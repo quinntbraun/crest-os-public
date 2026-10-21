@@ -5,7 +5,10 @@
   "license": "UNLICENSED",
   "type": "module",
   "packageManager": "npm@11.19.1",
-  "engines": { "node": "24.22.x", "npm": "11.19.1" },
+  "engines": {
+    "node": "24.22.x",
+    "npm": "11.19.1"
+  },
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",
     "build": "next build --webpack",
@@ -27,19 +30,21 @@
     "verify:dependencies": "node scripts/verify-dependencies.mjs",
     "check": "npm run verify:public && npm run verify:canonical && npm run verify:migrations && npm run verify:dependencies && npm run lint && npm run typecheck && npm test && npm run build",
     "audit:dependencies": "npm audit --audit-level=low",
-    "release:manifest": "node scripts/release-manifest.mjs"
+    "release:manifest": "node scripts/release-manifest.mjs",
+    "test:provider-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-session.test.mjs"
   },
   "dependencies": {
     "@supabase/auth-js": "2.118.0",
     "jose": "6.2.13",
     "next": "16.4.2",
+    "pg": "8.23.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "server-only": "0.0.1"
   },
   "devDependencies": {
-    "@eslint/js": "10.0.1",
     "@axe-core/playwright": "4.14.0",
+    "@eslint/js": "10.0.1",
     "@playwright/test": "1.64.1",
     "@types/node": "24.19.2",
     "@types/pg": "8.23.1",
@@ -48,7 +53,6 @@
     "eslint": "10.13.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "17.13.0",
-    "pg": "8.23.1",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.0",
     "vitest": "5.0.5"

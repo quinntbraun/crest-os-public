@@ -1,5 +1,7 @@
 # Current implementation plan
 
+Current live-provider database slice: provider PR6 merged at7a8154b22390c16a39ce43b67b468553e64aac54 and main CI39604490468 passed. Owner continuation authorizes the narrow schema4 reader and server adapter in PHASE_2_PROVIDER_DATABASE.md, tested with the official Auth image's migrations. Browser sessions, real Auth HTTP integration, tenant permissions and production activation remain downstream. No spending or real-data gate is lifted. Earlier status below is historical.
+
 Current provider slice: session PR5 merged at4f944a1ccf1a3fc9fe4ec6bb9d62a286116daa36; main run39596236309 passed. Owner continuation authorizes the server-only provider verification boundary in PHASE_2_PROVIDER.md, with actual SDK HTTP and signed synthetic JWT tests. This is provider evidence only; live-provider database wiring, browser sessions and tenant authorization remain downstream. No production, spending or real-data gate is lifted. Earlier session/schema status below is historical.
 
 Current session slice: identity PR4 merged at a5e784cbc9f64a7621d646452682e580bfe2e6d6 and its main checks passed. Owner continuation authorizes the synthetic session storage/local-policy foundation in PHASE_2_SESSIONS.md. It grants no runtime data access or provider authentication. Earlier schema status below is historical.

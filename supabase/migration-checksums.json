@@ -15,6 +15,11 @@
       "version": "20261021113648",
       "file": "20261021113648_session_foundation.sql",
       "sha256": "52beabfd373a8224e2fb691967ccdc4ba50dc0bbe4cda2949d23038f588cdba0"
+    },
+    {
+      "version": "20261021144015",
+      "file": "20261021144015_live_provider_session.sql",
+      "sha256": "d67fbca8e1042e2c28c8c7b8b35c59faa32b4b09ccdd555e98c5737823ffac27"
     }
   ]
 }
