@@ -17,6 +17,7 @@ import { createSessionLifecycle,SessionLifecycleError } from '../../src/security
 import {createBrowserSessionFlow,BrowserSessionError} from '../../src/security/browser-session-flow.ts';
 import {createLoginFingerprinter} from '../../src/security/login-admission.ts';
 import {createCsrfToken} from '../../src/security/request-protection.ts';
+import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginResponse,sessionResponse,logoutResponse,BrowserHttpError} from '../../src/security/browser-http.ts';
 
 let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,browserReceipt,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
@@ -651,4 +652,39 @@ test('direct browser-state SQL rejects malformed inputs and nonfresh transaction
   await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ');try{await client.query('SET LOCAL ROLE crest_web');await assert.rejects(client.query('SELECT crest_commands.browser_csrf_snapshot($1)',[randomBytes(32)]),error=>error.code==='25001');}finally{await client.query('ROLLBACK');}
   const f=await provision();await linkActor(f);const issued=await browserLogin(browserFlow(f),f);await revoke(issued.cookieValueForResponse(),signal());const row=await sessionRow(issued);
   await asWeb(async()=>{await assert.rejects(client.query('SELECT crest_commands.bind_browser_session($1,$2,NULL)',[row.token_hash,createCsrfToken(row.id).hashForDatabase()]),error=>error.code==='42501');});
+});
+
+test('actual MFA browser handoffs round-trip through bounded HTTP bodies and cookie-only credentials',async()=>{
+  const f=await provision();await linkActor(f);const flow=browserFlow(f),address=browserIp();
+  const read=createBrowserBodyReader({origin:browserOrigin,environment:'test'});
+  const request=(body,csrf='',cookie='')=>new Request(`${browserOrigin}/api/auth`,{method:'POST',headers:{origin:browserOrigin,'content-type':'application/json','x-crest-csrf':csrf,cookie},body:JSON.stringify(body)});
+  const begin=request({});await read(begin,'empty');const context=await flow.beginLogin(begin,address,signal());
+  const pending=loginContextResponse(context),pendingBody=await pending.json(),pendingPair=pending.headers.getSetCookie()[0].split(';')[0];
+  assert.deepEqual(Object.keys(pendingBody).sort(),['csrfToken','expiresAt']);assert(!JSON.stringify(pendingBody).includes(context.cookieValueForResponse()));
+  const loginRequest=request(browserInput(f),pendingBody.csrfToken,pendingPair),parsed=await read(loginRequest,'login');
+  const issued=await flow.login(loginRequest,address,readBrowserCookies(loginRequest.headers).login,parsed,signal());
+  const response=loginResponse(issued,parsed.trusted),body=await response.json(),sessionPair=response.headers.getSetCookie()[0].split(';')[0];
+  assert.equal(response.headers.getSetCookie().length,2);assert(!response.headers.getSetCookie()[0].includes('Max-Age'));
+  for(const secret of [issued.cookieValueForResponse(),f.password,f.subject,issued.evidence.actorId,issued.evidence.provider.sessionId])assert(!JSON.stringify(body).includes(secret));
+  const cookie=readBrowserCookies(new Headers({cookie:sessionPair})).session;
+  assert.equal((await lifecycle.verify(cookie,signal())).sessionId,issued.evidence.sessionId);
+  const before=await sessionRow(issued),proofRequest=request({},'',sessionPair);await read(proofRequest,'empty');
+  const proof=sessionResponse(await flow.session(proofRequest,cookie,signal())),proofBody=await proof.json();assert.deepEqual(proof.headers.getSetCookie(),[]);
+  unchangedSession(before,await sessionRow(issued));assert.equal((await sessionRow(issued)).version,before.version);
+  const logoutRequest=request({},proofBody.csrfToken,sessionPair);await read(logoutRequest,'empty');
+  const out=logoutResponse(await flow.logout(logoutRequest,cookie,signal()));assert.deepEqual(await out.json(),{localRevoked:true,providerSignedOut:true});
+  assert(out.headers.getSetCookie().every(value=>value.includes('Max-Age=0')));await lifecycleDenied(lifecycle.verify(cookie,signal()));
+});
+
+test('actual trusted-session response preserves the database deadline and bad HTTP JSON cannot consume pending login',async()=>{
+  const f=await provision();await linkActor(f);const flow=browserFlow(f),address=browserIp(),context=await flow.beginLogin(browserRequest(),address,signal());
+  const read=createBrowserBodyReader({origin:browserOrigin,environment:'test'});
+  const malformed=new Request(browserOrigin,{method:'POST',headers:{origin:browserOrigin,'content-type':'application/json','x-crest-csrf':context.csrfTokenForResponse()},body:'{"email":"x","password":"x","code":"123456","trusted":false,"trusted":true}'});
+  await assert.rejects(read(malformed,'login'),BrowserHttpError);assert.equal((await browserContext(context.cookieValueForResponse())).consumed_at,null);
+  const input={...browserInput(f),trusted:true},issued=await flow.login(browserRequest(context.csrfTokenForResponse()),address,context.cookieValueForResponse(),input,signal());
+  const original=(await sessionRow(issued)).expires_at.getTime(),response=loginResponse(issued,input.trusted);
+  const maxAge=Number(/Max-Age=(\d+)/.exec(response.headers.getSetCookie()[0])[1]);assert(maxAge>0&&maxAge<=2592000);
+  assert(response.headers.getSetCookie()[0].includes(`Expires=${new Date(original).toUTCString()}`));
+  assert.equal((await response.json()).expiresAt,original);assert.equal((await sessionRow(issued)).expires_at.getTime(),original);
+  await flow.logout(browserRequest(issued.csrfTokenForResponse()),issued.cookieValueForResponse(),signal());
 });
