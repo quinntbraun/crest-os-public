@@ -1,5 +1,7 @@
 # Current implementation plan
 
+Current session slice: identity PR4 merged at a5e784cbc9f64a7621d646452682e580bfe2e6d6 and its main checks passed. Owner continuation authorizes the synthetic session storage/local-policy foundation in PHASE_2_SESSIONS.md. It grants no runtime data access or provider authentication. Earlier schema status below is historical.
+
 Current identity slice: boundary PR3 merged at576b7c32a04c8202b983e683c69fd649c95b2079 after its required checks passed. Owner continuation authorizes the synthetic closed identity foundation in PHASE_2_IDENTITY.md. Schema2 adds no login/positive runtime grant, paid service or real data. Earlier empty-schema/registry status is historical.
 
 Current step: controlled migration PR2 merged at d86ed0152ad9e8ead0800fc24a03d1b0514909e0 after its required checks passed. Owner continuation authorizes the closed role/schema boundary in PHASE_2_DATABASE_BOUNDARY.md, followed by identity/session controls. Earlier publication/protection and empty-registry status below is historical. No production, spending or real-data gate is lifted.

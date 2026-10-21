@@ -10,6 +10,11 @@
       "version": "20261021032954",
       "file": "20261021032954_identity_foundation.sql",
       "sha256": "0b43e1a8271db3aa24decffc36bbb320e94682302470eb1076df7a850e6eef5c"
+    },
+    {
+      "version": "20261021113648",
+      "file": "20261021113648_session_foundation.sql",
+      "sha256": "52beabfd373a8224e2fb691967ccdc4ba50dc0bbe4cda2949d23038f588cdba0"
     }
   ]
 }

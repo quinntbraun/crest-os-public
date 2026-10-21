@@ -1,5 +1,7 @@
 # Migration and release discipline
 
+Current session slice: schema ordinal3 adds closed session lifecycle/history storage; the unchanged shell supports0..3. Previous schema1/2 bytes remain immutable and their regression suites stage the exact prefixes. PHASE_2_SESSIONS.md records compatibility tests and outstanding provider/access gates. Earlier schema status below is historical.
+
 Current identity slice: schema ordinal2 adds closed identity/membership/recovery/history relations. The unchanged shell supports0..2; schema0 and1 are the only prior supported schemas. PHASE_2_IDENTITY.md records real CLI upgrade/grant/concurrency requirements and remaining session/recovery gates. Earlier empty-schema status is historical. Applied schema1 bytes remain unchanged.
 
 Current boundary slice: schema ordinal1 creates restricted roles and empty private namespaces; the shell supports0..1. The registry is now nonempty and remains append-only. PHASE_2_DATABASE_BOUNDARY.md records object-owner/default-privilege choices and required real CLI/role tests. Earlier empty-registry/schema0-only statements are historical.
