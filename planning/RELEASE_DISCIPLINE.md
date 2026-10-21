@@ -1,5 +1,7 @@
 # Migration and release discipline
 
+Current identity slice: schema ordinal2 adds closed identity/membership/recovery/history relations. The unchanged shell supports0..2; schema0 and1 are the only prior supported schemas. PHASE_2_IDENTITY.md records real CLI upgrade/grant/concurrency requirements and remaining session/recovery gates. Earlier empty-schema status is historical. Applied schema1 bytes remain unchanged.
+
 Current boundary slice: schema ordinal1 creates restricted roles and empty private namespaces; the shell supports0..1. The registry is now nonempty and remains append-only. PHASE_2_DATABASE_BOUNDARY.md records object-owner/default-privilege choices and required real CLI/role tests. Earlier empty-registry/schema0-only statements are historical.
 
 Phase 2 continuation, 2026-10-20: the owner authorized the next synthetic slice after publication. The controlled coordinator is implemented for disposable local/CI databases; see PHASE_2_MIGRATIONS.md for exact target, lock, snapshot, receipt/failure and verification contracts. It does not enable hosted/production apply or satisfy independent production recovery requirements. The application migration registry is still empty. Main protection is now enforced, including the actual Foundation checks context from GitHub Actions and no bypasses; earlier unverified-protection statements below are historical.
