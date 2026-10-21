@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { localSessionEligibility, sessionLimits } from "../../src/security/session-policy.ts";
+import { localSessionEligibility } from "../../src/security/session-policy.ts";
 import type { LocalActor, LocalSession } from "../../src/security/session-policy.ts";
 
 const created = Date.parse("2026-10-21T11:00:00.000Z");
 const hour = 60*60*1000;
 const actor: LocalActor = { id: "00000000-0000-4000-8000-000000000001", kind: "owner",
   securityEpoch: "00000000-0000-4000-8000-000000000002", disabled: false };
+// Expected bounds come from SECURITY2, independently of production constants.
 const fixture = (trusted = true): LocalSession => ({ actorId: actor.id, issuedSecurityEpoch: actor.securityEpoch,
   trusted, createdAt: created, authenticatedAt: created, lastActiveAt: created,
-  expiresAt: created + (trusted ? sessionLimits.trustedAbsoluteMs : sessionLimits.untrustedAbsoluteMs), revokedAt: null, reauthAt: null });
+  expiresAt: created + (trusted ? (30*24*hour) : (12*hour)), revokedAt: null, reauthAt: null });
 const check = (s: LocalSession | null, now = created, recent = false, a: LocalActor | null = actor) => localSessionEligibility(s,a,now,"foreground",recent);
 
 describe("SECURITY2 local session prerequisites", () => {
@@ -18,8 +19,8 @@ describe("SECURITY2 local session prerequisites", () => {
   });
   it("background polling cannot extend the trusted seven-day idle window", () => {
     const s = fixture();
-    expect(localSessionEligibility(s,actor,created+sessionLimits.trustedIdleMs-1,"background").state).toBe("locally_eligible");
-    expect(check(s,created+sessionLimits.trustedIdleMs)).toEqual({ state:"denied",reason:"IDLE" });
+    expect(localSessionEligibility(s,actor,created+(7*24*hour)-1,"background").state).toBe("locally_eligible");
+    expect(check(s,created+(7*24*hour))).toEqual({ state:"denied",reason:"IDLE" });
     expect(s.lastActiveAt).toBe(created);
   });
   it.each([true,false])("absolute limit has no grace period for trusted=%s", (trusted) => {
@@ -39,16 +40,16 @@ describe("SECURITY2 local session prerequisites", () => {
     expect(check(fixture(false),created+12*hour)).toEqual({ state:"denied",reason:"EXPIRED" });
   });
   it("recent authentication expires exactly at fifteen minutes", () => {
-    expect(check(fixture(),created+sessionLimits.recentAuthMs-1,true).state).toBe("locally_eligible");
-    expect(check(fixture(),created+sessionLimits.recentAuthMs,true)).toEqual({ state:"denied",reason:"RECENT_AUTH_REQUIRED" });
-    expect(check(fixture(),created+sessionLimits.recentAuthMs,false).state).toBe("locally_eligible");
+    expect(check(fixture(),created+(15*60*1000)-1,true).state).toBe("locally_eligible");
+    expect(check(fixture(),created+(15*60*1000),true)).toEqual({ state:"denied",reason:"RECENT_AUTH_REQUIRED" });
+    expect(check(fixture(),created+(15*60*1000),false).state).toBe("locally_eligible");
   });
   it("foreground activity/provider refresh never renew recent authentication", () => {
     const now = created+hour;
     expect(check({...fixture(),lastActiveAt:now},now,true)).toEqual({ state:"denied",reason:"RECENT_AUTH_REQUIRED" });
     const reauthenticated = {...fixture(),lastActiveAt:now,reauthAt:now};
     expect(check(reauthenticated,now,true).state).toBe("locally_eligible");
-    expect(check(reauthenticated,now+sessionLimits.recentAuthMs,true)).toEqual({ state:"denied",reason:"RECENT_AUTH_REQUIRED" });
+    expect(check(reauthenticated,now+(15*60*1000),true)).toEqual({ state:"denied",reason:"RECENT_AUTH_REQUIRED" });
   });
   it("logout is final on the next protected request", () => {
     const s = {...fixture(),revokedAt:created};
@@ -68,7 +69,7 @@ describe("SECURITY2 local session prerequisites", () => {
   it.each([
     { createdAt:NaN }, { expiresAt:Infinity }, { lastActiveAt:created+0.5 }, { authenticatedAt:created+1 },
     { lastActiveAt:created-1 }, { createdAt:created+1 }, { lastActiveAt:created+1 },
-    { expiresAt:created }, { expiresAt:created+sessionLimits.trustedAbsoluteMs+1 },
+    { expiresAt:created }, { expiresAt:created+(30*24*hour)+1 },
     { revokedAt:created-1 }, { revokedAt:created+1 }, { reauthAt:created-1 }, { reauthAt:created+1 },
     { issuedSecurityEpoch:"invalid" }
   ])("malformed/future timestamps or identity fail closed: %j", (patch) => {
