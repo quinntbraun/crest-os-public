@@ -5,6 +5,11 @@
       "version": "20261021031357",
       "file": "20261021031357_database_boundary.sql",
       "sha256": "3834826b6ac68d71a768c3afb8dcafdb85f67790e7d556a056709f95399fcbfa"
+    },
+    {
+      "version": "20261021032954",
+      "file": "20261021032954_identity_foundation.sql",
+      "sha256": "0b43e1a8271db3aa24decffc36bbb320e94682302470eb1076df7a850e6eef5c"
     }
   ]
 }

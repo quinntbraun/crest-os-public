@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -23,6 +23,7 @@ let target;
 let ledgerRoot;
 let initialReceipt;
 let upgradedReceipt;
+let boundaryWorkspace;
 
 async function database() {
   const name = `crest_migrate_${randomBytes(8).toString("hex")}`;
@@ -39,7 +40,7 @@ async function connect(url) {
   return connection;
 }
 
-const apply = (connectionString, ledger, workspace = root, extra = {}) => applyTestMigrations({
+const apply = (connectionString, ledger, workspace = boundaryWorkspace, extra = {}) => applyTestMigrations({
   environment: "test", connectionString, ledgerRoot: ledger, workspace, cliPath, sourceCommit, ...extra
 });
 
@@ -51,6 +52,14 @@ before(async () => {
   const workspace = await mkdtemp(join(root, ".local/security-integration/case-"));
   await mkdir(join(workspace, "supabase/migrations"), { recursive: true });
   await writeFile(join(workspace, "supabase/migration-checksums.json"), '{"schemaVersion":1,"migrations":[]}\n');
+  // Keep the schema1 regression suite on its actual immutable migration prefix.
+  boundaryWorkspace = join(workspace, "schema1");
+  await mkdir(join(boundaryWorkspace, "supabase/migrations"), { recursive: true });
+  const registry = JSON.parse(await readFile(join(root, "supabase/migration-checksums.json"), "utf8"));
+  registry.migrations = registry.migrations.filter((m) => m.version <= "20261021031357");
+  assert.equal(registry.migrations.length, 1);
+  for (const m of registry.migrations) await writeFile(join(boundaryWorkspace, "supabase/migrations", m.file), await readFile(join(root, "supabase/migrations", m.file)));
+  await writeFile(join(boundaryWorkspace, "supabase/migration-checksums.json"), JSON.stringify(registry) + "\n");
   ledgerRoot = join(workspace, "ledger");
   target = await database();
   initialReceipt = await apply(target, ledgerRoot, workspace, { bootstrapEmpty: true });
@@ -204,7 +213,7 @@ test("actual web login cannot change schema, assume elevated roles, write or tru
 
 test("fresh schema1 apply reuses only reviewed cluster roles; namespaces remain isolated per database", async () => {
   const fresh = await database();
-  const receipt = await apply(fresh, `${ledgerRoot}-fresh`, root, { bootstrapEmpty: true });
+  const receipt = await apply(fresh, `${ledgerRoot}-fresh`, boundaryWorkspace, { bootstrapEmpty: true });
   assert.deepEqual(receipt.history, upgradedReceipt.history);
   assert.notEqual(receipt.target, upgradedReceipt.target);
   const isolated = await connect(fresh);
@@ -217,8 +226,8 @@ test("preexisting role privilege drift fails closed, retains pending receipt and
   assert(ownedRoles.has("crest_worker"));
   await admin.query("ALTER ROLE crest_worker LOGIN");
   try {
-    await assert.rejects(apply(fresh, `${ledgerRoot}-drift`, root, { bootstrapEmpty: true }), /MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);
-    await assert.rejects(apply(fresh, `${ledgerRoot}-drift`, root, { bootstrapEmpty: true }), /MIGRATION_PENDING_REVIEW_REQUIRED/);
+    await assert.rejects(apply(fresh, `${ledgerRoot}-drift`, boundaryWorkspace, { bootstrapEmpty: true }), /MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);
+    await assert.rejects(apply(fresh, `${ledgerRoot}-drift`, boundaryWorkspace, { bootstrapEmpty: true }), /MIGRATION_PENDING_REVIEW_REQUIRED/);
     const isolated = await connect(fresh);
     try { assert.equal((await isolated.query("SELECT count(*)::int AS n FROM pg_namespace WHERE nspname=ANY($1::text[])", [schemas])).rows[0].n, 0); }
     finally { await isolated.end(); }

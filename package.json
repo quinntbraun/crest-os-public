@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:db": "node scripts/test-database.mjs",
+    "test:identity-db": "node --test --test-concurrency=1 tests/integration/identity-foundation.test.mjs",
     "test:security-db": "node --test --test-concurrency=1 tests/integration/security-schema.test.mjs",
     "test:migrations": "node --test --test-concurrency=1 tests/integration/migration-coordinator.test.mjs",
     "migrations:apply:test": "node scripts/apply-test-migrations.mjs",
