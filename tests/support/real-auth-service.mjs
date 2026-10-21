@@ -62,9 +62,11 @@ export async function startRealAuthService(target) {
     if(!healthy)throw new Error('SYNTHETIC_AUTH_HEALTH_REQUIRED');
   };
   const cleanup=async()=>{
-    for(const client of clients)await client.dispose();
-    if(container){try{docker(['rm','--force',container]);}catch{/* only this recorded container; original test error remains */}}
+    let failed=false;
+    for(const client of clients){try{await client.dispose();}catch{failed=true;}}
+    if(container){try{docker(['rm','--force',container]);}catch{failed=true;}}
     await close(bridge);
+    if(failed)throw new Error('SYNTHETIC_AUTH_CLEANUP_FAILED');
   };
   try {
     const {privateKey}=await generateKeyPair('ES256',{extractable:true});const kid=randomUUID();
