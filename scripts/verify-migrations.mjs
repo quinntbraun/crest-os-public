@@ -22,4 +22,4 @@ if (base) {
   else if (base !== "34558ed3df4f339e45b8d1a012a2e2d1246e3546") throw new Error("Missing migration registry on comparison base");
 }
 validateMigrationSet(registry, files, previous);
-console.log(`Migration registry verified: ${files.size} migrations; no domain schema in Phase 1`);
+console.log(`Migration registry verified: ${files.size} ordered migrations`);

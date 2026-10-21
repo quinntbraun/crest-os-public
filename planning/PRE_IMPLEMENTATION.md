@@ -1,5 +1,7 @@
 # Current implementation plan
 
+Current step: controlled migration PR2 merged at d86ed0152ad9e8ead0800fc24a03d1b0514909e0 after its required checks passed. Owner continuation authorizes the closed role/schema boundary in PHASE_2_DATABASE_BOUNDARY.md, followed by identity/session controls. Earlier publication/protection and empty-registry status below is historical. No production, spending or real-data gate is lifted.
+
 Current continuation, 2026-10-20: public publication is complete and merged, main protection and its trusted Actions source are enforced, and all main checks passed. The owner then explicitly requested the next steps. Phase 2 synthetic development is now authorized, starting with the controlled migration prerequisite in PHASE_2_MIGRATIONS.md. This later instruction supersedes the earlier publication-only boundary below. No spending, provisioning, real data or production activation is approved.
 
 2026-10-20. The owner authorized the reviewed public-source transition documented in docs/PUBLICATION.md. Preserve the existing private repository and its original provenance; the public repository starts with fresh reviewed history. Do not weaken quality, disclose business records or introduce production credentials.
