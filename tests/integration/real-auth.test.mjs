@@ -18,8 +18,9 @@ import {createBrowserSessionFlow,BrowserSessionError} from '../../src/security/b
 import {createLoginFingerprinter} from '../../src/security/login-admission.ts';
 import {createCsrfToken} from '../../src/security/request-protection.ts';
 import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginResponse,sessionResponse,logoutResponse,BrowserHttpError} from '../../src/security/browser-http.ts';
+import {createSessionRequestAdmission,SessionAdmissionError} from '../../src/security/session-request-admission.ts';
 
-let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,browserReceipt,legacy,legacyBefore;
+let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,browserReceipt,admissionReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
@@ -38,7 +39,10 @@ before(async()=>{
   receipt=await sandbox.apply(target,await sandbox.prefix(6));
   refreshReceipt=await sandbox.apply(target,await sandbox.prefix(7));
   currentReceipt=await sandbox.apply(target,await sandbox.prefix(8));
-  browserReceipt=await sandbox.apply(target);
+  browserReceipt=await sandbox.apply(target,await sandbox.prefix(9));
+  upgradeProof=(await client.query('INSERT INTO crest_private.session_csrf_tokens(session_id,token_hash) VALUES($1,$2) RETURNING to_jsonb(session_csrf_tokens) AS row',[legacy.session,randomBytes(32)])).rows[0].row;
+  upgradeContext=(await client.query("WITH moment AS MATERIALIZED (SELECT clock_timestamp() AS stamp) INSERT INTO crest_private.login_contexts(id,credential_hash,ip_hash,csrf_hash,created_at,expires_at) SELECT gen_random_uuid(),$1,$2,$3,stamp,stamp+interval '10 minutes' FROM moment RETURNING to_jsonb(login_contexts) AS row",[randomBytes(32),randomBytes(32),randomBytes(32)])).rows[0].row;
+  admissionReceipt=await sandbox.apply(target);
   store=await createProviderTokenStore('primary',[{id:'primary',key:randomBytes(32)}]);
   lifecycle=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},boundary,store);
 });
@@ -212,7 +216,10 @@ test('schema5 upgrade retains existing local rows and append-only CLI history',a
   assert.equal(refreshReceipt.history.length,7);assert.deepEqual(refreshReceipt.history.slice(0,6),receipt.history);
   assert.equal(currentReceipt.history.length,8);assert.deepEqual(currentReceipt.history.slice(0,7),refreshReceipt.history);
   assert.equal(browserReceipt.history.length,9);assert.deepEqual(browserReceipt.history.slice(0,8),currentReceipt.history);
-  assert.deepEqual((await sandbox.apply(target)).history,browserReceipt.history);
+  assert.equal(admissionReceipt.history.length,10);assert.deepEqual(admissionReceipt.history.slice(0,9),browserReceipt.history);
+  assert.deepEqual((await sandbox.apply(target)).history,admissionReceipt.history);
+  assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.session_csrf_tokens c WHERE id=$1',[upgradeProof.id])).rows[0].row,upgradeProof);
+  assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.login_contexts c WHERE id=$1',[upgradeContext.id])).rows[0].row,upgradeContext);
 });
 test('issuance owner and functions retain forced RLS, lock-only identity rights and no runtime table exposure',async()=>{
   const role=(await client.query("SELECT * FROM pg_roles WHERE rolname='crest_session_owner'")).rows[0];
@@ -687,4 +694,127 @@ test('actual trusted-session response preserves the database deadline and bad HT
   assert(response.headers.getSetCookie()[0].includes(`Expires=${new Date(original).toUTCString()}`));
   assert.equal((await response.json()).expiresAt,original);assert.equal((await sessionRow(issued)).expires_at.getTime(),original);
   await flow.logout(browserRequest(issued.csrfTokenForResponse()),issued.cookieValueForResponse(),signal());
+});
+
+const sessionAdmit=(issued,bucket='ordinary',config={connectionString:runtimeUrl,environment:'test'},external=signal())=>
+  createSessionRequestAdmission(config)(issued.cookieValueForResponse(),bucket,external);
+const admissionCount=async(issued,bucket='ordinary')=>(await client.query('SELECT count(*)::int AS n FROM crest_private.session_request_admissions WHERE session_id=$1 AND bucket=$2',[issued.evidence.sessionId,bucket])).rows[0].n;
+async function seedAdmissions(issued,count,bucket='ordinary',age='0 seconds'){
+  await client.query("INSERT INTO crest_private.session_request_admissions(session_id,bucket,admitted_at) SELECT $1,$2,clock_timestamp()-$4::interval FROM generate_series(1,$3)",[issued.evidence.sessionId,bucket,count,age]);
+}
+async function admissionFixture(){const f=await provision();await linkActor(f);const flow=browserFlow(f),issued=await browserLogin(flow,f);return {f,flow,issued};}
+async function admissionBlocked(minimum=1){
+  const deadline=Date.now()+600;
+  while(Date.now()<deadline){
+    if((await sandbox.admin.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname=$1 AND usename=$2 AND wait_event_type='Lock'",[new URL(target).pathname.slice(1),login])).rows[0].n>=minimum)return;
+    await delay(5);
+  }
+  assert.fail('session admission must wait on the actual database session root');
+}
+
+test('durable session limit admits exactly120 requests and survives fresh adapters without changing authentication or audit',async()=>{
+  const {issued}=await admissionFixture(),before=await sessionRow(issued),events=(await client.query('SELECT * FROM crest_private.session_events WHERE session_id=$1 ORDER BY id',[issued.evidence.sessionId])).rows;
+  for(let i=0;i<120;i++)assert.equal(await sessionAdmit(issued),true);
+  for(let i=0;i<3;i++)assert.equal(await sessionAdmit(issued),false);
+  assert.equal(await admissionCount(issued),120);const after=await sessionRow(issued);unchangedSession(before,after);assert.equal(after.version,before.version);assert(after.provider_token_ciphertext.equals(before.provider_token_ciphertext));
+  assert.deepEqual((await client.query('SELECT * FROM crest_private.session_events WHERE session_id=$1 ORDER BY id',[issued.evidence.sessionId])).rows,events);
+});
+
+test('saturated ordinary work cannot prevent local-first logout and independent devices retain separate budgets',async()=>{
+  const {f,flow,issued}=await admissionFixture(),other=await browserLogin(flow,f);await seedAdmissions(issued,120);
+  assert.equal(await sessionAdmit(issued),false);assert.equal(await sessionAdmit(other),true);
+  assert.deepEqual(await flow.logout(browserRequest(issued.csrfTokenForResponse()),issued.cookieValueForResponse(),signal()),{localRevoked:true,providerSignedOut:true});
+  assert.equal(await admissionCount(issued,'logout'),1);assert.equal((await lifecycle.verify(other.cookieValueForResponse(),signal())).sessionId,other.evidence.sessionId);
+});
+
+test('logout allowance is independently bounded and never borrows ordinary capacity',async()=>{
+  const {flow,issued}=await admissionFixture();await seedAdmissions(issued,120,'logout');
+  await browserDenied(flow.logout(browserRequest(issued.csrfTokenForResponse()),issued.cookieValueForResponse(),signal()));assert.equal((await sessionRow(issued)).revoked_at,null);
+  assert.equal(await admissionCount(issued,'logout'),120);assert.equal(await sessionAdmit(issued),true);
+  await client.query("UPDATE crest_private.session_request_admissions SET admitted_at=clock_timestamp()-interval '61 seconds' WHERE session_id=$1 AND bucket='logout'",[issued.evidence.sessionId]);
+  assert.equal((await flow.logout(browserRequest(issued.csrfTokenForResponse()),issued.cookieValueForResponse(),signal())).localRevoked,true);
+});
+
+test('rolling minute TTL retains recent work, prunes expired work, and counts future timestamps conservatively',async()=>{
+  const {issued}=await admissionFixture();await seedAdmissions(issued,120,'ordinary','30 seconds');assert.equal(await sessionAdmit(issued),false);
+  await client.query("UPDATE crest_private.session_request_admissions SET admitted_at=clock_timestamp()-interval '60 seconds' WHERE session_id=$1",[issued.evidence.sessionId]);
+  assert.equal(await sessionAdmit(issued),true);assert.equal(await admissionCount(issued),1);
+  await client.query('DELETE FROM crest_private.session_request_admissions WHERE session_id=$1',[issued.evidence.sessionId]);
+  await seedAdmissions(issued,120,'ordinary','-1 hour');assert.equal(await sessionAdmit(issued),false);assert.equal(await admissionCount(issued),120);
+});
+
+test('concurrent requests share one session root and admit exactly one remaining place',async()=>{
+  const {issued}=await admissionFixture();await seedAdmissions(issued,119);const locker=await sandbox.connect(target);
+  await locker.query('BEGIN');await locker.query('SELECT id FROM crest_private.app_sessions WHERE id=$1 FOR UPDATE',[issued.evidence.sessionId]);
+  const pending=Promise.all(Array.from({length:12},()=>sessionAdmit(issued))).then(values=>({values}),error=>({error}));
+  try{await admissionBlocked(2);}finally{await locker.query('ROLLBACK');}
+  const result=await pending;assert(!result.error,'parallel reservations must finish inside existing runtime lock bounds');assert.equal(result.values.filter(Boolean).length,1);assert.equal(await admissionCount(issued),120);
+});
+
+test('a blocked session does not create a global admission lock or block another device',async()=>{
+  const {f,flow,issued}=await admissionFixture(),other=await browserLogin(flow,f),locker=await sandbox.connect(target);
+  await locker.query('BEGIN');await locker.query('SELECT id FROM crest_private.app_sessions WHERE id=$1 FOR UPDATE',[issued.evidence.sessionId]);
+  const pending=sessionAdmit(issued).then(value=>({value}),error=>({error}));
+  try{await admissionBlocked();assert.equal(await sessionAdmit(other),true);}finally{await locker.query('ROLLBACK');}
+  assert.deepEqual(await pending,{value:true});
+});
+
+test('rolled-back SQL reservations disappear but committed adapter reservations survive downstream failure',async()=>{
+  const {issued}=await admissionFixture(),hash=createHash('sha256').update(issued.cookieValueForResponse()).digest();
+  await asWeb(async()=>assert.equal((await client.query('SELECT crest_commands.admit_session_request($1,$2) AS admitted',[hash,'ordinary'])).rows[0].admitted,true));
+  assert.equal(await admissionCount(issued),0);
+  await assert.rejects((async()=>{assert.equal(await sessionAdmit(issued),true);throw new Error('synthetic downstream failure');})());
+  assert.equal(await admissionCount(issued),1);hash.fill(0);
+});
+
+test('unknown credentials, malformed SQL and stale isolation cannot allocate or bypass session counters',async()=>{
+  const {issued}=await admissionFixture(),hash=createHash('sha256').update(issued.cookieValueForResponse()).digest(),sql='SELECT crest_commands.admit_session_request($1,$2)';
+  assert.equal(await createSessionRequestAdmission({connectionString:runtimeUrl,environment:'test'})(createSessionCredential().cookieValueForResponse(),'ordinary',signal()),false);
+  for(const args of [[null,'ordinary'],[Buffer.alloc(31),'ordinary'],[hash,null],[hash,'Ordinary'],[hash,'upload']])await asWeb(async()=>await assert.rejects(client.query(sql,args),error=>error.code==='22023'));
+  await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ');try{await client.query('SET LOCAL ROLE crest_web');await assert.rejects(client.query(sql,[hash,'ordinary']),error=>error.code==='25001');}finally{await client.query('ROLLBACK');}
+  assert.equal(await admissionCount(issued),0);hash.fill(0);
+});
+
+test('session counters have forced RLS, bounded expired-only cleanup and no mutable runtime grants',async()=>{
+  const {issued}=await admissionFixture(),name='crest_private.session_request_admissions',fn='crest_commands.admit_session_request(bytea,text)';
+  const table=(await client.query('SELECT relrowsecurity,relforcerowsecurity,pg_get_userbyid(relowner) AS owner FROM pg_class WHERE oid=$1::regclass',[name])).rows[0];
+  assert(table.relrowsecurity&&table.relforcerowsecurity);assert.equal(table.owner,'crest_schema_owner');
+  const routine=(await client.query('SELECT prosecdef,proconfig,pg_get_userbyid(proowner) AS owner FROM pg_proc WHERE oid=$1::regprocedure',[fn])).rows[0];assert(routine.prosecdef);assert.equal(routine.owner,'crest_session_owner');assert.deepEqual(routine.proconfig,['search_path=pg_catalog, pg_temp','row_security=on']);
+  for(const role of ['crest_web','anon','authenticated','service_role','crest_worker','crest_login_owner','crest_command_owner','crest_recovery','crest_auth_reader']){
+    assert.equal((await client.query("SELECT has_table_privilege($1,$2,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE') AS allowed",[role,name])).rows[0].allowed,false);
+    if(role!=='crest_web')assert.equal((await client.query("SELECT has_function_privilege($1,$2,'EXECUTE') AS allowed",[role,fn])).rows[0].allowed,false);
+  }
+  for(const operation of ['UPDATE','TRUNCATE','TRIGGER','MAINTAIN'])assert.equal((await client.query('SELECT has_table_privilege($1,$2,$3) AS allowed',['crest_session_owner',name,operation])).rows[0].allowed,false);
+  await seedAdmissions(issued,300,'ordinary','61 seconds');assert.equal(await sessionAdmit(issued),true);assert.equal(await admissionCount(issued),61,'prune at most240 expired rows then add one');
+  await client.query('BEGIN');try{
+    await client.query('SET LOCAL ROLE crest_session_owner');const removed=await client.query('DELETE FROM crest_private.session_request_admissions WHERE session_id=$1',[issued.evidence.sessionId]);assert.equal(removed.rowCount,60,'owner may delete expired rows only');
+    await assert.rejects(client.query('UPDATE crest_private.session_request_admissions SET admitted_at=clock_timestamp()'),error=>error.code==='42501');
+  }finally{await client.query('ROLLBACK');}
+});
+
+test('session admission cancellation, database locks and overprivileged connections fail closed without session mutation',async()=>{
+  const {issued}=await admissionFixture(),before=await sessionRow(issued),controller=new AbortController();controller.abort();
+  await assert.rejects(sessionAdmit(issued,'ordinary',undefined,controller.signal),SessionAdmissionError);
+  await assert.rejects(sessionAdmit(issued,'ordinary',{connectionString:target,environment:'test'}),SessionAdmissionError);
+  const locker=await sandbox.connect(target);await locker.query('BEGIN');await locker.query('SELECT id FROM crest_private.app_sessions WHERE id=$1 FOR UPDATE',[issued.evidence.sessionId]);
+  try{await assert.rejects(sessionAdmit(issued),error=>error instanceof SessionAdmissionError&&error.message==='SESSION_ADMISSION_FAILED'&&error.cause===undefined);}finally{await locker.query('ROLLBACK');}
+  assert.equal(await admissionCount(issued),0);assert.equal((await sessionRow(issued)).version,before.version);assert.equal(await sessionAdmit(issued),true);
+});
+
+test('browser proof reissue enforces admission before provider work and invalid Origin or logout CSRF cannot consume capacity',async()=>{
+  const {f,issued}=await admissionFixture();let providerCalls=0;
+  const wrapped={...boundary,async verifyAccess(...args){providerCalls++;return boundary.verifyAccess(...args);}},flow=browserFlow(f,wrapped);
+  await browserDenied(flow.session(browserRequest('',{origin:'https://evil.example.test'}),issued.cookieValueForResponse(),signal()));assert.equal(await admissionCount(issued),0);
+  await browserDenied(flow.logout(browserRequest(createCsrfToken(randomUUID()).tokenForResponse()),issued.cookieValueForResponse(),signal()));assert.equal(await admissionCount(issued,'logout'),0);
+  await seedAdmissions(issued,120);await browserDenied(flow.session(browserRequest(),issued.cookieValueForResponse(),signal()));assert.equal(providerCalls,0);
+  assert.equal((await flow.logout(browserRequest(issued.csrfTokenForResponse()),issued.cookieValueForResponse(),signal())).localRevoked,true);
+});
+
+test('a work reservation is never authentication: revoked or expired sessions remain denied except local logout',async()=>{
+  const {flow,issued}=await admissionFixture();await revoke(issued.cookieValueForResponse(),signal());
+  assert.equal(await sessionAdmit(issued),true);await browserDenied(flow.session(browserRequest(),issued.cookieValueForResponse(),signal()));
+  assert.equal((await flow.logout(browserRequest(issued.csrfTokenForResponse()),issued.cookieValueForResponse(),signal())).localRevoked,true);
+  const next=await admissionFixture();await delay(5);await client.query("UPDATE crest_private.app_sessions SET expires_at=created_at+interval '1 millisecond',version=version+1 WHERE id=$1",[next.issued.evidence.sessionId]);
+  assert.equal(await sessionAdmit(next.issued),true);await browserDenied(next.flow.session(browserRequest(),next.issued.cookieValueForResponse(),signal()));
+  assert.equal((await next.flow.logout(browserRequest(next.issued.csrfTokenForResponse()),next.issued.cookieValueForResponse(),signal())).localRevoked,true);
 });
