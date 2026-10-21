@@ -1,5 +1,7 @@
 # Migration and release discipline
 
+Current boundary slice: schema ordinal1 creates restricted roles and empty private namespaces; the shell supports0..1. The registry is now nonempty and remains append-only. PHASE_2_DATABASE_BOUNDARY.md records object-owner/default-privilege choices and required real CLI/role tests. Earlier empty-registry/schema0-only statements are historical.
+
 Phase 2 continuation, 2026-10-20: the owner authorized the next synthetic slice after publication. The controlled coordinator is implemented for disposable local/CI databases; see PHASE_2_MIGRATIONS.md for exact target, lock, snapshot, receipt/failure and verification contracts. It does not enable hosted/production apply or satisfy independent production recovery requirements. The application migration registry is still empty. Main protection is now enforced, including the actual Foundation checks context from GitHub Actions and no bypasses; earlier unverified-protection statements below are historical.
 
 Phase 1 defines tooling and its initial empty schema contract. No business tables, users, posted records, provider credentials or application migrations exist. release/compatibility.json declares application 0.1.0 and schema range 0..0, report/command versions 0. Production activation remains blocked.

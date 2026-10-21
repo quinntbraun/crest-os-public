@@ -72,6 +72,7 @@ jobs:
           npm test
           npm run test:db
           npm run test:migrations
+          npm run test:security-db
       - name: Production build and browser accessibility smoke
         run: |
           npm run build

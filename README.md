@@ -16,7 +16,7 @@ npm run dev
 
 Open http://127.0.0.1:3000. This is a setup shell with process liveness at `/api/health`, not an authenticated business application. `check` runs provenance, migration/dependency checks, lint, strict types, tooling regressions and the production build. Use `npm run audit:dependencies` for the live registry security gate.
 
-Phase 2 starts with the [controlled migration prerequisite](planning/PHASE_2_MIGRATIONS.md). With the disposable PostgreSQL service and pinned tools available, `npm run test:migrations` creates its own synthetic databases and tests actual CLI applies, receipts, failures and concurrency. `npm run migrations:apply:test -- --bootstrap-empty` is restricted to explicitly configured disposable targets and a clean checkout; it cannot apply to staging/production. Owner login and application security tables are not implemented yet.
+Phase 2 starts with the [controlled migration prerequisite](planning/PHASE_2_MIGRATIONS.md). With the disposable PostgreSQL service and pinned tools available, `npm run test:migrations` creates its own synthetic databases and tests actual CLI applies, receipts, failures and concurrency. `npm run migrations:apply:test -- --bootstrap-empty` is restricted to explicitly configured disposable targets and a clean checkout; it cannot apply to staging/production. The next [database boundary slice](planning/PHASE_2_DATABASE_BOUNDARY.md) adds restricted roles and closed schemas, verified with `npm run test:security-db`. Owner login and application security tables are not implemented yet.
 
 ```sh
 node scripts/install-tools.mjs
@@ -34,7 +34,7 @@ With Docker available, start only the isolated synthetic test database:
 docker compose up --detach --wait test-db
 ```
 
-Set `CREST_ENV=test` and `CREST_TEST_DATABASE_URL=postgresql://supabase_admin:crest_local_test_only@127.0.0.1:54322/crest_test` in the current shell, then run `npm run test:db`. This public test credential is never suitable for a hosted service. The harness rejects non-loopback hosts, databases other than `crest_test`, and URL options. It runs real PostgreSQL/pgTAP under restricted roles and rolls back all test DDL/data. It tests the harness boundary, not Phase 2 application RLS/authentication. `docker compose down` destroys the disposable tmpfs database. No application migrations exist in this slice.
+Set `CREST_ENV=test` and `CREST_TEST_DATABASE_URL=postgresql://supabase_admin:crest_local_test_only@127.0.0.1:54322/crest_test` in the current shell, then run `npm run test:db`. This public test credential is never suitable for a hosted service. The harness rejects non-loopback hosts, databases other than `crest_test`, and URL options. It runs real PostgreSQL/pgTAP under restricted roles and rolls back all test DDL/data. It tests the harness boundary, not Phase 2 application RLS/authentication. `docker compose down` destroys the disposable tmpfs database. The schema1 migration creates restricted roles and empty private namespaces; application tables and data access are still closed.
 
 ```sh
 docker build --tag crest-os:local .

@@ -1,0 +1,27 @@
+# Phase 2: closed database boundary
+
+2026-10-20 owner continuation; implementation timestamp 2026-10-21 UTC. Migration prerequisite PR2 merged at d86ed0152ad9e8ead0800fc24a03d1b0514909e0 after Foundation checks run39523558484 passed. This small prerequisite implements DATABASE section2 / SECURITY section3 role separation before identity tables. It does not amend the canonical contract or complete F1/P01.
+
+## Recorded implementation choices
+
+- `crest_schema_owner`: non-login schema/table owner; never a runtime principal.
+- `crest_command_owner`: distinct non-login owner for narrowly scoped future routines. No blanket table rights, schema CREATE, RLS bypass or owner-role membership.
+- `crest_web`: future backend group; namespace USAGE only, no current table/routine access.
+- `crest_worker`, `crest_recovery`: distinct non-login groups with no current application grants. Recovery must later be incident-scoped; it is never inherited by web/worker.
+- Private namespaces: `crest` for tenant data, `crest_private` for server-only security state, `crest_commands` for allowlisted routines. None is in the disabled API schema list. No browser/provider grants, credential or real identity is created.
+
+All five roles are NOLOGIN/NOINHERIT/NOSUPERUSER/NOCREATEDB/NOCREATEROLE/NOREPLICATION/NOBYPASSRLS, with no role settings or memberships in either direction. Reusing cluster-wide role names in a second disposable database requires exactly this contract. Conflicting roles/namespaces fail rather than being silently repaired or adopted. Runtime login provisioning is deliberately absent; later narrowly granted login memberships require a reviewed migration/control update and tests, not a blanket owner grant.
+
+Remove PUBLIC CREATE in public so restricted runtime roles cannot place persistent objects there. Only schema owner can create in application namespaces; command owner has no CREATE. Global per-owner default privileges remove PUBLIC routine EXECUTE and type USAGE, along with table/sequence/schema grants. Per-schema revocation alone cannot remove globally granted defaults. Future migrations must create objects AS the intended owner; changing ownership afterwards does not retroactively apply that owner's defaults. A migration may temporarily grant command owner CREATE inside its transaction, create its routines under that role, then revoke CREATE before commit. No such runtime grant is present here.
+
+Migration version20261021031357 is schema ordinal1. The shell accepts schema0..1 because it has no database dependency. Report/command versions remain0 and production activation remains blocked. Schema0 is the only prior supported schema: real pinned CLI tests bootstrap its empty registry, append this migration with receipt continuity, verify unchanged CLI history on no-op, and separately test a fresh schema1 database. There are not two historical application schemas to test. Cluster-wide role creation is exercised only on disposable CI PostgreSQL; provider migration-admin capabilities and hosted release receipts remain unverified.
+
+## Required evidence and boundaries
+
+`npm run test:security-db` runs actual committed SQL through the controlled CLI in uniquely created disposable databases, never direct SQL apply. It verifies role attributes/membership, schema ownership and exact grants, closed namespaces, public-object creation denial, safe defaults for objects created by BOTH owners, direct command abuse, denied DDL/role escalation/raw writes and FORCE RLS even for the table owner. Most test-only objects/grants/rows are transactionally rolled back. The escalation test uses a genuinely restricted, randomly named test login (SET ROLE from a superuser session would not test session-user escalation correctly); it explicitly removes only its own login/table in cleanup. The runner drops only databases and roles it created; it refuses to start if these cluster role names already exist. Drift testing restores only a role created by this suite. No tests are skipped if PostgreSQL/CLI is missing.
+
+FORCE RLS is **not a default for new tables**. No application table/policy exists in this migration. The synthetic table tests prove the intended deny behavior, not implemented tenant/session authorization. The identity migration must enable AND force RLS on each protected table, use composite tenant foreign keys and add live-session/membership checks before any positive grant. Grant/RLS introspection must expand with each new object. A compromised schema owner can change DDL; separation is not an administrator-proof security claim.
+
+Next coherent slice: businesses, durable actors, memberships and security/control state, named capabilities, audited operations and transaction-held recovery fence; then provider-backed sessions, exact revocation/timeouts and pooled tenant-context tests. No generic CRUD, owner auto-provisioning, public signup, production connection, spending or real-data use is authorized by this change. The migration coordinator remains disposable-test-only; hosted apply and independent recovery storage remain gated.
+
+PostgreSQL17 references: [default privileges](https://www.postgresql.org/docs/17/sql-alterdefaultprivileges.html), [row security](https://www.postgresql.org/docs/17/ddl-rowsecurity.html), [function security](https://www.postgresql.org/docs/17/perm-functions.html). CI/PR results are evidence only after the exact head passes; this planning record is not a test pass.

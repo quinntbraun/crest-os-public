@@ -1,4 +1,10 @@
 {
   "schemaVersion": 1,
-  "migrations": []
+  "migrations": [
+    {
+      "version": "20261021031357",
+      "file": "20261021031357_database_boundary.sql",
+      "sha256": "3834826b6ac68d71a768c3afb8dcafdb85f67790e7d556a056709f95399fcbfa"
+    }
+  ]
 }
