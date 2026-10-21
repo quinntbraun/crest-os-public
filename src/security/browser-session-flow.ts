@@ -3,6 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {createSessionCredential,sessionCredentialHash} from './session-credential.ts';
 import {createCsrfToken,createRequestProtection} from './request-protection.ts';
 import {createLoginAdmission,createLoginFingerprinter} from './login-admission.ts';
+import {createSessionRequestAdmission} from './session-request-admission.ts';
 import {sessionDatabase} from './session-database.ts';
 import type {SessionDatabaseConfiguration} from './session-database.ts';
 import {createSessionLifecycle} from './session-lifecycle.ts';
@@ -47,7 +48,7 @@ export function createBrowserSessionFlow(config:SessionDatabaseConfiguration&{or
   const owner=Object.freeze({...config.owner});
   if(!uuid.test(owner.subject)||!uuid.test(owner.factorId))throw new Error('BROWSER_OWNER_CONFIGURATION_REQUIRED');
   const query=sessionDatabase(config),fingerprint=createLoginFingerprinter(config.loginKey),admit=createLoginAdmission(config,config.loginKey);
-  const protect=createRequestProtection(config),lifecycle=createSessionLifecycle(config,provider,tokens);
+  const protect=createRequestProtection(config),lifecycle=createSessionLifecycle(config,provider,tokens),admitSession=createSessionRequestAdmission(config);
   const clock=(external:AbortSignal)=>AbortSignal.any([external,AbortSignal.timeout(30000)]);
   async function bind(credential:string,csrf:ReturnType<typeof createCsrfToken>,previous:string|undefined,signal:AbortSignal){
     const hash=sessionCredentialHash(credential),old=optionalHash(previous),csrfHash=csrf.hashForDatabase();
@@ -105,13 +106,18 @@ export function createBrowserSessionFlow(config:SessionDatabaseConfiguration&{or
       const signal=clock(external);
       try{
         protect.requireOrigin(request);
+        if(await admitSession(credential,'ordinary',signal)!==true)throw new BrowserSessionError();
         const first=await lifecycle.verify(credential,signal),csrf=createCsrfToken(first.sessionId);await bind(credential,csrf,undefined,signal);
         return new BrowserSession(credential,csrf,await lifecycle.verify(credential,signal));
       }catch{throw new BrowserSessionError();}
     },
     async logout(request:RequestShape,credential:string,external:AbortSignal){
       const signal=clock(external);
-      try{await requireSessionCsrf(request,credential,signal);return await lifecycle.logout(credential,signal);}catch{throw new BrowserSessionError();}
+      try{
+        await requireSessionCsrf(request,credential,signal);
+        if(await admitSession(credential,'logout',signal)!==true)throw new BrowserSessionError();
+        return await lifecycle.logout(credential,signal);
+      }catch{throw new BrowserSessionError();}
     }
   });
 }

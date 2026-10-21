@@ -45,6 +45,11 @@
       "version": "20261021222140",
       "file": "20261021222140_browser_session_state.sql",
       "sha256": "cb57cf5ae1de679038be6710074530b149a1ade67a944579b13c2e703bba2f4a"
+    },
+    {
+      "version": "20261021232210",
+      "file": "20261021232210_session_request_admission.sql",
+      "sha256": "66de3a95fe08ba0d3f1e64b373bda728541448d88b5fddc5ded4f8eb53e99864"
     }
   ]
 }
