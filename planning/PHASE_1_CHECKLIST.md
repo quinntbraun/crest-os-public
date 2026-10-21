@@ -1,5 +1,7 @@
 # Phase 1 checklist
 
+Public publication update, 2026-10-20: main protection is now configured and verified through active ruleset25515303 plus the source-bound classic rule. Full public run39519874910 passed. The earlier checklist below records original foundation execution; its protection items are superseded by this notice and PUBLICATION_EVIDENCE.md. The final evidence-only head must pass its own required check before the owner-authorized public transfer is merged. Phase 2, production deployment and real data remain outside this publication authorization.
+
 Based on ROADMAP Phase 1, ARCHITECTURE and TESTING. **Owner-authorized; foundation implemented and full Linux CI run passed on the review branch.** See PHASE_1_EVIDENCE.md for exact tested commits and the latest-head requirement. Main protection/review remain unresolved; no merge or Phase 2 start is implied. An implemented tool is not a passed production gate.
 
 ## Entry criteria
