@@ -32,6 +32,7 @@
     "audit:dependencies": "npm audit --audit-level=low",
     "release:manifest": "node scripts/release-manifest.mjs",
     "test:provider-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-session.test.mjs",
+    "test:login-admission-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/login-admission.test.mjs",
     "test:real-auth": "node --conditions=react-server --test --test-concurrency=1 tests/integration/real-auth.test.mjs",
     "test:session-commands-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/session-revocation.test.mjs"
   },

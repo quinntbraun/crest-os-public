@@ -35,6 +35,11 @@
       "version": "20261021183931",
       "file": "20261021183931_locked_session_refresh.sql",
       "sha256": "0df851bdd8f36b678c6eba8da0e2f94446d89c133620ea4275ed588fcd419859"
+    },
+    {
+      "version": "20261021215031",
+      "file": "20261021215031_login_admission.sql",
+      "sha256": "48fbabeadabb03be9a432b9681c06f545223326ec7ff1f65dfd77ae12ee19971"
     }
   ]
 }
