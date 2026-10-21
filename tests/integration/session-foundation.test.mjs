@@ -5,10 +5,10 @@ import { setTimeout as delay } from "node:timers/promises";
 import { migrationSandbox } from "../support/migration-sandbox.mjs";
 import { localSessionEligibility,sessionLimits } from "../../src/security/session-policy.ts";
 
-let sandbox; let client; let target; let schema2; let oldReceipt; let receipt; let owner; let bootstrap; let beforeHash;
+let sandbox; let client; let target; let schema2; let schema3; let oldReceipt; let receipt; let owner; let bootstrap; let beforeHash;
 const identitiesHash = async () => (await client.query("SELECT encode(sha256(convert_to(jsonb_agg(to_jsonb(e) ORDER BY id)::text,'UTF8')),'hex') AS hash FROM crest_private.identity_events e")).rows[0].hash;
 before(async () => {
-  sandbox=await migrationSandbox(); target=await sandbox.database(); schema2=await sandbox.prefix(2);
+  sandbox=await migrationSandbox(); target=await sandbox.database(); schema2=await sandbox.prefix(2); schema3=await sandbox.prefix(3);
   oldReceipt=await sandbox.apply(target,schema2,true); client=await sandbox.connect(target);
   bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
   await client.query("BEGIN");
@@ -17,7 +17,7 @@ before(async () => {
   await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual'),($1,$3,'owner',$2,$2,'manual')",[business,owner,backup]);
   await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,owner]);
   await client.query("COMMIT"); beforeHash=await identitiesHash();
-  receipt=await sandbox.apply(target);
+  receipt=await sandbox.apply(target,schema3);
 });
 after(async () => { await sandbox?.close(); });
 async function makeActor() {
@@ -48,7 +48,7 @@ async function local(id,recent=false) {
 test("schema2 identity history survives schema3 unchanged; real CLI no-op retains history",async () => {
   assert.equal(oldReceipt.history.length,2); assert.equal(receipt.history.length,3);
   assert.deepEqual(receipt.history.slice(0,2),oldReceipt.history); assert.equal(await identitiesHash(),beforeHash);
-  assert.deepEqual((await sandbox.apply(target)).history,receipt.history);
+  assert.deepEqual((await sandbox.apply(target,schema3)).history,receipt.history);
   assert.equal((await client.query("SELECT count(*)::int AS n FROM crest_private.app_sessions")).rows[0].n,0);
 });
 test("session tables force RLS and deny all runtime/provider reads, writes and helper execution",async () => transaction(async () => {
@@ -150,6 +150,6 @@ test("refresh row lock makes a second refresher observe the first committed vers
 });
 test("both previous supported schemas upgrade through actual CLI with no rewritten history",async () => {
   const from1=await sandbox.database(); const prior=await sandbox.apply(from1,await sandbox.prefix(1),true);
-  const upgraded=await sandbox.apply(from1); assert.deepEqual(upgraded.history.slice(0,1),prior.history); assert.deepEqual(upgraded.history,receipt.history);
-  const fresh=await sandbox.database(); assert.deepEqual((await sandbox.apply(fresh,sandbox.root,true)).history,receipt.history);
+  const upgraded=await sandbox.apply(from1,schema3); assert.deepEqual(upgraded.history.slice(0,1),prior.history); assert.deepEqual(upgraded.history,receipt.history);
+  const fresh=await sandbox.database(); assert.deepEqual((await sandbox.apply(fresh,schema3,true)).history,receipt.history);
 });

@@ -26,6 +26,8 @@ npm run test:e2e
 
 Tool installation downloads checksum-pinned Gitleaks and Supabase CLI to ignored `.local/tools` on Windows/Linux x64. No CLI sign-in or project link is required. Windows needs PowerShell 7 (`pwsh`) to extract archives. Playwright tests desktop Chromium and 360px WebKit plus axe; they do not replace real-phone acceptance tests. On Linux, use Playwright's `install --with-deps chromium webkit` when OS libraries are missing. Webpack is the common build path. This managed Windows host blocks Next's native compiler through Application Control; its official WASM fallback also failed to load. Local build/browser success is not claimed. Use the Linux CI/container path to validate these gates; no host security policy is disabled.
 
+The [live provider-session reader](planning/PHASE_2_PROVIDER_DATABASE.md) adds a narrow boolean database helper and bounded server adapter. `npm run test:provider-db` also requires Docker on Linux to apply the digest-pinned official Auth binary's embedded migrations in disposable databases. Browser and business-data access remain closed pending real Auth HTTP integration and browser-session work.
+
 ## Disposable PostgreSQL and container checks
 
 With Docker available, start only the isolated synthetic test database:
