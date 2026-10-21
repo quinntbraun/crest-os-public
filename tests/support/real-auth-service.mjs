@@ -10,7 +10,9 @@ import { exportJWK,generateKeyPair,SignJWT } from 'jose';
 export function authResult(result,stage) {
   if(result.error) {
     const code=typeof result.error.code==='string'&&/^[a-z_]{1,64}$/.test(result.error.code)?result.error.code:'unknown';
-    throw new Error(`SYNTHETIC_AUTH_${stage}_${code}`); // no provider message, cause, response or tokens
+    const status=Number.isSafeInteger(result.error.status)?result.error.status:0;
+    const kind=['AuthApiError','AuthUnknownError','AuthRetryableFetchError'].includes(result.error.name)?result.error.name:'AuthError';
+    throw new Error(`SYNTHETIC_AUTH_${stage}_${code}_${status}_${kind}`); // no message, cause, response or tokens
   }
   return result.data;
 }
@@ -36,7 +38,9 @@ export async function startRealAuthService(target) {
     if(request.headers.authorization)headers.authorization=request.headers.authorization;
     const result=await fetch(`${upstream}${request.url.slice('/auth/v1'.length)}`,{method:request.method,headers,
       body:['GET','HEAD'].includes(request.method)?undefined:Buffer.concat(chunks),redirect:'error',signal:AbortSignal.timeout(5000)});
-    const data=Buffer.from(await result.arrayBuffer());if(data.length>128*1024)throw new Error();
+    // Enrollment returns a large SVG QR code. Only this test bridge accepts1MiB;
+    // the production boundary excludes enrollment and keeps its128KiB limit.
+    const data=Buffer.from(await result.arrayBuffer());if(data.length>1024*1024)throw new Error();
     response.writeHead(result.status,{'content-type':result.headers.get('content-type')??'application/json'});response.end(data);
   })().catch(()=>{if(!response.headersSent)response.writeHead(503);response.end();});});
   const bridgePort=await listen(bridge);const issuer=`http://127.0.0.1:${bridgePort}/auth/v1`;
@@ -45,6 +49,16 @@ export async function startRealAuthService(target) {
     const client=new AuthClient({url:issuer,headers:{apikey:publicKey,...authorization?{Authorization:`Bearer ${authorization}`}:{}} ,
       autoRefreshToken:false,persistSession:false,detectSessionInUrl:false,debug:false});
     clients.add(client);return client;
+  };
+  const waitHealthy=async()=>{
+    const deadline=Date.now()+20000;let healthy=false;
+    while(Date.now()<deadline&&!healthy){
+      try{const response=await fetch(`${upstream}/health`,{signal:AbortSignal.timeout(1000)});const health=await response.json();
+        healthy=response.ok&&health.name==='GoTrue'&&/^v?2\.197\.0$/.test(health.version);
+      }catch{/* startup only; no raw cause */}
+      if(!healthy)await delay(100);
+    }
+    if(!healthy)throw new Error('SYNTHETIC_AUTH_HEALTH_REQUIRED');
   };
   const cleanup=async()=>{
     for(const client of clients)await client.dispose();
@@ -69,18 +83,11 @@ export async function startRealAuthService(target) {
     const created=docker(['create','--network','host','--read-only','--tmpfs','/tmp','--cap-drop','ALL','--security-opt','no-new-privileges','--log-driver','none',
       '--label',`crest.synthetic-auth=${randomUUID()}`,...[...allowed,'API_EXTERNAL_URL'].flatMap(k=>['--env',k]),testAuthImage,'auth','serve'],env);
     assert.match(created,/^[a-f0-9]{64}$/);container=created;docker(['start',container]);
-    const deadline=Date.now()+20000;let healthy=false;
-    while(Date.now()<deadline&&!healthy){
-      try{const response=await fetch(`${upstream}/health`,{signal:AbortSignal.timeout(1000)});const health=await response.json();
-        healthy=response.ok&&health.name==='GoTrue'&&/^v?2\.197\.0$/.test(health.version);
-      }catch{/* startup only; no raw cause */}
-      if(!healthy)await delay(100);
-    }
-    if(!healthy)throw new Error('SYNTHETIC_AUTH_HEALTH_REQUIRED');
+    await waitHealthy();
     const adminJwt=await new SignJWT({role:'service_role',aud:'authenticated',iss:issuer}).setProtectedHeader({alg:'ES256',kid,typ:'JWT'}).setIssuedAt().setExpirationTime('1h').sign(privateKey);
     const admin=makeSdk(adminJwt);await admin.initialize();
     return {issuer,publicKey,admin,sdk:makeSdk,close:cleanup,
-      async stop(){docker(['stop','--time','5',container]);},async restart(){docker(['start',container]);await delay(500);}};
+      async stop(){docker(['stop','--time','5',container]);},async restart(){docker(['start',container]);await waitHealthy();}};
   } catch {
     await cleanup();
     // Container/SDK causes can contain synthetic private keys and credentials.
