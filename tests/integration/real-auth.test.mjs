@@ -302,6 +302,18 @@ test('retrieval cancellation and database failure return generic errors and reta
   const pending=lifecycle.verify(issued.cookieValueForResponse(),controller.signal),result=lifecycleDenied(pending);let blocked=false;
   try{const deadline=Date.now()+2000;while(!blocked&&Date.now()<deadline){blocked=(await sandbox.admin.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE application_name='crest_session_lifecycle' AND wait_event_type='Lock'")).rows[0].n>0;if(!blocked)await delay(10);}assert(blocked);controller.abort();await result;}finally{await locker.query('ROLLBACK');}
   const url=new URL(runtimeUrl);url.port='1';await lifecycleDenied(createSessionLifecycle({connectionString:url.toString(),environment:'test'},boundary,store).verify(issued.cookieValueForResponse(),signal()));
+  await lifecycleDenied(createSessionLifecycle({connectionString:target,environment:'test'},boundary,store).verify(issued.cookieValueForResponse(),signal()));
   assert.equal((await lifecycle.verify(issued.cookieValueForResponse(),signal())).sessionId,issued.evidence.sessionId);
   assert.equal((await sandbox.admin.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE application_name='crest_session_lifecycle'")).rows[0].n,0);
+});
+test('provider outage after creation commits releases no credential and revokes the newly persisted local session',async()=>{
+  const f=await provision(),actor=await linkActor(f);let stopped=false;
+  // Pause the actual provider only after the actual login lookup succeeds.
+  // SQL insertion stays available; the required post-insert online check fails.
+  const gate=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},async(subject,session,signal)=>{
+    const live=await lookup(subject,session,signal);if(!stopped){stopped=true;await service.stop();}return live;
+  });
+  try{await lifecycleDenied(issue(f,false,createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},gate,store)));}finally{if(stopped)await service.restart();}
+  const rows=(await client.query('SELECT * FROM crest_private.app_sessions WHERE actor_id=$1',[actor.id])).rows;assert.equal(rows.length,1);assert(rows[0].revoked_at);assert.equal(rows[0].provider_token_ciphertext,null);assert.equal(rows[0].key_id,null);
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.session_events WHERE session_id=$1',[rows[0].id])).rows[0].n,2);
 });
