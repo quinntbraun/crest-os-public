@@ -15,7 +15,7 @@ import { createSessionCredential } from '../../src/security/session-credential.t
 import { createSessionRevoker } from '../../src/security/session-revocation-db.ts';
 import { createSessionLifecycle,SessionLifecycleError } from '../../src/security/session-lifecycle.ts';
 
-let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,legacy,legacyBefore;
+let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
@@ -32,7 +32,8 @@ before(async()=>{
   legacy=await localState({subject:randomUUID()},{identity:{passwordAt:Date.now()-1000,totpAt:Date.now()-1000,sessionId:randomUUID()}});
   legacyBefore=(await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[legacy.session])).rows[0].row;
   receipt=await sandbox.apply(target,await sandbox.prefix(6));
-  refreshReceipt=await sandbox.apply(target);
+  refreshReceipt=await sandbox.apply(target,await sandbox.prefix(7));
+  currentReceipt=await sandbox.apply(target);
   store=await createProviderTokenStore('primary',[{id:'primary',key:randomBytes(32)}]);
   lifecycle=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},boundary,store);
 });
@@ -204,7 +205,8 @@ test('schema5 upgrade retains existing local rows and append-only CLI history',a
   assert.deepEqual((await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[legacy.session])).rows[0].row,legacyBefore);
   assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.session_events WHERE session_id=$1',[legacy.session])).rows[0].n,1);
   assert.equal(refreshReceipt.history.length,7);assert.deepEqual(refreshReceipt.history.slice(0,6),receipt.history);
-  assert.deepEqual((await sandbox.apply(target)).history,refreshReceipt.history);
+  assert.equal(currentReceipt.history.length,8);assert.deepEqual(currentReceipt.history.slice(0,7),refreshReceipt.history);
+  assert.deepEqual((await sandbox.apply(target)).history,currentReceipt.history);
 });
 test('issuance owner and functions retain forced RLS, lock-only identity rights and no runtime table exposure',async()=>{
   const role=(await client.query("SELECT * FROM pg_roles WHERE rolname='crest_session_owner'")).rows[0];
