@@ -387,6 +387,15 @@ test('revocation committed first prevents refresh and cannot restore deleted cip
   assert(after.revoked_at);assert.equal(after.provider_token_ciphertext,null);assert.equal(after.key_id,null);assert.equal(after.version,before.version);
 });
 
+test('actual Auth outage during refresh fails once, revokes locally and leaves the other device recoverable',async()=>{
+  const f=await provision();await linkActor(f);const issued=await issue(f),other=await issue(f);
+  await service.stop();
+  try{await lifecycleDenied(lifecycle.refresh(issued.cookieValueForResponse(),signal()));}finally{await service.restart();}
+  const row=await sessionRow(issued);assert(row.revoked_at);assert.equal(row.provider_token_ciphertext,null);assert.equal(row.key_id,null);
+  await lifecycleDenied(lifecycle.verify(issued.cookieValueForResponse(),signal()));
+  assert.equal((await lifecycle.verify(other.cookieValueForResponse(),signal())).sessionId,other.evidence.sessionId);
+});
+
 test('revocation waits for a held refresh and then irreversibly clears the replacement',async()=>{
   const f=await provision();await linkActor(f);const issued=await issue(f),held=heldRefresh();
   const refreshing=held.lifecycle.refresh(issued.cookieValueForResponse(),signal()).then(()=>undefined,()=>undefined);let revoking;
