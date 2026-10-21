@@ -28,7 +28,7 @@ before(async()=>{
     await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual'),($1,$3,'owner',$2,$2,'manual')",[business,owner,other]);
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,owner]);await client.query('COMMIT');
   }catch(error){await client.query('ROLLBACK');throw error;}
-  existing=await fixture();snapshot={row:await state(existing.id),events:await events(existing.id)};receipt=await sandbox.apply(target);
+  existing=await fixture();snapshot={row:await state(existing.id),events:await events(existing.id)};receipt=await sandbox.apply(target,await sandbox.prefix(5));
   login=`crest_probe_${randomBytes(8).toString('hex')}`;const password=randomBytes(32).toString('hex');assert.match(login,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
   await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;await sandbox.admin.query(`GRANT crest_web TO ${login}`);
   const url=new URL(target);url.username=login;url.password=password;runtimeUrl=url.toString();revoke=createSessionRevoker({connectionString:runtimeUrl,environment:'test'});
@@ -39,7 +39,7 @@ async function asRole(role,work){await client.query('BEGIN');try{await client.qu
 
 test('schema4 upgrade preserves rows/history and the append-only CLI prefix',async()=>{
   assert.equal(prior.history.length,4);assert.equal(receipt.history.length,5);assert.deepEqual(receipt.history.slice(0,4),prior.history);
-  assert.deepEqual(await state(existing.id),snapshot.row);assert.deepEqual(await events(existing.id),snapshot.events);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);
+  assert.deepEqual(await state(existing.id),snapshot.row);assert.deepEqual(await events(existing.id),snapshot.events);assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(5))).history,receipt.history);
 });
 test('command owner stays closed with only selected columns and an append-only audit insert',async()=>{
   const r=(await client.query("SELECT * FROM pg_roles WHERE rolname='crest_command_owner'")).rows[0];
@@ -121,6 +121,6 @@ test('migration rejects pre-existing command-owner grant drift rather than adopt
   // Release this fixture's owned login before creating the separate drift case.
   await sandbox.admin.query(`DROP ROLE ${login}`);loginOwned=false;
   const db=await sandbox.database(),c=await sandbox.connect(db);await sandbox.apply(db,await sandbox.prefix(0),true);await installProviderSchema(c,db);await sandbox.apply(db,await sandbox.prefix(4));
-  await c.query('GRANT SELECT ON crest_private.app_sessions TO crest_command_owner');await assert.rejects(sandbox.apply(db));
+  await c.query('GRANT SELECT ON crest_private.app_sessions TO crest_command_owner');await assert.rejects(sandbox.apply(db,await sandbox.prefix(5)));
   assert.equal((await c.query("SELECT to_regprocedure('crest_commands.revoke_app_session(bytea,uuid)') AS routine")).rows[0].routine,null);
 });

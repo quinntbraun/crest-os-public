@@ -230,6 +230,16 @@ describe('server provider evidence with actual SDK HTTP and JWT signatures',()=>
     await denied(gate.verifyAccess(await token(),binding));expect(signal?.aborted).toBe(true);
     expect(Date.now()-start).toBeLessThan(12000);
   },15000);
+  it('rejects externally cancelled verification/login before provider IO',async()=>{
+    const controller=new AbortController();controller.abort();const gate=boundary();
+    await denied(gate.verifyAccess(await token(),binding,controller.signal));await denied(gate.authenticatePasswordTotp(input,{subject:owner},controller.signal));expect(paths).toHaveLength(0);
+  });
+  it('propagates active caller cancellation to provider/session verification',async()=>{
+    let entered:()=>void=()=>{};const ready=new Promise<void>(resolve=>{entered=resolve;});let observed:AbortSignal|undefined;
+    const gate=boundary(async(_subject,_session,signal)=>{observed=signal;entered();return new Promise(()=>{});});
+    const controller=new AbortController(),work=gate.verifyAccess(await token(),binding,controller.signal);await ready;controller.abort();
+    await denied(work);expect(observed?.aborted).toBe(true);
+  });
   it.each([
     {issuer:'http://example.com/auth/v1',environment:'production'},
     {issuer:'http://localhost/auth/v1'},{issuer:'http://169.254.169.254/auth/v1'},

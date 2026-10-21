@@ -13,12 +13,13 @@ import { localSessionEligibility } from '../../src/security/session-policy.ts';
 import { createProviderTokenStore,ProviderTokenStorageError } from '../../src/security/provider-token-store.ts';
 import { createSessionCredential } from '../../src/security/session-credential.ts';
 import { createSessionRevoker } from '../../src/security/session-revocation-db.ts';
+import { createSessionLifecycle,SessionLifecycleError } from '../../src/security/session-lifecycle.ts';
 
-let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke;
+let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
-  await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
+  await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target,await sandbox.prefix(5));
   login=`crest_probe_${randomBytes(8).toString('hex')}`;const password=randomBytes(32).toString('hex');
   assert.match(login,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
   await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;
@@ -27,6 +28,12 @@ before(async()=>{
   revoke=createSessionRevoker({connectionString:runtimeUrl,environment:'test'});
   service=await startRealAuthService(target);boundary=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},lookup);
   keys=createRemoteJWKSet(new URL(`${service.issuer}/.well-known/jwks.json`),{headers:{apikey:service.publicKey}});
+  // Existing synthetic schema5 app state, retained across the schema6 upgrade.
+  legacy=await localState({subject:randomUUID()},{identity:{passwordAt:Date.now()-1000,totpAt:Date.now()-1000,sessionId:randomUUID()}});
+  legacyBefore=(await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[legacy.session])).rows[0].row;
+  receipt=await sandbox.apply(target);
+  store=await createProviderTokenStore('primary',[{id:'primary',key:randomBytes(32)}]);
+  lifecycle=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},boundary,store);
 });
 after(async()=>{await service?.close();if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();});
 async function denied(work){await assert.rejects(work,e=>e instanceof ProviderAuthenticationError&&e.message==='PROVIDER_AUTHENTICATION_FAILED'&&e.cause===undefined);}
@@ -50,7 +57,7 @@ const bound=material=>({subject:material.identity.subject,sessionId:material.ide
 const access=material=>material.tokensForServerStorage().accessToken;
 async function cryptographicallyValid(material){await jwtVerify(access(material),keys,{algorithms:['ES256'],issuer:service.issuer,audience:'authenticated'});}
 function wrongCode(totp){const valid=new Set([-2,-1,0,1,2].map(delta=>totp.generate({timestamp:Date.now()+delta*30000})));let n=0;while(valid.has(String(n).padStart(6,'0')))n++;return String(n).padStart(6,'0');}
-async function localState(fixture,material){
+async function linkActor(fixture){
   const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
   await client.query('BEGIN');let actor;
   try {
@@ -60,10 +67,17 @@ async function localState(fixture,material){
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,actor.id]);
     await client.query('COMMIT');
   }catch(error){await client.query('ROLLBACK');throw error;}
+  return actor;
+}
+async function localState(fixture,material){
+  const actor=await linkActor(fixture);
   const authAt=new Date(Math.min(material.identity.passwordAt,material.identity.totpAt)),credential=createSessionCredential();
   const session=(await client.query("WITH moment AS (SELECT date_trunc('milliseconds',clock_timestamp()) AS stamp) INSERT INTO crest_private.app_sessions(actor_id,provider_session_id,token_hash,issued_security_epoch,created_at,authenticated_at,last_active_at,expires_at,trusted,created_by,updated_by) SELECT $1,$2,$3,$4,stamp,$5,stamp,stamp+interval '12 hours',false,$1,$1 FROM moment RETURNING id",[actor.id,material.identity.sessionId,credential.hashForDatabase(),actor.current_security_epoch,authAt])).rows[0].id;
   return {actor:actor.id,session,credential};
 }
+const issue=(f,trusted=false,gate=lifecycle)=>gate.login({email:f.email,password:f.password,factorId:f.factorId,code:f.totp.generate()},{subject:f.subject},trusted,signal());
+async function lifecycleDenied(work){await assert.rejects(work,e=>e instanceof SessionLifecycleError&&e.message==='SESSION_LIFECYCLE_FAILED'&&e.cause===undefined);}
+async function asWeb(work){await client.query('BEGIN');try{await client.query('SET LOCAL ROLE crest_web');return await work();}finally{await client.query('ROLLBACK');}}
 async function local(id){
   const r=(await client.query("SELECT s.*,a.kind,a.disabled_at,a.current_security_epoch,clock_timestamp() AS now FROM crest_private.app_sessions s JOIN crest_private.actors a ON a.id=s.actor_id WHERE s.id=$1",[id])).rows[0];
   return localSessionEligibility({actorId:r.actor_id,issuedSecurityEpoch:r.issued_security_epoch,trusted:r.trusted,createdAt:r.created_at.getTime(),authenticatedAt:r.authenticated_at.getTime(),lastActiveAt:r.last_active_at.getTime(),expiresAt:r.expires_at.getTime(),revokedAt:r.revoked_at?.getTime()??null,reauthAt:r.reauth_at?.getTime()??null},
@@ -182,4 +196,112 @@ test('Auth outage denies despite cached public keys and recovers with a new onli
   try{await denied(boundary.verifyAccess(access(material),bound(material)));await revoke(state.credential.cookieValueForResponse(),signal());assert.equal((await local(state.session)).reason,'REVOKED');}finally{await service.restart();}
   assert.equal((await boundary.verifyAccess(access(material),bound(material))).state,'provider_verified');
   assert.equal((await local(state.session)).reason,'REVOKED');
+});
+
+test('schema5 upgrade retains existing local rows and append-only CLI history',async()=>{
+  assert.equal(prior.history.length,5);assert.equal(receipt.history.length,6);assert.deepEqual(receipt.history.slice(0,5),prior.history);
+  assert.deepEqual((await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[legacy.session])).rows[0].row,legacyBefore);
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.session_events WHERE session_id=$1',[legacy.session])).rows[0].n,1);
+  assert.deepEqual((await sandbox.apply(target)).history,receipt.history);
+});
+test('issuance owner and functions retain forced RLS, lock-only identity rights and no runtime table exposure',async()=>{
+  const role=(await client.query("SELECT * FROM pg_roles WHERE rolname='crest_session_owner'")).rows[0];
+  for(const field of ['rolcanlogin','rolinherit','rolsuper','rolbypassrls','rolcreatedb','rolcreaterole','rolreplication'])assert.equal(role[field],false);
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM pg_auth_members WHERE roleid=$1 OR member=$1',[role.oid])).rows[0].n,0);
+  for(const schema of ['crest','crest_private','crest_commands','auth','public'])assert.equal((await client.query("SELECT has_schema_privilege('crest_session_owner',$1,'CREATE') AS allowed",[schema])).rows[0].allowed,false);
+  for(const table of ['auth.users','auth.sessions','auth.refresh_tokens','crest_private.identity_events','crest_private.business_recovery_authorities'])assert.equal((await client.query("SELECT has_table_privilege('crest_session_owner',$1,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE') AS allowed",[table])).rows[0].allowed,false);
+  const policies=(await client.query("SELECT pg_get_expr(polwithcheck,polrelid) AS check FROM pg_policy WHERE polname IN ('session_actor_lock','session_business_lock')")).rows;assert.equal(policies.length,2);assert(policies.every(p=>p.check==='false'));
+  await client.query('BEGIN');try{await client.query('SET LOCAL ROLE crest_session_owner');await assert.rejects(client.query('UPDATE crest_private.actors SET id=id WHERE id=$1',[legacy.actor]),e=>['42501','23514'].includes(e.code));}finally{await client.query('ROLLBACK');}
+  for(const fn of ['session_actor_context(text,uuid)','issue_app_session(uuid,bytea,uuid,uuid,text,uuid,uuid,timestamptz,timestamptz,boolean,bytea,text,uuid)','app_session_snapshot(bytea)']){
+    const f=(await client.query('SELECT prosecdef,proconfig,pg_get_userbyid(proowner) AS owner FROM pg_proc WHERE oid=$1::regprocedure',[`crest_commands.${fn}`])).rows[0];assert(f.prosecdef);assert.equal(f.owner,'crest_session_owner');assert.deepEqual(f.proconfig,['search_path=pg_catalog, pg_temp','row_security=on']);
+    for(const role of ['anon','authenticated','service_role','crest_worker','crest_recovery','crest_command_owner','crest_auth_reader'])assert.equal((await client.query("SELECT has_function_privilege($1,$2,'EXECUTE') AS allowed",[role,`crest_commands.${fn}`])).rows[0].allowed,false);
+  }
+  await asWeb(async()=>{await assert.rejects(client.query('SELECT * FROM crest_private.app_sessions'),e=>e.code==='42501');});
+});
+test('actual password/TOTP login issues hashed opaque material with encrypted tokens and exact untrusted lifetime',async()=>{
+  const f=await provision(),actor=await linkActor(f),issued=await issue(f),cookie=issued.cookieValueForResponse();
+  assert.throws(()=>JSON.stringify(issued),SessionLifecycleError);assert.equal(Buffer.from(cookie,'base64url').length,32);
+  const row=(await client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[issued.evidence.sessionId])).rows[0];
+  assert.equal(row.actor_id,actor.id);assert(!row.token_hash.includes(Buffer.from(cookie)));assert(row.provider_token_ciphertext);assert.equal(row.key_id,'primary');
+  assert.equal(row.expires_at.getTime()-row.created_at.getTime(),12*60*60*1000);assert.equal(issued.evidence.expiresAt,row.expires_at.getTime());
+  assert.equal(issued.evidence.state,'session_verified');assert(issued.evidence.tenantAndRequestVerificationRequired);
+  const evidence=await lifecycle.verify(cookie,signal(),'background',true);assert.equal(evidence.foregroundActivityAt,null);assert.equal(evidence.provider.subject,f.subject);
+  const audit=JSON.stringify((await client.query('SELECT * FROM crest_private.session_events WHERE session_id=$1',[row.id])).rows);for(const omitted of [cookie,'token_hash','provider_token_ciphertext'])assert(!audit.includes(omitted));
+});
+test('two issued devices coexist with exact trusted lifetime; verification proposes activity without writing it',async()=>{
+  const f=await provision();await linkActor(f);const a=await issue(f,true),b=await issue(f,true);assert.notEqual(a.evidence.sessionId,b.evidence.sessionId);
+  const before=(await client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[b.evidence.sessionId])).rows[0];assert.equal(before.expires_at.getTime()-before.created_at.getTime(),720*60*60*1000);
+  const evidence=await lifecycle.verify(b.cookieValueForResponse(),signal(),'foreground',true);assert(Number.isSafeInteger(evidence.foregroundActivityAt));
+  const after=(await client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[b.evidence.sessionId])).rows[0];assert.equal(after.version,before.version);assert.equal(after.last_active_at.getTime(),before.last_active_at.getTime());
+  await revoke(a.cookieValueForResponse(),signal());await lifecycleDenied(lifecycle.verify(a.cookieValueForResponse(),signal()));assert.equal((await lifecycle.verify(b.cookieValueForResponse(),signal())).sessionId,b.evidence.sessionId);
+});
+test('a valid provider user without a linked owner never receives an app session or automatic membership',async()=>{
+  const f=await provision(),before=(await client.query('SELECT count(*)::int AS n FROM crest_private.app_sessions')).rows[0].n;
+  await lifecycleDenied(issue(f));assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.app_sessions')).rows[0].n,before);
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.actors WHERE auth_user_id=$1',[f.subject])).rows[0].n,0);
+});
+test('live security-epoch changes deny retrieval without a cached positive decision',async()=>{
+  const f=await provision(),actor=await linkActor(f),issued=await issue(f);await lifecycle.verify(issued.cookieValueForResponse(),signal());
+  await client.query('UPDATE crest_private.actors SET current_security_epoch=$1,version=version+1 WHERE id=$2',[randomUUID(),actor.id]);await lifecycleDenied(lifecycle.verify(issued.cookieValueForResponse(),signal()));
+});
+test('disabled actors deny retrieval even while provider identity and another local owner remain valid',async()=>{
+  const f=await provision(),actor=await linkActor(f),issued=await issue(f),bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
+  const backup=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic backup',$1,$2,$3,$3,'manual') RETURNING id",[service.issuer,randomUUID(),bootstrap])).rows[0].id;
+  const business=(await client.query('SELECT business_id FROM crest.memberships WHERE actor_id=$1',[actor.id])).rows[0].business_id;
+  await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$3,$3,'manual')",[business,backup,actor.id]);
+  await client.query('UPDATE crest_private.actors SET disabled_at=clock_timestamp(),version=version+1 WHERE id=$1',[actor.id]);await lifecycleDenied(lifecycle.verify(issued.cookieValueForResponse(),signal()));
+});
+test('provider logout invalidates issued local evidence despite a still-signed access JWT',async()=>{
+  const f=await provision();await linkActor(f);const issued=await issue(f),row=(await client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[issued.evidence.sessionId])).rows[0];
+  const binding={actorId:row.actor_id,appSessionId:row.id,providerSessionId:row.provider_session_id,securityEpoch:row.issued_security_epoch,subject:f.subject,issuer:service.issuer};
+  const access=(await store.decrypt({keyId:row.key_id,ciphertext:row.provider_token_ciphertext},binding)).tokensForProvider().accessToken;
+  authResult(await service.admin.admin.signOut(access,'local'),'issued_local_signout');await jwtVerify(access,keys,{algorithms:['ES256'],issuer:service.issuer,audience:'authenticated'});
+  await lifecycleDenied(lifecycle.verify(issued.cookieValueForResponse(),signal()));
+});
+test('ciphertext substitution between issued sessions fails before it can establish evidence',async()=>{
+  const f=await provision(),g=await provision();await linkActor(f);await linkActor(g);const a=await issue(f),b=await issue(g);
+  await client.query('UPDATE crest_private.app_sessions SET provider_token_ciphertext=(SELECT provider_token_ciphertext FROM crest_private.app_sessions WHERE id=$1),version=version+1 WHERE id=$2',[a.evidence.sessionId,b.evidence.sessionId]);
+  await lifecycleDenied(lifecycle.verify(b.cookieValueForResponse(),signal()));assert.equal((await lifecycle.verify(a.cookieValueForResponse(),signal())).sessionId,a.evidence.sessionId);
+});
+test('revocation committed during real provider verification is caught by the final database reread',async()=>{
+  const f=await provision();await linkActor(f);const issued=await issue(f);let entered,release;const ready=new Promise(resolve=>{entered=resolve;}),held=new Promise(resolve=>{release=resolve;});
+  // Synchronization wraps the real lookup; it never supplies a fake result.
+  const gate=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},async(subject,session,signal)=>{const live=await lookup(subject,session,signal);entered();await held;return live;});
+  const racing=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},gate,store),pending=racing.verify(issued.cookieValueForResponse(),signal()),result=lifecycleDenied(pending);
+  try{await Promise.race([ready,delay(5000).then(()=>{throw new Error('real lookup barrier was not reached');})]);await revoke(issued.cookieValueForResponse(),signal());}finally{release();}
+  await result;
+});
+test('unknown/wrong encryption keys fail closed while the original valid session remains unchanged',async()=>{
+  const f=await provision();await linkActor(f);const issued=await issue(f),wrong=await createProviderTokenStore('primary',[{id:'primary',key:randomBytes(32)}]);
+  await lifecycleDenied(createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},boundary,wrong).verify(issued.cookieValueForResponse(),signal()));
+  assert.equal((await lifecycle.verify(issued.cookieValueForResponse(),signal())).sessionId,issued.evidence.sessionId);
+});
+test('direct SQL rejects stale epoch/provider identity, malformed hash and stale/future authentication times',async()=>{
+  const f=await provision(),actor=await linkActor(f),material=await fresh(f),credential=createSessionCredential(),id=randomUUID();
+  const encrypted=await store.encrypt(material.tokensForServerStorage(),{actorId:actor.id,appSessionId:id,securityEpoch:actor.current_security_epoch,providerSessionId:material.identity.sessionId,subject:f.subject,issuer:service.issuer});
+  const args=[id,credential.hashForDatabase(),actor.id,actor.current_security_epoch,service.issuer,f.subject,material.identity.sessionId,new Date(material.identity.passwordAt),new Date(material.identity.totpAt),false,Buffer.from(encrypted.ciphertext),encrypted.keyId,randomUUID()];
+  const sql='SELECT crest_commands.issue_app_session($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)';
+  for(const [index,value] of [[3,randomUUID()],[5,randomUUID()],[6,randomUUID()],[1,Buffer.alloc(31)],[7,new Date(Date.now()-16*60*1000)],[8,new Date(Date.now()+60000)],[9,null]]){
+    const altered=[...args];altered[index]=value;await asWeb(async()=>{await assert.rejects(client.query(sql,altered),e=>['42501','22023'].includes(e.code));});
+  }
+  await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ');try{await client.query('SET LOCAL ROLE crest_web');await assert.rejects(client.query(sql,args),e=>e.code==='25001');}finally{await client.query('ROLLBACK');}
+  await asWeb(async()=>{await client.query(sql,args);});assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.app_sessions WHERE id=$1',[id])).rows[0].n,0);
+});
+test('issuance waiting on an actor root rereads a newly committed security epoch and releases no credential',async()=>{
+  const f=await provision(),actor=await linkActor(f),locker=await sandbox.connect(target);await locker.query('BEGIN');await locker.query('SELECT id FROM crest_private.actors WHERE id=$1 FOR UPDATE',[actor.id]);
+  const pending=issue(f),result=lifecycleDenied(pending);let blocked=false;
+  try{
+    const deadline=Date.now()+5000;while(!blocked&&Date.now()<deadline){blocked=(await sandbox.admin.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE application_name='crest_session_lifecycle' AND wait_event_type='Lock'")).rows[0].n>0;if(!blocked)await delay(10);}
+    assert(blocked,'actual issuance must wait on the held actor root');await locker.query('UPDATE crest_private.actors SET current_security_epoch=$1,version=version+1 WHERE id=$2',[randomUUID(),actor.id]);await locker.query('COMMIT');await result;
+  }finally{await locker.query('ROLLBACK');}
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.app_sessions WHERE actor_id=$1',[actor.id])).rows[0].n,0);
+});
+test('retrieval cancellation and database failure return generic errors and retain no lifecycle connection',async()=>{
+  const f=await provision();await linkActor(f);const issued=await issue(f),locker=await sandbox.connect(target),controller=new AbortController();
+  await locker.query('BEGIN');await locker.query('LOCK TABLE crest_private.app_sessions IN ACCESS EXCLUSIVE MODE');
+  const pending=lifecycle.verify(issued.cookieValueForResponse(),controller.signal),result=lifecycleDenied(pending);let blocked=false;
+  try{const deadline=Date.now()+2000;while(!blocked&&Date.now()<deadline){blocked=(await sandbox.admin.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE application_name='crest_session_lifecycle' AND wait_event_type='Lock'")).rows[0].n>0;if(!blocked)await delay(10);}assert(blocked);controller.abort();await result;}finally{await locker.query('ROLLBACK');}
+  const url=new URL(runtimeUrl);url.port='1';await lifecycleDenied(createSessionLifecycle({connectionString:url.toString(),environment:'test'},boundary,store).verify(issued.cookieValueForResponse(),signal()));
+  assert.equal((await lifecycle.verify(issued.cookieValueForResponse(),signal())).sessionId,issued.evidence.sessionId);
+  assert.equal((await sandbox.admin.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE application_name='crest_session_lifecycle'")).rows[0].n,0);
 });

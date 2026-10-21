@@ -25,6 +25,11 @@
       "version": "20261021172958",
       "file": "20261021172958_local_session_revocation.sql",
       "sha256": "f2e3d76c2bb9c0144bbd87a063a57dc62a225ee133103a2f194225eea3fad361"
+    },
+    {
+      "version": "20261021180111",
+      "file": "20261021180111_session_issuance.sql",
+      "sha256": "849d1e230f1699266bacc8e904cc2268f2b0ad6ea64012cec9e1b4088667c674"
     }
   ]
 }
