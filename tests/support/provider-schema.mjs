@@ -15,7 +15,9 @@ export async function installProviderSchema(client,target) {
   await client.query('CREATE SCHEMA auth AUTHORIZATION supabase_auth_admin');
   await client.query('CREATE EXTENSION IF NOT EXISTS pgcrypto');
   await client.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
-  url.searchParams.set('options','-c role=supabase_auth_admin');
+  // SET ROLE does not apply login-role defaults. Match the provider's normal
+  // auth-first search path so its unqualified migration ledger stays in auth.
+  url.searchParams.set('options','-c role=supabase_auth_admin -c search_path=auth,public');
   const env={...process.env,GOTRUE_DB_DATABASE_URL:url.toString(),GOTRUE_DB_DRIVER:'postgres',GOTRUE_DB_NAMESPACE:'auth',
     GOTRUE_SITE_URL:'http://127.0.0.1:3000',API_EXTERNAL_URL:'http://127.0.0.1:9999',
     GOTRUE_JWT_SECRET:randomBytes(48).toString('base64url'),GOTRUE_LOG_LEVEL:'error'};
