@@ -117,6 +117,9 @@ test('database outage and malformed credentials expose only generic errors',asyn
   await denied(unavailable(createSessionCredential().cookieValueForResponse(),signal()));await denied(revoke('invalid',signal()));
 });
 test('migration rejects pre-existing command-owner grant drift rather than adopting it',async()=>{
+  // Bootstrap intentionally rejects existing runtime memberships cluster-wide.
+  // Release this fixture's owned login before creating the separate drift case.
+  await sandbox.admin.query(`DROP ROLE ${login}`);loginOwned=false;
   const db=await sandbox.database(),c=await sandbox.connect(db);await sandbox.apply(db,await sandbox.prefix(0),true);await installProviderSchema(c,db);await sandbox.apply(db,await sandbox.prefix(4));
   await c.query('GRANT SELECT ON crest_private.app_sessions TO crest_command_owner');await assert.rejects(sandbox.apply(db));
   assert.equal((await c.query("SELECT to_regprocedure('crest_commands.revoke_app_session(bytea,uuid)') AS routine")).rows[0].routine,null);
