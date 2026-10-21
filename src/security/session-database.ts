@@ -1,6 +1,7 @@
 import 'server-only';
 import pg from 'pg';
 export type SessionDatabaseConfiguration={connectionString:string;environment:'production'|'test'};
+type Query=(text:string,values:unknown[])=>Promise<unknown>;
 // Trusted server SQL only. No caller-supplied identifiers or browser exposure.
 export function sessionDatabase(config:SessionDatabaseConfiguration){
   let connectionString:string;
@@ -12,17 +13,17 @@ export function sessionDatabase(config:SessionDatabaseConfiguration){
     connectionString=url.toString();
   }catch{throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');}
   const ssl=config.environment==='production'?{rejectUnauthorized:true}:false;
-  return async(text:string,values:unknown[],signal:AbortSignal):Promise<unknown>=>{
+  async function connection<T>(signal:AbortSignal,transaction:boolean,work:(query:Query,signal:AbortSignal)=>Promise<T>):Promise<T>{
     if(signal.aborted)throw new Error('SESSION_DATABASE_FAILED');
-    const client=new pg.Client({connectionString,ssl,connectionTimeoutMillis:1000,statement_timeout:1500,lock_timeout:750,
-      query_timeout:2000,options:'-c role=crest_web',application_name:'crest_session_lifecycle'});
-    client.on('error',()=>{});
     const controller=new AbortController(),combined=AbortSignal.any([signal,controller.signal]);
-    const timer=setTimeout(()=>controller.abort(),3000);timer.unref();
+    const client=new pg.Client({connectionString,ssl,connectionTimeoutMillis:1000,statement_timeout:transaction?11000:1500,lock_timeout:transaction?10000:750,
+      query_timeout:transaction?12000:2000,options:'-c role=crest_web',application_name:transaction?'crest_session_refresh':'crest_session_lifecycle'});
+    client.on('error',()=>controller.abort());client.once('end',()=>controller.abort());
+    const timer=setTimeout(()=>controller.abort(),transaction?15000:3000);timer.unref();
     const abort=()=>{void client.end().catch(()=>undefined);};combined.addEventListener('abort',abort,{once:true});
     const interrupted=new Promise<never>((_,reject)=>combined.addEventListener('abort',()=>reject(new Error('SESSION_DATABASE_FAILED')),{once:true}));
     try{
-      const work=(async()=>{
+      const pending=(async()=>{
         await client.connect();if(combined.aborted)throw new Error();
         const guard=await client.query<{allowed:boolean}>(`SELECT current_user='crest_web'
           AND EXISTS (SELECT 1 FROM pg_catalog.pg_roles r WHERE r.rolname=session_user AND r.rolcanlogin
@@ -30,12 +31,24 @@ export function sessionDatabase(config:SessionDatabaseConfiguration){
           AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles r ON r.oid=m.roleid
             WHERE m.member=(SELECT oid FROM pg_catalog.pg_roles WHERE rolname=session_user) AND r.rolname<>'crest_web') AS allowed`);
         if(guard.rows[0]?.allowed!==true||guard.rows.length!==1||combined.aborted)throw new Error();
-        const result=await client.query<{result:unknown}>(text,values);
-        if(result.rows.length!==1||!Object.hasOwn(result.rows[0]??{},'result'))throw new Error();
-        return result.rows[0]!.result;
+        const query:Query=async(text,values)=>{
+          if(combined.aborted)throw new Error();
+          const result=await client.query<{result:unknown}>(text,values);
+          if(result.rows.length!==1||!Object.hasOwn(result.rows[0]??{},'result'))throw new Error();
+          return result.rows[0]!.result;
+        };
+        if(!transaction)return work(query,combined);
+        await client.query('BEGIN ISOLATION LEVEL READ COMMITTED');
+        try{
+          await client.query("SET LOCAL idle_in_transaction_session_timeout='12s'; SET LOCAL transaction_timeout='15s'");
+          const result=await work(query,combined);if(combined.aborted)throw new Error();
+          await client.query('COMMIT');return result;
+        }catch(error){if(!combined.aborted)await client.query('ROLLBACK').catch(()=>undefined);throw error;}
       })();
-      const result=await Promise.race([work,interrupted]);if(combined.aborted)throw new Error();return result;
+      const result=await Promise.race([pending,interrupted]);if(combined.aborted)throw new Error();return result;
     }catch{throw new Error('SESSION_DATABASE_FAILED');}
     finally{clearTimeout(timer);combined.removeEventListener('abort',abort);await client.end().catch(()=>undefined);}
-  };
+  }
+  const query=async(text:string,values:unknown[],signal:AbortSignal)=>connection(signal,false,current=>current(text,values));
+  return Object.assign(query,{transaction:<T>(work:(query:Query,signal:AbortSignal)=>Promise<T>,signal:AbortSignal)=>connection(signal,true,work)});
 }

@@ -25,6 +25,8 @@ let issuer:string;
 let userOverrides:Record<string,unknown>;
 let initialOverrides:JWTPayload;
 let verifiedOverrides:JWTPayload;
+let refreshReference:JWTPayload;
+let refreshOverrides:JWTPayload;
 let mode:string;
 let paths:string[];
 let lookups:number;
@@ -54,6 +56,12 @@ async function serve(req:IncomingMessage,res:ServerResponse) {
   if(mode==='malformed') {res.end('{');return;}
   if(mode==='unavailable') {json(res,{msg:'private provider diagnostic'},503);return;}
   if(mode==='hanging') return;
+  if(path==='/auth/v1/token?grant_type=refresh_token'){
+    let body='';for await(const chunk of req)body+=chunk;
+    if(JSON.parse(body).refresh_token!=='synthetic-refresh-only'){json(res,{msg:'synthetic denied'},400);return;}
+    const now=Math.floor(Date.now()/1000);
+    json(res,{access_token:await token({...refreshReference,iat:now,exp:now+3600,...refreshOverrides}),refresh_token:'synthetic-rotated-only',expires_in:3600,token_type:'bearer',user:profile(refreshReference.sub)});return;
+  }
   if(path==='/auth/v1/token?grant_type=password') {
     let body='';for await(const chunk of req) body+=chunk;
     const credentials=JSON.parse(body);
@@ -99,7 +107,7 @@ beforeAll(async()=>{
   const address=server.address();if(!address||typeof address==='string') throw new Error('fixture bind failed');
   issuer=`http://127.0.0.1:${address.port}/auth/v1`;
 });
-beforeEach(()=>{sessions.clear();sessions.set(fixedSession,owner);challenges.clear();userOverrides={};initialOverrides={};verifiedOverrides={};mode='normal';paths=[];lookups=0;});
+beforeEach(()=>{sessions.clear();sessions.set(fixedSession,owner);challenges.clear();userOverrides={};initialOverrides={};verifiedOverrides={};refreshReference={};refreshOverrides={};mode='normal';paths=[];lookups=0;});
 afterAll(async()=>{server.closeAllConnections();await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));});
 
 describe('server provider evidence with actual SDK HTTP and JWT signatures',()=>{
@@ -240,6 +248,32 @@ describe('server provider evidence with actual SDK HTTP and JWT signatures',()=>
     const controller=new AbortController(),work=gate.verifyAccess(await token(),binding,controller.signal);await ready;controller.abort();
     await denied(work);expect(observed?.aborted).toBe(true);
   });
+  it('refreshes an expired signed AMR reference without using it as current provider evidence',async()=>{
+    const old=Math.floor(Date.now()/1000)-3600,access=await token({iat:old,exp:old+3599,amr:[{method:'password',timestamp:old},{method:'totp',timestamp:old}]});refreshReference=decodeJwt(access);
+    const gate=boundary();await denied(gate.verifyAccess(access,binding));
+    const material=await gate.refreshForSession({accessToken:access,refreshToken:'synthetic-refresh-only'},binding);
+    expect(material.identity.passwordAt).toBe(old*1000);expect(material.identity.totpAt).toBe(old*1000);expect(material.identity.expiresAt).toBeGreaterThan(Date.now());
+    expect(material.tokensForServerStorage().refreshToken).toBe('synthetic-rotated-only');expect(()=>JSON.stringify(material)).toThrow();
+    expect(paths.filter(p=>p.includes('grant_type=refresh_token'))).toHaveLength(1);expect(lookups).toBe(1);
+  });
+  it('rejects an expired reference with an invalid signature before any refresh exchange',async()=>{
+    const old=Math.floor(Date.now()/1000)-3600;await denied(boundary().refreshForSession({accessToken:await token({iat:old,exp:old+3599},'ES256',{},true),refreshToken:'synthetic-refresh-only'},binding));
+    expect(paths.some(p=>p.includes('grant_type=refresh_token'))).toBe(false);
+  });
+  it.each([{iss:'https://other.example.com/auth/v1'},{aud:'other'},{sub:other},{session_id:other},{aal:'aal1'},{role:'service_role'},{is_anonymous:true},{nbf:4102444800}])('rejects invalid reference binding %j',async overrides=>{
+    await denied(boundary().refreshForSession({accessToken:await token(overrides),refreshToken:'synthetic-refresh-only'},binding));expect(paths.some(p=>p.includes('grant_type=refresh_token'))).toBe(false);
+  });
+  it.each(['subject','session','aal','password','totp'])('rejects refreshed %s changes',async field=>{
+    const old=Math.floor(Date.now()/1000)-3600,amr=[{method:'password',timestamp:old},{method:'totp',timestamp:old}],access=await token({amr});refreshReference=decodeJwt(access);
+    refreshOverrides=field==='subject'?{sub:other}:field==='session'?{session_id:other}:field==='aal'?{aal:'aal1'}:{amr:amr.map(a=>a.method===field?{...a,timestamp:old+1}:a)};
+    await denied(boundary().refreshForSession({accessToken:access,refreshToken:'synthetic-refresh-only'},binding));expect(paths.filter(p=>p.includes('grant_type=refresh_token'))).toHaveLength(1);
+  });
+  it.each(['unavailable','hanging'])('does not let the SDK retry an uncertain %s refresh',async failure=>{
+    const access=await token(),gate=boundary();refreshReference=decodeJwt(access);
+    await gate.verifyAccess(access,binding);paths=[];mode=failure;const started=Date.now();
+    await denied(gate.refreshForSession({accessToken:access,refreshToken:'synthetic-refresh-only'},binding));
+    expect(Date.now()-started).toBeLessThan(5000);expect(paths.filter(p=>p.includes('grant_type=refresh_token'))).toHaveLength(1);
+  },7000);
   it.each([
     {issuer:'http://example.com/auth/v1',environment:'production'},
     {issuer:'http://localhost/auth/v1'},{issuer:'http://169.254.169.254/auth/v1'},

@@ -15,7 +15,7 @@ import { createSessionCredential } from '../../src/security/session-credential.t
 import { createSessionRevoker } from '../../src/security/session-revocation-db.ts';
 import { createSessionLifecycle,SessionLifecycleError } from '../../src/security/session-lifecycle.ts';
 
-let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,legacy,legacyBefore;
+let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
@@ -31,16 +31,17 @@ before(async()=>{
   // Existing synthetic schema5 app state, retained across the schema6 upgrade.
   legacy=await localState({subject:randomUUID()},{identity:{passwordAt:Date.now()-1000,totpAt:Date.now()-1000,sessionId:randomUUID()}});
   legacyBefore=(await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[legacy.session])).rows[0].row;
-  receipt=await sandbox.apply(target);
+  receipt=await sandbox.apply(target,await sandbox.prefix(6));
+  refreshReceipt=await sandbox.apply(target);
   store=await createProviderTokenStore('primary',[{id:'primary',key:randomBytes(32)}]);
   lifecycle=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},boundary,store);
 });
 after(async()=>{await service?.close();if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();});
 async function denied(work){await assert.rejects(work,e=>e instanceof ProviderAuthenticationError&&e.message==='PROVIDER_AUTHENTICATION_FAILED'&&e.cause===undefined);}
-async function provision({confirmed=true,enroll=true,backup=false}={}) {
+async function provision({confirmed=true,enroll=true,backup=false,provider=service}={}) {
   const email=`synthetic-${randomUUID()}@example.com`,password=randomBytes(32).toString('base64url');
-  const user=authResult(await service.admin.admin.createUser({email,password,email_confirm:confirmed}),'provision').user;
-  assert(user?.id,'provider must return a durable subject');const sdk=service.sdk();await sdk.initialize();
+  const user=authResult(await provider.admin.admin.createUser({email,password,email_confirm:confirmed}),'provision').user;
+  assert(user?.id,'provider must return a durable subject');const sdk=provider.sdk();await sdk.initialize();
   if(!confirmed||!enroll)return {subject:user.id,email,password,sdk};
   authResult(await sdk.signInWithPassword({email,password}),'enrollment_password');
   const add=async()=>{
@@ -57,11 +58,11 @@ const bound=material=>({subject:material.identity.subject,sessionId:material.ide
 const access=material=>material.tokensForServerStorage().accessToken;
 async function cryptographicallyValid(material){await jwtVerify(access(material),keys,{algorithms:['ES256'],issuer:service.issuer,audience:'authenticated'});}
 function wrongCode(totp){const valid=new Set([-2,-1,0,1,2].map(delta=>totp.generate({timestamp:Date.now()+delta*30000})));let n=0;while(valid.has(String(n).padStart(6,'0')))n++;return String(n).padStart(6,'0');}
-async function linkActor(fixture){
+async function linkActor(fixture,issuer=service.issuer){
   const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
   await client.query('BEGIN');let actor;
   try {
-    actor=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic Auth owner',$1,$2,$3,$3,'manual') RETURNING *",[service.issuer,fixture.subject,bootstrap])).rows[0];
+    actor=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic Auth owner',$1,$2,$3,$3,'manual') RETURNING *",[issuer,fixture.subject,bootstrap])).rows[0];
     const business=(await client.query("INSERT INTO crest.businesses(legal_name,timezone,created_by,updated_by,origin) VALUES('Synthetic Auth business','UTC',$1,$1,'manual') RETURNING id",[actor.id])).rows[0].id;
     await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,actor.id]);
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,actor.id]);
@@ -202,7 +203,8 @@ test('schema5 upgrade retains existing local rows and append-only CLI history',a
   assert.equal(prior.history.length,5);assert.equal(receipt.history.length,6);assert.deepEqual(receipt.history.slice(0,5),prior.history);
   assert.deepEqual((await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[legacy.session])).rows[0].row,legacyBefore);
   assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.session_events WHERE session_id=$1',[legacy.session])).rows[0].n,1);
-  assert.deepEqual((await sandbox.apply(target)).history,receipt.history);
+  assert.equal(refreshReceipt.history.length,7);assert.deepEqual(refreshReceipt.history.slice(0,6),receipt.history);
+  assert.deepEqual((await sandbox.apply(target)).history,refreshReceipt.history);
 });
 test('issuance owner and functions retain forced RLS, lock-only identity rights and no runtime table exposure',async()=>{
   const role=(await client.query("SELECT * FROM pg_roles WHERE rolname='crest_session_owner'")).rows[0];
@@ -316,4 +318,159 @@ test('provider outage after creation commits releases no credential and revokes 
   try{await lifecycleDenied(issue(f,false,createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},gate,store)));}finally{if(stopped)await service.restart();}
   const rows=(await client.query('SELECT * FROM crest_private.app_sessions WHERE actor_id=$1',[actor.id])).rows;assert.equal(rows.length,1);assert(rows[0].revoked_at);assert.equal(rows[0].provider_token_ciphertext,null);assert.equal(rows[0].key_id,null);
   assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.session_events WHERE session_id=$1',[rows[0].id])).rows[0].n,2);
+});
+
+const sessionRow=async issued=>(await client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[issued.evidence.sessionId])).rows[0];
+function unchangedSession(before,after){
+  for(const field of ['id','actor_id','provider_session_id','issued_security_epoch','trusted'])assert.equal(after[field],before[field]);
+  for(const field of ['created_at','authenticated_at','expires_at','last_active_at','reauth_at'])assert.equal(after[field]?.getTime()??null,before[field]?.getTime()??null);
+  assert(after.token_hash.equals(before.token_hash),'credential hash must remain unchanged');
+}
+async function tokenMaterial(row,f,provider=service,ring=store){
+  return (await ring.decrypt({keyId:row.key_id,ciphertext:row.provider_token_ciphertext},
+    {actorId:row.actor_id,appSessionId:row.id,providerSessionId:row.provider_session_id,securityEpoch:row.issued_security_epoch,subject:f.subject,issuer:provider.issuer})).tokensForProvider();
+}
+function heldRefresh(){
+  let entered,release,first=true;const ready=new Promise(resolve=>{entered=resolve;}),held=new Promise(resolve=>{release=resolve;});
+  const gate=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},async(subject,session,signal)=>{
+    const live=await lookup(subject,session,signal);
+    if(first){first=false;entered();await held;}return live;
+  });
+  return {ready,release,lifecycle:createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},gate,store)};
+}
+async function atBarrier(ready){await Promise.race([ready,delay(5000).then(()=>{throw new Error('actual refresh lookup barrier was not reached');})]);}
+async function waitForRefreshLock(){
+  const deadline=Date.now()+5000;
+  while(Date.now()<deadline){
+    if((await sandbox.admin.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname=$1 AND application_name='crest_session_refresh' AND wait_event_type='Lock'",[new URL(target).pathname.slice(1)])).rows[0].n>0)return;
+    await delay(10);
+  }
+  assert.fail('second refresh must wait on the actual session row lock');
+}
+
+test('locked refresh rotates encrypted real provider tokens without renewing login, activity or local lifetime',async()=>{
+  const f=await provision();await linkActor(f);const issued=await issue(f,true),before=await sessionRow(issued),old=await tokenMaterial(before,f);
+  const events=(await client.query('SELECT count(*)::int AS n FROM crest_private.session_events WHERE session_id=$1',[before.id])).rows[0].n;
+  const evidence=await lifecycle.refresh(issued.cookieValueForResponse(),signal()),after=await sessionRow(issued),current=await tokenMaterial(after,f);
+  assert.equal(evidence.state,'session_verified');assert(evidence.tenantAndRequestVerificationRequired);assert.equal(evidence.foregroundActivityAt,null);
+  assert.equal(evidence.provider.passwordAt,issued.evidence.provider.passwordAt);assert.equal(evidence.provider.totpAt,issued.evidence.provider.totpAt);
+  assert(current.refreshToken!==old.refreshToken,'provider refresh token must rotate');assert(!after.provider_token_ciphertext.equals(before.provider_token_ciphertext),'ciphertext must be replaced');
+  assert.equal(BigInt(after.version),BigInt(before.version)+1n);unchangedSession(before,after);
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.session_events WHERE session_id=$1',[before.id])).rows[0].n,events,'same-key refresh is not authentication or foreground activity');
+});
+
+test('two overlapping real refresh requests serialize and reuse the winner instead of replaying stale material',async()=>{
+  const f=await provision();await linkActor(f);const issued=await issue(f),before=await sessionRow(issued),held=heldRefresh();
+  const first=held.lifecycle.refresh(issued.cookieValueForResponse(),signal());let second;
+  // Attach handlers immediately so a barrier failure cannot cause an unhandled rejection.
+  const results=[first.then(value=>({value}),()=>({failed:true}))];
+  try{await atBarrier(held.ready);second=held.lifecycle.refresh(issued.cookieValueForResponse(),signal());results.push(second.then(value=>({value}),()=>({failed:true})));await waitForRefreshLock();}finally{held.release();}
+  for(const result of await Promise.all(results)){assert(!result.failed,'both overlapping refresh requests must verify');assert.equal(result.value.sessionId,before.id);}
+  const after=await sessionRow(issued);assert.equal(BigInt(after.version),BigInt(before.version)+1n);unchangedSession(before,after);
+});
+
+test('refresh migrates to the configured encryption key while retaining safe history and unchanged authentication',async()=>{
+  const f=await provision();await linkActor(f);const first=randomBytes(32),second=randomBytes(32);
+  const original=await createProviderTokenStore('first',[{id:'first',key:first}]),rotated=await createProviderTokenStore('second',[{id:'first',key:first},{id:'second',key:second}]);
+  const config={connectionString:runtimeUrl,environment:'test'},issued=await issue(f,false,createSessionLifecycle(config,boundary,original)),before=await sessionRow(issued);
+  await createSessionLifecycle(config,boundary,rotated).refresh(issued.cookieValueForResponse(),signal());const after=await sessionRow(issued);
+  assert.equal(after.key_id,'second');unchangedSession(before,after);
+  await assert.rejects(tokenMaterial(after,f,service,original),ProviderTokenStorageError);
+  assert((await tokenMaterial(after,f,service,rotated)).refreshToken,'current key must decrypt replacement');
+  const events=(await client.query('SELECT * FROM crest_private.session_events WHERE session_id=$1',[after.id])).rows;assert.equal(events.length,2);
+  const serialized=JSON.stringify(events);for(const omitted of ['key_id','provider_token_ciphertext','token_hash'])assert(!serialized.includes(omitted),'key change history excludes secret storage metadata');
+});
+
+test('revocation committed first prevents refresh and cannot restore deleted ciphertext',async()=>{
+  const f=await provision();await linkActor(f);const issued=await issue(f);await revoke(issued.cookieValueForResponse(),signal());const before=await sessionRow(issued);
+  await lifecycleDenied(lifecycle.refresh(issued.cookieValueForResponse(),signal()));const after=await sessionRow(issued);
+  assert(after.revoked_at);assert.equal(after.provider_token_ciphertext,null);assert.equal(after.key_id,null);assert.equal(after.version,before.version);
+});
+
+test('actual Auth outage during refresh fails once, revokes locally and leaves the other device recoverable',async()=>{
+  const f=await provision();await linkActor(f);const issued=await issue(f),other=await issue(f);
+  await service.stop();
+  try{await lifecycleDenied(lifecycle.refresh(issued.cookieValueForResponse(),signal()));}finally{await service.restart();}
+  const row=await sessionRow(issued);assert(row.revoked_at);assert.equal(row.provider_token_ciphertext,null);assert.equal(row.key_id,null);
+  await lifecycleDenied(lifecycle.verify(issued.cookieValueForResponse(),signal()));
+  assert.equal((await lifecycle.verify(other.cookieValueForResponse(),signal())).sessionId,other.evidence.sessionId);
+});
+
+test('revocation waits for a held refresh and then irreversibly clears the replacement',async()=>{
+  const f=await provision();await linkActor(f);const issued=await issue(f),held=heldRefresh();
+  const refreshing=held.lifecycle.refresh(issued.cookieValueForResponse(),signal()).then(()=>undefined,()=>undefined);let revoking;
+  try{await atBarrier(held.ready);revoking=revoke(issued.cookieValueForResponse(),signal());held.release();await revoking;}finally{held.release();await refreshing;}
+  const row=await sessionRow(issued);assert(row.revoked_at);assert.equal(row.provider_token_ciphertext,null);assert.equal(row.key_id,null);
+  await lifecycleDenied(lifecycle.verify(issued.cookieValueForResponse(),signal()));
+});
+
+test('cancellation after actual provider rotation rolls back and revokes only the affected local session',async()=>{
+  const f=await provision();await linkActor(f);const issued=await issue(f),other=await issue(f),held=heldRefresh(),controller=new AbortController();
+  const result=lifecycleDenied(held.lifecycle.refresh(issued.cookieValueForResponse(),controller.signal));
+  try{await atBarrier(held.ready);controller.abort();await result;}finally{held.release();}
+  const row=await sessionRow(issued);assert(row.revoked_at);assert.equal(row.provider_token_ciphertext,null);assert.equal(row.key_id,null);
+  assert.equal((await lifecycle.verify(other.cookieValueForResponse(),signal())).sessionId,other.evidence.sessionId);
+});
+
+test('loss of the owned transaction connection after rotation fails closed and leaves no held refresh connection',async()=>{
+  const f=await provision();await linkActor(f);const issued=await issue(f),held=heldRefresh();
+  const result=lifecycleDenied(held.lifecycle.refresh(issued.cookieValueForResponse(),signal()));
+  try{
+    await atBarrier(held.ready);
+    const rows=(await sandbox.admin.query("SELECT pid FROM pg_stat_activity WHERE datname=$1 AND usename=$2 AND application_name='crest_session_refresh'",[new URL(target).pathname.slice(1),login])).rows;
+    assert.equal(rows.length,1,'terminate only this fixture-owned refresh backend');
+    assert.equal((await sandbox.admin.query('SELECT pg_terminate_backend($1) AS stopped',[rows[0].pid])).rows[0].stopped,true);await result;
+  }finally{held.release();}
+  const row=await sessionRow(issued);assert(row.revoked_at);assert.equal(row.provider_token_ciphertext,null);
+  assert.equal((await sandbox.admin.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname=$1 AND application_name='crest_session_refresh'",[new URL(target).pathname.slice(1)])).rows[0].n,0);
+});
+
+test('provider revocation between real exchange and SQL replacement is rechecked before ciphertext can commit',async()=>{
+  const f=await provision();await linkActor(f);const issued=await issue(f),before=await sessionRow(issued),old=await tokenMaterial(before,f);let stopped=false;
+  const gate=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},async(subject,session,signal)=>{
+    const live=await lookup(subject,session,signal);if(!stopped){stopped=true;authResult(await service.admin.admin.signOut(old.accessToken,'local'),'refresh_race_signout');}return live;
+  });
+  await lifecycleDenied(createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},gate,store).refresh(issued.cookieValueForResponse(),signal()));
+  assert(stopped);const after=await sessionRow(issued);assert(after.revoked_at);assert.equal(after.provider_token_ciphertext,null);assert.equal(after.key_id,null);
+  assert.equal(BigInt(after.version),BigInt(before.version)+1n,'only local revocation commits after failed replacement');unchangedSession(before,after);
+});
+
+test('refresh accepts no unknown encryption key and cannot extend an expired local session',async()=>{
+  const f=await provision();await linkActor(f);const issued=await issue(f),before=await sessionRow(issued),wrong=await createProviderTokenStore('other',[{id:'other',key:randomBytes(32)}]);
+  await lifecycleDenied(createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},boundary,wrong).refresh(issued.cookieValueForResponse(),signal()));
+  assert.equal((await sessionRow(issued)).version,before.version);
+  await delay(20);await client.query("UPDATE crest_private.app_sessions SET expires_at=created_at+interval '1 millisecond',version=version+1 WHERE id=$1",[before.id]);
+  const expired=await sessionRow(issued);await lifecycleDenied(lifecycle.refresh(issued.cookieValueForResponse(),signal()));const after=await sessionRow(issued);
+  assert.equal(after.version,expired.version);assert(after.provider_token_ciphertext.equals(expired.provider_token_ciphertext),'expired local session cannot refresh or replace its tokens');
+});
+
+test('schema7 grants only ciphertext/provenance updates and rejects stale, malformed or nonfresh SQL calls',async()=>{
+  for(const field of ['provider_token_ciphertext','key_id','version','updated_by','operation_id'])assert.equal((await client.query("SELECT has_column_privilege('crest_session_owner','crest_private.app_sessions',$1,'UPDATE') AS allowed",[field])).rows[0].allowed,true);
+  for(const field of ['id','actor_id','token_hash','provider_session_id','issued_security_epoch','authenticated_at','created_at','reauth_at','last_active_at','expires_at','trusted','revoked_at'])assert.equal((await client.query("SELECT has_column_privilege('crest_session_owner','crest_private.app_sessions',$1,'UPDATE') AS allowed",[field])).rows[0].allowed,false);
+  for(const fn of ['lock_app_session(bytea)','replace_session_tokens(bytea,bigint,bytea,text,uuid)']){
+    const name=`crest_commands.${fn}`,row=(await client.query('SELECT prosecdef,proconfig,pg_get_userbyid(proowner) AS owner FROM pg_proc WHERE oid=$1::regprocedure',[name])).rows[0];
+    assert(row.prosecdef);assert.equal(row.owner,'crest_session_owner');assert.deepEqual(row.proconfig,['search_path=pg_catalog, pg_temp','row_security=on']);
+    for(const role of ['anon','authenticated','service_role','crest_worker','crest_recovery','crest_command_owner','crest_auth_reader'])assert.equal((await client.query("SELECT has_function_privilege($1,$2,'EXECUTE') AS allowed",[role,name])).rows[0].allowed,false);
+  }
+  const f=await provision();await linkActor(f);const issued=await issue(f),row=await sessionRow(issued),args=[row.token_hash,row.version,row.provider_token_ciphertext,row.key_id,randomUUID()];
+  const sql='SELECT crest_commands.replace_session_tokens($1,$2,$3,$4,$5)';
+  for(const [index,value] of [[0,Buffer.alloc(31)],[1,'0'],[2,Buffer.alloc(0)],[2,Buffer.alloc(65537)],[3,'invalid key'],[4,null]]){
+    const bad=[...args];bad[index]=value;await asWeb(async()=>{await assert.rejects(client.query(sql,bad),e=>e.code==='22023');});
+  }
+  await asWeb(async()=>{const bad=[...args];bad[1]=String(BigInt(row.version)+1n);await assert.rejects(client.query(sql,bad),e=>e.code==='40001');});
+  await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ');try{await client.query('SET LOCAL ROLE crest_web');await assert.rejects(client.query(sql,args),e=>e.code==='25001');}finally{await client.query('ROLLBACK');}
+  assert.equal((await sessionRow(issued)).version,row.version);
+});
+
+test('an actually expired access JWT refreshes automatically using the original signed AMR reference',async()=>{
+  const short=await startRealAuthService(target,{jwtExpiry:120});
+  try{
+    const f=await provision({provider:short});await linkActor(f,short.issuer);
+    const provider=createProviderBoundary({issuer:short.issuer,publicKey:short.publicKey,environment:'test'},lookup);
+    const gate=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},provider,store),issued=await issue(f,false,gate),before=await sessionRow(issued);
+    const remaining=issued.evidence.provider.expiresAt-Date.now();assert(remaining>90000&&remaining<=120000,'actual Auth must apply the test-only lifetime above the SDK MFA refresh margin');
+    await delay(remaining+25);const evidence=await gate.verify(issued.cookieValueForResponse(),signal()),after=await sessionRow(issued);
+    assert(evidence.provider.expiresAt>Date.now());assert.equal(evidence.provider.passwordAt,issued.evidence.provider.passwordAt);assert.equal(evidence.provider.totpAt,issued.evidence.provider.totpAt);
+    assert.equal(BigInt(after.version),BigInt(before.version)+1n);unchangedSession(before,after);
+  }finally{await short.close();}
 });

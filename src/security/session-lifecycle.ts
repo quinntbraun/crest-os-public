@@ -1,5 +1,6 @@
 import 'server-only';
 import {randomUUID} from 'node:crypto';
+import {decodeJwt} from 'jose';
 import {sessionDatabase} from './session-database.ts';
 import type {SessionDatabaseConfiguration} from './session-database.ts';
 import {createSessionCredential,sessionCredentialHash} from './session-credential.ts';
@@ -37,10 +38,45 @@ export function createSessionLifecycle(config:SessionDatabaseConfiguration,
   provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>){
   const query=sessionDatabase(config),revoke=createSessionRevoker(config);
   const read=async(hash:Buffer,signal:AbortSignal)=>snapshot(await query('SELECT crest_commands.app_session_snapshot($1::bytea) AS result',[hash],signal));
-  async function verify(credential:string,signal:AbortSignal,interaction:'foreground'|'background',recent:boolean):Promise<Verified>{
+  async function rotate(credential:string,hash:Buffer,observed:Snapshot,signal:AbortSignal):Promise<void>{
+    let attempted=false;
+    try{
+      await query.transaction(async(transaction,currentSignal)=>{
+        const current=snapshot(await transaction('SELECT crest_commands.lock_app_session($1::bytea) AS result',[hash]));
+        const material=await tokens.decrypt({keyId:current.keyId,ciphertext:Buffer.from(current.ciphertext,'base64')},current.binding);
+        if(current.version!==observed.version){
+          // A preceding rotation won. Use its live verified token, never the
+          // stale refresh material read before waiting for the session lock.
+          const identity=await provider.verifyAccess(material.tokensForProvider().accessToken,{subject:current.binding.subject,sessionId:current.binding.providerSessionId},currentSignal);
+          if(identity.issuer!==current.binding.issuer)throw new SessionLifecycleError();
+          return;
+        }
+        attempted=true;
+        const refreshed=await provider.refreshForSession(material.tokensForProvider(),{subject:current.binding.subject,sessionId:current.binding.providerSessionId},currentSignal);
+        if(refreshed.identity.issuer!==current.binding.issuer)throw new SessionLifecycleError();
+        const encrypted=await tokens.encrypt(refreshed.tokensForServerStorage(),current.binding);
+        await transaction('SELECT crest_commands.replace_session_tokens($1::bytea,$2::bigint,$3::bytea,$4::text,$5::uuid) AS result',
+          [hash,current.version,Buffer.from(encrypted.ciphertext),encrypted.keyId,randomUUID()]);
+      },signal);
+    }catch{
+      // Once an exchange may have consumed a refresh token, an uncertain
+      // rollback/commit must not leave the local session usable with old data.
+      if(attempted)try{await revoke(credential,new AbortController().signal);}catch{/* bounded best effort */}
+      throw new SessionLifecycleError();
+    }
+  }
+  async function verify(credential:string,signal:AbortSignal,interaction:'foreground'|'background',recent:boolean,allowRefresh=true):Promise<Verified>{
     const hash=sessionCredentialHash(credential);
     try{
-      const first=await read(hash,signal),material=await tokens.decrypt({keyId:first.keyId,ciphertext:Buffer.from(first.ciphertext,'base64')},first.binding);
+      let first=await read(hash,signal),material=await tokens.decrypt({keyId:first.keyId,ciphertext:Buffer.from(first.ciphertext,'base64')},first.binding);
+      // Decoded expiry is only a scheduling hint, never authentication evidence.
+      // Both the historical reference and replacement are signature verified.
+      const expiry=decodeJwt(material.tokensForProvider().accessToken).exp;
+      if(typeof expiry!=='number'||!Number.isSafeInteger(expiry*1000))throw new SessionLifecycleError();
+      if(allowRefresh&&expiry*1000<=Math.max(first.now,Date.now())+60000){
+        await rotate(credential,hash,first,signal);first=await read(hash,signal);
+        material=await tokens.decrypt({keyId:first.keyId,ciphertext:Buffer.from(first.ciphertext,'base64')},first.binding);
+      }
       const identity=await provider.verifyAccess(material.tokensForProvider().accessToken,{subject:first.binding.subject,sessionId:first.binding.providerSessionId},signal);
       if(identity.issuer!==first.binding.issuer)throw new SessionLifecycleError();
       // No cross-request cache. Reread after provider I/O so concurrent local
@@ -55,6 +91,11 @@ export function createSessionLifecycle(config:SessionDatabaseConfiguration,
     }finally{hash.fill(0);}
   }
   return Object.freeze({
+    async refresh(credential:string,external:AbortSignal):Promise<Verified>{
+      const signal=AbortSignal.any([external,AbortSignal.timeout(20000)]);let hash:Buffer|undefined;
+      try{hash=sessionCredentialHash(credential);await rotate(credential,hash,await read(hash,signal),signal);return await verify(credential,signal,'background',false,false);}
+      catch{throw new SessionLifecycleError();}finally{hash?.fill(0);}
+    },
     async login(input:{email:string;password:string;factorId:string;code:string},binding:ProviderBinding,trusted:boolean,external:AbortSignal):Promise<IssuedSession>{
       const signal=AbortSignal.any([external,AbortSignal.timeout(20000)]);let credential:ReturnType<typeof createSessionCredential>|undefined;
       try{
@@ -69,7 +110,7 @@ export function createSessionLifecycle(config:SessionDatabaseConfiguration,
         try{await query('SELECT crest_commands.issue_app_session($1::uuid,$2::bytea,$3::uuid,$4::uuid,$5::text,$6::uuid,$7::uuid,$8::timestamptz,$9::timestamptz,$10::boolean,$11::bytea,$12::text,$13::uuid) AS result',
           [id,hash,context.actorId,context.securityEpoch,identity.issuer,identity.subject,identity.sessionId,new Date(identity.passwordAt),new Date(identity.totpAt),trusted,Buffer.from(encrypted.ciphertext),encrypted.keyId,randomUUID()],signal);
         }finally{hash.fill(0);}
-        return new IssuedSession(credential,await verify(credential.cookieValueForResponse(),signal,'background',true));
+        return new IssuedSession(credential,await verify(credential.cookieValueForResponse(),signal,'background',true,false));
       }catch{
         // An uncertain commit must never release a credential. Best-effort
         // idempotent cleanup uses its own bounded connection even after abort.
