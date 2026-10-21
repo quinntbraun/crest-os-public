@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { randomBytes,randomUUID } from 'node:crypto';
+import { createHash,randomBytes,randomUUID } from 'node:crypto';
 import { before,after,test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 import { TOTP,URI } from 'otpauth';
@@ -14,8 +14,11 @@ import { createProviderTokenStore,ProviderTokenStorageError } from '../../src/se
 import { createSessionCredential } from '../../src/security/session-credential.ts';
 import { createSessionRevoker } from '../../src/security/session-revocation-db.ts';
 import { createSessionLifecycle,SessionLifecycleError } from '../../src/security/session-lifecycle.ts';
+import {createBrowserSessionFlow,BrowserSessionError} from '../../src/security/browser-session-flow.ts';
+import {createLoginFingerprinter} from '../../src/security/login-admission.ts';
+import {createCsrfToken} from '../../src/security/request-protection.ts';
 
-let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,legacy,legacyBefore;
+let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,browserReceipt,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
@@ -33,7 +36,8 @@ before(async()=>{
   legacyBefore=(await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[legacy.session])).rows[0].row;
   receipt=await sandbox.apply(target,await sandbox.prefix(6));
   refreshReceipt=await sandbox.apply(target,await sandbox.prefix(7));
-  currentReceipt=await sandbox.apply(target);
+  currentReceipt=await sandbox.apply(target,await sandbox.prefix(8));
+  browserReceipt=await sandbox.apply(target);
   store=await createProviderTokenStore('primary',[{id:'primary',key:randomBytes(32)}]);
   lifecycle=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},boundary,store);
 });
@@ -206,7 +210,8 @@ test('schema5 upgrade retains existing local rows and append-only CLI history',a
   assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.session_events WHERE session_id=$1',[legacy.session])).rows[0].n,1);
   assert.equal(refreshReceipt.history.length,7);assert.deepEqual(refreshReceipt.history.slice(0,6),receipt.history);
   assert.equal(currentReceipt.history.length,8);assert.deepEqual(currentReceipt.history.slice(0,7),refreshReceipt.history);
-  assert.deepEqual((await sandbox.apply(target)).history,currentReceipt.history);
+  assert.equal(browserReceipt.history.length,9);assert.deepEqual(browserReceipt.history.slice(0,8),currentReceipt.history);
+  assert.deepEqual((await sandbox.apply(target)).history,browserReceipt.history);
 });
 test('issuance owner and functions retain forced RLS, lock-only identity rights and no runtime table exposure',async()=>{
   const role=(await client.query("SELECT * FROM pg_roles WHERE rolname='crest_session_owner'")).rows[0];
@@ -475,4 +480,175 @@ test('an actually expired access JWT refreshes automatically using the original 
     assert(evidence.provider.expiresAt>Date.now());assert.equal(evidence.provider.passwordAt,issued.evidence.provider.passwordAt);assert.equal(evidence.provider.totpAt,issued.evidence.provider.totpAt);
     assert.equal(BigInt(after.version),BigInt(before.version)+1n);unchangedSession(before,after);
   }finally{await short.close();}
+});
+
+const browserOrigin='https://crest.example.test',browserKey=randomBytes(32);let browserAddress=0;
+const browserIp=()=>`192.0.2.${++browserAddress}`;
+const browserRequest=(token='',overrides={})=>new Request(`${browserOrigin}/auth`,{method:'POST',headers:{origin:browserOrigin,'content-type':'application/json','sec-fetch-site':'same-origin','x-crest-csrf':token,...overrides}});
+const browserFlow=(f,provider=boundary,key=browserKey)=>createBrowserSessionFlow({connectionString:runtimeUrl,environment:'test',origin:browserOrigin,loginKey:key,owner:{subject:f.subject,factorId:f.factorId}},provider,store);
+const browserInput=f=>({email:f.email,password:f.password,code:f.totp.generate(),trusted:false});
+async function browserDenied(work){await assert.rejects(work,error=>error instanceof BrowserSessionError&&error.message==='BROWSER_SESSION_FAILED'&&error.cause===undefined);}
+async function browserLogin(flow,f,address=browserIp(),previous){
+  const context=await flow.beginLogin(browserRequest(),address,signal());
+  return flow.login(browserRequest(context.csrfTokenForResponse()),address,context.cookieValueForResponse(),browserInput(f),signal(),previous);
+}
+async function browserContext(cookie){
+  const hash=createHash('sha256').update(cookie).digest();
+  try{return (await client.query('SELECT * FROM crest_private.login_contexts WHERE credential_hash=$1',[hash])).rows[0];}finally{hash.fill(0);}
+}
+
+test('anonymous context stores only hashes, expires after ten minutes and retires the previously presented context',async()=>{
+  const f=await provision(),flow=browserFlow(f),address=browserIp(),context=await flow.beginLogin(browserRequest(),address,signal());
+  assert.throws(()=>JSON.stringify(context),BrowserSessionError);const row=await browserContext(context.cookieValueForResponse());
+  assert.equal(row.expires_at.getTime()-row.created_at.getTime(),600000);assert.equal(context.expiresAt,row.expires_at.getTime());
+  assert(!row.credential_hash.includes(Buffer.from(context.cookieValueForResponse())));assert(!row.csrf_hash.includes(Buffer.from(context.csrfTokenForResponse())));
+  await flow.beginLogin(browserRequest(),address,signal(),context.cookieValueForResponse());const retired=await browserContext(context.cookieValueForResponse());assert(retired.consumed_at);assert.equal(retired.csrf_hash,null);
+  await browserDenied(flow.login(browserRequest(context.csrfTokenForResponse()),address,context.cookieValueForResponse(),browserInput(f),signal()));
+});
+
+test('anonymous context requires matching IP and CSRF proof before consuming or invoking actual Auth',async()=>{
+  const f=await provision();await linkActor(f);const flow=browserFlow(f),address=browserIp(),context=await flow.beginLogin(browserRequest(),address,signal());
+  const before=(await client.query('SELECT count(*)::int AS n FROM auth.sessions WHERE user_id=$1',[f.subject])).rows[0].n;
+  await browserDenied(flow.login(browserRequest(context.csrfTokenForResponse()),browserIp(),context.cookieValueForResponse(),browserInput(f),signal()));
+  await browserDenied(flow.login(browserRequest(),address,context.cookieValueForResponse(),browserInput(f),signal()));
+  await browserDenied(flow.login(browserRequest(context.csrfTokenForResponse(),{origin:'https://evil.example.test'}),address,context.cookieValueForResponse(),browserInput(f),signal()));
+  assert.equal((await browserContext(context.cookieValueForResponse())).consumed_at,null);
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM auth.sessions WHERE user_id=$1',[f.subject])).rows[0].n,before);
+  assert.equal((await flow.login(browserRequest(context.csrfTokenForResponse()),address,context.cookieValueForResponse(),browserInput(f),signal())).evidence.state,'session_verified');
+});
+
+test('browser orchestration consumes the context before actual password/TOTP issuance and returns no provider tokens',async()=>{
+  const f=await provision();await linkActor(f);const flow=browserFlow(f),address=browserIp(),context=await flow.beginLogin(browserRequest(),address,signal());
+  const issued=await flow.login(browserRequest(context.csrfTokenForResponse()),address,context.cookieValueForResponse(),browserInput(f),signal());assert.throws(()=>JSON.stringify(issued),BrowserSessionError);
+  assert(issued.evidence.tenantAndRequestVerificationRequired);const row=await sessionRow(issued),pending=await browserContext(context.cookieValueForResponse());
+  assert(pending.consumed_at);assert.equal(pending.csrf_hash,null);assert(row.provider_token_ciphertext);assert.equal(row.expires_at.getTime()-row.created_at.getTime(),43200000);
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.session_csrf_tokens WHERE session_id=$1',[row.id])).rows[0].n,1);
+  await browserDenied(flow.login(browserRequest(context.csrfTokenForResponse()),address,context.cookieValueForResponse(),browserInput(f),signal()));
+  assert.equal((await lifecycle.verify(issued.cookieValueForResponse(),signal())).sessionId,row.id);
+});
+
+test('concurrent replay of one context permits exactly one real provider login and one app session',async()=>{
+  const f=await provision(),actor=await linkActor(f),flow=browserFlow(f),address=browserIp(),context=await flow.beginLogin(browserRequest(),address,signal());
+  const before=(await client.query('SELECT count(*)::int AS n FROM auth.sessions WHERE user_id=$1',[f.subject])).rows[0].n;
+  const results=await Promise.allSettled(Array.from({length:2},()=>flow.login(browserRequest(context.csrfTokenForResponse()),address,context.cookieValueForResponse(),browserInput(f),signal())));
+  assert.equal(results.filter(result=>result.status==='fulfilled').length,1);assert.equal(results.filter(result=>result.status==='rejected'&&result.reason instanceof BrowserSessionError).length,1);
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.app_sessions WHERE actor_id=$1',[actor.id])).rows[0].n,1);
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM auth.sessions WHERE user_id=$1',[f.subject])).rows[0].n,before+1);
+});
+
+test('browser replacement atomically retires the previous local cookie while a second device remains valid',async()=>{
+  const f=await provision();await linkActor(f);const flow=browserFlow(f),old=await browserLogin(flow,f),other=await browserLogin(flow,f),replacement=await browserLogin(flow,f,browserIp(),old.cookieValueForResponse());
+  assert(replacement.cookieValueForResponse()!==old.cookieValueForResponse(),'replacement needs independent opaque material');
+  const oldRow=await sessionRow(old);assert(oldRow.revoked_at);assert.equal(oldRow.provider_token_ciphertext,null);assert.equal(oldRow.key_id,null);
+  await lifecycleDenied(lifecycle.verify(old.cookieValueForResponse(),signal()));assert.equal((await lifecycle.verify(other.cookieValueForResponse(),signal())).sessionId,other.evidence.sessionId);
+  assert.equal((await lifecycle.verify(replacement.cookieValueForResponse(),signal())).sessionId,replacement.evidence.sessionId);
+});
+
+test('failed CSRF insertion rolls back replacement without retiring the prior local session',async()=>{
+  const f=await provision();await linkActor(f);const flow=browserFlow(f),old=await browserLogin(flow,f),fresh=await browserLogin(flow,f);
+  const oldRow=await sessionRow(old),newRow=await sessionRow(fresh),proof=(await client.query('SELECT token_hash FROM crest_private.session_csrf_tokens WHERE session_id=$1',[newRow.id])).rows[0].token_hash;
+  await asWeb(async()=>{await assert.rejects(client.query('SELECT crest_commands.bind_browser_session($1,$2,$3)',[newRow.token_hash,proof,oldRow.token_hash]),error=>error.code==='23505');});
+  assert.equal((await sessionRow(old)).revoked_at,null);assert.equal((await lifecycle.verify(old.cookieValueForResponse(),signal())).sessionId,oldRow.id);
+});
+
+test('session CSRF reissue supports eight tabs without renewing authentication, activity, expiry or row version',async()=>{
+  const f=await provision();await linkActor(f);const flow=browserFlow(f),issued=await browserLogin(flow,f),before=await sessionRow(issued);let current=issued;
+  for(let i=0;i<9;i++)current=await flow.session(browserRequest(),issued.cookieValueForResponse(),signal());
+  const after=await sessionRow(issued);unchangedSession(before,after);assert.equal(after.version,before.version);
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.session_csrf_tokens WHERE session_id=$1',[before.id])).rows[0].n,8);
+  await browserDenied(flow.logout(browserRequest(issued.csrfTokenForResponse()),issued.cookieValueForResponse(),signal()));assert.equal((await sessionRow(issued)).revoked_at,null);
+  assert.equal((await flow.logout(browserRequest(current.csrfTokenForResponse()),current.cookieValueForResponse(),signal())).localRevoked,true);
+});
+
+test('just-issued CSRF proof survives trimming even when retained proof timestamps are ahead',async()=>{
+  const f=await provision();await linkActor(f);const flow=browserFlow(f),issued=await browserLogin(flow,f);
+  for(let i=0;i<7;i++)await flow.session(browserRequest(),issued.cookieValueForResponse(),signal());
+  await client.query("UPDATE crest_private.session_csrf_tokens SET created_at=clock_timestamp()+interval '1 hour' WHERE session_id=$1",[issued.evidence.sessionId]);
+  const current=await flow.session(browserRequest(),issued.cookieValueForResponse(),signal());
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.session_csrf_tokens WHERE session_id=$1',[issued.evidence.sessionId])).rows[0].n,8);
+  assert.equal((await flow.logout(browserRequest(current.csrfTokenForResponse()),current.cookieValueForResponse(),signal())).localRevoked,true);
+});
+
+test('browser logout commits local revocation before the real public-key SDK provider signout and preserves another device',async()=>{
+  const f=await provision();await linkActor(f);let checked=false,issued;
+  const inspected={...boundary,async signOutLocal(...args){assert((await sessionRow(issued)).revoked_at,'provider signout must follow local commit');checked=true;return boundary.signOutLocal(...args);}};
+  const flow=browserFlow(f,inspected);issued=await browserLogin(flow,f);const other=await browserLogin(flow,f),result=await flow.logout(browserRequest(issued.csrfTokenForResponse()),issued.cookieValueForResponse(),signal());
+  assert(checked);assert.deepEqual(result,{localRevoked:true,providerSignedOut:true});assert.equal(await lookup(f.subject,issued.evidence.provider.sessionId,signal()),false);
+  assert.equal((await lifecycle.verify(other.cookieValueForResponse(),signal())).sessionId,other.evidence.sessionId);
+});
+
+test('actual provider outage after local logout cannot restore the app session or clear another device',async()=>{
+  const f=await provision();await linkActor(f);let issued,stopped=false;
+  const gate={...boundary,async signOutLocal(...args){assert((await sessionRow(issued)).revoked_at);stopped=true;await service.stop();return boundary.signOutLocal(...args);}};
+  const flow=browserFlow(f,gate);issued=await browserLogin(flow,f);const other=await browserLogin(flow,f);
+  try{assert.deepEqual(await flow.logout(browserRequest(issued.csrfTokenForResponse()),issued.cookieValueForResponse(),signal()),{localRevoked:true,providerSignedOut:false});}finally{if(stopped)await service.restart();}
+  const row=await sessionRow(issued);assert(row.revoked_at);assert.equal(row.provider_token_ciphertext,null);await lifecycleDenied(lifecycle.verify(issued.cookieValueForResponse(),signal()));
+  assert.equal((await lifecycle.verify(other.cookieValueForResponse(),signal())).sessionId,other.evidence.sessionId);
+});
+
+test('expired and epoch-invalid browser sessions can still revoke locally using retained CSRF proof',async()=>{
+  const f=await provision(),actor=await linkActor(f),flow=browserFlow(f),expired=await browserLogin(flow,f),stale=await browserLogin(flow,f);
+  await delay(20);await client.query("UPDATE crest_private.app_sessions SET expires_at=created_at+interval '1 millisecond',version=version+1 WHERE id=$1",[expired.evidence.sessionId]);
+  assert.equal((await flow.logout(browserRequest(expired.csrfTokenForResponse()),expired.cookieValueForResponse(),signal())).localRevoked,true);
+  await client.query('UPDATE crest_private.actors SET current_security_epoch=$1,version=version+1 WHERE id=$2',[randomUUID(),actor.id]);
+  assert.equal((await flow.logout(browserRequest(stale.csrfTokenForResponse()),stale.cookieValueForResponse(),signal())).localRevoked,true);assert((await sessionRow(stale)).revoked_at);
+});
+
+test('replayed logout is idempotent while wrong-session or foreign-origin CSRF never revokes the target',async()=>{
+  const f=await provision();await linkActor(f);const flow=browserFlow(f),a=await browserLogin(flow,f),b=await browserLogin(flow,f);
+  await browserDenied(flow.logout(browserRequest(a.csrfTokenForResponse()),b.cookieValueForResponse(),signal()));
+  await browserDenied(flow.logout(browserRequest(b.csrfTokenForResponse(),{origin:'https://evil.example.test'}),b.cookieValueForResponse(),signal()));assert.equal((await sessionRow(b)).revoked_at,null);
+  await flow.logout(browserRequest(a.csrfTokenForResponse()),a.cookieValueForResponse(),signal());const before=await sessionRow(a);
+  assert.equal((await flow.logout(browserRequest(a.csrfTokenForResponse()),a.cookieValueForResponse(),signal())).localRevoked,true);assert.equal((await sessionRow(a)).version,before.version);
+});
+
+test('expired anonymous contexts and bootstrap budgets deny before provider authentication',async()=>{
+  const f=await provision();await linkActor(f);const flow=browserFlow(f),address=browserIp(),context=await flow.beginLogin(browserRequest(),address,signal()),row=await browserContext(context.cookieValueForResponse());
+  await client.query("UPDATE crest_private.login_contexts SET created_at=created_at-interval '11 minutes',expires_at=expires_at-interval '11 minutes' WHERE id=$1",[row.id]);
+  await browserDenied(flow.login(browserRequest(context.csrfTokenForResponse()),address,context.cookieValueForResponse(),browserInput(f),signal()));
+  const budgetIp=browserIp();for(let i=0;i<20;i++)await flow.beginLogin(browserRequest(),budgetIp,signal());
+  await browserDenied(flow.beginLogin(browserRequest(),budgetIp,signal()));
+  await browserDenied(browserFlow(f,boundary,randomBytes(32)).beginLogin(browserRequest(),browserIp(),signal()));
+});
+
+test('global bootstrap budget bounds stored anonymous state without creating authentication authority',async()=>{
+  const f=await provision(),flow=browserFlow(f),count=(await client.query("SELECT count(*)::int AS n FROM crest_private.login_contexts WHERE created_at>clock_timestamp()-interval '15 minutes'")).rows[0].n;
+  const seeded=(await client.query("WITH moment AS MATERIALIZED (SELECT clock_timestamp() AS stamp) INSERT INTO crest_private.login_contexts(id,credential_hash,ip_hash,csrf_hash,created_at,expires_at) SELECT gen_random_uuid(),sha256(convert_to(gen_random_uuid()::text,'UTF8')),sha256(convert_to(gen_random_uuid()::text,'UTF8')),sha256(convert_to(gen_random_uuid()::text,'UTF8')),moment.stamp,moment.stamp+interval '10 minutes' FROM generate_series(1,$1) CROSS JOIN moment RETURNING id",[1000-count])).rows.map(row=>row.id);
+  try{await browserDenied(flow.beginLogin(browserRequest(),browserIp(),signal()));}finally{await client.query('DELETE FROM crest_private.login_contexts WHERE id=ANY($1::uuid[])',[seeded]);}
+});
+
+test('durable login admission is mandatory before every actual password/TOTP attempt',async()=>{
+  const f=await provision(),actor=await linkActor(f),flow=browserFlow(f),address=browserIp();
+  for(let i=0;i<5;i++){const context=await flow.beginLogin(browserRequest(),address,signal());await browserDenied(flow.login(browserRequest(context.csrfTokenForResponse()),address,context.cookieValueForResponse(),{...browserInput(f),password:'synthetic-wrong-password'},signal()));}
+  await browserDenied(browserLogin(flow,f,address));assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.app_sessions WHERE actor_id=$1',[actor.id])).rows[0].n,0);
+  const digest=createLoginFingerprinter(browserKey)(f.email,address).parametersForDatabase()[0];assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.login_attempts WHERE identifier_hash=$1',[digest])).rows[0].n,5);
+});
+
+test('binding rechecks a provider revocation after real issuance and retains the previous cookie on failure',async()=>{
+  const f=await provision(),actor=await linkActor(f),normal=browserFlow(f),old=await browserLogin(normal,f);let stopped=false;
+  const gate=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},async(subject,session,signal)=>{
+    const live=await lookup(subject,session,signal),rows=(await client.query('SELECT * FROM crest_private.app_sessions WHERE actor_id=$1 AND provider_session_id=$2',[actor.id,session])).rows;
+    if(!stopped&&rows.length){stopped=true;const tokens=await tokenMaterial(rows[0],f);authResult(await service.admin.admin.signOut(tokens.accessToken,'local'),'browser_bind_race');}return live;
+  });
+  await browserDenied(browserLogin(browserFlow(f,gate),f,browserIp(),old.cookieValueForResponse()));assert(stopped);
+  assert.equal((await sessionRow(old)).revoked_at,null);assert.equal((await lifecycle.verify(old.cookieValueForResponse(),signal())).sessionId,old.evidence.sessionId);
+  const rows=(await client.query('SELECT * FROM crest_private.app_sessions WHERE actor_id=$1 AND id<>$2',[actor.id,old.evidence.sessionId])).rows;assert.equal(rows.length,1);assert(rows[0].revoked_at);assert.equal(rows[0].provider_token_ciphertext,null);
+});
+
+test('browser state tables/functions retain forced RLS and least privilege with no runtime table exposure',async()=>{
+  for(const table of ['login_contexts','session_csrf_tokens']){
+    const row=(await client.query('SELECT relrowsecurity,relforcerowsecurity,pg_get_userbyid(relowner) AS owner FROM pg_class WHERE oid=$1::regclass',[`crest_private.${table}`])).rows[0];assert(row.relrowsecurity&&row.relforcerowsecurity);assert.equal(row.owner,'crest_schema_owner');
+    assert.equal((await client.query("SELECT has_table_privilege('crest_web',$1,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE') AS allowed",[`crest_private.${table}`])).rows[0].allowed,false);
+  }
+  for(const [fn,owner] of [['create_login_context(uuid,bytea,bytea,bytea,bytea,bytea)','crest_login_owner'],['login_context_snapshot(bytea,bytea)','crest_login_owner'],['consume_login_context(bytea,bytea,bytea)','crest_login_owner'],['bind_browser_session(bytea,bytea,bytea)','crest_session_owner'],['browser_csrf_snapshot(bytea)','crest_session_owner']]){
+    const name=`crest_commands.${fn}`,row=(await client.query('SELECT prosecdef,proconfig,pg_get_userbyid(proowner) AS owner FROM pg_proc WHERE oid=$1::regprocedure',[name])).rows[0];assert(row.prosecdef);assert.equal(row.owner,owner);assert.deepEqual(row.proconfig,['search_path=pg_catalog, pg_temp','row_security=on']);
+    for(const role of ['anon','authenticated','service_role','crest_worker','crest_recovery','crest_auth_reader'])assert.equal((await client.query("SELECT has_function_privilege($1,$2,'EXECUTE') AS allowed",[role,name])).rows[0].allowed,false);
+  }
+});
+
+test('direct browser-state SQL rejects malformed inputs and nonfresh transaction snapshots',async()=>{
+  for(const sql of ["SELECT crest_commands.login_context_snapshot(decode('aa','hex'),decode('bb','hex'))","SELECT crest_commands.consume_login_context(NULL,NULL,NULL)","SELECT crest_commands.bind_browser_session(NULL,NULL,NULL)","SELECT crest_commands.browser_csrf_snapshot(NULL)"]){await asWeb(async()=>{await assert.rejects(client.query(sql),error=>error.code==='22023');});}
+  await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ');try{await client.query('SET LOCAL ROLE crest_web');await assert.rejects(client.query('SELECT crest_commands.browser_csrf_snapshot($1)',[randomBytes(32)]),error=>error.code==='25001');}finally{await client.query('ROLLBACK');}
+  const f=await provision();await linkActor(f);const issued=await browserLogin(browserFlow(f),f);await revoke(issued.cookieValueForResponse(),signal());const row=await sessionRow(issued);
+  await asWeb(async()=>{await assert.rejects(client.query('SELECT crest_commands.bind_browser_session($1,$2,NULL)',[row.token_hash,createCsrfToken(row.id).hashForDatabase()]),error=>error.code==='42501');});
 });

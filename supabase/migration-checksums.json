@@ -40,6 +40,11 @@
       "version": "20261021215031",
       "file": "20261021215031_login_admission.sql",
       "sha256": "48fbabeadabb03be9a432b9681c06f545223326ec7ff1f65dfd77ae12ee19971"
+    },
+    {
+      "version": "20261021222140",
+      "file": "20261021222140_browser_session_state.sql",
+      "sha256": "cb57cf5ae1de679038be6710074530b149a1ade67a944579b13c2e703bba2f4a"
     }
   ]
 }
