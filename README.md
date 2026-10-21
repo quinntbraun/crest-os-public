@@ -16,6 +16,8 @@ npm run dev
 
 Open http://127.0.0.1:3000. This is a setup shell with process liveness at `/api/health`, not an authenticated business application. `check` runs provenance, migration/dependency checks, lint, strict types, tooling regressions and the production build. Use `npm run audit:dependencies` for the live registry security gate.
 
+Phase 2 starts with the [controlled migration prerequisite](planning/PHASE_2_MIGRATIONS.md). With the disposable PostgreSQL service and pinned tools available, `npm run test:migrations` creates its own synthetic databases and tests actual CLI applies, receipts, failures and concurrency. `npm run migrations:apply:test -- --bootstrap-empty` is restricted to explicitly configured disposable targets and a clean checkout; it cannot apply to staging/production. Owner login and application security tables are not implemented yet.
+
 ```sh
 node scripts/install-tools.mjs
 npx --no-install playwright install chromium webkit

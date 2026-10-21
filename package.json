@@ -16,6 +16,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:db": "node scripts/test-database.mjs",
+    "test:migrations": "node --test --test-concurrency=1 tests/integration/migration-coordinator.test.mjs",
+    "migrations:apply:test": "node scripts/apply-test-migrations.mjs",
     "verify:canonical": "node scripts/verify-canonical.mjs",
     "verify:public": "node scripts/verify-public.mjs",
     "verify:migrations": "node scripts/verify-migrations.mjs",
