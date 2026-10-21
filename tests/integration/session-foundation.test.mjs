@@ -84,6 +84,7 @@ test("absolute expiry uses elapsed hours even across DST and rejects future/corr
   const now=(await client.query("SELECT clock_timestamp() AS stamp")).rows[0].stamp;
   await denied(()=>fixture({created:new Date(now.getTime()+60000)}));
   const s=await fixture({trusted:false});
+  await denied(()=>client.query("UPDATE crest_private.app_sessions SET last_active_at=clock_timestamp() WHERE id=$1",[s.id]));
   await denied(()=>client.query("UPDATE crest_private.app_sessions SET expires_at=expires_at+interval '1 second',version=version+1 WHERE id=$1",[s.id]));
   await denied(()=>client.query("UPDATE crest_private.app_sessions SET trusted=true,version=version+1 WHERE id=$1",[s.id]),"55000");
 }));
@@ -100,8 +101,10 @@ test("refresh/activity do not extend absolute expiry or fifteen-minute recent au
 }));
 test("revocation clears token ciphertext atomically and cannot be undone",async () => transaction(async () => {
   const s=await fixture(); assert.equal((await local(s.id)).state,"locally_eligible");
+  const otherDevice=await fixture(); assert.equal((await local(otherDevice.id)).state,"locally_eligible");
   await client.query("UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),version=version+1 WHERE id=$1",[s.id]);
   assert.equal((await local(s.id)).reason,"REVOKED");
+  assert.equal((await local(otherDevice.id)).state,"locally_eligible","selected-device revocation must preserve the other device");
   const revoked=(await client.query("SELECT provider_token_ciphertext,key_id FROM crest_private.app_sessions WHERE id=$1",[s.id])).rows[0];
   assert.deepEqual(revoked,{provider_token_ciphertext:null,key_id:null});
   await denied(()=>client.query("UPDATE crest_private.app_sessions SET revoked_at=NULL,version=version+1 WHERE id=$1",[s.id]),"55000");
