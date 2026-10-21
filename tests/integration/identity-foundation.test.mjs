@@ -27,6 +27,7 @@ let ledgerRoot;
 let previousReceipt;
 let currentReceipt;
 let bootstrap;
+let identityWorkspace;
 
 async function database() {
   const name = `crest_migrate_${randomBytes(8).toString("hex")}`;
@@ -41,7 +42,7 @@ async function connect(url = target) {
   await connection.connect();
   return connection;
 }
-const apply = (url, ledger, source = root, extra = {}) => applyTestMigrations({ environment: "test", connectionString: url, ledgerRoot: ledger, workspace: source, cliPath, sourceCommit, ...extra });
+const apply = (url, ledger, source = identityWorkspace, extra = {}) => applyTestMigrations({ environment: "test", connectionString: url, ledgerRoot: ledger, workspace: source, cliPath, sourceCommit, ...extra });
 
 before(async () => {
   await admin.connect();
@@ -55,6 +56,13 @@ before(async () => {
   assert.equal(registry.migrations.length, 1);
   for (const m of registry.migrations) await writeFile(join(schema1, "supabase/migrations", m.file), await readFile(join(root, "supabase/migrations", m.file)));
   await writeFile(join(schema1, "supabase/migration-checksums.json"), JSON.stringify(registry) + "\n");
+  identityWorkspace = join(workspace,"schema2");
+  await mkdir(join(identityWorkspace,"supabase/migrations"),{recursive:true});
+  const identityRegistry = JSON.parse(await readFile(join(root,"supabase/migration-checksums.json"),"utf8"));
+  identityRegistry.migrations=identityRegistry.migrations.filter((m)=>m.version<="20261021032954");
+  assert.equal(identityRegistry.migrations.length,2);
+  for(const m of identityRegistry.migrations) await writeFile(join(identityWorkspace,"supabase/migrations",m.file),await readFile(join(root,"supabase/migrations",m.file)));
+  await writeFile(join(identityWorkspace,"supabase/migration-checksums.json"),JSON.stringify(identityRegistry)+"\n");
   target = await database();
   ledgerRoot = join(workspace, "ledger");
   try { previousReceipt = await apply(target, ledgerRoot, schema1, { bootstrapEmpty: true }); }
@@ -265,7 +273,7 @@ test("a new membership waits for concurrent actor disable and cannot create an o
 
 test("fresh schema0 to schema2 preserves the same SQL history and closed access", async () => {
   const fresh = await database();
-  const receipt = await apply(fresh, join(workspace,"fresh-ledger"), root, { bootstrapEmpty: true });
+  const receipt = await apply(fresh, join(workspace,"fresh-ledger"), identityWorkspace, { bootstrapEmpty: true });
   assert.deepEqual(receipt.history, currentReceipt.history); assert.notEqual(receipt.target,currentReceipt.target);
 });
 

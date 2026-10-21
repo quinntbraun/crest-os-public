@@ -74,6 +74,7 @@ jobs:
           npm run test:migrations
           npm run test:security-db
           npm run test:identity-db
+          npm run test:sessions-db
       - name: Production build and browser accessibility smoke
         run: |
           npm run build
