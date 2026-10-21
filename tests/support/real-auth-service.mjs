@@ -31,7 +31,8 @@ export async function startRealAuthService(target) {
   const upstream=`http://127.0.0.1:${port}`;
   const publicKey=`sb_publishable_${randomBytes(24).toString('base64url')}`;
   const bridge=createServer((request,response)=>{void (async()=>{
-    if(!request.url?.startsWith('/auth/v1/')||request.headers.apikey!==publicKey) {response.writeHead(404);response.end();return;}
+    const publicJwks=request.url==='/auth/v1/.well-known/jwks.json'&&request.method==='GET';
+    if(!request.url?.startsWith('/auth/v1/')||!publicJwks&&request.headers.apikey!==publicKey) {response.writeHead(404);response.end();return;}
     const chunks=[];let size=0;
     for await(const chunk of request){size+=chunk.length;if(size>32768)throw new Error();chunks.push(chunk);}
     const headers={'content-type':'application/json'};

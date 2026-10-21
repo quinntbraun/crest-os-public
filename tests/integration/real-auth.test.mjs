@@ -67,7 +67,7 @@ async function local(id){
 }
 
 test('real Auth publishes only public keys and public signup remains disabled',async()=>{
-  const r=await fetch(`${service.issuer}/.well-known/jwks.json`,{headers:{apikey:service.publicKey}});const jwks=await r.json();
+  const r=await fetch(`${service.issuer}/.well-known/jwks.json`);assert(r.ok,'public signing keys require no API credential');const jwks=await r.json();
   assert.equal(jwks.keys.length,1);assert.equal(jwks.keys[0].alg,'ES256');for(const field of ['d','k','p','q'])assert(!(field in jwks.keys[0]),'private key material must not be public');
   const sdk=service.sdk();const result=await sdk.signUp({email:`synthetic-${randomUUID()}@example.com`,password:randomBytes(32).toString('hex')});assert(result.error,'public signup must deny');
 });
