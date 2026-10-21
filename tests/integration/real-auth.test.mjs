@@ -10,6 +10,7 @@ import { startRealAuthService,authResult } from '../support/real-auth-service.mj
 import { createProviderBoundary,ProviderAuthenticationError } from '../../src/security/provider-auth.ts';
 import { createLiveProviderSessionLookup } from '../../src/security/provider-session-db.ts';
 import { localSessionEligibility } from '../../src/security/session-policy.ts';
+import { createProviderTokenStore,ProviderTokenStorageError } from '../../src/security/provider-token-store.ts';
 
 let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys;
 const signal=()=>new AbortController().signal;
@@ -84,6 +85,34 @@ test('local security-epoch change invalidates app eligibility despite a still-va
   const f=await provision(),material=await fresh(f),state=await localState(f,material);
   await client.query('UPDATE crest_private.actors SET current_security_epoch=$1,version=version+1 WHERE id=$2',[randomUUID(),state.actor]);
   assert.equal((await local(state.session)).state,'denied');assert.equal((await boundary.verifyAccess(access(material),bound(material))).state,'provider_verified');
+});
+
+test('real provider tokens survive encrypted database storage and key rotation; row swaps and revocation deny',async()=>{
+  const f=await provision(),material=await fresh(f),state=await localState(f,material);
+  const row=(await client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[state.session])).rows[0];
+  const binding={actorId:state.actor,appSessionId:state.session,providerSessionId:row.provider_session_id,securityEpoch:row.issued_security_epoch,subject:f.subject,issuer:service.issuer};
+  const first=randomBytes(32),second=randomBytes(32),store=await createProviderTokenStore('first',[{id:'first',key:first}]);
+  const encrypted=await store.encrypt(material.tokensForServerStorage(),binding);
+  const persist=async record=>client.query('UPDATE crest_private.app_sessions SET provider_token_ciphertext=$1,key_id=$2,version=version+1 WHERE id=$3',[Buffer.from(record.ciphertext),record.keyId,state.session]);
+  await persist(encrypted);
+  const load=async()=>{const r=(await client.query('SELECT provider_token_ciphertext,key_id FROM crest_private.app_sessions WHERE id=$1',[state.session])).rows[0];return {ciphertext:r.provider_token_ciphertext,keyId:r.key_id};};
+  const saved=await load();assert(Buffer.isBuffer(saved.ciphertext));assert(!saved.ciphertext.includes(Buffer.from(access(material))));assert(!saved.ciphertext.includes(Buffer.from(material.tokensForServerStorage().refreshToken)));
+  const restored=(await store.decrypt(saved,binding)).tokensForProvider();assert.equal(restored.refreshToken,material.tokensForServerStorage().refreshToken);
+  assert.equal((await boundary.verifyAccess(restored.accessToken,bound(material))).state,'provider_verified');assert.equal((await local(state.session)).state,'locally_eligible');
+  await assert.rejects(store.decrypt(saved,{...binding,appSessionId:randomUUID()}),ProviderTokenStorageError);
+  const rotated=await createProviderTokenStore('second',[{id:'first',key:first},{id:'second',key:second}]);
+  await persist(await rotated.encrypt((await rotated.decrypt(saved,binding)).tokensForProvider(),binding));
+  const current=await load();assert.equal(current.keyId,'second');await assert.rejects(store.decrypt(current,binding),ProviderTokenStorageError);
+  const updated=(await client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[state.session])).rows[0];
+  for(const field of ['created_at','authenticated_at','expires_at','last_active_at'])assert.equal(updated[field].getTime(),row[field].getTime());
+  const events=JSON.stringify((await client.query('SELECT * FROM crest_private.session_events WHERE session_id=$1',[state.session])).rows);
+  for(const secret of [access(material),restored.refreshToken,'provider_token_ciphertext','key_id'])assert(!events.includes(secret),'audit projection excludes provider secrets and storage metadata');
+  await client.query('UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),provider_token_ciphertext=NULL,key_id=NULL,version=version+1 WHERE id=$1',[state.session]);
+  const cleared=await load();assert.equal(cleared.ciphertext,null);assert.equal(cleared.keyId,null);await assert.rejects(rotated.decrypt(cleared,binding),ProviderTokenStorageError);
+  assert.equal((await local(state.session)).reason,'REVOKED');
+  // A stale ciphertext copy can still decrypt: current database revocation must
+  // be checked for every request. Encryption never confers session authority.
+  assert.equal((await rotated.decrypt(current,binding)).tokensForProvider().accessToken,restored.accessToken);
 });
 test('AAL1 and confirmed accounts without verified TOTP never produce provider evidence',async()=>{
   const f=await provision({enroll:false});const password=authResult(await f.sdk.signInWithPassword({email:f.email,password:f.password}),'password_only');

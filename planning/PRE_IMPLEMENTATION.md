@@ -1,5 +1,7 @@
 # Current implementation plan
 
+Current token encryption slice: real Auth PR8 merged at ba078596e1f8e1c00782178f442471da4244a97a and main CI39639235755 passed. Owner continuation authorizes the server-only standard JWE profile in PHASE_2_TOKEN_ENCRYPTION.md and actual Auth/database round-trip evidence. Schema remains4. Browser lifecycle, live tenant authorization, recovery and production remain downstream; no spending or real-data gate is lifted. Earlier status below is historical.
+
 Current real Auth slice: live-reader PR7 merged at0b44807b1264d96fecda8a5f37a6c799fb381a69 and main CI39622076646 passed. Owner continuation authorizes isolated real Auth/MFA integration and targeted failed-attempt cleanup in PHASE_2_REAL_AUTH.md. Schema remains4; browser routes, encryption, tenant authorization, recovery and production remain downstream. No spending or real-data gate is lifted. Earlier status below is historical.
 
 Current live-provider database slice: provider PR6 merged at7a8154b22390c16a39ce43b67b468553e64aac54 and main CI39604490468 passed. Owner continuation authorizes the narrow schema4 reader and server adapter in PHASE_2_PROVIDER_DATABASE.md, tested with the official Auth image's migrations. Browser sessions, real Auth HTTP integration, tenant permissions and production activation remain downstream. No spending or real-data gate is lifted. Earlier status below is historical.
