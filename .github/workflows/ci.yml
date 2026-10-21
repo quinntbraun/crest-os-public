@@ -1,0 +1,112 @@
+name: Phase 1 verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-1-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  foundation:
+    name: Foundation checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      CREST_ENV: test
+      CREST_TEST_DATABASE_URL: postgresql://supabase_admin:crest_local_test_only@127.0.0.1:54322/crest_test
+    services:
+      postgres:
+        image: supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2
+        env:
+          POSTGRES_USER: supabase_admin
+          POSTGRES_PASSWORD: crest_local_test_only
+          POSTGRES_DB: crest_test
+        ports:
+          - 127.0.0.1:54322:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d crest_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Verify runtime and install exact lockfile
+        run: |
+          test "$(node --version)" = "v24.22.0"
+          test "$(npm --version)" = "11.19.1"
+          npm ci --ignore-scripts --no-fund
+      - name: Verify immutable tooling and scan secrets
+        run: |
+          node scripts/install-tools.mjs
+          .local/tools/gitleaks/gitleaks git --redact --log-opts="--all"
+          .local/tools/gitleaks/gitleaks dir . --redact
+      - name: Verify canonical provenance and append-only migrations
+        env:
+          VERIFY_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          npm run verify:public
+          npm run verify:canonical
+          if [ "$VERIFY_BASE_REF" = "0000000000000000000000000000000000000000" ]; then unset VERIFY_BASE_REF; fi
+          npm run verify:migrations
+          npm run verify:dependencies
+      - name: Dependency security gate
+        run: npm run audit:dependencies
+      - name: Lint, types and regression tests
+        run: |
+          npm run lint
+          npm run typecheck
+          npm test
+          npm run test:db
+      - name: Production build and browser accessibility smoke
+        run: |
+          npm run build
+          npx --no-install playwright install --with-deps chromium webkit
+          npm run test:e2e
+      - name: Build and smoke-test portable container
+        run: |
+          docker build --tag crest-os:ci .
+          docker run --detach --name crest-os-smoke --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges --publish 127.0.0.1:3100:3000 crest-os:ci
+          node scripts/smoke-container.mjs
+          test "$(docker inspect --format '{{.Config.User}}' crest-os-smoke)" = "node"
+          export CREST_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
+          npm run release:manifest
+          docker save crest-os:ci -o .local/release/crest-os-image.tar
+          sha256sum .local/release/crest-os-image.tar > .local/release/crest-os-image.tar.sha256
+      - name: Container diagnostics
+        if: failure()
+        run: docker logs crest-os-smoke || true
+      - name: Stop smoke container
+        if: always()
+        run: docker rm -f crest-os-smoke || true
+      - name: Preserve candidate artifact and provenance
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: phase-1-candidate-${{ github.sha }}
+          path: .local/release/
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: error
+      - name: Preserve browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-diagnostics-${{ github.sha }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 3
+          if-no-files-found: ignore

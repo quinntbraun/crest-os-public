@@ -1,0 +1,13 @@
+# Public publication evidence
+
+2026-10-20. Public repository setup is owner-authorized. Pending criteria below are not passes.
+
+- Original private repository preserved; public preparation starts from reviewed Phase 1 candidate with fresh history.
+- Public technical documents retain requirement IDs and technical contracts. Personal contacts/operating facts and full historical context are omitted or generalized with explicit public document revisions.
+- Exact comparison passed for 42 unchanged non-document files, including all application/tooling test source, package-lock, container, toolchain and migration registry. package.json only adds the publication check; no dependency changes. All technical requirement/acceptance/decision IDs from the original documents remain present. Document edits and private source/public SHA-256 mapping are retained in the private preparation record.
+- New public baseline: `34558ed3df4f339e45b8d1a012a2e2d1246e3546`; fresh Git objects only. Original private baseline object is absent from this checkout. Public canonical verification checks 14 document hashes/lengths and the immutable manifest; no undocumented later amendments.
+- Local checks passed: publication boundary, canonical provenance, empty append-only migration registry, integrity/license/exact-pin verification for 264 locked packages, lint, strict types and all 33 tooling tests. Fresh pinned install used --ignore-scripts and reported zero vulnerabilities. Gitleaks directory scan found no secrets. Initial sandbox registry failure was resolved by the approved network execution path; no security policy was disabled.
+- Negative checks passed: undocumented canonical body changes, baseline-manifest changes, an unreviewed contact address and a tracked non-example .env file were rejected. Temporary synthetic fixtures were removed and the valid tree passed again. These controls supplement manual review; they are not a proof of absence of all sensitive prose.
+- Main ruleset `25515303` is active for the default branch: PR required, zero formal approval count for one owner, resolved threads, strict up-to-date Foundation checks, deletion and force-push blocked, empty bypass list, current_user_can_bypass=never. Bind the required context to the GitHub Actions source after its first public run; until then no merge is approved.
+- Complete public Linux CI on the final candidate: pending. Windows native compiler restriction remains; build/DB/browser/container success must come from the new Linux run, not the private archive's earlier result.
+- Production/deployment, authentication/accounting implementation, real-data/recovery and adviser gates: not performed and not approved by publication.

@@ -1,0 +1,48 @@
+{
+  "name": "crest-os",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "packageManager": "npm@11.19.1",
+  "engines": { "node": "24.22.x", "npm": "11.19.1" },
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build --webpack",
+    "start": "next start --hostname 127.0.0.1",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:db": "node scripts/test-database.mjs",
+    "verify:canonical": "node scripts/verify-canonical.mjs",
+    "verify:public": "node scripts/verify-public.mjs",
+    "verify:migrations": "node scripts/verify-migrations.mjs",
+    "verify:dependencies": "node scripts/verify-dependencies.mjs",
+    "check": "npm run verify:public && npm run verify:canonical && npm run verify:migrations && npm run verify:dependencies && npm run lint && npm run typecheck && npm test && npm run build",
+    "audit:dependencies": "npm audit --audit-level=low",
+    "release:manifest": "node scripts/release-manifest.mjs"
+  },
+  "dependencies": {
+    "next": "16.4.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.19.2",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "10.13.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "pg": "8.23.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0",
+    "vitest": "5.0.5"
+  }
+}

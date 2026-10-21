@@ -1,0 +1,14 @@
+title = "Crest OS secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Generated dependencies, build outputs and ignored local tools only"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)\.next/''',
+  '''(^|/)\.local/''',
+  '''(^|/)playwright-report/''',
+  '''(^|/)test-results/'''
+]
