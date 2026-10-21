@@ -1,5 +1,7 @@
 # Current implementation plan
 
+Current local revocation slice: token-encryption PR9 merged at9856e12d102cbfd1ea7ca5e470f1c5514e464e8c and main CI39642612702 passed. Owner continuation authorizes the narrow schema5 local-session revocation command, opaque credential material and restricted adapter in PHASE_2_SESSION_REVOCATION.md. WORKING_STATE.md records continuation/free-service preferences and the next lifecycle prerequisites. Browser routes, issuance, live tenant authorization, recovery and production remain downstream. No spending, hosted provisioning or real-data gate is lifted. Earlier status below is historical.
+
 Current token encryption slice: real Auth PR8 merged at ba078596e1f8e1c00782178f442471da4244a97a and main CI39639235755 passed. Owner continuation authorizes the server-only standard JWE profile in PHASE_2_TOKEN_ENCRYPTION.md and actual Auth/database round-trip evidence. Schema remains4. Browser lifecycle, live tenant authorization, recovery and production remain downstream; no spending or real-data gate is lifted. Earlier status below is historical.
 
 Current real Auth slice: live-reader PR7 merged at0b44807b1264d96fecda8a5f37a6c799fb381a69 and main CI39622076646 passed. Owner continuation authorizes isolated real Auth/MFA integration and targeted failed-attempt cleanup in PHASE_2_REAL_AUTH.md. Schema remains4; browser routes, encryption, tenant authorization, recovery and production remain downstream. No spending or real-data gate is lifted. Earlier status below is historical.

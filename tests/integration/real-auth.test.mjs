@@ -11,8 +11,10 @@ import { createProviderBoundary,ProviderAuthenticationError } from '../../src/se
 import { createLiveProviderSessionLookup } from '../../src/security/provider-session-db.ts';
 import { localSessionEligibility } from '../../src/security/session-policy.ts';
 import { createProviderTokenStore,ProviderTokenStorageError } from '../../src/security/provider-token-store.ts';
+import { createSessionCredential } from '../../src/security/session-credential.ts';
+import { createSessionRevoker } from '../../src/security/session-revocation-db.ts';
 
-let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys;
+let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke;
 const signal=()=>new AbortController().signal;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
@@ -22,6 +24,7 @@ before(async()=>{
   await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;
   await sandbox.admin.query(`GRANT crest_web TO ${login}`);const url=new URL(target);url.username=login;url.password=password;runtimeUrl=url.toString();
   lookup=createLiveProviderSessionLookup({connectionString:runtimeUrl,environment:'test'});
+  revoke=createSessionRevoker({connectionString:runtimeUrl,environment:'test'});
   service=await startRealAuthService(target);boundary=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},lookup);
   keys=createRemoteJWKSet(new URL(`${service.issuer}/.well-known/jwks.json`),{headers:{apikey:service.publicKey}});
 });
@@ -57,9 +60,9 @@ async function localState(fixture,material){
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,actor.id]);
     await client.query('COMMIT');
   }catch(error){await client.query('ROLLBACK');throw error;}
-  const authAt=new Date(Math.min(material.identity.passwordAt,material.identity.totpAt));
-  const session=(await client.query("WITH moment AS (SELECT date_trunc('milliseconds',clock_timestamp()) AS stamp) INSERT INTO crest_private.app_sessions(actor_id,provider_session_id,token_hash,issued_security_epoch,created_at,authenticated_at,last_active_at,expires_at,trusted,created_by,updated_by) SELECT $1,$2,$3,$4,stamp,$5,stamp,stamp+interval '12 hours',false,$1,$1 FROM moment RETURNING id",[actor.id,material.identity.sessionId,randomBytes(32),actor.current_security_epoch,authAt])).rows[0].id;
-  return {actor:actor.id,session};
+  const authAt=new Date(Math.min(material.identity.passwordAt,material.identity.totpAt)),credential=createSessionCredential();
+  const session=(await client.query("WITH moment AS (SELECT date_trunc('milliseconds',clock_timestamp()) AS stamp) INSERT INTO crest_private.app_sessions(actor_id,provider_session_id,token_hash,issued_security_epoch,created_at,authenticated_at,last_active_at,expires_at,trusted,created_by,updated_by) SELECT $1,$2,$3,$4,stamp,$5,stamp,stamp+interval '12 hours',false,$1,$1 FROM moment RETURNING id",[actor.id,material.identity.sessionId,credential.hashForDatabase(),actor.current_security_epoch,authAt])).rows[0].id;
+  return {actor:actor.id,session,credential};
 }
 async function local(id){
   const r=(await client.query("SELECT s.*,a.kind,a.disabled_at,a.current_security_epoch,clock_timestamp() AS now FROM crest_private.app_sessions s JOIN crest_private.actors a ON a.id=s.actor_id WHERE s.id=$1",[id])).rows[0];
@@ -77,7 +80,7 @@ test('real password/TOTP, signed JWT, restricted DB reader and local app session
   const identity=await boundary.verifyAccess(access(material),bound(material));assert.equal(identity.state,'provider_verified');assert(identity.localSessionAndTenantVerificationRequired);
   assert.equal(await lookup(f.subject,identity.sessionId,signal()),true);
   const state=await localState(f,material);assert.equal((await local(state.session)).state,'locally_eligible');
-  await client.query('UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),version=version+1 WHERE id=$1',[state.session]);
+  await revoke(state.credential.cookieValueForResponse(),signal());
   assert.equal((await local(state.session)).reason,'REVOKED');assert.equal((await boundary.verifyAccess(access(material),bound(material))).state,'provider_verified');
   assert.throws(()=>JSON.stringify(material),/PROVIDER_AUTHENTICATION_FAILED/);
 });
@@ -107,7 +110,7 @@ test('real provider tokens survive encrypted database storage and key rotation; 
   for(const field of ['created_at','authenticated_at','expires_at','last_active_at'])assert.equal(updated[field].getTime(),row[field].getTime());
   const events=JSON.stringify((await client.query('SELECT * FROM crest_private.session_events WHERE session_id=$1',[state.session])).rows);
   for(const secret of [access(material),restored.refreshToken,'provider_token_ciphertext','key_id'])assert(!events.includes(secret),'audit projection excludes provider secrets and storage metadata');
-  await client.query('UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),provider_token_ciphertext=NULL,key_id=NULL,version=version+1 WHERE id=$1',[state.session]);
+  await revoke(state.credential.cookieValueForResponse(),signal());
   const cleared=await load();assert.equal(cleared.ciphertext,null);assert.equal(cleared.keyId,null);await assert.rejects(rotated.decrypt(cleared,binding),ProviderTokenStorageError);
   assert.equal((await local(state.session)).reason,'REVOKED');
   // A stale ciphertext copy can still decrypt: current database revocation must
@@ -175,7 +178,8 @@ test('a database lookup outage denies an otherwise valid real Auth session',asyn
   await denied(unavailable.verifyAccess(access(material),bound(material)));
 });
 test('Auth outage denies despite cached public keys and recovers with a new online check',async()=>{
-  const f=await provision(),material=await fresh(f);await boundary.verifyAccess(access(material),bound(material));await service.stop();
-  try{await denied(boundary.verifyAccess(access(material),bound(material)));}finally{await service.restart();}
+  const f=await provision(),material=await fresh(f),state=await localState(f,material);await boundary.verifyAccess(access(material),bound(material));await service.stop();
+  try{await denied(boundary.verifyAccess(access(material),bound(material)));await revoke(state.credential.cookieValueForResponse(),signal());assert.equal((await local(state.session)).reason,'REVOKED');}finally{await service.restart();}
   assert.equal((await boundary.verifyAccess(access(material),bound(material))).state,'provider_verified');
+  assert.equal((await local(state.session)).reason,'REVOKED');
 });
