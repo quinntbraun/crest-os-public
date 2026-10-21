@@ -205,6 +205,9 @@ test("future unlisted secret fields never enter identity history", async () => t
 
 test("identity roots, permission mappings and history cannot be deleted/truncated or history edited", async () => transaction(async () => {
   const owner = await actor(); await business(owner);
+  // Resolve deferred provisioning events so TRUNCATE reaches the retained-history
+  // trigger itself, rather than PostgreSQL's earlier pending-event prohibition.
+  await client.query("SET CONSTRAINTS ALL IMMEDIATE");
   for (const relation of relations) {
     await denied(`DELETE FROM ${relation}`, [], "55000");
     await denied(`TRUNCATE ${relation} CASCADE`, [], "55000");
