@@ -15,7 +15,10 @@ describe('session lifecycle boundary',()=>{
   it('rejects malformed/cancelled inputs with fixed errors before any network operation',async()=>{
     const lifecycle=createSessionLifecycle({connectionString:'postgresql://u:p@127.0.0.1/crest_migrate_0000000000000000',environment:'test'},provider,store);
     const controller=new AbortController();controller.abort();
-    for(const signal of [controller.signal,new AbortController().signal])await expect(lifecycle.verify('invalid',signal)).rejects.toThrow('SESSION_LIFECYCLE_FAILED');
+    for(const signal of [controller.signal,new AbortController().signal]){
+      await expect(lifecycle.verify('invalid',signal)).rejects.toThrow('SESSION_LIFECYCLE_FAILED');
+      await expect(lifecycle.refresh('invalid',signal)).rejects.toThrow('SESSION_LIFECYCLE_FAILED');
+    }
     await expect(lifecycle.login({email:'synthetic@example.com',password:'synthetic-only',factorId:'invalid',code:'invalid'},{subject:'invalid'},false,controller.signal)).rejects.toThrow('SESSION_LIFECYCLE_FAILED');
   });
 });

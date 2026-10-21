@@ -30,6 +30,11 @@
       "version": "20261021180111",
       "file": "20261021180111_session_issuance.sql",
       "sha256": "849d1e230f1699266bacc8e904cc2268f2b0ad6ea64012cec9e1b4088667c674"
+    },
+    {
+      "version": "20261021183931",
+      "file": "20261021183931_locked_session_refresh.sql",
+      "sha256": "0df851bdd8f36b678c6eba8da0e2f94446d89c133620ea4275ed588fcd419859"
     }
   ]
 }

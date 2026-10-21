@@ -1,7 +1,8 @@
 import "server-only";
 import { AuthClient } from "@supabase/auth-js";
 import type { User } from "@supabase/auth-js";
-import { createRemoteJWKSet,customFetch,jwtVerify } from "jose";
+import { compactVerify,createRemoteJWKSet,customFetch,decodeJwt,jwtVerify } from "jose";
+import type { JWTPayload,JWSHeaderParameters } from 'jose';
 
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const requestMs=3000;
@@ -42,13 +43,14 @@ function configuration(config:ProviderConfiguration):URL {
   } catch { throw new Error("PROVIDER_CONFIGURATION_REQUIRED"); }
 }
 
-function providerFetch(issuer:URL,operation?:AbortSignal):typeof fetch {
-  return async (input,init) => {
+function providerFetch(issuer:URL,operation?:AbortSignal,singleRefresh=false):typeof fetch {
+  const bounded:typeof fetch=async (input,init) => {
     const url=new URL(typeof input==='string'?input:input instanceof URL?input.toString():input.url);
     const method=(init?.method??'GET').toUpperCase();
     const path=url.pathname.slice(issuer.pathname.length);
     const allowed=method==='GET'&&(path==='/user'||path==='/.well-known/jwks.json')&&!url.search
       || method==='POST'&&path==='/token'&&url.search==='?grant_type=password'
+      || singleRefresh&&method==='POST'&&path==='/token'&&url.search==='?grant_type=refresh_token'
       || method==='POST'&&path==='/logout'&&url.search==='?scope=local'
       || method==='POST'&&/^\/factors\/[a-f0-9-]{36}\/(challenge|verify)$/.test(path)&&!url.search;
     if (url.origin!==issuer.origin || !url.pathname.startsWith(`${issuer.pathname}/`) || url.username || url.password || url.hash || !allowed) throw new ProviderAuthenticationError();
@@ -67,6 +69,17 @@ function providerFetch(issuer:URL,operation?:AbortSignal):typeof fetch {
     // Never forward provider Set-Cookie or incidental headers to a future browser.
     return new Response([204,205,304].includes(response.status)?null:bytes,{status:response.status,headers:{'content-type':response.headers.get('content-type')??'application/json'}});
   };
+  if(!singleRefresh)return bounded;
+  return async(input,init)=>{
+    const url=new URL(typeof input==='string'?input:input instanceof URL?input.toString():input.url);
+    if(url.pathname===`${issuer.pathname}/token`&&url.search==='?grant_type=refresh_token'){
+      // The SDK retries transient refresh failures. An uncertain single-use
+      // exchange must instead fail once so the caller can invalidate locally.
+      try{const response=await bounded(input,init);if(response.ok)return response;}catch{/* generic non-retryable SDK result */}
+      return new Response(JSON.stringify({code:'crest_refresh_failed',msg:'PROVIDER_AUTHENTICATION_FAILED'}),{status:400,headers:{'content-type':'application/json'}});
+    }
+    return bounded(input,init);
+  };
 }
 
 function userIsCurrent(user:User|null,subject:string,now:number):boolean {
@@ -84,18 +97,28 @@ export function createProviderBoundary(config:ProviderConfiguration,liveSession:
     timeoutDuration:requestMs,cacheMaxAge:600000,cooldownDuration:30000,[customFetch]:providerFetch(issuer)
   }); // Cache public keys only; JWT/user/provider-session observations are never cached.
 
-  async function claims(access:string,binding:ProviderBinding,requireMfa:boolean):Promise<ProviderIdentity> {
+  async function claims(access:string,binding:ProviderBinding,requireMfa:boolean,refreshReference=false):Promise<Omit<ProviderIdentity,'state'|'localSessionAndTenantVerificationRequired'>> {
     if(typeof access!=='string'||access.length>32768||!uuid.test(binding.subject)||binding.sessionId!==undefined&&!uuid.test(binding.sessionId)) throw new ProviderAuthenticationError();
     const now=Date.now();
-    const {payload,protectedHeader}=await jwtVerify(access,keys,{issuer:issuer.toString(),audience:'authenticated',
-      algorithms:['ES256','RS256'],requiredClaims:['sub','session_id','exp','iat','aal','role','is_anonymous','amr'],clockTolerance:0,currentDate:new Date(now)});
+    let payload:JWTPayload,protectedHeader:JWSHeaderParameters;
+    if(refreshReference){
+      // Signature-verified historical AMR reference only. It never produces
+      // provider evidence; refreshed credentials must pass normal verification.
+      const signed=await compactVerify(access,keys,{algorithms:['ES256','RS256']});
+      payload=decodeJwt(access);protectedHeader=signed.protectedHeader;
+    }else{
+      ({payload,protectedHeader}=await jwtVerify(access,keys,{issuer:issuer.toString(),audience:'authenticated',
+        algorithms:['ES256','RS256'],requiredClaims:['sub','session_id','exp','iat','aal','role','is_anonymous','amr'],clockTolerance:0,currentDate:new Date(now)}));
+    }
     if(protectedHeader.typ!=='JWT'||typeof protectedHeader.kid!=='string'||!/^[A-Za-z0-9_-]{1,128}$/.test(protectedHeader.kid)
       || protectedHeader.jku!==undefined||protectedHeader.x5u!==undefined
+      || protectedHeader.crit!==undefined||protectedHeader.b64!==undefined||payload.iss!==issuer.toString()
       || payload.sub!==binding.subject||typeof payload.session_id!=='string'||!uuid.test(payload.session_id)
       || binding.sessionId!==undefined&&payload.session_id!==binding.sessionId
       || payload.aud!=='authenticated'||payload.role!=='authenticated'||payload.is_anonymous!==false
       || !Number.isSafeInteger(payload.iat!*1000)||!Number.isSafeInteger(payload.exp!*1000)||!Number.isSafeInteger(payload.iat)||!Number.isSafeInteger(payload.exp)
-      || payload.iat!*1000>now||payload.exp!*1000<=now||payload.exp!<=payload.iat!
+      || payload.iat!*1000>now||!refreshReference&&payload.exp!*1000<=now||payload.exp!<=payload.iat!
+      || payload.nbf!==undefined&&(!Number.isSafeInteger(payload.nbf)||!Number.isSafeInteger(payload.nbf*1000)||payload.nbf*1000>now)
       || payload.aal!==(requireMfa?'aal2':'aal1')||!Array.isArray(payload.amr)) throw new ProviderAuthenticationError();
     const references=payload.amr as {method?:unknown;timestamp?:unknown}[];
     if(references.some(r=>!r||typeof r.method!=='string'||typeof r.timestamp!=='number'||!Number.isSafeInteger(r.timestamp)
@@ -106,11 +129,10 @@ export function createProviderBoundary(config:ProviderConfiguration,liveSession:
       return Math.max(...values as number[])*1000;
     };
     const passwordAt=at(['password']); const totpAt=requireMfa?at(['totp','mfa/totp']):0;
-    return Object.freeze({state:'provider_verified',issuer:issuer.toString(),subject:binding.subject,sessionId:payload.session_id,
-      expiresAt:payload.exp!*1000,passwordAt,totpAt,localSessionAndTenantVerificationRequired:true});
+    return Object.freeze({issuer:issuer.toString(),subject:binding.subject,sessionId:payload.session_id,expiresAt:payload.exp!*1000,passwordAt,totpAt});
   }
 
-  async function operation<T>(work:(client:InstanceType<typeof AuthClient>,signal:AbortSignal)=>Promise<T>,external?:AbortSignal):Promise<T> {
+  async function operation<T>(work:(client:InstanceType<typeof AuthClient>,signal:AbortSignal)=>Promise<T>,external?:AbortSignal,singleRefresh=false):Promise<T> {
     const controller=new AbortController();
     const signal=external?AbortSignal.any([external,controller.signal]):controller.signal;
     const timer=setTimeout(()=>controller.abort(),operationMs); timer.unref();
@@ -118,7 +140,7 @@ export function createProviderBoundary(config:ProviderConfiguration,liveSession:
     let result:T; let disposalFailed=false;
     try {
       if(signal.aborted)throw new ProviderAuthenticationError();
-      const current=new AuthClient({url:issuer.toString(),headers:{apikey:publicKey},fetch:providerFetch(issuer,signal),
+      const current=new AuthClient({url:issuer.toString(),headers:{apikey:publicKey},fetch:providerFetch(issuer,signal,singleRefresh),
         autoRefreshToken:false,persistSession:false,detectSessionInUrl:false,flowType:'pkce',skipAutoInitialize:true,debug:false,throwOnError:false});
       client=current;
       const interrupted=new Promise<never>((_,reject)=>signal.addEventListener('abort',()=>reject(new ProviderAuthenticationError()),{once:true}));
@@ -139,9 +161,21 @@ export function createProviderBoundary(config:ProviderConfiguration,liveSession:
     if(error||!userIsCurrent(data.user,identity.subject,Date.now())) throw new ProviderAuthenticationError();
     const exists=await liveSession(identity.subject,identity.sessionId,signal);
     if(exists!==true||signal.aborted||Date.now()>=identity.expiresAt) throw new ProviderAuthenticationError();
-    return identity;
+    return Object.freeze({...identity,state:'provider_verified',localSessionAndTenantVerificationRequired:true});
   }
   return Object.freeze({
+    refreshForSession(tokens:{accessToken:string;refreshToken:string},binding:ExistingProviderBinding,external?:AbortSignal):Promise<ProviderLoginMaterial>{
+      tokens=Object.freeze({...tokens});binding=Object.freeze({...binding});
+      return operation(async(client,signal)=>{
+        if(typeof tokens.refreshToken!=='string'||!/^[-A-Za-z0-9._~]{1,32768}$/.test(tokens.refreshToken)||!uuid.test(binding.sessionId))throw new ProviderAuthenticationError();
+        const before=await claims(tokens.accessToken,binding,true,true);
+        const refreshed=await client.refreshSession({refresh_token:tokens.refreshToken});
+        if(refreshed.error||!refreshed.data.session||!refreshed.data.session.refresh_token||refreshed.data.session.refresh_token.length>32768)throw new ProviderAuthenticationError();
+        const identity=await verify(client,signal,refreshed.data.session.access_token,binding);
+        if(identity.passwordAt!==before.passwordAt||identity.totpAt!==before.totpAt)throw new ProviderAuthenticationError();
+        return new ProviderLoginMaterial(identity,refreshed.data.session.access_token,refreshed.data.session.refresh_token);
+      },external,true);
+    },
     verifyAccess(access:string,binding:ExistingProviderBinding,external?:AbortSignal):Promise<ProviderIdentity> {
       const expected=Object.freeze({...binding});
       return operation((client,signal)=>{

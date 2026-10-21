@@ -22,7 +22,8 @@ const docker=(args,env=process.env)=>execFileSync('docker',args,{env,stdio:['ign
 
 // Test-only path bridge, not Supabase's managed API gateway. It never signs,
 // synthesizes or rewrites provider responses, JWTs, users or MFA results.
-export async function startRealAuthService(target) {
+export async function startRealAuthService(target,{jwtExpiry=3600}={}) {
+  assert(Number.isSafeInteger(jwtExpiry)&&jwtExpiry>=2&&jwtExpiry<=3600,'bounded synthetic JWT lifetime required');
   const db=new URL(target);assert.equal(process.env.CREST_ENV,'test');
   assert(['127.0.0.1','[::1]'].includes(db.hostname));assert.match(db.pathname,/^\/crest_migrate_[a-f0-9]{16}$/);assert(!db.search&&!db.hash);
   const {testAuthImage}=JSON.parse(await readFile(new URL('../../release/toolchain.json',import.meta.url),'utf8'));
@@ -75,7 +76,7 @@ export async function startRealAuthService(target) {
     const env={...process.env,GOTRUE_DB_DATABASE_URL:db.toString(),GOTRUE_DB_DRIVER:'postgres',GOTRUE_DB_NAMESPACE:'auth',
       GOTRUE_SITE_URL:'http://127.0.0.1:3000',API_EXTERNAL_URL:issuer,GOTRUE_API_HOST:'127.0.0.1',GOTRUE_API_PORT:String(port),
       GOTRUE_JWT_SECRET:randomBytes(48).toString('base64url'),GOTRUE_JWT_KEYS:JSON.stringify([key]),GOTRUE_JWT_ISSUER:issuer,
-      GOTRUE_JWT_AUD:'authenticated',GOTRUE_JWT_DEFAULT_GROUP_NAME:'authenticated',GOTRUE_JWT_EXP:'3600',
+      GOTRUE_JWT_AUD:'authenticated',GOTRUE_JWT_DEFAULT_GROUP_NAME:'authenticated',GOTRUE_JWT_EXP:String(jwtExpiry),
       GOTRUE_DISABLE_SIGNUP:'true',GOTRUE_EXTERNAL_EMAIL_ENABLED:'true',GOTRUE_MAILER_AUTOCONFIRM:'false',
       GOTRUE_MFA_TOTP_ENROLL_ENABLED:'true',GOTRUE_MFA_TOTP_VERIFY_ENABLED:'true',GOTRUE_SESSIONS_SINGLE_PER_USER:'false',
       GOTRUE_MFA_RATE_LIMIT_CHALLENGE_AND_VERIFY:'1000',GOTRUE_RATE_LIMIT_TOKEN_REFRESH:'1000',GOTRUE_RATE_LIMIT_SIGN_IN_SIGN_UP:'1000',GOTRUE_LOG_LEVEL:'error'};
