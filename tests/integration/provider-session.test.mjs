@@ -12,8 +12,9 @@ const signal=()=>new AbortController().signal;
 const hash=async()=> (await client.query("SELECT encode(sha256(convert_to(jsonb_agg(to_jsonb(e) ORDER BY id)::text,'UTF8')),'hex') AS hash FROM crest_private.identity_events e")).rows[0].hash;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
+  await sandbox.apply(target,await sandbox.prefix(0),true);
   await installProviderSchema(client,target);
-  prior=await sandbox.apply(target,await sandbox.prefix(3),true);
+  prior=await sandbox.apply(target,await sandbox.prefix(3));
   const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
   await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic provider owner','https://auth.example.com/auth/v1',$1,$2,$2,'manual')",[subject,bootstrap]);
   identityHash=await hash();receipt=await sandbox.apply(target);
@@ -112,9 +113,9 @@ test('lock timeouts and active cancellation close the driver connection and allo
 test('fresh schema0 and both preceding schema2/3 upgrades use actual provider DDL',async()=>{
   await sandbox.admin.query(`DROP ROLE ${login}`);loginOwned=false;
   for(const ordinal of [0,2]) {
-    const db=await sandbox.database(),c=await sandbox.connect(db);await installProviderSchema(c,db);
-    const before=ordinal?await sandbox.apply(db,await sandbox.prefix(ordinal),true):null;
-    const after=await sandbox.apply(db,sandbox.root,!ordinal);
+    const db=await sandbox.database(),c=await sandbox.connect(db);await sandbox.apply(db,await sandbox.prefix(0),true);await installProviderSchema(c,db);
+    const before=ordinal?await sandbox.apply(db,await sandbox.prefix(ordinal)):null;
+    const after=await sandbox.apply(db,sandbox.root);
     assert.equal(after.history.length,4);if(before)assert.deepEqual(after.history.slice(0,ordinal),before.history);
   }
 });
