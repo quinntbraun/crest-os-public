@@ -1,0 +1,6 @@
+* text=auto eol=lf
+docs/*.md -text whitespace=cr-at-eol
+docs/CANONICAL_MANIFEST.json -text
+*.png binary
+*.jpg binary
+*.zip binary
