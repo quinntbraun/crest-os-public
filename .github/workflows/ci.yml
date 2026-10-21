@@ -71,6 +71,7 @@ jobs:
           npm run typecheck
           npm test
           npm run test:db
+          npm run test:migrations
       - name: Production build and browser accessibility smoke
         run: |
           npm run build

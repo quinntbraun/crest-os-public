@@ -29,7 +29,11 @@ for (const tool of downloads) {
     execFileSync("tar", ["-xzf", archive, "-C", destination], { stdio: "inherit" });
   }
   const executable = fileURLToPath(new URL(`${tool.name}/${tool.name}${windows ? ".exe" : ""}`, toolRoot));
-  const version = execFileSync(executable, [tool.name === "gitleaks" ? "version" : "--version"], { encoding: "utf8" }).trim();
+  const env = tool.name === "supabase" ? {
+    ...process.env, DO_NOT_TRACK: "1", SUPABASE_TELEMETRY_DISABLED: "1",
+    SUPABASE_HOME: fileURLToPath(new URL("supabase/cli-home/", toolRoot))
+  } : process.env;
+  const version = execFileSync(executable, [tool.name === "gitleaks" ? "version" : "--version"], { encoding: "utf8", env }).trim();
   if (version !== tool.version) throw new Error(`Tool version mismatch: ${tool.name}`);
   console.log(`${tool.name} ${version}: verified SHA-256`);
 }

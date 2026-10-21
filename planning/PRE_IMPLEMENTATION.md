@@ -1,5 +1,7 @@
 # Current implementation plan
 
+Current continuation, 2026-10-20: public publication is complete and merged, main protection and its trusted Actions source are enforced, and all main checks passed. The owner then explicitly requested the next steps. Phase 2 synthetic development is now authorized, starting with the controlled migration prerequisite in PHASE_2_MIGRATIONS.md. This later instruction supersedes the earlier publication-only boundary below. No spending, provisioning, real data or production activation is approved.
+
 2026-10-20. The owner authorized the reviewed public-source transition documented in docs/PUBLICATION.md. Preserve the existing private repository and its original provenance; the public repository starts with fresh reviewed history. Do not weaken quality, disclose business records or introduce production credentials.
 
 Phase 1 foundation is implemented. Public migration/protection and verification are the active work. Branch/PR preparation is permitted; enforce main protection before routine merges. Phase 2 remains downstream of owner acceptance of the concrete foundation and its protection/check gates. This publication instruction is not authorization to begin new business features or deploy services.
