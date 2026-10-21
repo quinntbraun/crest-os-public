@@ -66,6 +66,7 @@ async function serve(req:IncomingMessage,res:ServerResponse) {
   }
   const bearer=req.headers.authorization?.slice('Bearer '.length);
   const claims=bearer?decodeJwt(bearer):null;
+  if(path==='/auth/v1/logout?scope=local'&&typeof claims?.session_id==='string') {sessions.delete(claims.session_id);res.writeHead(204);res.end();return;}
   if(path==='/auth/v1/user') {json(res,profile(claims?.sub));return;}
   if(path===`/auth/v1/factors/${factor}/challenge`&&claims?.sub&&typeof claims.session_id==='string') {
     challenges.set(claims.session_id,challenge);json(res,{id:challenge,type:'totp',expires_at:Math.floor(Date.now()/1000)+60});return;
@@ -194,6 +195,13 @@ describe('server provider evidence with actual SDK HTTP and JWT signatures',()=>
   it('does not authorize email equality or an existing session as a fresh login',async()=>{
     await denied(boundary().authenticatePasswordTotp(input,{subject:other}));
     await denied(boundary().authenticatePasswordTotp(input,binding));
+  });
+  it('cleans up only the failed attempt provider session, preserving another device',async()=>{
+    const gate=boundary();const material=await gate.authenticatePasswordTotp(input,{subject:owner});
+    await denied(gate.authenticatePasswordTotp({...input,code:'000000'},{subject:owner}));
+    expect(sessions.has(material.identity.sessionId)).toBe(true);
+    expect([...sessions.values()].filter(s=>s===owner)).toHaveLength(2); // prior fixture session and successful device only
+    expect(paths).toContain('POST /auth/v1/logout?scope=local');
   });
   it('requires fresh password AMR and fresh TOTP AMR from the completed ceremony',async()=>{
     initialOverrides={amr:[{method:'password',timestamp:1}]};

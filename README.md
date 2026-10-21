@@ -28,6 +28,8 @@ Tool installation downloads checksum-pinned Gitleaks and Supabase CLI to ignored
 
 The [live provider-session reader](planning/PHASE_2_PROVIDER_DATABASE.md) adds a narrow boolean database helper and bounded server adapter. `npm run test:provider-db` also requires Docker on Linux to apply the digest-pinned official Auth binary's embedded migrations in disposable databases. Browser and business-data access remain closed pending real Auth HTTP integration and browser-session work.
 
+The [real Auth integration](planning/PHASE_2_REAL_AUTH.md), `npm run test:real-auth`, runs the pinned Auth HTTP service with synthetic users, actual password/TOTP/refresh/logout and the restricted database reader. It additionally requires Docker on Linux. No browser login or business-data route is enabled.
+
 ## Disposable PostgreSQL and container checks
 
 With Docker available, start only the isolated synthetic test database:

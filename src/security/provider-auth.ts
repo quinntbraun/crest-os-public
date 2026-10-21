@@ -49,6 +49,7 @@ function providerFetch(issuer:URL,operation?:AbortSignal):typeof fetch {
     const path=url.pathname.slice(issuer.pathname.length);
     const allowed=method==='GET'&&(path==='/user'||path==='/.well-known/jwks.json')&&!url.search
       || method==='POST'&&path==='/token'&&url.search==='?grant_type=password'
+      || method==='POST'&&path==='/logout'&&url.search==='?scope=local'
       || method==='POST'&&/^\/factors\/[a-f0-9-]{36}\/(challenge|verify)$/.test(path)&&!url.search;
     if (url.origin!==issuer.origin || !url.pathname.startsWith(`${issuer.pathname}/`) || url.username || url.password || url.hash || !allowed) throw new ProviderAuthenticationError();
     const signals=[AbortSignal.timeout(requestMs)]; if(operation) signals.push(operation);
@@ -64,7 +65,7 @@ function providerFetch(issuer:URL,operation?:AbortSignal):typeof fetch {
     }
     const bytes=new Uint8Array(size); let offset=0; for(const chunk of chunks) { bytes.set(chunk,offset); offset+=chunk.length; }
     // Never forward provider Set-Cookie or incidental headers to a future browser.
-    return new Response(bytes,{status:response.status,headers:{'content-type':response.headers.get('content-type')??'application/json'}});
+    return new Response([204,205,304].includes(response.status)?null:bytes,{status:response.status,headers:{'content-type':response.headers.get('content-type')??'application/json'}});
   };
 }
 
@@ -150,9 +151,12 @@ export function createProviderBoundary(config:ProviderConfiguration,liveSession:
       input=Object.freeze({...input}); binding=Object.freeze({...binding});
       return operation(async(client,signal)=>{
         const started=Date.now();
+        let createdSession=false;
+        try {
         if(!uuid.test(binding.subject)||typeof input.email!=='string'||!input.email.trim()||input.email.length>320||typeof input.password!=='string'||!input.password||input.password.length>1024
           ||typeof input.factorId!=='string'||!uuid.test(input.factorId)||typeof input.code!=='string'||!/^\d{6}$/.test(input.code)||binding.sessionId!==undefined) throw new ProviderAuthenticationError();
         const signed=await client.signInWithPassword({email:input.email.trim(),password:input.password});
+        createdSession=!!signed.data.session;
         if(signed.error||!signed.data.session||signed.data.user?.id!==binding.subject) throw new ProviderAuthenticationError();
         const initial=await claims(signed.data.session.access_token,binding,false);
         if(initial.passwordAt<Math.floor(started/1000)*1000) throw new ProviderAuthenticationError();
@@ -164,6 +168,14 @@ export function createProviderBoundary(config:ProviderConfiguration,liveSession:
         const identity=await verify(client,signal,mfa.data.access_token,{subject:binding.subject,sessionId:initial.sessionId});
         if(identity.passwordAt<Math.floor(started/1000)*1000||identity.totpAt<Math.floor(started/1000)*1000) throw new ProviderAuthenticationError();
         return new ProviderLoginMaterial(identity,mfa.data.access_token,mfa.data.refresh_token);
+        } catch {
+          // This client owns only this attempt's newly created session. Local
+          // signout must never log out an already authenticated second device.
+          if(createdSession&&!signal.aborted) {
+            try { await client.signOut({scope:'local'}); } catch { /* best effort; no raw SDK cause */ }
+          }
+          throw new ProviderAuthenticationError();
+        }
       });
     }
   });
