@@ -50,6 +50,15 @@ describe('standard JWE provider token storage',()=>{
     const wrong=await createProviderTokenStore('key1',[{id:'key1',key:randomBytes(32)}]);await denied(wrong.decrypt(r,binding));
     await denied(rotated.decrypt({...r,keyId:'key2'},binding));await denied(store.decrypt(updated,binding));
   });
+  it('rejects forged bindings and key labels even when metadata and trusted expectations agree',async()=>{
+    const {key,store}=await fixture(),r=await store.encrypt(tokens,binding),other={...binding,appSessionId:randomUUID()};
+    const forged=rewrite(r,j=>{j.aad=Buffer.from(JSON.stringify(['crest.provider-tokens.v1',other.actorId,other.appSessionId,other.providerSessionId,other.securityEpoch,other.subject,other.issuer])).toString('base64url');});
+    // This passes expected-AAD comparison and must fail GCM authentication.
+    await denied(store.decrypt(forged,other));
+    const aliases=await createProviderTokenStore('key2',[{id:'key1',key},{id:'key2',key}]);
+    const relabeled=rewrite(r,j=>{const h=JSON.parse(Buffer.from(j.protected as string,'base64url').toString());j.protected=Buffer.from(JSON.stringify({...h,kid:'key2'})).toString('base64url');});
+    await denied(aliases.decrypt({...relabeled,keyId:'key2'},binding));
+  });
   it('copies key configuration before yielding and never exposes imported keys',async()=>{
     const key=randomBytes(32),entry={id:'key1',key},pending=createProviderTokenStore('key1',[entry]);key.fill(0);entry.id='changed';
     const store=await pending,r=await store.encrypt(tokens,binding);expect(r.keyId).toBe('key1');expect((await store.decrypt(r,binding)).tokensForProvider()).toEqual(tokens);
