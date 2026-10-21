@@ -30,9 +30,12 @@
     "release:manifest": "node scripts/release-manifest.mjs"
   },
   "dependencies": {
+    "@supabase/auth-js": "2.118.0",
+    "jose": "6.2.13",
     "next": "16.4.2",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "server-only": "0.0.1"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
