@@ -79,3 +79,9 @@ Read README.md, planning/PRE_IMPLEMENTATION.md and the canonical adoption/versio
 Use small reviewable changes and keep documentation current. Do not claim a check passed unless it ran successfully. No dependency/CI/scaffold work is authorized while the owner's no-coding instruction remains active. A later explicit coding instruction may lift that hold; it does not approve provisioning, spending, real data or financial activation.
 
 Preserve the original imported canonical baseline and manifest provenance. Canonical amendments need a clear reason, explicit version/change record and revised verification metadata. Never silently regenerate original baseline hashes to hide changes.
+
+## Continuity and service choices
+
+Read planning/WORKING_STATE.md when resuming or handing off. Verify Git status/head, current PR and exact CI evidence rather than trusting a chat summary or stale status prose. Keep changes small, document decisions and incomplete gates, and leave a concrete next step. If missing/conflicting context is affecting reliable work, tell the owner and prepare a fresh-chat handoff with the checkout, branch/head, evidence, unresolved work and constraints. Do not invent a chat-length threshold or claim that conversation length alone proves degraded quality.
+
+Prefer free/open-source services and tools, researching equivalent free alternatives before considering paid services. Do not reduce product quality or existing integrity/security requirements to meet the free constraint. Current spend is $0; paid purchases are not authorized. Continue routine authorized work without questions. Ask only when necessary owner action, account signup/access or a material unresolved decision prevents progress; complete independent work first. Never extract credentials or bypass account consent.

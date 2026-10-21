@@ -17,7 +17,7 @@ before(async()=>{
   prior=await sandbox.apply(target,await sandbox.prefix(3));
   const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
   await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic provider owner','https://auth.example.com/auth/v1',$1,$2,$2,'manual')",[subject,bootstrap]);
-  identityHash=await hash();receipt=await sandbox.apply(target);
+  identityHash=await hash();receipt=await sandbox.apply(target,await sandbox.prefix(4));
   await client.query("INSERT INTO auth.users(id,email,aud,role) VALUES($1,'first@example.com','authenticated','authenticated'),($2,'second@example.com','authenticated','authenticated')",[subject,other]);
   login=`crest_probe_${randomBytes(8).toString('hex')}`;const password=randomBytes(32).toString('hex');
   assert.match(login,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
@@ -40,7 +40,7 @@ async function asRole(role,work) {
 test('actual provider migrations and schema3 upgrade preserve identity history and CLI prefix',async()=>{
   assert.equal(prior.history.length,3);assert.equal(receipt.history.length,4);
   assert.deepEqual(receipt.history.slice(0,3),prior.history);assert.equal(await hash(),identityHash);
-  assert.deepEqual((await sandbox.apply(target)).history,receipt.history);
+  assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(4))).history,receipt.history);
   assert.equal((await client.query("SELECT pg_get_userbyid(relowner) AS owner FROM pg_class WHERE oid='auth.sessions'::regclass")).rows[0].owner,'supabase_auth_admin');
 });
 test('fresh connections reread exact subject/session and provider deletion is effective immediately',async()=>{
@@ -115,12 +115,12 @@ test('fresh schema0 and both preceding schema2/3 upgrades use actual provider DD
   for(const ordinal of [0,2]) {
     const db=await sandbox.database(),c=await sandbox.connect(db);await sandbox.apply(db,await sandbox.prefix(0),true);await installProviderSchema(c,db);
     const before=ordinal?await sandbox.apply(db,await sandbox.prefix(ordinal)):null;
-    const after=await sandbox.apply(db,sandbox.root);
+    const after=await sandbox.apply(db,await sandbox.prefix(4));
     assert.equal(after.history.length,4);if(before)assert.deepEqual(after.history.slice(0,ordinal),before.history);
   }
 });
 test('missing provider schema fails closed without installing a callable helper',async()=>{
   const db=await sandbox.database(),c=await sandbox.connect(db);await sandbox.apply(db,await sandbox.prefix(3),true);
-  await assert.rejects(sandbox.apply(db));
+  await assert.rejects(sandbox.apply(db,await sandbox.prefix(4)));
   assert.equal((await c.query("SELECT to_regprocedure('crest_commands.provider_session_is_live(uuid,uuid)') AS fn")).rows[0].fn,null);
 });

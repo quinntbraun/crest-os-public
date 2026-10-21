@@ -76,6 +76,7 @@ jobs:
           npm run test:identity-db
           npm run test:sessions-db
           npm run test:provider-db
+          npm run test:session-commands-db
           npm run test:real-auth
       - name: Production build and browser accessibility smoke
         run: |
