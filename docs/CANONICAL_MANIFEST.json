@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "baseline": "2026-10-20 reviewed public V1; original private provenance retained separately",
+  "output_files": [
+    {
+      "name": "ACCOUNTING.md",
+      "version": "1.5",
+      "sha256": "864531291788b10c3f985e2447a11c15fbdca9688c4470351c1970228c98f286",
+      "bytes": 186361
+    },
+    {
+      "name": "ARCHITECTURE.md",
+      "version": "1.5",
+      "sha256": "80bb086a9369a25ae12053bda5f17eca06a199c21e496bdf329f05d025ab55af",
+      "bytes": 35977
+    },
+    {
+      "name": "ARCHITECTURE_DECISIONS.md",
+      "version": "1.5",
+      "sha256": "11acb9dc027cc8427823522193cb5518ab499dc8521c2682e4797ff6c0a47867",
+      "bytes": 17703
+    },
+    {
+      "name": "ARCHITECTURE_REVIEW.md",
+      "version": "1.4",
+      "sha256": "21ae137850b5e732d4d2a19a242e43f62c036aabcd97ef5a63275665a497448e",
+      "bytes": 28841
+    },
+    {
+      "name": "BUSINESS_RULES.md",
+      "version": "1.3",
+      "sha256": "d03d63b765d3d29b7879fede7a858c32a6c03ae8feb9636e4188bc4db82e0e96",
+      "bytes": 81843
+    },
+    {
+      "name": "CANONICAL_ADOPTION_REPORT.md",
+      "version": "1.3",
+      "sha256": "894684b8466e37678de91951770a42d58f80b82891b7dce04a3928ce370b336d",
+      "bytes": 24619
+    },
+    {
+      "name": "CREST_CONTEXT.md",
+      "version": "1.0",
+      "sha256": "b21f26f1e27de90302ec2a7438ef48ff85a3a918ea8a30aef2e3a8588c687eaa",
+      "bytes": 616
+    },
+    {
+      "name": "DATABASE.md",
+      "version": "1.4",
+      "sha256": "d66147140019c214f48a2baf46828d866b77bf3b8c1d4279a5187d6fdf416661",
+      "bytes": 53037
+    },
+    {
+      "name": "EXPORTS_AND_BACKUPS.md",
+      "version": "1.4",
+      "sha256": "cebd4d21981aa060c02973dece9cff2ec3a2e9367d1467edb1694c2ebe39ecdd",
+      "bytes": 26475
+    },
+    {
+      "name": "PRODUCT.md",
+      "version": "1.4",
+      "sha256": "3ea23825ae5c2b998a82577f1685d72b4a98dd828bea4fd75651d4a6625b2dc8",
+      "bytes": 47186
+    },
+    {
+      "name": "PUBLICATION.md",
+      "version": "1.0",
+      "sha256": "f53bcc738639bdf8d336cf970fd0c83715153becd536ab265bf442bdcfce5932",
+      "bytes": 5584
+    },
+    {
+      "name": "ROADMAP.md",
+      "version": "1.4",
+      "sha256": "5a66b64ae58c80ce74423a886fe7bcc1126724f63280b77009225289624043f6",
+      "bytes": 9000
+    },
+    {
+      "name": "SECURITY.md",
+      "version": "1.4",
+      "sha256": "9733992e24d70a5579c0d703f8e8c8f9d8f58384eff04ccbac5d9701e9f7eb1c",
+      "bytes": 20091
+    },
+    {
+      "name": "TESTING.md",
+      "version": "1.4",
+      "sha256": "e6cc49f9fc4da81b684a5762df2dbde3548eb9384ab4532393ea97233dce6a7d",
+      "bytes": 24135
+    }
+  ]
+}

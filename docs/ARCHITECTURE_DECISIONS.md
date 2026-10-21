@@ -1,0 +1,95 @@
+# Crest OS - Initial Architecture Decision Register
+
+Version: 1.5 | 2026-10-20 | Owner Phase 1 and operating-cap maintenance; production activation gated
+
+
+Public edition, 2026-10-20: owner-authorized public source; application access and business evidence remain private. PUBLICATION.md records this explicit privacy/provenance amendment and the current authority/version register. Earlier private-repository and budget/authorization statements below are historical where superseded there. No security, accounting, recovery or real-data activation gate is waived.
+
+Status **Selected** means the canonical adopted technical design; it does not mean infrastructure purchased, software tested or unresolved production policy approved. **Gated** requires the named business/operational evidence before activation. Reversal difficulty is relative after two years of operation: low configuration/deployment change, medium adapter/data migration, high historical/schema contract change.
+
+| ID | Decision | Alternatives considered | Rationale / consequences | Reversal | Status |
+|---|---|---|---|---|---|
+| ADR01 | Next.js/TypeScript standard Node | Workers-compatible adapter, SPA+separate API, different framework | Keeps preferred framework and one language; private application needs no edge optimization; pin supported versions | Medium | Selected |
+| ADR02 | Render Docker web+cron, nearby US East DB | Cloudflare Workers, Vercel, self-managed VPS | Standard Node/pg utilities and predictable process model; paid compute and memory proof needed; no novel runtime dependency | Low | Selected; budget gated |
+| ADR03 | Supabase Free budget pilot, isolated local/on-demand staging | Supabase Free, other managed PG, self-hosted PG | Managed identity+DB; retains relational SQL; Free limits accepted conditionally: own backups, quota monitoring and pause recovery required | Medium | Selected budget pilot; measured capacity/restore gated |
+| ADR04 | Supabase Auth password+TOTP, server session registry | Browser JWT-only, custom password auth, passkeys | Provider credentials plus exact local revocation/timeouts; adds small BFF session layer that must be tested | Medium | Selected; D11 |
+| ADR05 | Private R2 Standard, immutable original keys | Supabase Storage, local disk, public bucket | S3 portability and low storage/egress; external object backup mandatory; app proxy download bandwidth still costs | Medium | Selected |
+| ADR06 | Business ID and actor/operator IDs throughout | Global owner singleton, full SaaS tenant platform | Composite FKs prevent cross-business mix; future employees need identity separation, not speculative role UI | High | Selected |
+| ADR07 | Modular monolith, one release image | Microservices, several edge functions | One transactional boundary and simple deployment; separate process credentials without domain services | Medium | Selected |
+| ADR08 | Parameterized SQL/pg and typed commands | Prisma/ORM schema ownership, browser PostgREST | Exact locking and SQL visible; needs query-type generation and reviews | Medium | Selected |
+| ADR09 | SQL migrations, single CLI migration authority | Dashboard edits, ORM push, auto destructive down | Durable changes, checksums, expand/contract and compatibility; more deliberate releases | High | Selected |
+| ADR10 | Server auth + forced RLS + restricted command routines | UI checks, service-role CRUD, RLS alone | Layered access; backend context trusted and server compromise explicitly residual; SQL routines narrow/invariant-focused | Medium | Selected |
+| ADR11 | Append-only audit and external hash anchors | Editable audit, full event-sourced application | Reconstruction without event-sourcing every directory row; hashes not absolute admin-proof | Medium | Selected |
+| ADR12 | PostgreSQL durable queue + cron leases/fencing | Redis queue, in-process fire-and-forget, CI-only scheduling | At-least-once retries with durable outcomes; one-minute report queue delay acceptable | Low | Selected |
+| ADR13 | Manual ETA/miles and maps handoff | Routing API, background GPS | Required reliability without fake browser capability or provider dependency; optional adapter later | Low | Selected; D07 formula unresolved |
+| ADR14 | PDFKit templates | Headless Chromium, external PDF service | Deterministic private reports, lower runtime memory; manual pagination/layout tests required | Low | Selected |
+| ADR15 | ExcelJS streaming + exact CSV | Spreadsheet SaaS, in-memory-only generation | Portable typed outputs; split limits/precision and exact cents companions | Low | Selected |
+| ADR16 | Vitest+pgTAP+Playwright+axe+k6 | UI-only tests, mocks for DB | Proves constraints and browser behavior; real iPhone testing still required | Low | Selected |
+| ADR17 | Redacted logs/health events+external heartbeat | Mandatory session replay, app-only backup dashboard | Low customer-data sharing and independent missed-backup alerts; operator must respond | Low | Selected |
+| ADR18 | Six-hour independent encrypted locked backups | Free backups, Pro-only7 days, PITR-only, manual exports | Meets designed24h RPO with30daily/12monthly retention; objects/keys/source artifacts essential | High | Selected; D10 funding/drill gated |
+| ADR19 | Stable operation identity plus business uniqueness | Disable buttons, retry UUID alone | Same key handles retry; external refs/entitlements address different-key duplication; ambiguous cash still human-reviewed | High | Selected |
+| ADR20 | Business finance lock; operator lock+occupancy | SERIALIZABLE everywhere, unlocked aggregate checks, distributed locks | Small workload permits simple serialization; future employee scaling can partition operational locks | Medium | Selected |
+| ADR21 | Frozen source snapshots and typed component lineage | Recompute from CRM, balance-only journal | Preserves historical truth and correct refunds/control accounts; ACCOUNTING1.4 supplies templates, original ranges, roots/receivable items, auxiliary/owner-custody controls and exact reconciliation; used control remapping prohibited | High | Selected |
+| ADR22 | No customer-data offline cache or financial replay | Full offline-first sync, native app | Honest uncertain-save recovery, lower exposure; poor connection may require manual external notes | Medium | Selected |
+| ADR23 | Public links deferred | Always-public PDFs, unrestricted customer portal | Required manual share works; if activated narrow revocable token and no GET acceptance | Low | Selected |
+| ADR24 | No automatic permanent business-data purge | Storage lifecycle by object age | Preserves evidence and backup references; privacy/legal retention remains owner/adviser decision | High | Gated D11 retention |
+| ADR25 | Neutral-provider restore/export roundtrip release gate | Merely documented portability | Exposes managed-auth/extension/tool/version assumptions early; temporary recovery cost | Low | Selected |
+
+## Owner decisions and activation evidence
+
+2026-10-20 maintenance (ADR33): Phase 1 foundation/tooling is explicitly authorized, using synthetic data. The absolute recurring operating cap is $30/month total, preferably lower; no purchase or provider provisioning is approved. crestdetailing.com is owned; a provider subdomain is acceptable. Preserve Node/Render/Supabase/R2 and independent recovery. Investigate measured budget conflicts before activation. Main protection remains unverified and no exception has been granted. Safe branch/PR preparation and testing may proceed; do not merge around this limitation. See CANONICAL_MAINTENANCE.md. D10 remains open.
+
+| Gate | Technical resolution | Remaining owner input / evidence |
+|---|---|---|
+| D01 | Versioned explicit tax profiles; unresolved blocks invoice/credit/tip classification | the owner/adviser verifies applicability/presentation/calculation. ACCOUNTING incorporates the gate; all Indiana service-specific applicability still unverified, unverified practice is not exemption |
+| D02 | Chart/mapping/opening/cutover structures and subledger controls | Actual channel identity, business-only custody opening/evidence, explicit personal funding choices and reconciled opening plan required before real use; dedicated account ownership must be verified before use |
+| D03 | Accrual operations separated from tax election; unresolved asset classification held | Adviser policy for assets/tax; no automated depreciation/tax filing |
+| D04 | No automatic fee; cancellation preserves source history | Terms/fee activation only if the owner chooses; no block on basic cancellation |
+| D05 | Mobile/Drop-Off enabled; Pickup + Return separately gated with acknowledgement checks | Drop-Off owner enablement recorded; configured custody/authorization evidence and separate Pickup + Return enablement remain |
+| D06 | Versioned owner-edited catalog; no old price defaults | Current public names/prices/copy when wanted |
+| D07 | Manual origin/ETA/miles and travel treatment | Dollar recommendation formula/default origin only if enabled |
+| D08 | Manual dates and proposed recurrence only | Cadences/winter SOP; no invented default or membership |
+| D09 | Native messaging and manual receipts; AI/OCR/cards excluded | Optional external providers/data sharing require separate activation |
+| D10 | Independent backups/monitoring/restore selected; budget pilot | Approximately $10/month target recorded; the privately configured owner alert mailbox selected; measured quota/runtime costs, offline key custody, restore and alert delivery remain pre-pilot gates |
+| D11 | Session, MFA, file limits, role model and provisional preservation specified | Owner accepts password+TOTP with remembered devices; recovery-kit setup remains; legal/privacy retention schedule before permanent deletion; real recovery/revoke/upload tests before release |
+| D12 | Reference vs financial imports separate; approved cutover per balance | reviewed legacy customers/vehicles/contact details only; prospective ledger; exact cutover instant/zone and actual openings remain; technical opening-before-ordinary sequence and legacy nonposting boundaries are defined |
+
+No blocker above requires inventing a new framework/database decision for synthetic accounting implementation. Exact provider checkout price, resource capacity and library compatibility are verification gates, not business choices. If the budget is unacceptable, revise hosting/recovery ADRs before provisioning; do not quietly weaken BR17.
+
+## Owner decisions recorded 2026-10-20
+
+- Cost target approximately $10/month; use free services where they preserve required behavior. The budget pilot and its capacity/availability tradeoffs are specified in ARCHITECTURE section 9. Cost does not authorize permanent data loss, accounting shortcuts or weaker access controls.
+- Recovery, security and backup alerts go to the privately configured owner alert mailbox. Verify ownership and actual delivery; do not send secrets/backups as email attachments. Independent monitor/provider notices must also target this mailbox. No messages or account changes were made by documenting this decision.
+- Password plus authenticator TOTP; remember trusted phone/desktop sessions for up to 30 days, expiring after seven days without foreground use. Opening the app does not require a new login. Sensitive export/security/period-unlock actions can require recent authentication. Device loss, recovery or revocation can end a session earlier. Require a unique Crest password; strongly recommend a different unique mailbox password and mailbox MFA. No paid password manager required. An offline sealed recovery kit must include provider recovery material and backup decryption keys, held separately from the phone/email/app; test recovery without the phone. Mailbox-only reset must not bypass TOTP.
+- Backups every six hours; 30 daily and 12 month-end points plus referenced originals. Continue financial writes after a 24-hour backup failure with persistent in-app and external email alerts; record the RPO breach. Do not destroy records to meet a storage cap. Retention is provisional preservation, not a legal retention opinion.
+- Real duplicate prevention uses stable command identity and verified provider transaction IDs. Same customer/vehicle/service, even on the same day, is not unique payment identity. Flag same-customer/same-amount/same-method/same-business-date receipts for review; display candidate details and allow an explicit reason to confirm a distinct receipt. Flagging never automatically refunds, merges, deletes or rejects a legitimate transaction. Repeated service on a new job is valid; invoice entitlement controls prevent billing the same fulfilled scope twice. Deterministic rules suffice; no AI model required.
+- Fresh prospective accounting start; no historical ledger import. Technical cutover/opening controls are adopted; actual local date/time and evidenced amounts remain activation inputs. Fresh start is not permission to assert zero cash, unpaid invoices, deposits, debts or assets. Import reviewed legacy customers and their vehicles/contact details through preview/mapping/reconciliation, with no financial posting. Preserve source batch and identifiers; no guessed field mapping or automatic merges.
+- Mobile and Customer Drop-Off enabled at launch. Pickup + Return remains separately gated. Existing condition/custody/acknowledgement requirements still apply; enabling a mode does not establish insurance or legal sufficiency.
+- Accountant-ready period reports and evidence: general ledger, trial balance, profit/loss, balance sheet, receivable/payable/customer-fund controls, reconciliation, invoices/receipts, mileage, asset register and corrections/export history. ACCOUNTING defines supported reports and reconciliation. Formal tax returns, tax advice, filing and automated depreciation are not promised; the tax preparer determines filing outputs. Prior-period records remain separately accessible for the tax preparer and are not erased by the fresh start.
+
+
+## Reconciliation decisions adopted 2026-10-20
+
+| ID | Decision / alternatives | Consequence and status |
+|---|---|---|
+| ADR26 | Business-only owner custody (1070-family), not entire personal wallet asset or automatic contribution/draw on receipt | Smallest model that retains business economic interest and transaction evidence. Custody lots and explicit funding/settlement split; personal activity excluded. No legal segregation/loan claim. ACCOUNTING26; adopted technical contract, D02 actual evidence gated |
+| ADR27 | Exact original-offset range consumption/restoration and typed roots/receivable items | Reject rounded remaining-balance alternatives and receipt-only FK model. Supports openings, reclassification, non-last reversals and legacy failures; adopted |
+| ADR28 | Distinct business recovery epoch for every mutation plus full invoice-number reservations/recovery series | Session revocation alone cannot prevent lost-operation replay; shared transactional authority fence and former-writer isolation apply to every mutation. Normal deployments retain epoch; recovery changes it before reopen; adopted |
+| ADR29 | Pinned used controls, explicit event order, exact dedicated-account versus custody reconciliation | No control remapping, random UUID event ordering, generic balance plugs or full personal-balance reconciliation. Operational invoice-issued reports and derived earnings remain explicit; adopted |
+
+These decisions do not add payroll, feeds, autonomous bookkeeping, tax filing, portals, public quote links, automatic SMS/depreciation or employee/location UI. Public-link security text remains a dormant optional contract, not authorization to build it in this pass.
+
+
+## Final pre-code audit selections
+
+ADR30: shared transactional business recovery-authority fence for all mutations, exclusive incident rotation, former-writer credential fencing and reviewed worker requeue (ARCHITECTURE5). This strengthens restore correctness without changing ordinary session revocation or backup-age continuation.
+
+ADR31: incident-only reconstruction of proven lost records preserves original business dates/numbers/snapshots and separate new reconstruction provenance; ordinary late recording is not historical issuance (EXPORTS_AND_BACKUPS7.2).
+
+ADR32: immutable supplemental opening items plus exact terminal opening-correction ranges; typed owner contribution capacity prevents duplicate capital return/conversion (ACCOUNTING12.3/26.3a). These are selected technical mechanics; actual opening facts and funding intent remain gated.
+
+## ADR34 - Owner-authorized public source, private application and evidence
+
+2026-10-20. Create a fresh public repository on GitHub Free, retaining the complete existing private repository as an unchanged historical/provenance archive. Publish reviewed application code and privacy-amended technical specifications only. Keep live records, historical business context, actual financial/channel/tax evidence, personal contact destinations, credentials and backups private. Public code does not grant application access; owner provisioning, TOTP, server authorization, restricted database roles/RLS, private storage and tested recovery remain required.
+
+PUBLICATION.md explicitly records the public-baseline transition, versions and current $0 requested expenditure. No paid service, runtime switch, production deployment or feature expansion is authorized. Preserve all accounting/integrity/security/recovery contracts and tests. Enforce main protection and passing Foundation checks before routine merging; no bypass exception is granted. This supersedes the earlier instruction to keep source private, without exposing private Git objects or weakening the product.
