@@ -22,7 +22,7 @@ before(async()=>{
     await client.query('COMMIT');
   }catch(error){await client.query('ROLLBACK');throw error;}
   legacyBefore=(await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[legacy])).rows[0].row;
-  receipt=await sandbox.apply(target);
+  receipt=await sandbox.apply(target,await sandbox.prefix(8));
   login=`crest_probe_${randomBytes(8).toString('hex')}`;const password=randomBytes(32).toString('hex');assert.match(login,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
   await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;
   await sandbox.admin.query(`GRANT crest_web TO ${login}`);const url=new URL(target);url.username=login;url.password=password;runtimeUrl=url.toString();
@@ -47,7 +47,7 @@ test('schema7 upgrade preserves prior sessions, identity and append-only migrati
   assert.deepEqual((await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[legacy])).rows[0].row,legacyBefore);
   assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.session_events WHERE session_id=$1',[legacy])).rows[0].n,1);
   assert.equal((await client.query('SELECT * FROM crest_private.actors WHERE id=$1',[bootstrap.id])).rows[0].current_security_epoch,bootstrap.current_security_epoch);
-  assert.deepEqual((await sandbox.apply(target)).history,receipt.history);
+  assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(8))).history,receipt.history);
 });
 test('login owner is closed and web has only the fixed-path forced-RLS command',async()=>{
   const role=(await client.query("SELECT * FROM pg_roles WHERE rolname='crest_login_owner'")).rows[0];
@@ -146,7 +146,7 @@ test('migration rejects owned-role and writable-schema drift without partially c
     await sandbox.apply(db,await sandbox.prefix(0),true);await installProviderSchema(c,db);await sandbox.apply(db,await sandbox.prefix(7));
     if(drift==='login')await sandbox.admin.query('ALTER ROLE crest_login_owner LOGIN');else await c.query('GRANT CREATE ON SCHEMA public TO crest_login_owner');
     try{
-      await assert.rejects(sandbox.apply(db));
+      await assert.rejects(sandbox.apply(db,await sandbox.prefix(8)));
       assert.equal((await c.query("SELECT to_regclass('crest_private.login_attempts') AS relation")).rows[0].relation,null);
       assert.equal((await c.query("SELECT to_regprocedure('crest_commands.admit_login(bytea,bytea,bytea)') AS routine")).rows[0].routine,null);
       assert.equal((await c.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,7);

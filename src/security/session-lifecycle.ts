@@ -91,6 +91,23 @@ export function createSessionLifecycle(config:SessionDatabaseConfiguration,
     }finally{hash.fill(0);}
   }
   return Object.freeze({
+    async logout(credential:string,external:AbortSignal):Promise<Readonly<{localRevoked:true;providerSignedOut:boolean}>>{
+      const signal=AbortSignal.any([external,AbortSignal.timeout(20000)]);let hash:Buffer|undefined;
+      try{
+        hash=sessionCredentialHash(credential);let saved:Snapshot|null=null;
+        // Snapshot failure must not prevent authoritative local revocation.
+        try{saved=await query('SELECT crest_commands.app_session_snapshot($1::bytea) AS result',[hash],signal) as Snapshot|null;}catch{/* local revoke still required */}
+        await revoke(credential,signal);
+        let providerSignedOut=false;
+        try{
+          if(saved&&saved.id===saved.binding.appSessionId){
+            const material=await tokens.decrypt({keyId:saved.keyId,ciphertext:Buffer.from(saved.ciphertext,'base64')},saved.binding);
+            await provider.signOutLocal(material.tokensForProvider().accessToken,{subject:saved.binding.subject,sessionId:saved.binding.providerSessionId},signal);providerSignedOut=true;
+          }
+        }catch{/* provider failure cannot restore committed local authority */}
+        return Object.freeze({localRevoked:true,providerSignedOut});
+      }catch{throw new SessionLifecycleError();}finally{hash?.fill(0);}
+    },
     async refresh(credential:string,external:AbortSignal):Promise<Verified>{
       const signal=AbortSignal.any([external,AbortSignal.timeout(20000)]);let hash:Buffer|undefined;
       try{hash=sessionCredentialHash(credential);await rotate(credential,hash,await read(hash,signal),signal);return await verify(credential,signal,'background',false,false);}

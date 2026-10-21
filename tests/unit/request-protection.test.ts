@@ -6,6 +6,13 @@ const origin='https://crest.example.com',id=randomUUID();
 const protect=createRequestProtection({origin,environment:'production'});
 const request=(token:string,overrides:Record<string,string>={},method='POST')=>({method,headers:new Headers({origin,'content-type':'application/json','sec-fetch-site':'same-origin','x-crest-csrf':token,...overrides})});
 describe('browser mutation prerequisites',()=>{
+  it('separates anonymous login proofs from authenticated session proofs and checks Origin at bootstrap',()=>{
+    const token=createCsrfToken(id,'login'),r=request(token.tokenForResponse());
+    expect(()=>protect(r,id,token.hashForDatabase(),'login')).not.toThrow();
+    expect(()=>protect(r,id,token.hashForDatabase())).toThrow(RequestProtectionError);
+    expect(()=>protect.requireOrigin(request(''))).not.toThrow();
+    expect(()=>protect.requireOrigin(request('',{origin:'https://evil.example.com'}))).toThrow(RequestProtectionError);
+  });
   it('accepts a matching random synchronizer token only for its bound session and approved origin',()=>{
     const token=createCsrfToken(id);expect(Buffer.from(token.tokenForResponse(),'base64url')).toHaveLength(32);
     for(const method of ['POST','PATCH'])expect(()=>protect(request(token.tokenForResponse(),{},method),id,token.hashForDatabase())).not.toThrow();

@@ -274,6 +274,18 @@ describe('server provider evidence with actual SDK HTTP and JWT signatures',()=>
     await denied(gate.refreshForSession({accessToken:access,refreshToken:'synthetic-refresh-only'},binding));
     expect(Date.now()-started).toBeLessThan(5000);expect(paths.filter(p=>p.includes('grant_type=refresh_token'))).toHaveLength(1);
   },7000);
+  it('uses the public-key SDK logout endpoint only for the exact signed session and local scope',async()=>{
+    const second=randomUUID();sessions.set(second,owner);const access=await token();await boundary().signOutLocal(access,binding);
+    expect(sessions.has(fixedSession)).toBe(false);expect(sessions.has(second)).toBe(true);expect(lookups).toBe(0);
+    expect(paths.filter(path=>path.includes('/logout'))).toEqual(['POST /auth/v1/logout?scope=local']);expect(paths.some(path=>path.endsWith('/user'))).toBe(false);
+  });
+  it('rejects substituted logout identity and session before provider logout',async()=>{
+    const access=await token();await denied(boundary().signOutLocal(access,{subject:other,sessionId:fixedSession}));
+    await denied(boundary().signOutLocal(access,{subject:owner,sessionId:randomUUID()}));expect(paths.some(path=>path.includes('/logout'))).toBe(false);
+  });
+  it('returns a generic failure for provider logout outage without replaying it',async()=>{
+    const access=await token();mode='unavailable';await denied(boundary().signOutLocal(access,binding));expect(paths.filter(path=>path.includes('/logout'))).toHaveLength(1);
+  });
   it.each([
     {issuer:'http://example.com/auth/v1',environment:'production'},
     {issuer:'http://localhost/auth/v1'},{issuer:'http://169.254.169.254/auth/v1'},

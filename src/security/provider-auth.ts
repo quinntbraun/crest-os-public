@@ -164,6 +164,17 @@ export function createProviderBoundary(config:ProviderConfiguration,liveSession:
     return Object.freeze({...identity,state:'provider_verified',localSessionAndTenantVerificationRequired:true});
   }
   return Object.freeze({
+    signOutLocal(access:string,binding:ExistingProviderBinding,external?:AbortSignal):Promise<void>{
+      binding=Object.freeze({...binding});
+      return operation(async(client)=>{
+        if(!uuid.test(binding.sessionId))throw new ProviderAuthenticationError();
+        // Reduction of authority only; an expired signed reference is allowed,
+        // but the provider may reject it. No implicit refresh or admin key.
+        await claims(access,binding,true,true);
+        const result=await client.admin.signOut(access,'local');
+        if(result.error)throw new ProviderAuthenticationError();
+      },external);
+    },
     refreshForSession(tokens:{accessToken:string;refreshToken:string},binding:ExistingProviderBinding,external?:AbortSignal):Promise<ProviderLoginMaterial>{
       tokens=Object.freeze({...tokens});binding=Object.freeze({...binding});
       return operation(async(client,signal)=>{
