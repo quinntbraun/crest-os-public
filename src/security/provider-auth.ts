@@ -110,19 +110,21 @@ export function createProviderBoundary(config:ProviderConfiguration,liveSession:
       expiresAt:payload.exp!*1000,passwordAt,totpAt,localSessionAndTenantVerificationRequired:true});
   }
 
-  async function operation<T>(work:(client:InstanceType<typeof AuthClient>,signal:AbortSignal)=>Promise<T>):Promise<T> {
+  async function operation<T>(work:(client:InstanceType<typeof AuthClient>,signal:AbortSignal)=>Promise<T>,external?:AbortSignal):Promise<T> {
     const controller=new AbortController();
+    const signal=external?AbortSignal.any([external,controller.signal]):controller.signal;
     const timer=setTimeout(()=>controller.abort(),operationMs); timer.unref();
     let client:InstanceType<typeof AuthClient>|undefined;
     let result:T; let disposalFailed=false;
     try {
-      const current=new AuthClient({url:issuer.toString(),headers:{apikey:publicKey},fetch:providerFetch(issuer,controller.signal),
+      if(signal.aborted)throw new ProviderAuthenticationError();
+      const current=new AuthClient({url:issuer.toString(),headers:{apikey:publicKey},fetch:providerFetch(issuer,signal),
         autoRefreshToken:false,persistSession:false,detectSessionInUrl:false,flowType:'pkce',skipAutoInitialize:true,debug:false,throwOnError:false});
       client=current;
-      const interrupted=new Promise<never>((_,reject)=>controller.signal.addEventListener('abort',()=>reject(new ProviderAuthenticationError()),{once:true}));
-      const request=(async()=>{ await current.initialize(); return work(current,controller.signal); })();
+      const interrupted=new Promise<never>((_,reject)=>signal.addEventListener('abort',()=>reject(new ProviderAuthenticationError()),{once:true}));
+      const request=(async()=>{ await current.initialize(); return work(current,signal); })();
       result=await Promise.race([request,interrupted]);
-      if(controller.signal.aborted) throw new ProviderAuthenticationError();
+      if(signal.aborted) throw new ProviderAuthenticationError();
     } catch { throw new ProviderAuthenticationError(); }
     finally {
       clearTimeout(timer); controller.abort();
@@ -140,14 +142,14 @@ export function createProviderBoundary(config:ProviderConfiguration,liveSession:
     return identity;
   }
   return Object.freeze({
-    verifyAccess(access:string,binding:ExistingProviderBinding):Promise<ProviderIdentity> {
+    verifyAccess(access:string,binding:ExistingProviderBinding,external?:AbortSignal):Promise<ProviderIdentity> {
       const expected=Object.freeze({...binding});
       return operation((client,signal)=>{
         if(!uuid.test(expected.sessionId)) throw new ProviderAuthenticationError();
         return verify(client,signal,access,expected);
-      });
+      },external);
     },
-    authenticatePasswordTotp(input:{email:string;password:string;factorId:string;code:string},binding:ProviderBinding):Promise<ProviderLoginMaterial> {
+    authenticatePasswordTotp(input:{email:string;password:string;factorId:string;code:string},binding:ProviderBinding,external?:AbortSignal):Promise<ProviderLoginMaterial> {
       input=Object.freeze({...input}); binding=Object.freeze({...binding});
       return operation(async(client,signal)=>{
         const started=Date.now();
@@ -176,7 +178,7 @@ export function createProviderBoundary(config:ProviderConfiguration,liveSession:
           }
           throw new ProviderAuthenticationError();
         }
-      });
+      },external);
     }
   });
 }
