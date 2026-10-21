@@ -28,6 +28,8 @@ Local unit tests cover prohibited environments/targets, malformed receipt identi
 
 Validation results and exact PR/head/run identity belong to the PR and live CI. Before merge, all required Foundation checks must pass and the change must be reviewed; this document alone is not a test pass. Local host lacks Docker and its native Next compiler remains blocked, so real PostgreSQL/CLI, build/browser/container evidence comes from Linux CI.
 
+Initial Linux run39523161443 passed all49 unit tests, the existing nine pgTAP assertions and nine of ten new real coordinator scenarios. Its guard-loss fixture failed to observe the CLI because the pinned driver's connection pool overrides application_name with @effect/sql-pg. Corrected the barrier to require an actual active PgSleep backend in the uniquely owned database, excluding the guard PID; stop waiting if the CLI already finishes. The assertion still requires actual CLI execution before terminating the guard. The [pinned driver source](https://github.com/supabase/cli/blob/v2.121.0/apps/cli/src/command-internal/db-connection.sql-pg.layer.ts) confirms the override. No production guard or test requirement was removed. The corrected head must pass the full suite before readiness.
+
 ## Remaining Phase 2 work and production boundaries
 
 After this prerequisite is reviewed, implement the first security migrations and synthetic F1 tests for businesses/durable actors/memberships/capabilities, restricted roles/FORCE RLS, sessions and audit/operation/recovery fencing, then provider authentication and server/session flows. Use the same controlled path for their disposable integration databases.

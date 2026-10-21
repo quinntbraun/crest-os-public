@@ -154,11 +154,14 @@ test("source edits after staging cannot change executed bytes or produce a recei
 test("loss of the guard during actual CLI execution retains pending evidence", { timeout: 45000 }, async () => withDatabase(async (url, database) => {
   const f = await fixture(url, new Map([[first, sql + "SELECT pg_sleep(10);\n"]]));
   let guardPid;
-  const outcome = f.apply({ bootstrapEmpty: true, beforeCli: async (pid) => { guardPid = pid; } }).then(() => null, (error) => error);
+  let settled = false;
+  const outcome = f.apply({ bootstrapEmpty: true, beforeCli: async (pid) => { guardPid = pid; } }).then(() => null, (error) => error).then((result) => { settled = true; return result; });
   const deadline = Date.now() + 20000;
   let running = false;
-  while (!running && Date.now() < deadline) {
-    const result = await admin.query("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1 AND application_name LIKE 'crest-migration-%' AND state='active' AND query LIKE '%pg_sleep%') AS running", [database]);
+  while (!running && !settled && Date.now() < deadline) {
+    // The pinned CLI's driver sets application_name=@effect/sql-pg. Observe the actual
+    // sleeping backend in this uniquely owned database, not the requested client label.
+    const result = await admin.query("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1 AND pid<>$2 AND state='active' AND wait_event='PgSleep') AS running", [database, guardPid ?? 0]);
     running = result.rows[0].running;
     if (!running) await delay(25);
   }
