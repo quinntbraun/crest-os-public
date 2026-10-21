@@ -463,12 +463,12 @@ test('schema7 grants only ciphertext/provenance updates and rejects stale, malfo
 });
 
 test('an actually expired access JWT refreshes automatically using the original signed AMR reference',async()=>{
-  const short=await startRealAuthService(target,{jwtExpiry:8});
+  const short=await startRealAuthService(target,{jwtExpiry:120});
   try{
     const f=await provision({provider:short});await linkActor(f,short.issuer);
     const provider=createProviderBoundary({issuer:short.issuer,publicKey:short.publicKey,environment:'test'},lookup);
     const gate=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},provider,store),issued=await issue(f,false,gate),before=await sessionRow(issued);
-    const remaining=issued.evidence.provider.expiresAt-Date.now();assert(remaining>0&&remaining<=8000,'actual Auth must apply the short test-only JWT lifetime');
+    const remaining=issued.evidence.provider.expiresAt-Date.now();assert(remaining>90000&&remaining<=120000,'actual Auth must apply the test-only lifetime above the SDK MFA refresh margin');
     await delay(remaining+25);const evidence=await gate.verify(issued.cookieValueForResponse(),signal()),after=await sessionRow(issued);
     assert(evidence.provider.expiresAt>Date.now());assert.equal(evidence.provider.passwordAt,issued.evidence.provider.passwordAt);assert.equal(evidence.provider.totpAt,issued.evidence.provider.totpAt);
     assert.equal(BigInt(after.version),BigInt(before.version)+1n);unchangedSession(before,after);

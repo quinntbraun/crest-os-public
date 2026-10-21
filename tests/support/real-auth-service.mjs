@@ -23,7 +23,8 @@ const docker=(args,env=process.env)=>execFileSync('docker',args,{env,stdio:['ign
 // Test-only path bridge, not Supabase's managed API gateway. It never signs,
 // synthesizes or rewrites provider responses, JWTs, users or MFA results.
 export async function startRealAuthService(target,{jwtExpiry=3600}={}) {
-  assert(Number.isSafeInteger(jwtExpiry)&&jwtExpiry>=2&&jwtExpiry<=3600,'bounded synthetic JWT lifetime required');
+  // SDK MFA session reads proactively refresh within90s even with autoRefresh off.
+  assert(Number.isSafeInteger(jwtExpiry)&&jwtExpiry>=120&&jwtExpiry<=3600,'bounded synthetic JWT lifetime above SDK refresh margin required');
   const db=new URL(target);assert.equal(process.env.CREST_ENV,'test');
   assert(['127.0.0.1','[::1]'].includes(db.hostname));assert.match(db.pathname,/^\/crest_migrate_[a-f0-9]{16}$/);assert(!db.search&&!db.hash);
   const {testAuthImage}=JSON.parse(await readFile(new URL('../../release/toolchain.json',import.meta.url),'utf8'));
