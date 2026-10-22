@@ -75,6 +75,11 @@
       "version": "20261022204800",
       "file": "20261022204800_business_name_command.sql",
       "sha256": "1074a3043aa0b12275c0b8a6c9f72f24b06f0ea8049cf9dc661fc4a880d5691f"
+    },
+    {
+      "version": "20261022221500",
+      "file": "20261022221500_business_settings_context.sql",
+      "sha256": "b90f1d1b074286af8c77b0dab2bb4301e1eeabff18b879e0e0bcb01100fee808"
     }
   ]
 }

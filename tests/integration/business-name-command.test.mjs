@@ -24,13 +24,13 @@ async function evidence(f){return {
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);
   prior=await sandbox.apply(target,await sandbox.prefix(13));bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;a=await state();b=await state();legacy=await seed(a);
-  previous=await sandbox.apply(target,await sandbox.prefix(14));retainedBefore=await evidence(a);receipt=await sandbox.apply(target);
+  previous=await sandbox.apply(target,await sandbox.prefix(14));retainedBefore=await evidence(a);receipt=await sandbox.apply(target,await sandbox.prefix(15));
   login=`crest_probe_${randomBytes(8).toString('hex')}`;const password=randomBytes(32).toString('hex');await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;await sandbox.admin.query(`GRANT crest_web TO ${login}`);
   const url=new URL(target);url.username=login;url.password=password;web=await sandbox.connect(url.toString());web2=await sandbox.connect(url.toString());for(const c of [web,web2])await c.query("SET ROLE crest_web; SET lock_timeout='3s'");webPid=await pid(web);web2Pid=await pid(web2);
 });
 after(async()=>{await web?.end();await web2?.end();if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();});
 test('schema13/14 staged upgrade preserves exact prior CLI history and private/source/audit rows',async()=>{
-  assert.equal(prior.history.length,13);assert.equal(previous.history.length,14);assert.equal(receipt.history.length,15);assert.deepEqual(previous.history.slice(0,13),prior.history);assert.deepEqual(receipt.history.slice(0,14),previous.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);assert.deepEqual(await evidence(a),retainedBefore);assert.deepEqual((await lookup(a,legacy.operation)).rows[0].result.receipt,legacy.result);
+  assert.equal(prior.history.length,13);assert.equal(previous.history.length,14);assert.equal(receipt.history.length,15);assert.deepEqual(previous.history.slice(0,13),prior.history);assert.deepEqual(receipt.history.slice(0,14),previous.history);assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(15))).history,receipt.history);assert.deepEqual(await evidence(a),retainedBefore);assert.deepEqual((await lookup(a,legacy.operation)).rows[0].result.receipt,legacy.result);
 });
 test('only fixed typed command is executable by web, and owners remain nonlogin/unassumable',async()=>{
   const signatures=[['rename_business(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,bigint,text)','crest_command_owner'],['lock_business_rename_authority(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)','crest_session_owner'],['finish_business_rename_activity(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid)','crest_session_owner']];
