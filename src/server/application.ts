@@ -8,6 +8,7 @@ export {createTenantContextReader} from '../security/tenant-read.ts';
 export {createMutationTransaction} from '../security/mutation-transaction.ts';
 export {createBusinessOperationLookup} from '../security/business-operation-lookup.ts';
 export {createBusinessNameCommand} from '../security/business-name-command.ts';
+export {createBusinessSettingsContextReader} from '../security/business-settings-context.ts';
 
 // One Node process, one listener, one Next application. No separate API service.
 export async function createCrestApplication(config:NodeConfiguration){
