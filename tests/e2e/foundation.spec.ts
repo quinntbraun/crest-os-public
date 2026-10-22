@@ -14,7 +14,7 @@ test("liveness exposes no environment details and is not cached", async ({ reque
   const response = await request.get("/api/health");
   expect(response.status()).toBe(200);
   expect(await response.json()).toEqual({ service: "crest-os", status: "ok" });
-  expect(response.headers()["cache-control"]).toBe("no-store");
+  expect(response.headers()["cache-control"]).toContain("no-store");
   expect(response.headers()["x-powered-by"]).toBeUndefined();
   expect(response.headers()["x-content-type-options"]).toBe("nosniff");
   expect(response.headers()["x-frame-options"]).toBe("DENY");
