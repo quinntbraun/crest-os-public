@@ -19,12 +19,13 @@ import {createBrowserSessionFlow,BrowserSessionError} from '../../src/security/b
 import {createLoginFingerprinter} from '../../src/security/login-admission.ts';
 import {createCsrfToken} from '../../src/security/request-protection.ts';
 import {createTenantContextReader,TenantReadError} from '../../src/security/tenant-read.ts';
+import {createBusinessOperationLookup,BusinessOperationLookupError} from '../../src/security/business-operation-lookup.ts';
 import {createMutationTransaction,MutationBoundaryError} from '../../src/security/mutation-transaction.ts';
 import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginResponse,sessionResponse,logoutResponse,BrowserHttpError} from '../../src/security/browser-http.ts';
 import {createSessionRequestAdmission,SessionAdmissionError} from '../../src/security/session-request-admission.ts';
 import {authenticationServer} from '../support/authentication-server.mjs';
 
-let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,fenceReceipt,storageReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
+let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,fenceReceipt,storageReceipt,lookupReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
@@ -46,7 +47,7 @@ before(async()=>{
   browserReceipt=await sandbox.apply(target,await sandbox.prefix(9));
   upgradeProof=(await client.query('INSERT INTO crest_private.session_csrf_tokens(session_id,token_hash) VALUES($1,$2) RETURNING to_jsonb(session_csrf_tokens) AS row',[legacy.session,randomBytes(32)])).rows[0].row;
   upgradeContext=(await client.query("WITH moment AS MATERIALIZED (SELECT clock_timestamp() AS stamp) INSERT INTO crest_private.login_contexts(id,credential_hash,ip_hash,csrf_hash,created_at,expires_at) SELECT gen_random_uuid(),$1,$2,$3,stamp,stamp+interval '10 minutes' FROM moment RETURNING to_jsonb(login_contexts) AS row",[randomBytes(32),randomBytes(32),randomBytes(32)])).rows[0].row;
-  admissionReceipt=await sandbox.apply(target,await sandbox.prefix(10));tenantReceipt=await sandbox.apply(target,await sandbox.prefix(11));fenceReceipt=await sandbox.apply(target,await sandbox.prefix(12));storageReceipt=await sandbox.apply(target);
+  admissionReceipt=await sandbox.apply(target,await sandbox.prefix(10));tenantReceipt=await sandbox.apply(target,await sandbox.prefix(11));fenceReceipt=await sandbox.apply(target,await sandbox.prefix(12));storageReceipt=await sandbox.apply(target,await sandbox.prefix(13));lookupReceipt=await sandbox.apply(target);
   store=await createProviderTokenStore('primary',[{id:'primary',key:randomBytes(32)}]);
   lifecycle=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},boundary,store);
 });
@@ -224,7 +225,8 @@ test('schema5 upgrade retains existing local rows and append-only CLI history',a
   assert.equal(tenantReceipt.history.length,11);assert.deepEqual(tenantReceipt.history.slice(0,10),admissionReceipt.history);
   assert.equal(fenceReceipt.history.length,12);assert.deepEqual(fenceReceipt.history.slice(0,11),tenantReceipt.history);
   assert.equal(storageReceipt.history.length,13);assert.deepEqual(storageReceipt.history.slice(0,12),fenceReceipt.history);
-  assert.deepEqual((await sandbox.apply(target)).history,storageReceipt.history);
+  assert.equal(lookupReceipt.history.length,14);assert.deepEqual(lookupReceipt.history.slice(0,13),storageReceipt.history);
+  assert.deepEqual((await sandbox.apply(target)).history,lookupReceipt.history);
   assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.session_csrf_tokens c WHERE id=$1',[upgradeProof.id])).rows[0].row,upgradeProof);
   assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.login_contexts c WHERE id=$1',[upgradeContext.id])).rows[0].row,upgradeContext);
 });
@@ -1022,4 +1024,30 @@ test('provider revocation after genuine JWT verification is rejected by the muta
   let changed=false,calls=0;const provider={...boundary,async verifyAccess(...args){const result=await boundary.verifyAccess(...args);if(!changed){changed=true;authResult(await service.admin.admin.signOut(args[0],'local'),'mutation_provider_revoke');}return result;}};
   const run=createMutationTransaction({connectionString:runtimeUrl,environment:'test'},{capability:'crm.manage',requireRecentAuth:false},provider,store);
   await assert.rejects(run(f.issued.cookieValueForResponse(),{businessId:f.business,recoveryEpoch:f.authority},async()=>{calls++;return null;},signal()),e=>e instanceof MutationBoundaryError&&e.message==='MUTATION_BOUNDARY_FAILED'&&e.cause===undefined);assert(changed);assert.equal(calls,0);
+});
+
+// Read-only receipt fixtures; no business rename command is enabled here.
+async function seedLookupReceipt(f){
+  const operation=randomUUID();await client.query('BEGIN');try{
+    await client.query("INSERT INTO crest_private.operations(business_id,operation_id,actor_id,command_type,schema_version,recovery_epoch,payload_hash,created_by,origin) VALUES($1,$2,$3,'business.rename',1,$4,$5,$3,'manual')",[f.business,operation,f.actor.id,f.authority,'a'.repeat(64)]);
+    const audit=(await client.query("INSERT INTO crest_private.audit_events(business_id,operation_id,actor_id,created_by,entity_kind,entity_id,entity_version,action,delta,origin) VALUES($1,$2,$3,$3,'businesses',$1,2,'rename',$4,'manual') RETURNING id",[f.business,operation,f.actor.id,{schemaVersion:1,before:{legalName:'Synthetic before'},after:{legalName:'Synthetic after'}}])).rows[0].id;
+    const result={schemaVersion:1,businessId:f.business,businessVersion:'2',auditEventId:audit};await client.query("UPDATE crest_private.operations SET state='committed',result_schema_version=1,result=$3 WHERE business_id=$1 AND operation_id=$2",[f.business,operation,result]);await client.query('COMMIT');return {operation,result};
+  }catch(error){await client.query('ROLLBACK');throw error;}
+}
+test('actual SDK lookup returns only a typed historical receipt or absence without advancing activity',async()=>{
+  const f=await mutationFixture(),record=await seedLookupReceipt(f),lookup=createBusinessOperationLookup({connectionString:runtimeUrl,environment:'test'},boundary,store);
+  const before=(await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[f.issued.evidence.sessionId])).rows[0].row;
+  await client.query('UPDATE crest_private.business_recovery_authorities SET active_epoch=$1,version=version+1 WHERE business_id=$2',[randomUUID(),f.business]);
+  const value=await lookup(f.issued.cookieValueForResponse(),{businessId:f.business,operationId:record.operation},signal());assert.deepEqual(value.forServer(),{state:'committed',operationId:record.operation,recoveryEpoch:f.authority,receipt:record.result});assert.throws(()=>JSON.stringify(value),BusinessOperationLookupError);
+  assert.deepEqual((await lookup(f.issued.cookieValueForResponse(),{businessId:f.business,operationId:randomUUID()},signal())).forServer(),{state:'absent'});
+  assert.deepEqual((await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[f.issued.evidence.sessionId])).rows[0].row,before);
+});
+test('provider or membership revocation after genuine SDK verification denies operation evidence',async()=>{
+  for(const kind of ['provider','membership']){
+    const f=await mutationFixture(),record=await seedLookupReceipt(f);let changed=false;
+    if(kind==='membership'){const backup=await linkActor(await provision());await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$3,$3,'manual')",[f.business,backup.id,f.actor.id]);}
+    const provider={...boundary,async verifyAccess(...args){const result=await boundary.verifyAccess(...args);if(!changed){changed=true;if(kind==='provider')authResult(await service.admin.admin.signOut(args[0],'local'),'lookup_provider_revoke');else await client.query('UPDATE crest.memberships SET active=false,version=version+1 WHERE business_id=$1 AND actor_id=$2',[f.business,f.actor.id]);}return result;}};
+    const lookup=createBusinessOperationLookup({connectionString:runtimeUrl,environment:'test'},provider,store);
+    await assert.rejects(lookup(f.issued.cookieValueForResponse(),{businessId:f.business,operationId:record.operation},signal()),e=>e instanceof BusinessOperationLookupError&&e.message==='BUSINESS_OPERATION_LOOKUP_FAILED'&&e.cause===undefined);assert(changed);
+  }
 });
