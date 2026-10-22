@@ -7,12 +7,13 @@ import type {Socket} from 'node:net';
 import {browserFailureResponse} from '../security/browser-http.ts';
 import {createAuthenticationHttp,settleAuthenticationResponse} from '../security/authentication-http.ts';
 import {transportFromIncomingMessage} from '../security/trusted-transport.ts';
+import {createBusinessHttp,businessFailureResponse} from '../security/business-http.ts';
 
 export type AuthenticationConfiguration=Readonly<{
   configuration:Omit<Parameters<typeof createAuthenticationHttp>[0],'origin'|'environment'>;
   provider:Parameters<typeof createAuthenticationHttp>[1];tokens:Parameters<typeof createAuthenticationHttp>[2];
 }>;
-export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration}>;
+export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>}>;
 export type PageHandler=(request:IncomingMessage,response:ServerResponse)=>Promise<void>;
 
 export function createBoundedNodeServer(tls?:NodeConfiguration['tls']):Server{
@@ -31,14 +32,14 @@ export function createBoundedNodeServer(tls?:NodeConfiguration['tls']):Server{
   return server;
 }
 
-export function requestTarget(raw:string|undefined,origin:string):Readonly<{url:URL;authentication:boolean}>{
+export function requestTarget(raw:string|undefined,origin:string):Readonly<{url:URL;authentication:boolean;business:boolean}>{
   if(!raw||raw.length>8192||!raw.startsWith('/')||raw.startsWith('//')||/[\\#]/.test(raw)
     ||Array.from(raw).some(char=>char.charCodeAt(0)<=32||char.charCodeAt(0)===127))throw new Error('REQUEST_TARGET_INVALID');
   const url=new URL(raw,origin);
   if(url.origin!==origin||url.pathname+url.search!==raw)throw new Error('REQUEST_TARGET_INVALID');
   // Reserve encoded aliases as well: they must never fall through to Next.
   const decoded=decodeURIComponent(url.pathname);
-  return Object.freeze({url,authentication:decoded==='/api/auth'||decoded.startsWith('/api/auth/')});
+  return Object.freeze({url,authentication:decoded==='/api/auth'||decoded.startsWith('/api/auth/'),business:decoded==='/api/business'||decoded.startsWith('/api/business/')});
 }
 
 export async function writeAuthenticationResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
@@ -79,32 +80,35 @@ export async function writeAuthenticationResponse(outgoing:ServerResponse,respon
 }
 
 export function bindApplicationHandler(server:Server,config:NodeConfiguration,pages:PageHandler):void{
-  const {origin,environment,authentication}=config;
+  const {origin,environment,authentication,business}=config;
   const url=new URL(origin);
   if(url.origin!==origin||url.username||url.password||!['http:','https:'].includes(url.protocol)||!['production','test'].includes(environment)
-    ||authentication&&environment==='production'&&!config.tls||server.listenerCount('request'))throw new Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+    ||business&&!authentication||authentication&&environment==='production'&&!config.tls||server.listenerCount('request'))throw new Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   const dispatch=authentication?createAuthenticationHttp({...authentication.configuration,origin,environment},authentication.provider,authentication.tokens):undefined;
-  let activeAuthentication=0;
+  const dispatchBusiness=business&&authentication?createBusinessHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
+  let activeProtected=0;
   server.on('request',(incoming,outgoing)=>{void (async()=>{
     const controller=new AbortController();
     const abort=()=>controller.abort();incoming.once('aborted',abort);
     outgoing.once('close',()=>{if(!outgoing.writableFinished)abort();});
-    let reserved=false;
+    let reserved=false,businessRequest=false;
     try{
       if(incoming.rawHeaders.length>256)throw new Error();
       const target=requestTarget(incoming.url,origin);
-      if(!target.authentication){await pages(incoming,outgoing);return;}
-      if(!dispatch||activeAuthentication>=32){await writeAuthenticationResponse(outgoing,browserFailureResponse(503),controller.signal);return;}
-      activeAuthentication++;reserved=true;
+      businessRequest=target.business;
+      if(!target.authentication&&!target.business){await pages(incoming,outgoing);return;}
+      const handler=target.business?dispatchBusiness:dispatch,failure=target.business?businessFailureResponse:browserFailureResponse;
+      if(!handler||activeProtected>=32){await writeAuthenticationResponse(outgoing,failure(503),controller.signal);return;}
+      activeProtected++;reserved=true;
       const peer=transportFromIncomingMessage(incoming),headers=new Headers();
       for(let i=0;i<incoming.rawHeaders.length;i+=2)headers.append(incoming.rawHeaders[i]!,incoming.rawHeaders[i+1]!);
       const request=new Request(target.url,{method:incoming.method,headers,signal:controller.signal,
         ...(!['GET','HEAD'].includes(incoming.method??'')?{body:Readable.toWeb(incoming),duplex:'half'}:{})} as RequestInit);
-      const response=await dispatch(request,peer);
+      const response=await handler(request,peer);
       await writeAuthenticationResponse(outgoing,response,controller.signal);
     }catch{
-      if(!outgoing.destroyed&&!outgoing.headersSent)try{await writeAuthenticationResponse(outgoing,browserFailureResponse(),controller.signal);}catch{outgoing.destroy();}
+      if(!outgoing.destroyed&&!outgoing.headersSent)try{await writeAuthenticationResponse(outgoing,(businessRequest?businessFailureResponse:browserFailureResponse)(),controller.signal);}catch{outgoing.destroy();}
       else outgoing.destroy();
-    }finally{if(reserved)activeAuthentication--;incoming.off('aborted',abort);}
+    }finally{if(reserved)activeProtected--;incoming.off('aborted',abort);}
   })();});
 }

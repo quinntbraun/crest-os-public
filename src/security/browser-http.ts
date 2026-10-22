@@ -1,11 +1,12 @@
 import 'server-only';
+import {privateJsonResponse as json,readFlatJsonBody} from './private-http.ts';
 import {sessionCredentialHash} from './session-credential.ts';
 import {createRequestProtection} from './request-protection.ts';
 import {sessionLimits} from './session-policy.ts';
 import type {createBrowserSessionFlow} from './browser-session-flow.ts';
 
 const sessionName='__Host-crest_session',loginName='__Host-crest_login';
-const bodyLimit=8192,bodyTimeoutMs=5000,cookieLimit=8192;
+const cookieLimit=8192;
 type Flow=ReturnType<typeof createBrowserSessionFlow>;
 type LoginContext=Awaited<ReturnType<Flow['beginLogin']>>;
 type BrowserSession=Awaited<ReturnType<Flow['login']>>;
@@ -52,21 +53,6 @@ function lifetime(expiresAt:number,now:number,maximum:number):number{
   if(seconds<1||!Number.isFinite(new Date(expiresAt).getTime()))throw new BrowserHttpError();
   return seconds;
 }
-function json(body:object,status=200,cookies:string[]=[]):Response{
-  const headers=new Headers({
-    'Content-Type':'application/json; charset=utf-8',
-    'Cache-Control':'private, no-store, max-age=0',
-    'CDN-Cache-Control':'no-store','Surrogate-Control':'no-store',
-    'Pragma':'no-cache','Expires':'0','Vary':'Cookie, Origin',
-    'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY',
-    'Referrer-Policy':'no-referrer','Cross-Origin-Resource-Policy':'same-origin',
-    'X-Robots-Tag':'noindex, nofollow','Permissions-Policy':'camera=(), microphone=(), geolocation=()',
-    'Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
-  });
-  for(const value of cookies)headers.append('Set-Cookie',value);
-  return new Response(JSON.stringify(body),{status,headers});
-}
-
 // Explicit allowlists: never serialize lifecycle evidence, provider tokens or opaque credentials.
 export function loginContextResponse(context:LoginContext,now=Date.now()):Response{
   const age=lifetime(context.expiresAt,now,10*60*1000);
@@ -97,39 +83,6 @@ export function browserFailureResponse(status:400|404|405|503=400):Response{
   return response;
 }
 
-async function boundedBody(request:Request,signal:AbortSignal):Promise<string>{
-  let reader:ReadableStreamDefaultReader<Uint8Array>|undefined;
-  try{
-    if(signal.aborted||request.bodyUsed||request.headers.has('content-encoding'))throw new BrowserHttpError();
-    const length=request.headers.get('content-length');
-    if(length!==null&&(!/^(0|[1-9]\d*)$/.test(length)||!Number.isSafeInteger(Number(length))||Number(length)>bodyLimit))throw new BrowserHttpError();
-    if(!request.body)throw new BrowserHttpError();
-    reader=request.body.getReader();
-    const decoder=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true});
-    let size=0,text='';
-    while(true){
-      // A stalled stream must not outlive the overall deadline or client cancellation.
-      const part=await new Promise<ReadableStreamReadResult<Uint8Array>>((resolve,reject)=>{
-        const abort=()=>reject(new BrowserHttpError());
-        if(signal.aborted){abort();return;}
-        signal.addEventListener('abort',abort,{once:true});
-        reader!.read().then(resolve,reject).finally(()=>signal.removeEventListener('abort',abort));
-      });
-      if(signal.aborted)throw new BrowserHttpError();
-      if(part.done)break;
-      if(!(part.value instanceof Uint8Array)||part.value.byteLength===0||(size+=part.value.byteLength)>bodyLimit)throw new BrowserHttpError();
-      text+=decoder.decode(part.value,{stream:true});
-    }
-    text+=decoder.decode();
-    if(length!==null&&Number(length)!==size)throw new BrowserHttpError();
-    return text;
-  }catch{
-    // Do not wait for a hostile source's cancellation promise to settle.
-    if(reader)void reader.cancel().catch(()=>{});
-    throw new BrowserHttpError();
-  }finally{reader?.releaseLock();}
-}
-
 export function createBrowserBodyReader(config:{origin:string;environment:'production'|'test'}){
   const protect=createRequestProtection(config);
   function read(request:Request,kind:'login'):Promise<LoginInput>;
@@ -138,22 +91,13 @@ export function createBrowserBodyReader(config:{origin:string;environment:'produ
     try{
       if(!['login','empty'].includes(kind)||request.method!=='POST')throw new BrowserHttpError();
       protect.requireOrigin(request);
-      const signal=AbortSignal.any([request.signal,AbortSignal.timeout(bodyTimeoutMs)]);
-      const text=await boundedBody(request,signal),value:unknown=JSON.parse(text);
-      if(!value||typeof value!=='object'||Array.isArray(value))throw new BrowserHttpError();
-      const keys=Object.keys(value);
-      if(kind==='empty'){
-        if(keys.length)throw new BrowserHttpError();
-        return Object.freeze({});
-      }
+      const value=await readFlatJsonBody(request,kind==='empty'?[]:['email','password','code','trusted']),keys=Object.keys(value);
+      if(kind==='empty')return Object.freeze({});
       const input=value as LoginInput;
       if(keys.length!==4||!['email','password','code','trusted'].every(key=>Object.hasOwn(input,key))
         ||typeof input.email!=='string'||!input.email.trim()||input.email.length>320
         ||typeof input.password!=='string'||!input.password||input.password.length>1024
         ||typeof input.code!=='string'||!/^\d{6}$/.test(input.code)||typeof input.trusted!=='boolean')throw new BrowserHttpError();
-      // For this shallow schema all values are strings/boolean. Counting separators
-      // outside valid JSON strings rejects duplicate keys, including escaped names.
-      if((text.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length!==4)throw new BrowserHttpError();
       return Object.freeze({email:input.email,password:input.password,code:input.code,trusted:input.trusted});
     }catch{throw new BrowserHttpError();}
   }

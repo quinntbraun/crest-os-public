@@ -20,4 +20,8 @@ for(const path of ['bootstrap','login','session','logout']){
   if(closed.status!==503||closed.headers.has('set-cookie')||!closed.headers.get('content-security-policy')?.includes("default-src 'none'")
     ||!closed.headers.get('cache-control')?.includes('no-store')||(await closed.json()).error!=='AUTHENTICATION_REQUEST_FAILED')throw new Error('Default image must keep authentication closed with private JSON');
 }
-console.log("Read-only, non-root Node adapter serves nonce-protected shell and closed private authentication JSON");
+for(const path of ['settings','rename','operation','%73ettings']){
+  const closed=await fetch('http://127.0.0.1:3100/api/business/'+path,{method:'POST',body:'{}'});
+  if(closed.status!==503||closed.headers.has('set-cookie')||!closed.headers.get('cache-control')?.includes('no-store')||(await closed.json()).error!=='BUSINESS_REQUEST_FAILED')throw new Error('Default image must keep business access closed with private JSON');
+}
+console.log("Read-only, non-root Node adapter serves nonce-protected shell and closed private authentication/business JSON");

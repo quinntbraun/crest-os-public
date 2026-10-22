@@ -1,4 +1,5 @@
 import 'server-only';
+import {createSessionCsrfVerifier} from './session-request-guard.ts';
 import {randomUUID} from 'node:crypto';
 import {createSessionCredential,sessionCredentialHash} from './session-credential.ts';
 import {createCsrfToken,createRequestProtection} from './request-protection.ts';
@@ -58,19 +59,7 @@ export function createBrowserSessionFlow(config:SessionDatabaseConfiguration&{or
       if(!result||typeof result.id!=='string'||!uuid.test(result.id))throw new BrowserSessionError();
     }finally{hash.fill(0);old?.fill(0);csrfHash.fill(0);}
   }
-  async function requireSessionCsrf(request:RequestShape,credential:string,signal:AbortSignal){
-    protect.requireOrigin(request);const hash=sessionCredentialHash(credential);
-    try{
-      const state=await query('SELECT crest_commands.browser_csrf_snapshot($1::bytea) AS result',[hash],signal) as {id?:string;hashes?:unknown[]}|null;
-      if(!state||typeof state.id!=='string'||!uuid.test(state.id)||!Array.isArray(state.hashes)||!state.hashes.length||state.hashes.length>8)throw new BrowserSessionError();
-      let matched=false;
-      for(const value of state.hashes){
-        if(typeof value!=='string')throw new BrowserSessionError();const stored=Buffer.from(value,'base64');
-        try{protect(request,state.id,stored);matched=true;}catch{/* test every bounded stored proof */}finally{stored.fill(0);}
-      }
-      if(!matched)throw new BrowserSessionError();
-    }finally{hash.fill(0);}
-  }
+  const requireSessionCsrf=createSessionCsrfVerifier(config);
   return Object.freeze({
     async beginLogin(request:RequestShape,address:string,external:AbortSignal,previous?:string):Promise<LoginContext>{
       const signal=clock(external);let values:Buffer[]=[];let hash:Buffer|undefined;const old=optionalHash(previous);

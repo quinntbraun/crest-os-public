@@ -1062,6 +1062,81 @@ test('provider or membership revocation after genuine SDK verification denies op
 });
 
 const renameInput=(f,patch={})=>({schemaVersion:1,businessId:f.business,operationId:randomUUID(),recoveryEpoch:f.authority,expectedVersion:'1',legalName:'Synthetic actual Auth name',...patch});
+async function businessHttpFixture(provider=boundary){
+  const f=await provision(),actor=await linkActor(f),business=(await client.query('SELECT business_id FROM crest.memberships WHERE actor_id=$1',[actor.id])).rows[0].business_id;
+  const server=await authenticationServer({connectionString:runtimeUrl,loginKey:browserKey,owner:{subject:f.subject,factorId:f.factorId}},provider,store,business);
+  const issued=await httpLogin(server,f);return {f,actor,business,server,issued,headers:{cookie:issued.pair,'x-crest-csrf':issued.csrfToken}};
+}
+async function businessHttpFailure(response,status=400,error='BUSINESS_REQUEST_FAILED'){
+  assert.equal(response.status,status);assert.deepEqual(await response.json(),{error});assert.match(response.headers.get('cache-control'),/no-store/);assert(!response.headers.has('set-cookie'));assert(!response.headers.has('access-control-allow-origin'));
+}
+test('business socket HTTP reads paused/ready context and commits/replays/looks up one exact typed operation',async()=>{
+  const f=await businessHttpFixture();try{
+    const before=await sessionRow(f.issued);let response=await f.server.businessRequest('settings',{},f.headers);assert.equal(response.status,200);const paused=await response.json();assert.equal(paused.writeState,'paused');assert.equal(paused.recoveryEpoch,null);assert.deepEqual(await sessionRow(f.issued),before);
+    await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[f.business]);
+    response=await f.server.businessRequest('settings',{},f.headers);assert.equal(response.status,200);const context=await response.json();
+    const input={schemaVersion:1,operationId:randomUUID(),recoveryEpoch:context.recoveryEpoch,expectedVersion:context.businessVersion,legalName:' Exact socket synthetic \u00e9 '};
+    response=await f.server.businessRequest('rename',input,f.headers);assert.equal(response.status,200);const committed=await response.json();assert.equal(committed.state,'committed');assert.equal(committed.receipt.businessVersion,'2');
+    assert.deepEqual(await(await f.server.businessRequest('rename',input,f.headers)).json(),committed);
+    const after=await sessionRow(f.issued);assert.deepEqual(await(await f.server.businessRequest('operation',{operationId:input.operationId},f.headers)).json(),committed);assert.deepEqual(await sessionRow(f.issued),after);
+    assert.deepEqual(await(await f.server.businessRequest('operation',{operationId:randomUUID()},f.headers)).json(),{state:'absent'});
+    assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1',[f.business])).rows[0].n,1);assert.equal(await admissionCount(f.issued),6);
+  }finally{await f.server.close();}
+});
+test('business HTTP Origin/CSRF/body/cookie guards do not reserve work or call the SDK',async()=>{
+  let providerCalls=0;const provider={...boundary,async verifyAccess(...args){providerCalls++;return boundary.verifyAccess(...args);}},f=await businessHttpFixture(provider);try{
+    providerCalls=0;await businessHttpFailure(await f.server.businessRequest('settings',{}, {...f.headers,origin:'https://evil.example.com'}));
+    await businessHttpFailure(await f.server.businessRequest('settings',{}, {...f.headers,'x-crest-csrf':randomBytes(32).toString('base64url')}));
+    await businessHttpFailure(await f.server.businessRequest('settings',{businessId:randomUUID()},f.headers));
+    await businessHttpFailure(await f.server.businessRequest('operation','{"operationId":"a","operationId":"b"}',f.headers));
+    await businessHttpFailure(await f.server.businessRequest('settings',{}, {...f.headers,cookie:f.issued.pair+'; '+f.issued.pair}));
+    await businessHttpFailure(await f.server.businessRequest('%73ettings',{},f.headers),404);await businessHttpFailure(await f.server.businessRequest('settings',{},f.headers,'GET'),405);
+    assert.equal(providerCalls,0);assert.equal(await admissionCount(f.issued),0);
+  }finally{await f.server.close();}
+});
+test('business/proof routes share durable admission; exhaustion stops SDK work and does not borrow logout capacity',async()=>{
+  let providerCalls=0;const provider={...boundary,async verifyAccess(...args){providerCalls++;return boundary.verifyAccess(...args);}},f=await businessHttpFixture(provider);try{
+    await seedAdmissions(f.issued,119);let response=await f.server.businessRequest('settings',{},f.headers);assert.equal(response.status,200);await response.json();assert.equal(await admissionCount(f.issued),120);providerCalls=0;
+    for(const [path,body] of [['settings',{}],['operation',{operationId:randomUUID()}],['rename',{schemaVersion:1,operationId:randomUUID(),expectedVersion:'1',recoveryEpoch:randomUUID(),legalName:'Synthetic'}]])await businessHttpFailure(await f.server.businessRequest(path,body,f.headers),429,'BUSINESS_REQUEST_LIMITED');
+    await httpFailure(await f.server.request('session',{}, {cookie:f.issued.pair}));assert.equal(providerCalls,0);assert.equal(await admissionCount(f.issued),120);
+    const out=await f.server.request('logout',{},f.headers);assert.equal(out.status,200);assert.equal((await out.json()).localRevoked,true);assert.equal(await admissionCount(f.issued,'logout'),1);
+  }finally{await f.server.close();}
+});
+test('business HTTP conflicts keep reservations and original epochs without automatic context substitution',async()=>{
+  const f=await businessHttpFixture();try{
+    await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[f.business]);const context=await(await f.server.businessRequest('settings',{},f.headers)).json();
+    const input={schemaVersion:1,operationId:randomUUID(),recoveryEpoch:context.recoveryEpoch,expectedVersion:context.businessVersion,legalName:'Synthetic committed'};
+    assert.equal((await f.server.businessRequest('rename',input,f.headers)).status,200);
+    let response=await f.server.businessRequest('rename',{...input,operationId:randomUUID()},f.headers);assert.equal(response.status,409);assert.deepEqual(await response.json(),{state:'conflict',reason:'version',currentVersion:'2'});
+    response=await f.server.businessRequest('rename',{...input,legalName:'Mismatched'},f.headers);assert.equal(response.status,409);assert.deepEqual(await response.json(),{state:'conflict',reason:'operation'});
+    await client.query('UPDATE crest_private.business_recovery_authorities SET active_epoch=$1,version=version+1 WHERE business_id=$2',[randomUUID(),f.business]);
+    await businessHttpFailure(await f.server.businessRequest('rename',input,f.headers),409,'RECOVERY_REVIEW_REQUIRED');const historical=await(await f.server.businessRequest('operation',{operationId:input.operationId},f.headers)).json();assert.equal(historical.recoveryEpoch,input.recoveryEpoch);
+    assert.equal(await admissionCount(f.issued),6);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1',[f.business])).rows[0].n,1);
+  }finally{await f.server.close();}
+});
+test('fresh SDK verification followed by provider revocation denies business HTTP without source changes',async()=>{
+  let revokeNext=false;const provider={...boundary,async verifyAccess(...args){const value=await boundary.verifyAccess(...args);if(revokeNext){revokeNext=false;authResult(await service.admin.admin.signOut(args[0],'local'),'business_http_revoke');}return value;}},f=await businessHttpFixture(provider);try{
+    revokeNext=true;await businessHttpFailure(await f.server.businessRequest('settings',{},f.headers),503);assert.equal(await admissionCount(f.issued),1);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1',[f.business])).rows[0].n,0);
+  }finally{await f.server.close();}
+});
+test('an authenticated device cannot read or mutate another configured business',async()=>{
+  const f=await businessHttpFixture(),other=await mutationFixture(),server=await authenticationServer({connectionString:runtimeUrl,loginKey:browserKey,owner:{subject:f.f.subject,factorId:f.f.factorId}},boundary,store,other.business);
+  try{
+    await businessHttpFailure(await server.businessRequest('settings',{},f.headers),503);
+    await businessHttpFailure(await server.businessRequest('operation',{operationId:randomUUID()},f.headers),503);
+    await businessHttpFailure(await server.businessRequest('rename',{schemaVersion:1,operationId:randomUUID(),recoveryEpoch:other.authority,expectedVersion:'1',legalName:'Forbidden synthetic'},f.headers),403,'BUSINESS_RENAME_DENIED');
+    assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1',[other.business])).rows[0].n,0);
+  }finally{await server.close();await f.server.close();}
+});
+test('a committed business HTTP response discarded by the client is reconciled by explicit lookup before identical retry',async()=>{
+  const f=await businessHttpFixture();try{
+    await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[f.business]);const context=await(await f.server.businessRequest('settings',{},f.headers)).json();
+    const input={schemaVersion:1,operationId:randomUUID(),expectedVersion:context.businessVersion,recoveryEpoch:context.recoveryEpoch,legalName:'Synthetic uncertain delivery'};
+    const response=await f.server.businessRequest('rename',input,f.headers);assert.equal(response.status,200);await response.body.cancel();
+    const known=await(await f.server.businessRequest('operation',{operationId:input.operationId},f.headers)).json();assert.equal(known.state,'committed');assert.deepEqual(await(await f.server.businessRequest('rename',input,f.headers)).json(),known);
+    assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.audit_events WHERE business_id=$1',[f.business])).rows[0].n,1);
+  }finally{await f.server.close();}
+});
 test('actual SDK settings context reads paused/ready state without changing session or supplying reusable authority',async()=>{
   const f=await mutationFixture(),read=createBusinessSettingsContextReader({connectionString:runtimeUrl,environment:'test'},boundary,store),cookie=f.issued.cookieValueForResponse();
   const before=(await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[f.issued.evidence.sessionId])).rows[0].row;
