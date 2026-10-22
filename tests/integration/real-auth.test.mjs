@@ -19,11 +19,12 @@ import {createBrowserSessionFlow,BrowserSessionError} from '../../src/security/b
 import {createLoginFingerprinter} from '../../src/security/login-admission.ts';
 import {createCsrfToken} from '../../src/security/request-protection.ts';
 import {createTenantContextReader,TenantReadError} from '../../src/security/tenant-read.ts';
+import {createMutationTransaction,MutationBoundaryError} from '../../src/security/mutation-transaction.ts';
 import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginResponse,sessionResponse,logoutResponse,BrowserHttpError} from '../../src/security/browser-http.ts';
 import {createSessionRequestAdmission,SessionAdmissionError} from '../../src/security/session-request-admission.ts';
 import {authenticationServer} from '../support/authentication-server.mjs';
 
-let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
+let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,fenceReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
@@ -45,7 +46,7 @@ before(async()=>{
   browserReceipt=await sandbox.apply(target,await sandbox.prefix(9));
   upgradeProof=(await client.query('INSERT INTO crest_private.session_csrf_tokens(session_id,token_hash) VALUES($1,$2) RETURNING to_jsonb(session_csrf_tokens) AS row',[legacy.session,randomBytes(32)])).rows[0].row;
   upgradeContext=(await client.query("WITH moment AS MATERIALIZED (SELECT clock_timestamp() AS stamp) INSERT INTO crest_private.login_contexts(id,credential_hash,ip_hash,csrf_hash,created_at,expires_at) SELECT gen_random_uuid(),$1,$2,$3,stamp,stamp+interval '10 minutes' FROM moment RETURNING to_jsonb(login_contexts) AS row",[randomBytes(32),randomBytes(32),randomBytes(32)])).rows[0].row;
-  admissionReceipt=await sandbox.apply(target,await sandbox.prefix(10));tenantReceipt=await sandbox.apply(target);
+  admissionReceipt=await sandbox.apply(target,await sandbox.prefix(10));tenantReceipt=await sandbox.apply(target,await sandbox.prefix(11));fenceReceipt=await sandbox.apply(target);
   store=await createProviderTokenStore('primary',[{id:'primary',key:randomBytes(32)}]);
   lifecycle=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},boundary,store);
 });
@@ -221,7 +222,8 @@ test('schema5 upgrade retains existing local rows and append-only CLI history',a
   assert.equal(browserReceipt.history.length,9);assert.deepEqual(browserReceipt.history.slice(0,8),currentReceipt.history);
   assert.equal(admissionReceipt.history.length,10);assert.deepEqual(admissionReceipt.history.slice(0,9),browserReceipt.history);
   assert.equal(tenantReceipt.history.length,11);assert.deepEqual(tenantReceipt.history.slice(0,10),admissionReceipt.history);
-  assert.deepEqual((await sandbox.apply(target)).history,tenantReceipt.history);
+  assert.equal(fenceReceipt.history.length,12);assert.deepEqual(fenceReceipt.history.slice(0,11),tenantReceipt.history);
+  assert.deepEqual((await sandbox.apply(target)).history,fenceReceipt.history);
   assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.session_csrf_tokens c WHERE id=$1',[upgradeProof.id])).rows[0].row,upgradeProof);
   assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.login_contexts c WHERE id=$1',[upgradeContext.id])).rows[0].row,upgradeContext);
 });
@@ -985,4 +987,38 @@ test('actual Node disconnect during issued-login verification propagates cancell
     assert.equal(await lookup(f.subject,failed.provider_session_id,signal()),false);
     assert.equal((await lifecycle.verify(cookieValue(other.pair),signal())).sessionId,other.evidence.sessionId);
   }finally{release();await server.close();}
+});
+
+// No business mutation is enabled: these callbacks only inspect the real fenced
+// connection. Dedicated SQL fixtures separately prove probe-write rollback.
+async function mutationFixture(){
+  const fixture=await provision(),actor=await linkActor(fixture),issued=await issue(fixture),business=(await client.query('SELECT business_id FROM crest.memberships WHERE actor_id=$1',[actor.id])).rows[0].business_id;
+  const authority=(await client.query('SELECT active_epoch FROM crest_private.business_recovery_authorities WHERE business_id=$1',[business])).rows[0].active_epoch;
+  return {fixture,actor,issued,business,authority};
+}
+test('real SDK/JWT evidence fences one restricted transaction and closes its scope after commit',async()=>{
+  const f=await mutationFixture();await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[f.business]);
+  const run=createMutationTransaction({connectionString:runtimeUrl,environment:'test'},{capability:'crm.manage',requireRecentAuth:false},boundary,store);
+  const before=(await client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[f.issued.evidence.sessionId])).rows[0];let captured;
+  const result=await run(f.issued.cookieValueForResponse(),{businessId:f.business,recoveryEpoch:f.authority},async scope=>{
+    captured=scope;assert.throws(()=>JSON.stringify(scope),MutationBoundaryError);
+    assert.deepEqual(scope.contextForServer(),{actorId:f.actor.id,businessId:f.business,sessionId:f.issued.evidence.sessionId,recoveryEpoch:f.authority,capability:'crm.manage'});
+    return scope.query("SELECT jsonb_build_object('principal',current_user,'isolation',current_setting('transaction_isolation'),'lock',current_setting('lock_timeout')) AS result",[]);
+  },signal());
+  assert.deepEqual(result,{principal:'crest_web',isolation:'read committed',lock:'3s'});
+  await assert.rejects(captured.query('SELECT 1 AS result',[]),MutationBoundaryError);
+  const after=(await client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[f.issued.evidence.sessionId])).rows[0];for(const field of ['authenticated_at','last_active_at','expires_at'])assert.equal(after[field].getTime(),before[field].getTime());assert.equal(after.version,before.version);
+});
+test('real SDK authentication cannot bypass disabled writes or silently upgrade a stale pinned epoch',async()=>{
+  const f=await mutationFixture(),run=createMutationTransaction({connectionString:runtimeUrl,environment:'test'},{capability:'crm.manage',requireRecentAuth:false},boundary,store);let calls=0;
+  const work=async()=>{calls++;return null;},request={businessId:f.business,recoveryEpoch:f.authority};
+  await assert.rejects(run(f.issued.cookieValueForResponse(),request,work,signal()),e=>e instanceof MutationBoundaryError&&e.message==='RECOVERY_REVIEW_REQUIRED'&&e.cause===undefined);
+  const next=randomUUID();await client.query('UPDATE crest_private.business_recovery_authorities SET active_epoch=$1,writes_enabled=true,version=version+1 WHERE business_id=$2',[next,f.business]);
+  await assert.rejects(run(f.issued.cookieValueForResponse(),request,work,signal()),e=>e instanceof MutationBoundaryError&&e.message==='RECOVERY_REVIEW_REQUIRED');assert.equal(calls,0);assert.equal(request.recoveryEpoch,f.authority);
+});
+test('provider revocation after genuine JWT verification is rejected by the mutation fence before work',async()=>{
+  const f=await mutationFixture();await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[f.business]);
+  let changed=false,calls=0;const provider={...boundary,async verifyAccess(...args){const result=await boundary.verifyAccess(...args);if(!changed){changed=true;authResult(await service.admin.admin.signOut(args[0],'local'),'mutation_provider_revoke');}return result;}};
+  const run=createMutationTransaction({connectionString:runtimeUrl,environment:'test'},{capability:'crm.manage',requireRecentAuth:false},provider,store);
+  await assert.rejects(run(f.issued.cookieValueForResponse(),{businessId:f.business,recoveryEpoch:f.authority},async()=>{calls++;return null;},signal()),e=>e instanceof MutationBoundaryError&&e.message==='MUTATION_BOUNDARY_FAILED'&&e.cause===undefined);assert(changed);assert.equal(calls,0);
 });

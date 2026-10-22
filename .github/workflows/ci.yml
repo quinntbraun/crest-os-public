@@ -79,6 +79,7 @@ jobs:
           npm run test:session-commands-db
           npm run test:login-admission-db
           npm run test:tenant-read-db
+          npm run test:mutation-fence-db
           npm run test:real-auth
       - name: Production build and browser accessibility smoke
         run: |

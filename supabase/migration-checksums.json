@@ -55,6 +55,11 @@
       "version": "20261022061000",
       "file": "20261022061000_tenant_read_boundary.sql",
       "sha256": "d3ae4914d14e039fa78547f2148676c0e558bc46f208291c4fbf527504b37a96"
+    },
+    {
+      "version": "20261022174500",
+      "file": "20261022174500_mutation_recovery_fence.sql",
+      "sha256": "84365e4209ee0c4af9ba4000fa62f30baa66f78ee4462b909688c3aa71fcc11b"
     }
   ]
 }

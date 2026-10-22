@@ -34,7 +34,7 @@ before(async()=>{
   bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;backup=(await owner()).id;
   legacy=await state();legacyRow=(await client.query('SELECT to_jsonb(s) AS value FROM crest_private.app_sessions s WHERE id=$1',[legacy.session])).rows[0].value;
   legacyHistory=createHash('sha256').update(JSON.stringify((await client.query('SELECT * FROM crest_private.identity_events ORDER BY id')).rows)).digest('hex');
-  receipt=await sandbox.apply(target);
+  receipt=await sandbox.apply(target,await sandbox.prefix(11));
   login=`crest_probe_${randomBytes(8).toString('hex')}`;const password=randomBytes(32).toString('hex');
   assert.match(login,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
   await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;
@@ -44,7 +44,7 @@ after(async()=>{await web?.end();if(loginOwned)await sandbox.admin.query(`DROP R
 
 test('schema10 upgrade preserves session/identity history and append-only CLI prefix',async()=>{
   assert.equal(prior.history.length,10);assert.equal(receipt.history.length,11);assert.deepEqual(receipt.history.slice(0,10),prior.history);
-  assert.deepEqual((await sandbox.apply(target)).history,receipt.history);
+  assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(11))).history,receipt.history);
   assert.deepEqual((await client.query('SELECT to_jsonb(s) AS value FROM crest_private.app_sessions s WHERE id=$1',[legacy.session])).rows[0].value,legacyRow);
   assert.equal(createHash('sha256').update(JSON.stringify((await client.query('SELECT * FROM crest_private.identity_events ORDER BY id')).rows)).digest('hex'),legacyHistory);
 });
