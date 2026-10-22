@@ -82,6 +82,7 @@ jobs:
           npm run test:mutation-fence-db
           npm run test:operation-storage-db
           npm run test:operation-lookup-db
+          npm run test:business-name-db
           npm run test:real-auth
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 6

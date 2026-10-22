@@ -19,13 +19,14 @@ import {createBrowserSessionFlow,BrowserSessionError} from '../../src/security/b
 import {createLoginFingerprinter} from '../../src/security/login-admission.ts';
 import {createCsrfToken} from '../../src/security/request-protection.ts';
 import {createTenantContextReader,TenantReadError} from '../../src/security/tenant-read.ts';
+import {createBusinessNameCommand,BusinessNameCommandError} from '../../src/security/business-name-command.ts';
 import {createBusinessOperationLookup,BusinessOperationLookupError} from '../../src/security/business-operation-lookup.ts';
 import {createMutationTransaction,MutationBoundaryError} from '../../src/security/mutation-transaction.ts';
 import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginResponse,sessionResponse,logoutResponse,BrowserHttpError} from '../../src/security/browser-http.ts';
 import {createSessionRequestAdmission,SessionAdmissionError} from '../../src/security/session-request-admission.ts';
 import {authenticationServer} from '../support/authentication-server.mjs';
 
-let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,fenceReceipt,storageReceipt,lookupReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
+let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,fenceReceipt,storageReceipt,lookupReceipt,renameReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
@@ -47,7 +48,7 @@ before(async()=>{
   browserReceipt=await sandbox.apply(target,await sandbox.prefix(9));
   upgradeProof=(await client.query('INSERT INTO crest_private.session_csrf_tokens(session_id,token_hash) VALUES($1,$2) RETURNING to_jsonb(session_csrf_tokens) AS row',[legacy.session,randomBytes(32)])).rows[0].row;
   upgradeContext=(await client.query("WITH moment AS MATERIALIZED (SELECT clock_timestamp() AS stamp) INSERT INTO crest_private.login_contexts(id,credential_hash,ip_hash,csrf_hash,created_at,expires_at) SELECT gen_random_uuid(),$1,$2,$3,stamp,stamp+interval '10 minutes' FROM moment RETURNING to_jsonb(login_contexts) AS row",[randomBytes(32),randomBytes(32),randomBytes(32)])).rows[0].row;
-  admissionReceipt=await sandbox.apply(target,await sandbox.prefix(10));tenantReceipt=await sandbox.apply(target,await sandbox.prefix(11));fenceReceipt=await sandbox.apply(target,await sandbox.prefix(12));storageReceipt=await sandbox.apply(target,await sandbox.prefix(13));lookupReceipt=await sandbox.apply(target);
+  admissionReceipt=await sandbox.apply(target,await sandbox.prefix(10));tenantReceipt=await sandbox.apply(target,await sandbox.prefix(11));fenceReceipt=await sandbox.apply(target,await sandbox.prefix(12));storageReceipt=await sandbox.apply(target,await sandbox.prefix(13));lookupReceipt=await sandbox.apply(target,await sandbox.prefix(14));renameReceipt=await sandbox.apply(target);
   store=await createProviderTokenStore('primary',[{id:'primary',key:randomBytes(32)}]);
   lifecycle=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},boundary,store);
 });
@@ -226,7 +227,8 @@ test('schema5 upgrade retains existing local rows and append-only CLI history',a
   assert.equal(fenceReceipt.history.length,12);assert.deepEqual(fenceReceipt.history.slice(0,11),tenantReceipt.history);
   assert.equal(storageReceipt.history.length,13);assert.deepEqual(storageReceipt.history.slice(0,12),fenceReceipt.history);
   assert.equal(lookupReceipt.history.length,14);assert.deepEqual(lookupReceipt.history.slice(0,13),storageReceipt.history);
-  assert.deepEqual((await sandbox.apply(target)).history,lookupReceipt.history);
+  assert.equal(renameReceipt.history.length,15);assert.deepEqual(renameReceipt.history.slice(0,14),lookupReceipt.history);
+  assert.deepEqual((await sandbox.apply(target)).history,renameReceipt.history);
   assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.session_csrf_tokens c WHERE id=$1',[upgradeProof.id])).rows[0].row,upgradeProof);
   assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.login_contexts c WHERE id=$1',[upgradeContext.id])).rows[0].row,upgradeContext);
 });
@@ -992,8 +994,8 @@ test('actual Node disconnect during issued-login verification propagates cancell
   }finally{release();await server.close();}
 });
 
-// No business mutation is enabled: these callbacks only inspect the real fenced
-// connection. Dedicated SQL fixtures separately prove probe-write rollback.
+// Historical generic-fence cases inspect only the fenced connection. Typed
+// business.rename composition is exercised separately at the end of this suite.
 async function mutationFixture(){
   const fixture=await provision(),actor=await linkActor(fixture),issued=await issue(fixture),business=(await client.query('SELECT business_id FROM crest.memberships WHERE actor_id=$1',[actor.id])).rows[0].business_id;
   const authority=(await client.query('SELECT active_epoch FROM crest_private.business_recovery_authorities WHERE business_id=$1',[business])).rows[0].active_epoch;
@@ -1050,4 +1052,32 @@ test('provider or membership revocation after genuine SDK verification denies op
     const lookup=createBusinessOperationLookup({connectionString:runtimeUrl,environment:'test'},provider,store);
     await assert.rejects(lookup(f.issued.cookieValueForResponse(),{businessId:f.business,operationId:record.operation},signal()),e=>e instanceof BusinessOperationLookupError&&e.message==='BUSINESS_OPERATION_LOOKUP_FAILED'&&e.cause===undefined);assert(changed);
   }
+});
+
+const renameInput=(f,patch={})=>({schemaVersion:1,businessId:f.business,operationId:randomUUID(),recoveryEpoch:f.authority,expectedVersion:'1',legalName:'Synthetic actual Auth name',...patch});
+test('actual SDK business command commits once, preserves its receipt across retry and lookup, and advances only foreground activity',async()=>{
+  const f=await mutationFixture();await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[f.business]);
+  const run=createBusinessNameCommand({connectionString:runtimeUrl,environment:'test'},boundary,store),r=renameInput(f),read=createBusinessOperationLookup({connectionString:runtimeUrl,environment:'test'},boundary,store),cookie=f.issued.cookieValueForResponse();
+  const before=(await client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[f.issued.evidence.sessionId])).rows[0];
+  const result=await run(cookie,r,signal());assert.equal(result.forServer().state,'committed');assert.throws(()=>JSON.stringify(result),BusinessNameCommandError);assert.equal(result.forServer().receipt.businessVersion,'2');
+  assert.deepEqual((await run(cookie,r,signal())).forServer(),result.forServer());assert.deepEqual((await read(cookie,{businessId:f.business,operationId:r.operationId},signal())).forServer(),result.forServer());
+  const source=(await client.query('SELECT legal_name,version::text FROM crest.businesses WHERE id=$1',[f.business])).rows[0];assert.deepEqual(source,{legal_name:r.legalName,version:'2'});assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.audit_events WHERE business_id=$1 AND operation_id=$2',[f.business,r.operationId])).rows[0].n,1);
+  const after=(await client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[f.issued.evidence.sessionId])).rows[0];assert(after.last_active_at>=before.last_active_at);for(const field of ['authenticated_at','reauth_at','expires_at','provider_token_ciphertext','key_id'])assert.deepEqual(after[field],before[field]);
+  const conflict=(await run(cookie,renameInput(f),signal())).forServer();assert.deepEqual(conflict,{state:'conflict',reason:'version',currentVersion:'2'});
+});
+test('genuine SDK verification followed by provider or membership revocation cannot commit a typed rename',async()=>{
+  for(const kind of ['provider','membership']){
+    const f=await mutationFixture();await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[f.business]);let changed=false;
+    if(kind==='membership'){const backup=await linkActor(await provision());await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$3,$3,'manual')",[f.business,backup.id,f.actor.id]);}
+    const provider={...boundary,async verifyAccess(...args){const result=await boundary.verifyAccess(...args);if(!changed){changed=true;if(kind==='provider')authResult(await service.admin.admin.signOut(args[0],'local'),'rename_provider_revoke');else await client.query('UPDATE crest.memberships SET active=false,version=version+1 WHERE business_id=$1 AND actor_id=$2',[f.business,f.actor.id]);}return result;}};
+    const run=createBusinessNameCommand({connectionString:runtimeUrl,environment:'test'},provider,store),r=renameInput(f),before=(await client.query('SELECT to_jsonb(b) AS row FROM crest.businesses b WHERE id=$1',[f.business])).rows[0].row;
+    await assert.rejects(run(f.issued.cookieValueForResponse(),r,signal()),e=>e instanceof BusinessNameCommandError&&e.message==='BUSINESS_RENAME_DENIED'&&e.cause===undefined);assert(changed);assert.deepEqual((await client.query('SELECT to_jsonb(b) AS row FROM crest.businesses b WHERE id=$1',[f.business])).rows[0].row,before);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1',[f.business])).rows[0].n,0);
+  }
+});
+test('actual typed command rejects paused writes and stale-epoch replay while historical lookup preserves the original receipt',async()=>{
+  const f=await mutationFixture(),run=createBusinessNameCommand({connectionString:runtimeUrl,environment:'test'},boundary,store),r=renameInput(f),cookie=f.issued.cookieValueForResponse();
+  await assert.rejects(run(cookie,r,signal()),e=>e instanceof BusinessNameCommandError&&e.message==='RECOVERY_REVIEW_REQUIRED'&&e.cause===undefined);
+  await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[f.business]);const result=(await run(cookie,r,signal())).forServer();
+  await client.query('UPDATE crest_private.business_recovery_authorities SET active_epoch=$1,version=version+1 WHERE business_id=$2',[randomUUID(),f.business]);await assert.rejects(run(cookie,r,signal()),e=>e instanceof BusinessNameCommandError&&e.message==='RECOVERY_REVIEW_REQUIRED');
+  const read=createBusinessOperationLookup({connectionString:runtimeUrl,environment:'test'},boundary,store);assert.deepEqual((await read(cookie,{businessId:f.business,operationId:r.operationId},signal())).forServer(),result);
 });
