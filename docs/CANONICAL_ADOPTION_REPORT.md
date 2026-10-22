@@ -1,7 +1,8 @@
 # Crest OS - Canonical Adoption Report
 
-Version: 1.3 | 2026-10-20 | Phase 1 maintenance register; real financial activation blocked
+Version: 1.4 | 2026-10-22 | Owner-requested V1 Calendar contract; implementation and production gated
 
+Calendar scope amendment, 2026-10-22: the owner requested Google Calendar connection support in V1. P20/BR21/ADR35 now require the capability with optional owner activation, outbound-only projection and unchanged integrity/security/recovery gates. This supersedes older optional/excluded Calendar wording only. Current versions and immutable-baseline amendment evidence are in CANONICAL_MAINTENANCE.md; implementation/research and unexecuted provider gates are in [the Calendar contract](../planning/GOOGLE_CALENDAR_V1.md). No live integration or production approval is implied.
 
 Public edition, 2026-10-20: owner-authorized public source; application access and business evidence remain private. PUBLICATION.md records this explicit privacy/provenance amendment and the current authority/version register. Earlier private-repository and budget/authorization statements below are historical where superseded there. No security, accounting, recovery or real-data activation gate is waived.
 
@@ -16,16 +17,16 @@ All eleven requested specification documents required changes. Full corrected co
 | Document | Canonical version | Disposition |
 |---|---|---|
 | [ACCOUNTING.md](ACCOUNTING.md) | 1.5, 2026-10-20 | Updated; adopted technical baseline, production gates retained |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | 1.5, 2026-10-20 | Maintained authority references and owner operating cap; production gates retained |
-| [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) | 1.5, 2026-10-20 | Recorded ADR33 Phase 1 authorization and operating cap; production gates retained |
-| [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md) | 1.4, 2026-10-20 | Updated; adopted technical baseline, production gates retained |
-| [BUSINESS_RULES.md](BUSINESS_RULES.md) | 1.3, 2026-10-20 | Updated; adopted technical baseline, production gates retained |
-| [DATABASE.md](DATABASE.md) | 1.4, 2026-10-20 | Updated; adopted technical baseline, production gates retained |
-| [EXPORTS_AND_BACKUPS.md](EXPORTS_AND_BACKUPS.md) | 1.4, 2026-10-20 | Updated; adopted technical baseline, production gates retained |
-| [PRODUCT.md](PRODUCT.md) | 1.4, 2026-10-20 | Reconciled section 7 D12 pilot wording with existing detailed gate |
-| [ROADMAP.md](ROADMAP.md) | 1.4, 2026-10-20 | Updated; adopted technical baseline, production gates retained |
-| [SECURITY.md](SECURITY.md) | 1.4, 2026-10-20 | Updated; adopted technical baseline, production gates retained |
-| [TESTING.md](TESTING.md) | 1.4, 2026-10-20 | Updated; adopted technical baseline, production gates retained |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 1.6, 2026-10-22 | Current Calendar amendment; prior adopted contracts and production gates retained |
+| [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) | 1.6, 2026-10-22 | Current Calendar amendment; prior adopted contracts and production gates retained |
+| [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md) | 1.5, 2026-10-22 | Current Calendar amendment; prior adopted contracts and production gates retained |
+| [BUSINESS_RULES.md](BUSINESS_RULES.md) | 1.4, 2026-10-22 | Current Calendar amendment; prior adopted contracts and production gates retained |
+| [DATABASE.md](DATABASE.md) | 1.5, 2026-10-22 | Current Calendar amendment; prior adopted contracts and production gates retained |
+| [EXPORTS_AND_BACKUPS.md](EXPORTS_AND_BACKUPS.md) | 1.5, 2026-10-22 | Current Calendar amendment; prior adopted contracts and production gates retained |
+| [PRODUCT.md](PRODUCT.md) | 1.5, 2026-10-22 | Current Calendar amendment; prior adopted contracts and production gates retained |
+| [ROADMAP.md](ROADMAP.md) | 1.5, 2026-10-22 | Current Calendar amendment; prior adopted contracts and production gates retained |
+| [SECURITY.md](SECURITY.md) | 1.5, 2026-10-22 | Current Calendar amendment; prior adopted contracts and production gates retained |
+| [TESTING.md](TESTING.md) | 1.5, 2026-10-22 | Current Calendar amendment; prior adopted contracts and production gates retained |
 | [CREST_CONTEXT.md](CREST_CONTEXT.md) | 1.0, 2026-10-20 | Public boundary notice; full historical context remains private |
 
 The original project-local PRODUCT/BUSINESS_RULES1.0 and technical1.1 files include dated owner amendments newer than several saved technical copies. ACCOUNTING1.2 explicitly identified that provenance. Those later cost, session, retention, recovery and operational decisions were preserved. ACCOUNTING header/prose now consistently identify1.4 as current; historical1.0 verification evidence is labeled historical, not current authority. Input and output hashes in CANONICAL_MANIFEST.json identify the exact package. Synced sources and original deliverables were not overwritten by document generation.
@@ -175,3 +176,7 @@ Primary general recordkeeping reference checked: [IRS Publication583](https://ww
 Final audit supersedes any earlier claim that no substantive gap remained. Corrected recovery locking and former-writer fencing, precise lost-record reconstruction, opening delta capacity, owner-contribution correction capacity, unknown personal-channel ownership coverage, En Route reschedule transition, gross/discount allocation schema and roadmap/cost gates. ARCHITECTURE_REVIEW final challenge table and TESTING A01-A10 identify the exact corrected sections. All X01-X28 remain applicable/adopted; new supporting structures are exported. Current register: ACCOUNTING1.4; PRODUCT/BUSINESS_RULES1.2; all technical companions1.3; contextual CREST_CONTEXT unchanged. Repository PASS; synthetic/nonfinancial implementation PASS; real financial use FAIL. No implemented software test or professional-accounting certification is claimed. Existing activation gates and actual configuration remain outstanding.
 
 Additional defects corrected: the generic journal-dimension rule wrongly restricted approved legacy/opening/tax/disposal sources to invoice/tip parents; DATABASE omitted explicit actor/session security-epoch fields; a net returned refund needed an explicit gross-liability/embedded-fee template. ACCOUNTING4.1/24.3, DATABASE2 and TESTING A09-A10 now specify them. PRODUCT D05/D12 gating wording was brought into agreement with the already approved operating modes and prospective cutover.
+
+## 11. Owner-requested Calendar scope amendment, 2026-10-22
+
+P20/BR21/ADR35 add required V1 Google connection capability with optional owner activation and outbound-only dedicated-calendar publication. PRODUCT optional/defer wording, ARCHITECTURE's exclusion and ROADMAP's automatic-calendar exclusion are explicitly revised. Companion database/security/export/testing contracts add minimal disclosure, least consent, retained outbox identity, uncertain-result/version/etag/recovery controls and actual-provider gates. No accounting semantics, original baseline manifest, applied SQL, dependencies or runtime are changed. ARCHITECTURE_REVIEW's earlier scope disposition is historical where this explicit owner amendment supersedes it. Research/alternatives and planned GC01-GC18 are documented; no implementation/provider/production completion is claimed. CANONICAL_MAINTENANCE.md/JSON record all changed baseline identities and new versions. Original adoption evidence below/above remains historical rather than being rewritten as today's executed work.

@@ -1,7 +1,8 @@
 # Crest OS - Canonical Adoption and Adversarial Review
 
-Version: 1.4 | 2026-10-20 | Canonical design review; implementation validation pending
+Version: 1.5 | 2026-10-22 | Owner-requested V1 Calendar contract; implementation and production gated
 
+Calendar scope amendment, 2026-10-22: the owner requested Google Calendar connection support in V1. P20/BR21/ADR35 now require the capability with optional owner activation, outbound-only projection and unchanged integrity/security/recovery gates. This supersedes older optional/excluded Calendar wording only. Current versions and immutable-baseline amendment evidence are in CANONICAL_MAINTENANCE.md; implementation/research and unexecuted provider gates are in [the Calendar contract](../planning/GOOGLE_CALENDAR_V1.md). No live integration or production approval is implied.
 
 Public edition, 2026-10-20: owner-authorized public source; application access and business evidence remain private. PUBLICATION.md records this explicit privacy/provenance amendment and the current authority/version register. Earlier private-repository and budget/authorization statements below are historical where superseded there. No security, accounting, recovery or real-data activation gate is waived.
 
@@ -176,3 +177,7 @@ Fresh adversarial review found substantive defects in the previously adopted bas
 X01-X28 remain adopted and applicable. These findings close additional mechanics within those contracts, particularly X03/X06/X12/X16/X17/X23. No accounting semantics are deferred to an engineering choice. All added lineage/recovery structures are explicitly included in exports and restore checks. PASS for repository creation and synthetic/nonfinancial implementation means specification handoff readiness only; real financial use remains FAIL until actual activation evidence and implemented release/recovery tests pass. CREST_CONTEXT is unchanged. No code, migrations, repository or infrastructure were created.
 
 Additional defects corrected: the generic journal-dimension rule wrongly restricted approved legacy/opening/tax/disposal sources to invoice/tip parents; DATABASE omitted explicit actor/session security-epoch fields; a net returned refund needed an explicit gross-liability/embedded-fee template. ACCOUNTING4.1/24.3, DATABASE2 and TESTING A09-A10 now specify them. PRODUCT D05/D12 gating wording was brought into agreement with the already approved operating modes and prospective cutover.
+
+## 2026-10-22 Calendar amendment design review
+
+The earlier optional/future scope disposition predates the owner's explicit P20 addition. ADR35 now selects opt-in one-way publication to a dedicated app-created calendar. Reviewed risks: OAuth scope/token leakage and account mix-up; duplicate external creation/lost acknowledgement; out-of-order reschedules and external edit/delete; Google outages/billing changes; stale workers/restore replay; misleading current-success state; and unnecessary client/financial disclosure. The narrowed payload/scopes, transaction outbox, retained IDs/attempts, etags/review, bounded budgets, recovery reconciliation and GC01-GC18 address these in the contract. They remain unimplemented/unexecuted and require adversarial implementation/provider tests. Review is by the implementing assistant, not independent security certification; no claim of bug-free code or free production infrastructure follows.

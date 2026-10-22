@@ -1,7 +1,8 @@
 # Crest OS V1 - Database Contract
 
-Version: 1.4 | 2026-10-20 | Canonical V1 baseline adopted for implementation; production activation gated
+Version: 1.5 | 2026-10-22 | Owner-requested V1 Calendar contract; implementation and production gated
 
+Calendar scope amendment, 2026-10-22: the owner requested Google Calendar connection support in V1. P20/BR21/ADR35 now require the capability with optional owner activation, outbound-only projection and unchanged integrity/security/recovery gates. This supersedes older optional/excluded Calendar wording only. Current versions and immutable-baseline amendment evidence are in CANONICAL_MAINTENANCE.md; implementation/research and unexecuted provider gates are in [the Calendar contract](../planning/GOOGLE_CALENDAR_V1.md). No live integration or production approval is implied.
 
 Public edition, 2026-10-20: owner-authorized public source; application access and business evidence remain private. PUBLICATION.md records this explicit privacy/provenance amendment and the current authority/version register. Earlier private-repository and budget/authorization statements below are historical where superseded there. No security, accounting, recovery or real-data activation gate is waived.
 
@@ -262,3 +263,9 @@ Exports include every implemented business entity, current and historical versio
 No generic cascade from customer/business/actor to historical facts. No `source_type + source_id` without a constrained typed source relationship for accounting. No unrestricted manual adjustment to AR/funds/cash control without subledger links. No unique constraint on phone, email or amount/date alone. No mutable accepted-quote JSON. No generic API that takes a table name, business ID or SQL fragment. No financial trigger whose definer role can bypass business checks without revalidating actor/context. No aggregate check implemented solely by an unlocked SELECT. No deleting old operation identities to make the table small.
 
 Every schema release runs introspection checks over these invariants, restores the prior release snapshot, applies migrations, verifies record counts/checksums and reruns finance controls. These are implementation acceptance obligations, not tests executed during this document phase.
+
+## 11. P20 Calendar integration logical contract (not implemented schema)
+
+Later versioned migrations add tenant-scoped connection/consent metadata, job/destination event mappings, typed scheduling outbox work and retained redacted attempts. Secret columns remain in a separate restricted encrypted credential boundary, never ordinary export/projection. Composite tenant FKs, uniqueness per job/destination and remote ID/destination, source versions, generation/lease/recovery fences and indexed bounded work claims are required. State-machine transitions retain unresolved attempts and cannot delete source history. Credential revocation state is distinct from confirmed event cleanup.
+
+The scheduling transaction writes its appointment/history/outbox atomically; provider network I/O occurs after commit. Record one opaque Google-compatible event identity before dispatch, stable through retries/confirmed reschedules, plus projection/consent version and observed etag. Neither title matching nor409/404 alone proves ownership or completion. Restore cannot replay old queues or self-upgrade epochs; reviewed provider reconciliation precedes new dispatch. Exact columns/functions/grants require the implementation migration review and GC01-GC18. No Calendar tables or grants exist merely because this logical contract was added.

@@ -1,7 +1,8 @@
 # Crest OS V1 - Security Contract
 
-Version: 1.4 | 2026-10-20 | Canonical V1 baseline adopted for implementation; production activation gated
+Version: 1.5 | 2026-10-22 | Owner-requested V1 Calendar contract; implementation and production gated
 
+Calendar scope amendment, 2026-10-22: the owner requested Google Calendar connection support in V1. P20/BR21/ADR35 now require the capability with optional owner activation, outbound-only projection and unchanged integrity/security/recovery gates. This supersedes older optional/excluded Calendar wording only. Current versions and immutable-baseline amendment evidence are in CANONICAL_MAINTENANCE.md; implementation/research and unexecuted provider gates are in [the Calendar contract](../planning/GOOGLE_CALENDAR_V1.md). No live integration or production approval is implied.
 
 Public edition, 2026-10-20: owner-authorized public source; application access and business evidence remain private. PUBLICATION.md records this explicit privacy/provenance amendment and the current authority/version register. Earlier private-repository and budget/authorization statements below are historical where superseded there. No security, accounting, recovery or real-data activation gate is waived.
 
@@ -95,3 +96,9 @@ Production D11 requires verified owner identity+TOTP, SMTP/recovery drill, devic
 ## Owner security configuration - 2026-10-20
 
 Recovery/security/backup destination: the privately configured owner alert mailbox; verify delivery and mailbox ownership. Trusted-device settings above meet frequent reopen use; opening the app alone is not a login event. Require a unique Crest password and recommend unique mailbox password with MFA. No paid password manager is required; choose a secure offline recovery kit with independent keys/codes and test loss of phone/email. Recovery email does not bypass TOTP. Configure provider/security and external heartbeat alerts as well as app notifications; no secrets or customer files in alert email. No account settings were changed by this document.
+
+## 9. P20 Google authorization and external disclosure
+
+Google connection is separate optional consent, never a Crest sign-in/recovery path. Only a freshly authorized owner can initiate/change/disconnect it, with Origin/CSRF protections; a narrow state-bound OAuth callback is reviewed separately. Use a maintained server OAuth flow, one-use expiring session/actor/business-bound state, exact configured callback/issuer/client, account/scope validation and PKCE where proven supported; reject replay/account mix-up/changed sign-in. Keep OAuth codes/state out of logs, referrers and rendered errors; clean callback URLs. Encrypt integration tokens server-side with distinct purpose/key handling and serialized refresh; no browser persistence, CI or customer export secrets.
+
+Request calendar.app.created rather than broad calendar/list/ACL access, with separately disclosed minimal OIDC identification if needed. Preview destination and generic event fields; client/service/address are separately opted-in, never financial/contact/vehicle/photo/internal evidence. No public calendar, bearer feed, guests, invitations, inherited reminders or ACL automation. Private visibility does not prove calendar sharing/device notifications are safe; owner sharing checks remain required. Disconnect fences/drains work before grant revocation; uncertain remote effects remain reviewable, and existing events are not claimed erased. Actual Google consent, client mode/policy, revoked/expired/partial access, leakage, restore fencing and real-device evidence gate activation. See ADR35 and GC01-GC18; no new permission or production access is enabled here.

@@ -1,7 +1,8 @@
 # Crest OS V1 - Verification and Release Gates
 
-Version: 1.4 | 2026-10-20 | Canonical V1 baseline adopted for implementation; production activation gated
+Version: 1.5 | 2026-10-22 | Owner-requested V1 Calendar contract; implementation and production gated
 
+Calendar scope amendment, 2026-10-22: the owner requested Google Calendar connection support in V1. P20/BR21/ADR35 now require the capability with optional owner activation, outbound-only projection and unchanged integrity/security/recovery gates. This supersedes older optional/excluded Calendar wording only. Current versions and immutable-baseline amendment evidence are in CANONICAL_MAINTENANCE.md; implementation/research and unexecuted provider gates are in [the Calendar contract](../planning/GOOGLE_CALENDAR_V1.md). No live integration or production approval is implied.
 
 Public edition, 2026-10-20: owner-authorized public source; application access and business evidence remain private. PUBLICATION.md records this explicit privacy/provenance amendment and the current authority/version register. Earlier private-repository and budget/authorization statements below are historical where superseded there. No security, accounting, recovery or real-data activation gate is waived.
 
@@ -21,6 +22,7 @@ Fixture packs:
 - F6 files: generated safe image/receipt/PDF, real synthetic HEIC captured on test phone, corrupt/truncated/oversized/polyglot/decompression-bomb/active-PDF fixtures; no real customer photos.
 - F7 import/export: repeated file, repeated provider ID, identical legitimate transactions, missing parents, formula-leading/Unicode/null/backslash text, leading-zero IDs and huge integer cents.
 - F8 recovery/capacity: seeded10k customers/50k jobs/1m journal lines,100 GB generated originals, historical schema/image/key versions and intentionally missing/corrupt object.
+- F9 Calendar: synthetic Google account/project/dedicated calendar, deterministic provider faults, two devices/workers, DST gap/fold and redacted OAuth/connection fixtures; never real client bookings or credentials in public CI. Actual provider setup/consent remains a separate owner gate.
 
 ## 2. Product acceptance matrix
 
@@ -47,6 +49,7 @@ Each row tests all acceptance bullets for that P requirement; the evidence colum
 | P17 import/export/recovery | DB/worker/restore; F7/F8 | Repeat batch safe, reference mode nonposting, correct typed data/IDs, one snapshot across formats, attachment bytes, independent restore+auth compatible | M,D,N,R |
 | P18 phone | device/E2E/a11y; F1-F7 | 360px width,44px targets, readable contrast, camera/gallery, keyboard/screen reader, suspended/reloaded app, uncertain payment resolution, handoff after committed save | D,R |
 | P19 desktop/performance | E2E/a11y/k6; F1-F8 | Full functional parity including exports/reconciliation; p95 outcome/progress<=3sec; large-dataset measured capacity | D,N,R |
+| P20 Google Calendar | unit/DB/API/worker/E2E/provider/real device; F1/F4/F9 | GC01-GC18 in planning/GOOGLE_CALENDAR_V1.md: least consent, atomic outbox, actual create/update/cancel, identity/unknown-result/etag/lease races, revocation/budget/disconnect, restore and secret-free exports | M,D,N,R |
 
 ## 3. Mandatory adversarial fixture matrix
 
@@ -134,7 +137,7 @@ Assert exact accounts, cents, tax/discount ranges, dates, dimensions, funding/co
 | Recovery | Restore before committed receipt, old device/new operation key with old epoch rejected; reviewed reconstruction aliases original evidence. Known numbers reserved; unknown high-water new UUID series prevents full-number collision; unresolved money gap blocks clean financial resume |
 | Owner custody | All O01-O10, mixed wallet full personal balance excluded; transfer between personal channels not draw/contribution; explicit personal funding shortage; personal spend does not silently consume custody; owner obligation never negative or automatically netted |
 
-For each major workflow, tests trace lead→customer→vehicle→quote→acceptance→schedule→job→invoice→receipt→ledger→review and expense→receipt→ledger→reconciliation. Review creation remains at job completion; this financial test sequence does not delay review until payment. Also exercise funds→application→refund/tip, credit→unapplication→refund, collection failure, transfer/transit, cutover/openings and restore/reconstruct/resume. All still use synthetic data until the established production gates pass.
+For each major workflow, tests trace leadâ†’customerâ†’vehicleâ†’quoteâ†’acceptanceâ†’scheduleâ†’jobâ†’invoiceâ†’receiptâ†’ledgerâ†’review and expenseâ†’receiptâ†’ledgerâ†’reconciliation. Review creation remains at job completion; this financial test sequence does not delay review until payment. Also exercise fundsâ†’applicationâ†’refund/tip, creditâ†’unapplicationâ†’refund, collection failure, transfer/transit, cutover/openings and restore/reconstruct/resume. All still use synthetic data until the established production gates pass.
 
 
 ## 8. Final pre-code audit regression requirements
@@ -154,3 +157,9 @@ All cases below are required synthetic DB/API tests at M/D, full recovery/portab
 
 | A09 | Failed refund100 returned net95 with embedded fee5 restores F100 and same root ranges100, fee5 once. Retry100 clears F, never another revenue reduction. Separate credit100/debit5 evidence gives the same controls without duplicate fee |
 | A10 | Enforce permitted semantic dimensions for legacy/opening concessions, tax remittance/recovery, purchase tax and asset gain/loss; reject generic tax/revenue line. Revoke-all changes actor security epoch; previously issued app sessions fail every next protected request, including pooled connections |
+
+## 9. Google Calendar acceptance trace
+
+P20/BR21/ADR35 require all GC01-GC18 in planning/GOOGLE_CALENDAR_V1.md, including deterministic fault injection and actual PostgreSQL permissions/atomicity plus distinct actual Google synthetic staging and real-phone tests. These are planned requirements, not passing tests or a universal bug-free guarantee. Ordinary public CI must never gain Google/production secrets; separate authenticated provider acceptance needs owner-approved setup and explicit evidence. A chat Calendar connector cannot substitute for Crest OAuth/runtime integration.
+
+Merge gates for implementation include unit/type/lint/build, affected migrations/grants/DB/outbox concurrency, OAuth/protocol failure regressions and browser/a11y; deployment/first activation also require actual provider and real-device visibility, free quota/client-mode checks, disconnect/revocation, secret-free roundtrip exports and isolated restore/remote reconciliation. No skipped/mocked provider gate counts as real Google success. All existing M/D/N/R/accounting/security/recovery gates remain. Known defects block release; residual provider outages/refresh delays must be surfaced honestly.
