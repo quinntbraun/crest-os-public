@@ -35,7 +35,7 @@ before(async()=>{
   await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target,await sandbox.prefix(11));
   bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;backup=(await owner()).id;legacy=await state();probe=await enabled();
   legacyRow=(await client.query('SELECT to_jsonb(s) AS value FROM crest_private.app_sessions s WHERE id=$1',[legacy.session])).rows[0].value;
-  history=createHash('sha256').update(JSON.stringify((await client.query('SELECT * FROM crest_private.identity_events ORDER BY id')).rows)).digest('hex');receipt=await sandbox.apply(target);
+  history=createHash('sha256').update(JSON.stringify((await client.query('SELECT * FROM crest_private.identity_events ORDER BY id')).rows)).digest('hex');receipt=await sandbox.apply(target,await sandbox.prefix(12));
   login=`crest_probe_${randomBytes(8).toString('hex')}`;const password=randomBytes(32).toString('hex');assert.match(login,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
   await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;await sandbox.admin.query(`GRANT crest_web TO ${login}`);
   const url=new URL(target);url.username=login;url.password=password;runtimeUrl=url.toString();web=await sandbox.connect(runtimeUrl);await web.query('SET ROLE crest_web');
@@ -47,7 +47,7 @@ before(async()=>{
 after(async()=>{await web?.end();if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();});
 
 test('schema11 upgrade preserves stored session/history and the exact CLI prefix',async()=>{
-  assert.equal(prior.history.length,11);assert.equal(receipt.history.length,12);assert.deepEqual(receipt.history.slice(0,11),prior.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);
+  assert.equal(prior.history.length,11);assert.equal(receipt.history.length,12);assert.deepEqual(receipt.history.slice(0,11),prior.history);assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(12))).history,receipt.history);
   assert.deepEqual((await client.query('SELECT to_jsonb(s) AS value FROM crest_private.app_sessions s WHERE id=$1',[legacy.session])).rows[0].value,legacyRow);
   assert.equal(createHash('sha256').update(JSON.stringify((await client.query('SELECT * FROM crest_private.identity_events ORDER BY id')).rows)).digest('hex'),history);
 });
