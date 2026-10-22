@@ -60,6 +60,11 @@
       "version": "20261022174500",
       "file": "20261022174500_mutation_recovery_fence.sql",
       "sha256": "84365e4209ee0c4af9ba4000fa62f30baa66f78ee4462b909688c3aa71fcc11b"
+    },
+    {
+      "version": "20261022183000",
+      "file": "20261022183000_operation_audit_storage.sql",
+      "sha256": "b927b7fc2cdbdfb6c6f2b5eebb08208065fa412e170a2ef1aacb06b3976f60a7"
     }
   ]
 }
