@@ -56,9 +56,11 @@ function json(body:object,status=200,cookies:string[]=[]):Response{
   const headers=new Headers({
     'Content-Type':'application/json; charset=utf-8',
     'Cache-Control':'private, no-store, max-age=0',
+    'CDN-Cache-Control':'no-store','Surrogate-Control':'no-store',
     'Pragma':'no-cache','Expires':'0','Vary':'Cookie, Origin',
     'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY',
     'Referrer-Policy':'no-referrer','Cross-Origin-Resource-Policy':'same-origin',
+    'X-Robots-Tag':'noindex, nofollow','Permissions-Policy':'camera=(), microphone=(), geolocation=()',
     'Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
   });
   for(const value of cookies)headers.append('Set-Cookie',value);
@@ -88,9 +90,9 @@ export function logoutResponse(result:Awaited<ReturnType<Flow['logout']>>):Respo
   // Clear only after confirmed local revocation; do not claim remote signout succeeded.
   return json({localRevoked:true,providerSignedOut:result.providerSignedOut},200,[clearCookie(sessionName),clearCookie(loginName)]);
 }
-export function browserFailureResponse(status:400|404|405=400):Response{
+export function browserFailureResponse(status:400|404|405|503=400):Response{
   // No exception argument: request/SDK/database errors and credentials cannot be reflected.
-  const response=json({error:'AUTHENTICATION_REQUEST_FAILED'},[400,404,405].includes(status)?status:400);
+  const response=json({error:'AUTHENTICATION_REQUEST_FAILED'},[400,404,405,503].includes(status)?status:400);
   if(status===405)response.headers.set('Allow','POST');
   return response;
 }

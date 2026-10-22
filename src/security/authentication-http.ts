@@ -7,8 +7,16 @@ import type {IngressConfiguration,transportFromIncomingMessage} from './trusted-
 type Flow=ReturnType<typeof createBrowserSessionFlow>;
 type Configuration=Parameters<typeof createBrowserSessionFlow>[0]&{ingress:IngressConfiguration};
 const paths=new Set(['/api/auth/bootstrap','/api/auth/login','/api/auth/session','/api/auth/logout']);
+const deliveryCleanup=new WeakMap<Response,()=>Promise<void>>();
 
-// Not mounted by Next yet: the hosting adapter must supply real socket evidence.
+// The Node adapter settles once on finish or failed delivery. Never recover a
+// credential by parsing Set-Cookie, and never revoke a proof-only response.
+export async function settleAuthenticationResponse(response:Response,finished:boolean):Promise<void>{
+  const cleanup=deliveryCleanup.get(response);deliveryCleanup.delete(response);
+  if(cleanup&&!finished)await cleanup();
+}
+
+// The hosting adapter supplies actual socket evidence, independently of Next.
 export function createAuthenticationHttp(config:Configuration,provider:Parameters<typeof createBrowserSessionFlow>[1],tokens:Parameters<typeof createBrowserSessionFlow>[2]){
   const resolve=createTrustedTransport(config),read=createBrowserBodyReader(config),flow=createBrowserSessionFlow(config,provider,tokens);
   return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>):Promise<Response>=>{
@@ -37,6 +45,7 @@ export function createAuthenticationHttp(config:Configuration,provider:Parameter
         }
       }
       if(signal.aborted)throw new Error();
+      if(issued){const session=issued;deliveryCleanup.set(response,()=>flow.discardUnexposedLogin(session));}
       return response;
     }catch{
       // Only a newly issued login may be discarded. A failed proof response must

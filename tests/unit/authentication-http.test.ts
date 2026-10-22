@@ -1,9 +1,12 @@
 import {randomBytes,randomUUID} from 'node:crypto';
+import {IncomingMessage,ServerResponse} from 'node:http';
+import {Socket} from 'node:net';
 import {beforeEach,describe,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
 const flow=vi.hoisted(()=>({beginLogin:vi.fn(),login:vi.fn(),session:vi.fn(),logout:vi.fn(),discardUnexposedLogin:vi.fn()}));
 vi.mock('../../src/security/browser-session-flow.ts',()=>({createBrowserSessionFlow:()=>flow}));
-import {createAuthenticationHttp} from '../../src/security/authentication-http.ts';
+import {createAuthenticationHttp,settleAuthenticationResponse} from '../../src/security/authentication-http.ts';
+import {writeAuthenticationResponse} from '../../src/server/node-server.ts';
 import {transportFixture} from '../support/transport.ts';
 
 const origin='https://crest.example.com',opaque=randomBytes(32).toString('base64url'),proof=randomBytes(32).toString('base64url');
@@ -79,5 +82,36 @@ describe('authentication HTTP dispatcher',()=>{
   it('never clears a cookie on unconfirmed logout or reflects thrown provider details',async()=>{
     flow.logout.mockResolvedValue({localRevoked:false,providerSignedOut:true});await failure(await dispatch(request('logout',{}, {cookie}),transportFixture()));
     flow.beginLogin.mockRejectedValue(new Error('password=private'));await failure(await dispatch(request(),transportFixture()));
+  });
+  it('settles a finished delivery once without revoking its login, even after a later close',async()=>{
+    flow.login.mockResolvedValue(issued());const response=await dispatch(request('login',input,{cookie}),transportFixture());
+    const out=new ServerResponse(new IncomingMessage(new Socket()));vi.spyOn(out,'end').mockImplementation(()=>{out.emit('finish');out.emit('close');return out;});
+    await writeAuthenticationResponse(out,response,new AbortController().signal);await settleAuthenticationResponse(response,false);
+    expect(flow.discardUnexposedLogin).not.toHaveBeenCalled();expect(out.getHeader('set-cookie')).toHaveLength(2);
+  });
+  it('cleans a new login exactly once if the response write throws',async()=>{
+    const session=issued();flow.login.mockResolvedValue(session);const response=await dispatch(request('login',input,{cookie}),transportFixture());
+    const out=new ServerResponse(new IncomingMessage(new Socket()));vi.spyOn(out,'end').mockImplementation(()=>{throw new Error('synthetic write failure');});
+    await expect(writeAuthenticationResponse(out,response,new AbortController().signal)).rejects.toThrow('AUTHENTICATION_DELIVERY_FAILED');
+    await settleAuthenticationResponse(response,false);expect(flow.discardUnexposedLogin).toHaveBeenCalledExactlyOnceWith(session);
+  });
+  it('cleans an issued response cancelled before writing and logs only a fixed cleanup failure',async()=>{
+    const session=issued();flow.login.mockResolvedValue(session);flow.discardUnexposedLogin.mockRejectedValue(new Error('private provider material'));
+    const response=await dispatch(request('login',input,{cookie}),transportFixture()),controller=new AbortController();controller.abort();
+    const error=vi.spyOn(console,'error').mockImplementation(()=>{});
+    try{await expect(writeAuthenticationResponse(new ServerResponse(new IncomingMessage(new Socket())),response,controller.signal)).rejects.toThrow();
+      expect(flow.discardUnexposedLogin).toHaveBeenCalledExactlyOnceWith(session);expect(error).toHaveBeenCalledExactlyOnceWith('AUTHENTICATION_DELIVERY_CLEANUP_FAILED');
+    }finally{error.mockRestore();}
+  });
+  it('does not revoke a pre-existing proof session on a failed write',async()=>{
+    flow.session.mockResolvedValue(issued());const response=await dispatch(request('session',{}, {cookie}),transportFixture()),controller=new AbortController();controller.abort();
+    await expect(writeAuthenticationResponse(new ServerResponse(new IncomingMessage(new Socket())),response,controller.signal)).rejects.toThrow();expect(flow.discardUnexposedLogin).not.toHaveBeenCalled();
+  });
+  it('bounds response bytes and cancels a stalled response body',async()=>{
+    const out=()=>new ServerResponse(new IncomingMessage(new Socket()));
+    await expect(writeAuthenticationResponse(out(),new Response('x'.repeat(8193)),new AbortController().signal)).rejects.toThrow();
+    const controller=new AbortController();let cancelled=false;
+    const response=new Response(new ReadableStream({cancel(){cancelled=true;}})),pending=writeAuthenticationResponse(out(),response,controller.signal);
+    controller.abort();await expect(pending).rejects.toThrow();expect(cancelled).toBe(true);
   });
 });
