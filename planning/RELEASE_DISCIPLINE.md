@@ -1,5 +1,7 @@
 # Migration and release discipline
 
+Current mutation recovery fence slice: schema12 appends one guarded fence with only narrow definer recovery reads and no domain write/activation grant; app0.1.0 accepts schema0..12, report/command0 and production blocked. Previous11 SQL migrations remain byte-identical. PHASE_2_MUTATION_FENCE records staged upgrade, retained history, transaction rollback, lock-barrier and real Auth requirements. Operation/audit storage and a typed domain/RLS consumer remain prerequisites to business writes. Earlier schema status below is historical.
+
 Current tenant context read slice: schema11 appends one guarded identity.read routine and narrow definer column/lock policies; application0.1.0 accepts schema0..11, report/command0 and production blocked. Previous10 migration bytes remain unchanged. PHASE_2_TENANT_READ records staged upgrade, privilege/concurrency/real Auth requirements and the outstanding domain context/recovery/operation/audit gates. Earlier schema status below is historical.
 
 Current session slice: schema ordinal3 adds closed session lifecycle/history storage; the unchanged shell supports0..3. Previous schema1/2 bytes remain immutable and their regression suites stage the exact prefixes. PHASE_2_SESSIONS.md records compatibility tests and outstanding provider/access gates. Earlier schema status below is historical.

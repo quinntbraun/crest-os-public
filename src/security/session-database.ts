@@ -13,11 +13,11 @@ export function sessionDatabase(config:SessionDatabaseConfiguration){
     connectionString=url.toString();
   }catch{throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');}
   const ssl=config.environment==='production'?{rejectUnauthorized:true}:false;
-  async function connection<T>(signal:AbortSignal,transaction:boolean,work:(query:Query,signal:AbortSignal)=>Promise<T>):Promise<T>{
+  async function connection<T>(signal:AbortSignal,transaction:boolean,work:(query:Query,signal:AbortSignal)=>Promise<T>,command=false):Promise<T>{
     if(signal.aborted)throw new Error('SESSION_DATABASE_FAILED');
     const controller=new AbortController(),combined=AbortSignal.any([signal,controller.signal]);
-    const client=new pg.Client({connectionString,ssl,connectionTimeoutMillis:1000,statement_timeout:transaction?11000:1500,lock_timeout:transaction?10000:750,
-      query_timeout:transaction?12000:2000,options:'-c role=crest_web',application_name:transaction?'crest_session_refresh':'crest_session_lifecycle'});
+    const client=new pg.Client({connectionString,ssl,connectionTimeoutMillis:1000,statement_timeout:command?10000:transaction?11000:1500,lock_timeout:command?3000:transaction?10000:750,
+      query_timeout:command?11000:transaction?12000:2000,options:'-c role=crest_web',application_name:command?'crest_business_command':transaction?'crest_session_refresh':'crest_session_lifecycle'});
     client.on('error',()=>controller.abort());client.once('end',()=>controller.abort());
     const timer=setTimeout(()=>controller.abort(),transaction?15000:3000);timer.unref();
     const abort=()=>{void client.end().catch(()=>undefined);};combined.addEventListener('abort',abort,{once:true});
@@ -42,13 +42,25 @@ export function sessionDatabase(config:SessionDatabaseConfiguration){
         try{
           await client.query("SET LOCAL idle_in_transaction_session_timeout='12s'; SET LOCAL transaction_timeout='15s'");
           const result=await work(query,combined);if(combined.aborted)throw new Error();
-          await client.query('COMMIT');return result;
+          const completion=await client.query('COMMIT');
+          // PostgreSQL answers ROLLBACK if a callback swallowed a statement
+          // error and left the transaction aborted. Never confirm that result.
+          if(completion.command!=='COMMIT')throw new Error('SESSION_DATABASE_FAILED');
+          return result;
         }catch(error){if(!combined.aborted)await client.query('ROLLBACK').catch(()=>undefined);throw error;}
       })();
       const result=await Promise.race([pending,interrupted]);if(combined.aborted)throw new Error();return result;
-    }catch{throw new Error('SESSION_DATABASE_FAILED');}
+    }catch(error){
+      // Only this fixed, expected business-fence result may cross the command
+      // profile. No SQL/SDK cause, detail, hint, parameter or raw message escapes.
+      // eslint-disable-next-line preserve-caught-error -- Database causes may contain credentials, SQL text or parameters.
+      if(command&&error instanceof Error&&'code' in error&&error.code==='P0001'&&error.message==='RECOVERY_REVIEW_REQUIRED')throw new Error('RECOVERY_REVIEW_REQUIRED');
+      // eslint-disable-next-line preserve-caught-error -- Never transport a raw database cause outside this boundary.
+      throw new Error('SESSION_DATABASE_FAILED');
+    }
     finally{clearTimeout(timer);combined.removeEventListener('abort',abort);await client.end().catch(()=>undefined);}
   }
   const query=async(text:string,values:unknown[],signal:AbortSignal)=>connection(signal,false,current=>current(text,values));
-  return Object.assign(query,{transaction:<T>(work:(query:Query,signal:AbortSignal)=>Promise<T>,signal:AbortSignal)=>connection(signal,true,work)});
+  return Object.assign(query,{transaction:<T>(work:(query:Query,signal:AbortSignal)=>Promise<T>,signal:AbortSignal)=>connection(signal,true,work),
+    commandTransaction:<T>(work:(query:Query,signal:AbortSignal)=>Promise<T>,signal:AbortSignal)=>connection(signal,true,work,true)});
 }
