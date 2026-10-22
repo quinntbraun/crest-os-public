@@ -6,3 +6,17 @@ h1 { margin: 0.5rem 0 1.25rem; font-size: 2.5rem; line-height: 1.15; }
 p { font-size: 1rem; line-height: 1.6; }
 .eyebrow { font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .status { display: inline-block; padding: 0.5rem 0.875rem; border: 1px solid #8b9c9a; border-radius: 0.5rem; }
+a { color: #174e44; text-underline-offset: 0.2em; }
+a, button { min-height: 44px; }
+a { display: inline-flex; align-items: center; }
+.sign-in { max-width: 30rem; margin-top: 3vh; padding-bottom: 3rem; }
+form { display: grid; gap: 0.5rem; }
+label { font-weight: 700; margin-top: 0.75rem; }
+input:not([type="checkbox"]) { width: 100%; min-width: 0; min-height: 48px; padding: 0.75rem; font: inherit; color: inherit; background: #fff; border: 1px solid #607671; border-radius: 0.5rem; }
+button { width: 100%; padding: 0.75rem 1rem; font: inherit; font-weight: 700; border: 1px solid #174e44; border-radius: 0.5rem; background: #174e44; color: #fff; cursor: pointer; margin-top: 1rem; }
+button.secondary { color: #174e44; background: transparent; }
+.field-help { font-size: 0.875rem; line-height: 1.5; margin: 0.5rem 0; color: #425653; }
+.trust { display: flex; align-items: center; gap: 0.75rem; min-height: 44px; cursor: pointer; }
+.trust input { width: 24px; height: 24px; flex-shrink: 0; accent-color: #174e44; }
+:focus-visible { outline: 3px solid #285cc4; outline-offset: 4px; }
+@media (max-width: 400px) { h1 { font-size: 2.25rem; } }
