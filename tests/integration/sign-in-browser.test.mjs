@@ -14,7 +14,7 @@ import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {startRealAuthService,authResult} from '../support/real-auth-service.mjs';
 
-let sandbox,client,service,app,origin,fixture,actor,login,loginOwned=false;
+let sandbox,client,service,app,origin,fixture,actor,business,login,loginOwned=false;
 const sessionName='__Host-crest_session';
 before(async()=>{
   assert.equal(process.platform,'linux','the disposable container/HTTPS fixture requires Linux CI');
@@ -35,7 +35,7 @@ before(async()=>{
   const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
   await client.query('BEGIN');try{
     actor=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic browser owner',$1,$2,$3,$3,'manual') RETURNING id",[service.issuer,user.id,bootstrap])).rows[0].id;
-    const business=(await client.query("INSERT INTO crest.businesses(legal_name,timezone,created_by,updated_by,origin) VALUES('Synthetic browser business','UTC',$1,$1,'manual') RETURNING id",[actor])).rows[0].id;
+    business=(await client.query("INSERT INTO crest.businesses(legal_name,timezone,created_by,updated_by,origin) VALUES('Synthetic browser business','UTC',$1,$1,'manual') RETURNING id",[actor])).rows[0].id;
     await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,actor]);
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,actor]);await client.query('COMMIT');
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_BROWSER_OWNER_FAILED');}
@@ -50,12 +50,25 @@ before(async()=>{
   const runtime=await createAuthenticationRuntime({database:{connectionString:database.toString(),environment:'test'},provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
     owner:{subject:user.id,factorId:factor.id},loginKey:randomBytes(32),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:randomBytes(32)}]});
   assert.throws(()=>JSON.stringify(runtime),/AUTHENTICATION_RUNTIME_PRIVATE/);
-  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer()});
+  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business}});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
 });
 after(async()=>{try{await app?.close();}finally{try{await service?.close();}finally{if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();}}});
 
 async function checkSession(page){await page.getByRole('button',{name:'Check session',exact:true}).click();await expect(page.getByRole('status')).not.toContainText('Checking this device');}
+async function exerciseBusinessHttp(page,name){
+  const send=(path,body={},proof=null)=>page.evaluate(async input=>{const response=await fetch(input.path,{method:'POST',headers:{'Content-Type':'application/json',...(input.proof?{'x-crest-csrf':input.proof}:{})},body:JSON.stringify(input.body)});return {status:response.status,body:await response.json(),cache:response.headers.get('cache-control')};},{path,body,proof});
+  const session=await send('/api/auth/session');assert.equal(session.status,200);const csrf=session.body.csrfToken;
+  assert.equal((await send('/api/business/settings')).status,400);
+  await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);
+  const settings=await send('/api/business/settings',{},csrf);assert.equal(settings.status,200);assert.match(settings.cache,/no-store/);assert.equal(settings.body.businessId,business);assert.equal(settings.body.writeState,'ready');
+  const input={schemaVersion:1,operationId:randomUUID(),expectedVersion:settings.body.businessVersion,recoveryEpoch:settings.body.recoveryEpoch,legalName:`Synthetic HTTPS ${name}`};
+  const result=await send('/api/business/rename',input,csrf);assert.equal(result.status,200);assert.equal(result.body.state,'committed');assert.equal(result.body.receipt.businessVersion,(BigInt(input.expectedVersion)+1n).toString());
+  assert.deepEqual((await send('/api/business/rename',input,csrf)).body,result.body);
+  assert.deepEqual((await send('/api/business/operation',{operationId:input.operationId},csrf)).body,result.body);
+  assert.equal((await send('/api/business/rename',{...input,businessId:randomUUID()},csrf)).status,400);
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.audit_events WHERE business_id=$1 AND operation_id=$2',[business,input.operationId])).rows[0].n,1);
+}
 async function fill(page,{trusted=false,password=fixture.password}={}){
   await page.getByLabel('Email',{exact:true}).fill(fixture.email);await page.getByLabel('Password',{exact:true}).fill(password);
   await page.getByLabel('Authenticator code',{exact:true}).fill(fixture.totp.generate());await page.getByLabel('Trust this personal device').setChecked(trusted);
@@ -105,6 +118,7 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
         const denied=await other.evaluate(async()=>{const response=await fetch('/api/auth/logout',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});return {status:response.status,body:await response.json()};});
         assert.equal(denied.status,400);assert.deepEqual(denied.body,{error:'AUTHENTICATION_REQUEST_FAILED'});assert.equal((await row(trusted)).revoked_at,null,'missing CSRF cannot revoke');
       });
+      await t.test('compiled HTTPS guarded business API uses the authenticated device',async()=>{await exerciseBusinessHttp(page,name);});
       await t.test('confirmed local-first logout clears one device and leaves the other live',async()=>{
         await page.getByRole('button',{name:'Sign out on this device',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Signed out on this device.');
         assert.equal(await localCookie(first),undefined,'logout clears credential');const revoked=await row(untrusted);assert(revoked.revoked_at,'local revoked');assert.equal(revoked.provider_token_ciphertext,null);
