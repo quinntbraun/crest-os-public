@@ -1,0 +1,15 @@
+import 'server-only';
+import next from 'next';
+import nextConfig from '../../next.config.ts';
+import {bindApplicationHandler,createBoundedNodeServer} from './node-server.ts';
+import type {NodeConfiguration} from './node-server.ts';
+
+// One Node process, one listener, one Next application. No separate API service.
+export async function createCrestApplication(config:NodeConfiguration){
+  const server=createBoundedNodeServer(config.tls);
+  const app=next({dev:false,quiet:true,conf:nextConfig,httpServer:server});
+  try{
+    await app.prepare();bindApplicationHandler(server,config,app.getRequestHandler());
+    return {server,close:async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await app.close();}};
+  }catch{await app.close();throw new Error('APPLICATION_START_FAILED');}
+}

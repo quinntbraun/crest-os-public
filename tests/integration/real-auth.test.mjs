@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash,randomBytes,randomUUID } from 'node:crypto';
 import { before,after,test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
+import {request as nodeRequest} from 'node:http';
 import { TOTP,URI } from 'otpauth';
 import { createRemoteJWKSet,decodeJwt,jwtVerify } from 'jose';
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
@@ -914,4 +915,48 @@ test('unexposed-login cleanup requires this flow issuance and revokes only that 
   assert((await sessionRow(issued)).revoked_at);await lifecycleDenied(lifecycle.verify(issued.cookieValueForResponse(),signal()));
   assert.equal((await lifecycle.verify(other.cookieValueForResponse(),signal())).sessionId,other.evidence.sessionId);
   await browserDenied(flow.discardUnexposedLogin(issued));
+});
+
+async function waitForRevokedLogin(actor,excluded){
+  const deadline=Date.now()+8000;
+  while(Date.now()<deadline){
+    const rows=(await client.query('SELECT * FROM crest_private.app_sessions WHERE actor_id=$1 AND id<>$2',[actor.id,excluded])).rows;
+    if(rows.length===1&&rows[0].revoked_at&&await lookup(actor.auth_user_id,rows[0].provider_session_id,signal())===false)return rows[0];
+    await delay(20);
+  }
+  assert.fail('failed delivery must revoke only its newly issued local session');
+}
+
+test('actual Node response-write failure cleans up new Auth/local issuance while an existing device remains live',async()=>{
+  const f=await provision(),actor=await linkActor(f),server=await httpFixture(f);
+  try{
+    const other=await httpLogin(server,f),pending=await httpPending(server);
+    server.server.prependOnceListener('request',(_request,response)=>{response.end=()=>{throw new Error('synthetic response-write failure');};});
+    await assert.rejects(server.request('login',browserInput(f),{cookie:pending.pair,'x-crest-csrf':pending.csrfToken}));
+    const failed=await waitForRevokedLogin(actor,other.evidence.sessionId);assert.equal(failed.provider_token_ciphertext,null);
+    assert.equal(await lookup(f.subject,failed.provider_session_id,signal()),false);
+    assert.equal((await lifecycle.verify(cookieValue(other.pair),signal())).sessionId,other.evidence.sessionId);
+  }finally{await server.close();}
+});
+
+test('actual Node disconnect during issued-login verification propagates cancellation and cleans only the new session',async()=>{
+  const f=await provision(),actor=await linkActor(f);let other,release,entered,closed;
+  const barrier=new Promise(resolve=>{entered=resolve;}),gate=new Promise(resolve=>{release=resolve;}),disconnected=new Promise(resolve=>{closed=resolve;});let paused=false;
+  const provider={...boundary,async verifyAccess(...args){
+    const result=await boundary.verifyAccess(...args);
+    if(other&&!paused&&(await client.query('SELECT count(*)::int AS n FROM crest_private.app_sessions WHERE actor_id=$1',[actor.id])).rows[0].n===2){paused=true;entered();await gate;}
+    return result;
+  }},server=await httpFixture(f,provider);
+  try{
+    other=await httpLogin(server,f);const pending=await httpPending(server);
+    server.server.prependOnceListener('request',(_request,response)=>response.once('close',closed));
+    const body=JSON.stringify(browserInput(f)),url=new URL('/api/auth/login',server.origin);
+    const request=nodeRequest(url,{method:'POST',headers:{origin:server.origin,'content-type':'application/json','content-length':Buffer.byteLength(body),cookie:pending.pair,'x-crest-csrf':pending.csrfToken}});
+    const outcome=new Promise(resolve=>{request.on('error',()=>resolve('disconnected'));request.on('response',response=>{response.resume();resolve('unexpected response');});});request.end(body);
+    await Promise.race([barrier,delay(8000).then(()=>{throw new Error('issued login barrier not reached');})]);
+    request.destroy();assert.equal(await outcome,'disconnected');await disconnected;release();
+    const failed=await waitForRevokedLogin(actor,other.evidence.sessionId);assert.equal(failed.provider_token_ciphertext,null);
+    assert.equal(await lookup(f.subject,failed.provider_session_id,signal()),false);
+    assert.equal((await lifecycle.verify(cookieValue(other.pair),signal())).sessionId,other.evidence.sessionId);
+  }finally{release();await server.close();}
 });

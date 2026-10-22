@@ -15,4 +15,9 @@ if (!response.ok || !html.includes("Setup in progress") || !nonce || !html.inclu
 const next=await fetch("http://127.0.0.1:3100/");
 if(!next.ok||next.headers.get('content-security-policy')===policy)throw new Error('Container must generate a fresh document nonce');
 await next.arrayBuffer();
-console.log("Read-only, non-root container serves liveness and uncached nonce-protected shell");
+for(const path of ['bootstrap','login','session','logout']){
+  const closed=await fetch('http://127.0.0.1:3100/api/auth/'+path,{method:'POST',headers:{origin:'http://127.0.0.1:3100','content-type':'application/json'},body:'{}'});
+  if(closed.status!==503||closed.headers.has('set-cookie')||!closed.headers.get('content-security-policy')?.includes("default-src 'none'")
+    ||!closed.headers.get('cache-control')?.includes('no-store')||(await closed.json()).error!=='AUTHENTICATION_REQUEST_FAILED')throw new Error('Default image must keep authentication closed with private JSON');
+}
+console.log("Read-only, non-root Node adapter serves nonce-protected shell and closed private authentication JSON");

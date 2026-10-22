@@ -115,9 +115,10 @@ export function createSessionLifecycle(config:SessionDatabaseConfiguration,
     },
     async login(input:{email:string;password:string;factorId:string;code:string},binding:ProviderBinding,trusted:boolean,external:AbortSignal):Promise<IssuedSession>{
       const signal=AbortSignal.any([external,AbortSignal.timeout(20000)]);let credential:ReturnType<typeof createSessionCredential>|undefined;
+      let material:Awaited<ReturnType<typeof provider.authenticatePasswordTotp>>|undefined;
       try{
         if(typeof trusted!=='boolean'||signal.aborted)throw new SessionLifecycleError();
-        const material=await provider.authenticatePasswordTotp(input,binding,signal),identity=material.identity;
+        material=await provider.authenticatePasswordTotp(input,binding,signal);const identity=material.identity;
         const context=await query('SELECT crest_commands.session_actor_context($1::text,$2::uuid) AS result',[identity.issuer,identity.subject],signal) as {actorId?:string;securityEpoch?:string}|null;
         if(!context||typeof context.actorId!=='string'||!uuid.test(context.actorId)||typeof context.securityEpoch!=='string'||!uuid.test(context.securityEpoch))throw new SessionLifecycleError();
         credential=createSessionCredential();const id=randomUUID();
@@ -131,7 +132,10 @@ export function createSessionLifecycle(config:SessionDatabaseConfiguration,
       }catch{
         // An uncertain commit must never release a credential. Best-effort
         // idempotent cleanup uses its own bounded connection even after abort.
-        if(credential)try{await revoke(credential.cookieValueForResponse(),new AbortController().signal);}catch{/* fixed public failure below */}
+        const cleanup=AbortSignal.timeout(4000);
+        if(credential)try{await revoke(credential.cookieValueForResponse(),cleanup);}catch{/* still attempt scoped provider cleanup */}
+        if(material)try{await provider.signOutLocal(material.tokensForServerStorage().accessToken,
+          {subject:material.identity.subject,sessionId:material.identity.sessionId},cleanup);}catch{/* durable orphan reconciliation remains required */}
         throw new SessionLifecycleError();
       }
     },

@@ -9,3 +9,5 @@
 !src/**
 !public/
 !public/**
+!scripts/
+!scripts/build-server.mjs
