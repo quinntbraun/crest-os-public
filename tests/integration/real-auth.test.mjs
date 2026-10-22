@@ -26,7 +26,7 @@ import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginRes
 import {createSessionRequestAdmission,SessionAdmissionError} from '../../src/security/session-request-admission.ts';
 import {authenticationServer} from '../support/authentication-server.mjs';
 
-let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,fenceReceipt,storageReceipt,lookupReceipt,renameReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
+let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,refreshGrants,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,fenceReceipt,storageReceipt,lookupReceipt,renameReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
@@ -44,6 +44,7 @@ before(async()=>{
   legacyBefore=(await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[legacy.session])).rows[0].row;
   receipt=await sandbox.apply(target,await sandbox.prefix(6));
   refreshReceipt=await sandbox.apply(target,await sandbox.prefix(7));
+  refreshGrants=(await client.query("SELECT attname,has_column_privilege('crest_session_owner',attrelid,attnum,'UPDATE') AS allowed FROM pg_attribute WHERE attrelid='crest_private.app_sessions'::regclass AND attnum>0 AND NOT attisdropped ORDER BY attname")).rows;
   currentReceipt=await sandbox.apply(target,await sandbox.prefix(8));
   browserReceipt=await sandbox.apply(target,await sandbox.prefix(9));
   upgradeProof=(await client.query('INSERT INTO crest_private.session_csrf_tokens(session_id,token_hash) VALUES($1,$2) RETURNING to_jsonb(session_csrf_tokens) AS row',[legacy.session,randomBytes(32)])).rows[0].row;
@@ -494,9 +495,13 @@ test('refresh accepts no unknown encryption key and cannot extend an expired loc
   assert.equal(after.version,expired.version);assert(after.provider_token_ciphertext.equals(expired.provider_token_ciphertext),'expired local session cannot refresh or replace its tokens');
 });
 
-test('schema7 grants only ciphertext/provenance updates and rejects stale, malformed or nonfresh SQL calls',async()=>{
+test('historical refresh grants and schema15 activity grants remain exact; stale/malformed/nonfresh calls deny',async()=>{
+  const allowed=['provider_token_ciphertext','key_id','version','updated_by','operation_id'].sort();
+  assert.deepEqual(refreshGrants.filter(r=>r.allowed).map(r=>r.attname),allowed);
+  const current=(await client.query("SELECT attname FROM pg_attribute WHERE attrelid='crest_private.app_sessions'::regclass AND attnum>0 AND NOT attisdropped AND has_column_privilege('crest_session_owner',attrelid,attnum,'UPDATE') ORDER BY attname")).rows.map(r=>r.attname);
+  assert.deepEqual(current,[...allowed,'last_active_at'].sort());
   for(const field of ['provider_token_ciphertext','key_id','version','updated_by','operation_id'])assert.equal((await client.query("SELECT has_column_privilege('crest_session_owner','crest_private.app_sessions',$1,'UPDATE') AS allowed",[field])).rows[0].allowed,true);
-  for(const field of ['id','actor_id','token_hash','provider_session_id','issued_security_epoch','authenticated_at','created_at','reauth_at','last_active_at','expires_at','trusted','revoked_at'])assert.equal((await client.query("SELECT has_column_privilege('crest_session_owner','crest_private.app_sessions',$1,'UPDATE') AS allowed",[field])).rows[0].allowed,false);
+  for(const field of ['id','actor_id','token_hash','provider_session_id','issued_security_epoch','authenticated_at','created_at','reauth_at','expires_at','trusted','revoked_at'])assert.equal((await client.query("SELECT has_column_privilege('crest_session_owner','crest_private.app_sessions',$1,'UPDATE') AS allowed",[field])).rows[0].allowed,false);
   for(const fn of ['lock_app_session(bytea)','replace_session_tokens(bytea,bigint,bytea,text,uuid)']){
     const name=`crest_commands.${fn}`,row=(await client.query('SELECT prosecdef,proconfig,pg_get_userbyid(proowner) AS owner FROM pg_proc WHERE oid=$1::regprocedure',[name])).rows[0];
     assert(row.prosecdef);assert.equal(row.owner,'crest_session_owner');assert.deepEqual(row.proconfig,['search_path=pg_catalog, pg_temp','row_security=on']);

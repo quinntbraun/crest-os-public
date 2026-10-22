@@ -11,7 +11,7 @@ type Input={schemaVersion:1;businessId:string;operationId:string;recoveryEpoch:s
 type Receipt=Readonly<{schemaVersion:1;businessId:string;businessVersion:string;auditEventId:string}>;
 type Result=Readonly<{state:'committed';operationId:string;recoveryEpoch:string;receipt:Receipt}|
   {state:'conflict';reason:'operation'}|{state:'conflict';reason:'version';currentVersion:string}>;
-type Code='BUSINESS_RENAME_INPUT_REQUIRED'|'BUSINESS_RENAME_NOT_SUBMITTED'|'BUSINESS_RENAME_DENIED'|'RECOVERY_REVIEW_REQUIRED'|'BUSINESS_RENAME_OUTCOME_UNKNOWN';
+type Code='BUSINESS_RENAME_INPUT_REQUIRED'|'BUSINESS_RENAME_NOT_SUBMITTED'|'BUSINESS_RENAME_DENIED'|'RECOVERY_REVIEW_REQUIRED'|'BUSINESS_RENAME_OUTCOME_UNKNOWN'|'BUSINESS_RENAME_RESULT_PRIVATE';
 export class BusinessNameCommandError extends Error{constructor(code:Code){super(code);this.name='BusinessNameCommandError';}}
 function exact(value:unknown,keys:string[]):value is Record<string,unknown>{return !!value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key));}
 function version(value:unknown):value is string{return typeof value==='string'&&/^[1-9][0-9]{0,18}$/.test(value)&&BigInt(value)<=maximum;}
@@ -19,7 +19,7 @@ class CommandResult{
   #value:Result;
   constructor(value:Result){this.#value=Object.freeze(value);Object.freeze(this);}
   forServer():Result{return this.#value;}
-  toJSON():never{throw new BusinessNameCommandError('BUSINESS_RENAME_NOT_SUBMITTED');}
+  toJSON():never{throw new BusinessNameCommandError('BUSINESS_RENAME_RESULT_PRIVATE');}
 }
 export function createBusinessNameCommand(config:SessionDatabaseConfiguration,
   provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>){
