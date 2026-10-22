@@ -83,10 +83,19 @@ jobs:
           npm run test:operation-storage-db
           npm run test:operation-lookup-db
           npm run test:real-auth
+      - name: Install browser dependencies with bounded Ubuntu downloads
+        timeout-minutes: 6
+        run: |
+          # The pinned runner uses this mirror list. Keep Ubuntu signatures and
+          # suites/keyrings intact; avoid the repeatedly stalled Azure mirror.
+          test -f /etc/apt/apt-mirrors.txt
+          grep -qF 'mirror+file:/etc/apt/apt-mirrors.txt' /etc/apt/sources.list.d/ubuntu.sources
+          printf '%s\tpriority:1\n%s\tpriority:2\n' 'https://archive.ubuntu.com/ubuntu/' 'https://security.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/99crest-ci-downloads > /dev/null
+          npx --no-install playwright install --with-deps chromium webkit
       - name: Production build and browser accessibility smoke
         run: |
           npm run build
-          npx --no-install playwright install --with-deps chromium webkit
           npm run test:e2e
           npm run test:sign-in-browser
       - name: Build and smoke-test portable container
