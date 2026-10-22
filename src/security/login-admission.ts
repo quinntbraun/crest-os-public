@@ -1,6 +1,6 @@
 import 'server-only';
 import {createHash,createHmac,createSecretKey} from 'node:crypto';
-import {isIP} from 'node:net';
+import {normalizeClientAddress} from './client-address.ts';
 import {sessionDatabase} from './session-database.ts';
 import type {SessionDatabaseConfiguration} from './session-database.ts';
 
@@ -13,16 +13,6 @@ function identifier(value:string):string{
   if(!normalized||normalized.length>320||/\s/u.test(normalized)
     ||Array.from(normalized).some(char=>char.charCodeAt(0)<32||char.charCodeAt(0)===127))throw new LoginAdmissionError();
   return normalized;
-}
-function ip(value:string):string{
-  if(typeof value!=='string'||value.length>45)throw new LoginAdmissionError();
-  if(isIP(value)===4)return value;
-  if(isIP(value)!==6)throw new LoginAdmissionError();
-  const canonical=new URL(`http://[${value}]/`).hostname.slice(1,-1);
-  const mapped=/^::ffff:([a-f0-9]{1,4}):([a-f0-9]{1,4})$/.exec(canonical);
-  if(!mapped)return canonical;
-  const high=parseInt(mapped[1]!,16),low=parseInt(mapped[2]!,16);
-  return [high>>>8,high&255,low>>>8,low&255].join('.');
 }
 class LoginFingerprints{
   #parameters:Buffer[];
@@ -39,7 +29,7 @@ export function createLoginFingerprinter(bytes:Uint8Array){
     try{
       return new LoginFingerprints([
         createHmac('sha256',key).update('crest.login.identifier.v1\0').update(identifier(email)).digest(),
-        createHmac('sha256',key).update('crest.login.ip.v1\0').update(ip(address)).digest(),Buffer.from(fingerprint)
+        createHmac('sha256',key).update('crest.login.ip.v1\0').update(normalizeClientAddress(address)).digest(),Buffer.from(fingerprint)
       ]);
     }catch{throw new LoginAdmissionError();}
   };

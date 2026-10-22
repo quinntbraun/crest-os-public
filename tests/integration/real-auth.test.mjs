@@ -19,6 +19,7 @@ import {createLoginFingerprinter} from '../../src/security/login-admission.ts';
 import {createCsrfToken} from '../../src/security/request-protection.ts';
 import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginResponse,sessionResponse,logoutResponse,BrowserHttpError} from '../../src/security/browser-http.ts';
 import {createSessionRequestAdmission,SessionAdmissionError} from '../../src/security/session-request-admission.ts';
+import {authenticationServer} from '../support/authentication-server.mjs';
 
 let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,browserReceipt,admissionReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
@@ -817,4 +818,100 @@ test('a work reservation is never authentication: revoked or expired sessions re
   const next=await admissionFixture();await delay(5);await client.query("UPDATE crest_private.app_sessions SET expires_at=created_at+interval '1 millisecond',version=version+1 WHERE id=$1",[next.issued.evidence.sessionId]);
   assert.equal(await sessionAdmit(next.issued),true);await browserDenied(next.flow.session(browserRequest(),next.issued.cookieValueForResponse(),signal()));
   assert.equal((await next.flow.logout(browserRequest(next.issued.csrfTokenForResponse()),next.issued.cookieValueForResponse(),signal())).localRevoked,true);
+});
+
+const httpFixture=(f,provider=boundary)=>authenticationServer({connectionString:runtimeUrl,loginKey:browserKey,owner:{subject:f.subject,factorId:f.factorId}},provider,store);
+const responseCookie=(response,name)=>response.headers.getSetCookie().find(value=>value.startsWith(name+'='))?.split(';')[0];
+const cookieValue=pair=>pair.slice(pair.indexOf('=')+1);
+async function httpPending(server,headers={}){
+  const response=await server.request('bootstrap',{},headers);assert.equal(response.status,200);
+  const pair=responseCookie(response,'__Host-crest_login');assert(pair);const body=await response.json();
+  assert.deepEqual(Object.keys(body),['csrfToken','expiresAt']);return {pair,...body};
+}
+async function httpLogin(server,f,{trusted=false,previous}={}){
+  const pending=await httpPending(server),response=await server.request('login',{...browserInput(f),trusted},{cookie:[pending.pair,previous].filter(Boolean).join('; '),'x-crest-csrf':pending.csrfToken});
+  assert.equal(response.status,200);const pair=responseCookie(response,'__Host-crest_session');assert(pair);
+  const evidence=await lifecycle.verify(cookieValue(pair),signal()),body=await response.json();assert.deepEqual(Object.keys(body),['csrfToken','expiresAt']);
+  return {pair,response,evidence,...body};
+}
+async function httpFailure(response,status=400){
+  assert.equal(response.status,status);assert.deepEqual(await response.json(),{error:'AUTHENTICATION_REQUEST_FAILED'});
+  assert.match(response.headers.get('cache-control'),/no-store/);assert.match(response.headers.get('content-security-policy'),/default-src 'none'/);
+  assert(!response.headers.has('set-cookie'));assert(!response.headers.has('access-control-allow-origin'));
+}
+
+test('socket HTTP bootstrap, actual password/TOTP, proof and logout preserve private handoff and database deadlines',async()=>{
+  const f=await provision();await linkActor(f);const server=await httpFixture(f);
+  try{
+    const issued=await httpLogin(server,f),before=await sessionRow(issued),set=issued.response.headers.getSetCookie()[0];
+    for(const flag of ['Secure','HttpOnly','SameSite=Lax','Path=/'])assert(set.includes(flag));assert(!set.includes('Max-Age='));
+    assert.equal(issued.expiresAt,before.expires_at.getTime());
+    const response=await server.request('session',{}, {cookie:issued.pair});assert.equal(response.status,200);assert(!response.headers.has('set-cookie'));
+    const proof=await response.json();assert.deepEqual(Object.keys(proof),['csrfToken','expiresAt']);assert.equal(proof.expiresAt,issued.expiresAt);
+    unchangedSession(before,await sessionRow(issued));assert.equal(await admissionCount(issued),1);
+    await httpFailure(await server.request('logout',{}, {cookie:issued.pair,'x-crest-csrf':randomBytes(32).toString('base64url')}));assert.equal((await sessionRow(issued)).revoked_at,null);
+    const out=await server.request('logout',{}, {cookie:issued.pair,'x-crest-csrf':proof.csrfToken});assert.equal(out.status,200);
+    assert.deepEqual(await out.json(),{localRevoked:true,providerSignedOut:true});assert(out.headers.getSetCookie().every(value=>value.includes('Max-Age=0')));
+    await lifecycleDenied(lifecycle.verify(cookieValue(issued.pair),signal()));
+    await httpFailure(await server.request('session',{}, {cookie:issued.pair}));
+  }finally{await server.close();}
+});
+
+test('socket HTTP trusted replacement revokes only the presented device and preserves its original persistent deadline',async()=>{
+  const f=await provision();await linkActor(f);const server=await httpFixture(f);
+  try{
+    const old=await httpLogin(server,f),other=await httpLogin(server,f),replacement=await httpLogin(server,f,{trusted:true,previous:old.pair});
+    const stored=await sessionRow(replacement),cookie=replacement.response.headers.getSetCookie()[0];
+    assert(stored.trusted);assert(cookie.includes('Expires='+new Date(stored.expires_at).toUTCString()));assert.match(cookie,/Max-Age=\d+/);
+    assert((await sessionRow(old)).revoked_at);assert.equal((await sessionRow(other)).revoked_at,null);
+    const response=await server.request('session',{}, {cookie:replacement.pair});assert.equal(response.status,200);assert(!response.headers.has('set-cookie'));
+    assert.equal((await response.json()).expiresAt,stored.expires_at.getTime());assert.equal((await sessionRow(replacement)).expires_at.getTime(),stored.expires_at.getTime());
+    const out=await server.request('logout',{}, {cookie:replacement.pair,'x-crest-csrf':replacement.csrfToken});assert.equal(out.status,200);await out.json();
+    assert.equal((await lifecycle.verify(cookieValue(other.pair),signal())).sessionId,other.evidence.sessionId);
+  }finally{await server.close();}
+});
+
+test('socket HTTP malformed requests and forged forwarding claims cannot consume pending login or select the IP budget',async()=>{
+  const f=await provision(),actor=await linkActor(f),server=await httpFixture(f);
+  try{
+    const pending=await httpPending(server,{'x-forwarded-for':'198.51.100.1','forwarded':'for=203.0.113.1'}),row=await browserContext(cookieValue(pending.pair));
+    const parameters=createLoginFingerprinter(browserKey)('login-context','127.0.0.1').parametersForDatabase();
+    try{assert(row.ip_hash.equals(parameters[1]));}finally{for(const value of parameters)value.fill(0);}
+    const headers={cookie:pending.pair,'x-crest-csrf':pending.csrfToken};
+    await httpFailure(await server.request('login',browserInput(f),{...headers,origin:'https://evil.example.com'}));
+    await httpFailure(await server.request('login',{...browserInput(f),factorId:f.factorId},headers));
+    await httpFailure(await server.request('login','{"email":"x","password":"x","code":"123456","trusted":false,"trusted":true}',headers));
+    await httpFailure(await server.request('login',browserInput(f),headers,'PATCH'),405);
+    await httpFailure(await server.request('login?credential=forged',browserInput(f),headers),404);
+    await httpFailure(await server.request('bootstrap',{}, {},'OPTIONS'),405);
+    assert.equal((await browserContext(cookieValue(pending.pair))).consumed_at,null);
+    assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.app_sessions WHERE actor_id=$1',[actor.id])).rows[0].n,0);
+    const response=await server.request('login',browserInput(f),{...headers,'x-forwarded-for':'203.0.113.2','x-real-ip':'203.0.113.3'});assert.equal(response.status,200);await response.json();
+    await httpFailure(await server.request('login',browserInput(f),headers));
+    const second=await httpPending(server,{'x-forwarded-for':'203.0.113.4'});assert((await browserContext(cookieValue(second.pair))).ip_hash.equals(row.ip_hash));
+  }finally{await server.close();}
+});
+
+test('socket HTTP logout remains available after ordinary saturation and commits locally before failed provider signout',async()=>{
+  const f=await provision();await linkActor(f);let observed=false,issued;
+  const provider={...boundary,async signOutLocal(){assert((await sessionRow(issued)).revoked_at);observed=true;throw new Error('synthetic provider unavailability');}},server=await httpFixture(f,provider);
+  try{
+    issued=await httpLogin(server,f);const other=await httpLogin(server,f);await seedAdmissions(issued,120);
+    await httpFailure(await server.request('session',{}, {cookie:issued.pair}));
+    const out=await server.request('logout',{}, {cookie:issued.pair,'x-crest-csrf':issued.csrfToken});assert.equal(out.status,200);
+    assert.deepEqual(await out.json(),{localRevoked:true,providerSignedOut:false});assert(observed);assert(out.headers.getSetCookie().every(value=>value.includes('Max-Age=0')));
+    assert.equal(await admissionCount(issued,'logout'),1);await lifecycleDenied(lifecycle.verify(cookieValue(issued.pair),signal()));
+    assert.equal((await lifecycle.verify(cookieValue(other.pair),signal())).sessionId,other.evidence.sessionId);
+  }finally{await server.close();}
+});
+
+test('unexposed-login cleanup requires this flow issuance and revokes only that new session without request admission',async()=>{
+  const f=await provision();await linkActor(f);const flow=browserFlow(f),issued=await browserLogin(flow,f),other=await browserLogin(flow,f),foreign=browserFlow(f);
+  await browserDenied(foreign.discardUnexposedLogin(issued));
+  const proof=await flow.session(browserRequest(),other.cookieValueForResponse(),signal());await browserDenied(flow.discardUnexposedLogin(proof));
+  await browserDenied(flow.discardUnexposedLogin({cookieValueForResponse:()=>issued.cookieValueForResponse()}));
+  await seedAdmissions(issued,120,'logout');await flow.discardUnexposedLogin(issued);
+  assert((await sessionRow(issued)).revoked_at);await lifecycleDenied(lifecycle.verify(issued.cookieValueForResponse(),signal()));
+  assert.equal((await lifecycle.verify(other.cookieValueForResponse(),signal())).sessionId,other.evidence.sessionId);
+  await browserDenied(flow.discardUnexposedLogin(issued));
 });

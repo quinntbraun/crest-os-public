@@ -50,6 +50,7 @@ export function createBrowserSessionFlow(config:SessionDatabaseConfiguration&{or
   const query=sessionDatabase(config),fingerprint=createLoginFingerprinter(config.loginKey),admit=createLoginAdmission(config,config.loginKey);
   const protect=createRequestProtection(config),lifecycle=createSessionLifecycle(config,provider,tokens),admitSession=createSessionRequestAdmission(config);
   const clock=(external:AbortSignal)=>AbortSignal.any([external,AbortSignal.timeout(30000)]);
+  const unexposedLogins=new WeakSet<BrowserSession>();
   async function bind(credential:string,csrf:ReturnType<typeof createCsrfToken>,previous:string|undefined,signal:AbortSignal){
     const hash=sessionCredentialHash(credential),old=optionalHash(previous),csrfHash=csrf.hashForDatabase();
     try{
@@ -96,11 +97,19 @@ export function createBrowserSessionFlow(config:SessionDatabaseConfiguration&{or
         if(await admit(input.email,address,signal)!==true)throw new BrowserSessionError();
         issued=await lifecycle.login({email:input.email,password:input.password,code:input.code,factorId:owner.factorId},{subject:owner.subject},input.trusted,signal);
         const csrf=createCsrfToken(issued.evidence.sessionId),credential=issued.cookieValueForResponse();await bind(credential,csrf,previous,signal);
-        return new BrowserSession(credential,csrf,await lifecycle.verify(credential,signal));
+        const session=new BrowserSession(credential,csrf,await lifecycle.verify(credential,signal));
+        unexposedLogins.add(session);return session;
       }catch{
         if(issued)try{await lifecycle.logout(issued.cookieValueForResponse(),AbortSignal.timeout(4000));}catch{/* no unverified credential handoff */}
         throw new BrowserSessionError();
       }finally{hash?.fill(0);for(const value of values)value.fill(0);}
+    },
+    async discardUnexposedLogin(session:BrowserSession):Promise<void>{
+      try{
+        if(!unexposedLogins.has(session))throw new BrowserSessionError();
+        await lifecycle.logout(session.cookieValueForResponse(),AbortSignal.timeout(4000));
+        unexposedLogins.delete(session);
+      }catch{throw new BrowserSessionError();}
     },
     async session(request:RequestShape,credential:string,external:AbortSignal):Promise<BrowserSession>{
       const signal=clock(external);
