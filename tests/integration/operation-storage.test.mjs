@@ -37,7 +37,7 @@ before(async()=>{
   legacy=(await client.query("WITH moment AS MATERIALIZED (SELECT clock_timestamp() AS stamp) INSERT INTO crest_private.app_sessions(actor_id,provider_session_id,token_hash,issued_security_epoch,created_at,authenticated_at,last_active_at,expires_at,trusted,created_by,updated_by) SELECT id,$2,$3,current_security_epoch,m.stamp,m.stamp,m.stamp,m.stamp+interval '12 hours',false,id,id FROM crest_private.actors CROSS JOIN moment m WHERE id=$1 RETURNING id",[a.actor,randomUUID(),randomBytes(32)])).rows[0].id;
   legacyRow=(await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[legacy])).rows[0].row;
   history=createHash('sha256').update(JSON.stringify((await client.query('SELECT * FROM crest_private.identity_events ORDER BY id')).rows)).digest('hex');
-  previous=await sandbox.apply(target,await sandbox.prefix(12));receipt=await sandbox.apply(target);
+  previous=await sandbox.apply(target,await sandbox.prefix(12));receipt=await sandbox.apply(target,await sandbox.prefix(13));
   // A CI-only source row demonstrates atomic rollback; no runtime privilege or
   // production domain semantics are inferred from this disposable table.
   await client.query('SET ROLE crest_schema_owner; CREATE TABLE crest.operation_storage_probe(id uuid PRIMARY KEY,operation_id uuid NOT NULL,value text NOT NULL); ALTER TABLE crest.operation_storage_probe ENABLE ROW LEVEL SECURITY; ALTER TABLE crest.operation_storage_probe FORCE ROW LEVEL SECURITY; RESET ROLE');
@@ -47,7 +47,7 @@ after(async()=>{await sandbox?.close();});
 
 test('schema11/12 upgrades preserve exact CLI prefixes, sessions and identity history',async()=>{
   assert.equal(prior.history.length,11);assert.equal(previous.history.length,12);assert.equal(receipt.history.length,13);
-  assert.deepEqual(previous.history.slice(0,11),prior.history);assert.deepEqual(receipt.history.slice(0,12),previous.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);
+  assert.deepEqual(previous.history.slice(0,11),prior.history);assert.deepEqual(receipt.history.slice(0,12),previous.history);assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(13))).history,receipt.history);
   assert.deepEqual((await client.query('SELECT to_jsonb(s) AS row FROM crest_private.app_sessions s WHERE id=$1',[legacy])).rows[0].row,legacyRow);
   assert.equal(createHash('sha256').update(JSON.stringify((await client.query('SELECT * FROM crest_private.identity_events ORDER BY id')).rows)).digest('hex'),history);
 });
@@ -115,8 +115,8 @@ test('operation attribution requires same-business membership and matching creat
   await client.query('BEGIN');try{await rejected(()=>claim({...a,actor:b.actor}),'23503');await rejected(()=>client.query("INSERT INTO crest_private.operations(business_id,operation_id,actor_id,command_type,schema_version,recovery_epoch,payload_hash,created_by,origin) VALUES($1,$2,$3,'synthetic.storage',1,$4,$5,$6,'manual')",[a.business,randomUUID(),a.actor,a.epoch,hash,b.actor]),'23514');}finally{await client.query('ROLLBACK');}
 });
 test('database constructs exact portable hash evidence, UTC instants and decimal-string versions',async()=>{
-  const record=await transaction(async()=>{const op=(await claim()).rows[0];await client.query("SET LOCAL TIME ZONE 'Pacific/Honolulu'");const event=(await audit(op,client,{version:'9007199254740993',effective:'2026-01-01T12:34:56.123456Z',delta:{schemaVersion:1,before:null,after:{label:'Synthetic Ã© text \\ and "quoted"'}}})).rows[0];await complete(op);return event;});
-  assert.equal(record.event_hash,createHash('sha256').update(record.hash_input,'utf8').digest('hex'));assert.deepEqual(JSON.parse(record.hash_input),record.payload);assert.equal(record.payload.entityVersion,'9007199254740993');assert.equal(record.payload.effectiveAt,'2026-01-01T12:34:56.123456Z');assert.match(record.payload.recordedAt,/Z$/);assert.equal(record.payload.hashFormat,'pg17-jsonb-text-utf8-v1');assert.equal(record.payload.businessId,a.business);assert.equal(record.payload.actorId,a.actor);
+  const record=await transaction(async()=>{const op=(await claim()).rows[0];await client.query("SET LOCAL TIME ZONE 'Pacific/Honolulu'");const event=(await audit(op,client,{version:'9007199254740993',effective:'2026-01-01T12:34:56.123456Z',delta:{schemaVersion:1,before:null,after:{label:'Synthetic \u00e9 text \\ and "quoted"'}}})).rows[0];await complete(op);return event;});
+  assert.equal(record.event_hash,createHash('sha256').update(record.hash_input,'utf8').digest('hex'));assert.deepEqual(JSON.parse(record.hash_input),record.payload);assert.equal(record.payload.entityVersion,'9007199254740993');assert.equal(record.payload.delta.after.label,'Synthetic \u00e9 text \\ and "quoted"');assert.equal(record.payload.effectiveAt,'2026-01-01T12:34:56.123456Z');assert.match(record.payload.recordedAt,/Z$/);assert.equal(record.payload.hashFormat,'pg17-jsonb-text-utf8-v1');assert.equal(record.payload.businessId,a.business);assert.equal(record.payload.actorId,a.actor);
   const exported=JSON.parse(JSON.stringify({operationId:record.operation_id,hashInput:record.hash_input,eventHash:record.event_hash,payload:record.payload}));assert.equal(createHash('sha256').update(exported.hashInput,'utf8').digest('hex'),exported.eventHash);assert.equal(exported.payload.entityVersion,'9007199254740993');
   await client.query("SET TIME ZONE 'Asia/Tokyo'");try{const reread=(await client.query('SELECT hash_input,event_hash,payload FROM crest_private.audit_events WHERE id=$1',[record.id])).rows[0];assert.equal(reread.hash_input,record.hash_input);assert.equal(reread.event_hash,record.event_hash);assert.deepEqual(reread.payload,record.payload);}finally{await client.query('RESET TIME ZONE');}
 });

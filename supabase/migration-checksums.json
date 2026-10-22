@@ -65,6 +65,11 @@
       "version": "20261022183000",
       "file": "20261022183000_operation_audit_storage.sql",
       "sha256": "b927b7fc2cdbdfb6c6f2b5eebb08208065fa412e170a2ef1aacb06b3976f60a7"
+    },
+    {
+      "version": "20261022194000",
+      "file": "20261022194000_operation_lookup_integrity.sql",
+      "sha256": "943a516a717bda082b6fd228581285b6dd0b30618dbf85996fb4c5e2d4265d31"
     }
   ]
 }

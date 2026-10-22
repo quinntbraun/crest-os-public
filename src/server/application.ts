@@ -6,6 +6,7 @@ import type {NodeConfiguration} from './node-server.ts';
 export {createAuthenticationRuntime} from './authentication-runtime.ts';
 export {createTenantContextReader} from '../security/tenant-read.ts';
 export {createMutationTransaction} from '../security/mutation-transaction.ts';
+export {createBusinessOperationLookup} from '../security/business-operation-lookup.ts';
 
 // One Node process, one listener, one Next application. No separate API service.
 export async function createCrestApplication(config:NodeConfiguration){
