@@ -88,9 +88,11 @@ export function logoutResponse(result:Awaited<ReturnType<Flow['logout']>>):Respo
   // Clear only after confirmed local revocation; do not claim remote signout succeeded.
   return json({localRevoked:true,providerSignedOut:result.providerSignedOut},200,[clearCookie(sessionName),clearCookie(loginName)]);
 }
-export function browserFailureResponse():Response{
+export function browserFailureResponse(status:400|404|405=400):Response{
   // No exception argument: request/SDK/database errors and credentials cannot be reflected.
-  return json({error:'AUTHENTICATION_REQUEST_FAILED'},400);
+  const response=json({error:'AUTHENTICATION_REQUEST_FAILED'},[400,404,405].includes(status)?status:400);
+  if(status===405)response.headers.set('Allow','POST');
+  return response;
 }
 
 async function boundedBody(request:Request,signal:AbortSignal):Promise<string>{
@@ -128,7 +130,9 @@ async function boundedBody(request:Request,signal:AbortSignal):Promise<string>{
 
 export function createBrowserBodyReader(config:{origin:string;environment:'production'|'test'}){
   const protect=createRequestProtection(config);
-  return async function read(request:Request,kind:'login'|'empty'):Promise<LoginInput|Readonly<Record<string,never>>>{
+  function read(request:Request,kind:'login'):Promise<LoginInput>;
+  function read(request:Request,kind:'empty'):Promise<Readonly<Record<string,never>>>;
+  async function read(request:Request,kind:'login'|'empty'):Promise<LoginInput|Readonly<Record<string,never>>>{
     try{
       if(!['login','empty'].includes(kind)||request.method!=='POST')throw new BrowserHttpError();
       protect.requireOrigin(request);
@@ -150,5 +154,6 @@ export function createBrowserBodyReader(config:{origin:string;environment:'produ
       if((text.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length!==4)throw new BrowserHttpError();
       return Object.freeze({email:input.email,password:input.password,code:input.code,trusted:input.trusted});
     }catch{throw new BrowserHttpError();}
-  };
+  }
+  return read;
 }
