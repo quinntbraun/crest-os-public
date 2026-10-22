@@ -1072,15 +1072,16 @@ async function businessHttpFailure(response,status=400,error='BUSINESS_REQUEST_F
 }
 test('business socket HTTP reads paused/ready context and commits/replays/looks up one exact typed operation',async()=>{
   const f=await businessHttpFixture();try{
-    const before=await sessionRow(f.issued);let response=await f.server.businessRequest('settings',{},f.headers);assert.equal(response.status,200);const paused=await response.json();assert.equal(paused.writeState,'paused');assert.equal(paused.recoveryEpoch,null);assert.deepEqual(await sessionRow(f.issued),before);
+    const before=await sessionRow(f.issued);let response=await f.server.businessRequest('settings',{},f.headers);assert.equal(response.status,200);const editBinding=response.headers.get('x-crest-edit-binding');assert.match(editBinding,/^[A-Za-z0-9_-]{43}$/);assert.notEqual(editBinding,f.issued.evidence.sessionId);const paused=await response.json();assert.equal(paused.writeState,'paused');assert.equal(paused.recoveryEpoch,null);assert.deepEqual(await sessionRow(f.issued),before);
     await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[f.business]);
-    response=await f.server.businessRequest('settings',{},f.headers);assert.equal(response.status,200);const context=await response.json();
+    response=await f.server.businessRequest('settings',{},f.headers);assert.equal(response.status,200);assert.equal(response.headers.get('x-crest-edit-binding'),editBinding);const context=await response.json();
     const input={schemaVersion:1,operationId:randomUUID(),recoveryEpoch:context.recoveryEpoch,expectedVersion:context.businessVersion,legalName:' Exact socket synthetic \u00e9 '};
     response=await f.server.businessRequest('rename',input,f.headers);assert.equal(response.status,200);const committed=await response.json();assert.equal(committed.state,'committed');assert.equal(committed.receipt.businessVersion,'2');
     assert.deepEqual(await(await f.server.businessRequest('rename',input,f.headers)).json(),committed);
     const after=await sessionRow(f.issued);assert.deepEqual(await(await f.server.businessRequest('operation',{operationId:input.operationId},f.headers)).json(),committed);assert.deepEqual(await sessionRow(f.issued),after);
     assert.deepEqual(await(await f.server.businessRequest('operation',{operationId:randomUUID()},f.headers)).json(),{state:'absent'});
     assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1',[f.business])).rows[0].n,1);assert.equal(await admissionCount(f.issued),6);
+    const other=await httpLogin(f.server,f.f),otherResponse=await f.server.businessRequest('settings',{}, {cookie:other.pair,'x-crest-csrf':other.csrfToken});assert.equal(otherResponse.status,200);assert.notEqual(otherResponse.headers.get('x-crest-edit-binding'),editBinding);await otherResponse.json();
   }finally{await f.server.close();}
 });
 test('business HTTP Origin/CSRF/body/cookie guards do not reserve work or call the SDK',async()=>{

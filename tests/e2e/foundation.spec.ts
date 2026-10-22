@@ -37,3 +37,8 @@ test('default Node image reserves authentication before Next with private deny-a
     expect(headers['cache-control']).toContain('no-store');expect(headers['set-cookie']).toBeUndefined();expect(headers['access-control-allow-origin']).toBeUndefined();expect(headers['cookie']).toBeUndefined();
   }
 });
+test('settings stays private, accessible and unavailable in the unconfigured image',async({page})=>{
+  const response=await page.goto('/settings');expect(response?.headers()['cache-control']).toContain('no-store');await expect(page.getByRole('heading',{name:'Business settings',exact:true})).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Business settings could not be verified');await expect(page.getByLabel('Business legal name',{exact:true})).toHaveCount(0);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
+});

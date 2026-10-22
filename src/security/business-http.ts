@@ -1,4 +1,5 @@
 import 'server-only';
+import {createHash} from 'node:crypto';
 import {createTrustedTransport} from './trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from './trusted-transport.ts';
 import {createRequestProtection} from './request-protection.ts';
@@ -35,7 +36,7 @@ export function createBusinessHttp(config:Configuration,provider:Parameters<type
       if(!cookie)throw new Error();
       const input=await readFlatJsonBody(bounded,url.pathname==='/api/business/settings'?[]:url.pathname==='/api/business/operation'?['operationId']:
         ['schemaVersion','operationId','recoveryEpoch','expectedVersion','legalName']);
-      await csrf(bounded,cookie,signal);
+      const sessionId=await csrf(bounded,cookie,signal);
       // A separate committed reservation precedes all SDK/domain work. It is
       // shared with proof reissue/other business routes, never refunded on error.
       workStarted=true;
@@ -45,8 +46,12 @@ export function createBusinessHttp(config:Configuration,provider:Parameters<type
       if(signal.aborted)throw new Error();
       if(url.pathname==='/api/business/settings'){
         const value=(await settings(cookie,businessId,signal)).forServer();if(signal.aborted)throw new Error();
-        return privateJsonResponse({schemaVersion:value.schemaVersion,businessId:value.businessId,legalName:value.legalName,businessVersion:value.businessVersion,
+        const response=privateJsonResponse({schemaVersion:value.schemaVersion,businessId:value.businessId,legalName:value.legalName,businessVersion:value.businessVersion,
           writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});
+        // Non-authorizing scope marker for a per-tab pending intent. Neither a
+        // credential digest nor the session UUID, and never accepted as proof.
+        response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.business.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));
+        return response;
       }
       if(url.pathname==='/api/business/operation'){
         const value=(await lookup(cookie,{businessId,operationId:input.operationId as string},signal)).forServer();if(signal.aborted)throw new Error();

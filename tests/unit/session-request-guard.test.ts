@@ -10,7 +10,7 @@ const run=()=>createSessionCsrfVerifier({connectionString:'unused',environment:'
 beforeEach(()=>{vi.resetAllMocks();mock.query.mockResolvedValue({id:session,hashes:[randomBytes(32).toString('base64'),proof.hashForDatabase().toString('base64')]});});
 it('validates retained session-bound proof, digest-only query and cleanup',async()=>{
   mock.query.mockImplementation(async(sql,params)=>{expect(sql).toBe('SELECT crest_commands.browser_csrf_snapshot($1::bytea) AS result');expect(params[0].equals(createHash('sha256').update(credential,'ascii').digest())).toBe(true);return {id:session,hashes:[proof.hashForDatabase().toString('base64')]};});
-  await run()(request(),credential,signal());expect([...mock.query.mock.calls[0]![1][0]]).toEqual(Array(32).fill(0));
+  expect(await run()(request(),credential,signal())).toBe(session);expect([...mock.query.mock.calls[0]![1][0]]).toEqual(Array(32).fill(0));
 });
 it('rejects Origin before any credential snapshot work',async()=>{await expect(run()(request({origin:'https://evil.example.com'}),credential,signal())).rejects.toThrow();expect(mock.query).not.toHaveBeenCalled();});
 it('checks every bounded retained proof and rejects a proof from another session',async()=>{

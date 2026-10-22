@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
-import {readFile,chmod} from 'node:fs/promises';
+import {readFile,chmod,mkdir} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createServer} from 'node:net';
 import {chromium,webkit,expect} from '@playwright/test';
@@ -74,6 +74,45 @@ async function fill(page,{trusted=false,password=fixture.password}={}){
   await page.getByLabel('Authenticator code',{exact:true}).fill(fixture.totp.generate());await page.getByLabel('Trust this personal device').setChecked(trusted);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
 }
+async function openSettings(page){await page.bringToFront();await page.goto(origin+'/settings');await expect(page.getByLabel('Business legal name',{exact:true})).toBeVisible();}
+async function backgroundNameChange(page,legalName){
+  return page.evaluate(async name=>{const post=async(path,body,csrf)=>{const r=await fetch('/api/'+path,{method:'POST',headers:{'content-type':'application/json',...(csrf?{'x-crest-csrf':csrf}:{})},body:JSON.stringify(body)});if(r.status!==200)throw new Error('SYNTHETIC_CONCURRENT_SAVE_FAILED');return r.json();};
+    const proof=await post('auth/session',{},null),context=await post('business/settings',{},proof.csrfToken);
+    return post('business/rename',{schemaVersion:1,operationId:crypto.randomUUID(),expectedVersion:context.businessVersion,recoveryEpoch:context.recoveryEpoch,legalName:name},proof.csrfToken);
+  },legalName);
+}
+async function pendingNameEdit(page){return page.evaluate(()=>JSON.parse(sessionStorage.getItem('crest.business-name.pending.v1')));}
+async function settingsReviewFlow(page,other,name){
+  await openSettings(page);const proposed=`Synthetic reviewed UI ${name}`;await page.getByLabel('Business legal name',{exact:true}).fill(proposed);
+  await backgroundNameChange(other,`Concurrent synthetic ${name}`);let attempts=0;const observe=request=>{if(request.url().endsWith('/api/business/rename'))attempts++;};page.on('request',observe);
+  try{
+    await page.getByRole('button',{name:'Save business name',exact:true}).click();await expect(page.getByRole('status')).toContainText('Another change was saved first');assert.equal(attempts,1);
+    assert.equal(await pendingNameEdit(page),null);await expect(page.getByLabel('Business legal name',{exact:true})).toHaveCount(0);
+    await page.getByRole('button',{name:'Load current settings',exact:true}).click();await expect(page.getByLabel('Business legal name',{exact:true})).toHaveValue(proposed);await expect(page.locator('.current-name')).toContainText(`Concurrent synthetic ${name}`);assert.equal(attempts,1);
+    await page.getByRole('button',{name:'Save business name',exact:true}).click();await expect(page.getByRole('status')).toContainText('Business name saved');assert.equal(attempts,2);assert.equal(await pendingNameEdit(page),null);
+    await page.getByRole('button',{name:'Load current settings',exact:true}).click();await expect(page.getByLabel('Business legal name',{exact:true})).toHaveValue(proposed);
+    assert.equal((await page.getByLabel('Business legal name',{exact:true}).boundingBox()).height>=44,true);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.equal((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.length,0);
+    await mkdir('.local/review',{recursive:true});await page.screenshot({path:`.local/review/settings-${name}.png`,fullPage:true});
+  }finally{page.off('request',observe);}
+}
+async function settingsInterruptedFlow(page,name){
+  await openSettings(page);await page.getByLabel('Business legal name',{exact:true}).fill(`Synthetic acknowledged loss ${name}`);let committedRequest,requests=0;
+  const lost=async route=>{requests++;committedRequest=route.request().postDataJSON();const response=await route.fetch();assert.equal(response.status(),200);await response.body();await route.abort('failed');};
+  await page.route('**/api/business/rename',lost);await page.getByRole('button',{name:'Save business name',exact:true}).click();await expect(page.getByRole('status')).toContainText('save could not be confirmed');await page.unroute('**/api/business/rename',lost);
+  const original=await pendingNameEdit(page);assert.deepEqual(original.command,committedRequest);assert.equal(requests,1);
+  const stored=JSON.stringify(original);const cookie=await localCookie(page.context());assert(!stored.includes(cookie.value));assert(!stored.includes('csrfToken'));assert(!stored.includes('provider'));assert.equal(await page.evaluate(()=>localStorage.length),0);
+  await page.reload();await expect(page.getByRole('status')).toContainText('A pending save was found');assert.deepEqual(await pendingNameEdit(page),original);assert.equal(requests,1);
+  await page.getByRole('button',{name:'Check save status',exact:true}).click();await expect(page.getByRole('status')).toContainText('Save reference confirmed');assert.equal(await pendingNameEdit(page),null);
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.audit_events WHERE business_id=$1 AND operation_id=$2',[business,original.command.operationId])).rows[0].n,1);
+  await page.getByRole('button',{name:'Load current settings',exact:true}).click();await expect(page.getByLabel('Business legal name',{exact:true})).toHaveValue(original.command.legalName);
+  await page.getByLabel('Business legal name',{exact:true}).fill(`Synthetic explicit retry ${name}`);const notSent=route=>route.abort('failed');await page.route('**/api/business/rename',notSent);
+  await page.getByRole('button',{name:'Save business name',exact:true}).click();await expect(page.getByRole('status')).toContainText('save could not be confirmed');await page.unroute('**/api/business/rename',notSent);const retry=await pendingNameEdit(page);
+  await page.getByRole('button',{name:'Check save status',exact:true}).click();await expect(page.getByRole('status')).toContainText('does not prove an earlier request failed');assert.deepEqual(await pendingNameEdit(page),retry);
+  const sent=page.waitForRequest(request=>request.url().endsWith('/api/business/rename'));await page.getByRole('button',{name:'Retry original change',exact:true}).click();assert.deepEqual((await sent).postDataJSON(),retry.command);
+  await expect(page.getByRole('status')).toContainText('Business name saved');assert.equal(await pendingNameEdit(page),null);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,retry.command.operationId])).rows[0].n,1);
+  await page.goto(origin+'/sign-in');await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
+}
 async function localCookie(context){return (await context.cookies(origin)).find(cookie=>cookie.name===sessionName);}
 async function row(cookie){assert(cookie,'session cookie required');const hash=createHash('sha256').update(cookie.value,'ascii').digest();return (await client.query('SELECT * FROM crest_private.app_sessions WHERE actor_id=$1 AND token_hash=$2',[actor,hash])).rows[0];}
 async function assertPrivate(page,context){
@@ -119,6 +158,8 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
         assert.equal(denied.status,400);assert.deepEqual(denied.body,{error:'AUTHENTICATION_REQUEST_FAILED'});assert.equal((await row(trusted)).revoked_at,null,'missing CSRF cannot revoke');
       });
       await t.test('compiled HTTPS guarded business API uses the authenticated device',async()=>{await exerciseBusinessHttp(page,name);});
+      await t.test('settings UI requires version-conflict review and remains accessible on this device',async()=>{await settingsReviewFlow(page,other,name);});
+      await t.test('interrupted saves survive reload and reconcile before an explicit original retry',async()=>{await settingsInterruptedFlow(page,name);});
       await t.test('confirmed local-first logout clears one device and leaves the other live',async()=>{
         await page.getByRole('button',{name:'Sign out on this device',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Signed out on this device.');
         assert.equal(await localCookie(first),undefined,'logout clears credential');const revoked=await row(untrusted);assert(revoked.revoked_at,'local revoked');assert.equal(revoked.provider_token_ciphertext,null);
