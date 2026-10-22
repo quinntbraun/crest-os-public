@@ -9,8 +9,8 @@
       "originalSha256": "3ea23825ae5c2b998a82577f1685d72b4a98dd828bea4fd75651d4a6625b2dc8",
       "originalBytes": 47186,
       "version": "1.5",
-      "sha256": "fdf6480824548957ef8fbd98eba2d924cab72ecbd3404927883083d175343175",
-      "bytes": 49327,
+      "sha256": "d94afb61105f10495800132d5bae1e1f0bbae0481546143abefb142d35a68d56",
+      "bytes": 49253,
       "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
     },
     {
@@ -81,8 +81,8 @@
       "originalSha256": "e6cc49f9fc4da81b684a5762df2dbde3548eb9384ab4532393ea97233dce6a7d",
       "originalBytes": 24135,
       "version": "1.5",
-      "sha256": "e173174ceaf8157b58ca59ba0ae5926f8d194232ce3d2694424508c783fee5e3",
-      "bytes": 26573,
+      "sha256": "c4604a30e24130999b85b61e02e19d9ebbce953fa3dfbae181024d1073d09081",
+      "bytes": 26488,
       "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
     },
     {

@@ -137,7 +137,7 @@ Assert exact accounts, cents, tax/discount ranges, dates, dimensions, funding/co
 | Recovery | Restore before committed receipt, old device/new operation key with old epoch rejected; reviewed reconstruction aliases original evidence. Known numbers reserved; unknown high-water new UUID series prevents full-number collision; unresolved money gap blocks clean financial resume |
 | Owner custody | All O01-O10, mixed wallet full personal balance excluded; transfer between personal channels not draw/contribution; explicit personal funding shortage; personal spend does not silently consume custody; owner obligation never negative or automatically netted |
 
-For each major workflow, tests trace leadâ†’customerâ†’vehicleâ†’quoteâ†’acceptanceâ†’scheduleâ†’jobâ†’invoiceâ†’receiptâ†’ledgerâ†’review and expenseâ†’receiptâ†’ledgerâ†’reconciliation. Review creation remains at job completion; this financial test sequence does not delay review until payment. Also exercise fundsâ†’applicationâ†’refund/tip, creditâ†’unapplicationâ†’refund, collection failure, transfer/transit, cutover/openings and restore/reconstruct/resume. All still use synthetic data until the established production gates pass.
+For each major workflow, tests trace lead→customer→vehicle→quote→acceptance→schedule→job→invoice→receipt→ledger→review and expense→receipt→ledger→reconciliation. Review creation remains at job completion; this financial test sequence does not delay review until payment. Also exercise funds→application→refund/tip, credit→unapplication→refund, collection failure, transfer/transit, cutover/openings and restore/reconstruct/resume. All still use synthetic data until the established production gates pass.
 
 
 ## 8. Final pre-code audit regression requirements

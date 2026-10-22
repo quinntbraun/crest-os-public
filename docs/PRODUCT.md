@@ -279,13 +279,6 @@ Acceptance:
 - Report totals reconcile to exported ledger/source data at the same consistent snapshot. Large exports cannot silently truncate.
 - Restore a backup in a restricted recovery environment, including photos/receipts, and verify ledger balances, links, authentication configuration and application compatibility before production launch.
 
-### P20 - Opt-in Google Calendar connection and automatic outbound schedule view
-
-Required V1 capability, optional owner activation. After an explicit owner connection and shared-field preview, automatically publish confirmed appointments into a dedicated app-created Google calendar visible alongside the owner's other calendars. Crest remains authoritative; Google edits never confirm/reschedule/cancel work, change money/custody or reserve personal busy time in Crest. No two-way sync, primary-calendar write, guests/invitations or imported personal calendars in V1.
-
-Acceptance: current source-version sync state and last confirmed time are visible; confirmed reschedule updates the same mapped event and cancellation removes the external active reservation while retaining source history. Failures preserve the internal schedule and expose Pending/Delayed/Reconnect required/Review needed honestly. Exact timestamps/timezones and minimal payload preview, optional client/service/address disclosure, least Google scopes, encrypted server credentials, duplicate/uncertain-result reconciliation, external-edit review, disconnect and restore fencing, exports and synthetic actual-Google acceptance are required. No paid intermediary or overage is assumed. See BR21, ADR35 and TESTING GC01-GC18. This feature's implementation follows the scheduling/recovery prerequisites; writing this requirement is not a completion claim.
-
-
 ## 4. Experience and reliability requirements
 
 ### P18 - Mobile
@@ -299,6 +292,13 @@ Acceptance: complete P02-P14 on a supported phone browser with synthetic data; r
 Required: full feature parity, keyboard-friendly forms, filterable/sortable tables, calendar, multi-line quote builder, receipt review beside expense fields, import previews, reconciliation and report/export controls. No critical function depends on a mobile-only gesture or camera. Desktop has sufficient density for money review without hiding balances or warnings.
 
 Performance acceptance: on a declared mid-range phone and throttled mobile-network test profile, ordinary text-only navigation and saves at the pilot dataset must show an outcome or progress within 3 seconds at the 95th percentile. Large uploads/exports may run longer with progress/retry. Architecture review must record the exact device/network/dataset used, plus a test at 10,000 customers and 50,000 jobs. Failure requires optimization or an explicitly documented capacity limit before rollout; it must not be hidden behind a generic fast claim.
+
+### P20 - Opt-in Google Calendar connection and automatic outbound schedule view
+
+Required V1 capability, optional owner activation. After an explicit owner connection and shared-field preview, automatically publish confirmed appointments into a dedicated app-created Google calendar visible alongside the owner's other calendars. Crest remains authoritative; Google edits never confirm/reschedule/cancel work, change money/custody or reserve personal busy time in Crest. No two-way sync, primary-calendar write, guests/invitations or imported personal calendars in V1.
+
+Acceptance: current source-version sync state and last confirmed time are visible; confirmed reschedule updates the same mapped event and cancellation removes the external active reservation while retaining source history. Failures preserve the internal schedule and expose Pending/Delayed/Reconnect required/Review needed honestly. Exact timestamps/timezones and minimal payload preview, optional client/service/address disclosure, least Google scopes, encrypted server credentials, duplicate/uncertain-result reconciliation, external-edit review, disconnect and restore fencing, exports and synthetic actual-Google acceptance are required. No paid intermediary or overage is assumed. See BR21, ADR35 and TESTING GC01-GC18. This feature's implementation follows the scheduling/recovery prerequisites; writing this requirement is not a completion claim.
+
 
 ## 5. Open decisions and activation gates
 
@@ -323,25 +323,25 @@ These gates distinguish architecture blockers from activation blockers. The gene
 
 | Finding / source sections | Risk | Resolution in this specification |
 |---|---|---|
-| Immediate review ask at completion (Â§22-23) versus payment-then-review narrative (Â§5/Â§59) | Review delayed or duplicated | Completion triggers the ask independently of payment |
-| Paid and follow-up included in one job lifecycle (Â§22) | Refund erases completed-work state; custody hidden | Separate work, financial, outreach and transport states |
-| Automatic mileage aspiration (Â§36) versus PWA/low-cost design (Â§50-52) | Browser background behavior creates invented miles | Persist travel events; actual/manual and estimated distance explicitly separated |
-| Native messages and sent tracking (Â§23-25) | Opening SMS app falsely treated as delivery | Preparation/opened/manual-confirmed-sent are different evidence levels |
-| Unresolved tax called non-blocking (Â§37/Â§65) | Balanced books may still misstate revenue/tax | Configurable model, but tax configuration gates production posting |
-| Basic accounting foundation versus full financial reports (Â§38/Â§45/Â§55) | Attractive but incomplete balance sheet/profit | Required minimum ledger, openings, reconciliation and completeness labels; no full tax suite |
-| Pickup exists before legal policy (Â§27) | Completion confused with return; implied authorization | Pickup + Return disabled, Drop-Off enabled by dated owner decision; separate custody and explicit enablement |
-| Price ranges in current and historical sections (Â§10/Â§63) | Ranges become false minimums; older exterior prices override current context | Store guidance only; manual reviewed prices; no inherited promotion |
-| Extraction in condition examples and paid add-on (Â§9-11) | Double charging | Explicit scope inclusion and no duplicate charge for the same work |
-| Multi-vehicle quotes without fulfillment/billing allocation (Â§14) | Repeated invoicing, misleading per-service profitability | Line allocations to jobs/invoices with limits and explicit bundle allocation |
-| Gross/contribution/net profit and CLV requested broadly (Â§44) | Missing costs/tax/owner labor presented as precise profit | Defined book income, qualified contribution and observed lifetime revenue; predictive CLV deferred |
-| Backup restore testing described as eventual (Â§46) | Only discover broken backups after loss | Demonstrated restore before real pilot, repeated drills |
-| Import/update intent (Â§20/Â§39/Â§54) | Auto-merge or duplicate historical revenue | Staging, owner review, reference-history mode and cutover reconciliation |
+| Immediate review ask at completion (§22-23) versus payment-then-review narrative (§5/§59) | Review delayed or duplicated | Completion triggers the ask independently of payment |
+| Paid and follow-up included in one job lifecycle (§22) | Refund erases completed-work state; custody hidden | Separate work, financial, outreach and transport states |
+| Automatic mileage aspiration (§36) versus PWA/low-cost design (§50-52) | Browser background behavior creates invented miles | Persist travel events; actual/manual and estimated distance explicitly separated |
+| Native messages and sent tracking (§23-25) | Opening SMS app falsely treated as delivery | Preparation/opened/manual-confirmed-sent are different evidence levels |
+| Unresolved tax called non-blocking (§37/§65) | Balanced books may still misstate revenue/tax | Configurable model, but tax configuration gates production posting |
+| Basic accounting foundation versus full financial reports (§38/§45/§55) | Attractive but incomplete balance sheet/profit | Required minimum ledger, openings, reconciliation and completeness labels; no full tax suite |
+| Pickup exists before legal policy (§27) | Completion confused with return; implied authorization | Pickup + Return disabled, Drop-Off enabled by dated owner decision; separate custody and explicit enablement |
+| Price ranges in current and historical sections (§10/§63) | Ranges become false minimums; older exterior prices override current context | Store guidance only; manual reviewed prices; no inherited promotion |
+| Extraction in condition examples and paid add-on (§9-11) | Double charging | Explicit scope inclusion and no duplicate charge for the same work |
+| Multi-vehicle quotes without fulfillment/billing allocation (§14) | Repeated invoicing, misleading per-service profitability | Line allocations to jobs/invoices with limits and explicit bundle allocation |
+| Gross/contribution/net profit and CLV requested broadly (§44) | Missing costs/tax/owner labor presented as precise profit | Defined book income, qualified contribution and observed lifetime revenue; predictive CLV deferred |
+| Backup restore testing described as eventual (§46) | Only discover broken backups after loss | Demonstrated restore before real pilot, repeated drills |
+| Import/update intent (§20/§39/§54) | Auto-merge or duplicate historical revenue | Staging, owner review, reference-history mode and cutover reconciliation |
 
 Scope pressure: defer OCR/AI, map automation, automated recurrence, customer accept links and the asset UI before cutting ledger integrity, exception handling, exports or recovery. Financial reporting and three fulfillment modes make V1 materially larger than a CRM. They remain because the requested scope expressly includes them; implementation should deliver vertical slices, not a large simultaneous build.
 
 ## 7. Release sequence and definition of done
 
-Suggested implementation sequence (not authorization to code): CRM/access â†’ reviewed quotes and acceptance â†’ scheduling/mobile/transport/timing/photos â†’ financial engine with synthetic fixtures â†’ invoices/collections/expenses/reconciliation â†’ reports/exports/imports/recovery â†’ integrated pilot. Test each slice before building dependents.
+Suggested implementation sequence (not authorization to code): CRM/access → reviewed quotes and acceptance → scheduling/mobile/transport/timing/photos → financial engine with synthetic fixtures → invoices/collections/expenses/reconciliation → reports/exports/imports/recovery → integrated pilot. Test each slice before building dependents.
 
 Required release gates:
 
