@@ -20,6 +20,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:sign-in-browser": "node --test --test-concurrency=1 tests/integration/sign-in-browser.test.mjs",
+    "test:tenant-read-db": "node --test --test-concurrency=1 tests/integration/tenant-read.test.mjs",
     "test:db": "node scripts/test-database.mjs",
     "test:sessions-db": "node --test --test-concurrency=1 tests/integration/session-foundation.test.mjs",
     "test:identity-db": "node --test --test-concurrency=1 tests/integration/identity-foundation.test.mjs",

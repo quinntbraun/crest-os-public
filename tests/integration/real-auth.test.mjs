@@ -18,11 +18,12 @@ import { createSessionLifecycle,SessionLifecycleError } from '../../src/security
 import {createBrowserSessionFlow,BrowserSessionError} from '../../src/security/browser-session-flow.ts';
 import {createLoginFingerprinter} from '../../src/security/login-admission.ts';
 import {createCsrfToken} from '../../src/security/request-protection.ts';
+import {createTenantContextReader,TenantReadError} from '../../src/security/tenant-read.ts';
 import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginResponse,sessionResponse,logoutResponse,BrowserHttpError} from '../../src/security/browser-http.ts';
 import {createSessionRequestAdmission,SessionAdmissionError} from '../../src/security/session-request-admission.ts';
 import {authenticationServer} from '../support/authentication-server.mjs';
 
-let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,browserReceipt,admissionReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
+let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
@@ -44,7 +45,7 @@ before(async()=>{
   browserReceipt=await sandbox.apply(target,await sandbox.prefix(9));
   upgradeProof=(await client.query('INSERT INTO crest_private.session_csrf_tokens(session_id,token_hash) VALUES($1,$2) RETURNING to_jsonb(session_csrf_tokens) AS row',[legacy.session,randomBytes(32)])).rows[0].row;
   upgradeContext=(await client.query("WITH moment AS MATERIALIZED (SELECT clock_timestamp() AS stamp) INSERT INTO crest_private.login_contexts(id,credential_hash,ip_hash,csrf_hash,created_at,expires_at) SELECT gen_random_uuid(),$1,$2,$3,stamp,stamp+interval '10 minutes' FROM moment RETURNING to_jsonb(login_contexts) AS row",[randomBytes(32),randomBytes(32),randomBytes(32)])).rows[0].row;
-  admissionReceipt=await sandbox.apply(target);
+  admissionReceipt=await sandbox.apply(target,await sandbox.prefix(10));tenantReceipt=await sandbox.apply(target);
   store=await createProviderTokenStore('primary',[{id:'primary',key:randomBytes(32)}]);
   lifecycle=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},boundary,store);
 });
@@ -219,9 +220,34 @@ test('schema5 upgrade retains existing local rows and append-only CLI history',a
   assert.equal(currentReceipt.history.length,8);assert.deepEqual(currentReceipt.history.slice(0,7),refreshReceipt.history);
   assert.equal(browserReceipt.history.length,9);assert.deepEqual(browserReceipt.history.slice(0,8),currentReceipt.history);
   assert.equal(admissionReceipt.history.length,10);assert.deepEqual(admissionReceipt.history.slice(0,9),browserReceipt.history);
-  assert.deepEqual((await sandbox.apply(target)).history,admissionReceipt.history);
+  assert.equal(tenantReceipt.history.length,11);assert.deepEqual(tenantReceipt.history.slice(0,10),admissionReceipt.history);
+  assert.deepEqual((await sandbox.apply(target)).history,tenantReceipt.history);
   assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.session_csrf_tokens c WHERE id=$1',[upgradeProof.id])).rows[0].row,upgradeProof);
   assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.login_contexts c WHERE id=$1',[upgradeContext.id])).rows[0].row,upgradeContext);
+});
+
+test('real password/TOTP and fresh SDK evidence join exact tenant membership without exporting reusable authority',async()=>{
+  const f=await provision(),actor=await linkActor(f),issued=await issue(f),business=(await client.query('SELECT business_id FROM crest.memberships WHERE actor_id=$1',[actor.id])).rows[0].business_id;
+  const read=createTenantContextReader({connectionString:runtimeUrl,environment:'test'},boundary,store),before=(await client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[issued.evidence.sessionId])).rows[0];
+  const context=await read(issued.cookieValueForResponse(),business,signal());assert.throws(()=>JSON.stringify(context),TenantReadError);
+  assert.deepEqual(context.forServer(),{actorId:actor.id,businessId:business,currency:'USD',timezone:'UTC'});
+  const after=(await client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[issued.evidence.sessionId])).rows[0];
+  for(const field of ['authenticated_at','last_active_at','expires_at'])assert.equal(after[field].getTime(),before[field].getTime());assert.equal(after.version,before.version);
+  await assert.rejects(read(issued.cookieValueForResponse(),randomUUID(),signal()),e=>e instanceof TenantReadError&&e.cause===undefined);
+  authResult(await service.admin.admin.signOut((await store.decrypt({keyId:after.key_id,ciphertext:after.provider_token_ciphertext},
+    {actorId:actor.id,appSessionId:after.id,providerSessionId:after.provider_session_id,securityEpoch:after.issued_security_epoch,subject:f.subject,issuer:service.issuer})).tokensForProvider().accessToken,'local'),'tenant_selected_logout');
+  await assert.rejects(read(issued.cookieValueForResponse(),business,signal()),e=>e instanceof TenantReadError&&e.cause===undefined);
+});
+
+test('membership change after genuine SDK verification is reread by the guarded tenant routine',async()=>{
+  const f=await provision(),actor=await linkActor(f),issued=await issue(f),business=(await client.query('SELECT business_id FROM crest.memberships WHERE actor_id=$1',[actor.id])).rows[0].business_id;
+  const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
+  const backup=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic tenant backup',$1,$2,$3,$3,'manual') RETURNING id",[service.issuer,randomUUID(),bootstrap])).rows[0].id;
+  await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$3,$3,'manual')",[business,backup,actor.id]);
+  let changed=false;const provider={...boundary,async verifyAccess(...args){const result=await boundary.verifyAccess(...args);if(!changed){changed=true;await client.query('UPDATE crest.memberships SET active=false,version=version+1 WHERE business_id=$1 AND actor_id=$2',[business,actor.id]);}return result;}};
+  const read=createTenantContextReader({connectionString:runtimeUrl,environment:'test'},provider,store);
+  await assert.rejects(read(issued.cookieValueForResponse(),business,signal()),e=>e instanceof TenantReadError&&e.message==='TENANT_READ_FAILED'&&e.cause===undefined);
+  assert(changed,'real SDK verification barrier must execute');
 });
 test('issuance owner and functions retain forced RLS, lock-only identity rights and no runtime table exposure',async()=>{
   const role=(await client.query("SELECT * FROM pg_roles WHERE rolname='crest_session_owner'")).rows[0];

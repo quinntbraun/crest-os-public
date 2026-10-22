@@ -1,5 +1,7 @@
 # Migration and release discipline
 
+Current tenant context read slice: schema11 appends one guarded identity.read routine and narrow definer column/lock policies; application0.1.0 accepts schema0..11, report/command0 and production blocked. Previous10 migration bytes remain unchanged. PHASE_2_TENANT_READ records staged upgrade, privilege/concurrency/real Auth requirements and the outstanding domain context/recovery/operation/audit gates. Earlier schema status below is historical.
+
 Current session slice: schema ordinal3 adds closed session lifecycle/history storage; the unchanged shell supports0..3. Previous schema1/2 bytes remain immutable and their regression suites stage the exact prefixes. PHASE_2_SESSIONS.md records compatibility tests and outstanding provider/access gates. Earlier schema status below is historical.
 
 Current identity slice: schema ordinal2 adds closed identity/membership/recovery/history relations. The unchanged shell supports0..2; schema0 and1 are the only prior supported schemas. PHASE_2_IDENTITY.md records real CLI upgrade/grant/concurrency requirements and remaining session/recovery gates. Earlier empty-schema status is historical. Applied schema1 bytes remain unchanged.

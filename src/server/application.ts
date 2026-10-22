@@ -4,6 +4,7 @@ import nextConfig from '../../next.config.ts';
 import {bindApplicationHandler,createBoundedNodeServer} from './node-server.ts';
 import type {NodeConfiguration} from './node-server.ts';
 export {createAuthenticationRuntime} from './authentication-runtime.ts';
+export {createTenantContextReader} from '../security/tenant-read.ts';
 
 // One Node process, one listener, one Next application. No separate API service.
 export async function createCrestApplication(config:NodeConfiguration){
