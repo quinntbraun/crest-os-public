@@ -8,6 +8,7 @@ export default function HomePage() {
       <h1>Crest OS</h1>
       <p>Your internal workspace is being prepared.</p>
       <p className="status">Setup in progress</p>
+      <p><a href="/sign-in">Device sign-in</a></p>
     </main>
   );
 }

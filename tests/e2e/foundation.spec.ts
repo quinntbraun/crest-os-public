@@ -20,6 +20,15 @@ test("liveness exposes no environment details and is not cached", async ({ reque
   expect(response.headers()["x-frame-options"]).toBe("DENY");
 });
 
+test('sign-in is accessible and honestly unavailable in the unconfigured image',async({page})=>{
+  await page.goto('/sign-in');
+  await expect(page.getByRole('status')).toContainText('Sign-in is not available while setup is in progress');
+  await expect(page.getByRole('button',{name:'Check session',exact:true})).toBeVisible();
+  await expect(page.getByLabel('Password',{exact:true})).toHaveCount(0);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
+});
+
 test('default Node image reserves authentication before Next with private deny-all JSON',async({request})=>{
   for(const path of ['bootstrap','login','session','logout']){
     const response=await request.post('/api/auth/'+path,{data:{},headers:{origin:'http://127.0.0.1:3000',cookie:'synthetic=must-not-reflect'}});

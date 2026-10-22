@@ -84,6 +84,7 @@ jobs:
           npm run build
           npx --no-install playwright install --with-deps chromium webkit
           npm run test:e2e
+          npm run test:sign-in-browser
       - name: Build and smoke-test portable container
         run: |
           docker build --tag crest-os:ci .
