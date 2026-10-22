@@ -20,3 +20,8 @@ button.secondary { color: #174e44; background: transparent; }
 .trust input { width: 24px; height: 24px; flex-shrink: 0; accent-color: #174e44; }
 :focus-visible { outline: 3px solid #285cc4; outline-offset: 4px; }
 @media (max-width: 400px) { h1 { font-size: 2.25rem; } }
+.settings { max-width: 36rem; margin-top: 3vh; padding-bottom: 3rem; }
+.settings nav { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; margin-top: 1.5rem; }
+.current-name { overflow-wrap: anywhere; padding: 1rem; border: 1px solid #8b9c9a; border-radius: 0.5rem; background: #fff; }
+.save-reference { overflow-wrap: anywhere; font-size: 0.875rem; }
+button:disabled { opacity: 0.65; cursor: not-allowed; }

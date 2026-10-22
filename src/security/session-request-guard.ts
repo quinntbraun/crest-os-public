@@ -20,6 +20,7 @@ export function createSessionCsrfVerifier(config:SessionDatabaseConfiguration&{o
         try{protect(request,state.id,stored);matched=true;}catch{/* test every bounded stored proof */}finally{stored.fill(0);}
       }
       if(!matched||signal.aborted)throw new SessionRequestGuardError();
+      return state.id;
     }catch{throw new SessionRequestGuardError();}finally{hash.fill(0);}
   };
 }

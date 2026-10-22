@@ -1,4 +1,4 @@
-import {randomBytes,randomUUID} from 'node:crypto';
+import {randomBytes,randomUUID,createHash} from 'node:crypto';
 import {beforeEach,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
 const calls=vi.hoisted(()=>({csrf:vi.fn(),admit:vi.fn(),rename:vi.fn(),settings:vi.fn(),lookup:vi.fn()}));
@@ -18,7 +18,7 @@ const receipt=()=>({state:'committed',operationId:operation,recoveryEpoch:epoch,
 const dispatch=()=>createBusinessHttp(config,{} as never,{} as never);
 const request=(path='settings',body:unknown={},headers:Record<string,string>={},method='POST',signal?:AbortSignal)=>new Request(origin+'/api/business/'+path,{method,headers:{origin,'content-type':'application/json',cookie,...headers},...(!['GET','HEAD'].includes(method)?{body:typeof body==='string'?body:JSON.stringify(body)}:{}),...(signal?{signal}:{})});
 const projection=(value:object)=>({forServer:()=>value,toJSON:()=>{throw new Error('private projection');}});
-beforeEach(()=>{vi.resetAllMocks();calls.admit.mockResolvedValue(true);calls.csrf.mockResolvedValue(undefined);calls.settings.mockResolvedValue(projection(context()));calls.rename.mockResolvedValue(projection(receipt()));calls.lookup.mockResolvedValue(projection({state:'absent'}));});
+beforeEach(()=>{vi.resetAllMocks();calls.admit.mockResolvedValue(true);calls.csrf.mockResolvedValue(randomUUID());calls.settings.mockResolvedValue(projection(context()));calls.rename.mockResolvedValue(projection(receipt()));calls.lookup.mockResolvedValue(projection({state:'absent'}));});
 async function failure(response:Response,status=400,error='BUSINESS_REQUEST_FAILED'){
   expect(response.status).toBe(status);expect(await response.json()).toEqual({error});expect(response.headers.get('cache-control')).toContain('no-store');expect(response.headers.get('content-security-policy')).toContain("default-src 'none'");expect(response.headers.has('set-cookie')).toBe(false);expect(response.headers.has('access-control-allow-origin')).toBe(false);
 }
@@ -31,6 +31,13 @@ it('settings requires CSRF then durable ordinary admission before private typed 
 it('injects only the configured business and preserves every pinned typed rename value',async()=>{
   const input=command(),value=receipt();calls.rename.mockResolvedValue(projection(value));const response=await dispatch()(request('rename',input),transportFixture());expect(response.status).toBe(200);expect(await response.json()).toEqual(value);
   expect(calls.rename).toHaveBeenCalledWith(opaque,{...input,businessId},expect.any(AbortSignal));expect(calls.admit).toHaveBeenCalledTimes(1);
+});
+it('returns a stable non-authorizing edit binding only for the verified settings session',async()=>{
+  const session=randomUUID();calls.csrf.mockResolvedValue(session);const run=dispatch(),first=await run(request(),transportFixture()),second=await run(request(),transportFixture());
+  const expected=createHash('sha256').update('crest.business.edit.v1\0').update(businessId).update('\0').update(session).digest('base64url');
+  expect(first.headers.get('x-crest-edit-binding')).toBe(expected);expect(second.headers.get('x-crest-edit-binding')).toBe(expected);expect(expected).not.toContain(session);expect(expected).not.toBe(createHash('sha256').update(opaque).digest('base64url'));
+  calls.csrf.mockResolvedValue(randomUUID());expect((await run(request(),transportFixture())).headers.get('x-crest-edit-binding')).not.toBe(expected);
+  expect((await run(request('operation',{operationId:operation}),transportFixture())).headers.has('x-crest-edit-binding')).toBe(false);
 });
 it('historical lookup returns committed original epoch or absence with no context read or replacement ID',async()=>{
   const run=dispatch();expect(await(await run(request('operation',{operationId:operation}),transportFixture())).json()).toEqual({state:'absent'});
