@@ -124,7 +124,7 @@ test('fresh schema17 targets reject each role drift and retain failed-attempt re
     for(const [change,restore] of [
       ['ALTER ROLE crest_inventory_owner INHERIT','ALTER ROLE crest_inventory_owner NOINHERIT'],
       ['GRANT crest_inventory_owner TO crest_inventory','REVOKE crest_inventory_owner FROM crest_inventory'],
-      ['ALTER DEFAULT PRIVILEGES FOR ROLE crest_inventory_owner GRANT EXECUTE ON ROUTINES TO PUBLIC','ALTER DEFAULT PRIVILEGES FOR ROLE crest_inventory_owner REVOKE EXECUTE ON ROUTINES FROM PUBLIC'],
+      ['ALTER DEFAULT PRIVILEGES FOR ROLE crest_inventory_owner GRANT EXECUTE ON ROUTINES TO crest_inventory','ALTER DEFAULT PRIVILEGES FOR ROLE crest_inventory_owner REVOKE EXECUTE ON ROUTINES FROM crest_inventory'],
       ['GRANT SELECT ON auth.users TO crest_inventory_owner','REVOKE SELECT ON auth.users FROM crest_inventory_owner']
     ]){
       const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);const before=await sandbox.apply(t,await sandbox.prefix(17));
