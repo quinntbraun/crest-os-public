@@ -1,13 +1,14 @@
 # Crest OS V1 - Technical Architecture
 
-Version: 1.5 | 2026-10-20 | Phase 1 maintenance; production activation gated
+Version: 1.6 | 2026-10-22 | Owner-requested V1 Calendar contract; implementation and production gated
 
+Calendar scope amendment, 2026-10-22: the owner requested Google Calendar connection support in V1. P20/BR21/ADR35 now require the capability with optional owner activation, outbound-only projection and unchanged integrity/security/recovery gates. This supersedes older optional/excluded Calendar wording only. Current versions and immutable-baseline amendment evidence are in CANONICAL_MAINTENANCE.md; implementation/research and unexecuted provider gates are in [the Calendar contract](../planning/GOOGLE_CALENDAR_V1.md). No live integration or production approval is implied.
 
 Public edition, 2026-10-20: owner-authorized public source; application access and business evidence remain private. PUBLICATION.md records this explicit privacy/provenance amendment and the current authority/version register. Earlier private-repository and budget/authorization statements below are historical where superseded there. No security, accounting, recovery or real-data activation gate is waived.
 
 ## 1. Authority and readiness
 
-Read with PRODUCT.md 1.3, BUSINESS_RULES.md 1.2 and ACCOUNTING.md 1.4 (2026-10-20), plus the contextual CREST_CONTEXT.md. Their P01-P19, BR00-BR20 and activation gates remain mandatory. This package defines technical decisions; it does not approve tax policy, insurance coverage, migration balances, funding, or production activation. The original architecture phase created no repository, application, migration or infrastructure. Phase 1 repository/tooling work is now owner-authorized. ACCOUNTING.md is adopted as the specialized financial contract, including sections 24-26; its X01-X28 amendments are incorporated in the canonical companions. See CANONICAL_MAINTENANCE.md for the preserved baseline and this revision.
+Read with PRODUCT.md1.5, BUSINESS_RULES.md1.4 and ACCOUNTING.md1.5 (current version register in PUBLICATION.md), plus the contextual CREST_CONTEXT.md. Their P01-P20, BR00-BR21 and activation gates remain mandatory. This package defines technical decisions; it does not approve tax policy, insurance coverage, migration balances, funding, or production activation. The original architecture phase created no repository, application, migration or infrastructure. Phase 1 repository/tooling work is now owner-authorized. ACCOUNTING.md is adopted as the specialized financial contract, including sections 24-26; its X01-X28 amendments are incorporated in the canonical companions. See CANONICAL_MAINTENANCE.md for the preserved baseline and this revision.
 
 Companion contracts: DATABASE.md, SECURITY.md, TESTING.md, EXPORTS_AND_BACKUPS.md, ROADMAP.md and ARCHITECTURE_DECISIONS.md. Adopt these together. ARCHITECTURE_REVIEW.md records the final failure scenarios, ratings and complete requirement/gate reconciliation. Engineering may choose local names and minor UI details, but changing transaction boundaries, posting contracts, isolation, storage guarantees or providers requires an ADR update.
 
@@ -133,7 +134,7 @@ Upload sequence: authorize typed parent link; create Pending metadata and one-us
 
 Native `tel:`, `sms:` and maps links are explicit user actions using safely encoded validated fields. Save the transition before launching another app. If browser popup restrictions prevent automatic opening after an async save, show a separate Open Message button and Copy fallback. Review drafts survive reload via stored message records. No delivery/read claims.
 
-Required V1 maps: open directions in installed/browser maps and manually enter ETA/actual miles. No paid routing API, no background GPS, no inferred actual distance. Optional routing can later implement an adapter returning source/time/estimate with manual fallback; D07 still blocks dollar recommendations. No Google Calendar sync, OCR, AI or public quote-link subsystem in the required build. Preserve versioned customer-safe quote projection so a later opt-in link need not expose internal models.
+Required V1 maps: open directions in installed/browser maps and manually enter ETA/actual miles. No paid routing API, no background GPS, no inferred actual distance. Optional routing can later implement an adapter returning source/time/estimate with manual fallback; D07 still blocks dollar recommendations. P20 now requires opt-in outbound Google Calendar capability under ADR35; OCR, AI and public quote-link subsystems remain outside the required build. Preserve versioned customer-safe quote projection so a later opt-in link need not expose internal models.
 
 ## 7. PWA and two-device reality
 
@@ -223,3 +224,9 @@ Checked 2026-10-20; pricing and availability must be rechecked at provisioning. 
 - S14: [Supabase sessions](https://supabase.com/docs/guides/auth/sessions).
 - S15: [PostgreSQL row security](https://www.postgresql.org/docs/current/ddl-rowsecurity.html).
 - S16: [R2 signed URLs](https://developers.cloudflare.com/r2/api/s3/presigned-urls/).
+
+## 12. Owner-requested Google Calendar projection (ADR35)
+
+Use the existing Node/PostgreSQL monolith and bounded worker, a transactional scheduling outbox and narrow Google Calendar adapter. No separate automation platform, Redis or proprietary calendar server. Dedicated app-created user-owned secondary calendar and least scopes isolate unrelated calendars. Integration credentials are encrypted server-side with separate purpose/key context; OAuth consent does not become Crest authentication. Typed mappings retain original external identity, source version, destination, connection generation and recovery/lease fences. Google calls cannot be atomic with PostgreSQL; uncertain results are reconciled and never described as globally exactly-once delivery.
+
+Use conditional provider updates, retain unresolved attempts, bound retries and shared budgets, surface divergence, and prohibit inbound Google changes to authoritative jobs. Fence/drain old workers and compare actual remote state before any post-restore dispatch. The researched design, alternatives, official evidence and GC01-GC18 gates are in planning/GOOGLE_CALENDAR_V1.md. Implementation follows Phase2/3 and authoritative Phase6 scheduling; current runtime remains default-closed. Free API feasibility is not proof of free always-on hosting or production recovery.

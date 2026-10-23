@@ -1,7 +1,8 @@
 # Crest OS V1 - Product Specification
 
-Version: 1.4 | 2026-10-20 | D12 release wording maintenance; production activation gated
+Version: 1.5 | 2026-10-22 | Owner-requested V1 Calendar contract; implementation and production gated
 
+Calendar scope amendment, 2026-10-22: the owner requested Google Calendar connection support in V1. P20/BR21/ADR35 now require the capability with optional owner activation, outbound-only projection and unchanged integrity/security/recovery gates. This supersedes older optional/excluded Calendar wording only. Current versions and immutable-baseline amendment evidence are in CANONICAL_MAINTENANCE.md; implementation/research and unexecuted provider gates are in [the Calendar contract](../planning/GOOGLE_CALENDAR_V1.md). No live integration or production approval is implied.
 
 Public edition, 2026-10-20: owner-authorized public source; application access and business evidence remain private. PUBLICATION.md records this explicit privacy/provenance amendment and the current authority/version register. Earlier private-repository and budget/authorization statements below are historical where superseded there. No security, accounting, recovery or real-data activation gate is waived.
 
@@ -40,7 +41,7 @@ V1 uses one business, one owner account, USD, and an explicitly configured busin
 | CRM | Leads, conversion, customers, multiple addresses and vehicles, search, history | No automatic identity merges |
 | Catalog/pricing | Editable services, five categories, four conditions, owner-controlled flat quotes and discounts | Price examples are guidance, never enforced defaults |
 | Quotes | Review, customer-ready presentation, revisions, acceptance evidence, immutable accepted scope | Manual sharing and recorded external acceptance suffice |
-| Operations | Calendar, scheduling, rescheduling, cancellation, mobile travel, timing, photos, completion | No route optimizer or autonomous dispatch |
+| Operations | Calendar, scheduling, rescheduling, cancellation, mobile travel, timing, photos, completion; P20 Google Calendar connection capability | Google connection opt-in; outbound-only dedicated-calendar view, no route optimizer or autonomous dispatch |
 | Fulfillment | Working mobile, customer drop-off, and Crest pickup/return workflows | Mobile and Drop-Off enabled; Pickup + Return separately gated; no implied insurance coverage |
 | Communications | Native text/call links, copy fallback, review request at completion, manual maintenance queue | No paid SMS requirement or delivery claims without evidence |
 | Money | Invoices, split/partial payments, tips, excess funds, refunds, reversals | Manual recording of external money movement, no direct cards |
@@ -54,7 +55,7 @@ V1 uses one business, one owner account, USD, and an explicitly configured busin
 
 ### 2.2 Optional V1
 
-Passkeys; quote view/accept links with narrowly scoped revocable tokens; geocoding and route/ETA suggestions; Google Calendar outbound integration; structured website lead intake; receipt OCR; reviewed AI intake/quote suggestions; configurable recurrence that creates proposals rather than commitments; asset register without automated depreciation. Each must meet the same privacy, audit, deduplication, and owner-review standards. None may delay the required manual workflow. Mapping failure must leave manual ETA/distance and directions available.
+Passkeys; quote view/accept links with narrowly scoped revocable tokens; geocoding and route/ETA suggestions; structured website lead intake; receipt OCR; reviewed AI intake/quote suggestions; configurable recurrence that creates proposals rather than commitments; asset register without automated depreciation. Each must meet the same privacy, audit, deduplication, and owner-review standards. None may delay the required manual workflow. Mapping failure must leave manual ETA/distance and directions available.
 
 ### 2.3 Future, not V1
 
@@ -292,6 +293,13 @@ Required: full feature parity, keyboard-friendly forms, filterable/sortable tabl
 
 Performance acceptance: on a declared mid-range phone and throttled mobile-network test profile, ordinary text-only navigation and saves at the pilot dataset must show an outcome or progress within 3 seconds at the 95th percentile. Large uploads/exports may run longer with progress/retry. Architecture review must record the exact device/network/dataset used, plus a test at 10,000 customers and 50,000 jobs. Failure requires optimization or an explicitly documented capacity limit before rollout; it must not be hidden behind a generic fast claim.
 
+### P20 - Opt-in Google Calendar connection and automatic outbound schedule view
+
+Required V1 capability, optional owner activation. After an explicit owner connection and shared-field preview, automatically publish confirmed appointments into a dedicated app-created Google calendar visible alongside the owner's other calendars. Crest remains authoritative; Google edits never confirm/reschedule/cancel work, change money/custody or reserve personal busy time in Crest. No two-way sync, primary-calendar write, guests/invitations or imported personal calendars in V1.
+
+Acceptance: current source-version sync state and last confirmed time are visible; confirmed reschedule updates the same mapped event and cancellation removes the external active reservation while retaining source history. Failures preserve the internal schedule and expose Pending/Delayed/Reconnect required/Review needed honestly. Exact timestamps/timezones and minimal payload preview, optional client/service/address disclosure, least Google scopes, encrypted server credentials, duplicate/uncertain-result reconciliation, external-edit review, disconnect and restore fencing, exports and synthetic actual-Google acceptance are required. No paid intermediary or overage is assumed. See BR21, ADR35 and TESTING GC01-GC18. This feature's implementation follows the scheduling/recovery prerequisites; writing this requirement is not a completion claim.
+
+
 ## 5. Open decisions and activation gates
 
 | ID | Unresolved decision / owner | What can proceed | What is blocked until resolved |
@@ -329,7 +337,7 @@ These gates distinguish architecture blockers from activation blockers. The gene
 | Backup restore testing described as eventual (§46) | Only discover broken backups after loss | Demonstrated restore before real pilot, repeated drills |
 | Import/update intent (§20/§39/§54) | Auto-merge or duplicate historical revenue | Staging, owner review, reference-history mode and cutover reconciliation |
 
-Scope pressure: defer OCR/AI, map automation, automated recurrence, customer accept links, Google Calendar sync and the asset UI before cutting ledger integrity, exception handling, exports or recovery. Financial reporting and three fulfillment modes make V1 materially larger than a CRM. They remain because the requested scope expressly includes them; implementation should deliver vertical slices, not a large simultaneous build.
+Scope pressure: defer OCR/AI, map automation, automated recurrence, customer accept links and the asset UI before cutting ledger integrity, exception handling, exports or recovery. Financial reporting and three fulfillment modes make V1 materially larger than a CRM. They remain because the requested scope expressly includes them; implementation should deliver vertical slices, not a large simultaneous build.
 
 ## 7. Release sequence and definition of done
 

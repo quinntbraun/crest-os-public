@@ -1,7 +1,116 @@
 {
   "schemaVersion": 1,
-  "date": "2026-10-20",
+  "date": "2026-10-22",
   "baselineCommit": "34558ed3df4f339e45b8d1a012a2e2d1246e3546",
-  "changeRecord": "PUBLICATION.md",
-  "amendments": []
+  "changeRecord": "CANONICAL_MAINTENANCE.md",
+  "amendments": [
+    {
+      "name": "PRODUCT.md",
+      "originalSha256": "3ea23825ae5c2b998a82577f1685d72b4a98dd828bea4fd75651d4a6625b2dc8",
+      "originalBytes": 47186,
+      "version": "1.5",
+      "sha256": "d94afb61105f10495800132d5bae1e1f0bbae0481546143abefb142d35a68d56",
+      "bytes": 49253,
+      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+    },
+    {
+      "name": "BUSINESS_RULES.md",
+      "originalSha256": "d03d63b765d3d29b7879fede7a858c32a6c03ae8feb9636e4188bc4db82e0e96",
+      "originalBytes": 81843,
+      "version": "1.4",
+      "sha256": "ee8bc575179273a1abe64d496effedf7d94a42885ee0809da047ee1581fa06ec",
+      "bytes": 83983,
+      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+    },
+    {
+      "name": "ARCHITECTURE.md",
+      "originalSha256": "80bb086a9369a25ae12053bda5f17eca06a199c21e496bdf329f05d025ab55af",
+      "originalBytes": 35977,
+      "version": "1.6",
+      "sha256": "3b404f7d81b2c02ece6761881989a275909c82db295a603aafde8f33149f97e4",
+      "bytes": 38006,
+      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+    },
+    {
+      "name": "ARCHITECTURE_DECISIONS.md",
+      "originalSha256": "11acb9dc027cc8427823522193cb5518ab499dc8521c2682e4797ff6c0a47867",
+      "originalBytes": 17703,
+      "version": "1.6",
+      "sha256": "e194836811ef49e17401b7b4acc8a36ee8a248a01ca92ead272406968360b761",
+      "bytes": 19895,
+      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+    },
+    {
+      "name": "DATABASE.md",
+      "originalSha256": "d66147140019c214f48a2baf46828d866b77bf3b8c1d4279a5187d6fdf416661",
+      "originalBytes": 53037,
+      "version": "1.5",
+      "sha256": "7b51a2362d6b9bfe302a1a012bc38d97fe66d6db5558f56048af0009d2b6cd93",
+      "bytes": 54943,
+      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+    },
+    {
+      "name": "SECURITY.md",
+      "originalSha256": "9733992e24d70a5579c0d703f8e8c8f9d8f58384eff04ccbac5d9701e9f7eb1c",
+      "originalBytes": 20091,
+      "version": "1.5",
+      "sha256": "9c27fd06bf078bc3d48b11f685c6cecdf7f1e7adcb31ec2f29985820c41df29e",
+      "bytes": 22309,
+      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+    },
+    {
+      "name": "EXPORTS_AND_BACKUPS.md",
+      "originalSha256": "cebd4d21981aa060c02973dece9cff2ec3a2e9367d1467edb1694c2ebe39ecdd",
+      "originalBytes": 26475,
+      "version": "1.5",
+      "sha256": "162b73eb711eee6562f04518d156744954d1f45c6831372086e92ac5f50ae27c",
+      "bytes": 28282,
+      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+    },
+    {
+      "name": "ROADMAP.md",
+      "originalSha256": "5a66b64ae58c80ce74423a886fe7bcc1126724f63280b77009225289624043f6",
+      "originalBytes": 9000,
+      "version": "1.5",
+      "sha256": "9d71c24347c64fb3c6f46a355b82cfcd9954f4356e08af75fe648e7c7f99ecba",
+      "bytes": 10200,
+      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+    },
+    {
+      "name": "TESTING.md",
+      "originalSha256": "e6cc49f9fc4da81b684a5762df2dbde3548eb9384ab4532393ea97233dce6a7d",
+      "originalBytes": 24135,
+      "version": "1.5",
+      "sha256": "c4604a30e24130999b85b61e02e19d9ebbce953fa3dfbae181024d1073d09081",
+      "bytes": 26488,
+      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+    },
+    {
+      "name": "CANONICAL_ADOPTION_REPORT.md",
+      "originalSha256": "894684b8466e37678de91951770a42d58f80b82891b7dce04a3928ce370b336d",
+      "originalBytes": 24619,
+      "version": "1.4",
+      "sha256": "062144e8478b23d55217d1c3239f18151c42e35401401a5788d0c4472d931ab8",
+      "bytes": 26411,
+      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+    },
+    {
+      "name": "ARCHITECTURE_REVIEW.md",
+      "originalSha256": "21ae137850b5e732d4d2a19a242e43f62c036aabcd97ef5a63275665a497448e",
+      "originalBytes": 28841,
+      "version": "1.5",
+      "sha256": "6051cdb26e6aacc4ffbfb5d873130fe18c4a71358b91c6f9355a3a52a0e4520e",
+      "bytes": 30374,
+      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+    },
+    {
+      "name": "PUBLICATION.md",
+      "originalSha256": "f53bcc738639bdf8d336cf970fd0c83715153becd536ab265bf442bdcfce5932",
+      "originalBytes": 5584,
+      "version": "1.1",
+      "sha256": "a04bf5e796ecd06e268c4c2e4eb260ae853a53a7521b5fcd67bbd129ef599343",
+      "bytes": 5793,
+      "reason": "2026-10-22 current version register for explicit owner Calendar amendment; original public provenance retained"
+    }
+  ]
 }

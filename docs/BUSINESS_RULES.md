@@ -1,7 +1,8 @@
 # Crest OS V1 - Business Rules and Invariants
 
-Version: 1.3 | 2026-10-20 | Canonical V1 baseline adopted for implementation; production activation gated
+Version: 1.4 | 2026-10-22 | Owner-requested V1 Calendar contract; implementation and production gated
 
+Calendar scope amendment, 2026-10-22: the owner requested Google Calendar connection support in V1. P20/BR21/ADR35 now require the capability with optional owner activation, outbound-only projection and unchanged integrity/security/recovery gates. This supersedes older optional/excluded Calendar wording only. Current versions and immutable-baseline amendment evidence are in CANONICAL_MAINTENANCE.md; implementation/research and unexecuted provider gates are in [the Calendar contract](../planning/GOOGLE_CALENDAR_V1.md). No live integration or production approval is implied.
 
 Public edition, 2026-10-20: owner-authorized public source; application access and business evidence remain private. PUBLICATION.md records this explicit privacy/provenance amendment and the current authority/version register. Earlier private-repository and budget/authorization statements below are historical where superseded there. No security, accounting, recovery or real-data activation gate is waived.
 
@@ -469,3 +470,9 @@ This dated owner amendment controls the affected defaults and D05/D10/D11/D12 ga
 ## BR20 - Owner custody and verified activation evidence
 
 V1 supports business-only custody in mixed personal channels and explicit prospective openings; actual channels, ownership and historical coverage remain private activation evidence. Adopt ACCOUNTING section 26's business-only owner-custody control. A receipt belongs economically to Crest's books through AR settlement/tip/funds classification, not owner-contribution revenue. Personal wealth/balances/activity are excluded. Actual transfer, personal appropriation, personal funding, fee, refund and collection failure each requires its typed event/evidence. Custody balances are not proof of a legally segregated bank asset. No automatic owner loan, sweep, distribution or personal-to-business allocation is allowed. All Indiana services/tips still require verified tax profiles; unverified collection practice and registration do not establish exemption.
+
+## BR21 - Google Calendar is an opt-in projection of confirmed appointments
+
+P20 is required V1 capability with optional owner connection. Only committed confirmed appointment versions publish; proposals and revised unconfirmed times never become confirmed reservations. One mapped event per job/destination survives reschedule/retry; completion retains the historical appointment and cancellation removes its active reservation without deleting Crest history, accepted scope, custody or financial records. Google changes cannot alter Crest facts or act as customer confirmation. Personal-calendar conflicts/free-busy import, recurring Google series and guests/invitations are excluded.
+
+Default shared data is a generic title, opaque job reference, confirmed start/end/zone and sign-in-protected Crest link. Client display name, service label and work address require separately previewed opt-in; never publish money, contacts, vehicle identifiers, private notes or photos. No silent widening of payload/scope. Inherited reminders are disabled; explain Google sharing/device preview exposure. Scheduling and a typed outbox intent commit together; Google I/O follows commit. Current source version, connection generation, tenant, lease and recovery authority govern dispatch/finalization. Unknown external outcomes retain identity and require reconciliation before retry; no blind replacement ID or automatic restore replay. External changes become visible review, not silent overwrite or inbound schedule commands. See ADR35 and the researched Calendar contract.

@@ -1,7 +1,8 @@
 # Crest OS V1 - Portability and Recovery
 
-Version: 1.4 | 2026-10-20 | Canonical V1 baseline adopted for implementation; production activation gated
+Version: 1.5 | 2026-10-22 | Owner-requested V1 Calendar contract; implementation and production gated
 
+Calendar scope amendment, 2026-10-22: the owner requested Google Calendar connection support in V1. P20/BR21/ADR35 now require the capability with optional owner activation, outbound-only projection and unchanged integrity/security/recovery gates. This supersedes older optional/excluded Calendar wording only. Current versions and immutable-baseline amendment evidence are in CANONICAL_MAINTENANCE.md; implementation/research and unexecuted provider gates are in [the Calendar contract](../planning/GOOGLE_CALENDAR_V1.md). No live integration or production approval is implied.
 
 Public edition, 2026-10-20: owner-authorized public source; application access and business evidence remain private. PUBLICATION.md records this explicit privacy/provenance amendment and the current authority/version register. Earlier private-repository and budget/authorization statements below are historical where superseded there. No security, accounting, recovery or real-data activation gate is waived.
 
@@ -115,3 +116,9 @@ Technical design selected: Supabase Free budget pilot subject to quota and resto
 ## 9. Audit-complete portability fields
 
 Complete CSV, backup and neutral reconstruction include opening_adjustments, supplemental opening roots/items, opening_correction_removed range history/restoration, owner_contribution_lots/movements and obligation conversion links, unclassified_channel_evidence and unresolved funding tasks, recovery authority/events, reconstruction dependencies/aliases and original-versus-reconstruction provenance. Controls assert both root and contribution conservation, AR/custody opening deltas and pending-evidence coverage. Include stable scope partitions and frozen gross/discount/final allocation components. No table may be omitted merely because it is recovery metadata or currently nonposting. Secrets remain excluded from portable export; backups preserve required protected recovery material.
+
+## 10. P20 Calendar portability and post-restore reconciliation
+
+Export secret-free connection/consent/destination metadata, original job/event mappings, source/projection versions, sync state and redacted attempt/reconciliation history in the common open schema/CSV and useful XLSX views. Do not export Google tokens, OAuth codes/state, client secrets or private keys. Backups retain logical integration history; encrypted secret recovery follows restricted key procedures or deliberate reauthorization. Google copies, imports/ICS and screenshots are not backups.
+
+Database restore does not restore Google. Freeze dispatch, fence/drain former workers and review actual dedicated-calendar state against retained evidence before requeue. Preserve original mapped identities and reconstruction provenance; remote-only/missing/changed events or lost mappings require reviewed resolution, never bulk creation/deletion or old-epoch replay. Source jobs, confirmation/custody and financial history remain authoritative regardless of Google state. Disconnect does not erase Google copies or Crest audit; mapped-event cleanup is a separate explicit previewed action. GC13/GC16 and existing recovery/export gates must run before activation.
