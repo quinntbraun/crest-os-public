@@ -76,6 +76,21 @@ it.each([[],Array.from({length:11},()=>randomUUID()),['bad'],Array<string>(1)].m
 it('rejects case-insensitive duplicates before any work',async()=>{
   const id=randomUUID(),execute=vi.fn();await expect(dispatchProviderCleanup([id,id.toUpperCase()],execute,signal())).rejects.toThrow('PROVIDER_CLEANUP_REVIEW_REQUIRED');expect(execute).not.toHaveBeenCalled();
 });
+it('rejects oversized selections before invoking an iterator or inspecting entries',async()=>{
+  const ids=Array<string>(11),iterate=vi.fn(()=>{throw new Error('ITERATOR_MUST_NOT_RUN');}),read=vi.fn(()=>{throw new Error('ENTRY_MUST_NOT_RUN');}),execute=vi.fn();
+  Object.defineProperty(ids,Symbol.iterator,{value:iterate});Object.defineProperty(ids,0,{get:read});
+  await expect(dispatchProviderCleanup(ids,execute,signal())).rejects.toThrow('PROVIDER_CLEANUP_REVIEW_REQUIRED');expect(iterate).not.toHaveBeenCalled();expect(read).not.toHaveBeenCalled();expect(execute).not.toHaveBeenCalled();
+});
+it('copies only bounded indexed entries without adopting a custom iterator',async()=>{
+  const id=randomUUID(),ids=[id],iterate=vi.fn(()=>{throw new Error('ITERATOR_MUST_NOT_RUN');}),r=saved(id);
+  Object.defineProperty(ids,Symbol.iterator,{value:iterate});
+  const execute=vi.fn().mockResolvedValue({requestId:id,outcome:'provider_removed',canonicalEvidence:r.canonicalEvidence,evidenceHash:r.evidenceHash});
+  const result=await dispatchProviderCleanup(ids,execute,signal());expect(iterate).not.toHaveBeenCalled();expect(execute).toHaveBeenCalledExactlyOnceWith(id,expect.any(AbortSignal));expect(result.results[0]?.requestId).toBe(id);expect(result.telemetry.confirmed).toBe(1);
+});
+it('redacts a selection accessor failure before any execution',async()=>{
+  const ids=[randomUUID()],execute=vi.fn();Object.defineProperty(ids,0,{get:()=>{throw new Error('synthetic private selection detail');}});
+  const error=await dispatchProviderCleanup(ids,execute,signal()).catch(e=>e);expect(error.message).toBe('PROVIDER_CLEANUP_REVIEW_REQUIRED');expect(error.cause).toBeUndefined();expect(execute).not.toHaveBeenCalled();
+});
 it('copies selection before awaits, runs sequentially and reports bounded counts',async()=>{
   const ids:string[]=[randomUUID(),randomUUID()],original=[...ids],events:string[]=[];
   const execute=vi.fn(async(id:string)=>{events.push(id);if(events.length===1)ids.splice(0,ids.length,randomUUID());const r=saved(id,events.length===1?'provider_removed':'provider_absent_observed');return {requestId:id,outcome:r.evidence.outcome as 'provider_removed'|'provider_absent_observed',canonicalEvidence:r.canonicalEvidence,evidenceHash:r.evidenceHash};});

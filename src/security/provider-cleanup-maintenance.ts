@@ -100,10 +100,18 @@ export type CleanupDispatchResult=Readonly<{
 // Trusted maintenance composition only: the explicit original IDs are the work
 // selection. Inventory classifications, age and empty pages never select work.
 export async function dispatchProviderCleanup(requestIds:readonly string[],execute:CleanupExecutor,signal:AbortSignal):Promise<CleanupDispatchResult>{
-  const selected=Array.isArray(requestIds)?Array.from(requestIds):[];
-  if(selected.length<1||selected.length>10||selected.some(id=>!validId(id))
-    ||new Set(selected.map(id=>id.toLowerCase())).size!==selected.length)throw new CleanupMaintenanceError();
-  const ids=selected.map(id=>id.toLowerCase());
+  const ids:string[]=[];
+  try{
+    if(!Array.isArray(requestIds))throw new Error();
+    const count=requestIds.length;
+    if(!Number.isSafeInteger(count)||count<1||count>10)throw new Error();
+    // Check the size before copying; never consume a caller's iterator.
+    // Indexed reads also preserve sparse-entry rejection within the fixed bound.
+    for(let index=0;index<count;index++){
+      const id:unknown=requestIds[index];if(!validId(id))throw new Error();ids.push(id.toLowerCase());
+    }
+    if(new Set(ids).size!==count)throw new Error();
+  }catch{throw new CleanupMaintenanceError();}
   const results:CleanupDispatchResult['results'][number][]=[],controller=new AbortController(),combined=AbortSignal.any([signal,controller.signal]);
   const timer=setTimeout(()=>controller.abort(),45000);timer.unref();
   let stopped=false,started=0,removed=0,absentObserved=0,unknown=0;
