@@ -370,6 +370,10 @@ test('epoch change during actual provider login cannot rebase a durable attempt'
 });
 test('failed durable begin prevents all provider password requests',async()=>{
   const f=await provision(),actor=await linkActor(f);let calls=0;
+  const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
+  const backup=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic begin backup',$1,$2,$3,$3,'manual') RETURNING id",[service.issuer,randomUUID(),bootstrap])).rows[0].id;
+  const business=(await client.query('SELECT business_id FROM crest.memberships WHERE actor_id=$1',[actor.id])).rows[0].business_id;
+  await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$3,$3,'manual')",[business,backup,actor.id]);
   await client.query('UPDATE crest_private.actors SET disabled_at=clock_timestamp(),version=version+1 WHERE id=$1',[actor.id]);
   const gate={...boundary,authenticatePasswordTotp:async(...args)=>{calls++;return boundary.authenticatePasswordTotp(...args);}};
   await lifecycleDenied(issue(f,false,createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},gate,store)));assert.equal(calls,0);
