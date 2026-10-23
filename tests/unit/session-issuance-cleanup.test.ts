@@ -4,17 +4,19 @@ vi.mock('server-only',()=>({}));
 const mocks=vi.hoisted(()=>({query:vi.fn(),revoke:vi.fn()}));
 vi.mock('../../src/security/session-database.ts',()=>({sessionDatabase:()=>mocks.query}));
 vi.mock('../../src/security/session-revocation-db.ts',()=>({createSessionRevoker:()=>mocks.revoke}));
+import type {ProviderPasswordSessionObserver} from '../../src/security/provider-auth.ts';
 import {createSessionLifecycle} from '../../src/security/session-lifecycle.ts';
 
 beforeEach(()=>vi.resetAllMocks());
 function fixture(){
   const events:string[]=[],controller=new AbortController(),subject=randomUUID(),sessionId=randomUUID();
   const material={identity:{subject,sessionId,issuer:'https://crest.example.com/auth/v1',passwordAt:Date.now(),totpAt:Date.now()},tokensForServerStorage:()=>({accessToken:'synthetic-access',refreshToken:'synthetic-refresh'})};
-  const provider={issuerForServerBinding:()=>'https://crest.example.com/auth/v1',authenticatePasswordTotp:vi.fn(async()=>material),signOutLocal:vi.fn(async()=>{events.push('provider');})};
+  const provider={issuerForServerBinding:()=>'https://crest.example.com/auth/v1',authenticatePasswordTotp:vi.fn(async(_input:unknown,_binding:unknown,signal:AbortSignal,observe:ProviderPasswordSessionObserver)=>{await observe({...material.identity,expiresAt:Date.now()+60000},signal);return material;}),signOutLocal:vi.fn(async()=>{events.push('provider');})};
   mocks.query.mockImplementation(async(sql:string,_values:unknown[],signal:AbortSignal)=>{
     if(signal.aborted)throw new Error('synthetic cancellation');
     if(sql.includes('begin_provider_login'))return {attemptId:_values[0],appSessionId:_values[1],actorId:randomUUID(),securityEpoch:randomUUID()};
-    if(sql.includes('issue_tracked_app_session')){controller.abort();return true;}
+    if(sql.includes('record_provider_login_target'))return {evidence:{attemptId:_values[0],actorId:_values[1],securityEpoch:_values[2],providerIssuer:_values[3],providerSubject:_values[4],providerSessionId:_values[5]}};
+    if(sql.includes('issue_targeted_app_session')){controller.abort();return true;}
     throw new Error('unexpected query');
   });
   mocks.revoke.mockImplementation(async()=>{events.push('local');});
@@ -37,7 +39,7 @@ it('failed provider cleanup cannot undo local revocation or expose its exception
   const error=await f.login().catch(error=>error);expect(error.message).toBe('SESSION_LIFECYCLE_FAILED');expect(error.cause).toBeUndefined();expect(mocks.revoke).toHaveBeenCalledTimes(1);
 });
 it('a failure before any credential allocation cleans known provider material without inventing a local session',async()=>{
-  const f=fixture();f.material.identity.issuer='https://other.example.com/auth/v1';
+  const f=fixture();const original=f.provider.authenticatePasswordTotp.getMockImplementation()!;f.provider.authenticatePasswordTotp.mockImplementation(async(...args)=>{const material=await original(...args);return {...material,identity:{...material.identity,issuer:'https://other.example.com/auth/v1'}};});
   await expect(f.login()).rejects.toThrow('SESSION_LIFECYCLE_FAILED');expect(mocks.revoke).not.toHaveBeenCalled();expect(f.events).toEqual(['provider']);
 });
 it('an authentication failure without returned provider material cannot target another session for cleanup',async()=>{

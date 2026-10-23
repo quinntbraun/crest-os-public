@@ -12,6 +12,10 @@ export class ProviderAuthenticationError extends Error {
   constructor() { super("PROVIDER_AUTHENTICATION_FAILED"); this.name="ProviderAuthenticationError"; }
 }
 export type ProviderBinding={ subject:string; sessionId?:string };
+// Signed AAL1/password reference for trusted server evidence storage only.
+// No tokens, MFA evidence, current-session authority or cleanup permission.
+export type ProviderPasswordSessionReference=Readonly<{issuer:string;subject:string;sessionId:string;passwordAt:number;expiresAt:number}>;
+export type ProviderPasswordSessionObserver=(reference:ProviderPasswordSessionReference,signal:AbortSignal)=>Promise<void>;
 export type ExistingProviderBinding={subject:string;sessionId:string};
 export type ProviderConfiguration={ issuer:string; publicKey:string; environment:"production"|"test" };
 // Trusted server adapter only: implement using the narrow provider-session reader,
@@ -195,19 +199,24 @@ export function createProviderBoundary(config:ProviderConfiguration,liveSession:
         return verify(client,signal,access,expected);
       },external);
     },
-    authenticatePasswordTotp(input:{email:string;password:string;factorId:string;code:string},binding:ProviderBinding,external?:AbortSignal):Promise<ProviderLoginMaterial> {
+    authenticatePasswordTotp(input:{email:string;password:string;factorId:string;code:string},binding:ProviderBinding,external?:AbortSignal,onPasswordSession?:ProviderPasswordSessionObserver):Promise<ProviderLoginMaterial> {
       input=Object.freeze({...input}); binding=Object.freeze({...binding});
       return operation(async(client,signal)=>{
         const started=Date.now();
         let createdSession=false;
         try {
         if(!uuid.test(binding.subject)||typeof input.email!=='string'||!input.email.trim()||input.email.length>320||typeof input.password!=='string'||!input.password||input.password.length>1024
-          ||typeof input.factorId!=='string'||!uuid.test(input.factorId)||typeof input.code!=='string'||!/^\d{6}$/.test(input.code)||binding.sessionId!==undefined) throw new ProviderAuthenticationError();
+          ||typeof input.factorId!=='string'||!uuid.test(input.factorId)||typeof input.code!=='string'||!/^\d{6}$/.test(input.code)||binding.sessionId!==undefined||onPasswordSession!==undefined&&typeof onPasswordSession!=='function') throw new ProviderAuthenticationError();
         const signed=await client.signInWithPassword({email:input.email.trim(),password:input.password});
         createdSession=!!signed.data.session;
         if(signed.error||!signed.data.session||signed.data.user?.id!==binding.subject) throw new ProviderAuthenticationError();
         const initial=await claims(signed.data.session.access_token,binding,false);
         if(initial.passwordAt<Math.floor(started/1000)*1000) throw new ProviderAuthenticationError();
+        // Persist the safe signed reference before profile/MFA I/O. Failure
+        // stops the exchange and uses the existing attempt-local cleanup.
+        if(onPasswordSession)await onPasswordSession(Object.freeze({issuer:initial.issuer,subject:initial.subject,
+          sessionId:initial.sessionId,passwordAt:initial.passwordAt,expiresAt:initial.expiresAt}),signal);
+        if(signal.aborted)throw new ProviderAuthenticationError();
         const profile=await client.getUser(signed.data.session.access_token);
         if(profile.error||!userIsCurrent(profile.data.user,binding.subject,Date.now())
           ||!profile.data.user?.factors?.some(f=>f.id===input.factorId&&f.factor_type==='totp'&&f.status==='verified')) throw new ProviderAuthenticationError();

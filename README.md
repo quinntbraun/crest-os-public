@@ -40,6 +40,8 @@ The [retained inventory evidence](planning/PHASE_2_PROVIDER_RECONCILIATION_EVIDE
 
 The [durable provider login starts and tracked registration](planning/PHASE_2_PROVIDER_LOGIN_ATTEMPTS.md) slice adds schema20 and `npm run test:provider-attempts-db`: an immutable token-free start before provider I/O, pinned security epoch and exact registration history. Unknown attempts remain unresolved; legacy callers and remote cleanup remain explicit gaps.
 
+The [signed password-session target receipt](planning/PHASE_2_PROVIDER_LOGIN_TARGETS.md) slice adds schema21 and `npm run test:provider-targets-db`: immutable token-free references before profile/MFA I/O, exact targeted issuance and restricted registration history. These references do not complete cleanup authority or unknown-outcome handling.
+
 ## Disposable PostgreSQL and container checks
 
 With Docker available, start only the isolated synthetic test database:

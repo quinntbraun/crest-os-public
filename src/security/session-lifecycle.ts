@@ -7,7 +7,7 @@ import {createSessionCredential,sessionCredentialHash} from './session-credentia
 import {createSessionRevoker} from './session-revocation-db.ts';
 import {localSessionEligibility} from './session-policy.ts';
 import type {LocalSession,LocalActor} from './session-policy.ts';
-import type {createProviderBoundary,ProviderBinding,ProviderIdentity} from './provider-auth.ts';
+import type {createProviderBoundary,ProviderBinding,ProviderIdentity,ProviderPasswordSessionReference} from './provider-auth.ts';
 import type {createProviderTokenStore,TokenBinding} from './provider-token-store.ts';
 
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -128,13 +128,28 @@ export function createSessionLifecycle(config:SessionDatabaseConfiguration,
           [attemptId,id,issuer,binding.subject],signal) as {attemptId?:string;appSessionId?:string;actorId?:string;securityEpoch?:string}|null;
         if(signal.aborted||!context||context.attemptId!==attemptId||context.appSessionId!==id||typeof context.actorId!=='string'||!uuid.test(context.actorId)
           ||typeof context.securityEpoch!=='string'||!uuid.test(context.securityEpoch))throw new SessionLifecycleError();
-        material=await provider.authenticatePasswordTotp(input,binding,signal);const identity=material.identity;
-        if(identity.issuer!==issuer||identity.subject!==binding.subject)throw new SessionLifecycleError();
+        let target:ProviderPasswordSessionReference|undefined,observing=false;
+        material=await provider.authenticatePasswordTotp(input,binding,signal,async(reference,currentSignal)=>{
+          if(observing||currentSignal.aborted||signal.aborted||reference.issuer!==issuer||reference.subject!==binding.subject
+            ||typeof reference.sessionId!=='string'||!uuid.test(reference.sessionId)||!Number.isSafeInteger(reference.passwordAt)
+            ||!Number.isSafeInteger(reference.expiresAt)||reference.passwordAt<0||reference.expiresAt<=reference.passwordAt)throw new SessionLifecycleError();
+          observing=true;const observed=Object.freeze({...reference});
+          const saved=await query('SELECT crest_commands.record_provider_login_target($1::uuid,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::timestamptz) AS result',
+            [attemptId,context.actorId,context.securityEpoch,issuer,binding.subject,observed.sessionId,new Date(observed.passwordAt),new Date(observed.expiresAt)],currentSignal) as
+              {evidence?:{attemptId?:string;actorId?:string;securityEpoch?:string;providerIssuer?:string;providerSubject?:string;providerSessionId?:string}}|null;
+          const evidence=saved?.evidence;
+          if(signal.aborted||currentSignal.aborted||!evidence||evidence.attemptId!==attemptId||evidence.actorId!==context.actorId
+            ||evidence.securityEpoch!==context.securityEpoch||evidence.providerIssuer!==issuer||evidence.providerSubject!==binding.subject
+            ||evidence.providerSessionId!==observed.sessionId)throw new SessionLifecycleError();
+          target=observed;
+        });const identity=material.identity;
+        if(!target||identity.issuer!==issuer||identity.subject!==binding.subject||identity.sessionId!==target.sessionId
+          ||identity.passwordAt!==target.passwordAt)throw new SessionLifecycleError();
         credential=createSessionCredential();
         const encrypted=await tokens.encrypt(material.tokensForServerStorage(),{actorId:context.actorId,securityEpoch:context.securityEpoch,appSessionId:id,
           providerSessionId:identity.sessionId,subject:identity.subject,issuer:identity.issuer});
         const hash=credential.hashForDatabase();
-        try{await query('SELECT crest_commands.issue_tracked_app_session($1::uuid,$2::bytea,$3::uuid,$4::uuid,$5::text,$6::uuid,$7::uuid,$8::timestamptz,$9::timestamptz,$10::boolean,$11::bytea,$12::text,$13::uuid) AS result',
+        try{await query('SELECT crest_commands.issue_targeted_app_session($1::uuid,$2::bytea,$3::uuid,$4::uuid,$5::text,$6::uuid,$7::uuid,$8::timestamptz,$9::timestamptz,$10::boolean,$11::bytea,$12::text,$13::uuid) AS result',
           [id,hash,context.actorId,context.securityEpoch,identity.issuer,identity.subject,identity.sessionId,new Date(identity.passwordAt),new Date(identity.totpAt),trusted,Buffer.from(encrypted.ciphertext),encrypted.keyId,attemptId],signal);
         }finally{hash.fill(0);}
         return new IssuedSession(credential,await verify(credential.cookieValueForResponse(),signal,'background',true,false));
