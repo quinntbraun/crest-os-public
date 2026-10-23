@@ -115,6 +115,11 @@
       "version": "20261023054500",
       "file": "20261023054500_provider_cleanup_requests.sql",
       "sha256": "eade0749863ee69eb8387b9cf3cc50be6588e3ae33b43cae5991f84f842505c3"
+    },
+    {
+      "version": "20261023063000",
+      "file": "20261023063000_provider_cleanup_executor.sql",
+      "sha256": "e779ae5b1fafd457892ccdf7e0c3385574f2b472aac52c770afd6db4abd496b5"
     }
   ]
 }

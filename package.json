@@ -49,7 +49,8 @@
     "test:provider-attempts-db": "node --test --test-concurrency=1 tests/integration/provider-login-attempts.test.mjs",
     "test:provider-targets-db": "node --test --test-concurrency=1 tests/integration/provider-login-targets.test.mjs",
     "test:login-fences-db": "node --test --test-concurrency=1 tests/integration/login-attempt-fences.test.mjs",
-    "test:provider-requests-db": "node --test --test-concurrency=1 tests/integration/provider-cleanup-requests.test.mjs"
+    "test:provider-requests-db": "node --test --test-concurrency=1 tests/integration/provider-cleanup-requests.test.mjs",
+    "test:provider-executor-db": "node --test --test-concurrency=1 tests/integration/provider-cleanup-executor.test.mjs"
   },
   "dependencies": {
     "@supabase/auth-js": "2.118.0",

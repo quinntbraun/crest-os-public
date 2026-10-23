@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "date": "2026-10-22",
+  "date": "2026-10-23",
   "baselineCommit": "34558ed3df4f339e45b8d1a012a2e2d1246e3546",
   "changeRecord": "CANONICAL_MAINTENANCE.md",
   "amendments": [
@@ -35,10 +35,10 @@
       "name": "ARCHITECTURE_DECISIONS.md",
       "originalSha256": "11acb9dc027cc8427823522193cb5518ab499dc8521c2682e4797ff6c0a47867",
       "originalBytes": 17703,
-      "version": "1.6",
-      "sha256": "e194836811ef49e17401b7b4acc8a36ee8a248a01ca92ead272406968360b761",
-      "bytes": 19895,
-      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+      "version": "1.7",
+      "sha256": "94d7905f5f9cb1cf58a6ffcf7b83afc09a3b94a7e7ae3990c3c9b98c960e8b27",
+      "bytes": 24898,
+      "reason": "2026-10-22 owner Calendar scope retained; 2026-10-23 ADR36 explicit narrow provider reduction decision and current register; see CANONICAL_MAINTENANCE.md"
     },
     {
       "name": "DATABASE.md",
@@ -107,10 +107,10 @@
       "name": "PUBLICATION.md",
       "originalSha256": "f53bcc738639bdf8d336cf970fd0c83715153becd536ab265bf442bdcfce5932",
       "originalBytes": 5584,
-      "version": "1.1",
-      "sha256": "a04bf5e796ecd06e268c4c2e4eb260ae853a53a7521b5fcd67bbd129ef599343",
-      "bytes": 5793,
-      "reason": "2026-10-22 current version register for explicit owner Calendar amendment; original public provenance retained"
+      "version": "1.2",
+      "sha256": "ac1cca21ed30f9db54c13daa35dc60f3fd9acae437b55984338d3c677101e5d0",
+      "bytes": 5847,
+      "reason": "2026-10-22 owner Calendar scope retained; 2026-10-23 ADR36 explicit narrow provider reduction decision and current register; see CANONICAL_MAINTENANCE.md"
     }
   ]
 }

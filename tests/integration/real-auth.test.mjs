@@ -27,7 +27,7 @@ import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginRes
 import {createSessionRequestAdmission,SessionAdmissionError} from '../../src/security/session-request-admission.ts';
 import {authenticationServer} from '../support/authentication-server.mjs';
 
-let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,refreshGrants,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,fenceReceipt,storageReceipt,lookupReceipt,renameReceipt,settingsReceipt,cleanupReceipt,inventoryReceipt,evidenceReceipt,attemptsReceipt,targetsReceipt,finishReceipt,requestReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
+let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,refreshGrants,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,fenceReceipt,storageReceipt,lookupReceipt,renameReceipt,settingsReceipt,cleanupReceipt,inventoryReceipt,evidenceReceipt,attemptsReceipt,targetsReceipt,finishReceipt,requestReceipt,executorReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
@@ -50,7 +50,7 @@ before(async()=>{
   browserReceipt=await sandbox.apply(target,await sandbox.prefix(9));
   upgradeProof=(await client.query('INSERT INTO crest_private.session_csrf_tokens(session_id,token_hash) VALUES($1,$2) RETURNING to_jsonb(session_csrf_tokens) AS row',[legacy.session,randomBytes(32)])).rows[0].row;
   upgradeContext=(await client.query("WITH moment AS MATERIALIZED (SELECT clock_timestamp() AS stamp) INSERT INTO crest_private.login_contexts(id,credential_hash,ip_hash,csrf_hash,created_at,expires_at) SELECT gen_random_uuid(),$1,$2,$3,stamp,stamp+interval '10 minutes' FROM moment RETURNING to_jsonb(login_contexts) AS row",[randomBytes(32),randomBytes(32),randomBytes(32)])).rows[0].row;
-  admissionReceipt=await sandbox.apply(target,await sandbox.prefix(10));tenantReceipt=await sandbox.apply(target,await sandbox.prefix(11));fenceReceipt=await sandbox.apply(target,await sandbox.prefix(12));storageReceipt=await sandbox.apply(target,await sandbox.prefix(13));lookupReceipt=await sandbox.apply(target,await sandbox.prefix(14));renameReceipt=await sandbox.apply(target,await sandbox.prefix(15));settingsReceipt=await sandbox.apply(target,await sandbox.prefix(16));cleanupReceipt=await sandbox.apply(target,await sandbox.prefix(17));inventoryReceipt=await sandbox.apply(target,await sandbox.prefix(18));evidenceReceipt=await sandbox.apply(target,await sandbox.prefix(19));attemptsReceipt=await sandbox.apply(target,await sandbox.prefix(20));targetsReceipt=await sandbox.apply(target,await sandbox.prefix(21));finishReceipt=await sandbox.apply(target,await sandbox.prefix(22));requestReceipt=await sandbox.apply(target);
+  admissionReceipt=await sandbox.apply(target,await sandbox.prefix(10));tenantReceipt=await sandbox.apply(target,await sandbox.prefix(11));fenceReceipt=await sandbox.apply(target,await sandbox.prefix(12));storageReceipt=await sandbox.apply(target,await sandbox.prefix(13));lookupReceipt=await sandbox.apply(target,await sandbox.prefix(14));renameReceipt=await sandbox.apply(target,await sandbox.prefix(15));settingsReceipt=await sandbox.apply(target,await sandbox.prefix(16));cleanupReceipt=await sandbox.apply(target,await sandbox.prefix(17));inventoryReceipt=await sandbox.apply(target,await sandbox.prefix(18));evidenceReceipt=await sandbox.apply(target,await sandbox.prefix(19));attemptsReceipt=await sandbox.apply(target,await sandbox.prefix(20));targetsReceipt=await sandbox.apply(target,await sandbox.prefix(21));finishReceipt=await sandbox.apply(target,await sandbox.prefix(22));requestReceipt=await sandbox.apply(target,await sandbox.prefix(23));executorReceipt=await sandbox.apply(target);
   store=await createProviderTokenStore('primary',[{id:'primary',key:randomBytes(32)}]);
   lifecycle=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},boundary,store);
 });
@@ -63,6 +63,9 @@ async function providerInventory(actor){
 }
 async function cleanupRequest(actor,finishId){
   const c=await sandbox.connect(target);await c.query('BEGIN');try{await c.query('SET LOCAL ROLE crest_inventory');const r=(await c.query('SELECT crest_commands.request_provider_cleanup($1,$2,$3,$4) AS result',[randomUUID(),finishId,actor.id,service.issuer])).rows[0].result;await c.query('COMMIT');assert.equal(r.evidence.state,'pending_review');assert.equal(createHash('sha256').update(r.canonicalEvidence,'utf8').digest('hex'),r.evidenceHash);return r;}finally{await c.query('ROLLBACK');await c.end();}
+}
+async function executeCleanup(actor,requestId){
+ const c=await sandbox.connect(target);try{await c.query('SET ROLE crest_cleanup');const r=(await c.query('SELECT crest_commands.execute_provider_cleanup($1,$2,$3) AS result',[requestId,actor.id,service.issuer])).rows[0].result;assert.equal(createHash('sha256').update(r.canonicalEvidence,'utf8').digest('hex'),r.evidenceHash);return r;}finally{await c.end();}
 }
 async function denied(work){await assert.rejects(work,e=>e instanceof ProviderAuthenticationError&&e.message==='PROVIDER_AUTHENTICATION_FAILED'&&e.cause===undefined);}
 async function provision({confirmed=true,enroll=true,backup=false,provider=service}={}) {
@@ -245,8 +248,8 @@ test('schema5 upgrade retains existing local rows and append-only CLI history',a
   assert.equal(evidenceReceipt.history.length,19);assert.deepEqual(evidenceReceipt.history.slice(0,18),inventoryReceipt.history);
   assert.equal(attemptsReceipt.history.length,20);assert.deepEqual(attemptsReceipt.history.slice(0,19),evidenceReceipt.history);
   assert.equal(targetsReceipt.history.length,21);assert.deepEqual(targetsReceipt.history.slice(0,20),attemptsReceipt.history);
-  assert.equal(requestReceipt.history.length,23);assert.deepEqual(requestReceipt.history.slice(0,22),finishReceipt.history);assert.equal(finishReceipt.history.length,22);assert.deepEqual(finishReceipt.history.slice(0,21),targetsReceipt.history);
-  assert.deepEqual((await sandbox.apply(target)).history,requestReceipt.history);
+  assert.equal(executorReceipt.history.length,24);assert.deepEqual(executorReceipt.history.slice(0,23),requestReceipt.history);assert.equal(requestReceipt.history.length,23);assert.deepEqual(requestReceipt.history.slice(0,22),finishReceipt.history);assert.equal(finishReceipt.history.length,22);assert.deepEqual(finishReceipt.history.slice(0,21),targetsReceipt.history);
+  assert.deepEqual((await sandbox.apply(target)).history,executorReceipt.history);
   assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.session_csrf_tokens c WHERE id=$1',[upgradeProof.id])).rows[0].row,upgradeProof);
   assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.login_contexts c WHERE id=$1',[upgradeContext.id])).rows[0].row,upgradeContext);
 });
@@ -1293,4 +1296,20 @@ test('actual typed command rejects paused writes and stale-epoch replay while hi
   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[f.business]);const result=(await run(cookie,r,signal())).forServer();
   await client.query('UPDATE crest_private.business_recovery_authorities SET active_epoch=$1,version=version+1 WHERE business_id=$2',[randomUUID(),f.business]);await assert.rejects(run(cookie,r,signal()),e=>e instanceof BusinessNameCommandError&&e.message==='RECOVERY_REVIEW_REQUIRED');
   const read=createBusinessOperationLookup({connectionString:runtimeUrl,environment:'test'},boundary,store);assert.deepEqual((await read(cookie,{businessId:f.business,operationId:r.operationId},signal())).forServer(),result);
+});
+
+test('exact maintenance removal after a genuine local stop erases provider authority and preserves another device',async()=>{
+ const f=await provision(),actor=await linkActor(f),other=await issue(f);let material;
+ const gate={...boundary,authenticatePasswordTotp:async(...args)=>{material=await boundary.authenticatePasswordTotp(...args);return material;},verifyAccess:async()=>{throw new ProviderAuthenticationError();},signOutLocal:async()=>{throw new ProviderAuthenticationError();}};
+ await lifecycleDenied(issue(f,false,createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},gate,store)));assert(material);
+ const row=(await client.query('SELECT * FROM crest_private.app_sessions WHERE actor_id=$1 AND id<>$2',[actor.id,other.evidence.sessionId])).rows[0];assert(row?.revoked_at);assert.equal(row.provider_token_ciphertext,null);assert.equal(row.key_id,null);
+ const stopped=(await client.query("SELECT id FROM crest_private.provider_login_finishes f JOIN crest_private.provider_login_attempts a ON a.attempt_id=f.attempt_id WHERE a.reserved_app_session_id=$1 AND phase='stopped_review'",[row.id])).rows[0];const selected=await cleanupRequest(actor,stopped.id),r=await executeCleanup(actor,selected.evidence.requestId);assert.equal(r.evidence.outcome,'provider_removed');assert.equal(r.evidence.providerSessionId,material.identity.sessionId);
+ assert.equal((await client.query('SELECT count(*)::int AS n FROM auth.sessions WHERE id=$1',[material.identity.sessionId])).rows[0].n,0);assert.equal((await client.query('SELECT count(*)::int AS n FROM auth.mfa_amr_claims WHERE session_id=$1',[material.identity.sessionId])).rows[0].n,0);await cryptographicallyValid(material);await denied(boundary.verifyAccess(access(material),bound(material)));const sdk=service.sdk();await sdk.initialize();const refreshed=await sdk.refreshSession({refresh_token:material.tokensForServerStorage().refreshToken});assert(refreshed.error);assert.equal((await lifecycle.verify(other.cookieValueForResponse(),signal())).sessionId,other.evidence.sessionId);assert.deepEqual(await executeCleanup(actor,selected.evidence.requestId),r);
+});
+test('provider removal while a genuine MFA result is held prevents later app issuance and preserves another device',async()=>{
+ const f=await provision(),actor=await linkActor(f),other=await issue(f);let entered,release,material;
+ const ready=new Promise(resolve=>{entered=resolve;}),held=new Promise(resolve=>{release=resolve;});const gate={...boundary,authenticatePasswordTotp:async(...args)=>{material=await boundary.authenticatePasswordTotp(...args);entered();await held;return material;}};
+ const result=lifecycleDenied(issue(f,false,createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},gate,store)));let attempt,r;
+ try{await atBarrier(ready);attempt=(await client.query('SELECT * FROM crest_private.provider_login_attempts WHERE actor_id=$1 AND reserved_app_session_id<>$2',[actor.id,other.evidence.sessionId])).rows[0];const c=await sandbox.connect(runtimeUrl);let stop;try{await c.query('SET ROLE crest_web');stop=(await c.query('SELECT crest_commands.finish_provider_login($1,$2,$3,$4,$5,$6) AS result',[attempt.attempt_id,actor.id,attempt.issued_security_epoch,service.issuer,f.subject,'stopped_review'])).rows[0].result;}finally{await c.end();}const selected=await cleanupRequest(actor,stop.evidence.finishId);r=await executeCleanup(actor,selected.evidence.requestId);assert.equal(r.evidence.outcome,'provider_removed');assert.equal(r.evidence.providerSessionId,material.identity.sessionId);}finally{release();}await result;
+ assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.app_sessions WHERE id=$1',[attempt.reserved_app_session_id])).rows[0].n,0);await denied(boundary.verifyAccess(access(material),bound(material)));assert.equal((await lifecycle.verify(other.cookieValueForResponse(),signal())).sessionId,other.evidence.sessionId);
 });
