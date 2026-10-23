@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {before,after,test} from 'node:test';
+import net from 'node:net';
+import {once} from 'node:events';
+import pg from 'pg';
+import {createProviderReconciliationReviewer,createProviderCleanupExecutor} from '../../src/security/provider-cleanup-maintenance.ts';
+const runtimeRoles=[];let runtimeInventory,runtimeCleanup;
+const freshSignal=()=>new AbortController().signal;
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 const issuer='https://auth.example.com/auth/v1',fn='crest_commands.provider_reconciliation_review(uuid,text,uuid,integer)';
@@ -18,7 +24,7 @@ before(async()=>{
  web=await sandbox.connect(target);second=await sandbox.connect(target);maintenance=await sandbox.connect(target);cleanup=await sandbox.connect(target);for(const c of [web,second])await c.query('SET ROLE crest_web');await maintenance.query('SET ROLE crest_inventory');await cleanup.query('SET ROLE crest_cleanup');
  const f=await fixture();await capture(f);f.stop=await finish(f);f.request=await request(f);await consume(f);retained=await sources();grants=await privileges();receipt=await sandbox.apply(target);
 });
-after(async()=>{await sandbox?.close();});
+after(async()=>{for(const name of runtimeRoles)await sandbox.admin.query(`DROP ROLE ${name}`);await sandbox?.close();});
 const finish=(f,phase='stopped_review',c=web)=>c.query('SELECT crest_commands.finish_provider_login($1,$2,$3,$4,$5,$6) AS result',[f.b.attemptId,f.a.id,f.b.securityEpoch,issuer,f.a.subject,phase]).then(r=>r.rows[0].result);
 const request=f=>maintenance.query('SELECT crest_commands.request_provider_cleanup($1,$2,$3,$4) AS result',[randomUUID(),f.stop.evidence.finishId,f.a.id,issuer]).then(r=>r.rows[0].result);
 const consume=(f,c=cleanup)=>c.query('SELECT crest_commands.execute_provider_cleanup($1,$2,$3) AS result',[f.request.evidence.requestId,f.a.id,issuer]).then(r=>r.rows[0].result);
@@ -106,4 +112,62 @@ test('schema23 upgrade through24 and25 preserves the earlier migration prefix',a
 });
 test('headerless legacy provider/app sessions are never adopted or removed by an empty attempt review',async()=>{
  const a=await actor();await member(a);const provider=randomUUID(),app=randomUUID();await client.query("INSERT INTO auth.sessions(id,user_id,aal) VALUES($1,$2,'aal2')",[provider,a.subject]);await client.query('SELECT crest_commands.issue_app_session($1,$2,$3,$4,$5,$6,$7,$8,$9,false,$10,$11,$12)',[app,randomBytes(32),a.id,a.epoch,issuer,a.subject,provider,new Date(),new Date(),randomBytes(32),'synthetic',randomUUID()]);assert.deepEqual(await page(a),[]);assert.equal((await client.query('SELECT count(*)::int AS n FROM auth.sessions WHERE id=$1',[provider])).rows[0].n,1);assert.equal((await client.query('SELECT revoked_at FROM crest_private.app_sessions WHERE id=$1',[app])).rows[0].revoked_at,null);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.provider_login_attempts WHERE actor_id=$1',[a.id])).rows[0].n,0);
+});
+
+async function provisionRuntime(role){
+ const name=`crest_probe_${randomBytes(8).toString('hex')}`,password=randomBytes(32).toString('hex');assert.match(name,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
+ await sandbox.admin.query(`CREATE ROLE ${name} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);runtimeRoles.push(name);await sandbox.admin.query(`GRANT ${role} TO ${name} WITH INHERIT FALSE`);
+ const url=new URL(target);url.username=name;url.password=password;return {name,config:{connectionString:url.toString(),environment:'test',actorId:owner.id,issuer}};
+}
+const runtimeReview=(a=owner,config=runtimeInventory.config)=>createProviderReconciliationReviewer({...config,actorId:a.id});
+const only=async(f,config=runtimeInventory.config)=>(await runtimeReview(f.a,config)(null,100,freshSignal())).find(r=>r.attempt.attemptId===f.b.attemptId);
+
+test('runtime inventory adapter returns immutable original references without changing any retained source',async()=>{
+ // Provision only after all closed-role migration/preflight cases have finished.
+ runtimeInventory=await provisionRuntime('crest_inventory');runtimeCleanup=await provisionRuntime('crest_cleanup');
+ const a=await actor();await member(a);const f=await selected(a),before=await sources(),r=await only(f);
+ assert.equal(r.reviewState,'cleanup_outcome_unconfirmed_review');assert.equal(r.attempt.attemptId,f.b.attemptId);assert.equal(r.request.requestId,f.request.evidence.requestId);assert.equal(r.stop.evidenceHash,f.stop.evidenceHash);assert(Object.isFrozen(r));assert(Object.isFrozen(r.attempt));assert(Object.isFrozen(r.request));assert.deepEqual(await sources(),before);
+});
+test('runtime keyset pages are bounded and scoped with an explicitly supplied original cursor',async()=>{
+ const a=await actor();await member(a);const ids=[];for(let i=0;i<5;i++)ids.push((await fixture(a)).b.attemptId);ids.sort();const read=runtimeReview(a),seen=[];let cursor=null;
+ for(let i=0;i<4;i++){const rows=await read(cursor?.toUpperCase()??null,2,freshSignal());assert(rows.length<=2);seen.push(...rows.map(r=>r.attempt.attemptId));if(!rows.length)break;cursor=rows.at(-1).attempt.attemptId;}
+ assert.deepEqual(seen,ids);assert.deepEqual(await read(cursor,2,freshSignal()),[]);assert.deepEqual(await runtimeReview({id:randomUUID()})(null,100,freshSignal()),[]);assert.deepEqual(await runtimeReview(a,{...runtimeInventory.config,issuer:'https://other.example.com/auth/v1'})(null,100,freshSignal()),[]);
+});
+test('runtime reader refuses administrator combined-capability and cleanup-only profiles before exposing evidence',async()=>{
+ const f=await fixture();await capture(f);const before=await sources();
+ await assert.rejects(only(f,{...runtimeInventory.config,connectionString:target}),/PROVIDER_CLEANUP_REVIEW_REQUIRED/);await assert.rejects(only(f,runtimeCleanup.config),/PROVIDER_CLEANUP_REVIEW_REQUIRED/);
+ await sandbox.admin.query(`GRANT crest_cleanup TO ${runtimeInventory.name} WITH INHERIT FALSE`);try{await assert.rejects(only(f),/PROVIDER_CLEANUP_REVIEW_REQUIRED/);}finally{await sandbox.admin.query(`REVOKE crest_cleanup FROM ${runtimeInventory.name}`);}
+ assert.deepEqual(await sources(),before);
+});
+test('runtime review is historical across an uncommitted target rollback and outcome commit barrier',async()=>{
+ const a=await actor();await member(a);const f=await fixture(a);f.stop=await finish(f);await second.query('BEGIN');try{await capture(f,second);assert.equal((await only(f)).reviewState,'target_unconfirmed_review');}finally{await second.query('ROLLBACK');}
+ assert.equal((await only(f)).reviewState,'target_unconfirmed_review');await capture(f);f.request=await request(f);await cleanup.query('BEGIN');let saved;try{saved=await consume(f);assert.equal((await only(f)).reviewState,'cleanup_outcome_unconfirmed_review');await cleanup.query('COMMIT');}catch(error){await cleanup.query('ROLLBACK');throw error;}
+ assert.deepEqual((await only(f)).outcome,{outcome:'provider_removed',evidenceHash:saved.evidenceHash});
+});
+test('runtime observation grants no execution authority and cancellation starts no work',async()=>{
+ const f=await selected(),before=await sources(),cancel=new AbortController();cancel.abort();await assert.rejects(runtimeReview()(null,1,cancel.signal),/PROVIDER_CLEANUP_REVIEW_REQUIRED/);
+ await assert.rejects(createProviderCleanupExecutor(runtimeInventory.config)(f.request.evidence.requestId,freshSignal()),/PROVIDER_CLEANUP_REVIEW_REQUIRED/);
+ const c=new pg.Client({connectionString:runtimeInventory.config.connectionString,options:'-c role=crest_inventory'});await c.connect();try{await assert.rejects(c.query('SELECT * FROM auth.sessions'),e=>e.code==='42501');await assert.rejects(c.query('SELECT crest_commands.execute_provider_cleanup($1,$2,$3)',[f.request.evidence.requestId,owner.id,issuer]),e=>e.code==='42501');}finally{await c.end();}assert.deepEqual(await sources(),before);
+});
+test('runtime review preserves removed versus observed-absent history after provider reappearance',async()=>{
+ const a=await actor();await member(a);const f=await selected(a),g=await selected(a);await client.query('DELETE FROM auth.sessions WHERE id=$1',[g.p]);await consume(f);await consume(g);await client.query("INSERT INTO auth.sessions(id,user_id,aal) VALUES($1,$2,'aal1')",[f.p,a.subject]);
+ const before=await sources();assert.equal((await only(f)).outcome.outcome,'provider_removed');assert.equal((await only(g)).outcome.outcome,'provider_absent_observed');assert.deepEqual(await sources(),before);
+});
+test('runtime review retains old-epoch disabled-actor evidence without granting current access',async()=>{
+ const a=await actor();await member(a);const f=await fixture(a);await capture(f);await issue(f);await finish(f,'registration_closed');f.stop=await finish(f);await client.query('UPDATE crest_private.actors SET disabled_at=clock_timestamp(),current_security_epoch=$1,version=version+1 WHERE id=$2',[randomUUID(),a.id]);
+ const r=await only(f);assert.equal(r.reviewState,'stopped_without_request_review');assert.equal(r.attempt.securityEpoch,f.b.securityEpoch);assert(r.registrationFinish);assert(r.stop);assert(r.registration.localRevokedAt);
+});
+test('actual completed read closes its transport without waiting for a withheld peer shutdown',async()=>{
+ const a=await actor();await member(a);const f=await fixture(a),before=await sources(),url=new URL(runtimeInventory.config.connectionString),upstreamPort=Number(url.port),sockets=new Set();let endedResolve;
+ const ended=new Promise(resolve=>{endedResolve=resolve;});
+ // Keep the proxy's read side open after frontend FIN and withhold Terminate.
+ // The old graceful end awaited this peer forever after clearing its deadline.
+ const proxy=net.createServer({allowHalfOpen:true},down=>{
+  const up=net.createConnection({host:'127.0.0.1',port:upstreamPort});sockets.add(down);sockets.add(up);down.on('error',()=>{});up.on('error',()=>down.destroy());
+  down.on('data',data=>{if(data.length===5&&data[0]===88&&data.readUInt32BE(1)===4)return;up.write(data);});up.on('data',data=>down.write(data));down.on('end',()=>endedResolve());
+ });
+ await new Promise(resolve=>proxy.listen(0,'127.0.0.1',resolve));let deadline;
+ try{url.port=String(proxy.address().port);const timeout=new Promise((_,reject)=>{deadline=setTimeout(()=>reject(new Error('BOUNDED_TRANSPORT_CLOSE_REQUIRED')),2000);});
+  const r=await Promise.race([only(f,{...runtimeInventory.config,connectionString:url.toString()}),timeout]);assert.equal(r.reviewState,'target_unconfirmed_review');await Promise.race([ended,timeout]);assert.deepEqual(await sources(),before);
+ }finally{clearTimeout(deadline);for(const socket of sockets)socket.destroy();const closed=once(proxy,'close');proxy.close();await closed;}
 });

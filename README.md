@@ -12,6 +12,8 @@ The [bounded maintenance adapter](planning/PHASE_2_PROVIDER_CLEANUP_DISPATCH.md)
 
 The [historical reconciliation review](planning/PHASE_2_PROVIDER_RECONCILIATION_REVIEW.md) joins bounded login-start/target/finish/request/outcome facts while keeping unknown, conflicting and recorded states distinct. It adds no cleanup or application-access authority.
 
+The [private runtime review adapter](planning/PHASE_2_PROVIDER_RECONCILIATION_RUNTIME.md) validates one bounded read-only inventory page and closes its owned transport within the maintenance lifetime. It enables no automatic cleanup, endpoint or scheduler.
+
 ## Local development
 
 Run every repository command from this `crest-os-public` checkout, not the parent ChatGPT project mirror or original private archive. Use Node **24.22.0** and its bundled npm **11.19.1**. No paid account or provider credentials are needed.
