@@ -16,6 +16,8 @@ The [private runtime review adapter](planning/PHASE_2_PROVIDER_RECONCILIATION_RU
 
 The [portable attempt-evidence verifier](planning/PHASE_2_PORTABLE_ATTEMPT_EVIDENCE.md) checks original JSON bytes, hashes and included source links offline, with explicit missing-record reporting. It establishes internal consistency only; complete exports and recoverable backups remain gated.
 
+The [provider-evidence snapshot readers](planning/PHASE_2_PROVIDER_EVIDENCE_SNAPSHOT.md) expose scoped counts and bounded original-evidence pages in a read-only repeatable-read transaction. They enable no export job, cleanup action or production access.
+
 ## Local development
 
 Run every repository command from this `crest-os-public` checkout, not the parent ChatGPT project mirror or original private archive. Use Node **24.22.0** and its bundled npm **11.19.1**. No paid account or provider credentials are needed.
