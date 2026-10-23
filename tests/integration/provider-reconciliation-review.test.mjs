@@ -4,6 +4,9 @@ import {before,after,test} from 'node:test';
 import net from 'node:net';
 import {once} from 'node:events';
 import pg from 'pg';
+import {execFileSync} from 'node:child_process';
+import {resolve} from 'node:path';
+import {verifyProviderAttemptEvidence} from '../../src/security/provider-attempt-evidence.ts';
 import {createProviderReconciliationReviewer,createProviderCleanupExecutor} from '../../src/security/provider-cleanup-maintenance.ts';
 const runtimeRoles=[];let runtimeInventory,runtimeCleanup;
 const freshSignal=()=>new AbortController().signal;
@@ -170,4 +173,43 @@ test('actual completed read closes its transport without waiting for a withheld 
  try{url.port=String(proxy.address().port);const timeout=new Promise((_,reject)=>{deadline=setTimeout(()=>reject(new Error('BOUNDED_TRANSPORT_CLOSE_REQUIRED')),2000);});
   const r=await Promise.race([only(f,{...runtimeInventory.config,connectionString:url.toString()}),timeout]);assert.equal(r.reviewState,'target_unconfirmed_review');await Promise.race([ended,timeout]);assert.deepEqual(await sources(),before);
  }finally{clearTimeout(deadline);for(const socket of sockets)socket.destroy();const closed=once(proxy,'close');proxy.close();await closed;}
+});
+
+async function portableFragment(f){
+ const params=[f.a.id,issuer,null,100];
+ const start=(await maintenance.query('SELECT * FROM crest_commands.provider_login_attempt_inventory($1,$2,$3,$4)',params)).rows.find(r=>r.attempt_id===f.b.attemptId);
+ const targetRow=(await maintenance.query('SELECT * FROM crest_commands.provider_login_target_inventory($1,$2,$3,$4)',params)).rows.find(r=>r.attempt_id===f.b.attemptId);
+ const finishes=(await maintenance.query('SELECT * FROM crest_commands.provider_login_finish_inventory($1,$2,$3,$4)',params)).rows.filter(r=>r.evidence.attemptId===f.b.attemptId);
+ const rows=[];const add=(kind,row)=>{if(row)rows.push({kind,canonicalEvidence:row.canonical_evidence??row.canonicalEvidence,evidenceHash:row.evidence_hash??row.evidenceHash});};
+ add('start',start);add('target',targetRow);for(const r of finishes)add(r.evidence.phase==='registration_closed'?'registration_finish':'stop',r);
+ if(f.request){add('request',(await maintenance.query('SELECT crest_commands.read_provider_cleanup_request($1,$2,$3) AS result',[f.request.evidence.requestId,f.a.id,issuer])).rows[0].result);add('outcome',(await maintenance.query('SELECT crest_commands.read_provider_cleanup_outcome($1,$2,$3) AS result',[f.request.evidence.requestId,f.a.id,issuer])).rows[0].result);}
+ const expected={actorId:f.a.id,issuer,attemptId:f.b.attemptId},header={format:'crest-provider-attempt-evidence',formatVersion:1,actorId:f.a.id,providerIssuer:issuer,attemptId:f.b.attemptId};
+ return {serialized:[header,...rows].map(r=>JSON.stringify(r)).join('\n')+'\n',expected,rows};
+}
+test('portable verifier preserves actual restricted-reader original bytes for all six retained record kinds',async()=>{
+ const a=await actor();await member(a);const f=await fixture(a);await capture(f);await issue(f);await finish(f,'registration_closed');f.stop=await finish(f);f.request=await request(f);await consume(f);
+ const before=await sources(),file=await portableFragment(f),report=verifyProviderAttemptEvidence(file.serialized,file.expected);assert.equal(report.assurance,'internal_consistency_only');assert.deepEqual(report.missingKinds,[]);assert.equal(report.records.length,6);
+ for(const row of file.rows){const copied=report.records.find(r=>r.kind===row.kind);assert(Buffer.from(copied.canonicalEvidence,'utf8').equals(Buffer.from(row.canonicalEvidence,'utf8')));assert.equal(copied.evidenceHash,row.evidenceHash);}assert.deepEqual(await sources(),before);
+});
+test('portable fragments distinguish missing original target and later absence outcome without rewriting the stopped bytes',async()=>{
+ const a=await actor();await member(a);const f=await fixture(a);f.stop=await finish(f);const unknown=await portableFragment(f);assert.deepEqual(verifyProviderAttemptEvidence(unknown.serialized,unknown.expected).missingKinds,['target','registration_finish','request','outcome']);
+ await capture(f);f.request=await request(f);await client.query('DELETE FROM auth.sessions WHERE id=$1',[f.p]);await consume(f);const file=await portableFragment(f),report=verifyProviderAttemptEvidence(file.serialized,file.expected);
+ assert.deepEqual(report.missingKinds,['registration_finish']);assert.equal(JSON.parse(report.records.find(r=>r.kind==='outcome').canonicalEvidence).outcome,'provider_absent_observed');assert.equal(report.records.find(r=>r.kind==='stop').canonicalEvidence,unknown.rows.find(r=>r.kind==='stop').canonicalEvidence);assert(verifyProviderAttemptEvidence(unknown.serialized,unknown.expected).missingKinds.includes('outcome'));
+});
+test('uncommitted and rolled-back originals stay missing in portable fragments; later commit never changes old file claims',async()=>{
+ const a=await actor();await member(a);const f=await fixture(a);f.stop=await finish(f);await second.query('BEGIN');try{await capture(f,second);const file=await portableFragment(f);assert(verifyProviderAttemptEvidence(file.serialized,file.expected).missingKinds.includes('target'));}finally{await second.query('ROLLBACK');}
+ await capture(f);f.request=await request(f);await cleanup.query('BEGIN');let pending;try{await consume(f);pending=await portableFragment(f);assert(verifyProviderAttemptEvidence(pending.serialized,pending.expected).missingKinds.includes('outcome'));await cleanup.query('COMMIT');}catch(error){await cleanup.query('ROLLBACK');throw error;}
+ const saved=await portableFragment(f);assert(!verifyProviderAttemptEvidence(saved.serialized,saved.expected).missingKinds.includes('outcome'));assert(verifyProviderAttemptEvidence(pending.serialized,pending.expected).missingKinds.includes('outcome'));
+});
+test('a separate credential-free Node process verifies historical bytes and rejects tampering without PostgreSQL or React',async()=>{
+ const a=await actor();await member(a);const f=await selected(a);await consume(f);const file=await portableFragment(f);await client.query('UPDATE crest_private.actors SET disabled_at=clock_timestamp(),current_security_epoch=$1,version=version+1 WHERE id=$2',[randomUUID(),a.id]);const before=await sources();
+ const script=`import {readFileSync} from 'node:fs';import {pathToFileURL} from 'node:url';const {verifyProviderAttemptEvidence}=await import(pathToFileURL(process.argv[1]).href);const data=JSON.parse(readFileSync(0,'utf8'));try{process.stdout.write(JSON.stringify(verifyProviderAttemptEvidence(data.serialized,data.expected)));}catch(error){process.stdout.write(JSON.stringify({error:error.message}));}`;
+ const offline=data=>JSON.parse(execFileSync(process.execPath,['--input-type=module','-e',script,resolve('src/security/provider-attempt-evidence.ts')],{input:JSON.stringify(data),encoding:'utf8',timeout:5000,maxBuffer:262144,env:{NODE_NO_WARNINGS:'1',...(process.env.SystemRoot?{SystemRoot:process.env.SystemRoot}:{})}}));
+ const report=offline(file);assert.equal(report.assurance,'internal_consistency_only');assert.equal(JSON.parse(report.records[0].canonicalEvidence).securityEpoch,f.b.securityEpoch);assert.deepEqual(report.records,verifyProviderAttemptEvidence(file.serialized,file.expected).records);
+ const lines=file.serialized.trimEnd().split('\n'),row=JSON.parse(lines[1]);row.canonicalEvidence+=' ';lines[1]=JSON.stringify(row);assert.deepEqual(offline({...file,serialized:lines.join('\n')}),{error:'PROVIDER_ATTEMPT_EVIDENCE_REVIEW_REQUIRED'});assert.deepEqual(await sources(),before);
+});
+
+test('portable verifier preserves actual PostgreSQL target ranges one microsecond apart',async()=>{
+ const a=await actor();await member(a);const f=await fixture(a);await web.query("SELECT crest_commands.record_provider_login_target($1,$2,$3,$4,$5,$6,date_trunc('second',statement_timestamp()),date_trunc('second',statement_timestamp())+interval '1 microsecond')",f.args.slice(0,6));
+ const file=await portableFragment(f),report=verifyProviderAttemptEvidence(file.serialized,file.expected),targetRecord=report.records.find(r=>r.kind==='target'),e=JSON.parse(targetRecord.canonicalEvidence);assert.equal(Date.parse(e.passwordAt),Date.parse(e.accessExpiresAt));assert.equal(targetRecord.canonicalEvidence,file.rows.find(r=>r.kind==='target').canonicalEvidence);assert.deepEqual(report.missingKinds,['registration_finish','stop','request','outcome']);
 });
