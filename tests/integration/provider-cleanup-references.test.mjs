@@ -29,7 +29,7 @@ before(async()=>{
   }catch(error){await client.query('ROLLBACK');throw error;}
   legacy=await fixture();await revoke(legacy,client);active=await fixture();initiallyRevoked=await fixture({revoked:true});
   retained={legacy:await session(legacy.id),events:await events(legacy.id),active:await session(active.id),initial:await session(initiallyRevoked.id)};
-  receipt=await sandbox.apply(target);
+  receipt=await sandbox.apply(target,await sandbox.prefix(17));
   login=`crest_probe_${randomBytes(8).toString('hex')}`;const password=randomBytes(32).toString('hex');
   assert.match(login,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
   await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;await sandbox.admin.query(`GRANT crest_web TO ${login}`);
@@ -39,7 +39,7 @@ before(async()=>{
 after(async()=>{await web?.end();await second?.end();if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();});
 
 test('schema16 upgrade backfills proven revocations without changing retained source/history or receipt prefixes',async()=>{
-  assert.equal(prior.history.length,16);assert.equal(receipt.history.length,17);assert.deepEqual(receipt.history.slice(0,16),prior.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);
+  assert.equal(prior.history.length,16);assert.equal(receipt.history.length,17);assert.deepEqual(receipt.history.slice(0,16),prior.history);assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(17))).history,receipt.history);
   assert.deepEqual(await session(legacy.id),retained.legacy);assert.deepEqual(await events(legacy.id),retained.events);assert.deepEqual(await session(active.id),retained.active);assert.deepEqual(await session(initiallyRevoked.id),retained.initial);
   const [reference]=await rows(legacy.id);assert.equal(reference.provider_session_id,legacy.provider);assert.equal(reference.state,'review_required');assert.equal(reference.source_event_id,retained.events[1].id);assert.equal(reference.source_event_hash,retained.events[1].event_hash);
   assert.deepEqual(await rows(active.id),[]);assert.deepEqual(await rows(initiallyRevoked.id),[]);
