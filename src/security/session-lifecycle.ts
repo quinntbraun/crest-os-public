@@ -14,6 +14,7 @@ const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 export class SessionLifecycleError extends Error{
   constructor(){super('SESSION_LIFECYCLE_FAILED');this.name='SessionLifecycleError';}
 }
+type LoginAttempt=Readonly<{attemptId:string;appSessionId:string;actorId:string;securityEpoch:string;issuer:string;subject:string}>;
 type Snapshot={id:string;version:string;now:number;binding:TokenBinding;actor:LocalActor;session:LocalSession;keyId:string;ciphertext:string};
 type Verified=Readonly<{state:'session_verified';sessionId:string;actorId:string;expiresAt:number;provider:ProviderIdentity;
   tenantAndRequestVerificationRequired:true;foregroundActivityAt:number|null}>;
@@ -37,6 +38,14 @@ function snapshot(value:unknown):Snapshot{
 export function createSessionLifecycle(config:SessionDatabaseConfiguration,
   provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>){
   const query=sessionDatabase(config),revoke=createSessionRevoker(config);
+  const finish=async(attempt:LoginAttempt,phase:'registration_closed'|'stopped_review',signal:AbortSignal)=>{
+    const result=await query('SELECT crest_commands.finish_provider_login($1::uuid,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::text) AS result',
+      [attempt.attemptId,attempt.actorId,attempt.securityEpoch,attempt.issuer,attempt.subject,phase],signal) as
+      {evidence?:{attemptId?:string;appSessionId?:string;actorId?:string;securityEpoch?:string;providerIssuer?:string;providerSubject?:string;phase?:string}}|null;
+    const e=result?.evidence;
+    if(signal.aborted||!e||e.attemptId!==attempt.attemptId||e.appSessionId!==attempt.appSessionId||e.actorId!==attempt.actorId
+      ||e.securityEpoch!==attempt.securityEpoch||e.providerIssuer!==attempt.issuer||e.providerSubject!==attempt.subject||e.phase!==phase)throw new SessionLifecycleError();
+  };
   const read=async(hash:Buffer,signal:AbortSignal)=>snapshot(await query('SELECT crest_commands.app_session_snapshot($1::bytea) AS result',[hash],signal));
   async function rotate(credential:string,hash:Buffer,observed:Snapshot,signal:AbortSignal):Promise<void>{
     let attempted=false;
@@ -115,7 +124,7 @@ export function createSessionLifecycle(config:SessionDatabaseConfiguration,
     },
     async login(input:{email:string;password:string;factorId:string;code:string},binding:ProviderBinding,trusted:boolean,external:AbortSignal):Promise<IssuedSession>{
       const signal=AbortSignal.any([external,AbortSignal.timeout(20000)]);let credential:ReturnType<typeof createSessionCredential>|undefined;
-      let material:Awaited<ReturnType<typeof provider.authenticatePasswordTotp>>|undefined;
+      let material:Awaited<ReturnType<typeof provider.authenticatePasswordTotp>>|undefined,attempt:LoginAttempt|undefined;
       try{
         input=Object.freeze({...input});binding=Object.freeze({...binding});
         if(typeof trusted!=='boolean'||signal.aborted||typeof input.email!=='string'||!input.email.trim()||input.email.length>320
@@ -128,6 +137,7 @@ export function createSessionLifecycle(config:SessionDatabaseConfiguration,
           [attemptId,id,issuer,binding.subject],signal) as {attemptId?:string;appSessionId?:string;actorId?:string;securityEpoch?:string}|null;
         if(signal.aborted||!context||context.attemptId!==attemptId||context.appSessionId!==id||typeof context.actorId!=='string'||!uuid.test(context.actorId)
           ||typeof context.securityEpoch!=='string'||!uuid.test(context.securityEpoch))throw new SessionLifecycleError();
+        attempt=Object.freeze({attemptId,appSessionId:id,actorId:context.actorId,securityEpoch:context.securityEpoch,issuer,subject:binding.subject});
         let target:ProviderPasswordSessionReference|undefined,observing=false;
         material=await provider.authenticatePasswordTotp(input,binding,signal,async(reference,currentSignal)=>{
           if(observing||currentSignal.aborted||signal.aborted||reference.issuer!==issuer||reference.subject!==binding.subject
@@ -149,15 +159,18 @@ export function createSessionLifecycle(config:SessionDatabaseConfiguration,
         const encrypted=await tokens.encrypt(material.tokensForServerStorage(),{actorId:context.actorId,securityEpoch:context.securityEpoch,appSessionId:id,
           providerSessionId:identity.sessionId,subject:identity.subject,issuer:identity.issuer});
         const hash=credential.hashForDatabase();
-        try{await query('SELECT crest_commands.issue_targeted_app_session($1::uuid,$2::bytea,$3::uuid,$4::uuid,$5::text,$6::uuid,$7::uuid,$8::timestamptz,$9::timestamptz,$10::boolean,$11::bytea,$12::text,$13::uuid) AS result',
+        try{await query('SELECT crest_commands.issue_open_app_session($1::uuid,$2::bytea,$3::uuid,$4::uuid,$5::text,$6::uuid,$7::uuid,$8::timestamptz,$9::timestamptz,$10::boolean,$11::bytea,$12::text,$13::uuid) AS result',
           [id,hash,context.actorId,context.securityEpoch,identity.issuer,identity.subject,identity.sessionId,new Date(identity.passwordAt),new Date(identity.totpAt),trusted,Buffer.from(encrypted.ciphertext),encrypted.keyId,attemptId],signal);
         }finally{hash.fill(0);}
+        await finish(attempt,'registration_closed',signal);
         return new IssuedSession(credential,await verify(credential.cookieValueForResponse(),signal,'background',true,false));
       }catch{
         // An uncertain commit must never release a credential. Best-effort
         // idempotent cleanup uses its own bounded connection even after abort.
         const cleanup=AbortSignal.timeout(4000);
-        if(credential)try{await revoke(credential.cookieValueForResponse(),cleanup);}catch{/* still attempt scoped provider cleanup */}
+        let stopped=false;
+        if(attempt)try{await finish(attempt,'stopped_review',cleanup);stopped=true;}catch{/* leave uncertain finish for bounded reconciliation */}
+        if(credential&&!stopped)try{await revoke(credential.cookieValueForResponse(),cleanup);}catch{/* still attempt scoped provider cleanup */}
         if(material)try{await provider.signOutLocal(material.tokensForServerStorage().accessToken,
           {subject:material.identity.subject,sessionId:material.identity.sessionId},cleanup);}catch{/* durable orphan reconciliation remains required */}
         throw new SessionLifecycleError();

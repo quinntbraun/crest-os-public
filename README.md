@@ -42,6 +42,8 @@ The [durable provider login starts and tracked registration](planning/PHASE_2_PR
 
 The [signed password-session target receipt](planning/PHASE_2_PROVIDER_LOGIN_TARGETS.md) slice adds schema21 and `npm run test:provider-targets-db`: immutable token-free references before profile/MFA I/O, exact targeted issuance and restricted registration history. These references do not complete cleanup authority or unknown-outcome handling.
 
+The [local login finish fence](planning/PHASE_2_LOGIN_ATTEMPT_FENCES.md) adds schema22 and `npm run test:login-fences-db`: atomic scoped stop/revocation, immutable local finish history and serialized app issuance. Ordinary web must use the fenced issuer; earlier direct issuance commands are retired from web execution. A local finish does not certify remote cleanup or browser delivery.
+
 ## Disposable PostgreSQL and container checks
 
 With Docker available, start only the isolated synthetic test database:

@@ -105,6 +105,11 @@
       "version": "20261023043000",
       "file": "20261023043000_provider_login_targets.sql",
       "sha256": "5ee3f8eabf225b0b2953925f30d2e0407daa6022a0f32630b62eef2915fc479c"
+    },
+    {
+      "version": "20261023050000",
+      "file": "20261023050000_login_attempt_fences.sql",
+      "sha256": "d2bb223f2b3ff7615a76a098d7b2f8b5a48268c77a6fd22f7c35646e7ef639ce"
     }
   ]
 }
