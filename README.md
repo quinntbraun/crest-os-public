@@ -34,6 +34,8 @@ The [real Auth integration](planning/PHASE_2_REAL_AUTH.md), `npm run test:real-a
 
 The [token-free provider cleanup reference slice](planning/PHASE_2_PROVIDER_CLEANUP_REFERENCES.md) adds schema17 and the npm run test:provider-cleanup-db suite: local revocation retains exact immutable reconciliation evidence while erasing credentials. It does not execute provider cleanup or complete orphan reconciliation.
 
+The [provider-session inventory](planning/PHASE_2_PROVIDER_INVENTORY.md) adds schema18 and `npm run test:provider-inventory-db`: a separately scoped maintenance reader compares bounded provider pages with same-actor registrations/revocation references. Observations grant no cleanup authority; ordinary application requests cannot execute it.
+
 ## Disposable PostgreSQL and container checks
 
 With Docker available, start only the isolated synthetic test database:

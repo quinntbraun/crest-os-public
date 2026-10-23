@@ -43,7 +43,8 @@
     "test:real-auth": "node --conditions=react-server --test --test-concurrency=1 tests/integration/real-auth.test.mjs",
     "test:session-commands-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/session-revocation.test.mjs",
     "test:business-settings-db": "node --test --test-concurrency=1 tests/integration/business-settings-context.test.mjs",
-    "test:provider-cleanup-db": "node --test --test-concurrency=1 tests/integration/provider-cleanup-references.test.mjs"
+    "test:provider-cleanup-db": "node --test --test-concurrency=1 tests/integration/provider-cleanup-references.test.mjs",
+    "test:provider-inventory-db": "node --test --test-concurrency=1 tests/integration/provider-session-inventory.test.mjs"
   },
   "dependencies": {
     "@supabase/auth-js": "2.118.0",
