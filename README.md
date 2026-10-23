@@ -32,6 +32,8 @@ The [live provider-session reader](planning/PHASE_2_PROVIDER_DATABASE.md) adds a
 
 The [real Auth integration](planning/PHASE_2_REAL_AUTH.md), `npm run test:real-auth`, runs the pinned Auth HTTP service with synthetic users, actual password/TOTP/refresh/logout and the restricted database reader. It additionally requires Docker on Linux. No browser login or business-data route is enabled.
 
+The [token-free provider cleanup reference slice](planning/PHASE_2_PROVIDER_CLEANUP_REFERENCES.md) adds schema17 and the npm run test:provider-cleanup-db suite: local revocation retains exact immutable reconciliation evidence while erasing credentials. It does not execute provider cleanup or complete orphan reconciliation.
+
 ## Disposable PostgreSQL and container checks
 
 With Docker available, start only the isolated synthetic test database:

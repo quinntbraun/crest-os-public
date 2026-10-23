@@ -80,6 +80,11 @@
       "version": "20261022221500",
       "file": "20261022221500_business_settings_context.sql",
       "sha256": "b90f1d1b074286af8c77b0dab2bb4301e1eeabff18b879e0e0bcb01100fee808"
+    },
+    {
+      "version": "20261022235000",
+      "file": "20261022235000_provider_cleanup_references.sql",
+      "sha256": "55e3538459e818115a53dcbfa212f1fe9a9be42e61a35cb6e1c71edd3d1c3f61"
     }
   ]
 }

@@ -84,6 +84,7 @@ jobs:
           npm run test:operation-lookup-db
           npm run test:business-name-db
           npm run test:business-settings-db
+          npm run test:provider-cleanup-db
           npm run test:real-auth
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 6
