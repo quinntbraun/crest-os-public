@@ -173,12 +173,12 @@ test('failed source binding stops dispatch and leaves later selected targets uns
  const f=await selected(other),g=await selected(),ids=[f.request.evidence.requestId,g.request.evidence.requestId];const r=await dispatchProviderCleanup(ids,executeAdapter,freshSignal());assert.deepEqual(r.results,ids.map((requestId,i)=>({requestId,status:i?'not_started':'outcome_unknown'})));assert.equal(await present(f),1);assert.equal(await present(g),1);assert.equal(await readAdapter(ids[1],freshSignal()),null);
 });
 test('transport drops the committed execution response: dispatch stops and independent exact history resolves it',async()=>{
- const f=await selected(),g=await selected(),id=f.request.evidence.requestId,url=new URL(runtimeCleanup.config.connectionString),sockets=new Set();let dropped=false;
+ const f=await selected(),g=await selected(),id=f.request.evidence.requestId,url=new URL(runtimeCleanup.config.connectionString),sockets=new Set(),upstreamPort=Number(url.port);let dropped=false;
  // Disposable loopback proxy only. Forward authentication/guard normally; withhold
  // command packets until the backend ReadyForQuery proves autocommit completed,
  // then sever transport before the adapter can confirm the receipt.
  const proxy=net.createServer(down=>{
-   const up=net.createConnection({host:'127.0.0.1',port:Number(url.port)});sockets.add(down);sockets.add(up);let tail=Buffer.alloc(0),discard=false,pending=Buffer.alloc(0);
+   const up=net.createConnection({host:'127.0.0.1',port:upstreamPort});sockets.add(down);sockets.add(up);let tail=Buffer.alloc(0),discard=false,pending=Buffer.alloc(0);
    const stop=()=>{down.destroy();up.destroy();};down.on('error',stop);up.on('error',stop);down.on('close',()=>{sockets.delete(down);up.destroy();});up.on('close',()=>{sockets.delete(up);down.destroy();});
    down.on('data',data=>{tail=Buffer.concat([tail,data]);if(tail.includes(Buffer.from('execute_provider_cleanup')))discard=true;tail=tail.subarray(-256);up.write(data);});
    up.on('data',data=>{
