@@ -120,6 +120,11 @@
       "version": "20261023063000",
       "file": "20261023063000_provider_cleanup_executor.sql",
       "sha256": "e779ae5b1fafd457892ccdf7e0c3385574f2b472aac52c770afd6db4abd496b5"
+    },
+    {
+      "version": "20261023083000",
+      "file": "20261023083000_provider_reconciliation_review.sql",
+      "sha256": "73041923ed3fa37e45b2855ab117f34dba0f95c7fc11aca2d39b05257932968f"
     }
   ]
 }

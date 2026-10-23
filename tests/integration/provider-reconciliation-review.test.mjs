@@ -1,0 +1,109 @@
+import assert from 'node:assert/strict';
+import {randomBytes,randomUUID} from 'node:crypto';
+import {before,after,test} from 'node:test';
+import {migrationSandbox} from '../support/migration-sandbox.mjs';
+import {installProviderSchema} from '../support/provider-schema.mjs';
+const issuer='https://auth.example.com/auth/v1',fn='crest_commands.provider_reconciliation_review(uuid,text,uuid,integer)';
+let sandbox,target,client,web,second,maintenance,cleanup,bootstrap,owner,other,business,prior,receipt,retained,grants;
+async function actor(){const subject=randomUUID();await client.query("INSERT INTO auth.users(id,email,aud,role) VALUES($1,$2,'authenticated','authenticated')",[subject,`synthetic-${subject}@example.com`]);const a=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic target owner',$1,$2,$3,$3,'manual') RETURNING id,current_security_epoch",[issuer,subject,bootstrap])).rows[0];return {id:a.id,subject,epoch:a.current_security_epoch};}
+async function member(a){await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$3,$3,'manual')",[business,a.id,owner.id]);}
+const begin=(a=owner)=>web.query('SELECT crest_commands.begin_provider_login($1,$2,$3,$4) AS result',[randomUUID(),randomUUID(),issuer,a.subject]).then(r=>r.rows[0].result);
+async function fixture(a=owner){const b=await begin(a),p=randomUUID();await client.query("INSERT INTO auth.sessions(id,user_id,aal,created_at,updated_at) VALUES($1,$2,'aal1',clock_timestamp(),clock_timestamp())",[p,a.subject]);const passwordAt=new Date(Math.floor(Date.now()/1000)*1000),expiresAt=new Date(Date.now()+60000);return {a,b,p,passwordAt,expiresAt,args:[b.attemptId,a.id,b.securityEpoch,issuer,a.subject,p,passwordAt,expiresAt]};}
+const capture=(f,c=web)=>c.query('SELECT crest_commands.record_provider_login_target($1,$2,$3,$4,$5,$6,$7,$8) AS result',f.args).then(r=>r.rows[0].result);
+async function issue(f,{legacy=false,mutate=()=>{},c=web}={}){await client.query("UPDATE auth.sessions SET aal='aal2' WHERE id=$1",[f.p]);const hash=randomBytes(32),args=[f.b.appSessionId,hash,f.a.id,f.b.securityEpoch,issuer,f.a.subject,f.p,f.passwordAt,new Date(),false,randomBytes(32),'synthetic',f.b.attemptId];mutate(args);await c.query(`SELECT crest_commands.${legacy?'issue_tracked_app_session':'issue_open_app_session'}($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,args);return {hash,id:args[0]};}
+before(async()=>{
+ sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target,await sandbox.prefix(24));
+ bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;owner=await actor();other=await actor();
+ await client.query('BEGIN');try{business=(await client.query("INSERT INTO crest.businesses(legal_name,timezone,created_by,updated_by,origin) VALUES('Synthetic review business','UTC',$1,$1,'manual') RETURNING id",[owner.id])).rows[0].id;await member(owner);await member(other);await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,owner.id]);await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}
+ web=await sandbox.connect(target);second=await sandbox.connect(target);maintenance=await sandbox.connect(target);cleanup=await sandbox.connect(target);for(const c of [web,second])await c.query('SET ROLE crest_web');await maintenance.query('SET ROLE crest_inventory');await cleanup.query('SET ROLE crest_cleanup');
+ const f=await fixture();await capture(f);f.stop=await finish(f);f.request=await request(f);await consume(f);retained=await sources();grants=await privileges();receipt=await sandbox.apply(target);
+});
+after(async()=>{await sandbox?.close();});
+const finish=(f,phase='stopped_review',c=web)=>c.query('SELECT crest_commands.finish_provider_login($1,$2,$3,$4,$5,$6) AS result',[f.b.attemptId,f.a.id,f.b.securityEpoch,issuer,f.a.subject,phase]).then(r=>r.rows[0].result);
+const request=f=>maintenance.query('SELECT crest_commands.request_provider_cleanup($1,$2,$3,$4) AS result',[randomUUID(),f.stop.evidence.finishId,f.a.id,issuer]).then(r=>r.rows[0].result);
+const consume=(f,c=cleanup)=>c.query('SELECT crest_commands.execute_provider_cleanup($1,$2,$3) AS result',[f.request.evidence.requestId,f.a.id,issuer]).then(r=>r.rows[0].result);
+const page=(a=owner,{cursor=null,size=100,url=issuer,c=maintenance}={})=>c.query('SELECT * FROM crest_commands.provider_reconciliation_review($1,$2,$3,$4)',[a.id,url,cursor,size]).then(r=>r.rows);
+const review=async(f,c=maintenance)=>(await page(f.a,{c})).find(r=>r.attempt_id===f.b.attemptId)?.observation;
+async function selected(a=owner){const f=await fixture(a);await capture(f);f.stop=await finish(f);f.request=await request(f);return f;}
+const sources=async()=>{
+ const tables=['auth.sessions','crest_private.app_sessions','crest_private.session_events','crest_private.provider_login_attempts','crest_private.provider_login_targets','crest_private.provider_login_finishes','crest_private.provider_cleanup_requests','crest_private.provider_cleanup_outcomes'];
+ const result={};for(const table of tables)result[table]=(await client.query(`SELECT encode(sha256(convert_to(COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text,'UTF8')),'hex') AS hash FROM ${table} t`)).rows[0].hash;return result;
+};
+const privileges=()=>client.query("SELECT n.nspname,c.relname,c.relacl::text,array_agg(a.attacl::text ORDER BY a.attnum) AS columns FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped WHERE n.nspname IN ('auth','crest','crest_private') GROUP BY n.nspname,c.relname,c.relacl::text ORDER BY 1,2").then(r=>r.rows);
+
+test('schema24 upgrade preserves every source and all table/column privileges',async()=>{
+ assert.equal(prior.history.length,24);assert.equal(receipt.history.length,25);assert.deepEqual(receipt.history.slice(0,24),prior.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);assert.deepEqual(await sources(),retained);assert.deepEqual(await privileges(),grants);
+});
+test('a start without target or finish remains explicitly unconfirmed with original identity/hash',async()=>{
+ const f=await fixture(),before=await sources(),r=await review(f);assert.equal(r.reviewState,'target_unconfirmed_review');assert.equal(r.target,null);assert.equal(r.stop,null);assert.equal(r.request,null);assert.equal(r.outcome,null);assert.equal(r.attempt.appSessionId,f.b.appSessionId);assert.equal(r.attempt.securityEpoch,f.b.securityEpoch);assert.equal(r.attempt.providerSubject,f.a.subject);assert.equal(r.attempt.evidenceHash,(await client.query('SELECT event_hash FROM crest_private.provider_login_attempts WHERE attempt_id=$1',[f.b.attemptId])).rows[0].event_hash);assert.deepEqual(await sources(),before);
+});
+test('a stopped unknown target and an expired provider timestamp never become automatic closure',async()=>{
+ const f=await fixture();f.stop=await finish(f);await client.query("UPDATE auth.sessions SET not_after=clock_timestamp()-interval '1 year' WHERE id=$1",[f.p]);const r=await review(f);assert.equal(r.reviewState,'target_unconfirmed_review');assert.equal(r.stop.finishId,f.stop.evidence.finishId);assert.equal(r.target,null);assert.equal(r.outcome,null);assert.equal((await client.query('SELECT count(*)::int AS n FROM auth.sessions WHERE id=$1',[f.p])).rows[0].n,1);
+});
+test('a late signed target appears after stop without rewriting original stop or inventing a request',async()=>{
+ const f=await fixture();f.stop=await finish(f);await capture(f);const r=await review(f);assert.equal(r.reviewState,'stopped_without_request_review');assert.equal(r.target.providerSessionId,f.p);assert.equal(r.stop.evidenceHash,f.stop.evidenceHash);assert.equal(r.request,null);assert.equal(f.stop.evidence.providerSessionId,null);
+});
+test('a target without either finish remains finish-unconfirmed, even with a registered app',async()=>{
+ const f=await fixture();await capture(f);await issue(f);const r=await review(f);assert.equal(r.reviewState,'finish_unconfirmed_review');assert.equal(r.registration.state,'registration_recorded');assert.equal(r.registration.providerSessionId,f.p);assert.equal(r.registration.localRevokedAt,null);
+});
+test('registration closure is a recorded local fact, not cleanup of an active device',async()=>{
+ const f=await fixture();await capture(f);await issue(f);const closed=await finish(f,'registration_closed'),r=await review(f);assert.equal(r.reviewState,'registration_closed_recorded');assert.equal(r.registrationFinish.finishId,closed.evidence.finishId);assert.equal(r.stop,null);assert.equal(r.outcome,null);assert.equal((await client.query('SELECT revoked_at FROM crest_private.app_sessions WHERE id=$1',[f.b.appSessionId])).rows[0].revoked_at,null);
+});
+test('both local finish phases and their distinct original hashes remain visible after a stop',async()=>{
+ const f=await fixture();await capture(f);await issue(f);const c=await finish(f,'registration_closed');f.stop=await finish(f);const r=await review(f);assert.equal(r.reviewState,'stopped_without_request_review');assert.equal(r.registrationFinish.evidenceHash,c.evidenceHash);assert.equal(r.stop.evidenceHash,f.stop.evidenceHash);assert(r.registration.localRevokedAt);
+});
+test('selected request is pending historical intent until a separate outcome is committed',async()=>{
+ const f=await selected(),before=await sources(),r=await review(f);assert.equal(r.reviewState,'cleanup_outcome_unconfirmed_review');assert.equal(r.request.requestId,f.request.evidence.requestId);assert.equal(r.request.evidenceHash,f.request.evidenceHash);assert.equal(r.outcome,null);assert.deepEqual(await sources(),before);
+});
+test('removed outcome links original request/target/finish hashes without rewriting pending intent',async()=>{
+ const f=await selected(),outcome=await consume(f),before=await sources(),r=await review(f);assert.equal(r.reviewState,'cleanup_outcome_recorded');assert.equal(r.target.evidenceHash,(await client.query('SELECT event_hash FROM crest_private.provider_login_targets WHERE attempt_id=$1',[f.b.attemptId])).rows[0].event_hash);assert.equal(r.stop.evidenceHash,f.stop.evidenceHash);assert.deepEqual(r.outcome,{outcome:'provider_removed',evidenceHash:outcome.evidenceHash});assert.equal((await client.query('SELECT state FROM crest_private.provider_cleanup_requests WHERE request_id=$1',[f.request.evidence.requestId])).rows[0].state,'pending_review');assert.deepEqual(await sources(),before);
+});
+test('observed absence stays distinct from recorded removal',async()=>{
+ const f=await selected();await client.query('DELETE FROM auth.sessions WHERE id=$1',[f.p]);await consume(f);assert.equal((await review(f)).outcome.outcome,'provider_absent_observed');
+});
+test('a later provider row reappearance does not turn a recorded outcome into current absence or another action',async()=>{
+ const f=await selected();await consume(f);const before=await review(f);await client.query("INSERT INTO auth.sessions(id,user_id,aal) VALUES($1,$2,'aal1')",[f.p,other.subject]);const after=await review(f);assert.equal(after.reviewState,'cleanup_outcome_recorded');assert.deepEqual(after.outcome,before.outcome);assert.equal((await client.query('SELECT user_id FROM auth.sessions WHERE id=$1',[f.p])).rows[0].user_id,other.subject);assert(!Object.hasOwn(after,'providerIsAbsent'));
+});
+test('disabled actors and old epochs retain original historical review without restoring eligibility',async()=>{
+ const a=await actor();await member(a);const f=await selected(a);await consume(f);await client.query('UPDATE crest_private.actors SET disabled_at=clock_timestamp(),current_security_epoch=$1,version=version+1 WHERE id=$2',[randomUUID(),a.id]);const r=await review(f);assert.equal(r.attempt.securityEpoch,f.b.securityEpoch);assert.equal(r.reviewState,'cleanup_outcome_recorded');
+});
+test('actor and exact configured issuer scope all returned sources',async()=>{
+ const f=await fixture(other);await capture(f);assert(!(await page()).some(r=>r.attempt_id===f.b.attemptId));assert.equal((await review(f)).attempt.actorId,other.id);assert.deepEqual(await page(owner,{url:'https://other.example.com/auth/v1'}),[]);assert.deepEqual(await page({id:randomUUID()}),[]);
+});
+test('bounded UUID pages are ordered, exclusive and contain no cross-actor entries',async()=>{
+ const a=await actor();await member(a);const ids=[];for(let i=0;i<5;i++)ids.push((await fixture(a)).b.attemptId);ids.sort();const seen=[];let cursor=null;for(let i=0;i<4;i++){const rows=await page(a,{cursor,size:2});assert(rows.length<=2);for(const r of rows){assert.equal(r.observation.attempt.actorId,a.id);seen.push(r.attempt_id);}if(!rows.length)break;cursor=rows.at(-1).attempt_id;}assert.deepEqual(seen,ids);assert.deepEqual(await page(a,{cursor,size:2}),[]);
+});
+test('read-only review uses UTC observation time and exports references without secrets or durable snapshot claims',async()=>{
+ const f=await selected(),beforeZone=(await maintenance.query('SHOW timezone')).rows[0];await maintenance.query("BEGIN READ ONLY; SET LOCAL timezone='Pacific/Honolulu'");let r;try{r=await review(f);assert.match(r.observedAt,/\+00:00$/);}finally{await maintenance.query('ROLLBACK');}
+ assert.deepEqual(Object.keys(r).sort(),['attempt','observedAt','outcome','registration','registrationFinish','request','reviewState','schemaVersion','stop','target'].sort());assert.equal(r.schemaVersion,1);assert(!/token|cipher|credential|password|secret|databasePrincipal|email|csrf/.test(JSON.stringify(r)));assert.deepEqual((await maintenance.query('SHOW timezone')).rows[0],beforeZone);
+});
+test('invalid inputs, bounds and non-fresh transaction isolation deny without mutation',async()=>{
+ const before=await sources();for(const args of [[null,issuer,null,1],[owner.id,null,null,1],[owner.id,'',null,1],[owner.id,'x'.repeat(501),null,1],[owner.id,issuer,null,null],[owner.id,issuer,null,0],[owner.id,issuer,null,101]])await assert.rejects(maintenance.query('SELECT * FROM crest_commands.provider_reconciliation_review($1,$2,$3,$4)',args),e=>e.code==='22023');await maintenance.query('BEGIN ISOLATION LEVEL REPEATABLE READ');try{await assert.rejects(page(),e=>e.code==='25001');}finally{await maintenance.query('ROLLBACK');}assert.deepEqual(await sources(),before);
+});
+test('fixed definer grants no raw source/provider access or execution to web worker recovery or cleanup callers',async()=>{
+ const meta=(await client.query('SELECT prosecdef,provolatile,proconfig,pg_get_userbyid(proowner) AS owner FROM pg_proc WHERE oid=$1::regprocedure',[fn])).rows[0];assert.deepEqual({...meta,proconfig:meta.proconfig.map(x=>x.toLowerCase())},{prosecdef:true,provolatile:'s',proconfig:['search_path=pg_catalog, pg_temp','row_security=on','timezone=utc'],owner:'crest_inventory_owner'});
+ for(const role of ['crest_web','crest_worker','crest_recovery','crest_cleanup','crest_cleanup_owner','crest_session_owner','anon','authenticated','service_role'])assert.equal((await client.query("SELECT has_function_privilege($1,$2,'EXECUTE') AS ok",[role,fn])).rows[0].ok,false);for(const table of ['crest_private.provider_login_attempts','crest_private.provider_cleanup_outcomes','auth.sessions'])await assert.rejects(maintenance.query(`SELECT * FROM ${table}`),e=>e.code==='42501');assert.deepEqual(await privileges(),grants);
+});
+test('uncommitted late target remains unconfirmed to another reader and rollback preserves that state',async()=>{
+ const f=await fixture();f.stop=await finish(f);await second.query('BEGIN');try{await capture(f,second);assert.equal((await review(f)).reviewState,'target_unconfirmed_review');}finally{await second.query('ROLLBACK');}assert.equal((await review(f)).reviewState,'target_unconfirmed_review');
+});
+test('uncommitted cleanup never appears completed; commit exposes the single original outcome',async()=>{
+ const f=await selected();await cleanup.query('BEGIN');let saved;try{saved=await consume(f);assert.equal((await review(f)).reviewState,'cleanup_outcome_unconfirmed_review');await cleanup.query('COMMIT');}catch(error){await cleanup.query('ROLLBACK');throw error;}assert.deepEqual((await review(f)).outcome,{outcome:'provider_removed',evidenceHash:saved.evidenceHash});
+});
+test('conflicting original registration ancestry suppresses derived details instead of claiming completion',async()=>{
+ const f=await fixture();await capture(f);await client.query("UPDATE auth.sessions SET aal='aal2' WHERE id=$1",[f.p]);await client.query('SELECT crest_commands.issue_app_session($1,$2,$3,$4,$5,$6,$7,$8,$9,false,$10,$11,$12)',[f.b.appSessionId,randomBytes(32),owner.id,f.b.securityEpoch,issuer,owner.subject,f.p,f.passwordAt,new Date(),randomBytes(32),'synthetic',randomUUID()]);const r=await review(f);assert.equal(r.reviewState,'binding_conflict_review');assert.equal(r.registration.providerSessionId,null);assert.equal(r.target,null);assert.equal(r.outcome,null);
+});
+test('inconsistent restored outcome source hash is review-only and hides linked derived facts',async()=>{
+ const f=await selected();await consume(f);const before=await sources();await client.query('BEGIN');try{
+  await client.query('ALTER TABLE crest_private.provider_cleanup_outcomes DISABLE TRIGGER USER');await client.query("UPDATE crest_private.provider_cleanup_outcomes SET canonical_evidence=jsonb_set(canonical_evidence::jsonb,'{requestHash}',to_jsonb(repeat('0',64)))::text,event_hash=encode(sha256(convert_to(jsonb_set(canonical_evidence::jsonb,'{requestHash}',to_jsonb(repeat('0',64)))::text,'UTF8')),'hex') WHERE request_id=$1",[f.request.evidence.requestId]);await client.query('SET LOCAL ROLE crest_inventory');const r=await review(f,client);assert.equal(r.reviewState,'binding_conflict_review');assert.equal(r.request,null);assert.equal(r.target,null);assert.equal(r.outcome,null);
+ }finally{await client.query('ROLLBACK');}assert.deepEqual(await sources(),before);
+});
+test('changed prerequisite function refuses migration25 and retains pending-review state',async()=>{
+ const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);await sandbox.apply(t,await sandbox.prefix(24));await c.query('ALTER FUNCTION crest_commands.provider_login_attempt_inventory(uuid,text,uuid,integer) RESET row_security');await assert.rejects(sandbox.apply(t),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);assert.equal((await c.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,24);assert.equal((await c.query('SELECT to_regprocedure($1) AS routine',[fn])).rows[0].routine,null);await assert.rejects(sandbox.apply(t),/MIGRATION_PENDING_REVIEW_REQUIRED/);
+});
+test('schema23 upgrade through24 and25 preserves the earlier migration prefix',async()=>{
+ const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);const old=await sandbox.apply(t,await sandbox.prefix(23)),updated=await sandbox.apply(t);assert.equal(updated.history.length,25);assert.deepEqual(updated.history.slice(0,23),old.history);
+});
+test('headerless legacy provider/app sessions are never adopted or removed by an empty attempt review',async()=>{
+ const a=await actor();await member(a);const provider=randomUUID(),app=randomUUID();await client.query("INSERT INTO auth.sessions(id,user_id,aal) VALUES($1,$2,'aal2')",[provider,a.subject]);await client.query('SELECT crest_commands.issue_app_session($1,$2,$3,$4,$5,$6,$7,$8,$9,false,$10,$11,$12)',[app,randomBytes(32),a.id,a.epoch,issuer,a.subject,provider,new Date(),new Date(),randomBytes(32),'synthetic',randomUUID()]);assert.deepEqual(await page(a),[]);assert.equal((await client.query('SELECT count(*)::int AS n FROM auth.sessions WHERE id=$1',[provider])).rows[0].n,1);assert.equal((await client.query('SELECT revoked_at FROM crest_private.app_sessions WHERE id=$1',[app])).rows[0].revoked_at,null);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.provider_login_attempts WHERE actor_id=$1',[a.id])).rows[0].n,0);
+});

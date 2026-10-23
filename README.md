@@ -10,6 +10,8 @@ The current [exact-target cleanup executor slice](planning/PHASE_2_PROVIDER_CLEA
 
 The [bounded maintenance adapter](planning/PHASE_2_PROVIDER_CLEANUP_DISPATCH.md) processes only explicit original request IDs with separate execution/history profiles, receipt validation and stop-on-unknown reports. It adds no scheduler, production credential or default runtime activation.
 
+The [historical reconciliation review](planning/PHASE_2_PROVIDER_RECONCILIATION_REVIEW.md) joins bounded login-start/target/finish/request/outcome facts while keeping unknown, conflicting and recorded states distinct. It adds no cleanup or application-access authority.
+
 ## Local development
 
 Run every repository command from this `crest-os-public` checkout, not the parent ChatGPT project mirror or original private archive. Use Node **24.22.0** and its bundled npm **11.19.1**. No paid account or provider credentials are needed.
