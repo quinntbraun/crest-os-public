@@ -51,7 +51,7 @@
     "test:login-fences-db": "node --test --test-concurrency=1 tests/integration/login-attempt-fences.test.mjs",
     "test:provider-requests-db": "node --test --test-concurrency=1 tests/integration/provider-cleanup-requests.test.mjs",
     "test:provider-executor-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-cleanup-executor.test.mjs",
-    "test:provider-export-db": "node --test --test-concurrency=1 tests/integration/provider-evidence-snapshot.test.mjs",
+    "test:provider-export-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-evidence-snapshot.test.mjs",
     "test:provider-review-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-reconciliation-review.test.mjs"
   },
   "dependencies": {
