@@ -14,6 +14,8 @@ The [historical reconciliation review](planning/PHASE_2_PROVIDER_RECONCILIATION_
 
 The [private runtime review adapter](planning/PHASE_2_PROVIDER_RECONCILIATION_RUNTIME.md) validates one bounded read-only inventory page and closes its owned transport within the maintenance lifetime. It enables no automatic cleanup, endpoint or scheduler.
 
+The [portable attempt-evidence verifier](planning/PHASE_2_PORTABLE_ATTEMPT_EVIDENCE.md) checks original JSON bytes, hashes and included source links offline, with explicit missing-record reporting. It establishes internal consistency only; complete exports and recoverable backups remain gated.
+
 ## Local development
 
 Run every repository command from this `crest-os-public` checkout, not the parent ChatGPT project mirror or original private archive. Use Node **24.22.0** and its bundled npm **11.19.1**. No paid account or provider credentials are needed.
