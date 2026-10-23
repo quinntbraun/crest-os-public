@@ -62,7 +62,7 @@ $export$;
 CREATE FUNCTION crest_commands.provider_evidence_export_page(expected_actor uuid,expected_issuer text,expected_snapshot text,ledger_kind text,after_id uuid,page_size integer)
 RETURNS TABLE(record_id uuid,canonical_evidence text,evidence_hash text)
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $export$
-DECLARE source_cursor refcursor; item record; snapshot_token text;
+DECLARE source_cursor refcursor; item record; snapshot_token text; body_limit integer:=8192;
 BEGIN
   IF current_setting('transaction_isolation')<>'repeatable read' OR current_setting('transaction_read_only')<>'on' THEN
     RAISE EXCEPTION USING ERRCODE='25001',MESSAGE='CREST_PROVIDER_EXPORT_SNAPSHOT_REQUIRED';
@@ -81,6 +81,7 @@ BEGIN
   IF expected_snapshot<>snapshot_token THEN
     RAISE EXCEPTION USING ERRCODE='40001',MESSAGE='CREST_PROVIDER_EXPORT_SNAPSHOT_CHANGED';
   END IF;
+  IF ledger_kind='inventory_observation' THEN body_limit:=262144; END IF;
   CASE ledger_kind
     WHEN 'inventory_observation' THEN OPEN source_cursor FOR SELECT t.request_id AS source_id,t.canonical_evidence AS source_body,t.event_hash AS source_hash
       FROM crest_private.provider_inventory_observations t WHERE t.actor_id=expected_actor AND t.provider_issuer=expected_issuer AND (after_id IS NULL OR t.request_id>after_id) ORDER BY t.request_id LIMIT page_size;
@@ -98,7 +99,7 @@ BEGIN
   LOOP
     FETCH source_cursor INTO item; EXIT WHEN NOT FOUND;
     -- A damaged source fails the statement; never filter it out or invent bytes.
-    IF item.source_body IS NULL OR octet_length(item.source_body)>CASE WHEN ledger_kind='inventory_observation' THEN 262144 ELSE 8192 END
+    IF item.source_body IS NULL OR octet_length(item.source_body)>body_limit
       OR item.source_hash IS NULL OR item.source_hash !~ '^[a-f0-9]{64}$'
       OR item.source_hash<>encode(sha256(convert_to(item.source_body,'UTF8')),'hex') THEN
       RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_PROVIDER_EXPORT_SOURCE_REVIEW_REQUIRED';
