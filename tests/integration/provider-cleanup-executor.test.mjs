@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import {before,after,test} from 'node:test';
+import net from 'node:net';
+import {once} from 'node:events';
+import {createProviderCleanupExecutor,createProviderCleanupOutcomeReader,dispatchProviderCleanup} from '../../src/security/provider-cleanup-maintenance.ts';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 
+const runtimeRoles=[];let runtimeCleanup,runtimeHistory,executeAdapter,readAdapter;
+const freshSignal=()=>new AbortController().signal;
 const issuer='https://auth.example.com/auth/v1',table='crest_private.provider_cleanup_outcomes';
 const executeFn='crest_commands.execute_provider_cleanup(uuid,uuid,text)';
 let sandbox,target,client,web,second,maintenance,bootstrap,owner,other,business,prior,receipt,retained,localRetained,cleanup,cleanupSecond;
@@ -20,8 +25,9 @@ before(async()=>{
   await client.query('BEGIN');try{business=(await client.query("INSERT INTO crest.businesses(legal_name,timezone,created_by,updated_by,origin) VALUES('Synthetic target business','UTC',$1,$1,'manual') RETURNING id",[owner.id])).rows[0].id;await member(owner);await member(other);await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,owner.id]);await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}
   web=await sandbox.connect(target);second=await sandbox.connect(target);maintenance=await sandbox.connect(target);for(const c of [web,second])await c.query('SET ROLE crest_web');await maintenance.query('SET ROLE crest_inventory');
   const f=await fixture();await capture(f);await issue(f);f.stop=await finish(f);await request(f);retained=await sources();localRetained=await localSources();receipt=await sandbox.apply(target);cleanup=await sandbox.connect(target);cleanupSecond=await sandbox.connect(target);for(const c of [cleanup,cleanupSecond])await c.query('SET ROLE crest_cleanup');
+
 });
-after(async()=>{await sandbox?.close();});
+after(async()=>{for(const name of runtimeRoles)await sandbox.admin.query(`DROP ROLE ${name}`);await sandbox?.close();});
 
 const finish=(f,phase='stopped_review',c=web)=>c.query('SELECT crest_commands.finish_provider_login($1,$2,$3,$4,$5,$6) AS result',[f.b.attemptId,f.a.id,f.b.securityEpoch,issuer,f.a.subject,phase]).then(r=>r.rows[0].result);
 const local=f=>client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[f.b.appSessionId]).then(r=>r.rows[0]);
@@ -132,4 +138,61 @@ test('DELETE rechecks the provider subject after an actual row-lock wait and rej
 
 test('actual child-trigger and parent-FK DDL cannot cross the held inspection/deletion transaction',async()=>{
  const f=await selected(),c=await sandbox.connect(target);await c.query("SET lock_timeout='200ms'");await client.query("CREATE FUNCTION auth.cleanup_ddl_probe() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN OLD; END $$");await cleanup.query('BEGIN');try{await consume(f);for(const child of ['refresh_tokens','mfa_amr_claims'])await assert.rejects(c.query(`CREATE TRIGGER cleanup_ddl_probe BEFORE DELETE ON auth.${child} FOR EACH ROW EXECUTE FUNCTION auth.cleanup_ddl_probe()`),e=>e.code==='55P03');await assert.rejects(c.query('CREATE TABLE auth.cleanup_fk_probe(session_id uuid REFERENCES auth.sessions(id) ON DELETE CASCADE)'),e=>e.code==='55P03');assert.equal(await read(f.request.evidence.requestId),null);}finally{await cleanup.query('ROLLBACK');await client.query('DROP FUNCTION auth.cleanup_ddl_probe()');}assert.equal(await present(f),1);await consume(f);
+});
+
+async function provisionSyntheticMaintenance(){
+  async function runtime(role){const name=`crest_probe_${randomBytes(8).toString('hex')}`,password=randomBytes(32).toString('hex');assert.match(name,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);await sandbox.admin.query(`CREATE ROLE ${name} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);runtimeRoles.push(name);await sandbox.admin.query(`GRANT ${role} TO ${name} WITH INHERIT FALSE`);const url=new URL(target);url.username=name;url.password=password;return {name,config:{connectionString:url.toString(),environment:'test',actorId:owner.id,issuer}};}
+  runtimeCleanup=await runtime('crest_cleanup');runtimeHistory=await runtime('crest_inventory');executeAdapter=createProviderCleanupExecutor(runtimeCleanup.config);readAdapter=createProviderCleanupOutcomeReader(runtimeHistory.config);
+}
+test('restricted maintenance adapters execute and read exact persisted source bytes without source mutation',async()=>{
+ await provisionSyntheticMaintenance();
+ const f=await selected(owner,{registered:true}),before=await localSources(),id=f.request.evidence.requestId;
+ const r=await executeAdapter(id.toUpperCase(),freshSignal());assert.equal(r.outcome,'provider_removed');assert.equal(r.canonicalEvidence,(await read(id)).canonicalEvidence);assert.deepEqual(await readAdapter(id,freshSignal()),r);assert.equal(JSON.parse(r.canonicalEvidence).databasePrincipal,runtimeCleanup.name);assert.equal(await present(f),0);assert.equal(await localSources(),before);
+});
+test('maintenance reader null is scoped historical absence, never execution or current eligibility',async()=>{
+ const f=await selected(),id=f.request.evidence.requestId;assert.equal(await readAdapter(id,freshSignal()),null);assert.equal(await present(f),1);await executeAdapter(id,freshSignal());assert.equal(await createProviderCleanupOutcomeReader({...runtimeHistory.config,actorId:other.id})(id,freshSignal()),null);
+});
+test('maintenance refuses administrator and combined capability logins before provider action',async()=>{
+ const f=await selected(),id=f.request.evidence.requestId;
+ await assert.rejects(createProviderCleanupExecutor({...runtimeCleanup.config,connectionString:target})(id,freshSignal()),/PROVIDER_CLEANUP_REVIEW_REQUIRED/);
+ await sandbox.admin.query(`GRANT crest_inventory TO ${runtimeCleanup.name} WITH INHERIT FALSE`);
+ try{await assert.rejects(executeAdapter(id,freshSignal()),/PROVIDER_CLEANUP_REVIEW_REQUIRED/);}finally{await sandbox.admin.query(`REVOKE crest_inventory FROM ${runtimeCleanup.name}`);}
+ assert.equal(await present(f),1);assert.equal(await readAdapter(id,freshSignal()),null);
+});
+test('inventory login cannot substitute for the executor and cancellation starts no database action',async()=>{
+ const f=await selected(),id=f.request.evidence.requestId;
+ await assert.rejects(createProviderCleanupExecutor(runtimeHistory.config)(id,freshSignal()),/PROVIDER_CLEANUP_REVIEW_REQUIRED/);
+ const c=new AbortController();c.abort();assert.equal((await dispatchProviderCleanup([id],executeAdapter,c.signal)).telemetry.notStarted,1);assert.equal(await present(f),1);assert.equal(await readAdapter(id,freshSignal()),null);
+});
+test('bounded sequential dispatch confirms removed and observed-absent receipts without inventing new deletions on replay',async()=>{
+ const f=await selected(),g=await selected();await client.query('DELETE FROM auth.sessions WHERE id=$1',[g.p]);const ids=[f.request.evidence.requestId,g.request.evidence.requestId];
+ const r=await dispatchProviderCleanup(ids,executeAdapter,freshSignal());assert.deepEqual(r.telemetry,{selected:2,started:2,confirmed:2,removed:1,absentObserved:1,unknown:0,notStarted:0});
+ await client.query("INSERT INTO auth.sessions(id,user_id,aal) VALUES($1,$2,'aal1')",[f.p,owner.subject]);assert.deepEqual((await dispatchProviderCleanup(ids,executeAdapter,freshSignal())).results,r.results);assert.equal(await present(f),1);
+});
+test('failed source binding stops dispatch and leaves later selected targets unstarted with original identities',async()=>{
+ const f=await selected(other),g=await selected(),ids=[f.request.evidence.requestId,g.request.evidence.requestId];const r=await dispatchProviderCleanup(ids,executeAdapter,freshSignal());assert.deepEqual(r.results,ids.map((requestId,i)=>({requestId,status:i?'not_started':'outcome_unknown'})));assert.equal(await present(f),1);assert.equal(await present(g),1);assert.equal(await readAdapter(ids[1],freshSignal()),null);
+});
+test('transport drops the committed execution response: dispatch stops and independent exact history resolves it',async()=>{
+ const f=await selected(),g=await selected(),id=f.request.evidence.requestId,url=new URL(runtimeCleanup.config.connectionString),sockets=new Set(),upstreamPort=Number(url.port);let dropped=false;
+ // Disposable loopback proxy only. Forward authentication/guard normally; withhold
+ // command packets until the backend ReadyForQuery proves autocommit completed,
+ // then sever transport before the adapter can confirm the receipt.
+ const proxy=net.createServer(down=>{
+   const up=net.createConnection({host:'127.0.0.1',port:upstreamPort});sockets.add(down);sockets.add(up);let tail=Buffer.alloc(0),discard=false,pending=Buffer.alloc(0);
+   const stop=()=>{down.destroy();up.destroy();};down.on('error',stop);up.on('error',stop);down.on('close',()=>{sockets.delete(down);up.destroy();});up.on('close',()=>{sockets.delete(up);down.destroy();});
+   down.on('data',data=>{tail=Buffer.concat([tail,data]);if(tail.includes(Buffer.from('execute_provider_cleanup')))discard=true;tail=tail.subarray(-256);up.write(data);});
+   up.on('data',data=>{
+     if(!discard){down.write(data);return;}pending=Buffer.concat([pending,data]);if(pending.length>32768){stop();return;}
+     while(pending.length>=5){const size=pending.readUInt32BE(1)+1;if(size<5||size>32768){stop();return;}if(pending.length<size)return;
+       if(pending[0]===90){dropped=true;stop();return;}pending=pending.subarray(size);
+     }
+   });
+ });
+ await new Promise(resolve=>proxy.listen(0,'127.0.0.1',resolve));
+ try{
+   url.port=String(proxy.address().port);const execute=createProviderCleanupExecutor({...runtimeCleanup.config,connectionString:url.toString()});
+   const r=await dispatchProviderCleanup([id,g.request.evidence.requestId],execute,freshSignal());assert.equal(dropped,true);assert.deepEqual(r.results.map(x=>x.status),['outcome_unknown','not_started']);assert.equal(await present(f),0);assert.equal(await present(g),1);
+   const retained=await readAdapter(id,freshSignal());assert.equal(retained.outcome,'provider_removed');assert.equal(retained.requestId,id);
+   await client.query("INSERT INTO auth.sessions(id,user_id,aal) VALUES($1,$2,'aal1')",[f.p,owner.subject]);assert.deepEqual(await executeAdapter(id,freshSignal()),retained);assert.equal(await present(f),1);
+ }finally{for(const socket of sockets)socket.destroy();const closed=once(proxy,'close');proxy.close();await closed;}
 });
