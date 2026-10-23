@@ -118,23 +118,28 @@ test('hostile search_path and temporary names cannot redirect the fixed reader',
   const before=await digest();await maintenance.query("SET search_path=pg_temp,public; CREATE TEMP TABLE app_sessions(id uuid); CREATE TEMP TABLE actors(id uuid); CREATE TEMP TABLE sessions(id uuid)");
   try{assert((await inventory()).some(r=>r.app_session_id===legacy.id));}finally{await maintenance.query('RESET search_path');}assert.equal(await digest(),before);
 });
-test('a schema17 target rejects drifted role attributes and membership before adding inventory',async()=>{
-  const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);await sandbox.apply(t,await sandbox.prefix(17));
+test('fresh schema17 targets reject each role drift and retain failed-attempt review barriers',async()=>{
   await sandbox.admin.query(`REVOKE crest_inventory FROM ${login}`);
   try{
-    await sandbox.admin.query('ALTER ROLE crest_inventory_owner INHERIT');try{await assert.rejects(sandbox.apply(t));}finally{await sandbox.admin.query('ALTER ROLE crest_inventory_owner NOINHERIT');}
-    await sandbox.admin.query('GRANT crest_inventory_owner TO crest_inventory');try{await assert.rejects(sandbox.apply(t));}finally{await sandbox.admin.query('REVOKE crest_inventory_owner FROM crest_inventory');}
-    await c.query('ALTER DEFAULT PRIVILEGES FOR ROLE crest_inventory_owner GRANT EXECUTE ON ROUTINES TO PUBLIC');try{await assert.rejects(sandbox.apply(t));}finally{await c.query('ALTER DEFAULT PRIVILEGES FOR ROLE crest_inventory_owner REVOKE EXECUTE ON ROUTINES FROM PUBLIC');}
-    await c.query('GRANT SELECT ON auth.users TO crest_inventory_owner');try{await assert.rejects(sandbox.apply(t));}finally{await c.query('REVOKE SELECT ON auth.users FROM crest_inventory_owner');}
-    assert.equal((await c.query("SELECT to_regprocedure('crest_commands.provider_session_inventory(uuid,text,uuid,integer)') AS fn")).rows[0].fn,null);
-    assert.equal((await sandbox.apply(t)).history.length,18);
+    for(const [change,restore] of [
+      ['ALTER ROLE crest_inventory_owner INHERIT','ALTER ROLE crest_inventory_owner NOINHERIT'],
+      ['GRANT crest_inventory_owner TO crest_inventory','REVOKE crest_inventory_owner FROM crest_inventory'],
+      ['ALTER DEFAULT PRIVILEGES FOR ROLE crest_inventory_owner GRANT EXECUTE ON ROUTINES TO PUBLIC','ALTER DEFAULT PRIVILEGES FOR ROLE crest_inventory_owner REVOKE EXECUTE ON ROUTINES FROM PUBLIC'],
+      ['GRANT SELECT ON auth.users TO crest_inventory_owner','REVOKE SELECT ON auth.users FROM crest_inventory_owner']
+    ]){
+      const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);const before=await sandbox.apply(t,await sandbox.prefix(17));
+      await c.query(change);try{await assert.rejects(sandbox.apply(t),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);}finally{await c.query(restore);}
+      assert.equal((await c.query("SELECT to_regprocedure('crest_commands.provider_session_inventory(uuid,text,uuid,integer)') AS fn")).rows[0].fn,null);
+      assert.equal((await c.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,before.history.length);
+      await assert.rejects(sandbox.apply(t),/MIGRATION_PENDING_REVIEW_REQUIRED/);
+    }
   }finally{await sandbox.admin.query(`GRANT crest_inventory TO ${login}`);}
 });
-test('incompatible provider RLS aborts the migration without adopting or repairing provider state',async()=>{
+test('incompatible provider RLS aborts without repairing state or replaying the failed target',async()=>{
   const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);await sandbox.apply(t,await sandbox.prefix(17));
-  await c.query('ALTER TABLE auth.sessions DISABLE ROW LEVEL SECURITY');await assert.rejects(sandbox.apply(t));
+  await c.query('ALTER TABLE auth.sessions DISABLE ROW LEVEL SECURITY');await assert.rejects(sandbox.apply(t),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);
   assert.equal((await c.query("SELECT relrowsecurity FROM pg_class WHERE oid='auth.sessions'::regclass")).rows[0].relrowsecurity,false);
   assert.equal((await c.query("SELECT to_regprocedure('crest_commands.provider_session_inventory(uuid,text,uuid,integer)') AS fn")).rows[0].fn,null);
-  await c.query('ALTER TABLE auth.sessions ENABLE ROW LEVEL SECURITY');await sandbox.admin.query(`REVOKE crest_inventory FROM ${login}`);
-  try{assert.equal((await sandbox.apply(t)).history.length,18);}finally{await sandbox.admin.query(`GRANT crest_inventory TO ${login}`);}
+  assert.equal((await c.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,17);
+  await c.query('ALTER TABLE auth.sessions ENABLE ROW LEVEL SECURITY');await assert.rejects(sandbox.apply(t),/MIGRATION_PENDING_REVIEW_REQUIRED/);
 });
