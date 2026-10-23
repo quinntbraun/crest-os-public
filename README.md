@@ -6,7 +6,7 @@ Crest Detailing's internal business operating system.
 
 The owner-requested [V1 Google Calendar capability](planning/GOOGLE_CALENDAR_V1.md) is now in the versioned specification (P20/BR21/ADR35). Research and acceptance requirements are documented; no Calendar runtime or live connection is implemented.
 
-The current [exact-source cleanup request slice](planning/PHASE_2_PROVIDER_CLEANUP_REQUESTS.md) records pending review from proven stopped-login targets; it adds no provider cleanup executor or production access.
+The current [exact-target cleanup executor slice](planning/PHASE_2_PROVIDER_CLEANUP_EXECUTOR.md) adds a separately isolated, source-checked transactional maintenance operation under ADR36; it provisions no service login, scheduler or production access.
 
 ## Local development
 
