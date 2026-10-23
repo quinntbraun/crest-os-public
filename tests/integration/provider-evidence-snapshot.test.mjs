@@ -1,11 +1,17 @@
 import assert from 'node:assert/strict';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import {before,after,test} from 'node:test';
+import net from 'node:net';
+import {once} from 'node:events';
+import pg from 'pg';
+import {createProviderEvidenceCollector} from '../../src/security/provider-evidence-collector.ts';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 const issuer='https://auth.example.com/auth/v1';
 const sources=[['inventory_observation','provider_inventory_observations','request_id','inventory_export_scope'],['login_attempt','provider_login_attempts','attempt_id','attempt_export_scope'],['login_target','provider_login_targets','attempt_id','target_export_scope'],['login_finish','provider_login_finishes','id','finish_export_scope'],['cleanup_request','provider_cleanup_requests','request_id','request_export_scope'],['cleanup_outcome','provider_cleanup_outcomes','request_id','outcome_export_scope']];
 let sandbox,target,client,web,second,maintenance,cleanup,reader,readerTwo,bootstrap,owner,other,business,prior,receipt,retained,grants;
+const runtimeRoles=[];let runtimeInventory,runtimeCleanup;
+const freshSignal=()=>new AbortController().signal;
 async function actor(){const subject=randomUUID();await client.query("INSERT INTO auth.users(id,email,aud,role) VALUES($1,$2,'authenticated','authenticated')",[subject,`synthetic-${subject}@example.com`]);const a=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic target owner',$1,$2,$3,$3,'manual') RETURNING id,current_security_epoch",[issuer,subject,bootstrap])).rows[0];return {id:a.id,subject,epoch:a.current_security_epoch};}
 async function member(a){await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$3,$3,'manual')",[business,a.id,owner.id]);}
 const begin=(a=owner)=>web.query('SELECT crest_commands.begin_provider_login($1,$2,$3,$4) AS result',[randomUUID(),randomUUID(),issuer,a.subject]).then(r=>r.rows[0].result);
@@ -32,7 +38,7 @@ before(async()=>{
  for(const c of [web,second])await c.query('SET ROLE crest_web');for(const c of [maintenance,reader,readerTwo])await c.query('SET ROLE crest_inventory');await cleanup.query('SET ROLE crest_cleanup');
  await full();await observation();retained=await sourceHashes();grants=await privileges();receipt=await sandbox.apply(target);
 });
-after(async()=>{await sandbox?.close();});
+after(async()=>{for(const name of runtimeRoles)await sandbox.admin.query(`DROP ROLE ${name}`);await sandbox?.close();});
 
 test('schema25 upgrade preserves every original source and table privilege with repeatable receipt',async()=>{
  assert.equal(prior.history.length,25);assert.equal(receipt.history.length,26);assert.deepEqual(receipt.history.slice(0,25),prior.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);assert.deepEqual(await sourceHashes(),retained);assert.deepEqual(await privileges(),grants);
@@ -104,9 +110,64 @@ test('forbidden provider secret SELECT drift refuses migration26 without creatin
 test('invalid UUID and integer parameters fail before producing any page',async()=>{
  for(const args of [['bad',issuer,'0'.repeat(64),'login_attempt',null,1],[owner.id,issuer,'0'.repeat(64),'login_attempt','bad',1],[owner.id,issuer,'0'.repeat(64),'login_attempt',null,'1.5']]){await reader.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');try{await assert.rejects(reader.query('SELECT * FROM crest_commands.provider_evidence_export_page($1,$2,$3,$4,$5,$6)',args),e=>e.code==='22P02');}finally{await reader.query('ROLLBACK');}}
 });
-test('a mismatched restored source hash fails the entire page instead of filtering out its record',async()=>{
+async function provisionRuntime(role){
+ const name=`crest_probe_${randomBytes(8).toString('hex')}`,password=randomBytes(32).toString('hex');assert.match(name,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);assert(['crest_inventory','crest_cleanup'].includes(role));
+ await sandbox.admin.query(`CREATE ROLE ${name} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);runtimeRoles.push(name);await sandbox.admin.query(`GRANT ${role} TO ${name} WITH INHERIT FALSE`);
+ const url=new URL(target);url.username=name;url.password=password;return {name,config:{connectionString:url.toString(),environment:'test',actorId:owner.id,issuer}};
+}
+const collect=(a=owner,config=runtimeInventory.config,signal=freshSignal())=>createProviderEvidenceCollector({...config,actorId:a.id})(signal);
+
+test('private collector preserves every original byte hash and count across all six actual ledgers without source writes',async()=>{
+ // Provision disposable logins only after all closed-role migration checks.
+ runtimeInventory=await provisionRuntime('crest_inventory');runtimeCleanup=await provisionRuntime('crest_cleanup');
+ const a=await actor();await member(a);await full(a);await observation(a);const before=await sourceHashes(),r=await collect(a);
+ assert.equal(r.assurance,'snapshot_bytes_only');assert.equal(r.context.scope,'retained_provider_ledgers');assert.match(r.generationId,/^[a-f0-9-]{36}$/);let bytes=0;
+ for(const [kind,table,key] of sources){const expected=(await client.query(`SELECT ${key} AS record_id,canonical_evidence,event_hash AS evidence_hash FROM crest_private.${table} WHERE actor_id=$1 AND provider_issuer=$2 ORDER BY ${key}`,[a.id,issuer])).rows;
+  const rows=r.records.filter(x=>x.kind===kind);assert.equal(String(rows.length),r.context.ledgerCounts[kind]);assert.deepEqual(rows.map(x=>({record_id:x.recordId,canonical_evidence:x.canonicalEvidence,evidence_hash:x.evidenceHash})),expected);for(const row of rows)bytes+=Buffer.byteLength(row.canonicalEvidence,'utf8');}
+ assert.equal(r.evidenceBytes,bytes);for(const x of [r,r.context,r.context.ledgerCounts,r.records,...r.records])assert(Object.isFrozen(x));assert.deepEqual(await sourceHashes(),before);
+});
+test('collector follows exclusive UUID cursors across more than two real pages without duplicates or gaps',async()=>{
+ const a=await actor();await member(a);const ids=[];for(let i=0;i<41;i++)ids.push((await begin(a)).attemptId);const r=await collect(a);assert.deepEqual(r.records.map(x=>x.recordId),ids.sort());assert.equal(r.context.ledgerCounts.login_attempt,'41');
+});
+test('collector keeps empty scopes explicit and preserves disabled old-epoch evidence without access promotion',async()=>{
+ const a=await actor();await member(a);await full(a);await client.query('UPDATE crest_private.actors SET disabled_at=clock_timestamp(),current_security_epoch=$1,version=version+1 WHERE id=$2',[randomUUID(),a.id]);assert.equal((await collect(a)).context.ledgerCounts.cleanup_outcome,'1');
+ for(const r of [await collect({id:randomUUID()}),await collect(a,{...runtimeInventory.config,issuer:'https://other.example.com/auth/v1'})]){assert.deepEqual(r.records,[]);assert(Object.values(r.context.ledgerCounts).every(n=>n==='0'));assert(!Object.hasOwn(r,'providerAbsent'));}
+});
+test('one pinned collector snapshot excludes starts targets requests and cleanup committed after its context',async()=>{
+ const a=await actor();await member(a);const f=await fixture(a);f.stop=await finish(f);const original=pg.Client.prototype.query,connections=new Set();let contexts=0;
+ // Test-only barrier around the real pg client. Every SQL statement and
+ // producer still executes against PostgreSQL; runtime has no injected hook.
+ pg.Client.prototype.query=async function(sql,...args){const r=await original.call(this,sql,...args);if(this.user===runtimeInventory.name){connections.add(this);if(typeof sql==='string'&&sql.includes('provider_evidence_export_context(')){contexts++;await begin(a);await capture(f);f.request=await request(f);await consume(f);}}return r;};
+ let held;try{held=await collect(a);}finally{pg.Client.prototype.query=original;}
+ assert.equal(contexts,1);assert.equal(connections.size,1);assert.equal(held.context.ledgerCounts.login_attempt,'1');assert.equal(held.records.filter(r=>r.kind==='login_attempt').length,1);
+ for(const k of ['login_target','cleanup_request','cleanup_outcome']){assert.equal(held.context.ledgerCounts[k],'0');assert(!held.records.some(r=>r.kind===k));}
+ const fresh=await collect(a);assert.notEqual(fresh.generationId,held.generationId);assert.equal(fresh.context.ledgerCounts.login_attempt,'2');for(const k of ['login_target','cleanup_request','cleanup_outcome'])assert.equal(fresh.context.ledgerCounts[k],'1');
+});
+test('collector denies administrator cleanup-only and combined roles and has no raw-source or cleanup authority',async()=>{
+ const before=await sourceHashes();for(const c of [{...runtimeInventory.config,connectionString:target},runtimeCleanup.config])await assert.rejects(collect(owner,c),/PROVIDER_EVIDENCE_COLLECTION_REVIEW_REQUIRED/);
+ await sandbox.admin.query(`GRANT crest_cleanup TO ${runtimeInventory.name} WITH INHERIT FALSE`);try{await assert.rejects(collect(),/PROVIDER_EVIDENCE_COLLECTION_REVIEW_REQUIRED/);}finally{await sandbox.admin.query(`REVOKE crest_cleanup FROM ${runtimeInventory.name}`);}
+ const c=new pg.Client({connectionString:runtimeInventory.config.connectionString,options:'-c role=crest_inventory'});await c.connect();try{await assert.rejects(c.query('SELECT * FROM auth.sessions'),e=>e.code==='42501');await assert.rejects(c.query('SELECT crest_commands.execute_provider_cleanup($1,$2,$3)',[randomUUID(),owner.id,issuer]),e=>e.code==='42501');}finally{await c.end();}assert.deepEqual(await sourceHashes(),before);
+});
+test('lost actual snapshot connection discards partial work and an explicit later call uses a new context',async()=>{
+ const a=await actor();await member(a);await begin(a);const before=await sourceHashes(),original=pg.Client.prototype.query;let contexts=0,pages=0;
+ pg.Client.prototype.query=async function(sql,...args){const r=await original.call(this,sql,...args);if(this.user===runtimeInventory.name&&typeof sql==='string'){if(sql.includes('provider_evidence_export_context('))contexts++;if(sql.includes('provider_evidence_export_page(')){pages++;await this.end();}}return r;};
+ try{await assert.rejects(collect(a),/PROVIDER_EVIDENCE_COLLECTION_REVIEW_REQUIRED/);}finally{pg.Client.prototype.query=original;}
+ assert.equal(contexts,1);assert.equal(pages,1);assert.equal((await collect(a)).context.ledgerCounts.login_attempt,'1');assert.deepEqual(await sourceHashes(),before);
+ const cancel=new AbortController();cancel.abort();await assert.rejects(collect(a,runtimeInventory.config,cancel.signal),/PROVIDER_EVIDENCE_COLLECTION_REVIEW_REQUIRED/);
+});
+test('successful collector closes its real transport without a peer shutdown acknowledgement',async()=>{
+ const a=await actor();await member(a);await begin(a);const url=new URL(runtimeInventory.config.connectionString),sockets=new Set();let endedResolve;
+ const ended=new Promise(resolve=>{endedResolve=resolve;});
+ const proxy=net.createServer({allowHalfOpen:true},down=>{const up=net.createConnection({host:'127.0.0.1',port:Number(new URL(target).port)});sockets.add(down);sockets.add(up);down.on('error',()=>{});up.on('error',()=>down.destroy());down.on('data',data=>{if(data.length===5&&data[0]===88&&data.readUInt32BE(1)===4)return;up.write(data);});up.on('data',data=>down.write(data));down.on('end',()=>endedResolve());});
+ await new Promise(resolve=>proxy.listen(0,'127.0.0.1',resolve));let deadline;
+ try{url.port=String(proxy.address().port);const timeout=new Promise((_,reject)=>{deadline=setTimeout(()=>reject(new Error('BOUNDED_COLLECTOR_CLOSE_REQUIRED')),2500);});const r=await Promise.race([collect(a,{...runtimeInventory.config,connectionString:url.toString()}),timeout]);assert.equal(r.context.ledgerCounts.login_attempt,'1');await Promise.race([ended,timeout]);}
+ finally{clearTimeout(deadline);for(const socket of sockets)socket.destroy();const closed=once(proxy,'close');proxy.close();await closed;}
+});
+
+test('a mismatched restored source hash fails the entire page and collector instead of filtering out its record',async()=>{
  const a=await actor();await member(a);const fixtures=[await fixture(a),await fixture(a)],f=fixtures.sort((x,y)=>x.b.attemptId.localeCompare(y.b.attemptId)).at(-1);const checks=(await client.query("SELECT conname FROM pg_constraint WHERE conrelid='crest_private.provider_login_attempts'::regclass AND contype='c' AND pg_get_constraintdef(oid) LIKE '%event_hash =%'")).rows;assert.equal(checks.length,1);assert.match(checks[0].conname,/^[a-z0-9_]+$/);
  await client.query('BEGIN');try{await client.query('ALTER TABLE crest_private.provider_login_attempts DISABLE TRIGGER USER');await client.query(`ALTER TABLE crest_private.provider_login_attempts DROP CONSTRAINT ${checks[0].conname}`);await client.query("UPDATE crest_private.provider_login_attempts SET event_hash=repeat('0',64) WHERE attempt_id=$1",[f.b.attemptId]);await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}
  await assert.rejects(snapshot(a,ctx=>{assert.equal(ctx.ledgerCounts.login_attempt,'2');return page(ctx,'login_attempt');}),e=>e.code==='23514');
+ await assert.rejects(collect(a),/PROVIDER_EVIDENCE_COLLECTION_REVIEW_REQUIRED/);
  // Dedicated final corruption fixture only. No repair, filtering or source writer is introduced.
 });
