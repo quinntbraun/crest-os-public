@@ -59,7 +59,7 @@ BEGIN
       'cleanup_outcome',(SELECT count(*)::text FROM crest_private.provider_cleanup_outcomes WHERE actor_id=expected_actor AND provider_issuer=expected_issuer)));
 END
 $export$;
-CREATE FUNCTION crest_commands.provider_evidence_export_page(expected_actor uuid,expected_issuer text,expected_snapshot text,ledger_kind text,after_id uuid,page_size integer)
+CREATE FUNCTION crest_commands.provider_evidence_export_page(expected_actor uuid,expected_issuer text,expected_snapshot text,ledger_kind text,after_id uuid,requested_page_size integer)
 RETURNS TABLE(record_id uuid,canonical_evidence text,evidence_hash text)
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $export$
 DECLARE source_cursor refcursor; item record; snapshot_token text; body_limit integer:=8192;
@@ -72,7 +72,7 @@ BEGIN
   END IF;
   IF expected_snapshot IS NULL OR expected_snapshot !~ '^[a-f0-9]{64}$' OR ledger_kind IS NULL
     OR ledger_kind NOT IN ('inventory_observation','login_attempt','login_target','login_finish','cleanup_request','cleanup_outcome')
-    OR page_size IS NULL OR page_size NOT BETWEEN 1 AND 20 THEN
+    OR requested_page_size IS NULL OR requested_page_size NOT BETWEEN 1 AND 20 THEN
     RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_PROVIDER_EXPORT_INPUT_REQUIRED';
   END IF;
   snapshot_token:=pg_current_snapshot()::text;
@@ -84,17 +84,17 @@ BEGIN
   IF ledger_kind='inventory_observation' THEN body_limit:=262144; END IF;
   CASE ledger_kind
     WHEN 'inventory_observation' THEN OPEN source_cursor FOR SELECT t.request_id AS source_id,t.canonical_evidence AS source_body,t.event_hash AS source_hash
-      FROM crest_private.provider_inventory_observations t WHERE t.actor_id=expected_actor AND t.provider_issuer=expected_issuer AND (after_id IS NULL OR t.request_id>after_id) ORDER BY t.request_id LIMIT page_size;
+      FROM crest_private.provider_inventory_observations t WHERE t.actor_id=expected_actor AND t.provider_issuer=expected_issuer AND (after_id IS NULL OR t.request_id>after_id) ORDER BY t.request_id LIMIT requested_page_size;
     WHEN 'login_attempt' THEN OPEN source_cursor FOR SELECT t.attempt_id AS source_id,t.canonical_evidence AS source_body,t.event_hash AS source_hash
-      FROM crest_private.provider_login_attempts t WHERE t.actor_id=expected_actor AND t.provider_issuer=expected_issuer AND (after_id IS NULL OR t.attempt_id>after_id) ORDER BY t.attempt_id LIMIT page_size;
+      FROM crest_private.provider_login_attempts t WHERE t.actor_id=expected_actor AND t.provider_issuer=expected_issuer AND (after_id IS NULL OR t.attempt_id>after_id) ORDER BY t.attempt_id LIMIT requested_page_size;
     WHEN 'login_target' THEN OPEN source_cursor FOR SELECT t.attempt_id AS source_id,t.canonical_evidence AS source_body,t.event_hash AS source_hash
-      FROM crest_private.provider_login_targets t WHERE t.actor_id=expected_actor AND t.provider_issuer=expected_issuer AND (after_id IS NULL OR t.attempt_id>after_id) ORDER BY t.attempt_id LIMIT page_size;
+      FROM crest_private.provider_login_targets t WHERE t.actor_id=expected_actor AND t.provider_issuer=expected_issuer AND (after_id IS NULL OR t.attempt_id>after_id) ORDER BY t.attempt_id LIMIT requested_page_size;
     WHEN 'login_finish' THEN OPEN source_cursor FOR SELECT t.id AS source_id,t.canonical_evidence AS source_body,t.event_hash AS source_hash
-      FROM crest_private.provider_login_finishes t WHERE t.actor_id=expected_actor AND t.provider_issuer=expected_issuer AND (after_id IS NULL OR t.id>after_id) ORDER BY t.id LIMIT page_size;
+      FROM crest_private.provider_login_finishes t WHERE t.actor_id=expected_actor AND t.provider_issuer=expected_issuer AND (after_id IS NULL OR t.id>after_id) ORDER BY t.id LIMIT requested_page_size;
     WHEN 'cleanup_request' THEN OPEN source_cursor FOR SELECT t.request_id AS source_id,t.canonical_evidence AS source_body,t.event_hash AS source_hash
-      FROM crest_private.provider_cleanup_requests t WHERE t.actor_id=expected_actor AND t.provider_issuer=expected_issuer AND (after_id IS NULL OR t.request_id>after_id) ORDER BY t.request_id LIMIT page_size;
+      FROM crest_private.provider_cleanup_requests t WHERE t.actor_id=expected_actor AND t.provider_issuer=expected_issuer AND (after_id IS NULL OR t.request_id>after_id) ORDER BY t.request_id LIMIT requested_page_size;
     WHEN 'cleanup_outcome' THEN OPEN source_cursor FOR SELECT t.request_id AS source_id,t.canonical_evidence AS source_body,t.event_hash AS source_hash
-      FROM crest_private.provider_cleanup_outcomes t WHERE t.actor_id=expected_actor AND t.provider_issuer=expected_issuer AND (after_id IS NULL OR t.request_id>after_id) ORDER BY t.request_id LIMIT page_size;
+      FROM crest_private.provider_cleanup_outcomes t WHERE t.actor_id=expected_actor AND t.provider_issuer=expected_issuer AND (after_id IS NULL OR t.request_id>after_id) ORDER BY t.request_id LIMIT requested_page_size;
   END CASE;
   LOOP
     FETCH source_cursor INTO item; EXIT WHEN NOT FOUND;
