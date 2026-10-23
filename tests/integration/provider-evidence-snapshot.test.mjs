@@ -4,7 +4,11 @@ import {before,after,test} from 'node:test';
 import net from 'node:net';
 import {once} from 'node:events';
 import pg from 'pg';
+import {execFileSync} from 'node:child_process';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
 import {createProviderEvidenceCollector} from '../../src/security/provider-evidence-collector.ts';
+import {verifyProviderEvidenceCollection} from '../../src/security/provider-evidence-verification.ts';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 const issuer='https://auth.example.com/auth/v1';
@@ -164,8 +168,42 @@ test('successful collector closes its real transport without a peer shutdown ack
  finally{clearTimeout(deadline);for(const socket of sockets)socket.destroy();const closed=once(proxy,'close');proxy.close();await closed;}
 });
 
-test('a mismatched restored source hash fails the entire page and collector instead of filtering out its record',async()=>{
+const verifyCollection=(collection,a=owner)=>verifyProviderEvidenceCollection(JSON.stringify(collection),{actorId:a.id,issuer});
+test('offline full-scope verifier preserves actual collected originals in a fresh credential-free Node process',async()=>{
+ const a=await actor();await member(a);await full(a);await observation(a);const before=await sourceHashes(),collected=await collect(a),verified=verifyCollection(collected,a);
+ assert.equal(verified.assurance,'internal_consistency_only');assert.deepEqual(verified.records,collected.records);assert.deepEqual(verified.attempts.map(x=>x.missingKinds),[[]]);for(const x of [verified,verified.context,verified.context.ledgerCounts,verified.records,...verified.records,verified.attempts,...verified.attempts])assert(Object.isFrozen(x));
+ const module=pathToFileURL(resolve('src/security/provider-evidence-verification.ts')).href;
+ const script=`import {readFileSync} from 'node:fs';import {verifyProviderEvidenceCollection} from ${JSON.stringify(module)};const r=verifyProviderEvidenceCollection(readFileSync(0,'utf8'),${JSON.stringify({actorId:a.id,issuer})});if(process.env.CREST_TEST_DATABASE_URL||r.assurance!=='internal_consistency_only'||r.attempts.length!==1||r.attempts[0].missingKinds.length)process.exit(1);process.stdout.write(String(r.records.length));`;
+ const output=execFileSync(process.execPath,['--input-type=module','-e',script],{input:JSON.stringify(collected),encoding:'utf8',env:{PATH:process.env.PATH},timeout:10000,maxBuffer:1024});assert.equal(output,String(collected.records.length));assert.deepEqual(await sourceHashes(),before);
+});
+test('verifier accepts actual inventory nested states including pinned nullable AAL3 and nonfinite provider deadlines',async()=>{
+ const a=await actor();await member(a);for(const [aal,deadline] of [[null,null],['aal3','infinity'],['aal1','-infinity']]){const f=await fixture(a);await client.query('UPDATE auth.sessions SET aal=$1,not_after=$2 WHERE id=$3',[aal,deadline,f.p]);}
+ const active=await fixture(a);await capture(active);await issue(active);const degraded=await fixture(a);await capture(degraded);await issue(degraded);await client.query("UPDATE auth.sessions SET aal='aal1' WHERE id=$1",[degraded.p]);const stopped=await fixture(a);await capture(stopped);await issue(stopped);await finish(stopped,'registration_closed');await finish(stopped);
+ await observation(a);const r=verifyCollection(await collect(a),a),o=JSON.parse(r.records.find(x=>x.kind==='inventory_observation').canonicalEvidence);assert.equal(o.observationCount,6);assert.deepEqual([...new Set(o.observations.map(x=>x.classification))].sort(),['local_revocation_review','registered_observed','registered_review','unregistered_review']);assert(o.observations.some(x=>x.provider_aal===null));assert(o.observations.some(x=>x.provider_aal==='aal3'));for(const x of o.observations.filter(x=>['infinity','-infinity'].includes(x.provider_not_after)))assert.equal(x.provider_unexpired,false);
+});
+test('verified old collections retain missing lifecycle facts across late target request and outcome commits',async()=>{
+ const a=await actor();await member(a);const f=await fixture(a);f.stop=await finish(f);const early=await collect(a),before=verifyCollection(early,a);assert(before.attempts[0].missingKinds.includes('target'));assert(before.attempts[0].missingKinds.includes('outcome'));
+ await capture(f);f.request=await request(f);const pending=verifyCollection(await collect(a),a);assert(!pending.attempts[0].missingKinds.includes('request'));assert(pending.attempts[0].missingKinds.includes('outcome'));await consume(f);const after=verifyCollection(await collect(a),a);assert.deepEqual(after.attempts[0].missingKinds,['registration_finish']);assert.deepEqual(verifyCollection(early,a),before);assert(!Object.hasOwn(after,'providerAbsent'));
+});
+test('verifier binds exact configured scope while preserving disabled and prior-epoch originals',async()=>{
+ const a=await actor();await member(a);const f=await full(a);await client.query('UPDATE crest_private.actors SET disabled_at=clock_timestamp(),current_security_epoch=$1,version=version+1 WHERE id=$2',[randomUUID(),a.id]);const collected=await collect(a),r=verifyCollection(collected,a);assert.equal(JSON.parse(r.records.find(x=>x.kind==='login_attempt').canonicalEvidence).securityEpoch,f.b.securityEpoch);
+ for(const binding of [{actorId:other.id,issuer},{actorId:a.id,issuer:'https://other.example.com/auth/v1'}])assert.throws(()=>verifyProviderEvidenceCollection(JSON.stringify(collected),binding),/PROVIDER_EVIDENCE_VERIFICATION_REVIEW_REQUIRED/);
+ const unknown={id:randomUUID()},empty=verifyCollection(await collect(unknown),unknown);assert.deepEqual(empty.records,[]);
+});
+test('rehashed portable request contradictions fail offline verification without changing any actual source',async()=>{
+ const a=await actor();await member(a);await full(a);const before=await sourceHashes(),collected=await collect(a),copy=JSON.parse(JSON.stringify(collected)),requestRow=copy.records.find(x=>x.kind==='cleanup_request'),outcomeRow=copy.records.find(x=>x.kind==='cleanup_outcome');
+ const req=JSON.parse(requestRow.canonicalEvidence);req.sourceFinishHash='0'.repeat(64);requestRow.canonicalEvidence=JSON.stringify(req);requestRow.evidenceHash=createHash('sha256').update(requestRow.canonicalEvidence).digest('hex');const out=JSON.parse(outcomeRow.canonicalEvidence);out.requestHash=requestRow.evidenceHash;outcomeRow.canonicalEvidence=JSON.stringify(out);outcomeRow.evidenceHash=createHash('sha256').update(outcomeRow.canonicalEvidence).digest('hex');copy.evidenceBytes=copy.records.reduce((n,x)=>n+Buffer.byteLength(x.canonicalEvidence),0);
+ assert.throws(()=>verifyCollection(copy,a),/PROVIDER_EVIDENCE_VERIFICATION_REVIEW_REQUIRED/);assert.deepEqual(verifyCollection(collected,a).records,collected.records);assert.deepEqual(await sourceHashes(),before);
+});
+test('historical inventory findings remain valid after a separately committed actual cleanup and empty newer observation',async()=>{
+ const a=await actor();await member(a);const f=await fixture(a);await capture(f);await issue(f);await finish(f,'registration_closed');f.stop=await finish(f);f.request=await request(f);const first=(await observation(a)).rows[0].result;await consume(f);const second=(await observation(a)).rows[0].result;
+ const r=verifyCollection(await collect(a),a),observed=r.records.filter(x=>x.kind==='inventory_observation');assert.equal(observed.length,2);assert.equal(JSON.parse(observed.find(x=>x.recordId===first.evidence.requestId).canonicalEvidence).observations[0].classification,'local_revocation_review');assert.equal(JSON.parse(observed.find(x=>x.recordId===second.evidence.requestId).canonicalEvidence).observationCount,0);assert.deepEqual(r.attempts[0].missingKinds,[]);
+});
+
+test('invalid restored source schemas and hashes fail verification without silently filtering their records',async()=>{
  const a=await actor();await member(a);const fixtures=[await fixture(a),await fixture(a)],f=fixtures.sort((x,y)=>x.b.attemptId.localeCompare(y.b.attemptId)).at(-1);const checks=(await client.query("SELECT conname FROM pg_constraint WHERE conrelid='crest_private.provider_login_attempts'::regclass AND contype='c' AND pg_get_constraintdef(oid) LIKE '%event_hash =%'")).rows;assert.equal(checks.length,1);assert.match(checks[0].conname,/^[a-z0-9_]+$/);
+ await client.query('BEGIN');try{await client.query('ALTER TABLE crest_private.provider_login_attempts DISABLE TRIGGER USER');await client.query("UPDATE crest_private.provider_login_attempts SET canonical_evidence=(canonical_evidence::jsonb||'{\"unsupportedProjection\":true}'::jsonb)::text,event_hash=encode(sha256(convert_to((canonical_evidence::jsonb||'{\"unsupportedProjection\":true}'::jsonb)::text,'UTF8')),'hex') WHERE attempt_id=$1",[f.b.attemptId]);await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}
+ const damaged=await collect(a);assert.equal(damaged.records.length,2);assert.throws(()=>verifyCollection(damaged,a),/PROVIDER_EVIDENCE_VERIFICATION_REVIEW_REQUIRED/);
  await client.query('BEGIN');try{await client.query('ALTER TABLE crest_private.provider_login_attempts DISABLE TRIGGER USER');await client.query(`ALTER TABLE crest_private.provider_login_attempts DROP CONSTRAINT ${checks[0].conname}`);await client.query("UPDATE crest_private.provider_login_attempts SET event_hash=repeat('0',64) WHERE attempt_id=$1",[f.b.attemptId]);await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}
  await assert.rejects(snapshot(a,ctx=>{assert.equal(ctx.ledgerCounts.login_attempt,'2');return page(ctx,'login_attempt');}),e=>e.code==='23514');
  await assert.rejects(collect(a),/PROVIDER_EVIDENCE_COLLECTION_REVIEW_REQUIRED/);

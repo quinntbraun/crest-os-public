@@ -20,6 +20,8 @@ The [provider-evidence snapshot readers](planning/PHASE_2_PROVIDER_EVIDENCE_SNAP
 
 The [private provider-evidence collector](planning/PHASE_2_PROVIDER_EVIDENCE_COLLECTOR.md) reads all six retained ledgers through one owned snapshot, validates counts and original hashes, and returns only a bounded complete collection. It enables no export job, file publication, provider action or production access.
 
+The [offline collection verifier](planning/PHASE_2_PROVIDER_EVIDENCE_VERIFICATION.md) checks six-ledger schemas, nested inventory findings and original source links, preserving missing facts and original bytes. Its assurance is internal consistency; complete export custody and restore checks remain gated.
+
 ## Local development
 
 Run every repository command from this `crest-os-public` checkout, not the parent ChatGPT project mirror or original private archive. Use Node **24.22.0** and its bundled npm **11.19.1**. No paid account or provider credentials are needed.
