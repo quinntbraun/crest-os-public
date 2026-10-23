@@ -164,6 +164,7 @@ export function createProviderBoundary(config:ProviderConfiguration,liveSession:
     return Object.freeze({...identity,state:'provider_verified',localSessionAndTenantVerificationRequired:true});
   }
   return Object.freeze({
+    issuerForServerBinding:()=>issuer.toString(),
     signOutLocal(access:string,binding:ExistingProviderBinding,external?:AbortSignal):Promise<void>{
       binding=Object.freeze({...binding});
       return operation(async(client)=>{

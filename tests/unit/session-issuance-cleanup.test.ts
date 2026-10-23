@@ -10,18 +10,18 @@ beforeEach(()=>vi.resetAllMocks());
 function fixture(){
   const events:string[]=[],controller=new AbortController(),subject=randomUUID(),sessionId=randomUUID();
   const material={identity:{subject,sessionId,issuer:'https://crest.example.com/auth/v1',passwordAt:Date.now(),totpAt:Date.now()},tokensForServerStorage:()=>({accessToken:'synthetic-access',refreshToken:'synthetic-refresh'})};
-  const provider={authenticatePasswordTotp:vi.fn(async()=>material),signOutLocal:vi.fn(async()=>{events.push('provider');})};
+  const provider={issuerForServerBinding:()=>'https://crest.example.com/auth/v1',authenticatePasswordTotp:vi.fn(async()=>material),signOutLocal:vi.fn(async()=>{events.push('provider');})};
   mocks.query.mockImplementation(async(sql:string,_values:unknown[],signal:AbortSignal)=>{
     if(signal.aborted)throw new Error('synthetic cancellation');
-    if(sql.includes('session_actor_context'))return {actorId:randomUUID(),securityEpoch:randomUUID()};
-    if(sql.includes('issue_app_session')){controller.abort();return true;}
+    if(sql.includes('begin_provider_login'))return {attemptId:_values[0],appSessionId:_values[1],actorId:randomUUID(),securityEpoch:randomUUID()};
+    if(sql.includes('issue_tracked_app_session')){controller.abort();return true;}
     throw new Error('unexpected query');
   });
   mocks.revoke.mockImplementation(async()=>{events.push('local');});
   const tokens={encrypt:vi.fn(async()=>({ciphertext:new Uint8Array(16),keyId:'synthetic'}))};
   const lifecycle=createSessionLifecycle({connectionString:'unused',environment:'test'},provider as never,tokens as never);
   const login=()=>lifecycle.login({email:'synthetic@example.com',password:'synthetic',code:'123456',factorId:randomUUID()},{subject},false,controller.signal);
-  return {events,controller,subject,sessionId,provider,login};
+  return {events,controller,subject,sessionId,material,provider,login};
 }
 it('cancelled post-commit verification revokes locally then signs out only known new provider material with an independent signal',async()=>{
   const f=fixture();await expect(f.login()).rejects.toThrow('SESSION_LIFECYCLE_FAILED');expect(f.controller.signal.aborted).toBe(true);expect(f.events).toEqual(['local','provider']);
@@ -37,7 +37,7 @@ it('failed provider cleanup cannot undo local revocation or expose its exception
   const error=await f.login().catch(error=>error);expect(error.message).toBe('SESSION_LIFECYCLE_FAILED');expect(error.cause).toBeUndefined();expect(mocks.revoke).toHaveBeenCalledTimes(1);
 });
 it('a failure before any credential allocation cleans known provider material without inventing a local session',async()=>{
-  const f=fixture();mocks.query.mockRejectedValue(new Error('synthetic context failure'));
+  const f=fixture();f.material.identity.issuer='https://other.example.com/auth/v1';
   await expect(f.login()).rejects.toThrow('SESSION_LIFECYCLE_FAILED');expect(mocks.revoke).not.toHaveBeenCalled();expect(f.events).toEqual(['provider']);
 });
 it('an authentication failure without returned provider material cannot target another session for cleanup',async()=>{
