@@ -69,7 +69,7 @@ async function serve(req:IncomingMessage,res:ServerResponse) {
     if(!subject||credentials.password!==password) {json(res,{msg:'private credential diagnostic'},400);return;}
     const sessionId=randomUUID();sessions.set(sessionId,subject);
     const now=Math.floor(Date.now()/1000);
-    json(res,{access_token:await token({sub:subject,session_id:sessionId,aal:'aal1',amr:[{method:'password',timestamp:now}],...initialOverrides}),
+    json(res,{access_token:await token({sub:subject,session_id:sessionId,aal:'aal1',amr:[{method:'password',timestamp:now}],...initialOverrides},'ES256',{},mode==='initial-wrong-key'),
       refresh_token:'synthetic-refresh-only',expires_in:3600,token_type:'bearer',user:profile(subject)});return;
   }
   const bearer=req.headers.authorization?.slice('Bearer '.length);
@@ -146,6 +146,38 @@ describe('server provider evidence with actual SDK HTTP and JWT signatures',()=>
     expect(()=>JSON.stringify(material)).toThrow('PROVIDER_AUTHENTICATION_FAILED');
     expect(paths).toContain(`POST /auth/v1/factors/${factor}/challenge`);
     expect(paths).toContain(`POST /auth/v1/factors/${factor}/verify`);
+  });
+  it('awaits an immutable token-free signed password reference before profile or MFA requests',async()=>{
+    let seen=false;
+    const material=await boundary().authenticatePasswordTotp(input,{subject:owner},undefined,async(reference,signal)=>{
+      seen=true;expect(signal.aborted).toBe(false);expect(Object.isFrozen(reference)).toBe(true);
+      expect(Object.keys(reference).sort()).toEqual(['expiresAt','issuer','passwordAt','sessionId','subject']);
+      expect(reference).toMatchObject({issuer,subject:owner});expect(sessions.get(reference.sessionId)).toBe(owner);
+      expect(paths.some(p=>p.includes('/user')||p.includes('/factors/'))).toBe(false);
+      expect(challenges.size).toBe(0);
+    });expect(seen).toBe(true);expect(material.identity.subject).toBe(owner);
+  });
+  it('failed durable observer blocks profile/MFA and cleans only the new password session',async()=>{
+    const observer=vi.fn(async()=>{throw new Error('synthetic unknown receipt commit');});
+    await denied(boundary().authenticatePasswordTotp(input,{subject:owner},undefined,observer));
+    expect(observer).toHaveBeenCalledTimes(1);expect(challenges.size).toBe(0);expect(paths.some(p=>p.includes('/factors/'))).toBe(false);
+    expect(paths).toContain('POST /auth/v1/logout?scope=local');expect(sessions.size).toBe(1);expect(sessions.get(fixedSession)).toBe(owner);
+  });
+  it('cancellation during receipt confirmation never continues to profile or MFA',async()=>{
+    const controller=new AbortController();
+    await denied(boundary().authenticatePasswordTotp(input,{subject:owner},controller.signal,async()=>{controller.abort();}));
+    expect(challenges.size).toBe(0);expect(paths.some(p=>p.includes('/factors/'))).toBe(false);
+  });
+  it.each([{sub:other},{aal:'aal2'},{exp:1},{amr:[{method:'password',timestamp:1}]}])('invalid or stale initial signed claims never reach the observer: %j',async overrides=>{
+    initialOverrides=overrides;const observer=vi.fn(async()=>{});
+    await denied(boundary().authenticatePasswordTotp(input,{subject:owner},undefined,observer));expect(observer).not.toHaveBeenCalled();expect(challenges.size).toBe(0);
+  });
+  it('rejects an invalid initial signature before delivering a password-session reference',async()=>{
+    mode='initial-wrong-key';const observer=vi.fn(async()=>{});
+    await denied(boundary().authenticatePasswordTotp(input,{subject:owner},undefined,observer));expect(observer).not.toHaveBeenCalled();expect(challenges.size).toBe(0);
+  });
+  it('rejects a malformed trusted observer before any provider HTTP request',async()=>{
+    await denied(boundary().authenticatePasswordTotp(input,{subject:owner},undefined,{} as never));expect(paths).toHaveLength(0);
   });
   it('isolates simultaneous SDK sessions for distinct durable subjects',async()=>{
     const gate=boundary();const [a,b]=await Promise.all([gate.authenticatePasswordTotp(input,{subject:owner}),

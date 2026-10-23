@@ -4,6 +4,7 @@ vi.mock('server-only',()=>({}));
 const {query,revoke}=vi.hoisted(()=>({query:vi.fn(),revoke:vi.fn()}));
 vi.mock('../../src/security/session-database.ts',()=>({sessionDatabase:()=>query}));
 vi.mock('../../src/security/session-revocation-db.ts',()=>({createSessionRevoker:()=>revoke}));
+import type {ProviderPasswordSessionObserver} from '../../src/security/provider-auth.ts';
 import {createSessionLifecycle} from '../../src/security/session-lifecycle.ts';
 import {createProviderBoundary} from '../../src/security/provider-auth.ts';
 import type {createProviderTokenStore} from '../../src/security/provider-token-store.ts';
@@ -41,11 +42,11 @@ it('snapshots credentials and trusted subject before awaiting the begin record',
 });
 it('pins the pre-provider epoch, reserved session and attempt through encryption and registration',async()=>{
   const identity={issuer,subject,sessionId:randomUUID(),passwordAt:Date.now()-1000,totpAt:Date.now()-1000};
-  authenticate.mockResolvedValue({identity,tokensForServerStorage:()=>({accessToken:'synthetic',refreshToken:'synthetic'})});
+  authenticate.mockImplementation(async(_input:unknown,_binding:unknown,signal:AbortSignal,observe:ProviderPasswordSessionObserver)=>{await observe({...identity,expiresAt:Date.now()+60000},signal);return {identity,tokensForServerStorage:()=>({accessToken:'synthetic',refreshToken:'synthetic'})};});
   encrypt.mockResolvedValue({ciphertext:Buffer.from('synthetic'),keyId:'synthetic'});
-  query.mockImplementation(async(sql,args)=>{if(sql.includes('begin_provider_login'))return confirmed(sql,args);throw new Error('uncertain issuance');});
-  await expect(run()).rejects.toThrow('SESSION_LIFECYCLE_FAILED');const begin=query.mock.calls[0]![1],issue=query.mock.calls[1]!;
-  expect(issue[0]).toContain('issue_tracked_app_session');expect(issue[1][0]).toBe(begin[1]);expect(issue[1][3]).toBe(epoch);expect(issue[1][12]).toBe(begin[0]);
+  query.mockImplementation(async(sql,args)=>{if(sql.includes('begin_provider_login'))return confirmed(sql,args);if(sql.includes('record_provider_login_target'))return {evidence:{attemptId:args[0],actorId:args[1],securityEpoch:args[2],providerIssuer:args[3],providerSubject:args[4],providerSessionId:args[5]}};throw new Error('uncertain issuance');});
+  await expect(run()).rejects.toThrow('SESSION_LIFECYCLE_FAILED');const begin=query.mock.calls[0]![1],issue=query.mock.calls[2]!;
+  expect(issue[0]).toContain('issue_targeted_app_session');expect(issue[1][0]).toBe(begin[1]);expect(issue[1][3]).toBe(epoch);expect(issue[1][12]).toBe(begin[0]);
   expect(encrypt.mock.calls[0]![1]).toMatchObject({actorId,securityEpoch:epoch,appSessionId:begin[1]});
   expect(revoke).toHaveBeenCalledTimes(1);expect(signOut).toHaveBeenCalledTimes(1);expect(query.mock.calls.some(c=>c[0].includes('session_actor_context'))).toBe(false);
 });
@@ -58,4 +59,38 @@ it('rejects malformed or coercible UUID inputs before persisting or calling the 
     if(field==='factorId')data.factorId=bad as unknown as string;else binding.subject=bad as unknown as string;
     await expect(run(data,binding)).rejects.toThrow('SESSION_LIFECYCLE_FAILED');}
   expect(query).not.toHaveBeenCalled();expect(authenticate).not.toHaveBeenCalled();
+});
+
+const receipt=(args:unknown[])=>({evidence:{attemptId:args[0],actorId:args[1],securityEpoch:args[2],providerIssuer:args[3],providerSubject:args[4],providerSessionId:args[5]}});
+function exchange({referenceOverrides={},identityOverrides={},twice=false,omit=false}:{referenceOverrides?:object;identityOverrides?:object;twice?:boolean;omit?:boolean}={}){
+  const identity={issuer,subject,sessionId:randomUUID(),passwordAt:Date.now()-1000,totpAt:Date.now()-1000};
+  authenticate.mockImplementation(async(_input:unknown,_binding:unknown,signal:AbortSignal,observe:ProviderPasswordSessionObserver)=>{
+    const reference={...identity,expiresAt:Date.now()+60000,...referenceOverrides};
+    if(!omit){await observe(reference,signal);if(twice)await observe(reference,signal);}
+    return {identity:{...identity,...identityOverrides},tokensForServerStorage:()=>({accessToken:'synthetic',refreshToken:'synthetic'})};
+  });
+  query.mockImplementation(async(sql,args)=>sql.includes('begin_provider_login')?confirmed(sql,args):receipt(args));
+}
+it.each(['failure','null','attempt','provider'])('an unconfirmed target receipt blocks encryption/issuance without retry: %s',async reason=>{
+  exchange();query.mockImplementation(async(sql,args)=>{if(sql.includes('begin_provider_login'))return confirmed(sql,args);
+    if(reason==='failure')throw new Error('uncertain receipt commit');if(reason==='null')return null;
+    const r=receipt(args);return {evidence:{...r.evidence,...(reason==='attempt'?{attemptId:randomUUID()}:{providerSessionId:randomUUID()})}};});
+  await expect(run()).rejects.toThrow('SESSION_LIFECYCLE_FAILED');expect(authenticate).toHaveBeenCalledTimes(1);expect(query).toHaveBeenCalledTimes(2);
+  expect(encrypt).not.toHaveBeenCalled();expect(revoke).not.toHaveBeenCalled();
+});
+it.each([{issuer:'https://other.example.com/auth/v1'},{subject:randomUUID()},{sessionId:'invalid'}])('rejects mismatched safe references before receipt SQL: %j',async referenceOverrides=>{
+  exchange({referenceOverrides});await expect(run()).rejects.toThrow('SESSION_LIFECYCLE_FAILED');expect(query).toHaveBeenCalledTimes(1);expect(encrypt).not.toHaveBeenCalled();
+});
+it('cannot register returned MFA material when a trusted adapter omits the required observer',async()=>{
+  exchange({omit:true});await expect(run()).rejects.toThrow('SESSION_LIFECYCLE_FAILED');expect(query).toHaveBeenCalledTimes(1);expect(encrypt).not.toHaveBeenCalled();expect(signOut).toHaveBeenCalledTimes(1);
+});
+it('rejects a repeated callback without sending a second receipt or registering',async()=>{
+  exchange({twice:true});await expect(run()).rejects.toThrow('SESSION_LIFECYCLE_FAILED');expect(query).toHaveBeenCalledTimes(2);expect(encrypt).not.toHaveBeenCalled();
+});
+it('cannot swap the provider session after the safe password reference was recorded',async()=>{
+  exchange({identityOverrides:{sessionId:randomUUID()}});await expect(run()).rejects.toThrow('SESSION_LIFECYCLE_FAILED');expect(query).toHaveBeenCalledTimes(2);expect(encrypt).not.toHaveBeenCalled();expect(signOut).toHaveBeenCalledTimes(1);
+});
+it('cancellation after target commit never proceeds to session registration',async()=>{
+  exchange();const c=new AbortController();query.mockImplementation(async(sql,args)=>{if(sql.includes('begin_provider_login'))return confirmed(sql,args);c.abort();return receipt(args);});
+  await expect(run(input(),{subject},c.signal)).rejects.toThrow('SESSION_LIFECYCLE_FAILED');expect(query).toHaveBeenCalledTimes(2);expect(encrypt).not.toHaveBeenCalled();
 });
