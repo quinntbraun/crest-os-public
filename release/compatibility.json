@@ -3,7 +3,7 @@
   "appVersion": "0.1.0",
   "databaseMajor": 17,
   "schemaMinimum": 0,
-  "schemaMaximum": 21,
+  "schemaMaximum": 22,
   "reportVersion": 0,
   "commandVersion": 1,
   "productionActivation": "blocked"

@@ -16,7 +16,7 @@ function fixture(){
     if(signal.aborted)throw new Error('synthetic cancellation');
     if(sql.includes('begin_provider_login'))return {attemptId:_values[0],appSessionId:_values[1],actorId:randomUUID(),securityEpoch:randomUUID()};
     if(sql.includes('record_provider_login_target'))return {evidence:{attemptId:_values[0],actorId:_values[1],securityEpoch:_values[2],providerIssuer:_values[3],providerSubject:_values[4],providerSessionId:_values[5]}};
-    if(sql.includes('issue_targeted_app_session')){controller.abort();return true;}
+    if(sql.includes('issue_open_app_session')){controller.abort();return true;}
     throw new Error('unexpected query');
   });
   mocks.revoke.mockImplementation(async()=>{events.push('local');});
