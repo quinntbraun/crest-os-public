@@ -36,6 +36,8 @@ The [token-free provider cleanup reference slice](planning/PHASE_2_PROVIDER_CLEA
 
 The [provider-session inventory](planning/PHASE_2_PROVIDER_INVENTORY.md) adds schema18 and `npm run test:provider-inventory-db`: a separately scoped maintenance reader compares bounded provider pages with same-actor registrations/revocation references. Observations grant no cleanup authority; ordinary application requests cannot execute it.
 
+The [retained inventory evidence](planning/PHASE_2_PROVIDER_RECONCILIATION_EVIDENCE.md) adds schema19 and `npm run test:provider-evidence-db`: immutable classified observations, exact scan-request replay and scoped historical lookup with independently verifiable JSON bytes. Scan receipts grant no cleanup authority or current-session eligibility.
+
 ## Disposable PostgreSQL and container checks
 
 With Docker available, start only the isolated synthetic test database:

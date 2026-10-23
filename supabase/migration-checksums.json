@@ -90,6 +90,11 @@
       "version": "20261023002000",
       "file": "20261023002000_provider_session_inventory.sql",
       "sha256": "fea6fd7a221849f1b9ca1a01316524eeb24bfb47677bf2fcf39836cad89a2db9"
+    },
+    {
+      "version": "20261023021500",
+      "file": "20261023021500_provider_reconciliation_evidence.sql",
+      "sha256": "5a418e0536b87000419859d4b2919ea9532c1e3bf51e20c49e0d5c7dd7338a6f"
     }
   ]
 }

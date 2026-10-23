@@ -27,7 +27,7 @@ import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginRes
 import {createSessionRequestAdmission,SessionAdmissionError} from '../../src/security/session-request-admission.ts';
 import {authenticationServer} from '../support/authentication-server.mjs';
 
-let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,refreshGrants,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,fenceReceipt,storageReceipt,lookupReceipt,renameReceipt,settingsReceipt,cleanupReceipt,inventoryReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
+let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,refreshGrants,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,fenceReceipt,storageReceipt,lookupReceipt,renameReceipt,settingsReceipt,cleanupReceipt,inventoryReceipt,evidenceReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
@@ -50,11 +50,14 @@ before(async()=>{
   browserReceipt=await sandbox.apply(target,await sandbox.prefix(9));
   upgradeProof=(await client.query('INSERT INTO crest_private.session_csrf_tokens(session_id,token_hash) VALUES($1,$2) RETURNING to_jsonb(session_csrf_tokens) AS row',[legacy.session,randomBytes(32)])).rows[0].row;
   upgradeContext=(await client.query("WITH moment AS MATERIALIZED (SELECT clock_timestamp() AS stamp) INSERT INTO crest_private.login_contexts(id,credential_hash,ip_hash,csrf_hash,created_at,expires_at) SELECT gen_random_uuid(),$1,$2,$3,stamp,stamp+interval '10 minutes' FROM moment RETURNING to_jsonb(login_contexts) AS row",[randomBytes(32),randomBytes(32),randomBytes(32)])).rows[0].row;
-  admissionReceipt=await sandbox.apply(target,await sandbox.prefix(10));tenantReceipt=await sandbox.apply(target,await sandbox.prefix(11));fenceReceipt=await sandbox.apply(target,await sandbox.prefix(12));storageReceipt=await sandbox.apply(target,await sandbox.prefix(13));lookupReceipt=await sandbox.apply(target,await sandbox.prefix(14));renameReceipt=await sandbox.apply(target,await sandbox.prefix(15));settingsReceipt=await sandbox.apply(target,await sandbox.prefix(16));cleanupReceipt=await sandbox.apply(target,await sandbox.prefix(17));inventoryReceipt=await sandbox.apply(target);
+  admissionReceipt=await sandbox.apply(target,await sandbox.prefix(10));tenantReceipt=await sandbox.apply(target,await sandbox.prefix(11));fenceReceipt=await sandbox.apply(target,await sandbox.prefix(12));storageReceipt=await sandbox.apply(target,await sandbox.prefix(13));lookupReceipt=await sandbox.apply(target,await sandbox.prefix(14));renameReceipt=await sandbox.apply(target,await sandbox.prefix(15));settingsReceipt=await sandbox.apply(target,await sandbox.prefix(16));cleanupReceipt=await sandbox.apply(target,await sandbox.prefix(17));inventoryReceipt=await sandbox.apply(target,await sandbox.prefix(18));evidenceReceipt=await sandbox.apply(target);
   store=await createProviderTokenStore('primary',[{id:'primary',key:randomBytes(32)}]);
   lifecycle=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},boundary,store);
 });
 after(async()=>{await service?.close();if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();});
+async function retainedInventory(actor,id=randomUUID()){
+  const c=await sandbox.connect(target);await c.query('BEGIN');try{await c.query('SET LOCAL ROLE crest_inventory');const result=(await c.query('SELECT crest_commands.record_provider_inventory($1,$2,$3,NULL,100) AS result',[id,actor.id,service.issuer])).rows[0].result;await c.query('COMMIT');return result;}finally{await c.query('ROLLBACK');await c.end();}
+}
 async function providerInventory(actor){
   const c=await sandbox.connect(target);await c.query('BEGIN READ ONLY');try{await c.query('SET LOCAL ROLE crest_inventory');return (await c.query('SELECT * FROM crest_commands.provider_session_inventory($1,$2,NULL,100)',[actor.id,service.issuer])).rows;}finally{await c.query('ROLLBACK');await c.end();}
 }
@@ -155,7 +158,7 @@ test('real provider tokens survive encrypted database storage and key rotation; 
 });
 test('AAL1 and confirmed accounts without verified TOTP never produce provider evidence',async()=>{
   const f=await provision({enroll:false});const password=authResult(await f.sdk.signInWithPassword({email:f.email,password:f.password}),'password_only');
-  const token=password.session.access_token,payload=decodeJwt(token),actor=await linkActor(f);const observation=(await providerInventory(actor)).find(r=>r.provider_session_id===payload.session_id);assert(observation);assert.equal(observation.provider_aal,'aal1');assert.equal(observation.app_session_id,null);assert.equal(observation.cleanup_reference_id,null);await denied(boundary.verifyAccess(token,{subject:f.subject,sessionId:payload.session_id}));
+  const token=password.session.access_token,payload=decodeJwt(token),actor=await linkActor(f);const observation=(await providerInventory(actor)).find(r=>r.provider_session_id===payload.session_id);assert(observation);assert.equal(observation.provider_aal,'aal1');assert.equal(observation.app_session_id,null);assert.equal(observation.cleanup_reference_id,null);const saved=await retainedInventory(actor);assert.equal(saved.evidence.observations.find(r=>r.provider_session_id===payload.session_id).classification,'unregistered_review');assert.deepEqual(await retainedInventory(actor,saved.evidence.requestId),saved);await denied(boundary.verifyAccess(token,{subject:f.subject,sessionId:payload.session_id}));
   await denied(boundary.authenticatePasswordTotp({email:f.email,password:f.password,factorId:randomUUID(),code:'123456'},{subject:f.subject}));
 });
 test('unconfirmed identity and incorrect password deny through the actual Auth API',async()=>{
@@ -236,7 +239,8 @@ test('schema5 upgrade retains existing local rows and append-only CLI history',a
   assert.equal(settingsReceipt.history.length,16);assert.deepEqual(settingsReceipt.history.slice(0,15),renameReceipt.history);
   assert.equal(cleanupReceipt.history.length,17);assert.deepEqual(cleanupReceipt.history.slice(0,16),settingsReceipt.history);
   assert.equal(inventoryReceipt.history.length,18);assert.deepEqual(inventoryReceipt.history.slice(0,17),cleanupReceipt.history);
-  assert.deepEqual((await sandbox.apply(target)).history,inventoryReceipt.history);
+  assert.equal(evidenceReceipt.history.length,19);assert.deepEqual(evidenceReceipt.history.slice(0,18),inventoryReceipt.history);
+  assert.deepEqual((await sandbox.apply(target)).history,evidenceReceipt.history);
   assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.session_csrf_tokens c WHERE id=$1',[upgradeProof.id])).rows[0].row,upgradeProof);
   assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.login_contexts c WHERE id=$1',[upgradeContext.id])).rows[0].row,upgradeContext);
 });
@@ -630,6 +634,7 @@ test('browser logout commits local revocation before the real public-key SDK pro
   const flow=browserFlow(f,inspected);issued=await browserLogin(flow,f);const other=await browserLogin(flow,f),result=await flow.logout(browserRequest(issued.csrfTokenForResponse()),issued.cookieValueForResponse(),signal());
   assert(checked);assert.deepEqual(result,{localRevoked:true,providerSignedOut:true});assert.equal(await lookup(f.subject,issued.evidence.provider.sessionId,signal()),false);
   const observed=await providerInventory(actor);assert(!observed.some(r=>r.app_session_id===issued.evidence.sessionId));assert(observed.some(r=>r.app_session_id===other.evidence.sessionId&&r.local_revoked_at===null));
+  const saved=await retainedInventory(actor);assert(!saved.evidence.observations.some(r=>r.app_session_id===issued.evidence.sessionId));assert.equal(saved.evidence.observations.find(r=>r.app_session_id===other.evidence.sessionId).classification,'registered_observed');
   assert.equal((await lifecycle.verify(other.cookieValueForResponse(),signal())).sessionId,other.evidence.sessionId);
 });
 
@@ -639,6 +644,7 @@ test('actual provider outage after local logout cannot restore the app session o
   const flow=browserFlow(f,gate);issued=await browserLogin(flow,f);const other=await browserLogin(flow,f);
   try{assert.deepEqual(await flow.logout(browserRequest(issued.csrfTokenForResponse()),issued.cookieValueForResponse(),signal()),{localRevoked:true,providerSignedOut:false});}finally{if(stopped)await service.restart();}
   const observed=await providerInventory(actor),revokedObservation=observed.find(r=>r.app_session_id===issued.evidence.sessionId);assert(revokedObservation);assert(revokedObservation.local_revoked_at);assert(revokedObservation.cleanup_reference_id);assert.equal(revokedObservation.provider_aal,'aal2');assert(observed.some(r=>r.app_session_id===other.evidence.sessionId&&r.local_revoked_at===null));
+  const saved=await retainedInventory(actor);assert.equal(saved.evidence.observations.find(r=>r.app_session_id===issued.evidence.sessionId).classification,'local_revocation_review');assert.equal(saved.evidence.observations.find(r=>r.app_session_id===other.evidence.sessionId).classification,'registered_observed');assert.deepEqual(await retainedInventory(actor,saved.evidence.requestId),saved);
   const row=await sessionRow(issued);assert(row.revoked_at);assert.equal(row.provider_token_ciphertext,null);await lifecycleDenied(lifecycle.verify(issued.cookieValueForResponse(),signal()));
   assert.deepEqual((await client.query('SELECT state,provider_session_id,source_version::text FROM crest_private.provider_cleanup_references WHERE app_session_id=$1',[issued.evidence.sessionId])).rows,[{state:'review_required',provider_session_id:issued.evidence.provider.sessionId,source_version:row.version}]);
   assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.provider_cleanup_references WHERE app_session_id=$1',[other.evidence.sessionId])).rows[0].n,0);

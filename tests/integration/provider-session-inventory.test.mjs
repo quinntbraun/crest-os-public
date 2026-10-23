@@ -31,7 +31,7 @@ before(async()=>{
     await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual'),($1,$3,'owner',$2,$2,'manual')",[business,owner.id,other.id]);
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,owner.id]);await client.query('COMMIT');
   }catch(error){await client.query('ROLLBACK');throw error;}
-  const p=await provider();legacy=await register(owner,p);await client.query('SELECT crest_commands.revoke_app_session($1,$2)',[legacy.hash,randomUUID()]);retained=await digest();receipt=await sandbox.apply(target);
+  const p=await provider();legacy=await register(owner,p);await client.query('SELECT crest_commands.revoke_app_session($1,$2)',[legacy.hash,randomUUID()]);retained=await digest();receipt=await sandbox.apply(target,await sandbox.prefix(18));
   login=`crest_probe_${randomBytes(8).toString('hex')}`;const password=randomBytes(32).toString('hex');assert.match(login,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
   await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;await sandbox.admin.query(`GRANT crest_inventory TO ${login}`);
   const url=new URL(target);url.username=login;url.password=password;maintenance=await sandbox.connect(url.toString());await maintenance.query('SET ROLE crest_inventory');
@@ -39,7 +39,7 @@ before(async()=>{
 after(async()=>{await maintenance?.end();if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();});
 
 test('schema17 upgrade preserves provider/local evidence and exact migration receipt prefix',async()=>{
-  assert.equal(prior.history.length,17);assert.equal(receipt.history.length,18);assert.deepEqual(receipt.history.slice(0,17),prior.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);assert.equal(await digest(),retained);
+  assert.equal(prior.history.length,17);assert.equal(receipt.history.length,18);assert.deepEqual(receipt.history.slice(0,17),prior.history);assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(18))).history,receipt.history);assert.equal(await digest(),retained);
 });
 test('unregistered AAL1 and AAL2 sessions are observations with no inferred orphan or authorization',async()=>{
   const a=await provider(owner,{aal:'aal1'}),b=await provider(),before=await digest(),rows=await inventory();
