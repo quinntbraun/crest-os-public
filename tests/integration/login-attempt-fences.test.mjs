@@ -20,7 +20,7 @@ before(async()=>{
   bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;owner=await actor();other=await actor();
   await client.query('BEGIN');try{business=(await client.query("INSERT INTO crest.businesses(legal_name,timezone,created_by,updated_by,origin) VALUES('Synthetic target business','UTC',$1,$1,'manual') RETURNING id",[owner.id])).rows[0].id;await member(owner);await member(other);await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,owner.id]);await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}
   web=await sandbox.connect(target);second=await sandbox.connect(target);maintenance=await sandbox.connect(target);for(const c of [web,second])await c.query('SET ROLE crest_web');await maintenance.query('SET ROLE crest_inventory');
-  const f=await fixture();await issue(f,{legacy:true});retained=await sources();receipt=await sandbox.apply(target);
+  const f=await fixture();await issue(f,{legacy:true});retained=await sources();receipt=await sandbox.apply(target,await sandbox.prefix(22));
 });
 after(async()=>{await sandbox?.close();});
 
@@ -28,7 +28,7 @@ const finish=(f,phase='stopped_review',c=web)=>c.query('SELECT crest_commands.fi
 const local=f=>client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[f.b.appSessionId]).then(r=>r.rows[0]);
 
 test('schema21 upgrade preserves sources and CLI prefix without inventing finishes',async()=>{
-  assert.equal(prior.history.length,21);assert.equal(receipt.history.length,22);assert.deepEqual(receipt.history.slice(0,21),prior.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);assert.equal(await sources(),retained);assert.deepEqual(await inventory(),[]);
+  assert.equal(prior.history.length,21);assert.equal(receipt.history.length,22);assert.deepEqual(receipt.history.slice(0,21),prior.history);assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(22))).history,receipt.history);assert.equal(await sources(),retained);assert.deepEqual(await inventory(),[]);
 });
 test('stopping before registration stores only safe original JSON/hash and blocks delayed app issuance',async()=>{
   const f=await fixture(),before=await sources(),r=await finish(f);assert.equal(await sources(),before);assert.equal(r.evidence.phase,'stopped_review');assert.equal(r.evidence.providerSessionId,null);assert.equal(r.evidence.registrationEventId,null);assert.equal(r.evidence.localRevokedAt,null);assert.equal(r.evidence.databasePrincipal,'supabase_admin');assert.deepEqual(JSON.parse(r.canonicalEvidence),r.evidence);assert.equal(createHash('sha256').update(r.canonicalEvidence,'utf8').digest('hex'),r.evidenceHash);
@@ -97,7 +97,7 @@ test('fixed definers/RLS retain isolated inventory and expose no source/provider
   for(const source of ['auth.sessions','auth.users','auth.refresh_tokens','crest_private.actors','crest_private.app_sessions','crest_private.session_events'])assert.equal((await client.query("SELECT has_any_column_privilege('crest_inventory_owner',$1,'INSERT,UPDATE,REFERENCES') OR has_table_privilege('crest_inventory_owner',$1,'DELETE,TRUNCATE,TRIGGER,MAINTAIN') AS allowed",[source])).rows[0].allowed,false);
 });
 test('schema20 upgrade through21/22 preserves compatible history',async()=>{
-  const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);const before=await sandbox.apply(t,await sandbox.prefix(20)),after=await sandbox.apply(t);assert.equal(after.history.length,22);assert.deepEqual(after.history.slice(0,20),before.history);
+  const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);const before=await sandbox.apply(t,await sandbox.prefix(20)),after=await sandbox.apply(t,await sandbox.prefix(22));assert.equal(after.history.length,22);assert.deepEqual(after.history.slice(0,20),before.history);
 });
 test('upstream issuance/revocation drift blocks22 and preserves pending-review refusal',async()=>{
   for(const change of ['ALTER FUNCTION crest_commands.issue_targeted_app_session(uuid,bytea,uuid,uuid,text,uuid,uuid,timestamptz,timestamptz,boolean,bytea,text,uuid) RESET row_security','ALTER FUNCTION crest_commands.revoke_app_session(bytea,uuid) RESET row_security','GRANT SELECT(payload) ON crest_private.session_events TO crest_inventory_owner']){const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);await sandbox.apply(t,await sandbox.prefix(21));await c.query(change);await assert.rejects(sandbox.apply(t),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);assert.equal((await c.query('SELECT to_regclass($1) AS table',[table])).rows[0].table,null);assert.equal((await c.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,21);await assert.rejects(sandbox.apply(t),/MIGRATION_PENDING_REVIEW_REQUIRED/);}
