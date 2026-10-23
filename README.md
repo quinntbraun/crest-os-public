@@ -38,6 +38,8 @@ The [provider-session inventory](planning/PHASE_2_PROVIDER_INVENTORY.md) adds sc
 
 The [retained inventory evidence](planning/PHASE_2_PROVIDER_RECONCILIATION_EVIDENCE.md) adds schema19 and `npm run test:provider-evidence-db`: immutable classified observations, exact scan-request replay and scoped historical lookup with independently verifiable JSON bytes. Scan receipts grant no cleanup authority or current-session eligibility.
 
+The [durable provider login starts and tracked registration](planning/PHASE_2_PROVIDER_LOGIN_ATTEMPTS.md) slice adds schema20 and `npm run test:provider-attempts-db`: an immutable token-free start before provider I/O, pinned security epoch and exact registration history. Unknown attempts remain unresolved; legacy callers and remote cleanup remain explicit gaps.
+
 ## Disposable PostgreSQL and container checks
 
 With Docker available, start only the isolated synthetic test database:

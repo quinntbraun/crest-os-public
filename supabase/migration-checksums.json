@@ -95,6 +95,11 @@
       "version": "20261023021500",
       "file": "20261023021500_provider_reconciliation_evidence.sql",
       "sha256": "5a418e0536b87000419859d4b2919ea9532c1e3bf51e20c49e0d5c7dd7338a6f"
+    },
+    {
+      "version": "20261023035000",
+      "file": "20261023035000_provider_login_attempts.sql",
+      "sha256": "ecfc93e97b8aefafb2f3579025a227acf1db16aba20606669433776823aaa389"
     }
   ]
 }

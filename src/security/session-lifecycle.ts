@@ -117,16 +117,25 @@ export function createSessionLifecycle(config:SessionDatabaseConfiguration,
       const signal=AbortSignal.any([external,AbortSignal.timeout(20000)]);let credential:ReturnType<typeof createSessionCredential>|undefined;
       let material:Awaited<ReturnType<typeof provider.authenticatePasswordTotp>>|undefined;
       try{
-        if(typeof trusted!=='boolean'||signal.aborted)throw new SessionLifecycleError();
+        input=Object.freeze({...input});binding=Object.freeze({...binding});
+        if(typeof trusted!=='boolean'||signal.aborted||typeof input.email!=='string'||!input.email.trim()||input.email.length>320
+          ||typeof input.password!=='string'||!input.password||input.password.length>1024||typeof input.factorId!=='string'||!uuid.test(input.factorId)
+          ||typeof input.code!=='string'||!/^\d{6}$/.test(input.code)||typeof binding.subject!=='string'||!uuid.test(binding.subject)||binding.sessionId!==undefined)throw new SessionLifecycleError();
+        const attemptId=randomUUID(),id=randomUUID(),issuer=provider.issuerForServerBinding();
+        // Confirm the durable marker before any provider exchange. Its epoch
+        // remains pinned through issuance; recovery never rebases this login.
+        const context=await query('SELECT crest_commands.begin_provider_login($1::uuid,$2::uuid,$3::text,$4::uuid) AS result',
+          [attemptId,id,issuer,binding.subject],signal) as {attemptId?:string;appSessionId?:string;actorId?:string;securityEpoch?:string}|null;
+        if(signal.aborted||!context||context.attemptId!==attemptId||context.appSessionId!==id||typeof context.actorId!=='string'||!uuid.test(context.actorId)
+          ||typeof context.securityEpoch!=='string'||!uuid.test(context.securityEpoch))throw new SessionLifecycleError();
         material=await provider.authenticatePasswordTotp(input,binding,signal);const identity=material.identity;
-        const context=await query('SELECT crest_commands.session_actor_context($1::text,$2::uuid) AS result',[identity.issuer,identity.subject],signal) as {actorId?:string;securityEpoch?:string}|null;
-        if(!context||typeof context.actorId!=='string'||!uuid.test(context.actorId)||typeof context.securityEpoch!=='string'||!uuid.test(context.securityEpoch))throw new SessionLifecycleError();
-        credential=createSessionCredential();const id=randomUUID();
+        if(identity.issuer!==issuer||identity.subject!==binding.subject)throw new SessionLifecycleError();
+        credential=createSessionCredential();
         const encrypted=await tokens.encrypt(material.tokensForServerStorage(),{actorId:context.actorId,securityEpoch:context.securityEpoch,appSessionId:id,
           providerSessionId:identity.sessionId,subject:identity.subject,issuer:identity.issuer});
         const hash=credential.hashForDatabase();
-        try{await query('SELECT crest_commands.issue_app_session($1::uuid,$2::bytea,$3::uuid,$4::uuid,$5::text,$6::uuid,$7::uuid,$8::timestamptz,$9::timestamptz,$10::boolean,$11::bytea,$12::text,$13::uuid) AS result',
-          [id,hash,context.actorId,context.securityEpoch,identity.issuer,identity.subject,identity.sessionId,new Date(identity.passwordAt),new Date(identity.totpAt),trusted,Buffer.from(encrypted.ciphertext),encrypted.keyId,randomUUID()],signal);
+        try{await query('SELECT crest_commands.issue_tracked_app_session($1::uuid,$2::bytea,$3::uuid,$4::uuid,$5::text,$6::uuid,$7::uuid,$8::timestamptz,$9::timestamptz,$10::boolean,$11::bytea,$12::text,$13::uuid) AS result',
+          [id,hash,context.actorId,context.securityEpoch,identity.issuer,identity.subject,identity.sessionId,new Date(identity.passwordAt),new Date(identity.totpAt),trusted,Buffer.from(encrypted.ciphertext),encrypted.keyId,attemptId],signal);
         }finally{hash.fill(0);}
         return new IssuedSession(credential,await verify(credential.cookieValueForResponse(),signal,'background',true,false));
       }catch{

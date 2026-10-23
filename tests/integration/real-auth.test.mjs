@@ -27,7 +27,7 @@ import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginRes
 import {createSessionRequestAdmission,SessionAdmissionError} from '../../src/security/session-request-admission.ts';
 import {authenticationServer} from '../support/authentication-server.mjs';
 
-let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,refreshGrants,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,fenceReceipt,storageReceipt,lookupReceipt,renameReceipt,settingsReceipt,cleanupReceipt,inventoryReceipt,evidenceReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
+let sandbox,client,target,service,lookup,boundary,login,loginOwned=false,runtimeUrl,keys,revoke,lifecycle,store,prior,receipt,refreshReceipt,refreshGrants,currentReceipt,browserReceipt,admissionReceipt,tenantReceipt,fenceReceipt,storageReceipt,lookupReceipt,renameReceipt,settingsReceipt,cleanupReceipt,inventoryReceipt,evidenceReceipt,attemptsReceipt,upgradeProof,upgradeContext,legacy,legacyBefore;
 const signal=()=>new AbortController().signal;
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
@@ -50,7 +50,7 @@ before(async()=>{
   browserReceipt=await sandbox.apply(target,await sandbox.prefix(9));
   upgradeProof=(await client.query('INSERT INTO crest_private.session_csrf_tokens(session_id,token_hash) VALUES($1,$2) RETURNING to_jsonb(session_csrf_tokens) AS row',[legacy.session,randomBytes(32)])).rows[0].row;
   upgradeContext=(await client.query("WITH moment AS MATERIALIZED (SELECT clock_timestamp() AS stamp) INSERT INTO crest_private.login_contexts(id,credential_hash,ip_hash,csrf_hash,created_at,expires_at) SELECT gen_random_uuid(),$1,$2,$3,stamp,stamp+interval '10 minutes' FROM moment RETURNING to_jsonb(login_contexts) AS row",[randomBytes(32),randomBytes(32),randomBytes(32)])).rows[0].row;
-  admissionReceipt=await sandbox.apply(target,await sandbox.prefix(10));tenantReceipt=await sandbox.apply(target,await sandbox.prefix(11));fenceReceipt=await sandbox.apply(target,await sandbox.prefix(12));storageReceipt=await sandbox.apply(target,await sandbox.prefix(13));lookupReceipt=await sandbox.apply(target,await sandbox.prefix(14));renameReceipt=await sandbox.apply(target,await sandbox.prefix(15));settingsReceipt=await sandbox.apply(target,await sandbox.prefix(16));cleanupReceipt=await sandbox.apply(target,await sandbox.prefix(17));inventoryReceipt=await sandbox.apply(target,await sandbox.prefix(18));evidenceReceipt=await sandbox.apply(target);
+  admissionReceipt=await sandbox.apply(target,await sandbox.prefix(10));tenantReceipt=await sandbox.apply(target,await sandbox.prefix(11));fenceReceipt=await sandbox.apply(target,await sandbox.prefix(12));storageReceipt=await sandbox.apply(target,await sandbox.prefix(13));lookupReceipt=await sandbox.apply(target,await sandbox.prefix(14));renameReceipt=await sandbox.apply(target,await sandbox.prefix(15));settingsReceipt=await sandbox.apply(target,await sandbox.prefix(16));cleanupReceipt=await sandbox.apply(target,await sandbox.prefix(17));inventoryReceipt=await sandbox.apply(target,await sandbox.prefix(18));evidenceReceipt=await sandbox.apply(target,await sandbox.prefix(19));attemptsReceipt=await sandbox.apply(target);
   store=await createProviderTokenStore('primary',[{id:'primary',key:randomBytes(32)}]);
   lifecycle=createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},boundary,store);
 });
@@ -240,7 +240,8 @@ test('schema5 upgrade retains existing local rows and append-only CLI history',a
   assert.equal(cleanupReceipt.history.length,17);assert.deepEqual(cleanupReceipt.history.slice(0,16),settingsReceipt.history);
   assert.equal(inventoryReceipt.history.length,18);assert.deepEqual(inventoryReceipt.history.slice(0,17),cleanupReceipt.history);
   assert.equal(evidenceReceipt.history.length,19);assert.deepEqual(evidenceReceipt.history.slice(0,18),inventoryReceipt.history);
-  assert.deepEqual((await sandbox.apply(target)).history,evidenceReceipt.history);
+  assert.equal(attemptsReceipt.history.length,20);assert.deepEqual(attemptsReceipt.history.slice(0,19),evidenceReceipt.history);
+  assert.deepEqual((await sandbox.apply(target)).history,attemptsReceipt.history);
   assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.session_csrf_tokens c WHERE id=$1',[upgradeProof.id])).rows[0].row,upgradeProof);
   assert.deepEqual((await client.query('SELECT to_jsonb(c) AS row FROM crest_private.login_contexts c WHERE id=$1',[upgradeContext.id])).rows[0].row,upgradeContext);
 });
@@ -283,7 +284,15 @@ test('issuance owner and functions retain forced RLS, lock-only identity rights 
   await asWeb(async()=>{await assert.rejects(client.query('SELECT * FROM crest_private.app_sessions'),e=>e.code==='42501');});
 });
 test('actual password/TOTP login issues hashed opaque material with encrypted tokens and exact untrusted lifetime',async()=>{
-  const f=await provision(),actor=await linkActor(f),issued=await issue(f),cookie=issued.cookieValueForResponse();
+  const f=await provision(),actor=await linkActor(f);let marker;
+  const tracked={...boundary,authenticatePasswordTotp:async(...args)=>{
+    const rows=(await client.query('SELECT * FROM crest_private.provider_login_attempts WHERE actor_id=$1',[actor.id])).rows;assert.equal(rows.length,1);marker=rows[0];
+    assert.equal(marker.issued_security_epoch,actor.current_security_epoch);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.app_sessions WHERE id=$1',[marker.reserved_app_session_id])).rows[0].n,0);
+    return boundary.authenticatePasswordTotp(...args);
+  }};
+  const issued=await issue(f,false,createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},tracked,store)),cookie=issued.cookieValueForResponse();
+  assert.equal(issued.evidence.sessionId,marker.reserved_app_session_id);
+  assert.equal((await client.query("SELECT operation_id FROM crest_private.session_events WHERE session_id=$1 AND action='CREATED'",[issued.evidence.sessionId])).rows[0].operation_id,marker.attempt_id);
   assert.throws(()=>JSON.stringify(issued),SessionLifecycleError);assert.equal(Buffer.from(cookie,'base64url').length,32);
   const row=(await client.query('SELECT * FROM crest_private.app_sessions WHERE id=$1',[issued.evidence.sessionId])).rows[0];
   assert.equal(row.actor_id,actor.id);assert(!row.token_hash.includes(Buffer.from(cookie)));assert(row.provider_token_ciphertext);assert.equal(row.key_id,'primary');
@@ -351,6 +360,22 @@ test('direct SQL rejects stale epoch/provider identity, malformed hash and stale
   await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ');try{await client.query('SET LOCAL ROLE crest_web');await assert.rejects(client.query(sql,args),e=>e.code==='25001');}finally{await client.query('ROLLBACK');}
   await asWeb(async()=>{await client.query(sql,args);});assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.app_sessions WHERE id=$1',[id])).rows[0].n,0);
 });
+test('epoch change during actual provider login cannot rebase a durable attempt',async()=>{
+  const f=await provision(),actor=await linkActor(f);let calls=0;
+  const gate={...boundary,authenticatePasswordTotp:async(...args)=>{calls++;const result=await boundary.authenticatePasswordTotp(...args);
+    await client.query('UPDATE crest_private.actors SET current_security_epoch=$1,version=version+1 WHERE id=$2',[randomUUID(),actor.id]);return result;}};
+  await lifecycleDenied(issue(f,false,createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},gate,store)));assert.equal(calls,1);
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.app_sessions WHERE actor_id=$1',[actor.id])).rows[0].n,0);
+  const rows=(await client.query('SELECT * FROM crest_private.provider_login_attempts WHERE actor_id=$1',[actor.id])).rows;assert.equal(rows.length,1);assert.equal(rows[0].issued_security_epoch,actor.current_security_epoch);
+});
+test('failed durable begin prevents all provider password requests',async()=>{
+  const f=await provision(),actor=await linkActor(f);let calls=0;
+  await client.query('UPDATE crest_private.actors SET disabled_at=clock_timestamp(),version=version+1 WHERE id=$1',[actor.id]);
+  const gate={...boundary,authenticatePasswordTotp:async(...args)=>{calls++;return boundary.authenticatePasswordTotp(...args);}};
+  await lifecycleDenied(issue(f,false,createSessionLifecycle({connectionString:runtimeUrl,environment:'test'},gate,store)));assert.equal(calls,0);
+  assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.provider_login_attempts WHERE actor_id=$1',[actor.id])).rows[0].n,0);
+});
+
 test('issuance waiting on an actor root rereads a newly committed security epoch and releases no credential',async()=>{
   const f=await provision(),actor=await linkActor(f),locker=await sandbox.connect(target);await locker.query('BEGIN');await locker.query('SELECT id FROM crest_private.actors WHERE id=$1 FOR UPDATE',[actor.id]);
   const pending=issue(f),result=lifecycleDenied(pending);let blocked=false;
