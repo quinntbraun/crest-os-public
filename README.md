@@ -34,6 +34,8 @@ The [business history snapshot readers](planning/PHASE_2_BUSINESS_HISTORY_EXPORT
 
 The [offline business-history verifier](planning/PHASE_2_BUSINESS_HISTORY_VERIFICATION.md) checks included receipt/audit links and exact original numeric/hash evidence, reporting required actor IDs as unresolved references. It grants no identity access and does not certify a complete export or backup.
 
+The [business identity readers](planning/PHASE_2_BUSINESS_IDENTITY_EXPORT.md) add isolated actor/operator ancestry, capability metadata and original identity history with exact source-chain checks. Other businesses' scoped records remain excluded; complete authorized exports and independent recovery remain gated.
+
 
 
 

@@ -8,40 +8,40 @@ const clone=()=>structuredClone(manifest);
 const observed=()=>manifest.tables.flatMap(t=>[...t.required,...t.excluded.map(e=>e.column)].map(column=>({table:t.table,column})));
 const error='EXPORT_COVERAGE_REVIEW_REQUIRED';
 it('reports declared schema coverage without promising a complete export or backup',()=>{
- const result=verify(manifest,observed(),29);
+ const result=verify(manifest,observed(),30);
  expect(result).toEqual({assurance:'schema_inventory_only',tables:22,requiredColumns:255,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
  expect(Object.isFrozen(result)).toBe(true);
 });
-it('accepts different catalog and declaration order',()=>{const m=clone();m.tables.reverse();for(const t of m.tables)t.required.reverse();expect(verify(m,observed().reverse(),29).tables).toBe(22);});
-it.each([undefined,null,[],{},'manifest',3])('rejects malformed manifest %s',value=>expect(()=>verify(value,observed(),29)).toThrow(error));
-it.each([0,-1,28,30,1.5,NaN,Infinity])('rejects incompatible applied migration count %s',value=>expect(()=>verify(manifest,observed(),value)).toThrow(error));
-it('rejects unsupported format and extra top-level assertions',()=>{for(const m of [{...clone(),formatVersion:2},{...clone(),completePortableExport:true}])expect(()=>verify(m,observed(),29)).toThrow(error);});
-it.each([undefined,null,[],{},[{table:'crest.businesses',column:'id',value:'do not read rows'}]])('rejects malformed/empty catalog input %s',value=>expect(()=>verify(manifest,value,29)).toThrow(error));
-it('rejects a newly implemented table until its export policy is reviewed',()=>expect(()=>verify(manifest,[...observed(),{table:'crest.new_entity',column:'id'}],29)).toThrow(error));
-it('rejects a newly implemented column until its export policy is reviewed',()=>expect(()=>verify(manifest,[...observed(),{table:'crest.businesses',column:'new_field'}],29)).toThrow(error));
+it('accepts different catalog and declaration order',()=>{const m=clone();m.tables.reverse();for(const t of m.tables)t.required.reverse();expect(verify(m,observed().reverse(),30).tables).toBe(22);});
+it.each([undefined,null,[],{},'manifest',3])('rejects malformed manifest %s',value=>expect(()=>verify(value,observed(),30)).toThrow(error));
+it.each([0,-1,29,31,1.5,NaN,Infinity])('rejects incompatible applied migration count %s',value=>expect(()=>verify(manifest,observed(),value)).toThrow(error));
+it('rejects unsupported format and extra top-level assertions',()=>{for(const m of [{...clone(),formatVersion:2},{...clone(),completePortableExport:true}])expect(()=>verify(m,observed(),30)).toThrow(error);});
+it.each([undefined,null,[],{},[{table:'crest.businesses',column:'id',value:'do not read rows'}]])('rejects malformed/empty catalog input %s',value=>expect(()=>verify(manifest,value,30)).toThrow(error));
+it('rejects a newly implemented table until its export policy is reviewed',()=>expect(()=>verify(manifest,[...observed(),{table:'crest.new_entity',column:'id'}],30)).toThrow(error));
+it('rejects a newly implemented column until its export policy is reviewed',()=>expect(()=>verify(manifest,[...observed(),{table:'crest.businesses',column:'new_field'}],30)).toThrow(error));
 it('rejects a removed table or column',()=>{
- for(const rows of [observed().filter(r=>r.table!=='crest.businesses'),observed().slice(1)])expect(()=>verify(manifest,rows,29)).toThrow(error);
+ for(const rows of [observed().filter(r=>r.table!=='crest.businesses'),observed().slice(1)])expect(()=>verify(manifest,rows,30)).toThrow(error);
 });
 it('rejects repeated catalog columns and tables outside the owned schemas',()=>{
- for(const rows of [[...observed(),observed()[0]],[...observed(),{table:'auth.users',column:'id'}]])expect(()=>verify(manifest,rows,29)).toThrow(error);
+ for(const rows of [[...observed(),observed()[0]],[...observed(),{table:'auth.users',column:'id'}]])expect(()=>verify(manifest,rows,30)).toThrow(error);
 });
-it('rejects duplicate declared tables',()=>{const m=clone();m.tables.push(m.tables[0]!);expect(()=>verify(m,observed(),29)).toThrow(error);});
+it('rejects duplicate declared tables',()=>{const m=clone();m.tables.push(m.tables[0]!);expect(()=>verify(m,observed(),30)).toThrow(error);});
 it('rejects missing/duplicate/unknown declared columns',()=>{
- for(const name of ['missing','duplicate','unknown']){const m=clone(),t=m.tables[0]!;if(name==='missing')t.required.shift();else t.required.push(name==='duplicate'?t.required[0]!:'unknown');expect(()=>verify(m,observed(),29)).toThrow(error);}
+ for(const name of ['missing','duplicate','unknown']){const m=clone(),t=m.tables[0]!;if(name==='missing')t.required.shift();else t.required.push(name==='duplicate'?t.required[0]!:'unknown');expect(()=>verify(m,observed(),30)).toThrow(error);}
 });
 it('rejects moving each reviewed sensitive column into portable output',()=>{
- for(const t of manifest.tables)for(const e of t.excluded){const m=clone(),copy=m.tables.find(x=>x.table===t.table)!;copy.excluded=copy.excluded.filter(x=>x.column!==e.column);copy.required.push(e.column);expect(()=>verify(m,observed(),29)).toThrow(error);}
+ for(const t of manifest.tables)for(const e of t.excluded){const m=clone(),copy=m.tables.find(x=>x.table===t.table)!;copy.excluded=copy.excluded.filter(x=>x.column!==e.column);copy.required.push(e.column);expect(()=>verify(m,observed(),30)).toThrow(error);}
 });
-it('rejects hiding required history under a recognized exclusion label',()=>{const m=clone(),t=m.tables[0]!;t.excluded.push({column:t.required.shift()!,reason:'session_credential'});expect(()=>verify(m,observed(),29)).toThrow(error);});
+it('rejects hiding required history under a recognized exclusion label',()=>{const m=clone(),t=m.tables[0]!;t.excluded.push({column:t.required.shift()!,reason:'session_credential'});expect(()=>verify(m,observed(),30)).toThrow(error);});
 it('rejects unknown or incorrect exclusion reasons',()=>{
- for(const reason of ['convenience','browser_credential']){const m=clone(),e=m.tables.find(t=>t.table==='crest_private.app_sessions')!.excluded[0]!;e.reason=reason;expect(()=>verify(m,observed(),29)).toThrow(error);}
+ for(const reason of ['convenience','browser_credential']){const m=clone(),e=m.tables.find(t=>t.table==='crest_private.app_sessions')!.excluded[0]!;e.reason=reason;expect(()=>verify(m,observed(),30)).toThrow(error);}
 });
 it('rejects duplicated or simultaneously required/excluded sensitive columns',()=>{
- for(const duplicate of [true,false]){const m=clone(),t=m.tables.find(t=>t.excluded.length)!;if(duplicate)t.excluded.push(t.excluded[0]!);else t.required.push(t.excluded[0]!.column);expect(()=>verify(m,observed(),29)).toThrow(error);}
+ for(const duplicate of [true,false]){const m=clone(),t=m.tables.find(t=>t.excluded.length)!;if(duplicate)t.excluded.push(t.excluded[0]!);else t.required.push(t.excluded[0]!.column);expect(()=>verify(m,observed(),30)).toThrow(error);}
 });
 it('rejects unsupported scopes and misleading full-row coverage assertions',()=>{
- for(const override of [{scope:'all_tenants'},{complete:true}]){const m=clone();Object.assign(m.tables[0]!,override);expect(()=>verify(m,observed(),29)).toThrow(error);}
+ for(const override of [{scope:'all_tenants'},{complete:true}]){const m=clone();Object.assign(m.tables[0]!,override);expect(()=>verify(m,observed(),30)).toThrow(error);}
 });
 it('rejects renamed, omitted or misplaced partial-evidence groups',()=>{
- for(const group of ['unknown',null,'session_event']){const m=clone();m.tables.find(t=>t.table==='crest_private.app_sessions')!.partialEvidenceGroup=group;expect(()=>verify(m,observed(),29)).toThrow(error);}
+ for(const group of ['unknown',null,'session_event']){const m=clone();m.tables.find(t=>t.table==='crest_private.app_sessions')!.partialEvidenceGroup=group;expect(()=>verify(m,observed(),30)).toThrow(error);}
 });
