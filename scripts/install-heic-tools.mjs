@@ -8,6 +8,7 @@ const {heic}=JSON.parse(await readFile(new URL('../release/toolchain.json',impor
 const root=fileURLToPath(new URL('../.local/tools/heic/',import.meta.url)),sourceRoot=fileURLToPath(new URL('../.local/tools/heic-build/',import.meta.url));
 await mkdir(resolve(root,'sources'),{recursive:true});await mkdir(resolve(root,'share/licenses'),{recursive:true});
 const run=(command,args,timeout=60000)=>execFileSync(command,args,{encoding:'utf8',timeout,maxBuffer:8*1024*1024});
+let fixturePlan;
 for(const library of ['libde265','libheif']){
   const version=heic[library],sha=heic[library+'SourceSha256'],name=`${library}-${version}`;
   const r=await fetch(`https://github.com/strukturag/${library}/releases/download/v${version}/${name}.tar.gz`,{signal:AbortSignal.timeout(60000)});
@@ -30,13 +31,7 @@ for(const library of ['libde265','libheif']){
   run('cmake',['-S',source,'-B',build,...options]);run('cmake',['--build',build,'--parallel','2'],600000);run('cmake',['--install',build]);
   await copyFile(resolve(source,'COPYING'),resolve(root,'share/licenses',library+'-COPYING'));
   if(library==='libheif'&&process.argv.includes('--fixtures')){
-    // Test-only GPL x265 encoder: separate prefix/build, never copied into the
-    // release. The actual decoder keeps its HEVC-only/no-encoder library.
-    const fixtureRoot=fileURLToPath(new URL('../.local/tools/heic-fixtures/',import.meta.url)),fixtureBuild=resolve(source,'build-fixtures');
-    run('cmake',['-S',source,'-B',fixtureBuild,...options,`-DCMAKE_INSTALL_PREFIX=${fixtureRoot}`,
-      `-DCMAKE_INSTALL_RPATH=$ORIGIN/../lib;$ORIGIN;${resolve(root,'lib')}`,'-DWITH_X265=ON','-DWITH_EXAMPLES=ON',
-      '-DWITH_EXAMPLE_HEIF_THUMB=OFF','-DWITH_EXAMPLE_HEIF_VIEW=OFF']);
-    run('cmake',['--build',fixtureBuild,'--parallel','2'],600000);run('cmake',['--install',fixtureBuild]);
+    fixturePlan={source,options};
   }
 }
 await mkdir(resolve(root,'bin'),{recursive:true});
@@ -58,3 +53,12 @@ await writeFile(resolve(root,'share/licenses/BUILD-RECEIPT'),`Pinned libheif/lib
 const version=run(resolve(root,'bin/crest-heic-decode'),['--version']);
 if(version.trim()!==`crest-heic-v1 libheif${heic.libheif} libde265${heic.libde265}`)throw new Error('HEIC_NATIVE_VERSION_FAILED');
 console.log('HEIC inspector: verified source hashes, compiled HEVC-only decoder, retained LGPL sources/notices, executable versions');
+if(fixturePlan){
+  // Compile/check the actual adapter before spending time on test-only tools.
+  // The GPL x265 encoder has a separate prefix, never copied into the release.
+  const {source,options}=fixturePlan,fixtureRoot=fileURLToPath(new URL('../.local/tools/heic-fixtures/',import.meta.url)),fixtureBuild=resolve(source,'build-fixtures');
+  run('cmake',['-S',source,'-B',fixtureBuild,...options,`-DCMAKE_INSTALL_PREFIX=${fixtureRoot}`,
+    `-DCMAKE_INSTALL_RPATH=$ORIGIN/../lib;$ORIGIN;${resolve(root,'lib')}`,'-DWITH_X265=ON','-DWITH_EXAMPLES=ON',
+    '-DWITH_EXAMPLE_HEIF_THUMB=OFF','-DWITH_EXAMPLE_HEIF_VIEW=OFF']);
+  run('cmake',['--build',fixtureBuild,'--parallel','2'],600000);run('cmake',['--install',fixtureBuild]);
+}

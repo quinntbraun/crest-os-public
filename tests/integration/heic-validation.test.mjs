@@ -18,7 +18,7 @@ test('patched decoder consumes generated HEIC originals and returns correctly or
     for(const key of ['exif','xmp','icc','iptc','orientation'])assert.equal(m[key],undefined);
     const {data}=await sharp(r.preview.bytes).raw().toBuffer({resolveWithObject:true});
     if(f.name==='transparent alpha')assert.deepEqual([...data.subarray(0,3)],[255,255,255]);
-    else for(let i=0;i<3;i++)assert(Math.abs(data[i]-[34,68,102][i])<12,`preview color channel ${i}`);
+    else for(let i=0;i<3;i++)assert(Math.abs(data[i]-(f.color??[34,68,102])[i])<12,`preview color channel ${i}`);
   });
 });
 test('malformed, unsupported, excessive and corrupt HEIC files quarantine with stable redacted failures',async t=>{

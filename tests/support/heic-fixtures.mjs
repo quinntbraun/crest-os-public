@@ -19,14 +19,14 @@ export async function encodeHeic(pngs,args=[]){
 export async function heicFixtures(){
   const create=()=>sharp({create:{width:96,height:48,channels:3,background:'#224466'}});
   const png=await create().withExif({IFD0:{Copyright:'Synthetic test only'}}).png().toBuffer();
-  const plain=await encodeHeic([png]),p3=await encodeHeic([await create().withIccProfile('p3').png().toBuffer()]),
+  const plain=await encodeHeic([png]),p3=await encodeHeic([await sharp({create:{width:96,height:48,channels:3,background:'#20d040'}}).withIccProfile('p3').png().toBuffer()]),
     alpha=await encodeHeic([await sharp({create:{width:96,height:48,channels:4,background:{r:30,g:70,b:110,alpha:0}}}).png().toBuffer()]),
     ten=await encodeHeic([await create().toColourspace('rgb16').png().toBuffer()],['-b','10']),
     rotated=await encodeHeic([png],['--rotate-cw','90']),grid=await encodeHeic([png],['--cut-tiles','64']);
   const corrupt=Buffer.from(plain);let pos=0;while(pos<corrupt.length){const n=corrupt.readUInt32BE(pos);if(corrupt.toString('latin1',pos+4,pos+8)==='mdat'){corrupt.fill(0,pos+8,n===0?corrupt.length:pos+n);break;}pos+=n;}
   const huge=Buffer.from(plain),ispe=huge.indexOf(Buffer.from('ispe'));if(ispe<0)throw Error('Fixture ispe absent');huge.writeUInt32BE(20000,ispe+8);huge.writeUInt32BE(20000,ispe+12);
   return {plain,png,valid:[{name:'8-bit private EXIF original',bytes:plain,width:96,height:48},
-    {name:'Display P3 ICC',bytes:p3,width:96,height:48},{name:'transparent alpha',bytes:alpha,width:96,height:48},
+    {name:'Display P3 ICC',bytes:p3,width:96,height:48,color:[32,208,64]},{name:'transparent alpha',bytes:alpha,width:96,height:48},
     {name:'10-bit HEVC',bytes:ten,width:96,height:48,depth:10},{name:'90-degree transformation',bytes:rotated,width:48,height:96},
     {name:'HEIC grid',bytes:grid,width:96,height:48}],
     invalid:[{name:'damaged coded pixels',bytes:corrupt,codes:['HEIC_DECODE_FAILED']},

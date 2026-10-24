@@ -52,7 +52,9 @@ int main(int argc,char** argv){
     require(heif_get_decoder_descriptors(heif_compression_undefined,nullptr,0)==1&&heif_have_decoder_for_format(heif_compression_HEVC)
       &&!heif_have_encoder_for_format(heif_compression_HEVC),"HEIC_TOOLS_UNAVAILABLE");
     checked(heif_context_read_from_file(context.get(),argv[1],nullptr));
-    require(!heif_context_has_sequence(context.get())&&heif_context_get_number_of_top_level_images(context.get())==1,"HEIC_FORMAT_UNAVAILABLE");
+    // The Node container gate rejects sequence brands and moov/video boxes.
+    // Stay on the stable still-image API; do not enable experimental APIs.
+    require(heif_context_get_number_of_top_level_images(context.get())==1,"HEIC_FORMAT_UNAVAILABLE");
     heif_image_handle* h=nullptr;checked(heif_context_get_primary_image_handle(context.get(),&h));
     std::unique_ptr<heif_image_handle,decltype(&heif_image_handle_release)> handle(h,heif_image_handle_release);
     const int w=heif_image_handle_get_width(h),height=heif_image_handle_get_height(h),

@@ -29,7 +29,7 @@ test('patched same-release decoder handles 8/10-bit, alpha, P3, rotated and tile
     assert.equal(m.format,'jpeg');assert.equal(m.width,f.width);assert.equal(m.height,f.height);if(f.depth)assert.equal(r.source.bitDepth,f.depth);
     for(const key of ['exif','xmp','icc','iptc','orientation'])assert.equal(m[key],undefined);
     const {data}=await sharp(preview).raw().toBuffer({resolveWithObject:true});
-    if(f.name==='transparent alpha')assert.deepEqual([...data.subarray(0,3)],[255,255,255]);else for(let i=0;i<3;i++)assert(Math.abs(data[i]-[34,68,102][i])<12);
+    if(f.name==='transparent alpha')assert.deepEqual([...data.subarray(0,3)],[255,255,255]);else for(let i=0;i<3;i++)assert(Math.abs(data[i]-(f.color??[34,68,102])[i])<12);
   });
 });
 test('same admitted worker quarantines corrupt/excessive/unsupported originals with redacted errors',async t=>{
