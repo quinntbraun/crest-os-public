@@ -47,3 +47,11 @@ Owner continuation of existing export/recovery work. ADR39 selects a new isolate
 ARCHITECTURE_DECISIONS.md: prior amended SHA256 ecf466766fa000a6f8a88e50f3e43015459c584bb75f2fbd11d388a72b5fefe5, 32018 bytes at PR52/maind8c72572096279b0b35921fb3df3349152d9279e; now version1.10, SHA256 6cfa0adf14319e7e900fb7986a48ee76cf9b1479500df70e08e1be2e7b786622, 36739 bytes. Original baseline hash/length retained.
 
 PUBLICATION.md: prior amended SHA256 c8031ef7ab62de09a7f07c92d95624505dbced83a41bf5f88e99c0c5eb311fc8, 5851 bytes at PR52/maind8c72572096279b0b35921fb3df3349152d9279e; now version1.5, SHA256 7a1ee8028deee681206a33a070fba12b938142ae44f3810e46967020179879b5, 5853 bytes. Original baseline hash/length retained.
+
+## 2026-10-24 - Safe current session metadata export
+
+Owner continuation of existing export/recovery work. ADR40 adds a separate closed nonlogin definer for17 safe current app-session metadata columns and two actor-scope columns; existing owners/readers and credential exclusions remain unchanged. No business/financial/Calendar rule, ordinary runtime grant or production permission expansion. All30 prior SQL and original manifest remain immutable; same12 distinct amendments, ten other amended documents byte-for-byte unchanged.
+
+ARCHITECTURE_DECISIONS.md: prior amended SHA256 6cfa0adf14319e7e900fb7986a48ee76cf9b1479500df70e08e1be2e7b786622, 36739 bytes at PR54/main63b2d98f6163e015d8aff4605c20ac04f7f0391c; now version1.11, SHA256 3065eda1d9f1f67fbdb0d2f0faabbc29ee2b69035d98c72a46e5ec3bd84bdd35, 41159 bytes. Original baseline hash/length retained.
+
+PUBLICATION.md: prior amended SHA256 7a1ee8028deee681206a33a070fba12b938142ae44f3810e46967020179879b5, 5853 bytes at PR54/main63b2d98f6163e015d8aff4605c20ac04f7f0391c; now version1.6, SHA256 91707d64d4479dccb7276c1fe0e56435569df4fc8ad54dbcceb50b5574980bee, 5854 bytes. Original baseline hash/length retained.
