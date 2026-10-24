@@ -7,10 +7,10 @@ BEGIN
     OR EXISTS(SELECT 1 FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles r ON r.oid=m.roleid OR r.oid=m.member WHERE r.rolname='crest_export')
     OR EXISTS(SELECT 1 FROM pg_catalog.pg_namespace n WHERE has_schema_privilege('crest_export',n.oid,'CREATE'))
     OR EXISTS(SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
-      WHERE n.nspname IN ('crest','crest_private','auth') AND c.relkind IN ('r','p','v','m','f')
-      AND (has_any_column_privilege('crest_export',c.oid,'SELECT,INSERT,UPDATE,REFERENCES') OR has_table_privilege('crest_export',c.oid,'DELETE,TRUNCATE,TRIGGER,MAINTAIN')))
+      WHERE n.nspname IN ('crest','crest_private','auth') AND CASE WHEN c.relkind IN ('r','p','v','m','f') THEN
+        has_any_column_privilege('crest_export',c.oid,'SELECT,INSERT,UPDATE,REFERENCES') OR has_table_privilege('crest_export',c.oid,'DELETE,TRUNCATE,TRIGGER,MAINTAIN') ELSE false END)
     OR EXISTS(SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
-      WHERE n.nspname IN ('crest','crest_private','auth') AND c.relkind='S' AND has_sequence_privilege('crest_export',c.oid,'USAGE,SELECT,UPDATE'))
+      WHERE n.nspname IN ('crest','crest_private','auth') AND CASE WHEN c.relkind='S' THEN has_sequence_privilege('crest_export',c.oid,'USAGE,SELECT,UPDATE') ELSE false END)
     OR EXISTS(SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
       WHERE n.nspname IN ('crest','crest_private','crest_commands') AND has_function_privilege('crest_export',p.oid,'EXECUTE')
       AND p.oid NOT IN ('crest_commands.business_configuration_export_context(uuid)'::regprocedure,'crest_commands.business_configuration_export_page(uuid,text,text,uuid,integer)'::regprocedure,

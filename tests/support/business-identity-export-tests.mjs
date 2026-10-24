@@ -153,6 +153,12 @@ export function businessIdentityExportTests(get){
  test('identity migration refuses preexisting provider-column grants before creating any new reader',async()=>{
   const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await get().installProviderSchema(c,t);await sandbox.apply(t,await sandbox.prefix(29));await c.query('GRANT SELECT(id) ON auth.sessions TO crest_identity_export_owner');try{await assert.rejects(sandbox.apply(t));assert.equal((await c.query("SELECT to_regprocedure('crest_commands.business_identity_export_context(uuid)') AS routine")).rows[0].routine,null);}finally{await c.query('REVOKE SELECT(id) ON auth.sessions FROM crest_identity_export_owner');}
  });
+ test('identity migration privilege checks distinguish actual Auth tables indexes and sequences without evaluating an index as a sequence',async()=>{
+  const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await get().installProviderSchema(c,t);await sandbox.apply(t,await sandbox.prefix(29));
+  await c.query('CREATE SEQUENCE auth.synthetic_identity_guard_sequence');const result=await sandbox.apply(t);assert.equal(result.history.length,30);
+  assert.equal((await c.query("SELECT has_sequence_privilege('crest_export','auth.synthetic_identity_guard_sequence','USAGE,SELECT,UPDATE') AS allowed")).rows[0].allowed,false);
+  assert.notEqual((await c.query("SELECT to_regprocedure('crest_commands.business_identity_export_context(uuid)') AS routine")).rows[0].routine,null);
+ });
  test('original creation events cannot acquire an invented before snapshot even with a valid new source hash',async()=>{
   const old=(await client.query("SELECT id,payload::text AS body FROM crest_private.identity_events WHERE entity_id=$1 AND action='INSERT'",[owner])).rows[0];await eventChange(old.id,'payload',await patched(old.id,['before'],{id:owner}));try{await fails();}finally{await eventChange(old.id,'payload',old.body);}
  });
