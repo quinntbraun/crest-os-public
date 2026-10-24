@@ -17,9 +17,12 @@ const closed=work=>assert.rejects(work,/SYNTHETIC_RECOVERY_RESTORE_FAILED/);
 
 async function session(client,f){
   const value={...f,session:randomUUID(),provider:randomUUID(),hash:randomBytes(32)};
+  try{
   await client.query("INSERT INTO auth.sessions(id,user_id,aal,created_at,updated_at) VALUES($1,$2,'aal2',clock_timestamp(),clock_timestamp())",[value.provider,value.subject]);
-  await client.query("INSERT INTO crest_private.app_sessions(id,actor_id,provider_session_id,token_hash,issued_security_epoch,created_at,authenticated_at,last_active_at,expires_at,trusted,provider_token_ciphertext,key_id,created_by,updated_by) SELECT $1,id,$3,$4,current_security_epoch,clock_timestamp()-interval '1 second',clock_timestamp()-interval '1 second',clock_timestamp()-interval '1 second',clock_timestamp()+interval '1 hour',false,$5,'synthetic',id,id FROM crest_private.actors WHERE id=$2",[value.session,value.actor,value.provider,value.hash,randomBytes(32)]);
+  // Sample the database clock exactly once: authenticated_at must be <=created_at.
+  await client.query("WITH observed AS MATERIALIZED (SELECT clock_timestamp()-interval '1 second' AS stamp) INSERT INTO crest_private.app_sessions(id,actor_id,provider_session_id,token_hash,issued_security_epoch,created_at,authenticated_at,last_active_at,expires_at,trusted,provider_token_ciphertext,key_id,created_by,updated_by) SELECT $1,id,$3,$4,current_security_epoch,observed.stamp,observed.stamp,observed.stamp,observed.stamp+interval '1 hour',false,$5,'synthetic',id,id FROM crest_private.actors CROSS JOIN observed WHERE id=$2",[value.session,value.actor,value.provider,value.hash,randomBytes(32)]);
   return value;
+  }catch{throw new Error('SYNTHETIC_RECOVERY_SESSION_SEED_FAILED');}
 }
 async function web(url,admin){
   const login=`recovery_web_${randomBytes(8).toString('hex')}`,password=randomBytes(32).toString('hex');
@@ -120,6 +123,15 @@ test('restored FK/check/append-only guards still enforce source integrity',async
   await assert.rejects(restored.query("UPDATE crest.businesses SET timezone='',version=version+1 WHERE id=$1",[owner.business]),e=>e.code==='23514');
   await assert.rejects(restored.query('DELETE FROM crest.memberships WHERE actor_id=$1',[owner.actor]),e=>['23503','55000'].includes(e.code));
   await assert.rejects(restored.query("UPDATE crest_private.audit_events SET action='forged'"),e=>e.code==='55000');
+});
+test('one-microsecond authentication drift is rejected; the corrected seed shares one exact timestamp',async()=>{
+  await restored.query('BEGIN');try{
+    await assert.rejects(restored.query("INSERT INTO crest_private.app_sessions(id,actor_id,provider_session_id,token_hash,issued_security_epoch,created_at,authenticated_at,last_active_at,expires_at,trusted,provider_token_ciphertext,key_id,created_by,updated_by) SELECT gen_random_uuid(),actor_id,$2,$3,issued_security_epoch,created_at,created_at+interval '1 microsecond',created_at,created_at+interval '1 hour',false,provider_token_ciphertext,key_id,created_by,updated_by FROM crest_private.app_sessions WHERE id=$1",[owner.session,randomUUID(),randomBytes(32)]),e=>e.code==='23514'&&e.constraint==='app_sessions_check2');
+  }finally{await restored.query('ROLLBACK');}
+  await restored.query('BEGIN');try{
+    const fresh=await session(restored,owner);
+    assert.equal((await restored.query("SELECT created_at=authenticated_at AND created_at=last_active_at AND expires_at=created_at+interval '1 hour' AS exact FROM crest_private.app_sessions WHERE id=$1",[fresh.session])).rows[0].exact,true);
+  }finally{await restored.query('ROLLBACK');}
 });
 test('incident fixture pauses authority, revokes sessions and records a new epoch independently',async()=>{
   const incident=randomUUID(),epoch=randomUUID(),file=join(directory,'independent-incident.json');
