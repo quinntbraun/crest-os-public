@@ -35,10 +35,10 @@
       "name": "ARCHITECTURE_DECISIONS.md",
       "originalSha256": "11acb9dc027cc8427823522193cb5518ab499dc8521c2682e4797ff6c0a47867",
       "originalBytes": 17703,
-      "version": "1.8",
-      "sha256": "2d9d5b2807bf242c2e4d5e63aaadb28ed8522cfb592a5dcb197260af0b558ee0",
-      "bytes": 28165,
-      "reason": "2026-10-24 ADR37 explicitly isolated portable business metadata extraction; prior Calendar/ADR36 contracts retained; see CANONICAL_MAINTENANCE.md"
+      "version": "1.9",
+      "sha256": "ecf466766fa000a6f8a88e50f3e43015459c584bb75f2fbd11d388a72b5fefe5",
+      "bytes": 32018,
+      "reason": "2026-10-24 ADR38 explicit original operation/audit export evidence; Calendar/ADR36/ADR37 contracts retained; see CANONICAL_MAINTENANCE.md"
     },
     {
       "name": "DATABASE.md",
@@ -107,10 +107,10 @@
       "name": "PUBLICATION.md",
       "originalSha256": "f53bcc738639bdf8d336cf970fd0c83715153becd536ab265bf442bdcfce5932",
       "originalBytes": 5584,
-      "version": "1.3",
-      "sha256": "027dda264f9aa61cc28f8d00a8c4bdcab8eecc08967776a9855dc7b60fc94f77",
-      "bytes": 5846,
-      "reason": "2026-10-24 ADR37 explicitly isolated portable business metadata extraction; prior Calendar/ADR36 contracts retained; see CANONICAL_MAINTENANCE.md"
+      "version": "1.4",
+      "sha256": "c8031ef7ab62de09a7f07c92d95624505dbced83a41bf5f88e99c0c5eb311fc8",
+      "bytes": 5851,
+      "reason": "2026-10-24 ADR38 explicit original operation/audit export evidence; Calendar/ADR36/ADR37 contracts retained; see CANONICAL_MAINTENANCE.md"
     }
   ]
 }

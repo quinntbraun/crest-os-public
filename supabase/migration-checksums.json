@@ -140,6 +140,11 @@
       "version": "20261024062000",
       "file": "20261024062000_business_configuration_export.sql",
       "sha256": "929d2e6136e1c59ce88194467d16381b83cf1b7695cd342ec35cd8509f1f8b5e"
+    },
+    {
+      "version": "20261024070000",
+      "file": "20261024070000_business_history_export.sql",
+      "sha256": "3ff1f2df9b2c3146dece09f2d0f6b29d062a1b9668c12499c2f1c89629104706"
     }
   ]
 }

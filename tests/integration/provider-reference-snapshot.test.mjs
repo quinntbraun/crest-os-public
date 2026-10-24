@@ -12,11 +12,12 @@ import {installProviderSchema} from '../support/provider-schema.mjs';
 import {readFile} from 'node:fs/promises';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import {businessConfigurationExportTests} from '../support/business-configuration-export-tests.mjs';
+import {businessHistoryExportTests} from '../support/business-history-export-tests.mjs';
 
 const issuer='https://auth.example.com/auth/v1',kinds=['session_identity','session_event','cleanup_reference'];
 const tables=['app_sessions','session_events','provider_cleanup_references'];
 const functions=['crest_commands.provider_reference_export_context(uuid,text)','crest_commands.provider_reference_export_page(uuid,text,text,text,uuid,integer)'];
-let sandbox,target,client,reader,bootstrap,business,owner,other,legacy,prior,receipt,retained,oldFunctions,referenceReceipt;
+let sandbox,target,client,reader,bootstrap,business,owner,other,legacy,prior,receipt,retained,oldFunctions,referenceReceipt,configurationReceipt;
 const runtimeRoles=[];let runtimeInventory;
 const digest=s=>createHash('sha256').update(s,'utf8').digest('hex');
 async function actor(){const a=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic reference owner',$1,$2,$3,$3,'manual') RETURNING id,current_security_epoch",[issuer,randomUUID(),bootstrap])).rows[0];await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$3,$3,'manual')",[business,a.id,owner?.id??a.id]);return a;}
@@ -33,10 +34,11 @@ before(async()=>{
  bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
  const root=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic reference bootstrap',$1,$2,$3,$3,'manual') RETURNING id",[issuer,randomUUID(),bootstrap])).rows[0].id;
  await client.query('BEGIN');try{business=(await client.query("INSERT INTO crest.businesses(legal_name,timezone,created_by,updated_by,origin) VALUES('Synthetic reference business','UTC',$1,$1,'manual') RETURNING id",[root])).rows[0].id;await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,root]);await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,root]);await client.query('COMMIT');}catch(e){await client.query('ROLLBACK');throw e;}
- owner=await actor();other=await actor();legacy=await session();await revoke(legacy);retained=await sourceHashes();oldFunctions=await originals();referenceReceipt=await sandbox.apply(target,await sandbox.prefix(27));receipt=await sandbox.apply(target);reader=await sandbox.connect(target);await reader.query('SET ROLE crest_inventory');await initializeBusinessConfigurationExport();
+ owner=await actor();other=await actor();legacy=await session();await revoke(legacy);retained=await sourceHashes();oldFunctions=await originals();referenceReceipt=await sandbox.apply(target,await sandbox.prefix(27));configurationReceipt=await sandbox.apply(target,await sandbox.prefix(28));receipt=await sandbox.apply(target);reader=await sandbox.connect(target);await reader.query('SET ROLE crest_inventory');await initializeBusinessConfigurationExport();await initializeBusinessHistoryExport();
 });
 after(async()=>{for(const name of runtimeRoles)await sandbox.admin.query(`DROP ROLE ${name}`);await sandbox?.close();});
 const initializeBusinessConfigurationExport=businessConfigurationExportTests(()=>({client,sandbox,target,installProviderSchema,runtimeRoles}));
+const initializeBusinessHistoryExport=businessHistoryExportTests(()=>({client,sandbox,target,installProviderSchema,runtimeRoles}));
 
 async function exportColumns(){
  return (await client.query(`SELECT n.nspname||'.'||c.relname AS "table",a.attname AS "column"
@@ -66,10 +68,10 @@ test('live added source columns and tables fail coverage until reviewed without 
 });
 
 test('schema26 upgrade preserves all prior source bytes history and original six-ledger routines',async()=>{
- assert.equal(prior.history.length,26);assert.equal(referenceReceipt.history.length,27);assert.equal(receipt.history.length,28);assert.deepEqual(receipt.history.slice(0,27),referenceReceipt.history);assert.deepEqual(receipt.history.slice(0,26),prior.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);assert.deepEqual(await sourceHashes(),retained);assert.deepEqual(await originals(),oldFunctions);
+ assert.equal(prior.history.length,26);assert.equal(referenceReceipt.history.length,27);assert.equal(configurationReceipt.history.length,28);assert.equal(receipt.history.length,29);assert.deepEqual(receipt.history.slice(0,28),configurationReceipt.history);assert.deepEqual(receipt.history.slice(0,27),referenceReceipt.history);assert.deepEqual(receipt.history.slice(0,26),prior.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);assert.deepEqual(await sourceHashes(),retained);assert.deepEqual(await originals(),oldFunctions);
 });
-test('schema25 upgrade preserves its prefix through26,27 and28',async()=>{
- const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);const p=await sandbox.apply(t,await sandbox.prefix(25)),r=await sandbox.apply(t);assert.equal(r.history.length,28);assert.deepEqual(r.history.slice(0,25),p.history);
+test('schema25 upgrade preserves its prefix through26,27,28 and29',async()=>{
+ const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);const p=await sandbox.apply(t,await sandbox.prefix(25)),r=await sandbox.apply(t);assert.equal(r.history.length,29);assert.deepEqual(r.history.slice(0,25),p.history);
 });
 test('reference context reports all three exact source counts in an explicit separate scope',async()=>{
  await snapshot(owner,async ctx=>{assert.deepEqual(Object.keys(ctx).sort(),['actorId','ledgerCounts','observedAt','providerIssuer','schemaVersion','scope','snapshotToken'].sort());assert.equal(ctx.schemaVersion,1);assert.equal(ctx.scope,'provider_session_references');assert.equal(ctx.actorId,owner.id);assert.equal(ctx.providerIssuer,issuer);assert.match(ctx.observedAt,/\+00:00$/);assert.match(ctx.snapshotToken,/^[a-f0-9]{64}$/);for(let i=0;i<3;i++)assert.equal(ctx.ledgerCounts[kinds[i]],(await client.query(`SELECT count(*)::text AS n FROM crest_private.${tables[i]} WHERE actor_id=$1`,[owner.id])).rows[0].n);assert.deepEqual(Object.keys(ctx.ledgerCounts).sort(),[...kinds].sort());});
