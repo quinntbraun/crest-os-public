@@ -26,6 +26,9 @@ The [provider-reference snapshot readers](planning/PHASE_2_PROVIDER_REFERENCE_SN
 
 The [combined provider evidence collector and verifier](planning/PHASE_2_PROVIDER_RECOVERY_COLLECTION.md) keep all nine groups in one bounded snapshot and check original registration/revocation links offline, preserving exact versions and historical unknowns. Complete security coverage, private custody and independent recovery remain gated.
 
+The [security export coverage gate](planning/PHASE_2_SECURITY_EXPORT_COVERAGE.md) checks all22 Crest source tables/265 columns against the actual applied schema, with explicit credential exclusions. Nine existing evidence groups remain partial coverage; complete private export and independent restore remain gated.
+
+
 ## Local development
 
 Run every repository command from this `crest-os-public` checkout, not the parent ChatGPT project mirror or original private archive. Use Node **24.22.0** and its bundled npm **11.19.1**. No paid account or provider credentials are needed.
