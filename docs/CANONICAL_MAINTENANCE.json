@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "date": "2026-10-23",
+  "date": "2026-10-24",
   "baselineCommit": "34558ed3df4f339e45b8d1a012a2e2d1246e3546",
   "changeRecord": "CANONICAL_MAINTENANCE.md",
   "amendments": [
@@ -35,10 +35,10 @@
       "name": "ARCHITECTURE_DECISIONS.md",
       "originalSha256": "11acb9dc027cc8427823522193cb5518ab499dc8521c2682e4797ff6c0a47867",
       "originalBytes": 17703,
-      "version": "1.7",
-      "sha256": "94d7905f5f9cb1cf58a6ffcf7b83afc09a3b94a7e7ae3990c3c9b98c960e8b27",
-      "bytes": 24898,
-      "reason": "2026-10-22 owner Calendar scope retained; 2026-10-23 ADR36 explicit narrow provider reduction decision and current register; see CANONICAL_MAINTENANCE.md"
+      "version": "1.8",
+      "sha256": "2d9d5b2807bf242c2e4d5e63aaadb28ed8522cfb592a5dcb197260af0b558ee0",
+      "bytes": 28165,
+      "reason": "2026-10-24 ADR37 explicitly isolated portable business metadata extraction; prior Calendar/ADR36 contracts retained; see CANONICAL_MAINTENANCE.md"
     },
     {
       "name": "DATABASE.md",
@@ -107,10 +107,10 @@
       "name": "PUBLICATION.md",
       "originalSha256": "f53bcc738639bdf8d336cf970fd0c83715153becd536ab265bf442bdcfce5932",
       "originalBytes": 5584,
-      "version": "1.2",
-      "sha256": "ac1cca21ed30f9db54c13daa35dc60f3fd9acae437b55984338d3c677101e5d0",
-      "bytes": 5847,
-      "reason": "2026-10-22 owner Calendar scope retained; 2026-10-23 ADR36 explicit narrow provider reduction decision and current register; see CANONICAL_MAINTENANCE.md"
+      "version": "1.3",
+      "sha256": "027dda264f9aa61cc28f8d00a8c4bdcab8eecc08967776a9855dc7b60fc94f77",
+      "bytes": 5846,
+      "reason": "2026-10-24 ADR37 explicitly isolated portable business metadata extraction; prior Calendar/ADR36 contracts retained; see CANONICAL_MAINTENANCE.md"
     }
   ]
 }
