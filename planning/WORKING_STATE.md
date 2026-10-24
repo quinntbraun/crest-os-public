@@ -5,16 +5,16 @@ Read AGENTS.md, README.md, this checkpoint and PRE_IMPLEMENTATION.md. Canonical 
 ## Verified baseline
 
 - Public repository: https://github.com/quinntbraun/crest-os-public
-- PR60/protected main156c9f680b907bf072e5f3f78e6a7861aba2cf67; treeb4fc5261e4aa4bedab1f36346972435d2a6e2ba0. Candidate40122067944 and actual-main40122941126 passed all four trusted checks, including the required Foundation checks app15368 enforced for everyone.
-- Native totals:1915 unit/45 files,748 DB/Auth including109 genuine Auth and16 recovery,9 pgTAP,16 shell and18 HTTPS leaves. Exact source/run/job/artifact bindings and assurance limits are in PR60. The prior PR59 main fixture failure is retained; PR60 fixes its independently sampled timestamps without weakening the database constraint.
-- CI uses isolated foundation/provider/authentication groups and a fail-closed required aggregate. Every existing check remains. Local Docker is unavailable and Windows native-build execution is blocked; actual PG/Auth/build/browser/container proof comes from Linux CI.
+- PR61/protected mainaaa7053d5b60429af4d5889cd2e10dfb791b04fe; tree3d5b5e71302bb343b5ecee8d722588fc52906f88. Candidate40124902510 and actual-main40125942400 passed all four trusted checks, including Foundation checks/app15368 enforced for everyone. Exact logs/artifact bindings are in PR61.
+- Native totals:1915 unit/45 files,748 DB/Auth including109 genuine Auth and16 recovery,9 pgTAP,18 private-storage tests,16 shell and18 HTTPS leaves. Private storage mechanics are implemented; Available attachment publication, actual R2 configuration/conformance and complete object recovery remain unfinished.
+- CI uses isolated foundation/provider/authentication groups and a fail-closed aggregate. Local Docker is unavailable and Windows native-build execution is blocked; actual PG/Auth/build/browser/container proof comes from Linux CI. Sharp native generated-fixture decoding works locally.
 - App0.1.0/schema31/report0/command1. Default application authentication/business runtime and production activation remain closed. No usable CRM/finance/Calendar yet.
 
 ## Current feature slice
 
-feature/private-object-storage adds an actual AWS SDK/R2 private-storage adapter, scoped ten-minute staging PUTs, bounded checksummed staging snapshots and conditional original candidates with independent final-byte verification. See PHASE_3_PRIVATE_OBJECTS.md for the consumer contract, unknown-write handling, native fault tests and unimplemented gates. Candidate and protected actual-main proof for this slice must be recorded in its PR before claiming it shipped.
+feature/isolated-image-validation adds strict JPEG/PNG container/full-pixel validation, unchanged source digests, metadata-free oriented JPEG previews and a separate same-release restricted worker entry point. See PHASE_3_IMAGE_VALIDATION.md for scope, warning-latch root cause, cgroup-v2 admission, private IPC, native/container tests and limits. Candidate and protected actual-main proof must be recorded in its PR before claiming it shipped.
 
-This is storage mechanics, not format approval, attachment authorization or an Available transition. No file route or cloud account is activated. The explicit dependency/lockfile change adds exact-pinned AWS SDK3.1156.0 packages; canonical documents and published migrations remain unchanged. Native tests use synthetic loopback HTTP/streams and independently verify PUT signatures; actual R2 configuration/conformance is still unexecuted.
+Sharp0.35.5 was already integrity-locked transitively and is now a direct dependency. No schema, published migration or canonical bytes change. JPEG/PNG failures and unsupported PDF/HEIC remain explicit quarantined verdicts; no Available attachment, provider/DB authorization or file route is exposed. Production sandbox construction/transport, typed lease/epoch publication and actual R2/phone/recovery proofs remain gated. Do not assume Render cron can spawn Docker or that a HEIF flag proves HEIC decoding.
 
 ## Next usable milestones
 

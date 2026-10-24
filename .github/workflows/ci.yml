@@ -230,6 +230,7 @@ jobs:
           npm run typecheck
           npm test
           npm run test:private-files
+          npm run test:image-validation
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 6
         run: |
@@ -251,6 +252,7 @@ jobs:
           docker run --detach --name crest-os-smoke --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges --publish 127.0.0.1:3100:3000 crest-os:ci
           node scripts/smoke-container.mjs
           test "$(docker inspect --format '{{.Config.User}}' crest-os-smoke)" = "node"
+          npm run test:image-sandbox
           export CREST_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
           npm run release:manifest
           docker save crest-os:ci -o .local/release/crest-os-image.tar
