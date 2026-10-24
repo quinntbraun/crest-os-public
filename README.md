@@ -24,6 +24,8 @@ The [offline collection verifier](planning/PHASE_2_PROVIDER_EVIDENCE_VERIFICATIO
 
 The [provider-reference snapshot readers](planning/PHASE_2_PROVIDER_REFERENCE_SNAPSHOT.md) add legacy session mappings, original session events and cleanup-reference projections under one scoped read-only snapshot contract. Representations remain explicit; complete security export, private custody and restore remain gated.
 
+The [combined provider evidence collector and verifier](planning/PHASE_2_PROVIDER_RECOVERY_COLLECTION.md) keep all nine groups in one bounded snapshot and check original registration/revocation links offline, preserving exact versions and historical unknowns. Complete security coverage, private custody and independent recovery remain gated.
+
 ## Local development
 
 Run every repository command from this `crest-os-public` checkout, not the parent ChatGPT project mirror or original private archive. Use Node **24.22.0** and its bundled npm **11.19.1**. No paid account or provider credentials are needed.
