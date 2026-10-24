@@ -1,0 +1,30 @@
+# Usable release milestones and execution reporting
+
+2026-10-24. Execution map under canonical ROADMAP/TESTING/EXPORTS_AND_BACKUPS/SECURITY. No V1 requirement, security/accounting invariant, M/D/N/R gate, production approval or paid service authorization changes. Use actual source/UI/CI evidence rather than test counts or merged-PR counts to measure product progress.
+
+## Current baseline
+
+PR56/protected maind01987eac5c94c7cec0f7bc7a239d8ad29fe3f8a is fully verified. Tooling, migrations, restricted identity/session/provider controls, operation/audit framework and a synthetic business-settings rename/replay path exist. Several source readers and offline consistency verifiers exist. Default authentication/business runtime remains closed. Complete recovery, private files, customers, vehicles, catalog, jobs/scheduling, finance and Calendar are unfinished. A passing foundation suite is not a usable CRM or a recoverable production installation.
+
+The repeated30% estimate was a rough judgment, not a measured work breakdown. Do not increment it for tests or commits, repeat it as precise evidence, or imply that elapsed unattended time equals active implementation. Report estimates as low confidence until the remaining milestone work has a credible breakdown. Separate hands-on implementation, CI/service waiting, owner setup waits and investigation/rework. Do not claim a known server throughput or chat-length threshold.
+
+## Sequencing correction and finite criteria
+
+Earlier execution checkpoints grouped all remaining source coverage, full export delivery and maintenance refinements ahead of Phase3. Canonical ROADMAP instead establishes basic export manifest/files/recovery in Phase3, CRM in Phase4, expands per-domain exportability as domains are added, and completes professional reports/full portability in Phase11. This corrects the execution interpretation; it does not defer a safety dependency actually needed by a new workflow or a production gate. Specifications remain the authority.
+
+| Milestone | Concrete result and acceptance | Current state |
+|---|---|---|
+| Foundation dependency closure | Existing identity/session/RLS/operation/audit/recovery fence contracts work together; new dependencies use coherent feature-sized changes and affected native tests. Record any remaining issue as a specific blocker with its requirement, rather than an unbounded refinement list | Substantial implementation; configuration/state linking is the current bounded slice; remaining security/runtime/recovery integration is explicit |
+| Basic recoverability and private files (Phase3) | Actual synthetic PostgreSQL backup/isolated restore; compatible configuration/key recovery and session/business-authority invalidation before writes. Private immutable original upload/validation/checksum/fence and source/file inventory tests; basic manifest with honest completeness | Unimplemented. Next after necessary foundation dependencies; use free local/CI synthetic services before owner hosting/account setup |
+| First useful synthetic CRM test build (Phase4) | Open the app, create/search/archive a synthetic customer, add a vehicle/address/ownership, reopen and edit safely, reject stale/conflicting changes, inspect retained history and retrieve common-format data. Preserve browser/mobile usability and identity/recovery controls | Unimplemented. This is the first product-use milestone, not a complete V1 or real-data approval |
+| Operational test build (Phases5-7) | Catalog/quote snapshots and accepted scope; schedule a job, exercise field states/time/mileage/custody and reopen it reliably. Calendar capability follows P20 prerequisites/GC01-GC18 with separate owner activation | Unimplemented |
+| Finance and complete V1 acceptance (Phases8-14) | Double-entry/source audit correctness, invoices/collections/expenses/reconciliation/reports/imports, complete portable roundtrip, independent compatible encrypted recovery, failure/capacity/phone/provider tests | Unimplemented; full original scope and all applicable decisions/gates retained |
+| Limited real-data pilot/cutover (Phases15-16) | Applicable D decisions approved; actual configured recovery/custody/provider/phone proofs, owner access/runbook and controlled reconciled pilot | Blocked by unfinished implementation and required acceptance/setup |
+
+Exports must be added with each implemented domain; do not accumulate unrecoverable source tables. Complete source coverage, dictionaries/format correctness, authorized consistent capture/private custody/manifest/download, neutral reimport and independent recovery remain required before their corresponding release/real-use claims. An early synthetic UI demonstration does not satisfy them. Source-reader/hash tests alone do not satisfy a restore drill. No bypass, fake data-as-real, silent omission, production write-enable or discarded requirement is permitted to accelerate the visible milestone.
+
+## Working and reporting discipline
+
+Consolidate related implementation, consumer checks and integration proof into one coherent PR when reviewable. Do not create separate release cycles for tiny separable assertions. Retain all required CI checks/protection; optimize work packaging rather than suppressing tests. After each slice, identify the concrete acceptance gap it closes and the next dependency. Start no speculative feature/refinement unless a milestone requirement or actual defect justifies it.
+
+Every session report states: shipped functionality, executed verification and limitations; next usable milestone and specific blockers; a fresh rough coding estimate explicitly separate from real-use readiness; remaining active-hour estimates with scope/confidence and waiting excluded; spend/necessary owner action; context health based on repository/live evidence. A percentage alone is not a progress report. The useful CRM test build is distinct from a financial pilot and full V1. Re-estimate when actual work or the owner changes scope. If context becomes insufficient, prepare an exact fresh-chat handoff; length alone is not proof of degraded quality.

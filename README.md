@@ -45,6 +45,8 @@ The [safe current session metadata reader](planning/PHASE_2_SESSION_METADATA_EXP
 
 The [offline session verifier](planning/PHASE_2_SESSION_METADATA_VERIFICATION.md) checks safe current metadata against retained provider/session evidence with exact versions and timestamps. Matching claims establish internal consistency only; authorized consistent capture, full reference closure and recovery remain gated.
 
+The [configuration and business evidence verifier](planning/PHASE_2_BUSINESS_CONFIGURATION_VERIFICATION.md) compares all39 current configuration fields with retained identity state and resolves included history actor references. The [usable-release milestones](planning/USABLE_RELEASE_MILESTONES.md) distinguish foundation checks, a useful synthetic CRM build and real-use acceptance.
+
 ## Local development
 
 Run every repository command from this `crest-os-public` checkout, not the parent ChatGPT project mirror or original private archive. Use Node **24.22.0** and its bundled npm **11.19.1**. No paid account or provider credentials are needed.
