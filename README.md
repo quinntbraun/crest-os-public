@@ -39,6 +39,8 @@ The [business identity readers](planning/PHASE_2_BUSINESS_IDENTITY_EXPORT.md) ad
 
 
 
+The [offline identity verifier](planning/PHASE_2_BUSINESS_IDENTITY_VERIFICATION.md) checks original actor/capability/identity history and included references independently. Current configuration bindings, complete exports and recovery remain explicit unfinished gates.
+
 ## Local development
 
 Run every repository command from this `crest-os-public` checkout, not the parent ChatGPT project mirror or original private archive. Use Node **24.22.0** and its bundled npm **11.19.1**. No paid account or provider credentials are needed.
