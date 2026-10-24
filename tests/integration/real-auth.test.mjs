@@ -24,6 +24,7 @@ import {createBusinessNameCommand,BusinessNameCommandError} from '../../src/secu
 import {createBusinessOperationLookup,BusinessOperationLookupError} from '../../src/security/business-operation-lookup.ts';
 import {createMutationTransaction,MutationBoundaryError} from '../../src/security/mutation-transaction.ts';
 import {verifyProviderRecoveryEvidenceCollection} from '../../src/security/provider-recovery-evidence-verification.ts';
+import {verifyBusinessHistoryEvidence} from '../../src/security/business-history-evidence.ts';
 import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginResponse,sessionResponse,logoutResponse,BrowserHttpError} from '../../src/security/browser-http.ts';
 import {createSessionRequestAdmission,SessionAdmissionError} from '../../src/security/session-request-admission.ts';
 import {authenticationServer} from '../support/authentication-server.mjs';
@@ -1197,6 +1198,8 @@ test('business socket HTTP reads paused/ready context and commits/replays/looks 
       const op=(await exporter.query("SELECT * FROM crest_commands.business_history_export_page($1,$2,'operation',NULL,20)",[f.business,ctx.snapshotToken])).rows[0],audit=(await exporter.query("SELECT * FROM crest_commands.business_history_export_page($1,$2,'audit_event',NULL,20)",[f.business,ctx.snapshotToken])).rows[0];
       const o=JSON.parse(op.canonical_evidence).row,a=JSON.parse(audit.canonical_evidence).row;assert.equal(o.operation_id,input.operationId);assert.deepEqual(JSON.parse(o.result),committed.receipt);assert.equal(a.id,committed.receipt.auditEventId);assert.equal(a.operation_id,input.operationId);assert.equal(a.payload,a.hash_input);assert.equal(a.event_hash,createHash('sha256').update(a.hash_input,'utf8').digest('hex'));assert.equal(JSON.parse(a.hash_input).operationId,input.operationId);
       for(const row of [op,audit]){assert.equal(row.representation,'snapshot_projection');assert.equal(row.evidence_hash,createHash('sha256').update(row.canonical_evidence,'utf8').digest('hex'));}
+      const records=[op,audit].map((row,index)=>({kind:index===0?'operation':'audit_event',recordId:row.record_id,representation:row.representation,canonicalEvidence:row.canonical_evidence,evidenceHash:row.evidence_hash}));
+      const verified=verifyBusinessHistoryEvidence(JSON.stringify({formatVersion:1,assurance:'snapshot_bytes_only',generationId:randomUUID(),context:ctx,evidenceBytes:records.reduce((n,r)=>n+Buffer.byteLength(r.canonicalEvidence),0),records}),{businessId:f.business});assert.deepEqual(verified.records,records);assert.deepEqual(verified.requiredActorIds,[o.actor_id]);assert.equal(verified.referenceClosureComplete,false);
     }finally{await exporter.query('ROLLBACK');await exporter.end();}assert.deepEqual(await sessionRow(f.issued),after);assert.equal(await admissionCount(f.issued),6);
     const other=await httpLogin(f.server,f.f),otherResponse=await f.server.businessRequest('settings',{}, {cookie:other.pair,'x-crest-csrf':other.csrfToken});assert.equal(otherResponse.status,200);assert.notEqual(otherResponse.headers.get('x-crest-edit-binding'),editBinding);await otherResponse.json();
   }finally{await f.server.close();}

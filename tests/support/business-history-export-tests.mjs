@@ -3,6 +3,7 @@ import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import pg from 'pg';
+import {verifyBusinessHistoryEvidence} from '../../src/security/business-history-evidence.ts';
 
 // Closed-storage synthetic probes, not a generic application command API.
 // The parent explicitly awaits the returned initializer after migrations.
@@ -22,7 +23,7 @@ export function businessHistoryExportTests(get){
  async function claim(id=business){return (await client.query("INSERT INTO crest_private.operations(business_id,operation_id,actor_id,command_type,schema_version,recovery_epoch,payload_hash,created_by,origin) VALUES($1,$2,$3,'synthetic.export_probe',1,$4,$5,$3,'manual') RETURNING id,operation_id",[id,randomUUID(),author,randomUUID(),digest('synthetic history payload')])).rows[0];}
  async function commit(id=business,delta={schemaVersion:1,before:null,after:{label:'Synthetic, "history" 雪',counter: '9007199254740993'}}){
   await client.query('BEGIN');try{const o=await claim(id);
-   const a=(await client.query("INSERT INTO crest_private.audit_events(business_id,operation_id,actor_id,entity_kind,entity_id,entity_version,action,reason,effective_at,delta,created_by,origin) VALUES($1,$2,$3,'businesses',$1,9007199254740993,'synthetic.export_probe','Synthetic evidence','2026-01-01T01:02:03.123456-06:00',$4::jsonb,$3,'manual') RETURNING id",[id,o.operation_id,author,JSON.stringify(delta)])).rows[0].id;
+   const a=(await client.query("INSERT INTO crest_private.audit_events(business_id,operation_id,actor_id,entity_kind,entity_id,entity_version,action,reason,effective_at,delta,created_by,origin) VALUES($1,$2,$3,'businesses',$1,9007199254740993,'synthetic.export_probe','Synthetic evidence','2026-01-01T01:02:03.123456-06:00',$4::jsonb,$3,'manual') RETURNING id",[id,o.operation_id,author,typeof delta==='string'?delta:JSON.stringify(delta)])).rows[0].id;
    await client.query("UPDATE crest_private.operations SET state='committed',result_schema_version=1,result=$2::jsonb WHERE id=$1",[o.id,'{"schemaVersion":1,"counter":9007199254740993,"ids":[]}']);await client.query('COMMIT');return {...o,audit:a};
   }catch(e){await client.query('ROLLBACK');throw e;}
  }
@@ -50,6 +51,24 @@ export function businessHistoryExportTests(get){
  });
  test('history retains original audit hash-input bytes hash and source bindings separately from the new wrapper hash',async()=>snapshot(async ctx=>{
   for(const r of await all(ctx,'audit_event')){const b=JSON.parse(r.canonical_evidence),row=b.row,p=JSON.parse(row.payload);assert.equal(row.payload,row.hash_input);assert.equal(row.event_hash,digest(row.hash_input));assert.equal(p.id,row.id);assert.equal(p.businessId,business);assert.equal(p.entityVersion,'9007199254740993');assert.equal(row.entity_version,'9007199254740993');assert.equal(p.effectiveAt,'2026-01-01T07:02:03.123456Z');assert.notEqual(r.evidence_hash,row.event_hash);}
+ }));
+ test('offline history verification accepts exact PostgreSQL evidence and reports unresolved historical actors',async()=>snapshot(async ctx=>{
+  const records=[];for(const kind of Object.keys(tables))for(const r of await all(ctx,kind))records.push({kind,recordId:r.record_id,representation:r.representation,canonicalEvidence:r.canonical_evidence,evidenceHash:r.evidence_hash});
+  const input={formatVersion:1,assurance:'snapshot_bytes_only',generationId:randomUUID(),context:ctx,evidenceBytes:records.reduce((n,r)=>n+Buffer.byteLength(r.canonicalEvidence),0),records};
+  const report=verifyBusinessHistoryEvidence(JSON.stringify(input),{businessId:business});assert.deepEqual(report.records,records);assert.deepEqual(report.requiredActorIds,[author]);assert.equal(report.referenceClosureComplete,false);assert.equal(report.completePortableExport,false);assert.equal(report.completeBackup,false);
+ }));
+ test('offline verification rejects rounded exact PostgreSQL delta values even after the wrapper hash is replaced',async()=>{
+  const id=await root('Synthetic exact numeric history');await commit(id,'{"schemaVersion":1,"before":null,"after":{"counter":9007199254740993,"fraction":0.12345678901234567890123456789}}');await snapshot(async ctx=>{
+  const records=[];for(const kind of Object.keys(tables))for(const r of await all(ctx,kind))records.push({kind,recordId:r.record_id,representation:r.representation,canonicalEvidence:r.canonical_evidence,evidenceHash:r.evidence_hash});
+  const input0={formatVersion:1,assurance:'snapshot_bytes_only',generationId:randomUUID(),context:ctx,evidenceBytes:records.reduce((n,r)=>n+Buffer.byteLength(r.canonicalEvidence),0),records};assert.equal(verifyBusinessHistoryEvidence(JSON.stringify(input0),{businessId:id}).records.length,2);
+  const row=records.find(r=>r.kind==='audit_event'),b=JSON.parse(row.canonicalEvidence);assert(b.row.delta.includes('9007199254740993'));assert(b.row.delta.includes('0.12345678901234567890123456789'));b.row.delta=b.row.delta.replace('9007199254740993','9007199254740992');row.canonicalEvidence=JSON.stringify(b);row.evidenceHash=digest(row.canonicalEvidence);
+  const input={formatVersion:1,assurance:'snapshot_bytes_only',generationId:randomUUID(),context:ctx,evidenceBytes:records.reduce((n,r)=>n+Buffer.byteLength(r.canonicalEvidence),0),records};
+  assert.throws(()=>verifyBusinessHistoryEvidence(JSON.stringify(input),{businessId:id}),/BUSINESS_HISTORY_EVIDENCE_REVIEW_REQUIRED/);
+ },id);});
+ test('offline verification detects an omitted PostgreSQL audit even with a corrected declared count',async()=>snapshot(async ctx=>{
+  const records=[];for(const kind of Object.keys(tables))for(const r of await all(ctx,kind))records.push({kind,recordId:r.record_id,representation:r.representation,canonicalEvidence:r.canonical_evidence,evidenceHash:r.evidence_hash});
+  records.splice(records.findIndex(r=>r.kind==='audit_event'),1);const input={formatVersion:1,assurance:'snapshot_bytes_only',generationId:randomUUID(),context:{...ctx,recordCounts:{...ctx.recordCounts,audit_event:'22'}},evidenceBytes:records.reduce((n,r)=>n+Buffer.byteLength(r.canonicalEvidence),0),records};
+  assert.throws(()=>verifyBusinessHistoryEvidence(JSON.stringify(input),{businessId:business}),/BUSINESS_HISTORY_EVIDENCE_REVIEW_REQUIRED/);
  }));
  test('operation result JSON retains unsafe integer lexemes without decoding them through Number',async()=>snapshot(async ctx=>{
   const row=JSON.parse((await page(ctx,'operation'))[0].canonical_evidence).row;assert.equal(typeof row.result,'string');assert(row.result.includes('9007199254740993'));assert.notEqual(row.recovery_epoch,(await client.query('SELECT active_epoch FROM crest_private.business_recovery_authorities WHERE business_id=$1',[business])).rows[0].active_epoch);
