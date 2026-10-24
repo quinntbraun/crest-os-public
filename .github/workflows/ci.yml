@@ -14,8 +14,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  foundation:
-    name: Foundation checks
+  # Each group owns a separate cluster; fixtures create global roles and
+  # must remain serial inside that cluster. No suite is removed or optional.
+  database_foundation:
+    name: Database foundation
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -49,6 +51,159 @@ jobs:
           test "$(node --version)" = "v24.22.0"
           test "$(npm --version)" = "11.19.1"
           npm ci --ignore-scripts --no-fund
+      - name: Install verified database tooling
+        run: node scripts/install-tools.mjs
+      - name: Run isolated regression group
+        run: |
+          npm run test:db
+          npm run test:migrations
+          npm run test:security-db
+          npm run test:identity-db
+          npm run test:sessions-db
+          npm run test:provider-db
+          npm run test:session-commands-db
+          npm run test:login-admission-db
+          npm run test:tenant-read-db
+          npm run test:mutation-fence-db
+          npm run test:operation-storage-db
+          npm run test:operation-lookup-db
+          npm run test:business-name-db
+          npm run test:business-settings-db
+
+  database_provider:
+    name: Provider and evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      CREST_ENV: test
+      CREST_TEST_DATABASE_URL: postgresql://supabase_admin:crest_local_test_only@127.0.0.1:54322/crest_test
+    services:
+      postgres:
+        image: supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2
+        env:
+          POSTGRES_USER: supabase_admin
+          POSTGRES_PASSWORD: crest_local_test_only
+          POSTGRES_DB: crest_test
+        ports:
+          - 127.0.0.1:54322:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d crest_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Verify runtime and install exact lockfile
+        run: |
+          test "$(node --version)" = "v24.22.0"
+          test "$(npm --version)" = "11.19.1"
+          npm ci --ignore-scripts --no-fund
+      - name: Install verified database tooling
+        run: node scripts/install-tools.mjs
+      - name: Run isolated regression group
+        run: |
+          npm run test:provider-cleanup-db
+          npm run test:provider-inventory-db
+          npm run test:provider-evidence-db
+          npm run test:provider-attempts-db
+          npm run test:provider-targets-db
+          npm run test:login-fences-db
+          npm run test:provider-requests-db
+          npm run test:provider-executor-db
+          npm run test:provider-review-db
+          npm run test:provider-export-db
+
+  authentication:
+    name: Genuine authentication
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      CREST_ENV: test
+      CREST_TEST_DATABASE_URL: postgresql://supabase_admin:crest_local_test_only@127.0.0.1:54322/crest_test
+    services:
+      postgres:
+        image: supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2
+        env:
+          POSTGRES_USER: supabase_admin
+          POSTGRES_PASSWORD: crest_local_test_only
+          POSTGRES_DB: crest_test
+        ports:
+          - 127.0.0.1:54322:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d crest_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Verify runtime and install exact lockfile
+        run: |
+          test "$(node --version)" = "v24.22.0"
+          test "$(npm --version)" = "11.19.1"
+          npm ci --ignore-scripts --no-fund
+      - name: Install verified database tooling
+        run: node scripts/install-tools.mjs
+      - name: Run isolated regression group
+        run: |
+          npm run test:real-auth
+
+  foundation:
+    name: Foundation checks
+    needs: [database_foundation, database_provider, authentication]
+    # Run even when a prerequisite fails/skips so branch protection cannot see
+    # a skipped required job as success. The guard rejects incomplete results.
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      CREST_ENV: test
+      CREST_TEST_DATABASE_URL: postgresql://supabase_admin:crest_local_test_only@127.0.0.1:54322/crest_test
+    services:
+      postgres:
+        image: supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2
+        env:
+          POSTGRES_USER: supabase_admin
+          POSTGRES_PASSWORD: crest_local_test_only
+          POSTGRES_DB: crest_test
+        ports:
+          - 127.0.0.1:54322:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d crest_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Verify runtime and install exact lockfile
+        run: |
+          test "$(node --version)" = "v24.22.0"
+          test "$(npm --version)" = "11.19.1"
+          npm ci --ignore-scripts --no-fund
+      - name: Require every prerequisite to succeed
+        env:
+          CREST_CI_NEEDS: ${{ toJSON(needs) }}
+        run: node scripts/verify-ci-results.mjs
       - name: Verify immutable tooling and scan secrets
         run: |
           node scripts/install-tools.mjs
@@ -70,31 +225,6 @@ jobs:
           npm run lint
           npm run typecheck
           npm test
-          npm run test:db
-          npm run test:migrations
-          npm run test:security-db
-          npm run test:identity-db
-          npm run test:sessions-db
-          npm run test:provider-db
-          npm run test:session-commands-db
-          npm run test:login-admission-db
-          npm run test:tenant-read-db
-          npm run test:mutation-fence-db
-          npm run test:operation-storage-db
-          npm run test:operation-lookup-db
-          npm run test:business-name-db
-          npm run test:business-settings-db
-          npm run test:provider-cleanup-db
-          npm run test:provider-inventory-db
-          npm run test:provider-evidence-db
-          npm run test:provider-attempts-db
-          npm run test:provider-targets-db
-          npm run test:login-fences-db
-          npm run test:provider-requests-db
-          npm run test:provider-executor-db
-          npm run test:provider-review-db
-          npm run test:provider-export-db
-          npm run test:real-auth
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 6
         run: |
