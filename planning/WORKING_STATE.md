@@ -1,29 +1,27 @@
 # Continuation checkpoint
 
-Read AGENTS.md, README.md, this checkpoint and PRE_IMPLEMENTATION.md. Canonical documents are authoritative. Verify live Git/PR/CI before dependent work; never reset unexpected changes. Historical checkpoint detail is preserved in Git through PR58.
+Read AGENTS.md, README.md, this checkpoint and PRE_IMPLEMENTATION.md. Canonical documents are authoritative. Verify live Git/PR/CI before dependent work; never reset unexpected changes. Historical detail is preserved in Git and PR metadata.
 
 ## Verified baseline
 
 - Public repository: https://github.com/quinntbraun/crest-os-public
-- PR58/protected main98461af19ecb0c871e425b97bcc801a83c0e5026; tree8be27f48b3e5ecfeb96dfcc342151f64140e0805.
-- Candidate40116891393 and actual-main40117826989:1915 unit/45 files,732 DB/Auth including109 genuine Auth,9 pgTAP,16 shell and18 HTTPS leaves. Four trusted GitHub Actions checks passed; required Foundation checks app15368 is enforced for everyone. Full bindings/log evidence are in PR58.
-- CI uses isolated foundation/provider/authentication groups and a fail-closed required aggregate. Every existing check remains. Candidate+main measured19m40s versus26m25s for PR57; one comparison, no throughput guarantee.
+- PR60/protected main156c9f680b907bf072e5f3f78e6a7861aba2cf67; treeb4fc5261e4aa4bedab1f36346972435d2a6e2ba0. Candidate40122067944 and actual-main40122941126 passed all four trusted checks, including the required Foundation checks app15368 enforced for everyone.
+- Native totals:1915 unit/45 files,748 DB/Auth including109 genuine Auth and16 recovery,9 pgTAP,16 shell and18 HTTPS leaves. Exact source/run/job/artifact bindings and assurance limits are in PR60. The prior PR59 main fixture failure is retained; PR60 fixes its independently sampled timestamps without weakening the database constraint.
+- CI uses isolated foundation/provider/authentication groups and a fail-closed required aggregate. Every existing check remains. Local Docker is unavailable and Windows native-build execution is blocked; actual PG/Auth/build/browser/container proof comes from Linux CI.
 - App0.1.0/schema31/report0/command1. Default application authentication/business runtime and production activation remain closed. No usable CRM/finance/Calendar yet.
 
-## Current work
+## Current feature slice
 
-PR59 merged as2d16abefbc8d49f2d20ab1b9204d03f400fa00b9/tree19b8fc59ed2d42aee6f1c826f79badd1ef431ca5. Candidate40120641919 passed all gates including15 native recovery cases. Actual-main40121571177 failed in the new fixture's session INSERT: independently sampled clock_timestamp values made authenticated_at one microsecond later than created_at, correctly violating app_sessions_check2. Do not call this main verified or retry unchanged source for a green run.
+feature/private-object-storage adds an actual AWS SDK/R2 private-storage adapter, scoped ten-minute staging PUTs, bounded checksummed staging snapshots and conditional original candidates with independent final-byte verification. See PHASE_3_PRIVATE_OBJECTS.md for the consumer contract, unknown-write handling, native fault tests and unimplemented gates. Candidate and protected actual-main proof for this slice must be recorded in its PR before claiming it shipped.
 
-fix/recovery-fixture-clock uses one materialized PostgreSQL timestamp for all seed boundaries and adds a deterministic native regression: +1 microsecond fails the unchanged constraint; the corrected seed stores exact equal boundaries, with rollback preserving the restored data. Planned totals16 recovery/748 DB/Auth including109 genuine Auth,1915 unit/45 files,9 pgTAP,16 shell/18 HTTPS leaves. Require exact-source candidate/protected actual-main verification for the fix. Original failure remains in PR59; fixed source/proof belongs in its follow-up PR. All schema/canonical/lockfile/runtime grants unchanged; no deployment, real data or spending.
+This is storage mechanics, not format approval, attachment authorization or an Available transition. No file route or cloud account is activated. The explicit dependency/lockfile change adds exact-pinned AWS SDK3.1156.0 packages; canonical documents and published migrations remain unchanged. Native tests use synthetic loopback HTTP/streams and independently verify PUT signatures; actual R2 configuration/conformance is still unexecuted.
 
 ## Next usable milestones
 
-Finish and verify this actual synthetic database recovery proof, then implement private files and the remaining basic recovery/vault/heartbeat/authority boundaries. CRM customer/vehicle/address/ownership workflows follow under USABLE_RELEASE_MILESTONES.md. Complete exports, neutral reimport, independent compatible recovery and all relevant release gates remain required before their claims/real use. A database-only drill is explicitly not a complete backup or production recovery approval.
-
-Use coherent feature-sized PRs with meaningful native regressions; no speculative foundation verifier refinements. Keep these notes concise; Git/PR history retains prior proof.
+Continue Phase3 isolated photo/PDF validation, typed attachment publication with leases/recovery fences and fresh-session authorized reads, file inventory/basic manifest, compatible configuration/key/image recovery, independent vault/heartbeat and incident authority. Then Phase4 customer/vehicle/address/ownership workflows with per-domain exportability under USABLE_RELEASE_MILESTONES.md. A database-only drill or storage byte test is not a complete backup or real-data approval. Retain all applicable safety/release gates; avoid speculative verifier refinements.
 
 ## Constraints and reporting
 
-Use synthetic data only. No paid service, purchase, owner signup, provisioning, production grant/apply/deployment/activation or real records. sources/ and the private archive remain read-only. Preserve all published SQL and canonical amendment/original provenance bytes.
+Use synthetic data only. No paid service, purchase, owner signup, provisioning, production grant/apply/deployment/activation or real records. sources/ and the private archive remain read-only. Preserve published SQL and canonical amendment/original provenance bytes.
 
-Every final report states shipped functionality, executed checks/limits, next concrete milestone, rough V1 coding percent separate from actual-use readiness, low-confidence remaining active hours (waiting excluded), spend/necessary owner action and context health. Test/PR counts are not product completion. Latest rough estimate was about30%,60-100 active hours to a synthetic CRM build and150-300 to limited pilot; these are uncertain judgments, not measured schedules. Repository/live evidence is sufficient; no invented chat-length threshold. Calendar P20/BR21/ADR35 remains required V1 capability with optional later owner activation. PC transfer remains deferred.
+Every final report states shipped functionality, checks/limits, next concrete milestone, rough V1 coding percent separate from actual-use readiness, low-confidence remaining active hours excluding waits, spend/necessary owner action and context health. Test/PR counts are not product completion. Latest estimate30-35%,60-100 active hours to a first synthetic CRM build and150-300 to a limited pilot; uncertain judgments, not measured schedules. Repository/live evidence is sufficient; no invented chat-length threshold. Calendar P20/BR21/ADR35 is required V1 capability with optional later owner activation. PC transfer remains deferred.

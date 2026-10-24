@@ -4,6 +4,8 @@ Crest Detailing's internal business operating system.
 
 **Status (2026-10-23): Public-source foundation; private owner-only application and business data. Phases 2-3 security and recovery foundations are underway. Read [the continuation checkpoint](planning/WORKING_STATE.md) and [current implementation plan](planning/PRE_IMPLEMENTATION.md), then verify live Git/PR/CI evidence. No CRM/financial functionality, hosted provider provisioning, real data, spending or production activation.**
 
+The [private object storage boundary](planning/PHASE_3_PRIVATE_OBJECTS.md) adds scoped staging PUTs, bounded checksummed intake and conditional immutable original candidates. Format validation, typed attachment publication and authorized reads remain unfinished.
+
 The owner-requested [V1 Google Calendar capability](planning/GOOGLE_CALENDAR_V1.md) is now in the versioned specification (P20/BR21/ADR35). Research and acceptance requirements are documented; no Calendar runtime or live connection is implemented.
 
 The current [exact-target cleanup executor slice](planning/PHASE_2_PROVIDER_CLEANUP_EXECUTOR.md) adds a separately isolated, source-checked transactional maintenance operation under ADR36; it provisions no service login, scheduler or production access.
