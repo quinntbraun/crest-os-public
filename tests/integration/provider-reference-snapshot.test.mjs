@@ -9,6 +9,8 @@ import {createProviderRecoveryEvidenceCollector} from '../../src/security/provid
 import {verifyProviderRecoveryEvidenceCollection} from '../../src/security/provider-recovery-evidence-verification.ts';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
+import {readFile} from 'node:fs/promises';
+import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 
 const issuer='https://auth.example.com/auth/v1',kinds=['session_identity','session_event','cleanup_reference'];
 const tables=['app_sessions','session_events','provider_cleanup_references'];
@@ -33,6 +35,33 @@ before(async()=>{
  owner=await actor();other=await actor();legacy=await session();await revoke(legacy);retained=await sourceHashes();oldFunctions=await originals();receipt=await sandbox.apply(target);reader=await sandbox.connect(target);await reader.query('SET ROLE crest_inventory');
 });
 after(async()=>{for(const name of runtimeRoles)await sandbox.admin.query(`DROP ROLE ${name}`);await sandbox?.close();});
+
+async function exportColumns(){
+ return (await client.query(`SELECT n.nspname||'.'||c.relname AS "table",a.attname AS "column"
+  FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid
+  WHERE n.nspname IN ('crest','crest_private') AND c.relkind IN ('r','p')
+    AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2`)).rows;
+}
+test('portable coverage inventory accounts for every actual Crest source column without claiming completed exports',async()=>{
+ const m=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+ const report=verifyExportCoverage(m,await exportColumns(),receipt.history.length);
+ assert.deepEqual(report,{assurance:'schema_inventory_only',tables:22,requiredColumns:255,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
+});
+test('live added source columns and tables fail coverage until reviewed without altering retained sources',async()=>{
+ const m=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+ await client.query('BEGIN');try{
+  await client.query('ALTER TABLE crest.businesses ADD COLUMN synthetic_export_review text');
+  const columns=await exportColumns();assert(columns.some(r=>r.column==='synthetic_export_review'));
+  assert.throws(()=>verifyExportCoverage(m,columns,receipt.history.length),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
+ }finally{await client.query('ROLLBACK');}
+ await client.query('BEGIN');try{
+  await client.query('CREATE TABLE crest.synthetic_export_review(id uuid)');
+  const columns=await exportColumns();assert(columns.some(r=>r.table==='crest.synthetic_export_review'));
+  assert.throws(()=>verifyExportCoverage(m,columns,receipt.history.length),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
+ }finally{await client.query('ROLLBACK');}
+ assert.equal(verifyExportCoverage(m,await exportColumns(),receipt.history.length).tables,22);
+});
 
 test('schema26 upgrade preserves all prior source bytes history and original six-ledger routines',async()=>{
  assert.equal(prior.history.length,26);assert.equal(receipt.history.length,27);assert.deepEqual(receipt.history.slice(0,26),prior.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);assert.deepEqual(await sourceHashes(),retained);assert.deepEqual(await originals(),oldFunctions);
