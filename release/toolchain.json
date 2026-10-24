@@ -30,7 +30,7 @@
   },
   "pdf": {
     "qpdfVersion": "12.4.2",
-    "linuxX64Sha256": "db367d897829f22c4198ce1094143c9d467bd6ee7dfabc44ba6f02056b24f8b1",
+    "qpdfSourceSha256": "8a58af5b6141319287c1883bec8bd1bd545b7567b7fc5e6ce5d25a1c85f36397",
     "windowsX64Sha256": "773d2fa0c7d161e2271430734338e560a07b25d0edf11ceee8e53de435012766",
     "pdfiumPackage": "3.0.0",
     "pdfiumWasmSha256": "beeaf5bbff216d555fecec7cd486072838c4632a2272d31b52ef1fd05008fe7c",

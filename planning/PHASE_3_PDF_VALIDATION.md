@@ -4,7 +4,9 @@
 
 ## Tool and implementation decision
 
-Use checksum-pinned qpdf12.4.2 for normalized inspection and exact-pinned @hyzyla/pdfium3.0.0 for offline rendering. The wrapper vendors PDFium build8046d; builder commit f2bed3c8bd49569a6b5c2a0df3a1ae0def3d8871 targets chromium/8046 with V8/XFA disabled by default for WASM. release/toolchain.json pins inspector archives and the actual WASM SHA-256. Explicit local WASM bytes avoid CDN/browser fetches. These are source-configuration/artifact identities, not a reproducible-build attestation or security certification.
+Use checksum-pinned qpdf12.4.2 for normalized inspection and exact-pinned @hyzyla/pdfium3.0.0 for offline rendering. Linux compiles the verified official source in its own build environment (static qpdf/libjpeg, native crypto; system zlib/C/C++ runtime); compiler/dev packages stay outside the runtime image. The build retains qpdf/libjpeg/zlib notices and a package-version receipt. Windows uses the verified official distribution. The initial Linux binary-archive attempt failed its layout check before validation/artifact publication; it is superseded by source builds, avoiding its symlink and bundled-library notice ambiguity. No failed gate was waived.
+
+The wrapper vendors PDFium build8046d; builder commit f2bed3c8bd49569a6b5c2a0df3a1ae0def3d8871 targets chromium/8046 with V8/XFA disabled by default for WASM. release/toolchain.json pins qpdf source/Windows archives and the actual WASM SHA-256. Explicit local WASM bytes avoid CDN/browser fetches. These are source-configuration/artifact identities, not a reproducible-build attestation or security certification.
 
 qpdf's Apache-2.0 distribution/notices remain intact; the wrapper retains its MIT LICENSE.md. release/third-party retains PDFium's BSD/Apache license plus32 distinct additional license texts from chromium/8046, DEPS-pinned sources and Emscripten6.0.0. The collection includes optional components and does not claim every component is linked. Notices travel with the release image. Updates require reviewing pins, compatibility, notices and native/sandbox regressions together.
 

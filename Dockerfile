@@ -4,15 +4,19 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --ignore-scripts --no-fund
 
+FROM dependencies AS pdf-tools
+RUN apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 update && apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 install --yes --no-install-recommends cmake g++ make pkg-config libjpeg-dev zlib1g-dev
+COPY scripts/install-pdf-tools.mjs ./scripts/install-pdf-tools.mjs
+COPY release/toolchain.json ./release/toolchain.json
+RUN node scripts/install-pdf-tools.mjs
+
 FROM dependencies AS builder
 COPY next.config.ts next-env.d.ts tsconfig.json ./
 COPY src ./src
 COPY public ./public
 COPY scripts/build-server.mjs ./scripts/build-server.mjs
-COPY scripts/install-pdf-tools.mjs ./scripts/install-pdf-tools.mjs
 COPY release/toolchain.json ./release/toolchain.json
 COPY release/third-party ./release/third-party
-RUN node scripts/install-pdf-tools.mjs
 RUN npm run build
 
 FROM dependencies AS runtime-dependencies
@@ -25,7 +29,7 @@ COPY --from=runtime-dependencies --chown=node:node /app/node_modules ./node_modu
 COPY --from=builder --chown=node:node /app/package.json ./package.json
 COPY --from=builder --chown=node:node /app/.next ./.next
 COPY --from=builder --chown=node:node /app/.local/server ./server
-COPY --from=builder --chown=node:node /app/.local/tools/pdf/qpdf ./.local/tools/pdf/qpdf
+COPY --from=pdf-tools --chown=node:node /app/.local/tools/pdf/qpdf ./.local/tools/pdf/qpdf
 COPY --from=builder --chown=node:node /app/release/third-party ./release/third-party
 COPY --from=builder --chown=node:node /app/public ./public
 USER node
