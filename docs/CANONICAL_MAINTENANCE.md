@@ -31,3 +31,11 @@ Owner continuation of existing export/recovery work; ADR37 records the separate 
 ARCHITECTURE_DECISIONS.md: prior amended SHA256 94d7905f5f9cb1cf58a6ffcf7b83afc09a3b94a7e7ae3990c3c9b98c960e8b27, 24898 bytes at PR49/main fefc8e46bba37f3bc61cf3fc24c97b097c70a928; now version 1.8, SHA256 2d9d5b2807bf242c2e4d5e63aaadb28ed8522cfb592a5dcb197260af0b558ee0, 28165 bytes. Original baseline hash/length are unchanged.
 
 PUBLICATION.md: prior amended SHA256 ac1cca21ed30f9db54c13daa35dc60f3fd9acae437b55984338d3c677101e5d0, 5847 bytes at PR49/main fefc8e46bba37f3bc61cf3fc24c97b097c70a928; now version 1.3, SHA256 027dda264f9aa61cc28f8d00a8c4bdcab8eecc08967776a9855dc7b60fc94f77, 5846 bytes. Original baseline hash/length are unchanged.
+
+## 2026-10-24 - Original operation/audit evidence export boundary
+
+Owner continuation of existing export/recovery work. ADR38 explicitly extends the isolated nonlogin export definer with safe business-scoped operation/audit SELECT only, preserving original hash evidence and declaring JSON-text precision/row/page limits. No ordinary runtime, provider/actor/session read, financial semantic or production permission expansion. All28 prior SQL, original baseline manifest and ten other amended documents remain immutable; the same12 distinct amendment entries are retained.
+
+ARCHITECTURE_DECISIONS.md: prior amended SHA256 2d9d5b2807bf242c2e4d5e63aaadb28ed8522cfb592a5dcb197260af0b558ee0, 28165 bytes at PR50/main89c68de21fd5f4cd116e8bf7cf73768cc86ada3a; now version1.9, SHA256 ecf466766fa000a6f8a88e50f3e43015459c584bb75f2fbd11d388a72b5fefe5, 32018 bytes. Original baseline hash/length retained.
+
+PUBLICATION.md: prior amended SHA256 027dda264f9aa61cc28f8d00a8c4bdcab8eecc08967776a9855dc7b60fc94f77, 5846 bytes at PR50/main89c68de21fd5f4cd116e8bf7cf73768cc86ada3a; now version1.4, SHA256 c8031ef7ab62de09a7f07c92d95624505dbced83a41bf5f88e99c0c5eb311fc8, 5851 bytes. Original baseline hash/length retained.

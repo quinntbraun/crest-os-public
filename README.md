@@ -30,6 +30,9 @@ The [security export coverage gate](planning/PHASE_2_SECURITY_EXPORT_COVERAGE.md
 
 The [business configuration snapshot readers](planning/PHASE_2_BUSINESS_CONFIGURATION_EXPORT.md) add isolated business-scoped extraction of all39 current root/membership/recovery columns under ADR37. Inactive/paused history is retained; actual owner-authorized full exports, identity/audit closure and encrypted recovery remain gated.
 
+The [business history snapshot readers](planning/PHASE_2_BUSINESS_HISTORY_EXPORT.md) add scoped operation receipts and original audit evidence under ADR38, preserving exact JSON text and distinct source/wrapper hashes. Identity reference closure, complete authorized exports and recoverable private custody remain gated.
+
+
 
 
 ## Local development
