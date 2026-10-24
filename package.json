@@ -54,7 +54,9 @@
     "test:provider-export-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-evidence-snapshot.test.mjs tests/integration/provider-reference-snapshot.test.mjs",
     "test:provider-review-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-reconciliation-review.test.mjs",
     "test:recovery-db": "node --test --test-concurrency=1 tests/integration/recovery-drill.test.mjs",
-    "test:private-files": "node --conditions=react-server --test --test-concurrency=1 tests/integration/private-object-store.test.mjs"
+    "test:private-files": "node --conditions=react-server --test --test-concurrency=1 tests/integration/private-object-store.test.mjs",
+    "test:image-validation": "node --conditions=react-server --test --test-concurrency=1 tests/integration/image-validation.test.mjs",
+    "test:image-sandbox": "node --test --test-concurrency=1 tests/integration/image-sandbox.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1156.0",
@@ -65,7 +67,8 @@
     "pg": "8.23.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "server-only": "0.0.1"
+    "server-only": "0.0.1",
+    "sharp": "0.35.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
