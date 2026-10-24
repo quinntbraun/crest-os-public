@@ -28,6 +28,16 @@ export function historyJsonInteger(value: unknown): number | undefined {
   const n = Number(m[1]! + m[2]!) * 10 ** exponent;
   return Number.isSafeInteger(n) ? n : undefined;
 }
+// Convert only proven exact signed64 integers, never rounded Number values.
+export function historyJsonBigint(value: unknown): bigint | undefined {
+  if (!(value instanceof ExactNumber)) return undefined;
+  if (value.value === '0') return 0n;
+  const m = /^(-?)([1-9][0-9]*)e(-?[0-9]+)$/.exec(value.value)!;
+  const exponent = Number(m[3]);
+  if (exponent < 0 || exponent > 18 || m[2]!.length + exponent > 19) return undefined;
+  const n = BigInt(m[1]! + m[2]!) * 10n ** BigInt(exponent);
+  return n >= -9223372036854775808n && n <= 9223372036854775807n ? n : undefined;
+}
 export function historyJsonEqual(a: unknown, b: unknown): boolean {
   if (a instanceof ExactNumber || b instanceof ExactNumber) return a instanceof ExactNumber && b instanceof ExactNumber && a.value === b.value;
   if (a === b) return true;

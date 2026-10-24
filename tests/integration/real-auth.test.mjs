@@ -24,6 +24,7 @@ import {createBusinessNameCommand,BusinessNameCommandError} from '../../src/secu
 import {createBusinessOperationLookup,BusinessOperationLookupError} from '../../src/security/business-operation-lookup.ts';
 import {createMutationTransaction,MutationBoundaryError} from '../../src/security/mutation-transaction.ts';
 import {verifyProviderRecoveryEvidenceCollection} from '../../src/security/provider-recovery-evidence-verification.ts';
+import {verifySessionRecoveryEvidence} from '../../src/security/session-metadata-evidence.ts';
 import {verifyBusinessHistoryEvidence} from '../../src/security/business-history-evidence.ts';
 import {verifyBusinessIdentityEvidence} from '../../src/security/business-identity-evidence.ts';
 import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginResponse,sessionResponse,logoutResponse,BrowserHttpError} from '../../src/security/browser-http.ts';
@@ -1368,4 +1369,10 @@ async function verifyReferenceSnapshot(connection,actor){
  for(const kind of ['session_identity','session_event','cleanup_reference'])for(const r of groups[kind])records.push({kind,recordId:r.record_id,representation:r.representation,canonicalEvidence:r.canonical_evidence,evidenceHash:r.evidence_hash});
  const collection={formatVersion:2,assurance:'snapshot_bytes_only',generationId:randomUUID(),context:evidence,referenceContext:ctx,evidenceBytes:records.reduce((n,r)=>n+Buffer.byteLength(r.canonicalEvidence),0),records};
  const verified=verifyProviderRecoveryEvidenceCollection(JSON.stringify(collection),{actorId:actor.id,issuer:service.issuer});assert.equal(verified.assurance,'internal_consistency_only');assert.deepEqual(verified.records,records);
+ await connection.query('SET LOCAL ROLE crest_export');try{
+  const metadataContext=(await connection.query('SELECT crest_commands.session_metadata_export_context($1,$2) AS result',[actor.id,service.issuer])).rows[0].result,metadataRecords=[];let cursor=null,ended=false;
+  for(let i=0;i<52;i++){const rows=(await connection.query('SELECT * FROM crest_commands.session_metadata_export_page($1,$2,$3,$4,20)',[actor.id,service.issuer,metadataContext.snapshotToken,cursor])).rows;for(const r of rows)metadataRecords.push({kind:'session_metadata',recordId:r.record_id,representation:r.representation,canonicalEvidence:r.canonical_evidence,evidenceHash:r.evidence_hash});if(!rows.length){ended=true;break;}cursor=rows.at(-1).record_id;}assert(ended);assert.equal(String(metadataRecords.length),metadataContext.recordCount);
+  const metadata={formatVersion:1,assurance:'snapshot_bytes_only',generationId:collection.generationId,context:metadataContext,evidenceBytes:metadataRecords.reduce((n,r)=>n+Buffer.byteLength(r.canonicalEvidence),0),records:metadataRecords},joined=verifySessionRecoveryEvidence(JSON.stringify(metadata),JSON.stringify(collection),{actorId:actor.id,issuer:service.issuer});
+  assert.deepEqual(joined.metadata.records,metadataRecords);assert.deepEqual(joined.provider.records,records);assert(joined.requiredActorIds.includes(actor.id));assert.equal(joined.consistentCaptureProven,false);assert.equal(joined.referenceClosureComplete,false);assert.equal(joined.completePortableExport,false);assert.equal(joined.completeBackup,false);
+ }finally{await connection.query('SET LOCAL ROLE crest_inventory');}
 }
