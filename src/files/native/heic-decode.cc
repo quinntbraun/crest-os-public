@@ -11,8 +11,15 @@
 
 constexpr uint64_t pixels=60000000, png_limit=256ULL*1024*1024;
 void require(bool ok,const char* code="HEIC_DECODE_FAILED"){if(!ok)throw code;}
-struct LibraryFailure {int code;int subcode;};
-void checked(heif_error e){if(e.code!=heif_error_Ok)throw LibraryFailure{int(e.code),int(e.subcode)};}
+struct LibraryFailure {int code;int subcode;int limit;};
+void checked(heif_error e){
+  if(e.code==heif_error_Ok)return;
+  // Classify fixed library limit wording, never retain or print the message.
+  const int limit=e.subcode!=heif_suberror_Security_limit_exceeded?0:
+    std::strstr(e.message,"total memory usage")?1:std::strstr(e.message,"pixels")?3:
+    std::strstr(e.message,"Allocating ")?2:4;
+  throw LibraryFailure{int(e.code),int(e.subcode),limit};
+}
 void dimensions(int w,int h){require(w>0&&h>0&&uint64_t(w)*uint64_t(h)<=pixels,"HEIC_PIXEL_LIMIT");}
 struct Output {FILE* file;uint64_t size;};
 void png_failure(png_structp p,png_const_charp){png_longjmp(p,1);}
@@ -48,7 +55,9 @@ int main(int argc,char** argv){
     auto* limits=heif_context_get_security_limits(context.get());require(limits&&limits->version>=4);
     limits->max_image_size_pixels=pixels;limits->max_number_of_tiles=1024;limits->max_items=4096;
     limits->max_color_profile_size=4*1024*1024;limits->max_memory_block_size=256ULL*1024*1024;
-    limits->max_total_memory=512ULL*1024*1024;limits->max_sequence_frames=1;limits->max_number_of_file_brands=64;
+    // Full-size source/color-conversion/output planes can coexist. Keep the
+    // library budget below the independent 1 GiB process/container hard cap.
+    limits->max_total_memory=768ULL*1024*1024;limits->max_sequence_frames=1;limits->max_number_of_file_brands=64;
     heif_context_set_max_decoding_threads(context.get(),0);
     require(heif_get_decoder_descriptors(heif_compression_undefined,nullptr,0)==1&&heif_have_decoder_for_format(heif_compression_HEVC)
       &&!heif_have_encoder_for_format(heif_compression_HEVC),"HEIC_TOOLS_UNAVAILABLE");
@@ -84,7 +93,7 @@ int main(int argc,char** argv){
     // Numeric enums only: never forward native messages, filenames or bytes.
     // The Node validator discards these private diagnostic fields.
     std::cout<<"{\"code\":\"HEIC_DECODE_FAILED\",\"libraryCode\":"<<error.code
-      <<",\"librarySubcode\":"<<error.subcode<<"}\n";return 1;
+      <<",\"librarySubcode\":"<<error.subcode<<",\"limitCategory\":"<<error.limit<<"}\n";return 1;
   }catch(const char* code){std::cout<<"{\"code\":\""<<code<<"\"}\n";return 1;}
   catch(...){std::cout<<"{\"code\":\"HEIC_DECODE_FAILED\"}\n";return 1;}
 }

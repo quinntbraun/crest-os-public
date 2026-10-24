@@ -51,7 +51,7 @@ export async function diagnoseHeic(bytes){
     await writeFile(original,bytes,{mode:0o600,flag:'wx'});
     try{await execute(resolve('.local/tools/heic/bin/crest-heic-decode'),[original,raster],{timeout:25000,maxBuffer:65536});return 'native replay succeeded';}
     catch(e){
-      try{const r=JSON.parse(e.stdout);return JSON.stringify({libraryCode:Number.isInteger(r.libraryCode)?r.libraryCode:null,librarySubcode:Number.isInteger(r.librarySubcode)?r.librarySubcode:null});}
+      try{const r=JSON.parse(e.stdout);return JSON.stringify({libraryCode:Number.isInteger(r.libraryCode)?r.libraryCode:null,librarySubcode:Number.isInteger(r.librarySubcode)?r.librarySubcode:null,limitCategory:Number.isInteger(r.limitCategory)?r.limitCategory:null});}
       catch{return 'native replay failed without numeric diagnostics';}
     }
   }finally{await unlink(original).catch(()=>{});await unlink(raster).catch(()=>{});await rmdir(directory);}
