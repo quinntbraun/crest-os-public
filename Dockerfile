@@ -9,6 +9,10 @@ COPY next.config.ts next-env.d.ts tsconfig.json ./
 COPY src ./src
 COPY public ./public
 COPY scripts/build-server.mjs ./scripts/build-server.mjs
+COPY scripts/install-pdf-tools.mjs ./scripts/install-pdf-tools.mjs
+COPY release/toolchain.json ./release/toolchain.json
+COPY release/third-party ./release/third-party
+RUN node scripts/install-pdf-tools.mjs
 RUN npm run build
 
 FROM dependencies AS runtime-dependencies
@@ -21,6 +25,8 @@ COPY --from=runtime-dependencies --chown=node:node /app/node_modules ./node_modu
 COPY --from=builder --chown=node:node /app/package.json ./package.json
 COPY --from=builder --chown=node:node /app/.next ./.next
 COPY --from=builder --chown=node:node /app/.local/server ./server
+COPY --from=builder --chown=node:node /app/.local/tools/pdf/qpdf ./.local/tools/pdf/qpdf
+COPY --from=builder --chown=node:node /app/release/third-party ./release/third-party
 COPY --from=builder --chown=node:node /app/public ./public
 USER node
 EXPOSE 3000

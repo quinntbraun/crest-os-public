@@ -224,6 +224,8 @@ jobs:
           npm run verify:dependencies
       - name: Dependency security gate
         run: npm run audit:dependencies
+      - name: Install checksum-pinned PDF inspector
+        run: node scripts/install-pdf-tools.mjs
       - name: Lint, types and regression tests
         run: |
           npm run lint
@@ -231,6 +233,7 @@ jobs:
           npm test
           npm run test:private-files
           npm run test:image-validation
+          npm run test:pdf-validation
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 6
         run: |
@@ -253,6 +256,7 @@ jobs:
           node scripts/smoke-container.mjs
           test "$(docker inspect --format '{{.Config.User}}' crest-os-smoke)" = "node"
           npm run test:image-sandbox
+          npm run test:pdf-sandbox
           export CREST_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
           npm run release:manifest
           docker save crest-os:ci -o .local/release/crest-os-image.tar

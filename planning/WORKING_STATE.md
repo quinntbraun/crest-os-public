@@ -5,16 +5,16 @@ Read AGENTS.md, README.md, this checkpoint and PRE_IMPLEMENTATION.md. Canonical 
 ## Verified baseline
 
 - Public repository: https://github.com/quinntbraun/crest-os-public
-- PR61/protected mainaaa7053d5b60429af4d5889cd2e10dfb791b04fe; tree3d5b5e71302bb343b5ecee8d722588fc52906f88. Candidate40124902510 and actual-main40125942400 passed all four trusted checks, including Foundation checks/app15368 enforced for everyone. Exact logs/artifact bindings are in PR61.
-- Native totals:1915 unit/45 files,748 DB/Auth including109 genuine Auth and16 recovery,9 pgTAP,18 private-storage tests,16 shell and18 HTTPS leaves. Private storage mechanics are implemented; Available attachment publication, actual R2 configuration/conformance and complete object recovery remain unfinished.
+- PR62/protected main79e420340c7013d088fb616d053a278aa1cba06e; tree3ed96a3a7905641b28f11f9b68fe2a5e636009b9. Candidate40127937786 and actual-main40128978013 passed all four trusted checks, including Foundation checks/app15368 enforced for everyone. Exact logs/artifact bindings are in PR62.
+- Native totals:1915 unit/45 files,748 DB/Auth including109 genuine Auth and16 recovery,9 pgTAP,18 private-storage entries,38 native-image entries,47 image-sandbox entries,16 shell and18 HTTPS leaves. Storage and isolated JPEG/PNG mechanics are implemented; Available publication, actual R2 configuration/conformance and complete object recovery remain unfinished.
 - CI uses isolated foundation/provider/authentication groups and a fail-closed aggregate. Local Docker is unavailable and Windows native-build execution is blocked; actual PG/Auth/build/browser/container proof comes from Linux CI. Sharp native generated-fixture decoding works locally.
 - App0.1.0/schema31/report0/command1. Default application authentication/business runtime and production activation remain closed. No usable CRM/finance/Calendar yet.
 
 ## Current feature slice
 
-feature/isolated-image-validation adds strict JPEG/PNG container/full-pixel validation, unchanged source digests, metadata-free oriented JPEG previews and a separate same-release restricted worker entry point. See PHASE_3_IMAGE_VALIDATION.md for scope, warning-latch root cause, cgroup-v2 admission, private IPC, native/container tests and limits. Candidate and protected actual-main proof must be recorded in its PR before claiming it shipped.
+feature/isolated-pdf-validation adds qpdf12.4.2 inspection, offline PDFium3.0.0 all-page rendering, unchanged original digests, one bounded raster preview and a same-release restricted worker. See PHASE_3_PDF_VALIDATION.md for tool/license decisions, tests and limits. Candidate and protected actual-main proof must be recorded in its PR before claiming it shipped.
 
-Sharp0.35.5 was already integrity-locked transitively and is now a direct dependency. No schema, published migration or canonical bytes change. JPEG/PNG failures and unsupported PDF/HEIC remain explicit quarantined verdicts; no Available attachment, provider/DB authorization or file route is exposed. Production sandbox construction/transport, typed lease/epoch publication and actual R2/phone/recovery proofs remain gated. Do not assume Render cron can spawn Docker or that a HEIF flag proves HEIC decoding.
+No schema, published migration or canonical bytes change. Unsupported HEIC and invalid/encrypted/active/uninspectable PDFs remain quarantined; no Available attachment, provider/DB authorization or file route is exposed. Production sandbox construction/transport, typed lease/epoch publication and actual R2/phone/recovery proofs remain gated. Do not assume Render cron can spawn Docker or a HEIF flag proves HEIC decoding.
 
 ## Next usable milestones
 

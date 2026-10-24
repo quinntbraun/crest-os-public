@@ -1,0 +1,31 @@
+import {createHash} from 'node:crypto';
+import {mkdir,readFile,writeFile,chmod} from 'node:fs/promises';
+import {resolve,sep} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {execFileSync} from 'node:child_process';
+import {unzipSync} from 'fflate';
+const {pdf}=JSON.parse(await readFile(new URL('../release/toolchain.json',import.meta.url),'utf8'));
+if(process.arch!=='x64'||!['linux','win32'].includes(process.platform))throw new Error('PDF_TOOL_PLATFORM_UNSUPPORTED');
+const windows=process.platform==='win32',name=`qpdf-${pdf.qpdfVersion}-${windows?'mingw64':'bin-linux-x86_64'}.zip`;
+const url=`https://github.com/qpdf/qpdf/releases/download/v${pdf.qpdfVersion}/${name}`;
+const response=await fetch(url,{signal:AbortSignal.timeout(60000)});
+if(!response.ok)throw new Error('PDF_TOOL_DOWNLOAD_FAILED');
+const archive=Buffer.from(await response.arrayBuffer());
+if(archive.length>32*1024*1024||createHash('sha256').update(archive).digest('hex')!==(windows?pdf.windowsX64Sha256:pdf.linuxX64Sha256))throw new Error('PDF_TOOL_CHECKSUM_FAILED');
+const files=unzipSync(archive),exe=windows?'qpdf.exe':'qpdf';
+const matches=Object.keys(files).filter(path=>path.endsWith(`/bin/${exe}`));
+if(matches.length!==1)throw new Error('PDF_TOOL_ARCHIVE_INVALID');
+const prefix=matches[0].slice(0,-`bin/${exe}`.length),root=fileURLToPath(new URL('../.local/tools/pdf/qpdf/',import.meta.url));
+let total=0;
+for(const [path,bytes] of Object.entries(files)){
+  if(!path.startsWith(prefix)||path.endsWith('/'))continue;
+  const relative=path.slice(prefix.length);const destination=resolve(root,relative);
+  if(relative.includes('\\')||relative.split('/').includes('..')||!destination.startsWith(resolve(root)+sep))throw new Error('PDF_TOOL_ARCHIVE_INVALID');
+  total+=bytes.length;if(total>128*1024*1024)throw new Error('PDF_TOOL_ARCHIVE_INVALID');
+  await mkdir(resolve(destination,'..'),{recursive:true});await writeFile(destination,bytes);
+  if(relative.startsWith('bin/'))await chmod(destination,0o755);
+}
+const binary=resolve(root,'bin',exe);
+const version=execFileSync(binary,['--version'],{encoding:'utf8',timeout:15000,maxBuffer:65536,windowsHide:true});
+if(!version.startsWith(`qpdf version ${pdf.qpdfVersion}\n`)&&!version.startsWith(`qpdf version ${pdf.qpdfVersion}\r\n`))throw new Error('PDF_TOOL_VERSION_FAILED');
+console.log(`qpdf ${pdf.qpdfVersion}: verified SHA-256, retained distribution notices, executable version`);

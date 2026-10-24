@@ -56,11 +56,14 @@
     "test:recovery-db": "node --test --test-concurrency=1 tests/integration/recovery-drill.test.mjs",
     "test:private-files": "node --conditions=react-server --test --test-concurrency=1 tests/integration/private-object-store.test.mjs",
     "test:image-validation": "node --conditions=react-server --test --test-concurrency=1 tests/integration/image-validation.test.mjs",
-    "test:image-sandbox": "node --test --test-concurrency=1 tests/integration/image-sandbox.test.mjs"
+    "test:image-sandbox": "node --test --test-concurrency=1 tests/integration/image-sandbox.test.mjs",
+    "test:pdf-validation": "node --conditions=react-server --test --test-concurrency=1 tests/integration/pdf-validation.test.mjs",
+    "test:pdf-sandbox": "node --test --test-concurrency=1 tests/integration/pdf-sandbox.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1156.0",
     "@aws-sdk/s3-request-presigner": "3.1156.0",
+    "@hyzyla/pdfium": "3.0.0",
     "@supabase/auth-js": "2.118.0",
     "jose": "6.2.13",
     "next": "16.4.2",
@@ -80,6 +83,7 @@
     "@types/react-dom": "19.3.0",
     "eslint": "10.13.0",
     "eslint-plugin-react-hooks": "7.1.1",
+    "fflate": "0.8.3",
     "globals": "17.13.0",
     "otpauth": "9.5.2",
     "rolldown": "1.2.14",
