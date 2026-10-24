@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {readdir} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import sharp from 'sharp';
-import {heicFixtures,boundaryHeic} from '../support/heic-fixtures.mjs';
+import {heicFixtures,boundaryHeic,diagnoseHeic} from '../support/heic-fixtures.mjs';
 import {validateHeic,HeicValidationError,heicValidationVersion,maximumHeicBytes} from '../../src/files/heic-validation.ts';
 const hash=b=>createHash('sha256').update(b).digest('hex');let fixtures;
 before(async()=>{assert.equal(process.platform,'linux');fixtures=await heicFixtures();});
@@ -27,7 +27,9 @@ test('malformed, unsupported, excessive and corrupt HEIC files quarantine with s
   }));
 });
 test('combined25 MiB/60MP tiled HEIC fully decodes; only preview shrinks',async()=>{
-  const bytes=await boundaryHeic(),r=await validateHeic(bytes,'image/heif');assert.equal(bytes.length,maximumHeicBytes);
+  const bytes=await boundaryHeic();let r;
+  try{r=await validateHeic(bytes,'image/heif');}catch{assert.fail('HEIC boundary decode: '+await diagnoseHeic(bytes));}
+  assert.equal(bytes.length,maximumHeicBytes);
   assert.equal(r.source.sha256,hash(bytes));assert.equal(r.source.width*r.source.height,60_000_000);assert.equal(r.preview.width,2048);assert.equal(r.preview.height,1229);
   await assert.rejects(validateHeic(Buffer.concat([bytes,Buffer.alloc(1)]),'image/heic'),{code:'HEIC_SIZE_INVALID'});
 });

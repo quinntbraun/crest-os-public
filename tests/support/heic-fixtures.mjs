@@ -42,3 +42,17 @@ export async function boundaryHeic(){
   const png=await sharp({create:{width:10000,height:6000,channels:3,background:'#224466'}}).png().toBuffer();
   return padHeic(await encodeHeic([png],['--cut-tiles','1024']),25*1024*1024);
 }
+
+// Failure-only diagnostics for generated CI data. Expose numeric enums, never
+// native stderr/messages, paths or file bytes. Successful validation adds no work.
+export async function diagnoseHeic(bytes){
+  const directory=await mkdtemp(join(tmpdir(),'crest-heic-diagnostic-')),original=join(directory,'original.heic'),raster=join(directory,'decoded.png');
+  try{
+    await writeFile(original,bytes,{mode:0o600,flag:'wx'});
+    try{await execute(resolve('.local/tools/heic/bin/crest-heic-decode'),[original,raster],{timeout:25000,maxBuffer:65536});return 'native replay succeeded';}
+    catch(e){
+      try{const r=JSON.parse(e.stdout);return JSON.stringify({libraryCode:Number.isInteger(r.libraryCode)?r.libraryCode:null,librarySubcode:Number.isInteger(r.librarySubcode)?r.librarySubcode:null});}
+      catch{return 'native replay failed without numeric diagnostics';}
+    }
+  }finally{await unlink(original).catch(()=>{});await unlink(raster).catch(()=>{});await rmdir(directory);}
+}

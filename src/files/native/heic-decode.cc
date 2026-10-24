@@ -11,7 +11,8 @@
 
 constexpr uint64_t pixels=60000000, png_limit=256ULL*1024*1024;
 void require(bool ok,const char* code="HEIC_DECODE_FAILED"){if(!ok)throw code;}
-void checked(heif_error e){require(e.code==heif_error_Ok);}
+struct LibraryFailure {int code;int subcode;};
+void checked(heif_error e){if(e.code!=heif_error_Ok)throw LibraryFailure{int(e.code),int(e.subcode)};}
 void dimensions(int w,int h){require(w>0&&h>0&&uint64_t(w)*uint64_t(h)<=pixels,"HEIC_PIXEL_LIMIT");}
 struct Output {FILE* file;uint64_t size;};
 void png_failure(png_structp p,png_const_charp){png_longjmp(p,1);}
@@ -79,6 +80,11 @@ int main(int argc,char** argv){
     write_png(argv[2],w,height,data,stride,icc);
     std::cout<<"{\"width\":"<<w<<",\"height\":"<<height<<",\"encodedWidth\":"<<encoded_w
       <<",\"encodedHeight\":"<<encoded_h<<",\"bitDepth\":"<<depth<<"}\n";return 0;
+  }catch(const LibraryFailure& error){
+    // Numeric enums only: never forward native messages, filenames or bytes.
+    // The Node validator discards these private diagnostic fields.
+    std::cout<<"{\"code\":\"HEIC_DECODE_FAILED\",\"libraryCode\":"<<error.code
+      <<",\"librarySubcode\":"<<error.subcode<<"}\n";return 1;
   }catch(const char* code){std::cout<<"{\"code\":\""<<code<<"\"}\n";return 1;}
   catch(...){std::cout<<"{\"code\":\"HEIC_DECODE_FAILED\"}\n";return 1;}
 }
