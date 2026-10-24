@@ -130,6 +130,11 @@
       "version": "20261023110000",
       "file": "20261023110000_provider_evidence_snapshot.sql",
       "sha256": "3711ec4b3f7a07b1bb9efdb36e905190d93cf37a3ee8cba3bfbed91c08c96b35"
+    },
+    {
+      "version": "20261023143000",
+      "file": "20261023143000_provider_reference_snapshot.sql",
+      "sha256": "e6d5c1b939657f94123a59f5cd8741a56fcdf9b322936de487c2bd74df73cc49"
     }
   ]
 }
