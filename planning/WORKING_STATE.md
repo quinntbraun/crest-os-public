@@ -12,9 +12,9 @@ Read AGENTS.md, README.md, this checkpoint and PRE_IMPLEMENTATION.md. Canonical 
 
 ## Current work
 
-feature/synthetic-recovery-drill starts from that main. PHASE_3_RECOVERY_DRILL.md defines a bounded, synthetic-only actual pg_dump/age/isolated pg_restore drill. Fifteen new native cases are planned: whole-database snapshot/rows/schema/grants, unknown-schema exact values/sequence, emergency-key recovery in a fresh process, failed/corrupt input, nonempty target denial, restored RLS/constraints, incident fixture/session invalidation/stale command rejection and original-source preservation. Expected totals:1915 unit/45 files,747 DB/Auth including109 genuine Auth,9 pgTAP,16 shell/18 HTTPS leaves. Counts are expectations until exact-source CI succeeds.
+PR59 merged as2d16abefbc8d49f2d20ab1b9204d03f400fa00b9/tree19b8fc59ed2d42aee6f1c826f79badd1ef431ca5. Candidate40120641919 passed all gates including15 native recovery cases. Actual-main40121571177 failed in the new fixture's session INSERT: independently sampled clock_timestamp values made authenticated_at one microsecond later than created_at, correctly violating app_sessions_check2. Do not call this main verified or retry unchanged source for a green run.
 
-No SQL/schema/canonical/lockfile/runtime grant or production recovery adapter is added. Official age1.3.2 artifacts are checksum-pinned in toolchain metadata; Windows/Linux installation is separate from ordinary app dependencies. Native PG/Docker/build/browser verification runs in Linux CI; do not claim it from local Windows syntax/unit checks.
+fix/recovery-fixture-clock uses one materialized PostgreSQL timestamp for all seed boundaries and adds a deterministic native regression: +1 microsecond fails the unchanged constraint; the corrected seed stores exact equal boundaries, with rollback preserving the restored data. Planned totals16 recovery/748 DB/Auth including109 genuine Auth,1915 unit/45 files,9 pgTAP,16 shell/18 HTTPS leaves. Require exact-source candidate/protected actual-main verification for the fix. Original failure remains in PR59; fixed source/proof belongs in its follow-up PR. All schema/canonical/lockfile/runtime grants unchanged; no deployment, real data or spending.
 
 ## Next usable milestones
 
