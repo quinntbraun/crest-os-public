@@ -43,6 +43,8 @@ The [offline identity verifier](planning/PHASE_2_BUSINESS_IDENTITY_VERIFICATION.
 
 The [safe current session metadata reader](planning/PHASE_2_SESSION_METADATA_EXPORT.md) fills the existing session projection gap with explicit credential exclusions and a separate closed definer. Complete joined exports and independent recovery remain gated.
 
+The [offline session verifier](planning/PHASE_2_SESSION_METADATA_VERIFICATION.md) checks safe current metadata against retained provider/session evidence with exact versions and timestamps. Matching claims establish internal consistency only; authorized consistent capture, full reference closure and recovery remain gated.
+
 ## Local development
 
 Run every repository command from this `crest-os-public` checkout, not the parent ChatGPT project mirror or original private archive. Use Node **24.22.0** and its bundled npm **11.19.1**. No paid account or provider credentials are needed.
