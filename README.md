@@ -28,6 +28,9 @@ The [combined provider evidence collector and verifier](planning/PHASE_2_PROVIDE
 
 The [security export coverage gate](planning/PHASE_2_SECURITY_EXPORT_COVERAGE.md) checks all22 Crest source tables/265 columns against the actual applied schema, with explicit credential exclusions. Nine existing evidence groups remain partial coverage; complete private export and independent restore remain gated.
 
+The [business configuration snapshot readers](planning/PHASE_2_BUSINESS_CONFIGURATION_EXPORT.md) add isolated business-scoped extraction of all39 current root/membership/recovery columns under ADR37. Inactive/paused history is retained; actual owner-authorized full exports, identity/audit closure and encrypted recovery remain gated.
+
+
 
 ## Local development
 

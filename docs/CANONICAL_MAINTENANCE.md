@@ -23,3 +23,11 @@ ARCHITECTURE_DECISIONS.md: prior amended SHA256 e194836811ef49e17401b7b4acc8a36e
 PUBLICATION.md: prior amended SHA256 a04bf5e796ecd06e268c4c2e4eb260ae853a53a7521b5fcd67bbd129ef599343, 5793 bytes; now version 1.2, SHA256 ac1cca21ed30f9db54c13daa35dc60f3fd9acae437b55984338d3c677101e5d0, 5847 bytes. Earlier amended bytes remain in PR37/main f399bdf8e5fb2b12e316b560eff7cf76195c999b.
 
 Original baseline manifest and every original hash/length stay immutable. The existing current amendment entries for these two documents advance to the new explicitly recorded versions while preserving their original baseline identities; ten other amended documents and all23 prior SQL remain byte-identical. Maintenance JSON keeps12 distinct amended documents, not a count of chronological change events.
+
+## 2026-10-24 - Isolated business configuration export boundary
+
+Owner continuation of existing export/recovery work; ADR37 records the separate nonlogin read-only business metadata boundary required by ARCHITECTURE. No business/financial scope or production permission changes. Keep provider inventory and ordinary runtime privileges unchanged. All 27 prior SQL and the original baseline manifest remain immutable; ten other amended documents retain identical bytes. The same 12 distinct current amendment entries remain, not 13.
+
+ARCHITECTURE_DECISIONS.md: prior amended SHA256 94d7905f5f9cb1cf58a6ffcf7b83afc09a3b94a7e7ae3990c3c9b98c960e8b27, 24898 bytes at PR49/main fefc8e46bba37f3bc61cf3fc24c97b097c70a928; now version 1.8, SHA256 2d9d5b2807bf242c2e4d5e63aaadb28ed8522cfb592a5dcb197260af0b558ee0, 28165 bytes. Original baseline hash/length are unchanged.
+
+PUBLICATION.md: prior amended SHA256 ac1cca21ed30f9db54c13daa35dc60f3fd9acae437b55984338d3c677101e5d0, 5847 bytes at PR49/main fefc8e46bba37f3bc61cf3fc24c97b097c70a928; now version 1.3, SHA256 027dda264f9aa61cc28f8d00a8c4bdcab8eecc08967776a9855dc7b60fc94f77, 5846 bytes. Original baseline hash/length are unchanged.
