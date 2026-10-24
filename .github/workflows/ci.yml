@@ -234,6 +234,10 @@ jobs:
           sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 update
           sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 install --yes --no-install-recommends cmake g++ make pkg-config libjpeg-dev zlib1g-dev
           node scripts/install-pdf-tools.mjs
+      - name: Build checksum-pinned HEIC decoder and separate synthetic encoder
+        run: |
+          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 install --yes --no-install-recommends libpng-dev libx265-dev
+          node scripts/install-heic-tools.mjs --fixtures
       - name: Lint, types and regression tests
         run: |
           npm run lint
@@ -242,6 +246,7 @@ jobs:
           npm run test:private-files
           npm run test:image-validation
           npm run test:pdf-validation
+          npm run test:heic-validation
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 6
         run: |
@@ -259,6 +264,7 @@ jobs:
           test "$(docker inspect --format '{{.Config.User}}' crest-os-smoke)" = "node"
           npm run test:image-sandbox
           npm run test:pdf-sandbox
+          npm run test:heic-sandbox
           export CREST_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
           npm run release:manifest
           docker save crest-os:ci -o .local/release/crest-os-image.tar

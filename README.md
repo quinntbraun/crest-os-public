@@ -6,7 +6,7 @@ Crest Detailing's internal business operating system.
 
 The [private object storage boundary](planning/PHASE_3_PRIVATE_OBJECTS.md) adds scoped staging PUTs, bounded checksummed intake and conditional immutable original candidates. Format validation, typed attachment publication and authorized reads remain unfinished.
 
-The [isolated image validator](planning/PHASE_3_IMAGE_VALIDATION.md) adds strict JPEG/PNG checks and private previews. The [PDF validator](planning/PHASE_3_PDF_VALIDATION.md) adds encrypted/active-content rejection and offline page rendering. HEIC, attachment publication and production sandbox dispatch remain gated; check the feature PR's exact-source proof before treating pending work as shipped.
+The [isolated image validator](planning/PHASE_3_IMAGE_VALIDATION.md) adds strict JPEG/PNG checks and private previews. The [PDF validator](planning/PHASE_3_PDF_VALIDATION.md) adds encrypted/active-content rejection and offline page rendering. The [HEIC worker](planning/PHASE_3_HEIC_VALIDATION.md) adds patched native full-image decoding and private previews; check its feature PR's exact-source proof before calling it verified. Actual phone tests, attachment publication and production sandbox dispatch remain gated.
 
 The owner-requested [V1 Google Calendar capability](planning/GOOGLE_CALENDAR_V1.md) is now in the versioned specification (P20/BR21/ADR35). Research and acceptance requirements are documented; no Calendar runtime or live connection is implemented.
 

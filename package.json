@@ -58,7 +58,9 @@
     "test:image-validation": "node --conditions=react-server --test --test-concurrency=1 tests/integration/image-validation.test.mjs",
     "test:image-sandbox": "node --test --test-concurrency=1 tests/integration/image-sandbox.test.mjs",
     "test:pdf-validation": "node --conditions=react-server --test --test-concurrency=1 tests/integration/pdf-validation.test.mjs",
-    "test:pdf-sandbox": "node --test --test-concurrency=1 tests/integration/pdf-sandbox.test.mjs"
+    "test:pdf-sandbox": "node --test --test-concurrency=1 tests/integration/pdf-sandbox.test.mjs",
+    "test:heic-validation": "node --conditions=react-server --test --test-concurrency=1 tests/integration/heic-validation.test.mjs",
+    "test:heic-sandbox": "node --test --test-concurrency=1 tests/integration/heic-sandbox.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1156.0",

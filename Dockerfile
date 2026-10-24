@@ -10,6 +10,13 @@ COPY scripts/install-pdf-tools.mjs ./scripts/install-pdf-tools.mjs
 COPY release/toolchain.json ./release/toolchain.json
 RUN node scripts/install-pdf-tools.mjs
 
+FROM dependencies AS heic-tools
+RUN apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 update && apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 install --yes --no-install-recommends cmake g++ make pkg-config libpng-dev zlib1g-dev
+COPY scripts/install-heic-tools.mjs ./scripts/install-heic-tools.mjs
+COPY release/toolchain.json ./release/toolchain.json
+COPY src/files/native/heic-decode.cc ./src/files/native/heic-decode.cc
+RUN node scripts/install-heic-tools.mjs
+
 FROM dependencies AS builder
 COPY next.config.ts next-env.d.ts tsconfig.json ./
 COPY src ./src
@@ -30,6 +37,7 @@ COPY --from=builder --chown=node:node /app/package.json ./package.json
 COPY --from=builder --chown=node:node /app/.next ./.next
 COPY --from=builder --chown=node:node /app/.local/server ./server
 COPY --from=pdf-tools --chown=node:node /app/.local/tools/pdf/qpdf ./.local/tools/pdf/qpdf
+COPY --from=heic-tools --chown=node:node /app/.local/tools/heic ./.local/tools/heic
 COPY --from=builder --chown=node:node /app/release/third-party ./release/third-party
 COPY --from=builder --chown=node:node /app/public ./public
 USER node
