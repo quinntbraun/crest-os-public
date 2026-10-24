@@ -25,6 +25,7 @@ import {createBusinessOperationLookup,BusinessOperationLookupError} from '../../
 import {createMutationTransaction,MutationBoundaryError} from '../../src/security/mutation-transaction.ts';
 import {verifyProviderRecoveryEvidenceCollection} from '../../src/security/provider-recovery-evidence-verification.ts';
 import {verifyBusinessHistoryEvidence} from '../../src/security/business-history-evidence.ts';
+import {verifyBusinessIdentityEvidence} from '../../src/security/business-identity-evidence.ts';
 import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginResponse,sessionResponse,logoutResponse,BrowserHttpError} from '../../src/security/browser-http.ts';
 import {createSessionRequestAdmission,SessionAdmissionError} from '../../src/security/session-request-admission.ts';
 import {authenticationServer} from '../support/authentication-server.mjs';
@@ -1205,6 +1206,8 @@ test('business socket HTTP reads paused/ready context and commits/replays/looks 
       const profiles=await identityRows('actor');assert(profiles.some(r=>r.record_id===o.actor_id));
       const identities=await identityRows('identity_event');assert(identities.some(r=>{const row=JSON.parse(r.canonical_evidence).row;return row.entity_kind==='businesses'&&row.entity_id===f.business&&row.entity_version==='2'&&row.operation_id===input.operationId;}));
       for(const r of identities){const row=JSON.parse(r.canonical_evidence).row;assert.equal(row.event_hash,createHash('sha256').update(row.payload,'utf8').digest('hex'));assert.equal(r.evidence_hash,createHash('sha256').update(r.canonical_evidence,'utf8').digest('hex'));assert(row.business_id===null||row.business_id===f.business);}
+      const identityRecords=[];for(const [kind,rows] of [['actor',profiles],['role_capability',await identityRows('role_capability')],['identity_event',identities]])for(const r of rows)identityRecords.push({kind,recordId:r.record_id,representation:r.representation,canonicalEvidence:r.canonical_evidence,evidenceHash:r.evidence_hash});
+      const identityReport=verifyBusinessIdentityEvidence(JSON.stringify({formatVersion:1,assurance:'snapshot_bytes_only',generationId:randomUUID(),context:identityContext,evidenceBytes:identityRecords.reduce((n,r)=>n+Buffer.byteLength(r.canonicalEvidence),0),records:identityRecords}),{businessId:f.business});assert.deepEqual(identityReport.records,identityRecords);assert(identityReport.requiredActorIds.includes(o.actor_id));assert(identityReport.requiredConfigurationRows.some(r=>r.entityKind==='businesses'&&r.recordId===f.business&&r.entityVersion==='2'));assert.equal(identityReport.referenceClosureComplete,false);assert.equal(identityReport.configurationCurrentRowsVerified,false);
 
     }finally{await exporter.query('ROLLBACK');await exporter.end();}assert.deepEqual(await sessionRow(f.issued),after);assert.equal(await admissionCount(f.issued),6);
     const other=await httpLogin(f.server,f.f),otherResponse=await f.server.businessRequest('settings',{}, {cookie:other.pair,'x-crest-csrf':other.csrfToken});assert.equal(otherResponse.status,200);assert.notEqual(otherResponse.headers.get('x-crest-edit-binding'),editBinding);await otherResponse.json();

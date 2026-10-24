@@ -3,6 +3,8 @@ import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import pg from 'pg';
+import {execFileSync} from 'node:child_process';
+import {verifyBusinessIdentityEvidence} from '../../src/security/business-identity-evidence.ts';
 
 // Synthetic storage probes. The parent awaits initialization after schema30.
 export function businessIdentityExportTests(get){
@@ -13,6 +15,8 @@ export function businessIdentityExportTests(get){
  const page=(ctx,kind,{id=ctx.businessId,token=ctx.snapshotToken,cursor=null,size=20,c=reader}={})=>c.query('SELECT * FROM crest_commands.business_identity_export_page($1,$2,$3,$4,$5)',[id,token,kind,cursor,size]).then(r=>r.rows);
  async function snapshot(work,id=business){await reader.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');try{return await work(await context(id));}finally{await reader.query('ROLLBACK');}}
  async function all(ctx,kind){const out=[];let cursor=null;for(let i=0;i<600;i++){const rows=await page(ctx,kind,{cursor});out.push(...rows);if(!rows.length)return out;cursor=rows.at(-1).record_id;}assert.fail('synthetic identity pagination bound');}
+ async function portable(ctx){const records=[];for(const kind of ['actor','role_capability','identity_event'])for(const r of await all(ctx,kind))records.push({kind,recordId:r.record_id,representation:r.representation,canonicalEvidence:r.canonical_evidence,evidenceHash:r.evidence_hash});return {formatVersion:1,assurance:'snapshot_bytes_only',generationId:randomUUID(),context:ctx,evidenceBytes:records.reduce((n,r)=>n+Buffer.byteLength(r.canonicalEvidence),0),records};}
+ const offline=c=>verifyBusinessIdentityEvidence(JSON.stringify(c),{businessId:business});
  async function actor(label,creator=bootstrap,version='1'){
   return (await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,version,created_by,updated_by,origin) VALUES('owner',$1,'https://auth.example.com/auth/v1',$2,$3,$4,$4,'manual') RETURNING id",[label,randomUUID(),version,creator])).rows[0].id;
  }
@@ -42,6 +46,20 @@ export function businessIdentityExportTests(get){
  test('identity context reports exact bounded actor ancestry catalog and original event counts',async()=>snapshot(async ctx=>{
   assert.deepEqual(Object.keys(ctx).sort(),['schemaVersion','scope','businessId','snapshotToken','observedAt','recordCounts'].sort());assert.equal(ctx.schemaVersion,1);assert.equal(ctx.scope,'business_identity');assert.equal(ctx.businessId,business);assert.equal(ctx.recordCounts.actor,String(actorIds.size));assert.equal(ctx.recordCounts.role_capability,'5');assert.match(ctx.snapshotToken,/^[a-f0-9]{64}$/);assert.match(ctx.observedAt,/\+00:00$/);
   assert.equal(ctx.recordCounts.identity_event,String((await all(ctx,'identity_event')).length));
+ }));
+ test('offline identity verification accepts exact PostgreSQL ancestry history and unresolved configuration references',async()=>snapshot(async ctx=>{
+  const before=await hashes(),c=await portable(ctx),r=offline(c);assert.deepEqual(r.records,c.records);assert.deepEqual(r.requiredActorIds,[...actorIds].sort());assert.equal(r.requiredConfigurationRows.filter(x=>x.entityKind==='memberships').length,23);assert.equal(r.requiredConfigurationRows.length,25);assert.equal(r.assurance,'internal_consistency_only');assert.equal(r.configurationCurrentRowsVerified,false);assert.equal(r.referenceClosureComplete,false);assert.equal(r.completePortableExport,false);assert.equal(r.completeBackup,false);assert.deepEqual(await hashes(),before);
+ }));
+ test('offline identity verification rejects rehashed PostgreSQL current actor drift without touching source',async()=>snapshot(async ctx=>{
+  const c=await portable(ctx),copy=JSON.parse(JSON.stringify(c)),r=copy.records.find(r=>r.kind==='actor'&&r.recordId===owner),b=JSON.parse(r.canonicalEvidence);b.row.display_label='Synthetic mismatched saved identity';r.canonicalEvidence=JSON.stringify(b);r.evidenceHash=digest(r.canonicalEvidence);copy.evidenceBytes=copy.records.reduce((n,r)=>n+Buffer.byteLength(r.canonicalEvidence),0);assert.throws(()=>offline(copy),/BUSINESS_IDENTITY_EVIDENCE_REVIEW_REQUIRED/);assert.deepEqual(offline(c).records,c.records);
+ }));
+ test('offline identity verification detects omitted PostgreSQL middle history despite corrected count and bytes',async()=>snapshot(async ctx=>{
+  const c=await portable(ctx),copy=JSON.parse(JSON.stringify(c)),index=copy.records.findIndex(r=>{if(r.kind!=='identity_event')return false;const row=JSON.parse(r.canonicalEvidence).row;return row.entity_id===owner&&row.entity_version==='9007199254740994';});assert(index>=0);copy.records.splice(index,1);copy.context.recordCounts.identity_event=String(Number(copy.context.recordCounts.identity_event)-1);copy.evidenceBytes=copy.records.reduce((n,r)=>n+Buffer.byteLength(r.canonicalEvidence),0);assert.throws(()=>offline(copy),/BUSINESS_IDENTITY_EVIDENCE_REVIEW_REQUIRED/);assert.deepEqual(offline(c).records,c.records);
+ }));
+ test('offline identity evidence verifies in a separate credential-free Node process with original unsafe versions and offsets',async()=>snapshot(async ctx=>{
+  const c=await portable(ctx);assert(c.records.some(r=>r.canonicalEvidence.includes('9007199254740993')));assert(c.records.some(r=>r.canonicalEvidence.includes('+13:00')||r.canonicalEvidence.includes('+12:00')));
+  const module=new URL('../../src/security/business-identity-evidence.ts',import.meta.url).href,script=`import{readFileSync}from'node:fs';import{verifyBusinessIdentityEvidence as verify}from ${JSON.stringify(module)};const r=verify(readFileSync(0,'utf8'),${JSON.stringify({businessId:business})});if(process.env.CREST_TEST_DATABASE_URL||r.assurance!=='internal_consistency_only'||r.completeBackup)process.exit(1);process.stdout.write(String(r.records.length));`;
+  assert.equal(execFileSync(process.execPath,['--input-type=module','-e',script],{input:JSON.stringify(c),encoding:'utf8',env:{PATH:process.env.PATH},timeout:10000,maxBuffer:1024}),String(c.records.length));
  }));
  test('identity projections preserve all38 explicit source columns with exact versions JSON text and declared dictionaries',async()=>snapshot(async ctx=>{
   for(const [kind,table] of Object.entries(tables)){
