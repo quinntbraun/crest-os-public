@@ -44,8 +44,10 @@ test('same isolated worker quarantines every adversarial byte fixture with redac
     const {result,exit}=run(f.bytes,f.type);assert.equal(exit,1);assert.deepEqual(result,{status:'Quarantined',code:f.code});
   });
 });
-test('maximum60MP four-channel PNG decodes within512 MiB, one CPU and32 PIDs',async()=>{
-  const bytes=await sharp({create:{width:10000,height:6000,channels:4,background:{r:34,g:68,b:102,alpha:0.5}}}).png().toBuffer();
+test('combined25 MiB/60MP four-channel PNG decodes within512 MiB, one CPU and32 PIDs',async()=>{
+  const core=await sharp({create:{width:10000,height:6000,channels:4,background:{r:34,g:68,b:102,alpha:0.5}}}).png().toBuffer();
+  const bytes=Buffer.concat([core.subarray(0,-12),chunk('rNDm',Buffer.alloc(maximum-core.length-12)),core.subarray(-12)]);
+  assert.equal(bytes.length,maximum);
   const {result,exit}=run(bytes,'image/png');assert.equal(exit,0);assert.equal(result.source.width*result.source.height,60_000_000);
   assert.equal(result.source.sha256,hash(bytes));
 });
