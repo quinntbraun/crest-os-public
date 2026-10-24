@@ -2,7 +2,7 @@
 
 Crest Detailing's internal business operating system.
 
-**Status (2026-10-23): Public-source foundation; private owner-only application and business data. Phase 2 security implementation is underway. Read [the continuation checkpoint](planning/WORKING_STATE.md) and [current implementation plan](planning/PRE_IMPLEMENTATION.md), then verify live Git/PR/CI evidence. No CRM/financial functionality, hosted provider provisioning, real data, spending or production activation.**
+**Status (2026-10-23): Public-source foundation; private owner-only application and business data. Phases 2-3 security and recovery foundations are underway. Read [the continuation checkpoint](planning/WORKING_STATE.md) and [current implementation plan](planning/PRE_IMPLEMENTATION.md), then verify live Git/PR/CI evidence. No CRM/financial functionality, hosted provider provisioning, real data, spending or production activation.**
 
 The owner-requested [V1 Google Calendar capability](planning/GOOGLE_CALENDAR_V1.md) is now in the versioned specification (P20/BR21/ADR35). Research and acceptance requirements are documented; no Calendar runtime or live connection is implemented.
 
@@ -46,6 +46,8 @@ The [safe current session metadata reader](planning/PHASE_2_SESSION_METADATA_EXP
 The [offline session verifier](planning/PHASE_2_SESSION_METADATA_VERIFICATION.md) checks safe current metadata against retained provider/session evidence with exact versions and timestamps. Matching claims establish internal consistency only; authorized consistent capture, full reference closure and recovery remain gated.
 
 The [configuration and business evidence verifier](planning/PHASE_2_BUSINESS_CONFIGURATION_VERIFICATION.md) compares all39 current configuration fields with retained identity state and resolves included history actor references. The [usable-release milestones](planning/USABLE_RELEASE_MILESTONES.md) distinguish foundation checks, a useful synthetic CRM build and real-use acceptance.
+
+The [synthetic database recovery drill](planning/PHASE_3_RECOVERY_DRILL.md) uses an encrypted real PostgreSQL archive and a fresh isolated cluster to verify database recovery and existing security fences. Complete vault/file/configuration recovery and production incident activation remain unfinished.
 
 ## Local development
 
