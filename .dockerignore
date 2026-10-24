@@ -11,3 +11,8 @@
 !public/**
 !scripts/
 !scripts/build-server.mjs
+!scripts/install-pdf-tools.mjs
+!release/
+!release/toolchain.json
+!release/third-party/
+!release/third-party/**

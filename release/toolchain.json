@@ -27,5 +27,16 @@
     "windowsAmd64Sha256": "f48d8f8f9ebe903ab5027ed067652f2cc1db94bc206976430133b905dcd8e8c7",
     "source": "https://github.com/FiloSottile/age/releases/tag/v1.3.2",
     "execution": "Synthetic recovery drill only; production vault/key custody remains gated"
+  },
+  "pdf": {
+    "qpdfVersion": "12.4.2",
+    "qpdfSourceSha256": "8a58af5b6141319287c1883bec8bd1bd545b7567b7fc5e6ce5d25a1c85f36397",
+    "windowsX64Sha256": "773d2fa0c7d161e2271430734338e560a07b25d0edf11ceee8e53de435012766",
+    "pdfiumPackage": "3.0.0",
+    "pdfiumWasmSha256": "beeaf5bbff216d555fecec7cd486072838c4632a2272d31b52ef1fd05008fe7c",
+    "pdfiumBuildTag": "8046d",
+    "pdfiumBuildCommit": "f2bed3c8bd49569a6b5c2a0df3a1ae0def3d8871",
+    "source": "https://github.com/qpdf/qpdf/releases/tag/v12.4.2",
+    "execution": "Isolated PDF validation only; application publication and production dispatch remain gated"
   }
 }
