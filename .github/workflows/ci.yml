@@ -229,6 +229,7 @@ jobs:
           npm run lint
           npm run typecheck
           npm test
+          npm run test:private-files
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 6
         run: |

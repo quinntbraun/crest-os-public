@@ -53,9 +53,12 @@
     "test:provider-executor-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-cleanup-executor.test.mjs",
     "test:provider-export-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-evidence-snapshot.test.mjs tests/integration/provider-reference-snapshot.test.mjs",
     "test:provider-review-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-reconciliation-review.test.mjs",
-    "test:recovery-db": "node --test --test-concurrency=1 tests/integration/recovery-drill.test.mjs"
+    "test:recovery-db": "node --test --test-concurrency=1 tests/integration/recovery-drill.test.mjs",
+    "test:private-files": "node --conditions=react-server --test --test-concurrency=1 tests/integration/private-object-store.test.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1156.0",
+    "@aws-sdk/s3-request-presigner": "3.1156.0",
     "@supabase/auth-js": "2.118.0",
     "jose": "6.2.13",
     "next": "16.4.2",
