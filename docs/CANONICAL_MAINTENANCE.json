@@ -35,10 +35,10 @@
       "name": "ARCHITECTURE_DECISIONS.md",
       "originalSha256": "11acb9dc027cc8427823522193cb5518ab499dc8521c2682e4797ff6c0a47867",
       "originalBytes": 17703,
-      "version": "1.10",
-      "sha256": "6cfa0adf14319e7e900fb7986a48ee76cf9b1479500df70e08e1be2e7b786622",
-      "bytes": 36739,
-      "reason": "2026-10-24 ADR39 separate identity ancestry/original history export boundary; earlier contracts retained; see CANONICAL_MAINTENANCE.md"
+      "version": "1.11",
+      "sha256": "3065eda1d9f1f67fbdb0d2f0faabbc29ee2b69035d98c72a46e5ec3bd84bdd35",
+      "bytes": 41159,
+      "reason": "2026-10-24 owner continuation, ADR40 isolated safe current session metadata; see CANONICAL_MAINTENANCE.md"
     },
     {
       "name": "DATABASE.md",
@@ -107,10 +107,10 @@
       "name": "PUBLICATION.md",
       "originalSha256": "f53bcc738639bdf8d336cf970fd0c83715153becd536ab265bf442bdcfce5932",
       "originalBytes": 5584,
-      "version": "1.5",
-      "sha256": "7a1ee8028deee681206a33a070fba12b938142ae44f3810e46967020179879b5",
-      "bytes": 5853,
-      "reason": "2026-10-24 ADR39 separate identity ancestry/original history export boundary; earlier contracts retained; see CANONICAL_MAINTENANCE.md"
+      "version": "1.6",
+      "sha256": "91707d64d4479dccb7276c1fe0e56435569df4fc8ad54dbcceb50b5574980bee",
+      "bytes": 5854,
+      "reason": "2026-10-24 owner continuation, ADR40 isolated safe current session metadata; see CANONICAL_MAINTENANCE.md"
     }
   ]
 }

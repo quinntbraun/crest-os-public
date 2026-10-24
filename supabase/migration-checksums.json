@@ -150,6 +150,11 @@
       "version": "20261024090000",
       "file": "20261024090000_business_identity_export.sql",
       "sha256": "09907b15904b0940050162c822ec14df66d8a020a54e611473921b6d4294c07c"
+    },
+    {
+      "version": "20261024111000",
+      "file": "20261024111000_session_metadata_export.sql",
+      "sha256": "4b8f6bcecdc597b7d847885d333aae21a786b7a4bcb8dee9b40b36c8affc6d63"
     }
   ]
 }
