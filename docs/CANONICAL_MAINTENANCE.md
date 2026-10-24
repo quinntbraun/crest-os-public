@@ -39,3 +39,11 @@ Owner continuation of existing export/recovery work. ADR38 explicitly extends th
 ARCHITECTURE_DECISIONS.md: prior amended SHA256 2d9d5b2807bf242c2e4d5e63aaadb28ed8522cfb592a5dcb197260af0b558ee0, 28165 bytes at PR50/main89c68de21fd5f4cd116e8bf7cf73768cc86ada3a; now version1.9, SHA256 ecf466766fa000a6f8a88e50f3e43015459c584bb75f2fbd11d388a72b5fefe5, 32018 bytes. Original baseline hash/length retained.
 
 PUBLICATION.md: prior amended SHA256 027dda264f9aa61cc28f8d00a8c4bdcab8eecc08967776a9855dc7b60fc94f77, 5846 bytes at PR50/main89c68de21fd5f4cd116e8bf7cf73768cc86ada3a; now version1.4, SHA256 c8031ef7ab62de09a7f07c92d95624505dbced83a41bf5f88e99c0c5eb311fc8, 5851 bytes. Original baseline hash/length retained.
+
+## 2026-10-24 - Identity ancestry and original identity-history export
+
+Owner continuation of existing export/recovery work. ADR39 selects a new isolated read-only identity definer and exact business/actor-operator ancestry scope, with original history/current-row consistency and explicit processing bounds. Earlier export owners/grants/routines, all29 prior SQL and the original baseline manifest remain unchanged. No ordinary runtime/session/provider/credential authority, business/financial semantics, spending or production permission expansion. Same12 distinct current amendments; ten other amended documents retain identical bytes.
+
+ARCHITECTURE_DECISIONS.md: prior amended SHA256 ecf466766fa000a6f8a88e50f3e43015459c584bb75f2fbd11d388a72b5fefe5, 32018 bytes at PR52/maind8c72572096279b0b35921fb3df3349152d9279e; now version1.10, SHA256 6cfa0adf14319e7e900fb7986a48ee76cf9b1479500df70e08e1be2e7b786622, 36739 bytes. Original baseline hash/length retained.
+
+PUBLICATION.md: prior amended SHA256 c8031ef7ab62de09a7f07c92d95624505dbced83a41bf5f88e99c0c5eb311fc8, 5851 bytes at PR52/maind8c72572096279b0b35921fb3df3349152d9279e; now version1.5, SHA256 7a1ee8028deee681206a33a070fba12b938142ae44f3810e46967020179879b5, 5853 bytes. Original baseline hash/length retained.
