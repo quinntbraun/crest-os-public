@@ -33,10 +33,10 @@ before(async()=>{
  bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
  const root=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic reference bootstrap',$1,$2,$3,$3,'manual') RETURNING id",[issuer,randomUUID(),bootstrap])).rows[0].id;
  await client.query('BEGIN');try{business=(await client.query("INSERT INTO crest.businesses(legal_name,timezone,created_by,updated_by,origin) VALUES('Synthetic reference business','UTC',$1,$1,'manual') RETURNING id",[root])).rows[0].id;await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,root]);await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,root]);await client.query('COMMIT');}catch(e){await client.query('ROLLBACK');throw e;}
- owner=await actor();other=await actor();legacy=await session();await revoke(legacy);retained=await sourceHashes();oldFunctions=await originals();referenceReceipt=await sandbox.apply(target,await sandbox.prefix(27));receipt=await sandbox.apply(target);reader=await sandbox.connect(target);await reader.query('SET ROLE crest_inventory');
+ owner=await actor();other=await actor();legacy=await session();await revoke(legacy);retained=await sourceHashes();oldFunctions=await originals();referenceReceipt=await sandbox.apply(target,await sandbox.prefix(27));receipt=await sandbox.apply(target);reader=await sandbox.connect(target);await reader.query('SET ROLE crest_inventory');await initializeBusinessConfigurationExport();
 });
 after(async()=>{for(const name of runtimeRoles)await sandbox.admin.query(`DROP ROLE ${name}`);await sandbox?.close();});
-businessConfigurationExportTests(()=>({client,sandbox,target,installProviderSchema,runtimeRoles}));
+const initializeBusinessConfigurationExport=businessConfigurationExportTests(()=>({client,sandbox,target,installProviderSchema,runtimeRoles}));
 
 async function exportColumns(){
  return (await client.query(`SELECT n.nspname||'.'||c.relname AS "table",a.attname AS "column"
