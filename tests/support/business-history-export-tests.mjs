@@ -87,6 +87,12 @@ export function businessHistoryExportTests(get){
  test('future private source columns are not automatically serialized into history projections',async()=>{
   for(const [kind,table] of Object.entries(tables)){await client.query(`ALTER TABLE ${table} ADD COLUMN synthetic_private_field text DEFAULT 'synthetic private sentinel'`);try{await snapshot(async ctx=>{const s=(await page(ctx,kind))[0].canonical_evidence;assert(!s.includes('synthetic_private_field'));assert(!s.includes('synthetic private sentinel'));});}finally{await client.query(`ALTER TABLE ${table} DROP COLUMN synthetic_private_field`);}}
  });
+ test('an operation with its matching audit hidden by restrictive RLS fails instead of exporting incomplete evidence',async()=>{
+  const before=await hashes();await client.query('CREATE POLICY synthetic_hide_history_audits ON crest_private.audit_events AS RESTRICTIVE FOR SELECT TO crest_export_owner USING(false)');
+  try{await snapshot(async ctx=>{assert.equal(ctx.recordCounts.operation,'24');assert.equal(ctx.recordCounts.audit_event,'0');await assert.rejects(page(ctx,'operation'),/CREST_BUSINESS_HISTORY_EXPORT_SOURCE_REVIEW_REQUIRED/);});}
+  finally{await client.query('DROP POLICY synthetic_hide_history_audits ON crest_private.audit_events');}
+  assert.deepEqual(await hashes(),before);await snapshot(async ctx=>assert.equal(ctx.recordCounts.audit_event,'24'));
+ });
  test('an audit with valid original bytes and hash but contradictory source metadata fails the whole page',async()=>{
   const old=(await client.query('SELECT id,entity_id,hash_input,event_hash FROM crest_private.audit_events WHERE business_id=$1 ORDER BY id LIMIT 1',[business])).rows[0];
   await changeAudit(old.id,'entity_id',randomUUID());try{assert.equal((await client.query('SELECT event_hash FROM crest_private.audit_events WHERE id=$1',[old.id])).rows[0].event_hash,old.event_hash);await snapshot(async ctx=>assert.rejects(page(ctx,'audit_event'),/CREST_BUSINESS_HISTORY_EXPORT_SOURCE_REVIEW_REQUIRED/));}finally{await changeAudit(old.id,'entity_id',old.entity_id);}
