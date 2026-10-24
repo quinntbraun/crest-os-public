@@ -262,7 +262,7 @@ BEGIN
   END CASE;
   LOOP
     FETCH source_cursor INTO item;EXIT WHEN NOT FOUND;body:=item.source_body;
-    IF body IS NULL OR octet_length(body)>CASE WHEN record_kind='identity_event' THEN 262144 ELSE 16384 END OR total_bytes+octet_length(body)>8388608 THEN
+    IF body IS NULL OR octet_length(body)>(CASE WHEN record_kind='identity_event' THEN 262144 ELSE 16384 END) OR total_bytes+octet_length(body)>8388608 THEN
       RAISE EXCEPTION USING ERRCODE='54000',MESSAGE='CREST_IDENTITY_EXPORT_BUDGET_REQUIRED';
     END IF;
     total_bytes:=total_bytes+octet_length(body);
