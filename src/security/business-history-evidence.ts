@@ -1,6 +1,5 @@
 import {createHash} from 'node:crypto';
-import {parseEvidenceJson} from './provider-evidence-json.ts';
-import {parseHistoryJson, historyJsonEqual, historyJsonNumber} from './history-evidence-json.ts';
+import {parseHistoryJson, historyJsonEqual, historyJsonNumber, historyJsonInteger} from './history-evidence-json.ts';
 
 type Body = Record<string, unknown>;
 type Kind = 'operation' | 'audit_event';
@@ -27,7 +26,9 @@ function text(value: unknown, max: number): value is string {
     && Buffer.byteLength(value, 'utf8') <= max && Buffer.from(value, 'utf8').toString('utf8') === value;
 }
 function id(value: unknown): value is string { return typeof value === 'string' && uuid.test(value); }
-function integer(value: unknown): value is number { return typeof value === 'number' && Number.isSafeInteger(value) && value >= 1 && value <= 2147483647; }
+function integer(value: unknown): number {
+  const n = historyJsonInteger(value); require(n !== undefined && n >= 1 && n <= 2147483647); return n;
+}
 function digest(value: string) { return createHash('sha256').update(value, 'utf8').digest('hex'); }
 // PostgreSQL UTC projection spellings and original microseconds are retained.
 // Never use Date's millisecond truncation for evidence equality.
@@ -53,7 +54,7 @@ function operation(row: Body) {
     && integer(row.schema_version) && integer(row.result_schema_version) && row.state === 'committed'
     && instant(row.committed_at) >= instant(row.created_at));
   const result = sourceJson(row.result, 65536); object(result);
-  require(historyJsonNumber(result.schemaVersion, row.result_schema_version));
+  require(historyJsonNumber(result.schemaVersion, integer(row.result_schema_version)));
 }
 function audit(row: Body) {
   require(typeof row.entity_kind === 'string' && /^[a-z][a-z0-9_]{0,63}$/.test(row.entity_kind)
@@ -84,12 +85,12 @@ function audit(row: Body) {
 export function verifyBusinessHistoryEvidence(serialized: unknown, expected: {businessId: string}) {
   try {
     require(text(serialized, 64 * 1024 * 1024)); const businessId = expected.businessId.toLowerCase(); require(id(businessId));
-    const c = parseEvidenceJson(serialized); fields(c, ['formatVersion','assurance','generationId','context','evidenceBytes','records']);
-    require(c.formatVersion === 1 && c.assurance === 'snapshot_bytes_only' && id(c.generationId)
-      && Array.isArray(c.records) && c.records.length <= 1000 && typeof c.evidenceBytes === 'number'
-      && Number.isSafeInteger(c.evidenceBytes) && c.evidenceBytes >= 0 && c.evidenceBytes <= 8 * 1024 * 1024);
+    const c = parseHistoryJson(serialized); fields(c, ['formatVersion','assurance','generationId','context','evidenceBytes','records']);
+    const declaredBytes = historyJsonInteger(c.evidenceBytes);
+    require(historyJsonNumber(c.formatVersion, 1) && c.assurance === 'snapshot_bytes_only' && id(c.generationId)
+      && Array.isArray(c.records) && c.records.length <= 1000 && declaredBytes !== undefined && declaredBytes >= 0 && declaredBytes <= 8 * 1024 * 1024);
     const ctx = c.context; fields(ctx, ['schemaVersion','scope','businessId','snapshotToken','observedAt','recordCounts']);
-    require(ctx.schemaVersion === 1 && ctx.scope === 'business_history' && ctx.businessId === businessId
+    require(historyJsonNumber(ctx.schemaVersion, 1) && ctx.scope === 'business_history' && ctx.businessId === businessId
       && typeof ctx.snapshotToken === 'string' && hash.test(ctx.snapshotToken)); instant(ctx.observedAt);
     fields(ctx.recordCounts, kinds);
     const counts = {} as Record<Kind,string>;
@@ -103,15 +104,15 @@ export function verifyBusinessHistoryEvidence(serialized: unknown, expected: {bu
       require(text(r.canonicalEvidence, r.kind === 'operation' ? 262144 : 2097152) && typeof r.evidenceHash === 'string'
         && hash.test(r.evidenceHash) && digest(r.canonicalEvidence) === r.evidenceHash);
       bytes += Buffer.byteLength(r.canonicalEvidence, 'utf8'); require(bytes <= 8 * 1024 * 1024);
-      const b = parseEvidenceJson(r.canonicalEvidence); fields(b, ['schemaVersion','kind','businessId','jsonTextColumns','row']);
-      require(b.schemaVersion === 1 && b.kind === r.kind && b.businessId === businessId
+      const b = parseHistoryJson(r.canonicalEvidence); fields(b, ['schemaVersion','kind','businessId','jsonTextColumns','row']);
+      require(historyJsonNumber(b.schemaVersion, 1) && b.kind === r.kind && b.businessId === businessId
         && JSON.stringify(b.jsonTextColumns) === JSON.stringify(r.kind === 'operation' ? ['result'] : ['delta','payload']));
       const row = b.row; fields(row, r.kind === 'operation' ? operationFields : auditFields); common(row, r.recordId, businessId, actors);
       if (r.kind === 'operation') { operation(row); require(!operations.has(row.operation_id as string)); operations.set(row.operation_id as string, row); }
       else { audit(row); audits.push(row); }
       rows.push(Object.freeze({kind:r.kind, recordId:r.recordId, representation:'snapshot_projection', canonicalEvidence:r.canonicalEvidence, evidenceHash:r.evidenceHash}));
     }
-    require(bytes === c.evidenceBytes && String(operations.size) === counts.operation && String(audits.length) === counts.audit_event);
+    require(bytes === declaredBytes && String(operations.size) === counts.operation && String(audits.length) === counts.audit_event);
     const linked = new Set<string>();
     for (const a of audits) {
       const o = operations.get(a.operation_id as string); require(o && o.actor_id === a.actor_id && o.origin === a.origin && o.import_row_id === a.import_row_id);

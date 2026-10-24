@@ -104,4 +104,11 @@ describe('offline business history evidence',()=>{
  it('never treats comma-containing object names as the required schema fields',()=>{
   const f=historyFixture();change(f,1,b=>{const value=b.row.reason;delete b.row.reason;delete b.row.origin;b.row['origin,reason']=value;});reject(f);
  });
+ it('rejects fractional metadata lexemes that JavaScript would round to an allowed integer',()=>{
+  for(const key of ['schemaVersion','schema_version','result_schema_version']){
+   const f=historyFixture(),r=f.collection.records[0]!;r.canonicalEvidence=r.canonicalEvidence.replace('"'+key+'":1','"'+key+'":1.0000000000000001');r.evidenceHash=digest(r.canonicalEvidence);reject(f);
+  }
+  const f=historyFixture();for(const key of ['formatVersion','schemaVersion'])expect(()=>verify(f.encode().replace('"'+key+'":1','"'+key+'":1.0000000000000001'),{businessId:f.businessId})).toThrow(error);
+  const input=f.encode().replace(/"evidenceBytes":([0-9]+)/,'"evidenceBytes":$1.0000000000000001');expect(()=>verify(input,{businessId:f.businessId})).toThrow(error);
+ });
 });

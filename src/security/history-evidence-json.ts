@@ -19,6 +19,15 @@ function require(value: unknown): asserts value {
 export function historyJsonNumber(value: unknown, expected: number): boolean {
   return value instanceof ExactNumber && value.value === new ExactNumber(String(expected)).value;
 }
+export function historyJsonInteger(value: unknown): number | undefined {
+  if (!(value instanceof ExactNumber)) return undefined;
+  if (value.value === '0') return 0;
+  const m = /^(-?)([1-9][0-9]*)e(-?[0-9]+)$/.exec(value.value)!;
+  const exponent = Number(m[3]);
+  if (exponent < 0 || exponent > 15 || m[2]!.length + exponent > 16) return undefined;
+  const n = Number(m[1]! + m[2]!) * 10 ** exponent;
+  return Number.isSafeInteger(n) ? n : undefined;
+}
 export function historyJsonEqual(a: unknown, b: unknown): boolean {
   if (a instanceof ExactNumber || b instanceof ExactNumber) return a instanceof ExactNumber && b instanceof ExactNumber && a.value === b.value;
   if (a === b) return true;
