@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import {before,after,test} from 'node:test';
+import pg from 'pg';
+import {execFileSync} from 'node:child_process';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {createProviderRecoveryEvidenceCollector} from '../../src/security/provider-evidence-collector.ts';
+import {verifyProviderRecoveryEvidenceCollection} from '../../src/security/provider-recovery-evidence-verification.ts';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 
@@ -8,6 +14,7 @@ const issuer='https://auth.example.com/auth/v1',kinds=['session_identity','sessi
 const tables=['app_sessions','session_events','provider_cleanup_references'];
 const functions=['crest_commands.provider_reference_export_context(uuid,text)','crest_commands.provider_reference_export_page(uuid,text,text,text,uuid,integer)'];
 let sandbox,target,client,reader,bootstrap,business,owner,other,legacy,prior,receipt,retained,oldFunctions;
+const runtimeRoles=[];let runtimeInventory;
 const digest=s=>createHash('sha256').update(s,'utf8').digest('hex');
 async function actor(){const a=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic reference owner',$1,$2,$3,$3,'manual') RETURNING id,current_security_epoch",[issuer,randomUUID(),bootstrap])).rows[0];await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$3,$3,'manual')",[business,a.id,owner?.id??a.id]);return a;}
 async function session(a=owner,{id=randomUUID(),version='1'}={}){const p=randomUUID();await client.query("WITH moment AS MATERIALIZED(SELECT clock_timestamp() AS stamp) INSERT INTO crest_private.app_sessions(id,actor_id,provider_session_id,token_hash,issued_security_epoch,created_at,authenticated_at,last_active_at,expires_at,trusted,provider_token_ciphertext,key_id,version,created_by,updated_by) SELECT $1,$2,$3,$4,$5,stamp,stamp,stamp,stamp+interval '1 hour',false,$6,'synthetic',$7,$2,$2 FROM moment",[id,a.id,p,randomBytes(32),a.current_security_epoch,randomBytes(32),version]);return {id,p,a};}
@@ -25,7 +32,7 @@ before(async()=>{
  await client.query('BEGIN');try{business=(await client.query("INSERT INTO crest.businesses(legal_name,timezone,created_by,updated_by,origin) VALUES('Synthetic reference business','UTC',$1,$1,'manual') RETURNING id",[root])).rows[0].id;await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,root]);await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,root]);await client.query('COMMIT');}catch(e){await client.query('ROLLBACK');throw e;}
  owner=await actor();other=await actor();legacy=await session();await revoke(legacy);retained=await sourceHashes();oldFunctions=await originals();receipt=await sandbox.apply(target);reader=await sandbox.connect(target);await reader.query('SET ROLE crest_inventory');
 });
-after(async()=>{await sandbox?.close();});
+after(async()=>{for(const name of runtimeRoles)await sandbox.admin.query(`DROP ROLE ${name}`);await sandbox?.close();});
 
 test('schema26 upgrade preserves all prior source bytes history and original six-ledger routines',async()=>{
  assert.equal(prior.history.length,26);assert.equal(receipt.history.length,27);assert.deepEqual(receipt.history.slice(0,26),prior.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);assert.deepEqual(await sourceHashes(),retained);assert.deepEqual(await originals(),oldFunctions);
@@ -107,4 +114,64 @@ test('rehashed event ID binding corruption fails instead of presenting the hash 
 });
 test('an oversized original fails explicitly rather than truncating or omitting its stored bytes',async()=>{
  const a=await actor();await session(a);await client.query('BEGIN');try{await client.query('ALTER TABLE crest_private.session_events DISABLE TRIGGER USER');await client.query("UPDATE crest_private.session_events SET payload=payload||jsonb_build_object('unsupported',repeat('x',8192)),event_hash=encode(sha256(convert_to((payload||jsonb_build_object('unsupported',repeat('x',8192)))::text,'UTF8')),'hex') WHERE actor_id=$1",[a.id]);await client.query('COMMIT');}catch(e){await client.query('ROLLBACK');throw e;}await assert.rejects(snapshot(a,async ctx=>{assert.equal(ctx.ledgerCounts.session_event,'1');await page(ctx,'session_event');}),e=>e.code==='23514');
+});
+
+async function provisionCollector(){
+ const name=`crest_probe_${randomBytes(8).toString('hex')}`,password=randomBytes(32).toString('hex');assert.match(name,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
+ await sandbox.admin.query(`CREATE ROLE ${name} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);runtimeRoles.push(name);await sandbox.admin.query(`GRANT crest_inventory TO ${name} WITH INHERIT FALSE`);
+ const url=new URL(target);url.username=name;url.password=password;return {name,config:{connectionString:url.toString(),environment:'test',actorId:owner.id,issuer}};
+}
+const collect=a=>createProviderRecoveryEvidenceCollector({...runtimeInventory.config,actorId:a.id})(new AbortController().signal);
+const verify=(c,a)=>verifyProviderRecoveryEvidenceCollection(JSON.stringify(c),{actorId:a.id,issuer});
+async function tracked(a){
+ const subject=(await client.query('SELECT auth_user_id FROM crest_private.actors WHERE id=$1',[a.id])).rows[0].auth_user_id;
+ await client.query("INSERT INTO auth.users(id,email,aud,role) VALUES($1,$2,'authenticated','authenticated')",[subject,`synthetic-${subject}@example.com`]);
+ const web=await sandbox.connect(target),cleanup=await sandbox.connect(target);await web.query('SET ROLE crest_web');await cleanup.query('SET ROLE crest_cleanup');
+ try{
+  const b=(await web.query('SELECT crest_commands.begin_provider_login($1,$2,$3,$4) AS result',[randomUUID(),randomUUID(),issuer,subject])).rows[0].result,p=randomUUID(),passwordAt=new Date(Math.floor(Date.now()/1000)*1000);
+  await client.query("INSERT INTO auth.sessions(id,user_id,aal,created_at,updated_at) VALUES($1,$2,'aal1',clock_timestamp(),clock_timestamp())",[p,subject]);
+  await web.query('SELECT crest_commands.record_provider_login_target($1,$2,$3,$4,$5,$6,$7,$8)',[b.attemptId,a.id,b.securityEpoch,issuer,subject,p,passwordAt,new Date(Date.now()+60000)]);
+  await client.query("UPDATE auth.sessions SET aal='aal2' WHERE id=$1",[p]);
+  await web.query('SELECT crest_commands.issue_open_app_session($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',[b.appSessionId,randomBytes(32),a.id,b.securityEpoch,issuer,subject,p,passwordAt,new Date(),false,randomBytes(32),'synthetic',b.attemptId]);
+  await web.query('SELECT crest_commands.finish_provider_login($1,$2,$3,$4,$5,$6)',[b.attemptId,a.id,b.securityEpoch,issuer,subject,'registration_closed']);
+  const stop=(await web.query('SELECT crest_commands.finish_provider_login($1,$2,$3,$4,$5,$6) AS result',[b.attemptId,a.id,b.securityEpoch,issuer,subject,'stopped_review'])).rows[0].result;
+  const request=(await reader.query('SELECT crest_commands.request_provider_cleanup($1,$2,$3,$4) AS result',[randomUUID(),stop.evidence.finishId,a.id,issuer])).rows[0].result;
+  await cleanup.query('SELECT crest_commands.execute_provider_cleanup($1,$2,$3)',[request.evidence.requestId,a.id,issuer]);return b;
+ }finally{await web.end();await cleanup.end();}
+}
+test('combined collector verifies actual nine-group source bytes and links including a legacy session without source writes',async()=>{
+ runtimeInventory=await provisionCollector();const a=await actor(),legacy=await session(a);await revoke(legacy);await tracked(a);const before=await sourceHashes(),c=await collect(a),r=verify(c,a);
+ assert.equal(c.formatVersion,2);assert.equal(c.context.scope,'retained_provider_ledgers');assert.equal(c.referenceContext.scope,'provider_session_references');assert.equal(c.referenceContext.ledgerCounts.session_identity,'2');assert.equal(c.referenceContext.ledgerCounts.session_event,'4');assert.equal(c.referenceContext.ledgerCounts.cleanup_reference,'2');assert.deepEqual(r.records,c.records);assert.deepEqual(r.attempts.map(x=>x.missingKinds),[[]]);assert.equal(r.assurance,'internal_consistency_only');
+ for(const v of [c,c.referenceContext,c.referenceContext.ledgerCounts,c.records,...c.records,r,r.referenceContext,r.referenceContext.ledgerCounts,r.records,...r.records])assert(Object.isFrozen(v));assert.deepEqual(await sourceHashes(),before);
+});
+test('combined held snapshot excludes later registration revocation requests and outcomes across both scopes',async()=>{
+ const a=await actor(),f=await session(a),original=pg.Client.prototype.query,connections=new Set();let contexts=0;
+ pg.Client.prototype.query=async function(sql,...args){const r=await original.call(this,sql,...args);if(this.user===runtimeInventory.name){connections.add(this);if(typeof sql==='string'&&sql.includes('provider_evidence_export_context(')){contexts++;await revoke(f);await tracked(a);}}return r;};
+ let held;try{held=await collect(a);}finally{pg.Client.prototype.query=original;}
+ assert.equal(contexts,1);assert.equal(connections.size,1);assert(Object.values(held.context.ledgerCounts).every(n=>n==='0'));assert.deepEqual(held.referenceContext.ledgerCounts,{session_identity:'1',session_event:'1',cleanup_reference:'0'});assert.equal(verify(held,a).records.length,2);
+ const fresh=await collect(a);assert.notEqual(fresh.generationId,held.generationId);assert.equal(fresh.context.ledgerCounts.cleanup_outcome,'1');assert.equal(fresh.referenceContext.ledgerCounts.cleanup_reference,'2');assert.deepEqual(verify(fresh,a).attempts.map(x=>x.missingKinds),[[]]);
+});
+test('combined reference pagination and exact bigint versions verify in a fresh credential-free Node process',async()=>{
+ const a=await actor();for(let i=0;i<23;i++)await session(a,{version:'9007199254740993'});const c=await collect(a),r=verify(c,a);assert.equal(r.records.length,46);assert.equal(c.referenceContext.ledgerCounts.session_event,'23');
+ const module=pathToFileURL(resolve('src/security/provider-recovery-evidence-verification.ts')).href;
+ const script=`import {readFileSync} from 'node:fs';import {verifyProviderRecoveryEvidenceCollection} from ${JSON.stringify(module)};const r=verifyProviderRecoveryEvidenceCollection(readFileSync(0,'utf8'),${JSON.stringify({actorId:a.id,issuer})});if(process.env.CREST_TEST_DATABASE_URL||r.assurance!=='internal_consistency_only')process.exit(1);process.stdout.write(String(r.records.length));`;
+ const result=execFileSync(process.execPath,['--input-type=module','-e',script],{input:JSON.stringify(c),encoding:'utf8',env:{PATH:process.env.PATH},timeout:10000,maxBuffer:1024});assert.equal(result,'46');
+});
+test('combined collection preserves source timezone offsets and microseconds after a local revocation',async()=>{
+ const a=await actor();await client.query("SET timezone='Pacific/Honolulu'");try{const f=await session(a);await revoke(f);}finally{await client.query('RESET timezone');}const c=await collect(a);assert(c.records.filter(r=>r.kind==='session_event').every(r=>r.canonicalEvidence.includes('-10:00')));assert.deepEqual(verify(c,a).records,c.records);
+});
+test('combined collection retains disabled old-epoch history and empty scopes without application-access claims',async()=>{
+ const a=await actor(),f=await session(a);await revoke(f);await client.query('UPDATE crest_private.actors SET disabled_at=clock_timestamp(),current_security_epoch=$1,version=version+1 WHERE id=$2',[randomUUID(),a.id]);const c=await collect(a);assert.equal(verify(c,a).referenceContext.ledgerCounts.cleanup_reference,'1');const empty=await collect({id:randomUUID()});assert.deepEqual(verify(empty,{id:empty.context.actorId}).records,[]);assert(!Object.hasOwn(c,'ready'));
+});
+test('losing the combined connection in a reference page discards both scopes and an explicit new call starts fresh',async()=>{
+ const a=await actor();await session(a);const original=pg.Client.prototype.query;let contexts=0;
+ pg.Client.prototype.query=async function(sql,...args){const r=await original.call(this,sql,...args);if(this.user===runtimeInventory.name&&typeof sql==='string'){if(sql.includes('provider_evidence_export_context('))contexts++;if(sql.includes('provider_reference_export_page('))await this.end();}return r;};
+ try{await assert.rejects(collect(a),/PROVIDER_EVIDENCE_COLLECTION_REVIEW_REQUIRED/);}finally{pg.Client.prototype.query=original;}assert.equal(contexts,1);assert.equal(verify(await collect(a),a).records.length,2);
+});
+test('portable rehashed source-reference contradictions fail while unmodified originals remain verifiable',async()=>{
+ const a=await actor();await tracked(a);const c=await collect(a),copy=JSON.parse(JSON.stringify(c)),ref=copy.records.find(r=>r.kind==='cleanup_reference');const b=JSON.parse(ref.canonicalEvidence);b.sourceEventHash='0'.repeat(64);ref.canonicalEvidence=JSON.stringify(b);ref.evidenceHash=digest(ref.canonicalEvidence);copy.evidenceBytes=copy.records.reduce((n,r)=>n+Buffer.byteLength(r.canonicalEvidence),0);assert.throws(()=>verify(copy,a),/PROVIDER_RECOVERY_EVIDENCE_REVIEW_REQUIRED/);assert.deepEqual(verify(c,a).records,c.records);
+});
+test('combined collector has no administrator adoption raw-source read or cleanup mutation authority',async()=>{
+ await assert.rejects(createProviderRecoveryEvidenceCollector({...runtimeInventory.config,connectionString:target})(new AbortController().signal),/PROVIDER_EVIDENCE_COLLECTION_REVIEW_REQUIRED/);
+ const c=new pg.Client({connectionString:runtimeInventory.config.connectionString,options:'-c role=crest_inventory'});await c.connect();try{await assert.rejects(c.query('SELECT * FROM crest_private.session_events'),e=>e.code==='42501');await assert.rejects(c.query('SELECT crest_commands.execute_provider_cleanup($1,$2,$3)',[randomUUID(),owner.id,issuer]),e=>e.code==='42501');}finally{await c.end();}
 });

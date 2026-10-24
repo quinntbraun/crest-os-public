@@ -9,9 +9,16 @@ type Kind=typeof kinds[number];
 type Configuration={connectionString:string;environment:'production'|'test';actorId:string;issuer:string};
 type Context=Readonly<{schemaVersion:1;scope:'retained_provider_ledgers';actorId:string;providerIssuer:string;snapshotToken:string;observedAt:string;ledgerCounts:Readonly<Record<Kind,string>>}>;
 type RecordBytes=Readonly<{kind:Kind;recordId:string;canonicalEvidence:string;evidenceHash:string}>;
+const referenceKinds=['session_identity','session_event','cleanup_reference'] as const;
+type ReferenceKind=typeof referenceKinds[number];
+type ReferenceContext=Readonly<Omit<Context,'scope'|'ledgerCounts'>&{scope:'provider_session_references';ledgerCounts:Readonly<Record<ReferenceKind,string>>}>;
+type ReferenceBytes=Readonly<{kind:ReferenceKind;recordId:string;canonicalEvidence:string;evidenceHash:string;representation:'stored_payload'|'snapshot_projection'}>;
 export type ProviderEvidenceCollection=Readonly<{
   formatVersion:1;assurance:'snapshot_bytes_only';generationId:string;context:Context;
   evidenceBytes:number;records:readonly RecordBytes[];
+}>;
+export type ProviderRecoveryEvidenceCollection=Readonly<Omit<ProviderEvidenceCollection,'formatVersion'|'records'>&{
+  formatVersion:2;referenceContext:ReferenceContext;records:readonly (RecordBytes|ReferenceBytes)[];
 }>;
 export class ProviderEvidenceCollectionError extends Error{
   constructor(){super('PROVIDER_EVIDENCE_COLLECTION_REVIEW_REQUIRED');this.name='ProviderEvidenceCollectionError';}
@@ -47,9 +54,33 @@ function record(value:unknown,kind:Kind,after:string|null):RecordBytes{
   return Object.freeze({kind,recordId:value.record_id,canonicalEvidence:value.canonical_evidence,evidenceHash:value.evidence_hash});
 }
 
+function referenceContext(value:unknown,actorId:string,issuer:string):ReferenceContext{
+  require(keys(value,'actorId,ledgerCounts,observedAt,providerIssuer,schemaVersion,scope,snapshotToken')
+    &&value.schemaVersion===1&&value.scope==='provider_session_references'&&value.actorId===actorId&&value.providerIssuer===issuer
+    &&typeof value.snapshotToken==='string'&&hash.test(value.snapshotToken)&&utc(value.observedAt)
+    &&keys(value.ledgerCounts,[...referenceKinds].sort().join(',')));
+  const counts={} as Record<ReferenceKind,string>;let total=0;
+  for(const kind of referenceKinds){const n=value.ledgerCounts[kind];require(typeof n==='string'&&/^(0|[1-9][0-9]{0,3})$/.test(n));total+=Number(n);require(total<=maxRecords);counts[kind]=n;}
+  return Object.freeze({schemaVersion:1,scope:'provider_session_references',actorId,providerIssuer:issuer,
+    snapshotToken:value.snapshotToken,observedAt:value.observedAt,ledgerCounts:Object.freeze(counts)});
+}
+function referenceRecord(value:unknown,kind:ReferenceKind,after:string|null):ReferenceBytes{
+  require(keys(value,'canonical_evidence,evidence_hash,record_id,representation')&&value.representation===(kind==='session_event'?'stored_payload':'snapshot_projection'));
+  const r=record({canonical_evidence:value.canonical_evidence,evidence_hash:value.evidence_hash,record_id:value.record_id},'login_attempt',after);
+  return Object.freeze({...r,kind,representation:value.representation as ReferenceBytes['representation']});
+}
+
 // Private composition only. No caller SQL, pool, callback/sink, filesystem,
 // environment lookup, provider action, runtime route or automatic retry.
 export function createProviderEvidenceCollector(config:Configuration){
+  const run=createCollector(config,false);
+  return async(signal:AbortSignal):Promise<ProviderEvidenceCollection>=>{const c=await run(signal);require(c.formatVersion===1);return c;};
+}
+export function createProviderRecoveryEvidenceCollector(config:Configuration){
+  const run=createCollector(config,true);
+  return async(signal:AbortSignal):Promise<ProviderRecoveryEvidenceCollection>=>{const c=await run(signal);require(c.formatVersion===2);return c;};
+}
+function createCollector(config:Configuration,includeReferences:boolean){
   let connectionString:string,actorId:string,issuer:string,ssl:false|{rejectUnauthorized:true};
   try{
     const url=new URL(config.connectionString),provider=new URL(config.issuer);
@@ -61,7 +92,7 @@ export function createProviderEvidenceCollector(config:Configuration){
     connectionString=url.toString();actorId=config.actorId.toLowerCase();issuer=config.issuer;ssl=config.environment==='production'?{rejectUnauthorized:true}:false;
   }catch{throw new Error('PROVIDER_EVIDENCE_COLLECTION_CONFIGURATION_REQUIRED');}
   let active=false;
-  return async(signal:AbortSignal):Promise<ProviderEvidenceCollection>=>{
+  return async(signal:AbortSignal):Promise<ProviderEvidenceCollection|ProviderRecoveryEvidenceCollection>=>{
     require(!signal.aborted&&!active);active=true;
     const controller=new AbortController(),combined=AbortSignal.any([signal,controller.signal]),started=performance.now();
     let client:pg.Client|undefined,transport:Socket|undefined,closed=false,timer:ReturnType<typeof setTimeout>|undefined;
@@ -92,7 +123,13 @@ export function createProviderEvidenceCollector(config:Configuration){
         // one snapshot. Never reacquire a connection/context for a later page.
         const result=await query('SELECT crest_commands.provider_evidence_export_context($1::uuid,$2::text) AS result',[actorId,issuer]);
         require(result.rows.length===1&&keys(result.rows[0],'result'));const ctx=context(result.rows[0].result,actorId,issuer);
-        const generationId=randomUUID(),records:RecordBytes[]=[];let evidenceBytes=0;
+        let refs:ReferenceContext|undefined;
+        if(includeReferences){
+          const result=await query('SELECT crest_commands.provider_reference_export_context($1::uuid,$2::text) AS result',[actorId,issuer]);
+          require(result.rows.length===1&&keys(result.rows[0],'result'));refs=referenceContext(result.rows[0].result,actorId,issuer);
+          require(Object.values(ctx.ledgerCounts).concat(Object.values(refs.ledgerCounts)).reduce((sum,n)=>sum+Number(n),0)<=maxRecords);
+        }
+        const generationId=randomUUID(),records:RecordBytes[]=[],referenceRecords:ReferenceBytes[]=[];let evidenceBytes=0;
         for(const kind of kinds){
           let after:string|null=null,count=0;
           for(;;){
@@ -107,7 +144,19 @@ export function createProviderEvidenceCollector(config:Configuration){
           }
           require(String(count)===ctx.ledgerCounts[kind]);
         }
+        if(refs)for(const kind of referenceKinds){
+          let after:string|null=null,count=0;
+          for(;;){
+            const page=await query('SELECT * FROM crest_commands.provider_reference_export_page($1::uuid,$2::text,$3::text,$4::text,$5::uuid,$6::integer)',[actorId,issuer,refs.snapshotToken,kind,after,pageSize]);
+            require(Array.isArray(page.rows)&&page.rows.length<=pageSize);
+            for(const value of page.rows){const r=referenceRecord(value,kind,after);evidenceBytes+=Buffer.byteLength(r.canonicalEvidence,'utf8');count++;
+              require(evidenceBytes<=maxBytes&&records.length+referenceRecords.length<maxRecords&&count<=Number(refs.ledgerCounts[kind]));referenceRecords.push(r);after=r.recordId;}
+            if(page.rows.length<pageSize)break;
+          }
+          require(String(count)===refs.ledgerCounts[kind]);
+        }
         require((await query('COMMIT')).command==='COMMIT');check();
+        if(refs)return Object.freeze({formatVersion:2 as const,assurance:'snapshot_bytes_only' as const,generationId,context:ctx,referenceContext:refs,evidenceBytes,records:Object.freeze([...records,...referenceRecords])});
         return Object.freeze({formatVersion:1 as const,assurance:'snapshot_bytes_only' as const,generationId,context:ctx,evidenceBytes,records:Object.freeze(records)});
       })();
       const value=await Promise.race([pending,interruption]);check();return value;

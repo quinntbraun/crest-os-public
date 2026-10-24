@@ -8,7 +8,7 @@ vi.mock('pg',()=>({default:{Client:class{
   on(name:string,fn:()=>void){this.events[name]=fn;return this;}once(name:string,fn:()=>void){return this.on(name,fn);}
   connect(){return db.connect();}query(...args:unknown[]){return db.query(...args);}end(){return db.end();}
 }}}));
-import {createProviderEvidenceCollector} from '../../src/security/provider-evidence-collector.ts';
+import {createProviderEvidenceCollector,createProviderRecoveryEvidenceCollector} from '../../src/security/provider-evidence-collector.ts';
 const actorId='11111111-1111-1111-1111-111111111111',issuer='https://auth.example.com/auth/v1';
 const config={connectionString:'postgresql://u:p@127.0.0.1/crest_migrate_0000000000000000',environment:'test' as const,actorId,issuer};
 const kinds=['inventory_observation','login_attempt','login_target','login_finish','cleanup_request','cleanup_outcome'];
@@ -113,4 +113,52 @@ it.each(['https://example.com/db','postgresql://u:p@localhost/crest_migrate_0000
 });
 it.each([{actorId:'invalid'},{issuer:'http://auth.example.com'},{issuer:'https://u:p@auth.example.com'},{issuer:'https://auth.example.com?secret=x'},{issuer:'https://auth.example.com#x'},{environment:'development'}])('rejects invalid trusted binding %j',change=>{
   expect(()=>createProviderEvidenceCollector({...config,...change} as typeof config)).toThrow('PROVIDER_EVIDENCE_COLLECTION_CONFIGURATION_REQUIRED');
+});
+
+const refKinds=['session_identity','session_event','cleanup_reference'];
+function recovery(){
+ const ref={...ctx,scope:'provider_session_references',snapshotToken:'b'.repeat(64),ledgerCounts:Object.fromEntries(refKinds.map(k=>[k,'0']))};
+ const refPages:Record<string,Record<string,unknown>[]>={};
+ const answerBoth=(sql:string,args:unknown[]=[])=>{
+  if(sql.includes('provider_reference_export_context'))return {rows:[{result:ref}]};
+  if(sql.includes('provider_reference_export_page'))return {rows:(refPages[args[3] as string]??[]).filter(r=>args[4]===null||(r.record_id as string)>(args[4] as string)).slice(0,20)};
+  return answer(sql,args);
+ };
+ db.query.mockImplementation(answerBoth);return {ref,refPages,answerBoth};
+}
+it('format2 owns one connection two scoped contexts and all nine scans before confirmed COMMIT',async()=>{
+ const f=recovery();for(const k of kinds){pages[k]=[row()];counts()[k]='1';}for(const k of refKinds){f.refPages[k]=[{...row(),representation:k==='session_event'?'stored_payload':'snapshot_projection'}];f.ref.ledgerCounts[k]='1';}
+ const r=await createProviderRecoveryEvidenceCollector(config)(signal());expect(db.configs).toHaveLength(1);expect(r.formatVersion).toBe(2);expect(r.context).toEqual(ctx);expect(r.referenceContext).toEqual(f.ref);expect(r.records.map(r=>r.kind)).toEqual([...kinds,...refKinds]);expect(r.evidenceBytes).toBe(9*Buffer.byteLength(row().canonical_evidence));
+ for(const v of [r,r.context,r.context.ledgerCounts,r.referenceContext,r.referenceContext.ledgerCounts,r.records,...r.records])expect(Object.isFrozen(v)).toBe(true);
+ const calls=db.query.mock.calls;expect(calls[2]?.[0]).toContain('provider_evidence_export_context');expect(calls[3]?.[0]).toContain('provider_reference_export_context');expect(calls.at(-1)?.[0]).toBe('COMMIT');expect(calls.filter(c=>c[0].includes('_context('))).toHaveLength(2);
+ for(const [i,k] of [...kinds,...refKinds].entries())expect(calls[i+4]?.[1]).toEqual([actorId,issuer,(i<6?'a':'b').repeat(64),k,null,20]);expect(db.end).toHaveBeenCalledOnce();
+});
+it('format2 keeps empty scopes explicit and uses no independent format1 collector or second snapshot',async()=>{
+ recovery();const r=await createProviderRecoveryEvidenceCollector(config)(signal());expect(r.records).toEqual([]);expect(r.evidenceBytes).toBe(0);expect(db.query.mock.calls.filter(c=>c[0].startsWith('BEGIN'))).toHaveLength(1);expect(r).not.toHaveProperty('ready');
+});
+it('shares the1000-record allowance across contexts before reading any source page',async()=>{
+ const f=recovery();counts().login_attempt='800';f.ref.ledgerCounts.session_event='201';await expect(createProviderRecoveryEvidenceCollector(config)(signal())).rejects.toThrow(error);expect(db.query.mock.calls.some(c=>c[0].includes('_page('))).toBe(false);
+});
+it('shares the8MiB byte allowance across both scopes without truncating either',async()=>{
+ const f=recovery();pages.inventory_observation=Array.from({length:32},(_,i)=>row(i+1,'x'.repeat(262144)));counts().inventory_observation='32';f.refPages.session_event=[{...row(1,'x'),representation:'stored_payload'}];f.ref.ledgerCounts.session_event='1';await expect(createProviderRecoveryEvidenceCollector(config)(signal())).rejects.toThrow(error);expect(db.query.mock.calls.some(c=>c[0]==='COMMIT')).toBe(false);
+});
+it.each(['schemaVersion','scope','actorId','providerIssuer','snapshotToken','observedAt','ledgerCounts','extra'])('rejects bad second context %s without partial output',async key=>{
+ const f=recovery();Object.assign(f.ref,{[key]:key==='schemaVersion'?2:'invalid'});await expect(createProviderRecoveryEvidenceCollector(config)(signal())).rejects.toThrow(error);expect(db.query.mock.calls.some(c=>c[0].includes('_page('))).toBe(false);
+});
+it.each(['01','-1','1001','1.0','999999999999999999999999999999'])('rejects malformed reference counts %s',async value=>{const f=recovery();f.ref.ledgerCounts.session_event=value;await expect(createProviderRecoveryEvidenceCollector(config)(signal())).rejects.toThrow(error);});
+it.each(['representation','extra','hash','id','body-cap','utf8-cap','nul','surrogate','short-count','extra-count','duplicate','order'])('rejects malformed or mismatched reference row %s',async change=>{
+ const f=recovery(),r={...row(1),representation:'stored_payload'};f.refPages.session_event=[r,{...row(2),representation:'stored_payload'}];f.ref.ledgerCounts.session_event='2';
+ if(change==='representation')r.representation='snapshot_projection';if(change==='extra')Object.assign(r,{secret:'synthetic'});if(change==='hash')r.evidence_hash='0'.repeat(64);if(change==='id')r.record_id='invalid';
+ if(['body-cap','utf8-cap','nul','surrogate'].includes(change))Object.assign(r,row(1,change==='body-cap'?'x'.repeat(8193):change==='utf8-cap'?'雪'.repeat(3000):change==='nul'?'\0':'\ud800'));
+ if(change==='short-count')f.ref.ledgerCounts.session_event='3';if(change==='extra-count')f.ref.ledgerCounts.session_event='1';if(change==='duplicate')f.refPages.session_event[1]!.record_id=r.record_id;if(change==='order')f.refPages.session_event.reverse();await expect(createProviderRecoveryEvidenceCollector(config)(signal())).rejects.toThrow(error);expect(db.query.mock.calls.some(c=>c[0]==='COMMIT')).toBe(false);
+});
+it('paginates all reference rows by exclusive original UUID without changing representations',async()=>{
+ const f=recovery();f.refPages.session_event=Array.from({length:41},(_,i)=>({...row(i+1),representation:'stored_payload'}));f.ref.ledgerCounts.session_event='41';const r=await createProviderRecoveryEvidenceCollector(config)(signal());expect(r.records.map(r=>r.recordId)).toEqual(f.refPages.session_event.map(r=>r.record_id));expect(db.query.mock.calls.filter(c=>c[0].includes('provider_reference_export_page')&&c[1][3]==='session_event')).toHaveLength(3);
+});
+it.each(['context','page'])('cancels hanging reference %s and destroys its owned socket with no partial COMMIT',async point=>{
+ const f=recovery(),cancel=new AbortController();db.end.mockImplementation(()=>new Promise(()=>{}));db.query.mockImplementation((sql,args)=>sql.includes('provider_reference_export_'+point)?new Promise(()=>{}):f.answerBoth(sql,args));const p=createProviderRecoveryEvidenceCollector(config)(cancel.signal),failure=expect(p).rejects.toThrow(error);
+ await vi.waitFor(()=>expect(db.query.mock.calls.some(c=>c[0].includes('provider_reference_export_'+point))).toBe(true));const socket=(db.configs[0]!.stream as ()=>{destroyed:boolean})();cancel.abort();await failure;expect(socket.destroyed).toBe(true);expect(db.query.mock.calls.some(c=>c[0]==='COMMIT')).toBe(false);
+});
+it('rejects concurrent combined work and starts fresh after an explicit retry',async()=>{
+ recovery();const read=createProviderRecoveryEvidenceCollector(config),first=await read(signal());db.connect.mockImplementationOnce(()=>new Promise(()=>{}));const c=new AbortController(),p=read(c.signal),failure=expect(p).rejects.toThrow(error);await expect(read(signal())).rejects.toThrow(error);c.abort();await failure;expect((await read(signal())).generationId).not.toBe(first.generationId);
 });

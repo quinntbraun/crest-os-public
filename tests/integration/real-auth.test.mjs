@@ -23,6 +23,7 @@ import {createBusinessSettingsContextReader,BusinessSettingsContextError} from '
 import {createBusinessNameCommand,BusinessNameCommandError} from '../../src/security/business-name-command.ts';
 import {createBusinessOperationLookup,BusinessOperationLookupError} from '../../src/security/business-operation-lookup.ts';
 import {createMutationTransaction,MutationBoundaryError} from '../../src/security/mutation-transaction.ts';
+import {verifyProviderRecoveryEvidenceCollection} from '../../src/security/provider-recovery-evidence-verification.ts';
 import {createBrowserBodyReader,readBrowserCookies,loginContextResponse,loginResponse,sessionResponse,logoutResponse,BrowserHttpError} from '../../src/security/browser-http.ts';
 import {createSessionRequestAdmission,SessionAdmissionError} from '../../src/security/session-request-admission.ts';
 import {authenticationServer} from '../support/authentication-server.mjs';
@@ -1342,4 +1343,9 @@ async function verifyReferenceSnapshot(connection,actor){
  for(const row of groups.session_identity){assert.equal(row.representation,'snapshot_projection');const b=JSON.parse(row.canonical_evidence);assert.equal(b.actorId,actor.id);assert.equal(b.providerIssuer,service.issuer);assert.equal((await client.query('SELECT provider_session_id FROM crest_private.app_sessions WHERE id=$1',[row.record_id])).rows[0].provider_session_id,b.providerSessionId);}
  for(const row of groups.cleanup_reference){assert.equal(row.representation,'snapshot_projection');const b=JSON.parse(row.canonical_evidence),event=groups.session_event.find(e=>e.record_id===b.sourceEventId);assert(event);assert.equal(event.evidence_hash,b.sourceEventHash);assert.equal(JSON.parse(event.canonical_evidence).after.id,b.appSessionId);assert.equal(typeof b.sourceVersion,'string');}
  const text=Object.values(groups).flat().map(r=>r.canonical_evidence).join('\n');for(const key of ['token_hash','provider_token_ciphertext','key_id','access_token','refresh_token'])assert(!text.includes('"'+key+'"'));
+ const evidence=(await connection.query('SELECT crest_commands.provider_evidence_export_context($1,$2) AS result',[actor.id,service.issuer])).rows[0].result,records=[];
+ for(const kind of ['inventory_observation','login_attempt','login_target','login_finish','cleanup_request','cleanup_outcome']){let cursor=null,count=0;for(let i=0;i<30;i++){const part=(await connection.query('SELECT * FROM crest_commands.provider_evidence_export_page($1,$2,$3,$4,$5,20)',[actor.id,service.issuer,evidence.snapshotToken,kind,cursor])).rows;for(const r of part)records.push({kind,recordId:r.record_id,canonicalEvidence:r.canonical_evidence,evidenceHash:r.evidence_hash});count+=part.length;if(part.length<20)break;cursor=part.at(-1).record_id;}assert.equal(String(count),evidence.ledgerCounts[kind]);}
+ for(const kind of ['session_identity','session_event','cleanup_reference'])for(const r of groups[kind])records.push({kind,recordId:r.record_id,representation:r.representation,canonicalEvidence:r.canonical_evidence,evidenceHash:r.evidence_hash});
+ const collection={formatVersion:2,assurance:'snapshot_bytes_only',generationId:randomUUID(),context:evidence,referenceContext:ctx,evidenceBytes:records.reduce((n,r)=>n+Buffer.byteLength(r.canonicalEvidence),0),records};
+ const verified=verifyProviderRecoveryEvidenceCollection(JSON.stringify(collection),{actorId:actor.id,issuer:service.issuer});assert.equal(verified.assurance,'internal_consistency_only');assert.deepEqual(verified.records,records);
 }
