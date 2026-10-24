@@ -32,6 +32,8 @@ The [business configuration snapshot readers](planning/PHASE_2_BUSINESS_CONFIGUR
 
 The [business history snapshot readers](planning/PHASE_2_BUSINESS_HISTORY_EXPORT.md) add scoped operation receipts and original audit evidence under ADR38, preserving exact JSON text and distinct source/wrapper hashes. Identity reference closure, complete authorized exports and recoverable private custody remain gated.
 
+The [offline business-history verifier](planning/PHASE_2_BUSINESS_HISTORY_VERIFICATION.md) checks included receipt/audit links and exact original numeric/hash evidence, reporting required actor IDs as unresolved references. It grants no identity access and does not certify a complete export or backup.
+
 
 
 
