@@ -32,11 +32,13 @@ async function state(){
 }
 before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target);
+ // Prepare both schema histories before granting the disposable web login.
+ // Cluster roles are shared; migration1 correctly rejects an existing member.
+ const guard=await sandbox.database(),guardClient=await sandbox.connect(guard);await sandbox.apply(guard,await sandbox.prefix(0),true);await installProviderSchema(guardClient,guard);await sandbox.apply(guard);
  bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;a=await state();b=await state();
  login='crest_state_probe_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");loginOwned=true;await sandbox.admin.query('GRANT crest_web,crest_export TO '+login);
  const url=new URL(target);url.username=login;url.password=password;web=await sandbox.connect(url.toString());web2=await sandbox.connect(url.toString());exporter=await sandbox.connect(url.toString());for(const c of [web,web2]){await c.query('SET ROLE crest_web');await c.query("SET lock_timeout='3s'");}await exporter.query('SET ROLE crest_export');
  seed=randomUUID();await save(a,seed);retained=await evidenceBefore(a);proposal=await leadStateProposal(sandbox);
- const guard=await sandbox.database(),guardClient=await sandbox.connect(guard);await sandbox.apply(guard,await sandbox.prefix(0),true);await installProviderSchema(guardClient,guard);await sandbox.apply(guard);
  await client.query('ALTER ROLE crest_lead_owner LOGIN');
  try{await assert.rejects(sandbox.apply(guard,proposal),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);assert.equal((await guardClient.query("SELECT to_regclass('crest.lead_events') AS value")).rows[0].value,null);await assert.rejects(sandbox.apply(guard,proposal),/MIGRATION_PENDING_REVIEW_REQUIRED/);guardRefused=true;}finally{await client.query('ALTER ROLE crest_lead_owner NOLOGIN');}
  receipt=await sandbox.apply(target,proposal);
