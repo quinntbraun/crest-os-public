@@ -80,6 +80,8 @@ test('audit failure and explicit rollback leave no source/receipt/session-activi
  await web.query('BEGIN');assert.equal((await save(f,r)).state,'committed');await web.query('ROLLBACK');assert.deepEqual(await evidence(f),retained);assert.deepEqual(await lookup(f,r.operation),{state:'absent'});
 });
 test('fresh credential/provider/epoch checks apply to writes and original replay; paused lookup retains receipt',async()=>{
- const f=await state(),parent=await lead(f),r=request(parent),first=await save(f,r);assert.equal(first.state,'committed');assert.deepEqual(await save({...f,hash:randomBytes(32)},r),{state:'denied'});assert.deepEqual(await save({...f,epoch:randomUUID()},r),{state:'denied'});
- await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[f.business]);assert.deepEqual(await lookup(f,r.operation),first);assert.deepEqual(await save(f,r),{state:'denied'});await client.query('DELETE FROM auth.sessions WHERE id=$1',[f.provider]);assert.deepEqual(await save(f,r),{state:'denied'});
+ const f=await state(),parent=await lead(f),r=request(parent),first=await save(f,r);assert.equal(first.state,'committed');const retained=await evidence(f);
+ assert.deepEqual(await save({...f,hash:randomBytes(32)},r),{state:'denied'});await assert.rejects(save({...f,epoch:randomUUID()},r),e=>e.code==='P0001'&&e.message==='RECOVERY_REVIEW_REQUIRED');assert.deepEqual(await evidence(f),retained);
+ await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[f.business]);assert.deepEqual(await lookup(f,r.operation),first);await assert.rejects(save(f,r),e=>e.code==='P0001'&&e.message==='RECOVERY_REVIEW_REQUIRED');assert.deepEqual(await evidence(f),retained);
+ await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[f.business]);await client.query('DELETE FROM auth.sessions WHERE id=$1',[f.provider]);assert.deepEqual(await save(f,r),{state:'denied'});assert.deepEqual(await evidence(f),retained);
 });
