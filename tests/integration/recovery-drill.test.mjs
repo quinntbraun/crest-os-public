@@ -97,7 +97,11 @@ before(async()=>{
     const safe=line=>line===''?'[blank]':publicLines.has(line?.trim())&&line?.trim()?line:
       /^(?:GRANT|REVOKE|ALTER DEFAULT PRIVILEGES|CREATE FUNCTION|ALTER FUNCTION|CREATE TABLE|ALTER TABLE|CREATE TYPE|ALTER TYPE) [A-Za-z0-9_ .(),;"]+$/.test(line??'')&&/\bcrest(?:_|\.)[a-z_]+\b/.test(line)?line:'[schema statement withheld]';
     const object=lines=>{for(let i=at;i>=0;i--)if(/^(?:CREATE FUNCTION|CREATE TABLE|CREATE TYPE) crest(?:_|\.)/.test(lines[i]))return safe(lines[i]);return '[object withheld]';};
-    throw new Error('SYNTHETIC_SCHEMA_REVIEW_REQUIRED:'+JSON.stringify({line:at+1,expectedObject:object(left),actualObject:object(right),expected:left.slice(Math.max(0,at-1),at+8).map(safe),actual:right.slice(Math.max(0,at-1),at+8).map(safe)}),{cause:error});
+    // This fixture creates customers solely from the published migration and
+    // makes no later customer DDL changes. Its table definition has no secrets
+    // or source records; preserve literal control characters for exact diagnosis.
+    const table=lines=>object(lines)==='CREATE TABLE crest.customers ('?lines.slice(Math.max(0,at-1),at+8):[];
+    throw new Error('SYNTHETIC_SCHEMA_REVIEW_REQUIRED:'+JSON.stringify({line:at+1,expectedObject:object(left),actualObject:object(right),expected:left.slice(Math.max(0,at-1),at+8).map(safe),actual:right.slice(Math.max(0,at-1),at+8).map(safe),expectedCustomerDdl:table(left),actualCustomerDdl:table(right)}),{cause:error});
   }
   assert.match(output.toString(),/^Synthetic isolated database restore and verification completed\s*$/);
   restored=await connect(restoredUrl);
