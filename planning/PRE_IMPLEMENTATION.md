@@ -1,5 +1,9 @@
 # Current implementation plan
 
+## Active screen: vehicle editor
+
+Read PHASE_4_VEHICLE_EDITOR.md. This consumer follows PR72's private vehicle HTTP with `/vehicles`, nullable intake/year fields, genuine search/history/archive and exact original pending-save handling. Preserve private in-memory drafts and block lost-draft/absent-receipt replacements. Local checks are not exact-source Next/HTTPS/device acceptance; run the expanded actual fixture and retain every security/recovery/container gate. Vehicle associations, atomic ownership transfer and typed attachment publication remain next work. No SQL, canonical or dependency change.
+
 ## Current consumer: private vehicle HTTP
 
 Read PHASE_4_VEHICLE_HTTP.md. Vehicle backend PR71 source45c4292 retains all35 published migrations; its exact native17-case vehicle and22-case encrypted recovery suites pass in run40168254083, while full candidate/build acceptance remains pending. Sourcefed3d09 had one invalid field in its permission test; the correction checks real label writes against both restricted callers. Do not edit SQL35 or treat earlier units as current-source acceptance. Address protected main isd9327e6; verify actual-main run40167780564 separately.
