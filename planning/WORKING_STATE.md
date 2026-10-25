@@ -1,5 +1,9 @@
 # Continuation checkpoint
 
+## Current consumer: vehicle customer links
+
+Read PHASE_4_ASSOCIATION_EDITOR.md and PHASE_4_ASSOCIATION_HTTP.md. The ownership screen, typed private HTTP/client and pending-reference recovery are combined in PR75 to test the complete association workflow together. The local screen source passes 2,850 unit tests/78 files; genuine screen browser acceptance is written but pending. Every required current-source gate remains required before merge or readiness claims. Protected backend main is 8f50aacb53fb064721c49eeb7814570a3e21ba88, tree 92babba4b6e82ddb86cad782086ffa74cbd08313, retaining candidate c422d3d0/run 40174331962 with all four trusted checks/2,676 units/831 DBAuth/full logs/artifacts passed. Its separate actual-main run must still be verified. Vehicle editor actual-main run 40173749320 passed all gates. Preserve all 36 SQL, canonical provenance and dependency bytes. No spending, signup, production apply/deployment/activation or real records.
+
 ## Active consumer: private association HTTP and client
 
 Read PHASE_4_ASSOCIATION_HTTP.md. Five explicitly configured private routes and reserved Node routing are implemented locally over PR74; ordinary request/admission/auth/recovery behavior is retained. All 2,795 unit tests/75 files, lint/types/server bundle pass. Genuine compiled HTTPS fixtures for Chromium/mobile WebKit are written and syntax-checked, but have not run. The stateless browser client now has 64 additional focused cases and a successful pinned browser-bundle build; its compiled HTTPS acceptance is written but pending. Publish the consumer stacked on PR74 to test early, then integrate the protected parent and require fresh main-based acceptance. Association forms and runtime activation remain unfinished. Preserve SQL1–36/canonical/dependency bytes. Older sections below describe parent/historical work; read live evidence before acceptance.

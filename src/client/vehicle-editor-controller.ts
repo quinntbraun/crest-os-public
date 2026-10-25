@@ -12,8 +12,8 @@ import type {PendingVehicle,createPendingVehicleStore} from './pending-vehicle-e
 
 type Snapshot=Awaited<ReturnType<typeof vehicles.context>>;
 type History=Extract<Awaited<ReturnType<typeof vehicles.history>>,{state:'found'}>;
-export type VehicleEditorView=Readonly<{phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Vehicle[];hasMore:boolean;search:string;includeArchived:boolean;selected:Vehicle|null;draft:VehicleDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean}>;
-export const initialVehicleEditorView:VehicleEditorView=Object.freeze({phase:'loading',message:'Checking vehicle access…',busy:true,rows:Object.freeze([]),hasMore:false,search:'',includeArchived:false,selected:null,draft:null,draftIssue:'',history:null,canSave:false,canRetry:false,reference:'',writesPaused:true});
+export type VehicleEditorView=Readonly<{businessId:string|null;phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Vehicle[];hasMore:boolean;search:string;includeArchived:boolean;selected:Vehicle|null;draft:VehicleDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean}>;
+export const initialVehicleEditorView:VehicleEditorView=Object.freeze({businessId:null,phase:'loading',message:'Checking vehicle access…',busy:true,rows:Object.freeze([]),hasMore:false,search:'',includeArchived:false,selected:null,draft:null,draftIssue:'',history:null,canSave:false,canRetry:false,reference:'',writesPaused:true});
 export const emptyVehicleDraft:VehicleDraft=Object.freeze({label:'',year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'customer_vehicle',notes:null,archived:false,archiveReason:null});
 
 type Dependencies={store:ReturnType<typeof createPendingVehicleStore>;change:(view:VehicleEditorView)=>void;api?:typeof vehicles;session?:typeof authentication.session;id?:()=>string};
@@ -28,7 +28,7 @@ export function createVehicleEditorController(deps:Dependencies){
     const placeholder='00000000-0000-0000-0000-000000000000',body={schemaVersion:1,operationId:placeholder,vehicleId:placeholder,expectedVersion:selected?.version??'0',recoveryEpoch:placeholder,...draft};
     return new TextEncoder().encode(JSON.stringify(body)).byteLength>8192?'This draft is too large to send. Shorten the vehicle details or notes before saving.':'';
   }
-  const view=():VehicleEditorView=>Object.freeze({phase,message,busy:!!active,rows:phase==='ready'?rows:Object.freeze([]),hasMore:phase==='ready'&&hasMore,search:phase==='ready'?search:'',includeArchived:phase==='ready'&&includeArchived,selected:phase==='ready'?selected:null,draft:phase==='ready'?draft:null,draftIssue:phase==='ready'?draftIssue():'',history:phase==='ready'?history:null,
+  const view=():VehicleEditorView=>Object.freeze({businessId:phase==='ready'?snapshot?.context.businessId??null:null,phase,message,busy:!!active,rows:phase==='ready'?rows:Object.freeze([]),hasMore:phase==='ready'&&hasMore,search:phase==='ready'?search:'',includeArchived:phase==='ready'&&includeArchived,selected:phase==='ready'?selected:null,draft:phase==='ready'?draft:null,draftIssue:phase==='ready'?draftIssue():'',history:phase==='ready'?history:null,
     canSave:!active&&phase==='ready'&&snapshot?.context.writeState==='ready'&&draft!==null&&draftIssue()===''&&(!selected||JSON.stringify(draft)!==JSON.stringify(draftFromVehicle(selected))),canRetry:!active&&canRetry,
     reference:phase==='pending'&&snapshot?.context.businessId===pending?.businessId?pending?.reference.operationId??'':'',writesPaused:snapshot?.context.writeState!=='ready'});
   const emit=()=>{if(alive)deps.change(view());};
