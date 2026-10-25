@@ -190,6 +190,11 @@
       "version": "20261025120000",
       "file": "20261025120000_lead_state_events.sql",
       "sha256": "026b02ca64ccd410161ab2ec187a6e3e8da0774f024b675142027f5463a1021a"
+    },
+    {
+      "version": "20261025140000",
+      "file": "20261025140000_lead_vehicles.sql",
+      "sha256": "394d1254c38843c7fa028a3c72c08fbb2851b28392ecad6570c7df47121c1cf7"
     }
   ]
 }

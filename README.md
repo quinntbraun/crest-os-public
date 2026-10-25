@@ -1,10 +1,10 @@
 # Crest OS
 
-Current development: [lead status controls and retained history](planning/PHASE_4_LEAD_LIFECYCLE.md), following merged and verified [lead/source intake forms](planning/PHASE_4_LEAD_EDITOR.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence.
+Current development: [lead vehicle intake, source CSV and recovery](planning/PHASE_4_LEAD_RESOURCES.md), following protected-merged [lead status controls](planning/PHASE_4_LEAD_LIFECYCLE.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence.
 
 Crest Detailing's internal business operating system.
 
-**Status (2026-10-25): Public source; private owner-only application and business data. Synthetic customer, address, vehicle, ownership and lead/source intake screens are implemented. Canonical lead state events, private API and mobile status controls are under acceptance; conversion remains unfinished. Synthetic development only; no production activation, real data, spending or provider provisioning is approved.**
+**Status (2026-10-25): Public source; private owner-only application and business data. Synthetic customer, address, vehicle, ownership and lead/source intake screens are implemented. Lead status controls are protected-merged with separate main verification in progress. Registered lead vehicle backend/CSV/recovery is under acceptance; lead vehicle screens, lead-owned addresses and conversion remain unfinished. Synthetic development only; no production activation, real data, spending or provider provisioning is approved.**
 
 The [customer directory core](planning/PHASE_4_CUSTOMER_DIRECTORY.md), [private HTTP boundary](planning/PHASE_4_CUSTOMER_HTTP.md) and [customer editor](planning/PHASE_4_CUSTOMER_EDITOR.md) add save/search/history, optimistic conflicts, archive/reopen and explicit interrupted-save review. Customer forms at `/customers` require configured authenticated customer access; the default executable remains closed. Drafts stay in memory; only opaque pending references use per-tab storage. A lost draft with an absent receipt remains blocked for review, not a replacement save. Exact-source native browser/build/container proof and real-use recovery/portability gates remain. ADR41/ROADMAP1.6 permit synthetic construction overlap while retaining every applicable release gate.
 
