@@ -1,6 +1,6 @@
 # Crest OS
 
-Current development: [private lead vehicle API and browser client](planning/PHASE_4_LEAD_VEHICLE_HTTP.md), following [lead vehicle intake, source CSV and recovery](planning/PHASE_4_LEAD_RESOURCES.md) and protected-merged [lead status controls](planning/PHASE_4_LEAD_LIFECYCLE.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence.
+Current development: [mobile lead vehicle forms and save recovery](planning/PHASE_4_LEAD_VEHICLE_EDITOR.md), following [private lead vehicle API/client](planning/PHASE_4_LEAD_VEHICLE_HTTP.md) and [lead vehicle source CSV/recovery](planning/PHASE_4_LEAD_RESOURCES.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence.
 
 Crest Detailing's internal business operating system.
 

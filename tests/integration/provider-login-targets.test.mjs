@@ -40,8 +40,19 @@ test('different typed replay inputs conflict without overwriting the original re
 test('capture rejects a missing header or any mismatched immutable actor/epoch/issuer/subject',async()=>{
   const f=await fixture();for(const [i,value] of [[0,randomUUID()],[1,other.id],[2,randomUUID()],[3,'https://other.example.com/auth/v1'],[4,other.subject]]){const args=[...f.args];args[i]=value;await assert.rejects(capture({...f,args}),e=>e.code==='23514');}assert(!(await inventory()).some(r=>r.attempt_id===f.b.attemptId));
 });
-test('invalid timestamps and typed inputs cannot create a receipt',async()=>{
-  const f=await fixture();for(const [i,value] of [[0,null],[5,null],[6,null],[6,'infinity'],[7,'-infinity'],[7,f.passwordAt],[3,''],[3,'x'.repeat(501)]]){const args=[...f.args];args[i]=value;await assert.rejects(capture({...f,args}),e=>e.code==='22023');}for(const passwordAt of [new Date(f.passwordAt.getTime()-1000),new Date(Date.now()+30000)]){const args=[...f.args];args[6]=passwordAt;await assert.rejects(capture({...f,args}),e=>e.code==='23514');}
+test('timestamp bounds reject malformed, pre-attempt and future values and accept the exact database boundary',async()=>{
+  const f=await fixture();for(const [i,value] of [[0,null],[5,null],[6,null],[6,'infinity'],[7,'-infinity'],[7,f.passwordAt],[3,''],[3,'x'.repeat(501)]]){const args=[...f.args];args[i]=value;await assert.rejects(capture({...f,args}),e=>e.code==='22023');}
+  // The provider timestamp is sampled after begin/insert work and can cross a
+  // second boundary. One second before that later sample may still be valid.
+  // Derive the actual inclusive floor from the immutable database header.
+  const earliest=(await client.query("SELECT date_trunc('second',created_at) AS earliest FROM crest_private.provider_login_attempts WHERE attempt_id=$1",[f.b.attemptId])).rows[0].earliest;
+  const before=[...f.args];before[6]=new Date(earliest.getTime()-1);await assert.rejects(capture({...f,args:before}),e=>e.code==='23514');
+  // Evaluate future values in PostgreSQL, so host clock skew or scheduling
+  // between sampling and dispatch cannot turn this into a valid past sample.
+  await assert.rejects(web.query("SELECT crest_commands.record_provider_login_target($1,$2,$3,$4,$5,$6,clock_timestamp()+interval '1 day',clock_timestamp()+interval '2 days')",f.args.slice(0,6)),e=>e.code==='23514');
+  assert(!(await inventory()).some(r=>r.attempt_id===f.b.attemptId));
+  await web.query('BEGIN');try{const atBoundary=[...f.args];atBoundary[6]=earliest;const recorded=await capture({...f,args:atBoundary});assert.equal(new Date(recorded.evidence.passwordAt).getTime(),earliest.getTime());}finally{await web.query('ROLLBACK');}
+  assert(!(await inventory()).some(r=>r.attempt_id===f.b.attemptId));
 });
 test('late signed evidence remains recordable after recovery, disable or provider disappearance without authorizing issuance',async()=>{
   const a=await actor();await member(a);const f=await fixture(a);await client.query('UPDATE crest_private.actors SET disabled_at=clock_timestamp(),current_security_epoch=$1,version=version+1 WHERE id=$2',[randomUUID(),a.id]);await client.query('DELETE FROM auth.sessions WHERE id=$1',[f.p]);const r=await capture(f);assert.equal(r.evidence.securityEpoch,f.b.securityEpoch);assert.equal((await inventory(a))[0].registration_state,'registration_unconfirmed');await assert.rejects(issue(f),e=>e.code==='42501');

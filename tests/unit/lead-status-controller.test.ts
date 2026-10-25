@@ -1,3 +1,5 @@
+import {createPendingLeadVehicleStore} from '../../src/client/pending-lead-vehicle-edit';
+import {pendingLeadVehicle} from '../../src/client/pending-lead-vehicle-edit';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {beforeEach,it,expect,vi} from 'vitest';
 import type {Mock} from 'vitest';
@@ -17,7 +19,11 @@ const reference=(patch={})=>pendingLeadState({schemaVersion:1,businessId,binding
 const committed=(c=command())=>({state:'committed' as const,operationId:c.operationId,recoveryEpoch:c.recoveryEpoch,receipt:{schemaVersion:1 as const,businessId,leadId:c.leadId,leadVersion:(BigInt(c.expectedVersion)+1n).toString(),leadEventId:randomUUID(),leadAuditEventId:randomUUID(),eventAuditEventId:randomUUID()}});
 let row:ReturnType<typeof leadFixture>,memory:Map<string,string>,storage:{getItem:Mock<(k:string)=>string|null>;setItem:Mock<(k:string,v:string)=>void>;removeItem:Mock<(k:string)=>void>},store:ReturnType<typeof createPendingLeadStateStore>,intakeStore:ReturnType<typeof createPendingLeadStore>,api:{[K in keyof typeof leadStates]:Mock<(typeof leadStates)[K]>},leadApi:{[K in 'context'|'history']:Mock<(typeof leads)[K]>},session:Mock<typeof authentication.session>,id:Mock<()=>string>,change:Mock;
 const notified=vi.fn();
-const controller=()=>createLeadStatusController({businessId,leadId,store,intakeStore,api,leadApi,session,id,change,committed:notified});
+const controller=()=>createLeadStatusController({vehicleStore:createPendingLeadVehicleStore(storage),businessId,leadId,store,intakeStore,api,leadApi,session,id,change,committed:notified});
+it('a vehicle reference appearing during status authority blocks dispatch; confirmed original status lookup can still release its own reference',async()=>{
+ const vehicle=createPendingLeadVehicleStore(storage),value=pendingLeadVehicle({schemaVersion:1,businessId,binding,reference:{operationId:randomUUID(),leadId,leadVehicleId:randomUUID(),expectedVersion:'0',recoveryEpoch:epoch}}),c=await prepared();
+ leadApi.context.mockImplementation(async()=>{vehicle.write(value);return context();});await c.save();expect(api.change).not.toHaveBeenCalled();expect(id).not.toHaveBeenCalled();expect(c.view().phase).toBe('blocked');leadApi.context.mockResolvedValue(context());store.write(reference());api.lookup.mockResolvedValue(committed());await c.load();await c.check();expect(store.read()).toBeNull();expect(vehicle.read()).toEqual(value);
+});
 const intakeReference=()=>pendingLead({schemaVersion:1,businessId,binding,reference:{operationId:randomUUID(),leadId,expectedVersion:version,recoveryEpoch:epoch}});
 async function prepared(){const c=controller();await c.load();c.choose('lost');c.reason(command().draft.reason);return c;}
 beforeEach(()=>{

@@ -1,4 +1,5 @@
 'use client';
+import {createPendingLeadVehicleStore} from '../../client/pending-lead-vehicle-edit';
 import {useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {createLeadStatusController,initialLeadStatusView} from '../../client/lead-status-controller';
@@ -11,7 +12,7 @@ export function LeadStatusPanel({businessId,leadId,disabled,onLock,onCommitted}:
  const [view,setView]=useState(initialLeadStatusView),current=useRef<ReturnType<typeof createLeadStatusController>|null>(null),status=useRef<HTMLParagraphElement>(null);
  useEffect(()=>{
   const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)};
-  const controller=createLeadStatusController({businessId,leadId,store:createPendingLeadStateStore(storage),intakeStore:createPendingLeadStore(storage),change:setView,committed:onCommitted});current.current=controller;
+  const controller=createLeadStatusController({businessId,leadId,store:createPendingLeadStateStore(storage),vehicleStore:createPendingLeadVehicleStore(storage),intakeStore:createPendingLeadStore(storage),change:setView,committed:onCommitted});current.current=controller;
   const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
   return()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
