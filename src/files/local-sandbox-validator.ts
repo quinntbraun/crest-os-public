@@ -11,10 +11,10 @@ import type {FileType} from './validation-contract.ts';
 export function createLocalSandboxValidator(config:{imageId:string}){
   if(!/^sha256:[a-f0-9]{64}$/.test(config.imageId))fail('SANDBOX_INPUT_INVALID');
   const imageId=config.imageId;
-  let busy=false;
+  let busy=false,uncertain=false;
   return Object.freeze({async validate(input:Uint8Array,type:FileType,dispatchId:string,signal?:AbortSignal){
     validInput(input,type);if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(dispatchId))fail('SANDBOX_INPUT_INVALID');if(platform()!=='linux')fail('SANDBOX_UNAVAILABLE');
-    if(busy)fail('SANDBOX_UNAVAILABLE');if(signal?.aborted)fail('SANDBOX_ABORTED');
+    if(busy||uncertain)fail('SANDBOX_UNAVAILABLE');if(signal?.aborted)fail('SANDBOX_ABORTED');
     // Seal before any await. The image ID and all execution options are fixed.
     const bytes=Buffer.from(input),expected={type,byteSize:bytes.length,sha256:fileHash(bytes)};
     busy=true;const nonce=dispatchId,ends=performance.now()+60000;
@@ -60,14 +60,17 @@ export function createLocalSandboxValidator(config:{imageId:string}){
       let exit;try{exit=JSON.parse(inspectedExit.stdout.toString('utf8'));}catch{return fail('SANDBOX_PROTOCOL_INVALID');}
       if(inspectedExit.exit!==0||exit.Running!==false||exit.OOMKilled!==false||exit.ExitCode!==response.exit)fail('SANDBOX_EXECUTION_FAILED');
       return readValidationReply(response.stdout,response.exit,expected);
-    }catch(error){if(error instanceof SandboxValidationError)throw error;return fail('SANDBOX_EXECUTION_FAILED');}
+    }catch(error){
+      if(error instanceof SandboxValidationError){if(error.code==='SANDBOX_CREATE_UNCERTAIN'||error.code==='SANDBOX_CLEANUP_UNCERTAIN')uncertain=true;throw error;}
+      return fail('SANDBOX_EXECUTION_FAILED');
+    }
     finally{
       if(owned&&id){try{const removed=await command(['rm','--force',id],Math.min(10000,Math.max(1,ends-performance.now())),65536);if(removed.exit!==0)cleanupFailed=true;}catch{cleanupFailed=true;}}
       else if(id)cleanupFailed=true;
       if(directory)try{await rmdir(directory);}catch{cleanupFailed=true;}
       busy=false;
       // A successful decode is withheld unless owned-container removal is confirmed.
-      if(cleanupFailed)fail('SANDBOX_CLEANUP_UNCERTAIN');
+      if(cleanupFailed){uncertain=true;fail('SANDBOX_CLEANUP_UNCERTAIN');}
       if(signal?.aborted)fail('SANDBOX_ABORTED');
       if(performance.now()>ends)fail('SANDBOX_TIMEOUT');
     }

@@ -55,8 +55,10 @@ it.each(['wrong-hash','bad-json','overflow','oom','quarantine'])('withholds inva
   mode=failure;await expect(run()).rejects.toMatchObject({code:failure==='oom'?'SANDBOX_EXECUTION_FAILED':failure==='quarantine'?'FILE_QUARANTINED':'SANDBOX_PROTOCOL_INVALID'});
   expect(argsHistory.at(-1)).toEqual(['rm','--force',container]);
 });
-it('withholds success when cleanup cannot be confirmed',async()=>{mode='cleanup-failed';await expect(run()).rejects.toMatchObject({code:'SANDBOX_CLEANUP_UNCERTAIN'});});
-it.each(['create-unknown','wrong-owner'])('does not start or delete an unverified container: %s',async failure=>{mode=failure;await expect(run()).rejects.toThrow(/SANDBOX_(CREATE|CLEANUP)_UNCERTAIN/);expect(argsHistory.some(a=>a[0]==='start'||a[0]==='rm')).toBe(false);});
+it('withholds success when cleanup cannot be confirmed',async()=>{mode='cleanup-failed';const c=client();await expect(c.validate(bytes,'image/png',dispatch)).rejects.toMatchObject({code:'SANDBOX_CLEANUP_UNCERTAIN'});
+  const calls=mocks.spawn.mock.calls.length;mode='';await expect(c.validate(bytes,'image/png',dispatch)).rejects.toThrow('SANDBOX_UNAVAILABLE');expect(mocks.spawn.mock.calls.length).toBe(calls);});
+it.each(['create-unknown','wrong-owner'])('does not start or delete an unverified container: %s',async failure=>{mode=failure;const c=client();await expect(c.validate(bytes,'image/png',dispatch)).rejects.toThrow(/SANDBOX_(CREATE|CLEANUP)_UNCERTAIN/);expect(argsHistory.some(a=>a[0]==='start'||a[0]==='rm')).toBe(false);
+  const calls=mocks.spawn.mock.calls.length;mode='';await expect(c.validate(bytes,'image/png',dispatch)).rejects.toThrow('SANDBOX_UNAVAILABLE');expect(mocks.spawn.mock.calls.length).toBe(calls);});
 it('bounds stdout waiting and kills/removes its owned container on deadline',async()=>{
   vi.useFakeTimers({toFake:['Date','setTimeout','clearTimeout']});mode='hold';const pending=run();const rejected=expect(pending).rejects.toMatchObject({code:'SANDBOX_TIMEOUT'});await drain();expect(argsHistory.at(-1)?.[0]).toBe('start');await vi.advanceTimersByTimeAsync(48000);await rejected;
   expect(argsHistory.at(-1)).toEqual(['rm','--force',container]);
