@@ -1,6 +1,16 @@
 -- Dated retained customer/vehicle relationships. No production activation.
 -- PostgreSQL's supplied UUID GiST classes enforce period exclusion at every
 -- isolation level, including writes outside the application command.
+CREATE SCHEMA IF NOT EXISTS extensions AUTHORIZATION crest_schema_owner;
+-- Refuse untrusted extension-schema creators before installing trusted code.
+DO $extension_schema$
+BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname IN ('crest_web','anon','authenticated','service_role') AND has_schema_privilege(oid,'extensions','CREATE'))
+  OR EXISTS(SELECT 1 FROM pg_namespace n CROSS JOIN LATERAL aclexplode(coalesce(n.nspacl,acldefault('n',n.nspowner))) a WHERE n.nspname='extensions' AND a.grantee=0 AND a.privilege_type='CREATE') THEN
+  RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='CREST_ASSOCIATION_EXTENSION_SCHEMA_REVIEW_REQUIRED';
+ END IF;
+END
+$extension_schema$;
 CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA extensions;
 DO $review$
 BEGIN
