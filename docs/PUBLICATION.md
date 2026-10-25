@@ -1,6 +1,6 @@
 # Public source publication and provenance
 
-Version: 1.6 | 2026-10-24 | Public provenance preserved; ADR40 session metadata register
+Version: 1.7 | 2026-10-24 | ADR41 customer directory and construction sequencing register
 
 ## Authority and scope
 
@@ -20,7 +20,7 @@ All application source, unit/DB/browser tests, dependency lockfile, container se
 
 Fresh history intentionally excludes all original private objects, PR discussions, CI logs and artifacts. This is a new explicitly named public baseline, not a claim that the original manifest covers redacted bytes. The original private manifest is never rewritten. A private comparison record retains exact source/public hashes and edits for review. The public manifest lists the reviewed public bytes; the public baseline commit is fixed in CANONICAL_MAINTENANCE.json and the verifier. The verifier checks the immutable manifest and baseline blobs from Git plus separately versioned later amendments, just as before. Future canonical changes require explicit reasons, versions and amended hashes; never regenerate baseline hashes to hide drift.
 
-Current public versions: ACCOUNTING1.5, ARCHITECTURE1.6, ARCHITECTURE_DECISIONS1.11, PRODUCT1.5, BUSINESS_RULES1.4, DATABASE1.5, SECURITY1.5, TESTING1.5, EXPORTS_AND_BACKUPS1.5, ROADMAP1.5, ARCHITECTURE_REVIEW1.5, CANONICAL_ADOPTION_REPORT1.4, CREST_CONTEXT1.0. The2026-10-22 owner-requested Calendar scope amendment and2026-10-23 ADR36/2026-10-24 ADR37-ADR40 technical decisions are separately recorded in CANONICAL_MAINTENANCE.md/JSON; these current versions do not change the immutable public baseline. Older version references in historical adoption/review prose describe their original package. Technical accounting semantics are retained; historical ACCOUNTING1.4 references mean those same adopted contracts, now published with privacy-only amendments as1.5.
+Current public versions: ACCOUNTING1.5, ARCHITECTURE1.6, ARCHITECTURE_DECISIONS1.12, PRODUCT1.5, BUSINESS_RULES1.4, DATABASE1.5, SECURITY1.5, TESTING1.5, EXPORTS_AND_BACKUPS1.5, ROADMAP1.6, ARCHITECTURE_REVIEW1.5, CANONICAL_ADOPTION_REPORT1.4, CREST_CONTEXT1.0. The2026-10-22 owner-requested Calendar scope amendment and2026-10-23 ADR36/2026-10-24 ADR37-ADR41 technical decisions are separately recorded in CANONICAL_MAINTENANCE.md/JSON; these current versions do not change the immutable public baseline. Older version references in historical adoption/review prose describe their original package. Technical accounting semantics are retained; historical ACCOUNTING1.4 references mean those same adopted contracts, now published with privacy-only amendments as1.5.
 
 ## Public workflow
 

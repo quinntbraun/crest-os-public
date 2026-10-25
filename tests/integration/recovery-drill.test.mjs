@@ -5,17 +5,20 @@ import { join } from 'node:path';
 import { after,before,test } from 'node:test';
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
 import { installProviderSchema } from '../support/provider-schema.mjs';
-import { backupDatabase,connect,hash,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase,roleDefinitions,run } from '../support/recovery-drill.mjs';
+import { backupDatabase,connect,hash,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase,roleDefinitions,run,postgresTool,normalizedSchema } from '../support/recovery-drill.mjs';
 import {captureObjectArchive,restoreObjectArchive} from '../../src/tooling/object-recovery.ts';
 import {objectDirectory,encryptor,decryptor} from '../support/object-recovery-drill.mjs';
 
 let sandbox,source,sourceUrl,sourceWeb,cluster,restored,restoredUrl,point,keys,emergencyKey,directory,backup,owner,original,sourceLogin,restoredLogin,liveSource,sourceLoginOwned=false,restoredLoginOwned=false;
 let sourceObjects,vaultObjects,restoredObjects,objectInventory,postSnapshotObject;
+let snapshotCustomer;
 const objectSignal=()=>AbortSignal.timeout(30000);
 const objectPorts=destination=>({readVault:vaultObjects.read,unseal:decryptor(emergencyKey),putDestination:destination.put,readDestination:destination.read});
 const issuer='https://auth.example.com/auth/v1';
 const renameSql='SELECT crest_commands.rename_business($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12) AS value';
 const args=(f,r)=>[f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+120000),f.business,f.epoch,r.operation,r.version,r.name];
+const customerSave=(f,id,version,name)=>sourceWeb.query('SELECT crest_commands.save_customer($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13) AS value',
+  [f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+120000),f.business,f.epoch,randomUUID(),id,version,{displayName:name,phone:'(317) 555-0100',email:'Synthetic@Example.com',contactPreference:null,outreachOptOut:true,notes:'Synthetic \\N =evidence é 😀',customerSince:null,archived:false,archiveReason:null}]);
 const rename=(connection,f,r)=>connection.query(renameSql,args(f,r));
 const request=(version='2',name='Synthetic restored review')=>({operation:randomUUID(),version,name});
 const closed=work=>assert.rejects(work,/SYNTHETIC_RECOVERY_RESTORE_FAILED/);
@@ -66,8 +69,10 @@ before(async()=>{
   }
   const w=await web(sourceUrl,sandbox.admin);sourceWeb=w.connection;sourceLogin=w.login;sourceLoginOwned=true;
   original=request('1','Synthetic committed before snapshot');assert.equal((await rename(sourceWeb,owner,original)).rows[0].value.state,'committed');
+  snapshotCustomer=randomUUID();assert.equal((await customerSave(owner,snapshotCustomer,'0','Synthetic customer before snapshot')).rows[0].value.state,'committed');
   backup=await backupDatabase(source,sourceUrl,point,keys.recipient,async()=>{
     assert.equal((await rename(sourceWeb,owner,request('2','Synthetic committed after snapshot'))).rows[0].value.state,'committed');
+    assert.equal((await customerSave(owner,snapshotCustomer,'1','Synthetic customer after snapshot')).rows[0].value.state,'committed');
     const key=`originals/${business}/${randomUUID()}`,bytes=Buffer.from('Committed after snapshot');postSnapshotObject=key;
     await sourceObjects.put(key,bytes,objectSignal());
     const later=await connect(sourceUrl);try{await later.query('INSERT INTO recovery_fixture.objects VALUES($1,$2,$3,$4,$5)',[key,bytes.length,hash(bytes),'original','Available']);}finally{await later.end();}
@@ -78,7 +83,26 @@ before(async()=>{
   // The fresh process receives no source URL/credential and has only the copy
   // of the emergency key after the original is removed.
   await unlink(keys.path);
-  const output=await run(process.execPath,['tests/support/restore-recovery-drill.mjs',point,emergencyKey],{env:{...process.env,CREST_TEST_DATABASE_URL:'',CREST_RECOVERY_DRILL_TARGET:restoredUrl,CREST_RECOVERY_DRILL_VAULT:join(directory,'vault-objects'),CREST_RECOVERY_DRILL_OBJECTS:join(directory,'restored-objects')}});
+  let output;
+  try{output=await run(process.execPath,['tests/support/restore-recovery-drill.mjs',point,emergencyKey],{env:{...process.env,CREST_TEST_DATABASE_URL:'',CREST_RECOVERY_DRILL_TARGET:restoredUrl,CREST_RECOVERY_DRILL_VAULT:join(directory,'vault-objects'),CREST_RECOVERY_DRILL_OBJECTS:join(directory,'restored-objects')}});}
+  catch(error){
+    if(error.message!=='SYNTHETIC_RECOVERY_TOOL_FAILED:schema')throw error;
+    const expected=normalizedSchema(await postgresTool('pg_dump',sourceUrl,['--schema-only'])),actual=normalizedSchema(await postgresTool('pg_dump',restoredUrl,['--schema-only']));
+    assert.equal(hash(expected),backup.manifest.schemaSha256,'source schema changed after capture');
+    const left=expected.split('\n'),right=actual.split('\n'),at=left.findIndex((line,i)=>line!==right[i]);
+    // Only fixed public Crest DDL headers/grants and exact lines already in the
+    // published customer migration may cross diagnostics. No source data, SQL
+    // comments/bodies from arbitrary objects or connection details are emitted.
+    const publicLines=new Set((await readFile(new URL('../../supabase/migrations/20261025020000_customer_directory.sql',import.meta.url),'utf8')).split('\n').map(s=>s.trim()));
+    const safe=line=>line===''?'[blank]':publicLines.has(line?.trim())&&line?.trim()?line:
+      /^(?:GRANT|REVOKE|ALTER DEFAULT PRIVILEGES|CREATE FUNCTION|ALTER FUNCTION|CREATE TABLE|ALTER TABLE|CREATE TYPE|ALTER TYPE) [A-Za-z0-9_ .(),;"]+$/.test(line??'')&&/\bcrest(?:_|\.)[a-z_]+\b/.test(line)?line:'[schema statement withheld]';
+    const object=lines=>{for(let i=at;i>=0;i--)if(/^(?:CREATE FUNCTION|CREATE TABLE|CREATE TYPE) crest(?:_|\.)/.test(lines[i]))return safe(lines[i]);return '[object withheld]';};
+    // This fixture creates customers solely from the registered migrations and
+    // makes no later customer DDL changes. Its table definition has no secrets
+    // or source records; preserve literal control characters for exact diagnosis.
+    const table=lines=>object(lines)==='CREATE TABLE crest.customers ('?lines.slice(Math.max(0,at-1),at+8):[];
+    throw new Error('SYNTHETIC_SCHEMA_REVIEW_REQUIRED:'+JSON.stringify({line:at+1,expectedObject:object(left),actualObject:object(right),expected:left.slice(Math.max(0,at-1),at+8).map(safe),actual:right.slice(Math.max(0,at-1),at+8).map(safe),expectedCustomerDdl:table(left),actualCustomerDdl:table(right)}),{cause:error});
+  }
   assert.match(output.toString(),/^Synthetic isolated database restore and verification completed\s*$/);
   restored=await connect(restoredUrl);
 },{timeout:240000});
@@ -93,15 +117,21 @@ test('actual encrypted database recovery works in a fresh process and separate c
   assert.notEqual(new URL(sourceUrl).port,new URL(restoredUrl).port);
   assert.deepEqual(await inventory(restored),backup.manifest.rows);
   assert.deepEqual(await roleDefinitions(restored),backup.manifest.roles);
-  assert.equal((await restored.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,31);
+  assert.equal((await restored.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,backup.manifest.schemaVersion);
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM auth.schema_migrations')).rows[0].n,(await source.query('SELECT count(*)::int AS n FROM auth.schema_migrations')).rows[0].n);
   assert.equal(backup.manifest.completeBackup,false); // vault/files/config/full release remain unfinished
 });
 test('one exported snapshot preserves prior operations and excludes concurrent committed changes',async()=>{
   assert.equal((await restored.query('SELECT legal_name FROM crest.businesses WHERE id=$1',[owner.business])).rows[0].legal_name,original.name);
   assert.equal((await source.query('SELECT legal_name FROM crest.businesses WHERE id=$1',[owner.business])).rows[0].legal_name,'Synthetic committed after snapshot');
-  assert.equal((await restored.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,1);
-  assert.equal((await source.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,2);
+  assert.equal((await restored.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,2);
+  assert.equal((await source.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,4);
+});
+test('actual customer contacts, raw notes and source audit recover at the exact snapshot version',async()=>{
+  const customer=(await restored.query('SELECT crest_private.customer_projection(c) AS value FROM crest.customers c WHERE id=$1',[snapshotCustomer])).rows[0].value;
+  assert.equal(customer.display_name,'Synthetic customer before snapshot');assert.equal(customer.version,'1');assert.equal(customer.phone_raw,'(317) 555-0100');assert.equal(customer.phone_normalized,'3175550100');assert.equal(customer.email_raw,'Synthetic@Example.com');assert.equal(customer.outreach_opt_out,true);assert.equal(customer.notes,'Synthetic \\N =evidence é 😀');
+  assert.equal((await source.query('SELECT display_name FROM crest.customers WHERE id=$1',[snapshotCustomer])).rows[0].display_name,'Synthetic customer after snapshot');
+  const audit=(await restored.query("SELECT delta FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='customers' AND entity_id=$2",[owner.business,snapshotCustomer])).rows;assert.equal(audit.length,1);assert.deepEqual(audit[0].delta.after,customer);
 });
 
 test('same-snapshot retained files restore with Archived and quarantined evidence, excluding later commits',async()=>{

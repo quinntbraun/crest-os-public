@@ -69,6 +69,7 @@ jobs:
           npm run test:operation-lookup-db
           npm run test:business-name-db
           npm run test:business-settings-db
+          npm run test:customers-db
       - name: Install pinned recovery tooling
         run: node scripts/install-recovery-tools.mjs
       - name: Encrypted isolated database recovery drill

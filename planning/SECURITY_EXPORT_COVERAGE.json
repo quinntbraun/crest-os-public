@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 31,
+  "migrationCount": 33,
   "tables": [
     {
       "table": "crest.businesses",
@@ -474,6 +474,35 @@
         "session_id",
         "bucket",
         "admitted_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.customers",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "display_name",
+        "phone_raw",
+        "phone_normalized",
+        "email_raw",
+        "email_normalized",
+        "contact_preference",
+        "outreach_opt_out",
+        "notes",
+        "customer_since",
+        "archived_at",
+        "archived_reason",
+        "version",
+        "created_at",
+        "updated_at",
+        "created_by",
+        "updated_by",
+        "origin",
+        "operation_id",
+        "import_row_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

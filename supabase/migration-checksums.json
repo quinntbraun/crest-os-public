@@ -155,6 +155,16 @@
       "version": "20261024111000",
       "file": "20261024111000_session_metadata_export.sql",
       "sha256": "4b8f6bcecdc597b7d847885d333aae21a786b7a4bcb8dee9b40b36c8affc6d63"
+    },
+    {
+      "version": "20261025020000",
+      "file": "20261025020000_customer_directory.sql",
+      "sha256": "bc78d2ee002180a1d4b11409944e53f9e969320c3e8565708423be826389fc01"
+    },
+    {
+      "version": "20261025030000",
+      "file": "20261025030000_customer_check_roundtrip.sql",
+      "sha256": "559761cd526077fa97cd11cc07d1f8e4ddfd7a87e975dca433592d760ba7ee30"
     }
   ]
 }
