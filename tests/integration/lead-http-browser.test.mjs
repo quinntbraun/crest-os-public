@@ -19,7 +19,7 @@ const sessionName='__Host-crest_session';
 before(async()=>{
   assert.equal(process.platform,'linux','the disposable container/HTTPS fixture requires Linux CI');
   process.env.NODE_ENV='production';
-  for(const [input,name] of [['src/client/leads.ts','crestLeadFixture'],['src/client/lead-sources.ts','crestLeadSourceFixture']]){
+  for(const [input,name] of [['src/client/leads.ts','crestLeadFixture'],['src/client/lead-sources.ts','crestLeadSourceFixture'],['src/client/lead-states.ts','crestLeadStateFixture']]){
     const bundle=await rolldown({input,platform:'browser',onwarn(warning){throw new Error('LEAD_CLIENT_FIXTURE_BUILD_FAILED:'+warning.code);}});
     try{const result=await bundle.generate({format:'iife',name,sourcemap:false});assert.equal(result.output.length,1);assert.equal(result.output[0].type,'chunk');browserClient+=result.output[0].code+'\n';}finally{await bundle.close();}
   }
@@ -129,17 +129,52 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     },{business,source:sourceCommand,lead:leadCommand,proof:clientProof});
     assert.equal(result.context.context.writeState,'ready');assert.notEqual(result.context.binding,result.sourceContext.binding);assert.deepEqual(result.saved,result.lookup);assert.deepEqual(result.sourceSaved,result.sourceLookup);assert.equal(result.saved.receipt.leadId,raw.leadId);assert.equal(result.list.leads.length,1);assert.equal(result.history.state,'found');assert.equal(result.history.lead.notes,raw.notes);assert.equal(result.history.lead.estimated_cents,raw.estimatedCents);assert.equal(result.history.lead.follow_up_at,raw.followUpAt);assert.equal(result.history.lead.source_snapshot.active,true);assert.deepEqual(result.sourceHistory.history.map(e=>e.action),['create','deactivate']);
    });
+
+   await t.test('compiled status client retains Lost/reopen reasons, mixed history and original receipts',async()=>{
+    const raw={...leadDraft(epoch,'Synthetic status client '+name),sourceId:otherSource.leadSourceId,estimatedCents:'9007199254740993',followUpAt:'2026-11-01T10:00:00.123456Z'};
+    assert.equal((await send(page,root+'save',raw,proof)).status,200);
+    const original={schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,leadId:raw.leadId,expectedVersion:'1',draft:{fromState:'new',toState:'lost',reason:' Original Lost é 😀\n retained '}};
+    const result=await page.evaluate(async({business,raw,original,csrf})=>{
+     const api=globalThis.crestLeadStateFixture.leadStates,intake=globalThis.crestLeadFixture.leads,p={csrfToken:csrf,expiresAt:Date.now()+60000},signal=()=>new AbortController().signal;
+     const lost=await api.change(business,original,p,signal());
+     const {schemaVersion,operationId,recoveryEpoch,leadId,expectedVersion,...draft}=raw;
+     await intake.save(business,{schemaVersion,operationId:crypto.randomUUID(),recoveryEpoch,leadId,expectedVersion:'2',draft:{...draft,notes:'Intake between status events'}},p,signal());
+     const reopen={...original,operationId:crypto.randomUUID(),expectedVersion:'3',draft:{fromState:'lost',toState:'follow_up',reason:' Original reopen é 😀\n retained '}};
+     const reopened=await api.change(business,reopen,p,signal()),{draft:originalDraft,schemaVersion:originalSchema,...reference}=original;
+     const lookup=await api.lookup(business,reference,p,signal()),replay=await api.change(business,original,p,signal()),different=await api.change(business,{...original,draft:{...originalDraft,reason:'Changed body'}},p,signal());
+     const first=await api.events(business,{leadId,afterVersion:'0',pageSize:1},p,signal()),last=await api.events(business,{leadId,afterVersion:'2',pageSize:1},p,signal()),history=await intake.history(business,{leadId,afterVersion:'0',pageSize:5},p,signal());
+     return {lost,reopened,lookup,replay,different,first,last,history,originalSchema,operationId,expectedVersion};
+    },{business,raw,original,csrf:proof});
+    assert.equal(result.lost.state,'committed');assert.equal(result.reopened.state,'committed');assert.deepEqual(result.lookup,result.lost);assert.deepEqual(result.replay,result.lost);assert.deepEqual(result.different,{state:'conflict',reason:'operation'});
+    assert.equal(result.first.hasMore,true);assert.equal(result.last.hasMore,false);assert.deepEqual(result.first.events.map(e=>e.lead_version),['2']);assert.deepEqual(result.last.events.map(e=>e.lead_version),['4']);assert.equal(result.first.events[0].reason,original.draft.reason);assert.equal(result.last.events[0].reason,' Original reopen é 😀\n retained ');
+    assert.deepEqual(result.history.history.map(e=>e.action),['create','state_change','edit','state_change']);assert.equal(result.history.lead.state,'follow_up');assert.equal(result.history.lead.estimated_cents,raw.estimatedCents);assert.equal(result.history.lead.follow_up_at,raw.followUpAt);assert.equal(result.history.lead.source_snapshot.id,otherSource.leadSourceId);
+    assert.equal((await client.query('SELECT count(*)::int AS n FROM crest.lead_events WHERE lead_id=$1',[raw.leadId])).rows[0].n,2);
+   });
+   await t.test('two-device status race commits once and a dropped status response resolves only its original receipt',async()=>{
+    const raw=leadDraft(epoch,'Synthetic status race '+name);assert.equal((await send(page,root+'save',raw,proof)).status,200);
+    const change={schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,leadId:raw.leadId,expectedVersion:'1',fromState:'new',toState:'contacted',reason:null},rival={...change,operationId:randomUUID(),toState:'follow_up'};
+    const race=await Promise.all([send(page,root+'state',change,proof),send(other,root+'state',rival,otherProof)]);assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);
+    const winner=race[0].status===200?change:rival,loser=race[0].status===200?rival:change;assert.equal(race.find(r=>r.status===409).body.reason,'version');assert.equal((await send(page,root+'state-operation',{operationId:loser.operationId},proof)).body.state,'absent');
+    const original={...change,operationId:randomUUID(),expectedVersion:'2',fromState:winner.toState,toState:'lost',reason:' Lost response original reason é 😀'};
+    const pattern='**/api/business/leads/state';let calls=0,status;
+    const drop=async intercepted=>{calls++;try{status=(await intercepted.fetch()).status();}finally{await intercepted.abort('failed');}};await page.route(pattern,drop);
+    try{await assert.rejects(send(page,root+'state',original,proof));}finally{await page.unroute(pattern,drop);}
+    assert.equal(calls,1);assert.equal(status,200);const found=await send(page,root+'state-operation',{operationId:original.operationId},proof);assert.equal(found.status,200);assert.equal(found.body.receipt.leadVersion,'3');assert.deepEqual((await send(page,root+'state',original,proof)).body,found.body);
+    for(const patch of [{toState:'won'},{toState:'quote_sent'},{reason:null},{followUpAt:null}])assert.equal((await send(page,root+'state',{...original,...patch},proof)).status,400);
+    const rows=(await client.query('SELECT lead_version::text AS version FROM crest.lead_events WHERE lead_id=$1 ORDER BY lead_version',[raw.leadId])).rows;assert.deepEqual(rows.map(r=>r.version),['2','3']);
+   });
    await t.test('lost committed responses resolve the exact original receipt and paused writes retain historical lookup',async()=>{
     const original=leadDraft(epoch,'Synthetic lost response '+name),pattern='**/api/business/leads/save';let calls=0,status;
     const drop=async intercepted=>{calls++;try{status=(await intercepted.fetch()).status();}finally{await intercepted.abort('failed');}};await page.route(pattern,drop);
     try{await assert.rejects(send(page,root+'save',original,proof));}finally{await page.unroute(pattern,drop);}assert.equal(calls,1);assert.equal(status,200);
     const receipt=await send(page,root+'operation',{operationId:original.operationId},proof);assert.equal(receipt.status,200);assert.equal(receipt.body.receipt.leadId,original.leadId);assert.equal(receipt.body.receipt.leadVersion,'1');assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,original.operationId])).rows[0].n,1);
+    const statusOriginal={schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,leadId:original.leadId,expectedVersion:'1',fromState:'new',toState:'lost',reason:'Retained while paused'};const statusReceipt=await send(page,root+'state',statusOriginal,proof);assert.equal(statusReceipt.status,200);
     await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[business]);
-    try{const context=await send(page,root+'context',{},proof);assert.equal(context.body.writeState,'paused');assert.equal(context.body.recoveryEpoch,null);assert.equal((await send(page,root+'save',original,proof)).status,409);assert.deepEqual((await send(page,root+'operation',{operationId:original.operationId},proof)).body,receipt.body);}finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);}
+    try{const context=await send(page,root+'context',{},proof);assert.equal(context.body.writeState,'paused');assert.equal(context.body.recoveryEpoch,null);assert.equal((await send(page,root+'save',original,proof)).status,409);assert.deepEqual((await send(page,root+'operation',{operationId:original.operationId},proof)).body,receipt.body);assert.equal((await send(page,root+'state',statusOriginal,proof)).status,409);assert.deepEqual((await send(page,root+'state-operation',{operationId:statusOriginal.operationId},proof)).body,statusReceipt.body);assert.equal((await send(page,root+'state-events',{leadId:original.leadId,afterVersion:'0',pageSize:20},proof)).status,200);}finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);}
    });
    await t.test('fresh session revocation denies lead and source reads without returning private labels',async()=>{
     const cookie=(await second.cookies()).find(c=>c.name===sessionName);await client.query('UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),version=version+1 WHERE token_hash=$1',[createHash('sha256').update(cookie.value,'ascii').digest()]);
-    for(const [route,body] of [[root+'history',{leadId:input.leadId,afterVersion:'0',pageSize:20}],[sources+'history',{leadSourceId:source.leadSourceId,afterVersion:'0',pageSize:20}]]){const denied=await send(other,route,body,otherProof);assert.notEqual(denied.status,200);assert(!JSON.stringify(denied.body).includes(input.label));assert(!JSON.stringify(denied.body).includes(source.label));}
+    for(const [route,body] of [[root+'state-events',{leadId:input.leadId,afterVersion:'0',pageSize:20}],[root+'state-operation',{operationId:randomUUID()}],[root+'history',{leadId:input.leadId,afterVersion:'0',pageSize:20}],[sources+'history',{leadSourceId:source.leadSourceId,afterVersion:'0',pageSize:20}]]){const denied=await send(other,route,body,otherProof);assert.notEqual(denied.status,200);assert(!JSON.stringify(denied.body).includes(input.label));assert(!JSON.stringify(denied.body).includes(source.label));}
    });
   }finally{await first?.close();await second?.close();await browser.close();}
  });
