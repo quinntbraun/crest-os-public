@@ -19,8 +19,11 @@ const maxBytes=32*1024*1024;
 export function hash(value){return createHash('sha256').update(value).digest('hex');}
 export function run(command,args,{input,env=process.env,signal}={}){
   return new Promise((resolve,reject)=>{
-    const child=execFile(command,args,{env,signal,timeout:120000,maxBuffer:maxBytes,encoding:'buffer'},(error,stdout)=>{
-      if(error)reject(new Error('SYNTHETIC_RECOVERY_TOOL_FAILED'));else resolve(stdout);
+    const child=execFile(command,args,{env,signal,timeout:120000,maxBuffer:maxBytes,encoding:'buffer'},(error,stdout,stderr)=>{
+      // Only fixed restore stages may cross the child boundary. Never echo raw
+      // tool stderr, SQL, target URLs, credentials or restored source values.
+      const stage=stderr.toString().match(/SYNTHETIC_RECOVERY_RESTORE_FAILED:(empty_destination|receipt|manifest|authenticated_dump|objects|closed_roles|restore|rows|schema)\b/)?.[1];
+      if(error)reject(new Error('SYNTHETIC_RECOVERY_TOOL_FAILED'+(stage?':'+stage:'')));else resolve(stdout);
     });
     child.stdin.on('error',()=>{});child.stdin.end(input);
   });
