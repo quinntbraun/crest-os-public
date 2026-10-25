@@ -9,10 +9,10 @@ const observed=()=>manifest.tables.flatMap(t=>[...t.required,...t.excluded.map(e
 const error='EXPORT_COVERAGE_REVIEW_REQUIRED';
 it('reports declared schema coverage without promising a complete export or backup',()=>{
  const result=verify(manifest,observed(),manifest.migrationCount);
- expect(result).toEqual({assurance:'schema_inventory_only',tables:29,requiredColumns:403,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
+ expect(result).toEqual({assurance:'schema_inventory_only',tables:30,requiredColumns:420,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
  expect(Object.isFrozen(result)).toBe(true);
 });
-it('accepts different catalog and declaration order',()=>{const m=clone();m.tables.reverse();for(const t of m.tables)t.required.reverse();expect(verify(m,observed().reverse(),manifest.migrationCount).tables).toBe(29);});
+it('accepts different catalog and declaration order',()=>{const m=clone();m.tables.reverse();for(const t of m.tables)t.required.reverse();expect(verify(m,observed().reverse(),manifest.migrationCount).tables).toBe(30);});
 it.each([undefined,null,[],{},'manifest',3])('rejects malformed manifest %s',value=>expect(()=>verify(value,observed(),manifest.migrationCount)).toThrow(error));
 it.each([0,-1,manifest.migrationCount-1,manifest.migrationCount+1,1.5,NaN,Infinity])('rejects incompatible applied migration count %s',value=>expect(()=>verify(manifest,observed(),value)).toThrow(error));
 it('rejects unsupported format and extra top-level assertions',()=>{for(const m of [{...clone(),formatVersion:2},{...clone(),completePortableExport:true}])expect(()=>verify(m,observed(),manifest.migrationCount)).toThrow(error);});
