@@ -1,4 +1,4 @@
-import {customerUuid,customerInstant,requireCustomer,exactCustomerObject} from './customer-contract';
+import {customerUuid,customerInstant,requireCustomer,exactCustomerObject} from './customer-contract.ts';
 
 export type VehicleDraft=Readonly<{label:string;year:number|null;make:string|null;model:string|null;color:string|null;vin:string|null;plate:string|null;kind:'customer_vehicle'|'business_rig'|'other';notes:string|null;archived:boolean;archiveReason:string|null}>;
 export type AddressDraft=Readonly<{line1:string|null;line2:string|null;city:string|null;region:string|null;postalCode:string|null;country:string|null;exactLocationText:string|null;instructions:string|null;latitude:string|null;longitude:string|null;geocodeSource:string|null;geocodeAccuracy:string|null;verifiedAt:string|null;archived:boolean;archiveReason:string|null}>;

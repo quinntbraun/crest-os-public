@@ -1,6 +1,6 @@
-import {customerUuid,customerVersion,customerInstant,exactCustomerObject,requireCustomer} from './customer-contract';
-import {parseAddressDraft} from './customer-resource-contract';
-import type {AddressDraft} from './customer-resource-contract';
+import {customerUuid,customerVersion,customerInstant,exactCustomerObject,requireCustomer} from './customer-contract.ts';
+import {parseAddressDraft} from './customer-resource-contract.ts';
+import type {AddressDraft} from './customer-resource-contract.ts';
 export const addressColumns=['id','business_id','customer_id','line1','line2','city','region','postal_code','country','exact_location_text','instructions','geocode_source','geocode_accuracy','latitude','longitude','verified_at','archived_at','archived_reason','version','created_at','updated_at','created_by','updated_by','origin','operation_id','import_row_id'] as const;
 export type CustomerAddress=Readonly<{id:string;business_id:string;customer_id:string;line1:string|null;line2:string|null;city:string|null;region:string|null;postal_code:string|null;country:string|null;exact_location_text:string|null;instructions:string|null;geocode_source:string|null;geocode_accuracy:string|null;latitude:string|null;longitude:string|null;verified_at:string|null;archived_at:string|null;archived_reason:string|null;version:string;created_at:string;updated_at:string;created_by:string;updated_by:string;origin:'manual'|'import'|'system';operation_id:string;import_row_id:string|null}>;
 export function draftFromAddress(row:CustomerAddress):AddressDraft{return parseAddressDraft({line1:row.line1,line2:row.line2,city:row.city,region:row.region,postalCode:row.postal_code,country:row.country,exactLocationText:row.exact_location_text,instructions:row.instructions,geocodeSource:row.geocode_source,geocodeAccuracy:row.geocode_accuracy,latitude:row.latitude,longitude:row.longitude,verifiedAt:row.verified_at,archived:row.archived_at!==null,archiveReason:row.archived_reason});}
