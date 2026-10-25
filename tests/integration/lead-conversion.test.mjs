@@ -12,6 +12,7 @@ import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import {backupDatabase,connect,keyPair,privateWorkspace,recoveryCluster,inventory,run} from '../support/recovery-drill.mjs';
 import {mkdir,copyFile,chmod,unlink,readFile} from 'node:fs/promises';
 import {join} from 'node:path';
+import {sessionDatabase} from '../../src/security/session-database.ts';
 let sandbox,client,target,web,web2,exporter,login,bootstrap,prior,receipt,prefix40,registered41,guardRefused=false;
 let recovery,restored,restoredWeb,recoveryOwner,recoveryRequest,recoveryReceipt,recoveryOriginal,recoveryCsv,recoveryBackup,sourceAfterCapture,postSnapshotConversion;
 const issuer='https://auth.example.com/auth/v1';
@@ -65,6 +66,18 @@ before(async()=>{
 after(async()=>{await restoredWeb?.end();await restored?.end();await recovery?.close();await web?.end();await web2?.end();await exporter?.end();if(login)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
 
 test('registered41 preserves the registered40 history, rejects unsafe owners and reapplies idempotently',async()=>{assert(guardRefused);assert.equal(prior.history.length,40);assert.equal(receipt.history.length,41);assert.deepEqual(receipt.history.slice(0,40),prior.history);assert.deepEqual((await sandbox.apply(target,registered41)).history,receipt.history);});
+test('the private command boundary confirms immutable customer relink rejection only after native rollback',async()=>{
+ const f=await state(),parent=await lead(f,{notes:'Original intake for relink boundary'}),conversion=await convert(f,request(parent.id));assert.equal(conversion.state,'committed');
+ const probe='crest_conversion_web_'+randomBytes(8).toString('hex'),password=randomBytes(32).toString('hex'),operation=randomUUID();let owned=false;
+ try{
+  await sandbox.admin.query('CREATE ROLE '+probe+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");owned=true;await sandbox.admin.query('GRANT crest_web TO '+probe);
+  const url=new URL(target);url.username=probe;url.password=password;const db=sessionDatabase({connectionString:url.toString(),environment:'test'}),before=await evidence(f);
+  await assert.rejects(db.commandTransaction(query=>query('SELECT crest_commands.save_lead($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::integer,$12::uuid,$13::bigint,$14::jsonb) AS result',[...auth(f),f.epoch,operation,1,parent.id,'2',{...parent.draft,customerId:null}]),new AbortController().signal),e=>e.message==='LEAD_CONVERTED_CUSTOMER_IMMUTABLE'&&!Object.hasOwn(e,'code')&&!Object.hasOwn(e,'cause'));
+  assert.deepEqual(await evidence(f),before);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[f.business,operation])).rows[0].n,0);
+  assert.equal((await client.query('SELECT customer_id FROM crest.leads WHERE id=$1',[parent.id])).rows[0].customer_id,conversion.receipt.customerId);
+ }finally{if(owned)await sandbox.admin.query('DROP ROLE '+probe);}
+});
+
 test('SQL child operation identities match independent SHA256 vectors for all four roles',async()=>{
  const expected={customer:'9a4707b1-a8f7-8bbe-9de1-85fca8a7dfac',vehicle:'8ce78a8f-200d-8a49-8c5c-77ea91cdaa1a',address:'58be4bb7-5ccc-8612-974f-c8da37952da8',lead:'face5a0f-2ebb-8398-8098-f697898669e4'};
  for(const [role,id] of Object.entries(expected))assert.equal((await client.query('SELECT crest_private.conversion_child_operation($1,$2,$3,$4,$5) AS id',['11111111-1111-4111-8111-111111111111','22222222-2222-4222-8222-222222222222','33333333-3333-4333-8333-333333333333',role,'44444444-4444-4444-8444-444444444444'])).rows[0].id,id);

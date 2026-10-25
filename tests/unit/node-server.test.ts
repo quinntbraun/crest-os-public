@@ -27,7 +27,7 @@ describe('Node hosting boundary',()=>{
   it('requires explicit authentication composition before enabling a business target',()=>{
     expect(()=>bindApplicationHandler(createBoundedNodeServer(),{origin,environment:'test',business:{businessId:'untrusted'}},async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   });
-  it.each([{customers:true},{customers:true,authentication:{}},{customers:'yes'},{vehicles:true},{vehicles:true,authentication:{}},{vehicles:'yes'},{associations:true},{associations:true,authentication:{}},{associations:'yes'},{leads:true},{leads:true,authentication:{}},{leads:'yes'}])('requires explicit boolean directory composition with authentication and business: %o',patch=>{
+  it.each([{customers:true},{customers:true,authentication:{}},{customers:'yes'},{vehicles:true},{vehicles:true,authentication:{}},{vehicles:'yes'},{associations:true},{associations:true,authentication:{}},{associations:'yes'},{leads:true},{leads:true,authentication:{}},{leads:'yes'},{leadConversions:true},{leadConversions:true,leads:false},{leadConversions:'yes'}])('requires explicit boolean directory composition with authentication and business: %o',patch=>{
     expect(()=>bindApplicationHandler(createBoundedNodeServer(),{origin,environment:'test',...patch} as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   });
   it.each([false,true])('lead/source routing needs independent opt-in and retains bounded private delivery: %s',async enabled=>{

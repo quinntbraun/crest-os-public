@@ -66,3 +66,5 @@ it('accepts and retains mixed status/intake/reopen history through the browser t
  const result=await leads.history(leadBusiness,{leadId:first.id,afterVersion:'0',pageSize:20},proof(),signal());
  expect(result).toMatchObject({state:'found',lead:reopened,history:[{action:'create'},{action:'state_change'},{action:'edit'},{action:'state_change'}]});
 });
+
+it('preserves definite converted-customer rejection without automatic retries',async()=>{fetcher.mockResolvedValue(response({state:'conflict',reason:'converted'},409));expect(await leads.save(leadBusiness,save(),proof(),signal())).toEqual({state:'conflict',reason:'converted'});expect(fetcher).toHaveBeenCalledTimes(1);});

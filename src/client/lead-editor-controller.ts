@@ -66,6 +66,7 @@ export function createLeadEditorController(deps:Dependencies){
     try{deps.store.clear(pending);}catch{retain(result.state==='committed'?'Save confirmed, but its reference could not be cleared. Check save status before another edit.':'No change was saved, but its reference could not be cleared. Check save status before another edit.');return;}
     pending=null;clearPrivate();phase='review';message=result.state==='committed'?(lookup?'The original save is confirmed. Load current leads to review the recorded result.':'Lead saved. Load current leads before another edit.'):'The record changed or the lead ID is already in use. Load current leads and review before starting a new edit.';
     if(result.state==='conflict'&&result.reason==='parent')message='The selected customer or source could not be linked. Load current leads and choose the existing records again before a new edit.';
+    if(result.state==='conflict'&&result.reason==='converted')message='This lead was already converted. Its recorded customer cannot be replaced or cleared. Load current leads to review the original conversion before editing other details.';
   }
   const check=()=>run(async signal=>{
     pending=deps.store.read();if(!pending)throw new PendingLeadError();retain('Checking the original lead save…');emit();await fresh(signal);

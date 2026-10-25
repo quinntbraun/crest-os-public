@@ -19,10 +19,13 @@ import {leadVehicleWireDraftKeys,parseLeadVehicleWireDraft} from './lead-vehicle
 import {createLeadAddressDirectory,LeadAddressDirectoryError} from './lead-address-directory.ts';
 import {leadAddressWireDraftKeys,parseLeadAddressWireDraft} from './lead-address-http-contract.ts';
 
+import {createLeadConversionDirectory,LeadConversionDirectoryError} from './lead-conversion-directory.ts';
+import {leadConversionWireKeys,parseLeadConversionWire} from './lead-conversion-command-contract.ts';
+
 type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
 const prefix='/api/business/leads/';
 const draftKeys=['label','customerId','sourceId','referralText','phone','email','requestedScope','availability','estimatedCents','followUpAt','notes'] as const;
-const fields={context:[],list:['search','afterId','includeLost','pageSize'],history:['leadId','afterVersion','pageSize'],operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','leadId','expectedVersion',...draftKeys],state:['schemaVersion','operationId','recoveryEpoch','leadId','expectedVersion','fromState','toState','reason'],'state-operation':['operationId'],'state-events':['leadId','afterVersion','pageSize'],
+const fields={convert:leadConversionWireKeys,'conversion-operation':['operationId'],conversion:['leadId'],'conversion-links':['leadId','conversionId','afterId','pageSize'],context:[],list:['search','afterId','includeLost','pageSize'],history:['leadId','afterVersion','pageSize'],operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','leadId','expectedVersion',...draftKeys],state:['schemaVersion','operationId','recoveryEpoch','leadId','expectedVersion','fromState','toState','reason'],'state-operation':['operationId'],'state-events':['leadId','afterVersion','pageSize'],
   'address-save':['schemaVersion','operationId','recoveryEpoch','leadId','leadAddressId','expectedVersion',...leadAddressWireDraftKeys],
   'address-operation':['operationId'],'address-list':['leadId','afterId','includeArchived','pageSize'],'address-history':['leadId','leadAddressId','afterVersion','pageSize'],
   'vehicle-save':['schemaVersion','operationId','recoveryEpoch','leadId','leadVehicleId','expectedVersion',...leadVehicleWireDraftKeys],
@@ -33,19 +36,25 @@ export function leadFailureResponse(status:400|404|405|503=400):Response{
 }
 // Only trusted composition can select this business. All routes share the
 // existing committed ordinary admission budget with authentication/settings.
-export function createLeadHttp(config:Configuration,provider:Parameters<typeof createLeadDirectory>[1],tokens:Parameters<typeof createLeadDirectory>[2]){
-  if(!leadUuid(config.businessId))throw new Error('LEAD_HTTP_CONFIGURATION_REQUIRED');
+export function createLeadHttp(config:Configuration,provider:Parameters<typeof createLeadDirectory>[1],tokens:Parameters<typeof createLeadDirectory>[2],conversions=false){
+  if(!leadUuid(config.businessId)||typeof conversions!=='boolean')throw new Error('LEAD_HTTP_CONFIGURATION_REQUIRED');
   const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
   const directory=createLeadDirectory(config,provider,tokens),states=createLeadStateDirectory(config,provider,tokens),vehicles=createLeadVehicleDirectory(config,provider,tokens),addresses=createLeadAddressDirectory(config,provider,tokens),context=createBusinessSettingsContextReader(config,provider,tokens);
+  const conversionDirectory=conversions?createLeadConversionDirectory(config,provider,tokens):undefined;
   return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>):Promise<Response>=>{
-    let submitted=false,workStarted=false,stateSubmitted=false,vehicleSubmitted=false,addressSubmitted=false;
+    let submitted=false,workStarted=false,stateSubmitted=false,vehicleSubmitted=false,addressSubmitted=false,conversionSubmitted=false;
     try{
       const signal=AbortSignal.any([request.signal,AbortSignal.timeout(40000)]);if(signal.aborted)throw new Error();resolve(request,peer);
       const url=new URL(request.url),route=url.pathname.slice(prefix.length) as Route;
       if(url.search||url.hash||!url.pathname.startsWith(prefix)||!Object.hasOwn(fields,route))return leadFailureResponse(404);
+      if(['convert','conversion-operation','conversion','conversion-links'].includes(route)&&!conversions)return leadFailureResponse(404);
       if(request.method!=='POST')return leadFailureResponse(405);
       protect.requireOrigin(request);const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;if(!cookie)throw new Error();
       const input=await readFlatJsonBody(bounded,fields[route],131072);
+      const conversion=route==='convert'?parseLeadConversionWire(input,businessId):undefined;
+      if(route==='conversion-operation')requireLead(leadUuid(input.operationId));
+      if(route==='conversion')requireLead(leadUuid(input.leadId));
+      if(route==='conversion-links')requireLead(leadUuid(input.leadId)&&leadUuid(input.conversionId)&&(input.afterId===null||leadUuid(input.afterId))&&Number.isSafeInteger(input.pageSize)&&Number(input.pageSize)>=1&&Number(input.pageSize)<=50);
       let draft:ReturnType<typeof parseLeadDraft>|undefined,stateDraft:ReturnType<typeof parseLeadStateDraft>|undefined,vehicleDraft:ReturnType<typeof parseLeadVehicleWireDraft>|undefined,addressDraft:ReturnType<typeof parseLeadAddressWireDraft>|undefined;
       if(route==='address-save'){
         requireLead(input.schemaVersion===1&&leadUuid(input.operationId)&&leadUuid(input.leadId)&&leadUuid(input.leadAddressId)&&leadUuid(input.recoveryEpoch)&&leadVersion(input.expectedVersion,true));
@@ -74,6 +83,15 @@ export function createLeadHttp(config:Configuration,provider:Parameters<typeof c
       const sessionId=await csrf(bounded,cookie,signal);workStarted=true;
       if(!await admit(cookie,'ordinary',signal)){const response=privateJsonResponse({error:'LEAD_REQUEST_LIMITED'},429);response.headers.set('Retry-After','60');return response;}
       if(signal.aborted)throw new Error();let result:object;
+      if(route==='convert'){
+        conversionSubmitted=true;
+        const value=(await conversionDirectory!.convert(cookie,conversion!,signal)).forServer();
+        if(signal.aborted)throw new Error();return privateJsonResponse(value,value.state==='conflict'?409:200);
+      }
+      if(route==='conversion-operation')result=(await conversionDirectory!.lookup(cookie,{businessId,operationId:input.operationId as string},signal)).forServer();
+      else if(route==='conversion')result=(await conversionDirectory!.read(cookie,{businessId,leadId:input.leadId as string},signal)).forServer();
+      else if(route==='conversion-links')result=(await conversionDirectory!.links(cookie,{businessId,leadId:input.leadId as string,conversionId:input.conversionId as string,afterId:input.afterId as string|null,pageSize:input.pageSize as number},signal)).forServer();
+      if(route==='conversion-operation'||route==='conversion'||route==='conversion-links'){if(signal.aborted)throw new Error();return privateJsonResponse(result!);}
       if(route==='address-save'){
         addressSubmitted=true;
         const value=(await addresses.save(cookie,{schemaVersion:1,businessId,operationId:input.operationId as string,leadId:input.leadId as string,leadAddressId:input.leadAddressId as string,recoveryEpoch:input.recoveryEpoch as string,expectedVersion:input.expectedVersion as string,draft:addressDraft!},signal)).forServer();
@@ -140,6 +158,14 @@ export function createLeadHttp(config:Configuration,provider:Parameters<typeof c
       else result=(await directory.list(cookie,{businessId,search:input.search as string,afterId:input.afterId as string|null,includeLost:input.includeLost as boolean,pageSize:input.pageSize as number},signal)).forServer();
       if(signal.aborted)throw new Error();return privateJsonResponse(result);
     }catch(error){
+      if(conversionSubmitted){
+        if(error instanceof LeadConversionDirectoryError){
+          if(error.message==='LEAD_CONVERSION_NOT_SUBMITTED')return privateJsonResponse({error:error.message},503);
+          if(error.message==='LEAD_CONVERSION_DENIED')return privateJsonResponse({error:error.message},403);
+          if(error.message==='RECOVERY_REVIEW_REQUIRED')return privateJsonResponse({error:error.message},409);
+        }
+        return privateJsonResponse({error:'LEAD_CONVERSION_OUTCOME_UNKNOWN'},503);
+      }
       if(addressSubmitted){
         if(error instanceof LeadAddressDirectoryError){
           if(error.message==='LEAD_ADDRESS_NOT_SUBMITTED')return privateJsonResponse({error:error.message},503);

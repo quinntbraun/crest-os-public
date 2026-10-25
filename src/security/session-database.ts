@@ -14,6 +14,7 @@ export function sessionDatabase(config:SessionDatabaseConfiguration){
   }catch{throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');}
   const ssl=config.environment==='production'?{rejectUnauthorized:true}:false;
   async function connection<T>(signal:AbortSignal,transaction:boolean,work:(query:Query,signal:AbortSignal)=>Promise<T>,command=false):Promise<T>{
+    let convertedCustomerError:unknown,rollbackConfirmed=false;
     if(signal.aborted)throw new Error('SESSION_DATABASE_FAILED');
     const controller=new AbortController(),combined=AbortSignal.any([signal,controller.signal]);
     const client=new pg.Client({connectionString,ssl,connectionTimeoutMillis:1000,statement_timeout:command?10000:transaction?11000:1500,lock_timeout:command?3000:transaction?10000:750,
@@ -33,7 +34,14 @@ export function sessionDatabase(config:SessionDatabaseConfiguration){
         if(guard.rows[0]?.allowed!==true||guard.rows.length!==1||combined.aborted)throw new Error();
         const query:Query=async(text,values)=>{
           if(combined.aborted)throw new Error();
-          const result=await client.query<{result:unknown}>(text,values);
+          let result;
+          try{result=await client.query<{result:unknown}>(text,values);}catch(error){
+            // Only a failed, fixed lead-save statement can produce this known
+            // conflict. Confirmation is withheld until ROLLBACK is acknowledged.
+            if(command&&text==='SELECT crest_commands.save_lead($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::integer,$12::uuid,$13::bigint,$14::jsonb) AS result'
+              &&error instanceof Error&&'code' in error&&error.code==='55000'&&error.message==='CREST_CONVERTED_CUSTOMER_IMMUTABLE')convertedCustomerError=error;
+            throw error;
+          }
           if(result.rows.length!==1||!Object.hasOwn(result.rows[0]??{},'result'))throw new Error();
           return result.rows[0]!.result;
         };
@@ -47,10 +55,12 @@ export function sessionDatabase(config:SessionDatabaseConfiguration){
           // error and left the transaction aborted. Never confirm that result.
           if(completion.command!=='COMMIT')throw new Error('SESSION_DATABASE_FAILED');
           return result;
-        }catch(error){if(!combined.aborted)await client.query('ROLLBACK').catch(()=>undefined);throw error;}
+        }catch(error){if(!combined.aborted)await client.query('ROLLBACK').then(r=>{rollbackConfirmed=r.command==='ROLLBACK';},()=>undefined);throw error;}
       })();
       const result=await Promise.race([pending,interrupted]);if(combined.aborted)throw new Error();return result;
     }catch(error){
+      // eslint-disable-next-line preserve-caught-error -- Only a fixed marker crosses after an acknowledged rollback; raw database details stay private.
+      if(command&&!combined.aborted&&rollbackConfirmed&&convertedCustomerError!==undefined&&error===convertedCustomerError)throw new Error('LEAD_CONVERTED_CUSTOMER_IMMUTABLE');
       // Only this fixed, expected business-fence result may cross the command
       // profile. No SQL/SDK cause, detail, hint, parameter or raw message escapes.
       // eslint-disable-next-line preserve-caught-error -- Database causes may contain credentials, SQL text or parameters.

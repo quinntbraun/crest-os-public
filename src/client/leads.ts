@@ -48,7 +48,7 @@ export const leads=Object.freeze({
     if(new TextEncoder().encode(JSON.stringify(body)).byteLength>131072)throw new LeadClientError('input');
     const r=await post('save',body,proof,signal),v=r.value;
     try{
-      if(r.status===409&&exact(v,['state','reason'])&&v.state==='conflict'&&(v.reason==='operation'||v.reason==='lead'||v.reason==='parent'))return Object.freeze({state:'conflict' as const,reason:v.reason});
+      if(r.status===409&&exact(v,['state','reason'])&&v.state==='conflict'&&(v.reason==='operation'||v.reason==='lead'||v.reason==='parent'||v.reason==='converted'))return Object.freeze({state:'conflict' as const,reason:v.reason});
       if(r.status===409&&exact(v,['state','reason','currentVersion'])&&v.state==='conflict'&&v.reason==='version'&&version(v.currentVersion,true))return Object.freeze({state:'conflict' as const,reason:'version' as const,currentVersion:v.currentVersion});
       check(r.status===200);return committed(v,businessId,ref);
     }catch{throw new LeadClientError('unknown');}

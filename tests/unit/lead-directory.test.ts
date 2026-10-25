@@ -1,5 +1,10 @@
 import {randomBytes,randomUUID} from 'node:crypto';
 
+it('returns a definite converted-customer conflict only for the fixed acknowledged-rollback marker',async()=>{
+ mock.transaction.mockRejectedValueOnce(new Error('LEAD_CONVERTED_CUSTOMER_IMMUTABLE'));expect((await factory().save(credential,input(),signal())).forServer()).toEqual({state:'conflict',reason:'converted'});
+ mock.transaction.mockRejectedValueOnce(Object.assign(new Error('CREST_CONVERTED_CUSTOMER_IMMUTABLE'),{code:'55000'}));await expect(factory().save(credential,input(),signal())).rejects.toThrow('LEAD_SAVE_OUTCOME_UNKNOWN');
+});
+
 it.each(['missing','hasMore','terminal','before'])('rejects %s history without silently omitting or joining versions',async defect=>{
  const second={...row,version:'2',operation_id:randomUUID()},event=(after:typeof row,before:typeof row|null)=>({version:after.version,eventId:randomUUID(),actorId:after.updated_by,operationId:after.operation_id,at:after.updated_at,action:before===null?'create':'edit',before,after});
  const events=[event(row,null),event(second,row)],result={schemaVersion:1,businessId:row.business_id,lead:second,history:events,hasMore:false};
