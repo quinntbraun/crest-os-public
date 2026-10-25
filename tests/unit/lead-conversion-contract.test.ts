@@ -1,0 +1,85 @@
+import {randomUUID} from 'node:crypto';
+import {it,expect} from 'vitest';
+import {leadConversionMaxBytes,parseLeadConversion,prepareLeadConversion,newConversionCustomer,newConversionVehicle,newConversionAddress} from '../../src/customer/lead-conversion-contract';
+import {CustomerDataError} from '../../src/customer/customer-contract';
+import {leadFixture} from '../support/lead-fixture';
+import {leadVehicleFixture} from '../support/lead-vehicle-fixture';
+import {leadAddressFixture} from '../support/lead-address-fixture';
+
+function fixture(){
+ const lead=leadFixture({version:'9007199254740993',notes:'😀'.repeat(4000),phone_raw:' (001) raw phone ',phone_normalized:'001',email_raw:'Raw@Example.com',email_normalized:'raw@example.com',estimated_cents:'9223372036854775807',follow_up_at:'2026-11-01T01:02:03.123456Z'}),businessId=lead.business_id,leadId=lead.id;
+ const vehicles=[0,1].map(()=>leadVehicleFixture({id:randomUUID(),business_id:businessId,lead_id:leadId,version:'9007199254740993'})),addresses=[0,1].map(()=>leadAddressFixture({id:randomUUID(),business_id:businessId,lead_id:leadId,version:'9007199254740993'}));
+ const customerDraft=newConversionCustomer(lead,businessId,{contactPreference:null,outreachOptOut:true,notes:null,customerSince:null});
+ const command={schemaVersion:1 as const,businessId,operationId:randomUUID(),recoveryEpoch:randomUUID(),conversionId:randomUUID(),leadId,expectedLeadVersion:lead.version,customer:{kind:'new' as const,id:randomUUID(),draft:customerDraft},vehicles:vehicles.map(v=>newConversionVehicle(v,businessId,leadId,randomUUID(),randomUUID(),'customer_vehicle')),addresses:addresses.map(a=>newConversionAddress(a,businessId,leadId,randomUUID(),randomUUID()))};
+ return {lead,businessId,leadId,vehicles,addresses,command};
+}
+const invalid=(value:unknown)=>expect(()=>parseLeadConversion(value)).toThrow(CustomerDataError);
+it('pins a two-vehicle/two-location conversion without changing lead state, estimates, follow-up or original notes',()=>{
+ const f=fixture(),before=structuredClone(f),preview=prepareLeadConversion(f.command,f.lead,[...f.vehicles].reverse(),[...f.addresses].reverse());
+ expect(preview.command).toEqual(f.command);expect(preview.lead).toMatchObject({version:'9007199254740993',state:'new',estimated_cents:'9223372036854775807',follow_up_at:'2026-11-01T01:02:03.123456Z',notes:'😀'.repeat(4000)});expect(preview.command.customer).toMatchObject({kind:'new',draft:{displayName:f.lead.label,phone:' (001) raw phone ',email:'Raw@Example.com',outreachOptOut:true,notes:null,customerSince:null}});expect(f).toEqual(before);
+});
+it('permits a minimal customer-only selection and never invents required vehicles or locations',()=>{const f=fixture(),value={...f.command,vehicles:[],addresses:[]};expect(prepareLeadConversion(value,f.lead,[],[]).command).toEqual(value);});
+it('existing destinations carry only explicit identity/version and are never replacement drafts',()=>{
+ const f=fixture(),id=randomUUID(),command={...f.command,customer:{kind:'existing',id,expectedVersion:'9223372036854775807'},vehicles:f.command.vehicles.map(v=>({...v,target:{kind:'existing',id:randomUUID(),expectedVersion:'9007199254740993'}})),addresses:f.command.addresses.map(a=>({...a,target:{kind:'existing',id:randomUUID(),expectedVersion:'1'}}))};expect(parseLeadConversion(command)).toEqual(command);
+ invalid({...command,customer:{...command.customer,draft:f.command.customer.draft}});invalid({...f.command,customer:{...f.command.customer,expectedVersion:'0'}});
+});
+it('copies and freezes the full command and all nested choices before caller input changes',()=>{
+ const raw=structuredClone(fixture().command),parsed=parseLeadConversion(raw);Object.assign(raw.customer.draft,{displayName:'Changed outside'});Object.assign(raw.vehicles[0]!.target,{id:randomUUID()});raw.addresses.reverse();
+ expect(parsed.customer).not.toEqual(raw.customer);expect(parsed.vehicles[0]!.target).not.toEqual(raw.vehicles[0]!.target);for(const value of [parsed,parsed.customer,parsed.vehicles,parsed.addresses,...parsed.vehicles,...parsed.addresses,...parsed.vehicles.map(v=>v.target),...parsed.addresses.map(a=>a.target)])expect(Object.isFrozen(value)).toBe(true);
+ for(const t of [parsed.customer,...parsed.vehicles.map(v=>v.target),...parsed.addresses.map(a=>a.target)])if(t.kind==='new')expect(Object.isFrozen(t.draft)).toBe(true);
+});
+it.each(['schemaVersion','businessId','operationId','recoveryEpoch','conversionId','leadId','expectedLeadVersion','customer','vehicles','addresses'])('requires exact original %s rather than guessing it',key=>{const raw={...fixture().command};Reflect.deleteProperty(raw,key);invalid(raw);});
+it.each(['actorId','sessionToken','permission','toState','acceptedQuoteId','billingCustomerId','ownerId','payloadHash'])('rejects injected %s authority or business facts',key=>{invalid({...fixture().command,[key]:randomUUID()});});
+it.each(['schemaVersion','businessId','operationId','recoveryEpoch','conversionId','leadId','expectedLeadVersion'])('rejects malformed command %s',key=>{invalid({...fixture().command,[key]:key==='schemaVersion'?2:key==='expectedLeadVersion'?'0':'not-a-uuid'});});
+it.each(['0','01','1e3','-1','9223372036854775808',1,null])('rejects nonexact expected version %s at every source and existing target',expected=>{
+ const f=fixture();invalid({...f.command,expectedLeadVersion:expected});invalid({...f.command,customer:{kind:'existing',id:randomUUID(),expectedVersion:expected}});invalid({...f.command,vehicles:[{...f.command.vehicles[0],expectedLeadVehicleVersion:expected}]});invalid({...f.command,addresses:[{...f.command.addresses[0],expectedLeadAddressVersion:expected}]});
+});
+it.each(['linkId','leadVehicleId','expectedLeadVehicleVersion','target'])('rejects missing vehicle mapping %s',key=>{const f=fixture(),mapping={...f.command.vehicles[0]};Reflect.deleteProperty(mapping,key);invalid({...f.command,vehicles:[mapping]});});
+it.each(['linkId','leadAddressId','expectedLeadAddressVersion','target'])('rejects missing location mapping %s',key=>{const f=fixture(),mapping={...f.command.addresses[0]};Reflect.deleteProperty(mapping,key);invalid({...f.command,addresses:[mapping]});});
+it.each(['vehicles','addresses'] as const)('rejects duplicate selected %s and duplicate mapping IDs without dropping a row',kind=>{
+ const f=fixture(),rows=f.command[kind];invalid({...f.command,[kind]:[rows[0],rows[0]]});invalid({...f.command,[kind]:rows.map((row,index)=>index===0?row:{...row,linkId:rows[0]!.linkId})});
+});
+it('mapping IDs are unique across vehicle and address links; typed source/target UUIDs may legitimately coincide',()=>{
+ const f=fixture();invalid({...f.command,addresses:[{...f.command.addresses[0],linkId:f.command.vehicles[0]!.linkId}]});const same=randomUUID(),command={...f.command,vehicles:[{...f.command.vehicles[0]!,leadVehicleId:same}],addresses:[{...f.command.addresses[0]!,leadAddressId:same}]};expect(parseLeadConversion(command).vehicles[0]!.leadVehicleId).toBe(parseLeadConversion(command).addresses[0]!.leadAddressId);
+});
+it.each(['vehicles','addresses'] as const)('explicit many-to-one existing %s selections are allowed only with consistent original versions',kind=>{
+ const f=fixture(),target={kind:'existing',id:randomUUID(),expectedVersion:'9007199254740993'},rows=f.command[kind].map(row=>({...row,target})),command={...f.command,customer:{kind:'existing',id:randomUUID(),expectedVersion:'1'},[kind]:rows};expect(parseLeadConversion(command)[kind]).toHaveLength(2);invalid({...command,[kind]:[rows[0],{...rows[1],target:{...target,expectedVersion:'2'}}]});
+});
+it.each(['vehicles','addresses'] as const)('repeated new %s identities or mixing new/existing identities is rejected',kind=>{
+ const f=fixture(),rows=f.command[kind],first=rows[0]!,second=rows[1]!,command={...f.command,customer:{kind:'existing',id:randomUUID(),expectedVersion:'1'}};invalid({...command,[kind]:[first,{...second,target:first.target}]});invalid({...command,[kind]:[first,{...second,target:{kind:'existing',id:first.target.id,expectedVersion:'1'}}]});
+});
+it.each(['customer','vehicle','address'] as const)('conversion never silently creates an archived %s destination',kind=>{
+ const f=fixture();if(kind==='customer')invalid({...f.command,customer:{...f.command.customer,draft:{...f.command.customer.draft,archived:true,archiveReason:'Needs review'}}});else if(kind==='vehicle'){const row=f.command.vehicles[0]!,target=row.target;if(target.kind!=='new')throw Error();invalid({...f.command,vehicles:[{...row,target:{...target,draft:{...target.draft,archived:true,archiveReason:'Needs review'}}}]});}else{const row=f.command.addresses[0]!,target=row.target;if(target.kind!=='new')throw Error();invalid({...f.command,addresses:[{...row,target:{...target,draft:{...target.draft,archived:true,archiveReason:'Needs review'}}}]});}
+});
+it('retains exact location decimals/microseconds and unknown-versus-empty values in a new destination preview',()=>{
+ const f=fixture(),source={...f.addresses[0]!,line1:'',latitude:'89.999999999999999999999',longitude:'-179.000000000000000000001',verified_at:'2026-10-25T01:02:03.123456Z',exact_location_text:'😀'.repeat(2000),instructions:'é'.repeat(2000)},mapping=newConversionAddress(source,f.businessId,f.leadId,randomUUID(),randomUUID());expect(mapping.target).toMatchObject({kind:'new',draft:{line1:'',line2:null,latitude:source.latitude,longitude:source.longitude,verifiedAt:source.verified_at,exactLocationText:source.exact_location_text,instructions:source.instructions}});expect(source.line1).toBe('');
+});
+it('copies every reported vehicle detail and explicit classification without converting requested work into accepted services',()=>{
+ const f=fixture(),raw={...f.vehicles[0]!,reported_vehicle:{...f.vehicles[0]!.reported_vehicle,label:'Original reported vehicle',year:-2147483648,vin:' raw nonstandard VIN ',notes:'😀'.repeat(2000)},requested_services:{schemaVersion:1 as const,text:'😀'.repeat(4000)},condition_notes:'é'.repeat(4000)},mapping=newConversionVehicle(raw,f.businessId,f.leadId,randomUUID(),randomUUID(),'other');expect(mapping.target).toMatchObject({kind:'new',draft:{label:raw.reported_vehicle.label,year:-2147483648,vin:raw.reported_vehicle.vin,notes:raw.reported_vehicle.notes,kind:'other'}});expect(JSON.stringify(mapping)).not.toContain(raw.condition_notes);expect(JSON.stringify(mapping)).not.toContain(raw.requested_services.text);expect(raw.condition_notes).toBe('é'.repeat(4000));
+});
+it.each(['sourceBusiness','sourceLead','sourceVersion','missing','extra','duplicate','archived'] as const)('preview rejects %s vehicle evidence without substituting source records',mode=>{
+ const f=fixture(),rows=[...f.vehicles];if(mode==='sourceBusiness')rows[0]={...rows[0]!,business_id:randomUUID()};if(mode==='sourceLead')rows[0]={...rows[0]!,lead_id:randomUUID()};if(mode==='sourceVersion')rows[0]={...rows[0]!,version:'2'};if(mode==='missing')rows.pop();if(mode==='extra')rows.push({...rows[0]!,id:randomUUID()});if(mode==='duplicate')rows[1]=rows[0]!;if(mode==='archived')rows[0]={...rows[0]!,archived_at:rows[0]!.updated_at,archived_reason:'Source needs review'};expect(()=>prepareLeadConversion(f.command,f.lead,rows,f.addresses)).toThrow(CustomerDataError);
+});
+it.each(['sourceBusiness','sourceLead','sourceVersion','missing','extra','duplicate','archived'] as const)('preview rejects %s address evidence without substituting source records',mode=>{
+ const f=fixture(),rows=[...f.addresses];if(mode==='sourceBusiness')rows[0]={...rows[0]!,business_id:randomUUID()};if(mode==='sourceLead')rows[0]={...rows[0]!,lead_id:randomUUID()};if(mode==='sourceVersion')rows[0]={...rows[0]!,version:'2'};if(mode==='missing')rows.pop();if(mode==='extra')rows.push({...rows[0]!,id:randomUUID()});if(mode==='duplicate')rows[1]=rows[0]!;if(mode==='archived')rows[0]={...rows[0]!,archived_at:rows[0]!.updated_at,archived_reason:'Source needs review'};expect(()=>prepareLeadConversion(f.command,f.lead,f.vehicles,rows)).toThrow(CustomerDataError);
+});
+it('preview preserves an already linked customer and rejects silently moving the lead to another customer',()=>{
+ const f=fixture(),id=randomUUID(),lead={...f.lead,customer_id:id},command={...f.command,customer:{kind:'existing',id,expectedVersion:'2'}};expect(prepareLeadConversion(command,lead,f.vehicles,f.addresses).command.customer.id).toBe(id);expect(()=>prepareLeadConversion(f.command,lead,f.vehicles,f.addresses)).toThrow(CustomerDataError);
+});
+it.each(['business','id','version'] as const)('preview rejects a changed lead %s',key=>{const f=fixture(),lead={...f.lead,[key==='business'?'business_id':key]:key==='version'?'2':randomUUID()};expect(()=>prepareLeadConversion(f.command,lead,f.vehicles,f.addresses)).toThrow(CustomerDataError);});
+it('customer preview requires explicit contact choices/date/notes, never truncates retained lead notes or assumes a date',()=>{
+ const f=fixture(),choices={contactPreference:null,outreachOptOut:true,notes:null,customerSince:null};expect(newConversionCustomer(f.lead,f.businessId,choices)).toMatchObject({notes:null,customerSince:null,outreachOptOut:true});expect(f.lead.notes).toHaveLength(8000);expect(()=>newConversionCustomer(f.lead,f.businessId,{...choices,notes:f.lead.notes})).toThrow(CustomerDataError);const missing={...choices};Reflect.deleteProperty(missing,'outreachOptOut');expect(()=>newConversionCustomer(f.lead,f.businessId,missing)).toThrow(CustomerDataError);expect(()=>newConversionCustomer(f.lead,randomUUID(),choices)).toThrow(CustomerDataError);
+});
+it('selection order is retained and changed original command IDs are never regenerated',()=>{const f=fixture(),command=parseLeadConversion(f.command),reversed=parseLeadConversion({...f.command,vehicles:[...f.command.vehicles].reverse()});expect(command.operationId).toBe(f.command.operationId);expect(command.conversionId).toBe(f.command.conversionId);expect(command.vehicles[0]!.linkId).toBe(f.command.vehicles[0]!.linkId);expect(reversed.vehicles).toEqual([...command.vehicles].reverse());expect(JSON.stringify(reversed)).not.toBe(JSON.stringify(command));});
+it('rejects sparse/excessive selections before walking an unbounded plan',()=>{const f=fixture();invalid({...f.command,vehicles:new Array(1001),addresses:[]});invalid({...f.command,vehicles:new Array(2),addresses:[]});invalid({...f.command,vehicles:{length:2}});});
+it('enforces the complete UTF-8 byte boundary without truncating selected mappings',()=>{
+ const f=fixture(),rows=Array.from({length:600},()=>({linkId:randomUUID(),leadVehicleId:randomUUID(),expectedLeadVehicleVersion:'1',target:{kind:'existing' as const,id:randomUUID(),expectedVersion:'1'}}));let count=0,bytes=0;const command={...f.command,vehicles:rows.slice(0,1),addresses:[],customer:{...f.command.customer,draft:{...f.command.customer.draft,notes:''}}};
+ while(count<rows.length){command.vehicles=rows.slice(0,count+1);const next=new TextEncoder().encode(JSON.stringify(command)).byteLength;if(next>leadConversionMaxBytes)break;count++;bytes=next;}command.vehicles=rows.slice(0,count);const remaining=leadConversionMaxBytes-bytes;expect(remaining).toBeLessThan(2000);command.customer.draft.notes='x'.repeat(remaining);const parsed=parseLeadConversion(command);expect(new TextEncoder().encode(JSON.stringify(parsed))).toHaveLength(leadConversionMaxBytes);command.customer.draft.notes+='x';invalid(command);expect(parsed.vehicles).toHaveLength(count);
+ const baseAddress=f.command.addresses[0]!.target;if(baseAddress.kind!=='new')throw Error();const large={...f.command,addresses:Array.from({length:20},()=>({...f.command.addresses[0]!,linkId:randomUUID(),leadAddressId:randomUUID(),target:{kind:'new',id:randomUUID(),draft:{...baseAddress.draft,exactLocationText:'😀'.repeat(2000),instructions:'😀'.repeat(2000)}}}))};expect(new TextEncoder().encode(JSON.stringify(large)).byteLength).toBeGreaterThan(leadConversionMaxBytes);invalid(large);
+});
+it('preparation returns copied frozen original source images, not mutable caller aliases',()=>{const f=fixture(),result=prepareLeadConversion(f.command,f.lead,f.vehicles,f.addresses);Object.assign(f.lead,{notes:'changed'});Object.assign(f.vehicles[0]!.reported_vehicle,{label:'changed'});Object.assign(f.addresses[0]!,{instructions:'changed'});expect(result.lead.notes).toBe('😀'.repeat(4000));expect(result.vehicles[0]!.reported_vehicle.label).not.toBe('changed');expect(result.addresses[0]!.instructions).toBeNull();for(const row of [result,result.lead,result.vehicles,result.addresses,...result.vehicles,...result.addresses])expect(Object.isFrozen(row)).toBe(true);});
+
+
+it('an already linked customer must be selected as existing rather than recreated under its ID',()=>{const f=fixture(),lead={...f.lead,customer_id:f.command.customer.id};expect(()=>prepareLeadConversion(f.command,lead,f.vehicles,f.addresses)).toThrow(CustomerDataError);});
+
+it('a newly created customer cannot silently acquire an existing customer-owned address',()=>{const f=fixture();invalid({...f.command,addresses:[{...f.command.addresses[0]!,target:{kind:'existing',id:randomUUID(),expectedVersion:'1'}}]});});

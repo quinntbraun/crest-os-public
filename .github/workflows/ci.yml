@@ -77,6 +77,8 @@ jobs:
           npm run test:lead-state-db
           npm run test:lead-vehicles-db
           npm run test:lead-addresses-db
+      - name: Prove unregistered atomic conversion in an isolated database
+        run: node --test --test-concurrency=1 tests/integration/lead-conversion.test.mjs
       - name: Install pinned recovery tooling
         run: node scripts/install-recovery-tools.mjs
       - name: Encrypted isolated database recovery drill
