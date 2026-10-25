@@ -116,7 +116,13 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
    });
    await t.test('compiled stateless browser clients preserve source/lead receipts, exact intake and complete history',async()=>{
     const clientProof=(await send(page,'auth/session')).body;
-    await page.evaluate(code=>{const nonce=document.querySelector('script[nonce]')?.nonce;if(!nonce)throw new Error('SYNTHETIC_NONCE_REQUIRED');const script=document.createElement('script');script.nonce=nonce;script.textContent=code;document.head.append(script);},browserClient);
+    // Every device used by a compiled-client case needs its own nonce-bound
+    // installation. Script globals and cookies are separate browser contexts.
+    for(const device of [page,other]){
+     await device.evaluate(code=>{const nonce=document.querySelector('script[nonce]')?.nonce;if(!nonce)throw new Error('SYNTHETIC_NONCE_REQUIRED');const script=document.createElement('script');script.nonce=nonce;script.textContent=code;document.head.append(script);},browserClient);
+     const installed=await device.evaluate(()=>[['crestLeadFixture','leads','save'],['crestLeadSourceFixture','leadSources','save'],['crestLeadStateFixture','leadStates','change'],['crestLeadVehicleFixture','leadVehicles','save'],['crestLeadAddressFixture','leadAddresses','save']].map(([name,api,method])=>typeof globalThis[name]?.[api]?.[method]==='function'));
+     assert.deepEqual(installed,[true,true,true,true,true],'all actual compiled clients must be installed independently on both synthetic devices');
+    }
     const {schemaVersion,operationId,recoveryEpoch,leadSourceId,expectedVersion,...sourceBody}=sourceDraft(epoch,'Synthetic client source '+name),sourceCommand={schemaVersion,operationId,recoveryEpoch,leadSourceId,expectedVersion,draft:sourceBody};
     const raw={...leadDraft(epoch,'Synthetic client inquiry '+name),sourceId:leadSourceId,notes:'😀'.repeat(4000),estimatedCents:'9223372036854775807',followUpAt:'2026-10-25T10:00:00.123456Z'},leadBody={...raw};for(const key of ['schemaVersion','operationId','recoveryEpoch','leadId','expectedVersion'])delete leadBody[key];
     const leadCommand={schemaVersion:raw.schemaVersion,operationId:raw.operationId,recoveryEpoch:raw.recoveryEpoch,leadId:raw.leadId,expectedVersion:raw.expectedVersion,draft:leadBody};
