@@ -1,6 +1,6 @@
 # Crest OS
 
-Current development: [private lead/source HTTP](planning/PHASE_4_LEAD_HTTP.md) connects genuine intake and retained source snapshots to explicitly configured app access. Ownership controls are merged; canonical lead-backend and current HTTP acceptance remain in progress. See [the active checkpoint](planning/WORKING_STATE.md) and [lead implementation](planning/PHASE_4_LEAD_INTAKE.md). Synthetic development only; real-data use remains gated.
+Current development: [lead/source intake forms](planning/PHASE_4_LEAD_EDITOR.md) add explicit customer/source selection, exact values and original-save recovery over [private typed access](planning/PHASE_4_LEAD_HTTP.md). The backend is merged; current consumer acceptance remains in progress. See [the active checkpoint](planning/WORKING_STATE.md) and [lead implementation](planning/PHASE_4_LEAD_INTAKE.md). Synthetic development only; real-data use remains gated.
 
 Crest Detailing's internal business operating system.
 

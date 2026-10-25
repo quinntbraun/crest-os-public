@@ -26,6 +26,7 @@ button.secondary { color: #174e44; background: transparent; }
 .save-reference { overflow-wrap: anywhere; font-size: 0.875rem; }
 button:disabled { opacity: 0.65; cursor: not-allowed; }
 .customers { max-width: 52rem; margin-top: 3vh; padding-bottom: 3rem; }
+.customers p { overflow-wrap: anywhere; }
 .customers nav { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; margin-top: 1.5rem; }
 .customers fieldset { min-width: 0; margin: 1rem 0; padding: 1rem; border: 1px solid #8b9c9a; border-radius: 0.5rem; }
 .customers legend { font-weight: 700; padding: 0 0.25rem; }
