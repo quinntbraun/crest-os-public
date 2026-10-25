@@ -1,5 +1,9 @@
 # Current implementation plan
 
+## Active consumer: lead/source intake forms
+
+Read PHASE_4_LEAD_EDITOR.md. Mobile lead/source forms, explicit genuine reference pickers, exact USD/UTC input, private controllers and separate opaque pending references are implemented locally. All3,306 units/93files, lint/types/server bundle pass; actual compiled HTTPS/axe fixture is written but unexecuted. Lead list/history use10/5 complete rows/events to fit the unchanged1MiB bound; sources retain25/20. Parent backend PR76 is merged asca2db5d; separate actual-main run40185215438 and private HTTP/client PR77 run40185267989 are in progress, with all851 DB/Auth groups passed. Preserve37 SQL/canonical/coverage/compatibility/lockfile bytes. Next: verify live parent and current-source native gates, then lead lifecycle/vehicle/address/conversion within approved scope. No activation or real records. Older sections are historical.
+
 ## Active consumer: private lead/source HTTP
 
 Read PHASE_4_LEAD_HTTP.md. Fixed private intake/source routes, stateless typed browser clients, explicit leads opt-in and bounded128KiB intake transport are implemented locally;3,183 units/88files, lint/types/server bundle pass. Genuine HTTPS fixture is written but unexecuted. Parent PR76 source32d2595/run40183242375 has passed all three isolated DB/Auth jobs; full acceptance remains pending. Preserve37 SQL/canonical/coverage/compatibility/dependency bytes. Next: exact-source HTTPS/build acceptance and mobile forms, with lifecycle/conversion still unfinished. No activation or real records. Older sections are historical.
