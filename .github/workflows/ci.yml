@@ -19,7 +19,7 @@ jobs:
   database_foundation:
     name: Database foundation
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"
@@ -286,7 +286,7 @@ jobs:
       - name: Preserve candidate artifact and provenance
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: phase-1-candidate-${{ github.sha }}
+          name: phase-1-candidate-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: .local/release/
           include-hidden-files: true
           retention-days: 3
@@ -295,7 +295,7 @@ jobs:
         # Successful synthetic UI screenshots contain no credentials or real data.
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: settings-review-${{ github.sha }}
+          name: settings-review-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: .local/review/settings-*.png
           include-hidden-files: true
           retention-days: 3
@@ -304,7 +304,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: browser-diagnostics-${{ github.sha }}
+          name: browser-diagnostics-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             playwright-report/
             test-results/
