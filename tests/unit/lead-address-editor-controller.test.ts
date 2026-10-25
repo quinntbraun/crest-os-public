@@ -1,3 +1,4 @@
+const conversionRead=vi.fn<()=>unknown>(()=>null);
 import {randomBytes,randomUUID} from 'node:crypto';
 import {beforeEach,it,expect,vi} from 'vitest';
 import type {Mock} from 'vitest';
@@ -16,9 +17,9 @@ const command=():LeadAddressSave=>({schemaVersion:1,operationId,leadId,leadAddre
 const reference=(patch={})=>pendingLeadAddress({schemaVersion:1,businessId,binding,reference:{operationId,leadId,leadAddressId:row.id,expectedVersion:'1',recoveryEpoch:epoch},...patch});
 const committed=(c=command())=>({state:'committed' as const,operationId:c.operationId,recoveryEpoch:c.recoveryEpoch,receipt:{schemaVersion:1 as const,businessId,leadId:c.leadId,leadAddressId:c.leadAddressId,leadAddressVersion:(BigInt(c.expectedVersion)+1n).toString(),auditEventId:randomUUID()}});
 let memory:Map<string,string>,storage:{getItem:Mock<(k:string)=>string|null>;setItem:Mock<(k:string,v:string)=>void>;removeItem:Mock<(k:string)=>void>},store:ReturnType<typeof createPendingLeadAddressStore>,api:{[K in keyof typeof leadAddresses]:Mock<(typeof leadAddresses)[K]>},context:Mock<typeof leads.context>,session:Mock<typeof authentication.session>,id:Mock<()=>string>,intakeRead:Mock<()=>unknown>,statusRead:Mock<()=>unknown>,vehicleRead:Mock<()=>unknown>,change:Mock;
-const controller=()=>createLeadAddressEditorController({businessId,leadId,store,api,context,session,id,change,intakeStore:{read:intakeRead},statusStore:{read:statusRead},vehicleStore:{read:vehicleRead}});
+const controller=()=>createLeadAddressEditorController({conversionStore:{read:conversionRead},businessId,leadId,store,api,context,session,id,change,intakeStore:{read:intakeRead},statusStore:{read:statusRead},vehicleStore:{read:vehicleRead}});
 async function prepared(){const c=controller();await c.load();await c.open(row.id);c.edit(command().draft);return c;}
-beforeEach(()=>{
+beforeEach(()=>{conversionRead.mockReset().mockReturnValue(null);
  memory=new Map();storage={getItem:vi.fn(k=>memory.get(k)??null),setItem:vi.fn((k,v)=>{memory.set(k,v);}),removeItem:vi.fn(k=>{memory.delete(k);})};store=createPendingLeadAddressStore(storage);
  api={save:vi.fn<typeof leadAddresses.save>().mockImplementation(async(_business,c)=>committed(c)),lookup:vi.fn<typeof leadAddresses.lookup>().mockResolvedValue({state:'absent'}),list:vi.fn<typeof leadAddresses.list>().mockResolvedValue({state:'found',schemaVersion:1,businessId,leadId,leadVersion:'1',leadAddresses:[row],hasMore:false}),history:vi.fn<typeof leadAddresses.history>().mockResolvedValue({state:'found',schemaVersion:1,businessId,leadAddress:row,history:[],hasMore:false})};
  context=vi.fn<typeof leads.context>().mockResolvedValue(contextValue());session=vi.fn<typeof authentication.session>().mockResolvedValue({csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000});id=vi.fn<()=>string>().mockReturnValue(operationId);intakeRead=vi.fn(()=>null);statusRead=vi.fn(()=>null);vehicleRead=vi.fn(()=>null);change=vi.fn();
@@ -49,3 +50,5 @@ it('paused reads keep source history available and cannot submit new addresses',
 it('changes archived filter immediately and removes stale private rows while awaiting the new page',async()=>{
  const c=await prepared();let release!:(value:Awaited<ReturnType<typeof leadAddresses.list>>)=>void;api.list.mockImplementationOnce(()=>new Promise(resolve=>{release=resolve;}));const work=c.query(true);expect(c.view()).toMatchObject({busy:true,includeArchived:true,rows:[],selected:null,draft:null,history:null});expect(api.list.mock.calls.at(-1)![1]).toEqual({leadId,afterId:null,includeArchived:true,pageSize:10});release({state:'found',schemaVersion:1,businessId,leadId,leadVersion:'1',leadAddresses:[row],hasMore:false});await work;expect(c.view()).toMatchObject({busy:false,includeArchived:true,rows:[row]});api.list.mockRejectedValueOnce(new Error('private failure'));await c.query(false);expect(c.view()).toMatchObject({phase:'unavailable',includeArchived:false,rows:[]});
 });
+
+it.each(['pending','unreadable'] as const)('blocks a %s conversion reference before sibling mutation',async which=>{const c=await prepared();conversionRead.mockImplementation(()=>{if(which==='unreadable')throw new Error('reference unavailable');return {original:'conversion pending'};});await c.save();expect(c.view().canSave).toBe(false);expect(api.save).not.toHaveBeenCalled();});

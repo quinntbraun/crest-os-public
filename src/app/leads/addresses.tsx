@@ -1,4 +1,5 @@
 'use client';
+import {createPendingLeadConversionStore} from '../../client/pending-lead-conversion';
 import {Fragment,useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {createLeadAddressEditorController,initialLeadAddressEditorView,emptyLeadAddressDraft} from '../../client/lead-address-editor-controller';
@@ -25,7 +26,7 @@ export function LeadAddressPanel({businessId,leadId,disabled,onLock}:{businessId
  const [view,setView]=useState(initialLeadAddressEditorView),current=useRef<ReturnType<typeof createLeadAddressEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null);
  useEffect(()=>{
   const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)};
-  const controller=createLeadAddressEditorController({businessId,leadId,store:createPendingLeadAddressStore(storage),intakeStore:createPendingLeadStore(storage),statusStore:createPendingLeadStateStore(storage),vehicleStore:createPendingLeadVehicleStore(storage),change:setView});current.current=controller;
+  const controller=createLeadAddressEditorController({conversionStore:createPendingLeadConversionStore(storage),businessId,leadId,store:createPendingLeadAddressStore(storage),intakeStore:createPendingLeadStore(storage),statusStore:createPendingLeadStateStore(storage),vehicleStore:createPendingLeadVehicleStore(storage),change:setView});current.current=controller;
   const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
   return()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};

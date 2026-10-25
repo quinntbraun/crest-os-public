@@ -1,4 +1,5 @@
 'use client';
+import {createPendingLeadConversionStore} from '../../client/pending-lead-conversion';
 import {createPendingLeadAddressStore} from '../../client/pending-lead-address-edit';
 import {Fragment,useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
@@ -24,7 +25,7 @@ export function LeadVehiclePanel({businessId,leadId,disabled,onLock}:{businessId
  const [view,setView]=useState(initialLeadVehicleEditorView),current=useRef<ReturnType<typeof createLeadVehicleEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null);
  useEffect(()=>{
   const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)};
-  const controller=createLeadVehicleEditorController({addressStore:createPendingLeadAddressStore(storage),businessId,leadId,store:createPendingLeadVehicleStore(storage),intakeStore:createPendingLeadStore(storage),statusStore:createPendingLeadStateStore(storage),change:setView});current.current=controller;
+  const controller=createLeadVehicleEditorController({conversionStore:createPendingLeadConversionStore(storage),addressStore:createPendingLeadAddressStore(storage),businessId,leadId,store:createPendingLeadVehicleStore(storage),intakeStore:createPendingLeadStore(storage),statusStore:createPendingLeadStateStore(storage),change:setView});current.current=controller;
   const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
   return()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
