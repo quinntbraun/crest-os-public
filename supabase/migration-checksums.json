@@ -170,6 +170,11 @@
       "version": "20261025040000",
       "file": "20261025040000_customer_addresses.sql",
       "sha256": "71fdce77577e293457ee4d2321ca1cbb5dfce171d97988813deacf03303249ed"
+    },
+    {
+      "version": "20261025060000",
+      "file": "20261025060000_vehicle_directory.sql",
+      "sha256": "395ab79a844bf29db39689a6b186ce9bf2e8da455b30b283758e0c4ef705a626"
     }
   ]
 }

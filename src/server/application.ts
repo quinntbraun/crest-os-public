@@ -25,3 +25,4 @@ export async function createCrestApplication(config:NodeConfiguration){
 export {createCustomerAddressDirectory} from '../customer/customer-address-directory.ts';
 
 export {createCustomerAddressHttp} from '../customer/customer-address-http.ts';
+export {createVehicleDirectory} from '../customer/vehicle-directory.ts';

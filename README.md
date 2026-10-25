@@ -57,6 +57,8 @@ The [configuration and business evidence verifier](planning/PHASE_2_BUSINESS_CON
 
 The [synthetic database recovery drill](planning/PHASE_3_RECOVERY_DRILL.md) uses an encrypted real PostgreSQL archive and a fresh isolated cluster to verify database recovery and existing security fences. The [retained-object recovery extension](planning/PHASE_3_OBJECT_RECOVERY.md) binds exact private object archives to that snapshot and checks file restoration before SQL. Configured independent vault/configuration recovery and production incident activation remain unfinished; the feature PR records executed evidence.
 
+The [vehicle directory backend](planning/PHASE_4_VEHICLE_DIRECTORY.md) adds label-only vehicle sources, optional raw VIN/year/plate, nonunique search hints, audit/archive/history, typed private methods and same-snapshot recovery coverage. Native acceptance, dated customer associations, vehicle forms and ownership transfer remain unfinished; default access stays closed.
+
 ## Local development
 
 The [customer-owned address backend](planning/PHASE_4_CUSTOMER_ADDRESSES.md) adds incomplete intake locations, same-business customer links, versioned archive/history and exact-decimal source exports. Native database/recovery tests pass for the backend source; private address HTTP/client methods are implemented with current-source Linux acceptance pending. Private mobile address forms and original-parent save recovery are implemented, with exact-source browser acceptance pending; no geocoder, fake vehicle/lead parent or default runtime activation is introduced. Vehicle/ownership work remains in [the resource plan](planning/PHASE_4_CUSTOMER_RESOURCES.md).

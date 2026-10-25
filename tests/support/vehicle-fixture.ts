@@ -1,0 +1,3 @@
+import type {Vehicle} from '../../src/customer/vehicle-contract.ts';
+import {customerFixture,customerBusiness} from './customer-fixture.ts';
+export function vehicleFixture(patch:Partial<Vehicle>={}):Vehicle{return {id:'77777777-7777-4777-8777-777777777777',business_id:customerBusiness,label:'Synthetic vehicle',year:null,make:null,model:null,color:null,vin_raw:null,vin_normalized:null,plate:null,kind:'customer_vehicle',notes:null,archived_at:null,archived_reason:null,version:'1',created_at:customerFixture().created_at,updated_at:customerFixture().updated_at,created_by:customerFixture().created_by,updated_by:customerFixture().updated_by,origin:'manual',operation_id:'88888888-8888-4888-8888-888888888888',import_row_id:null,...patch};}
