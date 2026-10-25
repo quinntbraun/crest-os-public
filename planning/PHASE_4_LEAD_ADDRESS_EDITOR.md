@@ -1,3 +1,7 @@
+## Current browser-session attribution correction
+
+Main-based source313a725/run40233081794 reached native browser acceptance with one failing leaf (Chromium paused status-history reload) and one failed parent; all other leaves, including all ten address form cases, passed. The failed reload never rendered Lead search. It does not establish a production defect or prove rate limiting: the completed log has no per-request admission diagnosis. The fixture unnecessarily charged the separate vehicle privacy/paused-history scenario to the status workflow's session. That scenario now uses its existing genuine vehicle session, retaining the same business, two-tab privacy/paused/history assertions and all production limits. No new MFA login, resets, delays, retry loops, SQL or application change. Fresh full acceptance remains required; a repeated failure must be diagnosed from actual request statuses/admission evidence before another correction.
+
 # Private lead location editor and original-save recovery
 
 ## Current browser fixture isolation
