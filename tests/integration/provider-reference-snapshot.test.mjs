@@ -68,13 +68,13 @@ test('live added source columns and tables fail coverage until reviewed without 
   const columns=await exportColumns();assert(columns.some(r=>r.table==='crest.synthetic_export_review'));
   assert.throws(()=>verifyExportCoverage(m,columns,receipt.history.length),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
  }finally{await client.query('ROLLBACK');}
- assert.equal(verifyExportCoverage(m,await exportColumns(),receipt.history.length).tables,25);
+ assert.equal(verifyExportCoverage(m,await exportColumns(),receipt.history.length).tables,26);
 });
 
 test('schema26 upgrade preserves all prior source bytes history and original six-ledger routines',async()=>{
  assert.equal(prior.history.length,26);assert.equal(referenceReceipt.history.length,27);assert.equal(configurationReceipt.history.length,28);assert.equal(identityReceipt.history.length,30);assert.deepEqual(identityReceipt.history.slice(0,29),historyReceipt.history);assert.equal(receipt.history.length,36);assert.deepEqual(receipt.history.slice(0,30),identityReceipt.history);assert.equal(historyReceipt.history.length,29);assert.deepEqual(receipt.history.slice(0,29),historyReceipt.history);assert.deepEqual(receipt.history.slice(0,28),configurationReceipt.history);assert.deepEqual(receipt.history.slice(0,27),referenceReceipt.history);assert.deepEqual(receipt.history.slice(0,26),prior.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);assert.deepEqual(await sourceHashes(),retained);assert.deepEqual(await originals(),oldFunctions);
 });
-test('schema25 upgrade preserves its prefix through26,27,28,29,30,31,32,33,34 and35',async()=>{
+test('schema25 upgrade preserves its prefix through26,27,28,29,30,31,32,33,34,35 and36',async()=>{
  const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);const p=await sandbox.apply(t,await sandbox.prefix(25)),r=await sandbox.apply(t);assert.equal(r.history.length,36);assert.deepEqual(r.history.slice(0,25),p.history);
 });
 test('reference context reports all three exact source counts in an explicit separate scope',async()=>{
