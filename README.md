@@ -2,7 +2,9 @@
 
 Crest Detailing's internal business operating system.
 
-**Status (2026-10-23): Public-source foundation; private owner-only application and business data. Phases 2-3 security and recovery foundations are underway. Read [the continuation checkpoint](planning/WORKING_STATE.md) and [current implementation plan](planning/PRE_IMPLEMENTATION.md), then verify live Git/PR/CI evidence. No CRM/financial functionality, hosted provider provisioning, real data, spending or production activation.**
+**Status (2026-10-24): Public-source foundation; private owner-only application and business data. Security/recovery foundations and the first synthetic customer backend are underway. Read [the continuation checkpoint](planning/WORKING_STATE.md) and [current implementation plan](planning/PRE_IMPLEMENTATION.md), then verify live Git/PR/CI evidence. No usable CRM screens, financial functionality, hosted provider provisioning, real data, spending or production activation.**
+
+The [customer directory core](planning/PHASE_4_CUSTOMER_DIRECTORY.md) adds genuine customer save/search/history, optimistic conflicts and same-snapshot CSV formatting. This is a backend slice pending native database/recovery proof; no customer route, form or real-data activation is implemented. ADR41/ROADMAP1.6 permit synthetic construction overlap while retaining every applicable release gate.
 
 The [private object storage boundary](planning/PHASE_3_PRIVATE_OBJECTS.md) adds scoped staging PUTs, bounded checksummed intake and conditional immutable original candidates. Format validation, typed attachment publication and authorized reads remain unfinished.
 
@@ -32,7 +34,7 @@ The [provider-reference snapshot readers](planning/PHASE_2_PROVIDER_REFERENCE_SN
 
 The [combined provider evidence collector and verifier](planning/PHASE_2_PROVIDER_RECOVERY_COLLECTION.md) keep all nine groups in one bounded snapshot and check original registration/revocation links offline, preserving exact versions and historical unknowns. Complete security coverage, private custody and independent recovery remain gated.
 
-The [security export coverage gate](planning/PHASE_2_SECURITY_EXPORT_COVERAGE.md) checks all22 Crest source tables/265 columns against the actual applied schema, with explicit credential exclusions. Nine existing evidence groups remain partial coverage; complete private export and independent restore remain gated.
+The [security export coverage gate](planning/PHASE_2_SECURITY_EXPORT_COVERAGE.md) checks all23 Crest source tables/286 columns against the actual applied schema, with explicit credential exclusions. Nine existing evidence groups remain partial coverage; complete private export and independent restore remain gated.
 
 The [business configuration snapshot readers](planning/PHASE_2_BUSINESS_CONFIGURATION_EXPORT.md) add isolated business-scoped extraction of all39 current root/membership/recovery columns under ADR37. Inactive/paused history is retained; actual owner-authorized full exports, identity/audit closure and encrypted recovery remain gated.
 

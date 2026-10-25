@@ -55,3 +55,13 @@ Owner continuation of existing export/recovery work. ADR40 adds a separate close
 ARCHITECTURE_DECISIONS.md: prior amended SHA256 6cfa0adf14319e7e900fb7986a48ee76cf9b1479500df70e08e1be2e7b786622, 36739 bytes at PR54/main63b2d98f6163e015d8aff4605c20ac04f7f0391c; now version1.11, SHA256 3065eda1d9f1f67fbdb0d2f0faabbc29ee2b69035d98c72a46e5ec3bd84bdd35, 41159 bytes. Original baseline hash/length retained.
 
 PUBLICATION.md: prior amended SHA256 7a1ee8028deee681206a33a070fba12b938142ae44f3810e46967020179879b5, 5853 bytes at PR54/main63b2d98f6163e015d8aff4605c20ac04f7f0391c; now version1.6, SHA256 91707d64d4479dccb7276c1fe0e56435569df4fc8ad54dbcceb50b5574980bee, 5854 bytes. Original baseline hash/length retained.
+
+## 2026-10-24 - Customer directory and synthetic construction overlap
+
+Under the owner's ongoing implementation/efficiency request, ADR41 and ROADMAP1.6 explicitly overlap synthetic Phases3/4 construction so genuine domain parents can support typed files. No V1 scope, acceptance, accounting, data/privacy/recovery or real-data/production gate is waived. Migration32 adds isolated customer command/integrity ownership and typed web/domain snapshot routines; existing owners and previous privileges remain intact with only the listed customer/helper grants added. All31 published SQL remain unchanged. Preserve immutable original baseline/manifest and all original amendment hashes. Same12 distinct amendment entries; nine other amended documents unchanged.
+
+ARCHITECTURE_DECISIONS.md: prior amended SHA256 3065eda1d9f1f67fbdb0d2f0faabbc29ee2b69035d98c72a46e5ec3bd84bdd35, 41159 bytes at PR66/main8dc8d16ef9868490197db412b88a46d6b8f9b3ff; now version1.12, SHA256 cb82df85e1503bbe44193c1fb6d5bdf5f51d4c8f09609b1e6e3434dd04ef65f6, 44926 bytes. Original baseline hash/length retained.
+
+ROADMAP.md: prior amended SHA256 9d71c24347c64fb3c6f46a355b82cfcd9954f4356e08af75fe648e7c7f99ecba, 10200 bytes at PR66/main8dc8d16ef9868490197db412b88a46d6b8f9b3ff; now version1.6, SHA256 48f297ee47a7e3c455308165d551b47af131a9056143715c7d190ed4e726c4d8, 11259 bytes. Original baseline hash/length retained.
+
+PUBLICATION.md: prior amended SHA256 91707d64d4479dccb7276c1fe0e56435569df4fc8ad54dbcceb50b5574980bee, 5854 bytes at PR66/main8dc8d16ef9868490197db412b88a46d6b8f9b3ff; now version1.7, SHA256 c9d6f8ae426b680ba03b686b559860e685834b551866f1423ea6b2131e2d8bd9, 5855 bytes. Original baseline hash/length retained.

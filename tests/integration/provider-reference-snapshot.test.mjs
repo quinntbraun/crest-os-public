@@ -54,7 +54,7 @@ async function exportColumns(){
 test('portable coverage inventory accounts for every actual Crest source column without claiming completed exports',async()=>{
  const m=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
  const report=verifyExportCoverage(m,await exportColumns(),receipt.history.length);
- assert.deepEqual(report,{assurance:'schema_inventory_only',tables:22,requiredColumns:255,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
+ assert.deepEqual(report,{assurance:'schema_inventory_only',tables:23,requiredColumns:276,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
 });
 test('live added source columns and tables fail coverage until reviewed without altering retained sources',async()=>{
  const m=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));

@@ -155,6 +155,11 @@
       "version": "20261024111000",
       "file": "20261024111000_session_metadata_export.sql",
       "sha256": "4b8f6bcecdc597b7d847885d333aae21a786b7a4bcb8dee9b40b36c8affc6d63"
+    },
+    {
+      "version": "20261025020000",
+      "file": "20261025020000_customer_directory.sql",
+      "sha256": "bc78d2ee002180a1d4b11409944e53f9e969320c3e8565708423be826389fc01"
     }
   ]
 }

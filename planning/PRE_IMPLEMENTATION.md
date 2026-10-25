@@ -1,13 +1,13 @@
 # Current implementation plan
 
-## Active change: retained-object recovery
+## Active change: customer directory backend
 
-PR65/protected main393206cce63e83fcf0c1951b15f31c6951d1bc96, treee22b47fde40992a52dfce6c206793c5f4f8d4589, passed candidate40145236144 and actual-main40146988314. Exact-source proof is in PR65. Read WORKING_STATE.md and PHASE_3_OBJECT_RECOVERY.md; canonical ROADMAP/TESTING/SECURITY/DATABASE remain authoritative.
+PR66/protected main8dc8d16ef9868490197db412b88a46d6b8f9b3ff, tree7c5daeb05ae0063ec1d69be7c8ebc27d44ba604e, passed candidate40150463624 and actual-main40152710258. Exact-source proof and finalized artifact bindings are in PR66. Retained object/database snapshot restoration is verified on isolated fixtures; independent cloud/vault/configuration/key/image recovery remains gated.
 
-Extend the encrypted database drill with snapshot-bound retained originals, previews and quarantine. Use standard age and immutable vault candidates; independently verify ciphertext/destination, preflight every object and fail before SQL on missing files. Exercise emergency-key/fresh-process recovery and faults. Actual DB inventory stays explicitly drill-only until genuine domain tables exist. No fake parent, generic cabinet, schema/canonical change, production authority or cloud setup.
+Read WORKING_STATE.md and PHASE_4_CUSTOMER_DIRECTORY.md. ADR41/ROADMAP1.6 explicitly overlap synthetic Phases3/4 construction so genuine CRM parents support later typed attachment links. This is sequencing within approved V1 scope, with all acceptance/security/export/recovery/accounting/real-data gates retained. Keep the existing stack and all checks.
 
-Keep all checks. Local Windows executes native age/object tests; PostgreSQL/Docker/Auth/build/browser proof comes from Linux CI. Record candidate and actual-main results in the feature PR. No automatic deletion/retry of uncertain candidates, unsupported complete-backup claim or status-only PR.
+Migration32 and the typed server adapter add customer create/edit/archive/reopen, scoped literal search/history, atomic operation/audit receipts and optimistic conflicts. Strict CSV formatting and same-snapshot readers retain all source columns; actual restore fixtures include customer history. No browser route, form, live setup or application activation is included. Verify native PG/upgrade/concurrency/recovery in Linux CI before calling this backend verified. No published SQL is edited; three current canonical amendments preserve immutable originals.
 
 ## Next
 
-Complete finite Phase3 durable typed attachment publication/fresh-authorized reads, file inventory/basic manifest and compatible independent recovery, then Phase4's customer/vehicle/address/ownership workflow and common-format retrieval. Real typed parent FKs are mandatory; do not invent a generic cabinet. Bundle coherent workflow changes; preserve all real-data, phone/provider, accounting and V1 Calendar gates. No speculative verifier refinement or paid setup.
+Implement customer HTTP/mobile forms with the existing fresh session, Origin/CSRF/admission boundaries and explicit trusted business configuration. Preserve stable pending operation/payload/epoch and status-before-identical-manual-retry after unknown outcomes. Then genuine vehicle/address relationships and durable typed attachment publication/authorized reads. Complete whole exports, compatible independent recovery, vault/heartbeat and incident authority before real-data approval. No speculative verifier refinement, paid setup or status-only PR.
