@@ -61,7 +61,7 @@ export function SignIn(){
       <p className="field-help">Optional. Stay signed in for up to 30 days, with a seven-day inactivity limit. Leave unchecked on a shared device.</p>
       <button type="submit">Sign in</button>
     </form>}
-    {view.phase==='signed'&&<><h2>Session verified</h2><p>Business settings are available when configured. Customer and financial tools are still in setup.</p><Link href="/settings">Business settings</Link><button type="button" onClick={()=>void run('logout')}>Sign out on this device</button></>}
+    {view.phase==='signed'&&<><h2>Session verified</h2><p>Business settings and customer tools require configured access. Setup and synthetic testing are still in progress.</p><Link href="/customers">Customers</Link><Link href="/settings">Business settings</Link><button type="button" onClick={()=>void run('logout')}>Sign out on this device</button></>}
     {!view.busy&&<button className="secondary" type="button" onClick={()=>void run('session')}>Check session</button>}
     <p className="field-help">Session checks do not extend your sign-in. Account setup and recovery are not available here yet.</p>
   </section>;

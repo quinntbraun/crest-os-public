@@ -29,7 +29,7 @@ export function BusinessSettingsScreen(){
       {view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('retry')}>Retry original change</button>}
     </>}
     {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current settings</button>}
-    <nav aria-label="Settings navigation"><Link href="/sign-in">Device sign-in and sign-out</Link><Link href="/">Crest OS home</Link></nav>
+    <nav aria-label="Settings navigation"><Link href="/customers">Customers</Link><Link href="/sign-in">Device sign-in and sign-out</Link><Link href="/">Crest OS home</Link></nav>
     <p className="field-help">Customer and financial tools are still in setup. This screen does not activate production access.</p>
   </section>;
 }
