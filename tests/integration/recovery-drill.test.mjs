@@ -93,7 +93,7 @@ before(async()=>{
     // Only grant statements over fixed public Crest names may cross diagnostics.
     // No function bodies, comments, source values or arbitrary SQL are emitted.
     const safe=line=>/^(?:GRANT|REVOKE|ALTER DEFAULT PRIVILEGES) [A-Za-z0-9_ .(),;]+$/.test(line??'')&&/\bcrest_[a-z_]+\b/.test(line)?line:'[schema statement withheld]';
-    throw new Error('SYNTHETIC_SCHEMA_REVIEW_REQUIRED:'+JSON.stringify({line:at+1,expected:left.slice(Math.max(0,at-1),at+4).map(safe),actual:right.slice(Math.max(0,at-1),at+4).map(safe)}));
+    throw new Error('SYNTHETIC_SCHEMA_REVIEW_REQUIRED:'+JSON.stringify({line:at+1,expected:left.slice(Math.max(0,at-1),at+4).map(safe),actual:right.slice(Math.max(0,at-1),at+4).map(safe)}),{cause:error});
   }
   assert.match(output.toString(),/^Synthetic isolated database restore and verification completed\s*$/);
   restored=await connect(restoredUrl);
