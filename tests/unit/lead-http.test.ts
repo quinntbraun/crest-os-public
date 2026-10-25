@@ -7,6 +7,7 @@ vi.mock('../../src/security/session-request-admission.ts',()=>({createSessionReq
 vi.mock('../../src/security/business-settings-context.ts',()=>({createBusinessSettingsContextReader:()=>calls.context}));
 vi.mock('../../src/customer/lead-directory.ts',async original=>({...await original<typeof import('../../src/customer/lead-directory.ts')>(),createLeadDirectory:()=>calls}));
 vi.mock('../../src/customer/lead-state-directory.ts',async original=>({...await original<typeof import('../../src/customer/lead-state-directory.ts')>(),createLeadStateDirectory:()=>({change:calls.change,lookup:calls.stateLookup,events:calls.events})}));
+vi.mock('../../src/customer/lead-vehicle-directory.ts',async original=>({...await original<typeof import('../../src/customer/lead-vehicle-directory.ts')>(),createLeadVehicleDirectory:()=>({})}));
 import {LeadStateDirectoryError} from '../../src/customer/lead-state-directory.ts';
 import {createLeadHttp} from '../../src/customer/lead-http.ts';
 import {LeadDirectoryError} from '../../src/customer/lead-directory.ts';
