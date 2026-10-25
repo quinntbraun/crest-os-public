@@ -1,10 +1,10 @@
 # Crest OS
 
-Current development: [private lead address API and browser client](planning/PHASE_4_LEAD_ADDRESS_HTTP.md), following [lead-owned source and encrypted recovery](planning/PHASE_4_LEAD_ADDRESSES.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence.
+Current development: [private lead location forms and original-save recovery](planning/PHASE_4_LEAD_ADDRESS_EDITOR.md), following the [registered lead address backend](planning/PHASE_4_LEAD_ADDRESSES.md) and [private HTTP/client](planning/PHASE_4_LEAD_ADDRESS_HTTP.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence.
 
 Crest Detailing's internal business operating system.
 
-**Status (2026-10-25): Public source; private owner-only application and business data. Synthetic customer/address/vehicle/ownership and lead/source/status screens are implemented. Lead vehicle forms are under current-source native acceptance; registered lead-owned address backend/CSV/recovery is under verification. Lead address screens and atomic conversion remain unfinished. Synthetic development only; no production activation, real data, spending or provider provisioning is approved.**
+**Status (2026-10-25): Public source; private owner-only application and business data. Synthetic customer/address/vehicle/ownership and lead/source/status screens are implemented. Lead vehicle and lead address forms are under current-source native acceptance. Atomic lead conversion remains unfinished. Synthetic development only; no production activation, real data, spending or provider provisioning is approved.**
 
 The [customer directory core](planning/PHASE_4_CUSTOMER_DIRECTORY.md), [private HTTP boundary](planning/PHASE_4_CUSTOMER_HTTP.md) and [customer editor](planning/PHASE_4_CUSTOMER_EDITOR.md) add save/search/history, optimistic conflicts, archive/reopen and explicit interrupted-save review. Customer forms at `/customers` require configured authenticated customer access; the default executable remains closed. Drafts stay in memory; only opaque pending references use per-tab storage. A lost draft with an absent receipt remains blocked for review, not a replacement save. Exact-source native browser/build/container proof and real-use recovery/portability gates remain. ADR41/ROADMAP1.6 permit synthetic construction overlap while retaining every applicable release gate.
 

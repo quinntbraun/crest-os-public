@@ -1,4 +1,5 @@
 'use client';
+import {createPendingLeadAddressStore} from '../../client/pending-lead-address-edit';
 import {Fragment,useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {createLeadVehicleEditorController,initialLeadVehicleEditorView,emptyLeadVehicleDraft} from '../../client/lead-vehicle-editor-controller';
@@ -23,7 +24,7 @@ export function LeadVehiclePanel({businessId,leadId,disabled,onLock}:{businessId
  const [view,setView]=useState(initialLeadVehicleEditorView),current=useRef<ReturnType<typeof createLeadVehicleEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null);
  useEffect(()=>{
   const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)};
-  const controller=createLeadVehicleEditorController({businessId,leadId,store:createPendingLeadVehicleStore(storage),intakeStore:createPendingLeadStore(storage),statusStore:createPendingLeadStateStore(storage),change:setView});current.current=controller;
+  const controller=createLeadVehicleEditorController({addressStore:createPendingLeadAddressStore(storage),businessId,leadId,store:createPendingLeadVehicleStore(storage),intakeStore:createPendingLeadStore(storage),statusStore:createPendingLeadStateStore(storage),change:setView});current.current=controller;
   const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
   return()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
@@ -38,7 +39,7 @@ export function LeadVehiclePanel({businessId,leadId,disabled,onLock}:{businessId
  const writeDisabled=disabled||view.busy||view.writesPaused,key=(view.selected?.id??'new')+':'+(view.selected?.version??'0');
  return <section aria-label="Lead vehicles" aria-busy={view.busy}><h2>Reported vehicles</h2>
   <p ref={status} tabIndex={-1} role="status" aria-label="Lead vehicle editor status" aria-live="polite" aria-atomic="true">{view.message}</p>
-  {disabled&&<p className="field-help">Save or reload the intake or status draft before editing vehicle reports.</p>}
+  {disabled&&<p className="field-help">Save or reload the intake, status or address draft before editing vehicle reports.</p>}
   {['idle','review','blocked','unavailable'].includes(view.phase)&&<button type="button" className="secondary" disabled={disabled||view.busy} onClick={()=>void action('load')}>Load lead vehicles</button>}
   {view.phase==='ready'&&<>
    {view.writesPaused&&<p className="notice">Vehicle report changes are paused. Retained history remains available.</p>}

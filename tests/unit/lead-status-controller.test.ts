@@ -1,3 +1,4 @@
+import {createPendingLeadAddressStore} from '../../src/client/pending-lead-address-edit';
 import {createPendingLeadVehicleStore} from '../../src/client/pending-lead-vehicle-edit';
 import {pendingLeadVehicle} from '../../src/client/pending-lead-vehicle-edit';
 import {randomBytes,randomUUID} from 'node:crypto';
@@ -19,7 +20,7 @@ const reference=(patch={})=>pendingLeadState({schemaVersion:1,businessId,binding
 const committed=(c=command())=>({state:'committed' as const,operationId:c.operationId,recoveryEpoch:c.recoveryEpoch,receipt:{schemaVersion:1 as const,businessId,leadId:c.leadId,leadVersion:(BigInt(c.expectedVersion)+1n).toString(),leadEventId:randomUUID(),leadAuditEventId:randomUUID(),eventAuditEventId:randomUUID()}});
 let row:ReturnType<typeof leadFixture>,memory:Map<string,string>,storage:{getItem:Mock<(k:string)=>string|null>;setItem:Mock<(k:string,v:string)=>void>;removeItem:Mock<(k:string)=>void>},store:ReturnType<typeof createPendingLeadStateStore>,intakeStore:ReturnType<typeof createPendingLeadStore>,api:{[K in keyof typeof leadStates]:Mock<(typeof leadStates)[K]>},leadApi:{[K in 'context'|'history']:Mock<(typeof leads)[K]>},session:Mock<typeof authentication.session>,id:Mock<()=>string>,change:Mock;
 const notified=vi.fn();
-const controller=()=>createLeadStatusController({vehicleStore:createPendingLeadVehicleStore(storage),businessId,leadId,store,intakeStore,api,leadApi,session,id,change,committed:notified});
+const controller=()=>createLeadStatusController({addressStore:createPendingLeadAddressStore(storage),vehicleStore:createPendingLeadVehicleStore(storage),businessId,leadId,store,intakeStore,api,leadApi,session,id,change,committed:notified});
 it('a vehicle reference appearing during status authority blocks dispatch; confirmed original status lookup can still release its own reference',async()=>{
  const vehicle=createPendingLeadVehicleStore(storage),value=pendingLeadVehicle({schemaVersion:1,businessId,binding,reference:{operationId:randomUUID(),leadId,leadVehicleId:randomUUID(),expectedVersion:'0',recoveryEpoch:epoch}}),c=await prepared();
  leadApi.context.mockImplementation(async()=>{vehicle.write(value);return context();});await c.save();expect(api.change).not.toHaveBeenCalled();expect(id).not.toHaveBeenCalled();expect(c.view().phase).toBe('blocked');leadApi.context.mockResolvedValue(context());store.write(reference());api.lookup.mockResolvedValue(committed());await c.load();await c.check();expect(store.read()).toBeNull();expect(vehicle.read()).toEqual(value);
@@ -62,4 +63,14 @@ it('copies source version and original state/reason before fresh verification ca
 
 it('refreshes intake only after committed reference removal; a presentation callback failure cannot recreate uncertainty',async()=>{
  const c=await prepared();notified.mockImplementation(()=>{expect(store.read()).toBeNull();throw new Error('unavailable refresh');});await c.save();expect(notified).toHaveBeenCalledWith(leadId);expect(c.view()).toMatchObject({phase:'review',canSave:false,reference:''});expect(c.view().message).toContain('confirmed');expect(store.read()).toBeNull();
+});
+
+it('a retained or unreadable address reference blocks new work without replacing either slot',async()=>{
+ const addresses=createPendingLeadAddressStore(storage),value={schemaVersion:1 as const,businessId:businessId,binding,reference:{operationId:randomUUID(),leadId:leadId,leadAddressId:randomUUID(),expectedVersion:'0',recoveryEpoch:epoch}};addresses.write(value);const c=controller();await c.load();expect(c.view().canSave).toBe(false);await c.save();expect(api.change).not.toHaveBeenCalled();expect(id).not.toHaveBeenCalled();expect(addresses.read()).toEqual(value);expect(store.read()).toBeNull();addresses.clear(value);storage.getItem.mockImplementation(k=>k==='crest.lead-address.pending-reference.v1'?'{':memory.get(k)??null);await c.load();await c.save();expect(api.change).not.toHaveBeenCalled();expect(id).not.toHaveBeenCalled();
+});
+it('an address reference arriving during authority blocks dispatch before IDs; original committed lookup stays available',async()=>{
+ const c=await prepared(),addresses=createPendingLeadAddressStore(storage),value={schemaVersion:1 as const,businessId:businessId,binding,reference:{operationId:randomUUID(),leadId:leadId,leadAddressId:randomUUID(),expectedVersion:'0',recoveryEpoch:epoch}};leadApi.context.mockImplementation(async()=>{addresses.write(value);return context();});await c.save();expect(api.change).not.toHaveBeenCalled();expect(id).not.toHaveBeenCalled();expect(store.read()).toBeNull();leadApi.context.mockResolvedValue(context());store.write(reference());api.lookup.mockResolvedValue(committed());await c.load();await c.check();expect(store.read()).toBeNull();expect(addresses.read()).toEqual(value);expect(api.change).not.toHaveBeenCalled();
+});
+it('a new address reference blocks uncertain retry while retaining the original save reference',async()=>{
+ const c=await prepared();api.change.mockRejectedValue(new LeadStateClientError('unknown'));await c.save();const addresses=createPendingLeadAddressStore(storage),value={schemaVersion:1 as const,businessId:businessId,binding,reference:{operationId:randomUUID(),leadId:leadId,leadAddressId:randomUUID(),expectedVersion:'0',recoveryEpoch:epoch}};addresses.write(value);await c.check();expect(c.view().canRetry).toBe(false);await c.retry();expect(api.change).toHaveBeenCalledTimes(1);expect(store.read()).toEqual(reference());expect(addresses.read()).toEqual(value);
 });
