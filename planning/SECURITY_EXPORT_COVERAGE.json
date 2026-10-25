@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 33,
+  "migrationCount": 34,
   "tables": [
     {
       "table": "crest.businesses",
@@ -493,6 +493,40 @@
         "outreach_opt_out",
         "notes",
         "customer_since",
+        "archived_at",
+        "archived_reason",
+        "version",
+        "created_at",
+        "updated_at",
+        "created_by",
+        "updated_by",
+        "origin",
+        "operation_id",
+        "import_row_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.addresses",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "customer_id",
+        "line1",
+        "line2",
+        "city",
+        "region",
+        "postal_code",
+        "country",
+        "exact_location_text",
+        "instructions",
+        "geocode_source",
+        "geocode_accuracy",
+        "latitude",
+        "longitude",
+        "verified_at",
         "archived_at",
         "archived_reason",
         "version",

@@ -22,3 +22,6 @@ export async function createCrestApplication(config:NodeConfiguration){
     return {server,close:async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await app.close();}};
   }catch{await app.close();throw new Error('APPLICATION_START_FAILED');}
 }
+export {createCustomerAddressDirectory} from '../customer/customer-address-directory.ts';
+
+export {createCustomerAddressHttp} from '../customer/customer-address-http.ts';

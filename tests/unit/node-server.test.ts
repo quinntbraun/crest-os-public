@@ -1,10 +1,11 @@
 import {request as httpRequest} from 'node:http';
 import {describe,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn()}));
+const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn()}));
 vi.mock('../../src/security/browser-session-flow.ts',()=>({createBrowserSessionFlow:()=>flow}));
 vi.mock('../../src/security/business-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/business-http.ts')>(),createBusinessHttp:()=>flow.business}));
 vi.mock('../../src/customer/customer-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-http.ts')>(),createCustomerHttp:()=>flow.customers}));
+vi.mock('../../src/customer/customer-address-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-address-http.ts')>(),createCustomerAddressHttp:()=>flow.addresses}));
 import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../../src/server/node-server.ts';
 import type {NodeConfiguration} from '../../src/server/node-server.ts';
 
@@ -21,15 +22,15 @@ describe('Node hosting boundary',()=>{
     const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw new Error();const local=`http://127.0.0.1:${address.port}`,pages=vi.fn(async()=>{});
     bindApplicationHandler(server,{origin:local,environment:'test',business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
     const previousBusiness=flow.business.mock.calls.length,previousCustomer=flow.customers.mock.calls.length;
-    try{for(const path of ['/api/business/customers','/api/business/customers/context','/api/%62usiness/%63ustomers/save']){const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(503);expect(await response.json()).toEqual({error:'CUSTOMER_REQUEST_FAILED'});expect(response.headers.get('cache-control')).toContain('no-store');}expect(flow.business.mock.calls.length).toBe(previousBusiness);expect(flow.customers.mock.calls.length).toBe(previousCustomer);expect(pages).not.toHaveBeenCalled();}
+    try{for(const path of ['/api/business/customers','/api/business/customers/context','/api/%62usiness/%63ustomers/save','/api/business/customers/addresses','/api/business/customers/addresses/context','/api/%62usiness/%63ustomers/%61ddresses/save']){const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(503);expect(await response.json()).toEqual({error:path.includes('addresses')||path.includes('%61ddresses')?'ADDRESS_REQUEST_FAILED':'CUSTOMER_REQUEST_FAILED'});expect(response.headers.get('cache-control')).toContain('no-store');}expect(flow.business.mock.calls.length).toBe(previousBusiness);expect(flow.customers.mock.calls.length).toBe(previousCustomer);expect(flow.addresses).not.toHaveBeenCalled();expect(pages).not.toHaveBeenCalled();}
     finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
   });
   it('customer pages have their own1MiB delivery bound while authentication/settings retain8KiB',async()=>{
     const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw new Error();const local=`http://127.0.0.1:${address.port}`,pages=vi.fn(async()=>{}),privateBody=JSON.stringify({synthetic:'é'.repeat(12000)});
-    flow.customers.mockImplementation(async request=>new Response(request.url.endsWith('/oversize')?'x'.repeat(1048577):privateBody,{headers:{'cache-control':'private, no-store'}}));flow.business.mockResolvedValue(new Response(privateBody));
+    flow.customers.mockImplementation(async request=>new Response(request.url.endsWith('/oversize')?'x'.repeat(1048577):privateBody,{headers:{'cache-control':'private, no-store'}}));flow.addresses.mockImplementation(async request=>new Response(request.url.endsWith('/oversize')?'x'.repeat(1048577):privateBody,{headers:{'cache-control':'private, no-store'}}));flow.business.mockResolvedValue(new Response(privateBody));
     bindApplicationHandler(server,{origin:local,environment:'test',customers:true,business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
-    try{const response=await fetch(local+'/api/business/customers/list',{method:'POST',body:'{}'});expect(response.status).toBe(200);expect(await response.text()).toBe(privateBody);expect(response.headers.get('cache-control')).toContain('no-store');await expect(fetch(local+'/api/business/customers/oversize',{method:'POST',body:'{}'})).rejects.toThrow();await expect(fetch(local+'/api/business/settings',{method:'POST',body:'{}'})).rejects.toThrow();expect(pages).not.toHaveBeenCalled();}
-    finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));flow.customers.mockReset();flow.business.mockReset();}
+    try{const response=await fetch(local+'/api/business/customers/list',{method:'POST',body:'{}'});expect(response.status).toBe(200);expect(await response.text()).toBe(privateBody);expect(response.headers.get('cache-control')).toContain('no-store');await expect(fetch(local+'/api/business/customers/oversize',{method:'POST',body:'{}'})).rejects.toThrow();expect(await(await fetch(local+'/api/business/customers/addresses/list',{method:'POST',body:'{}'})).text()).toBe(privateBody);await expect(fetch(local+'/api/business/customers/addresses/oversize',{method:'POST',body:'{}'})).rejects.toThrow();await expect(fetch(local+'/api/business/settings',{method:'POST',body:'{}'})).rejects.toThrow();expect(pages).not.toHaveBeenCalled();}
+    finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));flow.customers.mockReset();flow.addresses.mockReset();flow.business.mockReset();}
   });
   it.each(['/api/auth/login','/api/auth','/api/%61uth/login','/%61pi/auth/login','/api%2fauth/login'])('reserves the authentication namespace including encoded aliases: %s',path=>{
     expect(requestTarget(path,origin).authentication).toBe(true);

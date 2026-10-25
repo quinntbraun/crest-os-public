@@ -19,7 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:sign-in-browser": "node --test --test-concurrency=1 tests/integration/sign-in-browser.test.mjs",
+    "test:sign-in-browser": "node --test --test-concurrency=1 tests/integration/sign-in-browser.test.mjs tests/integration/customer-address-browser.test.mjs",
     "test:tenant-read-db": "node --test --test-concurrency=1 tests/integration/tenant-read.test.mjs",
     "test:mutation-fence-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/mutation-fence.test.mjs",
     "test:operation-storage-db": "node --test --test-concurrency=1 tests/integration/operation-storage.test.mjs",
@@ -63,7 +63,8 @@
     "test:heic-sandbox": "node --test --test-concurrency=1 tests/integration/heic-sandbox.test.mjs",
     "test:file-intake": "node --conditions=react-server --test --test-concurrency=1 tests/integration/validated-file-intake.test.mjs",
     "test:object-recovery": "node --test --test-concurrency=1 tests/integration/object-recovery.test.mjs",
-    "test:customers-db": "node --test --test-concurrency=1 tests/integration/customer-directory.test.mjs"
+    "test:customers-db": "node --test --test-concurrency=1 tests/integration/customer-directory.test.mjs",
+    "test:addresses-db": "node --test --test-concurrency=1 tests/integration/customer-address-directory.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1156.0",

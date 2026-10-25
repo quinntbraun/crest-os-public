@@ -40,7 +40,7 @@ before(async()=>{
   bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;a=await state();b=await state();beforeUpgrade=(await client.query('SELECT to_jsonb(b) AS value FROM crest.businesses b ORDER BY id')).rows;
   const guardTarget=await sandbox.database(),guardClient=await sandbox.connect(guardTarget);await sandbox.apply(guardTarget,await sandbox.prefix(0),true);await installProviderSchema(guardClient,guardTarget);await sandbox.apply(guardTarget,await sandbox.prefix(31));
   await client.query('CREATE ROLE crest_customer_owner LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS');
-  try{await assert.rejects(sandbox.apply(guardTarget),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);assert.equal((await guardClient.query("SELECT to_regclass('crest.customers') AS value")).rows[0].value,null);await assert.rejects(sandbox.apply(guardTarget),/MIGRATION_PENDING_REVIEW_REQUIRED/);guardRefused=true;}finally{await client.query('ALTER ROLE crest_customer_owner NOLOGIN');}
+  try{await assert.rejects(sandbox.apply(guardTarget,await sandbox.prefix(33)),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);assert.equal((await guardClient.query("SELECT to_regclass('crest.customers') AS value")).rows[0].value,null);await assert.rejects(sandbox.apply(guardTarget,await sandbox.prefix(33)),/MIGRATION_PENDING_REVIEW_REQUIRED/);guardRefused=true;}finally{await client.query('ALTER ROLE crest_customer_owner NOLOGIN');}
   // Keep the failed target's pending evidence. The positive upgrade uses the
   // original distinct database/ledger after explicit synthetic role repair.
   customerReceipt=await sandbox.apply(target,await sandbox.prefix(32));
@@ -50,11 +50,11 @@ before(async()=>{
   login=`crest_crm_probe_${randomBytes(8).toString('hex')}`;const password=randomBytes(32).toString('hex');await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;await sandbox.admin.query(`GRANT crest_web,crest_export TO ${login}`);
   const u=new URL(target);u.username=login;u.password=password;
   web=await sandbox.connect(u.toString());web2=await sandbox.connect(u.toString());exporter=await sandbox.connect(u.toString());for(const c of [web,web2])await c.query("SET ROLE crest_web; SET lock_timeout='3s'");await exporter.query('SET ROLE crest_export');
-  upgradeCustomer=request({body:body({displayName:'Synthetic schema32 customer',archived:true,archiveReason:'Retained\r\nreason',notes:'Unchanged\r\nnotes'})});await command(a,upgradeCustomer);upgradeEvidence=await evidence(a);receipt=await sandbox.apply(target);
+  upgradeCustomer=request({body:body({displayName:'Synthetic schema32 customer',archived:true,archiveReason:'Retained\r\nreason',notes:'Unchanged\r\nnotes'})});await command(a,upgradeCustomer);upgradeEvidence=await evidence(a);receipt=await sandbox.apply(target,await sandbox.prefix(33));
 },{timeout:180000});
 after(async()=>{await web?.end();await web2?.end();await exporter?.end();if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();});
 test('schema31 through32 and33 preserves original migration receipts, source audit and business rows',async()=>{
-  assert.equal(prior.history.length,31);assert.equal(customerReceipt.history.length,32);assert.deepEqual(customerReceipt.history.slice(0,31),prior.history);assert.equal(receipt.history.length,33);assert.deepEqual(receipt.history.slice(0,32),customerReceipt.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);assert.deepEqual((await client.query('SELECT to_jsonb(b) AS value FROM crest.businesses b ORDER BY id')).rows,beforeUpgrade);assert.deepEqual(await evidence(a),upgradeEvidence);
+  assert.equal(prior.history.length,31);assert.equal(customerReceipt.history.length,32);assert.deepEqual(customerReceipt.history.slice(0,31),prior.history);assert.equal(receipt.history.length,33);assert.deepEqual(receipt.history.slice(0,32),customerReceipt.history);assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(33))).history,receipt.history);assert.deepEqual((await client.query('SELECT to_jsonb(b) AS value FROM crest.businesses b ORDER BY id')).rows,beforeUpgrade);assert.deepEqual(await evidence(a),upgradeEvidence);
 });
 test('migration refuses an existing login role before creating customer storage',()=>{assert.equal(guardRefused,true);});
 
@@ -65,8 +65,8 @@ for(const profile of ['restored','unexpected'])test('check repair accepts only k
   for(const item of normalizedCustomerChecks)await c.query('ALTER TABLE crest.customers DROP CONSTRAINT '+item.name+', ADD CONSTRAINT '+item.name+' '+item.definition);
   if(profile==='unexpected')await c.query('ALTER TABLE crest.customers DROP CONSTRAINT customers_display_name_check, ADD CONSTRAINT customers_display_name_check CHECK(char_length(display_name)>0)');
   const definitions=async()=>(await c.query("SELECT conname,pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conrelid='crest.customers'::regclass ORDER BY conname")).rows,original=await definitions();
-  if(profile==='restored'){const result=await sandbox.apply(t);assert.equal(result.history.length,33);assert.deepEqual(result.history.slice(0,32),before.history);assert.deepEqual(await definitions(),original);}
-  else{await assert.rejects(sandbox.apply(t),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);assert.deepEqual(await definitions(),original);await assert.rejects(sandbox.apply(t),/MIGRATION_PENDING_REVIEW_REQUIRED/);}
+  if(profile==='restored'){const result=await sandbox.apply(t,await sandbox.prefix(33));assert.equal(result.history.length,33);assert.deepEqual(result.history.slice(0,32),before.history);assert.deepEqual(await definitions(),original);}
+  else{await assert.rejects(sandbox.apply(t,await sandbox.prefix(33)),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);assert.deepEqual(await definitions(),original);await assert.rejects(sandbox.apply(t,await sandbox.prefix(33)),/MIGRATION_PENDING_REVIEW_REQUIRED/);}
 });
 
 test('customer and integrity owners are closed; web has only typed commands, never raw customer/secret access',async()=>{
