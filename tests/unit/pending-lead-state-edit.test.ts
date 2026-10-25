@@ -1,0 +1,19 @@
+import {randomBytes,randomUUID} from 'node:crypto';
+import {it,expect,vi} from 'vitest';
+import {createPendingLeadStateStore,pendingLeadState,pendingLeadStateKey,PendingLeadStateError} from '../../src/client/pending-lead-state-edit';
+
+const record=()=>({schemaVersion:1,businessId:randomUUID(),binding:randomBytes(32).toString('base64url'),reference:{operationId:randomUUID(),leadId:randomUUID(),expectedVersion:'9007199254740993',recoveryEpoch:randomUUID()}});
+function fixture(){const memory=new Map<string,string>(),storage={getItem:vi.fn((k:string)=>memory.get(k)??null),setItem:vi.fn((k:string,v:string)=>{memory.set(k,v);}),removeItem:vi.fn((k:string)=>{memory.delete(k);})};return {memory,storage,store:createPendingLeadStateStore(storage)};}
+it('copies and freezes only the bounded original reference, preserving exact versions',()=>{const raw=record(),r=pendingLeadState(raw);raw.reference.expectedVersion='2';expect(r.reference.expectedVersion).toBe('9007199254740993');expect(Object.isFrozen(r)).toBe(true);expect(Object.isFrozen(r.reference)).toBe(true);});
+it('never overwrites an unresolved reference and clears only the exact record',()=>{const {store}=fixture(),a=pendingLeadState(record()),b=pendingLeadState(record());expect(store.read()).toBeNull();store.write(a);expect(()=>store.write(b)).toThrow(PendingLeadStateError);expect(()=>store.clear(b)).toThrow(PendingLeadStateError);expect(store.read()).toEqual(a);store.require(a);store.clear(a);expect(store.read()).toBeNull();});
+it.each(['draft','csrfToken','payloadHash','expiresAt'])('rejects extra %s fields instead of persisting lead data or authority',key=>{expect(()=>pendingLeadState({...record(),[key]:'synthetic'})).toThrow(PendingLeadStateError);});
+it.each(['0','1e3','01','-1','9223372036854775808',1])('rejects malformed original version %s',expectedVersion=>{const value=record();expect(()=>pendingLeadState({...value,reference:{...value.reference,expectedVersion}})).toThrow(PendingLeadStateError);});
+it.each(['{','null',' '.repeat(1025)])('blocks malformed/oversized storage without clearing it',raw=>{const {store,memory}=fixture();memory.set(pendingLeadStateKey,raw);expect(()=>store.read()).toThrow(PendingLeadStateError);expect(memory.get(pendingLeadStateKey)).toBe(raw);});
+it('verifies a write and a removal rather than assuming storage success',()=>{const {store,storage,memory}=fixture(),value=pendingLeadState(record());storage.setItem.mockImplementation(()=>{});expect(()=>store.write(value)).toThrow(PendingLeadStateError);storage.setItem.mockImplementation((k,v)=>{memory.set(k,v);});store.write(value);storage.removeItem.mockImplementation(()=>{});expect(()=>store.clear(value)).toThrow(PendingLeadStateError);expect(store.read()).toEqual(value);});
+it('wraps access/quota errors without including browser or private error details',()=>{const {store,storage}=fixture();storage.getItem.mockImplementation(()=>{throw new Error('private browser details');});expect(()=>store.read()).toThrow('LEAD_STATE_REFERENCE_STORAGE_FAILED');});
+
+it('uses a separate opaque slot from intake and never persists status or reason',()=>{
+ const {store,memory}=fixture();memory.set('crest.lead.pending-reference.v1','retained intake reference');const value=pendingLeadState(record());store.write(value);expect(memory.get('crest.lead.pending-reference.v1')).toBe('retained intake reference');
+ expect([...memory.keys()]).toContain(pendingLeadStateKey);expect(Object.keys(JSON.parse(memory.get(pendingLeadStateKey)!))).toEqual(['schemaVersion','businessId','binding','reference']);store.clear(value);expect(memory.get('crest.lead.pending-reference.v1')).toBe('retained intake reference');
+ for(const extra of [{reason:'private'},{fromState:'lost'},{toState:'follow_up'}])expect(()=>pendingLeadState({...record(),...extra})).toThrow(PendingLeadStateError);
+});

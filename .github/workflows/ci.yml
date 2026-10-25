@@ -19,7 +19,7 @@ jobs:
   database_foundation:
     name: Database foundation
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 25
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"
@@ -74,6 +74,7 @@ jobs:
           npm run test:vehicles-db
           npm run test:associations-db
           npm run test:leads-db
+          npm run test:lead-state-db
       - name: Install pinned recovery tooling
         run: node scripts/install-recovery-tools.mjs
       - name: Encrypted isolated database recovery drill
@@ -177,7 +178,7 @@ jobs:
     # a skipped required job as success. The guard rejects incomplete results.
     if: ${{ always() }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"

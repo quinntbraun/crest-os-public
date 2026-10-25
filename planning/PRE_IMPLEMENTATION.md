@@ -1,3 +1,9 @@
+## Active slice: canonical lead status history and typed backend
+
+Read PHASE_4_LEAD_LIFECYCLE.md. The exactly tested forward SQL is adopted as migration38 (SHA256026b02ca64ccd410161ab2ec187a6e3e8da0774f024b675142027f5463a1021a); all37 prior SQL/checksums remain unchanged. Canonical coverage is29tables/413columns,403required plus10credential exclusions. Ordinary recovery retains all29 tested cases; proposal-only helpers/workflow are removed. Fixed typed change/lookup/event readers and status-aware intake history are implemented; private status HTTP/client are implemented under acceptance; mobile status controls, explicit original-intent recovery and mutual intake/status guards are implemented under acceptance. Full new-source standard acceptance is required before merge/readiness claims.
+
+Protected intake forms main93c1687 passed separate actual-main run40197402161/attempt2 with all four trusted checks/logs/artifacts,3,306units/93files,851DB/Auth,22shell,94HTTPS leaves/108entries and build/container. Corrective CI PR79 remains separately under verification. Older sections below are historical checkpoints. No spending/signup, production activation or real records.
+
 # Current implementation plan
 
 ## Active consumer: lead/source intake forms

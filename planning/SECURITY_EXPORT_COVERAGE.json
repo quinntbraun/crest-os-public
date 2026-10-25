@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 37,
+  "migrationCount": 38,
   "tables": [
     {
       "table": "crest.businesses",
@@ -644,6 +644,32 @@
         "follow_up_at",
         "lost_reason",
         "notes",
+        "version",
+        "created_at",
+        "updated_at",
+        "created_by",
+        "updated_by",
+        "origin",
+        "operation_id",
+        "import_row_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.lead_events",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "lead_id",
+        "lead_version",
+        "from_state",
+        "to_state",
+        "reason",
+        "effective_at",
+        "quote_send_id",
+        "acceptance_id",
         "version",
         "created_at",
         "updated_at",

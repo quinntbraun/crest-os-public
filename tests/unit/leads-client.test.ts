@@ -58,3 +58,11 @@ it('complete history validates fields independently of JSON property order',asyn
  fetcher.mockResolvedValue(response({schemaVersion:1,businessId:leadBusiness,lead:current,history:[event(first,null,'create'),event(current,first,'edit')],hasMore:false}));
  expect((await leads.history(leadBusiness,{leadId:current.id,afterVersion:'0',pageSize:20},proof(),signal())).state).toBe('found');
 });
+
+it('accepts and retains mixed status/intake/reopen history through the browser transport',async()=>{
+ const first=leadFixture(),lost=leadFixture({version:'2',state:'lost',lost_reason:'Retained original reason',operation_id:randomUUID()}),edited={...lost,version:'3',notes:'Intake while lost',operation_id:randomUUID()},reopened={...edited,version:'4',state:'follow_up' as const,lost_reason:null,operation_id:randomUUID()};
+ const event=(after:typeof first,before:typeof first|null,action:string)=>({version:after.version,eventId:randomUUID(),actorId:after.updated_by,operationId:after.operation_id,at:after.updated_at,action,before,after});
+ fetcher.mockResolvedValue(response({schemaVersion:1,businessId:leadBusiness,lead:reopened,history:[event(first,null,'create'),event(lost,first,'state_change'),event(edited,lost,'edit'),event(reopened,edited,'state_change')],hasMore:false}));
+ const result=await leads.history(leadBusiness,{leadId:first.id,afterVersion:'0',pageSize:20},proof(),signal());
+ expect(result).toMatchObject({state:'found',lead:reopened,history:[{action:'create'},{action:'state_change'},{action:'edit'},{action:'state_change'}]});
+});

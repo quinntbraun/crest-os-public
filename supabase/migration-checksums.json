@@ -185,6 +185,11 @@
       "version": "20261025100000",
       "file": "20261025100000_lead_intake.sql",
       "sha256": "365d261422a647e6b39ce21b0fc3ae1f22ea54f58e9892e5aa0a0a79c5a85f0c"
+    },
+    {
+      "version": "20261025120000",
+      "file": "20261025120000_lead_state_events.sql",
+      "sha256": "026b02ca64ccd410161ab2ec187a6e3e8da0774f024b675142027f5463a1021a"
     }
   ]
 }

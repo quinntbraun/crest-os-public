@@ -1,7 +1,8 @@
 import type {Proof} from './authentication';
 import {exactCustomerObject as exact,customerUuid as uuid,customerVersion as version,customerInstant,requireCustomer as check} from '../customer/customer-contract';
-import {parseLead,leadSourceColumns,leadColumns} from '../customer/lead-contract';
+import {parseLead} from '../customer/lead-contract';
 import {parseLeadDraft} from '../customer/lead-contract';
+import {sameLead,validateLeadHistoryChange} from '../customer/lead-history-contract';
 import type {LeadDraft} from '../customer/lead-contract';
 export type LeadReference=Readonly<{operationId:string;leadId:string;expectedVersion:string;recoveryEpoch:string}>;
 export type LeadSave=LeadReference&Readonly<{schemaVersion:1;draft:LeadDraft}>;
@@ -65,15 +66,14 @@ export const leads=Object.freeze({
     try{check(uuid(businessId)&&exact(input,['leadId','afterVersion','pageSize'])&&uuid(input.leadId)&&version(input.afterVersion,true)&&Number.isSafeInteger(input.pageSize)&&input.pageSize>=1&&input.pageSize<=20);const pinned=Object.freeze({...input}),r=await post('history',pinned,proof,signal),v=r.value;check(r.status===200);if(exact(v,['state'])&&v.state==='absent')return Object.freeze({state:'absent' as const});
       check(exact(v,['schemaVersion','businessId','lead','history','hasMore'])&&v.schemaVersion===1&&v.businessId===businessId&&Array.isArray(v.history)&&v.history.length<=pinned.pageSize&&typeof v.hasMore==='boolean');const lead=parseLead(v.lead,businessId);check(lead.id===pinned.leadId);let previous=BigInt(pinned.afterVersion);
       let last:ReturnType<typeof parseLead>|null=null;
-      const same=(a:ReturnType<typeof parseLead>,b:ReturnType<typeof parseLead>)=>leadColumns.every(k=>k==='source_snapshot'?(a.source_snapshot===null||b.source_snapshot===null?a.source_snapshot===b.source_snapshot:leadSourceColumns.every(c=>a.source_snapshot![c]===b.source_snapshot![c])):a[k]===b[k]);
       const history=Array.from(v.history,e=>{
         check(exact(e,['version','eventId','actorId','operationId','at','action','before','after'])&&version(e.version)&&uuid(e.eventId)&&uuid(e.actorId)&&uuid(e.operationId)&&customerInstant(e.at));
         const after=parseLead(e.after,businessId),before=e.before===null?null:parseLead(e.before,businessId);
-        check(after.id===lead.id&&after.version===e.version&&after.operation_id===e.operationId&&after.updated_by===e.actorId&&BigInt(e.version)===previous+1n&&BigInt(e.version)<=BigInt(lead.version)&&(before===null?e.version==='1'&&e.action==='create':before.id===lead.id&&BigInt(before.version)+1n===BigInt(e.version)&&e.action==='edit'));
-        check(last===null||before!==null&&same(last,before));last=after;previous=BigInt(e.version);return Object.freeze({...e,before,after});
+        check(after.id===lead.id&&after.version===e.version&&after.operation_id===e.operationId&&after.updated_by===e.actorId&&BigInt(e.version)===previous+1n&&BigInt(e.version)<=BigInt(lead.version)&&(before===null?e.version==='1'&&e.action==='create':before.id===lead.id&&BigInt(before.version)+1n===BigInt(e.version)));
+        validateLeadHistoryChange(e.action,before,after);check(last===null||before!==null&&sameLead(last,before));last=after;previous=BigInt(e.version);return Object.freeze({...e,before,after});
       });
       const remaining=BigInt(lead.version)>BigInt(pinned.afterVersion)?BigInt(lead.version)-BigInt(pinned.afterVersion):0n;
-      check(BigInt(history.length)===(remaining>BigInt(pinned.pageSize)?BigInt(pinned.pageSize):remaining)&&v.hasMore===(remaining>BigInt(pinned.pageSize))&&(last===null||previous!==BigInt(lead.version)||same(last,lead)));
+      check(BigInt(history.length)===(remaining>BigInt(pinned.pageSize)?BigInt(pinned.pageSize):remaining)&&v.hasMore===(remaining>BigInt(pinned.pageSize))&&(last===null||previous!==BigInt(lead.version)||sameLead(last,lead)));
       return Object.freeze({state:'found' as const,lead,history:Object.freeze(history),hasMore:v.hasMore});
     }catch(e){throw e instanceof LeadClientError?e:new LeadClientError('unavailable');}
   }

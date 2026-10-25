@@ -1,4 +1,16 @@
+## Active slice: canonical lead status history and typed backend
+
+Read PHASE_4_LEAD_LIFECYCLE.md. The exactly tested forward SQL is adopted as migration38 (SHA256026b02ca64ccd410161ab2ec187a6e3e8da0774f024b675142027f5463a1021a); all37 prior SQL/checksums remain unchanged. Canonical coverage is29tables/413columns,403required plus10credential exclusions. Ordinary recovery retains all29 tested cases; proposal-only helpers/workflow are removed. Fixed typed change/lookup/event readers and status-aware intake history are implemented; private status HTTP/client are implemented under acceptance; mobile status controls, explicit original-intent recovery and mutual intake/status guards are implemented under acceptance. Full new-source standard acceptance is required before merge/readiness claims.
+
+Protected intake forms main93c1687 passed separate actual-main run40197402161/attempt2 with all four trusted checks/logs/artifacts,3,306units/93files,851DB/Auth,22shell,94HTTPS leaves/108entries and build/container. Corrective CI PR79 remains separately under verification. Older sections below are historical checkpoints. No spending/signup, production activation or real records.
+
 # Continuation checkpoint
+
+## Active construction: tested lead state/source/recovery proposal
+
+Read PHASE_4_LEAD_LIFECYCLE.md. Unregistered forward38 implements immutable18-column manual state events, complete paired audits/original receipts, fixed change/lookup, scoped history, repeatable-read source pages and reversible CSV. Exact sourced120426f/run40199878808 passes13 native status/source and29 encrypted recovery cases plus111 focused units; all3,417 local units/95files pass. Coverage is29tables/413columns (403required,10excluded) in the disposable proposal only. The next source cleans the historical SQL header before exact-byte adoption and requires its own fresh proof. All37 published SQL/registry/canonical/coverage/compatibility/lockfile bytes remain unchanged. Next adopt the exact tested SQL as38, update registered coverage/compatibility and all affected latest-schema fixtures, remove temporary proposal variants/workflow, add typed adapters/private consumers and require full current-source acceptance before merging. No commercial proof or production activation.
+
+Forms PR78 candidatebbd09d0/run40187448544 fully passes all four trusted checks/full logs/artifacts:3,306units,851DBAuth,22shell,94HTTPS leaves/108entries, Next/two HEIC builds/restricted container. Protected merge93c1687 retains its exact treea41848c and parents8363b474/1402d02. Parent API actual-main8363b474/run40187360010 is independently fully verified. PR78 actual-main run40197402161/attempt1 finished testing/container smoke but was cancelled finalizing an artifact at the25-minute job boundary; attempt2 is in progress and remains unverified. Foundation's timeout is35 minutes in this feature, with all checks and artifact requirements retained. Verify live source/attempt/logs/artifacts rather than substituting candidate evidence for actual main. No spending/signup/provisioning, production apply/grants/deployment/activation or real records. Older sections below are historical.
 
 ## Active consumer: lead/source intake forms
 
