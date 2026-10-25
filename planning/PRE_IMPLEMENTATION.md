@@ -1,3 +1,7 @@
+## Active consumer: private lead address transport
+
+Read PHASE_4_LEAD_ADDRESS_HTTP.md and live CI. HTTP/client and8 new genuine browser leaves are implemented locally over registered backende1a8bd4/40SQL. All3878units/116files plus lint/types/server bundle pass; exact native/combined source proof remains. Preserve published SQL40 and every current release gate; group this consumer with draft85 only after its database/recovery proof, then require protected84 integration/fresh main-based acceptance and separate main verification. No runtime activation or real data.
+
 ## Active construction: registered lead-owned address backend
 
 Read PHASE_4_LEAD_ADDRESSES.md/live CI. Proposalbe1c327/run40221538958 passed12 native address and all366 database cases; exact body adopted as40 with only first-comment normalization. All39 published migrations stay unchanged. Registered inventory31tables/456columns,446required+10excluded; compatibility max40/min0/blocked. Twelve native and37 encrypted recovery cases require fresh complete canonical-source acceptance. Mobile84 build/browser remains pending; API separate-main40219337833 is fully verified. Preserve proposal/local/public checkpoints and never substitute proposal proof for release or actual-main proof. Synthetic only; default runtime closed.

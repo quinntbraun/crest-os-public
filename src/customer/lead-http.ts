@@ -16,11 +16,15 @@ import {parseLeadStateDraft} from './lead-state-contract.ts';
 import {createLeadStateDirectory,LeadStateDirectoryError} from './lead-state-directory.ts';
 import {createLeadVehicleDirectory,LeadVehicleDirectoryError} from './lead-vehicle-directory.ts';
 import {leadVehicleWireDraftKeys,parseLeadVehicleWireDraft} from './lead-vehicle-http-contract.ts';
+import {createLeadAddressDirectory,LeadAddressDirectoryError} from './lead-address-directory.ts';
+import {leadAddressWireDraftKeys,parseLeadAddressWireDraft} from './lead-address-http-contract.ts';
 
 type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
 const prefix='/api/business/leads/';
 const draftKeys=['label','customerId','sourceId','referralText','phone','email','requestedScope','availability','estimatedCents','followUpAt','notes'] as const;
 const fields={context:[],list:['search','afterId','includeLost','pageSize'],history:['leadId','afterVersion','pageSize'],operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','leadId','expectedVersion',...draftKeys],state:['schemaVersion','operationId','recoveryEpoch','leadId','expectedVersion','fromState','toState','reason'],'state-operation':['operationId'],'state-events':['leadId','afterVersion','pageSize'],
+  'address-save':['schemaVersion','operationId','recoveryEpoch','leadId','leadAddressId','expectedVersion',...leadAddressWireDraftKeys],
+  'address-operation':['operationId'],'address-list':['leadId','afterId','includeArchived','pageSize'],'address-history':['leadId','leadAddressId','afterVersion','pageSize'],
   'vehicle-save':['schemaVersion','operationId','recoveryEpoch','leadId','leadVehicleId','expectedVersion',...leadVehicleWireDraftKeys],
   'vehicle-operation':['operationId'],'vehicle-list':['leadId','afterId','includeArchived','pageSize'],'vehicle-history':['leadId','leadVehicleId','afterVersion','pageSize']} as const;
 type Route=keyof typeof fields;
@@ -32,9 +36,9 @@ export function leadFailureResponse(status:400|404|405|503=400):Response{
 export function createLeadHttp(config:Configuration,provider:Parameters<typeof createLeadDirectory>[1],tokens:Parameters<typeof createLeadDirectory>[2]){
   if(!leadUuid(config.businessId))throw new Error('LEAD_HTTP_CONFIGURATION_REQUIRED');
   const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
-  const directory=createLeadDirectory(config,provider,tokens),states=createLeadStateDirectory(config,provider,tokens),vehicles=createLeadVehicleDirectory(config,provider,tokens),context=createBusinessSettingsContextReader(config,provider,tokens);
+  const directory=createLeadDirectory(config,provider,tokens),states=createLeadStateDirectory(config,provider,tokens),vehicles=createLeadVehicleDirectory(config,provider,tokens),addresses=createLeadAddressDirectory(config,provider,tokens),context=createBusinessSettingsContextReader(config,provider,tokens);
   return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>):Promise<Response>=>{
-    let submitted=false,workStarted=false,stateSubmitted=false,vehicleSubmitted=false;
+    let submitted=false,workStarted=false,stateSubmitted=false,vehicleSubmitted=false,addressSubmitted=false;
     try{
       const signal=AbortSignal.any([request.signal,AbortSignal.timeout(40000)]);if(signal.aborted)throw new Error();resolve(request,peer);
       const url=new URL(request.url),route=url.pathname.slice(prefix.length) as Route;
@@ -42,7 +46,13 @@ export function createLeadHttp(config:Configuration,provider:Parameters<typeof c
       if(request.method!=='POST')return leadFailureResponse(405);
       protect.requireOrigin(request);const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;if(!cookie)throw new Error();
       const input=await readFlatJsonBody(bounded,fields[route],131072);
-      let draft:ReturnType<typeof parseLeadDraft>|undefined,stateDraft:ReturnType<typeof parseLeadStateDraft>|undefined,vehicleDraft:ReturnType<typeof parseLeadVehicleWireDraft>|undefined;
+      let draft:ReturnType<typeof parseLeadDraft>|undefined,stateDraft:ReturnType<typeof parseLeadStateDraft>|undefined,vehicleDraft:ReturnType<typeof parseLeadVehicleWireDraft>|undefined,addressDraft:ReturnType<typeof parseLeadAddressWireDraft>|undefined;
+      if(route==='address-save'){
+        requireLead(input.schemaVersion===1&&leadUuid(input.operationId)&&leadUuid(input.leadId)&&leadUuid(input.leadAddressId)&&leadUuid(input.recoveryEpoch)&&leadVersion(input.expectedVersion,true));
+        addressDraft=parseLeadAddressWireDraft(Object.fromEntries(leadAddressWireDraftKeys.map(k=>[k,input[k]])));
+      }
+      if(route==='address-list')requireLead(leadUuid(input.leadId)&&(input.afterId===null||leadUuid(input.afterId))&&typeof input.includeArchived==='boolean'&&Number.isSafeInteger(input.pageSize)&&Number(input.pageSize)>=1&&Number(input.pageSize)<=50);
+      if(route==='address-history')requireLead(leadUuid(input.leadId)&&leadUuid(input.leadAddressId)&&leadVersion(input.afterVersion,true)&&Number.isSafeInteger(input.pageSize)&&Number(input.pageSize)>=1&&Number(input.pageSize)<=20);
       if(route==='vehicle-save'){
         requireLead(input.schemaVersion===1&&leadUuid(input.operationId)&&leadUuid(input.leadId)&&leadUuid(input.leadVehicleId)&&leadUuid(input.recoveryEpoch)&&leadVersion(input.expectedVersion,true));
         vehicleDraft=parseLeadVehicleWireDraft(Object.fromEntries(leadVehicleWireDraftKeys.map(k=>[k,input[k]])));
@@ -57,13 +67,32 @@ export function createLeadHttp(config:Configuration,provider:Parameters<typeof c
         requireLead(input.schemaVersion===1&&leadUuid(input.operationId)&&leadUuid(input.leadId)&&leadUuid(input.recoveryEpoch)&&leadVersion(input.expectedVersion,true));
         draft=parseLeadDraft(Object.fromEntries(draftKeys.map(k=>[k,input[k]])));
       }
-      if(route==='operation'||route==='state-operation'||route==='vehicle-operation')requireLead(leadUuid(input.operationId));
+      if(route==='operation'||route==='state-operation'||route==='vehicle-operation'||route==='address-operation')requireLead(leadUuid(input.operationId));
       if(route==='list')requireLead(typeof input.search==='string'&&[...input.search].length<=200&&(input.afterId===null||leadUuid(input.afterId))&&typeof input.includeLost==='boolean'&&Number.isSafeInteger(input.pageSize)&&Number(input.pageSize)>=1&&Number(input.pageSize)<=50);
       if(route==='history')requireLead(leadUuid(input.leadId)&&leadVersion(input.afterVersion,true)&&Number.isSafeInteger(input.pageSize)&&Number(input.pageSize)>=1&&Number(input.pageSize)<=20);
       if(route==='state-events')requireLead(leadUuid(input.leadId)&&leadVersion(input.afterVersion,true)&&Number.isSafeInteger(input.pageSize)&&Number(input.pageSize)>=1&&Number(input.pageSize)<=50);
       const sessionId=await csrf(bounded,cookie,signal);workStarted=true;
       if(!await admit(cookie,'ordinary',signal)){const response=privateJsonResponse({error:'LEAD_REQUEST_LIMITED'},429);response.headers.set('Retry-After','60');return response;}
       if(signal.aborted)throw new Error();let result:object;
+      if(route==='address-save'){
+        addressSubmitted=true;
+        const value=(await addresses.save(cookie,{schemaVersion:1,businessId,operationId:input.operationId as string,leadId:input.leadId as string,leadAddressId:input.leadAddressId as string,recoveryEpoch:input.recoveryEpoch as string,expectedVersion:input.expectedVersion as string,draft:addressDraft!},signal)).forServer();
+        if(signal.aborted)throw new Error();return privateJsonResponse(value,value.state==='conflict'?409:200);
+      }
+      if(route==='address-operation'){
+        result=(await addresses.lookup(cookie,{businessId,operationId:input.operationId as string},signal)).forServer();
+        if(signal.aborted)throw new Error();return privateJsonResponse(result);
+      }
+      if(route==='address-list'){
+        const value=(await addresses.list(cookie,{businessId,leadId:input.leadId as string,afterId:input.afterId as string|null,includeArchived:input.includeArchived as boolean,pageSize:input.pageSize as number},signal)).forServer();
+        result=value.state==='absent'?value:{schemaVersion:value.schemaVersion,businessId:value.businessId,leadId:value.leadId,leadVersion:value.leadVersion,leadAddresses:value.leadAddresses,hasMore:value.hasMore};
+        if(signal.aborted)throw new Error();return privateJsonResponse(result);
+      }
+      if(route==='address-history'){
+        const value=(await addresses.history(cookie,{businessId,leadId:input.leadId as string,leadAddressId:input.leadAddressId as string,afterVersion:input.afterVersion as string,pageSize:input.pageSize as number},signal)).forServer();
+        result=value.state==='absent'?value:{schemaVersion:value.schemaVersion,businessId:value.businessId,leadAddress:value.leadAddress,history:value.history,hasMore:value.hasMore};
+        if(signal.aborted)throw new Error();return privateJsonResponse(result);
+      }
       if(route==='vehicle-save'){
         vehicleSubmitted=true;
         const value=(await vehicles.save(cookie,{schemaVersion:1,businessId,operationId:input.operationId as string,leadId:input.leadId as string,leadVehicleId:input.leadVehicleId as string,recoveryEpoch:input.recoveryEpoch as string,expectedVersion:input.expectedVersion as string,draft:vehicleDraft!},signal)).forServer();
@@ -111,6 +140,14 @@ export function createLeadHttp(config:Configuration,provider:Parameters<typeof c
       else result=(await directory.list(cookie,{businessId,search:input.search as string,afterId:input.afterId as string|null,includeLost:input.includeLost as boolean,pageSize:input.pageSize as number},signal)).forServer();
       if(signal.aborted)throw new Error();return privateJsonResponse(result);
     }catch(error){
+      if(addressSubmitted){
+        if(error instanceof LeadAddressDirectoryError){
+          if(error.message==='LEAD_ADDRESS_NOT_SUBMITTED')return privateJsonResponse({error:error.message},503);
+          if(error.message==='LEAD_ADDRESS_DENIED')return privateJsonResponse({error:error.message},403);
+          if(error.message==='RECOVERY_REVIEW_REQUIRED')return privateJsonResponse({error:error.message},409);
+        }
+        return privateJsonResponse({error:'LEAD_ADDRESS_OUTCOME_UNKNOWN'},503);
+      }
       if(vehicleSubmitted){
         if(error instanceof LeadVehicleDirectoryError){
           if(error.message==='LEAD_VEHICLE_NOT_SUBMITTED')return privateJsonResponse({error:error.message},503);

@@ -37,7 +37,7 @@ describe('Node hosting boundary',()=>{
     const before=[flow.leads.mock.calls.length,flow.leadSources.mock.calls.length],businessBefore=flow.business.mock.calls.length;
     try{
       for(const [index,stem] of ['leads','lead-sources'].entries()){
-        const paths=['/api/business/'+stem,'/api/business/'+stem+'/context','/api/%62usiness/%6c'+stem.slice(1)+'/save',...(stem==='leads'?['/api/business/leads/vehicle-save','/api/%62usiness/leads/%76ehicle-operation']:[])];
+        const paths=['/api/business/'+stem,'/api/business/'+stem+'/context','/api/%62usiness/%6c'+stem.slice(1)+'/save',...(stem==='leads'?['/api/business/leads/vehicle-save','/api/%62usiness/leads/%76ehicle-operation','/api/business/leads/address-save','/api/%62usiness/leads/%61ddress-operation']:[])];
         for(const path of paths){
           const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(enabled?200:503);expect(await response.json()).toEqual(enabled?{synthetic:'lead'}:{error:stem==='leads'?'LEAD_REQUEST_FAILED':'LEAD_SOURCE_REQUEST_FAILED'});
         }

@@ -1,6 +1,6 @@
 # Crest OS
 
-Current development: [lead-owned address intake and source recovery](planning/PHASE_4_LEAD_ADDRESSES.md), following [mobile lead vehicle forms](planning/PHASE_4_LEAD_VEHICLE_EDITOR.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence.
+Current development: [private lead address API and browser client](planning/PHASE_4_LEAD_ADDRESS_HTTP.md), following [lead-owned source and encrypted recovery](planning/PHASE_4_LEAD_ADDRESSES.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence.
 
 Crest Detailing's internal business operating system.
 

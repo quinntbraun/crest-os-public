@@ -9,6 +9,7 @@ vi.mock('../../src/customer/lead-directory.ts',async original=>({...await origin
 vi.mock('../../src/customer/lead-state-directory.ts',async original=>({...await original<typeof import('../../src/customer/lead-state-directory.ts')>(),createLeadStateDirectory:()=>({change:calls.change,lookup:calls.stateLookup,events:calls.events})}));
 vi.mock('../../src/customer/lead-vehicle-directory.ts',async original=>({...await original<typeof import('../../src/customer/lead-vehicle-directory.ts')>(),createLeadVehicleDirectory:()=>({})}));
 import {LeadStateDirectoryError} from '../../src/customer/lead-state-directory.ts';
+vi.mock('../../src/customer/lead-address-directory.ts',()=>({createLeadAddressDirectory:()=>({}),LeadAddressDirectoryError:class extends Error{}}));
 import {createLeadHttp} from '../../src/customer/lead-http.ts';
 import {LeadDirectoryError} from '../../src/customer/lead-directory.ts';
 import {draftFromLead} from '../../src/customer/lead-contract.ts';
