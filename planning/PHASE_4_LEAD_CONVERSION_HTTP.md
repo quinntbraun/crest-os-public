@@ -22,7 +22,7 @@ The command boundary now recognizes only that exact code/message from the existi
 
 ## Verification and remaining work
 
-Local4185 unit cases in128 files pass, including105 new regression cases. Lint/types, canonical12 amendments,41 migration checks,297 locked dependencies and server bundle pass. A fixture-edit encoding mistake was corrected by restoring the two affected existing test files from their original Git UTF8 bytes and reapplying only the intended focused changes; full units then passed.
+Local4186 unit cases in128 files pass, including106 new regression cases. Lint/types, canonical12 amendments,41 migration checks,297 locked dependencies and server bundle pass. A fixture-edit encoding mistake was corrected by restoring the two affected existing test files from their original Git UTF8 bytes and reapplying only the intended focused changes; full units then passed.
 
 The mandatory native conversion suite adds a23rd case using a genuine restricted crest_web login and actual command-transaction/trigger/rollback, asserting unchanged sources and no losing operation. Its invocation uses the existing react-server condition for server-only modules. Every22 prior conversion/source-export/encrypted-recovery case remains mandatory. Expected database/Auth total922 (393 foundation,420 provider,109 genuine Auth), including four conversion-specific and37 ordinary encrypted-recovery cases.
 

@@ -89,8 +89,14 @@ export function createLeadHttp(config:Configuration,provider:Parameters<typeof c
         if(signal.aborted)throw new Error();return privateJsonResponse(value,value.state==='conflict'?409:200);
       }
       if(route==='conversion-operation')result=(await conversionDirectory!.lookup(cookie,{businessId,operationId:input.operationId as string},signal)).forServer();
-      else if(route==='conversion')result=(await conversionDirectory!.read(cookie,{businessId,leadId:input.leadId as string},signal)).forServer();
-      else if(route==='conversion-links')result=(await conversionDirectory!.links(cookie,{businessId,leadId:input.leadId as string,conversionId:input.conversionId as string,afterId:input.afterId as string|null,pageSize:input.pageSize as number},signal)).forServer();
+      else if(route==='conversion'){
+        const value=(await conversionDirectory!.read(cookie,{businessId,leadId:input.leadId as string},signal)).forServer();
+        result=value.state==='absent'?value:{schemaVersion:value.schemaVersion,businessId:value.businessId,conversion:value.conversion};
+      }
+      else if(route==='conversion-links'){
+        const value=(await conversionDirectory!.links(cookie,{businessId,leadId:input.leadId as string,conversionId:input.conversionId as string,afterId:input.afterId as string|null,pageSize:input.pageSize as number},signal)).forServer();
+        result=value.state==='absent'?value:{schemaVersion:value.schemaVersion,businessId:value.businessId,conversion:value.conversion,links:value.links,hasMore:value.hasMore};
+      }
       if(route==='conversion-operation'||route==='conversion'||route==='conversion-links'){if(signal.aborted)throw new Error();return privateJsonResponse(result!);}
       if(route==='address-save'){
         addressSubmitted=true;

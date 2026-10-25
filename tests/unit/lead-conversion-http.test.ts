@@ -13,7 +13,7 @@ vi.mock('../../src/customer/lead-conversion-directory.ts',async original=>({...a
 import {createLeadHttp} from '../../src/customer/lead-http';
 import {LeadConversionDirectoryError} from '../../src/customer/lead-conversion-directory';
 import {leadConversionToWire} from '../../src/customer/lead-conversion-command-contract';
-import {conversionRecordFixture,conversionBusiness as business} from '../support/lead-conversion-record-fixture';
+import {conversionRecordFixture,conversionLinkFixture,conversionBusiness as business} from '../support/lead-conversion-record-fixture';
 import {transportFixture} from '../support/transport';
 const origin='https://crest.example.com',opaque=randomBytes(32).toString('base64url'),cookie='__Host-crest_session='+opaque;
 const config={origin,businessId:business,environment:'production' as const,ingress:{kind:'direct' as const},connectionString:'mock'};
@@ -43,4 +43,10 @@ it('treats a raw post-dispatch exception as unknown and sends no replacement',as
 it('routes original receipt, retained source and manually paged links without reusing conversion authority',async()=>{
  const d=dispatch(),rows=[['conversion-operation',{operationId:parent().operation_id},calls.lookup],['conversion',{leadId:parent().lead_id},calls.read],['conversion-links',{leadId:parent().lead_id,conversionId:parent().id,afterId:null,pageSize:50},calls.links]] as const;
  for(const [route,body,fn]of rows){const r=await d(request(route,body),transportFixture());expect(r.status).toBe(200);expect(await r.json()).toEqual({state:'absent'});expect(fn.mock.calls[0]![1]).toEqual({...body,businessId:business});}expect(calls.convert).not.toHaveBeenCalled();expect(calls.admit).toHaveBeenCalledTimes(3);
+});
+it('projects found directory models into the exact source and mapping wire schemas',async()=>{
+ const source={schemaVersion:1,businessId:business,conversion:parent()},page={...source,links:[conversionLinkFixture(),conversionLinkFixture('address')],hasMore:false};
+ calls.read.mockResolvedValue(privateValue({state:'found',...source}));calls.links.mockResolvedValue(privateValue({state:'found',...page}));const d=dispatch();
+ expect(await (await d(request('conversion',{leadId:parent().lead_id}),transportFixture())).json()).toEqual(source);
+ expect(await (await d(request('conversion-links',{leadId:parent().lead_id,conversionId:parent().id,afterId:null,pageSize:50}),transportFixture())).json()).toEqual(page);
 });
