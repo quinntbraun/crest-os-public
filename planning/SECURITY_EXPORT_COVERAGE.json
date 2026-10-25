@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 35,
+  "migrationCount": 36,
   "tables": [
     {
       "table": "crest.businesses",
@@ -559,6 +559,34 @@
         "notes",
         "archived_at",
         "archived_reason",
+        "version",
+        "created_at",
+        "updated_at",
+        "created_by",
+        "updated_by",
+        "origin",
+        "operation_id",
+        "import_row_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.customer_vehicles",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "customer_id",
+        "vehicle_id",
+        "valid_from",
+        "valid_to",
+        "relationship",
+        "is_billing",
+        "evidence",
+        "close_reason",
+        "closed_at",
+        "closed_by",
         "version",
         "created_at",
         "updated_at",

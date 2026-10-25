@@ -11,7 +11,7 @@ import {objectDirectory,encryptor,decryptor} from '../support/object-recovery-dr
 
 let sandbox,source,sourceUrl,sourceWeb,cluster,restored,restoredUrl,point,keys,emergencyKey,directory,backup,owner,original,sourceLogin,restoredLogin,liveSource,sourceLoginOwned=false,restoredLoginOwned=false;
 let sourceObjects,vaultObjects,restoredObjects,objectInventory,postSnapshotObject;
-let snapshotCustomer,snapshotAddress,snapshotVehicle;
+let snapshotCustomer,snapshotAddress,snapshotVehicle,snapshotAssociation,nextAssociation;
 const objectSignal=()=>AbortSignal.timeout(30000);
 const objectPorts=destination=>({readVault:vaultObjects.read,unseal:decryptor(emergencyKey),putDestination:destination.put,readDestination:destination.read});
 const issuer='https://auth.example.com/auth/v1';
@@ -24,6 +24,8 @@ const addressSave=(f,id,version,location)=>sourceWeb.query('SELECT crest_command
 const vehicleSave=(f,id,version,label)=>sourceWeb.query('SELECT crest_commands.save_vehicle($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13) AS value',
  [f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+120000),f.business,f.epoch,randomUUID(),id,version,{label,year:-500,make:null,model:null,color:null,vin:' Raw-vin / é 001 ',plate:'00123',kind:'customer_vehicle',notes:'Synthetic retained vehicle',archived:false,archiveReason:null}]);
 const rename=(connection,f,r)=>connection.query(renameSql,args(f,r));
+const associationSave=(f,action)=>sourceWeb.query('SELECT crest_commands.change_vehicle_association($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12) AS value',
+ [f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+120000),f.business,f.epoch,randomUUID(),action==='open'?'0':'1',{action,associationId:snapshotAssociation,customerId:snapshotCustomer,vehicleId:snapshotVehicle,effectiveAt:action==='open'?'2026-10-01T00:00:00.000000Z':'2026-10-25T00:00:00.000001Z',relationship:action==='open'?'owner':'keeper',isBilling:true,evidence:'Synthetic retained association \u00e9 \u{1f600}',reason:action==='open'?null:'Synthetic transfer after snapshot',nextAssociationId:action==='open'?null:nextAssociation}]);
 const request=(version='2',name='Synthetic restored review')=>({operation:randomUUID(),version,name});
 const closed=work=>assert.rejects(work,/SYNTHETIC_RECOVERY_RESTORE_FAILED/);
 
@@ -76,11 +78,13 @@ before(async()=>{
   snapshotCustomer=randomUUID();assert.equal((await customerSave(owner,snapshotCustomer,'0','Synthetic customer before snapshot')).rows[0].value.state,'committed');
   snapshotAddress=randomUUID();assert.equal((await addressSave(owner,snapshotAddress,'0','Synthetic address before snapshot')).rows[0].value.state,'committed');
   snapshotVehicle=randomUUID();assert.equal((await vehicleSave(owner,snapshotVehicle,'0','Synthetic vehicle before snapshot')).rows[0].value.state,'committed');
+  snapshotAssociation=randomUUID();nextAssociation=randomUUID();assert.equal((await associationSave(owner,'open')).rows[0].value.state,'committed');
   backup=await backupDatabase(source,sourceUrl,point,keys.recipient,async()=>{
     assert.equal((await rename(sourceWeb,owner,request('2','Synthetic committed after snapshot'))).rows[0].value.state,'committed');
     assert.equal((await customerSave(owner,snapshotCustomer,'1','Synthetic customer after snapshot')).rows[0].value.state,'committed');
     assert.equal((await addressSave(owner,snapshotAddress,'1','Synthetic address after snapshot')).rows[0].value.state,'committed');
     assert.equal((await vehicleSave(owner,snapshotVehicle,'1','Synthetic vehicle after snapshot')).rows[0].value.state,'committed');
+    assert.equal((await associationSave(owner,'transfer')).rows[0].value.state,'committed');
     const key=`originals/${business}/${randomUUID()}`,bytes=Buffer.from('Committed after snapshot');postSnapshotObject=key;
     await sourceObjects.put(key,bytes,objectSignal());
     const later=await connect(sourceUrl);try{await later.query('INSERT INTO recovery_fixture.objects VALUES($1,$2,$3,$4,$5)',[key,bytes.length,hash(bytes),'original','Available']);}finally{await later.end();}
@@ -132,8 +136,8 @@ test('actual encrypted database recovery works in a fresh process and separate c
 test('one exported snapshot preserves prior operations and excludes concurrent committed changes',async()=>{
   assert.equal((await restored.query('SELECT legal_name FROM crest.businesses WHERE id=$1',[owner.business])).rows[0].legal_name,original.name);
   assert.equal((await source.query('SELECT legal_name FROM crest.businesses WHERE id=$1',[owner.business])).rows[0].legal_name,'Synthetic committed after snapshot');
-  assert.equal((await restored.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,4);
-  assert.equal((await source.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,8);
+  assert.equal((await restored.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,5);
+  assert.equal((await source.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,10);
 });
 test('actual customer contacts, raw notes and source audit recover at the exact snapshot version',async()=>{
   const customer=(await restored.query('SELECT crest_private.customer_projection(c) AS value FROM crest.customers c WHERE id=$1',[snapshotCustomer])).rows[0].value;
@@ -153,6 +157,13 @@ test('vehicle source, raw VIN/generated hint and audit restore at the same encry
  assert.equal((await source.query('SELECT label FROM crest.vehicles WHERE id=$1',[snapshotVehicle])).rows[0].label,'Synthetic vehicle after snapshot');const events=(await restored.query("SELECT delta FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='vehicles' AND entity_id=$2",[owner.business,snapshotVehicle])).rows;assert.equal(events.length,1);assert.deepEqual(events[0].delta.after,v);
 });
 
+test('dated association and UUID GiST exclusions recover at the earlier snapshot before the later atomic transfer',async()=>{
+ const a=(await restored.query('SELECT crest_private.association_projection(a) AS value FROM crest.customer_vehicles a WHERE id=$1',[snapshotAssociation])).rows[0].value;
+ assert.equal(a.customer_id,snapshotCustomer);assert.equal(a.vehicle_id,snapshotVehicle);assert.equal(a.version,'1');assert.equal(a.valid_to,null);assert.equal(a.relationship,'owner');assert.equal(a.is_billing,true);assert.equal(a.evidence,'Synthetic retained association é 😀');
+ assert.equal((await restored.query('SELECT count(*)::int AS n FROM crest.customer_vehicles WHERE business_id=$1',[owner.business])).rows[0].n,1);assert.equal((await source.query('SELECT count(*)::int AS n FROM crest.customer_vehicles WHERE business_id=$1',[owner.business])).rows[0].n,2);
+ const events=(await restored.query("SELECT delta FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='customer_vehicles' AND entity_id=$2",[owner.business,snapshotAssociation])).rows;assert.equal(events.length,1);assert.deepEqual(events[0].delta.after,a);
+ const constraints=(await restored.query("SELECT conname FROM pg_constraint WHERE conrelid='crest.customer_vehicles'::regclass AND contype='x' ORDER BY conname")).rows;assert.deepEqual(constraints.map(r=>r.conname),['association_billing_period','association_owner_period']);
+});
 test('same-snapshot retained files restore with Archived and quarantined evidence, excluding later commits',async()=>{
   assert.deepEqual((await restored.query('SELECT key,"byteSize",sha256,retention FROM recovery_fixture.objects ORDER BY key COLLATE "C"')).rows,objectInventory);
   assert.equal(objectInventory.length,3);assert.equal((await source.query('SELECT count(*)::int AS n FROM recovery_fixture.objects')).rows[0].n,4);

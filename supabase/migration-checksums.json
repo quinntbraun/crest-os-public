@@ -175,6 +175,11 @@
       "version": "20261025060000",
       "file": "20261025060000_vehicle_directory.sql",
       "sha256": "395ab79a844bf29db39689a6b186ce9bf2e8da455b30b283758e0c4ef705a626"
+    },
+    {
+      "version": "20261025080000",
+      "file": "20261025080000_vehicle_associations.sql",
+      "sha256": "d1277347d6a2b6771290aa7fda2a1eab277cc7cd1bff742231e130fc074900b3"
     }
   ]
 }

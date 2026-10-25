@@ -1,5 +1,13 @@
 # Continuation checkpoint
 
+## Active work: dated customer–vehicle associations
+
+Vehicle backend PR71, private HTTP PR72 and mobile editor PR73 are merged. Protected main is 7c2c0a83d2928c57dc4773b0c19c8eb95b16e41a (tree 856655e967fe58a15981832ef1713866f3e844e5). PR71's actual-main run 40169678422 and PR72's actual-main run 40172076361 passed. PR73 source 08ea716ce9f7e478ae3889ee0a89f7d8d8b646e3 passed all four trusted checks and full logs/artifacts in main-based candidate run 40172139505/attempt 1; the protected merge retains exactly that candidate tree and ordered parents c5f0890/08ea716. Separate PR73 actual-main acceptance remains pending. Older sections below retain historical evidence and do not establish current acceptance.
+
+Read PHASE_4_VEHICLE_ASSOCIATIONS.md. The association backend implements dated owner/keeper links, independent explicit billing selection, immutable audited close, atomic transfer, retained receipts, private typed readers and reversible source CSV. Proposal run 40173321294/attempt 1 at source 849995bdf84be6db58047314f47e7ed8a663dd34 passed all 18 native association and 23 encrypted-restore cases. Exactly tested SQL SHA256 d1277347d6a2b6771290aa7fda2a1eab277cc7cd1bff742231e130fc074900b3 is promoted as canonical migration 36; temporary proposal CI is removed. Latest coverage is 26 tables and 354 columns (344 required and 10 credential exclusions). Full standard current-source feature PR acceptance remains pending. All published migration bytes, canonical provenance and the dependency lockfile remain immutable.
+
+Next: complete current-source release acceptance, then implement association HTTP/mobile consumers. Complete authorized exports, durable unresolved-intent recovery, independent operational recovery, financial/Calendar workflows and real-use approval remain required. Synthetic only; no spending, signup, production grant/apply/deployment, activation or real records.
+
 ## Active vehicle screen
 
 Read PHASE_4_VEHICLE_EDITOR.md. This branch follows private HTTP PR72/source dc55bc3 and vehicle backend PR71/source45c4292. `/vehicles` and its controller/opaque reference store are implemented; current-source native acceptance must run. SQL1-35/canonical provenance remain unchanged. Do not confuse local unit/controller tests with genuine browser or production readiness. Keep dependency source/candidate/actual-main evidence separate and verify live before merge/retarget. Next: acceptance findings, dated same-business customer–vehicle associations/atomic transfer and typed attachments. Prior active HTTP section describes the parent slice, without certifying this screen.
