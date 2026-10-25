@@ -1,5 +1,5 @@
--- ADR41 closed CRM boundary: lead_source source. Synthetic proposal only.
--- Not an applied/published migration; native acceptance is required.
+-- ADR41 closed CRM boundary: lead_source source. Synthetic development only.
+-- Preserve registry history; production activation and real-data use remain gated.
 DO $review$
 DECLARE r oid; role_name text;
 BEGIN
@@ -309,8 +309,8 @@ GRANT EXECUTE ON FUNCTION crest_commands.authorize_lead_source_read(bytea,uuid,u
 GRANT EXECUTE ON FUNCTION crest_commands.save_lead_source(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,uuid,bigint,jsonb),crest_commands.lookup_lead_source_operation(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid),crest_commands.read_lead_source_directory(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,text,uuid,boolean,integer),crest_commands.read_lead_source_history(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,bigint,integer) TO crest_web;
 GRANT EXECUTE ON FUNCTION crest_commands.lead_source_snapshot_context(uuid),crest_commands.lead_source_snapshot_page(uuid,text,uuid,integer) TO crest_export;
 
--- ADR41 closed CRM boundary: lead source. Synthetic proposal only.
--- Not an applied/published migration; native acceptance is required.
+-- ADR41 closed CRM boundary: lead source. Synthetic development only.
+-- Preserve registry history; production activation and real-data use remain gated.
 DO $review$
 DECLARE r oid; role_name text;
 BEGIN

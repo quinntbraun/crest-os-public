@@ -148,8 +148,8 @@ test('actual encrypted database recovery works in a fresh process and separate c
 test('one exported snapshot preserves prior operations and excludes concurrent committed changes',async()=>{
   assert.equal((await restored.query('SELECT legal_name FROM crest.businesses WHERE id=$1',[owner.business])).rows[0].legal_name,original.name);
   assert.equal((await source.query('SELECT legal_name FROM crest.businesses WHERE id=$1',[owner.business])).rows[0].legal_name,'Synthetic committed after snapshot');
-  assert.equal((await restored.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,5);
-  assert.equal((await source.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,10);
+  assert.equal((await restored.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,7);
+  assert.equal((await source.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,14);
 });
 test('actual customer contacts, raw notes and source audit recover at the exact snapshot version',async()=>{
   const customer=(await restored.query('SELECT crest_private.customer_projection(c) AS value FROM crest.customers c WHERE id=$1',[snapshotCustomer])).rows[0].value;
