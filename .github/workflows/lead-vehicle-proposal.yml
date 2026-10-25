@@ -59,6 +59,10 @@ jobs:
           .local/tools/gitleaks/gitleaks dir . --redact --no-banner
           npm run lint
           npm run typecheck
-          npm test -- tests/unit/lead-resource-contract.test.ts
+          npm test -- tests/unit/lead-resource-contract.test.ts tests/unit/lead-vehicle-contract.test.ts tests/unit/lead-vehicle-csv.test.ts
       - name: Exercise actual isolated PostgreSQL proposal
         run: node --test --test-concurrency=1 tests/integration/lead-vehicle-proposal.test.mjs
+      - name: Install pinned recovery tooling
+        run: node scripts/install-recovery-tools.mjs
+      - name: Restore encrypted same-snapshot lead vehicle proposal
+        run: node --test --test-concurrency=1 tests/integration/lead-vehicle-recovery-proposal.test.mjs

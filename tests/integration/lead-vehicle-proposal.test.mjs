@@ -6,7 +6,10 @@ import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {leadVehicleProposal} from '../support/lead-vehicle-proposal.mjs';
 import {parseLeadVehicleDraft} from '../../src/customer/lead-resource-contract.ts';
-let sandbox,client,target,web,web2,login,loginOwned=false,bootstrap,a,b,prior,receipt,proposal;
+import {parseLeadVehicle} from '../../src/customer/lead-vehicle-contract.ts';
+import {formatLeadVehicleCsv} from '../../src/customer/lead-vehicle-csv.ts';
+import {decodeLeadVehicleCsv} from '../support/lead-vehicle-fixture.ts';
+let sandbox,client,target,web,web2,exporter,login,loginOwned=false,bootstrap,a,b,prior,receipt,proposal;
 const issuer='https://auth.example.com/auth/v1';
 const auth=f=>[f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+300000),f.business];
 const body=(patch={})=>({vehicleId:null,reportedVehicle:{schemaVersion:1,label:'Synthetic reported vehicle',year:null,make:null,model:null,color:null,vin:null,plate:null,notes:null},requestedServices:{schemaVersion:1,text:null},conditionNotes:null,archived:false,archiveReason:null,...patch});
@@ -38,10 +41,10 @@ async function directoryVehicle(f){
 before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target);proposal=await leadVehicleProposal(sandbox);receipt=await sandbox.apply(target,proposal);
  bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;a=await state();b=await state();
- login='crest_lead_vehicle_probe_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");loginOwned=true;await sandbox.admin.query('GRANT crest_web TO '+login);
- const url=new URL(target);url.username=login;url.password=password;web=await sandbox.connect(url.toString());web2=await sandbox.connect(url.toString());for(const c of [web,web2]){await c.query('SET ROLE crest_web');await c.query("SET lock_timeout='3s'");}
+ login='crest_lead_vehicle_probe_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");loginOwned=true;await sandbox.admin.query('GRANT crest_web,crest_export TO '+login);
+ const url=new URL(target);url.username=login;url.password=password;web=await sandbox.connect(url.toString());web2=await sandbox.connect(url.toString());exporter=await sandbox.connect(url.toString());for(const c of [web,web2]){await c.query('SET ROLE crest_web');await c.query("SET lock_timeout='3s'");}await exporter.query('SET ROLE crest_export');
 },{timeout:240000});
-after(async()=>{await web?.end();await web2?.end();if(loginOwned)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
+after(async()=>{await web?.end();await web2?.end();await exporter?.end();if(loginOwned)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
 test('forward proposal preserves all38 published migration hashes and applies idempotently',async()=>{assert.equal(prior.history.length,38);assert.equal(receipt.history.length,39);assert.deepEqual(receipt.history.slice(0,38),prior.history);assert.deepEqual((await sandbox.apply(target,proposal)).history,receipt.history);});
 test('forced RLS and closed domain owners deny raw web/export mutation and private verification',async()=>{
  assert.equal((await client.query("SELECT relrowsecurity AND relforcerowsecurity AS yes FROM pg_class WHERE oid='crest.lead_vehicles'::regclass")).rows[0].yes,true);
@@ -84,4 +87,30 @@ test('fresh credential/provider/epoch checks apply to writes and original replay
  assert.deepEqual(await save({...f,hash:randomBytes(32)},r),{state:'denied'});await assert.rejects(save({...f,epoch:randomUUID()},r),e=>e.code==='P0001'&&e.message==='RECOVERY_REVIEW_REQUIRED');assert.deepEqual(await evidence(f),retained);
  await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[f.business]);assert.deepEqual(await lookup(f,r.operation),first);await assert.rejects(save(f,r),e=>e.code==='P0001'&&e.message==='RECOVERY_REVIEW_REQUIRED');assert.deepEqual(await evidence(f),retained);
  await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[f.business]);await client.query('DELETE FROM auth.sessions WHERE id=$1',[f.provider]);assert.deepEqual(await save(f,r),{state:'denied'});assert.deepEqual(await evidence(f),retained);
+});
+test('scoped keyset pages and complete audit history retain archive/reopen reports without extending session activity',async()=>{
+ const f=await state(),parent=await lead(f),other=await lead(f),foreign=await lead(b),one=request(parent),two=request(parent,{draft:body({archived:true,archiveReason:'Original archive'})});
+ for(const r of [one,two])assert.equal((await save(f,r)).state,'committed');assert.equal((await save(f,{...one,version:'1',operation:randomUUID(),draft:body({conditionNotes:'Later reported detail'})})).state,'committed');
+ const activity=(await client.query('SELECT to_jsonb(s) FROM crest_private.app_sessions s WHERE id=$1',[f.session])).rows;
+ const list=async(id,after=null,archived=false,size=1)=>(await web.query('SELECT crest_commands.read_lead_vehicles($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS value',[...auth(f),id,after,archived,size])).rows[0].value;
+ const active=await list(parent);assert.equal(active.leadId,parent);assert.equal(active.leadVersion,'1');assert.equal(active.leadVehicles.length,1);assert.equal(active.leadVehicles[0].id,one.id);assert.equal(active.hasMore,false);parseLeadVehicle(active.leadVehicles[0],f.business,parent);
+ const first=await list(parent,null,true),second=await list(parent,first.leadVehicles[0].id,true);assert.equal(first.hasMore,true);assert.equal(second.hasMore,false);assert.deepEqual([...first.leadVehicles,...second.leadVehicles].map(x=>x.id),[one.id,two.id].sort());assert.deepEqual((await list(other)).leadVehicles,[]);assert.deepEqual(await list(foreign),{state:'absent'});
+ const history=async(leadId,id,after,size)=>(await web.query('SELECT crest_commands.read_lead_vehicle_history($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS value',[...auth(f),leadId,id,after,size])).rows[0].value;
+ const h1=await history(parent,one.id,'0',1),h2=await history(parent,one.id,'1',1);assert.equal(h1.hasMore,true);assert.equal(h2.hasMore,false);assert.equal(h1.history[0].before,null);assert.deepEqual(h1.history[0].after,h2.history[0].before);assert.deepEqual(h2.history[0].after,await source(one.id));assert.equal(h2.history[0].action,'edit');assert.deepEqual(await history(other,one.id,'0',1),{state:'absent'});
+ await assert.rejects(list(parent,null,true,51),e=>e.code==='22023');await assert.rejects(history(parent,one.id,'0',21),e=>e.code==='22023');assert.deepEqual((await client.query('SELECT to_jsonb(s) FROM crest_private.app_sessions s WHERE id=$1',[f.session])).rows,activity);
+});
+test('privileged source extraction stays in one read-only repeatable-read snapshot and round-trips every original field',async()=>{
+ const f=await state(),parent=await lead(f),one=request(parent,{draft:body({conditionNotes:' =SUM(A1)\nUnicode é 😀 "\\N"',requestedServices:{schemaVersion:1,text:''}})}),two=request(parent,{draft:body({archived:true,archiveReason:"'Original archive\\N"})});for(const r of [one,two])assert.equal((await save(f,r)).state,'committed');
+ const originals=await Promise.all([one,two].map(r=>source(r.id)));originals.sort((a,b)=>a.id<b.id?-1:1);
+ await assert.rejects(web.query('SELECT crest_commands.lead_vehicle_snapshot_context($1)',[f.business]),e=>e.code==='42501');await assert.rejects(exporter.query('SELECT * FROM crest.lead_vehicles'),e=>e.code==='42501');await assert.rejects(exporter.query('SELECT crest_commands.lead_vehicle_snapshot_context($1)',[f.business]),e=>e.code==='25001');
+ await exporter.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+ try{
+  const context=(await exporter.query('SELECT crest_commands.lead_vehicle_snapshot_context($1) AS value',[f.business])).rows[0].value;assert.equal(context.rowCount,'2');assert.equal(context.scope,'lead_vehicle_intake');
+  assert.equal((await save(f,{...one,version:'1',operation:randomUUID(),draft:body({conditionNotes:'After snapshot'})})).state,'committed');assert.equal((await save(f,request(parent))).state,'committed');
+  const rows=[];let after=null;for(let i=0;i<2;i++){const page=(await exporter.query('SELECT crest_commands.lead_vehicle_snapshot_page($1,$2,$3,1) AS value',[f.business,context.snapshotToken,after])).rows[0].value;assert.equal(page.snapshotToken,context.snapshotToken);assert.equal(page.leadVehicles.length,1);rows.push(...page.leadVehicles);after=page.leadVehicles[0].id;}
+  assert.deepEqual(rows,originals);for(const row of rows)parseLeadVehicle(row,f.business,parent);const csv=formatLeadVehicleCsv({businessId:f.business,snapshotToken:context.snapshotToken,expectedRowCount:context.rowCount,rows});assert.deepEqual(decodeLeadVehicleCsv(csv.csv,csv.escapeMap,f.business),originals);
+  await exporter.query('SAVEPOINT wrong_token');await assert.rejects(exporter.query('SELECT crest_commands.lead_vehicle_snapshot_page($1,$2,NULL,1)',[f.business,'0'.repeat(64)]),e=>e.code==='22023');await exporter.query('ROLLBACK TO SAVEPOINT wrong_token');
+  assert.equal((await exporter.query('SELECT crest_commands.lead_vehicle_snapshot_context($1) AS value',[f.business])).rows[0].value.rowCount,'2');
+ }finally{await exporter.query('ROLLBACK');}
+ assert.equal((await source(one.id)).condition_notes,'After snapshot');
 });

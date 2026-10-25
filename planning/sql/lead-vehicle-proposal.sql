@@ -186,3 +186,65 @@ ALTER FUNCTION crest_commands.lookup_lead_vehicle_operation(bytea,uuid,uuid,text
 REVOKE CREATE ON SCHEMA crest_private,crest_commands FROM crest_lead_owner;
 REVOKE ALL ON FUNCTION crest_private.lead_vehicle_operation_result(uuid,uuid,uuid),crest_commands.save_lead_vehicle(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,uuid,uuid,bigint,jsonb),crest_commands.lookup_lead_vehicle_operation(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION crest_commands.save_lead_vehicle(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,uuid,uuid,bigint,jsonb),crest_commands.lookup_lead_vehicle_operation(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid) TO crest_web;
+SET LOCAL ROLE crest_schema_owner;
+CREATE FUNCTION crest_commands.read_lead_vehicles(credential_hash bytea,expected_session uuid,expected_actor uuid,expected_issuer text,expected_subject uuid,expected_provider_session uuid,provider_valid_until timestamptz,requested_business uuid,requested_lead uuid,after_id uuid,include_archived boolean,page_limit integer) RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $directory$
+DECLARE context jsonb;result jsonb;
+BEGIN
+ PERFORM set_config('crest.business_id','',true),set_config('crest.actor_id','',true),set_config('crest.operation_id','',true);
+ IF requested_lead IS NULL OR include_archived IS NULL OR page_limit IS NULL OR page_limit NOT BETWEEN 1 AND 50 THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_LEAD_VEHICLE_INPUT_REQUIRED';END IF;
+ context:=crest_commands.authorize_lead_read(credential_hash,expected_session,expected_actor,expected_issuer,expected_subject,expected_provider_session,provider_valid_until,requested_business);
+ PERFORM set_config('crest.business_id',context->>'businessId',true),set_config('crest.actor_id',context->>'actorId',true);
+ WITH target AS MATERIALIZED(SELECT version FROM crest.leads WHERE business_id=requested_business AND id=requested_lead),
+ matches AS MATERIALIZED(SELECT v.* FROM crest.lead_vehicles v WHERE v.business_id=requested_business AND v.lead_id=requested_lead AND (include_archived OR v.archived_at IS NULL) AND (after_id IS NULL OR v.id>after_id) ORDER BY v.id LIMIT page_limit+1),
+ page AS(SELECT * FROM matches ORDER BY id LIMIT page_limit)
+ SELECT CASE WHEN EXISTS(SELECT 1 FROM target) THEN jsonb_build_object('schemaVersion',1,'businessId',requested_business,'leadId',requested_lead,'leadVersion',(SELECT version::text FROM target),'leadVehicles',coalesce((SELECT jsonb_agg(crest_private.lead_vehicle_projection(p::crest.lead_vehicles) ORDER BY p.id) FROM page p),'[]'::jsonb),'hasMore',(SELECT count(*)>page_limit FROM matches)) ELSE jsonb_build_object('state','absent') END INTO result;
+ IF octet_length(result::text)>1048576 THEN RAISE EXCEPTION USING ERRCODE='54000',MESSAGE='CREST_LEAD_VEHICLE_PAGE_LIMIT';END IF;RETURN result;
+END
+$directory$;
+CREATE FUNCTION crest_commands.read_lead_vehicle_history(credential_hash bytea,expected_session uuid,expected_actor uuid,expected_issuer text,expected_subject uuid,expected_provider_session uuid,provider_valid_until timestamptz,requested_business uuid,requested_lead uuid,requested_lead_vehicle uuid,after_version bigint,page_limit integer) RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $history$
+DECLARE context jsonb;result jsonb;
+BEGIN
+ PERFORM set_config('crest.business_id','',true),set_config('crest.actor_id','',true),set_config('crest.operation_id','',true);
+ IF requested_lead IS NULL OR requested_lead_vehicle IS NULL OR after_version IS NULL OR after_version<0 OR page_limit IS NULL OR page_limit NOT BETWEEN 1 AND 20 THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_LEAD_VEHICLE_INPUT_REQUIRED';END IF;
+ context:=crest_commands.authorize_lead_read(credential_hash,expected_session,expected_actor,expected_issuer,expected_subject,expected_provider_session,provider_valid_until,requested_business);
+ PERFORM set_config('crest.business_id',context->>'businessId',true),set_config('crest.actor_id',context->>'actorId',true);
+ WITH target AS MATERIALIZED(SELECT * FROM crest.lead_vehicles WHERE business_id=requested_business AND lead_id=requested_lead AND id=requested_lead_vehicle),
+ events AS MATERIALIZED(SELECT * FROM crest_private.audit_events WHERE business_id=requested_business AND entity_kind='lead_vehicles' AND entity_id=requested_lead_vehicle AND entity_version>after_version ORDER BY entity_version LIMIT page_limit+1),
+ page AS(SELECT * FROM events ORDER BY entity_version LIMIT page_limit)
+ SELECT CASE WHEN EXISTS(SELECT 1 FROM target) THEN jsonb_build_object('schemaVersion',1,'businessId',requested_business,'leadVehicle',(SELECT crest_private.lead_vehicle_projection(t::crest.lead_vehicles) FROM target t),'history',coalesce((SELECT jsonb_agg(jsonb_build_object('version',p.entity_version::text,'eventId',p.id,'actorId',p.actor_id,'operationId',p.operation_id,'at',to_char(p.recorded_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),'action',p.action,'before',p.delta->'before','after',p.delta->'after') ORDER BY p.entity_version) FROM page p),'[]'::jsonb),'hasMore',(SELECT count(*)>page_limit FROM events)) ELSE jsonb_build_object('state','absent') END INTO result;
+ IF octet_length(result::text)>1048576 THEN RAISE EXCEPTION USING ERRCODE='54000',MESSAGE='CREST_LEAD_VEHICLE_PAGE_LIMIT';END IF;RETURN result;
+END
+$history$;
+-- Separate privileged export caller, never raw table access or web execute.
+-- Whole-export authorization and private custody remain separately required.
+CREATE FUNCTION crest_commands.lead_vehicle_snapshot_context(requested_business uuid) RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $context$
+DECLARE n bigint;
+BEGIN
+ IF current_setting('transaction_isolation')<>'repeatable read' OR current_setting('transaction_read_only')<>'on' THEN RAISE EXCEPTION USING ERRCODE='25001',MESSAGE='CREST_LEAD_VEHICLE_SNAPSHOT_REQUIRED';END IF;
+ IF requested_business IS NULL THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_LEAD_VEHICLE_INPUT_REQUIRED';END IF;
+ PERFORM set_config('crest.business_id',requested_business::text,true),set_config('crest.actor_id','',true),set_config('crest.operation_id','',true);
+ IF NOT EXISTS(SELECT 1 FROM crest.businesses WHERE id=requested_business) THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_LEAD_VEHICLE_SCOPE_REQUIRED';END IF;
+ SELECT count(*) INTO n FROM crest.lead_vehicles WHERE business_id=requested_business;IF n>1000 THEN RAISE EXCEPTION USING ERRCODE='54000',MESSAGE='CREST_LEAD_VEHICLE_SNAPSHOT_LIMIT';END IF;
+ RETURN jsonb_build_object('schemaVersion',1,'scope','lead_vehicle_intake','businessId',requested_business,'snapshotToken',encode(sha256(convert_to(jsonb_build_object('domain','crest.lead.vehicle.intake.snapshot/1','businessId',requested_business,'snapshot',pg_current_snapshot()::text)::text,'UTF8')),'hex'),'rowCount',n::text);
+END
+$context$;
+CREATE FUNCTION crest_commands.lead_vehicle_snapshot_page(requested_business uuid,expected_snapshot text,after_id uuid,page_limit integer) RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $page$
+DECLARE context jsonb;result jsonb;
+BEGIN
+ context:=crest_commands.lead_vehicle_snapshot_context(requested_business);
+ IF expected_snapshot IS DISTINCT FROM context->>'snapshotToken' OR page_limit IS NULL OR page_limit NOT BETWEEN 1 AND 50 THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_LEAD_VEHICLE_SNAPSHOT_REQUIRED';END IF;
+ WITH page AS(SELECT * FROM crest.lead_vehicles WHERE business_id=requested_business AND (after_id IS NULL OR id>after_id) ORDER BY id LIMIT page_limit)
+ SELECT jsonb_build_object('schemaVersion',1,'businessId',requested_business,'snapshotToken',expected_snapshot,'leadVehicles',coalesce(jsonb_agg(crest_private.lead_vehicle_projection(p::crest.lead_vehicles) ORDER BY p.id),'[]'::jsonb)) INTO result FROM page p;
+ IF octet_length(result::text)>1048576 THEN RAISE EXCEPTION USING ERRCODE='54000',MESSAGE='CREST_LEAD_VEHICLE_PAGE_LIMIT';END IF;RETURN result;
+END
+$page$;
+RESET ROLE;
+GRANT CREATE ON SCHEMA crest_commands TO crest_lead_owner;
+ALTER FUNCTION crest_commands.read_lead_vehicles(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,boolean,integer) OWNER TO crest_lead_owner;
+ALTER FUNCTION crest_commands.read_lead_vehicle_history(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,bigint,integer) OWNER TO crest_lead_owner;
+ALTER FUNCTION crest_commands.lead_vehicle_snapshot_context(uuid) OWNER TO crest_lead_owner;
+ALTER FUNCTION crest_commands.lead_vehicle_snapshot_page(uuid,text,uuid,integer) OWNER TO crest_lead_owner;
+REVOKE CREATE ON SCHEMA crest_commands FROM crest_lead_owner;
+REVOKE ALL ON FUNCTION crest_commands.read_lead_vehicles(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,boolean,integer),crest_commands.read_lead_vehicle_history(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,bigint,integer),crest_commands.lead_vehicle_snapshot_context(uuid),crest_commands.lead_vehicle_snapshot_page(uuid,text,uuid,integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION crest_commands.read_lead_vehicles(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,boolean,integer),crest_commands.read_lead_vehicle_history(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,bigint,integer) TO crest_web;
+GRANT EXECUTE ON FUNCTION crest_commands.lead_vehicle_snapshot_context(uuid),crest_commands.lead_vehicle_snapshot_page(uuid,text,uuid,integer) TO crest_export;

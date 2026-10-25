@@ -2,6 +2,12 @@
 import {readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
+import {leadVehicleColumns} from '../../src/customer/lead-vehicle-contract.ts';
+export async function leadVehicleProposalCoverage(){
+ const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+ if(manifest.migrationCount!==38||manifest.tables.length!==29)throw new Error('LEAD_VEHICLE_PROPOSAL_BASE_REQUIRED');
+ manifest.migrationCount=39;manifest.tables.push({table:'crest.lead_vehicles',scope:'business',required:[...leadVehicleColumns],excluded:[],partialEvidenceGroup:null});return manifest;
+}
 export async function leadVehicleProposal(sandbox){
  const path=await sandbox.prefix(38),file='20261025140000_lead_vehicles.sql';
  const sql=await readFile(new URL('../../planning/sql/lead-vehicle-proposal.sql',import.meta.url));

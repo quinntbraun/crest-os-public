@@ -1,3 +1,7 @@
+## Active construction: lead vehicle source, snapshot extraction and recovery
+
+Read PHASE_4_LEAD_RESOURCES.md and live CI. Forward39 remains an unregistered disposable proposal: the core passed9 native PostgreSQL cases; current scoped readers/CSV/33-case encrypted restore require fresh11native/33recovery proof before exact tested adoption. All38 canonical SQL/checksums, coverage/compatibility, provenance and lockfile stay unchanged. Parent status screen PR81/sourcef72912a is independently under full acceptance. Next genuine lead-owned addresses and atomic selected customer/vehicle/address conversion, without inferred Won/ownership/commercial facts. No activation, spending/signup/provisioning or real records. Older sections retain history.
+
 ## Active slice: canonical lead status history and typed backend
 
 Read PHASE_4_LEAD_LIFECYCLE.md. The exactly tested forward SQL is adopted as migration38 (SHA256026b02ca64ccd410161ab2ec187a6e3e8da0774f024b675142027f5463a1021a); all37 prior SQL/checksums remain unchanged. Canonical coverage is29tables/413columns,403required plus10credential exclusions. Ordinary recovery retains all29 tested cases; proposal-only helpers/workflow are removed. Fixed typed change/lookup/event readers and status-aware intake history are implemented; private status HTTP/client are implemented under acceptance; mobile status controls, explicit original-intent recovery and mutual intake/status guards are implemented under acceptance. Full new-source standard acceptance is required before merge/readiness claims.
