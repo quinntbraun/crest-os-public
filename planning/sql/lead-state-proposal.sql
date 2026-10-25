@@ -126,7 +126,7 @@ BEGIN
  b:=l.delta->'before';n:=l.delta->'after';
  IF jsonb_typeof(b) IS DISTINCT FROM 'object' OR jsonb_typeof(n) IS DISTINCT FROM 'object' OR l.action<>'state_change' OR a.action<>'create' OR l.reason IS DISTINCT FROM e.reason OR a.reason IS DISTINCT FROM e.reason OR l.effective_at IS DISTINCT FROM e.effective_at OR a.effective_at IS DISTINCT FROM e.effective_at OR a.delta->'before'<>'null'::jsonb OR a.delta->'after' IS DISTINCT FROM crest_private.lead_event_projection(e)
    OR b->>'id' IS DISTINCT FROM e.lead_id::text OR b->>'business_id' IS DISTINCT FROM requested_business::text OR b->>'state' IS DISTINCT FROM e.from_state OR n->>'state' IS DISTINCT FROM e.to_state OR n->>'version' IS DISTINCT FROM e.lead_version::text OR n->>'updated_by' IS DISTINCT FROM requested_actor::text OR n->>'operation_id' IS DISTINCT FROM requested_operation::text
-   OR n->'lost_reason' IS DISTINCT FROM CASE WHEN e.to_state='lost' THEN to_jsonb(e.reason) ELSE 'null'::jsonb END
+   OR n->'lost_reason' IS DISTINCT FROM (CASE WHEN e.to_state='lost' THEN to_jsonb(e.reason) ELSE 'null'::jsonb END)
    OR (b-ARRAY['state','lost_reason','version','updated_at','updated_by','operation_id']) IS DISTINCT FROM (n-ARRAY['state','lost_reason','version','updated_at','updated_by','operation_id'])
    OR (b->>'version')::bigint+1<>e.lead_version THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_LEAD_STATE_RESULT_REVIEW_REQUIRED';END IF;
  body:=jsonb_build_object('fromState',e.from_state,'toState',e.to_state,'reason',e.reason);
