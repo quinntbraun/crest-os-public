@@ -10,7 +10,7 @@ export async function leadConversionProposal(sandbox) {
  const path=join(directory,'supabase/migration-checksums.json');
  const registry=JSON.parse(await readFile(path,'utf8'));
  assert.equal(registry.migrations.length,40);
- const bytes=await readFile(join(sandbox.root,'planning/proposals/lead-conversion.sql'));
+ const bytes=await readFile(join(sandbox.root,'planning/proposals/lead-conversion-v2.sql'));
  const file='20261025180000_lead_conversion.sql';
  registry.migrations.push({version:file.slice(0,14),file,sha256:createHash('sha256').update(bytes).digest('hex')});
  await writeFile(join(directory,'supabase/migrations',file),bytes);
