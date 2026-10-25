@@ -1,0 +1,6 @@
+import type {Lead,LeadSource} from '../../src/customer/lead-contract.ts';
+import {customerBusiness,customerFixture} from './customer-fixture.ts';
+export const leadBusiness=customerBusiness;
+const base=customerFixture();
+export function leadSourceFixture(patch:Partial<LeadSource>={}):LeadSource{return {id:'11111111-1111-4111-8111-111111111111',business_id:leadBusiness,label:'Synthetic referral',label_normalized:'synthetic referral',kind:'Owner-recorded source',active:true,referral_customer_id:null,version:'1',created_at:base.created_at,updated_at:base.updated_at,created_by:base.created_by,updated_by:base.updated_by,origin:'manual',operation_id:base.operation_id,import_row_id:null,...patch};}
+export function leadFixture(patch:Partial<Lead>={}):Lead{return {id:'22222222-2222-4222-8222-222222222222',business_id:leadBusiness,label:'Synthetic inquiry',customer_id:null,source_id:null,source_snapshot:null,referral_text:null,phone_raw:null,phone_normalized:null,email_raw:null,email_normalized:null,requested_scope:null,availability:null,estimated_cents:null,state:'new',follow_up_at:null,lost_reason:null,notes:null,version:'1',created_at:base.created_at,updated_at:base.updated_at,created_by:base.created_by,updated_by:base.updated_by,origin:'manual',operation_id:base.operation_id,import_row_id:null,...patch};}
