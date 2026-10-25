@@ -59,7 +59,7 @@ The [synthetic database recovery drill](planning/PHASE_3_RECOVERY_DRILL.md) uses
 
 ## Local development
 
-The [customer-owned address backend](planning/PHASE_4_CUSTOMER_ADDRESSES.md) adds incomplete intake locations, same-business customer links, versioned archive/history and exact-decimal source exports. Native database/recovery proof and private address forms are pending; no geocoder, fake vehicle/lead parent or default runtime activation is introduced. Vehicle/ownership work remains in [the resource plan](planning/PHASE_4_CUSTOMER_RESOURCES.md).
+The [customer-owned address backend](planning/PHASE_4_CUSTOMER_ADDRESSES.md) adds incomplete intake locations, same-business customer links, versioned archive/history and exact-decimal source exports. Native database/recovery tests pass for the backend source; private address HTTP/client methods are implemented with current-source Linux acceptance pending. Address forms remain next; no geocoder, fake vehicle/lead parent or default runtime activation is introduced. Vehicle/ownership work remains in [the resource plan](planning/PHASE_4_CUSTOMER_RESOURCES.md).
 
 Run every repository command from this `crest-os-public` checkout, not the parent ChatGPT project mirror or original private archive. Use Node **24.22.0** and its bundled npm **11.19.1**. No paid account or provider credentials are needed.
 
