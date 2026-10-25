@@ -37,9 +37,11 @@ async function state(){
 before(async()=>{
   sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target,await sandbox.prefix(31));
   bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;a=await state();b=await state();beforeUpgrade=(await client.query('SELECT to_jsonb(b) AS value FROM crest.businesses b ORDER BY id')).rows;
+  const guardTarget=await sandbox.database(),guardClient=await sandbox.connect(guardTarget);await sandbox.apply(guardTarget,await sandbox.prefix(0),true);await installProviderSchema(guardClient,guardTarget);await sandbox.apply(guardTarget,await sandbox.prefix(31));
   await client.query('CREATE ROLE crest_customer_owner LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS');
-  try{await assert.rejects(sandbox.apply(target));assert.equal((await client.query("SELECT to_regclass('crest.customers') AS value")).rows[0].value,null);guardRefused=true;}finally{await client.query('ALTER ROLE crest_customer_owner NOLOGIN');}
-  // A separate explicit retry follows the verified rollback and fixture repair.
+  try{await assert.rejects(sandbox.apply(guardTarget),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);assert.equal((await guardClient.query("SELECT to_regclass('crest.customers') AS value")).rows[0].value,null);await assert.rejects(sandbox.apply(guardTarget),/MIGRATION_PENDING_REVIEW_REQUIRED/);guardRefused=true;}finally{await client.query('ALTER ROLE crest_customer_owner NOLOGIN');}
+  // Keep the failed target's pending evidence. The positive upgrade uses the
+  // original distinct database/ledger after explicit synthetic role repair.
   receipt=await sandbox.apply(target);
   login=`crest_crm_probe_${randomBytes(8).toString('hex')}`;const password=randomBytes(32).toString('hex');await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;await sandbox.admin.query(`GRANT crest_web,crest_export TO ${login}`);
   const u=new URL(target);u.username=login;u.password=password;
