@@ -73,7 +73,10 @@ export function createLeadHttp(config:Configuration,provider:Parameters<typeof c
         if(signal.aborted)throw new Error();return privateJsonResponse(value,value.state==='conflict'?409:200);
       }
       if(route==='state-operation')result=(await states.lookup(cookie,{businessId,operationId:input.operationId as string},signal)).forServer();
-      else if(route==='state-events')result=(await states.events(cookie,{businessId,leadId:input.leadId as string,afterVersion:input.afterVersion as string,pageSize:input.pageSize as number},signal)).forServer();
+      else if(route==='state-events'){
+        const value=(await states.events(cookie,{businessId,leadId:input.leadId as string,afterVersion:input.afterVersion as string,pageSize:input.pageSize as number},signal)).forServer();
+        result=value.state==='absent'?value:{schemaVersion:value.schemaVersion,businessId:value.businessId,leadId:value.leadId,leadVersion:value.leadVersion,events:value.events,hasMore:value.hasMore};
+      }
       else if(route==='operation')result=(await directory.lookup(cookie,{businessId,operationId:input.operationId as string},signal)).forServer();
       else if(route==='history')result=(await directory.history(cookie,{businessId,leadId:input.leadId as string,afterVersion:input.afterVersion as string,pageSize:input.pageSize as number},signal)).forServer();
       else result=(await directory.list(cookie,{businessId,search:input.search as string,afterId:input.afterId as string|null,includeLost:input.includeLost as boolean,pageSize:input.pageSize as number},signal)).forServer();

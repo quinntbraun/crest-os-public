@@ -88,3 +88,8 @@ it('status writes stop at origin, CSRF or admission failure',async()=>{
  calls.csrf.mockRejectedValue(new Error());await failure(await dispatch()(request('state',stateChange()),transportFixture()));expect(calls.change).not.toHaveBeenCalled();
  calls.csrf.mockResolvedValue(randomUUID());calls.admit.mockResolvedValue(false);await failure(await dispatch()(request('state',stateChange()),transportFixture()),429,'LEAD_REQUEST_LIMITED');expect(calls.change).not.toHaveBeenCalled();
 });
+
+it('event history emits the exact validated source wire schema consumed by the status client',async()=>{
+ const page={schemaVersion:1,businessId:leadBusiness,leadId:row.id,leadVersion:'1',events:[],hasMore:false};calls.events.mockResolvedValue(projection({state:'found',...page}));
+ const response=await dispatch()(request('state-events',{leadId:row.id,afterVersion:'0',pageSize:20}),transportFixture());expect(response.status).toBe(200);expect(await response.json()).toEqual(page);
+});
