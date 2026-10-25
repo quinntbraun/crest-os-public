@@ -109,6 +109,7 @@ test('fresh provider/session/owner/epoch fences remain enforced and paused looku
  await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[f.business]);
  try{await assert.rejects(change(f,r),/RECOVERY_REVIEW_REQUIRED/);assert.deepEqual(await lookup(f,r.operation),first);}finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[f.business]);}
  await assert.rejects(change({...f,epoch:randomUUID()},request(id,'contacted','follow_up',{version:'2'})),/RECOVERY_REVIEW_REQUIRED/);
+ const replacement=await state();await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$3,$3,'manual')",[f.business,replacement.actor,f.actor]);
  await client.query('UPDATE crest.memberships SET active=false,version=version+1,updated_by=$2 WHERE business_id=$1 AND actor_id=$2',[f.business,f.actor]);assert.deepEqual(await change(f,request(id,'contacted','follow_up',{version:'2'})),{state:'denied'});
 });
 test('raw state rewrites and orphan events fail; retained event updates/deletes/truncation stay forbidden',async()=>{
