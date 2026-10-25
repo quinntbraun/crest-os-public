@@ -1,6 +1,6 @@
 # Crest OS
 
-Current development: dated customer–vehicle association backend and atomic ownership transfers. Migration 36 remains an unadopted proposal pending native and encrypted-restore acceptance. See [the active checkpoint](planning/WORKING_STATE.md) and [association implementation](planning/PHASE_4_VEHICLE_ASSOCIATIONS.md). Synthetic development only; real-data use remains gated.
+Current development: dated customer–vehicle association backend and atomic ownership transfers. Migration 36 retains the exact SQL bytes that passed native and encrypted-restore preflight; full current-source release acceptance remains pending. See [the active checkpoint](planning/WORKING_STATE.md) and [association implementation](planning/PHASE_4_VEHICLE_ASSOCIATIONS.md). Synthetic development only; real-data use remains gated.
 
 Crest Detailing's internal business operating system.
 
