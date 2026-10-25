@@ -1,3 +1,9 @@
+## Registered native run: retained recovery fixture correction
+
+Registered sourceba3a6e27/run40236062657 Database foundation job121300827714 completed all22 conversion cases successfully, including the four registered-identity encrypted conversion restore cases. The ordinary37-case recovery group had34 passes and three failures: a remaining31-table expectation versus the genuine33-table restored schema, and vehicle/address parent-only TRUNCATE expecting a retention trigger while PostgreSQL first refused the new conversion-link FK (0A000). This is a failed full database job and cannot establish release acceptance.
+
+The correction expects33 actual restored source tables and separately asserts DELETE retention, parent-only FK refusal, and joint parent/conversion-links TRUNCATE retention. All original immutable provenance, deferred audit, exact row equality, forced RLS and closed-grant assertions remain. No SQL, checksum, authority, test count or gate is relaxed. Fresh full registered-source acceptance is required.
+
 ## Registered conversion41: exact tested adoption
 
 Source380d40c1fef4bbe4233e526b7d15a4dcd98074e4, candidate27e5d81e831e99cc2c3e71a9ba1d349dc3e41351, run40234408390/attempt1 has independently verified completed Database foundation, Provider and evidence, and Genuine authentication logs/checks/tree/ordered parents:392+420+109=921 passing cases, zero failures/cancellations/skips/todos. The22 conversion cases include16 atomic/history/security cases, two read/CSV cases and four independent encrypted-restore cases. This is database/Auth proof only; complete source release and parent address browser acceptance remain pending.
