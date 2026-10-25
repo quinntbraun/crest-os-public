@@ -79,7 +79,7 @@ jobs:
           npm run test:lead-addresses-db
       - name: Install pinned recovery tooling
         run: node scripts/install-recovery-tools.mjs
-      - name: Prove unregistered atomic conversion, source export and encrypted recovery
+      - name: Prove registered atomic conversion, source export and encrypted recovery
         run: node --test --test-concurrency=1 tests/integration/lead-conversion.test.mjs
       - name: Encrypted isolated database recovery drill
         run: npm run test:recovery-db

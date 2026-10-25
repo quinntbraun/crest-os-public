@@ -1,6 +1,6 @@
 # Crest OS
 
-Current development: [private lead location forms and original-save recovery](planning/PHASE_4_LEAD_ADDRESS_EDITOR.md), following the [registered lead address backend](planning/PHASE_4_LEAD_ADDRESSES.md) and [private HTTP/client](planning/PHASE_4_LEAD_ADDRESS_HTTP.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence.
+Current development: [registered atomic conversion backend and recovery](planning/PHASE_4_LEAD_CONVERSION.md); [private lead location forms and original-save recovery](planning/PHASE_4_LEAD_ADDRESS_EDITOR.md), following the [registered lead address backend](planning/PHASE_4_LEAD_ADDRESSES.md) and [private HTTP/client](planning/PHASE_4_LEAD_ADDRESS_HTTP.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence.
 
 Crest Detailing's internal business operating system.
 

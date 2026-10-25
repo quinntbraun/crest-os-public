@@ -1,3 +1,11 @@
+## Registered conversion41: exact tested adoption
+
+Source380d40c1fef4bbe4233e526b7d15a4dcd98074e4, candidate27e5d81e831e99cc2c3e71a9ba1d349dc3e41351, run40234408390/attempt1 has independently verified completed Database foundation, Provider and evidence, and Genuine authentication logs/checks/tree/ordered parents:392+420+109=921 passing cases, zero failures/cancellations/skips/todos. The22 conversion cases include16 atomic/history/security cases, two read/CSV cases and four independent encrypted-restore cases. This is database/Auth proof only; complete source release and parent address browser acceptance remain pending.
+
+The exact tested core-v2 bytes, one LF and additive read/export body are now registered as migration41 (20261025180000_lead_conversion.sql), SHA2564ebe1d190cc9e7d7dce08a281aa1c0ee8b6c2fa754fdca423bd4acbcdc7c4d2e. All40 earlier SQL/checksums are unchanged. Historical proposal comments/components remain verbatim provenance; the registry defines adoption. Registered inventory now covers33 tables/499 columns (489 required,10 credential exclusions,9 partial groups); compatibility maximum41/minimum0, activation blocked. The mandatory22-case suite now applies registered40-to41 and uses the ordinary registered recovery identity and canonical inventory, with no test-only proposal overlay or alternative restore identity. Fresh complete registered-source acceptance is required before merge.
+
+Next: resolve parent browser findings, obtain current registered native/build/browser/container proof, then implement conversion private API/client/forms with explicit converted-customer relink conflicts. No runtime conversion endpoint or production activation exists. Synthetic only; no spending, account setup, provisioning, production grants/apply/deploy or real records. Older sections below are historical.
+
 # Explicit atomic lead conversion: selection and composition boundary
 
 ## Current source reads, partial CSV and recovery construction
