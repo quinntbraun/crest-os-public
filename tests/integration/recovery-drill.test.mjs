@@ -218,7 +218,7 @@ test('lead source snapshot, exact cents/microseconds, genuine customer and origi
   for(const role of ['crest_lead_owner','crest_lead_integrity_owner','crest_lead_source_owner','crest_lead_source_integrity_owner'])await assert.rejects(w.connection.query('SET ROLE '+role),e=>e.code==='42501');
   for(const table of ['leads','lead_sources'])await assert.rejects(w.connection.query('SELECT * FROM crest.'+table),e=>e.code==='42501');
  }finally{await w.connection.end();await restored.query('DROP ROLE '+w.login);}
- assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,31);
+ assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,33);
 });
 
 test('registered coverage accounts for every actual source column and rejects omissions on the restored schema',async()=>{
@@ -269,7 +269,9 @@ test('original lead vehicle receipt and later absent operations remain independe
 });
 test('restored lead vehicle retention, immutable provenance and complete deferred audits still reject direct rewrites',async()=>{
  assert.equal((await restored.query("SELECT relrowsecurity AND relforcerowsecurity AS yes FROM pg_class WHERE oid='crest.lead_vehicles'::regclass")).rows[0].yes,true);
- for(const sql of ['DELETE FROM crest.lead_vehicles','TRUNCATE crest.lead_vehicles'])await assert.rejects(restored.query(sql),e=>e.code==='55000');
+ await assert.rejects(restored.query('DELETE FROM crest.lead_vehicles'),e=>e.code==='55000');
+ await assert.rejects(restored.query('TRUNCATE crest.lead_vehicles'),e=>e.code==='0A000');
+ await assert.rejects(restored.query('TRUNCATE crest.lead_vehicles,crest.conversion_links'),e=>e.code==='55000');
  await assert.rejects(restored.query('UPDATE crest.lead_vehicles SET id=$1,version=version+1 WHERE id=$2',[randomUUID(),snapshotLeadVehicle]),e=>e.code==='55000');
  await assert.rejects(restored.query("UPDATE crest.lead_vehicles SET condition_notes='forged',version=version+1 WHERE id=$1",[snapshotLeadVehicle]),e=>e.code==='23514');assert.deepEqual((await restored.query('SELECT crest_private.lead_vehicle_projection(v) AS value FROM crest.lead_vehicles v WHERE id=$1',[snapshotLeadVehicle])).rows[0].value,retainedLeadVehicle);
 });
@@ -298,7 +300,9 @@ test('original lead address receipt resolves after encrypted restore while later
 });
 test('restored lead address RLS, retention, immutable parent and complete deferred audit still enforce integrity',async()=>{
  assert.equal((await restored.query("SELECT relrowsecurity AND relforcerowsecurity AS yes FROM pg_class WHERE oid='crest.lead_addresses'::regclass")).rows[0].yes,true);
- for(const sql of ['DELETE FROM crest.lead_addresses','TRUNCATE crest.lead_addresses'])await assert.rejects(restored.query(sql),e=>e.code==='55000');
+ await assert.rejects(restored.query('DELETE FROM crest.lead_addresses'),e=>e.code==='55000');
+ await assert.rejects(restored.query('TRUNCATE crest.lead_addresses'),e=>e.code==='0A000');
+ await assert.rejects(restored.query('TRUNCATE crest.lead_addresses,crest.conversion_links'),e=>e.code==='55000');
  await assert.rejects(restored.query('UPDATE crest.lead_addresses SET id=$1,version=version+1 WHERE id=$2',[randomUUID(),snapshotLeadAddress]),e=>e.code==='55000');
  await assert.rejects(restored.query("UPDATE crest.lead_addresses SET instructions='forged',version=version+1 WHERE id=$1",[snapshotLeadAddress]),e=>e.code==='23514');assert.deepEqual((await restored.query('SELECT crest_private.lead_address_projection(a) AS value FROM crest.lead_addresses a WHERE id=$1',[snapshotLeadAddress])).rows[0].value,retainedLeadAddress);
 });
