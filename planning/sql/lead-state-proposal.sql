@@ -1,5 +1,5 @@
--- Forward38 proposal. NOT registered/applied by normal migrations.
--- BR02.2: manual state events; no quote-send/acceptance creation authority.
+-- BR02.2: immutable manual lead state events and original retry receipts.
+-- Synthetic development only; production activation remains separately gated.
 DO $review$
 BEGIN
   IF (SELECT count(*) FROM pg_roles WHERE rolname IN ('crest_lead_owner','crest_lead_integrity_owner','crest_schema_owner') AND NOT(rolcanlogin OR rolinherit OR rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls) AND rolconfig IS NULL)<>3

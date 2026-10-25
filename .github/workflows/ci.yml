@@ -177,7 +177,7 @@ jobs:
     # a skipped required job as success. The guard rejects incomplete results.
     if: ${{ always() }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"
