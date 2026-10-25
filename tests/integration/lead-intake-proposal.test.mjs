@@ -1,12 +1,14 @@
 // Actual PostgreSQL, isolated source proposal; no hosted or real business data.
 import assert from 'node:assert/strict';
 import {randomUUID,randomBytes,createHash} from 'node:crypto';
-import {readFile,writeFile} from 'node:fs/promises';
+import {readFile,writeFile,cp} from 'node:fs/promises';
 import {join} from 'node:path';
 import {before,after,test} from 'node:test';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {parseLead,parseLeadSource,leadColumns,leadSourceColumns} from '../../src/customer/lead-contract.ts';
+import {formatLeadCsv,formatLeadSourceCsv} from '../../src/customer/lead-csv.ts';
+import {readCustomerCsv} from '../support/customer-fixture.ts';
 let sandbox,client,target,web,web2,exporter,login,loginOwned=false,bootstrap,a,b,prior,receipt,retained,proposal,guardRefused=false;
 const issuer='https://auth.example.com/auth/v1';
 const auth=f=>[f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+300000),f.business];
@@ -33,7 +35,7 @@ async function state(){
 }
 before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target,await sandbox.prefix(36));
- proposal=await sandbox.prefix(36);const sql=await readFile(new URL('../support/proposed-lead-intake.sql',import.meta.url));const file='20261025100000_lead_intake.sql';const path=join(proposal,'supabase/migration-checksums.json'),registry=JSON.parse(await readFile(path,'utf8'));registry.migrations.push({version:'20261025100000',file,sha256:createHash('sha256').update(sql).digest('hex')});await writeFile(join(proposal,'supabase/migrations',file),sql);await writeFile(path,JSON.stringify(registry)+'\n');
+ const prefix=await sandbox.prefix(36);proposal=join(sandbox.workspace,'lead-proposal37');await cp(prefix,proposal,{recursive:true,errorOnExist:true,force:false});const sql=await readFile(new URL('../support/proposed-lead-intake.sql',import.meta.url));const file='20261025100000_lead_intake.sql';const path=join(proposal,'supabase/migration-checksums.json'),registry=JSON.parse(await readFile(path,'utf8'));registry.migrations.push({version:'20261025100000',file,sha256:createHash('sha256').update(sql).digest('hex')});await writeFile(join(proposal,'supabase/migrations',file),sql);await writeFile(path,JSON.stringify(registry)+'\n');assert.equal(JSON.parse(await readFile(join(prefix,'supabase/migration-checksums.json'),'utf8')).migrations.length,36,'proposal must not mutate the historical prefix');
  const guard=await sandbox.database(),guardClient=await sandbox.connect(guard);await sandbox.apply(guard,await sandbox.prefix(0),true);await installProviderSchema(guardClient,guard);await sandbox.apply(guard,await sandbox.prefix(36));
  await client.query('CREATE ROLE crest_lead_source_owner LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS');
  try{await assert.rejects(sandbox.apply(guard,proposal),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);assert.equal((await guardClient.query("SELECT to_regclass('crest.lead_sources') AS value")).rows[0].value,null);await assert.rejects(sandbox.apply(guard,proposal),/MIGRATION_PENDING_REVIEW_REQUIRED/);guardRefused=true;}finally{await client.query('ALTER ROLE crest_lead_source_owner NOLOGIN');}
@@ -90,5 +92,5 @@ test('literal search, bounded UUID pages and inactive source inclusion preserve 
 });
 test('scoped source snapshots retain all26 plus15 columns in one read-only repeatable transaction',async()=>{
  await assert.rejects(web.query('SELECT crest_commands.lead_snapshot_context($1)',[a.business]),e=>e.code==='42501');await assert.rejects(exporter.query('SELECT crest_commands.lead_snapshot_context($1)',[a.business]),e=>e.code==='25001');
- await exporter.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');try{for(const [domain,table,columns,parse]of [['lead','leads',leadColumns,parseLead],['lead_source','lead_sources',leadSourceColumns,parseLeadSource]]){const ctx=(await exporter.query('SELECT crest_commands.'+domain+'_snapshot_context($1) AS value',[a.business])).rows[0].value;let after=null,rows=[];for(;;){const page=(await exporter.query('SELECT crest_commands.'+domain+'_snapshot_page($1,$2,$3,2) AS value',[a.business,ctx.snapshotToken,after])).rows[0].value;rows.push(...page[table]);if(page[table].length<2)break;after=page[table].at(-1).id;}assert.equal(rows.length,Number(ctx.rowCount));for(const row of rows){assert.deepEqual(Object.keys(row).sort(),[...columns].sort());parse(row,a.business);}}await exporter.query('COMMIT');}catch(e){await exporter.query('ROLLBACK');throw e;}
+ await exporter.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');try{for(const [domain,table,columns,parse,format]of [['lead','leads',leadColumns,parseLead,formatLeadCsv],['lead_source','lead_sources',leadSourceColumns,parseLeadSource,formatLeadSourceCsv]]){const ctx=(await exporter.query('SELECT crest_commands.'+domain+'_snapshot_context($1) AS value',[a.business])).rows[0].value;let after=null,rows=[];for(;;){const page=(await exporter.query('SELECT crest_commands.'+domain+'_snapshot_page($1,$2,$3,2) AS value',[a.business,ctx.snapshotToken,after])).rows[0].value;rows.push(...page[table]);if(page[table].length<2)break;after=page[table].at(-1).id;}assert.equal(rows.length,Number(ctx.rowCount));for(const row of rows){assert.deepEqual(Object.keys(row).sort(),[...columns].sort());parse(row,a.business);}const formatted=format({businessId:a.business,snapshotToken:ctx.snapshotToken,expectedRowCount:ctx.rowCount,rows});assert.equal(readCustomerCsv(formatted.csv)[0].length,columns.length);assert.equal(JSON.parse(formatted.manifest).completeBackup,false);}await exporter.query('COMMIT');}catch(e){await exporter.query('ROLLBACK');throw e;}
 });
