@@ -117,7 +117,7 @@ test('actual encrypted database recovery works in a fresh process and separate c
   assert.notEqual(new URL(sourceUrl).port,new URL(restoredUrl).port);
   assert.deepEqual(await inventory(restored),backup.manifest.rows);
   assert.deepEqual(await roleDefinitions(restored),backup.manifest.roles);
-  assert.equal((await restored.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,32);
+  assert.equal((await restored.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,backup.manifest.schemaVersion);
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM auth.schema_migrations')).rows[0].n,(await source.query('SELECT count(*)::int AS n FROM auth.schema_migrations')).rows[0].n);
   assert.equal(backup.manifest.completeBackup,false); // vault/files/config/full release remain unfinished
 });
