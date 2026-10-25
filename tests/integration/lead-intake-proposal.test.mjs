@@ -83,7 +83,10 @@ test('fresh authority, wrong business, paused writes and original-epoch fences r
 test('retained identity/state/snapshot provenance cannot be changed through raw writes',async()=>{
  const source=request(sourceBody()),r=request(leadBody({sourceId:source.id}));await save('lead_source',a,source);await save('lead',a,r);
  for(const [sql,args]of [["UPDATE crest.leads SET business_id=$1 WHERE id=$2",[b.business,r.id]],["UPDATE crest.leads SET state='won' WHERE id=$1",[r.id]],["UPDATE crest.leads SET source_snapshot='{}',version=version+1 WHERE id=$1",[r.id]]])await assert.rejects(client.query(sql,args),/IMMUTABLE_LEAD/);
- for(const table of ['leads','lead_sources']){await assert.rejects(client.query('DELETE FROM crest.'+table),e=>e.code==='55000');await assert.rejects(client.query('TRUNCATE crest.'+table),e=>e.code==='55000');}
+ for(const table of ['leads','lead_sources'])await assert.rejects(client.query('DELETE FROM crest.'+table),e=>e.code==='55000');
+ await assert.rejects(client.query('TRUNCATE crest.leads'),e=>e.code==='55000');
+ await assert.rejects(client.query('TRUNCATE crest.lead_sources'),e=>e.code==='0A000','PostgreSQL refuses referenced-only truncation before the retention trigger');
+ await assert.rejects(client.query('TRUNCATE crest.leads,crest.lead_sources'),e=>e.code==='55000','the retained-data trigger still refuses a complete foreign-key group');
 });
 test('literal search, bounded UUID pages and inactive source inclusion preserve identities',async()=>{
  const f=await state();for(const label of ['Synthetic %_ literal','Synthetic other'])await save('lead',f,request(leadBody({label})));assert.equal((await directory('lead',f,{search:'%_'})).leads.length,1);const page=await directory('lead',f,{size:1}),next=await directory('lead',f,{after:page.leads[0].id});assert(page.hasMore);assert.equal(next.leads.length,1);assert(next.leads[0].id>page.leads[0].id);
