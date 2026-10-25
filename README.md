@@ -8,6 +8,8 @@ The [private object storage boundary](planning/PHASE_3_PRIVATE_OBJECTS.md) adds 
 
 The [isolated image validator](planning/PHASE_3_IMAGE_VALIDATION.md) adds strict JPEG/PNG checks and private previews. The [PDF validator](planning/PHASE_3_PDF_VALIDATION.md) adds encrypted/active-content rejection and offline page rendering. The [HEIC worker](planning/PHASE_3_HEIC_VALIDATION.md) adds patched native full-image decoding and private previews; check its feature PR's exact-source proof before calling it verified. Actual phone tests, attachment publication and production sandbox dispatch remain gated.
 
+The [validated private intake](planning/PHASE_3_VALIDATED_INTAKE.md) connects the staging snapshot, isolated decoder and independently verified original/preview candidates. Its explicit local operator/CI dispatcher enforces the existing sandbox profile; production hosting, durable typed publication and authorized file reads remain unfinished. Check its PR for exact-source native evidence.
+
 The owner-requested [V1 Google Calendar capability](planning/GOOGLE_CALENDAR_V1.md) is now in the versioned specification (P20/BR21/ADR35). Research and acceptance requirements are documented; no Calendar runtime or live connection is implemented.
 
 The current [exact-target cleanup executor slice](planning/PHASE_2_PROVIDER_CLEANUP_EXECUTOR.md) adds a separately isolated, source-checked transactional maintenance operation under ADR36; it provisions no service login, scheduler or production access.

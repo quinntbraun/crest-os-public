@@ -3,7 +3,8 @@ import {createHash} from 'node:crypto';
 import {crc32} from 'node:zlib';
 import sharp from 'sharp';
 
-export const imageValidationVersion='crest-image-v1-sharp-0.35.5';
+import {imageValidationVersion} from './validation-contract.ts';
+export {imageValidationVersion};
 export const maximumImageBytes=25*1024*1024;
 export const maximumImagePixels=60_000_000;
 export const maximumPreviewBytes=8*1024*1024;

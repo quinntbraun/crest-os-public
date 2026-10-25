@@ -265,6 +265,7 @@ jobs:
           npm run test:image-sandbox
           npm run test:pdf-sandbox
           npm run test:heic-sandbox
+          npm run test:file-intake
           export CREST_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
           npm run release:manifest
           docker save crest-os:ci -o .local/release/crest-os-image.tar

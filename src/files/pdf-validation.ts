@@ -10,7 +10,8 @@ import sharp from 'sharp';
 import toolchain from '../../release/toolchain.json' with {type:'json'};
 
 export const maximumPdfBytes=25*1024*1024,maximumPdfPages=100;
-export const pdfValidationVersion='crest-pdf-v1-qpdf-12.4.2-pdfium-3.0.0';
+import {pdfValidationVersion} from './validation-contract.ts';
+export {pdfValidationVersion};
 type Failure='PDF_SIZE_INVALID'|'PDF_CONTAINER_INVALID'|'PDF_ENCRYPTED'|'PDF_ACTIVE_CONTENT'|'PDF_PAGE_LIMIT'
   |'PDF_UNINSPECTABLE'|'PDF_RENDER_FAILED'|'PDF_TOOLS_UNAVAILABLE';
 export class PdfValidationError extends Error {

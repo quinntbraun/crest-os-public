@@ -6,7 +6,7 @@ import {createServer} from 'node:http';
 import {Readable} from 'node:stream';
 import {createHash,createHmac,randomBytes,randomUUID,timingSafeEqual} from 'node:crypto';
 import {S3Client} from '@aws-sdk/client-s3';
-import {createPrivateObjectStore,createR2ObjectStore,newOriginalKey,maximumFileBytes,PrivateObjectError} from '../../src/files/private-object-store.ts';
+import {createPrivateObjectStore,createR2ObjectStore,newOriginalKey,newPreviewKey,maximumFileBytes,PrivateObjectError} from '../../src/files/private-object-store.ts';
 
 const business=randomUUID(),attempt=randomUUID(),bucket='crest-synthetic-files';
 const access=randomBytes(16).toString('hex'),secret=randomBytes(32).toString('hex');
@@ -45,15 +45,15 @@ before(async()=>{
       if(req.method==='PUT'){
         const chunks=[];for await(const chunk of req)chunks.push(chunk);
         const bytes=Buffer.concat(chunks);
-        if(key.startsWith('originals/')&&(req.headers['if-none-match']!=='*'||objects.has(key)))return xml(res,412,'PreconditionFailed');
+        if((key.startsWith('originals/')||key.startsWith('previews/'))&&(req.headers['if-none-match']!=='*'||objects.has(key)))return xml(res,412,'PreconditionFailed');
         objects.set(key,{bytes,type:req.headers['content-type']});
         if(mode==='lost-write-response'){req.socket.destroy();return;}
         res.writeHead(200,{etag:'"deliberately-not-a-content-hash"'});res.end();return;
       }
       if(req.method!=='GET')return xml(res,405,'MethodNotAllowed');
-      if(mode==='missing-final-read'&&key.startsWith('originals/'))return xml(res,404,'NoSuchKey');
+      if(mode==='missing-final-read'&&(key.startsWith('originals/')||key.startsWith('previews/')))return xml(res,404,'NoSuchKey');
       const object=objects.get(key);if(!object)return xml(res,404,'NoSuchKey');
-      const bytes=mode==='corrupt-original'&&key.startsWith('originals/')?Buffer.alloc(object.bytes.length,99):object.bytes;
+      const bytes=mode==='corrupt-original'&&(key.startsWith('originals/')||key.startsWith('previews/'))?Buffer.alloc(object.bytes.length,99):object.bytes;
       if(mode==='oversized-header'){res.writeHead(200,{'content-length':maximumFileBytes+1});res.end();return;}
       if(mode==='missing-length'){res.writeHead(200);res.end(bytes);return;}
       res.writeHead(200,{'content-length':bytes.length+(mode==='truncated'?1:0),'content-type':object.type,etag:'"not-sha256"'});
@@ -191,4 +191,26 @@ test('production construction fixes HTTPS R2 endpoint and refuses arbitrary acco
     assert.throws(()=>createR2ObjectStore({...config,...change}),PrivateObjectError);
   }
   const live=createR2ObjectStore(config);assert(live.store);live.close();
+});
+
+test('private preview candidates preserve sealed bytes, enforce8 MiB and conditionally refuse replacement',async()=>{
+  const bytes=Buffer.alloc(8*1024*1024,7),key=newPreviewKey(business),sha256=digest(bytes);
+  const writing=store.writePreviewCandidate({key,bytes,sha256,contentType:'image/jpeg'});bytes.fill(9);
+  const r=await writing;assert.equal(r.sha256,sha256);assert.equal(r.byteSize,8*1024*1024);assert.equal(digest(objects.get(key).bytes),sha256);
+  assert.equal(requests.find(r=>r.method==='PUT').headers['if-none-match'],'*');
+  await denied(store.writePreviewCandidate({key,bytes:Buffer.alloc(1),sha256:digest(Buffer.alloc(1)),contentType:'image/jpeg'}),'OBJECT_KEY_EXISTS');
+});
+test('preview namespace, JPEG MIME, hash and size are checked before I/O',async()=>{
+  const input={key:newPreviewKey(business),bytes:Buffer.from('jpeg'),sha256:digest(Buffer.from('jpeg')),contentType:'image/jpeg'};
+  for(const change of [{key:newOriginalKey(business)},{key:'previews/../x'},{contentType:'image/png'},{bytes:Buffer.alloc(0)},{bytes:Buffer.alloc(8*1024*1024+1)},{sha256:'not-sha256'}])
+    await denied(store.writePreviewCandidate({...input,...change}),'OBJECT_INPUT_INVALID');
+  assert.equal(requests.length,0);assert.throws(()=>newPreviewKey('invalid'),PrivateObjectError);
+});
+test('lost, missing and corrupt preview outcomes retain the private candidate without retry or deletion',async()=>{
+  const bytes=Buffer.from('jpeg');
+  for(const [failure,code] of [['lost-write-response','OBJECT_WRITE_UNCERTAIN'],['missing-final-read','OBJECT_STORAGE_FAILED'],['corrupt-original','OBJECT_BYTES_MISMATCH']]){
+    mode=failure;const key=newPreviewKey(business);await denied(store.writePreviewCandidate({key,bytes,sha256:digest(bytes),contentType:'image/jpeg'}),code);
+    assert(objects.has(key));assert.equal(requests.filter(r=>r.key===key&&r.method==='PUT').length,1);
+  }
+  assert(!requests.some(r=>r.method==='DELETE'));
 });
