@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { after,before,test } from 'node:test';
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
 import { installProviderSchema } from '../support/provider-schema.mjs';
-import { backupDatabase,connect,hash,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase,roleDefinitions,run } from '../support/recovery-drill.mjs';
+import { backupDatabase,connect,hash,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase,roleDefinitions,run,postgresTool,normalizedSchema } from '../support/recovery-drill.mjs';
 import {captureObjectArchive,restoreObjectArchive} from '../../src/tooling/object-recovery.ts';
 import {objectDirectory,encryptor,decryptor} from '../support/object-recovery-drill.mjs';
 
@@ -83,7 +83,18 @@ before(async()=>{
   // The fresh process receives no source URL/credential and has only the copy
   // of the emergency key after the original is removed.
   await unlink(keys.path);
-  const output=await run(process.execPath,['tests/support/restore-recovery-drill.mjs',point,emergencyKey],{env:{...process.env,CREST_TEST_DATABASE_URL:'',CREST_RECOVERY_DRILL_TARGET:restoredUrl,CREST_RECOVERY_DRILL_VAULT:join(directory,'vault-objects'),CREST_RECOVERY_DRILL_OBJECTS:join(directory,'restored-objects')}});
+  let output;
+  try{output=await run(process.execPath,['tests/support/restore-recovery-drill.mjs',point,emergencyKey],{env:{...process.env,CREST_TEST_DATABASE_URL:'',CREST_RECOVERY_DRILL_TARGET:restoredUrl,CREST_RECOVERY_DRILL_VAULT:join(directory,'vault-objects'),CREST_RECOVERY_DRILL_OBJECTS:join(directory,'restored-objects')}});}
+  catch(error){
+    if(error.message!=='SYNTHETIC_RECOVERY_TOOL_FAILED:schema')throw error;
+    const expected=normalizedSchema(await postgresTool('pg_dump',sourceUrl,['--schema-only'])),actual=normalizedSchema(await postgresTool('pg_dump',restoredUrl,['--schema-only']));
+    assert.equal(hash(expected),backup.manifest.schemaSha256,'source schema changed after capture');
+    const left=expected.split('\n'),right=actual.split('\n'),at=left.findIndex((line,i)=>line!==right[i]);
+    // Only grant statements over fixed public Crest names may cross diagnostics.
+    // No function bodies, comments, source values or arbitrary SQL are emitted.
+    const safe=line=>/^(?:GRANT|REVOKE|ALTER DEFAULT PRIVILEGES) [A-Za-z0-9_ .(),;]+$/.test(line??'')&&/\bcrest_[a-z_]+\b/.test(line)?line:'[schema statement withheld]';
+    throw new Error('SYNTHETIC_SCHEMA_REVIEW_REQUIRED:'+JSON.stringify({line:at+1,expected:left.slice(Math.max(0,at-1),at+4).map(safe),actual:right.slice(Math.max(0,at-1),at+4).map(safe)}));
+  }
   assert.match(output.toString(),/^Synthetic isolated database restore and verification completed\s*$/);
   restored=await connect(restoredUrl);
 },{timeout:240000});
