@@ -32,6 +32,10 @@ Earlier API consumer validation passes3,529 units/99files, lint/types/server bun
 
 Current lifecycle canonical/backend/HTTP changes still need their own full native/Auth/browser/build/container acceptance and separate protected-main verification. Private status HTTP and stateless browser methods are implemented under the existing explicit leads opt-in; mobile status controls and distinct original-intent controller recovery are now implemented under acceptance. The expanded native browser fixture is authored, not yet executed. Lead vehicle/address intake, atomic conversion, durable missing-draft resolution, complete exports/independent recovery, commercial/field/financial/Calendar workflows and real devices remain unfinished. Synthetic only; no provisioning/spending/signup, production apply/grants/deploy/activation or real records.
 
+The first complete screen candidate run40207593512 passed all three DB/Auth jobs and local/Linux units, but failed its expanded browser gate. Chromium assertions matched an old parent confirmation before the second command committed, causing dependent recovery/reference assertions to run early. Mobile WebKit's third session was the sixth login against one shared fixture identifier and correctly hit the unchanged five-attempt/15-minute admission limit. Forward fixture correction waits for the new retained source version and cleared original reference, and gives each engine its own complete disposable PostgreSQL/Auth/business/application lifecycle. No login/request limit, runtime authorization, assertion outcome or test case is waived. Full new-source browser/build/container acceptance remains required.
+
+The superseded API-only source3f1745b/candidatecf85e76/run40204986952 is independently fully verified: all four trusted checks/full logs/finalized artifacts,3,529units/99files,868DB/Auth,22shell,98HTTPS leaves/112entries, twoHEIC builds, Next and restricted container, zero negative counts. This establishes that predecessor only; it does not certify the screen candidate or actual main.
+
 
 ## Mobile status controls
 

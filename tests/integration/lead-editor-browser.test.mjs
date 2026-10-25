@@ -1,7 +1,7 @@
 // Genuine HTTPS + compiled Next/Node + real disposable Auth/PG. No traces,
 // HAR, video, storageState exports or credential-bearing failure artifacts.
 import assert from 'node:assert/strict';
-import {before,after,test} from 'node:test';
+import {test} from 'node:test';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {readFile,chmod} from 'node:fs/promises';
@@ -16,7 +16,10 @@ import {startRealAuthService,authResult} from '../support/real-auth-service.mjs'
 
 let sandbox,client,service,app,origin,fixture,actor,business,login,loginOwned=false;
 const sessionName='__Host-crest_session';
-before(async()=>{
+// Each engine exercises three genuine MFA sessions in its own disposable
+// business/Auth/database/application. Six logins against one identifier would
+// correctly hit the unchanged five-attempt/15-minute production admission.
+async function startFixture(){
   assert.equal(process.platform,'linux','the disposable container/HTTPS fixture requires Linux CI');
   process.env.NODE_ENV='production';
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);
@@ -53,8 +56,8 @@ before(async()=>{
   app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},leads:true,customers:true});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);
-});
-after(async()=>{try{await app?.close();}finally{try{await service?.close();}finally{if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();}}});
+}
+async function stopFixture(){try{await app?.close();}finally{try{await service?.close();}finally{if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();}}app=undefined;service=undefined;sandbox=undefined;loginOwned=false;}
 
 async function fill(page,{trusted=false,password=fixture.password}={}){
   await page.getByLabel('Email',{exact:true}).fill(fixture.email);await page.getByLabel('Password',{exact:true}).fill(password);
@@ -79,9 +82,18 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
  test('genuine private lead/source editors '+name,async t=>{
   const browser=await engine.launch();let statusContext,statusPage,first,second,epoch,one,two,source,lead,sourceLabel='Synthetic source editor '+name,leadLabel='Synthetic lead editor '+name;
   try{
+   await startFixture();
    first=await browser.newContext({ignoreHTTPSErrors:true,viewport});second=await browser.newContext({ignoreHTTPSErrors:true,viewport});const page=await first.newPage(),other=await second.newPage();
    async function fresh(){return (await send(other,'auth/session')).body.csrfToken;}
    const statusPanel=p=>p.getByRole('region',{name:'Lead status',exact:true}),statusMessage=p=>p.getByRole('status',{name:'Lead status editor status',exact:true});
+   async function statusCommitted(version){
+    // The prior confirmation text can still be present while the next command
+    // awaits authority. Wait for the newly committed source version and cleared
+    // original reference, not a matching message from the previous operation.
+    await expect(statusPage.getByRole('region',{name:'Lead history',exact:true}).getByText('Current version: '+version,{exact:true})).toBeVisible();
+    await expect(editorStatus(statusPage)).toContainText('Status change confirmed');
+    await expect.poll(()=>statusPage.evaluate(()=>sessionStorage.getItem('crest.lead-state.pending-reference.v1'))).toBeNull();
+   }
    async function loadStatus(p=statusPage){await statusPanel(p).getByRole('button',{name:'Load current lead status',exact:true}).click();await expect(statusMessage(p)).toContainText('Review the current status');}
    async function statusLead(label,p=statusPage){
     const raw={schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,leadId:randomUUID(),expectedVersion:'0',label,customerId:one.customerId,sourceId:null,referralText:null,phone:null,email:null,requestedScope:null,availability:null,estimatedCents:'9007199254740993',followUpAt:'2026-11-01T01:02:03.123456Z',notes:'Synthetic retained intake'};
@@ -126,9 +138,9 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     await panel.getByLabel('New lead status',{exact:true}).selectOption('lost');await expect(panel.getByRole('button',{name:'Save lead status',exact:true})).toBeDisabled();await expect(statusPage.getByLabel('Lead label',{exact:true})).toBeDisabled();
     const lostReason=' Original Lost reason é 😀\n retained ';await panel.getByLabel('Reason for this status change',{exact:true}).fill(lostReason);
     assert.equal(await statusPage.locator('form form').count(),0);assert.deepEqual((await new AxeBuilder({page:statusPage}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);assert.equal(await statusPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert(await panel.getByRole('button',{name:'Save lead status',exact:true}).evaluate(el=>el.getBoundingClientRect().height>=44));
-    await panel.getByRole('button',{name:'Save lead status',exact:true}).click();await expect(editorStatus(statusPage)).toContainText('Status change confirmed');
+    await panel.getByRole('button',{name:'Save lead status',exact:true}).click();await statusCommitted('2');
     let stored=(await client.query('SELECT state,lost_reason,version::text,estimated_cents::text,notes FROM crest.leads WHERE id=$1',[raw.leadId])).rows[0];assert.equal(stored.state,'lost');assert.equal(stored.version,'2');assert.equal(stored.lost_reason,lostReason);assert.equal(stored.estimated_cents,raw.estimatedCents);assert.equal(stored.notes,raw.notes);
-    await loadStatus();await panel.getByLabel('New lead status',{exact:true}).selectOption('follow_up');await expect(panel.getByRole('button',{name:'Save lead status',exact:true})).toBeDisabled();const reopenReason=' Original reopen reason é 😀\n retained ';await panel.getByLabel('Reason for this status change',{exact:true}).fill(reopenReason);await panel.getByRole('button',{name:'Save lead status',exact:true}).click();await expect(editorStatus(statusPage)).toContainText('Status change confirmed');
+    await loadStatus();await panel.getByLabel('New lead status',{exact:true}).selectOption('follow_up');await expect(panel.getByRole('button',{name:'Save lead status',exact:true})).toBeDisabled();const reopenReason=' Original reopen reason é 😀\n retained ';await panel.getByLabel('Reason for this status change',{exact:true}).fill(reopenReason);await panel.getByRole('button',{name:'Save lead status',exact:true}).click();await statusCommitted('3');
     stored=(await client.query('SELECT state,lost_reason,version::text FROM crest.leads WHERE id=$1',[raw.leadId])).rows[0];assert.deepEqual(stored,{state:'follow_up',lost_reason:null,version:'3'});
     await loadStatus();const retained=panel.getByRole('region',{name:'Retained status history',exact:true});await retained.getByText('Version 2 · new → lost',{exact:true}).click();await retained.getByText('Version 3 · lost → follow up',{exact:true}).click();
     assert.equal(await retained.locator('details').nth(0).locator('p').last().textContent(),lostReason);assert.equal(await retained.locator('details').nth(1).locator('p').last().textContent(),reopenReason);assert.equal(await statusPage.evaluate(()=>sessionStorage.getItem('crest.lead-state.pending-reference.v1')),null);
@@ -144,9 +156,9 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     const raw=await statusLead('Synthetic status recovery '+name),panel=statusPanel(statusPage),pattern='**/api/business/leads/state',key='crest.lead-state.pending-reference.v1',read=()=>statusPage.evaluate(k=>JSON.parse(sessionStorage.getItem(k)),key);
     await panel.getByLabel('New lead status',{exact:true}).selectOption('contacted');let sent,calls=0;
     const dropped=async route=>{sent=route.request().postDataJSON();calls++;assert.equal((await route.fetch()).status(),200);await route.abort('failed');};await statusPage.route(pattern,dropped);await panel.getByRole('button',{name:'Save lead status',exact:true}).click();await expect(statusMessage(statusPage)).toContainText('could not be confirmed');await statusPage.unroute(pattern,dropped);const original=await read();assert.equal(calls,1);assert.equal(original.reference.operationId,sent.operationId);assert.equal(original.reference.expectedVersion,'1');assert(!JSON.stringify(original).includes(raw.label));
-    await statusPage.reload();await expect(statusPage.getByRole('button',{name:'Add lead',exact:true})).toBeVisible();await find(statusPage,raw.label);await panel.getByRole('button',{name:'Load current lead status',exact:true}).click();await expect(statusMessage(statusPage)).toContainText('pending status change');await panel.getByRole('button',{name:'Check status change outcome',exact:true}).click();await expect(editorStatus(statusPage)).toContainText('Status change confirmed');assert.equal(await read(),null);
+    await statusPage.reload();await expect(statusPage.getByRole('button',{name:'Add lead',exact:true})).toBeVisible();await find(statusPage,raw.label);await panel.getByRole('button',{name:'Load current lead status',exact:true}).click();await expect(statusMessage(statusPage)).toContainText('pending status change');await panel.getByRole('button',{name:'Check status change outcome',exact:true}).click();await statusCommitted('2');assert.equal(await read(),null);
     await loadStatus();await panel.getByLabel('New lead status',{exact:true}).selectOption('follow_up');let blockedBody;const blocked=route=>{blockedBody=route.request().postDataJSON();return route.abort('failed');};await statusPage.route(pattern,blocked);await panel.getByRole('button',{name:'Save lead status',exact:true}).click();await expect(statusMessage(statusPage)).toContainText('could not be confirmed');await statusPage.unroute(pattern,blocked);await panel.getByRole('button',{name:'Check status change outcome',exact:true}).click();await expect(statusMessage(statusPage)).toContainText('does not prove an earlier request failed');
-    const retry=statusPage.waitForRequest(r=>r.url().endsWith('/api/business/leads/state'));await panel.getByRole('button',{name:'Retry original status change',exact:true}).click();assert.deepEqual((await retry).postDataJSON(),blockedBody);await expect(editorStatus(statusPage)).toContainText('Status change confirmed');assert.equal(await read(),null);
+    const retry=statusPage.waitForRequest(r=>r.url().endsWith('/api/business/leads/state'));await panel.getByRole('button',{name:'Retry original status change',exact:true}).click();assert.deepEqual((await retry).postDataJSON(),blockedBody);await statusCommitted('3');assert.equal(await read(),null);
     await loadStatus();await panel.getByLabel('New lead status',{exact:true}).selectOption('contacted');await statusPage.route(pattern,blocked);await panel.getByRole('button',{name:'Save lead status',exact:true}).click();await expect(statusMessage(statusPage)).toContainText('could not be confirmed');await statusPage.unroute(pattern,blocked);const unresolved=await read();
     await statusPage.reload();await expect(statusPage.getByRole('button',{name:'Add lead',exact:true})).toBeVisible();await find(statusPage,raw.label);await panel.getByRole('button',{name:'Load current lead status',exact:true}).click();await panel.getByRole('button',{name:'Check status change outcome',exact:true}).click();await expect(statusMessage(statusPage)).toContainText('original draft is no longer in memory');await expect(panel.getByRole('button',{name:'Retry original status change',exact:true})).toHaveCount(0);await expect(statusPage.getByLabel('Lead label',{exact:true})).toBeDisabled();assert.deepEqual(await read(),unresolved);assert.equal(await statusPage.evaluate(()=>sessionStorage.getItem('crest.lead.pending-reference.v1')),null);
    });
@@ -170,6 +182,6 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     await loadButton(page,true).click();await page.getByRole('button',{name:'Add lead source',exact:true}).click();await page.getByLabel('Source label',{exact:true}).fill('Synthetic hidden source draft');await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'hidden'});document.dispatchEvent(new Event('visibilitychange'));});await expect(editorStatus(page,true)).toContainText('Private lead source details were cleared');await expect(page.getByRole('form',{name:'Lead source editor',exact:true})).toHaveCount(0);await page.evaluate(()=>{delete document.visibilityState;});
     await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[business]);try{await loadButton(page,true).click();await expect(page.getByRole('button',{name:'Add lead source',exact:true})).toBeDisabled();await find(page,label,true);await expect(saveButton(page,true)).toBeDisabled();}finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);}
    });
-  }finally{await statusContext?.close();await first?.close();await second?.close();await browser.close();}
+  }finally{try{await statusContext?.close();await first?.close();await second?.close();await browser.close();}finally{await stopFixture();}}
  });
 }
