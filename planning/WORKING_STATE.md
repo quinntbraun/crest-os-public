@@ -2,6 +2,10 @@
 
 Read AGENTS.md, README.md, this checkpoint and PRE_IMPLEMENTATION.md. Canonical documents are authoritative. Verify live Git/PR/CI before dependent work; never reset unexpected changes. Historical detail is preserved in Git and PR metadata.
 
+## Customer editor consumer
+
+This branch adds `/customers` over PR68/PR67. Read PHASE_4_CUSTOMER_EDITOR.md and the updated implementation plan. Forms/controller preserve raw optional values, archive/reopen/history and explicit uncertain-save recovery without browser contact storage. Opaque per-tab metadata survives reload; a lost original draft with an absent receipt blocks replacement for review. That operator-resolution path remains a real-use gate. Full actual-source compiled HTTPS/browser/container proof is required; do not replace it with unit counts. Runtime activation remains explicit and default-closed. Verify live dependency PRs before retargeting/merging this stacked consumer; no source/schema/provenance history is rewritten.
+
 ## Verified baseline
 
 - Public repository: https://github.com/quinntbraun/crest-os-public

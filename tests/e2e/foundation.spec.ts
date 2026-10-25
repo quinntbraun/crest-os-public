@@ -42,3 +42,10 @@ test('settings stays private, accessible and unavailable in the unconfigured ima
   await expect(page.getByRole('status')).toContainText('Business settings could not be verified');await expect(page.getByLabel('Business legal name',{exact:true})).toHaveCount(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
 });
+
+test('customer editor is private and accessible while the default customer runtime remains closed',async({page,request})=>{
+  const response=await page.goto('/customers');expect(response?.headers()['cache-control']).toContain('no-store');await expect(page.getByRole('heading',{name:'Customers',exact:true})).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Customer access could not be verified');await expect(page.getByRole('form',{name:'Customer editor',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Add customer',exact:true})).toHaveCount(0);
+  const denied=await request.post('/api/business/customers/list',{data:{},headers:{origin:'http://127.0.0.1:3000'}});expect(denied.status()).toBe(503);expect(denied.headers()['cache-control']).toContain('no-store');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
+});
