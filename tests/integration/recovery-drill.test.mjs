@@ -6,8 +6,13 @@ import { after,before,test } from 'node:test';
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
 import { installProviderSchema } from '../support/provider-schema.mjs';
 import { backupDatabase,connect,hash,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase,roleDefinitions,run } from '../support/recovery-drill.mjs';
+import {captureObjectArchive,restoreObjectArchive} from '../../src/tooling/object-recovery.ts';
+import {objectDirectory,encryptor,decryptor} from '../support/object-recovery-drill.mjs';
 
 let sandbox,source,sourceUrl,sourceWeb,cluster,restored,restoredUrl,point,keys,emergencyKey,directory,backup,owner,original,sourceLogin,restoredLogin,liveSource,sourceLoginOwned=false,restoredLoginOwned=false;
+let sourceObjects,vaultObjects,restoredObjects,objectInventory,postSnapshotObject;
+const objectSignal=()=>AbortSignal.timeout(30000);
+const objectPorts=destination=>({readVault:vaultObjects.read,unseal:decryptor(emergencyKey),putDestination:destination.put,readDestination:destination.read});
 const issuer='https://auth.example.com/auth/v1';
 const renameSql='SELECT crest_commands.rename_business($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12) AS value';
 const args=(f,r)=>[f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+120000),f.business,f.epoch,r.operation,r.version,r.name];
@@ -51,17 +56,29 @@ before(async()=>{
   // An otherwise unknown schema/table and a sequence ensure a selective export
   // cannot masquerade as a database backup. This fixture is never a migration.
   await source.query("CREATE SCHEMA recovery_fixture; CREATE SEQUENCE recovery_fixture.counter START 9007199254740993; CREATE TABLE recovery_fixture.evidence(id bigint PRIMARY KEY DEFAULT nextval('recovery_fixture.counter'),exact_time timestamptz NOT NULL,original bytea NOT NULL,label text NOT NULL CHECK(length(label)>0)); INSERT INTO recovery_fixture.evidence(exact_time,original,label) VALUES('2026-10-24T01:02:03.123456Z',decode('000102ff00','hex'),'Unicode é 😀 \\N =formula');");
+  sourceObjects=await objectDirectory(join(directory,'source-objects'));vaultObjects=await objectDirectory(join(directory,'vault-objects'));restoredObjects=await objectDirectory(join(directory,'restored-objects'));
+  // The real domain tables do not exist yet. Keep an explicitly drill-only
+  // inventory schema, captured with the actual exported database snapshot.
+  await source.query('CREATE TABLE recovery_fixture.objects(key text PRIMARY KEY, "byteSize" integer NOT NULL,sha256 text NOT NULL,retention text NOT NULL,state text NOT NULL)');
+  for(const [i,retention] of ['original','derivative','quarantine'].entries()){
+    const key=retention==='quarantine'?`staging/${business}/${randomUUID()}/${randomUUID()}`:`${i===0?'originals':'previews'}/${business}/${randomUUID()}`,bytes=Buffer.from(`Synthetic retained ${retention} é 😀`);
+    await sourceObjects.put(key,bytes,objectSignal());await source.query('INSERT INTO recovery_fixture.objects VALUES($1,$2,$3,$4,$5)',[key,bytes.length,hash(bytes),retention,i===0?'Archived':i===1?'Available':'Quarantined']);
+  }
   const w=await web(sourceUrl,sandbox.admin);sourceWeb=w.connection;sourceLogin=w.login;sourceLoginOwned=true;
   original=request('1','Synthetic committed before snapshot');assert.equal((await rename(sourceWeb,owner,original)).rows[0].value.state,'committed');
   backup=await backupDatabase(source,sourceUrl,point,keys.recipient,async()=>{
     assert.equal((await rename(sourceWeb,owner,request('2','Synthetic committed after snapshot'))).rows[0].value.state,'committed');
+    const key=`originals/${business}/${randomUUID()}`,bytes=Buffer.from('Committed after snapshot');postSnapshotObject=key;
+    await sourceObjects.put(key,bytes,objectSignal());
+    const later=await connect(sourceUrl);try{await later.query('INSERT INTO recovery_fixture.objects VALUES($1,$2,$3,$4,$5)',[key,bytes.length,hash(bytes),'original','Available']);}finally{await later.end();}
     const independent=await connect(sourceUrl);try{liveSource=await inventory(independent);}finally{await independent.end();}
-  });
+  },{async inventory(client){objectInventory=(await client.query('SELECT key,"byteSize",sha256,retention FROM recovery_fixture.objects ORDER BY key COLLATE "C"')).rows;return objectInventory;},
+    capture:objects=>captureObjectArchive(randomUUID(),objects,{readSource:sourceObjects.read,seal:encryptor(keys.recipient),putVault:vaultObjects.put,readVault:vaultObjects.read})});
   cluster=await recoveryCluster();restoredUrl=await cluster.database();
   // The fresh process receives no source URL/credential and has only the copy
   // of the emergency key after the original is removed.
   await unlink(keys.path);
-  const output=await run(process.execPath,['tests/support/restore-recovery-drill.mjs',point,emergencyKey],{env:{...process.env,CREST_TEST_DATABASE_URL:'',CREST_RECOVERY_DRILL_TARGET:restoredUrl}});
+  const output=await run(process.execPath,['tests/support/restore-recovery-drill.mjs',point,emergencyKey],{env:{...process.env,CREST_TEST_DATABASE_URL:'',CREST_RECOVERY_DRILL_TARGET:restoredUrl,CREST_RECOVERY_DRILL_VAULT:join(directory,'vault-objects'),CREST_RECOVERY_DRILL_OBJECTS:join(directory,'restored-objects')}});
   assert.match(output.toString(),/^Synthetic isolated database restore and verification completed\s*$/);
   restored=await connect(restoredUrl);
 },{timeout:240000});
@@ -85,6 +102,24 @@ test('one exported snapshot preserves prior operations and excludes concurrent c
   assert.equal((await source.query('SELECT legal_name FROM crest.businesses WHERE id=$1',[owner.business])).rows[0].legal_name,'Synthetic committed after snapshot');
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,1);
   assert.equal((await source.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,2);
+});
+
+test('same-snapshot retained files restore with Archived and quarantined evidence, excluding later commits',async()=>{
+  assert.deepEqual((await restored.query('SELECT key,"byteSize",sha256,retention FROM recovery_fixture.objects ORDER BY key COLLATE "C"')).rows,objectInventory);
+  assert.equal(objectInventory.length,3);assert.equal((await source.query('SELECT count(*)::int AS n FROM recovery_fixture.objects')).rows[0].n,4);
+  for(const object of objectInventory){const b=await restoredObjects.read(object.key,object.byteSize,objectSignal());assert.equal(hash(b),object.sha256);assert.deepEqual(b,await sourceObjects.read(object.key,object.byteSize,objectSignal()));}
+  await assert.rejects(readFile(restoredObjects.path(postSnapshotObject)),e=>e.code==='ENOENT');assert(!backup.manifest.excluded.includes('external_objects'));
+});
+
+test('missing referenced original blocks database restoration before SQL without touching the source',async()=>{
+  const entry=objectInventory.find(o=>o.retention==='original'),index=objectInventory.indexOf(entry),key=`recovery/${backup.manifest.objectArchive.receipt.pointId}/objects/${index}.age`,path=vaultObjects.path(key),saved=await readFile(path);
+  const f=await emptyRestore(),destination=await objectDirectory(join(directory,'missing-object-destination'));
+  try{await unlink(path);await closed(restoreDatabase(point,emergencyKey,f.url,a=>restoreObjectArchive(a.receipt,a.inventory,objectPorts(destination))));assert.deepEqual(await inventory(f.client),[]);assert.deepEqual(await readdir(join(directory,'missing-object-destination')),[]);}
+  finally{await writeFile(path,saved,{flag:'wx',mode:0o600});await f.client.end();}
+});
+
+test('object archive requires an explicit restore transport and cannot silently restore DB alone',async()=>{
+  const f=await emptyRestore();try{await closed(restoreDatabase(point,emergencyKey,f.url));assert.deepEqual(await inventory(f.client),[]);}finally{await f.client.end();}
 });
 test('unknown-schema rows retain exact bigint, microseconds, binary bytes and sequence state',async()=>{
   assert.deepEqual((await restored.query("SELECT id::text,to_char(exact_time AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS stamp,encode(original,'hex') AS original,label FROM recovery_fixture.evidence")).rows,(await source.query("SELECT id::text,to_char(exact_time AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS stamp,encode(original,'hex') AS original,label FROM recovery_fixture.evidence")).rows);

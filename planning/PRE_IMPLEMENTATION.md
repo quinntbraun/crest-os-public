@@ -1,12 +1,12 @@
 # Current implementation plan
 
-## Active change: validated private file intake
+## Active change: retained-object recovery
 
-PR64/protected main2abdca1bc3458381339f80e05ecae9c3f3863958, tree6d579616653552374c608b3dff45e690aef64452, is fully verified in candidate40140192052 and actual-main40141770335. Read WORKING_STATE.md and PHASE_3_VALIDATED_INTAKE.md; canonical ROADMAP/TESTING/SECURITY/DATABASE remain authoritative.
+PR65/protected main393206cce63e83fcf0c1951b15f31c6951d1bc96, treee22b47fde40992a52dfce6c206793c5f4f8d4589, passed candidate40145236144 and actual-main40146988314. Exact-source proof is in PR65. Read WORKING_STATE.md and PHASE_3_OBJECT_RECOVERY.md; canonical ROADMAP/TESTING/SECURITY/DATABASE remain authoritative.
 
-Connect one bounded staging snapshot through the actual isolated JPEG/PNG/HEIC/PDF decoder to independently checksummed immutable original and private preview candidates. Use an explicit local operator/CI transport for the reviewed image ID and already specified sandbox limits; no production host, web Docker authority, grant, credentials or activation. Retain unknown create/write/cleanup outcomes and reserved candidate/dispatch identity for reconciliation. Never mark Available or infer deletion/retry safety.
+Extend the encrypted database drill with snapshot-bound retained originals, previews and quarantine. Use standard age and immutable vault candidates; independently verify ciphertext/destination, preflight every object and fail before SQL on missing files. Exercise emergency-key/fresh-process recovery and faults. Actual DB inventory stays explicitly drill-only until genuine domain tables exist. No fake parent, generic cabinet, schema/canonical change, production authority or cloud setup.
 
-Test real SDK preview limits/faults, binding/protocol/cancellation/cleanup/partial-write unit regressions and native SDK+restricted-release-container intake across all four formats, plus reused staging, quarantine, final corruption, lost original response and running-worker cancellation. Keep all existing gates. Local Windows native/Docker constraints remain; candidate and actual-main Linux evidence belongs in the PR. Preserve canonical/SQL bytes and no dependency/schema changes.
+Keep all checks. Local Windows executes native age/object tests; PostgreSQL/Docker/Auth/build/browser proof comes from Linux CI. Record candidate and actual-main results in the feature PR. No automatic deletion/retry of uncertain candidates, unsupported complete-backup claim or status-only PR.
 
 ## Next
 
