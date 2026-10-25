@@ -70,11 +70,12 @@ test('snapshot inventory binds every entry even when encrypted manifest is rewri
   }
 });
 test('receipt rejects a different point, unexpected fields and unbounded metadata before I/O',async()=>{
-  const f=await fixture(),r=await capture(f);for(const invalid of [{...r,pointId:randomUUID()},{...r,extra:true},{...r,manifest:{...r.manifest,byteSize:Infinity}},{...r,manifest:{...r.manifest,key:'../../escape'}}])await failed(restore(f,invalid),'inventory');
+  const f=await fixture(),r=await capture(f);for(const invalid of [{...r,pointId:randomUUID()},{...r,pointId:{toString:()=>r.pointId}},{...r,extra:true},{...r,manifest:{...r.manifest,sha256:{toString:()=>r.manifest.sha256}}},{...r,manifest:{...r.manifest,byteSize:Infinity}},{...r,manifest:{...r.manifest,key:'../../escape'}}])await failed(restore(f,invalid),'inventory');
 });
 test('invalid, duplicate, oversized and cross-namespace inventories fail before I/O',async()=>{
   const f=await fixture(),o=f.objects[0];let calls=0;f.capture.readSource=async()=>{calls++;throw new Error('credential-bearing URL');};
   for(const invalid of [[o,o],[{...o,key:'../escape'}],[{...o,byteSize:25*1024*1024+1}],[{...o,retention:'derivative'}],[{...o,extra:true}],Array(1001).fill(o)])await failed(captureObjectArchive(f.pointId,invalid,f.capture),'inventory');assert.equal(calls,0);
+  for(const point of [null,'../escape',{toString:()=>f.pointId}])await failed(captureObjectArchive(point,f.objects,f.capture),'inventory');assert.equal(calls,0);
 });
 test('lost vault PUT response is retained and never retried or published complete',async()=>{
   const f=await fixture();let writes=0;f.capture.putVault=async(...args)=>{writes++;await f.vault.put(...args);throw new Error('secret transport detail');};await failed(capture(f),'vault_write');assert.equal(writes,1);assert.equal((await readdir(join(f.root,'vault'))).length,1);

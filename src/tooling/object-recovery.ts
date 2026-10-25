@@ -47,9 +47,9 @@ function live(signal:AbortSignal){if(signal.aborted)throw new ObjectRecoveryErro
 function objectKey(pointId:string,index:number){return `recovery/${pointId}/objects/${index}.age`;}
 function manifestKey(pointId:string){return `recovery/${pointId}/manifest.age`;}
 function receiptCopy(receipt:ObjectArchiveReceipt){
-  fields(receipt,['version','pointId','manifest']);check(receipt.version===1&&pointPattern.test(receipt.pointId));
+  fields(receipt,['version','pointId','manifest']);check(receipt.version===1&&typeof receipt.pointId==='string'&&pointPattern.test(receipt.pointId));
   fields(receipt.manifest,['key','byteSize','sha256']);const {key,byteSize,sha256}=receipt.manifest;
-  check(key===manifestKey(receipt.pointId)&&Number.isSafeInteger(byteSize)&&byteSize>0&&byteSize<=maxManifest+overhead&&/^[a-f0-9]{64}$/.test(sha256));
+  check(key===manifestKey(receipt.pointId)&&Number.isSafeInteger(byteSize)&&byteSize>0&&byteSize<=maxManifest+overhead&&typeof sha256==='string'&&/^[a-f0-9]{64}$/.test(sha256));
   return {version:1 as const,pointId:receipt.pointId,manifest:{key,byteSize,sha256}};
 }
 
@@ -58,7 +58,7 @@ function receiptCopy(receipt:ObjectArchiveReceipt){
 export async function captureObjectArchive(pointId:string,objects:readonly RecoveryObject[],ports:{readSource:RecoveryReader;seal:Crypt;putVault:RecoveryWriter;readVault:RecoveryReader},signal?:AbortSignal):Promise<ObjectArchiveReceipt>{
   let stage:Stage='inventory';const boundedSignal=signalFor(signal);
   try{
-    check(pointPattern.test(pointId));const expected=inventory(objects),{readSource,seal,putVault,readVault}=ports;live(boundedSignal);
+    check(typeof pointId==='string'&&pointPattern.test(pointId));const expected=inventory(objects),{readSource,seal,putVault,readVault}=ports;live(boundedSignal);
     const entries=[];
     for(const [index,object] of expected.entries()){
       stage='source';const plain=bounded(await readSource(object.key,object.byteSize,boundedSignal),object.byteSize);matches(plain,object);live(boundedSignal);
