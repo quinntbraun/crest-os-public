@@ -1,21 +1,30 @@
 import {request as httpRequest} from 'node:http';
 import {describe,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn()}));
+const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn()}));
 vi.mock('../../src/security/browser-session-flow.ts',()=>({createBrowserSessionFlow:()=>flow}));
 vi.mock('../../src/security/business-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/business-http.ts')>(),createBusinessHttp:()=>flow.business}));
 vi.mock('../../src/customer/customer-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-http.ts')>(),createCustomerHttp:()=>flow.customers}));
 vi.mock('../../src/customer/customer-address-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-address-http.ts')>(),createCustomerAddressHttp:()=>flow.addresses}));
+vi.mock('../../src/customer/vehicle-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/vehicle-http.ts')>(),createVehicleHttp:()=>flow.vehicles}));
 import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../../src/server/node-server.ts';
 import type {NodeConfiguration} from '../../src/server/node-server.ts';
 
 const origin='https://crest.example.com';
+async function withVehicleServer(enabled:boolean,work:(local:string,pages:ReturnType<typeof vi.fn>)=>Promise<void>){
+  const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const address=server.address();if(!address||typeof address==='string')throw new Error();
+  const local=`http://127.0.0.1:${address.port}`,pages=vi.fn(async()=>{});
+  flow.vehicles.mockImplementation(async()=>new Response(JSON.stringify({synthetic:'vehicle'}),{headers:{'cache-control':'private, no-store'}}));
+  bindApplicationHandler(server,{origin:local,environment:'test',customers:true,vehicles:enabled,business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+  try{await work(local,pages);}finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));flow.vehicles.mockReset();}
+}
 describe('Node hosting boundary',()=>{
   it.each(['/api/business','/api/business/settings','/api/%62usiness/rename','/%61pi/business/operation','/api%2fbusiness/settings'])('reserves the business namespace including encoded aliases: %s',path=>expect(requestTarget(path,origin).business).toBe(true));
   it('requires explicit authentication composition before enabling a business target',()=>{
     expect(()=>bindApplicationHandler(createBoundedNodeServer(),{origin,environment:'test',business:{businessId:'untrusted'}},async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   });
-  it.each([{customers:true},{customers:true,authentication:{}},{customers:'yes'}])('requires explicit boolean customer composition with authentication and business: %o',patch=>{
+  it.each([{customers:true},{customers:true,authentication:{}},{customers:'yes'},{vehicles:true},{vehicles:true,authentication:{}},{vehicles:'yes'}])('requires explicit boolean directory composition with authentication and business: %o',patch=>{
     expect(()=>bindApplicationHandler(createBoundedNodeServer(),{origin,environment:'test',...patch} as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   });
   it('customer routing stays closed without opt-in and never falls through to business or Next',async()=>{
@@ -25,6 +34,20 @@ describe('Node hosting boundary',()=>{
     try{for(const path of ['/api/business/customers','/api/business/customers/context','/api/%62usiness/%63ustomers/save','/api/business/customers/addresses','/api/business/customers/addresses/context','/api/%62usiness/%63ustomers/%61ddresses/save']){const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(503);expect(await response.json()).toEqual({error:path.includes('addresses')||path.includes('%61ddresses')?'ADDRESS_REQUEST_FAILED':'CUSTOMER_REQUEST_FAILED'});expect(response.headers.get('cache-control')).toContain('no-store');}expect(flow.business.mock.calls.length).toBe(previousBusiness);expect(flow.customers.mock.calls.length).toBe(previousCustomer);expect(flow.addresses).not.toHaveBeenCalled();expect(pages).not.toHaveBeenCalled();}
     finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
   });
+  it.each([false,true])('vehicle routing requires its own opt-in even with customers enabled: %s',enabled=>withVehicleServer(enabled,async(local,pages)=>{
+    const before=flow.vehicles.mock.calls.length;
+    for(const path of ['/api/business/vehicles','/api/business/vehicles/context','/api/%62usiness/%76ehicles/save']){
+      const response=await fetch(local+path,{method:'POST',body:'{}'});
+      expect(response.status).toBe(enabled?200:503);
+      expect(await response.json()).toEqual(enabled?{synthetic:'vehicle'}:{error:'VEHICLE_REQUEST_FAILED'});
+    }
+    expect(flow.vehicles.mock.calls.length-before).toBe(enabled?3:0);expect(pages).not.toHaveBeenCalled();
+  }));
+  it('vehicle responses support bounded directory history and cancel oversized delivery',()=>withVehicleServer(true,async local=>{
+    flow.vehicles.mockImplementation(async request=>new Response(request.url.endsWith('/oversize')?'x'.repeat(1048577):'x'.repeat(20000)));
+    expect((await(await fetch(local+'/api/business/vehicles/history',{method:'POST',body:'{}'})).text()).length).toBe(20000);
+    await expect(fetch(local+'/api/business/vehicles/oversize',{method:'POST',body:'{}'})).rejects.toThrow();
+  }));
   it('customer pages have their own1MiB delivery bound while authentication/settings retain8KiB',async()=>{
     const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw new Error();const local=`http://127.0.0.1:${address.port}`,pages=vi.fn(async()=>{}),privateBody=JSON.stringify({synthetic:'é'.repeat(12000)});
     flow.customers.mockImplementation(async request=>new Response(request.url.endsWith('/oversize')?'x'.repeat(1048577):privateBody,{headers:{'cache-control':'private, no-store'}}));flow.addresses.mockImplementation(async request=>new Response(request.url.endsWith('/oversize')?'x'.repeat(1048577):privateBody,{headers:{'cache-control':'private, no-store'}}));flow.business.mockResolvedValue(new Response(privateBody));

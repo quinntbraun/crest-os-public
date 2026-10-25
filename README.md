@@ -61,6 +61,8 @@ The [vehicle directory backend](planning/PHASE_4_VEHICLE_DIRECTORY.md) adds labe
 
 ## Local development
 
+The [private vehicle HTTP boundary](planning/PHASE_4_VEHICLE_HTTP.md) adds scoped context/list/save/history/receipt routes and a stateless browser client over the genuine vehicle source. It requires its own explicit `vehicles:true` composition. Native HTTPS acceptance is pending; vehicle forms and dated ownership links remain unfinished.
+
 The [customer-owned address backend](planning/PHASE_4_CUSTOMER_ADDRESSES.md) adds incomplete intake locations, same-business customer links, versioned archive/history and exact-decimal source exports. Native database/recovery tests pass for the backend source; private address HTTP/client methods are implemented with current-source Linux acceptance pending. Private mobile address forms and original-parent save recovery are implemented, with exact-source browser acceptance pending; no geocoder, fake vehicle/lead parent or default runtime activation is introduced. Vehicle/ownership work remains in [the resource plan](planning/PHASE_4_CUSTOMER_RESOURCES.md).
 
 Run every repository command from this `crest-os-public` checkout, not the parent ChatGPT project mirror or original private archive. Use Node **24.22.0** and its bundled npm **11.19.1**. No paid account or provider credentials are needed.
