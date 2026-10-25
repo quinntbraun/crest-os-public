@@ -1,12 +1,13 @@
 import {request as httpRequest} from 'node:http';
 import {describe,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn()}));
+const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn()}));
 vi.mock('../../src/security/browser-session-flow.ts',()=>({createBrowserSessionFlow:()=>flow}));
 vi.mock('../../src/security/business-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/business-http.ts')>(),createBusinessHttp:()=>flow.business}));
 vi.mock('../../src/customer/customer-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-http.ts')>(),createCustomerHttp:()=>flow.customers}));
 vi.mock('../../src/customer/customer-address-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-address-http.ts')>(),createCustomerAddressHttp:()=>flow.addresses}));
 vi.mock('../../src/customer/vehicle-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/vehicle-http.ts')>(),createVehicleHttp:()=>flow.vehicles}));
+vi.mock('../../src/customer/association-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/association-http.ts')>(),createAssociationHttp:()=>flow.associations}));
 import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../../src/server/node-server.ts';
 import type {NodeConfiguration} from '../../src/server/node-server.ts';
 
@@ -24,7 +25,7 @@ describe('Node hosting boundary',()=>{
   it('requires explicit authentication composition before enabling a business target',()=>{
     expect(()=>bindApplicationHandler(createBoundedNodeServer(),{origin,environment:'test',business:{businessId:'untrusted'}},async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   });
-  it.each([{customers:true},{customers:true,authentication:{}},{customers:'yes'},{vehicles:true},{vehicles:true,authentication:{}},{vehicles:'yes'}])('requires explicit boolean directory composition with authentication and business: %o',patch=>{
+  it.each([{customers:true},{customers:true,authentication:{}},{customers:'yes'},{vehicles:true},{vehicles:true,authentication:{}},{vehicles:'yes'},{associations:true},{associations:true,authentication:{}},{associations:'yes'}])('requires explicit boolean directory composition with authentication and business: %o',patch=>{
     expect(()=>bindApplicationHandler(createBoundedNodeServer(),{origin,environment:'test',...patch} as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   });
   it('customer routing stays closed without opt-in and never falls through to business or Next',async()=>{
@@ -48,6 +49,19 @@ describe('Node hosting boundary',()=>{
     expect((await(await fetch(local+'/api/business/vehicles/history',{method:'POST',body:'{}'})).text()).length).toBe(20000);
     await expect(fetch(local+'/api/business/vehicles/oversize',{method:'POST',body:'{}'})).rejects.toThrow();
   }));
+  it.each([false,true])('association routing needs its own opt-in independently of customer/vehicle routes: %s',async enabled=>{
+    const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw new Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn(async()=>{});
+    flow.associations.mockImplementation(async request=>new Response(request.url.endsWith('/large')?'x'.repeat(20000):request.url.endsWith('/oversize')?'x'.repeat(1048577):JSON.stringify({synthetic:'association'})));
+    bindApplicationHandler(server,{origin:local,environment:'test',customers:true,vehicles:true,associations:enabled,business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+    const before=flow.associations.mock.calls.length,businessBefore=flow.business.mock.calls.length,vehiclesBefore=flow.vehicles.mock.calls.length;
+    try{
+      for(const path of ['/api/business/vehicle-associations','/api/business/vehicle-associations/context','/api/%62usiness/%76ehicle-associations/save']){
+        const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(enabled?200:503);expect(await response.json()).toEqual(enabled?{synthetic:'association'}:{error:'ASSOCIATION_REQUEST_FAILED'});
+      }
+      expect(flow.associations.mock.calls.length-before).toBe(enabled?3:0);expect(flow.business.mock.calls.length).toBe(businessBefore);expect(flow.vehicles.mock.calls.length).toBe(vehiclesBefore);expect(pages).not.toHaveBeenCalled();
+      if(enabled){expect((await(await fetch(local+'/api/business/vehicle-associations/large',{method:'POST',body:'{}'})).text()).length).toBe(20000);await expect(fetch(local+'/api/business/vehicle-associations/oversize',{method:'POST',body:'{}'})).rejects.toThrow();}
+    }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));flow.associations.mockReset();}
+  });
   it('customer pages have their own1MiB delivery bound while authentication/settings retain8KiB',async()=>{
     const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw new Error();const local=`http://127.0.0.1:${address.port}`,pages=vi.fn(async()=>{}),privateBody=JSON.stringify({synthetic:'é'.repeat(12000)});
     flow.customers.mockImplementation(async request=>new Response(request.url.endsWith('/oversize')?'x'.repeat(1048577):privateBody,{headers:{'cache-control':'private, no-store'}}));flow.addresses.mockImplementation(async request=>new Response(request.url.endsWith('/oversize')?'x'.repeat(1048577):privateBody,{headers:{'cache-control':'private, no-store'}}));flow.business.mockResolvedValue(new Response(privateBody));

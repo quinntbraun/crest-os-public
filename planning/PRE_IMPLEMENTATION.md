@@ -1,5 +1,9 @@
 # Current implementation plan
 
+## Active consumer: private association HTTP and client
+
+Read PHASE_4_ASSOCIATION_HTTP.md. Five explicitly configured private routes and reserved Node routing are implemented locally over PR74; ordinary request/admission/auth/recovery behavior is retained. All 2,795 unit tests/75 files, lint/types/server bundle pass. Genuine compiled HTTPS fixtures for Chromium/mobile WebKit are written and syntax-checked, but have not run. The stateless browser client now has 64 additional focused cases and a successful pinned browser-bundle build; its compiled HTTPS acceptance is written but pending. Publish the consumer stacked on PR74 to test early, then integrate the protected parent and require fresh main-based acceptance. Association forms and runtime activation remain unfinished. Preserve SQL1–36/canonical/dependency bytes. Older sections below describe parent/historical work; read live evidence before acceptance.
+
 ## Active work: dated customer–vehicle associations
 
 Vehicle backend PR71, private HTTP PR72 and mobile editor PR73 are merged. Protected main is 7c2c0a83d2928c57dc4773b0c19c8eb95b16e41a (tree 856655e967fe58a15981832ef1713866f3e844e5). PR71's actual-main run 40169678422 and PR72's actual-main run 40172076361 passed. PR73 source 08ea716ce9f7e478ae3889ee0a89f7d8d8b646e3 passed all four trusted checks and full logs/artifacts in main-based candidate run 40172139505/attempt 1; the protected merge retains exactly that candidate tree and ordered parents c5f0890/08ea716. Separate PR73 actual-main acceptance remains pending. Older sections below retain historical evidence and do not establish current acceptance.
