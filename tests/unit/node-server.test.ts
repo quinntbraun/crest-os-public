@@ -37,10 +37,11 @@ describe('Node hosting boundary',()=>{
     const before=[flow.leads.mock.calls.length,flow.leadSources.mock.calls.length],businessBefore=flow.business.mock.calls.length;
     try{
       for(const [index,stem] of ['leads','lead-sources'].entries()){
-        for(const path of ['/api/business/'+stem,'/api/business/'+stem+'/context','/api/%62usiness/%6c'+stem.slice(1)+'/save']){
+        const paths=['/api/business/'+stem,'/api/business/'+stem+'/context','/api/%62usiness/%6c'+stem.slice(1)+'/save',...(stem==='leads'?['/api/business/leads/vehicle-save','/api/%62usiness/leads/%76ehicle-operation']:[])];
+        for(const path of paths){
           const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(enabled?200:503);expect(await response.json()).toEqual(enabled?{synthetic:'lead'}:{error:stem==='leads'?'LEAD_REQUEST_FAILED':'LEAD_SOURCE_REQUEST_FAILED'});
         }
-        expect([flow.leads,flow.leadSources][index]!.mock.calls.length-before[index]!).toBe(enabled?3:0);
+        expect([flow.leads,flow.leadSources][index]!.mock.calls.length-before[index]!).toBe(enabled?paths.length:0);
         if(enabled){expect((await(await fetch(local+'/api/business/'+stem+'/large',{method:'POST',body:'{}'})).text()).length).toBe(20000);await expect(fetch(local+'/api/business/'+stem+'/oversize',{method:'POST',body:'{}'})).rejects.toThrow();}
       }
       expect(flow.business.mock.calls.length).toBe(businessBefore);expect(pages).not.toHaveBeenCalled();

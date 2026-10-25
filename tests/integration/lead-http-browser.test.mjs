@@ -19,7 +19,7 @@ const sessionName='__Host-crest_session';
 before(async()=>{
   assert.equal(process.platform,'linux','the disposable container/HTTPS fixture requires Linux CI');
   process.env.NODE_ENV='production';
-  for(const [input,name] of [['src/client/leads.ts','crestLeadFixture'],['src/client/lead-sources.ts','crestLeadSourceFixture'],['src/client/lead-states.ts','crestLeadStateFixture']]){
+  for(const [input,name] of [['src/client/leads.ts','crestLeadFixture'],['src/client/lead-sources.ts','crestLeadSourceFixture'],['src/client/lead-states.ts','crestLeadStateFixture'],['src/client/lead-vehicles.ts','crestLeadVehicleFixture']]){
     const bundle=await rolldown({input,platform:'browser',onwarn(warning){throw new Error('LEAD_CLIENT_FIXTURE_BUILD_FAILED:'+warning.code);}});
     try{const result=await bundle.generate({format:'iife',name,sourcemap:false});assert.equal(result.output.length,1);assert.equal(result.output[0].type,'chunk');browserClient+=result.output[0].code+'\n';}finally{await bundle.close();}
   }
@@ -54,7 +54,7 @@ before(async()=>{
   const runtime=await createAuthenticationRuntime({database:{connectionString:database.toString(),environment:'test'},provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
     owner:{subject:user.id,factorId:factor.id},loginKey:randomBytes(32),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:randomBytes(32)}]});
   assert.throws(()=>JSON.stringify(runtime),/AUTHENTICATION_RUNTIME_PRIVATE/);
-  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},leads:true});
+  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},leads:true,vehicles:true});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);
 });
@@ -74,9 +74,10 @@ async function send(page,route,body={},proof=null){
 const root='business/leads/',sources='business/lead-sources/';
 const sourceDraft=(epoch,label)=>({schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,leadSourceId:randomUUID(),expectedVersion:'0',label,kind:'Owner recorded referral',active:true,referralCustomerId:null});
 const leadDraft=(epoch,label)=>({schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,leadId:randomUUID(),expectedVersion:'0',label,customerId:null,sourceId:null,referralText:null,phone:null,email:null,requestedScope:null,availability:null,estimatedCents:null,followUpAt:null,notes:null});
+const vehicleDraft=(epoch,leadId,label)=>({schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,leadId,leadVehicleId:randomUUID(),expectedVersion:'0',vehicleId:null,reportedLabel:label,reportedYear:null,reportedMake:null,reportedModel:null,reportedColor:null,reportedVin:null,reportedPlate:null,reportedNotes:null,requestedServicesText:null,conditionNotes:null,archived:false,archiveReason:null});
 for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900}],['webkit',webkit,{width:360,height:800}]]){
  test('genuine private lead/source HTTP '+name,async t=>{
-  const browser=await engine.launch();let first,second,proof,otherProof,epoch,source,input,created,sourceCreated,otherSource;
+  const browser=await engine.launch();let first,second,proof,otherProof,epoch,source,input,created,sourceCreated,otherSource,vehicleOriginal,vehicleReceipt;
   try{
    first=await browser.newContext({ignoreHTTPSErrors:true,viewport});second=await browser.newContext({ignoreHTTPSErrors:true,viewport});const page=await first.newPage(),other=await second.newPage();
    await t.test('two devices establish genuine MFA and separate private provider-backed sessions',async()=>{
@@ -163,6 +164,42 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     for(const patch of [{toState:'won'},{toState:'quote_sent'},{reason:null},{followUpAt:null}])assert.equal((await send(page,root+'state',{...original,...patch},proof)).status,400);
     const rows=(await client.query('SELECT lead_version::text AS version FROM crest.lead_events WHERE lead_id=$1 ORDER BY lead_version',[raw.leadId])).rows;assert.deepEqual(rows.map(r=>r.version),['2','3']);
    });
+   await t.test('compiled vehicle client retains two original reports, genuine explicit link, archive history and original receipts',async()=>{
+    const directory={schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,vehicleId:randomUUID(),expectedVersion:'0',label:'Synthetic directory vehicle '+name,year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'customer_vehicle',notes:null,archived:false,archiveReason:null};
+    assert.equal((await send(page,'business/vehicles/save',directory,proof)).status,200);
+    vehicleOriginal={...vehicleDraft(epoch,input.leadId,'Synthetic reported vehicle '+name),vehicleId:directory.vehicleId,reportedYear:-42,reportedVin:' Raw 001 ',reportedNotes:'😀'.repeat(2000),requestedServicesText:'\n'.repeat(4000),conditionNotes:'é'.repeat(4000)};
+    const original=vehicleOriginal,secondReport=vehicleDraft(epoch,input.leadId,'Synthetic second unknown vehicle '+name);
+    const result=await page.evaluate(async({business,original,secondReport,csrf})=>{
+     const api=globalThis.crestLeadVehicleFixture.leadVehicles,p={csrfToken:csrf,expiresAt:Date.now()+60000},signal=()=>new AbortController().signal;
+     const command=flat=>{const {schemaVersion,operationId,recoveryEpoch,leadId,leadVehicleId,expectedVersion,vehicleId,reportedLabel,reportedYear,reportedMake,reportedModel,reportedColor,reportedVin,reportedPlate,reportedNotes,requestedServicesText,conditionNotes,archived,archiveReason}=flat;return {schemaVersion,operationId,recoveryEpoch,leadId,leadVehicleId,expectedVersion,draft:{vehicleId,reportedVehicle:{schemaVersion:1,label:reportedLabel,year:reportedYear,make:reportedMake,model:reportedModel,color:reportedColor,vin:reportedVin,plate:reportedPlate,notes:reportedNotes},requestedServices:{schemaVersion:1,text:requestedServicesText},conditionNotes,archived,archiveReason}};};
+     const first=command(original),saved=await api.save(business,first,p,signal());await api.save(business,command(secondReport),p,signal());
+     const archived=await api.save(business,{...first,operationId:crypto.randomUUID(),expectedVersion:'1',draft:{...first.draft,archived:true,archiveReason:'Original archive é 😀'}},p,signal());
+     const {schemaVersion,draft,...reference}=first,lookup=await api.lookup(business,reference,p,signal()),replay=await api.save(business,first,p,signal()),list=await api.list(business,{leadId:first.leadId,afterId:null,includeArchived:true,pageSize:10},p,signal()),active=await api.list(business,{leadId:first.leadId,afterId:null,includeArchived:false,pageSize:10},p,signal()),history=await api.history(business,{leadId:first.leadId,leadVehicleId:first.leadVehicleId,afterVersion:'0',pageSize:5},p,signal());return {saved,archived,lookup,replay,list,active,history,schemaVersion,draft};
+    },{business,original,secondReport,csrf:proof});
+    vehicleReceipt=result.saved;assert.equal(result.saved.receipt.leadVehicleVersion,'1');assert.equal(result.archived.receipt.leadVehicleVersion,'2');assert.deepEqual(result.lookup,result.saved);assert.deepEqual(result.replay,result.saved);assert.equal(result.list.leadVehicles.length,2);assert.equal(result.active.leadVehicles.length,1);assert.deepEqual(result.history.history.map(e=>e.action),['create','archive']);assert.equal(result.history.leadVehicle.vehicle_id,directory.vehicleId);assert.equal(result.history.history[0].after.reported_vehicle.notes,original.reportedNotes);assert.equal(result.history.leadVehicle.requested_services.text,original.requestedServicesText);assert.equal(result.history.leadVehicle.condition_notes,original.conditionNotes);
+    const source=(await client.query('SELECT label,version::text FROM crest.vehicles WHERE id=$1',[directory.vehicleId])).rows[0];assert.deepEqual(source,{label:directory.label,version:'1'});assert.equal((await client.query('SELECT count(*)::int AS n FROM crest.customer_vehicles WHERE vehicle_id=$1',[directory.vehicleId])).rows[0].n,0);
+    const lead=(await client.query('SELECT state,version::text FROM crest.leads WHERE id=$1',[input.leadId])).rows[0];assert.deepEqual(lead,{state:'new',version:'4'});
+   });
+   await t.test('two-device vehicle race and dropped response preserve one winner and original operation only',async()=>{
+    const original=vehicleDraft(epoch,input.leadId,'Synthetic vehicle race '+name);assert.equal((await send(page,root+'vehicle-save',original,proof)).status,200);
+    const changes=[{...original,operationId:randomUUID(),expectedVersion:'1',conditionNotes:'Device one'},{...original,operationId:randomUUID(),expectedVersion:'1',conditionNotes:'Device two'}],race=await Promise.all([send(page,root+'vehicle-save',changes[0],proof),send(other,root+'vehicle-save',changes[1],otherProof)]);assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);const loser=race[0].status===409?changes[0]:changes[1];assert.equal(race.find(r=>r.status===409).body.reason,'version');assert.deepEqual((await send(page,root+'vehicle-operation',{operationId:loser.operationId},proof)).body,{state:'absent'});
+    const dropped={...original,operationId:randomUUID(),expectedVersion:'2',conditionNotes:'Original lost response é 😀'},pattern='**/api/business/leads/vehicle-save';let calls=0,status;
+    const drop=async intercepted=>{calls++;try{status=(await intercepted.fetch()).status();}finally{await intercepted.abort('failed');}};await page.route(pattern,drop);try{await assert.rejects(send(page,root+'vehicle-save',dropped,proof));}finally{await page.unroute(pattern,drop);}assert.equal(calls,1);assert.equal(status,200);
+    const found=await send(page,root+'vehicle-operation',{operationId:dropped.operationId},proof);assert.equal(found.body.receipt.leadVehicleVersion,'3');assert.deepEqual((await send(page,root+'vehicle-save',dropped,proof)).body,found.body);assert.equal((await send(page,root+'vehicle-save',{...dropped,conditionNotes:'Changed body'},proof)).body.reason,'operation');
+   });
+   await t.test('vehicle transport rejects fabricated authority and missing sources without retaining claims',async()=>{
+    const original=vehicleDraft(epoch,input.leadId,'Synthetic rejected report '+name);
+    assert.equal((await send(page,root+'vehicle-save',original)).status,400);
+    for(const patch of [{businessId:randomUUID()},{customerId:randomUUID()},{reportedVehicle:{}},{quoteId:randomUUID()},{reportedYear:1.5},{reportedNotes:'😀'.repeat(2001)}])assert.equal((await send(page,root+'vehicle-save',{...original,...patch},proof)).status,400);
+    const noLead={...original,operationId:randomUUID(),leadId:randomUUID()},noVehicle={...original,operationId:randomUUID(),vehicleId:randomUUID()};for(const command of [noLead,noVehicle]){const r=await send(page,root+'vehicle-save',command,proof);assert.equal(r.status,409);assert.equal(r.body.reason,'parent');assert.deepEqual((await send(page,root+'vehicle-operation',{operationId:command.operationId},proof)).body,{state:'absent'});}
+    assert.deepEqual((await send(page,root+'vehicle-list',{leadId:randomUUID(),afterId:null,includeArchived:true,pageSize:10},proof)).body,{state:'absent'});assert.deepEqual((await send(page,root+'vehicle-history',{leadId:randomUUID(),leadVehicleId:vehicleOriginal.leadVehicleId,afterVersion:'0',pageSize:5},proof)).body,{state:'absent'});
+    assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,original.operationId])).rows[0].n,0);
+   });
+   await t.test('paused vehicle writes and changed recovery epochs preserve original lookup and source history',async()=>{
+    const wrong={...vehicleOriginal,operationId:randomUUID(),expectedVersion:'2',recoveryEpoch:randomUUID()};const denied=await send(page,root+'vehicle-save',wrong,proof);assert.equal(denied.status,409);assert.deepEqual(denied.body,{error:'RECOVERY_REVIEW_REQUIRED'});assert.deepEqual((await send(page,root+'vehicle-operation',{operationId:wrong.operationId},proof)).body,{state:'absent'});
+    await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[business]);
+    try{const r=await send(page,root+'vehicle-save',vehicleOriginal,proof);assert.equal(r.status,409);assert.deepEqual(r.body,{error:'RECOVERY_REVIEW_REQUIRED'});assert.deepEqual((await send(page,root+'vehicle-operation',{operationId:vehicleOriginal.operationId},proof)).body,vehicleReceipt);assert.equal((await send(page,root+'vehicle-history',{leadId:vehicleOriginal.leadId,leadVehicleId:vehicleOriginal.leadVehicleId,afterVersion:'0',pageSize:5},proof)).status,200);}finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);}
+   });
    await t.test('lost committed responses resolve the exact original receipt and paused writes retain historical lookup',async()=>{
     const original=leadDraft(epoch,'Synthetic lost response '+name),pattern='**/api/business/leads/save';let calls=0,status;
     const drop=async intercepted=>{calls++;try{status=(await intercepted.fetch()).status();}finally{await intercepted.abort('failed');}};await page.route(pattern,drop);
@@ -174,7 +211,7 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
    });
    await t.test('fresh session revocation denies lead and source reads without returning private labels',async()=>{
     const cookie=(await second.cookies()).find(c=>c.name===sessionName);await client.query('UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),version=version+1 WHERE token_hash=$1',[createHash('sha256').update(cookie.value,'ascii').digest()]);
-    for(const [route,body] of [[root+'state-events',{leadId:input.leadId,afterVersion:'0',pageSize:20}],[root+'state-operation',{operationId:randomUUID()}],[root+'history',{leadId:input.leadId,afterVersion:'0',pageSize:20}],[sources+'history',{leadSourceId:source.leadSourceId,afterVersion:'0',pageSize:20}]]){const denied=await send(other,route,body,otherProof);assert.notEqual(denied.status,200);assert(!JSON.stringify(denied.body).includes(input.label));assert(!JSON.stringify(denied.body).includes(source.label));}
+    for(const [route,body] of [[root+'vehicle-list',{leadId:input.leadId,afterId:null,includeArchived:true,pageSize:10}],[root+'vehicle-history',{leadId:input.leadId,leadVehicleId:vehicleOriginal.leadVehicleId,afterVersion:'0',pageSize:5}],[root+'vehicle-operation',{operationId:vehicleOriginal.operationId}],[root+'state-events',{leadId:input.leadId,afterVersion:'0',pageSize:20}],[root+'state-operation',{operationId:randomUUID()}],[root+'history',{leadId:input.leadId,afterVersion:'0',pageSize:20}],[sources+'history',{leadSourceId:source.leadSourceId,afterVersion:'0',pageSize:20}]]){const denied=await send(other,route,body,otherProof);assert.notEqual(denied.status,200);assert(!JSON.stringify(denied.body).includes(input.label));assert(!JSON.stringify(denied.body).includes(source.label));assert(!JSON.stringify(denied.body).includes(vehicleOriginal.reportedLabel));}
    });
   }finally{await first?.close();await second?.close();await browser.close();}
  });
