@@ -1,0 +1,62 @@
+name: Association migration proposal
+on:
+  push:
+    branches: [feature/vehicle-associations]
+permissions:
+  contents: read
+concurrency:
+  group: association-proposal-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native_proposal:
+    name: Association proposal native
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      CREST_ENV: test
+      CREST_TEST_DATABASE_URL: postgresql://supabase_admin:crest_local_test_only@127.0.0.1:54322/crest_test
+    services:
+      postgres:
+        image: supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2
+        env:
+          POSTGRES_USER: supabase_admin
+          POSTGRES_PASSWORD: crest_local_test_only
+          POSTGRES_DB: crest_test
+        ports:
+          - 127.0.0.1:54322:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d crest_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install exact reviewed dependencies
+        run: |
+          test "$(node --version)" = "v24.22.0"
+          test "$(npm --version)" = "11.19.1"
+          npm ci --ignore-scripts --no-fund
+      - name: Test proposed migration only in an isolated archived checkout
+        run: |
+          proposal_root="$GITHUB_WORKSPACE/.local/association-proposal"
+          mkdir -p "$proposal_root"
+          git archive HEAD | tar -x -C "$proposal_root"
+          test ! -e "$proposal_root/supabase/migrations/20261025080000_vehicle_associations.sql"
+          cp planning/proposed-migrations/20261025080000_vehicle_associations.sql "$proposal_root/supabase/migrations/20261025080000_vehicle_associations.sql"
+          cmp planning/proposed-migrations/20261025080000_vehicle_associations.sql "$proposal_root/supabase/migrations/20261025080000_vehicle_associations.sql"
+          sha256sum planning/proposed-migrations/20261025080000_vehicle_associations.sql
+          git rev-parse HEAD
+          ln -s "$GITHUB_WORKSPACE/node_modules" "$proposal_root/node_modules"
+          cd "$proposal_root"
+          node scripts/verify-migrations.mjs
+          node scripts/install-tools.mjs
+          npm run test:associations-db
+          node scripts/install-recovery-tools.mjs
+          npm run test:recovery-db

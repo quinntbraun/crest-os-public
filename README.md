@@ -1,5 +1,7 @@
 # Crest OS
 
+Current development: dated customer–vehicle association backend and atomic ownership transfers. Migration 36 remains an unadopted proposal pending native and encrypted-restore acceptance. See [the active checkpoint](planning/WORKING_STATE.md) and [association implementation](planning/PHASE_4_VEHICLE_ASSOCIATIONS.md). Synthetic development only; real-data use remains gated.
+
 Crest Detailing's internal business operating system.
 
 **Status (2026-10-24): Public-source foundation; private owner-only application and business data. Security/recovery foundations and the first synthetic customer backend are underway. Read [the continuation checkpoint](planning/WORKING_STATE.md) and [current implementation plan](planning/PRE_IMPLEMENTATION.md), then verify live Git/PR/CI evidence. No usable CRM screens, financial functionality, hosted provider provisioning, real data, spending or production activation.**

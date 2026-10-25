@@ -27,4 +27,5 @@ export {createCustomerAddressDirectory} from '../customer/customer-address-direc
 export {createCustomerAddressHttp} from '../customer/customer-address-http.ts';
 export {createVehicleDirectory} from '../customer/vehicle-directory.ts';
 
+export {createVehicleAssociationDirectory} from '../customer/vehicle-association-directory.ts';
 export {createVehicleHttp} from '../customer/vehicle-http.ts';

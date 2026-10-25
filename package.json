@@ -65,7 +65,8 @@
     "test:object-recovery": "node --test --test-concurrency=1 tests/integration/object-recovery.test.mjs",
     "test:customers-db": "node --test --test-concurrency=1 tests/integration/customer-directory.test.mjs",
     "test:addresses-db": "node --test --test-concurrency=1 tests/integration/customer-address-directory.test.mjs",
-    "test:vehicles-db": "node --test --test-concurrency=1 tests/integration/vehicle-directory.test.mjs"
+    "test:vehicles-db": "node --test --test-concurrency=1 tests/integration/vehicle-directory.test.mjs",
+    "test:associations-db": "node --test --test-concurrency=1 tests/integration/vehicle-associations.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1156.0",

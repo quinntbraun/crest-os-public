@@ -1,5 +1,13 @@
 # Current implementation plan
 
+## Active work: dated customer–vehicle associations
+
+Vehicle backend PR71 and private HTTP PR72 are merged. Protected main is c5f08903dc7bd9e1366ce6667e70fd32f5eb39e5 (tree 3537a69961a5fa218feb7789d749ad92a3812c9a). PR71's separate actual-main run 40169678422 passed; PR72's candidate run 40169724618 passed, while its separate actual-main run 40172076361 still requires live acceptance. Vehicle editor PR73 source 08ea716ce9f7e478ae3889ee0a89f7d8d8b646e3 has the reviewed original consumer tree 856655e967fe58a15981832ef1713866f3e844e5; fresh main-based run 40172139505 remains pending. Older sections below retain historical evidence and do not establish current acceptance.
+
+Read PHASE_4_VEHICLE_ASSOCIATIONS.md. The association backend implements dated owner/keeper links, independent explicit billing selection, immutable audited close, atomic transfer, retained receipts, private typed readers and reversible source CSV. Migration 36 is explicitly unadopted at planning/proposed-migrations/20261025080000_vehicle_associations.sql. Its proposed metadata describes 26 tables and 354 columns (344 required and 10 credential exclusions); ordinary migration verification intentionally rejects the unmaterialized proposal tree. A temporary branch-only workflow materializes those exact bytes in an isolated archive for the 18-case native suite and 23-case encrypted restore drill. Only after native success may those bytes be promoted to canonical migrations and the full standard feature PR checks run. Preserve all 35 adopted migration bytes, canonical provenance and dependency lockfile.
+
+Next: resolve native proposal findings, promote exact tested SQL, complete current-source release acceptance, then implement association HTTP/mobile consumers. Complete authorized exports, durable unresolved-intent recovery, independent operational recovery, financial/Calendar workflows and real-use approval remain required. Synthetic only; no spending, signup, production grant/apply/deployment, activation or real records.
+
 ## Current consumer: private vehicle HTTP
 
 Read PHASE_4_VEHICLE_HTTP.md. Vehicle backend PR71 source45c4292 retains all35 published migrations; its exact native17-case vehicle and22-case encrypted recovery suites pass in run40168254083, while full candidate/build acceptance remains pending. Sourcefed3d09 had one invalid field in its permission test; the correction checks real label writes against both restricted callers. Do not edit SQL35 or treat earlier units as current-source acceptance. Address protected main isd9327e6; verify actual-main run40167780564 separately.
