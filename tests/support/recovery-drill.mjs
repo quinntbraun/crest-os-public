@@ -17,9 +17,9 @@ const registryHash=hash(await readFile(join(root,'supabase/migration-checksums.j
 const tool=name=>join(root,`.local/tools/recovery/age/${name}${process.platform==='win32'?'.exe':''}`);
 const maxBytes=32*1024*1024;
 export function hash(value){return createHash('sha256').update(value).digest('hex');}
-export function run(command,args,{input,env=process.env}={}){
+export function run(command,args,{input,env=process.env,signal}={}){
   return new Promise((resolve,reject)=>{
-    const child=execFile(command,args,{env,timeout:120000,maxBuffer:maxBytes,encoding:'buffer'},(error,stdout)=>{
+    const child=execFile(command,args,{env,signal,timeout:120000,maxBuffer:maxBytes,encoding:'buffer'},(error,stdout)=>{
       if(error)reject(new Error('SYNTHETIC_RECOVERY_TOOL_FAILED'));else resolve(stdout);
     });
     child.stdin.on('error',()=>{});child.stdin.end(input);
@@ -82,18 +82,20 @@ async function unseal(path,expected,identity){
   assert.equal(hash(cipher),expected.sha256,'recovery ciphertext checksum mismatch');
   return run(tool('age'),['--decrypt','--identity',identity],{input:cipher});
 }
-export async function backupDatabase(client,url,directory,recipient,duringSnapshot=async()=>{}){
+export async function backupDatabase(client,url,directory,recipient,duringSnapshot=async()=>{},objectCapture){
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   try{
     const snapshot=(await client.query('SELECT pg_export_snapshot() AS value')).rows[0].value;
     const rows=await inventory(client),roles=await roleDefinitions(client);
+    const objects=objectCapture?await objectCapture.inventory(client):undefined;
     stage='schema';const schema=await postgresTool('pg_dump',url,['--schema-only','--snapshot',snapshot]);
     await duringSnapshot();
     stage='dump';const dump=await postgresTool('pg_dump',url,['--format=custom','--snapshot',snapshot]);
     assert.equal(dump.subarray(0,5).toString(),'PGDMP');
+    stage='objects';const objectArchive=objectCapture?{inventory:objects,receipt:await objectCapture.capture(objects)}:null;
     const manifest={formatVersion:1,scope:'synthetic_database_drill',completeBackup:false,schemaVersion:registry.migrations.length,
       registrySha256:registryHash,databaseImage:pins.testDatabaseImage,snapshot,roles,rows,schemaSha256:hash(normalizedSchema(schema)),
-      dump:{bytes:dump.length,sha256:hash(dump)},excluded:['runtime_login_credentials','external_objects','application_image','independent_vault','production_configuration','production_recovery_authority']};
+      dump:{bytes:dump.length,sha256:hash(dump)},objectArchive,excluded:['runtime_login_credentials',...(objectArchive?[]:['external_objects']),'application_image','independent_vault','production_configuration','production_recovery_authority']};
     // The backup side receives a public recipient only. No private identity.
     stage='encryption';const receipt={formatVersion:1,dump:await seal(join(directory,'database.age'),dump,recipient),
       manifest:await seal(join(directory,'manifest.age'),Buffer.from(JSON.stringify(manifest)),recipient)};
@@ -101,7 +103,7 @@ export async function backupDatabase(client,url,directory,recipient,duringSnapsh
     await client.query('COMMIT');return {manifest,receipt};
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_RECOVERY_BACKUP_FAILED:'+stage);}
 }
-export async function restoreDatabase(directory,identity,url){
+export async function restoreDatabase(directory,identity,url,restoreObjects){
   target(url);const client=await connect(url);let stage='empty_destination';
   try{
     assert.equal((await inventory(client)).length,0,'restore target must be empty');
@@ -112,6 +114,7 @@ export async function restoreDatabase(directory,identity,url){
     assert.equal(manifest.schemaVersion,registry.migrations.length);assert.equal(manifest.registrySha256,registryHash);assert.equal(manifest.databaseImage,pins.testDatabaseImage);
     stage='authenticated_dump';const dump=await unseal(join(directory,'database.age'),receipt.dump,identity);
     assert.equal(dump.length,manifest.dump.bytes);assert.equal(hash(dump),manifest.dump.sha256);assert.equal(dump.subarray(0,5).toString(),'PGDMP');
+    stage='objects';if(manifest.objectArchive){assert.equal(typeof restoreObjects,'function');await restoreObjects(manifest.objectArchive);}
     // Fully decrypt/authenticate/check BEFORE executing SQL. The bounded fixture
     // stays in memory; no partial plaintext dump is written to disk or published.
     stage='closed_roles';for(const r of manifest.roles){

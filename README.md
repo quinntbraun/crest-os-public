@@ -53,7 +53,7 @@ The [offline session verifier](planning/PHASE_2_SESSION_METADATA_VERIFICATION.md
 
 The [configuration and business evidence verifier](planning/PHASE_2_BUSINESS_CONFIGURATION_VERIFICATION.md) compares all39 current configuration fields with retained identity state and resolves included history actor references. The [usable-release milestones](planning/USABLE_RELEASE_MILESTONES.md) distinguish foundation checks, a useful synthetic CRM build and real-use acceptance.
 
-The [synthetic database recovery drill](planning/PHASE_3_RECOVERY_DRILL.md) uses an encrypted real PostgreSQL archive and a fresh isolated cluster to verify database recovery and existing security fences. Complete vault/file/configuration recovery and production incident activation remain unfinished.
+The [synthetic database recovery drill](planning/PHASE_3_RECOVERY_DRILL.md) uses an encrypted real PostgreSQL archive and a fresh isolated cluster to verify database recovery and existing security fences. The [retained-object recovery extension](planning/PHASE_3_OBJECT_RECOVERY.md) binds exact private object archives to that snapshot and checks file restoration before SQL. Configured independent vault/configuration recovery and production incident activation remain unfinished; the feature PR records executed evidence.
 
 ## Local development
 
