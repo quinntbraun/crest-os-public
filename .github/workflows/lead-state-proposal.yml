@@ -62,3 +62,7 @@ jobs:
           npm test -- tests/unit/lead-state-contract.test.ts tests/unit/lead-event-csv.test.ts
       - name: Exercise actual isolated PostgreSQL proposal
         run: node --test --test-concurrency=1 tests/integration/lead-state-proposal.test.mjs
+      - name: Install pinned recovery tooling
+        run: node scripts/install-recovery-tools.mjs
+      - name: Restore encrypted same-snapshot lead state proposal
+        run: node --test --test-concurrency=1 tests/integration/lead-state-recovery-proposal.test.mjs
