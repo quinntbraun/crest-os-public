@@ -53,7 +53,7 @@ export function CustomerScreen(){
           {view.draft.customerSince!==null&&<><label htmlFor="customer-since">Customer-since date</label><input id="customer-since" name="customer-since" type="date" min="0001-01-01" max="9999-12-31" value={view.draft.customerSince} onChange={event=>edit('customerSince',event.target.value)} required/></>}
           <label className="trust"><input type="checkbox" checked={view.draft.archived} onChange={event=>current.current?.edit({...view.draft!,archived:event.target.checked,archiveReason:event.target.checked?'':null})}/>Archive customer</label>
           {view.draft.archived&&<><label htmlFor="archive-reason">Archive reason</label><textarea id="archive-reason" name="archive-reason" rows={3} maxLength={2000} value={view.draft.archiveReason??''} onChange={event=>edit('archiveReason',event.target.value)} required/><p className="field-help">{[...(view.draft.archiveReason??'')].length}/1000 characters. Archiving retains the record and its history.</p></>}
-        </fieldset><button type="submit" disabled={!view.canSave}>Save customer</button>
+        </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}<button type="submit" disabled={!view.canSave}>Save customer</button>
       </form>}
       {view.history&&<section aria-label="Customer history"><h2>Retained history</h2><p>Current version: {view.history.customer.version}</p>
         {view.history.history.map(event=><details key={event.after.version}><summary>Version {event.after.version} · {event.after.updated_at}</summary>{event.before&&<><h3>Before</h3><CustomerDetails customer={event.before}/></>}<h3>After</h3><CustomerDetails customer={event.after}/></details>)}

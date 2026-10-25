@@ -9,8 +9,8 @@ import type {PendingCustomer,createPendingCustomerStore} from './pending-custome
 
 type Snapshot=Awaited<ReturnType<typeof customers.context>>;
 type History=Extract<Awaited<ReturnType<typeof customers.history>>,{state:'found'}>;
-export type CustomerEditorView=Readonly<{phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Customer[];hasMore:boolean;search:string;includeArchived:boolean;selected:Customer|null;draft:CustomerDraft|null;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean}>;
-export const initialCustomerEditorView:CustomerEditorView=Object.freeze({phase:'loading',message:'Checking customer access…',busy:true,rows:Object.freeze([]),hasMore:false,search:'',includeArchived:false,selected:null,draft:null,history:null,canSave:false,canRetry:false,reference:'',writesPaused:true});
+export type CustomerEditorView=Readonly<{phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Customer[];hasMore:boolean;search:string;includeArchived:boolean;selected:Customer|null;draft:CustomerDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean}>;
+export const initialCustomerEditorView:CustomerEditorView=Object.freeze({phase:'loading',message:'Checking customer access…',busy:true,rows:Object.freeze([]),hasMore:false,search:'',includeArchived:false,selected:null,draft:null,draftIssue:'',history:null,canSave:false,canRetry:false,reference:'',writesPaused:true});
 export const emptyCustomerDraft:CustomerDraft=Object.freeze({displayName:'',phone:null,email:null,contactPreference:null,outreachOptOut:false,notes:null,customerSince:null,archived:false,archiveReason:null});
 
 type Dependencies={store:ReturnType<typeof createPendingCustomerStore>;change:(view:CustomerEditorView)=>void;api?:typeof customers;session?:typeof authentication.session;id?:()=>string};
@@ -19,9 +19,14 @@ export function createCustomerEditorController(deps:Dependencies){
   let alive=true,active:AbortController|null=null,proof:Proof|null=null,snapshot:Snapshot|null=null,pending:PendingCustomer|null=null,original:CustomerSave|null=null;
   let phase:CustomerEditorView['phase']='loading',message=initialCustomerEditorView.message,rows:readonly Customer[]=[],hasMore=false,search='',includeArchived=false,selected:Customer|null=null,draft:CustomerDraft|null=null,history:History|null=null,canRetry=false;
   const clearPrivate=()=>{proof=null;snapshot=null;rows=[];hasMore=false;search='';includeArchived=false;selected=null;draft=null;history=null;original=null;canRetry=false;};
-  function validDraft(){try{return draft!==null&&!!parseCustomerDraft(draft);}catch{return false;}}
-  const view=():CustomerEditorView=>Object.freeze({phase,message,busy:!!active,rows:phase==='ready'?rows:Object.freeze([]),hasMore:phase==='ready'&&hasMore,search:phase==='ready'?search:'',includeArchived:phase==='ready'&&includeArchived,selected:phase==='ready'?selected:null,draft:phase==='ready'?draft:null,history:phase==='ready'?history:null,
-    canSave:!active&&phase==='ready'&&snapshot?.context.writeState==='ready'&&validDraft()&&(!selected||JSON.stringify(draft)!==JSON.stringify(draftFromCustomer(selected))),canRetry:!active&&canRetry,
+  function draftIssue(){if(draft===null)return '';try{parseCustomerDraft(draft);}catch{return 'Review the name, field lengths, date and archive reason before saving.';}
+    // UUIDs have a fixed wire length. Match the actual flat JSON input and
+    // exact current version before creating IDs, a reference or a request.
+    const placeholder='00000000-0000-0000-0000-000000000000',body={schemaVersion:1,operationId:placeholder,customerId:placeholder,expectedVersion:selected?.version??'0',recoveryEpoch:placeholder,...draft};
+    return new TextEncoder().encode(JSON.stringify(body)).byteLength>8192?'This draft is too large to send. Shorten the contact details or notes before saving.':'';
+  }
+  const view=():CustomerEditorView=>Object.freeze({phase,message,busy:!!active,rows:phase==='ready'?rows:Object.freeze([]),hasMore:phase==='ready'&&hasMore,search:phase==='ready'?search:'',includeArchived:phase==='ready'&&includeArchived,selected:phase==='ready'?selected:null,draft:phase==='ready'?draft:null,draftIssue:phase==='ready'?draftIssue():'',history:phase==='ready'?history:null,
+    canSave:!active&&phase==='ready'&&snapshot?.context.writeState==='ready'&&draft!==null&&draftIssue()===''&&(!selected||JSON.stringify(draft)!==JSON.stringify(draftFromCustomer(selected))),canRetry:!active&&canRetry,
     reference:phase==='pending'&&snapshot?.context.businessId===pending?.businessId?pending?.reference.operationId??'':'',writesPaused:snapshot?.context.writeState!=='ready'});
   const emit=()=>{if(alive)deps.change(view());};
   const live=(signal:AbortSignal)=>{if(!alive||signal.aborted||active?.signal!==signal)throw new Error();};
