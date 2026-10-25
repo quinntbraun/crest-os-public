@@ -1,5 +1,11 @@
 # Current implementation plan
 
+## Current consumer: private vehicle HTTP
+
+Read PHASE_4_VEHICLE_HTTP.md. Vehicle backend PR71 source45c4292 retains all35 published migrations; its exact native17-case vehicle and22-case encrypted recovery suites pass in run40168254083, while full candidate/build acceptance remains pending. Sourcefed3d09 had one invalid field in its permission test; the correction checks real label writes against both restricted callers. Do not edit SQL35 or treat earlier units as current-source acceptance. Address protected main isd9327e6; verify actual-main run40167780564 separately.
+
+This branch adds private five-route HTTP and stateless vehicle browser methods with independent explicit opt-in, unchanged authorization/admission/recovery fences and actual HTTPS acceptance fixtures. No vehicle screen or ownership source is claimed. Next: finish native findings, vehicle mobile editor and genuine dated customer association/atomic transfer, then typed attachment workflows and existing usable-release gates. No paid service or real-data activation.
+
 ## Active change: genuine vehicle directory; address acceptance pending
 
 PR66/protected main8dc8d16ef9868490197db412b88a46d6b8f9b3ff, tree7c5daeb05ae0063ec1d69be7c8ebc27d44ba604e, passed candidate40150463624 and actual-main40152710258. Exact-source proof and finalized artifact bindings are in PR66. Retained object/database snapshot restoration is verified on isolated fixtures; independent cloud/vault/configuration/key/image recovery remains gated.

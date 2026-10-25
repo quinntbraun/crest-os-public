@@ -1,5 +1,11 @@
 # Continuation checkpoint
 
+## Active vehicle HTTP consumer
+
+Read PHASE_4_VEHICLE_HTTP.md and PRE_IMPLEMENTATION.md. This consumer adds private HTTP/client methods over vehicle PR71, with independent `vehicles:true` opt-in. Backend source45c4292538d115e3ebebb1f732b9fb6bc73f902c/tree d8da30436142cedbc18e3e362d12b7a83bfae4ef passes17native vehicle and22encrypted recovery cases in run40168254083; full candidate remains pending and must be verified live. Keep all35 published SQL bytes immutable. Current protected main/address merge d9327e6 has separate actual-main run40167780564; verify it live. Older sections below are historical foundation detail, not proof of current branch acceptance.
+
+Next: current-source HTTPS/compiled acceptance, vehicle editor and dated customer links/atomic ownership transfer. Vehicle identity is its UUID, never VIN/plate. Domain source extraction is partial; complete authorized exports/recovery, durable lost-draft intent resolution, real phones, operational/financial/Calendar workflows and real-use approval remain gates. No spending, signup, production grant/apply/deployment, activation or real records.
+
 Read AGENTS.md, README.md, this checkpoint and PRE_IMPLEMENTATION.md. Canonical documents are authoritative. Verify live Git/PR/CI before dependent work; never reset unexpected changes. Historical detail is preserved in Git and PR metadata.
 
 ## Active vehicle branch
