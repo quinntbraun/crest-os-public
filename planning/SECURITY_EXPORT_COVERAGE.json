@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 34,
+  "migrationCount": 35,
   "tables": [
     {
       "table": "crest.businesses",
@@ -527,6 +527,36 @@
         "latitude",
         "longitude",
         "verified_at",
+        "archived_at",
+        "archived_reason",
+        "version",
+        "created_at",
+        "updated_at",
+        "created_by",
+        "updated_by",
+        "origin",
+        "operation_id",
+        "import_row_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.vehicles",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "label",
+        "year",
+        "make",
+        "model",
+        "color",
+        "vin_raw",
+        "vin_normalized",
+        "plate",
+        "kind",
+        "notes",
         "archived_at",
         "archived_reason",
         "version",
