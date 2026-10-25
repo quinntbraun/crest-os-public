@@ -35,7 +35,7 @@ export function parseLeadStateDraft(value:unknown):LeadStateDraft{
 
 export const leadEventColumns=['id','business_id','lead_id','lead_version','from_state','to_state','reason','effective_at','quote_send_id','acceptance_id','version','created_at','updated_at','created_by','updated_by','origin','operation_id','import_row_id'] as const;
 export type LeadEvent=Readonly<{id:string;business_id:string;lead_id:string;lead_version:string;from_state:LeadState;to_state:ManualLeadTarget;reason:string|null;effective_at:string;quote_send_id:null;acceptance_id:null;version:'1';created_at:string;updated_at:string;created_by:string;updated_by:string;origin:'manual';operation_id:string;import_row_id:null}>;
-// Only the manual source defined in this proposal; future commercial events
+// Only the manual source defined in migration38; future commercial events
 // require a reviewed schema/contract change with genuine source references.
 export function parseLeadEvent(value:unknown,businessId:string):LeadEvent{
   requireCustomer(exactCustomerObject(value,leadEventColumns)&&customerUuid(businessId)&&value.business_id===businessId

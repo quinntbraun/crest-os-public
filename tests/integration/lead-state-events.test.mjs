@@ -1,12 +1,13 @@
-// Actual disposable PostgreSQL/Auth schema; unregistered forward38 only.
+// Actual disposable PostgreSQL/Auth schema; canonical37-to38 upgrade.
 import assert from 'node:assert/strict';
 import {randomUUID,randomBytes} from 'node:crypto';
 import {before,after,test} from 'node:test';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
-import {leadStateProposal} from '../support/lead-state-proposal.mjs';
 import {leadStates,parseLead} from '../../src/customer/lead-contract.ts';
 import {parseLeadStateDraft,parseLeadEvent} from '../../src/customer/lead-state-contract.ts';
+import {parseLeadStateCommitted,parseLeadStatePage} from '../../src/customer/lead-state-command-contract.ts';
+import {validateLeadHistoryChange} from '../../src/customer/lead-history-contract.ts';
 import {formatLeadEventCsv} from '../../src/customer/lead-csv.ts';
 import {readCustomerCsv} from '../support/customer-fixture.ts';
 let sandbox,client,target,web,web2,exporter,login,loginOwned=false,bootstrap,a,b,prior,receipt,retained,seed,proposal,guardRefused=false;
@@ -33,21 +34,21 @@ async function state(){
  await client.query("INSERT INTO auth.users(id,email,aud,role) VALUES($1,$2,'authenticated','authenticated')",[subject,'synthetic-'+subject+'@example.com']);return extraSession({business,epoch,subject,actor});
 }
 before(async()=>{
- sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target);
+ sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target,await sandbox.prefix(37));
  // Prepare both schema histories before granting the disposable web login.
  // Cluster roles are shared; migration1 correctly rejects an existing member.
- const guard=await sandbox.database(),guardClient=await sandbox.connect(guard);await sandbox.apply(guard,await sandbox.prefix(0),true);await installProviderSchema(guardClient,guard);await sandbox.apply(guard);
+ const guard=await sandbox.database(),guardClient=await sandbox.connect(guard);await sandbox.apply(guard,await sandbox.prefix(0),true);await installProviderSchema(guardClient,guard);await sandbox.apply(guard,await sandbox.prefix(37));
  bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;a=await state();b=await state();
  login='crest_state_probe_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");loginOwned=true;await sandbox.admin.query('GRANT crest_web,crest_export TO '+login);
  const url=new URL(target);url.username=login;url.password=password;web=await sandbox.connect(url.toString());web2=await sandbox.connect(url.toString());exporter=await sandbox.connect(url.toString());for(const c of [web,web2]){await c.query('SET ROLE crest_web');await c.query("SET lock_timeout='3s'");}await exporter.query('SET ROLE crest_export');
- seed=randomUUID();await save(a,seed);retained=await evidenceBefore(a);proposal=await leadStateProposal(sandbox);
+ seed=randomUUID();await save(a,seed);retained=await evidenceBefore(a);proposal=await sandbox.prefix(38);
  await client.query('ALTER ROLE crest_lead_owner LOGIN');
  try{await assert.rejects(sandbox.apply(guard,proposal),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);assert.equal((await guardClient.query("SELECT to_regclass('crest.lead_events') AS value")).rows[0].value,null);await assert.rejects(sandbox.apply(guard,proposal),/MIGRATION_PENDING_REVIEW_REQUIRED/);guardRefused=true;}finally{await client.query('ALTER ROLE crest_lead_owner NOLOGIN');}
  receipt=await sandbox.apply(target,proposal);
 },{timeout:240000});
 async function evidenceBefore(f){return {lead:await lead(seed),operations:(await client.query('SELECT to_jsonb(o) AS value FROM crest_private.operations o WHERE business_id=$1 ORDER BY id',[f.business])).rows,audit:(await client.query('SELECT to_jsonb(a) AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY id',[f.business])).rows};}
 after(async()=>{await web?.end();await web2?.end();await exporter?.end();if(loginOwned)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
-test('37-to38 proposal preserves every prior receipt/source and refuses an unsafe existing owner',async()=>{
+test('37-to38 upgrade preserves every prior receipt/source and refuses an unsafe existing owner',async()=>{
  assert.equal(prior.history.length,37);assert.equal(receipt.history.length,38);assert.deepEqual(receipt.history.slice(0,37),prior.history);assert.deepEqual((await sandbox.apply(target,proposal)).history,receipt.history);assert(guardRefused);assert.deepEqual(await evidenceBefore(a),retained);
 });
 test('forced-RLS append-only events and private verifier deny ordinary/export raw authority',async()=>{
@@ -136,4 +137,20 @@ test('scoped ordered state history and complete18-column snapshot/CSV preserve g
   const formatted=formatLeadEventCsv({businessId:a.business,snapshotToken:context.snapshotToken,expectedRowCount:context.rowCount,rows:all});assert.equal(readCustomerCsv(formatted.csv)[0].length,18);assert.equal(JSON.parse(formatted.manifest).completeBackup,false);assert(JSON.parse(formatted.escapeMap).escapes.some(x=>x.column==='reason'));
   await exporter.query('COMMIT');
  }catch(e){await exporter.query('ROLLBACK');throw e;}
+});
+
+test('typed original receipts and mixed intake/status history preserve event gaps and retained reopen reasons',async()=>{
+ const f=await state(),id=randomUUID();await save(f,id);
+ const lostRequest=request(id,'new','lost',{body:{fromState:'new',toState:'lost',reason:'Original lost reason é 😀'}});
+ const lost=await change(f,lostRequest);const accepted=parseLeadStateCommitted(lost,f.business,lostRequest.operation);assert.equal(accepted.receipt.leadVersion,'2');
+ await save(f,id,'2',body({notes:'Intake edit between status events'}));
+ const reopen=request(id,'lost','follow_up',{version:'3',body:{fromState:'lost',toState:'follow_up',reason:'Original reopened reason \n kept'}});assert.equal((await change(f,reopen)).state,'committed');
+ const history=(await web.query('SELECT crest_commands.read_lead_history($1,$2,$3,$4,$5,$6,$7,$8,$9,0,20) AS value',[...auth(f),id])).rows[0].value;
+ assert.deepEqual(history.history.map(e=>e.action),['create','state_change','edit','state_change']);
+ for(const e of history.history)validateLeadHistoryChange(e.action,e.before===null?null:parseLead(e.before,f.business),parseLead(e.after,f.business));
+ const raw=(await web.query('SELECT crest_commands.read_lead_state_events($1,$2,$3,$4,$5,$6,$7,$8,$9,0,1) AS value',[...auth(f),id])).rows[0].value;
+ const first=parseLeadStatePage(raw,f.business,id,'0',1);assert.equal(first.state,'found');assert(first.hasMore);assert.deepEqual(first.events.map(e=>e.lead_version),['2']);assert.equal(first.events[0].reason,lostRequest.body.reason);
+ const next=(await web.query('SELECT crest_commands.read_lead_state_events($1,$2,$3,$4,$5,$6,$7,$8,$9,2,1) AS value',[...auth(f),id])).rows[0].value;
+ const last=parseLeadStatePage(next,f.business,id,'2',1);assert.equal(last.state,'found');assert.equal(last.hasMore,false);assert.deepEqual(last.events.map(e=>e.lead_version),['4']);assert.equal(last.events[0].reason,reopen.body.reason);
+ assert.deepEqual(parseLeadStateCommitted(await lookup(f,lostRequest.operation),f.business,lostRequest.operation),accepted);
 });

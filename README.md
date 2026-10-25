@@ -1,10 +1,10 @@
 # Crest OS
 
-Current development: [lead/source intake forms](planning/PHASE_4_LEAD_EDITOR.md) add explicit customer/source selection, exact values and original-save recovery over [private typed access](planning/PHASE_4_LEAD_HTTP.md). The backend is merged; current consumer acceptance remains in progress. See [the active checkpoint](planning/WORKING_STATE.md) and [lead implementation](planning/PHASE_4_LEAD_INTAKE.md). Synthetic development only; real-data use remains gated.
+Current development: [lead status history and typed backend](planning/PHASE_4_LEAD_LIFECYCLE.md), following merged and verified [lead/source intake forms](planning/PHASE_4_LEAD_EDITOR.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence.
 
 Crest Detailing's internal business operating system.
 
-**Status (2026-10-25): Public source; private owner-only application and business data. Synthetic customer, address and vehicle screens are implemented. Dated customer links/atomic transfer and their private controls are merged. Lead/source backend acceptance is in progress; conversion and lead forms are unfinished. Read [the current checkpoint](planning/WORKING_STATE.md) and verify live source/PR/CI evidence. No production activation, real data, spending or provider provisioning is approved.**
+**Status (2026-10-25): Public source; private owner-only application and business data. Synthetic customer, address, vehicle, ownership and lead/source intake screens are implemented. Canonical lead state events and private backend are under acceptance; state controls and conversion remain unfinished. Synthetic development only; no production activation, real data, spending or provider provisioning is approved.**
 
 The [customer directory core](planning/PHASE_4_CUSTOMER_DIRECTORY.md), [private HTTP boundary](planning/PHASE_4_CUSTOMER_HTTP.md) and [customer editor](planning/PHASE_4_CUSTOMER_EDITOR.md) add save/search/history, optimistic conflicts, archive/reopen and explicit interrupted-save review. Customer forms at `/customers` require configured authenticated customer access; the default executable remains closed. Drafts stay in memory; only opaque pending references use per-tab storage. A lost draft with an absent receipt remains blocked for review, not a replacement save. Exact-source native browser/build/container proof and real-use recovery/portability gates remain. ADR41/ROADMAP1.6 permit synthetic construction overlap while retaining every applicable release gate.
 

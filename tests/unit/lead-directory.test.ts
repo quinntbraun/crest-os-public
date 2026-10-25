@@ -37,3 +37,11 @@ it('list validates exact source and business binding before exposing computed co
 it('history checks the immutable source/version/actor/operation chain',async()=>{
  const result={schemaVersion:1,businessId:row.business_id,lead:row,history:[{version:'1',eventId:randomUUID(),actorId:row.updated_by,operationId:row.operation_id,at:row.updated_at,action:'create',before:null,after:row}],hasMore:false},request={businessId:row.business_id,leadId:row.id,afterVersion:'0',pageSize:20};mock.read.mockResolvedValue(result);expect((await factory().history(credential,request,signal())).forServer()).toMatchObject({lead:row});mock.read.mockResolvedValue({...result,history:[{...result.history[0],after:{...row,id:randomUUID()}}]});await expect(factory().history(credential,request,signal())).rejects.toThrow('LEAD_REQUEST_FAILED');
 });
+
+it('accepts a contiguous mixed status/intake/reopen audit chain without losing source or follow-up',async()=>{
+ const lost={...row,version:'2',state:'lost',lost_reason:'Retained original reason',operation_id:randomUUID()},edited={...lost,version:'3',notes:'Intake while lost',operation_id:randomUUID()},reopened={...edited,version:'4',state:'follow_up',lost_reason:null,operation_id:randomUUID()};
+ const event=(after:typeof row,before:typeof row|null,action:string)=>({version:after.version,eventId:randomUUID(),actorId:after.updated_by,operationId:after.operation_id,at:after.updated_at,action,before,after});
+ mock.read.mockResolvedValue({schemaVersion:1,businessId:row.business_id,lead:reopened,history:[event(row,null,'create'),event(lost as typeof row,row,'state_change'),event(edited as typeof row,lost as typeof row,'edit'),event(reopened as typeof row,edited as typeof row,'state_change')],hasMore:false});
+ const result=(await factory().history(credential,{businessId:row.business_id,leadId:row.id,afterVersion:'0',pageSize:20},signal())).forServer();
+ expect(result).toMatchObject({lead:reopened,history:[{action:'create'},{action:'state_change'},{action:'edit'},{action:'state_change'}]});
+});
