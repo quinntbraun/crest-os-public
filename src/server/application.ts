@@ -30,3 +30,5 @@ export {createVehicleDirectory} from '../customer/vehicle-directory.ts';
 export {createVehicleAssociationDirectory} from '../customer/vehicle-association-directory.ts';
 export {createVehicleHttp} from '../customer/vehicle-http.ts';
 export {createAssociationHttp} from '../customer/association-http.ts';
+export {createLeadHttp} from '../customer/lead-http.ts';
+export {createLeadSourceHttp} from '../customer/lead-source-http.ts';
