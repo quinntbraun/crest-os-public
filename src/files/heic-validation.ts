@@ -7,7 +7,8 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import sharp from 'sharp';
 export const maximumHeicBytes=25*1024*1024,maximumHeicPixels=60_000_000;
-export const heicValidationVersion='crest-heic-v1-libheif-1.23.6-libde265-1.1.3-sharp-0.35.5';
+import {heicValidationVersion} from './validation-contract.ts';
+export {heicValidationVersion};
 type Code='HEIC_SIZE_INVALID'|'HEIC_CONTAINER_INVALID'|'HEIC_TYPE_MISMATCH'|'HEIC_FORMAT_UNAVAILABLE'|'HEIC_PIXEL_LIMIT'|'HEIC_DECODE_FAILED'|'HEIC_TOOLS_UNAVAILABLE';
 export class HeicValidationError extends Error {readonly code:Code;constructor(code:Code){super(code);this.name='HeicValidationError';this.code=code;}}
 const fail=(code:Code):never=>{throw new HeicValidationError(code);};
