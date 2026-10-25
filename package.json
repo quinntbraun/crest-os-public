@@ -19,7 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:sign-in-browser": "node --test --test-concurrency=1 tests/integration/sign-in-browser.test.mjs",
+    "test:sign-in-browser": "node --test --test-concurrency=1 tests/integration/sign-in-browser.test.mjs tests/integration/customer-address-browser.test.mjs",
     "test:tenant-read-db": "node --test --test-concurrency=1 tests/integration/tenant-read.test.mjs",
     "test:mutation-fence-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/mutation-fence.test.mjs",
     "test:operation-storage-db": "node --test --test-concurrency=1 tests/integration/operation-storage.test.mjs",

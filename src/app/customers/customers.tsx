@@ -4,16 +4,9 @@ import {useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {createCustomerEditorController,initialCustomerEditorView} from '../../client/customer-editor-controller';
 import {createPendingCustomerStore} from '../../client/pending-customer-edit';
+import {NullableText} from './nullable-text';
 import type {Customer,CustomerDraft} from '../../customer/customer-contract';
 
-type NullableProps={label:string;name:string;value:string|null;limit:number;multiline?:boolean;disabled:boolean;change:(value:string|null)=>void};
-function NullableText({label,name,value,limit,multiline=false,disabled,change}:NullableProps){
-  return <fieldset disabled={disabled}><legend>{label}</legend><label className="trust"><input type="checkbox" checked={value!==null} onChange={event=>change(event.target.checked?'':null)}/>Record {label.toLowerCase()}</label>
-    {value!==null&&<><label className="visually-hidden" htmlFor={name}>{label} value</label>{multiline?<textarea id={name} name={name} rows={3} maxLength={limit*2} value={value} onChange={event=>change(event.target.value)}/>:<input id={name} name={name} type="text" autoComplete="off" maxLength={limit*2} value={value} onChange={event=>change(event.target.value)}/>}
-      <p className="field-help">{[...value].length}/{limit} characters.{(name==='phone'||name==='email')&&' Enter a value or uncheck to leave it unknown.'}</p></>}
-    {value===null&&<p className="field-help">Unknown / not recorded.</p>}
-  </fieldset>;
-}
 function CustomerDetails({customer}:{customer:Customer}){
   const unknown=(value:string|null)=>value===null?'Not recorded':value===''?'Recorded as empty':value;
   return <dl className="customer-values"><dt>Name</dt><dd>{customer.display_name}</dd><dt>Phone</dt><dd>{unknown(customer.phone_raw)}</dd><dt>Email</dt><dd>{unknown(customer.email_raw)}</dd><dt>Contact preference</dt><dd>{unknown(customer.contact_preference)}</dd><dt>Outreach</dt><dd>{customer.outreach_opt_out?'Opted out':'Not opted out'}</dd><dt>Customer since</dt><dd>{unknown(customer.customer_since)}</dd><dt>Notes</dt><dd>{unknown(customer.notes)}</dd><dt>Status</dt><dd>{customer.archived_at===null?'Active':'Archived: '+customer.archived_reason}</dd></dl>;
@@ -55,6 +48,7 @@ export function CustomerScreen(){
           {view.draft.archived&&<><label htmlFor="archive-reason">Archive reason</label><textarea id="archive-reason" name="archive-reason" rows={3} maxLength={2000} value={view.draft.archiveReason??''} onChange={event=>edit('archiveReason',event.target.value)} required/><p className="field-help">{[...(view.draft.archiveReason??'')].length}/1000 characters. Archiving retains the record and its history.</p></>}
         </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}<button type="submit" disabled={!view.canSave}>Save customer</button>
       </form>}
+      {view.selected&&<Link href={"/addresses?customer="+view.selected.id}>Manage customer addresses</Link>}
       {view.history&&<section aria-label="Customer history"><h2>Retained history</h2><p>Current version: {view.history.customer.version}</p>
         {view.history.history.map(event=><details key={event.after.version}><summary>Version {event.after.version} · {event.after.updated_at}</summary>{event.before&&<><h3>Before</h3><CustomerDetails customer={event.before}/></>}<h3>After</h3><CustomerDetails customer={event.after}/></details>)}
         {view.history.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('moreHistory')}>Next history page</button>}
@@ -62,7 +56,7 @@ export function CustomerScreen(){
     </>}
     {view.phase==='pending'&&<><p className="field-help">Keep the original save reference until the outcome is confirmed. No retry runs automatically.</p>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check customer save status</button>{view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('retry')}>Retry original customer change</button>}</>}
     {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current customers</button>}
-    <nav aria-label="Customer navigation"><Link href="/settings">Business settings</Link><Link href="/sign-in">Device sign-in and sign-out</Link><Link href="/">Crest OS home</Link></nav>
+    <nav aria-label="Customer navigation"><Link href="/addresses">Address save review</Link><Link href="/settings">Business settings</Link><Link href="/sign-in">Device sign-in and sign-out</Link><Link href="/">Crest OS home</Link></nav>
     <p className="field-help">Setup and synthetic testing are still in progress. This screen does not approve real customer records or production use.</p>
   </section>;
 }

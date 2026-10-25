@@ -49,3 +49,11 @@ test('customer editor is private and accessible while the default customer runti
   const denied=await request.post('/api/business/customers/list',{data:{},headers:{origin:'http://127.0.0.1:3000'}});expect(denied.status()).toBe(503);expect(denied.headers()['cache-control']).toContain('no-store');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
 });
+
+test('address screen is private, accessible and closed without configured authentication',async({page,request})=>{
+ const response=await page.goto('/addresses?customer=22222222-2222-4222-8222-222222222222');expect(response?.headers()['cache-control']).toContain('no-store');await expect(page.getByRole('heading',{name:'Customer addresses',exact:true})).toBeVisible();
+ await expect(page.getByRole('status')).toContainText('Address access could not be verified');await expect(page.getByRole('form',{name:'Address editor',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Add address',exact:true})).toHaveCount(0);
+ const denied=await request.post('/api/business/customers/addresses/list',{data:{customerId:'22222222-2222-4222-8222-222222222222'},headers:{origin:'http://127.0.0.1:3000'}});expect(denied.status()).toBe(503);expect(await denied.json()).toEqual({error:'ADDRESS_REQUEST_FAILED'});expect(denied.headers()['cache-control']).toContain('no-store');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
+ await page.goto('/addresses?customer=invalid');await expect(page.getByRole('status')).toContainText('Choose a customer');await expect(page.getByRole('button',{name:'Add address',exact:true})).toHaveCount(0);
+});
