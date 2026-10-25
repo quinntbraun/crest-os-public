@@ -58,6 +58,7 @@ test('portable coverage inventory accounts for every actual Crest source column 
 });
 test('live added source columns and tables fail coverage until reviewed without altering retained sources',async()=>{
  const m=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+ const retainedCoverage=verifyExportCoverage(m,await exportColumns(),receipt.history.length);
  await client.query('BEGIN');try{
   await client.query('ALTER TABLE crest.businesses ADD COLUMN synthetic_export_review text');
   const columns=await exportColumns();assert(columns.some(r=>r.column==='synthetic_export_review'));
@@ -68,13 +69,13 @@ test('live added source columns and tables fail coverage until reviewed without 
   const columns=await exportColumns();assert(columns.some(r=>r.table==='crest.synthetic_export_review'));
   assert.throws(()=>verifyExportCoverage(m,columns,receipt.history.length),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
  }finally{await client.query('ROLLBACK');}
- assert.equal(verifyExportCoverage(m,await exportColumns(),receipt.history.length).tables,26);
+ assert.deepEqual(verifyExportCoverage(m,await exportColumns(),receipt.history.length),retainedCoverage);
 });
 
 test('schema26 upgrade preserves all prior source bytes history and original six-ledger routines',async()=>{
  assert.equal(prior.history.length,26);assert.equal(referenceReceipt.history.length,27);assert.equal(configurationReceipt.history.length,28);assert.equal(identityReceipt.history.length,30);assert.deepEqual(identityReceipt.history.slice(0,29),historyReceipt.history);assert.equal(receipt.history.length,37);assert.deepEqual(receipt.history.slice(0,30),identityReceipt.history);assert.equal(historyReceipt.history.length,29);assert.deepEqual(receipt.history.slice(0,29),historyReceipt.history);assert.deepEqual(receipt.history.slice(0,28),configurationReceipt.history);assert.deepEqual(receipt.history.slice(0,27),referenceReceipt.history);assert.deepEqual(receipt.history.slice(0,26),prior.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);assert.deepEqual(await sourceHashes(),retained);assert.deepEqual(await originals(),oldFunctions);
 });
-test('schema25 upgrade preserves its prefix through26,27,28,29,30,31,32,33,34,35 and36',async()=>{
+test('schema25 upgrade preserves its prefix through26,27,28,29,30,31,32,33,34,35,36 and37',async()=>{
  const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);const p=await sandbox.apply(t,await sandbox.prefix(25)),r=await sandbox.apply(t);assert.equal(r.history.length,37);assert.deepEqual(r.history.slice(0,25),p.history);
 });
 test('reference context reports all three exact source counts in an explicit separate scope',async()=>{
