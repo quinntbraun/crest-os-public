@@ -197,6 +197,44 @@ BEGIN
  RETURN crest_private.lead_state_operation_result(requested_business,expected_actor,requested_operation);
 END
 $lookup$;
+CREATE FUNCTION crest_commands.read_lead_state_events(credential_hash bytea,expected_session uuid,expected_actor uuid,expected_issuer text,expected_subject uuid,expected_provider_session uuid,provider_valid_until timestamptz,requested_business uuid,requested_lead uuid,after_version bigint,page_limit integer) RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $events$
+DECLARE context jsonb;result jsonb;
+BEGIN
+ PERFORM set_config('crest.business_id','',true),set_config('crest.actor_id','',true),set_config('crest.operation_id','',true);
+ IF requested_lead IS NULL OR after_version IS NULL OR after_version<0 OR page_limit IS NULL OR page_limit NOT BETWEEN 1 AND 50 THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_LEAD_STATE_INPUT_REQUIRED';END IF;
+ context:=crest_commands.authorize_lead_read(credential_hash,expected_session,expected_actor,expected_issuer,expected_subject,expected_provider_session,provider_valid_until,requested_business);
+ PERFORM set_config('crest.business_id',context->>'businessId',true),set_config('crest.actor_id',context->>'actorId',true);
+ WITH target AS MATERIALIZED(SELECT * FROM crest.leads WHERE business_id=requested_business AND id=requested_lead),
+ matches AS MATERIALIZED(SELECT * FROM crest.lead_events WHERE business_id=requested_business AND lead_id=requested_lead AND lead_version>after_version ORDER BY lead_version LIMIT page_limit+1),
+ page AS(SELECT * FROM matches ORDER BY lead_version LIMIT page_limit)
+ SELECT CASE WHEN EXISTS(SELECT 1 FROM target) THEN jsonb_build_object('schemaVersion',1,'businessId',requested_business,'leadId',requested_lead,'leadVersion',(SELECT version::text FROM target),'events',coalesce((SELECT jsonb_agg(crest_private.lead_event_projection(p::crest.lead_events) ORDER BY lead_version) FROM page p),'[]'::jsonb),'hasMore',(SELECT count(*)>page_limit FROM matches)) ELSE jsonb_build_object('state','absent') END INTO result;
+ IF octet_length(result::text)>1048576 THEN RAISE EXCEPTION USING ERRCODE='54000',MESSAGE='CREST_LEAD_STATE_PAGE_LIMIT';END IF;RETURN result;
+END
+$events$;
+-- Privileged partial source extraction. Caller must eventually own an actual
+-- authorized whole-export job; these functions confer no download authority.
+CREATE FUNCTION crest_commands.lead_event_snapshot_context(requested_business uuid) RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $snapshot$
+DECLARE n bigint;
+BEGIN
+ IF current_setting('transaction_isolation')<>'repeatable read' OR current_setting('transaction_read_only')<>'on' THEN RAISE EXCEPTION USING ERRCODE='25001',MESSAGE='CREST_LEAD_STATE_SNAPSHOT_REQUIRED';END IF;
+ IF requested_business IS NULL THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_LEAD_STATE_INPUT_REQUIRED';END IF;
+ PERFORM set_config('crest.business_id',requested_business::text,true),set_config('crest.actor_id','',true),set_config('crest.operation_id','',true);
+ IF NOT EXISTS(SELECT 1 FROM crest.businesses WHERE id=requested_business) THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_LEAD_STATE_SCOPE_REQUIRED';END IF;
+ SELECT count(*) INTO n FROM crest.lead_events WHERE business_id=requested_business;
+ IF n>1000 THEN RAISE EXCEPTION USING ERRCODE='54000',MESSAGE='CREST_LEAD_STATE_SNAPSHOT_LIMIT';END IF;
+ RETURN jsonb_build_object('schemaVersion',1,'scope','lead_state_events','businessId',requested_business,'snapshotToken',encode(sha256(convert_to(jsonb_build_object('domain','crest.lead.state.snapshot/1','businessId',requested_business,'snapshot',pg_current_snapshot()::text)::text,'UTF8')),'hex'),'rowCount',n::text);
+END
+$snapshot$;
+CREATE FUNCTION crest_commands.lead_event_snapshot_page(requested_business uuid,expected_snapshot text,after_id uuid,page_limit integer) RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $page$
+DECLARE context jsonb;result jsonb;
+BEGIN
+ context:=crest_commands.lead_event_snapshot_context(requested_business);
+ IF expected_snapshot IS DISTINCT FROM context->>'snapshotToken' OR page_limit IS NULL OR page_limit NOT BETWEEN 1 AND 100 THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_LEAD_STATE_SNAPSHOT_REQUIRED';END IF;
+ WITH page AS(SELECT * FROM crest.lead_events WHERE business_id=requested_business AND(after_id IS NULL OR id>after_id) ORDER BY id LIMIT page_limit)
+ SELECT jsonb_build_object('schemaVersion',1,'businessId',requested_business,'snapshotToken',expected_snapshot,'events',coalesce(jsonb_agg(crest_private.lead_event_projection(p::crest.lead_events) ORDER BY id),'[]'::jsonb)) INTO result FROM page p;
+ IF octet_length(result::text)>1048576 THEN RAISE EXCEPTION USING ERRCODE='54000',MESSAGE='CREST_LEAD_STATE_PAGE_LIMIT';END IF;RETURN result;
+END
+$page$;
 RESET ROLE;
 GRANT CREATE ON SCHEMA crest_private TO crest_lead_integrity_owner;
 ALTER FUNCTION crest_private.lead_state_operation_result(uuid,uuid,uuid) OWNER TO crest_lead_integrity_owner;
@@ -205,7 +243,13 @@ REVOKE CREATE ON SCHEMA crest_private FROM crest_lead_integrity_owner;
 GRANT CREATE ON SCHEMA crest_commands TO crest_lead_owner;
 ALTER FUNCTION crest_commands.change_lead_state(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,uuid,bigint,jsonb) OWNER TO crest_lead_owner;
 ALTER FUNCTION crest_commands.lookup_lead_state_operation(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid) OWNER TO crest_lead_owner;
+ALTER FUNCTION crest_commands.read_lead_state_events(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,bigint,integer) OWNER TO crest_lead_owner;
+ALTER FUNCTION crest_commands.lead_event_snapshot_context(uuid) OWNER TO crest_lead_owner;
+ALTER FUNCTION crest_commands.lead_event_snapshot_page(uuid,text,uuid,integer) OWNER TO crest_lead_owner;
 REVOKE CREATE ON SCHEMA crest_commands FROM crest_lead_owner;
 REVOKE ALL ON FUNCTION crest_private.lead_state_operation_result(uuid,uuid,uuid),crest_private.check_lead_state_event(),crest_commands.change_lead_state(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,uuid,bigint,jsonb),crest_commands.lookup_lead_state_operation(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION crest_private.lead_state_operation_result(uuid,uuid,uuid) TO crest_lead_owner;
 GRANT EXECUTE ON FUNCTION crest_commands.change_lead_state(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,uuid,bigint,jsonb),crest_commands.lookup_lead_state_operation(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid) TO crest_web;
+REVOKE ALL ON FUNCTION crest_commands.read_lead_state_events(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,bigint,integer),crest_commands.lead_event_snapshot_context(uuid),crest_commands.lead_event_snapshot_page(uuid,text,uuid,integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION crest_commands.read_lead_state_events(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,bigint,integer) TO crest_web;
+GRANT EXECUTE ON FUNCTION crest_commands.lead_event_snapshot_context(uuid),crest_commands.lead_event_snapshot_page(uuid,text,uuid,integer) TO crest_export;

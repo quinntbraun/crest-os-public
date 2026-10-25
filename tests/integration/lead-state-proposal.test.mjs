@@ -7,6 +7,8 @@ import {installProviderSchema} from '../support/provider-schema.mjs';
 import {leadStateProposal} from '../support/lead-state-proposal.mjs';
 import {leadStates,parseLead} from '../../src/customer/lead-contract.ts';
 import {parseLeadStateDraft,parseLeadEvent} from '../../src/customer/lead-state-contract.ts';
+import {formatLeadEventCsv} from '../../src/customer/lead-csv.ts';
+import {readCustomerCsv} from '../support/customer-fixture.ts';
 let sandbox,client,target,web,web2,exporter,login,loginOwned=false,bootstrap,a,b,prior,receipt,retained,seed,proposal,guardRefused=false;
 const issuer='https://auth.example.com/auth/v1';
 const auth=f=>[f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+300000),f.business];
@@ -117,4 +119,21 @@ test('raw state rewrites and orphan events fail; retained event updates/deletes/
  await assert.rejects(client.query("UPDATE crest.leads SET state='lost',lost_reason='forged',version=version+1 WHERE id=$1",[id]),/IMMUTABLE_LEAD_STATE_EVENT_REQUIRED/);
  await assert.rejects(client.query("INSERT INTO crest.lead_events(business_id,lead_id,lead_version,from_state,to_state,reason,created_by,updated_by,origin,operation_id) VALUES($1,$2,2,'new','lost','Orphan',$3,$3,'manual',$4)",[a.business,id,a.actor,op]),/CREST_LEAD_STATE_EVENT_REQUIRED/);assert.deepEqual(await events(id),[]);
  await change(a,request(id,'new','contacted'));for(const sql of ["UPDATE crest.lead_events SET reason='forged'","DELETE FROM crest.lead_events","TRUNCATE crest.lead_events"])await assert.rejects(client.query(sql),e=>e.code==='55000');
+});
+test('scoped ordered state history and complete18-column snapshot/CSV preserve gaps and every original event',async()=>{
+ const id=randomUUID();await save(a,id);await change(a,request(id,'new','contacted'));await save(a,id,'2',body({notes:'Intake edit between events'}));await change(a,request(id,'contacted','lost',{version:'3',body:{fromState:'contacted',toState:'lost',reason:'=SUM(A1)\nOriginal 😀 \\N'}}));
+ const read=(f,leadId,after=0,size=1)=>web.query('SELECT crest_commands.read_lead_state_events($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS value',[...auth(f),leadId,String(after),size]).then(r=>r.rows[0].value);
+ const first=await read(a,id),next=await read(a,id,first.events[0].lead_version);assert(first.hasMore);assert.equal(first.leadVersion,'4');assert.equal(first.events[0].lead_version,'2');assert.equal(next.events[0].lead_version,'4');assert.equal(next.hasMore,false);assert.deepEqual([...first.events,...next.events],await events(id));assert.deepEqual(await read(b,id),{state:'absent'});for(const size of [0,51])await assert.rejects(read(a,id,0,size),e=>e.code==='22023');
+ await assert.rejects(web.query('SELECT crest_commands.lead_event_snapshot_context($1)',[a.business]),e=>e.code==='42501');await assert.rejects(exporter.query('SELECT crest_commands.lead_event_snapshot_context($1)',[a.business]),e=>e.code==='25001');
+ await exporter.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');try{
+  const context=(await exporter.query('SELECT crest_commands.lead_event_snapshot_context($1) AS value',[a.business])).rows[0].value,pointRows=(await client.query('SELECT crest_private.lead_event_projection(e) AS value FROM crest.lead_events e WHERE business_id=$1 ORDER BY id',[a.business])).rows.map(x=>x.value);let after=null,all=[];
+  const later=await change(a,request(id,'lost','follow_up',{version:'4',body:{fromState:'lost',toState:'follow_up',reason:'Synthetic committed after source snapshot'}}));assert.equal(later.state,'committed');
+  for(const args of [[a.business,'a'.repeat(64),null,2],[b.business,context.snapshotToken,null,2],[a.business,context.snapshotToken,null,0],[a.business,context.snapshotToken,null,101]]){
+   await exporter.query('SAVEPOINT invalid_source_request');await assert.rejects(exporter.query('SELECT crest_commands.lead_event_snapshot_page($1,$2,$3,$4)',args),e=>e.code==='22023');await exporter.query('ROLLBACK TO SAVEPOINT invalid_source_request');await exporter.query('RELEASE SAVEPOINT invalid_source_request');
+  }
+  for(;;){const page=(await exporter.query('SELECT crest_commands.lead_event_snapshot_page($1,$2,$3,2) AS value',[a.business,context.snapshotToken,after])).rows[0].value;assert.equal(page.snapshotToken,context.snapshotToken);all.push(...page.events);if(page.events.length<2)break;after=page.events.at(-1).id;}
+  assert.equal(all.length,Number(context.rowCount));assert.deepEqual(all,pointRows);assert(all.every(x=>x.id!==later.receipt.leadEventId));assert.equal((await client.query('SELECT count(*)::int AS n FROM crest.lead_events WHERE business_id=$1',[a.business])).rows[0].n,all.length+1);for(const e of all)parseLeadEvent(e,a.business);
+  const formatted=formatLeadEventCsv({businessId:a.business,snapshotToken:context.snapshotToken,expectedRowCount:context.rowCount,rows:all});assert.equal(readCustomerCsv(formatted.csv)[0].length,18);assert.equal(JSON.parse(formatted.manifest).completeBackup,false);assert(JSON.parse(formatted.escapeMap).escapes.some(x=>x.column==='reason'));
+  await exporter.query('COMMIT');
+ }catch(e){await exporter.query('ROLLBACK');throw e;}
 });

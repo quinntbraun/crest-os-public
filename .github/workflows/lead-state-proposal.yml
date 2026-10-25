@@ -59,6 +59,6 @@ jobs:
           .local/tools/gitleaks/gitleaks dir . --redact --no-banner
           npm run lint
           npm run typecheck
-          npm test -- tests/unit/lead-state-contract.test.ts
+          npm test -- tests/unit/lead-state-contract.test.ts tests/unit/lead-event-csv.test.ts
       - name: Exercise actual isolated PostgreSQL proposal
         run: node --test --test-concurrency=1 tests/integration/lead-state-proposal.test.mjs
