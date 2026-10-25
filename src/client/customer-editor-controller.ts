@@ -70,13 +70,15 @@ export function createCustomerEditorController(deps:Dependencies){
     retain(kind==='recovery'?'Recovery review is required. The original customer request has been kept without changing its epoch.':'The customer save could not be confirmed. Check its original status before another action.');
   }
   const save=()=>{
-    if(!view().canSave||!snapshot||!proof||!draft)return Promise.resolve();const context=snapshot,authorization=proof,input=parseCustomerDraft(draft),current=selected;let dispatched=false;
+    if(!view().canSave||!snapshot||!proof||!draft)return Promise.resolve();const context=snapshot,input=parseCustomerDraft(draft),current=selected;let dispatched=false,checkedContext=false;
     return run(async signal=>{
+      await fresh(signal);checkedContext=true;
+      if(snapshot!.context.businessId!==context.context.businessId||snapshot!.binding!==context.binding||snapshot!.context.writeState!=='ready'||snapshot!.context.recoveryEpoch!==context.context.recoveryEpoch){clearPrivate();phase='review';message='Customer access or recovery changed. No change was sent. Load current customers before editing.';return;}
       const command:CustomerSave=Object.freeze({schemaVersion:1,operationId:id(),customerId:current?.id??id(),expectedVersion:current?.version??'0',recoveryEpoch:context.context.recoveryEpoch!,draft:input});
       const {draft:unused,schemaVersion,...reference}=command;void unused;void schemaVersion;
       const record=pendingCustomer({schemaVersion:1,businessId:context.context.businessId,binding:context.binding,reference});deps.store.write(record);pending=record;original=command;retain('Saving customer…');emit();dispatched=true;
-      const result=await api.save(record.businessId,command,authorization,signal);live(signal);finish(result);
-    },error=>failedWrite(error,true,dispatched));
+      const result=await api.save(record.businessId,command,proof!,signal);live(signal);finish(result);
+    },error=>{if(!checkedContext){clearPrivate();phase='unavailable';message='Customer access could not be reverified. No change was sent. Load current customers before editing.';}else failedWrite(error,true,dispatched);});
   };
   const retry=()=>{
     if(!view().canRetry||!pending||!original)return Promise.resolve();const record=pending,command=original;let dispatched=false;
