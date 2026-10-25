@@ -76,6 +76,7 @@ jobs:
           npm run test:leads-db
           npm run test:lead-state-db
           npm run test:lead-vehicles-db
+          npm run test:lead-address-proposal-db
       - name: Install pinned recovery tooling
         run: node scripts/install-recovery-tools.mjs
       - name: Encrypted isolated database recovery drill
