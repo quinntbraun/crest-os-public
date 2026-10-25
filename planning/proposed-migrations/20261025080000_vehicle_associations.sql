@@ -152,7 +152,7 @@ BEGIN
   IF name IN ('vehicleId','associationId') AND jsonb_typeof(receipt->name) IS DISTINCT FROM 'string' OR jsonb_typeof(receipt->name) NOT IN ('string','null') OR jsonb_typeof(receipt->name)='string' AND (receipt->>name)!~'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_ASSOCIATION_RESULT_REVIEW_REQUIRED'; END IF;
  END LOOP;
  IF o.state<>'committed' OR o.schema_version<>1 OR o.result_schema_version<>1 OR jsonb_typeof(receipt) IS DISTINCT FROM 'object' OR receipt-ARRAY['schemaVersion','businessId','action','vehicleId','associationId','associationVersion','closedAuditId','openedAssociationId','openedAuditId']<>'{}'::jsonb OR NOT(receipt ?& ARRAY['schemaVersion','businessId','action','vehicleId','associationId','associationVersion','closedAuditId','openedAssociationId','openedAuditId']) OR receipt->'schemaVersion'<>'1'::jsonb OR receipt->>'businessId' IS DISTINCT FROM requested_business::text OR receipt->>'action' NOT IN ('open','close','transfer') THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_ASSOCIATION_RESULT_REVIEW_REQUIRED'; END IF;
- IF (SELECT count(*) FROM crest_private.audit_events WHERE business_id=requested_business AND operation_id=requested_operation)<>CASE WHEN receipt->>'action'='transfer' THEN 2 ELSE 1 END THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_ASSOCIATION_RESULT_REVIEW_REQUIRED'; END IF;
+ IF (SELECT count(*) FROM crest_private.audit_events WHERE business_id=requested_business AND operation_id=requested_operation)<>(CASE WHEN receipt->>'action'='transfer' THEN 2 ELSE 1 END) THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_ASSOCIATION_RESULT_REVIEW_REQUIRED'; END IF;
  -- Reparse every full projection and bind original audit/actor/source/version;
  -- current directory changes can never replace original receipt evidence.
  FOR event IN SELECT * FROM crest_private.audit_events WHERE business_id=requested_business AND operation_id=requested_operation LOOP
@@ -194,7 +194,7 @@ DECLARE context jsonb; digest text; claimed uuid; existing record; previous cres
 BEGIN
  PERFORM set_config('crest.business_id','',true),set_config('crest.actor_id','',true),set_config('crest.operation_id','',true);
  body:=crest_private.association_body(body);
- IF requested_operation IS NULL OR request_schema IS DISTINCT FROM 1 OR expected_version IS NULL OR expected_version<>CASE WHEN body->>'action'='open' THEN 0 ELSE 1 END THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_ASSOCIATION_INPUT_REQUIRED'; END IF;
+ IF requested_operation IS NULL OR request_schema IS DISTINCT FROM 1 OR expected_version IS NULL OR expected_version<>(CASE WHEN body->>'action'='open' THEN 0 ELSE 1 END) THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_ASSOCIATION_INPUT_REQUIRED'; END IF;
  vehicle:=(body->>'vehicleId')::uuid;customer:=(body->>'customerId')::uuid;association:=(body->>'associationId')::uuid;next_id:=(body->>'nextAssociationId')::uuid;effective:=(body->>'effectiveAt')::timestamptz;
  BEGIN
   context:=crest_commands.lock_mutation_authority(credential_hash,expected_session,expected_actor,expected_issuer,expected_subject,expected_provider_session,provider_valid_until,requested_business,expected_epoch,'crm.manage',false);
