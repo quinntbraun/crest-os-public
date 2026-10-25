@@ -32,7 +32,7 @@ export function VehicleScreen(){
   function submit(event:FormEvent){event.preventDefault();void action('save');}
   function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const data=new FormData(event.currentTarget);void current.current?.query(String(data.get('search')??''),data.get('archived')==='on');}
   return <section aria-label="Vehicle directory" aria-busy={view.busy}>
-    <p ref={status} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
+    <p ref={status} tabIndex={-1} role="status" aria-label="Vehicle editor status" aria-live="polite" aria-atomic="true">{view.message}</p>
     {view.phase==='ready'&&<>
       {view.writesPaused&&<p className="notice">Vehicle changes are paused. You can review current records and history.</p>}
       <form onSubmit={search} aria-label="Search vehicles"><label htmlFor="vehicle-search">Vehicle search</label><input id="vehicle-search" name="search" type="search" autoComplete="off" maxLength={400} defaultValue={view.search} disabled={view.busy}/><label className="trust"><input name="archived" type="checkbox" defaultChecked={view.includeArchived} disabled={view.busy}/>Include archived vehicles</label><button className="secondary" type="submit" disabled={view.busy}>Search vehicles</button></form>

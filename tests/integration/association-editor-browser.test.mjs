@@ -76,7 +76,7 @@ const vehicle=(name,epoch)=>({schemaVersion:1,operationId:randomUUID(),recoveryE
 const panel=page=>page.getByRole('region',{name:'Customers for this vehicle',exact:true});
 async function openPanel(page,car){
  await page.bringToFront();await page.goto(origin+'/vehicles');await expect(page.getByRole('button',{name:'Add vehicle',exact:true})).toBeVisible();
- await page.getByLabel('Vehicle search',{exact:true}).fill(car.label);await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Vehicle search complete.');
+ await page.getByLabel('Vehicle search',{exact:true}).fill(car.label);await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toHaveText('Vehicle search complete.');
  await page.getByRole('button',{name:car.label,exact:true}).click();await expect(panel(page)).toBeVisible();
  await panel(page).getByRole('button',{name:'Load current customer links',exact:true}).click();
 }

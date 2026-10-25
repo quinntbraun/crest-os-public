@@ -27,7 +27,7 @@ export function AssociationPanel({businessId,vehicleId}:{businessId:string;vehic
  function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);void current.current?.searchCustomers(String(form.get('customer-search')??''));}
  function submit(event:FormEvent){event.preventDefault();void action('save');}
  return <section className="association-panel" aria-label="Customers for this vehicle" aria-busy={view.busy}><h2>Customers for this vehicle</h2>
-  <p ref={status} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
+  <p ref={status} tabIndex={-1} role="status" aria-label="Customer-link status" aria-live="polite" aria-atomic="true">{view.message}</p>
   {view.phase!=='pending'&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current customer links</button>}
   {view.phase==='ready'&&<>
    {view.writesPaused&&<p className="notice">Customer-link changes are paused. You can review retained links.</p>}
