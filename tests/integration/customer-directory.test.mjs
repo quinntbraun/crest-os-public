@@ -8,6 +8,7 @@ import {installProviderSchema} from '../support/provider-schema.mjs';
 import {formatCustomerCsv} from '../../src/customer/customer-csv.ts';
 import {decodeCustomerCsv} from '../support/customer-fixture.ts';
 let sandbox,client,target,web,web2,exporter,login,loginOwned=false,bootstrap,a,b,prior,receipt,customerReceipt,beforeUpgrade,guardRefused=false,upgradeCustomer,upgradeEvidence;
+const repairCases=new Map();
 const issuer='https://auth.example.com/auth/v1';
 const body=(patch={})=>({displayName:'Synthetic customer',phone:null,email:null,contactPreference:null,outreachOptOut:false,notes:null,customerSince:null,archived:false,archiveReason:null,...patch});
 const request=(patch={})=>({operation:randomUUID(),customer:randomUUID(),version:'0',schema:1,body:body(),...patch});
@@ -43,6 +44,9 @@ before(async()=>{
   // Keep the failed target's pending evidence. The positive upgrade uses the
   // original distinct database/ledger after explicit synthetic role repair.
   customerReceipt=await sandbox.apply(target,await sandbox.prefix(32));
+  // Bootstrap extra databases before granting any probe login memberships:
+  // schema2 deliberately refuses adoption of roles linked to other logins.
+  for(const profile of ['restored','unexpected']){const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);const before=await sandbox.apply(t,await sandbox.prefix(32));repairCases.set(profile,{t,c,before});}
   login=`crest_crm_probe_${randomBytes(8).toString('hex')}`;const password=randomBytes(32).toString('hex');await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;await sandbox.admin.query(`GRANT crest_web,crest_export TO ${login}`);
   const u=new URL(target);u.username=login;u.password=password;
   web=await sandbox.connect(u.toString());web2=await sandbox.connect(u.toString());exporter=await sandbox.connect(u.toString());for(const c of [web,web2])await c.query("SET ROLE crest_web; SET lock_timeout='3s'");await exporter.query('SET ROLE crest_export');
@@ -57,7 +61,7 @@ test('migration refuses an existing login role before creating customer storage'
 // Captured PostgreSQL17 canonical forms from the failed isolated restore.
 const normalizedCustomerChecks=[{"name":"customers_display_name_check","definition":"CHECK (((char_length(display_name) >= 1) AND (char_length(display_name) <= 200) AND (btrim(display_name) <> ''::text) AND (display_name !~ '[[:cntrl:]]'::text)))"},{"name":"customers_archived_reason_check","definition":"CHECK (((archived_reason IS NULL) OR ((char_length(archived_reason) >= 1) AND (char_length(archived_reason) <= 1000) AND (btrim(archived_reason) <> ''::text) AND (translate(archived_reason, '\t\n\r'::text, ''::text) !~ '[[:cntrl:]]'::text))))"}];
 for(const profile of ['restored','unexpected'])test('check repair accepts only known schema32 forms: '+profile,async()=>{
-  const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);const before=await sandbox.apply(t,await sandbox.prefix(32));
+  const {t,c,before}=repairCases.get(profile);
   for(const item of normalizedCustomerChecks)await c.query('ALTER TABLE crest.customers DROP CONSTRAINT '+item.name+', ADD CONSTRAINT '+item.name+' '+item.definition);
   if(profile==='unexpected')await c.query('ALTER TABLE crest.customers DROP CONSTRAINT customers_display_name_check, ADD CONSTRAINT customers_display_name_check CHECK(char_length(display_name)>0)');
   const definitions=async()=>(await c.query("SELECT conname,pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conrelid='crest.customers'::regclass ORDER BY conname")).rows,original=await definitions();
