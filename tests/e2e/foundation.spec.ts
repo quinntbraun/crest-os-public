@@ -57,3 +57,10 @@ test('address screen is private, accessible and closed without configured authen
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
  await page.goto('/addresses?customer=invalid');await expect(page.getByRole('status')).toContainText('Choose a customer');await expect(page.getByRole('button',{name:'Add address',exact:true})).toHaveCount(0);
 });
+
+test('vehicle screen is private, accessible and closed without its explicit runtime',async({page,request})=>{
+ const response=await page.goto('/vehicles');expect(response?.headers()['cache-control']).toContain('no-store');await expect(page.getByRole('heading',{name:'Vehicles',exact:true})).toBeVisible();
+ await expect(page.getByRole('status')).toContainText('Vehicle access could not be verified');await expect(page.getByRole('form',{name:'Vehicle editor',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Add vehicle',exact:true})).toHaveCount(0);
+ const denied=await request.post('/api/business/vehicles/list',{data:{},headers:{origin:'http://127.0.0.1:3000'}});expect(denied.status()).toBe(503);expect(await denied.json()).toEqual({error:'VEHICLE_REQUEST_FAILED'});expect(denied.headers()['cache-control']).toContain('no-store');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
+});
