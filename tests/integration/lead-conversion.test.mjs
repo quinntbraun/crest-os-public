@@ -127,9 +127,18 @@ test('two devices racing the original operation return one identical receipt',as
  const f=await state(),second=await session(f),parent=await lead(f),r=request(parent.id);const results=await Promise.all([convert(f,r),convert(second,r,web2)]);assert.equal(results[0].state,'committed');assert.deepEqual(results[0],results[1]);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest.lead_conversions WHERE business_id=$1',[f.business])).rows[0].n,1);
 });
 test('forced RLS, immutable mapping history and private helpers remain inaccessible to the web role',async()=>{
- const f=await state(),parent=await lead(f),r=request(parent.id);assert.equal((await convert(f,r)).state,'committed');
- for(const table of ['crest.lead_conversions','crest.conversion_links']){assert.equal((await client.query('SELECT relrowsecurity AND relforcerowsecurity AS yes FROM pg_class WHERE oid=$1::regclass',[table])).rows[0].yes,true);for(const sql of [`SELECT * FROM ${table}`,`DELETE FROM ${table}`,`TRUNCATE ${table}`,`UPDATE ${table} SET version=version`])await assert.rejects(web.query(sql),e=>e.code==='42501');for(const sql of [`DELETE FROM ${table}`,`TRUNCATE ${table}`,`UPDATE ${table} SET version=version`]){if(table.endsWith('conversion_links')&&!sql.startsWith('TRUNCATE'))continue;await assert.rejects(client.query(sql),e=>e.code==='55000');}}
- await assert.rejects(web.query('SELECT crest_private.lead_conversion_operation_result($1,$2,$3)',[f.business,f.actor,r.operation]),e=>e.code==='42501');for(const role of ['crest_lead_owner','crest_lead_integrity_owner','crest_customer_owner','crest_vehicle_owner','crest_address_owner'])await assert.rejects(web.query('SET ROLE '+role),e=>e.code==='42501');
+ const f=await state(),parent=await lead(f),v=await report(f,parent.id,'vehicle'),r=request(parent.id);r.body.vehicles=[vehicleLink(v)];assert.equal((await convert(f,r)).state,'committed');const retained=await evidence(f);
+ for(const table of ['crest.lead_conversions','crest.conversion_links']){
+  assert.equal((await client.query("SELECT relrowsecurity AND relforcerowsecurity AND relowner='crest_schema_owner'::regrole AS yes FROM pg_class WHERE oid=$1::regclass",[table])).rows[0].yes,true);
+  for(const sql of [`SELECT * FROM ${table}`,`DELETE FROM ${table}`,`TRUNCATE ${table}`,`UPDATE ${table} SET version=version`])await assert.rejects(web.query(sql),e=>e.code==='42501');
+  for(const sql of [`DELETE FROM ${table}`,`UPDATE ${table} SET version=version`])await assert.rejects(client.query(sql),e=>e.code==='55000'&&e.message==='CREST_RETAINED_COMMAND_HISTORY');
+ }
+ // FK validation precedes parent-only TRUNCATE triggers. Test both independent
+ // protections, including a closed FK set that reaches the retention trigger.
+ await assert.rejects(client.query('TRUNCATE crest.lead_conversions'),e=>e.code==='0A000'&&e.message==='cannot truncate a table referenced in a foreign key constraint');
+ for(const sql of ['TRUNCATE crest.conversion_links','TRUNCATE crest.lead_conversions,crest.conversion_links'])await assert.rejects(client.query(sql),e=>e.code==='55000'&&e.message==='CREST_RETAINED_COMMAND_HISTORY');
+ await assert.rejects(web.query('SELECT crest_private.lead_conversion_operation_result($1,$2,$3)',[f.business,f.actor,r.operation]),e=>e.code==='42501');for(const role of ['crest_lead_owner','crest_lead_integrity_owner','crest_customer_owner','crest_vehicle_owner','crest_address_owner']){await assert.rejects(web.query('SET ROLE '+role),e=>e.code==='42501');assert.equal((await client.query('SELECT rolcanlogin OR rolinherit OR rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls OR rolconfig IS NOT NULL AS bad FROM pg_roles WHERE rolname=$1',[role])).rows[0].bad,false);}
+ assert.deepEqual(await evidence(f),retained);
 });
 test('fresh identity and recovery authority protect writes and replay while paused lookup preserves the original receipt',async()=>{
  const f=await state(),parent=await lead(f),r=request(parent.id),first=await convert(f,r);assert.equal(first.state,'committed');const retained=await evidence(f);
