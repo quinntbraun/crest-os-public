@@ -8,6 +8,7 @@ import {NullableText} from '../customers/nullable-text';
 import type {Vehicle} from '../../customer/vehicle-contract';
 import type {VehicleDraft} from '../../customer/customer-resource-contract';
 import {vehicleYearInput} from './year-input';
+import {AssociationPanel} from './associations';
 
 function YearInput({value,change}:{value:number;change:(value:number)=>void}){
   const [text,setText]=useState(Number.isFinite(value)?String(value):'');
@@ -31,7 +32,7 @@ export function VehicleScreen(){
   function submit(event:FormEvent){event.preventDefault();void action('save');}
   function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const data=new FormData(event.currentTarget);void current.current?.query(String(data.get('search')??''),data.get('archived')==='on');}
   return <section aria-label="Vehicle directory" aria-busy={view.busy}>
-    <p ref={status} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
+    <p ref={status} tabIndex={-1} role="status" aria-label="Vehicle editor status" aria-live="polite" aria-atomic="true">{view.message}</p>
     {view.phase==='ready'&&<>
       {view.writesPaused&&<p className="notice">Vehicle changes are paused. You can review current records and history.</p>}
       <form onSubmit={search} aria-label="Search vehicles"><label htmlFor="vehicle-search">Vehicle search</label><input id="vehicle-search" name="search" type="search" autoComplete="off" maxLength={400} defaultValue={view.search} disabled={view.busy}/><label className="trust"><input name="archived" type="checkbox" defaultChecked={view.includeArchived} disabled={view.busy}/>Include archived vehicles</label><button className="secondary" type="submit" disabled={view.busy}>Search vehicles</button></form>
@@ -61,6 +62,7 @@ export function VehicleScreen(){
         {view.history.history.map(event=><details key={event.after.version}><summary>Version {event.after.version} · {event.after.updated_at}</summary>{event.before&&<><h3>Before</h3><VehicleDetails vehicle={event.before}/></>}<h3>After</h3><VehicleDetails vehicle={event.after}/></details>)}
         {view.history.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('moreHistory')}>Next history page</button>}
       </section>}
+      {view.selected&&view.businessId&&<AssociationPanel key={view.businessId+':'+view.selected.id} businessId={view.businessId} vehicleId={view.selected.id}/>}
     </>}
     {view.phase==='pending'&&<><p className="field-help">Keep the original save reference until the outcome is confirmed. No retry runs automatically.</p>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check vehicle save status</button>{view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('retry')}>Retry original vehicle change</button>}</>}
     {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current vehicles</button>}

@@ -1,10 +1,10 @@
 # Crest OS
 
-Current development: dated customer–vehicle association backend and atomic ownership transfers. Migration 36 retains the exact SQL bytes that passed native and encrypted-restore preflight; full current-source release acceptance remains pending. See [the active checkpoint](planning/WORKING_STATE.md) and [association implementation](planning/PHASE_4_VEHICLE_ASSOCIATIONS.md). Synthetic development only; real-data use remains gated.
+Current development: customer–vehicle ownership controls, private HTTP/client and original-save recovery over the merged association backend. Screen acceptance remains pending. See [the active checkpoint](planning/WORKING_STATE.md) and [association implementation](planning/PHASE_4_VEHICLE_ASSOCIATIONS.md). Synthetic development only; real-data use remains gated.
 
 Crest Detailing's internal business operating system.
 
-**Status (2026-10-24): Public-source foundation; private owner-only application and business data. Security/recovery foundations and the first synthetic customer backend are underway. Read [the continuation checkpoint](planning/WORKING_STATE.md) and [current implementation plan](planning/PRE_IMPLEMENTATION.md), then verify live Git/PR/CI evidence. No usable CRM screens, financial functionality, hosted provider provisioning, real data, spending or production activation.**
+**Status (2026-10-25): Public source; private owner-only application and business data. Synthetic customer, address and vehicle screens are implemented. Dated vehicle associations/atomic transfer are merged; their customer-link controls are under acceptance. Read [the current checkpoint](planning/WORKING_STATE.md) and verify live source/PR/CI evidence. No production activation, real data, spending or provider provisioning is approved.**
 
 The [customer directory core](planning/PHASE_4_CUSTOMER_DIRECTORY.md), [private HTTP boundary](planning/PHASE_4_CUSTOMER_HTTP.md) and [customer editor](planning/PHASE_4_CUSTOMER_EDITOR.md) add save/search/history, optimistic conflicts, archive/reopen and explicit interrupted-save review. Customer forms at `/customers` require configured authenticated customer access; the default executable remains closed. Drafts stay in memory; only opaque pending references use per-tab storage. A lost draft with an absent receipt remains blocked for review, not a replacement save. Exact-source native browser/build/container proof and real-use recovery/portability gates remain. ADR41/ROADMAP1.6 permit synthetic construction overlap while retaining every applicable release gate.
 
