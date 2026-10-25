@@ -90,10 +90,14 @@ before(async()=>{
     const expected=normalizedSchema(await postgresTool('pg_dump',sourceUrl,['--schema-only'])),actual=normalizedSchema(await postgresTool('pg_dump',restoredUrl,['--schema-only']));
     assert.equal(hash(expected),backup.manifest.schemaSha256,'source schema changed after capture');
     const left=expected.split('\n'),right=actual.split('\n'),at=left.findIndex((line,i)=>line!==right[i]);
-    // Only grant statements over fixed public Crest names may cross diagnostics.
-    // No function bodies, comments, source values or arbitrary SQL are emitted.
-    const safe=line=>/^(?:GRANT|REVOKE|ALTER DEFAULT PRIVILEGES) [A-Za-z0-9_ .(),;]+$/.test(line??'')&&/\bcrest_[a-z_]+\b/.test(line)?line:'[schema statement withheld]';
-    throw new Error('SYNTHETIC_SCHEMA_REVIEW_REQUIRED:'+JSON.stringify({line:at+1,expected:left.slice(Math.max(0,at-1),at+4).map(safe),actual:right.slice(Math.max(0,at-1),at+4).map(safe)}),{cause:error});
+    // Only fixed public Crest DDL headers/grants and exact lines already in the
+    // published customer migration may cross diagnostics. No source data, SQL
+    // comments/bodies from arbitrary objects or connection details are emitted.
+    const publicLines=new Set((await readFile(new URL('../../supabase/migrations/20261025020000_customer_directory.sql',import.meta.url),'utf8')).split('\n').map(s=>s.trim()));
+    const safe=line=>line===''?'[blank]':publicLines.has(line?.trim())&&line?.trim()?line:
+      /^(?:GRANT|REVOKE|ALTER DEFAULT PRIVILEGES|CREATE FUNCTION|ALTER FUNCTION|CREATE TABLE|ALTER TABLE|CREATE TYPE|ALTER TYPE) [A-Za-z0-9_ .(),;"]+$/.test(line??'')&&/\bcrest(?:_|\.)[a-z_]+\b/.test(line)?line:'[schema statement withheld]';
+    const object=lines=>{for(let i=at;i>=0;i--)if(/^(?:CREATE FUNCTION|CREATE TABLE|CREATE TYPE) crest(?:_|\.)/.test(lines[i]))return safe(lines[i]);return '[object withheld]';};
+    throw new Error('SYNTHETIC_SCHEMA_REVIEW_REQUIRED:'+JSON.stringify({line:at+1,expectedObject:object(left),actualObject:object(right),expected:left.slice(Math.max(0,at-1),at+8).map(safe),actual:right.slice(Math.max(0,at-1),at+8).map(safe)}),{cause:error});
   }
   assert.match(output.toString(),/^Synthetic isolated database restore and verification completed\s*$/);
   restored=await connect(restoredUrl);
