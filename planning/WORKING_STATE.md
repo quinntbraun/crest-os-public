@@ -12,7 +12,7 @@ Read AGENTS.md, README.md, this checkpoint and PRE_IMPLEMENTATION.md. Canonical 
 
 ## Current feature slice
 
-feature/customer-directory adds genuine customer storage, source/audit enforcement, typed save/search/history/replay, optimistic conflicts, separate closed command/integrity owners, snapshot readers and reversible CSV formatting. See PHASE_4_CUSTOMER_DIRECTORY.md. Migration32 is append-only; original canonical provenance is preserved through three explicit current amendments. ROADMAP1.6/ADR41 overlap synthetic Phases3/4 construction without waiving gates or fabricating attachment parents.
+feature/customer-directory adds genuine customer storage, source/audit enforcement, typed save/search/history/replay, optimistic conflicts, separate closed command/integrity owners, snapshot readers and reversible CSV formatting. See PHASE_4_CUSTOMER_DIRECTORY.md. Migrations32-33 are append-only;33 preserves32 and fixes the observed equivalent CHECK reparse fingerprint mismatch without weakening restore comparison or changing records. Original canonical provenance is preserved through three explicit current amendments. ROADMAP1.6/ADR41 overlap synthetic Phases3/4 construction without waiving gates or fabricating attachment parents.
 
 This is a backend slice pending native CI proof. Customer HTTP/forms, whole export job/private custody and genuine vehicle/address/lead/source/referral/duplicate workflows remain unfinished. No customer access route/config activation or real-data approval. Exact local/native/candidate/actual-main results belong in the feature PR; do not infer newer proof from this checkpoint.
 

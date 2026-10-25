@@ -7,7 +7,7 @@ import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {formatCustomerCsv} from '../../src/customer/customer-csv.ts';
 import {decodeCustomerCsv} from '../support/customer-fixture.ts';
-let sandbox,client,target,web,web2,exporter,login,loginOwned=false,bootstrap,a,b,prior,receipt,beforeUpgrade,guardRefused=false;
+let sandbox,client,target,web,web2,exporter,login,loginOwned=false,bootstrap,a,b,prior,receipt,customerReceipt,beforeUpgrade,guardRefused=false,upgradeCustomer,upgradeEvidence;
 const issuer='https://auth.example.com/auth/v1';
 const body=(patch={})=>({displayName:'Synthetic customer',phone:null,email:null,contactPreference:null,outreachOptOut:false,notes:null,customerSince:null,archived:false,archiveReason:null,...patch});
 const request=(patch={})=>({operation:randomUUID(),customer:randomUUID(),version:'0',schema:1,body:body(),...patch});
@@ -42,16 +42,29 @@ before(async()=>{
   try{await assert.rejects(sandbox.apply(guardTarget),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);assert.equal((await guardClient.query("SELECT to_regclass('crest.customers') AS value")).rows[0].value,null);await assert.rejects(sandbox.apply(guardTarget),/MIGRATION_PENDING_REVIEW_REQUIRED/);guardRefused=true;}finally{await client.query('ALTER ROLE crest_customer_owner NOLOGIN');}
   // Keep the failed target's pending evidence. The positive upgrade uses the
   // original distinct database/ledger after explicit synthetic role repair.
-  receipt=await sandbox.apply(target);
+  customerReceipt=await sandbox.apply(target,await sandbox.prefix(32));
   login=`crest_crm_probe_${randomBytes(8).toString('hex')}`;const password=randomBytes(32).toString('hex');await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;await sandbox.admin.query(`GRANT crest_web,crest_export TO ${login}`);
   const u=new URL(target);u.username=login;u.password=password;
   web=await sandbox.connect(u.toString());web2=await sandbox.connect(u.toString());exporter=await sandbox.connect(u.toString());for(const c of [web,web2])await c.query("SET ROLE crest_web; SET lock_timeout='3s'");await exporter.query('SET ROLE crest_export');
+  upgradeCustomer=request({body:body({displayName:'Synthetic schema32 customer',archived:true,archiveReason:'Retained\r\nreason',notes:'Unchanged\r\nnotes'})});await command(a,upgradeCustomer);upgradeEvidence=await evidence(a);receipt=await sandbox.apply(target);
 },{timeout:180000});
 after(async()=>{await web?.end();await web2?.end();await exporter?.end();if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();});
-test('schema31 to32 preserves original migration receipts and business rows',async()=>{
-  assert.equal(prior.history.length,31);assert.equal(receipt.history.length,32);assert.deepEqual(receipt.history.slice(0,31),prior.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);assert.deepEqual((await client.query('SELECT to_jsonb(b) AS value FROM crest.businesses b ORDER BY id')).rows,beforeUpgrade);
+test('schema31 through32 and33 preserves original migration receipts, source audit and business rows',async()=>{
+  assert.equal(prior.history.length,31);assert.equal(customerReceipt.history.length,32);assert.deepEqual(customerReceipt.history.slice(0,31),prior.history);assert.equal(receipt.history.length,33);assert.deepEqual(receipt.history.slice(0,32),customerReceipt.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);assert.deepEqual((await client.query('SELECT to_jsonb(b) AS value FROM crest.businesses b ORDER BY id')).rows,beforeUpgrade);assert.deepEqual(await evidence(a),upgradeEvidence);
 });
 test('migration refuses an existing login role before creating customer storage',()=>{assert.equal(guardRefused,true);});
+
+// Captured PostgreSQL17 canonical forms from the failed isolated restore.
+const normalizedCustomerChecks=[{"name":"customers_display_name_check","definition":"CHECK (((char_length(display_name) >= 1) AND (char_length(display_name) <= 200) AND (btrim(display_name) <> ''::text) AND (display_name !~ '[[:cntrl:]]'::text)))"},{"name":"customers_archived_reason_check","definition":"CHECK (((archived_reason IS NULL) OR ((char_length(archived_reason) >= 1) AND (char_length(archived_reason) <= 1000) AND (btrim(archived_reason) <> ''::text) AND (translate(archived_reason, '\t\n\r'::text, ''::text) !~ '[[:cntrl:]]'::text))))"}];
+for(const profile of ['restored','unexpected'])test('check repair accepts only known schema32 forms: '+profile,async()=>{
+  const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await installProviderSchema(c,t);const before=await sandbox.apply(t,await sandbox.prefix(32));
+  for(const item of normalizedCustomerChecks)await c.query('ALTER TABLE crest.customers DROP CONSTRAINT '+item.name+', ADD CONSTRAINT '+item.name+' '+item.definition);
+  if(profile==='unexpected')await c.query('ALTER TABLE crest.customers DROP CONSTRAINT customers_display_name_check, ADD CONSTRAINT customers_display_name_check CHECK(char_length(display_name)>0)');
+  const definitions=async()=>(await c.query("SELECT conname,pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conrelid='crest.customers'::regclass ORDER BY conname")).rows,original=await definitions();
+  if(profile==='restored'){const result=await sandbox.apply(t);assert.equal(result.history.length,33);assert.deepEqual(result.history.slice(0,32),before.history);assert.deepEqual(await definitions(),original);}
+  else{await assert.rejects(sandbox.apply(t),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);assert.deepEqual(await definitions(),original);await assert.rejects(sandbox.apply(t),/MIGRATION_PENDING_REVIEW_REQUIRED/);}
+});
+
 test('customer and integrity owners are closed; web has only typed commands, never raw customer/secret access',async()=>{
   for(const role of ['crest_customer_owner','crest_customer_integrity_owner']){const r=(await client.query('SELECT rolcanlogin OR rolinherit OR rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls OR rolconfig IS NOT NULL AS bad FROM pg_roles WHERE rolname=$1',[role])).rows[0];assert.equal(r.bad,false);await assert.rejects(web.query(`SET ROLE ${role}`),e=>e.code==='42501');assert.equal((await client.query("SELECT has_schema_privilege($1,'crest_commands','CREATE') AS yes",[role])).rows[0].yes,false);}
   assert.equal((await client.query("SELECT relrowsecurity AND relforcerowsecurity AS secure FROM pg_class WHERE oid='crest.customers'::regclass")).rows[0].secure,true);
