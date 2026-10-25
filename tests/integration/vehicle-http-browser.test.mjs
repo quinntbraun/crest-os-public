@@ -128,9 +128,14 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
    await t.test('mobile vehicle editor retains nullable evidence, unusual years, conflicts and archive history',async()=>{await vehicleEditorFlow(page,other,otherProof,name);});
    await t.test('interrupted editor saves resolve original receipts and retain unchanged retries or blocked lost drafts',async()=>{await interruptedVehicleFlow(page,name);});
    await t.test('a dropped committed response resolves only the original receipt and fresh revocation blocks later reads',async()=>{
-    const original={...input,operationId:randomUUID(),vehicleId:randomUUID(),expectedVersion:'0'},route='**/api/business/vehicles/save';let calls=0;
-    const drop=async intercepted=>{calls++;assert.equal((await intercepted.fetch()).status(),200);await intercepted.abort('failed');};await page.route(route,drop);
-    try{await assert.rejects(send(page,root+'save',original,proof));}finally{await page.unroute(route,drop);}assert.equal(calls,1);
+    const original={...input,operationId:randomUUID(),vehicleId:randomUUID(),expectedVersion:'0'},route='**/api/business/vehicles/save';let calls=0,droppedStatus;
+    // The intervening screen loads/first saves issue fresh proofs and evict
+    // the initial one from the bounded eight-proof history. Retain that gate.
+    assert.equal((await send(page,root+'save',original,proof)).status,400);
+    assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,original.operationId])).rows[0].n,0);
+    proof=(await send(page,'auth/session')).body.csrfToken;
+    const drop=async intercepted=>{calls++;try{droppedStatus=(await intercepted.fetch()).status();}finally{await intercepted.abort('failed');}};await page.route(route,drop);
+    try{await assert.rejects(send(page,root+'save',original,proof));}finally{await page.unroute(route,drop);}assert.equal(calls,1);assert.equal(droppedStatus,200);
     const receipt=await send(page,root+'operation',{operationId:original.operationId},proof);assert.equal(receipt.status,200);assert.equal(receipt.body.receipt.vehicleId,original.vehicleId);assert.equal(receipt.body.receipt.vehicleVersion,'1');assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,original.operationId])).rows[0].n,1);
     await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[business]);
     try{const context=await send(page,root+'context',{},proof);assert.equal(context.body.writeState,'paused');assert.equal(context.body.recoveryEpoch,null);assert.equal((await send(page,root+'save',original,proof)).status,409);assert.deepEqual((await send(page,root+'operation',{operationId:original.operationId},proof)).body,receipt.body);}finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);}
