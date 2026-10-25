@@ -1,8 +1,6 @@
-// Actual PostgreSQL, isolated source proposal; no hosted or real business data.
+// Actual PostgreSQL, registered lead/source commands. Synthetic data only.
 import assert from 'node:assert/strict';
-import {randomUUID,randomBytes,createHash} from 'node:crypto';
-import {readFile,writeFile,cp} from 'node:fs/promises';
-import {join} from 'node:path';
+import {randomUUID,randomBytes} from 'node:crypto';
 import {before,after,test} from 'node:test';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
@@ -35,7 +33,7 @@ async function state(){
 }
 before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target,await sandbox.prefix(36));
- const prefix=await sandbox.prefix(36);proposal=join(sandbox.workspace,'lead-proposal37');await cp(prefix,proposal,{recursive:true,errorOnExist:true,force:false});const sql=await readFile(new URL('../support/proposed-lead-intake.sql',import.meta.url));const file='20261025100000_lead_intake.sql';const path=join(proposal,'supabase/migration-checksums.json'),registry=JSON.parse(await readFile(path,'utf8'));registry.migrations.push({version:'20261025100000',file,sha256:createHash('sha256').update(sql).digest('hex')});await writeFile(join(proposal,'supabase/migrations',file),sql);await writeFile(path,JSON.stringify(registry)+'\n');assert.equal(JSON.parse(await readFile(join(prefix,'supabase/migration-checksums.json'),'utf8')).migrations.length,36,'proposal must not mutate the historical prefix');
+ proposal=await sandbox.prefix(37);
  const guard=await sandbox.database(),guardClient=await sandbox.connect(guard);await sandbox.apply(guard,await sandbox.prefix(0),true);await installProviderSchema(guardClient,guard);await sandbox.apply(guard,await sandbox.prefix(36));
  await client.query('CREATE ROLE crest_lead_source_owner LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS');
  try{await assert.rejects(sandbox.apply(guard,proposal),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);assert.equal((await guardClient.query("SELECT to_regclass('crest.lead_sources') AS value")).rows[0].value,null);await assert.rejects(sandbox.apply(guard,proposal),/MIGRATION_PENDING_REVIEW_REQUIRED/);guardRefused=true;}finally{await client.query('ALTER ROLE crest_lead_source_owner NOLOGIN');}
@@ -45,7 +43,7 @@ before(async()=>{
  a=await parent(a);b=await parent(b);retained=(await client.query('SELECT to_jsonb(c) AS value FROM crest.customers c ORDER BY id')).rows;receipt=await sandbox.apply(target,proposal);
 },{timeout:240000});
 after(async()=>{await web?.end();await web2?.end();await exporter?.end();if(loginOwned)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
-test('proposal36-to37 upgrade preserves exact prior ledger/customers and refuses an unsafe source owner',async()=>{assert.equal(prior.history.length,36);assert.equal(receipt.history.length,37);assert.deepEqual(receipt.history.slice(0,36),prior.history);assert.deepEqual((await sandbox.apply(target,proposal)).history,receipt.history);assert(guardRefused);assert.deepEqual((await client.query('SELECT to_jsonb(c) AS value FROM crest.customers c ORDER BY id')).rows,retained);});
+test('36-to37 upgrade preserves exact prior ledger/customers and refuses an unsafe source owner',async()=>{assert.equal(prior.history.length,36);assert.equal(receipt.history.length,37);assert.deepEqual(receipt.history.slice(0,36),prior.history);assert.deepEqual((await sandbox.apply(target,proposal)).history,receipt.history);assert(guardRefused);assert.deepEqual((await client.query('SELECT to_jsonb(c) AS value FROM crest.customers c ORDER BY id')).rows,retained);});
 test('all four closed owners and two forced-RLS sources deny raw ordinary/export access',async()=>{
  for(const role of ['crest_lead_owner','crest_lead_integrity_owner','crest_lead_source_owner','crest_lead_source_integrity_owner']){assert.equal((await client.query('SELECT rolcanlogin OR rolinherit OR rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls OR rolconfig IS NOT NULL AS bad FROM pg_roles WHERE rolname=$1',[role])).rows[0].bad,false);await assert.rejects(web.query('SET ROLE '+role),e=>e.code==='42501');assert.equal((await client.query("SELECT has_schema_privilege($1,'crest_commands','CREATE') AS yes",[role])).rows[0].yes,false);}
  for(const table of ['leads','lead_sources']){assert.equal((await client.query("SELECT relrowsecurity AND relforcerowsecurity AS secure FROM pg_class WHERE oid=$1::regclass",['crest.'+table])).rows[0].secure,true);for(const c of [web,exporter])for(const sql of ['SELECT * FROM crest.'+table,'DELETE FROM crest.'+table,'TRUNCATE crest.'+table,"UPDATE crest."+table+" SET label='forged'"])await assert.rejects(c.query(sql),e=>e.code==='42501');}

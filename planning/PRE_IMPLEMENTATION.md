@@ -1,5 +1,14 @@
 # Current implementation plan
 
+## Active slice: lead and source intake backend
+
+Read PHASE_4_LEAD_INTAKE.md. Migration37 locally adopts the exact tested lead/source SQL from source1ab5111/run40181814381:17 native intake,26 encrypted-recovery and142 focused unit cases pass. Genuine source snapshots, New-only intake, fixed typed commands and reversible source CSV are implemented; state events/conversion/HTTP/forms are unfinished. Coverage is28tables/395columns (385required,10excluded). Preserve all37 published SQL on publication, canonical provenance and lockfile. Full new-source standard acceptance remains required; proposal proof is not release acceptance.
+
+Ownership PR75 is protected-merged as mainf64c1f55e094a8f232320012eea680094d116063, matching candidatebeb215e's exact treee7fbb87 and ordered parents8f50aac/1fa9510. Candidate run40178836126 fully passes all four trusted checks/logs/artifacts,2,850 units,831DBAuth,22shell,68HTTPS leaves/78entries and restricted container. Separate actual-main run40180694421 remains under verification. Older sections below are historical, not current acceptance.
+
+Next: complete the canonical lead backend's full acceptance, then state events/atomic conversion and private consumers. Keep complete export/independent recovery, durable lost-draft intent resolution, real devices, operational/financial/Calendar and real-use approvals gated. No spending/signup, production apply/deployment/activation or real records.
+
+
 ## Current consumer: vehicle customer links
 
 Read PHASE_4_ASSOCIATION_EDITOR.md and PHASE_4_ASSOCIATION_HTTP.md. The ownership screen, typed private HTTP/client and pending-reference recovery are combined in PR75 to test the complete association workflow together. The local screen source passes 2,850 unit tests/78 files. First combined-source run40177269506 passed all eight new screen leaves, 22 shell and 831 DB/Auth, but the whole gate failed on the older vehicle fixture with an ambiguous status locator. Distinct accessible status names and exact locators correct that finding; fresh full current-source acceptance remains required. Every required current-source gate remains required before merge or readiness claims. Protected backend main is 8f50aacb53fb064721c49eeb7814570a3e21ba88, tree 92babba4b6e82ddb86cad782086ffa74cbd08313, retaining candidate c422d3d0/run 40174331962 with all four trusted checks/2,676 units/831 DBAuth/full logs/artifacts passed. Its separate actual-main run40176194007 is fully verified with all four trusted checks/full logs/artifacts. Vehicle editor actual-main run 40173749320 passed all gates. Preserve all 36 SQL, canonical provenance and dependency bytes. No spending, signup, production apply/deployment/activation or real records.

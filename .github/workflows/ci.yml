@@ -73,6 +73,7 @@ jobs:
           npm run test:addresses-db
           npm run test:vehicles-db
           npm run test:associations-db
+          npm run test:leads-db
       - name: Install pinned recovery tooling
         run: node scripts/install-recovery-tools.mjs
       - name: Encrypted isolated database recovery drill

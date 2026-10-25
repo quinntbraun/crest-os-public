@@ -1,3 +1,5 @@
+import {parseLead,parseLeadSource,leadColumns,leadSourceColumns} from '../../src/customer/lead-contract.ts';
+import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import assert from 'node:assert/strict';
 import { randomBytes,randomUUID } from 'node:crypto';
 import { chmod,copyFile,mkdir,readFile,readdir,stat,unlink,writeFile } from 'node:fs/promises';
@@ -11,7 +13,8 @@ import {objectDirectory,encryptor,decryptor} from '../support/object-recovery-dr
 
 let sandbox,source,sourceUrl,sourceWeb,cluster,restored,restoredUrl,point,keys,emergencyKey,directory,backup,owner,original,sourceLogin,restoredLogin,liveSource,sourceLoginOwned=false,restoredLoginOwned=false;
 let sourceObjects,vaultObjects,restoredObjects,objectInventory,postSnapshotObject;
-let snapshotCustomer,snapshotAddress,snapshotVehicle,snapshotAssociation,nextAssociation;
+let snapshotCustomer,snapshotAddress,snapshotVehicle,snapshotAssociation,nextAssociation,snapshotLeadSource,snapshotLead,sourceReceipt,leadReceipt;
+const leadSourceOperation=randomUUID(),leadOperation=randomUUID();
 const objectSignal=()=>AbortSignal.timeout(30000);
 const objectPorts=destination=>({readVault:vaultObjects.read,unseal:decryptor(emergencyKey),putDestination:destination.put,readDestination:destination.read});
 const issuer='https://auth.example.com/auth/v1';
@@ -26,6 +29,10 @@ const vehicleSave=(f,id,version,label)=>sourceWeb.query('SELECT crest_commands.s
 const rename=(connection,f,r)=>connection.query(renameSql,args(f,r));
 const associationSave=(f,action)=>sourceWeb.query('SELECT crest_commands.change_vehicle_association($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12) AS value',
  [f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+120000),f.business,f.epoch,randomUUID(),action==='open'?'0':'1',{action,associationId:snapshotAssociation,customerId:snapshotCustomer,vehicleId:snapshotVehicle,effectiveAt:action==='open'?'2026-10-01T00:00:00.000000Z':'2026-10-25T00:00:00.000001Z',relationship:action==='open'?'owner':'keeper',isBilling:true,evidence:'Synthetic retained association \u00e9 \u{1f600}',reason:action==='open'?null:'Synthetic transfer after snapshot',nextAssociationId:action==='open'?null:nextAssociation}]);
+const leadSourceSave=(f,id,version,label,active=true)=>sourceWeb.query('SELECT crest_commands.save_lead_source($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13) AS value',
+ [f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+120000),f.business,f.epoch,version==='0'?leadSourceOperation:randomUUID(),id,version,{label,kind:'Owner-recorded synthetic source',active,referralCustomerId:snapshotCustomer}]);
+const leadSave=(f,id,version,label,estimatedCents)=>sourceWeb.query('SELECT crest_commands.save_lead($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13) AS value',
+ [f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+120000),f.business,f.epoch,version==='0'?leadOperation:randomUUID(),id,version,{label,customerId:snapshotCustomer,sourceId:snapshotLeadSource,referralText:'Synthetic retained referral',phone:'(317) 001-0001',email:'Original@Example.com',requestedScope:'Interior and exterior',availability:null,estimatedCents,followUpAt:'2026-11-01T01:02:03.123456Z',notes:'Synthetic retained lead \\N =evidence é 😀'}]);
 const request=(version='2',name='Synthetic restored review')=>({operation:randomUUID(),version,name});
 const closed=work=>assert.rejects(work,/SYNTHETIC_RECOVERY_RESTORE_FAILED/);
 
@@ -79,12 +86,16 @@ before(async()=>{
   snapshotAddress=randomUUID();assert.equal((await addressSave(owner,snapshotAddress,'0','Synthetic address before snapshot')).rows[0].value.state,'committed');
   snapshotVehicle=randomUUID();assert.equal((await vehicleSave(owner,snapshotVehicle,'0','Synthetic vehicle before snapshot')).rows[0].value.state,'committed');
   snapshotAssociation=randomUUID();nextAssociation=randomUUID();assert.equal((await associationSave(owner,'open')).rows[0].value.state,'committed');
+  snapshotLeadSource=randomUUID();sourceReceipt=(await leadSourceSave(owner,snapshotLeadSource,'0','Synthetic source before snapshot')).rows[0].value;assert.equal(sourceReceipt.state,'committed');
+  snapshotLead=randomUUID();leadReceipt=(await leadSave(owner,snapshotLead,'0','Synthetic lead before snapshot','9007199254740993')).rows[0].value;assert.equal(leadReceipt.state,'committed');
   backup=await backupDatabase(source,sourceUrl,point,keys.recipient,async()=>{
     assert.equal((await rename(sourceWeb,owner,request('2','Synthetic committed after snapshot'))).rows[0].value.state,'committed');
     assert.equal((await customerSave(owner,snapshotCustomer,'1','Synthetic customer after snapshot')).rows[0].value.state,'committed');
     assert.equal((await addressSave(owner,snapshotAddress,'1','Synthetic address after snapshot')).rows[0].value.state,'committed');
     assert.equal((await vehicleSave(owner,snapshotVehicle,'1','Synthetic vehicle after snapshot')).rows[0].value.state,'committed');
     assert.equal((await associationSave(owner,'transfer')).rows[0].value.state,'committed');
+    assert.equal((await leadSourceSave(owner,snapshotLeadSource,'1','Synthetic source after snapshot',false)).rows[0].value.state,'committed');
+    assert.equal((await leadSave(owner,snapshotLead,'1','Synthetic lead after snapshot','9223372036854775807')).rows[0].value.state,'committed');
     const key=`originals/${business}/${randomUUID()}`,bytes=Buffer.from('Committed after snapshot');postSnapshotObject=key;
     await sourceObjects.put(key,bytes,objectSignal());
     const later=await connect(sourceUrl);try{await later.query('INSERT INTO recovery_fixture.objects VALUES($1,$2,$3,$4,$5)',[key,bytes.length,hash(bytes),'original','Available']);}finally{await later.end();}
@@ -136,8 +147,8 @@ test('actual encrypted database recovery works in a fresh process and separate c
 test('one exported snapshot preserves prior operations and excludes concurrent committed changes',async()=>{
   assert.equal((await restored.query('SELECT legal_name FROM crest.businesses WHERE id=$1',[owner.business])).rows[0].legal_name,original.name);
   assert.equal((await source.query('SELECT legal_name FROM crest.businesses WHERE id=$1',[owner.business])).rows[0].legal_name,'Synthetic committed after snapshot');
-  assert.equal((await restored.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,5);
-  assert.equal((await source.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,10);
+  assert.equal((await restored.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,7);
+  assert.equal((await source.query('SELECT count(*)::int AS n FROM crest_private.operations')).rows[0].n,14);
 });
 test('actual customer contacts, raw notes and source audit recover at the exact snapshot version',async()=>{
   const customer=(await restored.query('SELECT crest_private.customer_projection(c) AS value FROM crest.customers c WHERE id=$1',[snapshotCustomer])).rows[0].value;
@@ -164,6 +175,36 @@ test('dated association and UUID GiST exclusions recover at the earlier snapshot
  const events=(await restored.query("SELECT delta FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='customer_vehicles' AND entity_id=$2",[owner.business,snapshotAssociation])).rows;assert.equal(events.length,1);assert.deepEqual(events[0].delta.after,a);
  const constraints=(await restored.query("SELECT conname FROM pg_constraint WHERE conrelid='crest.customer_vehicles'::regclass AND contype='x' ORDER BY conname")).rows;assert.deepEqual(constraints.map(r=>r.conname),['association_billing_period','association_owner_period']);
 });
+
+test('lead source/referral, original label and immutable source audit restore before the later deactivation',async()=>{
+ const row=(await restored.query('SELECT crest_private.lead_source_projection(c) AS value FROM crest.lead_sources c WHERE id=$1',[snapshotLeadSource])).rows[0].value;
+ parseLeadSource(row,owner.business);assert.equal(row.version,'1');assert.equal(row.label,'Synthetic source before snapshot');assert.equal(row.active,true);assert.equal(row.referral_customer_id,snapshotCustomer);
+ const live=(await source.query('SELECT crest_private.lead_source_projection(c) AS value FROM crest.lead_sources c WHERE id=$1',[snapshotLeadSource])).rows[0].value;assert.equal(live.version,'2');assert.equal(live.label,'Synthetic source after snapshot');assert.equal(live.active,false);
+ const events=(await restored.query("SELECT delta FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='lead_sources' AND entity_id=$2",[owner.business,snapshotLeadSource])).rows;assert.equal(events.length,1);assert.deepEqual(events[0].delta.after,row);
+});
+test('lead source snapshot, exact cents/microseconds, genuine customer and original receipts restore together',async()=>{
+ const row=(await restored.query('SELECT crest_private.lead_projection(c) AS value FROM crest.leads c WHERE id=$1',[snapshotLead])).rows[0].value;
+ parseLead(row,owner.business);assert.equal(row.version,'1');assert.equal(row.label,'Synthetic lead before snapshot');assert.equal(row.customer_id,snapshotCustomer);assert.equal(row.source_id,snapshotLeadSource);assert.equal(row.source_snapshot.version,'1');assert.equal(row.source_snapshot.label,'Synthetic source before snapshot');assert.equal(row.estimated_cents,'9007199254740993');assert.equal(row.follow_up_at,'2026-11-01T01:02:03.123456Z');assert.equal(row.phone_normalized,'3170010001');assert.equal(row.availability,null);assert.equal(row.state,'new');assert.equal(row.notes,'Synthetic retained lead \\N =evidence é 😀');
+ const live=(await source.query('SELECT crest_private.lead_projection(c) AS value FROM crest.leads c WHERE id=$1',[snapshotLead])).rows[0].value;assert.equal(live.version,'2');assert.equal(live.estimated_cents,'9223372036854775807');assert.equal(live.source_snapshot.version,'1');
+ const events=(await restored.query("SELECT delta FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='leads' AND entity_id=$2",[owner.business,snapshotLead])).rows;assert.equal(events.length,1);assert.deepEqual(events[0].delta.after,row);
+ const w=await web(restoredUrl,restored);try{
+  for(const [command,operation,expected]of [['lead',leadOperation,leadReceipt],['lead_source',leadSourceOperation,sourceReceipt]]){
+   const result=(await w.connection.query('SELECT crest_commands.lookup_'+command+'_operation($1,$2,$3,$4,$5,$6,$7,$8,$9) AS value',[owner.hash,owner.session,owner.actor,issuer,owner.subject,owner.provider,new Date(Date.now()+120000),owner.business,operation])).rows[0].value;assert.deepEqual(result,expected);
+  }
+  for(const role of ['crest_lead_owner','crest_lead_integrity_owner','crest_lead_source_owner','crest_lead_source_integrity_owner'])await assert.rejects(w.connection.query('SET ROLE '+role),e=>e.code==='42501');
+  for(const table of ['leads','lead_sources'])await assert.rejects(w.connection.query('SELECT * FROM crest.'+table),e=>e.code==='42501');
+ }finally{await w.connection.end();await restored.query('DROP ROLE '+w.login);}
+ assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,28);
+});
+
+test('registered coverage accounts for every actual source column and rejects omissions on the restored schema',async()=>{
+ const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,37);
+ assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_sources').required,[...leadSourceColumns]);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.leads').required,[...leadColumns]);
+ const columns=(await restored.query(`SELECT n.nspname||'.'||c.relname AS "table",a.attname AS "column" FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN ('crest','crest_private') AND c.relkind IN ('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2`)).rows;
+ assert.deepEqual(verifyExportCoverage(manifest,columns,37),{assurance:'schema_inventory_only',tables:28,requiredColumns:385,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
+ const missing=structuredClone(manifest);missing.tables.find(t=>t.table==='crest.leads').required.pop();assert.throws(()=>verifyExportCoverage(missing,columns,37),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
+});
+
 test('same-snapshot retained files restore with Archived and quarantined evidence, excluding later commits',async()=>{
   assert.deepEqual((await restored.query('SELECT key,"byteSize",sha256,retention FROM recovery_fixture.objects ORDER BY key COLLATE "C"')).rows,objectInventory);
   assert.equal(objectInventory.length,3);assert.equal((await source.query('SELECT count(*)::int AS n FROM recovery_fixture.objects')).rows[0].n,4);

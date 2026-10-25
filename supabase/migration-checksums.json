@@ -180,6 +180,11 @@
       "version": "20261025080000",
       "file": "20261025080000_vehicle_associations.sql",
       "sha256": "d1277347d6a2b6771290aa7fda2a1eab277cc7cd1bff742231e130fc074900b3"
+    },
+    {
+      "version": "20261025100000",
+      "file": "20261025100000_lead_intake.sql",
+      "sha256": "365d261422a647e6b39ce21b0fc3ae1f22ea54f58e9892e5aa0a0a79c5a85f0c"
     }
   ]
 }
