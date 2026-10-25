@@ -63,7 +63,8 @@
     "test:heic-sandbox": "node --test --test-concurrency=1 tests/integration/heic-sandbox.test.mjs",
     "test:file-intake": "node --conditions=react-server --test --test-concurrency=1 tests/integration/validated-file-intake.test.mjs",
     "test:object-recovery": "node --test --test-concurrency=1 tests/integration/object-recovery.test.mjs",
-    "test:customers-db": "node --test --test-concurrency=1 tests/integration/customer-directory.test.mjs"
+    "test:customers-db": "node --test --test-concurrency=1 tests/integration/customer-directory.test.mjs",
+    "test:addresses-db": "node --test --test-concurrency=1 tests/integration/customer-address-directory.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1156.0",

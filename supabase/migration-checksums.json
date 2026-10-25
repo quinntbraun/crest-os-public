@@ -165,6 +165,11 @@
       "version": "20261025030000",
       "file": "20261025030000_customer_check_roundtrip.sql",
       "sha256": "559761cd526077fa97cd11cc07d1f8e4ddfd7a87e975dca433592d760ba7ee30"
+    },
+    {
+      "version": "20261025040000",
+      "file": "20261025040000_customer_addresses.sql",
+      "sha256": "71fdce77577e293457ee4d2321ca1cbb5dfce171d97988813deacf03303249ed"
     }
   ]
 }
