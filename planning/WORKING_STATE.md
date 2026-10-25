@@ -1,5 +1,11 @@
 # Continuation checkpoint
 
+## Active construction: lead state events proposal
+
+Read PHASE_4_LEAD_LIFECYCLE.md. Strict manual command/event contracts and unregistered forward38 SQL with append-only18-column events, paired complete audits, original receipts, fixed change/lookup, source-preserving guard and disposable native fixture are implemented. All107 focused contract cases pass locally; native command proof remains pending. All37 published SQL/registry/canonical/coverage/compatibility/lockfile bytes are unchanged. Event source readers/CSV/coverage, encrypted recovery, adapters and controls remain unfinished. Temporary proposal workflow is not a release gate substitute; remove it before canonical merge.
+
+Lead/source forms PR78/source1402d02/candidatebbd09d0/run40187448544 fully pass:3,306units/93files,851DBAuth,22shell,94HTTPS leaves/108entries, two native HEIC builds, Next and restricted container, all four trusted app15368 checks/full logs/finalized artifacts. Parent API actual-main8363b474/run40187360010 fully passes independently. Protected PR78 merge93c1687 retains the exact tested treea41848c and ordered parents8363b474/1402d02; its separate actual-main run40197402161 is pending. Verify live before dependent acceptance claims. No runtime activation/real records/spending/signup/provisioning. Older sections are historical.
+
 ## Active consumer: lead/source intake forms
 
 Read PHASE_4_LEAD_EDITOR.md. Mobile lead/source forms, explicit genuine reference pickers, exact USD/UTC input, private controllers and separate opaque pending references are implemented locally. All3,306 units/93files, lint/types/server bundle pass; actual compiled HTTPS/axe fixture is written but unexecuted. Lead list/history use10/5 complete rows/events to fit the unchanged1MiB bound; sources retain25/20. Parent backend PR76 is merged asca2db5d; separate actual-main run40185215438 and private HTTP/client PR77 run40185267989 are in progress, with all851 DB/Auth groups passed. Preserve37 SQL/canonical/coverage/compatibility/lockfile bytes. Next: verify live parent and current-source native gates, then lead lifecycle/vehicle/address/conversion within approved scope. No activation or real records. Older sections are historical.
