@@ -9,11 +9,16 @@ import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import pg from 'pg';
 import { migrationTestTarget } from '../../src/tooling/migration-coordinator.ts';
+import {leadConversionProposalIdentity} from './lead-conversion-proposal.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
 const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8'));
 const registryHash=hash(await readFile(join(root,'supabase/migration-checksums.json')));
+async function migrationIdentity(source){
+  assert(['registered','lead_conversion_proposal'].includes(source),'unknown synthetic migration source');
+  return source==='registered'?{schemaVersion:registry.migrations.length,registrySha256:registryHash}:leadConversionProposalIdentity();
+}
 const tool=name=>join(root,`.local/tools/recovery/age/${name}${process.platform==='win32'?'.exe':''}`);
 const maxBytes=32*1024*1024;
 export function hash(value){return createHash('sha256').update(value).digest('hex');}
@@ -85,8 +90,8 @@ async function unseal(path,expected,identity){
   assert.equal(hash(cipher),expected.sha256,'recovery ciphertext checksum mismatch');
   return run(tool('age'),['--decrypt','--identity',identity],{input:cipher});
 }
-export async function backupDatabase(client,url,directory,recipient,duringSnapshot=async()=>{},objectCapture){
-  target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+export async function backupDatabase(client,url,directory,recipient,duringSnapshot=async()=>{},objectCapture,migrationSource='registered'){
+  target(url);const identity=await migrationIdentity(migrationSource);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   try{
     const snapshot=(await client.query('SELECT pg_export_snapshot() AS value')).rows[0].value;
     const rows=await inventory(client),roles=await roleDefinitions(client);
@@ -96,8 +101,8 @@ export async function backupDatabase(client,url,directory,recipient,duringSnapsh
     stage='dump';const dump=await postgresTool('pg_dump',url,['--format=custom','--snapshot',snapshot]);
     assert.equal(dump.subarray(0,5).toString(),'PGDMP');
     stage='objects';const objectArchive=objectCapture?{inventory:objects,receipt:await objectCapture.capture(objects)}:null;
-    const manifest={formatVersion:1,scope:'synthetic_database_drill',completeBackup:false,schemaVersion:registry.migrations.length,
-      registrySha256:registryHash,databaseImage:pins.testDatabaseImage,snapshot,roles,rows,schemaSha256:hash(normalizedSchema(schema)),
+    const manifest={formatVersion:1,scope:'synthetic_database_drill',completeBackup:false,...identity,
+      ...(migrationSource==='registered'?{}:{migrationSource}),databaseImage:pins.testDatabaseImage,snapshot,roles,rows,schemaSha256:hash(normalizedSchema(schema)),
       dump:{bytes:dump.length,sha256:hash(dump)},objectArchive,excluded:['runtime_login_credentials',...(objectArchive?[]:['external_objects']),'application_image','independent_vault','production_configuration','production_recovery_authority']};
     // The backup side receives a public recipient only. No private identity.
     stage='encryption';const receipt={formatVersion:1,dump:await seal(join(directory,'database.age'),dump,recipient),
@@ -106,7 +111,7 @@ export async function backupDatabase(client,url,directory,recipient,duringSnapsh
     await client.query('COMMIT');return {manifest,receipt};
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_RECOVERY_BACKUP_FAILED:'+stage);}
 }
-export async function restoreDatabase(directory,identity,url,restoreObjects){
+export async function restoreDatabase(directory,identity,url,restoreObjects,migrationSource='registered'){
   target(url);const client=await connect(url);let stage='empty_destination';
   try{
     assert.equal((await inventory(client)).length,0,'restore target must be empty');
@@ -114,7 +119,7 @@ export async function restoreDatabase(directory,identity,url,restoreObjects){
     stage='receipt';const receipt=JSON.parse(await readFile(join(directory,'receipt.json'),'utf8'));assert.equal(receipt.formatVersion,1);
     stage='manifest';const manifest=JSON.parse((await unseal(join(directory,'manifest.age'),receipt.manifest,identity)).toString());
     assert.equal(manifest.formatVersion,1);assert.equal(manifest.scope,'synthetic_database_drill');assert.equal(manifest.completeBackup,false);
-    assert.equal(manifest.schemaVersion,registry.migrations.length);assert.equal(manifest.registrySha256,registryHash);assert.equal(manifest.databaseImage,pins.testDatabaseImage);
+    const expected=await migrationIdentity(migrationSource);assert.equal(manifest.migrationSource??'registered',migrationSource);assert.equal(manifest.schemaVersion,expected.schemaVersion);assert.equal(manifest.registrySha256,expected.registrySha256);assert.equal(manifest.databaseImage,pins.testDatabaseImage);
     stage='authenticated_dump';const dump=await unseal(join(directory,'database.age'),receipt.dump,identity);
     assert.equal(dump.length,manifest.dump.bytes);assert.equal(hash(dump),manifest.dump.sha256);assert.equal(dump.subarray(0,5).toString(),'PGDMP');
     stage='objects';if(manifest.objectArchive){assert.equal(typeof restoreObjects,'function');await restoreObjects(manifest.objectArchive);}
