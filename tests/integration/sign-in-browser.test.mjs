@@ -50,7 +50,7 @@ before(async()=>{
   const runtime=await createAuthenticationRuntime({database:{connectionString:database.toString(),environment:'test'},provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
     owner:{subject:user.id,factorId:factor.id},loginKey:randomBytes(32),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:randomBytes(32)}]});
   assert.throws(()=>JSON.stringify(runtime),/AUTHENTICATION_RUNTIME_PRIVATE/);
-  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business}});
+  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},customers:true});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
 });
 after(async()=>{try{await app?.close();}finally{try{await service?.close();}finally{if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();}}});
@@ -73,6 +73,24 @@ async function fill(page,{trusted=false,password=fixture.password}={}){
   await page.getByLabel('Email',{exact:true}).fill(fixture.email);await page.getByLabel('Password',{exact:true}).fill(password);
   await page.getByLabel('Authenticator code',{exact:true}).fill(fixture.totp.generate());await page.getByLabel('Trust this personal device').setChecked(trusted);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
+}
+async function exerciseCustomerHttp(page,name){
+  const send=(route,body={},proof=null)=>page.evaluate(async input=>{const response=await fetch(input.path,{method:'POST',headers:{'content-type':'application/json',...(input.proof?{'x-crest-csrf':input.proof}:{})},body:JSON.stringify(input.body)}),text=await response.text();return {status:response.status,body:JSON.parse(text),bytes:new TextEncoder().encode(text).byteLength,cache:response.headers.get('cache-control'),binding:response.headers.get('x-crest-edit-binding')};},{path:'/api/'+route,body,proof});
+  const proof=(await send('auth/session')).body.csrfToken,route='business/customers/';assert(proof);
+  assert.equal((await send(route+'context')).status,400);
+  const context=await send(route+'context',{},proof);assert.equal(context.status,200);assert.equal(context.body.businessId,business);assert.equal(context.body.writeState,'ready');assert.match(context.binding,/^[A-Za-z0-9_-]{43}$/);assert.match(context.cache,/no-store/);
+  const input={schemaVersion:1,operationId:randomUUID(),customerId:randomUUID(),recoveryEpoch:context.body.recoveryEpoch,expectedVersion:'0',displayName:`Synthetic HTTPS customer ${name}`,phone:'(317) 555-0100',email:null,contactPreference:null,outreachOptOut:true,notes:'Synthetic \\N =evidence é 😀',customerSince:null,archived:false,archiveReason:null};
+  const created=await send(route+'save',input,proof);assert.equal(created.status,200);assert.equal(created.body.state,'committed');assert.equal(created.body.receipt.customerVersion,'1');assert.equal(created.body.receipt.customerId,input.customerId);assert.match(created.cache,/no-store/);
+  for(let v=1;v<=3;v++){const edit=await send(route+'save',{...input,operationId:randomUUID(),expectedVersion:String(v),notes:('Retained evidence é '+v+' ').padEnd(2000,'x')},proof);assert.equal(edit.status,200);assert.equal(edit.body.receipt.customerVersion,String(v+1));}
+  assert.deepEqual((await send(route+'save',input,proof)).body,created.body);assert.deepEqual((await send(route+'operation',{operationId:input.operationId},proof)).body,created.body);
+  assert.equal((await send(route+'save',{...input,businessId:randomUUID()},proof)).status,400);
+  const staleOperation=randomUUID(),stale=await send(route+'save',{...input,operationId:staleOperation,expectedVersion:'1'},proof);assert.equal(stale.status,409);assert.deepEqual(stale.body,{state:'conflict',reason:'version',currentVersion:'4'});assert.deepEqual((await send(route+'operation',{operationId:staleOperation},proof)).body,{state:'absent'});
+  const history=await send(route+'history',{customerId:input.customerId,afterVersion:'0',pageSize:20},proof);assert.equal(history.status,200);assert(history.bytes>8192,'real retained history must exceed the authentication response cap');assert.equal(history.body.history.length,4);assert.equal(history.body.customer.version,'4');assert.equal(history.body.customer.phone_raw,input.phone);assert.equal(history.body.customer.email_raw,null);assert.equal(history.body.customer.outreach_opt_out,true);
+  const found=await send(route+'list',{search:input.displayName,afterId:null,includeArchived:false,pageSize:50},proof);assert.equal(found.status,200);assert.equal(found.body.customers.length,1);assert.equal(found.body.customers[0].id,input.customerId);
+  await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[business]);
+  try{const paused=await send(route+'context',{},proof);assert.equal(paused.body.writeState,'paused');assert.equal(paused.body.recoveryEpoch,null);assert.equal((await send(route+'save',input,proof)).status,409);assert.deepEqual((await send(route+'operation',{operationId:input.operationId},proof)).body,created.body);assert.equal((await send(route+'history',{customerId:input.customerId,afterVersion:'0',pageSize:20},proof)).status,200);}
+  finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);}
+  assert.equal((await client.query("SELECT count(*)::int AS n FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='customers' AND entity_id=$2",[business,input.customerId])).rows[0].n,4);
 }
 async function openSettings(page){await page.bringToFront();await page.goto(origin+'/settings');await expect(page.getByLabel('Business legal name',{exact:true})).toBeVisible();}
 async function backgroundNameChange(page,legalName){
@@ -158,6 +176,7 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
         assert.equal(denied.status,400);assert.deepEqual(denied.body,{error:'AUTHENTICATION_REQUEST_FAILED'});assert.equal((await row(trusted)).revoked_at,null,'missing CSRF cannot revoke');
       });
       await t.test('compiled HTTPS guarded business API uses the authenticated device',async()=>{await exerciseBusinessHttp(page,name);});
+      await t.test('compiled HTTPS customer save, history, conflict and paused replay use real Auth and PostgreSQL',async()=>{await exerciseCustomerHttp(page,name);});
       await t.test('settings UI requires version-conflict review and remains accessible on this device',async()=>{await settingsReviewFlow(page,other,name);});
       await t.test('interrupted saves survive reload and reconcile before an explicit original retry',async()=>{await settingsInterruptedFlow(page,name);});
       await t.test('confirmed local-first logout clears one device and leaves the other live',async()=>{

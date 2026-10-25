@@ -8,12 +8,13 @@ import {browserFailureResponse} from '../security/browser-http.ts';
 import {createAuthenticationHttp,settleAuthenticationResponse} from '../security/authentication-http.ts';
 import {transportFromIncomingMessage} from '../security/trusted-transport.ts';
 import {createBusinessHttp,businessFailureResponse} from '../security/business-http.ts';
+import {createCustomerHttp,customerFailureResponse} from '../customer/customer-http.ts';
 
 export type AuthenticationConfiguration=Readonly<{
   configuration:Omit<Parameters<typeof createAuthenticationHttp>[0],'origin'|'environment'>;
   provider:Parameters<typeof createAuthenticationHttp>[1];tokens:Parameters<typeof createAuthenticationHttp>[2];
 }>;
-export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>}>;
+export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>;customers?:boolean}>;
 export type PageHandler=(request:IncomingMessage,response:ServerResponse)=>Promise<void>;
 
 export function createBoundedNodeServer(tls?:NodeConfiguration['tls']):Server{
@@ -43,6 +44,12 @@ export function requestTarget(raw:string|undefined,origin:string):Readonly<{url:
 }
 
 export async function writeAuthenticationResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
+  return writePrivateResponse(outgoing,response,signal,8192);
+}
+export async function writeCustomerResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
+  return writePrivateResponse(outgoing,response,signal,1048576);
+}
+async function writePrivateResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal,limit:number):Promise<void>{
   let finished=false;
   try{
     const bounded=AbortSignal.any([signal,AbortSignal.timeout(5000)]);
@@ -55,7 +62,7 @@ export async function writeAuthenticationResponse(outgoing:ServerResponse,respon
           bounded.addEventListener('abort',abort,{once:true});reader.read().then(resolve,reject).finally(()=>bounded.removeEventListener('abort',abort));
         });
         if(part.done)break;
-        if(!part.value.byteLength||(size+=part.value.byteLength)>8192)throw new Error();chunks.push(part.value);
+        if(!part.value.byteLength||(size+=part.value.byteLength)>limit)throw new Error();chunks.push(part.value);
       }
     }finally{if(reader){void reader.cancel().catch(()=>{});reader.releaseLock();}}
     const body=Buffer.concat(chunks);
@@ -80,24 +87,26 @@ export async function writeAuthenticationResponse(outgoing:ServerResponse,respon
 }
 
 export function bindApplicationHandler(server:Server,config:NodeConfiguration,pages:PageHandler):void{
-  const {origin,environment,authentication,business}=config;
+  const {origin,environment,authentication,business,customers}=config;
   const url=new URL(origin);
   if(url.origin!==origin||url.username||url.password||!['http:','https:'].includes(url.protocol)||!['production','test'].includes(environment)
-    ||business&&!authentication||authentication&&environment==='production'&&!config.tls||server.listenerCount('request'))throw new Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+    ||business&&!authentication||customers!==undefined&&typeof customers!=='boolean'||customers&&(!business||!authentication)||authentication&&environment==='production'&&!config.tls||server.listenerCount('request'))throw new Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   const dispatch=authentication?createAuthenticationHttp({...authentication.configuration,origin,environment},authentication.provider,authentication.tokens):undefined;
   const dispatchBusiness=business&&authentication?createBusinessHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
+  const dispatchCustomers=customers&&business&&authentication?createCustomerHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
   let activeProtected=0;
   server.on('request',(incoming,outgoing)=>{void (async()=>{
     const controller=new AbortController();
     const abort=()=>controller.abort();incoming.once('aborted',abort);
     outgoing.once('close',()=>{if(!outgoing.writableFinished)abort();});
-    let reserved=false,businessRequest=false;
+    let reserved=false,businessRequest=false,customerRequest=false;
     try{
       if(incoming.rawHeaders.length>256)throw new Error();
       const target=requestTarget(incoming.url,origin);
       businessRequest=target.business;
+      const decoded=decodeURIComponent(target.url.pathname);customerRequest=target.business&&(decoded==='/api/business/customers'||decoded.startsWith('/api/business/customers/'));
       if(!target.authentication&&!target.business){await pages(incoming,outgoing);return;}
-      const handler=target.business?dispatchBusiness:dispatch,failure=target.business?businessFailureResponse:browserFailureResponse;
+      const handler=customerRequest?dispatchCustomers:target.business?dispatchBusiness:dispatch,failure=customerRequest?customerFailureResponse:target.business?businessFailureResponse:browserFailureResponse;
       if(!handler||activeProtected>=32){await writeAuthenticationResponse(outgoing,failure(503),controller.signal);return;}
       activeProtected++;reserved=true;
       const peer=transportFromIncomingMessage(incoming),headers=new Headers();
@@ -105,9 +114,9 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
       const request=new Request(target.url,{method:incoming.method,headers,signal:controller.signal,
         ...(!['GET','HEAD'].includes(incoming.method??'')?{body:Readable.toWeb(incoming),duplex:'half'}:{})} as RequestInit);
       const response=await handler(request,peer);
-      await writeAuthenticationResponse(outgoing,response,controller.signal);
+      await (customerRequest?writeCustomerResponse:writeAuthenticationResponse)(outgoing,response,controller.signal);
     }catch{
-      if(!outgoing.destroyed&&!outgoing.headersSent)try{await writeAuthenticationResponse(outgoing,(businessRequest?businessFailureResponse:browserFailureResponse)(),controller.signal);}catch{outgoing.destroy();}
+      if(!outgoing.destroyed&&!outgoing.headersSent)try{await writeAuthenticationResponse(outgoing,(customerRequest?customerFailureResponse:businessRequest?businessFailureResponse:browserFailureResponse)(),controller.signal);}catch{outgoing.destroy();}
       else outgoing.destroy();
     }finally{if(reserved)activeProtected--;incoming.off('aborted',abort);}
   })();});
