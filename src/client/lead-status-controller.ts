@@ -14,13 +14,13 @@ type Snapshot=Awaited<ReturnType<typeof leads.context>>;
 export type LeadStatusDraft=Readonly<{toState:ManualLeadTarget;reason:string|null}>;
 export type LeadStatusView=Readonly<{phase:'idle'|'loading'|'ready'|'pending'|'review'|'blocked'|'unavailable';busy:boolean;message:string;source:Lead|null;events:readonly LeadEvent[];hasMore:boolean;draft:LeadStatusDraft|null;draftIssue:string;canSave:boolean;canRetry:boolean;writesPaused:boolean;reference:string}>;
 export const initialLeadStatusView:LeadStatusView=Object.freeze({phase:'idle',busy:false,message:'Load current lead status and retained reasons before making a change.',source:null,events:Object.freeze([]),hasMore:false,draft:null,draftIssue:'',canSave:false,canRetry:false,writesPaused:true,reference:''});
-type Dependencies={businessId:string;leadId:string;store:ReturnType<typeof createPendingLeadStateStore>;intakeStore:Pick<ReturnType<typeof createPendingLeadStore>,'read'>;change:(view:LeadStatusView)=>void;api?:typeof leadStates;leadApi?:Pick<typeof leads,'context'|'history'>;session?:typeof authentication.session;id?:()=>string;committed?:(leadId:string)=>void};
+type Dependencies={businessId:string;leadId:string;store:ReturnType<typeof createPendingLeadStateStore>;intakeStore:Pick<ReturnType<typeof createPendingLeadStore>,'read'>;vehicleStore:{read:()=>unknown};change:(view:LeadStatusView)=>void;api?:typeof leadStates;leadApi?:Pick<typeof leads,'context'|'history'>;session?:typeof authentication.session;id?:()=>string;committed?:(leadId:string)=>void};
 export function createLeadStatusController(deps:Dependencies){
  checkValue(uuid(deps.businessId)&&uuid(deps.leadId));
  const businessId=deps.businessId,leadId=deps.leadId,api=deps.api??leadStates,leadApi=deps.leadApi??leads,session=deps.session??authentication.session,id=deps.id??(()=>crypto.randomUUID());
  let alive=true,active:AbortController|null=null,activeSignal:AbortSignal|null=null,proof:Proof|null=null,snapshot:Snapshot|null=null,pending:PendingLeadState|null=null,original:LeadStateChange|null=null;
  let phase:LeadStatusView['phase']='idle',message=initialLeadStatusView.message,source:Lead|null=null,events:readonly LeadEvent[]=[],hasMore=false,draft:LeadStatusDraft|null=null,canRetry=false;
- const intakeClear=()=>{try{return deps.intakeStore.read()===null;}catch{return false;}};
+ const intakeClear=()=>{try{return deps.intakeStore.read()===null&&deps.vehicleStore.read()===null;}catch{return false;}};
  const clearPrivate=()=>{proof=null;snapshot=null;source=null;events=[];hasMore=false;draft=null;original=null;canRetry=false;};
  function draftIssue(){if(!draft||!source)return '';try{parseLeadStateDraft({fromState:source.state,...draft});return '';}catch{return 'Choose a different manual status. Lost and reopening Lost or Won require a meaningful reason of at most 1,000 characters.';}}
  function view():LeadStatusView{return Object.freeze({phase,busy:!!active,message,source:phase==='ready'?source:null,events:phase==='ready'?events:Object.freeze([]),hasMore:phase==='ready'&&hasMore,draft:phase==='ready'?draft:null,draftIssue:phase==='ready'?draftIssue():'',canSave:!active&&phase==='ready'&&!!source&&!!draft&&snapshot?.context.writeState==='ready'&&intakeClear()&&draftIssue()==='',canRetry:!active&&canRetry,writesPaused:snapshot?.context.writeState!=='ready',reference:phase==='pending'&&snapshot?.context.businessId===pending?.businessId?pending?.reference.operationId??'':''});}
@@ -36,7 +36,7 @@ export function createLeadStatusController(deps:Dependencies){
  const load=()=>run(async signal=>{
   clearPrivate();phase='loading';message='Checking current lead status…';emit();pending=deps.store.read();await fresh(signal);
   if(pending){if(pending.businessId!==businessId){phase='blocked';message='A pending status change belongs to a different business. Its reference has been kept for review.';return;}retain(pending.reference.leadId===leadId?'A pending status change was found. Check its original outcome before another status change.':'A pending status change belongs to another lead. Check its original outcome before another status change.');return;}
-  if(!intakeClear()){phase='blocked';message='An intake save is pending or its reference cannot be read. Resolve that save before another status change.';return;}
+  if(!intakeClear()){phase='blocked';message='An intake save is pending or its reference cannot be read, or a vehicle report needs review. Resolve that save before another status change.';return;}
   const current=await leadApi.history(businessId,{leadId,afterVersion:'0',pageSize:1},proof!,signal);live(signal);
   if(current.state==='absent'){phase='review';message='This lead was not found. Load the current lead directory before continuing.';return;}
   const page=await api.events(businessId,{leadId,afterVersion:'0',pageSize:20},proof!,signal);live(signal);
@@ -71,7 +71,7 @@ export function createLeadStatusController(deps:Dependencies){
   return run(async signal=>{
    await fresh(signal);checkedContext=true;
    if(snapshot!.binding!==context.binding||snapshot!.context.writeState!=='ready'||snapshot!.context.recoveryEpoch!==context.context.recoveryEpoch){clearPrivate();phase='review';message='Lead access or recovery changed. No status change was sent. Load current status before editing.';return;}
-   if(!intakeClear()){clearPrivate();phase='blocked';message='An intake save needs review. No status change was sent.';return;}
+   if(!intakeClear()){clearPrivate();phase='blocked';message='An intake save or vehicle report needs review. No status change was sent.';return;}
    const command:LeadStateChange=Object.freeze({schemaVersion:1,operationId:id(),leadId,expectedVersion,recoveryEpoch:context.context.recoveryEpoch!,draft:input});
    const record=pendingLeadState({schemaVersion:1,businessId,binding:context.binding,reference:{operationId:command.operationId,leadId,expectedVersion:command.expectedVersion,recoveryEpoch:command.recoveryEpoch}});
    deps.store.write(record);pending=record;original=command;retain('Saving status change…');emit();dispatched=true;const result=await api.change(businessId,command,proof!,signal);live(signal);finish(result);

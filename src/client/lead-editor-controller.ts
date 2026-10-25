@@ -17,12 +17,12 @@ export type LeadEditorView=Readonly<{businessId:string|null;phase:'loading'|'rea
 export const initialLeadEditorView:LeadEditorView=Object.freeze({businessId:null,phase:'loading',message:'Checking lead access…',busy:true,rows:Object.freeze([]),hasMore:false,search:'',includeLost:false,selected:null,draft:null,draftIssue:'',history:null,canSave:false,canRetry:false,reference:'',writesPaused:true});
 export const emptyLeadDraft:LeadDraft=Object.freeze({label:'',customerId:null,sourceId:null,referralText:null,phone:null,email:null,requestedScope:null,availability:null,estimatedCents:null,followUpAt:null,notes:null});
 
-type Dependencies={store:ReturnType<typeof createPendingLeadStore>;statusStore:Pick<ReturnType<typeof createPendingLeadStateStore>,'read'>;change:(view:LeadEditorView)=>void;api?:typeof leads;session?:typeof authentication.session;id?:()=>string};
+type Dependencies={store:ReturnType<typeof createPendingLeadStore>;statusStore:Pick<ReturnType<typeof createPendingLeadStateStore>,'read'>;vehicleStore:{read:()=>unknown};change:(view:LeadEditorView)=>void;api?:typeof leads;session?:typeof authentication.session;id?:()=>string};
 export function createLeadEditorController(deps:Dependencies){
   const api=deps.api??leads,session=deps.session??authentication.session,id=deps.id??(()=>crypto.randomUUID());
   let alive=true,active:AbortController|null=null,proof:Proof|null=null,snapshot:Snapshot|null=null,pending:PendingLead|null=null,original:LeadSave|null=null;
   let phase:LeadEditorView['phase']='loading',message=initialLeadEditorView.message,rows:readonly Lead[]=[],hasMore=false,search='',includeLost=false,selected:Lead|null=null,draft:LeadDraft|null=null,history:History|null=null,canRetry=false;
-  const statusClear=()=>{try{return deps.statusStore.read()===null;}catch{return false;}};
+  const statusClear=()=>{try{return deps.statusStore.read()===null&&deps.vehicleStore.read()===null;}catch{return false;}};
   const clearPrivate=()=>{proof=null;snapshot=null;rows=[];hasMore=false;search='';includeLost=false;selected=null;draft=null;history=null;original=null;canRetry=false;};
   function draftIssue(){if(draft===null)return '';try{parseLeadDraft(draft);}catch{return 'Review the label, field lengths, estimate, follow-up time and selected references before saving.';}
     // UUIDs have a fixed wire length. Match the actual flat JSON input and
@@ -85,7 +85,7 @@ export function createLeadEditorController(deps:Dependencies){
     return run(async signal=>{
       await fresh(signal);checkedContext=true;
       if(snapshot!.context.businessId!==context.context.businessId||snapshot!.binding!==context.binding||snapshot!.context.writeState!=='ready'||snapshot!.context.recoveryEpoch!==context.context.recoveryEpoch){clearPrivate();phase='review';message='Lead access or recovery changed. No change was sent. Load current leads before editing.';return;}
-      if(!statusClear()){clearPrivate();phase='blocked';message='A status change needs review. No intake change was sent. Open the lead’s status panel to resolve its original reference.';return;}
+      if(!statusClear()){clearPrivate();phase='blocked';message='A status change needs review, or a vehicle report is pending. No intake change was sent. Open its panel to resolve the original reference.';return;}
       const command:LeadSave=Object.freeze({schemaVersion:1,operationId:id(),leadId:current?.id??id(),expectedVersion:current?.version??'0',recoveryEpoch:context.context.recoveryEpoch!,draft:input});
       const {draft:unused,schemaVersion,...reference}=command;void unused;void schemaVersion;
       const record=pendingLead({schemaVersion:1,businessId:context.context.businessId,binding:context.binding,reference});deps.store.write(record);pending=record;original=command;retain('Saving lead…');emit();dispatched=true;
