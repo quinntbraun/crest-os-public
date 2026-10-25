@@ -62,3 +62,7 @@ jobs:
           npm test -- tests/unit/lead-contract.test.ts tests/unit/lead-source.test.ts tests/unit/lead-csv.test.ts tests/unit/lead-directory.test.ts tests/unit/lead-source-directory.test.ts
       - name: Exercise actual isolated PostgreSQL proposal
         run: node --test --test-concurrency=1 tests/integration/lead-intake-proposal.test.mjs
+      - name: Install pinned recovery tooling
+        run: node scripts/install-recovery-tools.mjs
+      - name: Restore encrypted same-snapshot lead and source proposal
+        run: node --test --test-concurrency=1 tests/integration/lead-intake-recovery-proposal.test.mjs
