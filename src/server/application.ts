@@ -11,6 +11,7 @@ export {createBusinessNameCommand} from '../security/business-name-command.ts';
 export {createBusinessSettingsContextReader} from '../security/business-settings-context.ts';
 export {createBusinessHttp} from '../security/business-http.ts';
 export {createCustomerDirectory} from '../customer/customer-directory.ts';
+export {createCustomerHttp} from '../customer/customer-http.ts';
 
 // One Node process, one listener, one Next application. No separate API service.
 export async function createCrestApplication(config:NodeConfiguration){
