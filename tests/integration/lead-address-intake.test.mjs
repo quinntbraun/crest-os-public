@@ -1,8 +1,8 @@
-// Unregistered39-to40 proposal proof; canonical migration bytes stay unchanged.
+// Actual registered39-to40 upgrade, original source and RLS/recovery authority.
 import assert from 'node:assert/strict';
 import {randomUUID,randomBytes} from 'node:crypto';
 import {before,after,test} from 'node:test';
-import {leadAddressProposalSandbox as migrationSandbox} from '../support/lead-address-proposal.mjs';
+import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {parseLeadAddressDraft} from '../../src/customer/lead-resource-contract.ts';
 import {parseLeadAddress} from '../../src/customer/lead-address-contract.ts';
@@ -45,7 +45,7 @@ before(async()=>{
  const url=new URL(target);url.username=login;url.password=password;web=await sandbox.connect(url.toString());web2=await sandbox.connect(url.toString());exporter=await sandbox.connect(url.toString());for(const c of [web,web2]){await c.query('SET ROLE crest_web');await c.query("SET lock_timeout='3s'");}await exporter.query('SET ROLE crest_export');
 },{timeout:240000});
 after(async()=>{await web?.end();await web2?.end();await exporter?.end();if(loginOwned)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
-test('39-to40 proposal preserves all39 earlier migration hashes, refuses unsafe reused owners and applies idempotently',async()=>{assert(guardRefused);assert.equal(prior.history.length,39);assert.equal(receipt.history.length,40);assert.deepEqual(receipt.history.slice(0,39),prior.history);assert.deepEqual((await sandbox.apply(target,proposal)).history,receipt.history);});
+test('39-to40 upgrade preserves all39 earlier migration hashes, refuses unsafe reused owners and applies idempotently',async()=>{assert(guardRefused);assert.equal(prior.history.length,39);assert.equal(receipt.history.length,40);assert.deepEqual(receipt.history.slice(0,39),prior.history);assert.deepEqual((await sandbox.apply(target,proposal)).history,receipt.history);});
 test('forced RLS and closed domain owners deny raw web/export mutation and private verification',async()=>{
  assert.equal((await client.query("SELECT relrowsecurity AND relforcerowsecurity AS yes FROM pg_class WHERE oid='crest.lead_addresses'::regclass")).rows[0].yes,true);
  for(const sql of ['SELECT * FROM crest.lead_addresses','DELETE FROM crest.lead_addresses','TRUNCATE crest.lead_addresses',"UPDATE crest.lead_addresses SET instructions='forged'"])await assert.rejects(web.query(sql),e=>e.code==='42501');

@@ -70,7 +70,7 @@
     "test:leads-db": "node --test --test-concurrency=1 tests/integration/lead-intake.test.mjs",
     "test:lead-state-db": "node --test --test-concurrency=1 tests/integration/lead-state-events.test.mjs",
     "test:lead-vehicles-db": "node --test --test-concurrency=1 tests/integration/lead-vehicle-intake.test.mjs",
-    "test:lead-address-proposal-db": "node --test --test-concurrency=1 tests/integration/lead-address-intake.test.mjs"
+    "test:lead-addresses-db": "node --test --test-concurrency=1 tests/integration/lead-address-intake.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1156.0",

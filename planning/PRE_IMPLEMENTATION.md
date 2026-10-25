@@ -1,3 +1,7 @@
+## Active construction: registered lead-owned address backend
+
+Read PHASE_4_LEAD_ADDRESSES.md/live CI. Proposalbe1c327/run40221538958 passed12 native address and all366 database cases; exact body adopted as40 with only first-comment normalization. All39 published migrations stay unchanged. Registered inventory31tables/456columns,446required+10excluded; compatibility max40/min0/blocked. Twelve native and37 encrypted recovery cases require fresh complete canonical-source acceptance. Mobile84 build/browser remains pending; API separate-main40219337833 is fully verified. Preserve proposal/local/public checkpoints and never substitute proposal proof for release or actual-main proof. Synthetic only; default runtime closed.
+
 ## Active construction: lead-owned address intake
 
 Read PHASE_4_LEAD_ADDRESSES.md and live PR/CI. Proposal SQL is unregistered; all39 published migration bytes remain immutable. New source/command/history/private adapter/CSV and12 actual database cases require native proof before canonical adoption and same-snapshot encrypted recovery. All3792 units/114files, lint/types/server bundle pass locally. Parent mobile PR84/current source7a466bf is still under acceptance; never infer acceptance from inherited code or unit counts. Keep runtime closed and use synthetic data only. Next proposal proof, registered migration/recovery, private consumers and atomic explicit conversion.

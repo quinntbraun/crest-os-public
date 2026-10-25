@@ -1,4 +1,4 @@
--- PROPOSAL: BR02/P02/P03 lead-owned address intake; not a registered migration.
+-- BR02/P02/P03: retained lead-owned address intake and original history.
 -- All39 published migrations remain unchanged. Synthetic tests only.
 DO $review$
 BEGIN
