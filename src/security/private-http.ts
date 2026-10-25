@@ -1,5 +1,4 @@
 import 'server-only';
-const bodyLimit=8192;
 export class PrivateHttpError extends Error{constructor(){super('PRIVATE_HTTP_FAILED');this.name='PrivateHttpError';}}
 export function privateJsonResponse(body:object,status=200,cookies:string[]=[]):Response{
   const headers=new Headers({
@@ -16,7 +15,7 @@ export function privateJsonResponse(body:object,status=200,cookies:string[]=[]):
   return new Response(JSON.stringify(body),{status,headers});
 }
 
-async function boundedBody(request:Request,signal:AbortSignal):Promise<string>{
+async function boundedBody(request:Request,signal:AbortSignal,bodyLimit:number):Promise<string>{
   let reader:ReadableStreamDefaultReader<Uint8Array>|undefined;
   try{
     if(signal.aborted||request.bodyUsed||request.headers.has('content-encoding'))throw new PrivateHttpError();
@@ -49,9 +48,10 @@ async function boundedBody(request:Request,signal:AbortSignal):Promise<string>{
   }finally{reader?.releaseLock();}
 }
 
-export async function readFlatJsonBody(request:Request,keys:readonly string[]):Promise<Readonly<Record<string,unknown>>>{
+export async function readFlatJsonBody(request:Request,keys:readonly string[],bodyLimit=8192):Promise<Readonly<Record<string,unknown>>>{
   try{
-    const signal=AbortSignal.any([request.signal,AbortSignal.timeout(5000)]),text=await boundedBody(request,signal),value:unknown=JSON.parse(text);
+    if(!Number.isSafeInteger(bodyLimit)||bodyLimit<1||bodyLimit>131072)throw new PrivateHttpError();
+    const signal=AbortSignal.any([request.signal,AbortSignal.timeout(5000)]),text=await boundedBody(request,signal,bodyLimit),value:unknown=JSON.parse(text);
     if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length!==keys.length||!keys.every(key=>Object.hasOwn(value,key)))throw new PrivateHttpError();
     if(Object.values(value).some(v=>v!==null&&typeof v==='object')||(text.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length!==keys.length)throw new PrivateHttpError();
     return Object.freeze({...value});

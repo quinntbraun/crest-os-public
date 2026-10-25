@@ -1,5 +1,9 @@
 # Current implementation plan
 
+## Active consumer: private lead/source HTTP
+
+Read PHASE_4_LEAD_HTTP.md. Fixed private intake/source routes, stateless typed browser clients, explicit leads opt-in and bounded128KiB intake transport are implemented locally;3,183 units/88files, lint/types/server bundle pass. Genuine HTTPS fixture is written but unexecuted. Parent PR76 source32d2595/run40183242375 has passed all three isolated DB/Auth jobs; full acceptance remains pending. Preserve37 SQL/canonical/coverage/compatibility/dependency bytes. Next: exact-source HTTPS/build acceptance and mobile forms, with lifecycle/conversion still unfinished. No activation or real records. Older sections are historical.
+
 ## Active slice: lead and source intake backend
 
 Read PHASE_4_LEAD_INTAKE.md. Migration37 locally adopts the exact tested lead/source SQL from source1ab5111/run40181814381:17 native intake,26 encrypted-recovery and142 focused unit cases pass. Genuine source snapshots, New-only intake, fixed typed commands and reversible source CSV are implemented; state events/conversion/HTTP/forms are unfinished. Coverage is28tables/395columns (385required,10excluded). Preserve all37 published SQL on publication, canonical provenance and lockfile. Full new-source standard acceptance remains required; proposal proof is not release acceptance.
