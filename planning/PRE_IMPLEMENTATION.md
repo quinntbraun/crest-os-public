@@ -1,4 +1,10 @@
-## Current verification finding: browser response lifetime
+## Current work: consistent private exports
+
+2026-10-26. Explicit interrupted-save recovery is merged through protected PR89 after complete exact-source candidate acceptance. Actual main8d2ef72/tree6433e85 separately passed every complete gate in run40275210099, including969database/Auth, browser/build/container and main-bound artifacts. Full candidate sourcefd6511/run40271661475 independently passed4632units/138files,969database/Auth,24shell/176HTTPSleaves, two HEIC builds, production build/container, artifacts and all zero-negative gates. Old failure paragraphs below are historical.
+
+The next coherent feature is export draft90: public934e4084/run40274529267 independently passed975database/Auth including all3 new CRM capture cases. Private encrypted export parts use the existing standard JOSE library and real SDK/HTTP verification, with52crypto units/28export transport cases and the retained21attachment cases; local full4752units/140files, lint/types and49private-file cases pass. Read PHASE_4_SOURCE_EXPORT_DELIVERY.md for profiles, exact evidence and remaining owner queue/lease/manifest/download work. No new schema, role, privilege, dependency, provider setup, spending, real records or runtime activation. Independently accepted main8d2 may now be integrated normally and this single coherent draft retargeted to main; every fresh final-source gate remains.
+
+## Historical verification finding: browser response lifetime
 
 2026-10-26. Owner source80cf13a/run40260396422/attempt1 has independently verified969 database/Auth cases, including47 native retirement and four independent encrypted restore cases. Foundation completed4632units/138files,24shell tests and196HTTPS entries:194 passed,2failed (one stale-customer conversion editor leaf and its containing Chromium parent). All six new owner-recovery leaves passed in Chromium/WebKit. The existing test captured a browser Response and read its JSON after the page could invalidate the DevTools response resource; the failure explicitly reported Network.getResponseBody/response navigated away. Full release is not accepted; container/artifacts were skipped after the browser failure.
 
