@@ -18,6 +18,8 @@ import {formatBusinessFoundationBundle} from '../../src/security/business-founda
 import {verifyBusinessFoundationEvidence} from '../../src/security/business-configuration-evidence.ts';
 import {readCustomerCsv} from '../support/customer-fixture.ts';
 import {formatBusinessSourceBundle} from '../../src/security/business-source-bundle.ts';
+import {verifyBusinessSourceBundle} from '../../src/security/business-source-verifier.ts';
+import {exerciseNeutralSourceImport} from '../support/neutral-source-import.mjs';
 
 let sandbox,target,client,web,web2,bootstrap,login,pid2,prior,registered,unsafeOwnerRefused=false;
 let recovery,restored,restoredWeb,recoveryOwner,recoveryPlans,recoveryDecisions,recoveryOriginal,recoveryCommitted,recoveryHistory,recoveryBackup,sourceAfterCapture,postSnapshot;
@@ -240,7 +242,7 @@ test('business source collector captures every command-generated CRM source and 
  const lead=(await seed(f,'crm.lead.save')).leadId,vehicle=randomUUID(),address=randomUUID();
  assert.equal((await query(web,'SELECT crest_commands.save_lead_vehicle($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,0,$13) AS value',[...auth(f),f.epoch,randomUUID(),lead,vehicle,vehicleReport()])).state,'committed');
  assert.equal((await query(web,'SELECT crest_commands.save_lead_address($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,0,$13) AS value',[...auth(f),f.epoch,randomUUID(),lead,address,addressDraft()])).state,'committed');
- const body={customer:{kind:'new',id:randomUUID(),draft:customerDraft()},vehicles:[{linkId:randomUUID(),leadVehicleId:vehicle,expectedLeadVehicleVersion:'1',target:{kind:'new',id:randomUUID(),draft:vehicleDraft()}}],addresses:[{linkId:randomUUID(),leadAddressId:address,expectedLeadAddressVersion:'1',target:{kind:'new',id:randomUUID(),draft:{...addressDraft(),latitude:'-89.00000000000000000001',longitude:'180.00000000000000000000'}}}]};
+ const body={customer:{kind:'new',id:randomUUID(),draft:customerDraft()},vehicles:[{linkId:randomUUID(),leadVehicleId:vehicle,expectedLeadVehicleVersion:'1',target:{kind:'new',id:randomUUID(),draft:{...vehicleDraft(),year:2025}}}],addresses:[{linkId:randomUUID(),leadAddressId:address,expectedLeadAddressVersion:'1',target:{kind:'new',id:randomUUID(),draft:{...addressDraft(),latitude:'-89.00000000000000000001',longitude:'180.00000000000000000000'}}}]};
  assert.equal((await query(web,'SELECT crest_commands.convert_lead($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,1,$13) AS value',[...auth(f),f.epoch,randomUUID(),randomUUID(),lead,body])).state,'committed');
  await withSourceCollector(f,async config=>{
   const before=await evidence(f),sealed=await createBusinessSourceCollector(config)(new AbortController().signal),value=sealed.forServer(),crm=JSON.parse(value.crm);
@@ -286,11 +288,16 @@ test('business source collector captures every command-generated CRM source and 
    const at=all.parts.findIndex(p=>p.name===csvEntities[name]+'.csv'),matrix=readCustomerCsv(all.parts[at].content),columns=matrix.shift(),escapes=JSON.parse(all.parts[at+1].content).escapes;
    const decoded=matrix.map(cells=>Object.fromEntries(columns.map((column,index)=>{
     let cell=cells[index];if(cell==='\\N')return[column,null];if(escapes.some(e=>e.row_id===cells[columns.indexOf('id')]&&e.column===column)){assert(cell.startsWith("'"));cell=cell.slice(1);}cell=cell.replaceAll('\\\\','\\');
-    if(['outreach_opt_out','is_billing','active'].includes(column)){assert(['true','false'].includes(cell));cell=cell==='true';}if(['source_snapshot','reported_vehicle','requested_services','request'].includes(column))cell=JSON.parse(cell);return[column,cell];
+    if(['outreach_opt_out','is_billing','active'].includes(column)){assert(['true','false'].includes(cell));cell=cell==='true';}if(column==='year'){assert(/^[1-9][0-9]{3}$/.test(cell));cell=Number(cell);}if(['source_snapshot','reported_vehicle','requested_services','request'].includes(column))cell=JSON.parse(cell);return[column,cell];
    })));
    assert.deepEqual(decoded,crm.pages[name].flatMap(p=>JSON.parse(p)[field]),name+' source and CSV must agree on every field');
   }
   assert.equal(allManifest.evidenceBytes,value.evidenceBytes);assert.equal(allManifest.recordCount,value.recordCount);assert.equal(allManifest.completePortableExport,false);assert.equal(allManifest.completeBackup,false);assert.deepEqual(await evidence(f),before);
+  const independentlyVerified=verifyBusinessSourceBundle({manifest:Buffer.from(all.manifest),parts:all.parts.map(part=>({name:part.name,bytes:Buffer.from(part.content)}))},{businessId:f.business,appReleaseId:'a'.repeat(40)});
+  const reconstructed=independentlyVerified.forServer();for(const name of ['configuration','identity','history','crm'])assert.deepEqual(JSON.parse(reconstructed[name]),JSON.parse(value[name]));
+  assert.equal(Object.keys(reconstructed.rows).length,19);assert(reconstructed.csvSourceRowsVerified);assert(reconstructed.rawSourceReconstructionVerified);assert.equal(reconstructed.completePortableExport,false);assert.equal(reconstructed.completeBackup,false);
+  await exerciseNeutralSourceImport(sandbox,independentlyVerified);assert.deepEqual(await evidence(f),before);
+  console.log('Verified nineteen source CSV projections in a fresh extension-free PostgreSQL database with enforced relationships');
  });
 });
 test('business source collector keeps CRM rows and their audit history on the original real snapshot across a concurrent command', {timeout:30000},async()=>{

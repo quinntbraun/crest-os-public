@@ -36,6 +36,7 @@
     "verify:public": "node scripts/verify-public.mjs",
     "verify:migrations": "node scripts/verify-migrations.mjs",
     "verify:dependencies": "node scripts/verify-dependencies.mjs",
+    "verify:source-export": "node --conditions=react-server scripts/verify-source-export.mjs",
     "check": "npm run verify:public && npm run verify:canonical && npm run verify:migrations && npm run verify:dependencies && npm run lint && npm run typecheck && npm test && npm run build",
     "audit:dependencies": "npm audit --audit-level=low",
     "release:manifest": "node scripts/release-manifest.mjs",

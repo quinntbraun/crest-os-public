@@ -1,6 +1,6 @@
 # Crest OS
 
-Current development: [consistent source capture, nineteen CRM/foundation CSVs and encrypted private export delivery](planning/PHASE_4_SOURCE_EXPORT_DELIVERY.md), following [explicit interrupted-save recovery](planning/PHASE_4_ORIGINAL_OPERATION_RESOLUTION.md) and [atomic lead conversion](planning/PHASE_4_LEAD_CONVERSION.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence.
+Current development: [consistent source capture, nineteen CRM/foundation CSVs, independent offline verification and encrypted private export delivery](planning/PHASE_4_SOURCE_EXPORT_DELIVERY.md), following [explicit interrupted-save recovery](planning/PHASE_4_ORIGINAL_OPERATION_RESOLUTION.md) and [atomic lead conversion](planning/PHASE_4_LEAD_CONVERSION.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence.
 
 Crest Detailing's internal business operating system.
 
