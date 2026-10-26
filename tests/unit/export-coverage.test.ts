@@ -1,8 +1,20 @@
 import {expect,it} from 'vitest';
 import manifest from '../../planning/SECURITY_EXPORT_COVERAGE.json';
+import proposedJournal from '../../planning/proposals/source-export-journal-coverage.json';
 import {verifyExportCoverage as verify} from '../../src/tooling/export-coverage.ts';
 
 const clone=()=>structuredClone(manifest);
+it('retains every proposed journal field without changing the registered inventory or claiming a complete export',()=>{
+ const combined={...manifest,tables:[...manifest.tables,...proposedJournal.tables]},rows=combined.tables.flatMap(t=>[...t.required,...t.excluded.map(e=>e.column)].map(column=>({table:t.table,column})));
+ expect(proposedJournal).toMatchObject({formatVersion:1,registeredMigrationCount:42,proposedMigration:43,registered:false,assurance:'schema_inventory_only'});expect(proposedJournal.tables.flatMap(t=>t.required)).toHaveLength(114);expect(verify(combined,rows,42)).toEqual({assurance:'schema_inventory_only',tables:39,requiredColumns:603,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});expect(manifest.tables).toHaveLength(33);expect(manifest.migrationCount).toBe(42);
+});
+it.each(proposedJournal.tables)('refuses omitting a required journal field from $table',entry=>{
+ const combined={...manifest,tables:[...manifest.tables,...structuredClone(proposedJournal.tables)]},rows=combined.tables.flatMap(t=>[...t.required,...t.excluded.map(e=>e.column)].map(column=>({table:t.table,column})));
+ combined.tables.find(t=>t.table===entry.table)!.required.pop();expect(()=>verify(combined,rows,42)).toThrow('EXPORT_COVERAGE_REVIEW_REQUIRED');
+});
+it('does not misclassify journal object keys, key IDs or original JSON as excludable credentials',()=>{
+ for(const column of ['object_key','key_id','request_text']){const proposed=structuredClone(proposedJournal.tables),entry=proposed.find(t=>t.table==='crest_private.export_part_intents')!,combined={...manifest,tables:[...manifest.tables,...proposed]},rows=combined.tables.flatMap(t=>[...t.required,...t.excluded.map(e=>e.column)].map(column=>({table:t.table,column})));entry.required=entry.required.filter(v=>v!==column);const changed={...entry,excluded:[{column,reason:'session_credential'}]};combined.tables=combined.tables.map(t=>t.table===entry.table?changed:t);expect(()=>verify(combined,rows,42)).toThrow('EXPORT_COVERAGE_REVIEW_REQUIRED');}
+});
 // Only a synthetic input for validator failure tests. Actual schema coverage is
 // checked against pg_catalog in provider-reference-snapshot.test.mjs.
 const observed=()=>manifest.tables.flatMap(t=>[...t.required,...t.excluded.map(e=>e.column)].map(column=>({table:t.table,column})));

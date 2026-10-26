@@ -12,6 +12,8 @@ The [private export worker](planning/PHASE_4_SOURCE_EXPORT_DELIVERY.md#bounded-w
 
 The [durable export journal](planning/PHASE_4_EXPORT_JOB_JOURNAL.md) has passed all182 genuine database cases through audited Ready and immutable seven-day expiry, with a complete exact-source release. A server database adapter now reuses fresh real provider/local authentication, preserves original journal bytes, waits for commit before acknowledgment and supports original Ready lookup; its eight new genuine Auth/PG cases require execution. All5095 local unit cases/148files pass, including38 adapter cases. Adoption, schema43 coverage, actual worker composition and authorized owner delivery remain gated.
 
+The proposed journal inventory now marks all114 fields across its six tables as required export history, adding checks against the actual database catalog and refusing unreviewed columns. This is inventory coverage only; source extraction, CSV round-trip and recovery coverage remain unfinished.
+
 The [private object storage boundary](planning/PHASE_3_PRIVATE_OBJECTS.md) adds scoped staging PUTs, bounded checksummed intake and conditional immutable original candidates. Format validation, typed attachment publication and authorized reads remain unfinished.
 
 The [isolated image validator](planning/PHASE_3_IMAGE_VALIDATION.md) adds strict JPEG/PNG checks and private previews. The [PDF validator](planning/PHASE_3_PDF_VALIDATION.md) adds encrypted/active-content rejection and offline page rendering. The [HEIC worker](planning/PHASE_3_HEIC_VALIDATION.md) adds patched native full-image decoding and private previews; check its feature PR's exact-source proof before calling it verified. Actual phone tests, attachment publication and production sandbox dispatch remain gated.
