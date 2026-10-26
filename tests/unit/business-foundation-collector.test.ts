@@ -7,7 +7,16 @@ vi.mock('pg',()=>({default:{Client:class{
  on(name:string,fn:()=>void){this.events[name]=fn;return this;}once(name:string,fn:()=>void){return this.on(name,fn);}
  connect(){return db.connect();}query(...args:unknown[]){return db.query(...args);}end(){return db.end();}
 }}}));
-import {createBusinessFoundationCollector} from '../../src/security/business-foundation-collector';
+import {createBusinessFoundationCollector,createBusinessSourceCollector} from '../../src/security/business-foundation-collector';
+import {customerFixture} from '../support/customer-fixture.ts';
+import {addressFixture} from '../support/customer-address-fixture.ts';
+import {vehicleFixture} from '../support/vehicle-fixture.ts';
+import {associationFixture} from '../support/vehicle-association-fixture.ts';
+import {leadFixture,leadSourceFixture} from '../support/lead-fixture.ts';
+import {leadStateEventFixture} from '../support/lead-state-fixture.ts';
+import {leadVehicleFixture} from '../support/lead-vehicle-fixture.ts';
+import {leadAddressFixture} from '../support/lead-address-fixture.ts';
+import {conversionRecordFixture,conversionLinkFixture} from '../support/lead-conversion-record-fixture.ts';
 import {configurationFixture} from '../support/business-configuration-fixture';
 import {identityDigest} from '../support/business-identity-fixture';
 import {verifyBusinessFoundationEvidence} from '../../src/security/business-configuration-evidence';
@@ -107,4 +116,102 @@ it('requires verified TLS in production and copies configuration before work sta
 });
 it.each(['postgresql://u:p@remote.example.com/crest_migrate_0000000000000000','postgresql://u:p@127.0.0.1/real_database','postgresql://u:p@127.0.0.1/crest_migrate_0000000000000000?sslmode=disable'])('does not permit test capture from %s',connectionString=>{
  expect(()=>createBusinessFoundationCollector({...config(),connectionString})).toThrow('BUSINESS_FOUNDATION_COLLECTION_CONFIGURATION_REQUIRED');expect(db.configs).toHaveLength(0);
+});
+
+const crmInventory=[
+ ['customers','customer','customer_directory','customers'],['addresses','address','address_directory','addresses'],['vehicles','vehicle','vehicle_directory','vehicles'],['associations','association','vehicle_associations','associations'],['leadSources','lead_source','lead_source_directory','lead_sources'],['leads','lead','lead_directory','leads'],['leadEvents','lead_event','lead_state_events','events'],['leadVehicles','lead_vehicle','lead_vehicle_intake','leadVehicles'],['leadAddresses','lead_address','lead_address_intake','leadAddresses'],['conversions','lead_conversion','lead_conversion','conversions'],['links','conversion_link','lead_conversion','links']
+] as const;
+function sourceFixture(){
+ const businessId=f.expected.businessId,base=conversionRecordFixture(),parent={...base,business_id:businessId,request:{...base.request,businessId}};
+ const link=conversionLinkFixture(),addressLink=conversionLinkFixture('address');
+ const source=leadSourceFixture({business_id:businessId,referral_customer_id:parent.customer_id});
+ const lead=leadFixture({business_id:businessId,id:parent.lead_id,customer_id:parent.customer_id,source_id:source.id,source_snapshot:source,estimated_cents:'9007199254740993'});
+ const rows:Record<string,Record<string,unknown>[]>={
+  customers:[customerFixture({business_id:businessId,id:parent.customer_id,notes:'=Private É 😀\\N\ntext',version:'9007199254740993'})],
+  addresses:[addressFixture({business_id:businessId,id:addressLink.address_id!,customer_id:parent.customer_id,latitude:'-89.00000000000000000001',longitude:'180.00000000000000000000'})],
+  vehicles:[vehicleFixture({business_id:businessId,id:link.vehicle_id!})],
+  associations:[associationFixture({business_id:businessId,customer_id:parent.customer_id,vehicle_id:link.vehicle_id!})],
+  leadSources:[source],leads:[lead],leadEvents:[leadStateEventFixture({business_id:businessId,lead_id:parent.lead_id})],
+  leadVehicles:[leadVehicleFixture({business_id:businessId,id:link.lead_vehicle_id!,lead_id:parent.lead_id,vehicle_id:link.vehicle_id!})],
+  leadAddresses:[leadAddressFixture({business_id:businessId,id:addressLink.lead_address_id!,lead_id:parent.lead_id})],
+  conversions:[parent],links:[{...link,business_id:businessId},{...addressLink,business_id:businessId}]
+ };
+ for(const [i,[name,,scope]]of crmInventory.entries())if(name!=='links')contexts[name]=JSON.stringify({schemaVersion:1,scope,businessId,snapshotToken:i.toString(16).repeat(64),...(name==='conversions'?{conversionCount:'1',linkCount:'2'}:{rowCount:String(rows[name]!.length)})});
+ function sourceAnswer(sql:string,args:unknown[]=[]):unknown{
+  const d=crmInventory.find(([,routine])=>sql.includes(`.${routine}_snapshot_page(`));if(!d)return answer(sql,args);
+  const [name,,,field]=d,token=JSON.parse(contexts[name==='links'?'conversions':name] as string).snapshotToken;
+  return {rows:[{page:JSON.stringify({schemaVersion:1,businessId,snapshotToken:token,[field]:rows[name]!.filter(r=>args[2]===null||(r.id as string)>(args[2] as string)).slice(0,20)})}]};
+ }
+ db.query.mockImplementation(sourceAnswer);return {rows,sourceAnswer};
+}
+it('captures every CRM group and foundation on one connection with one initial context statement and commit',async()=>{
+ const fixture=sourceFixture(),sealed=await createBusinessSourceCollector(config())(signal()),value=sealed.forServer(),crm=JSON.parse(value.crm);
+ expect(()=>JSON.stringify(sealed)).toThrow('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');expect(db.configs).toHaveLength(1);expect(db.query.mock.calls.filter(c=>c[0].includes('_context('))).toHaveLength(1);
+ expect(crm.generationId).toBe(value.generationId);expect(crm.observedAt).toBe(value.observedAt);expect(crm.completePortableExport).toBe(false);expect(crm.completeBackup).toBe(false);
+ for(const [name,,,field]of crmInventory)expect(crm.pages[name].flatMap((p:string)=>JSON.parse(p)[field])).toEqual(fixture.rows[name]);
+ expect(Object.keys(crm.contexts)).toHaveLength(10);expect(Object.keys(crm.pages)).toHaveLength(11);expect(crm.recordCount).toBe(12);
+ expect(value.recordCount).toBe(12+[value.configuration,value.identity,value.history].reduce((n,s)=>n+JSON.parse(s).records.length,0));
+ expect(value.evidenceBytes).toBe(crm.evidenceBytes+[value.configuration,value.identity,value.history].reduce((n,s)=>n+JSON.parse(s).evidenceBytes,0));
+ expect(db.query.mock.calls.at(-1)![0]).toBe('COMMIT');expect(db.query.mock.calls.filter(c=>c[0].includes('_snapshot_page(')).every(c=>c[1][0]===f.expected.businessId&&c[1][3]===20)).toBe(true);
+});
+it('retains exact source JSON, large decimal strings, microseconds and domain-separated tokens',async()=>{
+ const fixture=sourceFixture(),original=fixture.sourceAnswer;
+ db.query.mockImplementation((sql,args)=>{const r=original(sql,args) as {rows:{page?:string}[]};if(sql.includes('.customer_snapshot_page('))r.rows[0]!.page='  '+r.rows[0]!.page+' \n';return r;});
+ const value=(await createBusinessSourceCollector(config())(signal())).forServer(),crm=JSON.parse(value.crm);
+ expect(crm.pages.customers[0]).toBe((db.query.mock.results.find((_,i)=>db.query.mock.calls[i]![0].includes('.customer_snapshot_page('))!.value as {rows:{page:string}[]}).rows[0]!.page);
+ expect(value.crm).toContain('9007199254740993');expect(value.crm).toContain('-89.00000000000000000001');expect(value.crm).toContain('.123456Z');
+ expect(new Set(Object.values(crm.contexts).map(p=>JSON.parse(p as string).snapshotToken)).size).toBe(10);
+});
+it('paginates complete CRM sources with an exclusive UUID cursor and explicit terminal page for exact multiples',async()=>{
+ const fixture=sourceFixture();fixture.rows.customers=Array.from({length:40},(_,i)=>({...fixture.rows.customers![0],id:i===39?conversionRecordFixture().customer_id:'00000000-0000-4000-8000-'+i.toString(16).padStart(12,'0')}));
+ contexts.customers=JSON.stringify({...JSON.parse(contexts.customers as string),rowCount:'40'});
+ const crm=JSON.parse((await createBusinessSourceCollector(config())(signal())).forServer().crm),calls=db.query.mock.calls.filter(c=>c[0].includes('.customer_snapshot_page('));
+ expect(calls).toHaveLength(3);expect(calls[1]![1][2]).toBe(fixture.rows.customers[19]!.id);expect(calls[2]![1][2]).toBe(fixture.rows.customers[39]!.id);expect(JSON.parse(crm.pages.customers[2]).customers).toEqual([]);
+});
+it('retains explicit empty source pages and exact zero counts without claiming complete Crest coverage',async()=>{
+ const fixture=sourceFixture();for(const [name]of crmInventory){fixture.rows[name]=[];if(name!=='links')contexts[name]=JSON.stringify({...JSON.parse(contexts[name] as string),...(name==='conversions'?{conversionCount:'0',linkCount:'0'}:{rowCount:'0'})});}
+ const value=(await createBusinessSourceCollector(config())(signal())).forServer(),crm=JSON.parse(value.crm);expect(crm.recordCount).toBe(0);expect(value.completePortableExport).toBe(false);expect(Object.values(crm.pages).every(p=>(p as string[]).length===1)).toBe(true);
+});
+it.each(['context-scope','context-number-count','context-extra','context-limit','context-business','missing-context'])('refuses %s before paging either source family',async issue=>{
+ sourceFixture();const c=JSON.parse(contexts.customers as string);if(issue==='context-scope')c.scope='vehicle_directory';if(issue==='context-number-count')c.rowCount=1;if(issue==='context-extra')c.secret='private';if(issue==='context-limit')c.rowCount='1001';if(issue==='context-business')c.businessId=randomUUID();contexts.customers=JSON.stringify(c);if(issue==='missing-context')delete contexts.customers;
+ await expect(createBusinessSourceCollector(config())(signal())).rejects.toThrow(error);expect(db.query.mock.calls.some(c=>c[0].includes('_page('))).toBe(false);
+});
+it.each(['foreign-page','wrong-token','extra-field','missing-row','extra-row','reversed-order','duplicate','foreign-row','bad-bigint','unsafe-number','duplicate-json-key','invalid-utf8','oversized-page'])('rejects %s without committing or publishing partial CRM output',async issue=>{
+ const fixture=sourceFixture();
+ if(issue==='missing-row')fixture.rows.customers=[];if(issue==='extra-row'||issue==='duplicate')fixture.rows.customers!.push({...fixture.rows.customers![0]});
+ if(issue==='bad-bigint')fixture.rows.customers![0]!.version=9007199254740992;if(issue==='foreign-row')fixture.rows.customers![0]!.business_id=randomUUID();
+ if(issue==='reversed-order'){fixture.rows.customers!.unshift({...fixture.rows.customers![0],id:'ffffffff-ffff-4fff-8fff-ffffffffffff'});contexts.customers=JSON.stringify({...JSON.parse(contexts.customers as string),rowCount:'2'});}
+ const original=fixture.sourceAnswer;db.query.mockImplementation((sql,args)=>{const r=original(sql,args) as {rows:{page?:string}[]};if(sql.includes('.customer_snapshot_page(')){
+  const page=JSON.parse(r.rows[0]!.page!);if(issue==='foreign-page')page.businessId=randomUUID();if(issue==='wrong-token')page.snapshotToken='f'.repeat(64);if(issue==='extra-field')page.secret='private';r.rows[0]!.page=JSON.stringify(page);
+  if(issue==='unsafe-number')r.rows[0]!.page=r.rows[0]!.page!.replace('"schemaVersion":1','"schemaVersion":9007199254740993');
+  if(issue==='duplicate-json-key')r.rows[0]!.page=r.rows[0]!.page!.replace('"schemaVersion":1','"schemaVersion":1,"schemaVersion":1');
+  if(issue==='invalid-utf8')r.rows[0]!.page+='\ud800';if(issue==='oversized-page')r.rows[0]!.page+=' '.repeat(1048576);
+ }return r;});
+ await expect(createBusinessSourceCollector(config())(signal())).rejects.toThrow(error);expect(db.query.mock.calls.some(c=>c[0]==='COMMIT')).toBe(false);
+});
+it.each(['address-customer','association-vehicle','lead-source','event-lead','lead-vehicle','lead-address','conversion-customer','missing-conversion-link'])('rejects broken %s references after complete capture',async issue=>{
+ const fixture=sourceFixture(),rows=fixture.rows;
+ if(issue==='address-customer')rows.addresses![0]!.customer_id=randomUUID();if(issue==='association-vehicle')rows.associations![0]!.vehicle_id=randomUUID();
+ if(issue==='lead-source')rows.leadSources=[];if(issue==='event-lead')rows.leadEvents![0]!.lead_id=randomUUID();if(issue==='lead-vehicle')rows.leadVehicles![0]!.vehicle_id=randomUUID();if(issue==='lead-address')rows.leadAddresses![0]!.lead_id=randomUUID();
+ if(issue==='conversion-customer')rows.customers=[];if(issue==='missing-conversion-link')rows.links!.pop();
+ for(const [name]of crmInventory)if(name!=='links'){const c=JSON.parse(contexts[name] as string);contexts[name]=JSON.stringify({...c,...(name==='conversions'?{conversionCount:String(rows.conversions!.length),linkCount:String(rows.links!.length)}:{rowCount:String(rows[name]!.length)})});}
+ await expect(createBusinessSourceCollector(config())(signal())).rejects.toThrow(error);expect(db.query.mock.calls.some(c=>c[0]==='COMMIT')).toBe(false);
+});
+it('cancellation during the last CRM page destroys the same connection and fences late output',async()=>{
+ const fixture=sourceFixture(),controller=new AbortController();let finish!:(value:unknown)=>void;
+ db.query.mockImplementation((sql,args)=>sql.includes('.conversion_link_snapshot_page(')?new Promise(r=>{finish=()=>r(fixture.sourceAnswer(sql,args));}):fixture.sourceAnswer(sql,args));
+ const pending=createBusinessSourceCollector(config())(controller.signal);await vi.waitFor(()=>expect(finish).toBeTypeOf('function'));controller.abort();await expect(pending).rejects.toThrow(error);finish(undefined);await Promise.resolve();expect(db.query.mock.calls.some(c=>c[0]==='COMMIT')).toBe(false);expect(db.end).toHaveBeenCalledOnce();
+});
+it('bounds the aggregate declared record count before reading any foundation or CRM page',async()=>{
+ sourceFixture();for(const [name]of crmInventory)if(name!=='links')contexts[name]=JSON.stringify({...JSON.parse(contexts[name] as string),...(name==='conversions'?{conversionCount:'1000',linkCount:'1000'}:{rowCount:'1000'})});
+ await expect(createBusinessSourceCollector(config())(signal())).rejects.toThrow(error);expect(db.query.mock.calls.some(c=>c[0].includes('_page('))).toBe(false);
+});
+it('rejects aggregate source bytes across individually valid bounded pages instead of truncating a capture',async()=>{
+ const fixture=sourceFixture();fixture.rows.customers=Array.from({length:1000},(_,i)=>({...fixture.rows.customers![0],id:'00000000-0000-4000-8000-'+i.toString(16).padStart(12,'0'),notes:'😀'.repeat(2000),display_name:'😀'.repeat(200)}));contexts.customers=JSON.stringify({...JSON.parse(contexts.customers as string),rowCount:'1000'});
+ await expect(createBusinessSourceCollector(config())(signal())).rejects.toThrow(error);const calls=db.query.mock.calls.filter(c=>c[0].includes('.customer_snapshot_page('));expect(calls.length).toBeGreaterThan(1);expect(calls.length).toBeLessThan(50);expect(db.query.mock.calls.some(c=>c[0]==='COMMIT')).toBe(false);
+});
+it.each(['lead-parent','address-customer'])('rejects a conversion link whose existing %s belongs to another source',async issue=>{
+ const fixture=sourceFixture();if(issue==='lead-parent'){const other={...fixture.rows.leads![0],id:randomUUID()};fixture.rows.leads!.push(other);fixture.rows.leads!.sort((a,b)=>(a.id as string)<(b.id as string)?-1:1);contexts.leads=JSON.stringify({...JSON.parse(contexts.leads as string),rowCount:'2'});fixture.rows.leadVehicles![0]!.lead_id=other.id;}
+ else{const other={...fixture.rows.customers![0],id:randomUUID()};fixture.rows.customers!.push(other);fixture.rows.customers!.sort((a,b)=>(a.id as string)<(b.id as string)?-1:1);contexts.customers=JSON.stringify({...JSON.parse(contexts.customers as string),rowCount:'2'});fixture.rows.addresses![0]!.customer_id=other.id;}
+ await expect(createBusinessSourceCollector(config())(signal())).rejects.toThrow(error);expect(db.query.mock.calls.some(c=>c[0]==='COMMIT')).toBe(false);
 });
