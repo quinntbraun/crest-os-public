@@ -174,7 +174,7 @@ for(const mode of ['revoked','provider-missing','stale','paused','epoch-changed'
  if(mode==='stopped')await stop(s.f,s.job,'2');
  if(mode==='wrong-lease'){s.current.leaseId=randomUUID();claimText=JSON.stringify(s.current);}
  if(mode==='foreign-owner')acting=await state();
- for(const work of [()=>snapshot(acting,mode==='wrong-lease'?s.raw():raw),()=>authorizeWorker(acting,claimText)])await assert.rejects(work(),e=>e.code==='42501');assert.deepEqual(await snapshots(s.f),kept);
+ for(const work of [()=>snapshot(acting,mode==='wrong-lease'?s.raw():raw),()=>authorizeWorker(acting,claimText)])await assert.rejects(work(),e=>mode==='paused'?e.code==='P0001'&&e.message==='RECOVERY_REVIEW_REQUIRED':e.code==='42501');assert.deepEqual(await snapshots(s.f),kept);
 });
 for(const commit of [true,false])test('two real devices serialize snapshot '+(commit?'commit':'rollback')+' and preserve one original plan',async()=>{
  const s=await snapshotFixture(),second=await session(s.f),raw=s.raw();let pending;await web.query('BEGIN');
