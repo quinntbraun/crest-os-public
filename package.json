@@ -24,6 +24,7 @@
     "test:mutation-fence-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/mutation-fence.test.mjs",
     "test:operation-storage-db": "node --test --test-concurrency=1 tests/integration/operation-storage.test.mjs",
     "test:operation-lookup-db": "node --test --test-concurrency=1 tests/integration/operation-lookup.test.mjs",
+    "test:operation-resolution-proposal-db": "node --test --test-concurrency=1 tests/integration/original-operation-resolution.test.mjs",
     "test:business-name-db": "node --test --test-concurrency=1 tests/integration/business-name-command.test.mjs",
     "test:db": "node scripts/test-database.mjs",
     "test:sessions-db": "node --test --test-concurrency=1 tests/integration/session-foundation.test.mjs",
