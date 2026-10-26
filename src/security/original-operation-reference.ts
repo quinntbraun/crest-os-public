@@ -1,4 +1,4 @@
-import {customerUuid as uuid,customerVersion as version,customerInstant as instant} from '../customer/customer-contract';
+import {customerUuid as uuid,customerVersion as version,customerInstant as instant} from '../customer/customer-contract.ts';
 
 type Common=Readonly<{operationId:string;recoveryEpoch:string}>;
 type Targets={
