@@ -2,13 +2,14 @@
 // business data, production authority, fake race timers or admission resets.
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
-import {randomUUID,randomBytes} from 'node:crypto';
+import {randomUUID,randomBytes,createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {parseOriginalOperationReference,parseOriginalOperationOutcome,originalOperationKinds} from '../../src/security/original-operation-reference.ts';
+import {verifyBusinessHistoryEvidence} from '../../src/security/business-history-evidence.ts';
 
-let sandbox,client,web,web2,bootstrap,login,pid2,unsafeOwnerRefused=false;
+let sandbox,target,client,web,web2,bootstrap,login,pid2,unsafeOwnerRefused=false;
 const issuer='https://auth.example.com/auth/v1',reason=' Owner reviewed lost draft é 😀\nRetire this original only. ';
 const auth=f=>[f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+300000),f.business];
 const query=(c,sql,args)=>c.query(sql,args).then(r=>r.rows[0].value);
@@ -54,7 +55,7 @@ async function evidence(f){const out={};for(const table of ['crest.customers','c
 async function waitForLock(pid){let blocked=false;const end=Date.now()+1500;while(Date.now()<end){await client.query('SELECT pg_stat_clear_snapshot()');blocked=(await client.query("SELECT wait_event_type='Lock' AS blocked FROM pg_stat_activity WHERE pid=$1",[pid])).rows[0]?.blocked;if(blocked)break;}assert.equal(blocked,true,'second device must actually wait for the first transaction');}
 
 before(async()=>{
- sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
+ sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
  const sql=await readFile(new URL('../../supabase/proposals/20261026010000_original_operation_resolution.sql',import.meta.url),'utf8');
  await client.query('ALTER ROLE crest_command_owner LOGIN');try{await client.query('BEGIN');await assert.rejects(client.query(sql),e=>e.code==='42501'&&e.message==='CREST_OPERATION_RESOLUTION_REVIEW_REQUIRED');unsafeOwnerRefused=true;}finally{await client.query('ROLLBACK');await client.query('ALTER ROLE crest_command_owner NOLOGIN');}
  await client.query('BEGIN');try{await client.query(sql);await client.query('COMMIT');}catch(e){await client.query('ROLLBACK');throw e;}
@@ -86,6 +87,57 @@ test('revoked credentials and a foreign business cannot claim retirement',async(
 test('failed retirement audit rolls back the claim and permits the genuine original',async()=>{const f=await state(),plan=await originalPlan(f,'crm.customer.save'),retained=await evidence(f);await client.query("ALTER TABLE crest_private.audit_events ADD CONSTRAINT synthetic_resolution_refusal CHECK(entity_kind<>'operations') NOT VALID");try{await assert.rejects(retire(f,plan.original),e=>e.code==='23514');assert.deepEqual(await evidence(f),retained);}finally{await client.query('ALTER TABLE crest_private.audit_events DROP CONSTRAINT synthetic_resolution_refusal');}assert.equal((await plan.run(f,web)).state,'committed');});
 test('retirement and audit are immutable even through a reusable web session',async()=>{const f=await state(),plan=await originalPlan(f,'crm.customer.save');await retire(f,plan.original);for(const sql of ['SELECT * FROM crest_private.operations','UPDATE crest_private.operations SET result=NULL','DELETE FROM crest_private.audit_events','SELECT crest_private.operation_retirement_result($1,$2,$3)'])await assert.rejects(web.query(sql,sql.includes('$1')?[f.business,f.actor,plan.original]:undefined),e=>e.code==='42501');await assert.rejects(web.query('SET ROLE crest_command_owner'),e=>e.code==='42501');for(const sql of ["UPDATE crest_private.operations SET payload_hash=repeat('a',64) WHERE business_id=$1 AND operation_id=$2",'DELETE FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2','DELETE FROM crest_private.audit_events WHERE business_id=$1 AND operation_id=$2'])await assert.rejects(client.query(sql,[f.business,plan.original.reference.operationId]),e=>e.code==='55000');});
 test('SQL reference validator agrees with the pure contract on every supported original',async()=>{const f=await state();for(const kind of originalOperationKinds){const plan=await originalPlan(f,kind);assert.equal((await client.query('SELECT crest_private.original_operation_reference_valid($1) AS valid',[plan.original])).rows[0].valid,true);for(const malformed of [{...plan.original,actorId:f.actor},{...plan.original,commandType:'finance.post'},{...plan.original,reference:{...plan.original.reference,draft:{notes:'Never retained'}}}])assert.equal((await client.query('SELECT crest_private.original_operation_reference_valid($1) AS valid',[malformed])).rows[0].valid,false);}});
+
+test('all eleven retirement decisions retain complete common-format operation and audit evidence in one ordinary history snapshot',async()=>{
+ const f=await state(),decisions=new Map();
+ for(const kind of originalOperationKinds){const plan=await originalPlan(f,kind),decision=await retire(f,plan.original,web,' =Reviewed, "original" é 😀\n\\N\t'+kind);assert.equal(decision.state,'retired');decisions.set(plan.original.reference.operationId,decision);}
+ const committed=await originalPlan(f,'crm.customer.save');assert.equal((await committed.run(f,web)).state,'committed');assert.equal((await retire(f,committed.original)).state,'original_recorded');
+ await assert.rejects(web.query('SELECT crest_commands.business_history_export_context($1)',[f.business]),e=>e.code==='42501');
+ const reader=await sandbox.connect(target),coverage=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+ await reader.query('SET ROLE crest_export');
+ const records=async context=>{
+  const out=[];
+  for(const kind of ['operation','audit_event']){
+   let cursor=null,finished=false;
+   for(let page=0;page<100;page++){
+    const rows=(await reader.query('SELECT * FROM crest_commands.business_history_export_page($1,$2,$3,$4,5)',[f.business,context.snapshotToken,kind,cursor])).rows;
+    if(!rows.length){finished=true;break;}
+    for(const row of rows)out.push({kind,recordId:row.record_id,representation:row.representation,canonicalEvidence:row.canonical_evidence,evidenceHash:row.evidence_hash});
+    cursor=rows.at(-1).record_id;
+   }
+   assert(finished,'ordinary history must finish its bounded pages');
+  }
+  return out;
+ };
+ let later,afterLater,initial;
+ await reader.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+ try{
+  const context=(await reader.query('SELECT crest_commands.business_history_export_context($1) AS value',[f.business])).rows[0].value;
+  initial=Number(context.recordCounts.operation);assert(initial>=12);assert.equal(context.recordCounts.operation,context.recordCounts.audit_event);
+  later=await originalPlan(f,'crm.customer.save');assert.equal((await retire(f,later.original)).state,'retired');afterLater=await evidence(f);
+  const rows=await records(context),report=verifyBusinessHistoryEvidence(JSON.stringify({formatVersion:1,assurance:'snapshot_bytes_only',generationId:randomUUID(),context,evidenceBytes:rows.reduce((n,row)=>n+Buffer.byteLength(row.canonicalEvidence),0),records:rows}),{businessId:f.business});
+  assert.equal(report.records.length,initial*2);assert.equal(report.completePortableExport,false);assert.equal(report.completeBackup,false);
+  const operations=new Map(),audits=new Map();
+  for(const item of rows){
+   assert.equal(item.evidenceHash,createHash('sha256').update(item.canonicalEvidence).digest('hex'));
+   const source=JSON.parse(item.canonicalEvidence),table=item.kind==='operation'?'crest_private.operations':'crest_private.audit_events';
+   assert.deepEqual(Object.keys(source.row).sort(),coverage.tables.find(t=>t.table===table).required.toSorted());
+   assert.equal(source.row.business_id,f.business);assert.equal(source.row.actor_id,f.actor);assert.notEqual(source.row.operation_id,later.original.reference.operationId);
+   (item.kind==='operation'?operations:audits).set(source.row.operation_id,source.row);
+  }
+  for(const [id,decision] of decisions){
+   const operation=operations.get(id),audit=audits.get(id);assert(operation&&audit);
+   assert.equal(operation.command_type,'operation.retire');assert.equal(operation.id,decision.retirement.operationRowId);assert.deepEqual(JSON.parse(operation.result),decision);
+   assert.equal(audit.id,decision.retirement.auditEventId);assert.equal(audit.entity_kind,'operations');assert.equal(audit.entity_id,operation.id);assert.equal(audit.action,'retire');assert.equal(audit.reason,decision.retirement.reason);
+   assert.equal(audit.hash_input,audit.payload);assert.equal(audit.event_hash,createHash('sha256').update(audit.hash_input).digest('hex'));
+   assert.deepEqual(JSON.parse(audit.delta),{schemaVersion:1,before:null,after:{schemaVersion:1,operationRowId:operation.id,original:decision.original,recoveryEpoch:decision.retirement.recoveryEpoch,reason:decision.retirement.reason}});
+  }
+  assert.equal(operations.get(committed.original.reference.operationId).command_type,'crm.customer.save');assert.deepEqual(await evidence(f),afterLater);
+ }finally{await reader.query('ROLLBACK');}
+ await reader.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+ try{const context=(await reader.query('SELECT crest_commands.business_history_export_context($1) AS value',[f.business])).rows[0].value;assert.equal(context.recordCounts.operation,String(initial+1));assert((await records(context)).some(row=>JSON.parse(row.canonicalEvidence).row.operation_id===later.original.reference.operationId));}finally{await reader.query('ROLLBACK');await reader.end();}
+ assert.deepEqual(await evidence(f),afterLater);
+});
 test('reasons preserve Unicode and whitespace while invalid reasons create no claim',async()=>{const f=await state();for(const why of ['', ' \t\r\n','\u00a0\ufeff','bad\u0001','bad\u007f','😀'.repeat(2001)]){const plan=await originalPlan(f,'crm.customer.save'),retained=await evidence(f);await assert.rejects(retire(f,plan.original,web,why),e=>e.code==='22023');assert.deepEqual(await evidence(f),retained);}for(const why of ['v','😀'.repeat(2000),reason]){const plan=await originalPlan(f,'crm.customer.save');assert.equal((await retire(f,plan.original,web,why)).retirement.reason,why);}});
 for(const role of ['customer','vehicle','address','lead'])test('retired derived conversion '+role+' rolls back parent, every other child and all mappings',async()=>{
  const f=await state(),parent=await seed(f,'crm.lead.save'),operation=randomUUID(),conversion=randomUUID(),customerId=randomUUID(),vehicleId=randomUUID(),addressId=randomUUID();
