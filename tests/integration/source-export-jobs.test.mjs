@@ -72,6 +72,7 @@ async function historicalRunning(f,count){
  const job=randomUUID(),base=Date.now()-86400000;let rootOperation,version=0,lastLease;
  async function fact(action,change){
   const operation=randomUUID();rootOperation??=operation;
+  await client.query("SELECT set_config('crest.business_id',$1,true),set_config('crest.actor_id',$2,true),set_config('crest.operation_id',$3,true)",[f.business,f.actor,operation]);
   const before=version===0?null:await query(client,'SELECT crest_private.source_export_job_projection(j) AS value FROM crest_private.export_jobs j WHERE business_id=$1 AND id=$2',[f.business,job]);
   await client.query("INSERT INTO crest_private.operations(business_id,operation_id,actor_id,command_type,schema_version,recovery_epoch,payload_hash,created_by,origin) VALUES($1,$2,$3,$4,1,$5,repeat('d',64),$3,'manual')",[f.business,operation,f.actor,'export.'+action,f.epoch]);
   await change(operation,++version);

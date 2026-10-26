@@ -112,13 +112,13 @@ BEGIN
  NEW.leased_at:=stamp;NEW.created_at:=stamp;NEW.lease_until:=stamp+interval '15 minutes';RETURN NEW;
 END $$;
 CREATE TRIGGER export_attempt_guard BEFORE INSERT ON crest_private.export_job_attempts FOR EACH ROW EXECUTE FUNCTION crest_private.guard_source_export_attempt();
-CREATE FUNCTION crest_private.check_source_export_attempt_audit() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,pg_temp AS $$
+CREATE FUNCTION crest_private.check_source_export_attempt_audit() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $$
 BEGIN
  IF NOT EXISTS(SELECT 1 FROM crest_private.audit_events a WHERE a.business_id=NEW.business_id AND a.operation_id=NEW.operation_id AND a.actor_id=NEW.created_by AND a.entity_kind='export_jobs' AND a.entity_id=NEW.export_job_id AND a.action='claim' AND a.delta->'after'->>'lease_id'=NEW.id::text AND a.delta->'after'->>'attempt_count'=NEW.attempt_no::text AND a.delta->'after'->>'recovery_epoch'=NEW.recovery_epoch::text AND a.delta->'after'->>'lease_until'=to_char(NEW.lease_until AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')) THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_EXPORT_ATTEMPT_AUDIT_REQUIRED';END IF;
  RETURN NULL;
 END $$;
 CREATE CONSTRAINT TRIGGER export_attempt_audit AFTER INSERT ON crest_private.export_job_attempts DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION crest_private.check_source_export_attempt_audit();
-CREATE FUNCTION crest_private.check_source_export_audit() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,pg_temp AS $$
+CREATE FUNCTION crest_private.check_source_export_audit() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $$
 DECLARE j crest_private.export_jobs;
 BEGIN
  SELECT * INTO j FROM crest_private.export_jobs WHERE business_id=NEW.business_id AND id=NEW.id;
@@ -233,6 +233,13 @@ BEGIN
  RETURN crest_private.source_export_receipt(requested_business,expected_actor,operation);
 END $$;
 RESET ROLE;
+-- Deferred checks fire at outer COMMIT after the command definer returned.
+-- Give only these non-callable trigger routines the existing scoped command
+-- identity; the web caller still has no source SELECT or trigger EXECUTE.
+GRANT CREATE ON SCHEMA crest_private TO crest_command_owner;
+ALTER FUNCTION crest_private.check_source_export_attempt_audit() OWNER TO crest_command_owner;
+ALTER FUNCTION crest_private.check_source_export_audit() OWNER TO crest_command_owner;
+REVOKE CREATE ON SCHEMA crest_private FROM crest_command_owner;
 GRANT CREATE ON SCHEMA crest_commands TO crest_session_owner,crest_command_owner;
 ALTER FUNCTION crest_commands.authorize_source_export_read(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid) OWNER TO crest_session_owner;
 ALTER FUNCTION crest_commands.lock_source_export_authority(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid) OWNER TO crest_session_owner;
