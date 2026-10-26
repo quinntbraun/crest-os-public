@@ -52,9 +52,9 @@ export function createLeadEditorController(deps:Dependencies){
     const context=snapshot,authorization=proof,after=more?rows.at(-1)?.id??null:null;
     return run(async signal=>{selected=null;draft=null;history=null;rows=[];hasMore=false;emit();const result=await api.list(context.context.businessId,{search:text,afterId:after,includeLost:archived,pageSize:10},authorization,signal);live(signal);rows=result.leads;hasMore=result.hasMore;search=text;includeLost=archived;message=more?'Showing the next lead page.':'Lead search complete.';},()=>{clearPrivate();phase='unavailable';message='Lead search could not be verified. Load current records again.';});
   };
-  const open=(leadId:string,statusConfirmed=false)=>{
-    if(phase!=='ready'||!snapshot||!proof||!leadUuid(leadId))return Promise.resolve();const context=snapshot,authorization=proof;
-    return run(async signal=>{selected=null;draft=null;history=null;emit();const result=await api.history(context.context.businessId,{leadId,afterVersion:'0',pageSize:5},authorization,signal);live(signal);if(result.state==='absent'){message='This lead was not found. Load the current directory before editing.';return;}selected=result.lead;rows=rows.map(row=>row.id===selected!.id?selected!:row);draft=draftFromLead(selected);history=result;message=statusConfirmed?'Status change confirmed. Review current lead details and retained history.':'Review lead details and retained history before saving.';},()=>{clearPrivate();phase='unavailable';message='Lead details could not be verified. Load current records again.';});
+  const open=(leadId:string,confirmed:'status'|'conversion'|false=false)=>{
+    if(phase!=='ready'||!snapshot||!proof||!leadUuid(leadId))return Promise.resolve();const context=snapshot;let authorization=proof;
+    return run(async signal=>{selected=null;draft=null;history=null;emit();if(confirmed){await fresh(signal);if(snapshot!.context.businessId!==context.context.businessId||snapshot!.binding!==context.binding||snapshot!.context.recoveryEpoch!==context.context.recoveryEpoch||snapshot!.context.writeState!==context.context.writeState)throw new LeadClientError('unavailable');authorization=proof!;}const result=await api.history(context.context.businessId,{leadId,afterVersion:'0',pageSize:5},authorization,signal);live(signal);if(result.state==='absent'){message='This lead was not found. Load the current directory before editing.';return;}selected=result.lead;rows=rows.map(row=>row.id===selected!.id?selected!:row);draft=draftFromLead(selected);history=result;message=confirmed?(confirmed==='status'?'Status change confirmed.':'Conversion confirmed.')+' Review current lead details and retained history.':'Review lead details and retained history before saving.';},()=>{clearPrivate();phase='unavailable';message='Lead details could not be verified. Load current records again.';});
   };
   const moreHistory=()=>{
     if(phase!=='ready'||!snapshot||!proof||!history?.hasMore||!selected)return Promise.resolve();const context=snapshot,authorization=proof,source=selected,after=history.history.at(-1)?.after.version;if(!after)return Promise.resolve();
@@ -99,7 +99,8 @@ export function createLeadEditorController(deps:Dependencies){
   };
   function suspend(){if(!alive)return;active?.abort();active=null;clearPrivate();phase='review';message='Private lead details were cleared. Load current leads before continuing; any pending reference has been kept.';emit();}
   return Object.freeze({load,query,open,moreHistory,save,check,retry,view,suspend,
-    statusChanged(leadId:string){return selected?.id===leadId&&phase==='ready'?open(leadId,true):Promise.resolve();},
+    statusChanged(leadId:string){return selected?.id===leadId&&phase==='ready'?open(leadId,'status'):Promise.resolve();},
+    conversionChanged(leadId:string){return selected?.id===leadId&&phase==='ready'?open(leadId,'conversion'):Promise.resolve();},
     create(){if(alive&&!active&&phase==='ready'&&statusClear()){selected=null;history=null;draft=emptyLeadDraft;message='Add only the inquiry details you know. Contact, source, estimate and follow-up can remain unknown.';emit();}},
     edit(value:LeadDraft){if(alive&&!active&&phase==='ready'&&draft){draft=Object.freeze({...value});emit();}},
     dispose(){alive=false;active?.abort();active=null;clearPrivate();pending=null;}
