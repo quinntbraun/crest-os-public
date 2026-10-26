@@ -2,7 +2,7 @@
 // Actual PostgreSQL/provider schema and restricted logins; no hosted resources.
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
-import {randomUUID,randomBytes} from 'node:crypto';
+import {randomUUID,randomBytes,createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
@@ -36,7 +36,7 @@ before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);history=(await sandbox.apply(target)).history;assert.equal(history.length,42);
  const sql=await readFile(new URL('../../planning/proposals/source-export-jobs.sql',import.meta.url),'utf8');
  await client.query('ALTER ROLE crest_command_owner LOGIN');try{await client.query('BEGIN');await assert.rejects(client.query(sql),e=>e.code==='42501'&&e.message==='CREST_EXPORT_JOB_SOURCE_REVIEW_REQUIRED');unsafeRefused=true;}finally{await client.query('ROLLBACK');await client.query('ALTER ROLE crest_command_owner NOLOGIN');}
- await client.query('BEGIN');try{await client.query(sql);await client.query('COMMIT');}catch(e){await client.query('ROLLBACK');throw e;}
+ await client.query('BEGIN');try{await client.query(sql);await client.query(await readFile(new URL('../../planning/proposals/source-export-snapshots.sql',import.meta.url),'utf8'));await client.query('COMMIT');}catch(e){await client.query('ROLLBACK');throw e;}
  bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
  login='crest_export_jobs_probe_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=password;web=await sandbox.connect(url.toString());web2=await sandbox.connect(url.toString());for(const c of [web,web2]){await c.query('SET ROLE crest_web');await c.query("SET lock_timeout='3s'");}pid2=(await web2.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
 },{timeout:240000});
@@ -69,7 +69,7 @@ for(const commit of [true,false])test('two real devices wait for an identical or
 test('a live lease cannot be expired and a wrong lease/version never advances the job',async()=>{const f=await state(),job=(await request(f)).receipt.job.id,lease=randomUUID();await claim(f,job,'1',lease);const kept=await evidence(f);assert.deepEqual(await expire(f,job,'2',lease),{state:'conflict',reason:'state'});assert.deepEqual(await expire(f,job,'2',randomUUID()),{state:'conflict',reason:'state'});assert.deepEqual(await expire(f,job,'1',lease),{state:'conflict',reason:'version'});assert.deepEqual(await evidence(f),kept);});
 test('explicit stop retains attempts and original claim receipts but releases active business exclusion',async()=>{const f=await state(),job=(await request(f)).receipt.job.id,lease=randomUUID(),op=randomUUID(),original=await claim(f,job,'1',lease,op);const stopped=await stop(f,job,'2');assert.equal(stopped.receipt.job.state,'Failed');assert.equal(stopped.receipt.job.failure_code,'OWNER_STOPPED');assert.equal(stopped.receipt.job.lease_id,null);assert.deepEqual(await lookup(f,op),original);assert.deepEqual(await claim(f,job,'1',lease,op),original);assert.equal((await status(f,job)).job.state,'Failed');assert.equal((await request(f)).state,'committed');assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.export_job_attempts WHERE business_id=$1',[f.business])).rows[0].n,1);});
 test('an audit failure rolls back request and lease/attempt/operation changes atomically',async()=>{const f=await state(),job=(await request(f)).receipt.job.id,kept=await evidence(f);await client.query("ALTER TABLE crest_private.audit_events ADD CONSTRAINT synthetic_export_refusal CHECK(entity_kind<>'export_jobs') NOT VALID");try{await assert.rejects(claim(f,job),e=>e.code==='23514');assert.deepEqual(await evidence(f),kept);const other=await state(),empty=await evidence(other);await assert.rejects(request(other),e=>e.code==='23514');assert.deepEqual(await evidence(other),empty);}finally{await client.query('ALTER TABLE crest_private.audit_events DROP CONSTRAINT synthetic_export_refusal');}});
-test('frozen source metadata and retained attempts cannot be rewritten or erased',async()=>{const f=await state(),job=(await request(f)).receipt.job.id;await claim(f,job);for(const sql of ["UPDATE crest_private.export_jobs SET app_release_id=repeat('b',40),version=version+1 WHERE business_id=$1","UPDATE crest_private.export_jobs SET state='Queued',lease_id=NULL,lease_until=NULL,version=version+1 WHERE business_id=$1",'DELETE FROM crest_private.export_jobs WHERE business_id=$1','UPDATE crest_private.export_job_attempts SET lease_until=lease_until+interval \'1 minute\' WHERE business_id=$1','DELETE FROM crest_private.export_job_attempts WHERE business_id=$1'])await assert.rejects(client.query(sql,[f.business]),e=>e.code==='55000');await assert.rejects(client.query('TRUNCATE crest_private.export_job_attempts,crest_private.export_jobs'),e=>e.code==='55000');});
+test('frozen source metadata and retained attempts cannot be rewritten or erased',async()=>{const f=await state(),job=(await request(f)).receipt.job.id;await claim(f,job);for(const sql of ["UPDATE crest_private.export_jobs SET app_release_id=repeat('b',40),version=version+1 WHERE business_id=$1","UPDATE crest_private.export_jobs SET state='Queued',lease_id=NULL,lease_until=NULL,version=version+1 WHERE business_id=$1",'DELETE FROM crest_private.export_jobs WHERE business_id=$1','UPDATE crest_private.export_job_attempts SET lease_until=lease_until+interval \'1 minute\' WHERE business_id=$1','DELETE FROM crest_private.export_job_attempts WHERE business_id=$1'])await assert.rejects(client.query(sql,[f.business]),e=>e.code==='55000');await assert.rejects(client.query('TRUNCATE crest_private.export_job_snapshots,crest_private.export_job_attempts,crest_private.export_jobs'),e=>e.code==='55000');});
 test('web credentials cannot read/write raw jobs, forge GUC access or assume command ownership',async()=>{const f=await state();await request(f);await web.query("SELECT set_config('crest.business_id',$1,false),set_config('crest.actor_id',$2,false)",[f.business,f.actor]);for(const sql of ['SELECT * FROM crest_private.export_jobs','SELECT * FROM crest_private.export_job_attempts','DELETE FROM crest_private.export_jobs','UPDATE crest_private.export_jobs SET version=version+1','SET ROLE crest_command_owner'])await assert.rejects(web.query(sql),e=>e.code==='42501');assert.equal((await status(f,(await client.query('SELECT id FROM crest_private.export_jobs WHERE business_id=$1',[f.business])).rows[0].id)).state,'found');});
 
 // Administrative HISTORICAL fixture construction only, not a runtime clock
@@ -77,8 +77,8 @@ test('web credentials cannot read/write raw jobs, forge GUC access or assume com
 // disable only the two source clock/state guards inside this setup transaction;
 // all FK, immutable history, operation/audit preparation and deferred consistency
 // checks remain. Restore both guards BEFORE COMMIT and every tested web call.
-async function historicalRunning(f,count){
- const job=randomUUID(),base=Date.now()-86400000;let rootOperation,version=0,lastLease;
+async function historicalRunning(f,count,expiryInMs){
+ const job=randomUUID(),base=expiryInMs===undefined?Date.now()-86400000:Date.now()-count*3600000-900000+expiryInMs;let rootOperation,version=0,lastLease;
  async function fact(action,change){
   const operation=randomUUID();rootOperation??=operation;const original=reference(f,'export.'+action,job,operation,action==='request'?{appReleaseId:release,profile:'crest.business-source-bundle.v1',sourceSchemaVersion:43}:{expectedVersion:String(version),...(action==='stop'?{}:{leaseId:lastLease})});
   await client.query("SELECT set_config('crest.business_id',$1,true),set_config('crest.actor_id',$2,true),set_config('crest.operation_id',$3,true)",[f.business,f.actor,operation]);
@@ -111,4 +111,104 @@ for(const [attempt,minutes]of [[1,1],[2,5],[3,15],[4,60],[5,60]])test('historica
  assert.throws(()=>parseSourceExportCommitted(result,parseSourceExportCommand(reference(f,'export.expire',seed.job,operation,{expectedVersion:seed.version,leaseId:randomUUID()})),f.actor),/SOURCE_EXPORT_COMMAND_REVIEW_REQUIRED/);
  assert.equal(result.state,'committed');assert.equal(j.state,attempt===5?'Failed':'Queued');assert.equal(j.attempt_count,attempt);assert.equal(j.lease_id,null);assert.equal(j.failure_code,'LEASE_EXPIRED');assert(Date.parse(j.next_run_at)>=before+minutes*60000&&Date.parse(j.next_run_at)<=Date.now()+minutes*60000);
  assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.export_job_attempts WHERE business_id=$1',[f.business])).rows[0].n,attempt);const kept=await evidence(f);assert.deepEqual(await claim(f,seed.job,j.version),{state:'conflict',reason:'state'});assert.deepEqual(await evidence(f),kept);
+});
+const sha=text=>createHash('sha256').update(text).digest('hex');
+const acknowledgment=(stage,original)=>({formatVersion:1,stage,requestSha256:sha(original)});
+const authorizeWorker=(f,original,c=web)=>query(c,'SELECT crest_commands.authorize_source_export_worker($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS value',[...auth(f),f.epoch,original]);
+const snapshot=(f,original,c=web)=>query(c,'SELECT crest_commands.record_source_export_snapshot($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS value',[...auth(f),f.epoch,original]);
+async function snapshotFixture(){
+ const f=await state(),job=(await request(f)).receipt.job.id,lease=randomUUID();await claim(f,job,'1',lease);
+ const current={formatVersion:1,profile:'crest.business-source-bundle.v1',businessId:f.business,actorId:f.actor,exportJobId:job,recoveryEpoch:f.epoch,leaseId:lease};
+ // Preserve the database microseconds; a JS millisecond can precede this lease.
+ const observedAt=(await client.query("SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"+00:00\"') AS stamp")).rows[0].stamp;
+ const plan={formatVersion:1,claim:current,generationId:randomUUID(),observedAt,appReleaseId:release,sourceSchemaVersion:43,manifestSha256:'c'.repeat(64),parts:[{partId:randomUUID(),fileName:'example.csv',contentType:'text/csv; charset=utf-8',bytes:7,sha256:'b'.repeat(64)},{partId:randomUUID(),fileName:'source_manifest.json',contentType:'application/json',bytes:9,sha256:'c'.repeat(64)}],totalBytes:16,referenceClosureComplete:false,completePortableExport:false,completeBackup:false};
+ return {f,job,lease,current,plan,raw:()=>JSON.stringify({plan,planSha256:sha(JSON.stringify(plan))})};
+}
+async function snapshots(f){return (await client.query('SELECT to_jsonb(s) AS value FROM crest_private.export_job_snapshots s WHERE business_id=$1 ORDER BY generation_id',[f.business])).rows;}
+test('worker authorization is a fresh live-lease check and exact-byte acknowledgment with no durable mutation',async()=>{
+ const s=await snapshotFixture(),raw=JSON.stringify(s.current),before=await evidence(s.f);assert.deepEqual(await authorizeWorker(s.f,raw),acknowledgment('authorize',raw));assert.deepEqual(await evidence(s.f),before);assert.deepEqual(await snapshots(s.f),[]);
+ await stop(s.f,s.job,'2');await assert.rejects(authorizeWorker(s.f,raw),e=>e.code==='42501');
+});
+test('snapshot freezes exact original request bytes and complete plan once under the current lease',async()=>{
+ const s=await snapshotFixture(),raw=s.raw(),before=await evidence(s.f);assert.deepEqual(await snapshot(s.f,raw),acknowledgment('snapshot',raw));assert.deepEqual(await snapshot(s.f,raw),acknowledgment('snapshot',raw));const rows=await snapshots(s.f);assert.equal(rows.length,1);
+ const r=rows[0].value;assert.equal(r.generation_id,s.plan.generationId);assert.equal(r.request_text,raw);assert.equal(r.request_sha256,sha(raw));assert.equal(r.plan_sha256,sha(JSON.stringify(s.plan)));assert.equal(r.file_count,2);assert.equal(r.total_bytes,16);assert.equal(r.actor_id,s.f.actor);assert.equal(r.lease_id,s.lease);assert.equal(r.operation_id,(await status(s.f,s.job)).job.operation_id);assert.deepEqual(await evidence(s.f),before);assert.equal((await status(s.f,s.job)).job.state,'Running');
+});
+for(const mode of ['generation','inventory','root-spacing'])test('an acknowledged snapshot cannot be replaced by '+mode,async()=>{
+ const s=await snapshotFixture(),original=s.raw();await snapshot(s.f,original);const kept=await snapshots(s.f);
+ if(mode==='generation')s.plan.generationId=randomUUID();if(mode==='inventory')s.plan.parts[0].sha256='d'.repeat(64);const changed=mode==='root-spacing'?' '+original:s.raw();
+ await assert.rejects(snapshot(s.f,changed),e=>e.code==='23514'&&e.message==='CREST_EXPORT_SNAPSHOT_ALREADY_FROZEN');assert.deepEqual(await snapshots(s.f),kept);
+});
+const malformedPlans=[
+ ['extra field',p=>{p.extra='forbidden';}],
+ ['schema42',p=>{p.sourceSchemaVersion=42;}],
+ ['different release',p=>{p.appReleaseId='d'.repeat(40);}],
+ ['different actor',p=>{p.claim.actorId=randomUUID();}],
+ ['different business',p=>{p.claim.businessId=randomUUID();}],
+ ['different epoch',p=>{p.claim.recoveryEpoch=randomUUID();}],
+ ['duplicate part identity',p=>{p.parts[1].partId=p.parts[0].partId;}],
+ ['duplicate name',p=>{p.parts[0].fileName='source_manifest.json';p.parts[0].contentType='application/json';}],
+ ['manifest first',p=>{p.parts.reverse();}],
+ ['wrong MIME',p=>{p.parts[0].contentType='application/json';}],
+ ['path traversal',p=>{p.parts[0].fileName='../source.csv';}],
+ ['part limit',p=>{p.parts[0].bytes=8388609;p.totalBytes=8388618;}],
+ ['fractional bytes',p=>{p.parts[0].bytes=1.5;p.totalBytes=10.5;}],
+ ['total mismatch',p=>{p.totalBytes++;}],
+ ['root checksum mismatch',p=>{p.manifestSha256='d'.repeat(64);}],
+ ['complete backup claim',p=>{p.completeBackup=true;}],
+ ['pre-lease observation',p=>{p.observedAt='2020-01-01T00:00:00+00:00';}],
+ ['future observation',p=>{p.observedAt='2099-01-01T00:00:00+00:00';}],
+ ['invalid calendar instant',p=>{p.observedAt='2026-02-30T00:00:00+00:00';}]
+];
+for(const [label,change]of malformedPlans)test('snapshot refuses '+label+' without durable effects',async()=>{const s=await snapshotFixture(),before=await evidence(s.f);change(s.plan);await assert.rejects(snapshot(s.f,s.raw()),e=>e.code==='22023');assert.deepEqual(await snapshots(s.f),[]);assert.deepEqual(await evidence(s.f),before);});
+for(const mode of ['bad-hash','duplicate-root','duplicate-nested','malformed','oversized'])test('snapshot rejects '+mode+' original JSON before durable effects',async()=>{
+ const s=await snapshotFixture();let raw=s.raw();if(mode==='bad-hash')raw=JSON.stringify({plan:s.plan,planSha256:'e'.repeat(64)});if(mode==='duplicate-root')raw=raw.replace('{"plan":','{"plan":null,"plan":');if(mode==='duplicate-nested')raw=raw.replace('"formatVersion":1','"formatVersion":0,"formatVersion":1');if(mode==='malformed')raw='{';if(mode==='oversized')raw=' '.repeat(1048577);
+ await assert.rejects(snapshot(s.f,raw),e=>e.code==='22023');assert.deepEqual(await snapshots(s.f),[]);
+});
+for(const mode of ['revoked','provider-missing','stale','paused','epoch-changed','stopped','wrong-lease','foreign-owner'])test('snapshot and worker authorization recheck '+mode+' authority even for an original replay',async()=>{
+ const s=await snapshotFixture(),raw=s.raw();await snapshot(s.f,raw);const kept=await snapshots(s.f);let acting=s.f,claimText=JSON.stringify(s.current);
+ if(mode==='revoked')await client.query('UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),version=version+1 WHERE id=$1',[s.f.session]);
+ if(mode==='provider-missing')await client.query('DELETE FROM auth.sessions WHERE id=$1',[s.f.provider]);
+ if(mode==='stale')acting=await session(s.f,'20 minutes');
+ if(mode==='paused')await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[s.f.business]);
+ if(mode==='epoch-changed'){acting={...s.f,epoch:randomUUID()};await client.query('UPDATE crest_private.business_recovery_authorities SET active_epoch=$2,version=version+1 WHERE business_id=$1',[s.f.business,acting.epoch]);}
+ if(mode==='stopped')await stop(s.f,s.job,'2');
+ if(mode==='wrong-lease'){s.current.leaseId=randomUUID();claimText=JSON.stringify(s.current);}
+ if(mode==='foreign-owner')acting=await state();
+ for(const work of [()=>snapshot(acting,mode==='wrong-lease'?s.raw():raw),()=>authorizeWorker(acting,claimText)])await assert.rejects(work(),e=>e.code==='42501');assert.deepEqual(await snapshots(s.f),kept);
+});
+for(const commit of [true,false])test('two real devices serialize snapshot '+(commit?'commit':'rollback')+' and preserve one original plan',async()=>{
+ const s=await snapshotFixture(),second=await session(s.f),raw=s.raw();let pending;await web.query('BEGIN');
+ try{await snapshot(s.f,raw);pending=snapshot(second,raw,web2);void pending.catch(()=>undefined);await waitForLock();await web.query(commit?'COMMIT':'ROLLBACK');assert.deepEqual(await pending,acknowledgment('snapshot',raw));assert.equal((await snapshots(s.f)).length,1);}
+ finally{await web.query('ROLLBACK');await pending?.catch(()=>undefined);}
+});
+test('a competing changed snapshot waits then refuses replacement after the first commit',async()=>{
+ const s=await snapshotFixture(),second=await session(s.f),raw=s.raw();let pending;await web.query('BEGIN');
+ try{await snapshot(s.f,raw);s.plan.generationId=randomUUID();pending=snapshot(second,s.raw(),web2);void pending.catch(()=>undefined);await waitForLock();await web.query('COMMIT');await assert.rejects(pending,e=>e.message==='CREST_EXPORT_SNAPSHOT_ALREADY_FROZEN');assert.equal((await snapshots(s.f))[0].value.request_text,raw);}
+ finally{await web.query('ROLLBACK');await pending?.catch(()=>undefined);}
+});
+test('an already expired historical lease cannot authorize or freeze a new snapshot',async()=>{
+ const f=await state(),seed=await historicalRunning(f,1),s=await snapshotFixture();s.plan.claim={...s.current,businessId:f.business,actorId:f.actor,exportJobId:seed.job,recoveryEpoch:f.epoch,leaseId:seed.lease};
+ for(const work of [()=>authorizeWorker(f,JSON.stringify(s.plan.claim)),()=>snapshot(f,s.raw())])await assert.rejects(work(),e=>e.message==='CREST_EXPORT_LIVE_LEASE_REQUIRED');assert.deepEqual(await snapshots(f),[]);
+});
+for(const stage of ['authorize','snapshot'])test('lease expiry while a real '+stage+' caller waits on the job refuses acknowledgment',async()=>{
+ const f=await state(),seed=await historicalRunning(f,1,2500),s=await snapshotFixture();s.plan.claim={...s.current,businessId:f.business,actorId:f.actor,exportJobId:seed.job,recoveryEpoch:f.epoch,leaseId:seed.lease};let pending;
+ await client.query('BEGIN');try{
+  await client.query('SELECT id FROM crest_private.export_jobs WHERE business_id=$1 AND id=$2 FOR UPDATE',[f.business,seed.job]);
+  pending=stage==='authorize'?authorizeWorker(f,JSON.stringify(s.plan.claim),web2):snapshot(f,s.raw(),web2);void pending.catch(()=>undefined);await waitForLock();
+  const deadline=Date.now()+5000;while(!(await client.query('SELECT lease_until<=clock_timestamp() AS expired FROM crest_private.export_jobs WHERE business_id=$1 AND id=$2',[f.business,seed.job])).rows[0].expired){assert(Date.now()<deadline);await client.query('SELECT pg_sleep(0.05)');}
+  await client.query('COMMIT');await assert.rejects(pending,e=>e.message==='CREST_EXPORT_LIVE_LEASE_REQUIRED');assert.deepEqual(await snapshots(f),[]);
+ }finally{await client.query('ROLLBACK');await pending?.catch(()=>undefined);}
+});
+test('a maximum1024-file64MiB snapshot plan retains exact original bytes within the fixed journal limit',async()=>{
+ const s=await snapshotFixture();s.plan.parts=Array.from({length:1023},(_,i)=>({partId:randomUUID(),fileName:'file_'+String(i).padStart(4,'0')+'.csv',contentType:'text/csv; charset=utf-8',bytes:i<7?8388608:i===7?8388608-1016:1,sha256:'b'.repeat(64)}));s.plan.parts.push({partId:randomUUID(),fileName:'source_manifest.json',contentType:'application/json',bytes:1,sha256:s.plan.manifestSha256});s.plan.totalBytes=67108864;
+ const raw=s.raw();assert(Buffer.byteLength(raw)<1048576);assert.deepEqual(await snapshot(s.f,raw),acknowledgment('snapshot',raw));const r=(await snapshots(s.f))[0].value;assert.equal(r.file_count,1024);assert.equal(r.total_bytes,67108864);assert.equal(r.request_text,raw);
+});
+for(const mode of ['file-count','total-bytes'])test('snapshot rejects the extra '+mode+' beyond its bounded inventory',async()=>{
+ const s=await snapshotFixture(),count=mode==='file-count'?1024:8;s.plan.parts=Array.from({length:count},(_,i)=>({partId:randomUUID(),fileName:'file_'+String(i).padStart(4,'0')+'.csv',contentType:'text/csv; charset=utf-8',bytes:mode==='file-count'?1:8388608,sha256:'b'.repeat(64)}));s.plan.parts.push({partId:randomUUID(),fileName:'source_manifest.json',contentType:'application/json',bytes:1,sha256:s.plan.manifestSha256});s.plan.totalBytes=s.plan.parts.reduce((n,p)=>n+p.bytes,0);
+ await assert.rejects(snapshot(s.f,s.raw()),e=>e.code==='22023');assert.deepEqual(await snapshots(s.f),[]);
+});
+test('snapshot persistence refuses raw web access, helper execution and retained-history removal',async()=>{
+ const s=await snapshotFixture();await snapshot(s.f,s.raw());const kept=await snapshots(s.f);
+ for(const sql of ['SELECT * FROM crest_private.export_job_snapshots','DELETE FROM crest_private.export_job_snapshots',"SELECT crest_private.export_json_object('{}',ARRAY[]::text[])","SELECT crest_private.guard_source_export_snapshot()"])await assert.rejects(web.query(sql),e=>e.code==='42501');
+ for(const sql of ['DELETE FROM crest_private.export_job_snapshots WHERE business_id=$1','UPDATE crest_private.export_job_snapshots SET request_text=request_text WHERE business_id=$1'])await assert.rejects(client.query(sql,[s.f.business]),e=>e.code==='55000');await assert.rejects(client.query('TRUNCATE crest_private.export_job_snapshots'),e=>e.code==='55000');assert.deepEqual(await snapshots(s.f),kept);
 });
