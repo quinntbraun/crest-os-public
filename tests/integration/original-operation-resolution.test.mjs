@@ -17,6 +17,7 @@ import {createBusinessSourceCollector} from '../../src/security/business-foundat
 import {formatBusinessFoundationBundle} from '../../src/security/business-foundation-bundle.ts';
 import {verifyBusinessFoundationEvidence} from '../../src/security/business-configuration-evidence.ts';
 import {readCustomerCsv} from '../support/customer-fixture.ts';
+import {formatBusinessSourceBundle} from '../../src/security/business-source-bundle.ts';
 
 let sandbox,target,client,web,web2,bootstrap,login,pid2,prior,registered,unsafeOwnerRefused=false;
 let recovery,restored,restoredWeb,recoveryOwner,recoveryPlans,recoveryDecisions,recoveryOriginal,recoveryCommitted,recoveryHistory,recoveryBackup,sourceAfterCapture,postSnapshot;
@@ -275,6 +276,21 @@ test('business source collector captures every command-generated CRM source and 
    assert.deepEqual(decoded,records,entity+' CSV must retain every captured column');
   }
   assert.equal(manifest.completePortableExport,false);assert.equal(manifest.completeBackup,false);assert.deepEqual(await evidence(f),before);
+  const allSealed=formatBusinessSourceBundle(sealed,{businessId:f.business,appReleaseId:'a'.repeat(40),sourceSchemaVersion:42}),all=allSealed.forServer(),allManifest=JSON.parse(all.manifest);
+  assert.throws(()=>JSON.stringify(allSealed),/BUSINESS_SOURCE_BUNDLE_REVIEW_REQUIRED/);assert.equal(all.parts.filter(p=>p.name.endsWith('.csv')).length,19);
+  for(const [index,p]of all.parts.entries()){assert.equal(p.bytes,Buffer.byteLength(p.content));assert.equal(p.sha256,createHash('sha256').update(p.content).digest('hex'));assert.deepEqual(allManifest.parts[index],{name:p.name,contentType:p.contentType,bytes:p.bytes,sha256:p.sha256});}
+  const text=name=>{const p=all.parts.find(p=>p.name===name);assert(p);return p.content;};
+  const csvEntities={customers:'customers',addresses:'addresses',vehicles:'vehicles',associations:'customer_vehicles',leadSources:'lead_sources',leads:'leads',leadEvents:'lead_events',leadVehicles:'lead_vehicles',leadAddresses:'lead_addresses',conversions:'lead_conversions',links:'conversion_links'};
+  for(const [name,, ,field]of sourceInventory){
+   const collection=allManifest.sourceCollections[name],originalContext=crm.contexts[name==='links'?'conversions':name];assert.equal(text(collection.context),originalContext);assert.deepEqual(collection.pages.map(text),crm.pages[name]);
+   const at=all.parts.findIndex(p=>p.name===csvEntities[name]+'.csv'),matrix=readCustomerCsv(all.parts[at].content),columns=matrix.shift(),escapes=JSON.parse(all.parts[at+1].content).escapes;
+   const decoded=matrix.map(cells=>Object.fromEntries(columns.map((column,index)=>{
+    let cell=cells[index];if(cell==='\\N')return[column,null];if(escapes.some(e=>e.row_id===cells[columns.indexOf('id')]&&e.column===column)){assert(cell.startsWith("'"));cell=cell.slice(1);}cell=cell.replaceAll('\\\\','\\');
+    if(['outreach_opt_out','is_billing','active'].includes(column)){assert(['true','false'].includes(cell));cell=cell==='true';}if(['source_snapshot','reported_vehicle','requested_services','request'].includes(column))cell=JSON.parse(cell);return[column,cell];
+   })));
+   assert.deepEqual(decoded,crm.pages[name].flatMap(p=>JSON.parse(p)[field]),name+' source and CSV must agree on every field');
+  }
+  assert.equal(allManifest.evidenceBytes,value.evidenceBytes);assert.equal(allManifest.recordCount,value.recordCount);assert.equal(allManifest.completePortableExport,false);assert.equal(allManifest.completeBackup,false);assert.deepEqual(await evidence(f),before);
  });
 });
 test('business source collector keeps CRM rows and their audit history on the original real snapshot across a concurrent command', {timeout:30000},async()=>{
