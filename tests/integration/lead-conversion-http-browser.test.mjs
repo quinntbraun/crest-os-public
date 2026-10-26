@@ -55,7 +55,7 @@ before(async()=>{
   const runtime=await createAuthenticationRuntime({database:{connectionString:database.toString(),environment:'test'},provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
     owner:{subject:user.id,factorId:factor.id},loginKey:randomBytes(32),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:randomBytes(32)}]});
   assert.throws(()=>JSON.stringify(runtime),/AUTHENTICATION_RUNTIME_PRIVATE/);
-  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},leads:true,leadConversions:true,customers:true,vehicles:true});
+  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},leads:true,leadConversions:true,customers:true,vehicles:true,operationResolution:true});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);
 });
@@ -138,6 +138,47 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
      assert.deepEqual(await lookupClient(page,original,proof),receipt);
      const outcome=await page.evaluate(async({business,c,proof})=>{const {businessId:ignored,...input}=c;void ignored;const api=globalThis.crestConversionFixture.leadConversions,parent=await api.read(business,c.leadId,proof,new AbortController().signal);try{await api.convert(business,input,proof,new AbortController().signal);return {parent,kind:'incorrect-success'};}catch(e){return {parent,kind:e.kind};}},{business,c:original,proof});assert.equal(outcome.kind,'recovery');assert.equal(outcome.parent.conversion.id,original.conversionId);
     }finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);}
+   });
+   await t.test('owner review resolves a dropped retirement response, paused historical lookup and exact local acknowledgment',async()=>{
+    proof=(await send(page,'auth/session')).body;const context=await send(page,'business/customers/context',{},proof.csrfToken);assert.equal(context.status,200);
+    const ref={operationId:randomUUID(),recoveryEpoch:context.body.recoveryEpoch,customerId:randomUUID(),expectedVersion:'0'},key='crest.customer.pending-reference.v1';
+    const pending={schemaVersion:1,businessId:business,binding:context.binding,reference:ref};await page.evaluate(({key,pending})=>sessionStorage.setItem(key,JSON.stringify(pending)),{key,pending});
+    await page.goto(origin+'/save-review');await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toBeVisible();await page.getByLabel('Reason for retiring this original save',{exact:true}).fill('Owner reviewed lost synthetic draft é 😀\nKeep exact original reference.');
+    await page.getByRole('button',{name:'Review retirement',exact:true}).click();await expect(page.getByRole('heading',{name:'Confirm retirement',exact:true})).toBeVisible();
+    let calls=0;const pattern='**/api/business/original-operations/retire',drop=async route=>{calls++;assert.equal((await route.fetch()).status(),200);await route.abort('failed');};await page.route(pattern,drop);
+    try{await page.getByRole('button',{name:'Confirm retirement of this original save',exact:true}).click();await expect(page.getByRole('status')).toContainText('The outcome could not be verified');}finally{await page.unroute(pattern,drop);}
+    assert.equal(calls,1);assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);assert.equal((await client.query('SELECT command_type FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,ref.operationId])).rows[0].command_type,'operation.retire');assert.equal((await client.query('SELECT count(*)::int AS n FROM crest.customers WHERE id=$1',[ref.customerId])).rows[0].n,0);
+    await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,active_epoch=$2,version=version+1 WHERE business_id=$1',[business,randomUUID()]);
+    try{
+     await page.getByRole('button',{name:'Check original resolution',exact:true}).click();await expect(page.getByRole('status')).toContainText('The original save is retired');assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);
+     await page.getByRole('button',{name:'Acknowledge retirement and release local reference',exact:true}).click();await expect(page.getByRole('status')).toContainText('The retired save reference is released');assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),null);
+    }finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);}
+    proof=(await send(page,'auth/session')).body;
+   });
+   await t.test('owner review of a recorded conversion verifies the actual typed original receipt before release',async()=>{
+    proof=(await send(page,'auth/session')).body;const context=await send(page,'business/customers/context',{},proof.csrfToken);assert.equal(context.status,200);
+    const key='crest.lead-conversion.pending-reference.v1',pending={schemaVersion:1,businessId:business,binding:context.binding,reference:reference(original)};await page.evaluate(({key,pending})=>sessionStorage.setItem(key,JSON.stringify(pending)),{key,pending});
+    await page.goto(origin+'/save-review');await page.getByLabel('Interrupted save type',{exact:true}).selectOption('crm.lead.convert');await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toBeVisible();
+    await page.getByRole('button',{name:'Check original resolution',exact:true}).click();await expect(page.getByRole('status')).toContainText('The original request was recorded');assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);
+    const verified=page.waitForResponse(response=>response.url()===origin+'/api/business/leads/conversion-operation'&&response.request().method()==='POST');
+    await page.getByRole('button',{name:'Verify original save receipt',exact:true}).click();assert.equal((await verified).status(),200);await expect(page.getByRole('status')).toContainText('The original save receipt is verified');assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),null);
+    assert.equal((await client.query('SELECT command_type FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,original.operationId])).rows[0].command_type,'crm.lead.convert');proof=(await send(page,'auth/session')).body;
+   });
+   await t.test('changed recovery authority blocks a reviewed retirement until fresh owner review without rebasing the original',async()=>{
+    proof=(await send(page,'auth/session')).body;const context=await send(page,'business/customers/context',{},proof.csrfToken);assert.equal(context.status,200);
+    const key='crest.customer.pending-reference.v1',ref={operationId:randomUUID(),recoveryEpoch:context.body.recoveryEpoch,customerId:randomUUID(),expectedVersion:'0'},pending={schemaVersion:1,businessId:business,binding:context.binding,reference:ref};
+    await page.evaluate(({key,pending})=>sessionStorage.setItem(key,JSON.stringify(pending)),{key,pending});await page.goto(origin+'/save-review');
+    await page.getByLabel('Reason for retiring this original save',{exact:true}).fill('Private discarded review reason');await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));
+    await expect(page.getByRole('status')).toContainText('Private review details were cleared');await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toHaveCount(0);assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);
+    await page.getByRole('button',{name:'Load original save review',exact:true}).click();await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toHaveValue('');await page.getByLabel('Reason for retiring this original save',{exact:true}).fill('Reason before recovery change');await page.getByRole('button',{name:'Review retirement',exact:true}).click();await expect(page.getByRole('heading',{name:'Confirm retirement',exact:true})).toBeVisible();
+    await client.query('UPDATE crest_private.business_recovery_authorities SET active_epoch=$2,version=version+1 WHERE business_id=$1',[business,randomUUID()]);
+    let requests=0;const count=request=>{if(request.url()===origin+'/api/business/original-operations/retire')requests++;};page.on('request',count);
+    try{await page.getByRole('button',{name:'Confirm retirement of this original save',exact:true}).click();await expect(page.getByRole('status')).toContainText('Access or recovery changed after review');assert.equal(requests,0);}finally{page.off('request',count);}
+    assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,ref.operationId])).rows[0].n,0);
+    await page.getByRole('button',{name:'Load original save review',exact:true}).click();await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toHaveValue('');
+    await page.getByLabel('Reason for retiring this original save',{exact:true}).fill('Fresh owner review of the same original');await page.getByRole('button',{name:'Review retirement',exact:true}).click();await page.getByRole('button',{name:'Confirm retirement of this original save',exact:true}).click();await expect(page.getByRole('status')).toContainText('The original save is retired');
+    assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)).reference,ref);await page.getByRole('button',{name:'Acknowledge retirement and release local reference',exact:true}).click();await expect(page.getByRole('status')).toContainText('The retired save reference is released');
+    await page.getByRole('link',{name:'Load current customers',exact:true}).click();await expect(page.getByRole('button',{name:'Add customer',exact:true})).toBeVisible();proof=(await send(page,'auth/session')).body;
    });
    await t.test('fabricated authority and revoked sessions return no conversion or financial/customer evidence',async()=>{
     const invalid={...leadConversionToWire(original),businessId:randomUUID()};assert.equal((await send(page,root+'convert',invalid,proof.csrfToken)).status,400);

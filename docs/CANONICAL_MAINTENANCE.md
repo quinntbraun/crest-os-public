@@ -1,6 +1,6 @@
 # Public canonical maintenance
 
-Version: 1.2 | 2026-10-23 | Calendar amendment and ADR36 technical maintenance decision
+Version: 1.3 | 2026-10-25 | ADR42 explicit original-operation retirement
 
 PUBLICATION.md records the explicitly authorized fresh public baseline, privacy changes, version register and retained private provenance. The original private manifest is unchanged and is never represented as verifying these redacted bytes.
 
@@ -65,3 +65,13 @@ ARCHITECTURE_DECISIONS.md: prior amended SHA256 3065eda1d9f1f67fbdb0d2f0faabbc29
 ROADMAP.md: prior amended SHA256 9d71c24347c64fb3c6f46a355b82cfcd9954f4356e08af75fe648e7c7f99ecba, 10200 bytes at PR66/main8dc8d16ef9868490197db412b88a46d6b8f9b3ff; now version1.6, SHA256 48f297ee47a7e3c455308165d551b47af131a9056143715c7d190ed4e726c4d8, 11259 bytes. Original baseline hash/length retained.
 
 PUBLICATION.md: prior amended SHA256 91707d64d4479dccb7276c1fe0e56435569df4fc8ad54dbcceb50b5574980bee, 5854 bytes at PR66/main8dc8d16ef9868490197db412b88a46d6b8f9b3ff; now version1.7, SHA256 c9d6f8ae426b680ba03b686b559860e685834b551866f1423ea6b2131e2d8bd9, 5855 bytes. Original baseline hash/length retained.
+
+## 2026-10-25 - Explicit unresolved nonfinancial-operation retirement
+
+The owner's ongoing implementation/efficiency request authorizes closing the finite lost-draft workflow dependency. ADR42 selects an immutable audited retirement competing on the existing original operation claim; fresh recent owner/current recovery authority and exact original evidence remain mandatory. A committed original stays unchanged; absence is not a terminal decision. No financial cancellation, undo, automatic retry/replacement, draft reconstruction, authority from IDs, paid service or production approval is introduced. ARCHITECTURE1.7 cross-references this explicit protocol and PUBLICATION1.8 advances the register. Same12 distinct amended documents; nine other amended documents, original baseline manifest/identities and all41 prior SQL remain unchanged. Registered42 copies the proven executable exactly; its historical proposal comment is retained provenance, not the registration authority. Independent registered recovery and full consumer/release gates remain required.
+
+ARCHITECTURE.md: prior amended SHA256 3b404f7d81b2c02ece6761881989a275909c82db295a603aafde8f33149f97e4, 38006 bytes at accepted-main integration6e3604d5384c03d50315adf7586b82700edcd710; now version1.7, SHA256 a6322ebe8d030ee1875bdae1e976a2372af8a12da06f6253eb973d005613dbd1, 38680 bytes. Original baseline hash/length retained.
+
+ARCHITECTURE_DECISIONS.md: prior amended SHA256 cb82df85e1503bbe44193c1fb6d5bdf5f51d4c8f09609b1e6e3434dd04ef65f6, 44926 bytes at accepted-main integration6e3604d5384c03d50315adf7586b82700edcd710; now version1.13, SHA256 067b07cccee091ef3c4018e3a42d76bfdcf467664b8100ca68bdfce25861c68b, 49984 bytes. Original baseline hash/length retained.
+
+PUBLICATION.md: prior amended SHA256 c9d6f8ae426b680ba03b686b559860e685834b551866f1423ea6b2131e2d8bd9, 5855 bytes at accepted-main integration6e3604d5384c03d50315adf7586b82700edcd710; now version1.8, SHA256 14dcd0b082ee74abd1d6c760bee09e9111b32d9e199963e06a37577880808e85, 5868 bytes. Original baseline hash/length retained.

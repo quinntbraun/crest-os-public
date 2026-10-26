@@ -68,7 +68,7 @@ export function AddressScreen({customerId}:{customerId:string|null}){
   </>}
   {view.phase==='pending'&&<><p className="field-help">An earlier address save is awaiting review. Its original customer is used even if you opened a different customer link. No retry runs automatically.</p>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check address save status</button>{view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('retry')}>Retry original address change</button>}</>}
   {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current addresses</button>}
-  <nav aria-label="Address navigation"><Link href="/customers">Customer directory</Link><Link href="/sign-in">Device sign-in and sign-out</Link><Link href="/">Crest OS home</Link></nav>
+<nav aria-label="Address navigation"><Link href="/save-review">Review interrupted save</Link><Link href="/customers">Customer directory</Link><Link href="/sign-in">Device sign-in and sign-out</Link><Link href="/">Crest OS home</Link></nav>
   <p className="field-help">Setup and synthetic testing are still in progress. This screen does not approve real records or production use.</p>
  </section>;
 }

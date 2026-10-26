@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "date": "2026-10-24",
+  "date": "2026-10-25",
   "baselineCommit": "34558ed3df4f339e45b8d1a012a2e2d1246e3546",
   "changeRecord": "CANONICAL_MAINTENANCE.md",
   "amendments": [
@@ -26,19 +26,19 @@
       "name": "ARCHITECTURE.md",
       "originalSha256": "80bb086a9369a25ae12053bda5f17eca06a199c21e496bdf329f05d025ab55af",
       "originalBytes": 35977,
-      "version": "1.6",
-      "sha256": "3b404f7d81b2c02ece6761881989a275909c82db295a603aafde8f33149f97e4",
-      "bytes": 38006,
-      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+      "version": "1.7",
+      "sha256": "a6322ebe8d030ee1875bdae1e976a2372af8a12da06f6253eb973d005613dbd1",
+      "bytes": 38680,
+      "reason": "2026-10-25 owner continued implementation/efficiency request, ADR42 explicit original-operation retirement; see CANONICAL_MAINTENANCE.md"
     },
     {
       "name": "ARCHITECTURE_DECISIONS.md",
       "originalSha256": "11acb9dc027cc8427823522193cb5518ab499dc8521c2682e4797ff6c0a47867",
       "originalBytes": 17703,
-      "version": "1.12",
-      "sha256": "cb82df85e1503bbe44193c1fb6d5bdf5f51d4c8f09609b1e6e3434dd04ef65f6",
-      "bytes": 44926,
-      "reason": "2026-10-24 owner continued implementation/efficiency request, ADR41 scoped customer directory and synthetic construction overlap; see CANONICAL_MAINTENANCE.md"
+      "version": "1.13",
+      "sha256": "067b07cccee091ef3c4018e3a42d76bfdcf467664b8100ca68bdfce25861c68b",
+      "bytes": 49984,
+      "reason": "2026-10-25 owner continued implementation/efficiency request, ADR42 explicit original-operation retirement; see CANONICAL_MAINTENANCE.md"
     },
     {
       "name": "DATABASE.md",
@@ -107,10 +107,10 @@
       "name": "PUBLICATION.md",
       "originalSha256": "f53bcc738639bdf8d336cf970fd0c83715153becd536ab265bf442bdcfce5932",
       "originalBytes": 5584,
-      "version": "1.7",
-      "sha256": "c9d6f8ae426b680ba03b686b559860e685834b551866f1423ea6b2131e2d8bd9",
-      "bytes": 5855,
-      "reason": "2026-10-24 owner continued implementation/efficiency request, ADR41 scoped customer directory and synthetic construction overlap; see CANONICAL_MAINTENANCE.md"
+      "version": "1.8",
+      "sha256": "14dcd0b082ee74abd1d6c760bee09e9111b32d9e199963e06a37577880808e85",
+      "bytes": 5868,
+      "reason": "2026-10-25 owner continued implementation/efficiency request, ADR42 explicit original-operation retirement; see CANONICAL_MAINTENANCE.md"
     }
   ]
 }

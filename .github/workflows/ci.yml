@@ -79,6 +79,8 @@ jobs:
           npm run test:lead-addresses-db
       - name: Install pinned recovery tooling
         run: node scripts/install-recovery-tools.mjs
+      - name: Prove registered original-operation retirement, complete source and independent encrypted recovery
+        run: npm run test:operation-resolution-db
       - name: Prove registered atomic conversion, source export and encrypted recovery
         run: node --conditions=react-server --test --test-concurrency=1 tests/integration/lead-conversion.test.mjs
       - name: Encrypted isolated database recovery drill
