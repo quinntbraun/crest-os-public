@@ -52,11 +52,17 @@ before(async()=>{
   }catch{res.destroy();}
  });
  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});origin='http://127.0.0.1:'+server.address().port;
+});
+after(async()=>{client?.destroy();server?.closeAllConnections();if(server)await new Promise(resolve=>server.close(resolve));});
+beforeEach(async()=>{
+ // Each case owns its SDK connection pool. Closing server sockets while
+ // reusing the old pool races its next keep-alive request on Linux, producing
+ // ECONNRESET before the fixture observes a PUT. Keep real within-case reuse,
+ // signing, one-attempt writes and all deliberate interrupted-I/O assertions.
+ client?.destroy();server.closeAllConnections();mode='normal';objects=new Map();requests=[];seen=undefined;
  client=new S3Client({region:'auto',endpoint:origin,forcePathStyle:true,credentials:{accessKeyId:access,secretAccessKey:secret},maxAttempts:1,requestChecksumCalculation:'WHEN_REQUIRED',responseChecksumValidation:'WHEN_REQUIRED'});
  store=await createEncryptedExportPartStore(client,bucket,'export1',[{id:'export1',key}]);
 });
-after(async()=>{client?.destroy();server?.closeAllConnections();if(server)await new Promise(resolve=>server.close(resolve));});
-beforeEach(()=>{server.closeAllConnections();mode='normal';objects=new Map();requests=[];seen=undefined;});
 const signal=()=>new AbortController().signal;
 const denied=(work,code='EXPORT_OBJECT_REVIEW_REQUIRED')=>assert.rejects(work,e=>e instanceof ExportObjectError&&e.code===code&&e.message===code&&e.cause===undefined);
 async function saved(s=store,b=binding(),bytes=plain){const prepared=await s.prepare(bytes,b,signal()),expected=prepared.intentForServer();return {prepared,expected,b,receipt:await s.writeCandidate(prepared,signal())};}

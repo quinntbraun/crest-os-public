@@ -14,6 +14,9 @@ import {decodeCustomerCsv} from '../support/customer-fixture.ts';
 import {backupDatabase,connect,keyPair,privateWorkspace,recoveryCluster,inventory,run} from '../support/recovery-drill.mjs';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import {createBusinessSourceCollector} from '../../src/security/business-foundation-collector.ts';
+import {formatBusinessFoundationBundle} from '../../src/security/business-foundation-bundle.ts';
+import {verifyBusinessFoundationEvidence} from '../../src/security/business-configuration-evidence.ts';
+import {readCustomerCsv} from '../support/customer-fixture.ts';
 
 let sandbox,target,client,web,web2,bootstrap,login,pid2,prior,registered,unsafeOwnerRefused=false;
 let recovery,restored,restoredWeb,recoveryOwner,recoveryPlans,recoveryDecisions,recoveryOriginal,recoveryCommitted,recoveryHistory,recoveryBackup,sourceAfterCapture,postSnapshot;
@@ -250,6 +253,28 @@ test('business source collector captures every command-generated CRM source and 
   }
   assert(crm.pages.customers.length>=2);assert.equal(crm.recordCount,count);assert.equal(count+['configuration','identity','history'].reduce((n,k)=>n+JSON.parse(value[k]).records.length,0),value.recordCount);
   assert(value.crm.includes('-89.00000000000000000001'));assert.equal(JSON.parse(crm.pages.links[0]).links.length,2);assert.deepEqual(await evidence(f),before);
+  const bundle=formatBusinessFoundationBundle(value,{businessId:f.business}),formatted=bundle.forServer(),manifest=JSON.parse(formatted.manifest);
+  assert.throws(()=>JSON.stringify(bundle),/BUSINESS_FOUNDATION_BUNDLE_REVIEW_REQUIRED/);
+  const part=name=>{const value=formatted.parts.find(p=>p.name===name);assert(value);assert.equal(value.bytes,Buffer.byteLength(value.content));assert.equal(value.sha256,createHash('sha256').update(value.content).digest('hex'));assert(value.bytes<=8*1024*1024);return value.content;};
+  const restored={};
+  for(const name of ['configuration','identity','history']){
+   const collection=manifest.sourceCollections[name],records=collection.pages.flatMap((file,index)=>{const page=JSON.parse(part(file));assert.equal(page.page,index+1);assert.equal(page.group,name);assert.equal(page.generationId,value.generationId);assert.deepEqual(page.context,collection.context);return page.records;});
+   assert.deepEqual(records,JSON.parse(value[name]).records);
+   restored[name]=JSON.stringify({formatVersion:1,assurance:'snapshot_bytes_only',generationId:value.generationId,context:collection.context,evidenceBytes:collection.evidenceBytes,records});
+  }
+  verifyBusinessFoundationEvidence(restored.configuration,restored.identity,restored.history,{businessId:f.business});
+  const entities={business:'businesses',membership:'memberships',recovery_authority:'business_recovery_authorities',actor:'actors',role_capability:'role_capabilities',identity_event:'identity_events',operation:'operations',audit_event:'audit_events'};
+  for(const [kind,entity]of Object.entries(entities)){
+   const records=['configuration','identity','history'].flatMap(name=>JSON.parse(value[name]).records).filter(row=>row.kind===kind).map(row=>JSON.parse(row.canonicalEvidence).row);
+   const matrix=readCustomerCsv(part(entity+'.csv')),columns=matrix.shift(),dictionary=JSON.parse(part(entity+'_dictionary.json')),escapes=JSON.parse(part(entity+'_escape_map.json')).escapes;
+   const decoded=matrix.map(cells=>Object.fromEntries(columns.map((column,index)=>{
+    let cell=cells[index];if(cell==='\\N')return[column,null];
+    if(escapes.some(e=>e.row_id===cells[columns.indexOf('id')]&&e.column===column)){assert(cell.startsWith("'"));cell=cell.slice(1);}
+    cell=cell.replaceAll('\\\\','\\');if(dictionary.booleanColumns?.includes(column))cell=cell==='true';if(['schema_version','result_schema_version'].includes(column))cell=Number(cell);return[column,cell];
+   })));
+   assert.deepEqual(decoded,records,entity+' CSV must retain every captured column');
+  }
+  assert.equal(manifest.completePortableExport,false);assert.equal(manifest.completeBackup,false);assert.deepEqual(await evidence(f),before);
  });
 });
 test('business source collector keeps CRM rows and their audit history on the original real snapshot across a concurrent command', {timeout:30000},async()=>{
