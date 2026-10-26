@@ -10,7 +10,7 @@ The [customer directory core](planning/PHASE_4_CUSTOMER_DIRECTORY.md), [private 
 
 The [private export worker](planning/PHASE_4_SOURCE_EXPORT_DELIVERY.md#bounded-worker-and-durable-journal-protocol) connects consistent source capture, independent file verification and encrypted custody with explicit durable-journal acknowledgment requirements. Real SDK/HTTP tests exercise all95 files and uncertain outcomes. The database queue/lease/journal adapter and owner request/download screens remain unfinished; the worker has no runtime route or authorization of its own.
 
-The [durable request and lease core](planning/PHASE_4_EXPORT_JOB_JOURNAL.md) passed all29 genuine database cases and66 focused tests for its typed original-command/receipt boundary. Its next unregistered continuation adds an immutable original-byte upload plan and fresh live-lease authorization, with47 additional database cases awaiting execution. Adoption, encrypted part records, verified custody, Ready state and owner delivery remain gated.
+The [durable export journal](planning/PHASE_4_EXPORT_JOB_JOURNAL.md) has accepted request/lease and immutable snapshot-plan behavior, including76 genuine database cases and66 focused command/receipt tests. Its next unregistered continuation adds original encrypted part intents and separate verification records, with62 additional database/HTTP cases awaiting execution. Adoption, actual worker composition, Ready state and owner delivery remain gated.
 
 The [private object storage boundary](planning/PHASE_3_PRIVATE_OBJECTS.md) adds scoped staging PUTs, bounded checksummed intake and conditional immutable original candidates. Format validation, typed attachment publication and authorized reads remain unfinished.
 
