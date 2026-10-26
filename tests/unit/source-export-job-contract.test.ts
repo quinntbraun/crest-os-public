@@ -5,14 +5,24 @@ import type {SourceExportCommand,SourceExportJob} from '../../src/security/sourc
 const error='SOURCE_EXPORT_COMMAND_REVIEW_REQUIRED',profile='crest.business-source-bundle.v1',stamp='2026-10-26T01:02:03.123456Z';
 function fixture(kind:SourceExportCommand['commandType']='export.request',expectedVersion='1'){
  const businessId=randomUUID(),actor=randomUUID(),epoch=randomUUID(),operationId=randomUUID(),jobId=randomUUID(),leaseId=randomUUID();
- const command=parseSourceExportCommand({schemaVersion:1,businessId,commandType:kind,reference:{operationId,recoveryEpoch:epoch,exportJobId:jobId,...(kind==='export.request'?{appReleaseId:'a'.repeat(40),profile,sourceSchemaVersion:43}:{expectedVersion,...(kind==='export.stop'?{}:{leaseId})})}});
+ const command=parseSourceExportCommand({schemaVersion:1,businessId,commandType:kind,reference:{operationId,recoveryEpoch:epoch,exportJobId:jobId,...(kind==='export.request'?{appReleaseId:'a'.repeat(40),profile,sourceSchemaVersion:43}:{expectedVersion,...(kind==='export.stop'?{}:{leaseId}),...(kind==='export.ready'?{generationId:randomUUID(),requestSha256:'c'.repeat(64)}:{})})}});
  const job:{-readonly [K in keyof SourceExportJob]:SourceExportJob[K]}={id:jobId,business_id:businessId,actor_id:actor,profile,app_release_id:'a'.repeat(40),source_schema_version:43,recovery_epoch:epoch,request_operation_id:kind==='export.request'?operationId:randomUUID(),state:kind==='export.claim'?'Running':kind==='export.stop'?'Failed':'Queued',attempt_count:kind==='export.request'?0:1,lease_id:kind==='export.claim'?leaseId:null,lease_until:kind==='export.claim'?'2026-10-26T01:17:03.123456Z':null,next_run_at:kind==='export.expire'?'2026-10-26T01:03:03.123456Z':stamp,failure_code:kind==='export.stop'?'OWNER_STOPPED':kind==='export.expire'?'LEASE_EXPIRED':null,version:kind==='export.request'?'1':String(BigInt(expectedVersion)+1n),created_at:stamp,updated_at:stamp,created_by:actor,updated_by:actor,origin:'manual',operation_id:operationId,import_row_id:null};
+ if(kind==='export.ready')job.state='Ready';
  const result={state:'committed',operationId,recoveryEpoch:epoch,receipt:{schemaVersion:1,command,job,auditEventId:randomUUID()}};
  return {businessId,actor,epoch,operationId,jobId,leaseId,command,job,result};
 }
-it.each(['export.request','export.claim','export.expire','export.stop'] as const)('binds every original %s reference and exact original source projection',kind=>{
+it.each(['export.request','export.claim','export.expire','export.stop','export.ready'] as const)('binds every original %s reference and exact original source projection',kind=>{
  const f=fixture(kind),read=parseSourceExportCommitted(f.result,f.command,f.actor);expect(read).toEqual(f.result);for(const value of [read,read.receipt,read.receipt.command,read.receipt.command.reference,read.receipt.job])expect(Object.isFrozen(value)).toBe(true);
  expect(read.receipt.job.created_at).toBe(stamp);expect(read.receipt.command.reference.operationId).toBe(f.operationId);
+});
+it.each(['leaseId','generationId','requestSha256','expectedVersion'] as const)('Ready retains its exact original %s after consuming the live lease',field=>{
+ const f=fixture('export.ready'),changed=JSON.parse(JSON.stringify(f.command));changed.reference[field]=field==='expectedVersion'?'2':field==='requestSha256'?'d'.repeat(64):randomUUID();expect(()=>parseSourceExportCommitted(f.result,changed,f.actor)).toThrow(error);expect(parseSourceExportCommitted(f.result,f.command,f.actor).receipt.job.lease_id).toBeNull();
+});
+it.each([{attempt_count:0},{failure_code:'OWNER_STOPPED'},{lease_id:randomUUID(),lease_until:'2026-10-26T01:17:03.123456Z'},{state:'Running'}])('Ready rejects incompatible source projection %j',patch=>{
+ const f=fixture('export.ready');expect(()=>parseSourceExportCommitted({...f.result,receipt:{...f.result.receipt,job:{...f.job,...patch}}},f.command,f.actor)).toThrow(error);
+});
+it.each([{generationId:'invalid'},{requestSha256:'A'.repeat(64)},{requestSha256:null},{leaseId:null}])('Ready refuses malformed retained completion references %j',patch=>{
+ const f=fixture('export.ready');expect(()=>parseSourceExportCommand({...f.command,reference:{...f.command.reference,...patch}})).toThrow(error);
 });
 it('copies command and receipt scalars before later mutation',()=>{
  const f=fixture('export.claim'),input=JSON.parse(JSON.stringify(f.command)),parsed=parseSourceExportCommand(input),result=JSON.parse(JSON.stringify(f.result)),read=parseSourceExportCommitted(result,parsed,f.actor);input.reference.leaseId=randomUUID();result.receipt.job.lease_id=randomUUID();expect(parsed.reference).toEqual(f.command.reference);expect(read).toEqual(f.result);
