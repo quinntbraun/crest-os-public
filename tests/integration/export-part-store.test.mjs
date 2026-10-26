@@ -7,6 +7,9 @@ import {createHash,createHmac,randomBytes,randomUUID,timingSafeEqual} from 'node
 import {S3Client} from '@aws-sdk/client-s3';
 import {createEncryptedExportPartStore,createR2EncryptedExportPartStore,ExportObjectError} from '../../src/files/export-part-store.ts';
 import {maximumExportPartBytes,maximumEncryptedExportPartBytes} from '../../src/security/export-part-crypto.ts';
+import {createBusinessSourceExportWorker} from '../../src/security/business-source-export-worker.ts';
+import {verifyBusinessSourceBundle} from '../../src/security/business-source-verifier.ts';
+import {businessSourceFixture} from '../support/business-source-fixture.ts';
 
 const bucket='crest-synthetic-exports',access=randomBytes(16).toString('hex'),secret=randomBytes(32).toString('hex'),key=randomBytes(32),plain=Buffer.from('"Private synthetic é 😀","9007199254740993"\r\n');
 const binding=()=>({businessId:randomUUID(),actorId:randomUUID(),exportJobId:randomUUID(),generationId:randomUUID(),recoveryEpoch:randomUUID(),partId:randomUUID(),fileName:'customers.csv',contentType:'text/csv; charset=utf-8'});
@@ -153,4 +156,47 @@ test('R2 composition accepts only the fixed account endpoint, explicit credentia
  const config={accountId:'a'.repeat(32),bucket,accessKeyId:access,secretAccessKey:secret,activeKeyId:'export1',keys:[{id:'export1',key}]};
  for(const patch of [{accountId:'https://elsewhere.example.com'},{bucket:'public.example.com'},{accessKeyId:'short'},{secretAccessKey:secret+'\n'}])await assert.rejects(createR2EncryptedExportPartStore({...config,...patch}));
  const configured=await createR2EncryptedExportPartStore(config);configured.close();assert.equal(requests.length,0);
+});
+
+// This journal models the future SQL adapter's ACK/fencing protocol only. It
+// is NOT a database queue or genuine owner authorization. Object I/O below
+// still uses the actual SDK, independent SigV4 server, JWE and HTTP streams.
+function workerFixture(){
+ const source=businessSourceFixture(),claim=Object.freeze({formatVersion:1,profile:'crest.business-source-bundle.v1',businessId:source.businessId,actorId:source.foundation.identity.owner,exportJobId:randomUUID(),recoveryEpoch:randomUUID(),leaseId:randomUUID()});
+ const intents=new Map(),verified=new Map();let plan,planHash,ready=0,live=true;
+ const ack=(stage,request)=>({formatVersion:1,stage,requestSha256:sha(Buffer.from(JSON.stringify(request)))});
+ const current=request=>{assert(live,'synthetic lease/authority was fenced');assert.deepEqual(request.claim??request,claim);};
+ const jobs={
+  async authorize(request){current(request);return ack('authorize',request);},
+  async snapshot(request){current(request.plan);assert.equal(plan,undefined);plan=request.plan;planHash=request.planSha256;assert.equal(sha(Buffer.from(JSON.stringify(plan))),planHash);return ack('snapshot',request);},
+  async intent(request){current(request);assert.equal(request.generationId,plan.generationId);assert.equal(request.planSha256,planHash);assert(!intents.has(request.partId));const descriptor=plan.parts.find(p=>p.partId===request.partId);assert(descriptor);assert.equal(descriptor.bytes,request.intent.plaintextBytes);assert.equal(descriptor.sha256,request.intent.plaintextSha256);intents.set(request.partId,request);return ack('intent',request);},
+  async verified(request){current(request);assert.deepEqual(intents.get(request.partId),request);assert(!verified.has(request.partId));verified.set(request.partId,request);return ack('verified',request);},
+  async ready(request){current(request.plan);assert.deepEqual(request.plan,plan);assert.equal(request.planSha256,planHash);assert.deepEqual(request.parts,[...verified.values()]);assert.equal(verified.size,plan.parts.length);ready++;return ack('ready',request);}
+ };
+ seen=method=>{if(method==='PUT'){const key=requests.at(-1).key;assert([...intents.values()].some(record=>record.intent.objectKey===key),'PUT requires acknowledged original intent');}};
+ return {source,claim,jobs,intents,verified,create:()=>createBusinessSourceExportWorker({businessId:source.businessId,appReleaseId:source.expected.appReleaseId},async()=>source.seal(),store,jobs),get plan(){return plan;},get ready(){return ready;},fence:()=>{live=false;}};
+}
+test('source export worker delivers every independently verified file through real encrypted conditional HTTP custody before Ready',async()=>{
+ const f=workerFixture(),result=await f.create().run(f.claim,signal());assert.equal(f.plan.parts.length,95);assert.equal(f.intents.size,95);assert.equal(f.verified.size,95);assert.equal(f.ready,1);assert.equal(objects.size,95);
+ assert.equal(requests.filter(r=>r.method==='PUT').length,95);assert.equal(requests.filter(r=>r.method==='GET').length,95);assert.equal(f.plan.parts.at(-1).fileName,'source_manifest.json');
+ assert.equal(result.forServer().completePortableExport,false);assert.throws(()=>JSON.stringify(result));
+ const parts=[];let manifest;
+ for(const p of f.plan.parts){
+  const intent=f.intents.get(p.partId).intent,b={businessId:f.claim.businessId,actorId:f.claim.actorId,exportJobId:f.claim.exportJobId,recoveryEpoch:f.claim.recoveryEpoch,generationId:f.plan.generationId,partId:p.partId,fileName:p.fileName,contentType:p.contentType};
+  const opened=await store.readVerified(intent,b,signal());try{const bytes=opened.forServer().bytes;assert.equal(sha(bytes),p.sha256);assert.equal(bytes.length,p.bytes);assert(!objects.get(intent.objectKey).bytes.includes(bytes));if(p.fileName==='source_manifest.json')manifest=bytes;else parts.push({name:p.fileName,bytes});}finally{opened.dispose();}
+ }
+ const checked=verifyBusinessSourceBundle({manifest,parts},f.source.expected).forServer();assert.equal(Object.keys(checked.rows).length,19);for(const name of ['configuration','identity','history','crm'])assert.equal(checked[name],f.source.value()[name]);
+});
+test('source export worker sends no HTTP write after a durable intent acknowledgment is lost',async()=>{
+ const f=workerFixture(),record=f.jobs.intent;f.jobs.intent=async request=>{await record(request);throw Error('synthetic lost committed acknowledgment');};
+ await assert.rejects(f.create().run(f.claim,signal()),{message:'SOURCE_EXPORT_RUN_REVIEW_REQUIRED'});assert.equal(f.intents.size,1);assert.equal(f.verified.size,0);assert.equal(f.ready,0);assert.equal(requests.length,0);assert.equal(objects.size,0);
+});
+test('source export worker preserves one original intent after a lost committed PUT and leaves reconciliation explicit',async()=>{
+ const f=workerFixture();mode='lost-write-response';await assert.rejects(f.create().run(f.claim,signal()),{message:'SOURCE_EXPORT_RUN_REVIEW_REQUIRED'});assert.equal(f.intents.size,1);assert.equal(f.verified.size,0);assert.equal(f.ready,0);assert.deepEqual(requests.map(r=>r.method),['PUT']);assert.equal(objects.size,1);
+ const original=[...f.intents.values()][0],p=f.plan.parts.find(p=>p.partId===original.partId),b={businessId:f.claim.businessId,actorId:f.claim.actorId,exportJobId:f.claim.exportJobId,recoveryEpoch:f.claim.recoveryEpoch,generationId:f.plan.generationId,partId:p.partId,fileName:p.fileName,contentType:p.contentType};mode='normal';
+ assert.deepEqual(await store.verifyCandidate(original.intent,b,signal()),original.intent);assert.deepEqual(requests.map(r=>r.method),['PUT','GET']);assert.equal(f.ready,0);assert.equal(f.verified.size,0);
+});
+test('source export worker stops after authority changes during an actual object read without recording verification or Ready',async()=>{
+ const f=workerFixture(),intentBeforePut=seen;seen=method=>{intentBeforePut(method);if(method==='GET')f.fence();};
+ await assert.rejects(f.create().run(f.claim,signal()),{message:'SOURCE_EXPORT_RUN_REVIEW_REQUIRED'});assert.equal(f.intents.size,1);assert.equal(f.verified.size,0);assert.equal(f.ready,0);assert.deepEqual(requests.map(r=>r.method),['PUT','GET']);assert.equal(objects.size,1);
 });

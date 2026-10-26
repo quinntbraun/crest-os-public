@@ -14,7 +14,7 @@ function require(value:unknown):asserts value{if(!value)throw new ExportObjectEr
 const digest=(bytes:Uint8Array)=>createHash('sha256').update(bytes).digest('hex'),hash=/^[a-f0-9]{64}$/;
 const fields=['formatVersion','objectKey','keyId','plaintextBytes','plaintextSha256','ciphertextBytes','ciphertextSha256'];
 function exact(value:unknown):value is Record<string,unknown>{return value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length===fields.length&&fields.every(k=>Object.hasOwn(value,k));}
-function intent(value:unknown,binding:ExportPartBinding):ExportPartIntent{
+export function parseExportPartIntent(value:unknown,binding:ExportPartBinding):ExportPartIntent{
  require(exact(value)&&value.formatVersion===1&&value.objectKey===exportPartObjectKey(binding)&&typeof value.keyId==='string'&&/^[A-Za-z0-9_-]{1,100}$/.test(value.keyId)
   &&typeof value.plaintextBytes==='number'&&Number.isSafeInteger(value.plaintextBytes)&&value.plaintextBytes>=1&&value.plaintextBytes<=maximumExportPartBytes
   &&typeof value.ciphertextBytes==='number'&&Number.isSafeInteger(value.ciphertextBytes)&&value.ciphertextBytes>=1&&value.ciphertextBytes<=maximumEncryptedExportPartBytes
@@ -53,7 +53,7 @@ export async function createEncryptedExportPartStore(client:S3Client,bucket:stri
  async function read(raw:ExportPartIntent,rawBinding:ExportPartBinding,external:AbortSignal){
   let opened:Awaited<ReturnType<typeof codec.decrypt>>|undefined;
   try{
-   const binding=parseExportPartBinding(rawBinding),expected=intent(raw,binding),signal=deadline(external);check(signal);
+   const binding=parseExportPartBinding(rawBinding),expected=parseExportPartIntent(raw,binding),signal=deadline(external);check(signal);
    const ciphertext=await encryptedRead(expected,signal);opened=await codec.decrypt({keyId:expected.keyId,ciphertext},binding,signal);
    const value=opened.metadataForServer();require(value.byteSize===expected.plaintextBytes&&value.sha256===expected.plaintextSha256);check(signal);return opened;
   }catch{opened?.dispose();throw new ExportObjectError();}
@@ -86,7 +86,7 @@ export async function createEncryptedExportPartStore(client:S3Client,bucket:stri
   // Reconcile the ORIGINAL recorded ciphertext intent after an uncertain PUT.
   // Absence/read failure never grants permission to retry or choose new bytes.
   async verifyCandidate(expected:ExportPartIntent,binding:ExportPartBinding,external:AbortSignal):Promise<ExportPartIntent>{
-   try{const verified=intent(expected,parseExportPartBinding(binding)),opened=await read(verified,binding,external);opened.dispose();return verified;}catch{throw new ExportObjectError();}
+   try{const verified=parseExportPartIntent(expected,parseExportPartBinding(binding)),opened=await read(verified,binding,external);opened.dispose();return verified;}catch{throw new ExportObjectError();}
   },
   readVerified:read
  });
