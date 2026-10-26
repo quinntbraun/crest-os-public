@@ -48,6 +48,7 @@ export function createLeadDirectory(config:SessionDatabaseConfiguration,provider
         if(outcome===null)throw new LeadDirectoryError('LEAD_SAVE_DENIED');return outcome;
       }catch(error){
         if(error instanceof LeadDirectoryError)throw error;
+        if(submitted&&error instanceof Error&&error.message==='LEAD_CONVERTED_CUSTOMER_IMMUTABLE')return new PrivateValue(Object.freeze({state:'conflict' as const,reason:'converted' as const}));
         if(error instanceof Error&&error.message==='RECOVERY_REVIEW_REQUIRED')throw new LeadDirectoryError('RECOVERY_REVIEW_REQUIRED');
         throw new LeadDirectoryError(submitted?'LEAD_SAVE_OUTCOME_UNKNOWN':'LEAD_SAVE_NOT_SUBMITTED');
       }

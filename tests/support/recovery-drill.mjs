@@ -96,8 +96,8 @@ export async function backupDatabase(client,url,directory,recipient,duringSnapsh
     stage='dump';const dump=await postgresTool('pg_dump',url,['--format=custom','--snapshot',snapshot]);
     assert.equal(dump.subarray(0,5).toString(),'PGDMP');
     stage='objects';const objectArchive=objectCapture?{inventory:objects,receipt:await objectCapture.capture(objects)}:null;
-    const manifest={formatVersion:1,scope:'synthetic_database_drill',completeBackup:false,schemaVersion:registry.migrations.length,
-      registrySha256:registryHash,databaseImage:pins.testDatabaseImage,snapshot,roles,rows,schemaSha256:hash(normalizedSchema(schema)),
+    const manifest={formatVersion:1,scope:'synthetic_database_drill',completeBackup:false,schemaVersion:registry.migrations.length,registrySha256:registryHash,
+      databaseImage:pins.testDatabaseImage,snapshot,roles,rows,schemaSha256:hash(normalizedSchema(schema)),
       dump:{bytes:dump.length,sha256:hash(dump)},objectArchive,excluded:['runtime_login_credentials',...(objectArchive?[]:['external_objects']),'application_image','independent_vault','production_configuration','production_recovery_authority']};
     // The backup side receives a public recipient only. No private identity.
     stage='encryption';const receipt={formatVersion:1,dump:await seal(join(directory,'database.age'),dump,recipient),

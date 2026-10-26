@@ -27,7 +27,7 @@ describe('Node hosting boundary',()=>{
   it('requires explicit authentication composition before enabling a business target',()=>{
     expect(()=>bindApplicationHandler(createBoundedNodeServer(),{origin,environment:'test',business:{businessId:'untrusted'}},async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   });
-  it.each([{customers:true},{customers:true,authentication:{}},{customers:'yes'},{vehicles:true},{vehicles:true,authentication:{}},{vehicles:'yes'},{associations:true},{associations:true,authentication:{}},{associations:'yes'},{leads:true},{leads:true,authentication:{}},{leads:'yes'}])('requires explicit boolean directory composition with authentication and business: %o',patch=>{
+  it.each([{customers:true},{customers:true,authentication:{}},{customers:'yes'},{vehicles:true},{vehicles:true,authentication:{}},{vehicles:'yes'},{associations:true},{associations:true,authentication:{}},{associations:'yes'},{leads:true},{leads:true,authentication:{}},{leads:'yes'},{leadConversions:true},{leadConversions:true,leads:false},{leadConversions:'yes'}])('requires explicit boolean directory composition with authentication and business: %o',patch=>{
     expect(()=>bindApplicationHandler(createBoundedNodeServer(),{origin,environment:'test',...patch} as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   });
   it.each([false,true])('lead/source routing needs independent opt-in and retains bounded private delivery: %s',async enabled=>{
@@ -37,7 +37,7 @@ describe('Node hosting boundary',()=>{
     const before=[flow.leads.mock.calls.length,flow.leadSources.mock.calls.length],businessBefore=flow.business.mock.calls.length;
     try{
       for(const [index,stem] of ['leads','lead-sources'].entries()){
-        const paths=['/api/business/'+stem,'/api/business/'+stem+'/context','/api/%62usiness/%6c'+stem.slice(1)+'/save',...(stem==='leads'?['/api/business/leads/vehicle-save','/api/%62usiness/leads/%76ehicle-operation']:[])];
+        const paths=['/api/business/'+stem,'/api/business/'+stem+'/context','/api/%62usiness/%6c'+stem.slice(1)+'/save',...(stem==='leads'?['/api/business/leads/vehicle-save','/api/%62usiness/leads/%76ehicle-operation','/api/business/leads/address-save','/api/%62usiness/leads/%61ddress-operation']:[])];
         for(const path of paths){
           const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(enabled?200:503);expect(await response.json()).toEqual(enabled?{synthetic:'lead'}:{error:stem==='leads'?'LEAD_REQUEST_FAILED':'LEAD_SOURCE_REQUEST_FAILED'});
         }

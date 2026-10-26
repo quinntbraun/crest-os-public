@@ -1,0 +1,31 @@
+# Private lead conversion HTTP and browser transport
+
+This consumer follows registered migration41. It adds no schema change or default runtime activation. The exact41 SQL/checksum, all previous SQL, canonical rules and dependency lockfile remain unchanged.
+
+## Product behavior and authority
+
+Four fixed POST routes live under /api/business/leads/: convert, conversion-operation, conversion and conversion-links. They require independent trusted leadConversions:true composition in addition to leads:true, configured business and authentication. Ordinary lead/source access does not enable conversion. The default executable remains closed. Existing lead context supplies advisory ready/paused state; every conversion verifies current SDK/local session, permission, recovery epoch, row versions and atomic database authority again.
+
+Origin/CSRF, private cookie handling, durable shared ordinary admission, deadlines, complete-body bounds, reserved Node routing and no-store private responses apply unchanged. The browser cannot supply business, actor, capabilities, outcome, ownership or accepted-work authority. The flat131072-byte envelope carries bounded selectionsJson; every nested duplicate key, extra field, invalid selection or oversized complete request is rejected before admission/domain dispatch. Nothing is truncated. JSON quoting/envelope overhead may make a valid in-memory selection too large to send; that is an explicit input failure.
+
+The server submits one fixed convert_lead function in one command transaction. It validates exact committed operation/epoch/conversion/lead/customer IDs and lead-version increment before returning after commit. Fixed conflicts distinguish original operation, lead, source, destination and existing conversion. Provider/pre-submission, denied, recovery-fenced and post-submission unknown failures remain distinct. A lost or malformed response never triggers an automatic replacement or retry.
+
+Original lookup uses only the existing operation reader and fresh authorization. The opaque client reference also pins original epoch, lead/conversion/customer IDs and expected lead version, allowing a lost draft's recorded receipt to be verified without persisting customer/vehicle/address drafts. An absent receipt remains an observation; no UI or operator resolution is added here. Reads preserve the immutable original conversion and mappings after later source/directory changes. Mapping pages are validated against the complete immutable selection, exact ordered cursor, expected IDs/counts and terminal flag; a missing, repeated or substituted mapping fails closed.
+
+The stateless compiled browser client retains no storage, generates no IDs, performs no automatic lookup/retry and never rebases an epoch. It enforces private response MIME/cache policy, streaming byte and cancellation bounds, fatal UTF8, nested duplicate-field rejection and exact typed receipts/source mappings. Conversion does not mark Won, accept requested services, infer billing or establish ownership.
+
+## Definite customer-relink rejection
+
+Migration41 already prevents replacing/clearing a converted lead's customer. Its trigger raises55000/CREST_CONVERTED_CUSTOMER_IMMUTABLE. Previously the generic database sanitizer correctly hid raw SQL errors but left this expected rejection as an unknown save, which could keep a pending reference indefinitely.
+
+The command boundary now recognizes only that exact code/message from the existing fixed save_lead statement. It emits a fixed private marker only when the original failed statement escapes unchanged and PostgreSQL acknowledges ROLLBACK. Callback-forged/different-statement errors, wrong code/message, failed/malformed rollback acknowledgement, swallowed failure, failed commit, read-only use and cancellation remain generic failures. No SQL details/cause/parameters escape. The lead directory maps the marker to a definite converted conflict; transport preserves409, and the editor clears the rejected pending reference, explains the retained customer and requires a new explicit review. Other intake remains editable.
+
+## Verification and remaining work
+
+Local4186 unit cases in128 files pass, including106 new regression cases. Lint/types, canonical12 amendments,41 migration checks,297 locked dependencies and server bundle pass. A fixture-edit encoding mistake was corrected by restoring the two affected existing test files from their original Git UTF8 bytes and reapplying only the intended focused changes; full units then passed.
+
+The mandatory native conversion suite adds a23rd case using a genuine restricted crest_web login and actual command-transaction/trigger/rollback, asserting unchanged sources and no losing operation. Its invocation uses the existing react-server condition for server-only modules. Every22 prior conversion/source-export/encrypted-recovery case remains mandatory. Expected database/Auth total922 (393 foundation,420 provider,109 genuine Auth), including four conversion-specific and37 ordinary encrypted-recovery cases.
+
+A separate genuine HTTPS fixture preserves existing cohorts and adds seven cases per engine: genuine MFA/provider-backed cookies and nonce-bound actual compiled clients; new customer/two vehicles/two precise locations with retained Lost intake; stale destinations/two-device races; dropped committed response/original lookup/exact retry; definite relink rollback and ordinary intake edits; paused/rotated recovery authority; fabricated authority/revocation/private responses. Chromium and mobile WebKit contribute14 new leaves and two parents:156 total HTTPS leaves/174 entries/18 parents. No mocks, session resets, extra production limits, traces, HAR or storage-state artifacts are used.
+
+Native cases are written and syntax/lint checked; current-source Linux execution, full production Next/browser/container acceptance and actual-main acceptance remain pending. Parent85 address and86 registered-backend acceptance stay independent. Conversion selection/review forms, cross-panel pending-intent locking, operator recovery and whole exports remain next. Synthetic only: no real records, paid setup, provisioning, production apply/grants/deployment or activation.

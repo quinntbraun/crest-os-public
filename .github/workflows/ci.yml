@@ -76,8 +76,11 @@ jobs:
           npm run test:leads-db
           npm run test:lead-state-db
           npm run test:lead-vehicles-db
+          npm run test:lead-addresses-db
       - name: Install pinned recovery tooling
         run: node scripts/install-recovery-tools.mjs
+      - name: Prove registered atomic conversion, source export and encrypted recovery
+        run: node --conditions=react-server --test --test-concurrency=1 tests/integration/lead-conversion.test.mjs
       - name: Encrypted isolated database recovery drill
         run: npm run test:recovery-db
 

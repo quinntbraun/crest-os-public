@@ -15,13 +15,13 @@ type History=Extract<Awaited<ReturnType<typeof leadVehicles.history>>,{state:'fo
 export type LeadVehicleEditorView=Readonly<{phase:'idle'|'loading'|'ready'|'pending'|'review'|'blocked'|'unavailable';busy:boolean;message:string;rows:readonly LeadVehicle[];hasMore:boolean;includeArchived:boolean;selected:LeadVehicle|null;draft:LeadVehicleDraft|null;history:History|null;draftIssue:string;canSave:boolean;canRetry:boolean;writesPaused:boolean;reference:string}>;
 export const emptyLeadVehicleDraft:LeadVehicleDraft=Object.freeze({vehicleId:null,reportedVehicle:Object.freeze({schemaVersion:1,label:'',year:null,make:null,model:null,color:null,vin:null,plate:null,notes:null}),requestedServices:Object.freeze({schemaVersion:1,text:null}),conditionNotes:null,archived:false,archiveReason:null});
 export const initialLeadVehicleEditorView:LeadVehicleEditorView=Object.freeze({phase:'idle',busy:false,message:'Load reported vehicles for this lead before making a change.',rows:Object.freeze([]),hasMore:false,includeArchived:false,selected:null,draft:null,history:null,draftIssue:'',canSave:false,canRetry:false,writesPaused:true,reference:''});
-type Dependencies={businessId:string;leadId:string;store:ReturnType<typeof createPendingLeadVehicleStore>;intakeStore:{read:()=>unknown};statusStore:{read:()=>unknown};change:(view:LeadVehicleEditorView)=>void;api?:typeof leadVehicles;context?:typeof leads.context;session?:typeof authentication.session;id?:()=>string};
+type Dependencies={businessId:string;leadId:string;store:ReturnType<typeof createPendingLeadVehicleStore>;intakeStore:{read:()=>unknown};statusStore:{read:()=>unknown};addressStore:{read:()=>unknown};conversionStore:{read:()=>unknown};change:(view:LeadVehicleEditorView)=>void;api?:typeof leadVehicles;context?:typeof leads.context;session?:typeof authentication.session;id?:()=>string};
 export function createLeadVehicleEditorController(deps:Dependencies){
  checkValue(uuid(deps.businessId)&&uuid(deps.leadId));
  const businessId=deps.businessId,leadId=deps.leadId,api=deps.api??leadVehicles,context=deps.context??leads.context,session=deps.session??authentication.session,id=deps.id??(()=>crypto.randomUUID());
  let alive=true,active:AbortController|null=null,activeSignal:AbortSignal|null=null,proof:Proof|null=null,snapshot:Snapshot|null=null,pending:PendingLeadVehicle|null=null,original:LeadVehicleSave|null=null;
  let phase:LeadVehicleEditorView['phase']='idle',message=initialLeadVehicleEditorView.message,rows:readonly LeadVehicle[]=[],hasMore=false,includeArchived=false,selected:LeadVehicle|null=null,draft:LeadVehicleDraft|null=null,history:History|null=null,canRetry=false;
- const siblingsClear=()=>{try{return deps.intakeStore.read()===null&&deps.statusStore.read()===null;}catch{return false;}};
+ const siblingsClear=()=>{try{return deps.conversionStore.read()===null&&deps.intakeStore.read()===null&&deps.statusStore.read()===null&&deps.addressStore.read()===null;}catch{return false;}};
  const clearPrivate=()=>{proof=null;snapshot=null;rows=[];hasMore=false;includeArchived=false;selected=null;draft=null;history=null;original=null;canRetry=false;};
  const dirty=()=>draft!==null&&(!selected||draftIssue()!==''||JSON.stringify(draft)!==JSON.stringify(draftFromLeadVehicle(selected)));
  function draftIssue(){if(!draft)return '';try{parseLeadVehicleDraft(draft);return '';}catch{return 'Review the reported label, optional year/details, requested work, condition and archive reason before saving.';}}
@@ -38,7 +38,7 @@ export function createLeadVehicleEditorController(deps:Dependencies){
  const load=()=>run(async signal=>{
   clearPrivate();phase='loading';message='Checking reported vehicle access…';emit();pending=deps.store.read();await fresh(signal);
   if(pending){if(pending.businessId!==businessId){phase='blocked';message='A pending vehicle report belongs to another business. Its reference has been kept for review.';return;}retain('A pending vehicle report was found. Check its original outcome before another edit.');return;}
-  if(!siblingsClear()){phase='blocked';message='An intake or status change needs review. Resolve its original outcome before editing reported vehicles.';return;}
+  if(!siblingsClear()){phase='blocked';message='An intake, status or address change needs review. Resolve its original outcome before editing reported vehicles.';return;}
   const page=await api.list(businessId,{leadId,afterId:null,includeArchived:false,pageSize:10},proof!,signal);live(signal);
   if(page.state==='absent'){phase='review';message='This lead was not found. Reload the lead directory before continuing.';return;}rows=page.leadVehicles;hasMore=page.hasMore;phase='ready';message=snapshot!.context.writeState==='ready'?'Review a reported vehicle or add another report.':'Vehicle report changes are paused. Retained records remain available.';
  },error=>{clearPrivate();phase=error instanceof PendingLeadVehicleError?'blocked':'unavailable';message=error instanceof PendingLeadVehicleError?'The pending vehicle reference cannot be read. Editing is blocked to protect it.':'Reported vehicles could not be verified. Load them again; any pending reference has been kept.';});
@@ -73,7 +73,7 @@ export function createLeadVehicleEditorController(deps:Dependencies){
  const save=()=>{
   if(!view().canSave||!snapshot||!draft)return Promise.resolve();const before=snapshot,input=parseLeadVehicleDraft(draft),leadVehicleId=selected?.id,expectedVersion=selected?.version??'0';let dispatched=false,checked=false;
   return run(async signal=>{await fresh(signal);checked=true;if(snapshot!.binding!==before.binding||snapshot!.context.writeState!=='ready'||snapshot!.context.recoveryEpoch!==before.context.recoveryEpoch){clearPrivate();phase='review';message='Lead access or recovery changed. No report was sent. Reload before editing.';return;}
-   if(!siblingsClear()){clearPrivate();phase='blocked';message='An intake or status change needs review. No vehicle report was sent.';return;}
+   if(!siblingsClear()){clearPrivate();phase='blocked';message='An intake, status or address change needs review. No vehicle report was sent.';return;}
    const command:LeadVehicleSave=Object.freeze({schemaVersion:1,operationId:id(),leadId,leadVehicleId:leadVehicleId??id(),expectedVersion,recoveryEpoch:before.context.recoveryEpoch!,draft:input});
    const {draft:unused,schemaVersion,...reference}=command;void unused;void schemaVersion;const record=pendingLeadVehicle({schemaVersion:1,businessId,binding:before.binding,reference});deps.store.write(record);pending=record;original=command;retain('Saving vehicle report…');emit();dispatched=true;
    const result=await api.save(businessId,command,proof!,signal);live(signal);finish(result);

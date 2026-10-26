@@ -195,6 +195,16 @@
       "version": "20261025140000",
       "file": "20261025140000_lead_vehicles.sql",
       "sha256": "394d1254c38843c7fa028a3c72c08fbb2851b28392ecad6570c7df47121c1cf7"
+    },
+    {
+      "version": "20261025160000",
+      "file": "20261025160000_lead_addresses.sql",
+      "sha256": "d5fcffe23ddc02ed8814ddb6d1c9fbd43495e6c476575a704f6f2815246dd4ba"
+    },
+    {
+      "version": "20261025180000",
+      "file": "20261025180000_lead_conversion.sql",
+      "sha256": "4ebe1d190cc9e7d7dce08a281aa1c0ee8b6c2fa754fdca423bd4acbcdc7c4d2e"
     }
   ]
 }

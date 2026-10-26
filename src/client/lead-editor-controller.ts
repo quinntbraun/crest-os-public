@@ -17,12 +17,12 @@ export type LeadEditorView=Readonly<{businessId:string|null;phase:'loading'|'rea
 export const initialLeadEditorView:LeadEditorView=Object.freeze({businessId:null,phase:'loading',message:'Checking lead access…',busy:true,rows:Object.freeze([]),hasMore:false,search:'',includeLost:false,selected:null,draft:null,draftIssue:'',history:null,canSave:false,canRetry:false,reference:'',writesPaused:true});
 export const emptyLeadDraft:LeadDraft=Object.freeze({label:'',customerId:null,sourceId:null,referralText:null,phone:null,email:null,requestedScope:null,availability:null,estimatedCents:null,followUpAt:null,notes:null});
 
-type Dependencies={store:ReturnType<typeof createPendingLeadStore>;statusStore:Pick<ReturnType<typeof createPendingLeadStateStore>,'read'>;vehicleStore:{read:()=>unknown};change:(view:LeadEditorView)=>void;api?:typeof leads;session?:typeof authentication.session;id?:()=>string};
+type Dependencies={store:ReturnType<typeof createPendingLeadStore>;statusStore:Pick<ReturnType<typeof createPendingLeadStateStore>,'read'>;vehicleStore:{read:()=>unknown};addressStore:{read:()=>unknown};conversionStore:{read:()=>unknown};change:(view:LeadEditorView)=>void;api?:typeof leads;session?:typeof authentication.session;id?:()=>string};
 export function createLeadEditorController(deps:Dependencies){
   const api=deps.api??leads,session=deps.session??authentication.session,id=deps.id??(()=>crypto.randomUUID());
   let alive=true,active:AbortController|null=null,proof:Proof|null=null,snapshot:Snapshot|null=null,pending:PendingLead|null=null,original:LeadSave|null=null;
   let phase:LeadEditorView['phase']='loading',message=initialLeadEditorView.message,rows:readonly Lead[]=[],hasMore=false,search='',includeLost=false,selected:Lead|null=null,draft:LeadDraft|null=null,history:History|null=null,canRetry=false;
-  const statusClear=()=>{try{return deps.statusStore.read()===null&&deps.vehicleStore.read()===null;}catch{return false;}};
+  const statusClear=()=>{try{return deps.conversionStore.read()===null&&deps.statusStore.read()===null&&deps.vehicleStore.read()===null&&deps.addressStore.read()===null;}catch{return false;}};
   const clearPrivate=()=>{proof=null;snapshot=null;rows=[];hasMore=false;search='';includeLost=false;selected=null;draft=null;history=null;original=null;canRetry=false;};
   function draftIssue(){if(draft===null)return '';try{parseLeadDraft(draft);}catch{return 'Review the label, field lengths, estimate, follow-up time and selected references before saving.';}
     // UUIDs have a fixed wire length. Match the actual flat JSON input and
@@ -52,9 +52,9 @@ export function createLeadEditorController(deps:Dependencies){
     const context=snapshot,authorization=proof,after=more?rows.at(-1)?.id??null:null;
     return run(async signal=>{selected=null;draft=null;history=null;rows=[];hasMore=false;emit();const result=await api.list(context.context.businessId,{search:text,afterId:after,includeLost:archived,pageSize:10},authorization,signal);live(signal);rows=result.leads;hasMore=result.hasMore;search=text;includeLost=archived;message=more?'Showing the next lead page.':'Lead search complete.';},()=>{clearPrivate();phase='unavailable';message='Lead search could not be verified. Load current records again.';});
   };
-  const open=(leadId:string,statusConfirmed=false)=>{
-    if(phase!=='ready'||!snapshot||!proof||!leadUuid(leadId))return Promise.resolve();const context=snapshot,authorization=proof;
-    return run(async signal=>{selected=null;draft=null;history=null;emit();const result=await api.history(context.context.businessId,{leadId,afterVersion:'0',pageSize:5},authorization,signal);live(signal);if(result.state==='absent'){message='This lead was not found. Load the current directory before editing.';return;}selected=result.lead;rows=rows.map(row=>row.id===selected!.id?selected!:row);draft=draftFromLead(selected);history=result;message=statusConfirmed?'Status change confirmed. Review current lead details and retained history.':'Review lead details and retained history before saving.';},()=>{clearPrivate();phase='unavailable';message='Lead details could not be verified. Load current records again.';});
+  const open=(leadId:string,confirmed:'status'|'conversion'|false=false)=>{
+    if(phase!=='ready'||!snapshot||!proof||!leadUuid(leadId))return Promise.resolve();const context=snapshot;let authorization=proof;
+    return run(async signal=>{selected=null;draft=null;history=null;emit();if(confirmed){await fresh(signal);if(snapshot!.context.businessId!==context.context.businessId||snapshot!.binding!==context.binding||snapshot!.context.recoveryEpoch!==context.context.recoveryEpoch||snapshot!.context.writeState!==context.context.writeState)throw new LeadClientError('unavailable');authorization=proof!;}const result=await api.history(context.context.businessId,{leadId,afterVersion:'0',pageSize:5},authorization,signal);live(signal);if(result.state==='absent'){message='This lead was not found. Load the current directory before editing.';return;}selected=result.lead;rows=rows.map(row=>row.id===selected!.id?selected!:row);draft=draftFromLead(selected);history=result;message=confirmed?(confirmed==='status'?'Status change confirmed.':'Conversion confirmed.')+' Review current lead details and retained history.':'Review lead details and retained history before saving.';},()=>{clearPrivate();phase='unavailable';message='Lead details could not be verified. Load current records again.';});
   };
   const moreHistory=()=>{
     if(phase!=='ready'||!snapshot||!proof||!history?.hasMore||!selected)return Promise.resolve();const context=snapshot,authorization=proof,source=selected,after=history.history.at(-1)?.after.version;if(!after)return Promise.resolve();
@@ -66,6 +66,7 @@ export function createLeadEditorController(deps:Dependencies){
     try{deps.store.clear(pending);}catch{retain(result.state==='committed'?'Save confirmed, but its reference could not be cleared. Check save status before another edit.':'No change was saved, but its reference could not be cleared. Check save status before another edit.');return;}
     pending=null;clearPrivate();phase='review';message=result.state==='committed'?(lookup?'The original save is confirmed. Load current leads to review the recorded result.':'Lead saved. Load current leads before another edit.'):'The record changed or the lead ID is already in use. Load current leads and review before starting a new edit.';
     if(result.state==='conflict'&&result.reason==='parent')message='The selected customer or source could not be linked. Load current leads and choose the existing records again before a new edit.';
+    if(result.state==='conflict'&&result.reason==='converted')message='This lead was already converted. Its recorded customer cannot be replaced or cleared. Load current leads to review the original conversion before editing other details.';
   }
   const check=()=>run(async signal=>{
     pending=deps.store.read();if(!pending)throw new PendingLeadError();retain('Checking the original lead save…');emit();await fresh(signal);
@@ -85,7 +86,7 @@ export function createLeadEditorController(deps:Dependencies){
     return run(async signal=>{
       await fresh(signal);checkedContext=true;
       if(snapshot!.context.businessId!==context.context.businessId||snapshot!.binding!==context.binding||snapshot!.context.writeState!=='ready'||snapshot!.context.recoveryEpoch!==context.context.recoveryEpoch){clearPrivate();phase='review';message='Lead access or recovery changed. No change was sent. Load current leads before editing.';return;}
-      if(!statusClear()){clearPrivate();phase='blocked';message='A status change needs review, or a vehicle report is pending. No intake change was sent. Open its panel to resolve the original reference.';return;}
+      if(!statusClear()){clearPrivate();phase='blocked';message='A status change needs review, or a vehicle report or address is pending. No intake change was sent. Open its panel to resolve the original reference.';return;}
       const command:LeadSave=Object.freeze({schemaVersion:1,operationId:id(),leadId:current?.id??id(),expectedVersion:current?.version??'0',recoveryEpoch:context.context.recoveryEpoch!,draft:input});
       const {draft:unused,schemaVersion,...reference}=command;void unused;void schemaVersion;
       const record=pendingLead({schemaVersion:1,businessId:context.context.businessId,binding:context.binding,reference});deps.store.write(record);pending=record;original=command;retain('Saving lead…');emit();dispatched=true;
@@ -98,8 +99,9 @@ export function createLeadEditorController(deps:Dependencies){
   };
   function suspend(){if(!alive)return;active?.abort();active=null;clearPrivate();phase='review';message='Private lead details were cleared. Load current leads before continuing; any pending reference has been kept.';emit();}
   return Object.freeze({load,query,open,moreHistory,save,check,retry,view,suspend,
-    statusChanged(leadId:string){return selected?.id===leadId&&phase==='ready'?open(leadId,true):Promise.resolve();},
-    create(){if(alive&&!active&&phase==='ready'){selected=null;history=null;draft=emptyLeadDraft;message='Add only the inquiry details you know. Contact, source, estimate and follow-up can remain unknown.';emit();}},
+    statusChanged(leadId:string){return selected?.id===leadId&&phase==='ready'?open(leadId,'status'):Promise.resolve();},
+    conversionChanged(leadId:string){return selected?.id===leadId&&phase==='ready'?open(leadId,'conversion'):Promise.resolve();},
+    create(){if(alive&&!active&&phase==='ready'&&statusClear()){selected=null;history=null;draft=emptyLeadDraft;message='Add only the inquiry details you know. Contact, source, estimate and follow-up can remain unknown.';emit();}},
     edit(value:LeadDraft){if(alive&&!active&&phase==='ready'&&draft){draft=Object.freeze({...value});emit();}},
     dispose(){alive=false;active?.abort();active=null;clearPrivate();pending=null;}
   });
