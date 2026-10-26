@@ -1,17 +1,21 @@
-// Isolated UNREGISTERED proposal after41. Real disposable PostgreSQL; no live
+// Registered41 -> registered42 and independent restore. Disposable PostgreSQL; no live
 // business data, production authority, fake race timers or admission resets.
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
 import {randomUUID,randomBytes,createHash} from 'node:crypto';
-import {readFile} from 'node:fs/promises';
+import {readFile,mkdir,copyFile,chmod,unlink} from 'node:fs/promises';
+import {join} from 'node:path';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {parseOriginalOperationReference,parseOriginalOperationOutcome,originalOperationKinds} from '../../src/security/original-operation-reference.ts';
 import {verifyBusinessHistoryEvidence} from '../../src/security/business-history-evidence.ts';
 import {formatBusinessHistoryCsv} from '../../src/security/business-history-csv.ts';
 import {decodeCustomerCsv} from '../support/customer-fixture.ts';
+import {backupDatabase,connect,keyPair,privateWorkspace,recoveryCluster,inventory,run} from '../support/recovery-drill.mjs';
+import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 
-let sandbox,target,client,web,web2,bootstrap,login,pid2,unsafeOwnerRefused=false;
+let sandbox,target,client,web,web2,bootstrap,login,pid2,prior,registered,unsafeOwnerRefused=false;
+let recovery,restored,restoredWeb,recoveryOwner,recoveryPlans,recoveryDecisions,recoveryOriginal,recoveryCommitted,recoveryHistory,recoveryBackup,sourceAfterCapture,postSnapshot;
 const issuer='https://auth.example.com/auth/v1',reason=' Owner reviewed lost draft é 😀\nRetire this original only. ';
 const auth=f=>[f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+300000),f.business];
 const query=(c,sql,args)=>c.query(sql,args).then(r=>r.rows[0].value);
@@ -22,10 +26,10 @@ const addressDraft=()=>({line1:null,line2:null,city:null,region:null,postalCode:
 const vehicleDraft=()=>({label:'Synthetic resolution vehicle',year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'customer_vehicle',notes:null,archived:false,archiveReason:null});
 const leadDraft=()=>({label:'Synthetic resolution lead',customerId:null,sourceId:null,referralText:null,phone:null,email:null,requestedScope:null,availability:null,estimatedCents:null,followUpAt:null,notes:null});
 const vehicleReport=()=>({vehicleId:null,reportedVehicle:{schemaVersion:1,label:'Synthetic report',year:null,make:null,model:null,color:null,vin:null,plate:null,notes:null},requestedServices:{schemaVersion:1,text:'Reported only'},conditionNotes:null,archived:false,archiveReason:null});
-async function session(f,age='1 second'){
+async function session(f,age='1 second',connection=client){
  const provider=randomUUID(),session=randomUUID(),hash=randomBytes(32);
- await client.query("INSERT INTO auth.sessions(id,user_id,aal,created_at,updated_at) VALUES($1,$2,'aal2',clock_timestamp(),clock_timestamp())",[provider,f.subject]);
- await client.query("WITH observed AS MATERIALIZED(SELECT clock_timestamp()-$6::interval AS stamp) INSERT INTO crest_private.app_sessions(id,actor_id,provider_session_id,token_hash,issued_security_epoch,created_at,authenticated_at,last_active_at,expires_at,trusted,provider_token_ciphertext,key_id,created_by,updated_by) SELECT $1,id,$3,$4,current_security_epoch,stamp,stamp,stamp,stamp+interval '12 hours',false,$5,'synthetic',id,id FROM crest_private.actors CROSS JOIN observed WHERE id=$2",[session,f.actor,provider,hash,randomBytes(32),age]);
+ await connection.query("INSERT INTO auth.sessions(id,user_id,aal,created_at,updated_at) VALUES($1,$2,'aal2',clock_timestamp(),clock_timestamp())",[provider,f.subject]);
+ await connection.query("WITH observed AS MATERIALIZED(SELECT clock_timestamp()-$6::interval AS stamp) INSERT INTO crest_private.app_sessions(id,actor_id,provider_session_id,token_hash,issued_security_epoch,created_at,authenticated_at,last_active_at,expires_at,trusted,provider_token_ciphertext,key_id,created_by,updated_by) SELECT $1,id,$3,$4,current_security_epoch,stamp,stamp,stamp,stamp+interval '12 hours',false,$5,'synthetic',id,id FROM crest_private.actors CROSS JOIN observed WHERE id=$2",[session,f.actor,provider,hash,randomBytes(32),age]);
  return {...f,provider,session,hash};
 }
 async function state(age='1 second'){
@@ -57,16 +61,16 @@ async function evidence(f){const out={};for(const table of ['crest.customers','c
 async function waitForLock(pid){let blocked=false;const end=Date.now()+1500;while(Date.now()<end){await client.query('SELECT pg_stat_clear_snapshot()');blocked=(await client.query("SELECT wait_event_type='Lock' AS blocked FROM pg_stat_activity WHERE pid=$1",[pid])).rows[0]?.blocked;if(blocked)break;}assert.equal(blocked,true,'second device must actually wait for the first transaction');}
 
 before(async()=>{
- sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
- const sql=await readFile(new URL('../../supabase/proposals/20261026010000_original_operation_resolution.sql',import.meta.url),'utf8');
+ sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target,await sandbox.prefix(41));
+ const sql=await readFile(new URL('../../supabase/migrations/20261026010000_original_operation_resolution.sql',import.meta.url),'utf8');
  await client.query('ALTER ROLE crest_command_owner LOGIN');try{await client.query('BEGIN');await assert.rejects(client.query(sql),e=>e.code==='42501'&&e.message==='CREST_OPERATION_RESOLUTION_REVIEW_REQUIRED');unsafeOwnerRefused=true;}finally{await client.query('ROLLBACK');await client.query('ALTER ROLE crest_command_owner NOLOGIN');}
- await client.query('BEGIN');try{await client.query(sql);await client.query('COMMIT');}catch(e){await client.query('ROLLBACK');throw e;}
+ registered=await sandbox.apply(target);
  bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
  login='crest_resolution_probe_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=password;web=await sandbox.connect(url.toString());web2=await sandbox.connect(url.toString());for(const c of [web,web2]){await c.query('SET ROLE crest_web');await c.query("SET lock_timeout='3s'");}pid2=(await web2.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
 },{timeout:240000});
-after(async()=>{await web?.end();await web2?.end();if(login)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
+after(async()=>{await restoredWeb?.end();await restored?.end();await recovery?.close();await web?.end();await web2?.end();if(login)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
 
-test('proposal refuses unsafe owner roles without replacing registered41 history',async()=>{assert(unsafeOwnerRefused);assert.equal((await client.query("SELECT count(*)::int AS n FROM crest_private.operations WHERE command_type='operation.retire'")).rows[0].n,0);});
+test('registered42 refuses unsafe owners, preserves all41 prior migrations and reapplies idempotently',async()=>{assert(unsafeOwnerRefused);assert.equal(prior.history.length,41);assert.equal(registered.history.length,42);assert.deepEqual(registered.history.slice(0,41),prior.history);assert.deepEqual((await sandbox.apply(target)).history,registered.history);assert.equal((await client.query("SELECT count(*)::int AS n FROM crest_private.operations WHERE command_type='operation.retire'")).rows[0].n,0);});
 for(const kind of originalOperationKinds){
  test('retirement blocks the late original '+kind+' before domain effects',async()=>{const f=await state(),plan=await originalPlan(f,kind),first=await retire(f,plan.original);assert.equal(first.state,'retired');assert.deepEqual(parseOriginalOperationOutcome(first,plan.original),first);assert.deepEqual(await lookup(f,plan.original),first);const retained=await evidence(f);assert.deepEqual(await plan.run(f,web),{state:'conflict',reason:'operation'});assert.deepEqual(await evidence(f),retained);});
  test('committed original '+kind+' remains unchanged and requires its typed receipt',async()=>{const f=await state(),plan=await originalPlan(f,kind);assert.equal((await plan.run(f,web)).state,'committed');const retained=await evidence(f),observed=await retire(f,plan.original);assert.deepEqual(observed,{schemaVersion:1,state:'original_recorded',original:plan.original});assert.deepEqual(await lookup(f,plan.original),observed);assert.deepEqual(await evidence(f),retained);});
@@ -152,4 +156,66 @@ for(const role of ['customer','vehicle','address','lead'])test('retired derived 
  const target=role==='customer'?customerId:role==='vehicle'?vehicleId:role==='address'?addressId:parent.leadId,child=(await client.query('SELECT crest_private.conversion_child_operation($1,$2,$3,$4,$5) AS id',[f.business,operation,conversion,role,target])).rows[0].id;
  const fields=role==='customer'?{customerId,expectedVersion:'0'}:role==='vehicle'?{vehicleId,expectedVersion:'0'}:role==='address'?{customerId,addressId,expectedVersion:'0'}:{leadId:parent.leadId,expectedVersion:'1'},original=parseOriginalOperationReference({schemaVersion:1,businessId:f.business,commandType:'crm.'+role+'.save',reference:{operationId:child,recoveryEpoch:f.epoch,...fields}});await retire(f,original);const retained=await evidence(f),body={customer:{kind:'new',id:customerId,draft:customerDraft()},vehicles:[{linkId:randomUUID(),leadVehicleId:reportVehicle,expectedLeadVehicleVersion:'1',target:{kind:'new',id:vehicleId,draft:vehicleDraft()}}],addresses:[{linkId:randomUUID(),leadAddressId:reportAddress,expectedLeadAddressVersion:'1',target:{kind:'new',id:addressId,draft:addressDraft()}}]};
  const result=await query(web,'SELECT crest_commands.convert_lead($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13,$14) AS value',[...auth(f),f.epoch,operation,conversion,parent.leadId,'1',body]);assert.equal(result.state,'conflict');assert.deepEqual(await evidence(f),retained);
+});
+
+async function capturedHistory(connection,businessId){
+ const context=(await connection.query('SELECT crest_commands.business_history_export_context($1) AS value',[businessId])).rows[0].value,records=[];
+ for(const kind of ['operation','audit_event']){
+  let cursor=null,finished=false;
+  for(let page=0;page<100;page++){
+   const rows=(await connection.query('SELECT * FROM crest_commands.business_history_export_page($1,$2,$3,$4,20)',[businessId,context.snapshotToken,kind,cursor])).rows;
+   if(!rows.length){finished=true;break;}
+   for(const row of rows)records.push({kind,recordId:row.record_id,representation:row.representation,canonicalEvidence:row.canonical_evidence,evidenceHash:row.evidence_hash});
+   cursor=rows.at(-1).record_id;
+  }
+  assert(finished,'synthetic history capture must finish its declared pages');
+ }
+ const serialized=JSON.stringify({formatVersion:1,assurance:'snapshot_bytes_only',generationId:randomUUID(),context,evidenceBytes:records.reduce((n,row)=>n+Buffer.byteLength(row.canonicalEvidence),0),records}),report=verifyBusinessHistoryEvidence(serialized,{businessId}),csv=formatBusinessHistoryCsv(serialized,{businessId});
+ const operations=decodeCustomerCsv(csv.operations.csv,csv.operations.escapeMap).map(row=>({...row,schema_version:Number(row.schema_version),result_schema_version:Number(row.result_schema_version)})),audits=decodeCustomerCsv(csv.audits.csv,csv.audits.escapeMap);
+ assert.deepEqual(operations,records.filter(row=>row.kind==='operation').map(row=>JSON.parse(row.canonicalEvidence).row));assert.deepEqual(audits,records.filter(row=>row.kind==='audit_event').map(row=>JSON.parse(row.canonicalEvidence).row));
+ return {context,records,operations,audits,report,csv};
+}
+
+test('independently keyed registered42 encrypted recovery retains all eleven retirement decisions after original key loss',async()=>{
+ const directory=await privateWorkspace(),kit=join(directory,'emergency-kit'),point=join(directory,'point');await mkdir(kit,{mode:0o700});await mkdir(point,{mode:0o700});const keys=await keyPair(kit),emergency=join(kit,'independent-key.txt');await copyFile(keys.path,emergency);await chmod(emergency,0o600);
+ recoveryOwner=await state();const f=recoveryOwner;recoveryPlans=[];recoveryDecisions=new Map();
+ for(const kind of originalOperationKinds){const plan=await originalPlan(f,kind),decision=await retire(f,plan.original,web,' =Owner review, "original" é 😀\n\\N\t'+kind);assert.equal(decision.state,'retired');recoveryPlans.push(plan);recoveryDecisions.set(plan.original.reference.operationId,decision);}
+ recoveryOriginal=await originalPlan(f,'crm.customer.save');recoveryCommitted=await recoveryOriginal.run(f,web);assert.equal(recoveryCommitted.state,'committed');
+ recoveryBackup=await backupDatabase(client,target,point,keys.recipient,async()=>{
+  recoveryHistory=await capturedHistory(client,f.business);
+  for(const decision of recoveryDecisions.values()){const row=recoveryHistory.operations.find(item=>item.operation_id===decision.original.reference.operationId);assert(row);assert.deepEqual(JSON.parse(row.result),decision);}
+  postSnapshot=await originalPlan(f,'crm.customer.save');assert.equal((await retire(f,postSnapshot.original)).state,'retired');
+ });assert.equal(recoveryBackup.manifest.schemaVersion,42);assert.equal(recoveryBackup.manifest.completeBackup,false);sourceAfterCapture=await inventory(client);
+ recovery=await recoveryCluster();const url=await recovery.database();await unlink(keys.path);
+ const output=await run(process.execPath,['tests/support/restore-original-operation.mjs',point,emergency],{env:{...process.env,CREST_TEST_DATABASE_URL:'',CREST_RECOVERY_DRILL_TARGET:url}});assert.match(output.toString(),/^Synthetic isolated original-operation restore and verification completed\s*$/);
+ restored=await connect(url);assert.deepEqual(await inventory(restored),recoveryBackup.manifest.rows);
+ const restoredLogin='crest_resolution_restored_'+randomBytes(8).toString('hex'),password=randomBytes(32).toString('hex');await restored.query('CREATE ROLE '+restoredLogin+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await restored.query('GRANT crest_web TO '+restoredLogin);const connection=new URL(url);connection.username=restoredLogin;connection.password=password;restoredWeb=await connect(connection.toString());await restoredWeb.query('SET ROLE crest_web');
+},{timeout:240000});
+
+test('restored retirement operation and audit JSON and CSV exclude the later decision without changing source history',async()=>{
+ assert(restored);await restored.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+ try{const actual=await capturedHistory(restored,recoveryOwner.business);assert.deepEqual(actual.records,recoveryHistory.records);assert.deepEqual(actual.operations,recoveryHistory.operations);assert.deepEqual(actual.audits,recoveryHistory.audits);assert.deepEqual(JSON.parse(actual.csv.manifest).recordCounts,JSON.parse(recoveryHistory.csv.manifest).recordCounts);assert.equal(actual.report.completeBackup,false);assert.equal(actual.report.completePortableExport,false);}finally{await restored.query('ROLLBACK');}
+ assert.equal((await restored.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[recoveryOwner.business,postSnapshot.original.reference.operationId])).rows[0].n,0);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[recoveryOwner.business,postSnapshot.original.reference.operationId])).rows[0].n,1);
+});
+
+test('restored recent owner reads paused historical retirements and unchanged original receipt while late originals remain fenced under fresh authority',async()=>{
+ assert(restoredWeb);const f=await session(recoveryOwner,'1 second',restored),epoch=randomUUID();
+ await restored.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,active_epoch=$2,version=version+1 WHERE business_id=$1',[f.business,epoch]);
+ for(const plan of recoveryPlans)assert.deepEqual(await lookup(f,plan.original,restoredWeb),recoveryDecisions.get(plan.original.reference.operationId));
+ assert.deepEqual(await lookup(f,recoveryOriginal.original,restoredWeb),{schemaVersion:1,state:'original_recorded',original:recoveryOriginal.original});
+ const originalReceipt=()=>query(restoredWeb,'SELECT crest_commands.lookup_customer_operation($1,$2,$3,$4,$5,$6,$7,$8,$9) AS value',[...auth(f),recoveryOriginal.original.reference.operationId]);assert.deepEqual(await originalReceipt(),recoveryCommitted);
+ await assert.rejects(retire({...f,epoch},recoveryPlans[0].original,restoredWeb),e=>e.code==='P0001'&&e.message==='RECOVERY_REVIEW_REQUIRED');
+ await restored.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[f.business]);
+ for(const plan of recoveryPlans){await assert.rejects(plan.run(f,restoredWeb),e=>e.code==='P0001'&&e.message==='RECOVERY_REVIEW_REQUIRED');assert.deepEqual(await plan.run({...f,epoch},restoredWeb),{state:'conflict',reason:'operation'});assert.deepEqual(await lookup({...f,epoch},plan.original,restoredWeb),recoveryDecisions.get(plan.original.reference.operationId));}
+ await restored.query('DELETE FROM auth.sessions WHERE id=$1',[f.provider]);await assert.rejects(lookup(f,recoveryPlans[0].original,restoredWeb),e=>e.code==='42501');await assert.rejects(originalReceipt(),e=>e.code==='42501');
+});
+
+test('registered42 restore preserves all499 source columns, closed roles and immutable retirement and audit evidence',async()=>{
+ assert(restored);const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,42);
+ const columns=(await restored.query("SELECT n.nspname||'.'||c.relname AS table,a.attname AS column FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r' AND a.attnum>0 AND NOT a.attisdropped ORDER BY n.nspname,c.relname,a.attnum")).rows;
+ assert.deepEqual(verifyExportCoverage(manifest,columns,42),{assurance:'schema_inventory_only',tables:33,requiredColumns:489,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
+ for(const role of ['crest_schema_owner','crest_command_owner','crest_session_owner','crest_integrity_owner'])assert.equal((await restored.query('SELECT NOT(rolcanlogin OR rolinherit OR rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls) AND rolconfig IS NULL AS closed FROM pg_roles WHERE rolname=$1',[role])).rows[0].closed,true);
+ const operation=recoveryPlans[0].original.reference.operationId;
+ for(const table of ['crest_private.operations','crest_private.audit_events']){await assert.rejects(restoredWeb.query('SELECT * FROM '+table),e=>e.code==='42501');for(const sql of ['UPDATE '+table+' SET operation_id=operation_id WHERE business_id=$1 AND operation_id=$2','DELETE FROM '+table+' WHERE business_id=$1 AND operation_id=$2'])await assert.rejects(restored.query(sql,[recoveryOwner.business,operation]),e=>e.code==='55000');}
+ await assert.rejects(restoredWeb.query('SET ROLE crest_command_owner'),e=>e.code==='42501');assert.deepEqual(await inventory(client),sourceAfterCapture);
 });

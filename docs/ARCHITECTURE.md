@@ -1,6 +1,6 @@
 # Crest OS V1 - Technical Architecture
 
-Version: 1.6 | 2026-10-22 | Owner-requested V1 Calendar contract; implementation and production gated
+Version: 1.7 | 2026-10-25 | ADR42 explicit unresolved nonfinancial-operation retirement; production gated
 
 Calendar scope amendment, 2026-10-22: the owner requested Google Calendar connection support in V1. P20/BR21/ADR35 now require the capability with optional owner activation, outbound-only projection and unchanged integrity/security/recovery gates. This supersedes older optional/excluded Calendar wording only. Current versions and immutable-baseline amendment evidence are in CANONICAL_MAINTENANCE.md; implementation/research and unexecuted provider gates are in [the Calendar contract](../planning/GOOGLE_CALENDAR_V1.md). No live integration or production approval is implied.
 
@@ -99,6 +99,8 @@ Every command contains a UUID operation ID, schema version, target IDs, expected
 5. Return confirmed result after commit. External effects run afterward, separately retryable. A timeout displays Outcome Unknown; query the authenticated operation endpoint before another action. Within the unchanged recovery epoch, if absent retry the identical operation; absence is not proof an in-flight request failed. After recovery epoch change require reviewed reconstruction, never replay a stale payload.
 
 Keep successful operation tombstones for the lifetime of the affected history. CRM command results may be compacted to IDs/hash; never purge financial deduplication identity while sources survive. Expected version errors require a new explicitly reviewed operation; network retries do not generate new IDs. Distinct genuine receipts with new IDs are not discarded merely because amounts match. Conversely, a new ID is not proof of a new real-world receipt: enforce verified provider/account/reference uniqueness and reviewed ambiguous-cash duplicate handling per DATABASE.md. Manual and imported recording share the same financial identity registry.
+
+ADR42 adds an explicit recent-owner retirement decision for an unresolved implemented nonfinancial original whose draft cannot safely be retried. Compete on the same original operation claim: a committed original remains unchanged and still needs its typed receipt; a committed immutable audited retirement permanently fences every late original before effects. Absence never releases the reference. Retain separate original/current retirement epochs, complete source/export/registered-restore evidence and acknowledged exact-reference clearing. No automatic replacement, lost-draft reconstruction, financial cancellation, undo or new authority from IDs is introduced.
 
 Use READ COMMITTED with explicit aggregate locks plus PostgreSQL constraints. For simplicity at one-owner scale, each financial mutation locks one business finance-control row first, and each field/schedule mutation locks one operator-control row first. This deliberately serializes small critical sections. Use SERIALIZABLE only for a future command proven to need predicate protection; it is not a replacement for knowing the invariant.
 
