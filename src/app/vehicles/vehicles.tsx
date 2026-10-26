@@ -66,7 +66,7 @@ export function VehicleScreen(){
     </>}
     {view.phase==='pending'&&<><p className="field-help">Keep the original save reference until the outcome is confirmed. No retry runs automatically.</p>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check vehicle save status</button>{view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('retry')}>Retry original vehicle change</button>}</>}
     {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current vehicles</button>}
-    <nav aria-label="Vehicle navigation"><Link href="/customers">Customers</Link><Link href="/leads">Leads</Link><Link href="/settings">Business settings</Link><Link href="/sign-in">Device sign-in and sign-out</Link><Link href="/">Crest OS home</Link></nav>
+<nav aria-label="Vehicle navigation"><Link href="/save-review">Review interrupted save</Link><Link href="/customers">Customers</Link><Link href="/leads">Leads</Link><Link href="/settings">Business settings</Link><Link href="/sign-in">Device sign-in and sign-out</Link><Link href="/">Crest OS home</Link></nav>
     <p className="field-help">Setup and synthetic testing are still in progress. This screen does not approve real customer records or production use.</p>
   </section>;
 }

@@ -32,3 +32,5 @@ export {createVehicleHttp} from '../customer/vehicle-http.ts';
 export {createAssociationHttp} from '../customer/association-http.ts';
 export {createLeadHttp} from '../customer/lead-http.ts';
 export {createLeadSourceHttp} from '../customer/lead-source-http.ts';
+export {createOriginalOperationDirectory} from '../security/original-operation-directory.ts';
+export {createOriginalOperationHttp} from '../security/original-operation-http.ts';

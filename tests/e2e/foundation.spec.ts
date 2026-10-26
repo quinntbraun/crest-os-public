@@ -1,6 +1,13 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+test('interrupted-save review remains private, accessible and closed by default',async({page,request})=>{
+ const response=await page.goto('/save-review');expect(response?.headers()['cache-control']).toContain('no-store');await expect(page.getByRole('heading',{name:'Interrupted save review',exact:true})).toBeVisible();
+ await expect(page.getByRole('status')).toContainText('The outcome could not be verified');await expect(page.getByLabel('Interrupted save type')).toBeVisible();await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Confirm retirement of this original save',exact:true})).toHaveCount(0);
+ for(const route of ['retire','resolution']){const denied=await request.post('/api/business/original-operations/'+route,{data:{},headers:{origin:'http://127.0.0.1:3000'}});expect(denied.status()).toBe(503);expect(await denied.json()).toEqual({error:'ORIGINAL_OPERATION_REQUEST_FAILED'});expect(denied.headers()['cache-control']).toContain('no-store');}
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
+});
+
 test("foundation shell is accessible at desktop and 360px width", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Crest OS", exact: true })).toBeVisible();

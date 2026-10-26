@@ -16,8 +16,9 @@ const prefix='/api/business/original-operations/';
 function failure(status:400|404|405|503=400,error='ORIGINAL_OPERATION_REQUEST_FAILED'){
  const response=privateJsonResponse({error},status);if(status===405)response.headers.set('Allow','POST');return response;
 }
-// No runtime wiring exists yet. Explicit trusted composition must opt in only
-// after registered schema/recovery/consumer acceptance; browser input cannot.
+export {failure as originalOperationFailureResponse};
+// Trusted composition must explicitly opt in; browser input cannot. The
+// ordinary application entry point keeps this unavailable by default.
 export function createOriginalOperationHttp(config:Configuration,provider:Parameters<typeof createOriginalOperationDirectory>[1],tokens:Parameters<typeof createOriginalOperationDirectory>[2],enabled=false){
  if(!uuid(config.businessId)||typeof enabled!=='boolean')throw new Error('ORIGINAL_OPERATION_HTTP_CONFIGURATION_REQUIRED');
  const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);

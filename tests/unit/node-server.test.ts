@@ -1,7 +1,7 @@
 import {request as httpRequest} from 'node:http';
 import {describe,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn()}));
+const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn()}));
 vi.mock('../../src/security/browser-session-flow.ts',()=>({createBrowserSessionFlow:()=>flow}));
 vi.mock('../../src/security/business-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/business-http.ts')>(),createBusinessHttp:()=>flow.business}));
 vi.mock('../../src/customer/customer-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-http.ts')>(),createCustomerHttp:()=>flow.customers}));
@@ -10,6 +10,7 @@ vi.mock('../../src/customer/vehicle-http.ts',async importOriginal=>({...await im
 vi.mock('../../src/customer/association-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/association-http.ts')>(),createAssociationHttp:()=>flow.associations}));
 vi.mock('../../src/customer/lead-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/lead-http.ts')>(),createLeadHttp:()=>flow.leads}));
 vi.mock('../../src/customer/lead-source-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/lead-source-http.ts')>(),createLeadSourceHttp:()=>flow.leadSources}));
+vi.mock('../../src/security/original-operation-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/original-operation-http.ts')>(),createOriginalOperationHttp:()=>flow.originalOperations}));
 import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../../src/server/node-server.ts';
 import type {NodeConfiguration} from '../../src/server/node-server.ts';
 
@@ -23,6 +24,21 @@ async function withVehicleServer(enabled:boolean,work:(local:string,pages:Return
   try{await work(local,pages);}finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));flow.vehicles.mockReset();}
 }
 describe('Node hosting boundary',()=>{
+  it.each([{operationResolution:true},{operationResolution:true,authentication:{}},{operationResolution:'yes'},{operationResolution:null}])('requires explicit boolean recovery composition with authentication and business: %o',patch=>{
+    expect(()=>bindApplicationHandler(createBoundedNodeServer(),{origin,environment:'test',...patch} as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  });
+  it.each([undefined,false,true])('original-operation routing independently opts in with a bounded private response: %s',async enabled=>{
+    const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw new Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn(async()=>{});
+    flow.originalOperations.mockImplementation(async request=>new Response(request.url.endsWith('/large')?'x'.repeat(16384):request.url.endsWith('/oversize')?'x'.repeat(16385):JSON.stringify({synthetic:'original-operation'}),{headers:{'cache-control':'private, no-store'}}));
+    bindApplicationHandler(server,{origin:local,environment:'test',...(enabled===undefined?{}:{operationResolution:enabled}),business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+    const before=flow.originalOperations.mock.calls.length,businessBefore=flow.business.mock.calls.length;
+    try{
+      const paths=['/api/business/original-operations','/api/business/original-operations/retire','/api/business/original-operations/resolution','/api/%62usiness/%6friginal-operations/retire','/api%2fbusiness/original-operations/resolution'];
+      for(const path of paths){const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(enabled?200:503);expect(response.headers.get('cache-control')).toContain('no-store');expect(await response.json()).toEqual(enabled?{synthetic:'original-operation'}:{error:'ORIGINAL_OPERATION_REQUEST_FAILED'});}
+      expect(flow.originalOperations.mock.calls.length-before).toBe(enabled?paths.length:0);expect(flow.business.mock.calls.length).toBe(businessBefore);expect(pages).not.toHaveBeenCalled();
+      if(enabled){expect((await(await fetch(local+'/api/business/original-operations/large',{method:'POST',body:'{}'})).text()).length).toBe(16384);await expect(fetch(local+'/api/business/original-operations/oversize',{method:'POST',body:'{}'})).rejects.toThrow();}
+    }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));flow.originalOperations.mockReset();}
+  });
   it.each(['/api/business','/api/business/settings','/api/%62usiness/rename','/%61pi/business/operation','/api%2fbusiness/settings'])('reserves the business namespace including encoded aliases: %s',path=>expect(requestTarget(path,origin).business).toBe(true));
   it('requires explicit authentication composition before enabling a business target',()=>{
     expect(()=>bindApplicationHandler(createBoundedNodeServer(),{origin,environment:'test',business:{businessId:'untrusted'}},async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
