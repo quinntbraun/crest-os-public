@@ -40,7 +40,7 @@ export function LeadScreen(){
   return()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
  },[]);
  const statusChanged=useCallback((leadId:string)=>{void current.current?.statusChanged(leadId);},[]);
- const conversionCommitted=useCallback((leadId:string)=>{setConversionGeneration(v=>v+1);void current.current?.statusChanged(leadId);},[]);
+ const conversionCommitted=useCallback((leadId:string)=>{setConversionGeneration(v=>v+1);void current.current?.conversionChanged(leadId);},[]);
  const dirty=view.draft!==null&&JSON.stringify(view.draft)!==JSON.stringify(view.selected?draftFromLead(view.selected):emptyLeadDraft);
  useEffect(()=>{if(!dirty&&view.phase!=='pending'&&!view.busy)return;const leave=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener('beforeunload',leave);return()=>window.removeEventListener('beforeunload',leave);},[dirty,view.phase,view.busy]);
  async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory'){const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
