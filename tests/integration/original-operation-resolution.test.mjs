@@ -8,6 +8,8 @@ import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {parseOriginalOperationReference,parseOriginalOperationOutcome,originalOperationKinds} from '../../src/security/original-operation-reference.ts';
 import {verifyBusinessHistoryEvidence} from '../../src/security/business-history-evidence.ts';
+import {formatBusinessHistoryCsv} from '../../src/security/business-history-csv.ts';
+import {decodeCustomerCsv} from '../support/customer-fixture.ts';
 
 let sandbox,target,client,web,web2,bootstrap,login,pid2,unsafeOwnerRefused=false;
 const issuer='https://auth.example.com/auth/v1',reason=' Owner reviewed lost draft é 😀\nRetire this original only. ';
@@ -115,8 +117,13 @@ test('all eleven retirement decisions retain complete common-format operation an
   const context=(await reader.query('SELECT crest_commands.business_history_export_context($1) AS value',[f.business])).rows[0].value;
   initial=Number(context.recordCounts.operation);assert(initial>=12);assert.equal(context.recordCounts.operation,context.recordCounts.audit_event);
   later=await originalPlan(f,'crm.customer.save');assert.equal((await retire(f,later.original)).state,'retired');afterLater=await evidence(f);
-  const rows=await records(context),report=verifyBusinessHistoryEvidence(JSON.stringify({formatVersion:1,assurance:'snapshot_bytes_only',generationId:randomUUID(),context,evidenceBytes:rows.reduce((n,row)=>n+Buffer.byteLength(row.canonicalEvidence),0),records:rows}),{businessId:f.business});
+  const rows=await records(context),serialized=JSON.stringify({formatVersion:1,assurance:'snapshot_bytes_only',generationId:randomUUID(),context,evidenceBytes:rows.reduce((n,row)=>n+Buffer.byteLength(row.canonicalEvidence),0),records:rows}),report=verifyBusinessHistoryEvidence(serialized,{businessId:f.business});
   assert.equal(report.records.length,initial*2);assert.equal(report.completePortableExport,false);assert.equal(report.completeBackup,false);
+  const csv=formatBusinessHistoryCsv(serialized,{businessId:f.business});
+  const decodedOperations=decodeCustomerCsv(csv.operations.csv,csv.operations.escapeMap).map(row=>({...row,schema_version:Number(row.schema_version),result_schema_version:Number(row.result_schema_version)}));
+  assert.deepEqual(decodedOperations,rows.filter(row=>row.kind==='operation').map(row=>JSON.parse(row.canonicalEvidence).row));
+  assert.deepEqual(decodeCustomerCsv(csv.audits.csv,csv.audits.escapeMap),rows.filter(row=>row.kind==='audit_event').map(row=>JSON.parse(row.canonicalEvidence).row));
+  assert.deepEqual(JSON.parse(csv.manifest).recordCounts,context.recordCounts);assert.equal(JSON.parse(csv.manifest).completeBackup,false);
   const operations=new Map(),audits=new Map();
   for(const item of rows){
    assert.equal(item.evidenceHash,createHash('sha256').update(item.canonicalEvidence).digest('hex'));

@@ -55,7 +55,7 @@ jobs:
           npm run verify:dependencies
           npm run typecheck
           npm run lint
-          npx --no-install vitest run tests/unit/original-operation-reference.test.ts tests/unit/original-operation-directory.test.ts
+          npx --no-install vitest run tests/unit/original-operation-reference.test.ts tests/unit/original-operation-directory.test.ts tests/unit/business-history-csv.test.ts
       - name: Install verified database tooling
         run: node scripts/install-tools.mjs
       - name: Prove isolated proposal claims, authorization and competing devices
