@@ -10,6 +10,8 @@ The [customer directory core](planning/PHASE_4_CUSTOMER_DIRECTORY.md), [private 
 
 The [private export worker](planning/PHASE_4_SOURCE_EXPORT_DELIVERY.md#bounded-worker-and-durable-journal-protocol) connects consistent source capture, independent file verification and encrypted custody with explicit durable-journal acknowledgment requirements. Real SDK/HTTP tests exercise all95 files and uncertain outcomes. The database queue/lease/journal adapter and owner request/download screens remain unfinished; the worker has no runtime route or authorization of its own.
 
+The [durable request and lease core](planning/PHASE_4_EXPORT_JOB_JOURNAL.md) is an unregistered migration proposal with29 written genuine database cases. Source requests, active-business exclusion, retained lease attempts and audited original outcomes are under construction; native acceptance, adoption, remaining journal stages and owner delivery remain gated.
+
 The [private object storage boundary](planning/PHASE_3_PRIVATE_OBJECTS.md) adds scoped staging PUTs, bounded checksummed intake and conditional immutable original candidates. Format validation, typed attachment publication and authorized reads remain unfinished.
 
 The [isolated image validator](planning/PHASE_3_IMAGE_VALIDATION.md) adds strict JPEG/PNG checks and private previews. The [PDF validator](planning/PHASE_3_PDF_VALIDATION.md) adds encrypted/active-content rejection and offline page rendering. The [HEIC worker](planning/PHASE_3_HEIC_VALIDATION.md) adds patched native full-image decoding and private previews; check its feature PR's exact-source proof before calling it verified. Actual phone tests, attachment publication and production sandbox dispatch remain gated.

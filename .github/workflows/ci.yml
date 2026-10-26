@@ -85,6 +85,8 @@ jobs:
         run: node --conditions=react-server --test --test-concurrency=1 tests/integration/lead-conversion.test.mjs
       - name: Encrypted isolated database recovery drill
         run: npm run test:recovery-db
+      - name: Prove proposed durable export requests and fenced lease attempts
+        run: node --conditions=react-server --test --test-concurrency=1 tests/integration/source-export-jobs.test.mjs
 
   database_provider:
     name: Provider and evidence
