@@ -103,6 +103,10 @@ DECLARE context jsonb;operation uuid;digest text;claimed uuid;existing record;ev
 BEGIN
  PERFORM set_config('crest.business_id','',true),set_config('crest.actor_id','',true),set_config('crest.operation_id','',true);
  IF NOT crest_private.original_operation_reference_valid(original) OR original->>'businessId' IS DISTINCT FROM requested_business::text OR requested_reason IS NULL OR char_length(requested_reason) NOT BETWEEN 1 AND 2000 OR btrim(requested_reason,E' \t\n\r\u000b\f'||U&'\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF')='' OR translate(requested_reason,E'\t\n\r','')~('['||chr(1)||'-'||chr(31)||chr(127)||']') THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_OPERATION_RETIREMENT_INPUT_REQUIRED';END IF;
+ -- JSONB numeric equality admits schemaVersion1.0 as version1. Normalize its
+ -- representation before hashing/retaining so an equivalent later lookup is
+ -- not rejected merely because the original caller used another spelling.
+ original:=original||jsonb_build_object('schemaVersion',1);
  context:=crest_commands.lock_operation_retirement_authority(credential_hash,expected_session,expected_actor,expected_issuer,expected_subject,expected_provider_session,provider_valid_until,requested_business,expected_epoch);
  operation:=(original->'reference'->>'operationId')::uuid;
  PERFORM set_config('crest.business_id',context->>'businessId',true),set_config('crest.actor_id',context->>'actorId',true),set_config('crest.operation_id',operation::text,true);
@@ -130,6 +134,7 @@ DECLARE context jsonb;
 BEGIN
  PERFORM set_config('crest.business_id','',true),set_config('crest.actor_id','',true),set_config('crest.operation_id','',true);
  IF NOT crest_private.original_operation_reference_valid(original) OR original->>'businessId' IS DISTINCT FROM requested_business::text THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_OPERATION_RETIREMENT_INPUT_REQUIRED';END IF;
+ original:=original||jsonb_build_object('schemaVersion',1);
  context:=crest_commands.authorize_operation_resolution_read(credential_hash,expected_session,expected_actor,expected_issuer,expected_subject,expected_provider_session,provider_valid_until,requested_business);
  PERFORM set_config('crest.business_id',context->>'businessId',true),set_config('crest.actor_id',context->>'actorId',true);
  RETURN crest_private.operation_retirement_result(requested_business,expected_actor,original);
