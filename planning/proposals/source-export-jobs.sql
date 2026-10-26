@@ -148,15 +148,27 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM crest.memberships WHERE business_id=requested_business AND actor_id=expected_actor AND active AND role='owner') THEN RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='CREST_EXPORT_JOB_DENIED';END IF;
  RETURN context;
 END $$;
+CREATE FUNCTION crest_private.source_export_command(kind text,business uuid,epoch uuid,operation uuid,job uuid,expected_version text,lease uuid,release_id text) RETURNS jsonb LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog,pg_temp AS $$
+DECLARE reference jsonb;
+BEGIN
+ reference:=jsonb_build_object('operationId',operation,'recoveryEpoch',epoch,'exportJobId',job);
+ IF kind='export.request' THEN reference:=reference||jsonb_build_object('appReleaseId',release_id,'profile','crest.business-source-bundle.v1','sourceSchemaVersion',43);
+ ELSIF kind IN('export.claim','export.expire') THEN reference:=reference||jsonb_build_object('expectedVersion',expected_version,'leaseId',lease);
+ ELSIF kind='export.stop' THEN reference:=reference||jsonb_build_object('expectedVersion',expected_version);
+ ELSE RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_EXPORT_JOB_INPUT_REQUIRED';END IF;
+ RETURN jsonb_build_object('schemaVersion',1,'businessId',business,'commandType',kind,'reference',reference);
+END $$;
 CREATE FUNCTION crest_private.source_export_receipt(business uuid,actor uuid,operation uuid) RETURNS jsonb LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog,pg_temp SET row_security=on AS $$
-DECLARE o crest_private.operations;r jsonb;a record;
+DECLARE o crest_private.operations;r jsonb;a record;expected_command jsonb;
 BEGIN
  SELECT * INTO o FROM crest_private.operations WHERE business_id=business AND actor_id=actor AND operation_id=operation;
  IF NOT FOUND THEN RETURN jsonb_build_object('state','absent');END IF;
  r:=o.result;
- IF o.command_type NOT IN('export.request','export.claim','export.expire','export.stop') OR o.schema_version<>1 OR o.state<>'committed' OR o.result_schema_version<>1 OR r IS NULL OR jsonb_typeof(r)<>'object' OR NOT(r?&ARRAY['schemaVersion','job','auditEventId']) OR r-ARRAY['schemaVersion','job','auditEventId']<>'{}'::jsonb OR r->'schemaVersion' IS DISTINCT FROM '1'::jsonb OR jsonb_typeof(r->'job') IS DISTINCT FROM 'object' OR r->'job'->>'business_id' IS DISTINCT FROM business::text OR r->'job'->>'operation_id' IS DISTINCT FROM operation::text THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_EXPORT_JOB_RESULT_REVIEW_REQUIRED';END IF;
- SELECT id INTO a FROM crest_private.audit_events WHERE business_id=business AND operation_id=operation AND actor_id=actor AND id::text=r->>'auditEventId' AND entity_kind='export_jobs' AND entity_id::text=r->'job'->>'id' AND entity_version::text=r->'job'->>'version' AND action=split_part(o.command_type,'.',2) AND delta->'after'=r->'job';
+ IF o.command_type NOT IN('export.request','export.claim','export.expire','export.stop') OR o.schema_version<>1 OR o.state<>'committed' OR o.result_schema_version<>1 OR r IS NULL OR jsonb_typeof(r)<>'object' OR NOT(r?&ARRAY['schemaVersion','command','job','auditEventId']) OR r-ARRAY['schemaVersion','command','job','auditEventId']<>'{}'::jsonb OR r->'schemaVersion' IS DISTINCT FROM '1'::jsonb OR jsonb_typeof(r->'job') IS DISTINCT FROM 'object' OR r->'job'->>'business_id' IS DISTINCT FROM business::text OR r->'job'->>'operation_id' IS DISTINCT FROM operation::text THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_EXPORT_JOB_RESULT_REVIEW_REQUIRED';END IF;
+ SELECT id,delta INTO a FROM crest_private.audit_events WHERE business_id=business AND operation_id=operation AND actor_id=actor AND id::text=r->>'auditEventId' AND entity_kind='export_jobs' AND entity_id::text=r->'job'->>'id' AND entity_version::text=r->'job'->>'version' AND action=split_part(o.command_type,'.',2) AND delta->'after'=r->'job';
  IF NOT FOUND THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_EXPORT_JOB_RESULT_REVIEW_REQUIRED';END IF;
+ expected_command:=crest_private.source_export_command(o.command_type,business,o.recovery_epoch,operation,(r->'job'->>'id')::uuid,a.delta->'before'->>'version',CASE WHEN o.command_type='export.claim' THEN (a.delta->'after'->>'lease_id')::uuid WHEN o.command_type='export.expire' THEN (a.delta->'before'->>'lease_id')::uuid ELSE NULL END,CASE WHEN o.command_type='export.request' THEN r->'job'->>'app_release_id' ELSE NULL END);
+ IF r->'command' IS DISTINCT FROM expected_command THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_EXPORT_JOB_RESULT_REVIEW_REQUIRED';END IF;
  RETURN jsonb_build_object('state','committed','operationId',operation,'recoveryEpoch',o.recovery_epoch,'receipt',r);
 END $$;
 CREATE FUNCTION crest_commands.source_export_transition(credential_hash bytea,expected_session uuid,expected_actor uuid,expected_issuer text,expected_subject uuid,expected_provider_session uuid,provider_valid_until timestamptz,requested_business uuid,expected_epoch uuid,operation uuid,job uuid,action text,expected_version bigint,lease uuid,release_id text) RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $$
@@ -198,7 +210,7 @@ BEGIN
   END IF;
   after_state:=crest_private.source_export_job_projection(j);
   INSERT INTO crest_private.audit_events(business_id,operation_id,actor_id,created_by,entity_kind,entity_id,entity_version,action,delta,origin) VALUES(requested_business,operation,expected_actor,expected_actor,'export_jobs',job,j.version,action,jsonb_build_object('schemaVersion',1,'before',before_state,'after',after_state),'manual') RETURNING id INTO event;
-  receipt:=jsonb_build_object('schemaVersion',1,'job',after_state,'auditEventId',event);
+  receipt:=jsonb_build_object('schemaVersion',1,'command',crest_private.source_export_command(kind,requested_business,expected_epoch,operation,job,expected_version::text,lease,release_id),'job',after_state,'auditEventId',event);
   UPDATE crest_private.operations SET state='committed',result_schema_version=1,result=receipt WHERE business_id=requested_business AND operation_id=operation;
   PERFORM crest_commands.lock_source_export_authority(credential_hash,expected_session,expected_actor,expected_issuer,expected_subject,expected_provider_session,provider_valid_until,requested_business,expected_epoch);
   RETURN crest_private.source_export_receipt(requested_business,expected_actor,operation);
@@ -254,3 +266,5 @@ REVOKE CREATE ON SCHEMA crest_commands FROM crest_session_owner,crest_command_ow
 REVOKE ALL ON FUNCTION crest_private.source_export_job_projection(crest_private.export_jobs),crest_private.guard_source_export_job(),crest_private.check_source_export_audit(),crest_private.guard_source_export_attempt(),crest_private.check_source_export_attempt_audit(),crest_private.source_export_receipt(uuid,uuid,uuid),crest_commands.authorize_source_export_read(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid),crest_commands.lock_source_export_authority(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid),crest_commands.source_export_transition(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,text,bigint,uuid,text),crest_commands.request_source_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,text),crest_commands.claim_source_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,bigint,uuid),crest_commands.expire_source_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,bigint,uuid),crest_commands.stop_source_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,bigint),crest_commands.read_source_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid),crest_commands.lookup_source_export_operation(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION crest_private.source_export_job_projection(crest_private.export_jobs),crest_private.source_export_receipt(uuid,uuid,uuid),crest_commands.authorize_source_export_read(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid),crest_commands.lock_source_export_authority(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid) TO crest_command_owner;
 GRANT EXECUTE ON FUNCTION crest_commands.request_source_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,text),crest_commands.claim_source_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,bigint,uuid),crest_commands.expire_source_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,bigint,uuid),crest_commands.stop_source_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,bigint),crest_commands.read_source_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid),crest_commands.lookup_source_export_operation(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid) TO crest_web;
+REVOKE ALL ON FUNCTION crest_private.source_export_command(text,uuid,uuid,uuid,uuid,text,uuid,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION crest_private.source_export_command(text,uuid,uuid,uuid,uuid,text,uuid,text) TO crest_command_owner;
