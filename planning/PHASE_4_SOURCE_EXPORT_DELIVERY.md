@@ -2,7 +2,7 @@
 
 2026-10-26. Construction under ADR37, EXPORTS_AND_BACKUPS section2 and the first useful synthetic CRM milestone. The approved queue, recent owner authorization, private custody, complete coverage and recovery requirements remain unchanged. No schema change, additional privilege, provider setup, paid service or production activation.
 
-The current owner-recovery release remains draft89/source80cf13a7dad0469fff1b5c7409ea39d8c3ea81ba in its original checkout while Linux CI runs. This next dependency is developed independently on feature/business-source-capture from that exact source. It does not alter or accept the running candidate. Integrate accepted actual main normally before publishing the eventual coherent export-delivery feature.
+The owner-recovery release remains draft89 in its original checkout while Linux CI runs. This independent feature/business-source-capture checkout now includes the current fd6511f4b74d5419d43a5cde7e03d437e3907b66 response-lifetime fixture correction through a normal merge. A dependent draft PR against the recovery branch may run all mandatory Linux gates to obtain native collector proof before consumer work; it does not alter or accept the running recovery candidate. Keep this as one coherent export-delivery draft. No merge until89 has complete candidate and independent actual-main acceptance; then retarget/integrate accepted main normally and require fresh final-source acceptance.
 
 ## Implemented capture boundary
 
