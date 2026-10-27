@@ -1,0 +1,99 @@
+{
+  "formatVersion": 1,
+  "repositoryRegistration": 43,
+  "executionStatus": "constructed_pending_acceptance",
+  "databaseApplied": false,
+  "productionActivation": "blocked",
+  "migration": {
+    "file": "20261027010000_source_export_journal.sql",
+    "sha256": "d020f734b28dd3090e17c9092548a204f45c3e24c3e886a8557a92eef0540447",
+    "bytes": 164510
+  },
+  "previousRegistry": {
+    "migrationCount": 42,
+    "sha256": "138c2418e90d91c824e1b4834219d5dd727f2e56f32e6d3b5eb1310062831b78",
+    "frozenFixture": "tests/support/registered42-migration-checksums.json"
+  },
+  "proposalBodies": [
+    {
+      "order": 1,
+      "path": "planning/proposals/source-export-jobs.sql",
+      "sha256": "82849fd3749128b6b6fc1938a426deb5d888c20b2d452ab53d6210b5b397cc7f",
+      "bytes": 41012,
+      "offset": 428
+    },
+    {
+      "order": 2,
+      "path": "planning/proposals/source-export-snapshots.sql",
+      "sha256": "f7287735b4277e5b3ec4b385f98fd09f20fe9f10424562133e64a6149c9930a9",
+      "bytes": 18844,
+      "offset": 41586
+    },
+    {
+      "order": 3,
+      "path": "planning/proposals/source-export-parts.sql",
+      "sha256": "29fa85cb60795db7a7d987a1e77f88af363ab651c0587d2e98b2cbac13ea1522",
+      "bytes": 19542,
+      "offset": 60572
+    },
+    {
+      "order": 4,
+      "path": "planning/proposals/source-export-ready.sql",
+      "sha256": "ef1a3b68a4c6391e683ebf4d41dffb74561c00433e3d9ba6abaa32a228b56025",
+      "bytes": 18067,
+      "offset": 80256
+    },
+    {
+      "order": 5,
+      "path": "planning/proposals/source-export-journal-reads.sql",
+      "sha256": "c9c6da59574540594d8a1e559f1405e2a094908bbcad3b0e0e6a6ba534d731dc",
+      "bytes": 26743,
+      "offset": 98473
+    },
+    {
+      "order": 6,
+      "path": "planning/proposals/source-export-request-resolution.sql",
+      "sha256": "de31ae1ce6e4afff12d7db35044e1b6b06f5e51f94a1e9b0c586a299f6d7cc8d",
+      "bytes": 12247,
+      "offset": 125371
+    },
+    {
+      "order": 7,
+      "path": "planning/proposals/source-export-owner-reads.sql",
+      "sha256": "7d95e19d6796490396c525c3a429fd3fd3a5da1a546fd46d586b19dc8c74c4ba",
+      "bytes": 26744,
+      "offset": 137766
+    }
+  ],
+  "journalTables": [
+    "crest_private.export_job_attempts",
+    "crest_private.export_job_completions",
+    "crest_private.export_job_snapshots",
+    "crest_private.export_jobs",
+    "crest_private.export_part_intents",
+    "crest_private.export_part_verifications"
+  ],
+  "requiredJournalColumns": 114,
+  "sourceCoverage": {
+    "tables": 39,
+    "requiredColumns": 603,
+    "excludedCredentialColumns": 10,
+    "actualRegistered43CatalogVerified": false
+  },
+  "completePortableExport": false,
+  "completeBackup": false,
+  "proposalEvidence": {
+    "source": "c9b179e43a8005e1284a386b53b625387e371a46",
+    "run": 40495494293,
+    "native": 1254,
+    "acceptsThisRegistration": false
+  },
+  "requiredAcceptance": [
+    "Registered43 upgrade/catalog/privilege and old-source drift checks",
+    "Genuine Auth/journal and inherited command execution on registered43",
+    "Registered43 independent encrypted restore and revoked/rotated authority checks",
+    "Preserved legacy42 recovery/profile checks",
+    "Complete exact-source browser/build/container/artifact release"
+  ],
+  "canonicalDecision": "ADR43"
+}

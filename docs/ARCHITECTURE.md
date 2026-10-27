@@ -1,6 +1,8 @@
 # Crest OS V1 - Technical Architecture
 
-Version: 1.7 | 2026-10-25 | ADR42 explicit unresolved nonfinancial-operation retirement; production gated
+Version: 1.8 | 2026-10-27 | ADR43 registered source-export journal; production gated
+
+Schema43 construction amendment,2026-10-27: ADR43 explicitly registers the reviewed bounded source-export journal and its39-table/613-column inventory while preserving all42 earlier migrations and closed legacy42 profiles. Fresh owner/lease/recovery authority, exact-original audit, independent reconstruction and version-specific encrypted restore remain mandatory. This source construction does not enable product routes, certify full backups or authorize production application/use. See DATABASE8, EXPORTS_AND_BACKUPS2 and planning/PHASE_4_SOURCE_EXPORT_ADOPTION.md.
 
 Calendar scope amendment, 2026-10-22: the owner requested Google Calendar connection support in V1. P20/BR21/ADR35 now require the capability with optional owner activation, outbound-only projection and unchanged integrity/security/recovery gates. This supersedes older optional/excluded Calendar wording only. Current versions and immutable-baseline amendment evidence are in CANONICAL_MAINTENANCE.md; implementation/research and unexecuted provider gates are in [the Calendar contract](../planning/GOOGLE_CALENDAR_V1.md). No live integration or production approval is implied.
 
