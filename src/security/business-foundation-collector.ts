@@ -14,6 +14,7 @@ import {parseLeadVehicle} from '../customer/lead-vehicle-contract.ts';
 import {parseLeadAddress} from '../customer/lead-address-contract.ts';
 import {parseLeadConversionRecord,parseConversionLink,parseLeadConversionCollection} from '../customer/lead-conversion-record.ts';
 import {parseHistoryJson,historyJsonEqual} from './history-evidence-json.ts';
+import {collectJournalSources,journalCollectionContext} from './source-export-journal-collection.ts';
 
 type Configuration=Readonly<{connectionString:string;environment:'production'|'test';businessId:string}>;
 type Group='configuration'|'identity'|'history';
@@ -26,6 +27,8 @@ type Capture=Readonly<{
 }>;
 export type BusinessFoundationCapture=Readonly<{forServer:()=>Capture;toJSON:()=>never}>;
 export type BusinessSourceCapture=Readonly<{forServer:()=>Capture&Readonly<{crm:string}>;toJSON:()=>never}>;
+type JournalCapture=Capture&Readonly<{sourceSchemaVersion:43;crm:string;journal:string;metadataBytes:number;originalBytes:number;wireBytes:number}>;
+export type BusinessSourceJournalCapture=Readonly<{forJournalServer:()=>JournalCapture;toJSON:()=>never}>;
 export class BusinessFoundationCollectionError extends Error{
  constructor(){super('BUSINESS_FOUNDATION_COLLECTION_REVIEW_REQUIRED');this.name='BusinessFoundationCollectionError';}
 }
@@ -108,9 +111,11 @@ function record(value:unknown,group:Group,kind:string,after:string|null):Row{
 // READ ONLY REPEATABLE READ connection; source JSON text is never rewritten.
 export function createBusinessFoundationCollector(config:Configuration){return createCollector(config,false);}
 export function createBusinessSourceCollector(config:Configuration){return createCollector(config,true);}
-function createCollector(config:Configuration,includeCrm:true):(signal:AbortSignal)=>Promise<BusinessSourceCapture>;
-function createCollector(config:Configuration,includeCrm:false):(signal:AbortSignal)=>Promise<BusinessFoundationCapture>;
-function createCollector(config:Configuration,includeCrm:boolean){
+export function createBusinessSourceJournalCollector(config:Configuration){return createCollector(config,true,true);}
+function createCollector(config:Configuration,includeCrm:true,includeJournal:true):(signal:AbortSignal)=>Promise<BusinessSourceJournalCapture>;
+function createCollector(config:Configuration,includeCrm:true,includeJournal?:false):(signal:AbortSignal)=>Promise<BusinessSourceCapture>;
+function createCollector(config:Configuration,includeCrm:false,includeJournal?:false):(signal:AbortSignal)=>Promise<BusinessFoundationCapture>;
+function createCollector(config:Configuration,includeCrm:boolean,includeJournal=false){
  let connectionString:string,businessId:string,ssl:false|{rejectUnauthorized:true};
  try{
   const url=new URL(config.connectionString);
@@ -141,12 +146,14 @@ function createCollector(config:Configuration,includeCrm:boolean){
     require(guard.rows.length===1&&exact(guard.rows[0],['allowed'])&&guard.rows[0].allowed===true);
     require((await query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')).command==='BEGIN');
     const contextSql='SELECT crest_commands.business_configuration_export_context($1::uuid) AS configuration,crest_commands.business_identity_export_context($1::uuid) AS identity,crest_commands.business_history_export_context($1::uuid) AS history';
-    const result=await query(contextSql+(includeCrm?crmContexts.map(n=>`,crest_commands.${crmSources[n].routine}_snapshot_context($1::uuid)::text AS "${n}"`).join(''):''),[businessId]);
-    require(result.rows.length===1&&exact(result.rows[0],includeCrm?[...groups,...crmContexts]:groups));
+    const result=await query(contextSql+(includeCrm?crmContexts.map(n=>`,crest_commands.${crmSources[n].routine}_snapshot_context($1::uuid)::text AS "${n}"`).join(''):'')+(includeJournal?',crest_commands.source_export_journal_context($1::uuid)::text AS journal':''),[businessId]);
+    require(result.rows.length===1&&exact(result.rows[0],[...groups,...(includeCrm?crmContexts:[]),...(includeJournal?['journal']:[])]));
     const contexts={} as Record<Group,Context>;let declared=0;
     for(const group of groups){contexts[group]=context(result.rows[0][group],group,businessId);declared+=Object.values(contexts[group].recordCounts).reduce((n,c)=>n+Number(c),0);}
     const crm={} as Record<CrmSource,CrmContext>,rawContexts:Partial<Record<CrmSource,string>>={};let crmBytes=0;
     if(includeCrm)for(const name of crmContexts){const raw=sourceJson(result.rows[0][name]);crm[name]=crmContext(raw.value,name,businessId);rawContexts[name]=raw.text;crmBytes+=raw.bytes;declared+=name==='conversions'?Number(crm[name].conversionCount)+Number(crm[name].linkCount):Number(crm[name].rowCount);}
+    const baseDeclared=declared;
+    if(includeJournal){const journal=journalCollectionContext(result.rows[0].journal,businessId,contexts.configuration.observedAt);declared+=Object.values(journal.recordCounts).reduce((n,c)=>n+Number(c),0);}
     require(declared<=maxRecords&&groups.every(g=>contexts[g].observedAt===contexts.configuration.observedAt));
     const generationId=randomUUID(),parts={} as Record<Group,string>;let evidenceBytes=0,recordCount=0;
     for(const group of groups){
@@ -191,11 +198,23 @@ function createCollector(config:Configuration,includeCrm:boolean){
      currentCrmReferences(rows);parseLeadConversionCollection(rows.conversions,rows.links,businessId);
      crmPart=JSON.stringify({formatVersion:1,generationId,businessId,observedAt:contexts.configuration.observedAt,contexts:rawContexts,pages,evidenceBytes:crmBytes,recordCount:Object.values(rows).reduce((n,r)=>n+r.length,0),completePortableExport:false,completeBackup:false});
     }
-    require(recordCount===declared);
+    require(recordCount===baseDeclared);
     // Reuse the existing lossless component, lineage and reference verifiers
     // while the transaction still owns the snapshot, before COMMIT.
     verifyBusinessFoundationEvidence(parts.configuration,parts.identity,parts.history,{businessId});check();
+    let journal:Awaited<ReturnType<typeof collectJournalSources>>|undefined;
+    if(includeJournal){
+     require(typeof result.rows[0].journal==='string');
+     journal=await collectJournalSources(query,check,{rawContext:result.rows[0].journal,businessId,observedAt:contexts.configuration.observedAt,generationId,remainingMetadataBytes:maxBytes-evidenceBytes,remainingRecords:maxRecords-recordCount});
+     recordCount+=journal.recordCount;require(recordCount===declared);
+     const serializedBytes=Buffer.byteLength(parts.configuration)+Buffer.byteLength(parts.identity)+Buffer.byteLength(parts.history)+Buffer.byteLength(crmPart!)+journal.serializedBytes;
+     require(serializedBytes<=33554432);
+    }
     require((await query('COMMIT')).command==='COMMIT');check();
+    if(journal){
+     const value:JournalCapture=Object.freeze({formatVersion:1,sourceSchemaVersion:43,generationId,businessId,observedAt:contexts.configuration.observedAt,capture:'single_connection_repeatable_read',...parts,crm:crmPart!,journal:journal.journal,metadataBytes:evidenceBytes+journal.metadataBytes,originalBytes:journal.originalBytes,wireBytes:journal.wireBytes,evidenceBytes:Buffer.byteLength(parts.configuration)+Buffer.byteLength(parts.identity)+Buffer.byteLength(parts.history)+Buffer.byteLength(crmPart!)+journal.serializedBytes,recordCount,completePortableExport:false,completeBackup:false});
+     return Object.freeze({forJournalServer:()=>value,toJSON():never{throw new Error('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');}});
+    }
     const value:Capture&{crm?:string}=Object.freeze({formatVersion:1,generationId,businessId,observedAt:contexts.configuration.observedAt,capture:'single_connection_repeatable_read',...parts,...(includeCrm?{crm:crmPart!}:{}),evidenceBytes,recordCount,completePortableExport:false,completeBackup:false});
     return Object.freeze({forServer:()=>value,toJSON():never{throw new Error('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');}});
    })();

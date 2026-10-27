@@ -12,6 +12,7 @@ import {installProviderSchema} from '../support/provider-schema.mjs';
 import {parseSourceExportCommand,parseSourceExportCommitted} from '../../src/security/source-export-job-contract.ts';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import {createJournalTextAssembler} from '../../src/security/source-export-journal-text.ts';
+import {createBusinessSourceJournalCollector} from '../../src/security/business-foundation-collector.ts';
 let sandbox,target,client,web,web2,bootstrap,login,pid2,history,readerLogin,readerUrl,readerUnsafeRefused=false,unsafeRefused=false;
 const issuer='https://auth.example.com/auth/v1',release='a'.repeat(40);
 const auth=f=>[f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+300000),f.business];
@@ -479,4 +480,31 @@ test('journal export has only fixed closed definers, explicit source columns and
 });
 test('journal reader source preflight refuses an unsafe definer before initial grants and retains the closed owner',async()=>{
  assert.equal(readerUnsafeRefused,true);assert.equal((await client.query("SELECT rolcanlogin FROM pg_roles WHERE rolname='crest_export_owner'")).rows[0].rolcanlogin,false);
+});
+
+const captureJournal=f=>createBusinessSourceJournalCollector({connectionString:readerUrl,environment:'test',businessId:f.business})(new AbortController().signal);
+function capturedJournalRows(journal,kind){
+ return journal.pages[kind].flatMap(p=>JSON.parse(p)).map(source=>{
+  assert.equal(source.evidence_hash,sha(source.canonical_evidence));const body=JSON.parse(source.canonical_evidence),row={...body.row};
+  if(body.originalText){const original=journal.originals.filter(o=>o.kind===kind&&o.recordKey===source.record_key);assert.equal(original.length,1);const assembly=createJournalTextAssembler({businessId:journal.businessId,snapshotToken:JSON.parse(journal.context).snapshotToken,kind,recordKey:source.record_key,descriptor:body.originalText});try{for(const raw of original[0].chunks)assembly.append(JSON.parse(raw));row.request_text=assembly.finish().forServer();}finally{assembly.dispose();}}
+  return row;
+ });
+}
+test('source journal collector captures all114 original fields on the owned CRM snapshot without modifying source or granting Ready',async()=>{
+ const s=await readyFixture();await readyExport(s.f,s.readyRaw(),s.operation);const retained={evidence:await evidence(s.f),parts:await partRows(s.f),snapshots:await snapshots(s.f),completions:await completions(s.f)},out=await captureJournal(s.f),value=out.forJournalServer(),journal=JSON.parse(value.journal);
+ assert.equal(Object.hasOwn(out,'forServer'),false);assert.throws(()=>JSON.stringify(out),/BUSINESS_FOUNDATION_CAPTURE_PRIVATE/);assert.equal(value.sourceSchemaVersion,43);assert.equal(value.generationId,journal.generationId);assert.equal(value.observedAt,journal.observedAt);assert.equal(value.generationId,JSON.parse(value.crm).generationId);assert.equal(value.completeBackup,false);assert.equal(value.completePortableExport,false);assert(!Object.hasOwn(value,'ready'));
+ for(const [kind,[table,keys]]of Object.entries(journalKinds)){const native=(await client.query('SELECT to_jsonb(t) AS value FROM crest_private.'+table+' t WHERE business_id=$1 ORDER BY '+keys.join(','),[s.f.business])).rows.map(x=>Object.fromEntries(Object.entries(x.value).map(([k,v])=>[k,k==='version'||k==='expected_version'?String(v):sourceScalar(v)])));assert.deepEqual(capturedJournalRows(journal,kind),native);}
+ assert.deepEqual({evidence:await evidence(s.f),parts:await partRows(s.f),snapshots:await snapshots(s.f),completions:await completions(s.f)},retained);assert(value.metadataBytes<=8388608);assert(value.originalBytes<=16777216);assert(value.wireBytes<=25165824);assert.equal(value.evidenceBytes,[value.configuration,value.identity,value.history,value.crm,value.journal].reduce((n,t)=>n+Buffer.byteLength(t),0));
+});
+test('source journal collector captures a genuine maximum12MiB completion separately from bounded CRM metadata',async()=>{
+ const s=await readyFixture(),base=s.readyRaw(),raw=' '.repeat(12582912-Buffer.byteLength(base))+base;await readyExport(s.f,raw,s.operation);const retained=await completions(s.f),value=(await captureJournal(s.f)).forJournalServer(),journal=JSON.parse(value.journal);
+ assert.equal(capturedJournalRows(journal,'completion')[0].request_text,raw);assert.equal(journal.originals.find(o=>o.kind==='completion').chunks.length,24);assert(value.originalBytes>=12582912);assert(value.originalBytes<=16777216);assert(value.metadataBytes<=8388608);assert(value.evidenceBytes<=33554432);assert.deepEqual(await completions(s.f),retained);
+});
+test('source journal collector keeps the original CRM and running journal snapshot across an actual concurrent Ready commit',async()=>{
+ const s=await readyFixture(1);let pending;await client.query('BEGIN');try{
+  await client.query('LOCK TABLE crest.customers IN ACCESS EXCLUSIVE MODE');pending=captureJournal(s.f);void pending.catch(()=>undefined);const deadline=Date.now()+1500;let blocked=false;
+  while(Date.now()<deadline){await client.query('SELECT pg_stat_clear_snapshot()');blocked=(await client.query("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND application_name='crest_business_capture' AND wait_event_type='Lock') AS blocked")).rows[0].blocked;if(blocked)break;}assert.equal(blocked,true,'owned collector must hold its original snapshot while blocked on CRM');
+  const part=JSON.stringify(s.parts[1]);await intentPart(s.f,part);await verifyPart(s.f,part);await readyExport(s.f,s.readyRaw(),s.operation);await client.query('COMMIT');const original=JSON.parse((await pending).forJournalServer().journal);assert.equal(capturedJournalRows(original,'job')[0].state,'Running');assert.equal(capturedJournalRows(original,'verification').length,1);assert.deepEqual(capturedJournalRows(original,'completion'),[]);
+  const newer=JSON.parse((await captureJournal(s.f)).forJournalServer().journal);assert.equal(capturedJournalRows(newer,'job')[0].state,'Ready');assert.equal(capturedJournalRows(newer,'verification').length,2);assert.equal(capturedJournalRows(newer,'completion').length,1);
+ }finally{await client.query('ROLLBACK');await pending?.catch(()=>undefined);}
 });

@@ -7,7 +7,8 @@ vi.mock('pg',()=>({default:{Client:class{
  on(name:string,fn:()=>void){this.events[name]=fn;return this;}once(name:string,fn:()=>void){return this.on(name,fn);}
  connect(){return db.connect();}query(...args:unknown[]){return db.query(...args);}end(){return db.end();}
 }}}));
-import {createBusinessFoundationCollector,createBusinessSourceCollector} from '../../src/security/business-foundation-collector';
+import {createBusinessFoundationCollector,createBusinessSourceCollector,createBusinessSourceJournalCollector} from '../../src/security/business-foundation-collector';
+import {journalCollectionFixture} from '../support/journal-collection-fixture.ts';
 import {customerFixture} from '../support/customer-fixture.ts';
 import {addressFixture} from '../support/customer-address-fixture.ts';
 import {vehicleFixture} from '../support/vehicle-fixture.ts';
@@ -144,6 +145,26 @@ function sourceFixture(){
  }
  db.query.mockImplementation(sourceAnswer);return {rows,sourceAnswer};
 }
+function journalFixture(){
+ const base=sourceFixture(),journal=journalCollectionFixture(f.expected.businessId,f.identity.stamp);contexts.journal=JSON.stringify(journal.context);
+ const original=async(sql:string,args:unknown[]=[])=>sql.includes('source_export_journal_')&&!sql.includes('_context(')?journal.query(sql,args):base.sourceAnswer(sql,args);
+ db.query.mockImplementation(original);return {base,journal,original};
+}
+it('includes the proposed journal in the original CRM snapshot and seals a separate private schema43 result only after commit',async()=>{
+ const fixture=journalFixture(),out=await createBusinessSourceJournalCollector(config())(signal()),value=out.forJournalServer(),journal=JSON.parse(value.journal);
+ expect(out).not.toHaveProperty('forServer');expect(()=>JSON.stringify(out)).toThrow('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');expect(value.sourceSchemaVersion).toBe(43);expect(Object.isFrozen(value)).toBe(true);
+ expect(journal.generationId).toBe(value.generationId);expect(journal.observedAt).toBe(value.observedAt);expect(JSON.parse(value.crm).generationId).toBe(value.generationId);expect(journal.pages.snapshot[0]).toBe(JSON.stringify([fixture.journal.page()]));
+ expect(value.metadataBytes).toBeLessThanOrEqual(8388608);expect(value.originalBytes).toBe(Buffer.byteLength(fixture.journal.text));expect(value.evidenceBytes).toBe([value.configuration,value.identity,value.history,value.crm,value.journal].reduce((n,s)=>n+Buffer.byteLength(s),0));
+ expect(db.configs).toHaveLength(1);const initial=db.query.mock.calls.filter(c=>c[0].includes('_context('));expect(initial).toHaveLength(1);expect(initial[0]![0]).toContain('source_export_journal_context');expect(db.query.mock.calls.at(-1)![0]).toBe('COMMIT');
+});
+it.each(['time','aggregate-count','original-budget','missing-context'])('refuses journal %s before any foundation or CRM page',async issue=>{
+ const fixture=journalFixture();if(issue==='time')fixture.journal.context.observedAt='2026-10-25T07:00:00.123456+00:00';if(issue==='aggregate-count')fixture.journal.context.recordCounts.job='10000';if(issue==='original-budget')fixture.journal.context.originalTextBytes='16777217';contexts.journal=JSON.stringify(fixture.journal.context);if(issue==='missing-context')delete contexts.journal;
+ await expect(createBusinessSourceJournalCollector(config())(signal())).rejects.toThrow(error);expect(db.query.mock.calls.some(c=>c[0].includes('_page('))).toBe(false);expect(db.end).toHaveBeenCalledOnce();
+});
+it.each(['missing-original','commit','bad-commit','late-cancel'])('does not release a journal capture after %s',async issue=>{
+ const fixture=journalFixture(),c=new AbortController();db.query.mockImplementation(async(sql,args)=>{if(sql==='COMMIT'){if(issue==='commit')throw Error('private database detail');if(issue==='bad-commit')return {command:'ROLLBACK'};if(issue==='late-cancel')c.abort();}if(sql.includes('_text_chunk(')&&issue==='missing-original')return {rows:[]};return fixture.original(sql,args);});
+ const failure=await createBusinessSourceJournalCollector(config())(c.signal).catch(e=>e);expect(failure.message).toBe(error);expect(failure).not.toHaveProperty('cause');if(issue==='missing-original')expect(db.query.mock.calls.some(c=>c[0]==='COMMIT')).toBe(false);expect(db.end).toHaveBeenCalledOnce();
+});
 it('captures every CRM group and foundation on one connection with one initial context statement and commit',async()=>{
  const fixture=sourceFixture(),sealed=await createBusinessSourceCollector(config())(signal()),value=sealed.forServer(),crm=JSON.parse(value.crm);
  expect(()=>JSON.stringify(sealed)).toThrow('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');expect(db.configs).toHaveLength(1);expect(db.query.mock.calls.filter(c=>c[0].includes('_context('))).toHaveLength(1);
