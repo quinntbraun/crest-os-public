@@ -20,6 +20,7 @@ import {createBusinessSourceJournalCollector} from '../../src/security/business-
 import {createBusinessSourceJournalExportWorker} from '../../src/security/business-source-export-worker.ts';
 import {bindSourceExportJournalWorker} from '../../src/security/source-export-journal-worker-port.ts';
 import {createSourceExportOwnerAccess} from '../../src/security/source-export-owner-access.ts';
+import {createSourceExportDownloadClient} from '../../src/client/source-export-downloads.ts';
 import {Readable} from 'node:stream';
 import {createSourceExportHttp} from '../../src/security/source-export-http.ts';
 import {sourceExportReferenceToWire,sourceExportRetirementToWire} from '../../src/security/source-export-http-contract.ts';
@@ -134,7 +135,7 @@ async function exportHttp(f,work,downloadStore){
    try{const request=new Request(origin+message.url,{method:message.method,headers:message.headers,...(!['GET','HEAD'].includes(message.method)?{body:Readable.toWeb(message),duplex:'half'}:{}),signal:controller.signal});const response=await handler(request,transportFromIncomingMessage(message));if(isSourceExportDownloadResponse(response))await writeSourceExportDownloadResponse(outgoing,response,controller.signal);else await writeOriginalOperationResponse(outgoing,response,controller.signal);}catch{outgoing.destroy();}finally{message.off('aborted',abort);outgoing.off('close',abort);}
   });
   const post=(route,body,headers={})=>fetch(origin+'/api/business/exports/'+route,{method:'POST',headers:{origin,'content-type':'application/json','sec-fetch-site':'same-origin',cookie:'__Host-crest_session='+f.credential,'x-crest-csrf':csrf.tokenForResponse(),...headers},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});
-  return await work(post);
+  return await work(post,{origin,proof:Object.freeze({csrfToken:csrf.tokenForResponse(),expiresAt:Math.min(f.issued.evidence.expiresAt,Date.now()+60000)})});
  }finally{hash.fill(0);server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 }
 const originalRequest=f=>({schemaVersion:1,businessId:f.business,commandType:'export.request',reference:{operationId:f.job.request_operation_id,recoveryEpoch:f.epoch,exportJobId:f.job.id,appReleaseId:release,profile:'crest.business-source-journal-bundle.v1',sourceSchemaVersion:43}});
@@ -219,6 +220,7 @@ async function binaryFixture(onRequest=async()=>{}){
 }
 async function downloadActivity(f){return (await client.query("SELECT jsonb_build_object('version',version::text,'lastActiveAt',to_char(last_active_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'),'authenticatedAt',to_char(authenticated_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'),'reauthAt',to_char(reauth_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'),'expiresAt',to_char(expires_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'),'operationId',operation_id) AS value FROM crest_private.app_sessions WHERE id=$1",[f.issued.evidence.sessionId])).rows[0].value;}
 function observedDownloadStore(store){
+
  const opened=[],copies=[];return{opened,copies,store:{async readVerified(...args){const value=await store.readVerified(...args);opened.push(value);return{metadataForServer:()=>value.metadataForServer(),forServer(){const copy=value.forServer();copies.push(copy.bytes);return copy;},dispose:()=>value.dispose(),toJSON(){throw Error('PRIVATE');}};}}};
 }
 
@@ -238,4 +240,20 @@ test('genuine Auth binary download withholds plaintext when recovery changes dur
  try{await exportHttp(f,async post=>{
   const response=await post('file',{exportJobId:f.job.id,generationId:plan.generationId,partId:plan.parts[0].partId});assert.equal(response.status,503);assert.equal(response.headers.get('content-disposition'),null);assert.deepEqual(await response.json(),{error:'SOURCE_EXPORT_DOWNLOAD_UNAVAILABLE'});
  },observed.store);assert.equal(observed.opened.length,1);assert.equal(observed.copies.length,0);assert.throws(()=>observed.opened[0].metadataForServer());assert.equal(h.requests.filter(r=>r.method==='GET').length-setupGets,1);assert.equal((await createSourceExportOwnerAccess(config,boundary,tokens,f.business).status(f.credential,f.job.id,signal())).forServer().job.state,'Ready');assert.deepEqual(await facts(f),saved);assert.deepEqual(await downloadActivity(f),activityBefore);}finally{await h.close();}
+});
+
+test('genuine Auth download client verifies admitted SDK bytes over real sockets and refuses paused delivery without retaining plaintext',async()=>{
+ const {f,h,bytes,plan,setupGets}=await binaryFixture(),observed=observedDownloadStore(h.store),saved=await facts(f),activityBefore=await downloadActivity(f);let retained;
+ try{await exportHttp(f,async(_post,browser)=>{
+  // Node-only relative-URL/cookie adapter. This is real Auth/SQL/SDK/socket
+  // composition, not compiled-browser, HTTPS, disk-save or provider conformance.
+  const native=globalThis.fetch;
+  globalThis.fetch=(input,init)=>{if(typeof input==='string'&&/^\/api\/business\/exports\/(downloads|file)$/.test(input)){const headers=new Headers(init?.headers);headers.set('origin',browser.origin);headers.set('sec-fetch-site','same-origin');headers.set('cookie','__Host-crest_session='+f.credential);return native(browser.origin+input,{...init,headers});}return native(input,init);};
+  try{
+   const downloads=createSourceExportDownloadClient(f.business),page=await downloads.catalogue({exportJobId:f.job.id,generationId:null,afterOrdinal:0},browser.proof,signal()),{files,nextOrdinal,...header}=page;assert.equal(nextOrdinal,null);assert.equal(header.generationId,plan.generationId);assert.deepEqual(await downloadActivity(f),activityBefore);
+   await downloads.receive(header,files[0],browser.proof,signal(),async value=>{retained=value.bytes;assert.deepEqual(value.bytes,new Uint8Array(bytes[0]));assert.equal(value.file.sha256,sha(bytes[0]));assert.equal(value.header.businessId,f.business);});assert(retained.every(b=>b===0));
+   const delivered=await facts(f),active=await downloadActivity(f);assert.equal(delivered.operations.length,saved.operations.length+1);assert.equal(delivered.audit_events.length,saved.audit_events.length+1);assert.equal(BigInt(active.version),BigInt(activityBefore.version)+1n);assert.equal(h.requests.filter(r=>r.method==='GET').length-setupGets,1);
+   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[f.business]);let consumed=false;await assert.rejects(downloads.receive(header,files[0],browser.proof,signal(),async()=>{consumed=true;}),e=>e.message==='SOURCE_EXPORT_DOWNLOAD_FAILED'&&e.kind==='unavailable');assert.equal(consumed,false);assert.deepEqual(await facts(f),delivered);assert.deepEqual(await downloadActivity(f),active);assert.equal(h.requests.filter(r=>r.method==='GET').length-setupGets,1);
+  }finally{globalThis.fetch=native;}
+ },observed.store);assert.equal(observed.opened.length,1);assert.equal(observed.copies.length,1);assert(observed.copies[0].every(b=>b===0));assert.throws(()=>observed.opened[0].metadataForServer());}finally{await h.close();}
 });
