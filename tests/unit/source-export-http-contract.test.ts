@@ -1,0 +1,20 @@
+import {expect,it} from 'vitest';
+import {randomUUID} from 'node:crypto';
+import {sourceExportReferenceToWire,sourceExportRetirementToWire,parseSourceExportReferenceWire,parseSourceExportRetirementWire,parseSourceExportStatusWire} from '../../src/security/source-export-http-contract.ts';
+import {sourceExportOwnerFixture} from '../support/source-export-owner-fixture.ts';
+const error='SOURCE_EXPORT_REQUEST_INPUT_REQUIRED';
+it('round trips the entire old original and separate current decision without normalization',()=>{const f=sourceExportOwnerFixture(),wire=sourceExportReferenceToWire(f.original),decision=sourceExportRetirementToWire(f.decision);expect(parseSourceExportReferenceWire(wire,f.businessId)).toEqual(f.original);expect(parseSourceExportRetirementWire(decision,f.businessId)).toEqual(f.decision);expect(Object.isFrozen(wire)).toBe(true);expect(decision.originalJson).toBe(wire.originalJson);});
+it.each(['duplicate root','escaped duplicate','duplicate reference','foreign business','worker command','legacy profile','oversized','extra outer','getter'])('rejects %s before interpreting authority',issue=>{
+ const f=sourceExportOwnerFixture(),wire:Record<string,unknown>={...sourceExportReferenceToWire(f.original)};
+ if(issue==='duplicate root')wire.originalJson=String(wire.originalJson).replace('{','{"schemaVersion":1,');
+ if(issue==='escaped duplicate')wire.originalJson=String(wire.originalJson).replace('{','{"schema\\u0056ersion":1,');
+ if(issue==='duplicate reference')wire.originalJson=String(wire.originalJson).replace('"reference":{','"reference":{"operationId":"'+f.original.reference.operationId+'",');
+ if(issue==='foreign business')wire.originalJson=String(wire.originalJson).replace(f.businessId,randomUUID());
+ if(issue==='worker command')wire.originalJson=String(wire.originalJson).replace('export.request','export.claim');
+ if(issue==='legacy profile')wire.originalJson=String(wire.originalJson).replace('crest.business-source-journal-bundle.v1','crest.business-source-bundle.v1');
+ if(issue==='oversized')wire.originalJson=' '.repeat(2049);if(issue==='extra outer')wire.actorId=f.actorId;if(issue==='getter')Object.defineProperty(wire,'originalJson',{get(){throw Error('PRIVATE GETTER');},enumerable:true});
+ expect(()=>parseSourceExportReferenceWire(wire,f.businessId)).toThrow(error);
+});
+it('copies the complete reference before later caller mutation',()=>{const f=sourceExportOwnerFixture(),wire=sourceExportReferenceToWire(f.original);f.original.reference.exportJobId=randomUUID();expect(parseSourceExportReferenceWire(wire,f.businessId).reference.exportJobId).not.toBe(f.original.reference.exportJobId);});
+it('permits only an opaque status ID and no selected actor or business',()=>{const f=sourceExportOwnerFixture();expect(parseSourceExportStatusWire({exportJobId:f.job.id})).toBe(f.job.id);for(const input of [{exportJobId:'invalid'},{exportJobId:f.job.id,actorId:f.actorId},{exportJobId:f.job.id,businessId:f.businessId}])expect(()=>parseSourceExportStatusWire(input)).toThrow(error);});
+it('bounds the full encoded retirement body and refuses invalid reasons',()=>{const f=sourceExportOwnerFixture();expect(parseSourceExportRetirementWire(sourceExportRetirementToWire({...f.decision,reason:'😀'.repeat(2000)}),f.businessId).reason).toBe('😀'.repeat(2000));for(const reason of [' ',String.fromCharCode(0),'a'.repeat(2001)])expect(()=>sourceExportRetirementToWire({...f.decision,reason})).toThrow(error);});

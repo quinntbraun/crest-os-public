@@ -20,6 +20,12 @@ import {createBusinessSourceJournalCollector} from '../../src/security/business-
 import {createBusinessSourceJournalExportWorker} from '../../src/security/business-source-export-worker.ts';
 import {bindSourceExportJournalWorker} from '../../src/security/source-export-journal-worker-port.ts';
 import {createSourceExportOwnerAccess} from '../../src/security/source-export-owner-access.ts';
+import {Readable} from 'node:stream';
+import {createSourceExportHttp} from '../../src/security/source-export-http.ts';
+import {sourceExportReferenceToWire,sourceExportRetirementToWire} from '../../src/security/source-export-http-contract.ts';
+import {createCsrfToken} from '../../src/security/request-protection.ts';
+import {transportFromIncomingMessage} from '../../src/security/trusted-transport.ts';
+import {createBoundedNodeServer,writeOriginalOperationResponse} from '../../src/server/node-server.ts';
 let sandbox,target,client,service,login,readerLogin,readerUrl,config,boundary,tokens,lifecycle,database,verifications=0;
 const signal=()=>new AbortController().signal,sha=text=>createHash('sha256').update(text).digest('hex'),release='a'.repeat(40);
 before(async()=>{
@@ -109,4 +115,48 @@ test('genuine Auth export retirement preserves the older original and current de
 });
 test('genuine Auth export resolution preserves a committed original and refuses revoked sessions',async()=>{
  const f=await fixture(),access=createSourceExportOwnerAccess(config,boundary,tokens,f.business),original={schemaVersion:1,businessId:f.business,commandType:'export.request',reference:{operationId:f.job.request_operation_id,recoveryEpoch:f.epoch,exportJobId:f.job.id,appReleaseId:release,profile:'crest.business-source-journal-bundle.v1',sourceSchemaVersion:43}},review={schemaVersion:1,recoveryEpoch:f.epoch,original,reason:'Reviewed synthetic original'},saved=await facts(f),observation=(await access.retireRequest(f.credential,review,signal())).forServer();assert.equal(observation.state,'original_recorded');assert.equal((await access.lookupRequest(f.credential,original,signal())).forServer().receipt.job.state,'Queued');assert.equal((await access.status(f.credential,f.job.id,signal())).forServer().job.state,'Running');assert.deepEqual(await facts(f),saved);await client.query('DELETE FROM auth.sessions WHERE id=$1',[f.issued.evidence.provider.sessionId]);await assert.rejects(access.retireRequest(f.credential,review,signal()),e=>e.message==='SOURCE_EXPORT_RESOLUTION_NOT_SUBMITTED');await assert.rejects(access.lookupResolution(f.credential,original,signal()),e=>e.message==='SOURCE_EXPORT_READ_FAILED');assert.deepEqual(await facts(f),saved);
+});
+
+// Test-only composition over actual loopback sockets. The product server does
+// not register these proposal routes. Mint a real session-bound CSRF fixture;
+// all HTTP guards, admission, provider verification and SQL remain genuine.
+async function exportHttp(f,work){
+ const server=createBoundedNodeServer();await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
+ const origin='http://127.0.0.1:'+server.address().port,handler=createSourceExportHttp({...config,origin,businessId:f.business,ingress:{kind:'direct'}},boundary,tokens,true),csrf=createCsrfToken(f.issued.evidence.sessionId),hash=csrf.hashForDatabase();
+ try{
+  await client.query('INSERT INTO crest_private.session_csrf_tokens(session_id,token_hash) VALUES($1,$2)',[f.issued.evidence.sessionId,hash]);
+  server.on('request',async(message,outgoing)=>{
+   const controller=new AbortController(),abort=()=>{if(!outgoing.writableFinished)controller.abort();};message.once('aborted',abort);outgoing.once('close',abort);
+   try{const request=new Request(origin+message.url,{method:message.method,headers:message.headers,...(!['GET','HEAD'].includes(message.method)?{body:Readable.toWeb(message),duplex:'half'}:{}),signal:controller.signal});await writeOriginalOperationResponse(outgoing,await handler(request,transportFromIncomingMessage(message)),controller.signal);}catch{outgoing.destroy();}finally{message.off('aborted',abort);outgoing.off('close',abort);}
+  });
+  const post=(route,body,headers={})=>fetch(origin+'/api/business/exports/'+route,{method:'POST',headers:{origin,'content-type':'application/json','sec-fetch-site':'same-origin',cookie:'__Host-crest_session='+f.credential,'x-crest-csrf':csrf.tokenForResponse(),...headers},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});
+  return await work(post);
+ }finally{hash.fill(0);server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+}
+const originalRequest=f=>({schemaVersion:1,businessId:f.business,commandType:'export.request',reference:{operationId:f.job.request_operation_id,recoveryEpoch:f.epoch,exportJobId:f.job.id,appReleaseId:release,profile:'crest.business-source-journal-bundle.v1',sourceSchemaVersion:43}});
+async function httpValue(response,status=200){assert.equal(response.status,status);assert.match(response.headers.get('cache-control'),/no-store/);assert.equal(response.headers.get('cdn-cache-control'),'no-store');assert.equal(response.headers.get('set-cookie'),null);return response.json();}
+test('genuine Auth export HTTP preserves original request receipts separately from current job status over real sockets',async()=>{
+ const f=await fixture(),original=originalRequest(f),wire=sourceExportReferenceToWire(original),saved=await facts(f),start=verifications;
+ await exportHttp(f,async post=>{
+  const receipt=await httpValue(await post('request',wire));assert.equal(receipt.state,'committed');assert.equal(receipt.receipt.job.state,'Queued');assert.deepEqual(receipt.receipt.command,original);assert.equal(receipt.receipt.job.actor_id,f.actor);
+  assert.deepEqual(await httpValue(await post('original',wire)),receipt);assert.equal((await httpValue(await post('status',{exportJobId:f.job.id}))).job.state,'Running');
+  const review={schemaVersion:1,recoveryEpoch:f.epoch,original,reason:'Reviewed synthetic HTTP original'};assert.equal((await httpValue(await post('retire',sourceExportRetirementToWire(review)))).state,'original_recorded');assert.equal((await httpValue(await post('resolution',wire))).state,'original_recorded');
+ });assert.equal(verifications-start,5);assert.deepEqual(await facts(f),saved);
+});
+test('genuine Auth export HTTP retires an absent old original without rebasing it and preserves its decision during pause',async()=>{
+ const f=await fixture(),original={...originalRequest(f),reference:{...originalRequest(f).reference,operationId:randomUUID(),exportJobId:randomUUID()}},wire=sourceExportReferenceToWire(original),current=randomUUID();await client.query('UPDATE crest_private.business_recovery_authorities SET active_epoch=$2,version=version+1 WHERE business_id=$1',[f.business,current]);
+ await exportHttp(f,async post=>{
+  assert.deepEqual(await httpValue(await post('original',wire)),{state:'absent'});assert.deepEqual(await httpValue(await post('resolution',wire)),{state:'absent'});
+  const review={schemaVersion:1,recoveryEpoch:current,original,reason:'Reviewed synthetic old HTTP original'},retired=await httpValue(await post('retire',sourceExportRetirementToWire(review)));assert.equal(retired.state,'retired');assert.deepEqual(retired.original,original);assert.equal(retired.retirement.recoveryEpoch,current);const saved=await facts(f);
+  await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[f.business]);assert.deepEqual(await httpValue(await post('resolution',wire)),retired);assert.deepEqual(await httpValue(await post('request',wire),409),{error:'RECOVERY_REVIEW_REQUIRED'});assert.deepEqual(await facts(f),saved);
+ });
+});
+test('genuine Auth export HTTP refuses invalid CSRF, foreign scope and revoked provider authority without private writes',async()=>{
+ const f=await fixture(),other=await fixture(),original=originalRequest(f),wire=sourceExportReferenceToWire(original),saved=await facts(f),start=verifications;
+ await exportHttp(f,async post=>{
+  assert.deepEqual(await httpValue(await post('request',wire,{'x-crest-csrf':randomBytes(32).toString('base64url')}),400),{error:'SOURCE_EXPORT_REQUEST_FAILED'});
+  assert.deepEqual(await httpValue(await post('original',wire,{cookie:'__Host-crest_session='+other.credential}),400),{error:'SOURCE_EXPORT_REQUEST_FAILED'});
+  assert.deepEqual(await httpValue(await post('request',sourceExportReferenceToWire({...original,businessId:other.business})),400),{error:'SOURCE_EXPORT_REQUEST_FAILED'});assert.equal(verifications,start);
+  await client.query('DELETE FROM auth.sessions WHERE id=$1',[f.issued.evidence.provider.sessionId]);assert.deepEqual(await httpValue(await post('request',wire),503),{error:'SOURCE_EXPORT_REQUEST_NOT_SUBMITTED'});assert.deepEqual(await httpValue(await post('original',wire),503),{error:'SOURCE_EXPORT_READ_FAILED'});
+ });assert.deepEqual(await facts(f),saved);
 });
