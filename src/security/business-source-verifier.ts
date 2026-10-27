@@ -50,6 +50,14 @@ function freeze<T>(value:T):T{if(value&&typeof value==='object'){for(const item 
 // Independent offline verification. Never imports a CSV writer/formatter or
 // uses provider/database/network access. Unkeyed hashes are not authenticity.
 export function verifyBusinessSourceBundle(input:Readonly<{manifest:Uint8Array;parts:readonly Part[]}>,expected:Readonly<{businessId:string;appReleaseId?:string}>){
+ return verifySourceProjection(input,expected,42);
+}
+export function verifyBusinessSourceProjection43(input:Readonly<{manifest:Uint8Array;parts:readonly Part[]}>,expected:Readonly<{businessId:string;appReleaseId:string;sourceSchemaVersion:43}>){
+ require(expected.sourceSchemaVersion===43);
+ const result=verifySourceProjection(input,expected,43).forServer();
+ return Object.freeze({forProjection43:()=>result,toJSON():never{throw new BusinessSourceVerificationError();}});
+}
+function verifySourceProjection<S extends 42|43>(input:Readonly<{manifest:Uint8Array;parts:readonly Part[]}>,expected:Readonly<{businessId:string;appReleaseId?:string}>,schema:S){
  try{
   const businessId=expected.businessId,release=expected.appReleaseId;require(typeof businessId==='string'&&uuid.test(businessId)&&(release===undefined||typeof release==='string'&&/^[a-f0-9]{40}$/.test(release)));
   const manifestInput=input.manifest;require(manifestInput instanceof Uint8Array&&manifestInput.byteLength<=maxPart&&Array.isArray(input.parts)&&input.parts.length<=1024);const manifestBytes=Buffer.from(manifestInput);
@@ -59,7 +67,7 @@ export function verifyBusinessSourceBundle(input:Readonly<{manifest:Uint8Array;p
    const bytes=Buffer.from(part.bytes);total+=bytes.byteLength;require(total<=maxTotal);files.set(part.name,{text:text(bytes),bytes:bytes.byteLength,sha256:createHash('sha256').update(bytes).digest('hex')});
   }
   const manifest=json(text(manifestBytes));exact(manifest,['formatVersion','profile','generationId','businessId','observedAt','appReleaseId','sourceSchemaVersion','captureDeclared','assurance','consistentCaptureProven','includedCrmReferencesVerified','referenceClosureComplete','completePortableExport','completeBackup','foundationManifest','evidenceBytes','recordCount','crmEvidenceBytes','crmRecordCount','sourceCollections','parts']);
-  require(manifest.formatVersion===1&&manifest.profile==='crest.business-source-bundle.v1'&&manifest.businessId===businessId&&typeof manifest.generationId==='string'&&uuid.test(manifest.generationId)&&typeof manifest.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(manifest.appReleaseId)&&(release===undefined||release===manifest.appReleaseId)&&manifest.sourceSchemaVersion===42&&manifest.captureDeclared==='single_connection_repeatable_read'&&manifest.assurance==='internal_consistency_only'&&manifest.consistentCaptureProven===false&&manifest.includedCrmReferencesVerified===true&&manifest.referenceClosureComplete===false&&manifest.completePortableExport===false&&manifest.completeBackup===false&&manifest.foundationManifest==='foundation_manifest.json'&&integer(manifest.evidenceBytes,maxPart)&&integer(manifest.recordCount,10000)&&integer(manifest.crmEvidenceBytes,maxPart)&&integer(manifest.crmRecordCount,10000));
+  require(manifest.formatVersion===1&&manifest.profile===(schema===42?'crest.business-source-bundle.v1':'crest.business-source-projection.v1')&&manifest.businessId===businessId&&typeof manifest.generationId==='string'&&uuid.test(manifest.generationId)&&typeof manifest.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(manifest.appReleaseId)&&(release===undefined||release===manifest.appReleaseId)&&manifest.sourceSchemaVersion===schema&&manifest.captureDeclared==='single_connection_repeatable_read'&&manifest.assurance==='internal_consistency_only'&&manifest.consistentCaptureProven===false&&manifest.includedCrmReferencesVerified===true&&manifest.referenceClosureComplete===false&&manifest.completePortableExport===false&&manifest.completeBackup===false&&manifest.foundationManifest==='foundation_manifest.json'&&integer(manifest.evidenceBytes,maxPart)&&integer(manifest.recordCount,10000)&&integer(manifest.crmEvidenceBytes,maxPart)&&integer(manifest.crmRecordCount,10000));
   const descriptors=new Map<string,Body>(),used=new Set<string>();require(Array.isArray(manifest.parts)&&manifest.parts.length===files.size);
   for(const descriptor of manifest.parts){
    exact(descriptor,['name','contentType','bytes','sha256']);require(typeof descriptor.name==='string'&&!descriptors.has(descriptor.name));const file=files.get(descriptor.name);require(file&&descriptor.bytes===file.bytes&&descriptor.sha256===file.sha256);
@@ -139,7 +147,7 @@ export function verifyBusinessSourceBundle(input:Readonly<{manifest:Uint8Array;p
   for(const link of rows.conversion_links!)require(link.lead_vehicle_id!==null?byId('lead_vehicles',link.lead_vehicle_id).lead_id===link.lead_id:byId('lead_addresses',link.lead_address_id).lead_id===link.lead_id&&byId('addresses',link.address_id).customer_id===byId('lead_conversions',link.conversion_id).customer_id);
   read('source_readme.txt');require(used.size===files.size);
   const crm=JSON.stringify({formatVersion:1,generationId:manifest.generationId,businessId,observedAt:manifest.observedAt,contexts,pages,evidenceBytes:crmBytes,recordCount:crmCount,completePortableExport:false,completeBackup:false});
-  const value=freeze({formatVersion:1 as const,businessId,generationId:manifest.generationId,observedAt:manifest.observedAt,appReleaseId:manifest.appReleaseId,sourceSchemaVersion:42 as const,...serialized,crm,rows,csvSourceRowsVerified:true as const,rawSourceReconstructionVerified:true as const,assurance:'internal_consistency_only' as const,referenceClosureComplete:false as const,completePortableExport:false as const,completeBackup:false as const});
+  const value=freeze({formatVersion:1 as const,businessId,generationId:manifest.generationId,observedAt:manifest.observedAt,appReleaseId:manifest.appReleaseId,sourceSchemaVersion:schema,...serialized,crm,rows,csvSourceRowsVerified:true as const,rawSourceReconstructionVerified:true as const,assurance:'internal_consistency_only' as const,referenceClosureComplete:false as const,completePortableExport:false as const,completeBackup:false as const});
   return Object.freeze({forServer:()=>value,toJSON:()=>{throw new BusinessSourceVerificationError();}});
  }catch{throw new BusinessSourceVerificationError();}
 }

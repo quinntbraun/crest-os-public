@@ -17,6 +17,9 @@ import {createBusinessSourceJournalCollector} from '../../src/security/business-
 import {formatSourceLogicalFiles} from '../../src/security/source-export-logical-files.ts';
 import {verifySourceLogicalFiles} from '../../src/tooling/verify-source-logical-files.ts';
 import {formatSourceExportJournalCsv} from '../../src/security/source-export-journal-csv.ts';
+import {verifyJournalCsv} from '../../src/tooling/verify-journal-csv.ts';
+import {formatBusinessSourceJournalBundle} from '../../src/security/business-source-journal-bundle.ts';
+import {verifyBusinessSourceJournalBundle} from '../../src/tooling/verify-business-source-journal-bundle.ts';
 import {readLogicalSourceExportCsv} from '../../src/security/source-export-csv-reader.ts';
 import {exerciseNeutralJournalImport} from '../support/neutral-journal-import.mjs';
 import {backupJournalDatabase,restoreJournalDatabase,journalInventory} from '../support/journal-recovery-drill.mjs';
@@ -496,6 +499,8 @@ async function portableJournal(value){
  assert.equal(Object.hasOwn(csvWrapper,'forServer'),false);assert.equal(Object.hasOwn(wrapped,'forServer'),false);assert(physical.parts.every(p=>p.bytes<=4194304));const recovered=verifySourceLogicalFiles(physical.manifest,physical.parts,binding),file=name=>{const matches=recovered.files.filter(f=>f.name===name);assert.equal(matches.length,1);return matches[0].content;};assert.equal(recovered.files.length,21);assert.equal(file('journal_capture.json'),value.journal);assert.equal(recovered.completeBackup,false);assert.equal(recovered.completePortableExport,false);
  const integerColumns={job:['attempt_count','source_schema_version'],attempt:['attempt_no'],snapshot:['source_schema_version','file_count','total_bytes'],intent:['ordinal','plaintext_bytes','ciphertext_bytes'],verification:[],completion:['file_count','total_bytes']},csvRows={};
  for(const [kind,[,keyColumns]]of Object.entries(journalKinds)){const dictionary=JSON.parse(file('journal_'+kind+'_dictionary.json')),escapes=JSON.parse(file('journal_'+kind+'_escape_map.json')).escapes;assert.deepEqual(dictionary.keyColumns,keyColumns);assert.deepEqual([...dictionary.integerColumns].sort(),[...integerColumns[kind]].sort());csvRows[kind]=readLogicalSourceExportCsv(file('journal_'+kind+'.csv'),escapes,{columns:dictionary.columns,keyColumns,integers:integerColumns[kind],maxRows:10000});}
+ const checked=verifyJournalCsv(file('journal_csv_manifest.json'),recovered.files.filter(f=>f.name!=='journal_csv_manifest.json'),binding).forJournalVerification();assert.deepEqual(checked.rows,csvRows);assert.equal(checked.businessId,value.businessId);assert.equal(checked.generationId,value.generationId);assert.equal(checked.observedAt,value.observedAt);assert.equal(checked.recordCount,JSON.parse(value.journal).recordCount);assert.equal(checked.completeBackup,false);
+ const joint=(await formatBusinessSourceJournalBundle({forJournalServer:()=>value,toJSON(){throw Error('PRIVATE');}},binding)).forJournalBundle(),verifiedJoint=verifyBusinessSourceJournalBundle(joint.manifest,joint.parts,binding).forJournalBundleVerification();assert.equal(Object.keys(verifiedJoint.sourceRows).length,19);assert.equal(Object.keys(verifiedJoint.journalRows).length,6);assert.deepEqual(verifiedJoint.journalRows,csvRows);assert.equal(verifiedJoint.recordCount,value.recordCount);assert.equal(verifiedJoint.sourceSchemaVersion,43);assert.equal(verifiedJoint.completeBackup,false);assert.equal(verifiedJoint.consistentCaptureProven,false);
  return {journal:JSON.parse(file('journal_capture.json')),parts:physical.parts,csvRows};
 }
 function capturedJournalRows(journal,kind){
