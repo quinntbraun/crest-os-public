@@ -7,8 +7,8 @@
   "runtimeEnabled": false,
   "nativeExecuted": false,
   "nativeCasesWritten": 29,
-  "sqlBytes": 19407,
-  "sqlSha256": "4a00e9f9dcddd1dfa021081106f853b08d1ee9a0194dd4fd3ae49279ce9e98c6",
+  "sqlBytes": 19437,
+  "sqlSha256": "463062296675b7f154552b9b227c537201d17c89d973d11b874e54aea2b68f70",
   "tables": {
     "crest.services": 13,
     "crest.service_versions": 16
@@ -27,5 +27,11 @@
   "trustedCommandsImplemented": false,
   "sourceExportCoverageImplemented": false,
   "recoveryAcceptanceExecuted": false,
-  "productionActivation": "blocked"
+  "productionActivation": "blocked",
+  "priorUnacceptedSqlSha256": "4a00e9f9dcddd1dfa021081106f853b08d1ee9a0194dd4fd3ae49279ce9e98c6",
+  "sourceCorrection": "Allow an entirely omitted starting range explicitly; still reject upper-only, negative or inverted supplied guidance.",
+  "priorNativeRun": 40592213936,
+  "priorNativePassed": 28,
+  "priorNativeFailed": 1,
+  "currentSourceNativeAccepted": false
 }

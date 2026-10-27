@@ -57,7 +57,7 @@ CREATE TABLE crest.service_versions (
  exclusions text NOT NULL,
  internal_guidance text,
  range_low_cents bigint CHECK(range_low_cents>=0),
- range_high_cents bigint CHECK(range_high_cents>=0 AND range_low_cents IS NOT NULL AND range_high_cents>=range_low_cents),
+ range_high_cents bigint CHECK(range_high_cents IS NULL OR (range_high_cents>=0 AND range_low_cents IS NOT NULL AND range_high_cents>=range_low_cents)),
  estimated_seconds bigint CHECK(estimated_seconds>0),
  created_at timestamptz NOT NULL DEFAULT clock_timestamp() CHECK(isfinite(created_at)),
  created_by uuid NOT NULL,

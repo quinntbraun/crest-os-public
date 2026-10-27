@@ -121,6 +121,8 @@ for(const patch of [{name:''},{inclusions:'\u00a0'},{internalGuidance:' '},{rang
 test('stored integer strings preserve bigint maxima and optional absence exactly',async()=>{
  const d=definition({rangeLowCents:'9007199254740993',rangeHighCents:'9223372036854775807',estimatedSeconds:'9223372036854775807'}),row=await create(a,{d});assert.deepEqual(await scalar('SELECT crest_private.service_definition(v) AS value FROM crest.service_versions v WHERE id=$1',[row.versionId]),d);
  const empty=await create(a,{d:definition({rangeLowCents:null,rangeHighCents:null,estimatedSeconds:null,internalGuidance:null})});assert.equal(empty.v.range_low_cents,null);assert.equal(empty.v.estimated_seconds,null);
+ const lowerOnly=await create(a,{d:definition({rangeHighCents:null})});assert.equal(lowerOnly.v.range_low_cents,'10000');assert.equal(lowerOnly.v.range_high_cents,null);
+ const zero=await create(a,{d:definition({rangeLowCents:'0',rangeHighCents:'0'})});assert.equal(zero.v.range_low_cents,'0');assert.equal(zero.v.range_high_cents,'0');
 });
 test('append-only content refuses updates, deletion and complete-group truncation',async()=>{
  const row=await create(a);for(const query of ["UPDATE crest.service_versions SET name='Forged' WHERE id=$1",'DELETE FROM crest.service_versions WHERE id=$1'])await refused(()=>client.query(query,[row.versionId]),e=>e.code==='55000');

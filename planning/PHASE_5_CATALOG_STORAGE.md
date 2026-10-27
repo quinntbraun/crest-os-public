@@ -28,6 +28,8 @@ The existing full local unit suite passes6058 cases across186 files, including41
 
 These29 database cases have NOT been executed locally: this Windows computer still lacks the supported WSL/Docker runtime. JavaScript syntax/type/lint and ordinary unit checks do not substitute for PostgreSQL execution. Native counts are prospective only: prior1551 plus29 would be1580, if all suites execute and pass. The separate existing admission regression also needs a fresh exact-source result. CI source/run evidence must be recorded separately.
 
+Fresh cloud run40592213936 for public8bb455a9/local11724957 executed all29 catalog cases:28 passed and the optional-absence case failed. The original upper-range CHECK combined a NULL comparison with a false lower-present condition, rejecting an entirely omitted range. The correction explicitly allows a NULL upper amount while retaining nonnegative/ordered-range checks whenever an upper amount is supplied. The existing regression now also exercises lower-only and explicit-zero guidance; it is not removed, relaxed or skipped. The failed run and original SQL remain retained by Git/checkpoint evidence. A new source/run is required; no catalog-native acceptance is claimed from28/29.
+
 The current browser preview remains available and all current services/quotes remain unsaved page memory. No storage activation, database application outside disposable tests, new provider, dependency, host installation, real data or spending is authorized here.
 
 ## Next step
