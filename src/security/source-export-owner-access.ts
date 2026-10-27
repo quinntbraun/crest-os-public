@@ -7,6 +7,8 @@ import {parseSourceExportCommand,parseSourceExportJob,parseSourceExportCommitted
 import {parseExportRequestRetirement,parseExportRequestResolution} from './source-export-request-resolution.ts';
 import {parseSourceExportOwnerContext} from './source-export-owner-context.ts';
 import {parseSourceExportCursor,parseSourceExportList} from './source-export-owner-list.ts';
+import {parseSourceExportDownloadPageRequest,parseSourceExportDownloadPartRequest,parseSourceExportDownloadCatalogue} from './source-export-download-contract.ts';
+import {parseSourceExportDownloadPermit} from './source-export-download-permit.ts';
 import type {SessionDatabaseConfiguration} from './session-database.ts';
 import type {SourceExportCommand} from './source-export-job-contract.ts';
 import type {createProviderBoundary} from './provider-auth.ts';
@@ -34,6 +36,18 @@ export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguratio
   }finally{hash?.fill(0);}
  }
  return Object.freeze({
+  async downloadCatalogue(credential:string,input:unknown,external:AbortSignal){
+   const request=(()=>{try{return parseSourceExportDownloadPageRequest(input);}catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_ACCESS_INPUT_REQUIRED');}})();
+   try{return privateResult(await authorized(credential,external,async(args,_actor,signal)=>{
+    const value=await database('SELECT crest_commands.read_source_export_download_page($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::integer) AS result',[...args,request.exportJobId,request.generationId,request.afterOrdinal],signal);require(!signal.aborted);const page=parseSourceExportDownloadCatalogue(value,scope,request);require(Date.parse(page.completedAt)<=Date.now()&&Date.parse(page.expiresAt)>Date.now());return page;
+   }));}catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_READ_FAILED');}
+  },
+  async downloadPart(credential:string,input:unknown,external:AbortSignal){
+   const request=(()=>{try{return parseSourceExportDownloadPartRequest(input);}catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_ACCESS_INPUT_REQUIRED');}})();
+   try{return privateResult(await authorized(credential,external,async(args,actor,signal)=>{
+    const value=await database('SELECT crest_commands.read_source_export_download_part($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::uuid) AS result',[...args,request.exportJobId,request.generationId,request.partId],signal);require(!signal.aborted);return parseSourceExportDownloadPermit(value,scope,actor,request);
+   }));}catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_READ_FAILED');}
+  },
   async list(credential:string,input:unknown,external:AbortSignal){
    const cursor=(()=>{try{return parseSourceExportCursor(input);}catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_ACCESS_INPUT_REQUIRED');}})();
    try{return privateResult(await authorized(credential,external,async(args,_actor,signal)=>{

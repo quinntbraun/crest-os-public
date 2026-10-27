@@ -12,6 +12,8 @@ import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {parseSourceExportCommand,parseSourceExportCommitted} from '../../src/security/source-export-job-contract.ts';
 import {parseSourceExportList} from '../../src/security/source-export-owner-list.ts';
+import {parseSourceExportDownloadCatalogue} from '../../src/security/source-export-download-contract.ts';
+import {parseSourceExportDownloadPermit} from '../../src/security/source-export-download-permit.ts';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import {createJournalTextAssembler} from '../../src/security/source-export-journal-text.ts';
 import {createBusinessSourceJournalCollector} from '../../src/security/business-foundation-collector.ts';
@@ -39,6 +41,8 @@ const stop=(f,job,version,operation=randomUUID())=>query(web,'SELECT crest_comma
 const status=(f,job,c=web)=>query(c,'SELECT crest_commands.read_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9) AS value',[...auth(f),job]);
 const lookup=(f,operation,c=web)=>query(c,'SELECT crest_commands.lookup_source_export_operation($1,$2,$3,$4,$5,$6,$7,$8,$9) AS value',[...auth(f),operation]);
 const ownerList=(f,before=null)=>query(web,'SELECT crest_commands.list_source_exports($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS value',[...auth(f),before?.createdAt??null,before?.id??null]);
+const downloadPage=(f,job,generation=null,after=0)=>query(web,'SELECT crest_commands.read_source_export_download_page($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS value',[...auth(f),job,generation,after]);
+const downloadPart=(f,job,generation,part)=>query(web,'SELECT crest_commands.read_source_export_download_part($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS value',[...auth(f),job,generation,part]);
 async function session(f,age='1 second',c=client){
  const provider=randomUUID(),session=randomUUID(),hash=randomBytes(32);
  await c.query("INSERT INTO auth.sessions(id,user_id,aal,created_at,updated_at) VALUES($1,$2,'aal2',clock_timestamp(),clock_timestamp())",[provider,f.subject]);
@@ -668,4 +672,39 @@ test('owner export listing refuses malformed and foreign cursors and stale sessi
 });
 test('owner export listing remains read-only during pause and refuses local revocation',async()=>{
  const f=await state(),r=await request(f),saved=await evidence(f);await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[f.business]);assert.equal((await ownerList(f)).jobs[0].id,r.receipt.job.id);assert.deepEqual(await evidence(f),saved);await client.query('UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),version=version+1 WHERE id=$1',[f.session]);await assert.rejects(ownerList(f),e=>e.code==='42501');assert.deepEqual(await evidence(f),saved);
+});
+
+test('download metadata uses closed definers and refuses recovery-authorizer source drift',async()=>{
+ const source=await readFile(new URL('../../planning/proposals/source-export-owner-reads.sql',import.meta.url),'utf8');await client.query('BEGIN');try{await client.query('ALTER FUNCTION crest_commands.lock_source_export_authority(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid) SET search_path=public');await assert.rejects(client.query(source),e=>e.code==='42501'&&e.message==='CREST_EXPORT_OWNER_READ_SOURCE_REVIEW_REQUIRED');}finally{await client.query('ROLLBACK');}
+ const signatures=['crest_commands.current_source_export_download(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid)','crest_commands.read_source_export_download_page(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer)','crest_commands.read_source_export_download_part(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid)'];
+ for(const [i,signature]of signatures.entries()){const r=(await client.query("SELECT r.rolname,p.prosecdef,has_function_privilege('crest_web',p.oid,'EXECUTE') AS web,has_function_privilege('crest_export',p.oid,'EXECUTE') AS exporter FROM pg_proc p JOIN pg_roles r ON r.oid=p.proowner WHERE p.oid=to_regprocedure($1)",[signature])).rows[0];assert.equal(r.rolname,'crest_command_owner');assert.equal(r.prosecdef,true);assert.equal(r.web,i!==0);assert.equal(r.exporter,false);}assert.equal((await client.query("SELECT has_schema_privilege('crest_command_owner','crest_commands','CREATE') AS allowed")).rows[0].allowed,false);
+});
+test('download catalogue requires current Ready and emits exact bounded public descriptors without storage metadata',async()=>{
+ const s=await readyFixture(1);await assert.rejects(downloadPage(s.f,s.job));const raw=JSON.stringify(s.parts[1]);await intentPart(s.f,raw);await verifyPart(s.f,raw);await readyExport(s.f,s.readyRaw(),s.operation);const saved={evidence:await evidence(s.f),parts:await partRows(s.f),completions:await completions(s.f)},page=parseSourceExportDownloadCatalogue(await downloadPage(s.f,s.job),s.f.business,{exportJobId:s.job,generationId:null,afterOrdinal:0});
+ assert.equal(page.generationId,s.plan.generationId);assert.equal(page.expiresAt.slice(19),page.completedAt.slice(19));assert.equal(Date.parse(page.expiresAt)-Date.parse(page.completedAt),604800000);assert.equal(page.nextOrdinal,null);assert.deepEqual(page.files.map(p=>({partId:p.partId,fileName:p.fileName,contentType:p.contentType,bytes:p.bytes,sha256:p.sha256})),s.plan.parts);assert(!JSON.stringify(page).includes('objectKey'));assert(!JSON.stringify(page).includes('keyId'));
+ const tail=parseSourceExportDownloadCatalogue(await downloadPage(s.f,s.job,s.plan.generationId,1),s.f.business,{exportJobId:s.job,generationId:s.plan.generationId,afterOrdinal:1});assert.equal(tail.files.length,1);assert.equal(tail.files[0].ordinal,2);await assert.rejects(downloadPage(s.f,s.job,null,1));assert.deepEqual({evidence:await evidence(s.f),parts:await partRows(s.f),completions:await completions(s.f)},saved);
+});
+test('download authority binds actual SDK encrypted bytes and rejects reuse after a recovery reset',async()=>{
+ const {s,bytes}=await custodySource(),h=await custodyFixture(async()=>{}),parts=[];try{
+  for(let i=0;i<bytes.length;i++){const p=await preparedPart(s,bytes[i],i,h.store);await intentPart(s.f,p.raw);const written=await h.store.writeCandidate(p.prepared,new AbortController().signal);await h.store.verifyCandidate(written,p.binding,new AbortController().signal);await verifyPart(s.f,p.raw);parts.push(p.payload);}
+  await readyExport(s.f,JSON.stringify({plan:s.plan,planSha256:sha(JSON.stringify(s.plan)),parts}),randomUUID());const request={exportJobId:s.job,generationId:s.plan.generationId,partId:s.plan.parts[0].partId},value=await downloadPart(s.f,s.job,request.generationId,request.partId),permit=parseSourceExportDownloadPermit(value,s.f.business,s.f.actor,request),opened=await h.store.readVerified(permit.intent,permit.binding,new AbortController().signal);
+  try{assert.deepEqual(await downloadPart(s.f,s.job,request.generationId,request.partId),value);const copy=opened.forServer().bytes;try{assert.deepEqual(copy,bytes[0]);}finally{copy.fill(0);}}finally{opened.dispose();}
+  const saved=await evidence(s.f);await client.query('UPDATE crest_private.business_recovery_authorities SET active_epoch=$2,version=version+1 WHERE business_id=$1',[s.f.business,randomUUID()]);await assert.rejects(downloadPart(s.f,s.job,request.generationId,request.partId));assert.equal((await status(s.f,s.job)).job.state,'Ready');assert.deepEqual(await evidence(s.f),saved);
+ }finally{await h.close();}
+});
+test('download metadata refuses foreign references and retains original actor AAD for another current owner',async()=>{
+ const s=await readyFixture(),other=await state();await readyExport(s.f,s.readyRaw(),s.operation);const reference={exportJobId:s.job,generationId:s.plan.generationId,partId:s.plan.parts[0].partId},saved=await evidence(s.f);
+ await assert.rejects(downloadPart(other,s.job,reference.generationId,reference.partId));await assert.rejects(downloadPart(s.f,s.job,randomUUID(),reference.partId));await assert.rejects(downloadPart(s.f,s.job,reference.generationId,randomUUID()));const stale=await session(s.f,'16 minutes');await assert.rejects(downloadPage(stale,s.job));
+ await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[s.f.business,other.actor]);const current={...other,business:s.f.business},permit=parseSourceExportDownloadPermit(await downloadPart(current,s.job,reference.generationId,reference.partId),s.f.business,other.actor,reference);assert.equal(permit.currentActorId,other.actor);assert.equal(permit.binding.actorId,s.f.actor);assert.deepEqual(await evidence(s.f),saved);
+});
+test('download metadata rejects paused and revoked authority while historical status stays readable',async()=>{
+ const s=await readyFixture();await readyExport(s.f,s.readyRaw(),s.operation);const saved=await evidence(s.f);await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[s.f.business]);await assert.rejects(downloadPage(s.f,s.job));await assert.rejects(downloadPart(s.f,s.job,s.plan.generationId,s.plan.parts[0].partId));assert.equal((await status(s.f,s.job)).job.state,'Ready');const fresh=await readyFixture();await readyExport(fresh.f,fresh.readyRaw(),fresh.operation);await client.query('UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),version=version+1 WHERE id=$1',[fresh.f.session]);await assert.rejects(downloadPage(fresh.f,fresh.job));assert.deepEqual(await evidence(s.f),saved);
+});
+test('download metadata rejects a persisted expired seven-day completion and preserves exact restored history',async()=>{
+ const s=await readyFixture();await readyExport(s.f,s.readyRaw(),s.operation);const saved=await completions(s.f),original=saved[0].value;
+ // Fixture-only clock construction: preserve the exact seven-day interval,
+ // enable the immutable guard BEFORE any tested web call, then restore every
+ // original microsecond. This does not claim a seven-day wall-clock wait.
+ async function clock(expired){await client.query('BEGIN');try{await client.query('ALTER TABLE crest_private.export_job_completions DISABLE TRIGGER export_completion_retained');if(expired)await client.query("UPDATE crest_private.export_job_completions SET completed_at=completed_at-interval '8 days',created_at=created_at-interval '8 days',expires_at=expires_at-interval '8 days' WHERE business_id=$1 AND generation_id=$2",[s.f.business,s.plan.generationId]);else await client.query('UPDATE crest_private.export_job_completions SET completed_at=$3,created_at=$3,expires_at=$4 WHERE business_id=$1 AND generation_id=$2',[s.f.business,s.plan.generationId,original.completed_at,original.expires_at]);await client.query('ALTER TABLE crest_private.export_job_completions ENABLE TRIGGER export_completion_retained');await client.query('COMMIT');}catch(e){await client.query('ROLLBACK');throw e;}}
+ await clock(true);try{await assert.rejects(downloadPage(s.f,s.job));await assert.rejects(downloadPart(s.f,s.job,s.plan.generationId,s.plan.parts[0].partId));assert.equal((await status(s.f,s.job)).job.state,'Ready');}finally{await clock(false);}assert.deepEqual(await completions(s.f),saved);assert.equal((await downloadPage(s.f,s.job)).generationId,s.plan.generationId);
 });
