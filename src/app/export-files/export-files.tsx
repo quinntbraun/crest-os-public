@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {createSourceExportController,initialSourceExportView} from '../../client/source-export-controller';
 import type {SourceExportView} from '../../client/source-export-controller';
+import {SourceExportDownloadScreen} from './export-downloads';
 type ExportAction='load'|'older'|'request'|'checkOriginal'|'checkResolution'|'retire'|'checkJob';
 
 export function SourceExportControls({view,action,editReason,selectJob,statusRef}:{view:SourceExportView;action:(kind:ExportAction)=>void;editReason:(value:string)=>void;selectJob:(id:string)=>void;statusRef?:React.Ref<HTMLParagraphElement>}){
@@ -34,9 +35,9 @@ export function SourceExportScreen(){
  const [view,setView]=useState(initialSourceExportView),current=useRef<ReturnType<typeof createSourceExportController>|null>(null),status=useRef<HTMLParagraphElement>(null);
  useEffect(()=>{
   const controller=createSourceExportController({storage:{getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)},change:setView});current.current=controller;void controller.load();
-  const returned=()=>{if(document.visibilityState==='visible')controller.reviewOnReturn();};window.addEventListener('focus',returned);window.addEventListener('pageshow',returned);document.addEventListener('visibilitychange',returned);
-  return()=>{controller.dispose();current.current=null;window.removeEventListener('focus',returned);window.removeEventListener('pageshow',returned);document.removeEventListener('visibilitychange',returned);};
+  const review=()=>controller.reviewOnReturn(),restore=(event:PageTransitionEvent)=>{if(event.persisted)review();};window.addEventListener('pagehide',review);window.addEventListener('pageshow',restore);document.addEventListener('visibilitychange',review);
+  return()=>{controller.dispose();current.current=null;window.removeEventListener('pagehide',review);window.removeEventListener('pageshow',restore);document.removeEventListener('visibilitychange',review);};
  },[]);
  async function action(kind:ExportAction){const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
- return <SourceExportControls view={view} statusRef={status} action={kind=>{void action(kind);}} editReason={value=>current.current?.editReason(value)} selectJob={value=>current.current?.selectJob(value)}/>;
+ return <><SourceExportControls view={view} statusRef={status} action={kind=>{void action(kind);}} editReason={value=>current.current?.editReason(value)} selectJob={value=>current.current?.selectJob(value)}/>{!view.busy&&view.jobId&&view.jobState==='Ready'&&['ready','confirmed'].includes(view.phase)&&<SourceExportDownloadScreen key={view.jobId} jobId={view.jobId}/>}</>;
 }
