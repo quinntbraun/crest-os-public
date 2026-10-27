@@ -89,6 +89,8 @@ jobs:
         run: node --conditions=react-server --test --test-concurrency=1 tests/integration/source-export-jobs.test.mjs
       - name: Prove registered43 journal upgrade, full workflow matrix and independent encrypted recovery
         run: node --conditions=react-server --test --test-concurrency=1 tests/integration/source-export-registered.test.mjs
+      - name: Prove proposed atomic execution admission and mixed request concurrency
+        run: node --conditions=react-server --test --test-concurrency=1 tests/integration/source-export-execution-admission.test.mjs
 
   database_provider:
     name: Provider and evidence
