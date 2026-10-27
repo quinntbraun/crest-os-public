@@ -17,6 +17,7 @@ import {formatSourceLogicalFiles} from '../../src/security/source-export-logical
 import {verifySourceLogicalFiles} from '../../src/tooling/verify-source-logical-files.ts';
 import {formatSourceExportJournalCsv} from '../../src/security/source-export-journal-csv.ts';
 import {readLogicalSourceExportCsv} from '../../src/security/source-export-csv-reader.ts';
+import {exerciseNeutralJournalImport} from '../support/neutral-journal-import.mjs';
 let sandbox,target,client,web,web2,bootstrap,login,pid2,history,readerLogin,readerUrl,readerUnsafeRefused=false,unsafeRefused=false;
 const issuer='https://auth.example.com/auth/v1',release='a'.repeat(40);
 const auth=f=>[f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+300000),f.business];
@@ -518,4 +519,8 @@ test('source journal collector keeps the original CRM and running journal snapsh
   const part=JSON.stringify(s.parts[1]);await intentPart(s.f,part);await verifyPart(s.f,part);await readyExport(s.f,s.readyRaw(),s.operation);await client.query('COMMIT');const original=JSON.parse((await pending).forJournalServer().journal);assert.equal(capturedJournalRows(original,'job')[0].state,'Running');assert.equal(capturedJournalRows(original,'verification').length,1);assert.deepEqual(capturedJournalRows(original,'completion'),[]);
   const newer=JSON.parse((await captureJournal(s.f)).forJournalServer().journal);assert.equal(capturedJournalRows(newer,'job')[0].state,'Ready');assert.equal(capturedJournalRows(newer,'verification').length,2);assert.equal(capturedJournalRows(newer,'completion').length,1);
  }finally{await client.query('ROLLBACK');await pending?.catch(()=>undefined);}
+});
+test('neutral journal reconstruction restores all114 original CSV columns in a fresh extension-free database and rejects broken journal relationships',async()=>{
+ const s=await readyFixture(),base=s.readyRaw(),raw=' '.repeat(12582912-Buffer.byteLength(base))+base;await readyExport(s.f,raw,s.operation);const retained={evidence:await evidence(s.f),parts:await partRows(s.f),snapshots:await snapshots(s.f),completions:await completions(s.f)},capture=(await captureJournal(s.f)).forJournalServer(),portable=await portableJournal(capture),report=await exerciseNeutralJournalImport(sandbox,portable.csvRows,capture);
+ assert.deepEqual(report,{journalColumns:114,journalTables:6,negativeChecks:30,extensionFree:true,applicationSchemaImported:false,completeBackup:false});assert.deepEqual({evidence:await evidence(s.f),parts:await partRows(s.f),snapshots:await snapshots(s.f),completions:await completions(s.f)},retained);assert.equal(portable.csvRows.completion[0].request_text,raw);
 });

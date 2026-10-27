@@ -1,5 +1,7 @@
 ## Current work: consistent private exports
 
+2026-10-26 six journal CSVs on0ef5d07f/run40436648317 have1191database/Auth acceptance. Independent fresh PostgreSQL journal reconstruction now has a separate114field schema, captured parent-key references, whole-row source comparisons, original-byte/Ready semantic checks and30damage probes. New209proposal/1192database/Auth execution is required; local syntax/lint is not native proof. See PHASE_4_JOURNAL_NEUTRAL.md. Encrypted recovery compatibility/adoption and worker43 remain unfinished.
+
 2026-10-26 six journal CSVs now retain114columns, original text, decimal versions and composite keys with dictionaries/explicit formula escapes. Separate logical CSV decoding retains the old8MiB reader while permitting bounded reconstructed32MiB logical files. Two retained native cases independently decode every journal CSV against real originals; fresh208proposal/1191database/Auth acceptance is required. See PHASE_4_JOURNAL_CSV.md; no schema43 adoption, neutral/recovery completion or runtime worker change.
 
 Owned journal/CRM capture sourced732a637/run40433337313 independently passed all1191database/Auth cases including208proposal/117genuineAuth; full release remains separate. New logical-file source has5228localunit/151file passes and needs its own exact-source native composition proof.
