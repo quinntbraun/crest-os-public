@@ -1,10 +1,10 @@
 -- UNREGISTERED forward43 supplement, after the six journal proposals.
--- Bounded owner metadata/current download evidence; no object or byte delivery.
+-- Bounded owner metadata/current download evidence and durable access audit.
 DO $review$ BEGIN
  IF (SELECT count(*) FROM pg_roles WHERE rolname IN('crest_schema_owner','crest_command_owner','crest_session_owner','crest_integrity_owner') AND NOT(rolcanlogin OR rolinherit OR rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls) AND rolconfig IS NULL)<>4
  OR EXISTS(SELECT 1 FROM pg_auth_members m JOIN pg_roles r ON r.oid=m.roleid OR r.oid=m.member WHERE r.rolname IN('crest_schema_owner','crest_command_owner','crest_session_owner','crest_integrity_owner'))
  OR EXISTS(SELECT 1 FROM pg_default_acl d JOIN pg_roles r ON r.oid=d.defaclrole,LATERAL aclexplode(d.defaclacl) a WHERE r.rolname IN('crest_schema_owner','crest_command_owner','crest_session_owner','crest_integrity_owner') AND a.grantee<>d.defaclrole)
- OR (SELECT count(*) FROM pg_class WHERE oid IN('crest_private.export_jobs'::regclass,'crest_private.export_job_snapshots'::regclass,'crest_private.export_part_intents'::regclass,'crest_private.export_part_verifications'::regclass,'crest_private.export_job_completions'::regclass) AND relowner='crest_schema_owner'::regrole AND relrowsecurity AND relforcerowsecurity)<>5
+ OR (SELECT count(*) FROM pg_class WHERE oid IN('crest_private.export_jobs'::regclass,'crest_private.export_job_snapshots'::regclass,'crest_private.export_part_intents'::regclass,'crest_private.export_part_verifications'::regclass,'crest_private.export_job_completions'::regclass,'crest_private.operations'::regclass,'crest_private.audit_events'::regclass) AND relowner='crest_schema_owner'::regrole AND relrowsecurity AND relforcerowsecurity)<>7
  OR has_schema_privilege('crest_command_owner','crest_commands','CREATE')
  OR EXISTS(SELECT 1 FROM (VALUES
  ('crest_commands.authorize_source_export_read(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid)','3ec3c8f8338dec214fa63f9ca81d086badbdd44817e18222262275ead503f4d6','crest_session_owner',true,'v','plpgsql'),
@@ -114,3 +114,34 @@ ALTER FUNCTION crest_commands.read_source_export_download_part(bytea,uuid,uuid,t
 REVOKE CREATE ON SCHEMA crest_commands FROM crest_command_owner;
 REVOKE ALL ON FUNCTION crest_commands.current_source_export_download(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid),crest_commands.read_source_export_download_page(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer),crest_commands.read_source_export_download_part(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION crest_commands.read_source_export_download_page(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer),crest_commands.read_source_export_download_part(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid) TO crest_web;
+
+-- Durable sensitive-read evidence. This records authorization to hand off one
+-- verified file, never a claim that a network transfer completed. Existing
+-- append-only operations/audit are exported with ordinary business history.
+SET LOCAL ROLE crest_schema_owner;
+CREATE POLICY source_export_access_claim ON crest_private.operations FOR INSERT TO crest_command_owner WITH CHECK(business_id=nullif(current_setting('crest.business_id',true),'')::uuid AND actor_id=nullif(current_setting('crest.actor_id',true),'')::uuid AND created_by=actor_id AND operation_id=nullif(current_setting('crest.operation_id',true),'')::uuid AND command_type='export.download_access' AND schema_version=1 AND origin='manual' AND import_row_id IS NULL);
+CREATE POLICY source_export_access_finish ON crest_private.operations FOR UPDATE TO crest_command_owner USING(business_id=nullif(current_setting('crest.business_id',true),'')::uuid AND actor_id=nullif(current_setting('crest.actor_id',true),'')::uuid AND operation_id=nullif(current_setting('crest.operation_id',true),'')::uuid AND command_type='export.download_access') WITH CHECK(business_id=nullif(current_setting('crest.business_id',true),'')::uuid AND actor_id=nullif(current_setting('crest.actor_id',true),'')::uuid AND created_by=actor_id AND operation_id=nullif(current_setting('crest.operation_id',true),'')::uuid AND command_type='export.download_access' AND schema_version=1 AND origin='manual' AND import_row_id IS NULL);
+CREATE POLICY source_export_access_audit ON crest_private.audit_events FOR INSERT TO crest_command_owner WITH CHECK(business_id=nullif(current_setting('crest.business_id',true),'')::uuid AND actor_id=nullif(current_setting('crest.actor_id',true),'')::uuid AND created_by=actor_id AND operation_id=nullif(current_setting('crest.operation_id',true),'')::uuid AND entity_kind='export_accesses' AND entity_id=operation_id AND entity_version=1 AND action='authorized_handoff' AND origin='manual' AND import_row_id IS NULL AND EXISTS(SELECT 1 FROM crest_private.operations o WHERE o.business_id=audit_events.business_id AND o.actor_id=audit_events.actor_id AND o.operation_id=audit_events.operation_id AND o.command_type='export.download_access' AND o.state='pending' AND o.schema_version=1));
+CREATE FUNCTION crest_commands.record_source_export_download_access(credential_hash bytea,expected_session uuid,expected_actor uuid,expected_issuer text,expected_subject uuid,expected_provider_session uuid,provider_valid_until timestamptz,requested_business uuid,requested_job uuid,requested_generation uuid,requested_part uuid,expected_record text)
+RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $$
+DECLARE current_record jsonb;scope jsonb;operation uuid:=gen_random_uuid();event uuid;stamp timestamptz;receipt jsonb;
+BEGIN
+ IF expected_record IS NULL OR octet_length(expected_record)>16384 OR NOT(expected_record IS JSON OBJECT WITH UNIQUE KEYS) THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_EXPORT_DOWNLOAD_INPUT_REQUIRED';END IF;
+ current_record:=crest_commands.read_source_export_download_part($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11);
+ IF current_record IS DISTINCT FROM expected_record::jsonb THEN RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='CREST_EXPORT_DOWNLOAD_UNAVAILABLE';END IF;
+ scope:=jsonb_build_object('header',current_record->'header','file',current_record->'file','currentActorId',expected_actor,'recoveryEpoch',current_record->'authority'->'recoveryEpoch');
+ -- Original encrypted AAD remains separate from the current accessing owner.
+ PERFORM set_config('crest.business_id',requested_business::text,true),set_config('crest.actor_id',expected_actor::text,true),set_config('crest.operation_id',operation::text,true);
+ INSERT INTO crest_private.operations(business_id,operation_id,actor_id,command_type,schema_version,recovery_epoch,payload_hash,created_by,origin) VALUES(requested_business,operation,expected_actor,'export.download_access',1,(current_record->'authority'->>'recoveryEpoch')::uuid,encode(sha256(convert_to(scope::text,'UTF8')),'hex'),expected_actor,'manual');
+ INSERT INTO crest_private.audit_events(business_id,operation_id,actor_id,created_by,entity_kind,entity_id,entity_version,action,delta,origin) VALUES(requested_business,operation,expected_actor,expected_actor,'export_accesses',operation,1,'authorized_handoff',jsonb_build_object('schemaVersion',1,'before',NULL,'after',scope),'manual') RETURNING id,recorded_at INTO event,stamp;
+ receipt:=jsonb_build_object('schemaVersion',1,'state','authorized_handoff','operationId',operation,'auditEventId',event,'recordedAt',to_char(stamp AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),'scope',scope);
+ UPDATE crest_private.operations SET state='committed',result_schema_version=1,result=receipt WHERE business_id=requested_business AND operation_id=operation AND actor_id=expected_actor;
+ IF crest_commands.read_source_export_download_part($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) IS DISTINCT FROM current_record THEN RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='CREST_EXPORT_DOWNLOAD_UNAVAILABLE';END IF;
+ RETURN receipt;
+END $$;
+RESET ROLE;
+GRANT CREATE ON SCHEMA crest_commands TO crest_command_owner;
+ALTER FUNCTION crest_commands.record_source_export_download_access(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,text) OWNER TO crest_command_owner;
+REVOKE CREATE ON SCHEMA crest_commands FROM crest_command_owner;
+REVOKE ALL ON FUNCTION crest_commands.record_source_export_download_access(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION crest_commands.record_source_export_download_access(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,text) TO crest_web;

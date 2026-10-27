@@ -7,8 +7,8 @@ import {parseSourceExportCommand,parseSourceExportJob,parseSourceExportCommitted
 import {parseExportRequestRetirement,parseExportRequestResolution} from './source-export-request-resolution.ts';
 import {parseSourceExportOwnerContext} from './source-export-owner-context.ts';
 import {parseSourceExportCursor,parseSourceExportList} from './source-export-owner-list.ts';
-import {parseSourceExportDownloadPageRequest,parseSourceExportDownloadPartRequest,parseSourceExportDownloadCatalogue} from './source-export-download-contract.ts';
-import {parseSourceExportDownloadPermit} from './source-export-download-permit.ts';
+import {downloadObject,parseSourceExportDownloadPageRequest,parseSourceExportDownloadPartRequest,parseSourceExportDownloadCatalogue} from './source-export-download-contract.ts';
+import {parseSourceExportDownloadPermit,parseSourceExportDownloadHandoff,sourceExportDownloadPermitRecord,parseSourceExportDownloadAccessReceipt} from './source-export-download-permit.ts';
 import type {SessionDatabaseConfiguration} from './session-database.ts';
 import type {SourceExportCommand} from './source-export-job-contract.ts';
 import type {createProviderBoundary} from './provider-auth.ts';
@@ -36,6 +36,16 @@ export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguratio
   }finally{hash?.fill(0);}
  }
  return Object.freeze({
+  async recordDownloadAccess(credential:string,input:unknown,expected:unknown,external:AbortSignal){
+   const request=parseSourceExportDownloadPartRequest(input);
+   // Copy and validate before provider I/O; then bind again to its fresh actor.
+   const candidate=downloadObject(expected,['header','currentActorId','originalActorId','recoveryEpoch','planSha256','file','binding','intent']).currentActorId;require(typeof candidate==='string');const permit=parseSourceExportDownloadHandoff(expected,scope,candidate,request);
+   try{return privateResult(await authorized(credential,external,(args,actor,signal)=>{
+    require(actor===permit.currentActorId);return database.commandTransaction(async(query,current)=>{
+     const value=await query('SELECT crest_commands.record_source_export_download_access($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::uuid,$12::text) AS result',[...args,request.exportJobId,request.generationId,request.partId,JSON.stringify(sourceExportDownloadPermitRecord(permit))]);require(!current.aborted);return parseSourceExportDownloadAccessReceipt(value,permit);
+    },signal);
+   }));}catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_READ_FAILED');}
+  },
   async downloadCatalogue(credential:string,input:unknown,external:AbortSignal){
    const request=(()=>{try{return parseSourceExportDownloadPageRequest(input);}catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_ACCESS_INPUT_REQUIRED');}})();
    try{return privateResult(await authorized(credential,external,async(args,_actor,signal)=>{

@@ -14,3 +14,20 @@ export function parseSourceExportDownloadPermit(input:unknown,businessId:string,
   return Object.freeze({header,currentActorId,originalActorId:a.originalActorId as string,recoveryEpoch:a.recoveryEpoch as string,planSha256:a.planSha256,file,binding,intent});
  }catch{throw new SourceExportDownloadError();}
 }
+
+export function sourceExportDownloadPermitRecord(p:ReturnType<typeof parseSourceExportDownloadPermit>){
+ return {header:p.header,authority:{currentActorId:p.currentActorId,originalActorId:p.originalActorId,recoveryEpoch:p.recoveryEpoch,planSha256:p.planSha256},file:p.file,intent:p.intent};
+}
+export function parseSourceExportDownloadHandoff(input:unknown,businessId:string,currentActorId:string,expected:unknown){
+ const p=downloadObject(input,['header','currentActorId','originalActorId','recoveryEpoch','planSha256','file','binding','intent']);
+ const value=parseSourceExportDownloadPermit({header:p.header,authority:{currentActorId:p.currentActorId,originalActorId:p.originalActorId,recoveryEpoch:p.recoveryEpoch,planSha256:p.planSha256},file:p.file,intent:p.intent},businessId,currentActorId,expected);
+ const binding=downloadObject(p.binding,['businessId','actorId','exportJobId','generationId','recoveryEpoch','partId','fileName','contentType']);
+ if(JSON.stringify(parseExportPartBinding(binding))!==JSON.stringify(value.binding))throw new SourceExportDownloadError();return value;
+}
+export function sourceExportDownloadAccessScope(p:ReturnType<typeof parseSourceExportDownloadPermit>){return Object.freeze({header:p.header,file:p.file,currentActorId:p.currentActorId,recoveryEpoch:p.recoveryEpoch});}
+export function parseSourceExportDownloadAccessReceipt(input:unknown,p:ReturnType<typeof parseSourceExportDownloadPermit>){
+ const r=downloadObject(input,['schemaVersion','state','operationId','auditEventId','recordedAt','scope']),s=downloadObject(r.scope,['header','file','currentActorId','recoveryEpoch']);
+ const header=parseSourceExportDownloadHeader(s.header,p.header.businessId,p.header.exportJobId,p.header.generationId),file=parseSourceExportDownloadFile(s.file),scope={header,file,currentActorId:s.currentActorId,recoveryEpoch:s.recoveryEpoch};
+ if(r.schemaVersion!==1||r.state!=='authorized_handoff'||!uuid(r.operationId)||!uuid(r.auditEventId)||typeof r.recordedAt!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(r.recordedAt)||!Number.isFinite(Date.parse(r.recordedAt))||Date.parse(r.recordedAt)>Date.now()||Date.parse(r.recordedAt)<Date.parse(header.completedAt)||Date.parse(r.recordedAt)>=Date.parse(header.expiresAt)||JSON.stringify(scope)!==JSON.stringify(sourceExportDownloadAccessScope(p)))throw new SourceExportDownloadError();
+ return Object.freeze({schemaVersion:1 as const,state:'authorized_handoff' as const,operationId:r.operationId as string,auditEventId:r.auditEventId as string,recordedAt:r.recordedAt,scope:Object.freeze(scope)});
+}

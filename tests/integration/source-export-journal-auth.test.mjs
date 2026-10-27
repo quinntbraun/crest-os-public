@@ -27,6 +27,9 @@ import {createCsrfToken} from '../../src/security/request-protection.ts';
 import {transportFromIncomingMessage} from '../../src/security/trusted-transport.ts';
 import {createBoundedNodeServer,writeOriginalOperationResponse} from '../../src/server/node-server.ts';
 import {parseSourceExportList,sourceExportListToWire} from '../../src/security/source-export-owner-list.ts';
+import {custodyFixture} from '../support/source-export-custody-fixture.mjs';
+import {createSourceExportDownloadHttp} from '../../src/security/source-export-download-http.ts';
+import {isSourceExportDownloadResponse,writeSourceExportDownloadResponse} from '../../src/server/source-export-download-response.ts';
 let sandbox,target,client,service,login,readerLogin,readerUrl,config,boundary,tokens,lifecycle,database,verifications=0;
 const signal=()=>new AbortController().signal,sha=text=>createHash('sha256').update(text).digest('hex'),release='a'.repeat(40);
 before(async()=>{
@@ -121,14 +124,14 @@ test('genuine Auth export resolution preserves a committed original and refuses 
 // Test-only composition over actual loopback sockets. The product server does
 // not register these proposal routes. Mint a real session-bound CSRF fixture;
 // all HTTP guards, admission, provider verification and SQL remain genuine.
-async function exportHttp(f,work){
+async function exportHttp(f,work,downloadStore){
  const server=createBoundedNodeServer();await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
- const origin='http://127.0.0.1:'+server.address().port,handler=createSourceExportHttp({...config,origin,businessId:f.business,appReleaseId:release,ingress:{kind:'direct'}},boundary,tokens,true),csrf=createCsrfToken(f.issued.evidence.sessionId),hash=csrf.hashForDatabase();
+ const origin='http://127.0.0.1:'+server.address().port,handler=downloadStore?createSourceExportDownloadHttp({...config,origin,businessId:f.business,ingress:{kind:'direct'}},boundary,tokens,downloadStore,true):createSourceExportHttp({...config,origin,businessId:f.business,appReleaseId:release,ingress:{kind:'direct'}},boundary,tokens,true),csrf=createCsrfToken(f.issued.evidence.sessionId),hash=csrf.hashForDatabase();
  try{
   await client.query('INSERT INTO crest_private.session_csrf_tokens(session_id,token_hash) VALUES($1,$2)',[f.issued.evidence.sessionId,hash]);
   server.on('request',async(message,outgoing)=>{
    const controller=new AbortController(),abort=()=>{if(!outgoing.writableFinished)controller.abort();};message.once('aborted',abort);outgoing.once('close',abort);
-   try{const request=new Request(origin+message.url,{method:message.method,headers:message.headers,...(!['GET','HEAD'].includes(message.method)?{body:Readable.toWeb(message),duplex:'half'}:{}),signal:controller.signal});await writeOriginalOperationResponse(outgoing,await handler(request,transportFromIncomingMessage(message)),controller.signal);}catch{outgoing.destroy();}finally{message.off('aborted',abort);outgoing.off('close',abort);}
+   try{const request=new Request(origin+message.url,{method:message.method,headers:message.headers,...(!['GET','HEAD'].includes(message.method)?{body:Readable.toWeb(message),duplex:'half'}:{}),signal:controller.signal});const response=await handler(request,transportFromIncomingMessage(message));if(isSourceExportDownloadResponse(response))await writeSourceExportDownloadResponse(outgoing,response,controller.signal);else await writeOriginalOperationResponse(outgoing,response,controller.signal);}catch{outgoing.destroy();}finally{message.off('aborted',abort);outgoing.off('close',abort);}
   });
   const post=(route,body,headers={})=>fetch(origin+'/api/business/exports/'+route,{method:'POST',headers:{origin,'content-type':'application/json','sec-fetch-site':'same-origin',cookie:'__Host-crest_session='+f.credential,'x-crest-csrf':csrf.tokenForResponse(),...headers},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});
   return await work(post);
@@ -201,4 +204,37 @@ test('genuine Auth download metadata refuses recovered generations and lost prov
  const f=await fixture();await throughParts(f);await stage(f,'ready',f.ready);const access=createSourceExportOwnerAccess(config,boundary,tokens,f.business),page={exportJobId:f.job.id,generationId:null,afterOrdinal:0},part={exportJobId:f.job.id,generationId:f.plan.generationId,partId:f.plan.parts[0].partId},saved=await facts(f);assert.equal((await access.downloadCatalogue(f.credential,page,signal())).forServer().generationId,f.plan.generationId);
  await client.query('UPDATE crest_private.business_recovery_authorities SET active_epoch=$2,version=version+1 WHERE business_id=$1',[f.business,randomUUID()]);await assert.rejects(access.downloadCatalogue(f.credential,page,signal()),e=>e.message==='SOURCE_EXPORT_READ_FAILED');await assert.rejects(access.downloadPart(f.credential,part,signal()),e=>e.message==='SOURCE_EXPORT_READ_FAILED');assert.equal((await access.status(f.credential,f.job.id,signal())).forServer().job.state,'Ready');assert.deepEqual(await facts(f),saved);
  const other=await fixture();await throughParts(other);await stage(other,'ready',other.ready);const current=createSourceExportOwnerAccess(config,boundary,tokens,other.business),otherSaved=await facts(other);await client.query('DELETE FROM auth.sessions WHERE id=$1',[other.issued.evidence.provider.sessionId]);await assert.rejects(current.downloadPart(other.credential,{exportJobId:other.job.id,generationId:other.plan.generationId,partId:other.plan.parts[0].partId},signal()),e=>e.message==='SOURCE_EXPORT_READ_FAILED');assert.deepEqual(await facts(other),otherSaved);
+});
+
+async function binaryFixture(onRequest=async()=>{}){
+ const f=await fixture(),h=await custodyFixture(onRequest),bytes=[Buffer.from('example'),Buffer.from('{"x":123}')],plan=structuredClone(f.plan);for(const [i,body]of bytes.entries())plan.parts[i].sha256=sha(body);plan.manifestSha256=sha(bytes[1]);const planSha256=sha(JSON.stringify(plan)),parts=[];
+ try{
+  await stage(f,'snapshot',JSON.stringify({plan,planSha256}));
+  for(const [i,p]of plan.parts.entries()){
+   const binding={businessId:f.business,actorId:f.actor,exportJobId:f.job.id,generationId:plan.generationId,recoveryEpoch:f.epoch,partId:p.partId,fileName:p.fileName,contentType:p.contentType},prepared=await h.store.prepare(bytes[i],binding,signal()),payload={claim:plan.claim,generationId:plan.generationId,planSha256,partId:p.partId,intent:prepared.intentForServer()},raw=JSON.stringify(payload);
+   await stage(f,'intent',raw);const intent=await h.store.writeCandidate(prepared,signal());await h.store.verifyCandidate(intent,binding,signal());await stage(f,'verified',raw);parts.push(payload);
+  }
+  await stage(f,'ready',JSON.stringify({plan,planSha256,parts}));return{f,h,bytes,plan,parts};
+ }catch(error){await h.close();throw error;}
+}
+function observedDownloadStore(store){
+ const opened=[],copies=[];return{opened,copies,store:{async readVerified(...args){const value=await store.readVerified(...args);opened.push(value);return{metadataForServer:()=>value.metadataForServer(),forServer(){const copy=value.forServer();copies.push(copy.bytes);return copy;},dispose:()=>value.dispose(),toJSON(){throw Error('PRIVATE');}};}}};
+}
+
+test('genuine Auth binary download withholds verified plaintext and rolls back evidence when its durable access audit fails',async()=>{
+ const {f,h,plan}=await binaryFixture(),observed=observedDownloadStore(h.store),saved=await facts(f);await client.query("ALTER TABLE crest_private.audit_events ADD CONSTRAINT synthetic_download_audit_refusal CHECK(entity_kind<>'export_accesses') NOT VALID");
+ try{await exportHttp(f,async post=>{const response=await post('file',{exportJobId:f.job.id,generationId:plan.generationId,partId:plan.parts[0].partId});assert.equal(response.status,503);assert.equal(response.headers.get('content-disposition'),null);assert.deepEqual(await response.json(),{error:'SOURCE_EXPORT_DOWNLOAD_UNAVAILABLE'});},observed.store);assert.equal(observed.opened.length,1);assert.equal(observed.copies.length,1);assert(observed.copies[0].every(b=>b===0));assert.throws(()=>observed.opened[0].metadataForServer());assert.deepEqual(await facts(f),saved);assert.equal(h.requests.filter(r=>r.method==='GET').length,3);}finally{await client.query('ALTER TABLE crest_private.audit_events DROP CONSTRAINT synthetic_download_audit_refusal');await h.close();}
+});
+test('genuine Auth binary download verifies recorded SDK bytes and fresh authority before actual private HTTP delivery',async()=>{
+ const {f,h,bytes,plan}=await binaryFixture(),observed=observedDownloadStore(h.store),saved=await facts(f);
+ try{await exportHttp(f,async post=>{
+  const page=await httpValue(await post('downloads',{exportJobId:f.job.id,generationId:null,afterOrdinal:0}));assert.equal(page.generationId,plan.generationId);assert(!JSON.stringify(page).includes('objectKey'));const start=verifications;
+  const response=await post('file',{exportJobId:f.job.id,generationId:plan.generationId,partId:plan.parts[0].partId});assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),plan.parts[0].contentType);assert.equal(response.headers.get('content-disposition'),'attachment; filename="example.csv"');assert.equal(response.headers.get('content-length'),String(bytes[0].length));assert.equal(response.headers.get('x-crest-sha256'),sha(bytes[0]));assert.match(response.headers.get('cache-control'),/no-store/);assert.equal(response.headers.get('cdn-cache-control'),'no-store');assert.equal(response.headers.get('set-cookie'),null);assert.deepEqual(Buffer.from(await response.arrayBuffer()),bytes[0]);assert.equal(verifications-start,3);
+ },observed.store);await new Promise(setImmediate);assert.equal(observed.opened.length,1);assert.equal(observed.copies.length,1);assert(observed.copies[0].every(b=>b===0));assert.throws(()=>observed.opened[0].metadataForServer());assert.equal(h.requests.filter(r=>r.method==='GET').length,3);const after=await facts(f);for(const name of ['export_jobs','export_job_snapshots','export_part_intents','export_part_verifications','export_job_completions'])assert.deepEqual(after[name],saved[name]);assert.equal(after.operations.length,saved.operations.length+1);assert.equal(after.audit_events.length,saved.audit_events.length+1);const o=after.operations.find(v=>v.value.command_type==='export.download_access').value,a=after.audit_events.find(v=>v.value.entity_kind==='export_accesses').value;assert.equal(o.actor_id,f.actor);assert.equal(o.state,'committed');assert.equal(a.action,'authorized_handoff');assert.equal(a.delta.after.file.sha256,sha(bytes[0]));assert.equal(a.delta.after.header.generationId,plan.generationId);assert.equal(a.event_hash,sha(a.hash_input));assert(!JSON.stringify(o.result).includes('objectKey'));}finally{await h.close();}
+});
+test('genuine Auth binary download withholds plaintext when recovery changes during actual object GET',async()=>{
+ let reset=false,subject;const s=await binaryFixture(async method=>{if(reset&&method==='GET'){reset=false;await client.query('UPDATE crest_private.business_recovery_authorities SET active_epoch=$2,version=version+1 WHERE business_id=$1',[subject.business,randomUUID()]);}}),{f,h,plan}=s;subject=f;const observed=observedDownloadStore(h.store),saved=await facts(f);reset=true;
+ try{await exportHttp(f,async post=>{
+  const response=await post('file',{exportJobId:f.job.id,generationId:plan.generationId,partId:plan.parts[0].partId});assert.equal(response.status,503);assert.equal(response.headers.get('content-disposition'),null);assert.deepEqual(await response.json(),{error:'SOURCE_EXPORT_DOWNLOAD_UNAVAILABLE'});
+ },observed.store);assert.equal(observed.opened.length,1);assert.equal(observed.copies.length,0);assert.throws(()=>observed.opened[0].metadataForServer());assert.equal(h.requests.filter(r=>r.method==='GET').length,3);assert.equal((await createSourceExportOwnerAccess(config,boundary,tokens,f.business).status(f.credential,f.job.id,signal())).forServer().job.state,'Ready');assert.deepEqual(await facts(f),saved);}finally{await h.close();}
 });

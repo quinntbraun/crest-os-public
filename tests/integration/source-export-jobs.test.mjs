@@ -2,10 +2,8 @@
 // Actual PostgreSQL/provider schema and restricted logins; no hosted resources.
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
-import {randomUUID,randomBytes,createHash,createHmac,timingSafeEqual} from 'node:crypto';
-import {createServer} from 'node:http';
-import {S3Client} from '@aws-sdk/client-s3';
-import {createEncryptedExportPartStore} from '../../src/files/export-part-store.ts';
+import {randomUUID,randomBytes,createHash} from 'node:crypto';
+import {custodyFixture} from '../support/source-export-custody-fixture.mjs';
 import {readFile,writeFile,mkdir,copyFile,chmod,unlink} from 'node:fs/promises';
 import {join} from 'node:path';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
@@ -43,6 +41,7 @@ const lookup=(f,operation,c=web)=>query(c,'SELECT crest_commands.lookup_source_e
 const ownerList=(f,before=null)=>query(web,'SELECT crest_commands.list_source_exports($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS value',[...auth(f),before?.createdAt??null,before?.id??null]);
 const downloadPage=(f,job,generation=null,after=0)=>query(web,'SELECT crest_commands.read_source_export_download_page($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS value',[...auth(f),job,generation,after]);
 const downloadPart=(f,job,generation,part)=>query(web,'SELECT crest_commands.read_source_export_download_part($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS value',[...auth(f),job,generation,part]);
+const recordAccess=(f,job,generation,part,record,c=web)=>query(c,'SELECT crest_commands.record_source_export_download_access($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS value',[...auth(f),job,generation,part,typeof record==='string'?record:JSON.stringify(record)]);
 async function session(f,age='1 second',c=client){
  const provider=randomUUID(),session=randomUUID(),hash=randomBytes(32);
  await c.query("INSERT INTO auth.sessions(id,user_id,aal,created_at,updated_at) VALUES($1,$2,'aal2',clock_timestamp(),clock_timestamp())",[provider,f.subject]);
@@ -315,24 +314,7 @@ for(const stage of ['intent','verified'])test('part '+stage+' refuses a lease th
 
 // Actual SDK/SigV4/HTTP/JWE with real SQL commits around I/O; synthetic local
 // storage only. This fixture is not hosted-provider conformance or Ready proof.
-async function custodyFixture(onRequest,mode='normal'){
- const bucket='crest-journal-synthetic',access=randomBytes(16).toString('hex'),secret=randomBytes(32).toString('hex'),key=randomBytes(32),objects=new Map(),requests=[];let origin,failure;
- const hmac=(k,v)=>createHmac('sha256',k).update(v).digest(),encode=v=>encodeURIComponent(v).replace(/[!'()*]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase());
- function signed(req,url,bytes){
-  const m=/^AWS4-HMAC-SHA256 Credential=([^,]+), SignedHeaders=([^,]+), Signature=([a-f0-9]{64})$/.exec(req.headers.authorization??'');if(!m)return false;const credential=m[1].split('/'),headers=m[2].split(';'),date=req.headers['x-amz-date'];if(credential.length!==5||credential[0]!==access||credential[2]!=='auto'||credential[3]!=='s3'||credential[4]!=='aws4_request'||!headers.includes('host')||req.headers['x-amz-content-sha256']!==sha(bytes)||typeof date!=='string'||!/^\d{8}T\d{6}Z$/.test(date))return false;
-  const q=[...url.searchParams].map(([k,v])=>[encode(k),encode(v)]).sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:a[1]<b[1]?-1:1).map(([k,v])=>k+'='+v).join('&'),canonicalHeaders=headers.map(name=>name+':'+String(req.headers[name]??'').trim().replace(/\s+/g,' ')+'\n').join(''),canonical=[req.method,url.pathname,q,canonicalHeaders,m[2],sha(bytes)].join('\n'),signing=hmac(hmac(hmac(hmac('AWS4'+secret,credential[1]),'auto'),'s3'),'aws4_request'),expected=hmac(signing,['AWS4-HMAC-SHA256',date,credential.slice(1).join('/'),sha(canonical)].join('\n'));return timingSafeEqual(expected,Buffer.from(m[3],'hex'));
- }
- const server=createServer(async(req,res)=>{
-  try{const url=new URL(req.url,origin),chunks=[];for await(const chunk of req)chunks.push(chunk);const bytes=Buffer.concat(chunks);if(!url.pathname.startsWith('/'+bucket+'/')||!signed(req,url,bytes)){res.writeHead(403);res.end();return;}const objectKey=url.pathname.slice(('/'+bucket+'/').length);requests.push({method:req.method,key:objectKey});await onRequest(req.method,objectKey,bytes);
-   if(req.method==='PUT'){assert.equal(req.headers['if-none-match'],'*');if(objects.has(objectKey)){res.writeHead(412,{'content-type':'application/xml'});res.end('<Error><Code>PreconditionFailed</Code></Error>');return;}objects.set(objectKey,Buffer.from(bytes));if(mode==='lost-put'){req.socket.destroy();return;}res.writeHead(200,{etag:'"opaque"'});res.end();return;}
-   assert.equal(req.method,'GET');assert(objects.has(objectKey));const data=Buffer.from(objects.get(objectKey));if(mode==='corrupt-read')data[0]^=1;res.writeHead(200,{'content-type':'application/jose+json','content-length':data.length,etag:'"not-a-content-hash"'});res.end(data);
-  }catch(e){failure=e;res.destroy();}
- });
- await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});origin='http://127.0.0.1:'+server.address().port;
- const sdk=new S3Client({region:'auto',endpoint:origin,forcePathStyle:true,credentials:{accessKeyId:access,secretAccessKey:secret},maxAttempts:1,requestChecksumCalculation:'WHEN_REQUIRED',responseChecksumValidation:'WHEN_REQUIRED'});
- try{const store=await createEncryptedExportPartStore(sdk,bucket,'journal-key',[{id:'journal-key',key}]);return {store,requests,objects,async close(){sdk.destroy();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));if(failure)throw failure;}};}
- catch(e){sdk.destroy();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));throw e;}
-}
+
 async function custodySource(){
  const s=await snapshotFixture(),bytes=[Buffer.from('example'),Buffer.from('{"x":123}')];for(const [i,b]of bytes.entries()){s.plan.parts[i].bytes=b.length;s.plan.parts[i].sha256=sha(b);}s.plan.manifestSha256=sha(bytes[1]);s.plan.totalBytes=bytes.reduce((n,b)=>n+b.length,0);await snapshot(s.f,s.raw());return {s,bytes};
 }
@@ -503,6 +485,30 @@ test('journal reader source preflight refuses an unsafe definer before initial g
 });
 
 const captureJournal=f=>createBusinessSourceJournalCollector({connectionString:readerUrl,environment:'test',businessId:f.business})(new AbortController().signal);
+test('download access uses a closed audited command with no direct browser history writes',async()=>{
+ const signature='crest_commands.record_source_export_download_access(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,text)',r=(await client.query("SELECT p.proowner='crest_command_owner'::regrole AS owner,p.prosecdef,has_function_privilege('crest_web',p.oid,'EXECUTE') AS web,has_function_privilege('crest_export',p.oid,'EXECUTE') AS exporter,lower(array_to_string(p.proconfig,',')) AS config FROM pg_proc p WHERE p.oid=to_regprocedure($1)",[signature])).rows[0];assert.deepEqual(r,{owner:true,prosecdef:true,web:true,exporter:false,config:'search_path=pg_catalog, pg_temp,row_security=on'});for(const table of ['operations','audit_events'])for(const privilege of ['SELECT','INSERT','UPDATE','DELETE'])assert.equal((await client.query('SELECT has_table_privilege($1,$2,$3) AS allowed',['crest_web','crest_private.'+table,privilege])).rows[0].allowed,false);
+});
+test('download access commits requester time and exact public scope into immutable exportable history',async()=>{
+ const s=await readyFixture(),other=await state();await readyExport(s.f,s.readyRaw(),s.operation);await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[s.f.business,other.actor]);const owner={...other,business:s.f.business,epoch:s.f.epoch},record=await downloadPart(owner,s.job,s.plan.generationId,s.plan.parts[0].partId),before=await evidence(s.f),r=await recordAccess(owner,s.job,s.plan.generationId,s.plan.parts[0].partId,record),after=await evidence(s.f);
+ assert.equal(r.state,'authorized_handoff');assert.equal(r.scope.currentActorId,other.actor);assert.equal(record.authority.originalActorId,s.f.actor);assert.deepEqual(r.scope.header,record.header);assert.deepEqual(r.scope.file,record.file);assert.equal(after.operations.length,before.operations.length+1);assert.equal(after.audit_events.length,before.audit_events.length+1);assert.deepEqual(after.export_jobs,before.export_jobs);assert.deepEqual(after.export_job_attempts,before.export_job_attempts);
+ const o=after.operations.find(v=>v.value.operation_id===r.operationId).value,a=after.audit_events.find(v=>v.value.id===r.auditEventId).value;assert.equal(o.actor_id,other.actor);assert.equal(o.command_type,'export.download_access');assert.equal(o.state,'committed');assert.deepEqual(o.result,r);assert.equal(a.actor_id,other.actor);assert.equal(a.entity_kind,'export_accesses');assert.equal(a.action,'authorized_handoff');assert.deepEqual(a.delta.after,r.scope);assert.equal(a.event_hash,sha(a.hash_input));assert.equal(a.payload.recordedAt,r.recordedAt);for(const secret of ['objectKey','keyId','ciphertext','credential'])assert(!JSON.stringify(r).includes(secret));
+ const captured=await captureJournal(s.f),portable=await portableJournal(captured.forJournalServer()),rows=Object.values(portable.sourceRows).flat();assert(rows.some(v=>v.operation_id===r.operationId&&v.command_type==='export.download_access'));assert(rows.some(v=>v.id===r.auditEventId&&v.entity_kind==='export_accesses'));
+ await assert.rejects(client.query("UPDATE crest_private.audit_events SET action='changed' WHERE id=$1",[r.auditEventId]),e=>e.code==='55000');await assert.rejects(client.query('DELETE FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[s.f.business,r.operationId]),e=>e.code==='55000');
+ const repeated=await recordAccess(owner,s.job,s.plan.generationId,s.plan.parts[0].partId,record);assert.notEqual(repeated.operationId,r.operationId);assert.notEqual(repeated.auditEventId,r.auditEventId);
+});
+test('download access refuses stale or altered permit evidence without a pending operation or audit',async()=>{
+ const s=await readyFixture();await readyExport(s.f,s.readyRaw(),s.operation);const p=s.plan.parts[0].partId,r=await downloadPart(s.f,s.job,s.plan.generationId,p),saved=await evidence(s.f);
+ for(const record of [{...r,file:{...r.file,sha256:'e'.repeat(64)}},{...r,authority:{...r.authority,currentActorId:randomUUID()}},{...r,intent:{...r.intent,ciphertextSha256:'e'.repeat(64)}},{...r,unexpected:true},'{"header":{},"header":{}}'])await assert.rejects(recordAccess(s.f,s.job,s.plan.generationId,p,record));
+ await client.query('UPDATE crest_private.business_recovery_authorities SET active_epoch=$2,version=version+1 WHERE business_id=$1',[s.f.business,randomUUID()]);await assert.rejects(recordAccess(s.f,s.job,s.plan.generationId,p,r));assert.deepEqual(await evidence(s.f),saved);
+});
+test('download access rolls back its operation and audit on audit failure or explicit transaction rollback',async()=>{
+ const s=await readyFixture();await readyExport(s.f,s.readyRaw(),s.operation);const p=s.plan.parts[0].partId,r=await downloadPart(s.f,s.job,s.plan.generationId,p),saved=await evidence(s.f);
+ await client.query("ALTER TABLE crest_private.audit_events ADD CONSTRAINT synthetic_access_refusal CHECK(entity_kind<>'export_accesses') NOT VALID");try{await assert.rejects(recordAccess(s.f,s.job,s.plan.generationId,p,r),e=>e.code==='23514');}finally{await client.query('ALTER TABLE crest_private.audit_events DROP CONSTRAINT synthetic_access_refusal');}assert.deepEqual(await evidence(s.f),saved);
+ await web.query('BEGIN');try{assert.equal((await recordAccess(s.f,s.job,s.plan.generationId,p,r)).state,'authorized_handoff');assert.deepEqual(await evidence(s.f),saved);}finally{await web.query('ROLLBACK');}assert.deepEqual(await evidence(s.f),saved);
+});
+test('download access rechecks recent current authority instead of trusting a copied permit',async()=>{
+ const s=await readyFixture(),foreign=await state();await readyExport(s.f,s.readyRaw(),s.operation);const p=s.plan.parts[0].partId,r=await downloadPart(s.f,s.job,s.plan.generationId,p),saved=await evidence(s.f),stale=await session(s.f,'16 minutes');await assert.rejects(recordAccess(stale,s.job,s.plan.generationId,p,r));await assert.rejects(recordAccess(foreign,s.job,s.plan.generationId,p,r));await client.query('UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),version=version+1 WHERE id=$1',[s.f.session]);await assert.rejects(recordAccess(s.f,s.job,s.plan.generationId,p,r));assert.deepEqual(await evidence(s.f),saved);
+});
 async function portableJournal(value){
  const binding={businessId:value.businessId,generationId:value.generationId,appReleaseId:release,sourceSchemaVersion:43},csvWrapper=await formatSourceExportJournalCsv(value.journal,binding),formatted=csvWrapper.forJournalCsv(),wrapped=formatSourceLogicalFiles([...formatted.files.map(({name,contentType,content})=>({name,contentType,content})),{name:'journal_csv_manifest.json',contentType:'application/json',content:formatted.manifest}],binding),physical=wrapped.forLogicalFiles();
  assert.equal(Object.hasOwn(csvWrapper,'forServer'),false);assert.equal(Object.hasOwn(wrapped,'forServer'),false);assert(physical.parts.every(p=>p.bytes<=4194304));const recovered=verifySourceLogicalFiles(physical.manifest,physical.parts,binding),file=name=>{const matches=recovered.files.filter(f=>f.name===name);assert.equal(matches.length,1);return matches[0].content;};assert.equal(recovered.files.length,21);assert.equal(file('journal_capture.json'),value.journal);assert.equal(recovered.completeBackup,false);assert.equal(recovered.completePortableExport,false);
@@ -510,7 +516,7 @@ async function portableJournal(value){
  for(const [kind,[,keyColumns]]of Object.entries(journalKinds)){const dictionary=JSON.parse(file('journal_'+kind+'_dictionary.json')),escapes=JSON.parse(file('journal_'+kind+'_escape_map.json')).escapes;assert.deepEqual(dictionary.keyColumns,keyColumns);assert.deepEqual([...dictionary.integerColumns].sort(),[...integerColumns[kind]].sort());csvRows[kind]=readLogicalSourceExportCsv(file('journal_'+kind+'.csv'),escapes,{columns:dictionary.columns,keyColumns,integers:integerColumns[kind],maxRows:10000});}
  const checked=verifyJournalCsv(file('journal_csv_manifest.json'),recovered.files.filter(f=>f.name!=='journal_csv_manifest.json'),binding).forJournalVerification();assert.deepEqual(checked.rows,csvRows);assert.equal(checked.businessId,value.businessId);assert.equal(checked.generationId,value.generationId);assert.equal(checked.observedAt,value.observedAt);assert.equal(checked.recordCount,JSON.parse(value.journal).recordCount);assert.equal(checked.completeBackup,false);
  const joint=(await formatBusinessSourceJournalBundle({forJournalServer:()=>value,toJSON(){throw Error('PRIVATE');}},binding)).forJournalBundle(),verifiedJoint=verifyBusinessSourceJournalBundle(joint.manifest,joint.parts,binding).forJournalBundleVerification();assert.equal(Object.keys(verifiedJoint.sourceRows).length,19);assert.equal(Object.keys(verifiedJoint.journalRows).length,6);assert.deepEqual(verifiedJoint.journalRows,csvRows);assert.equal(verifiedJoint.recordCount,value.recordCount);assert.equal(verifiedJoint.sourceSchemaVersion,43);assert.equal(verifiedJoint.completeBackup,false);assert.equal(verifiedJoint.consistentCaptureProven,false);
- return {journal:JSON.parse(file('journal_capture.json')),parts:physical.parts,csvRows};
+ return {journal:JSON.parse(file('journal_capture.json')),parts:physical.parts,csvRows,sourceRows:verifiedJoint.sourceRows};
 }
 function capturedJournalRows(journal,kind){
  return journal.pages[kind].flatMap(p=>JSON.parse(p)).map(source=>{
