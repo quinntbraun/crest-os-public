@@ -79,6 +79,8 @@ jobs:
           npm run test:lead-addresses-db
       - name: Prove proposed immutable catalog storage and audit integrity
         run: npm run test:catalog-storage-proposal
+      - name: Prove proposed trusted catalog saves, retries and scoped history
+        run: npm run test:catalog-commands-proposal
       - name: Install pinned recovery tooling
         run: node scripts/install-recovery-tools.mjs
       - name: Prove registered original-operation retirement, complete source and independent encrypted recovery

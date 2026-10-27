@@ -1,0 +1,98 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "existingMigrationCount": 43,
+  "requiredSchemaSqlSha256": "463062296675b7f154552b9b227c537201d17c89d973d11b874e54aea2b68f70",
+  "capability": "crm.manage",
+  "commandType": "catalog.service.save",
+  "httpRouteEnabled": false,
+  "ordinaryTableAccess": false,
+  "privateWebRpcGrantedWhenApplied": true,
+  "existingFunctionBodies": [
+    {
+      "signature": "crest_private.service_projection(crest.services)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "7682059c83fe884e2a3e9cd9149a9563633a54181fa6d2e465c2c4f392b991bf"
+    },
+    {
+      "signature": "crest_private.service_definition(crest.service_versions)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "5a4802486fff4985ecdbfebdd78ddf89a4fdd1f7326dd6b669c0badef1fbfeab"
+    },
+    {
+      "signature": "crest_private.service_version_projection(crest.service_versions)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "896397db79799cbc5983cd807cc7ddf0a66b2302586b044d324336be410689a4"
+    },
+    {
+      "signature": "crest_private.reject_catalog_history_change()",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "rowSecurity": false,
+      "bodySha256": "8b6ff4061e1b8355528145c495629fff13f4ee9a12326f39d0e9e083d4b0aceb"
+    },
+    {
+      "signature": "crest_private.validate_service_change()",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "rowSecurity": false,
+      "bodySha256": "fe39c7a8db21032cb2efe3618051689594e325e0a833b4876a6894eec017232d"
+    },
+    {
+      "signature": "crest_private.validate_service_version_append()",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "rowSecurity": false,
+      "bodySha256": "3887929028d45b3b5923cea6ffaeb512eed866d20922c4a6af5d25415559ba52"
+    },
+    {
+      "signature": "crest_private.check_service_audit()",
+      "owner": "crest_catalog_integrity_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "1a7d5488a79648c8f91a1197ad7c9464acd8e711e85fc6a02544960ce8d77236"
+    },
+    {
+      "signature": "crest_private.check_service_version_audit()",
+      "owner": "crest_catalog_integrity_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "0cb9e94087682106e14b230fbe5791517b9d513f161978f11d18cf9ebe7a019b"
+    },
+    {
+      "signature": "crest_commands.read_authorized_business_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid)",
+      "owner": "crest_session_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "614b87966124be9297a7658a86bc3ee84a29f19f381a80ca23ecf702ffa0e952"
+    },
+    {
+      "signature": "crest_commands.lock_mutation_authority(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,text,boolean)",
+      "owner": "crest_session_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "9b2d19abde943ad1353250275d1b3bf66b34b9ff5fbe1a6d16b73a0ef42cae35"
+    }
+  ],
+  "sqlBytes": 43342,
+  "sqlSha256": "d0c97c0bb15d4f4ab6ee2ce6a10dff9e04f6b5f22387aa4e0c9aa30e5307cdc0",
+  "nativeExecuted": false,
+  "productionActivation": "blocked"
+}

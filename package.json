@@ -14,6 +14,7 @@
     "review:build": "node review/server.mjs --build-only",
     "review:test": "node --test --test-concurrency=1 review/review.test.mjs",
     "test:catalog-storage-proposal": "node --test --test-concurrency=1 tests/integration/service-catalog-storage.test.mjs",
+    "test:catalog-commands-proposal": "node --test --test-concurrency=1 tests/integration/service-catalog-commands.test.mjs",
     "dev": "next dev --hostname 127.0.0.1",
     "build": "next build --webpack && npm run build:server",
     "build:server": "node scripts/build-server.mjs",
