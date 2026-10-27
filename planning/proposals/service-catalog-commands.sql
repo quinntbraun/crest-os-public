@@ -88,7 +88,7 @@ BEGIN
  FOREACH k IN ARRAY ARRAY['name','inclusions','exclusions'] LOOP
   IF jsonb_typeof(d->k) IS DISTINCT FROM 'string' THEN RETURN false;END IF;
   s:=d->>k;
-  IF char_length(s)>CASE WHEN k='name' THEN 200 ELSE 4000 END OR (k<>'exclusions' AND btrim(s,blanks)='') OR (CASE WHEN k='name' THEN s ELSE translate(s,E'\t\n\r','') END)~'[[:cntrl:]]' THEN RETURN false;END IF;
+  IF char_length(s)>(CASE WHEN k='name' THEN 200 ELSE 4000 END) OR (k<>'exclusions' AND btrim(s,blanks)='') OR (CASE WHEN k='name' THEN s ELSE translate(s,E'\t\n\r','') END)~'[[:cntrl:]]' THEN RETURN false;END IF;
  END LOOP;
  IF jsonb_typeof(d->'internalGuidance') IS DISTINCT FROM 'null' THEN
   s:=d->>'internalGuidance';
@@ -148,7 +148,7 @@ BEGIN
   IF r->'contentAuditEventId'<>'null'::jsonb OR before_row->'active' IS NOT DISTINCT FROM after_row->'active' THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_CATALOG_RESULT_REVIEW_REQUIRED';END IF;
   expected_action:=CASE WHEN (after_row->>'active')::boolean THEN 'reopen' ELSE 'archive' END;
  END IF;
- IF a.action<>expected_action OR (SELECT count(*) FROM crest_private.audit_events WHERE business_id=requested_business AND operation_id=requested_operation)<>CASE WHEN changed THEN 2 ELSE 1 END THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_CATALOG_RESULT_REVIEW_REQUIRED';END IF;
+ IF a.action<>expected_action OR (SELECT count(*) FROM crest_private.audit_events WHERE business_id=requested_business AND operation_id=requested_operation)<>(CASE WHEN changed THEN 2 ELSE 1 END) THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_CATALOG_RESULT_REVIEW_REQUIRED';END IF;
  body:=jsonb_build_object('code',after_row->'code','active',after_row->'active','definition',crest_private.service_definition(v));
  digest:=encode(sha256(convert_to(jsonb_build_object('commandType','catalog.service.save','schemaVersion',1,'businessId',requested_business,'actorId',requested_actor,'recoveryEpoch',o.recovery_epoch,'serviceId',v.service_id,'expectedRevision',expected_revision,'payload',body)::text,'UTF8')),'hex');
  IF NOT crest_private.valid_service_payload(body) OR digest<>o.payload_hash THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_CATALOG_RESULT_REVIEW_REQUIRED';END IF;
