@@ -69,7 +69,7 @@ export function parseServiceHistoryPage(v:unknown,request:Readonly<{businessId:s
   retained(service,after);requireService(after.id===service.id&&event.revision===after.version&&after.operation_id===event.operationId&&after.updated_by===event.actorId&&BigInt(event.revision)===revision+1n&&BigInt(event.revision)<=BigInt(service.version)&&content.id===after.current_version_id&&BigInt(content.sequence)<=BigInt(after.version));
   if(before===null){requireService(event.revision==='1'&&event.action==='create'&&content.sequence==='1');}
   else{
-   retained(before,after);requireService(BigInt(before.version)+1n===BigInt(after.version)&&before.updated_at<=after.updated_at&&event.action!=='create');
+   retained(before,after);requireService(BigInt(before.version)+1n===BigInt(after.version)&&event.action!=='create');
    if(event.action==='edit')requireService(before.current_version_id!==after.current_version_id&&BigInt(content.sequence)>1n);
    else requireService(before.current_version_id===after.current_version_id&&before.active!==after.active&&after.active===(event.action==='reopen'));
   }

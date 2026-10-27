@@ -39,6 +39,13 @@ it('preserves changed scope and archive content across contiguous pages',()=>{
  expect(parseServiceHistoryPage({...page,history:page.history.slice(2)},{...f.historyRequest,afterRevision:'2'})).toMatchObject({hasMore:false});
  expect(parseServiceHistoryPage({...page,history:[]},{...f.historyRequest,afterRevision:'5'})).toMatchObject({history:[]});
 });
+it('orders retained revisions by their sequence without assuming a monotonic wall clock',()=>{
+ const page=structuredClone(chain());
+ Object.assign(page.history[1]!.after,{updated_at:'2026-10-27T12:35:00.123456Z'});
+ // The later root revision remains valid when its timestamp is earlier than
+ // the previous update but still at/after original creation, as SQL permits.
+ expect(parseServiceHistoryPage(page,f.historyRequest)).toEqual(page);
+});
 it.each(['broken before','wrong action','changed archive scope','jumped content','changed code','changed content actor'])('rejects corrupt history: %s',kind=>{
  const page=structuredClone(chain());
  if(kind==='broken before')page.history[2]!.before={...page.history[2]!.before!,active:false};
