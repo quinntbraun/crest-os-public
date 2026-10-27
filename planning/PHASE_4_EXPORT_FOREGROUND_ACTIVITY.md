@@ -1,5 +1,7 @@
 # Foreground export activity and session locking
 
+2026-10-27: Foreground source1233aac7/run40482633027 had252/253 proposal passes (695/696 foundation) and423 provider passes; restored download denial/access evidence, both same-session waits, helper grants and rollback tests passed. The new fresh request case failed CREST_EXPORT_JOB_AUDIT_REQUIRED at COMMIT: the wrapper cleared the original writer's transaction-local business/actor/operation settings before its deferred Command-owner RLS audit check. Retain the original verified settings until COMMIT/ROLLBACK resets them automatically, matching the unchanged writer. No raw grant, trigger/RLS/assertion/timeout change. The same regression now additionally verifies committed Queued state and retained hashed audit. Failed source unaccepted; fresh1252 native/full source proof required.
+
 2026-10-27. Implements the existing SECURITY session-activity rule in the still-unregistered forward43 owner export path. Published56885d8f/run40477888467 has independently bound1,246 native passes; its full release remains a separate prerequisite. The preserved local recovery checkpointa5b0d7a adds a mandatory restored-download denial subtest. Publish both local checkpoints together after the parent full release, using one branch update so an intermediate run is not immediately superseded.
 
 ## Atomic foreground completion

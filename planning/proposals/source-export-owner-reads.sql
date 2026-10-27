@@ -161,7 +161,8 @@ BEGIN
  IF result->>'state'='committed' THEN
   PERFORM crest_commands.finish_source_export_foreground_activity($1,$2,$3,$4,$5,$6,$7,$8,$9,$10);
  END IF;
- PERFORM set_config('crest.business_id','',true),set_config('crest.actor_id','',true),set_config('crest.operation_id','',true);
+ -- The original writer's verified transaction-local scope must survive its
+ -- deferred audit checks at COMMIT. COMMIT/ROLLBACK resets it automatically.
  RETURN result;
 END $$;
 RESET ROLE;
