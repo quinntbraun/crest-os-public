@@ -1,7 +1,7 @@
 'use client';
 import {createPendingLeadConversionStore} from '../../client/pending-lead-conversion';
 import {Fragment,useEffect,useRef,useState} from 'react';
-import type {FormEvent} from 'react';
+import type {FormEvent,ComponentType} from 'react';
 import {createLeadAddressEditorController,initialLeadAddressEditorView,emptyLeadAddressDraft} from '../../client/lead-address-editor-controller';
 import {createPendingLeadAddressStore} from '../../client/pending-lead-address-edit';
 import {createPendingLeadStore} from '../../client/pending-lead-edit';
@@ -22,7 +22,7 @@ function AddressDetails({row}:{row:LeadAddress}){
  const values=[['Address line 1',row.line1],['Address line 2',row.line2],['City',row.city],['State or region',row.region],['Postal code',row.postal_code],['Country',row.country],['Exact location description',row.exact_location_text],['Location instructions',row.instructions],['Latitude',row.latitude],['Longitude',row.longitude],['Geocode source',row.geocode_source],['Geocode accuracy',row.geocode_accuracy],['Verification time (UTC)',row.verified_at],['Archived at (UTC)',row.archived_at],['Archive reason',row.archived_reason]] as const;
  return <dl className="customer-values">{values.map(([label,value])=><Fragment key={label}><dt>{label}</dt><dd style={{whiteSpace:'pre-wrap'}}>{text(value)}</dd></Fragment>)}</dl>;
 }
-export function LeadAddressPanel({businessId,leadId,disabled,onLock}:{businessId:string;leadId:string;disabled:boolean;onLock:(locked:boolean)=>void}){
+export function LeadAddressPanel({businessId,leadId,disabled,onLock,assist:Assist}:{businessId:string;leadId:string;disabled:boolean;onLock:(locked:boolean)=>void;assist?:ComponentType<{draft:LeadAddressDraft;change:(draft:LeadAddressDraft)=>void}>}){
  const [view,setView]=useState(initialLeadAddressEditorView),current=useRef<ReturnType<typeof createLeadAddressEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null);
  useEffect(()=>{
   const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)};
@@ -52,6 +52,7 @@ export function LeadAddressPanel({businessId,leadId,disabled,onLock}:{businessId
    {view.draft&&<>
     <h3>{view.selected?'Edit lead address':'New lead address'}</h3><p className="field-help">Record what is known. An incomplete location can be saved; this does not confirm a customer job location. Unknown and explicitly empty values remain distinct.</p>
     <form onSubmit={submit} aria-label="Lead address editor"><fieldset disabled={writeDisabled}><legend>Location details</legend>
+     {Assist&&!writeDisabled&&<Assist key={(view.selected?.id??'new')+':'+(view.selected?.version??'0')} draft={view.draft} change={next=>current.current?.edit(next)}/>}
      {fields.map(([name,label,limit,multiline])=><NullableText key={name} name={'lead-address-'+name} label={label} limit={limit} multiline={multiline} value={view.draft![name]} disabled={writeDisabled} change={value=>edit(name,value)}/>)}
      <details><summary>Location coordinates and verification</summary>
       <label className="trust"><input type="checkbox" checked={view.draft.latitude!==null||view.draft.longitude!==null} onChange={event=>{if(view.draft)current.current?.edit({...view.draft,latitude:event.target.checked?'':null,longitude:event.target.checked?'':null});}}/>Record location coordinates</label>

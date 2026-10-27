@@ -3,7 +3,8 @@ import {createPendingLeadConversionStore} from '../../client/pending-lead-conver
 import {createPendingLeadAddressStore} from '../../client/pending-lead-address-edit';
 import Link from 'next/link';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import type {FormEvent} from 'react';
+import type {FormEvent,ComponentType} from 'react';
+import type {LeadAddressDraft} from '../../customer/lead-resource-contract';
 import {createLeadEditorController,initialLeadEditorView,emptyLeadDraft} from '../../client/lead-editor-controller';
 import {createPendingLeadStore} from '../../client/pending-lead-edit';
 import type {Lead,LeadDraft} from '../../customer/lead-contract';
@@ -16,21 +17,18 @@ import {LeadAddressPanel} from './addresses';
 import {LeadConversionPanel} from './conversion';
 import {createPendingLeadVehicleStore} from '../../client/pending-lead-vehicle-edit';
 import {createPendingLeadStateStore} from '../../client/pending-lead-state-edit';
-import {leadDollars,leadCents,leadUtc} from './intake-input';
+import {leadDollars,leadCents} from './intake-input';
+import {FollowUpInput} from './follow-up-input';
 
 function EstimateInput({value,change}:{value:string;change:(value:string)=>void}){
  const [text,setText]=useState(()=>leadDollars(value));
  return <><label htmlFor="lead-estimate">Estimated value (USD)</label><input id="lead-estimate" name="estimate" inputMode="decimal" autoComplete="off" maxLength={24} value={text} onChange={event=>{setText(event.target.value);change(leadCents(event.target.value));}} required/><p className="field-help">Enter dollars, such as 125.50. Zero is an explicit estimate; uncheck to leave it unknown. This estimate is not a quote or invoice.</p></>;
 }
-function FollowUpInput({value,change}:{value:string;change:(value:string)=>void}){
- const [text,setText]=useState(value);
- return <><label htmlFor="lead-follow-up">Follow-up date and time (UTC)</label><input id="lead-follow-up" name="follow-up" autoComplete="off" maxLength={35} placeholder="2026-10-25 14:30" value={text} onChange={event=>{setText(event.target.value);change(leadUtc(event.target.value));}} required/><p className="field-help">Enter a UTC date and time, such as 2026-10-25 14:30. Existing seconds and microseconds are preserved. No device timezone is assumed.</p></>;
-}
 function LeadDetails({lead}:{lead:Lead}){
  const text=(value:string|null)=>value===null?'Not recorded':value===''?'Recorded as empty':value;
  return <dl className="customer-values"><dt>Label</dt><dd>{lead.label}</dd><dt>State</dt><dd>{lead.state.replaceAll('_',' ')}</dd><dt>Linked customer</dt><dd>{lead.customer_id?'Existing customer linked':'Not linked'}</dd><dt>Selected source snapshot</dt><dd>{lead.source_snapshot?lead.source_snapshot.label+' · '+lead.source_snapshot.kind:'Not recorded'}</dd><dt>Referral evidence</dt><dd>{text(lead.referral_text)}</dd><dt>Phone</dt><dd>{text(lead.phone_raw)}</dd><dt>Email</dt><dd>{text(lead.email_raw)}</dd><dt>Requested scope</dt><dd>{text(lead.requested_scope)}</dd><dt>Availability</dt><dd>{text(lead.availability)}</dd><dt>Estimate (USD)</dt><dd>{lead.estimated_cents===null?'Not recorded':leadDollars(lead.estimated_cents)}</dd><dt>Follow-up (UTC)</dt><dd>{text(lead.follow_up_at)}</dd><dt>Notes</dt><dd>{text(lead.notes)}</dd><dt>Lost reason</dt><dd>{text(lead.lost_reason)}</dd></dl>;
 }
-export function LeadScreen(){
+export function LeadScreen({addressAssist}:{addressAssist?:ComponentType<{draft:LeadAddressDraft;change:(draft:LeadAddressDraft)=>void}>}={}){
  const [conversionLocked,setConversionLocked]=useState(false),[conversionGeneration,setConversionGeneration]=useState(0),[statusLocked,setStatusLocked]=useState(false),[vehicleLocked,setVehicleLocked]=useState(false),[addressLocked,setAddressLocked]=useState(false),[view,setView]=useState(initialLeadEditorView),current=useRef<ReturnType<typeof createLeadEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null);
  useEffect(()=>{
   const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)};
@@ -57,6 +55,10 @@ export function LeadScreen(){
    <ul className="customer-list">{view.rows.map(row=><li key={row.id}><button type="button" className="secondary" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void current.current?.open(row.id)}>{row.label}</button><p>{row.state.replaceAll('_',' ')}{row.follow_up_at?' · Follow-up (UTC): '+row.follow_up_at:''}</p></li>)}</ul>
    {view.rows.length===0&&<p>No leads found on this page.</p>}{view.hasMore&&<button type="button" className="secondary" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void current.current?.query(view.search,view.includeLost,true)}>Next lead page</button>}
    <button type="button" disabled={disabled} onClick={()=>current.current?.create()}>Add lead</button>
+   {view.selected&&view.businessId&&<LeadStatusPanel key={'status:'+view.businessId+':'+view.selected.id+':'+conversionGeneration} businessId={view.businessId} leadId={view.selected.id} disabled={view.busy||dirty||vehicleLocked||addressLocked||conversionLocked} onLock={setStatusLocked} onCommitted={statusChanged}/>}
+   {view.selected&&view.businessId&&<LeadVehiclePanel key={'vehicles:'+view.businessId+':'+view.selected.id+':'+conversionGeneration} businessId={view.businessId} leadId={view.selected.id} disabled={view.busy||dirty||statusLocked||addressLocked||conversionLocked} onLock={setVehicleLocked}/>}
+   {view.selected&&view.businessId&&<LeadAddressPanel key={'addresses:'+view.businessId+':'+view.selected.id+':'+conversionGeneration} businessId={view.businessId} leadId={view.selected.id} disabled={view.busy||dirty||statusLocked||vehicleLocked||conversionLocked} onLock={setAddressLocked} {...addressAssist?{assist:addressAssist}:{}}/>}
+   {view.businessId&&<LeadConversionPanel key={'conversion:'+view.businessId+':'+(view.selected?.id??'none')} businessId={view.businessId} leadId={view.selected?.id??null} disabled={view.busy||dirty||statusLocked||vehicleLocked||addressLocked} onLock={setConversionLocked} onCommitted={conversionCommitted}/>}
    {view.draft&&<>
     <h2>{view.selected?'Edit lead intake':'New lead'}</h2><p className="field-help">Only a label is required. Unknown details stay unknown. Leaving or hiding this page clears private drafts; closing the tab can also lose its save reference.</p>
     {view.businessId&&<><ReferencePicker key={key+':customer'} businessId={view.businessId} kind="customer" value={view.draft.customerId} disabled={disabled} change={value=>edit('customerId',value)}/><ReferencePicker key={key+':source'} businessId={view.businessId} kind="source" value={view.draft.sourceId} disabled={disabled} change={value=>edit('sourceId',value)}/></>}
@@ -71,10 +73,6 @@ export function LeadScreen(){
      <NullableText name="notes" label="Notes" multiline limit={4000} value={view.draft.notes} disabled={disabled} change={value=>edit('notes',value)}/>
     </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}<button type="submit" disabled={!view.canSave||statusLocked||vehicleLocked||addressLocked||conversionLocked}>Save lead</button></form>
    </>}
-   {view.selected&&view.businessId&&<LeadStatusPanel key={'status:'+view.businessId+':'+view.selected.id+':'+conversionGeneration} businessId={view.businessId} leadId={view.selected.id} disabled={view.busy||dirty||vehicleLocked||addressLocked||conversionLocked} onLock={setStatusLocked} onCommitted={statusChanged}/>}
-   {view.selected&&view.businessId&&<LeadVehiclePanel key={'vehicles:'+view.businessId+':'+view.selected.id+':'+conversionGeneration} businessId={view.businessId} leadId={view.selected.id} disabled={view.busy||dirty||statusLocked||addressLocked||conversionLocked} onLock={setVehicleLocked}/>}
-   {view.selected&&view.businessId&&<LeadAddressPanel key={'addresses:'+view.businessId+':'+view.selected.id+':'+conversionGeneration} businessId={view.businessId} leadId={view.selected.id} disabled={view.busy||dirty||statusLocked||vehicleLocked||conversionLocked} onLock={setAddressLocked}/>}
-   {view.businessId&&<LeadConversionPanel key={'conversion:'+view.businessId+':'+(view.selected?.id??'none')} businessId={view.businessId} leadId={view.selected?.id??null} disabled={view.busy||dirty||statusLocked||vehicleLocked||addressLocked} onLock={setConversionLocked} onCommitted={conversionCommitted}/>}
    {view.history&&<section aria-label="Lead history"><h2>Retained history</h2><p>Current version: {view.history.lead.version}</p>{view.history.history.map(event=><details key={event.after.version}><summary>Version {event.after.version} · {event.after.updated_at}</summary>{event.before&&<><h3>Before</h3><LeadDetails lead={event.before}/></>}<h3>After</h3><LeadDetails lead={event.after}/></details>)}{view.history.hasMore&&<button className="secondary" type="button" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void action('moreHistory')}>Next lead history page</button>}</section>}
   </>}
   {view.phase==='pending'&&<><p className="field-help">Keep the original save reference until the outcome is confirmed. No retry runs automatically.</p>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void action('check')}>Check lead save status</button>{view.canRetry&&<button type="button" className="secondary" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void action('retry')}>Retry original lead change</button>}</>}

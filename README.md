@@ -1,6 +1,8 @@
 # Crest OS
 
-Current development: [private owner export request/status access](planning/PHASE_4_EXPORT_OWNER_ACCESS.md) and [audited interrupted-request resolution](planning/PHASE_4_EXPORT_REQUEST_RESOLUTION.md), following the [verified joint export worker](planning/PHASE_4_JOINT_EXPORT_WORKER.md), [interrupted-save recovery](planning/PHASE_4_ORIGINAL_OPERATION_RESOLUTION.md) and [atomic lead conversion](planning/PHASE_4_LEAD_CONVERSION.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence. New owner/resolution execution, schema 43 adoption and owner screens/download remain gated.
+Current development: the [owner-visible CRM workspace](planning/OWNER_REVIEW_WORKSPACE.md), [exact quote pricing worksheet](planning/PHASE_5_QUOTE_WORKSHEET.md) and [service definition/version editor](planning/PHASE_5_SERVICE_EDITOR.md). Run npm run review for fictional workflow testing. The service library and quote worksheet remain unsaved page memory. The [delivery inventory](planning/V1_DELIVERY_INVENTORY.md) records V1 status and estimates; [free durable local setup](planning/FREE_LOCAL_TEST_SETUP.md) remains a separate prerequisite. The [active checkpoint](planning/WORKING_STATE.md) distinguishes temporary review from production authentication, database and release acceptance. Real customer and financial use remains gated.
+
+The [catalog storage construction](planning/PHASE_5_CATALOG_STORAGE.md) now defines retained service content and its closed database acceptance cases; it is unregistered and does not enable permanent saving.
 
 Crest Detailing's internal business operating system.
 
@@ -68,6 +70,8 @@ The [synthetic database recovery drill](planning/PHASE_3_RECOVERY_DRILL.md) uses
 The [vehicle directory backend](planning/PHASE_4_VEHICLE_DIRECTORY.md) adds label-only vehicle sources, optional raw VIN/year/plate, nonunique search hints, audit/archive/history, typed private methods and same-snapshot recovery coverage. Native acceptance, dated customer associations, vehicle forms and ownership transfer remain unfinished; default access stays closed.
 
 ## Local development
+
+For the owner-visible sample workspace, run `npm run review` and open http://127.0.0.1:4318 on this computer. It uses the existing customer/vehicle/lead/source screens with fictional, temporary data. It is available for workflow/design feedback before the database-backed release; do not enter real records. See [scope and verified review behaviors](planning/OWNER_REVIEW_WORKSPACE.md). Run `npm run review:test` for its focused local HTTP checks. Normal production startup and all real-use acceptance gates are unchanged.
 
 The [private vehicle HTTP boundary](planning/PHASE_4_VEHICLE_HTTP.md) adds scoped context/list/save/history/receipt routes and a stateless browser client over the genuine vehicle source. It requires its own explicit `vehicles:true` composition. The [vehicle editor](planning/PHASE_4_VEHICLE_EDITOR.md) adds private mobile forms/history and original interrupted-save recovery; exact-source native acceptance is pending. Dated ownership links remain unfinished.
 

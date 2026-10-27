@@ -9,6 +9,7 @@ import type {Vehicle} from '../../customer/vehicle-contract';
 import type {VehicleDraft} from '../../customer/customer-resource-contract';
 import {vehicleYearInput} from './year-input';
 import {AssociationPanel} from './associations';
+import {customerUuid} from '../../customer/customer-contract';
 
 function YearInput({value,change}:{value:number;change:(value:number)=>void}){
   const [text,setText]=useState(Number.isFinite(value)?String(value):'');
@@ -18,14 +19,14 @@ function VehicleDetails({vehicle}:{vehicle:Vehicle}){
   const unknown=(value:string|number|null)=>value===null?'Not recorded':value===''?'Recorded as empty':String(value);
   return <dl className="customer-values"><dt>Label</dt><dd>{vehicle.label}</dd><dt>Year</dt><dd>{unknown(vehicle.year)}</dd><dt>Make</dt><dd>{unknown(vehicle.make)}</dd><dt>Model</dt><dd>{unknown(vehicle.model)}</dd><dt>Color</dt><dd>{unknown(vehicle.color)}</dd><dt>VIN</dt><dd>{unknown(vehicle.vin_raw)}</dd><dt>Plate</dt><dd>{unknown(vehicle.plate)}</dd><dt>Kind</dt><dd>{vehicle.kind==='customer_vehicle'?'Customer vehicle':vehicle.kind==='business_rig'?'Business rig':'Other'}</dd><dt>Notes</dt><dd>{unknown(vehicle.notes)}</dd><dt>Status</dt><dd>{vehicle.archived_at===null?'Active':'Archived: '+vehicle.archived_reason}</dd></dl>;
 }
-export function VehicleScreen(){
+export function VehicleScreen({initialVehicleId=null}:{initialVehicleId?:string|null}={}){
   const [view,setView]=useState(initialVehicleEditorView),current=useRef<ReturnType<typeof createVehicleEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null);
   useEffect(()=>{
-    const controller=createVehicleEditorController({store:createPendingVehicleStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});current.current=controller;void controller.load();
+    const controller=createVehicleEditorController({store:createPendingVehicleStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});current.current=controller;void(async()=>{await controller.load();if(customerUuid(initialVehicleId)&&controller.view().phase==='ready')await controller.open(initialVehicleId);})();
     const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
     document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
     return ()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
-  },[]);
+  },[initialVehicleId]);
   useEffect(()=>{if(!view.canSave&&view.phase!=='pending'&&!view.busy)return;const leaving=(event:BeforeUnloadEvent)=>{event.preventDefault();};window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[view.canSave,view.phase,view.busy]);
   async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory'){const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
   function edit<K extends keyof VehicleDraft>(key:K,value:VehicleDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}

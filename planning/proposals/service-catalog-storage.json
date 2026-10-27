@@ -1,0 +1,31 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "existingMigrationCount": 43,
+  "sourceProjectionVersion": 43,
+  "runtimeEnabled": false,
+  "nativeExecuted": false,
+  "nativeCasesWritten": 29,
+  "sqlBytes": 19407,
+  "sqlSha256": "4a00e9f9dcddd1dfa021081106f853b08d1ee9a0194dd4fd3ae49279ce9e98c6",
+  "tables": {
+    "crest.services": 13,
+    "crest.service_versions": 16
+  },
+  "functions": [
+    "crest_private.service_projection(crest.services)",
+    "crest_private.service_definition(crest.service_versions)",
+    "crest_private.service_version_projection(crest.service_versions)",
+    "crest_private.reject_catalog_history_change()",
+    "crest_private.validate_service_change()",
+    "crest_private.validate_service_version_append()",
+    "crest_private.check_service_audit()",
+    "crest_private.check_service_version_audit()"
+  ],
+  "ordinaryTableGrants": false,
+  "trustedCommandsImplemented": false,
+  "sourceExportCoverageImplemented": false,
+  "recoveryAcceptanceExecuted": false,
+  "productionActivation": "blocked"
+}

@@ -1,17 +1,18 @@
 'use client';
 import Link from 'next/link';
 import {useEffect,useRef,useState} from 'react';
-import type {FormEvent} from 'react';
+import type {FormEvent,ComponentType} from 'react';
 import {createCustomerEditorController,initialCustomerEditorView} from '../../client/customer-editor-controller';
 import {createPendingCustomerStore} from '../../client/pending-customer-edit';
 import {NullableText} from './nullable-text';
+import {phonePresentation} from '../../client/phone-presentation';
 import type {Customer,CustomerDraft} from '../../customer/customer-contract';
 
 function CustomerDetails({customer}:{customer:Customer}){
   const unknown=(value:string|null)=>value===null?'Not recorded':value===''?'Recorded as empty':value;
   return <dl className="customer-values"><dt>Name</dt><dd>{customer.display_name}</dd><dt>Phone</dt><dd>{unknown(customer.phone_raw)}</dd><dt>Email</dt><dd>{unknown(customer.email_raw)}</dd><dt>Contact preference</dt><dd>{unknown(customer.contact_preference)}</dd><dt>Outreach</dt><dd>{customer.outreach_opt_out?'Opted out':'Not opted out'}</dd><dt>Customer since</dt><dd>{unknown(customer.customer_since)}</dd><dt>Notes</dt><dd>{unknown(customer.notes)}</dd><dt>Status</dt><dd>{customer.archived_at===null?'Active':'Archived: '+customer.archived_reason}</dd></dl>;
 }
-export function CustomerScreen(){
+export function CustomerScreen({related:Related}:{related?:ComponentType<{customerId:string}>}={}){
   const [view,setView]=useState(initialCustomerEditorView),current=useRef<ReturnType<typeof createCustomerEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null);
   useEffect(()=>{
     const controller=createCustomerEditorController({store:createPendingCustomerStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});current.current=controller;void controller.load();
@@ -30,15 +31,17 @@ export function CustomerScreen(){
       {view.writesPaused&&<p className="notice">Customer changes are paused. You can review current records and history.</p>}
       <form onSubmit={search} aria-label="Search customers"><label htmlFor="customer-search">Customer search</label><input id="customer-search" name="search" type="search" autoComplete="off" maxLength={400} defaultValue={view.search} disabled={view.busy}/><label className="trust"><input name="archived" type="checkbox" defaultChecked={view.includeArchived} disabled={view.busy}/>Include archived customers</label><button className="secondary" type="submit" disabled={view.busy}>Search customers</button></form>
       <p className="field-help">Search names, email or phone text. Shared contact details do not merge customers. Searching or opening another record discards an unsaved draft.</p>
-      <ul className="customer-list">{view.rows.map(row=><li key={row.id}><button type="button" className="secondary" disabled={view.busy} onClick={()=>void current.current?.open(row.id)}>{row.display_name}{row.archived_at!==null?' — archived':''}</button></li>)}</ul>
+      <ul className="customer-list">{view.rows.map(row=><li key={row.id}><button type="button" className="secondary" disabled={view.busy} onClick={()=>void current.current?.open(row.id)}>{row.display_name}{row.archived_at!==null?' — archived':''}</button><p className="contact-summary">{[row.phone_raw===null?null:phonePresentation(row.phone_raw),row.email_raw].filter(value=>value!==null).join(' · ')||'Contact details not recorded'}</p></li>)}</ul>
       {view.rows.length===0&&<p>No customers found on this page.</p>}
       {view.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void current.current?.query(view.search,view.includeArchived,true)}>Next customer page</button>}
       <button type="button" disabled={view.busy||view.writesPaused} onClick={()=>current.current?.create()}>Add customer</button>
       {view.draft&&<form onSubmit={submit} aria-label="Customer editor"><h2>{view.selected?'Edit customer':'New customer'}</h2>
-        <p className="field-help">Only the name is required. Unknown details stay unknown. Leaving or hiding this page clears private drafts; closing this tab can also lose its save reference.</p>
+        <p className="field-help">Name is required. Phone and email are optional. Unsaved changes clear when you leave or hide this page.</p>
         <fieldset disabled={view.busy||view.writesPaused}><legend>Customer details</legend><label htmlFor="customer-name">Customer name</label><input id="customer-name" name="customer-name" autoComplete="off" maxLength={400} value={view.draft.displayName} onChange={event=>edit('displayName',event.target.value)} required/><p className="field-help">{[...view.draft.displayName].length}/200 characters.</p>
           <NullableText name="phone" label="Phone" limit={512} value={view.draft.phone} disabled={view.busy} change={value=>edit('phone',value)}/>
           <NullableText name="email" label="Email" limit={512} value={view.draft.email} disabled={view.busy} change={value=>edit('email',value)}/>
+          {view.draft.outreachOptOut&&<p className="notice">This customer has opted out of outreach.</p>}
+          <details key={view.selected?.id??'new'} className="customer-extra"><summary>Notes and more customer details</summary>
           <NullableText name="preference" label="Contact preference" limit={200} value={view.draft.contactPreference} disabled={view.busy} change={value=>edit('contactPreference',value)}/>
           <label className="trust"><input type="checkbox" checked={view.draft.outreachOptOut} onChange={event=>edit('outreachOptOut',event.target.checked)}/>Customer has opted out of outreach</label><p className="field-help">A missing opt-out flag does not establish permission to send messages. This editor sends no outreach.</p>
           <NullableText name="notes" label="Notes" multiline limit={2000} value={view.draft.notes} disabled={view.busy} change={value=>edit('notes',value)}/>
@@ -46,9 +49,11 @@ export function CustomerScreen(){
           {view.draft.customerSince!==null&&<><label htmlFor="customer-since">Customer-since date</label><input id="customer-since" name="customer-since" type="date" min="0001-01-01" max="9999-12-31" value={view.draft.customerSince} onChange={event=>edit('customerSince',event.target.value)} required/></>}
           <label className="trust"><input type="checkbox" checked={view.draft.archived} onChange={event=>current.current?.edit({...view.draft!,archived:event.target.checked,archiveReason:event.target.checked?'':null})}/>Archive customer</label>
           {view.draft.archived&&<><label htmlFor="archive-reason">Archive reason</label><textarea id="archive-reason" name="archive-reason" rows={3} maxLength={2000} value={view.draft.archiveReason??''} onChange={event=>edit('archiveReason',event.target.value)} required/><p className="field-help">{[...(view.draft.archiveReason??'')].length}/1000 characters. Archiving retains the record and its history.</p></>}
+          </details>
         </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}<button type="submit" disabled={!view.canSave}>Save customer</button>
       </form>}
       {view.selected&&<Link href={"/addresses?customer="+view.selected.id}>Manage customer addresses</Link>}
+      {view.selected&&Related&&<Related key={view.selected.id} customerId={view.selected.id}/>}
       {view.history&&<section aria-label="Customer history"><h2>Retained history</h2><p>Current version: {view.history.customer.version}</p>
         {view.history.history.map(event=><details key={event.after.version}><summary>Version {event.after.version} · {event.after.updated_at}</summary>{event.before&&<><h3>Before</h3><CustomerDetails customer={event.before}/></>}<h3>After</h3><CustomerDetails customer={event.after}/></details>)}
         {view.history.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('moreHistory')}>Next history page</button>}
