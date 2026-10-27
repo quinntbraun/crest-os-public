@@ -1,5 +1,9 @@
 ## Current work: consistent private exports
 
+Owned journal/CRM capture sourced732a637/run40433337313 independently passed all1191database/Auth cases including208proposal/117genuineAuth; full release remains separate. New logical-file source has5228localunit/151file passes and needs its own exact-source native composition proof.
+
+2026-10-26 logical-file construction adds standard UTF8/SHA256 split/reassembly for large original journal files under existing physical crypto limits. Independent decoder and39focused cases include maximum sources, malformed/missing/reordered evidence and real JWE interoperability. Two existing native cases extend composition without changing208proposal/1191database/Auth expected; fresh source-bound execution is required. See PHASE_4_LOGICAL_EXPORT_FILES.md; source43 remains unregistered and worker42 stays disconnected.
+
 2026-10-26 journal-aware capture is a separate unregistered schema43 construction candidate. It shares one owned transaction with foundation/CRM and preserves exact original text through bounded verified chunks. Existing schema42 worker/format/recovery contracts remain unchanged. See PHASE_4_JOURNAL_CAPTURE.md;208proposal/1191database/Auth are expected, not accepted until exact-source CI succeeds. Prior readerdb64e9cb/run40430646130 has independently accepted1188database/Auth; full release is separate.
 
 First reader sourcef53e6ca6/run40429852090 passed all443 preceding foundation cases but failed the205-case proposal before-hook while compiling the new page routine (42601, position14614). An unparenthesized SQL CASE inside PL/pgSQL IF let its inner THEN terminate the outer condition. Both page/chunk cursor predicates now parenthesize that unchanged CASE expression. No input/authority/row/chunk bound or205case/48unit assertion changed. No reader or full acceptance exists forf53; fresh corrected-source execution is required. The prior inventorya342 full1166 release remains accepted separately.
