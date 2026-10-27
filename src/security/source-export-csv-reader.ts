@@ -14,13 +14,22 @@ function formula(value:string){return value.startsWith("'")||['=','+','-','@'].i
 // Independent profile reader: no CSV writer import, type inference from cell
 // appearance or spreadsheet execution. Caller supplies a closed source schema.
 export function readSourceExportCsv(csv:unknown,escapes:unknown,schema:Schema){
+ return readCsv(csv,escapes,schema,['id'],8388608);
+}
+// Separate proposed logical-file profile. The existing physical CSV reader
+// keeps its8MiB/UUID-id contract; journal logical files allow composite UUID keys.
+export function readLogicalSourceExportCsv(csv:unknown,escapes:unknown,schema:Schema&Readonly<{keyColumns:readonly string[]}>){
+ return readCsv(csv,escapes,schema,schema.keyColumns,33554432);
+}
+function readCsv(csv:unknown,escapes:unknown,schema:Schema,keyColumns:readonly string[],limit:number){
  try{
-  require(typeof csv==='string'&&csv.length<=8*1024*1024&&Buffer.byteLength(csv)<=8*1024*1024&&!csv.includes('\0')&&Buffer.from(csv).toString()===csv);
-  require(schema.columns.length>0&&schema.columns.length<=100&&new Set(schema.columns).size===schema.columns.length&&schema.columns.includes('id')&&Number.isSafeInteger(schema.maxRows)&&schema.maxRows>=0&&schema.maxRows<=10000);
+  require(typeof csv==='string'&&csv.length<=limit&&Buffer.byteLength(csv)<=limit&&!csv.includes('\0')&&Buffer.from(csv).toString()===csv);
+  require(schema.columns.length>0&&schema.columns.length<=100&&new Set(schema.columns).size===schema.columns.length&&Array.isArray(keyColumns)&&keyColumns.length>=1&&keyColumns.length<=2&&new Set(keyColumns).size===keyColumns.length&&keyColumns.every(k=>schema.columns.includes(k))&&Number.isSafeInteger(schema.maxRows)&&schema.maxRows>=0&&schema.maxRows<=10000);
+  const validKey=(value:string)=>value.split(':').length===keyColumns.length&&value.split(':').every(part=>/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(part));
   require(Array.isArray(escapes)&&escapes.length<=100000);
   const flags=new Map<string,{rowId:string;column:string}>();
   for(const e of escapes){
-   require(object(e)&&Object.keys(e).length===3&&Object.hasOwn(e,'row_id')&&Object.hasOwn(e,'column')&&Object.hasOwn(e,'apostrophe_prefix')&&typeof e.row_id==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(e.row_id)&&typeof e.column==='string'&&schema.columns.includes(e.column)&&e.apostrophe_prefix===true);
+   require(object(e)&&Object.keys(e).length===3&&Object.hasOwn(e,'row_id')&&Object.hasOwn(e,'column')&&Object.hasOwn(e,'apostrophe_prefix')&&typeof e.row_id==='string'&&validKey(e.row_id)&&typeof e.column==='string'&&schema.columns.includes(e.column)&&e.apostrophe_prefix===true);
    const key=e.row_id+':'+e.column;require(!flags.has(key)&&!(schema.booleans??[]).includes(e.column)&&!(schema.integers??[]).includes(e.column)&&!(schema.json??[]).includes(e.column));flags.set(key,{rowId:e.row_id,column:e.column});
   }
   let at=0;const matrix:string[][]=[];
@@ -43,7 +52,7 @@ export function readSourceExportCsv(csv:unknown,escapes:unknown,schema:Schema){
   require(matrix.length>=1&&matrix[0]!.every((column,index)=>column===schema.columns[index]));
   const rows:Readonly<Record<string,unknown>>[]=[];let prior='';const used=new Set<string>();
   for(const cells of matrix.slice(1)){
-   const id=cells[schema.columns.indexOf('id')]!;require(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id)&&id>prior);prior=id;
+   const id=keyColumns.map(k=>cells[schema.columns.indexOf(k)]!).join(':');require(validKey(id)&&id>prior);prior=id;
    const row:Record<string,unknown>={};
    for(const [index,column]of schema.columns.entries()){
     let value=cells[index]!;const key=id+':'+column,flag=flags.has(key);

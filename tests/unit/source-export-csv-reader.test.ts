@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {readSourceExportCsv} from '../../src/security/source-export-csv-reader.ts';
+import {readSourceExportCsv,readLogicalSourceExportCsv} from '../../src/security/source-export-csv-reader.ts';
 const id='00000000-0000-4000-8000-000000000001',columns=['id','label','active','year','request'],schema={columns,booleans:['active'],integers:['year'],json:['request'],maxRows:1};
 const header='"id","label","active","year","request"\r\n',row='"'+id+'","Original","false","2026","{""version"":""9007199254740993""}"\r\n';
 const error='SOURCE_EXPORT_CSV_REVIEW_REQUIRED';
@@ -33,4 +33,17 @@ it.each(['missing prefix','unnecessary','unused row','unknown column','duplicate
  let csv=header+row;const flag={row_id:id,column:'label',apostrophe_prefix:true},flags:Record<string,unknown>[]=[flag];
  if(issue==='missing prefix')csv=csv.replace('Original','=1');if(issue==='unnecessary')csv=csv.replace('Original',"'Original");if(issue==='unused row')flag.row_id='00000000-0000-4000-8000-000000000002';if(issue==='unknown column')flag.column='secret';if(issue==='duplicate')flags.push({...flag});if(issue==='false flag')Object.assign(flag,{apostrophe_prefix:false});if(issue==='extra field')Object.assign(flag,{extra:'x'});if(issue==='boolean flag')flag.column='active';if(issue==='JSON flag')flag.column='request';if(issue==='null flag')csv=csv.replace('"Original"','"\\N"');
  expect(()=>readSourceExportCsv(csv,flags,schema)).toThrow(error);
+});
+const compositeColumns=['generation_id','part_id','request_text'],compositeSchema={columns:compositeColumns,keyColumns:['generation_id','part_id'],maxRows:2},part='00000000-0000-4000-8000-000000000002',compositeHeader='"generation_id","part_id","request_text"\r\n',compositeRow='"'+id+'","'+part+'","\' =SUM(A1)"\r\n';
+it('independently decodes generation/part keys and exact formula-prefix flags without inventing a source id column',()=>{
+ expect(readLogicalSourceExportCsv(compositeHeader+compositeRow,[{row_id:id+':'+part,column:'request_text',apostrophe_prefix:true}],compositeSchema)).toEqual([{generation_id:id,part_id:part,request_text:' =SUM(A1)'}]);
+});
+it.each(['missing-key','duplicate-key-column','too-many-keys','wrong-flag-key','duplicate-row','reversed-row','null-key','non-uuid-key'])('logical CSV rejects %s',issue=>{
+ let csv=compositeHeader+compositeRow;const s={...compositeSchema,keyColumns:[...compositeSchema.keyColumns]},flags=[{row_id:id+':'+part,column:'request_text',apostrophe_prefix:true}];
+ if(issue==='missing-key')s.keyColumns=['absent'];if(issue==='duplicate-key-column')s.keyColumns=['generation_id','generation_id'];if(issue==='too-many-keys')s.keyColumns=['generation_id','part_id','request_text'];if(issue==='wrong-flag-key')flags[0]!.row_id=part;
+ if(issue==='duplicate-row')csv+=compositeRow;if(issue==='reversed-row')csv=compositeHeader+compositeRow.replace(part,'ffffffff-ffff-4fff-8fff-ffffffffffff')+compositeRow;if(issue==='null-key')csv=csv.replace('"'+part+'"','"\\N"');if(issue==='non-uuid-key')csv=csv.replace(part,'invalid');
+ expect(()=>readLogicalSourceExportCsv(csv,flags,s)).toThrow(error);
+});
+it('keeps the existing reader at8MiB while the explicit logical reader accepts a larger exact text field',()=>{
+ const text='x'.repeat(8388608),csv=compositeHeader+'"'+id+'","'+part+'","'+text+'"\r\n';expect(()=>readSourceExportCsv(csv,[],{columns:['id'],maxRows:1})).toThrow(error);expect(readLogicalSourceExportCsv(csv,[],compositeSchema)[0]!.request_text).toBe(text);
 });

@@ -1,5 +1,7 @@
 ## Current work: consistent private exports
 
+2026-10-26 six journal CSVs now retain114columns, original text, decimal versions and composite keys with dictionaries/explicit formula escapes. Separate logical CSV decoding retains the old8MiB reader while permitting bounded reconstructed32MiB logical files. Two retained native cases independently decode every journal CSV against real originals; fresh208proposal/1191database/Auth acceptance is required. See PHASE_4_JOURNAL_CSV.md; no schema43 adoption, neutral/recovery completion or runtime worker change.
+
 Owned journal/CRM capture sourced732a637/run40433337313 independently passed all1191database/Auth cases including208proposal/117genuineAuth; full release remains separate. New logical-file source has5228localunit/151file passes and needs its own exact-source native composition proof.
 
 2026-10-26 logical-file construction adds standard UTF8/SHA256 split/reassembly for large original journal files under existing physical crypto limits. Independent decoder and39focused cases include maximum sources, malformed/missing/reordered evidence and real JWE interoperability. Two existing native cases extend composition without changing208proposal/1191database/Auth expected; fresh source-bound execution is required. See PHASE_4_LOGICAL_EXPORT_FILES.md; source43 remains unregistered and worker42 stays disconnected.

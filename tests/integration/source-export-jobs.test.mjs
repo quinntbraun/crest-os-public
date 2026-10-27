@@ -15,6 +15,8 @@ import {createJournalTextAssembler} from '../../src/security/source-export-journ
 import {createBusinessSourceJournalCollector} from '../../src/security/business-foundation-collector.ts';
 import {formatSourceLogicalFiles} from '../../src/security/source-export-logical-files.ts';
 import {verifySourceLogicalFiles} from '../../src/tooling/verify-source-logical-files.ts';
+import {formatSourceExportJournalCsv} from '../../src/security/source-export-journal-csv.ts';
+import {readLogicalSourceExportCsv} from '../../src/security/source-export-csv-reader.ts';
 let sandbox,target,client,web,web2,bootstrap,login,pid2,history,readerLogin,readerUrl,readerUnsafeRefused=false,unsafeRefused=false;
 const issuer='https://auth.example.com/auth/v1',release='a'.repeat(40);
 const auth=f=>[f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+300000),f.business];
@@ -485,9 +487,12 @@ test('journal reader source preflight refuses an unsafe definer before initial g
 });
 
 const captureJournal=f=>createBusinessSourceJournalCollector({connectionString:readerUrl,environment:'test',businessId:f.business})(new AbortController().signal);
-function portableJournal(value){
- const binding={businessId:value.businessId,generationId:value.generationId,appReleaseId:release,sourceSchemaVersion:43},wrapped=formatSourceLogicalFiles([{name:'journal_capture.json',contentType:'application/json',content:value.journal}],binding),physical=wrapped.forLogicalFiles();
- assert.equal(Object.hasOwn(wrapped,'forServer'),false);assert(physical.parts.every(p=>p.bytes<=4194304));const recovered=verifySourceLogicalFiles(physical.manifest,physical.parts,binding);assert.equal(recovered.files.length,1);assert.equal(recovered.files[0].content,value.journal);assert.equal(recovered.completeBackup,false);assert.equal(recovered.completePortableExport,false);return {journal:JSON.parse(recovered.files[0].content),parts:physical.parts};
+async function portableJournal(value){
+ const binding={businessId:value.businessId,generationId:value.generationId,appReleaseId:release,sourceSchemaVersion:43},csvWrapper=await formatSourceExportJournalCsv(value.journal,binding),formatted=csvWrapper.forJournalCsv(),wrapped=formatSourceLogicalFiles([...formatted.files.map(({name,contentType,content})=>({name,contentType,content})),{name:'journal_csv_manifest.json',contentType:'application/json',content:formatted.manifest}],binding),physical=wrapped.forLogicalFiles();
+ assert.equal(Object.hasOwn(csvWrapper,'forServer'),false);assert.equal(Object.hasOwn(wrapped,'forServer'),false);assert(physical.parts.every(p=>p.bytes<=4194304));const recovered=verifySourceLogicalFiles(physical.manifest,physical.parts,binding),file=name=>{const matches=recovered.files.filter(f=>f.name===name);assert.equal(matches.length,1);return matches[0].content;};assert.equal(recovered.files.length,21);assert.equal(file('journal_capture.json'),value.journal);assert.equal(recovered.completeBackup,false);assert.equal(recovered.completePortableExport,false);
+ const integerColumns={job:['attempt_count','source_schema_version'],attempt:['attempt_no'],snapshot:['source_schema_version','file_count','total_bytes'],intent:['ordinal','plaintext_bytes','ciphertext_bytes'],verification:[],completion:['file_count','total_bytes']},csvRows={};
+ for(const [kind,[,keyColumns]]of Object.entries(journalKinds)){const dictionary=JSON.parse(file('journal_'+kind+'_dictionary.json')),escapes=JSON.parse(file('journal_'+kind+'_escape_map.json')).escapes;assert.deepEqual(dictionary.keyColumns,keyColumns);assert.deepEqual([...dictionary.integerColumns].sort(),[...integerColumns[kind]].sort());csvRows[kind]=readLogicalSourceExportCsv(file('journal_'+kind+'.csv'),escapes,{columns:dictionary.columns,keyColumns,integers:integerColumns[kind],maxRows:10000});}
+ return {journal:JSON.parse(file('journal_capture.json')),parts:physical.parts,csvRows};
 }
 function capturedJournalRows(journal,kind){
  return journal.pages[kind].flatMap(p=>JSON.parse(p)).map(source=>{
@@ -497,14 +502,14 @@ function capturedJournalRows(journal,kind){
  });
 }
 test('source journal collector captures all114 original fields on the owned CRM snapshot without modifying source or granting Ready',async()=>{
- const s=await readyFixture();await readyExport(s.f,s.readyRaw(),s.operation);const retained={evidence:await evidence(s.f),parts:await partRows(s.f),snapshots:await snapshots(s.f),completions:await completions(s.f)},out=await captureJournal(s.f),value=out.forJournalServer(),{journal}=portableJournal(value);
+ const s=await readyFixture();await readyExport(s.f,s.readyRaw(),s.operation);const retained={evidence:await evidence(s.f),parts:await partRows(s.f),snapshots:await snapshots(s.f),completions:await completions(s.f)},out=await captureJournal(s.f),value=out.forJournalServer(),{journal,csvRows}=await portableJournal(value);
  assert.equal(Object.hasOwn(out,'forServer'),false);assert.throws(()=>JSON.stringify(out),/BUSINESS_FOUNDATION_CAPTURE_PRIVATE/);assert.equal(value.sourceSchemaVersion,43);assert.equal(value.generationId,journal.generationId);assert.equal(value.observedAt,journal.observedAt);assert.equal(value.generationId,JSON.parse(value.crm).generationId);assert.equal(value.completeBackup,false);assert.equal(value.completePortableExport,false);assert(!Object.hasOwn(value,'ready'));
- for(const [kind,[table,keys]]of Object.entries(journalKinds)){const native=(await client.query('SELECT to_jsonb(t) AS value FROM crest_private.'+table+' t WHERE business_id=$1 ORDER BY '+keys.join(','),[s.f.business])).rows.map(x=>Object.fromEntries(Object.entries(x.value).map(([k,v])=>[k,k==='version'||k==='expected_version'?String(v):sourceScalar(v)])));assert.deepEqual(capturedJournalRows(journal,kind),native);}
+ for(const [kind,[table,keys]]of Object.entries(journalKinds)){const native=(await client.query('SELECT to_jsonb(t) AS value FROM crest_private.'+table+' t WHERE business_id=$1 ORDER BY '+keys.join(','),[s.f.business])).rows.map(x=>Object.fromEntries(Object.entries(x.value).map(([k,v])=>[k,k==='version'||k==='expected_version'?String(v):sourceScalar(v)])));assert.deepEqual(capturedJournalRows(journal,kind),native);assert.deepEqual(csvRows[kind],native);}
  assert.deepEqual({evidence:await evidence(s.f),parts:await partRows(s.f),snapshots:await snapshots(s.f),completions:await completions(s.f)},retained);assert(value.metadataBytes<=8388608);assert(value.originalBytes<=16777216);assert(value.wireBytes<=25165824);assert.equal(value.evidenceBytes,[value.configuration,value.identity,value.history,value.crm,value.journal].reduce((n,t)=>n+Buffer.byteLength(t),0));
 });
 test('source journal collector captures a genuine maximum12MiB completion separately from bounded CRM metadata',async()=>{
- const s=await readyFixture(),base=s.readyRaw(),raw=' '.repeat(12582912-Buffer.byteLength(base))+base;await readyExport(s.f,raw,s.operation);const retained=await completions(s.f),value=(await captureJournal(s.f)).forJournalServer(),{journal,parts}=portableJournal(value);assert(parts.length>1);
- assert.equal(capturedJournalRows(journal,'completion')[0].request_text,raw);assert.equal(journal.originals.find(o=>o.kind==='completion').chunks.length,24);assert(value.originalBytes>=12582912);assert(value.originalBytes<=16777216);assert(value.metadataBytes<=8388608);assert(value.evidenceBytes<=33554432);assert.deepEqual(await completions(s.f),retained);
+ const s=await readyFixture(),base=s.readyRaw(),raw=' '.repeat(12582912-Buffer.byteLength(base))+base;await readyExport(s.f,raw,s.operation);const retained=await completions(s.f),value=(await captureJournal(s.f)).forJournalServer(),{journal,parts,csvRows}=await portableJournal(value);assert(parts.length>1);
+ assert.equal(capturedJournalRows(journal,'completion')[0].request_text,raw);assert.equal(csvRows.completion[0].request_text,raw);assert.equal(journal.originals.find(o=>o.kind==='completion').chunks.length,24);assert(value.originalBytes>=12582912);assert(value.originalBytes<=16777216);assert(value.metadataBytes<=8388608);assert(value.evidenceBytes<=33554432);assert.deepEqual(await completions(s.f),retained);
 });
 test('source journal collector keeps the original CRM and running journal snapshot across an actual concurrent Ready commit',async()=>{
  const s=await readyFixture(1);let pending;await client.query('BEGIN');try{
