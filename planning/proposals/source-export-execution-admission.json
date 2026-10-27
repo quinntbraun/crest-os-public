@@ -1,0 +1,72 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": 44,
+  "existingMigrationCount": 43,
+  "sourceProjectionVersion": 43,
+  "existingFunctionBodies": [
+    {
+      "signature": "crest_commands.lock_source_export_authority(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)",
+      "owner": "crest_session_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "c3b1c29f4662a3443b85a9f404b44ac31196ea723154273ea773188b5ec97e85"
+    },
+    {
+      "signature": "crest_commands.source_export_transition(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,text,bigint,uuid,text)",
+      "owner": "crest_command_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "5b45e08e35a9ca8e4f1198ea4b82884b7e7a7162fa0b39d9c5d37c305246dc69"
+    },
+    {
+      "signature": "crest_commands.lock_source_export_download_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid)",
+      "owner": "crest_session_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "d9e5bf7a084b2e680a544d34b89cdac9851197f03c343102742bb1ee4d8006ef"
+    },
+    {
+      "signature": "crest_commands.finish_source_export_foreground_activity(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid)",
+      "owner": "crest_session_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "dc9c164125228cb1a662c803b53a11d8f58f4a1d9b649ee41f4d2c147884fcbb"
+    },
+    {
+      "signature": "crest_private.source_export_job_projection(crest_private.export_jobs)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "0219e951c2ccb4259c49e7f422606c57d84a8ceb1469440ad6101c0c2dad8bb1"
+    },
+    {
+      "signature": "crest_private.source_export_command(text,uuid,uuid,uuid,uuid,text,uuid,text)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "815be80ed905af18cd0f62d4ab084a939887c5b29bf2807d7eb89699e71f975f"
+    },
+    {
+      "signature": "crest_private.source_export_receipt(uuid,uuid,uuid)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "0fdd4a259958313027e5f91e7b871cd2aff702704968b71d3eb6b84c48fd0102"
+    }
+  ],
+  "sqlSha256": "7ae5e32ace3826d1a87441a2c993a2f1fc5280888cbb43c81deab952cd71485c",
+  "sqlBytes": 11466,
+  "existingTablesChanged": false,
+  "newTables": 0,
+  "newSourceColumns": 0,
+  "productionActivation": "blocked",
+  "nativeExecuted": false
+}

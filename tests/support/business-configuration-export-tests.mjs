@@ -5,6 +5,7 @@ import {test} from 'node:test';
 import pg from 'pg';
 import {execFileSync} from 'node:child_process';
 import {verifyBusinessConfigurationEvidence,verifyBusinessFoundationEvidence} from '../../src/security/business-configuration-evidence.ts';
+import {createBusinessFoundationCollector} from '../../src/security/business-foundation-collector.ts';
 
 // Registered by the existing actual-PG provider-reference suite so the same
 // schema27->28 upgrade also exercises both independent read boundaries.
@@ -126,5 +127,42 @@ export function businessConfigurationExportTests(get){
   const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await get().installProviderSchema(c,t);await sandbox.apply(t,await sandbox.prefix(27));
   await c.query('GRANT SELECT(id) ON crest_private.actors TO crest_export');try{await assert.rejects(sandbox.apply(t));assert.equal((await c.query("SELECT to_regprocedure('crest_commands.business_configuration_export_context(uuid)') AS routine")).rows[0].routine,null);}finally{await c.query('REVOKE SELECT(id) ON crest_private.actors FROM crest_export');}
  });
+ async function withCollector(work){
+  const name='crest_capture_probe_'+randomBytes(8).toString('hex'),password=randomBytes(32).toString('hex');assert.match(name,/^crest_capture_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
+  await sandbox.admin.query(`CREATE ROLE ${name} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);get().runtimeRoles.push(name);
+  try{await sandbox.admin.query(`GRANT crest_export TO ${name} WITH INHERIT FALSE`);const url=new URL(get().target);url.username=name;url.password=password;return await work({connectionString:url.toString(),environment:'test',businessId:business});}
+  finally{await sandbox.admin.query(`DROP ROLE ${name}`);get().runtimeRoles.splice(get().runtimeRoles.indexOf(name),1);}
+ }
+ test('business foundation collector captures complete native source groups with real restricted credentials and multi-page memberships',async()=>withCollector(async captureConfig=>{
+  const expected=(await client.query('SELECT version::text,(SELECT count(*)::int FROM crest.memberships WHERE business_id=$1) AS memberships FROM crest.businesses WHERE id=$1',[business])).rows[0];assert(expected.memberships>=22);
+  const before=await allSources(),sealed=await createBusinessFoundationCollector(captureConfig)(new AbortController().signal),value=sealed.forServer(),parts=['configuration','identity','history'].map(k=>JSON.parse(value[k]));
+  assert.throws(()=>JSON.stringify(sealed),/BUSINESS_FOUNDATION_CAPTURE_PRIVATE/);assert.equal(value.capture,'single_connection_repeatable_read');assert.equal(value.businessId,business);
+  assert.equal(new Set(parts.map(p=>p.generationId)).size,1);assert.equal(new Set(parts.map(p=>p.context.observedAt)).size,1);assert.equal(new Set(parts.map(p=>p.context.snapshotToken)).size,3);
+  const report=verifyBusinessFoundationEvidence(value.configuration,value.identity,value.history,{businessId:business});assert.equal(report.configurationCurrentRowsVerified,true);assert.equal(report.includedActorReferencesVerified,true);assert.equal(report.configuration.records.length,expected.memberships+2);assert.equal(report.configuration.context.recordCounts.membership,String(expected.memberships));assert.equal(report.completePortableExport,false);assert.equal(report.completeBackup,false);
+  const root=JSON.parse(report.configuration.records.find(r=>r.kind==='business').canonicalEvidence).row;assert.equal(root.version,expected.version);assert(BigInt(root.version)>9007199254740991n);assert.equal(root.created_at,'2026-01-01T07:02:03.123456+00:00');
+  assert.equal(value.recordCount,parts.reduce((n,p)=>n+p.records.length,0));assert.equal(value.evidenceBytes,parts.reduce((n,p)=>n+p.evidenceBytes,0));assert.deepEqual(await allSources(),before);
+ }));
+ test('business foundation collector retains its original snapshot across a real lock wait and concurrent committed root change',{timeout:30000},async()=>withCollector(async captureConfig=>{
+  const lock=await sandbox.connect(get().target),before=(await client.query('SELECT legal_name,version::text FROM crest.businesses WHERE id=$1',[business])).rows[0];let locked=false,pending;
+  try{
+   await lock.query('BEGIN');await lock.query('LOCK TABLE crest_private.audit_events IN ACCESS EXCLUSIVE MODE');locked=true;
+   pending=createBusinessFoundationCollector(captureConfig)(new AbortController().signal).then(value=>({value}),error=>({error}));
+   let observed=false;const deadline=performance.now()+1500;
+   while(performance.now()<deadline){const r=await client.query("SELECT count(*)::int AS n FROM pg_catalog.pg_stat_activity WHERE application_name='crest_business_capture' AND wait_event_type='Lock' AND backend_xmin IS NOT NULL");if(r.rows[0].n===1){observed=true;break;}}
+   assert(observed,'capture must own an actual snapshot while waiting for the source lock');
+   await client.query("UPDATE crest.businesses SET legal_name='Synthetic committed after capture snapshot',version=version+1 WHERE id=$1",[business]);
+   await lock.query('COMMIT');locked=false;
+   const result=await pending;assert(!result.error,'native capture must finish with its original snapshot');const value=result.value.forServer(),report=verifyBusinessFoundationEvidence(value.configuration,value.identity,value.history,{businessId:business});
+   const old=JSON.parse(report.configuration.records.find(r=>r.kind==='business').canonicalEvidence).row;assert.equal(old.legal_name,before.legal_name);assert.equal(old.version,before.version);assert(!value.identity.includes('Synthetic committed after capture snapshot'));
+   const fresh=(await createBusinessFoundationCollector(captureConfig)(new AbortController().signal)).forServer(),current=verifyBusinessFoundationEvidence(fresh.configuration,fresh.identity,fresh.history,{businessId:business});
+   const next=JSON.parse(current.configuration.records.find(r=>r.kind==='business').canonicalEvidence).row;assert.equal(next.legal_name,'Synthetic committed after capture snapshot');assert.equal(next.version,String(BigInt(before.version)+1n));assert.notEqual(fresh.generationId,value.generationId);
+  }finally{if(locked)await lock.query('ROLLBACK');await pending;await lock.end();}
+ }));
+ test('business foundation collector refuses privileged login and its restricted role still cannot read raw sources or assume ownership',async()=>withCollector(async captureConfig=>{
+  await assert.rejects(createBusinessFoundationCollector({...captureConfig,connectionString:get().target})(new AbortController().signal),/BUSINESS_FOUNDATION_COLLECTION_REVIEW_REQUIRED/);
+  const c=new pg.Client({connectionString:captureConfig.connectionString,options:'-c role=crest_export',connectionTimeoutMillis:5000});await c.connect();
+  try{for(const sql of ['SELECT * FROM crest.businesses','SELECT token_hash FROM crest_private.app_sessions','SELECT * FROM crest_private.operations','SET ROLE crest_export_owner'])await assert.rejects(c.query(sql),e=>e.code==='42501');}
+  finally{await c.end();}
+ }));
  return initialize;
 }

@@ -85,6 +85,12 @@ jobs:
         run: node --conditions=react-server --test --test-concurrency=1 tests/integration/lead-conversion.test.mjs
       - name: Encrypted isolated database recovery drill
         run: npm run test:recovery-db
+      - name: Prove proposed durable export requests and fenced lease attempts
+        run: node --conditions=react-server --test --test-concurrency=1 tests/integration/source-export-jobs.test.mjs
+      - name: Prove registered43 journal upgrade, full workflow matrix and independent encrypted recovery
+        run: node --conditions=react-server --test --test-concurrency=1 tests/integration/source-export-registered.test.mjs
+      - name: Prove proposed atomic execution admission and mixed request concurrency
+        run: node --conditions=react-server --test --test-concurrency=1 tests/integration/source-export-execution-admission.test.mjs
 
   database_provider:
     name: Provider and evidence
@@ -184,7 +190,9 @@ jobs:
     # a skipped required job as success. The guard rejects incomplete results.
     if: ${{ always() }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    # Expanded real-browser and container checks need room for image packaging.
+    # Keep individual test/network bounds and all release gates unchanged.
+    timeout-minutes: 45
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"
@@ -269,6 +277,7 @@ jobs:
           npm run test:e2e
           npm run test:sign-in-browser
       - name: Build and smoke-test portable container
+        timeout-minutes: 15
         run: |
           docker build --tag crest-os:ci .
           docker run --detach --name crest-os-smoke --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges --publish 127.0.0.1:3100:3000 crest-os:ci
