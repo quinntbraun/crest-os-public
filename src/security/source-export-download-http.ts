@@ -18,8 +18,9 @@ type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressCo
 const cataloguePath='/api/business/exports/downloads',filePath='/api/business/exports/file';
 const pageKeys=Object.freeze(['exportJobId','generationId','afterOrdinal']),partKeys=Object.freeze(['exportJobId','generationId','partId']);
 function failure(status=503){const response=privateJsonResponse({error:status===503?'SOURCE_EXPORT_DOWNLOAD_UNAVAILABLE':'SOURCE_EXPORT_DOWNLOAD_REQUEST_FAILED'},status);if(status===405)response.headers.set('Allow','POST');return response;}
-// Trusted composition only, closed by default and absent from product server
-// registration. A real one-attempt private store is supplied by the server.
+export function sourceExportDownloadFailureResponse(status=503){return failure(status);}
+// Trusted composition only, closed by default. A real one-attempt private store
+// is supplied explicitly by the server; no environment activation switch.
 export function createSourceExportDownloadHttp(config:Configuration,provider:Parameters<typeof createSourceExportOwnerAccess>[1],tokens:Parameters<typeof createSourceExportOwnerAccess>[2],store:Pick<Awaited<ReturnType<typeof createEncryptedExportPartStore>>,'readVerified'>|undefined,enabled=false){
  if(!uuid(config.businessId)||typeof enabled!=='boolean'||enabled&&typeof store?.readVerified!=='function')throw Error('SOURCE_EXPORT_DOWNLOAD_HTTP_CONFIGURATION_REQUIRED');
  const scope=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config),access=enabled?createSourceExportOwnerAccess(config,provider,tokens,scope):undefined,reader=access?createSourceExportDownloadReader(scope,access,store!):undefined;

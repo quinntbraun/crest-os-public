@@ -34,3 +34,6 @@ export {createLeadHttp} from '../customer/lead-http.ts';
 export {createLeadSourceHttp} from '../customer/lead-source-http.ts';
 export {createOriginalOperationDirectory} from '../security/original-operation-directory.ts';
 export {createOriginalOperationHttp} from '../security/original-operation-http.ts';
+
+export {createSourceExportHttp} from '../security/source-export-http.ts';
+export {createSourceExportDownloadHttp} from '../security/source-export-download-http.ts';

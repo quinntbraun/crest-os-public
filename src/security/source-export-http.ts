@@ -17,6 +17,7 @@ const prefix='/api/business/exports/';
 function failure(status:400|404|405|503=400,error='SOURCE_EXPORT_REQUEST_FAILED'){
  const response=privateJsonResponse({error},status);if(status===405)response.headers.set('Allow','POST');return response;
 }
+export function sourceExportFailureResponse(status:400|404|405|503=503){return failure(status);}
 // Private composition only, disabled by default. This does not register a
 // route, adopt schema43, dispatch a worker or authorize file downloads.
 export function createSourceExportHttp(config:Configuration,provider:Parameters<typeof createSourceExportOwnerAccess>[1],tokens:Parameters<typeof createSourceExportOwnerAccess>[2],enabled=false){

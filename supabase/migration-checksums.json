@@ -210,6 +210,11 @@
       "version": "20261026010000",
       "file": "20261026010000_original_operation_resolution.sql",
       "sha256": "9dd564dd3c4bf54e0fc2a08347e51a8a0f51250a448fd75a8950395075ceb281"
+    },
+    {
+      "version": "20261027010000",
+      "file": "20261027010000_source_export_journal.sql",
+      "sha256": "d020f734b28dd3090e17c9092548a204f45c3e24c3e886a8557a92eef0540447"
     }
   ]
 }

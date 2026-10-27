@@ -1,6 +1,6 @@
 # Public canonical maintenance
 
-Version: 1.3 | 2026-10-25 | ADR42 explicit original-operation retirement
+Version: 1.4 | 2026-10-27 | ADR43 source-export journal registration
 
 PUBLICATION.md records the explicitly authorized fresh public baseline, privacy changes, version register and retained private provenance. The original private manifest is unchanged and is never represented as verifying these redacted bytes.
 
@@ -75,3 +75,17 @@ ARCHITECTURE.md: prior amended SHA256 3b404f7d81b2c02ece6761881989a275909c82db29
 ARCHITECTURE_DECISIONS.md: prior amended SHA256 cb82df85e1503bbe44193c1fb6d5bdf5f51d4c8f09609b1e6e3434dd04ef65f6, 44926 bytes at accepted-main integration6e3604d5384c03d50315adf7586b82700edcd710; now version1.13, SHA256 067b07cccee091ef3c4018e3a42d76bfdcf467664b8100ca68bdfce25861c68b, 49984 bytes. Original baseline hash/length retained.
 
 PUBLICATION.md: prior amended SHA256 c9d6f8ae426b680ba03b686b559860e685834b551866f1423ea6b2131e2d8bd9, 5855 bytes at accepted-main integration6e3604d5384c03d50315adf7586b82700edcd710; now version1.8, SHA256 14dcd0b082ee74abd1d6c760bee09e9111b32d9e199963e06a37577880808e85, 5868 bytes. Original baseline hash/length retained.
+
+## 2026-10-27 - Registered source-export journal and explicit recovery profiles
+
+The owner-authorized export/recovery implementation now constructs ADR43/migration43 from seven retained proven SQL bodies. Keep all42 prior SQL and the immutable baseline/manifest/original amendment identities unchanged. The same12 distinct amended documents remain; only the five listed current versions/hashes advance. Registration is a technical construction decision, not route activation, production permission, complete-backup certification or a business/financial/Calendar scope change. Genuine registered43 catalogue/upgrade/Auth/independent restore and complete source-specific browser/build/container/artifact acceptance remain mandatory. planning/SOURCE_EXPORT_SCHEMA43_ADOPTION.json records exact migration/body provenance; see planning/PHASE_4_SOURCE_EXPORT_ADOPTION.md for execution gaps.
+
+ARCHITECTURE.md: prior amended version1.7, SHA256 a6322ebe8d030ee1875bdae1e976a2372af8a12da06f6253eb973d005613dbd1, 38680 bytes at source00f21d77851e7603d99b8912bd6c1eeeda2e877b; now version1.8, SHA256 12890f037e599232634e39823eeb978c8674585643bb54f66ad9ba06212d37ca, 39230 bytes. Original baseline hash/length retained.
+
+ARCHITECTURE_DECISIONS.md: prior amended version1.13, SHA256 067b07cccee091ef3c4018e3a42d76bfdcf467664b8100ca68bdfce25861c68b, 49984 bytes at source00f21d77851e7603d99b8912bd6c1eeeda2e877b; now version1.14, SHA256 795c07717f9e6b6f3a0bc2875ef2c544bce70281d1cc125e74e6beef8bf10ef8, 54550 bytes. Original baseline hash/length retained.
+
+DATABASE.md: prior amended version1.5, SHA256 7b51a2362d6b9bfe302a1a012bc38d97fe66d6db5558f56048af0009d2b6cd93, 54943 bytes at source00f21d77851e7603d99b8912bd6c1eeeda2e877b; now version1.6, SHA256 044a64693667be29ceee6ebbf58fd136b9cdf799d18138e7c4911d1ada001113, 55826 bytes. Original baseline hash/length retained.
+
+EXPORTS_AND_BACKUPS.md: prior amended version1.5, SHA256 162b73eb711eee6562f04518d156744954d1f45c6831372086e92ac5f50ae27c, 28282 bytes at source00f21d77851e7603d99b8912bd6c1eeeda2e877b; now version1.6, SHA256 cb419895a528c8b5d9196326f63341d1df581846c8c5cf47390f8917948dd468, 29492 bytes. Original baseline hash/length retained.
+
+PUBLICATION.md: prior amended version1.8, SHA256 14dcd0b082ee74abd1d6c760bee09e9111b32d9e199963e06a37577880808e85, 5868 bytes at source00f21d77851e7603d99b8912bd6c1eeeda2e877b; now version1.9, SHA256 fb23f2c00ec0b81d4d46013081d768e71d35a5cdb8635d9c267537e6a33a41dd, 6258 bytes. Original baseline hash/length retained.

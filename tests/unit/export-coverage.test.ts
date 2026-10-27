@@ -1,9 +1,15 @@
 import {expect,it} from 'vitest';
-import manifest from '../../planning/SECURITY_EXPORT_COVERAGE.json';
+// Preserve the historical42 construction profile; registered43 is separate.
+import manifest from '../support/registered42-export-coverage.json';
+import registered43 from '../../planning/SECURITY_EXPORT_COVERAGE.json';
 import proposedJournal from '../../planning/proposals/source-export-journal-coverage.json';
 import {verifyExportCoverage as verify} from '../../src/tooling/export-coverage.ts';
 
 const clone=()=>structuredClone(manifest);
+it('declares registered43 journal coverage without changing the frozen42 profile or claiming actual catalogue observation',()=>{
+ const synthetic=registered43.tables.flatMap(t=>[...t.required,...t.excluded.map(e=>e.column)].map(column=>({table:t.table,column})));
+ expect(registered43.migrationCount).toBe(43);expect(verify(registered43,synthetic,43)).toEqual({assurance:'schema_inventory_only',tables:39,requiredColumns:603,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});expect(manifest.migrationCount).toBe(42);expect(manifest.tables).toHaveLength(33);
+});
 it('retains every proposed journal field without changing the registered inventory or claiming a complete export',()=>{
  const combined={...manifest,tables:[...manifest.tables,...proposedJournal.tables]},rows=combined.tables.flatMap(t=>[...t.required,...t.excluded.map(e=>e.column)].map(column=>({table:t.table,column})));
  expect(proposedJournal).toMatchObject({formatVersion:1,registeredMigrationCount:42,proposedMigration:43,registered:false,assurance:'schema_inventory_only'});expect(proposedJournal.tables.flatMap(t=>t.required)).toHaveLength(114);expect(verify(combined,rows,42)).toEqual({assurance:'schema_inventory_only',tables:39,requiredColumns:603,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});expect(manifest.tables).toHaveLength(33);expect(manifest.migrationCount).toBe(42);

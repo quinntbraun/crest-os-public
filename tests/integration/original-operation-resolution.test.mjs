@@ -11,7 +11,7 @@ import {parseOriginalOperationReference,parseOriginalOperationOutcome,originalOp
 import {verifyBusinessHistoryEvidence} from '../../src/security/business-history-evidence.ts';
 import {formatBusinessHistoryCsv} from '../../src/security/business-history-csv.ts';
 import {decodeCustomerCsv} from '../support/customer-fixture.ts';
-import {backupDatabase,connect,keyPair,privateWorkspace,recoveryCluster,inventory,run} from '../support/recovery-drill.mjs';
+import {backupLegacy42Database as backupDatabase,restoreDatabase as restoreCurrentDatabase,connect,keyPair,privateWorkspace,recoveryCluster,inventory,run} from '../support/recovery-drill.mjs';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import {createBusinessSourceCollector} from '../../src/security/business-foundation-collector.ts';
 import {formatBusinessFoundationBundle} from '../../src/security/business-foundation-bundle.ts';
@@ -71,13 +71,13 @@ before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target,await sandbox.prefix(41));
  const sql=await readFile(new URL('../../supabase/migrations/20261026010000_original_operation_resolution.sql',import.meta.url),'utf8');
  await client.query('ALTER ROLE crest_command_owner LOGIN');try{await client.query('BEGIN');await assert.rejects(client.query(sql),e=>e.code==='42501'&&e.message==='CREST_OPERATION_RESOLUTION_REVIEW_REQUIRED');unsafeOwnerRefused=true;}finally{await client.query('ROLLBACK');await client.query('ALTER ROLE crest_command_owner NOLOGIN');}
- registered=await sandbox.apply(target);
+ registered=await sandbox.apply(target,await sandbox.prefix(42));
  bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
  login='crest_resolution_probe_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=password;web=await sandbox.connect(url.toString());web2=await sandbox.connect(url.toString());for(const c of [web,web2]){await c.query('SET ROLE crest_web');await c.query("SET lock_timeout='3s'");}pid2=(await web2.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
 },{timeout:240000});
 after(async()=>{await restoredWeb?.end();await restored?.end();await recovery?.close();await web?.end();await web2?.end();if(login)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
 
-test('registered42 refuses unsafe owners, preserves all41 prior migrations and reapplies idempotently',async()=>{assert(unsafeOwnerRefused);assert.equal(prior.history.length,41);assert.equal(registered.history.length,42);assert.deepEqual(registered.history.slice(0,41),prior.history);assert.deepEqual((await sandbox.apply(target)).history,registered.history);assert.equal((await client.query("SELECT count(*)::int AS n FROM crest_private.operations WHERE command_type='operation.retire'")).rows[0].n,0);});
+test('registered42 refuses unsafe owners, preserves all41 prior migrations and reapplies idempotently',async()=>{assert(unsafeOwnerRefused);assert.equal(prior.history.length,41);assert.equal(registered.history.length,42);assert.deepEqual(registered.history.slice(0,41),prior.history);assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(42))).history,registered.history);assert.equal((await client.query("SELECT count(*)::int AS n FROM crest_private.operations WHERE command_type='operation.retire'")).rows[0].n,0);});
 for(const kind of originalOperationKinds){
  test('retirement blocks the late original '+kind+' before domain effects',async()=>{const f=await state(),plan=await originalPlan(f,kind),first=await retire(f,plan.original);assert.equal(first.state,'retired');assert.deepEqual(parseOriginalOperationOutcome(first,plan.original),first);assert.deepEqual(await lookup(f,plan.original),first);const retained=await evidence(f);assert.deepEqual(await plan.run(f,web),{state:'conflict',reason:'operation'});assert.deepEqual(await evidence(f),retained);});
  test('committed original '+kind+' remains unchanged and requires its typed receipt',async()=>{const f=await state(),plan=await originalPlan(f,kind);assert.equal((await plan.run(f,web)).state,'committed');const retained=await evidence(f),observed=await retire(f,plan.original);assert.deepEqual(observed,{schemaVersion:1,state:'original_recorded',original:plan.original});assert.deepEqual(await lookup(f,plan.original),observed);assert.deepEqual(await evidence(f),retained);});
@@ -106,7 +106,7 @@ test('all eleven retirement decisions retain complete common-format operation an
  for(const kind of originalOperationKinds){const plan=await originalPlan(f,kind),decision=await retire(f,plan.original,web,' =Reviewed, "original" é 😀\n\\N\t'+kind);assert.equal(decision.state,'retired');decisions.set(plan.original.reference.operationId,decision);}
  const committed=await originalPlan(f,'crm.customer.save');assert.equal((await committed.run(f,web)).state,'committed');assert.equal((await retire(f,committed.original)).state,'original_recorded');
  await assert.rejects(web.query('SELECT crest_commands.business_history_export_context($1)',[f.business]),e=>e.code==='42501');
- const reader=await sandbox.connect(target),coverage=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+ const reader=await sandbox.connect(target),coverage=JSON.parse(await readFile(new URL('../support/registered42-export-coverage.json',import.meta.url),'utf8'));
  await reader.query('SET ROLE crest_export');
  const records=async context=>{
   const out=[];
@@ -194,6 +194,7 @@ test('independently keyed registered42 encrypted recovery retains all eleven ret
   postSnapshot=await originalPlan(f,'crm.customer.save');assert.equal((await retire(f,postSnapshot.original)).state,'retired');
  });assert.equal(recoveryBackup.manifest.schemaVersion,42);assert.equal(recoveryBackup.manifest.completeBackup,false);sourceAfterCapture=await inventory(client);
  recovery=await recoveryCluster();const url=await recovery.database();await unlink(keys.path);
+ await assert.rejects(restoreCurrentDatabase(point,emergency,url),e=>e.message==='SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest');
  const output=await run(process.execPath,['tests/support/restore-original-operation.mjs',point,emergency],{env:{...process.env,CREST_TEST_DATABASE_URL:'',CREST_RECOVERY_DRILL_TARGET:url}});assert.match(output.toString(),/^Synthetic isolated original-operation restore and verification completed\s*$/);
  restored=await connect(url);assert.deepEqual(await inventory(restored),recoveryBackup.manifest.rows);
  const restoredLogin='crest_resolution_restored_'+randomBytes(8).toString('hex'),password=randomBytes(32).toString('hex');await restored.query('CREATE ROLE '+restoredLogin+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await restored.query('GRANT crest_web TO '+restoredLogin);const connection=new URL(url);connection.username=restoredLogin;connection.password=password;restoredWeb=await connect(connection.toString());await restoredWeb.query('SET ROLE crest_web');
@@ -218,7 +219,7 @@ test('restored recent owner reads paused historical retirements and unchanged or
 });
 
 test('registered42 restore preserves all499 source columns, closed roles and immutable retirement and audit evidence',async()=>{
- assert(restored);const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,42);
+ assert(restored);const manifest=JSON.parse(await readFile(new URL('../support/registered42-export-coverage.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,42);
  const columns=(await restored.query("SELECT n.nspname||'.'||c.relname AS table,a.attname AS column FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r' AND a.attnum>0 AND NOT a.attisdropped ORDER BY n.nspname,c.relname,a.attnum")).rows;
  assert.deepEqual(verifyExportCoverage(manifest,columns,42),{assurance:'schema_inventory_only',tables:33,requiredColumns:489,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
  for(const role of ['crest_schema_owner','crest_command_owner','crest_session_owner','crest_integrity_owner'])assert.equal((await restored.query('SELECT NOT(rolcanlogin OR rolinherit OR rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls) AND rolconfig IS NULL AS closed FROM pg_roles WHERE rolname=$1',[role])).rows[0].closed,true);

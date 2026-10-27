@@ -12,3 +12,5 @@ export {sessionDatabase} from '../../src/security/session-database.ts';
 export {sessionCredentialHash} from '../../src/security/session-credential.ts';
 export {createSourceExportDatabaseJournal} from '../../src/security/source-export-database-journal.ts';
 export {custodyFixture} from './source-export-custody-fixture.mjs';
+
+export {createCrestApplication} from '../../src/server/application.ts';
