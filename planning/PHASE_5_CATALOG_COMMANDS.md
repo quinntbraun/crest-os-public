@@ -1,0 +1,31 @@
+# Trusted service catalog command construction
+
+2026-10-27. Unregistered construction over registered43 plus the separately verified catalog schema. No migration ordinal, HTTP route, durable editor save or production activation is assigned here.
+
+## Scope and authority decision
+
+Use the existing owner `crm.manage` capability for nonfinancial service preparation, directory reads and retained scope history. No capability is added to the fixed five-entry catalog. This does not authorize prices on an offer, customer approval, invoice creation, posting or money movement. The private backend `crest_web` role receives four typed SQL entry points only; ordinary callers cannot access catalog tables, operation receipts, sessions or internal helpers directly. Supabase anon/authenticated access is not granted.
+
+The new closed catalog owner can read its business's service/current-content records, create service definitions and append content, advance only the permitted root fields, and record only catalog operations/audits. Existing session-owned helpers perform fresh owner/provider/capability/recovery checks and final foreground activity. They reuse the pinned registered boundary and mutation fence. Caller-supplied context settings are reset before deriving scope from credentials. Production server signature verification remains required before a database transaction; synthetic provider DDL fixtures do not claim genuine end-to-end Auth acceptance for these new commands.
+
+## Save, retry and history behavior
+
+`save_service` accepts a stable service UUID/code, expected root revision, exact definition, active flag and original operation UUID/epoch. Scope edits append a new immutable content sequence. Archive/reopen advances only the root revision, retaining the same scope. A changed code or stale revision conflicts and rolls back the pending claim. An identical current definition/active state returns `unchanged`, creates no original operation or audit, and does not extend foreground activity. It is safe to repeat that no-op, but it does not fabricate a committed receipt.
+
+Real changes return an original receipt identifying the service revision, immutable scope version and matching audit event IDs. Retry payload hashes include command/schema, business, actor, recovery epoch, service ID, expected revision and the exact definition/active state. A matching committed retry returns its original receipt even after subsequent edits or archive/reopen; a changed payload or another workflow's operation conflicts. Original result reconstruction checks the retained audit/content images, action, sequence and canonical hash, rather than trusting only receipt JSON.
+
+`lookup_service_operation`, `read_service_directory` and `read_service_history` use fresh scoped read authorization without extending activity. Paused recovery permits reads but blocks writes and matching retries. Directory search treats `%` and `_` literally, supports UUID pagination and explicit inactive inclusion, and caps pages at50. History retains root before/after images and the actual content associated with each revision, caps pages at20, and excludes revisions newer than its captured root header. Both outputs are limited to1MiB. The private directory includes internal guidance; it must never be used as a customer document projection.
+
+A function returning `committed` inside an open transaction is provisional. A future server adapter must await the actual COMMIT before exposing success and use original-operation lookup after an ambiguous outcome. The deferred-refusal regression deliberately rejects COMMIT after a provisional function result and requires source, operation, audit and session activity to roll back together. No server adapter is implemented by this SQL slice.
+
+## Verification and incomplete gates
+
+The unchanged schema hash is463062296675b7f154552b9b227c537201d17c89d973d11b874e54aea2b68f70. Public33c6182e/local5ad58b0b/treeac6ab210, run40593277044, passed all1580 native cases: foundation1016 (including29 catalog storage and38 corrected export-admission cases), provider423 and genuineAuth141. That source's full build/browser/container acceptance is tracked separately. The earlier8bb455a9/run40592213936 remains failed28/29; its failure was corrected without dropping the optional-range regression.
+
+The new command fixture uses actual disposable PostgreSQL, registered43 and official provider DDL, with restricted backend login connections. It tests source preflight drift and effective default ACLs; new-role isolation; typed privileges; create/edit/archive/reopen; original retries and workflow collisions; no-op and stale conflicts; exact bigint/optional input; scoped search/history; forged context; recovery pause; provider loss/deadlines; independent-session concurrency; and deferred COMMIT rollback. The shared sandbox now refuses preexisting catalog roles before adopting any cleanup ownership. The fixture verifies those roles survive refusal unchanged.
+
+These new command cases require their own exact-source native run; local JavaScript syntax, lint, types and domain units do not establish SQL acceptance. They are mandatory immediately after the existing schema cases in the existing CI foundation job. The proposal metadata pins10 original function bodies and records only this candidate's SQL hash, not a registered migration or runtime acceptance.
+
+Next: inspect native results and repair any root cause without skips. Then add the trusted server adapter and complete catalog source CSV/inventory and independent restore acceptance before migration adoption and a durable editor save. Existing review service/quote drafts remain unsaved page memory; fictional CRM samples and browser drafts must be preserved. No new dependency, provider, account, paid service, host installation, real data or production startup change is included.
+
+V1 remains roughly25-35% coded. Durable synthetic CRM testing still needs runtime setup and roughly15-30 active hours afterward; full V1 roughly200-350 remaining active hours, low confidence. Real Crest use remains gated. Cost$0.

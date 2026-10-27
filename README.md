@@ -2,7 +2,7 @@
 
 Current development: the [owner-visible CRM workspace](planning/OWNER_REVIEW_WORKSPACE.md), [exact quote pricing worksheet](planning/PHASE_5_QUOTE_WORKSHEET.md) and [service definition/version editor](planning/PHASE_5_SERVICE_EDITOR.md). Run npm run review for fictional workflow testing. The service library and quote worksheet remain unsaved page memory. The [delivery inventory](planning/V1_DELIVERY_INVENTORY.md) records V1 status and estimates; [free durable local setup](planning/FREE_LOCAL_TEST_SETUP.md) remains a separate prerequisite. The [active checkpoint](planning/WORKING_STATE.md) distinguishes temporary review from production authentication, database and release acceptance. Real customer and financial use remains gated.
 
-The [catalog storage construction](planning/PHASE_5_CATALOG_STORAGE.md) now defines retained service content and its closed database acceptance cases; it is unregistered and does not enable permanent saving.
+The [catalog storage construction](planning/PHASE_5_CATALOG_STORAGE.md) passed its29 native cases. The [trusted save/read command construction](planning/PHASE_5_CATALOG_COMMANDS.md) adds original-operation retries, scoped history and concurrent-edit protection; its native acceptance is pending. Both remain unregistered and do not enable permanent editor saving.
 
 Crest Detailing's internal business operating system.
 
