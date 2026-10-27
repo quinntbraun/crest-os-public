@@ -21,6 +21,8 @@ import {createBusinessSourceJournalExportWorker} from '../../src/security/busine
 import {bindSourceExportJournalWorker} from '../../src/security/source-export-journal-worker-port.ts';
 import {createSourceExportOwnerAccess} from '../../src/security/source-export-owner-access.ts';
 import {createSourceExportDownloadClient} from '../../src/client/source-export-downloads.ts';
+import {createSourceExportInventoryBuilder} from '../../src/client/source-export-download-inventory.ts';
+import {createSourceExportLocalVerifier} from '../../src/client/source-export-local-files.ts';
 import {Readable} from 'node:stream';
 import {createSourceExportHttp} from '../../src/security/source-export-http.ts';
 import {sourceExportReferenceToWire,sourceExportRetirementToWire} from '../../src/security/source-export-http-contract.ts';
@@ -240,6 +242,33 @@ test('genuine Auth binary download withholds plaintext when recovery changes dur
  try{await exportHttp(f,async post=>{
   const response=await post('file',{exportJobId:f.job.id,generationId:plan.generationId,partId:plan.parts[0].partId});assert.equal(response.status,503);assert.equal(response.headers.get('content-disposition'),null);assert.deepEqual(await response.json(),{error:'SOURCE_EXPORT_DOWNLOAD_UNAVAILABLE'});
  },observed.store);assert.equal(observed.opened.length,1);assert.equal(observed.copies.length,0);assert.throws(()=>observed.opened[0].metadataForServer());assert.equal(h.requests.filter(r=>r.method==='GET').length-setupGets,1);assert.equal((await createSourceExportOwnerAccess(config,boundary,tokens,f.business).status(f.credential,f.job.id,signal())).forServer().job.state,'Ready');assert.deepEqual(await facts(f),saved);assert.deepEqual(await downloadActivity(f),activityBefore);}finally{await h.close();}
+});
+
+test('genuine Auth selected-file resume compares actual admitted bytes and redownloads only the damaged part without local comparison effects',async()=>{
+ const {f,h,plan,setupGets}=await binaryFixture(),observed=observedDownloadStore(h.store),saved=await facts(f),activityBefore=await downloadActivity(f),owned=[];
+ try{await exportHttp(f,async(_post,browser)=>{
+  // Node-only relative URL and cookie adapter. Files below are constructed in
+  // memory: this proves no OS persistence, compiled browser or HTTPS behavior.
+  const native=globalThis.fetch;let requests=0;
+  globalThis.fetch=(input,init)=>{if(typeof input==='string'&&/^\/api\/business\/exports\/(downloads|file)$/.test(input)){requests++;const headers=new Headers(init?.headers);headers.set('origin',browser.origin);headers.set('sec-fetch-site','same-origin');headers.set('cookie','__Host-crest_session='+f.credential);return native(browser.origin+input,{...init,headers});}return native(input,init);};
+  let verifier;const inventory=createSourceExportInventoryBuilder(f.business,f.job.id);
+  try{
+   const downloads=createSourceExportDownloadClient(f.business),page=await downloads.catalogue(inventory.request(),browser.proof,signal());inventory.append(page);assert.equal(inventory.request(),null);
+   const snapshot=inventory.snapshot().forDownloadInventory();assert.equal(snapshot.files.length,2);assert.equal(snapshot.header.generationId,plan.generationId);const selected=[];
+   async function receive(file){let local;await downloads.receive(snapshot.header,file,browser.proof,signal(),async value=>{owned.push(value.bytes);local=new File([value.bytes],file.fileName,{type:file.contentType});});assert(local);return local;}
+   for(const file of snapshot.files)selected.push(await receive(file));
+   verifier=createSourceExportLocalVerifier(f.business,snapshot);const beforeCompare=await facts(f),beforeActivity=await downloadActivity(f),beforeRequests=requests,beforeGets=h.requests.filter(r=>r.method==='GET').length;
+   const complete=(await verifier.verify(selected,signal())).forLocalFileComparison();assert.equal(complete.state,'matching');assert.deepEqual(complete.remainingPartIds,[]);assert.equal(complete.completePortableExport,false);assert.equal(complete.completeBackup,false);assert.equal(complete.assurance,'selected_file_bytes_only');
+   const missing=(await verifier.verify(selected.slice(1),signal())).forLocalFileComparison();assert.deepEqual(missing.missingPartIds,[snapshot.files[0].partId]);assert.deepEqual(missing.remainingPartIds,[snapshot.files[0].partId]);
+   selected[0]=new File([new Uint8Array(snapshot.files[0].bytes)],snapshot.files[0].fileName);const damaged=(await verifier.verify(selected,signal())).forLocalFileComparison();assert.deepEqual(damaged.invalid,[{partId:snapshot.files[0].partId,reason:'checksum'}]);assert.deepEqual(damaged.remainingPartIds,[snapshot.files[0].partId]);
+   assert.equal(requests,beforeRequests);assert.equal(h.requests.filter(r=>r.method==='GET').length,beforeGets);assert.deepEqual(await facts(f),beforeCompare);assert.deepEqual(await downloadActivity(f),beforeActivity);
+   // Explicit whole-part retry, chosen from the actual comparison result.
+   for(const id of damaged.remainingPartIds){const file=snapshot.files.find(value=>value.partId===id);assert(file);selected[file.ordinal-1]=await receive(file);}
+   assert.equal((await verifier.verify(selected,signal())).forLocalFileComparison().state,'matching');assert.equal(requests,beforeRequests+1);assert(owned.every(bytes=>bytes.every(b=>b===0)));
+  }finally{verifier?.dispose();inventory.dispose();globalThis.fetch=native;}
+ },observed.store);
+ const delivered=await facts(f),active=await downloadActivity(f);assert.equal(delivered.operations.length,saved.operations.length+3);assert.equal(delivered.audit_events.length,saved.audit_events.length+3);assert.equal(BigInt(active.version),BigInt(activityBefore.version)+3n);assert.equal(h.requests.filter(r=>r.method==='GET').length-setupGets,3);for(const key of ['export_jobs','export_job_snapshots','export_part_intents','export_part_verifications','export_job_completions'])assert.deepEqual(delivered[key],saved[key]);assert.equal(observed.opened.length,3);assert.equal(observed.copies.length,3);assert(observed.copies.every(bytes=>bytes.every(b=>b===0)));for(const value of observed.opened)assert.throws(()=>value.metadataForServer());
+ }finally{await h.close();}
 });
 
 test('genuine Auth download client verifies admitted SDK bytes over real sockets and refuses paused delivery without retaining plaintext',async()=>{
