@@ -151,8 +151,14 @@ test('same original operation refuses changed payload, service or expected revis
  const r=request();await save(a,r);for(const bad of [{...r,body:{...r.body,definition:d({name:'Changed'})}},{...r,service:randomUUID()},{...r,revision:'1'}]){const before=await evidence(a);assert.deepEqual(await save(a,bad),{state:'conflict',reason:'operation'});assert.equal(await evidence(a),before);}
 });
 test('another workflow operation cannot be claimed as a service save',async()=>{
- const r=request();await client.query("INSERT INTO crest_private.operations(business_id,operation_id,actor_id,command_type,schema_version,recovery_epoch,payload_hash,created_by,origin) VALUES($1,$2,$3,'crm.customer.save',1,$4,$5,$3,'manual')",[a.business,r.operation,a.actor,a.epoch,'a'.repeat(64)]);
- const before=await evidence(a);assert.deepEqual(await save(a,r),{state:'conflict',reason:'operation'});assert.equal(await evidence(a),before);assert.deepEqual(await lookup(a,r.operation),{state:'absent'});
+ const r=request(),customer=randomUUID(),customerBody={displayName:'Synthetic collision customer',phone:null,email:null,contactPreference:null,outreachOptOut:false,notes:null,customerSince:null,archived:false,archiveReason:null};
+ // Use a genuinely committed other workflow; unfinished admin claims are
+ // correctly refused by the existing deferred completion constraint.
+ const original=await value(web,'SELECT crest_commands.save_customer($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) AS value',[...auth(a),a.epoch,r.operation,1,customer,'0',customerBody]);assert.equal(original.state,'committed');
+ const before=await evidence(a),customerBefore=await scalar('SELECT to_jsonb(c)::text AS value FROM crest.customers c WHERE id=$1',[customer]);
+ assert.deepEqual(await save(a,r),{state:'conflict',reason:'operation'});assert.equal(await evidence(a),before);assert.deepEqual(await lookup(a,r.operation),{state:'absent'});
+ assert.equal(await scalar('SELECT to_jsonb(c)::text AS value FROM crest.customers c WHERE id=$1',[customer]),customerBefore);
+ assert.deepEqual(await value(web,'SELECT crest_commands.lookup_customer_operation($1,$2,$3,$4,$5,$6,$7,$8,$9) AS value',[...auth(a),r.operation]),original);
 });
 
 const invalid=[['blank name',{definition:d({name:'\u00a0'})}],['blank scope',{definition:d({inclusions:' '})}],['number cents',{definition:d({rangeLowCents:100})}],['leading zero',{definition:d({rangeLowCents:'01'})}],['exponent',{definition:d({rangeLowCents:'1e2'})}],['trailing newline',{definition:d({rangeLowCents:'100\n'})}],['overflow',{definition:d({rangeLowCents:'9223372036854775808'})}],['negative',{definition:d({rangeLowCents:'-1'})}],['inverted',{definition:d({rangeLowCents:'20000'})}],['upper only',{definition:d({rangeLowCents:null})}],['zero duration',{definition:d({estimatedSeconds:'0'})}],['unknown field',{unexpected:true}],['unknown definition',{definition:{...d(),unexpected:true}}],['invalid code',{code:'bad code'}],['code newline',{code:'bad\n'}],['over budget',{definition:d({inclusions:'x'.repeat(4001)})}]];
