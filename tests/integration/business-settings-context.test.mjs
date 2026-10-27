@@ -52,7 +52,7 @@ before(async()=>{
 });
 after(async()=>{await web?.end();if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();});
 test('schema14/15 upgrades preserve prior receipts and genuine committed source/session/audit/history',async()=>{
-  assert.equal(prior.history.length,14);assert.equal(previous.history.length,15);assert.equal(receipt.history.length,42);
+  assert.equal(prior.history.length,14);assert.equal(previous.history.length,15);assert.equal(receipt.history.length,43);
   assert.deepEqual(previous.history.slice(0,14),prior.history);assert.deepEqual(receipt.history.slice(0,15),previous.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);
   assert.equal(await evidence(legacy),retained);assert.equal((await read(legacy)).rows[0].result.legalName,'Retained synthetic name');
   const result=(await web.query('SELECT crest_commands.lookup_business_name_operation($1,$2,$3,$4,$5,$6,$7,$8,$9) AS result',[...parameters(legacy),operation])).rows[0].result;

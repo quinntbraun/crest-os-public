@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "date": "2026-10-25",
+  "date": "2026-10-27",
   "baselineCommit": "34558ed3df4f339e45b8d1a012a2e2d1246e3546",
   "changeRecord": "CANONICAL_MAINTENANCE.md",
   "amendments": [
@@ -26,28 +26,28 @@
       "name": "ARCHITECTURE.md",
       "originalSha256": "80bb086a9369a25ae12053bda5f17eca06a199c21e496bdf329f05d025ab55af",
       "originalBytes": 35977,
-      "version": "1.7",
-      "sha256": "a6322ebe8d030ee1875bdae1e976a2372af8a12da06f6253eb973d005613dbd1",
-      "bytes": 38680,
-      "reason": "2026-10-25 owner continued implementation/efficiency request, ADR42 explicit original-operation retirement; see CANONICAL_MAINTENANCE.md"
+      "version": "1.8",
+      "sha256": "12890f037e599232634e39823eeb978c8674585643bb54f66ad9ba06212d37ca",
+      "bytes": 39230,
+      "reason": "2026-10-27 ADR43 registered source-export journal/coverage/recovery construction; exact prior hashes retained in CANONICAL_MAINTENANCE.md; production and complete-backup gates retained"
     },
     {
       "name": "ARCHITECTURE_DECISIONS.md",
       "originalSha256": "11acb9dc027cc8427823522193cb5518ab499dc8521c2682e4797ff6c0a47867",
       "originalBytes": 17703,
-      "version": "1.13",
-      "sha256": "067b07cccee091ef3c4018e3a42d76bfdcf467664b8100ca68bdfce25861c68b",
-      "bytes": 49984,
-      "reason": "2026-10-25 owner continued implementation/efficiency request, ADR42 explicit original-operation retirement; see CANONICAL_MAINTENANCE.md"
+      "version": "1.14",
+      "sha256": "795c07717f9e6b6f3a0bc2875ef2c544bce70281d1cc125e74e6beef8bf10ef8",
+      "bytes": 54550,
+      "reason": "2026-10-27 ADR43 registered source-export journal/coverage/recovery construction; exact prior hashes retained in CANONICAL_MAINTENANCE.md; production and complete-backup gates retained"
     },
     {
       "name": "DATABASE.md",
       "originalSha256": "d66147140019c214f48a2baf46828d866b77bf3b8c1d4279a5187d6fdf416661",
       "originalBytes": 53037,
-      "version": "1.5",
-      "sha256": "7b51a2362d6b9bfe302a1a012bc38d97fe66d6db5558f56048af0009d2b6cd93",
-      "bytes": 54943,
-      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+      "version": "1.6",
+      "sha256": "044a64693667be29ceee6ebbf58fd136b9cdf799d18138e7c4911d1ada001113",
+      "bytes": 55826,
+      "reason": "2026-10-27 ADR43 registered source-export journal/coverage/recovery construction; exact prior hashes retained in CANONICAL_MAINTENANCE.md; production and complete-backup gates retained"
     },
     {
       "name": "SECURITY.md",
@@ -62,10 +62,10 @@
       "name": "EXPORTS_AND_BACKUPS.md",
       "originalSha256": "cebd4d21981aa060c02973dece9cff2ec3a2e9367d1467edb1694c2ebe39ecdd",
       "originalBytes": 26475,
-      "version": "1.5",
-      "sha256": "162b73eb711eee6562f04518d156744954d1f45c6831372086e92ac5f50ae27c",
-      "bytes": 28282,
-      "reason": "2026-10-22 explicit owner V1 Calendar addition, P20/BR21/ADR35; see CANONICAL_MAINTENANCE.md"
+      "version": "1.6",
+      "sha256": "cb419895a528c8b5d9196326f63341d1df581846c8c5cf47390f8917948dd468",
+      "bytes": 29492,
+      "reason": "2026-10-27 ADR43 registered source-export journal/coverage/recovery construction; exact prior hashes retained in CANONICAL_MAINTENANCE.md; production and complete-backup gates retained"
     },
     {
       "name": "ROADMAP.md",
@@ -107,10 +107,10 @@
       "name": "PUBLICATION.md",
       "originalSha256": "f53bcc738639bdf8d336cf970fd0c83715153becd536ab265bf442bdcfce5932",
       "originalBytes": 5584,
-      "version": "1.8",
-      "sha256": "14dcd0b082ee74abd1d6c760bee09e9111b32d9e199963e06a37577880808e85",
-      "bytes": 5868,
-      "reason": "2026-10-25 owner continued implementation/efficiency request, ADR42 explicit original-operation retirement; see CANONICAL_MAINTENANCE.md"
+      "version": "1.9",
+      "sha256": "fb23f2c00ec0b81d4d46013081d768e71d35a5cdb8635d9c267537e6a33a41dd",
+      "bytes": 6258,
+      "reason": "2026-10-27 ADR43 registered source-export journal/coverage/recovery construction; exact prior hashes retained in CANONICAL_MAINTENANCE.md; production and complete-backup gates retained"
     }
   ]
 }

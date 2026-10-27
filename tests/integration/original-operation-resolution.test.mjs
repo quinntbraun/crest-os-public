@@ -11,8 +11,15 @@ import {parseOriginalOperationReference,parseOriginalOperationOutcome,originalOp
 import {verifyBusinessHistoryEvidence} from '../../src/security/business-history-evidence.ts';
 import {formatBusinessHistoryCsv} from '../../src/security/business-history-csv.ts';
 import {decodeCustomerCsv} from '../support/customer-fixture.ts';
-import {backupDatabase,connect,keyPair,privateWorkspace,recoveryCluster,inventory,run} from '../support/recovery-drill.mjs';
+import {backupLegacy42Database as backupDatabase,restoreDatabase as restoreCurrentDatabase,connect,keyPair,privateWorkspace,recoveryCluster,inventory,run} from '../support/recovery-drill.mjs';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
+import {createBusinessSourceCollector} from '../../src/security/business-foundation-collector.ts';
+import {formatBusinessFoundationBundle} from '../../src/security/business-foundation-bundle.ts';
+import {verifyBusinessFoundationEvidence} from '../../src/security/business-configuration-evidence.ts';
+import {readCustomerCsv} from '../support/customer-fixture.ts';
+import {formatBusinessSourceBundle} from '../../src/security/business-source-bundle.ts';
+import {verifyBusinessSourceBundle} from '../../src/security/business-source-verifier.ts';
+import {exerciseNeutralSourceImport} from '../support/neutral-source-import.mjs';
 
 let sandbox,target,client,web,web2,bootstrap,login,pid2,prior,registered,unsafeOwnerRefused=false;
 let recovery,restored,restoredWeb,recoveryOwner,recoveryPlans,recoveryDecisions,recoveryOriginal,recoveryCommitted,recoveryHistory,recoveryBackup,sourceAfterCapture,postSnapshot;
@@ -64,13 +71,13 @@ before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target,await sandbox.prefix(41));
  const sql=await readFile(new URL('../../supabase/migrations/20261026010000_original_operation_resolution.sql',import.meta.url),'utf8');
  await client.query('ALTER ROLE crest_command_owner LOGIN');try{await client.query('BEGIN');await assert.rejects(client.query(sql),e=>e.code==='42501'&&e.message==='CREST_OPERATION_RESOLUTION_REVIEW_REQUIRED');unsafeOwnerRefused=true;}finally{await client.query('ROLLBACK');await client.query('ALTER ROLE crest_command_owner NOLOGIN');}
- registered=await sandbox.apply(target);
+ registered=await sandbox.apply(target,await sandbox.prefix(42));
  bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
  login='crest_resolution_probe_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=password;web=await sandbox.connect(url.toString());web2=await sandbox.connect(url.toString());for(const c of [web,web2]){await c.query('SET ROLE crest_web');await c.query("SET lock_timeout='3s'");}pid2=(await web2.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
 },{timeout:240000});
 after(async()=>{await restoredWeb?.end();await restored?.end();await recovery?.close();await web?.end();await web2?.end();if(login)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
 
-test('registered42 refuses unsafe owners, preserves all41 prior migrations and reapplies idempotently',async()=>{assert(unsafeOwnerRefused);assert.equal(prior.history.length,41);assert.equal(registered.history.length,42);assert.deepEqual(registered.history.slice(0,41),prior.history);assert.deepEqual((await sandbox.apply(target)).history,registered.history);assert.equal((await client.query("SELECT count(*)::int AS n FROM crest_private.operations WHERE command_type='operation.retire'")).rows[0].n,0);});
+test('registered42 refuses unsafe owners, preserves all41 prior migrations and reapplies idempotently',async()=>{assert(unsafeOwnerRefused);assert.equal(prior.history.length,41);assert.equal(registered.history.length,42);assert.deepEqual(registered.history.slice(0,41),prior.history);assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(42))).history,registered.history);assert.equal((await client.query("SELECT count(*)::int AS n FROM crest_private.operations WHERE command_type='operation.retire'")).rows[0].n,0);});
 for(const kind of originalOperationKinds){
  test('retirement blocks the late original '+kind+' before domain effects',async()=>{const f=await state(),plan=await originalPlan(f,kind),first=await retire(f,plan.original);assert.equal(first.state,'retired');assert.deepEqual(parseOriginalOperationOutcome(first,plan.original),first);assert.deepEqual(await lookup(f,plan.original),first);const retained=await evidence(f);assert.deepEqual(await plan.run(f,web),{state:'conflict',reason:'operation'});assert.deepEqual(await evidence(f),retained);});
  test('committed original '+kind+' remains unchanged and requires its typed receipt',async()=>{const f=await state(),plan=await originalPlan(f,kind);assert.equal((await plan.run(f,web)).state,'committed');const retained=await evidence(f),observed=await retire(f,plan.original);assert.deepEqual(observed,{schemaVersion:1,state:'original_recorded',original:plan.original});assert.deepEqual(await lookup(f,plan.original),observed);assert.deepEqual(await evidence(f),retained);});
@@ -99,7 +106,7 @@ test('all eleven retirement decisions retain complete common-format operation an
  for(const kind of originalOperationKinds){const plan=await originalPlan(f,kind),decision=await retire(f,plan.original,web,' =Reviewed, "original" é 😀\n\\N\t'+kind);assert.equal(decision.state,'retired');decisions.set(plan.original.reference.operationId,decision);}
  const committed=await originalPlan(f,'crm.customer.save');assert.equal((await committed.run(f,web)).state,'committed');assert.equal((await retire(f,committed.original)).state,'original_recorded');
  await assert.rejects(web.query('SELECT crest_commands.business_history_export_context($1)',[f.business]),e=>e.code==='42501');
- const reader=await sandbox.connect(target),coverage=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+ const reader=await sandbox.connect(target),coverage=JSON.parse(await readFile(new URL('../support/registered42-export-coverage.json',import.meta.url),'utf8'));
  await reader.query('SET ROLE crest_export');
  const records=async context=>{
   const out=[];
@@ -187,6 +194,7 @@ test('independently keyed registered42 encrypted recovery retains all eleven ret
   postSnapshot=await originalPlan(f,'crm.customer.save');assert.equal((await retire(f,postSnapshot.original)).state,'retired');
  });assert.equal(recoveryBackup.manifest.schemaVersion,42);assert.equal(recoveryBackup.manifest.completeBackup,false);sourceAfterCapture=await inventory(client);
  recovery=await recoveryCluster();const url=await recovery.database();await unlink(keys.path);
+ await assert.rejects(restoreCurrentDatabase(point,emergency,url),e=>e.message==='SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest');
  const output=await run(process.execPath,['tests/support/restore-original-operation.mjs',point,emergency],{env:{...process.env,CREST_TEST_DATABASE_URL:'',CREST_RECOVERY_DRILL_TARGET:url}});assert.match(output.toString(),/^Synthetic isolated original-operation restore and verification completed\s*$/);
  restored=await connect(url);assert.deepEqual(await inventory(restored),recoveryBackup.manifest.rows);
  const restoredLogin='crest_resolution_restored_'+randomBytes(8).toString('hex'),password=randomBytes(32).toString('hex');await restored.query('CREATE ROLE '+restoredLogin+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await restored.query('GRANT crest_web TO '+restoredLogin);const connection=new URL(url);connection.username=restoredLogin;connection.password=password;restoredWeb=await connect(connection.toString());await restoredWeb.query('SET ROLE crest_web');
@@ -211,11 +219,108 @@ test('restored recent owner reads paused historical retirements and unchanged or
 });
 
 test('registered42 restore preserves all499 source columns, closed roles and immutable retirement and audit evidence',async()=>{
- assert(restored);const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,42);
+ assert(restored);const manifest=JSON.parse(await readFile(new URL('../support/registered42-export-coverage.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,42);
  const columns=(await restored.query("SELECT n.nspname||'.'||c.relname AS table,a.attname AS column FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r' AND a.attnum>0 AND NOT a.attisdropped ORDER BY n.nspname,c.relname,a.attnum")).rows;
  assert.deepEqual(verifyExportCoverage(manifest,columns,42),{assurance:'schema_inventory_only',tables:33,requiredColumns:489,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
  for(const role of ['crest_schema_owner','crest_command_owner','crest_session_owner','crest_integrity_owner'])assert.equal((await restored.query('SELECT NOT(rolcanlogin OR rolinherit OR rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls) AND rolconfig IS NULL AS closed FROM pg_roles WHERE rolname=$1',[role])).rows[0].closed,true);
  const operation=recoveryPlans[0].original.reference.operationId;
  for(const table of ['crest_private.operations','crest_private.audit_events']){await assert.rejects(restoredWeb.query('SELECT * FROM '+table),e=>e.code==='42501');for(const sql of ['UPDATE '+table+' SET operation_id=operation_id WHERE business_id=$1 AND operation_id=$2','DELETE FROM '+table+' WHERE business_id=$1 AND operation_id=$2'])await assert.rejects(restored.query(sql,[recoveryOwner.business,operation]),e=>e.code==='55000');}
  await assert.rejects(restoredWeb.query('SET ROLE crest_command_owner'),e=>e.code==='42501');assert.deepEqual(await inventory(client),sourceAfterCapture);
+});
+
+// Same restricted export identity and existing command-generated sources as
+// production capture. Temporary login exists only for each disposable case.
+async function withSourceCollector(f,work){
+ const name='crest_source_probe_'+randomBytes(8).toString('hex'),password=randomBytes(32).toString('hex');
+ await sandbox.admin.query(`CREATE ROLE ${name} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);
+ try{await sandbox.admin.query(`GRANT crest_export TO ${name} WITH INHERIT FALSE`);const url=new URL(target);url.username=name;url.password=password;return await work({connectionString:url.toString(),environment:'test',businessId:f.business});}
+ finally{await sandbox.admin.query(`DROP ROLE ${name}`);}
+}
+const sourceInventory=[['customers','crest.customers','customer','customers'],['addresses','crest.addresses','address','addresses'],['vehicles','crest.vehicles','vehicle','vehicles'],['associations','crest.customer_vehicles','association','associations'],['leadSources','crest.lead_sources','lead_source','lead_sources'],['leads','crest.leads','lead','leads'],['leadEvents','crest.lead_events','lead_event','events'],['leadVehicles','crest.lead_vehicles','lead_vehicle','leadVehicles'],['leadAddresses','crest.lead_addresses','lead_address','leadAddresses'],['conversions','crest.lead_conversions','lead_conversion','conversions'],['links','crest.conversion_links','conversion_link','links']];
+test('business source collector captures every command-generated CRM source and conversion link with exact native pages and no source changes',async()=>{
+ const f=await state();for(const kind of originalOperationKinds)if(kind!=='crm.lead.convert')await seed(f,kind);
+ for(let i=0;i<21;i++)await seed(f,'crm.customer.save');
+ const lead=(await seed(f,'crm.lead.save')).leadId,vehicle=randomUUID(),address=randomUUID();
+ assert.equal((await query(web,'SELECT crest_commands.save_lead_vehicle($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,0,$13) AS value',[...auth(f),f.epoch,randomUUID(),lead,vehicle,vehicleReport()])).state,'committed');
+ assert.equal((await query(web,'SELECT crest_commands.save_lead_address($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,0,$13) AS value',[...auth(f),f.epoch,randomUUID(),lead,address,addressDraft()])).state,'committed');
+ const body={customer:{kind:'new',id:randomUUID(),draft:customerDraft()},vehicles:[{linkId:randomUUID(),leadVehicleId:vehicle,expectedLeadVehicleVersion:'1',target:{kind:'new',id:randomUUID(),draft:{...vehicleDraft(),year:2025}}}],addresses:[{linkId:randomUUID(),leadAddressId:address,expectedLeadAddressVersion:'1',target:{kind:'new',id:randomUUID(),draft:{...addressDraft(),latitude:'-89.00000000000000000001',longitude:'180.00000000000000000000'}}}]};
+ assert.equal((await query(web,'SELECT crest_commands.convert_lead($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,1,$13) AS value',[...auth(f),f.epoch,randomUUID(),randomUUID(),lead,body])).state,'committed');
+ await withSourceCollector(f,async config=>{
+  const before=await evidence(f),sealed=await createBusinessSourceCollector(config)(new AbortController().signal),value=sealed.forServer(),crm=JSON.parse(value.crm);
+  assert.throws(()=>JSON.stringify(sealed),/BUSINESS_FOUNDATION_CAPTURE_PRIVATE/);assert.equal(value.capture,'single_connection_repeatable_read');assert.equal(crm.generationId,value.generationId);assert.equal(crm.observedAt,value.observedAt);
+  assert.equal(crm.completePortableExport,false);assert.equal(crm.completeBackup,false);assert.equal(Object.keys(crm.contexts).length,10);assert.equal(Object.keys(crm.pages).length,11);
+  let count=0;
+  for(const [name,table,routine,field]of sourceInventory){
+   const actual=crm.pages[name].flatMap(text=>JSON.parse(text)[field]),expected=(await client.query(`SELECT crest_private.${routine}_projection(t) AS row FROM ${table} t WHERE business_id=$1 ORDER BY id`,[f.business])).rows.map(r=>r.row);
+   assert(actual.length>0,name+' must contain a real source');assert.deepEqual(actual,expected);count+=actual.length;
+   const context=JSON.parse(crm.contexts[name==='links'?'conversions':name]);assert.equal(context.businessId,f.business);for(const text of crm.pages[name])assert.equal(JSON.parse(text).snapshotToken,context.snapshotToken);
+  }
+  assert(crm.pages.customers.length>=2);assert.equal(crm.recordCount,count);assert.equal(count+['configuration','identity','history'].reduce((n,k)=>n+JSON.parse(value[k]).records.length,0),value.recordCount);
+  assert(value.crm.includes('-89.00000000000000000001'));assert.equal(JSON.parse(crm.pages.links[0]).links.length,2);assert.deepEqual(await evidence(f),before);
+  const bundle=formatBusinessFoundationBundle(value,{businessId:f.business}),formatted=bundle.forServer(),manifest=JSON.parse(formatted.manifest);
+  assert.throws(()=>JSON.stringify(bundle),/BUSINESS_FOUNDATION_BUNDLE_REVIEW_REQUIRED/);
+  const part=name=>{const value=formatted.parts.find(p=>p.name===name);assert(value);assert.equal(value.bytes,Buffer.byteLength(value.content));assert.equal(value.sha256,createHash('sha256').update(value.content).digest('hex'));assert(value.bytes<=8*1024*1024);return value.content;};
+  const restored={};
+  for(const name of ['configuration','identity','history']){
+   const collection=manifest.sourceCollections[name],records=collection.pages.flatMap((file,index)=>{const page=JSON.parse(part(file));assert.equal(page.page,index+1);assert.equal(page.group,name);assert.equal(page.generationId,value.generationId);assert.deepEqual(page.context,collection.context);return page.records;});
+   assert.deepEqual(records,JSON.parse(value[name]).records);
+   restored[name]=JSON.stringify({formatVersion:1,assurance:'snapshot_bytes_only',generationId:value.generationId,context:collection.context,evidenceBytes:collection.evidenceBytes,records});
+  }
+  verifyBusinessFoundationEvidence(restored.configuration,restored.identity,restored.history,{businessId:f.business});
+  const entities={business:'businesses',membership:'memberships',recovery_authority:'business_recovery_authorities',actor:'actors',role_capability:'role_capabilities',identity_event:'identity_events',operation:'operations',audit_event:'audit_events'};
+  for(const [kind,entity]of Object.entries(entities)){
+   const records=['configuration','identity','history'].flatMap(name=>JSON.parse(value[name]).records).filter(row=>row.kind===kind).map(row=>JSON.parse(row.canonicalEvidence).row);
+   const matrix=readCustomerCsv(part(entity+'.csv')),columns=matrix.shift(),dictionary=JSON.parse(part(entity+'_dictionary.json')),escapes=JSON.parse(part(entity+'_escape_map.json')).escapes;
+   const decoded=matrix.map(cells=>Object.fromEntries(columns.map((column,index)=>{
+    let cell=cells[index];if(cell==='\\N')return[column,null];
+    if(escapes.some(e=>e.row_id===cells[columns.indexOf('id')]&&e.column===column)){assert(cell.startsWith("'"));cell=cell.slice(1);}
+    cell=cell.replaceAll('\\\\','\\');if(dictionary.booleanColumns?.includes(column))cell=cell==='true';if(['schema_version','result_schema_version'].includes(column))cell=Number(cell);return[column,cell];
+   })));
+   assert.deepEqual(decoded,records,entity+' CSV must retain every captured column');
+  }
+  assert.equal(manifest.completePortableExport,false);assert.equal(manifest.completeBackup,false);assert.deepEqual(await evidence(f),before);
+  const allSealed=formatBusinessSourceBundle(sealed,{businessId:f.business,appReleaseId:'a'.repeat(40),sourceSchemaVersion:42}),all=allSealed.forServer(),allManifest=JSON.parse(all.manifest);
+  assert.throws(()=>JSON.stringify(allSealed),/BUSINESS_SOURCE_BUNDLE_REVIEW_REQUIRED/);assert.equal(all.parts.filter(p=>p.name.endsWith('.csv')).length,19);
+  for(const [index,p]of all.parts.entries()){assert.equal(p.bytes,Buffer.byteLength(p.content));assert.equal(p.sha256,createHash('sha256').update(p.content).digest('hex'));assert.deepEqual(allManifest.parts[index],{name:p.name,contentType:p.contentType,bytes:p.bytes,sha256:p.sha256});}
+  const text=name=>{const p=all.parts.find(p=>p.name===name);assert(p);return p.content;};
+  const csvEntities={customers:'customers',addresses:'addresses',vehicles:'vehicles',associations:'customer_vehicles',leadSources:'lead_sources',leads:'leads',leadEvents:'lead_events',leadVehicles:'lead_vehicles',leadAddresses:'lead_addresses',conversions:'lead_conversions',links:'conversion_links'};
+  for(const [name,, ,field]of sourceInventory){
+   const collection=allManifest.sourceCollections[name],originalContext=crm.contexts[name==='links'?'conversions':name];assert.equal(text(collection.context),originalContext);assert.deepEqual(collection.pages.map(text),crm.pages[name]);
+   const at=all.parts.findIndex(p=>p.name===csvEntities[name]+'.csv'),matrix=readCustomerCsv(all.parts[at].content),columns=matrix.shift(),escapes=JSON.parse(all.parts[at+1].content).escapes;
+   const decoded=matrix.map(cells=>Object.fromEntries(columns.map((column,index)=>{
+    let cell=cells[index];if(cell==='\\N')return[column,null];if(escapes.some(e=>e.row_id===cells[columns.indexOf('id')]&&e.column===column)){assert(cell.startsWith("'"));cell=cell.slice(1);}cell=cell.replaceAll('\\\\','\\');
+    if(['outreach_opt_out','is_billing','active'].includes(column)){assert(['true','false'].includes(cell));cell=cell==='true';}if(column==='year'){assert(/^[1-9][0-9]{3}$/.test(cell));cell=Number(cell);}if(['source_snapshot','reported_vehicle','requested_services','request'].includes(column))cell=JSON.parse(cell);return[column,cell];
+   })));
+   assert.deepEqual(decoded,crm.pages[name].flatMap(p=>JSON.parse(p)[field]),name+' source and CSV must agree on every field');
+  }
+  assert.equal(allManifest.evidenceBytes,value.evidenceBytes);assert.equal(allManifest.recordCount,value.recordCount);assert.equal(allManifest.completePortableExport,false);assert.equal(allManifest.completeBackup,false);assert.deepEqual(await evidence(f),before);
+  const independentlyVerified=verifyBusinessSourceBundle({manifest:Buffer.from(all.manifest),parts:all.parts.map(part=>({name:part.name,bytes:Buffer.from(part.content)}))},{businessId:f.business,appReleaseId:'a'.repeat(40)});
+  const reconstructed=independentlyVerified.forServer();for(const name of ['configuration','identity','history','crm'])assert.deepEqual(JSON.parse(reconstructed[name]),JSON.parse(value[name]));
+  assert.equal(Object.keys(reconstructed.rows).length,19);assert(reconstructed.csvSourceRowsVerified);assert(reconstructed.rawSourceReconstructionVerified);assert.equal(reconstructed.completePortableExport,false);assert.equal(reconstructed.completeBackup,false);
+  await exerciseNeutralSourceImport(sandbox,independentlyVerified);assert.deepEqual(await evidence(f),before);
+  console.log('Verified nineteen source CSV projections in a fresh extension-free PostgreSQL database with enforced relationships');
+ });
+});
+test('business source collector keeps CRM rows and their audit history on the original real snapshot across a concurrent command', {timeout:30000},async()=>{
+ const f=await state(),customer=(await seed(f,'crm.customer.save')).customerId,newOperation=randomUUID(),lock=await sandbox.connect(target);let locked=false,pending;
+ try{await withSourceCollector(f,async config=>{
+  await lock.query('BEGIN');await lock.query('LOCK TABLE crest.lead_conversions IN ACCESS EXCLUSIVE MODE');locked=true;
+  pending=createBusinessSourceCollector(config)(new AbortController().signal).then(value=>({value}),error=>({error}));
+  let observed=false;const deadline=performance.now()+1500;
+  while(performance.now()<deadline){const r=await client.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE application_name='crest_business_capture' AND wait_event_type='Lock' AND backend_xmin IS NOT NULL");if(r.rows[0].n===1){observed=true;break;}}
+  assert(observed,'capture must own a real snapshot before the concurrent customer command');
+  assert.equal((await query(web,'SELECT crest_commands.save_customer($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,1,$12) AS value',[...auth(f),f.epoch,newOperation,customer,{...customerDraft(),displayName:'Synthetic newer CRM source'}])).state,'committed');
+  await lock.query('COMMIT');locked=false;const result=await pending;assert(!result.error,'old complete capture must succeed');
+  const old=result.value.forServer(),oldCrm=JSON.parse(old.crm),oldRow=JSON.parse(oldCrm.pages.customers[0]).customers[0];assert.equal(oldRow.id,customer);assert.equal(oldRow.version,'1');assert.equal(oldRow.display_name,'Synthetic resolution customer');assert(!old.history.includes(newOperation));
+  const fresh=(await createBusinessSourceCollector(config)(new AbortController().signal)).forServer(),next=JSON.parse(JSON.parse(fresh.crm).pages.customers[0]).customers[0];assert.equal(next.version,'2');assert.equal(next.display_name,'Synthetic newer CRM source');assert(fresh.history.includes(newOperation));assert.notEqual(old.generationId,fresh.generationId);
+ });}finally{if(locked)await lock.query('ROLLBACK');await pending;await lock.end();}
+});
+test('business source collector fails the whole private capture when one late CRM source permission is unavailable',async()=>{
+ const f=await state();await seed(f,'crm.customer.save');const before=await evidence(f);
+ await withSourceCollector(f,async config=>{
+  await client.query('REVOKE EXECUTE ON FUNCTION crest_commands.lead_address_snapshot_page(uuid,text,uuid,integer) FROM crest_export');
+  try{await assert.rejects(createBusinessSourceCollector(config)(new AbortController().signal),e=>e.message==='BUSINESS_FOUNDATION_COLLECTION_REVIEW_REQUIRED'&&!('cause' in e));}
+  finally{await client.query('GRANT EXECUTE ON FUNCTION crest_commands.lead_address_snapshot_page(uuid,text,uuid,integer) TO crest_export');}
+  const value=(await createBusinessSourceCollector(config)(new AbortController().signal)).forServer();assert.equal(JSON.parse(value.crm).recordCount,1);assert.deepEqual(await evidence(f),before);
+ });
 });

@@ -16,12 +16,16 @@ import {createAssociationHttp,associationFailureResponse} from '../customer/asso
 import {createLeadHttp,leadFailureResponse} from '../customer/lead-http.ts';
 import {createLeadSourceHttp,leadSourceFailureResponse} from '../customer/lead-source-http.ts';
 import {createOriginalOperationHttp,originalOperationFailureResponse} from '../security/original-operation-http.ts';
+import {createSourceExportHttp,sourceExportFailureResponse} from '../security/source-export-http.ts';
+import {createSourceExportDownloadHttp,sourceExportDownloadFailureResponse} from '../security/source-export-download-http.ts';
+import {isSourceExportDownloadResponse,writeSourceExportDownloadResponse,discardSourceExportDownloadResponse} from './source-export-download-response.ts';
 
 export type AuthenticationConfiguration=Readonly<{
   configuration:Omit<Parameters<typeof createAuthenticationHttp>[0],'origin'|'environment'>;
   provider:Parameters<typeof createAuthenticationHttp>[1];tokens:Parameters<typeof createAuthenticationHttp>[2];
 }>;
-export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>;customers?:boolean;vehicles?:boolean;associations?:boolean;leads?:boolean;leadConversions?:boolean;operationResolution?:boolean}>;
+export type SourceExportConfiguration=Readonly<{appReleaseId:string;store:NonNullable<Parameters<typeof createSourceExportDownloadHttp>[3]>}>;
+export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>;customers?:boolean;vehicles?:boolean;associations?:boolean;leads?:boolean;leadConversions?:boolean;operationResolution?:boolean;sourceExports?:SourceExportConfiguration}>;
 export type PageHandler=(request:IncomingMessage,response:ServerResponse)=>Promise<void>;
 
 export function createBoundedNodeServer(tls?:NodeConfiguration['tls']):Server{
@@ -58,6 +62,15 @@ export async function writeCustomerResponse(outgoing:ServerResponse,response:Res
 }
 export async function writeOriginalOperationResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
   return writePrivateResponse(outgoing,response,signal,16384);
+}
+// Metadata keeps the16KiB private cap. Only a genuine one-use file handoff
+// uses the separately verified8MiB binary writer and its settlement/wipe path.
+export async function writeSourceExportResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal,fileEndpoint=false):Promise<void>{
+ if(isSourceExportDownloadResponse(response)){
+  if(!fileEndpoint){discardSourceExportDownloadResponse(response);outgoing.destroy();throw Error('SOURCE_EXPORT_DELIVERY_FAILED');}
+  return writeSourceExportDownloadResponse(outgoing,response,signal);
+ }
+ return writePrivateResponse(outgoing,response,signal,16384);
 }
 async function writePrivateResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal,limit:number):Promise<void>{
   let finished=false;
@@ -97,8 +110,9 @@ async function writePrivateResponse(outgoing:ServerResponse,response:Response,si
 }
 
 export function bindApplicationHandler(server:Server,config:NodeConfiguration,pages:PageHandler):void{
-  const {origin,environment,authentication,business,customers,vehicles,associations,leads,leadConversions,operationResolution}=config;
+  const {origin,environment,authentication,business,customers,vehicles,associations,leads,leadConversions,operationResolution,sourceExports}=config;
   const url=new URL(origin);
+  if(sourceExports!==undefined&&(!sourceExports||typeof sourceExports!=='object'||Array.isArray(sourceExports)||!business||!authentication||typeof sourceExports.appReleaseId!=='string'||!/^([a-f0-9]{40})$/.test(sourceExports.appReleaseId)||typeof sourceExports.store?.readVerified!=='function'))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(operationResolution!==undefined&&typeof operationResolution!=='boolean'||operationResolution&&(!business||!authentication))throw new Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(url.origin!==origin||url.username||url.password||!['http:','https:'].includes(url.protocol)||!['production','test'].includes(environment)
     ||business&&!authentication||customers!==undefined&&typeof customers!=='boolean'||customers&&(!business||!authentication)||vehicles!==undefined&&typeof vehicles!=='boolean'||vehicles&&(!business||!authentication)||associations!==undefined&&typeof associations!=='boolean'||associations&&(!business||!authentication)||leadConversions!==undefined&&typeof leadConversions!=='boolean'||leadConversions&&!leads||leads!==undefined&&typeof leads!=='boolean'||leads&&(!business||!authentication)||authentication&&environment==='production'&&!config.tls||server.listenerCount('request'))throw new Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
@@ -111,12 +125,14 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
   const dispatchLeads=leads&&business&&authentication?createLeadHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,leadConversions===true):undefined;
   const dispatchLeadSources=leads&&business&&authentication?createLeadSourceHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
   const dispatchOriginalOperations=operationResolution===true&&business&&authentication?createOriginalOperationHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
+  const dispatchExports=sourceExports&&business&&authentication?createSourceExportHttp({...authentication.configuration,origin,environment,businessId:business.businessId,appReleaseId:sourceExports.appReleaseId},authentication.provider,authentication.tokens,true):undefined;
+  const dispatchExportDownloads=sourceExports&&business&&authentication?createSourceExportDownloadHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,sourceExports.store,true):undefined;
   let activeProtected=0;
   server.on('request',(incoming,outgoing)=>{void (async()=>{
     const controller=new AbortController();
     const abort=()=>controller.abort();incoming.once('aborted',abort);
     outgoing.once('close',()=>{if(!outgoing.writableFinished)abort();});
-    let reserved=false,businessRequest=false,customerRequest=false,addressRequest=false,vehicleRequest=false,associationRequest=false,leadRequest=false,leadSourceRequest=false,originalOperationRequest=false;
+    let reserved=false,businessRequest=false,customerRequest=false,addressRequest=false,vehicleRequest=false,associationRequest=false,leadRequest=false,leadSourceRequest=false,originalOperationRequest=false,exportRequest=false,exportDownloadRequest=false;
     try{
       if(incoming.rawHeaders.length>256)throw new Error();
       const target=requestTarget(incoming.url,origin);
@@ -128,8 +144,11 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
       leadRequest=target.business&&(decoded==='/api/business/leads'||decoded.startsWith('/api/business/leads/'));
       leadSourceRequest=target.business&&(decoded==='/api/business/lead-sources'||decoded.startsWith('/api/business/lead-sources/'));
       originalOperationRequest=target.business&&(decoded==='/api/business/original-operations'||decoded.startsWith('/api/business/original-operations/'));
+      exportRequest=target.business&&(decoded==='/api/business/exports'||decoded.startsWith('/api/business/exports/'));
+      exportDownloadRequest=exportRequest&&(decoded==='/api/business/exports/downloads'||decoded.startsWith('/api/business/exports/downloads/')||decoded==='/api/business/exports/file'||decoded.startsWith('/api/business/exports/file/'));
+      const exportFileRequest=decoded==='/api/business/exports/file';
       if(!target.authentication&&!target.business){await pages(incoming,outgoing);return;}
-      const handler=originalOperationRequest?dispatchOriginalOperations:leadSourceRequest?dispatchLeadSources:leadRequest?dispatchLeads:associationRequest?dispatchAssociations:vehicleRequest?dispatchVehicles:addressRequest?dispatchAddresses:customerRequest?dispatchCustomers:target.business?dispatchBusiness:dispatch,failure=originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:target.business?businessFailureResponse:browserFailureResponse;
+      const handler=exportRequest?(exportDownloadRequest?dispatchExportDownloads:dispatchExports):originalOperationRequest?dispatchOriginalOperations:leadSourceRequest?dispatchLeadSources:leadRequest?dispatchLeads:associationRequest?dispatchAssociations:vehicleRequest?dispatchVehicles:addressRequest?dispatchAddresses:customerRequest?dispatchCustomers:target.business?dispatchBusiness:dispatch,failure=exportRequest?(exportDownloadRequest?sourceExportDownloadFailureResponse:sourceExportFailureResponse):originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:target.business?businessFailureResponse:browserFailureResponse;
       if(!handler||activeProtected>=32){await writeAuthenticationResponse(outgoing,failure(503),controller.signal);return;}
       activeProtected++;reserved=true;
       const peer=transportFromIncomingMessage(incoming),headers=new Headers();
@@ -137,9 +156,10 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
       const request=new Request(target.url,{method:incoming.method,headers,signal:controller.signal,
         ...(!['GET','HEAD'].includes(incoming.method??'')?{body:Readable.toWeb(incoming),duplex:'half'}:{})} as RequestInit);
       const response=await handler(request,peer);
-      await (originalOperationRequest?writeOriginalOperationResponse:customerRequest||vehicleRequest||associationRequest||leadRequest||leadSourceRequest?writeCustomerResponse:writeAuthenticationResponse)(outgoing,response,controller.signal);
+      if(exportRequest)await writeSourceExportResponse(outgoing,response,controller.signal,exportFileRequest);
+      else await (originalOperationRequest?writeOriginalOperationResponse:customerRequest||vehicleRequest||associationRequest||leadRequest||leadSourceRequest?writeCustomerResponse:writeAuthenticationResponse)(outgoing,response,controller.signal);
     }catch{
-      if(!outgoing.destroyed&&!outgoing.headersSent)try{await writeAuthenticationResponse(outgoing,(originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:businessRequest?businessFailureResponse:browserFailureResponse)(),controller.signal);}catch{outgoing.destroy();}
+      if(!outgoing.destroyed&&!outgoing.headersSent)try{await writeAuthenticationResponse(outgoing,(exportRequest?(exportDownloadRequest?sourceExportDownloadFailureResponse:sourceExportFailureResponse):originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:businessRequest?businessFailureResponse:browserFailureResponse)(),controller.signal);}catch{outgoing.destroy();}
       else outgoing.destroy();
     }finally{if(reserved)activeProtected--;incoming.off('aborted',abort);}
   })();});
