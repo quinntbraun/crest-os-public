@@ -3,15 +3,15 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {createHash} from 'node:crypto';
-import {readFile,writeFile} from 'node:fs/promises';
-import {join} from 'node:path';
+import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import {join,basename} from 'node:path';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 const region=page=>page.getByRole('region',{name:'Download export files',exact:true}),status=page=>region(page).getByRole('status'),sha=value=>createHash('sha256').update(value).digest('hex');
 async function load(page){await region(page).getByRole('button',{name:'Check sign-in and load file list',exact:true}).click();await expect(status(page)).toContainText('The complete file list is checked.');}
 async function prepare(page,part){await region(page).getByLabel('File to prepare',{exact:true}).selectOption(part.partId);await region(page).getByRole('button',{name:'Prepare selected file',exact:true}).click();await expect(region(page).getByRole('button',{name:'Request browser save',exact:true})).toBeEnabled();}
-async function saved(page,f,part,index){await prepare(page,part);const pending=page.waitForEvent('download');await region(page).getByRole('button',{name:'Request browser save',exact:true}).click();const download=await pending;assert(download.url().startsWith('blob:'),'download must use the prepared local copy');assert.equal(download.suggestedFilename(),part.fileName);assert.equal(await download.failure(),null);const path=join(f.workspace,'verified-'+index+'-'+part.fileName);await download.saveAs(path);assert.equal(sha(await readFile(path)),part.sha256);await expect(status(page)).toContainText('saving has not been confirmed');return path;}
+async function saved(page,f,part,index){await prepare(page,part);const pending=page.waitForEvent('download');await region(page).getByRole('button',{name:'Request browser save',exact:true}).click();const download=await pending;assert(download.url().startsWith('blob:'),'download must use the prepared local copy');assert.equal(download.suggestedFilename(),part.fileName);assert.equal(await download.failure(),null);const directory=join(f.workspace,'verified-'+index);await mkdir(directory,{mode:0o700});const path=join(directory,part.fileName);assert.equal(basename(path),part.fileName,'read-back filename must remain exactly the catalogue filename');await download.saveAs(path);assert.equal(sha(await readFile(path)),part.sha256);await expect(status(page)).toContainText('saving has not been confirmed');return path;}
 async function compare(page,paths){const chooser=page.waitForEvent('filechooser');await region(page).getByLabel('Select local copies to compare',{exact:true}).click();await (await chooser).setFiles(paths);await expect(region(page).getByLabel('Select local copies to compare',{exact:true})).toHaveValue('');}
 const gets=f=>f.storage.requests.filter(r=>r.method==='GET').length-f.setupGets;
 for(const [name,engine,mobile]of [['chromium',chromium,false],['webkit',webkit,true]]){

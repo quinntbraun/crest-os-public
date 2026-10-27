@@ -1,5 +1,7 @@
 # Genuine browser save/resume verification
 
+Read-back fixture correction,2026-10-27: review found that the first implementation saved to a prefixed filesystem basename such as verified-0-example.csv. Playwright then supplies that basename as File.name, so the actual verifier must correctly report it unrelated/missing rather than accept example.csv. Preserve exact catalogue filenames inside separate0700 private attempt directories, assert basename equality, then keep the same actual browser-save/SHA/file-chooser/missing/corrupt/redownload checks. No product comparison normalization, relaxed filename rule, fake selected File or changed checksum assertion. Source683d6026 native1,254 acceptance is backend-only; genuine browser/full acceptance remains required and no failure is claimed until its actual diagnostics are inspected.
+
 2026-10-27. The controls source c9b179e4/candidated6edcaa7/run40495494293 has independently verified all1,254 database/Auth cases:696 foundation/253 proposal,423 provider and135 genuine Auth, including selected-file resume over real sockets. Its complete release remains a separate publication prerequisite; that source-bound proof does not accept these new test fixtures.
 
 ## Disposable composition
