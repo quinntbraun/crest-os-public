@@ -62,11 +62,13 @@
       "bodySha256": "0fdd4a259958313027e5f91e7b871cd2aff702704968b71d3eb6b84c48fd0102"
     }
   ],
-  "sqlSha256": "7ae5e32ace3826d1a87441a2c993a2f1fc5280888cbb43c81deab952cd71485c",
-  "sqlBytes": 11466,
+  "sqlSha256": "55bbc6f4c793b926a0b24e7b8b63007a7cb59bcb0794cd08c299c11d8deecbb3",
+  "sqlBytes": 12063,
   "existingTablesChanged": false,
   "newTables": 0,
   "newSourceColumns": 0,
   "productionActivation": "blocked",
-  "nativeExecuted": false
+  "nativeExecuted": false,
+  "priorUnacceptedSqlSha256": "7ae5e32ace3826d1a87441a2c993a2f1fc5280888cbb43c81deab952cd71485c",
+  "sourceCorrection": "Inspect effective global function defaults even when the explicit pg_default_acl row is absent; original failed14de source stays unaccepted."
 }

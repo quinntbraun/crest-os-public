@@ -88,6 +88,7 @@ for(const table of ['crest_private.operations','crest_private.audit_events','cre
 test('admission proposal refuses unsafe default function privileges atomically',async()=>{
  await client.query('BEGIN');try{
   await client.query('ALTER DEFAULT PRIVILEGES FOR ROLE crest_schema_owner GRANT EXECUTE ON FUNCTIONS TO PUBLIC');
+  assert.equal(await query(client,"SELECT count(*)::int AS value FROM pg_default_acl WHERE defaclrole='crest_schema_owner'::regrole AND defaclnamespace=0 AND defaclobjtype='f'"),0,'built-in PUBLIC execute can be effective without an explicit global default ACL row');
   await assert.rejects(client.query(sql),e=>e.code==='42501'&&e.message==='CREST_EXPORT_EXECUTION_SOURCE_REVIEW_REQUIRED');
  }finally{await client.query('ROLLBACK');}
  assert.equal(await query(client,'SELECT to_regprocedure($1) AS value',[signature]),null);

@@ -35,6 +35,9 @@ button:disabled { opacity: 0.65; cursor: not-allowed; }
 .customers textarea { display: block; width: 100%; min-width: 0; padding: 0.75rem; font: inherit; color: inherit; border: 1px solid #607671; border-radius: 0.5rem; background: #fff; }
 .customer-list { list-style: none; margin: 0; padding: 0; }
 .customer-list button { text-align: left; overflow-wrap: anywhere; }
+.contact-summary { margin:0.25rem 0 0.75rem; padding:0 0.75rem; font-size:0.875rem; color:#425653; overflow-wrap:anywhere; }
+.customers .customer-extra { background:#f6f8f4; }
+.customer-extra summary { font-weight:700; }
 .customer-values dd { margin: 0.25rem 0 1rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 .customer-values dt { font-weight: 700; }
 .customers details { margin: 1rem 0; padding: 1rem; background: #fff; border: 1px solid #8b9c9a; border-radius: 0.5rem; }
@@ -44,3 +47,17 @@ button:disabled { opacity: 0.65; cursor: not-allowed; }
 
 .association-panel h3, .association-panel p { overflow-wrap: anywhere; }
 .retirement-reason { white-space: pre-wrap; overflow-wrap: anywhere; }
+.lead-follow-up { display: grid; gap: 0.5rem; }
+.lead-follow-up > label { display: block; margin: 0; }
+.lead-follow-up > .field-help { margin: 0 0 0.5rem; }
+.quote-worksheet { overflow-wrap: anywhere; }
+.quote-worksheet label { display: block; }
+.quote-worksheet .trust { display: flex; }
+.quote-preview-lines { padding-left: 1.5rem; }
+.quote-preview-lines li { margin: 1rem 0 1.5rem; overflow-wrap: anywhere; }
+.quote-preview-lines h3 { white-space: pre-wrap; }
+.service-editor { margin: 1.25rem 0; }
+.service-editor > summary { padding: 0.75rem 0; cursor: pointer; font-weight: 600; }
+.service-editor .review-card { margin: 1rem 0; overflow-wrap: anywhere; }
+.service-editor button { margin: 0.4rem 0.5rem 0.4rem 0; }
+.service-text { white-space: pre-wrap; overflow-wrap: anywhere; }

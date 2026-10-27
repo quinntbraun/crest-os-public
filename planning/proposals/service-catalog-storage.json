@@ -1,0 +1,37 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "existingMigrationCount": 43,
+  "sourceProjectionVersion": 43,
+  "runtimeEnabled": false,
+  "nativeExecuted": false,
+  "nativeCasesWritten": 29,
+  "sqlBytes": 19437,
+  "sqlSha256": "463062296675b7f154552b9b227c537201d17c89d973d11b874e54aea2b68f70",
+  "tables": {
+    "crest.services": 13,
+    "crest.service_versions": 16
+  },
+  "functions": [
+    "crest_private.service_projection(crest.services)",
+    "crest_private.service_definition(crest.service_versions)",
+    "crest_private.service_version_projection(crest.service_versions)",
+    "crest_private.reject_catalog_history_change()",
+    "crest_private.validate_service_change()",
+    "crest_private.validate_service_version_append()",
+    "crest_private.check_service_audit()",
+    "crest_private.check_service_version_audit()"
+  ],
+  "ordinaryTableGrants": false,
+  "trustedCommandsImplemented": false,
+  "sourceExportCoverageImplemented": false,
+  "recoveryAcceptanceExecuted": false,
+  "productionActivation": "blocked",
+  "priorUnacceptedSqlSha256": "4a00e9f9dcddd1dfa021081106f853b08d1ee9a0194dd4fd3ae49279ce9e98c6",
+  "sourceCorrection": "Allow an entirely omitted starting range explicitly; still reject upper-only, negative or inverted supplied guidance.",
+  "priorNativeRun": 40592213936,
+  "priorNativePassed": 28,
+  "priorNativeFailed": 1,
+  "currentSourceNativeAccepted": false
+}

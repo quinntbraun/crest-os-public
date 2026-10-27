@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import {useEffect,useRef,useState} from 'react';
-import type {FormEvent} from 'react';
+import type {FormEvent,ComponentType} from 'react';
 import {createAddressEditorController,initialAddressEditorView} from '../../client/address-editor-controller';
 import {createPendingAddressStore} from '../../client/pending-address-edit';
 import {NullableText} from '../customers/nullable-text';
@@ -19,7 +19,7 @@ function AddressDetails({row}:{row:CustomerAddress}){
  const fields=[['Street / address line 1',row.line1],['Address line 2',row.line2],['City',row.city],['State / region',row.region],['Postal code',row.postal_code],['Country',row.country],['Exact location',row.exact_location_text],['Location instructions',row.instructions],['Latitude',row.latitude],['Longitude',row.longitude],['Geocode source',row.geocode_source],['Geocode accuracy',row.geocode_accuracy],['Verified at UTC',row.verified_at],['Archived at UTC',row.archived_at],['Archive reason',row.archived_reason]] as const;
  return <dl className="customer-values">{fields.map(([name,value])=><div key={name}><dt>{name}</dt><dd>{unknown(value)}</dd></div>)}</dl>;
 }
-export function AddressScreen({customerId}:{customerId:string|null}){
+export function AddressScreen({customerId,assist:Assist}:{customerId:string|null;assist?:ComponentType<{draft:AddressDraft;change:(draft:AddressDraft)=>void}>}){
  const [view,setView]=useState(initialAddressEditorView),current=useRef<ReturnType<typeof createAddressEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null);
  useEffect(()=>{
   const c=createAddressEditorController({customerId,store:createPendingAddressStore({getItem:k=>sessionStorage.getItem(k),setItem:(k,v)=>sessionStorage.setItem(k,v),removeItem:k=>sessionStorage.removeItem(k)}),change:setView});current.current=c;void c.load();
@@ -46,6 +46,7 @@ export function AddressScreen({customerId}:{customerId:string|null}){
    {view.draft&&<form onSubmit={save} aria-label="Address editor"><h2>{view.selected?'Edit address':'New address'}</h2>
     <p className="field-help">Record what you know; unknown and explicitly empty values remain distinct. This record does not confirm a job location. Leaving or hiding the page clears private drafts; closing the tab may also lose its save reference.</p>
     <fieldset disabled={view.busy||view.writesPaused}><legend>Location details</legend>
+     {Assist&&<Assist draft={view.draft} change={next=>current.current?.edit(next)}/>}
      {optionalFields.map(([name,title,limit,multiline])=><NullableText key={name} name={'address-'+name} label={title} limit={limit} multiline={multiline} value={view.draft![name]} disabled={view.busy} change={v=>edit(name,v)}/>)}
      <details><summary>Coordinates and verification</summary>
       <label className="trust"><input type="checkbox" checked={view.draft.latitude!==null||view.draft.longitude!==null} onChange={e=>current.current?.edit({...view.draft!,latitude:e.target.checked?'':null,longitude:e.target.checked?'':null})}/>Record coordinates</label>
