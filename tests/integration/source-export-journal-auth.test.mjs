@@ -26,11 +26,12 @@ import {sourceExportReferenceToWire,sourceExportRetirementToWire} from '../../sr
 import {createCsrfToken} from '../../src/security/request-protection.ts';
 import {transportFromIncomingMessage} from '../../src/security/trusted-transport.ts';
 import {createBoundedNodeServer,writeOriginalOperationResponse} from '../../src/server/node-server.ts';
+import {parseSourceExportList,sourceExportListToWire} from '../../src/security/source-export-owner-list.ts';
 let sandbox,target,client,service,login,readerLogin,readerUrl,config,boundary,tokens,lifecycle,database,verifications=0;
 const signal=()=>new AbortController().signal,sha=text=>createHash('sha256').update(text).digest('hex'),release='a'.repeat(40);
 before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);assert.equal((await sandbox.apply(target)).history.length,42);
- await client.query('BEGIN');try{for(const name of ['jobs','snapshots','parts','ready','journal-reads','request-resolution'])await client.query(await readFile(new URL('../../planning/proposals/source-export-'+name+'.sql',import.meta.url),'utf8'));await client.query('COMMIT');}catch(e){await client.query('ROLLBACK');throw e;}
+ await client.query('BEGIN');try{for(const name of ['jobs','snapshots','parts','ready','journal-reads','request-resolution','owner-reads'])await client.query(await readFile(new URL('../../planning/proposals/source-export-'+name+'.sql',import.meta.url),'utf8'));await client.query('COMMIT');}catch(e){await client.query('ROLLBACK');throw e;}
  login='crest_export_auth_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=password;config={connectionString:url.toString(),environment:'test'};database=sessionDatabase(config);
  readerLogin='crest_export_read_0'+randomBytes(8).toString('hex');const readerPassword=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+readerLogin+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+readerPassword+"'");await sandbox.admin.query('GRANT crest_export TO '+readerLogin+' WITH INHERIT FALSE');const readerAddress=new URL(target);readerAddress.username=readerLogin;readerAddress.password=readerPassword;readerUrl=readerAddress.toString();
  service=await startRealAuthService(target);const actual=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},createLiveProviderSessionLookup(config));boundary={...actual,async verifyAccess(...args){verifications++;return actual.verifyAccess(...args);}};
@@ -122,7 +123,7 @@ test('genuine Auth export resolution preserves a committed original and refuses 
 // all HTTP guards, admission, provider verification and SQL remain genuine.
 async function exportHttp(f,work){
  const server=createBoundedNodeServer();await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
- const origin='http://127.0.0.1:'+server.address().port,handler=createSourceExportHttp({...config,origin,businessId:f.business,ingress:{kind:'direct'}},boundary,tokens,true),csrf=createCsrfToken(f.issued.evidence.sessionId),hash=csrf.hashForDatabase();
+ const origin='http://127.0.0.1:'+server.address().port,handler=createSourceExportHttp({...config,origin,businessId:f.business,appReleaseId:release,ingress:{kind:'direct'}},boundary,tokens,true),csrf=createCsrfToken(f.issued.evidence.sessionId),hash=csrf.hashForDatabase();
  try{
   await client.query('INSERT INTO crest_private.session_csrf_tokens(session_id,token_hash) VALUES($1,$2)',[f.issued.evidence.sessionId,hash]);
   server.on('request',async(message,outgoing)=>{
@@ -158,5 +159,36 @@ test('genuine Auth export HTTP refuses invalid CSRF, foreign scope and revoked p
   assert.deepEqual(await httpValue(await post('original',wire,{cookie:'__Host-crest_session='+other.credential}),400),{error:'SOURCE_EXPORT_REQUEST_FAILED'});
   assert.deepEqual(await httpValue(await post('request',sourceExportReferenceToWire({...original,businessId:other.business})),400),{error:'SOURCE_EXPORT_REQUEST_FAILED'});assert.equal(verifications,start);
   await client.query('DELETE FROM auth.sessions WHERE id=$1',[f.issued.evidence.provider.sessionId]);assert.deepEqual(await httpValue(await post('request',wire),503),{error:'SOURCE_EXPORT_REQUEST_NOT_SUBMITTED'});assert.deepEqual(await httpValue(await post('original',wire),503),{error:'SOURCE_EXPORT_READ_FAILED'});
+ });assert.deepEqual(await facts(f),saved);
+});
+
+test('genuine Auth export context binds the current owner and server release and reports pause without a replacement epoch',async()=>{
+ const f=await fixture(),saved=await facts(f),start=verifications;
+ await exportHttp(f,async post=>{
+  const context=await httpValue(await post('context',{}));assert.deepEqual(context,{schemaVersion:1,businessId:f.business,actorId:f.actor,appReleaseId:release,profile:'crest.business-source-journal-bundle.v1',sourceSchemaVersion:43,writeState:'ready',recoveryEpoch:f.epoch});
+  assert.deepEqual(await httpValue(await post('context',{actorId:randomUUID()}),400),{error:'SOURCE_EXPORT_REQUEST_FAILED'});assert.equal(verifications-start,1);
+  await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[f.business]);assert.deepEqual(await httpValue(await post('context',{})),{...context,writeState:'paused',recoveryEpoch:null});assert.equal(verifications-start,2);
+  await client.query('DELETE FROM auth.sessions WHERE id=$1',[f.issued.evidence.provider.sessionId]);assert.deepEqual(await httpValue(await post('context',{}),503),{error:'SOURCE_EXPORT_READ_FAILED'});
+ });assert.deepEqual(await facts(f),saved);
+});
+
+async function stopFixtureExport(f,job){
+ const verified=await lifecycle.verify(f.credential,signal(),'background',true),hash=sessionCredentialHash(f.credential);
+ try{return await database.commandTransaction(q=>q('SELECT crest_commands.stop_source_export($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::uuid,$12::bigint) AS result',[hash,verified.sessionId,verified.actorId,verified.provider.issuer,verified.provider.subject,verified.provider.sessionId,new Date(verified.provider.expiresAt),f.business,f.epoch,randomUUID(),job.id,job.version]),signal());}finally{hash.fill(0);}
+}
+test('genuine Auth owner export history pages committed jobs over actual HTTP after the app is reopened',async()=>{
+ const f=await fixture(),access=createSourceExportOwnerAccess(config,boundary,tokens,f.business,release);await stopFixtureExport(f,f.job);
+ for(let i=0;i<6;i++){const original={...originalRequest(f),reference:{...originalRequest(f).reference,operationId:randomUUID(),exportJobId:randomUUID()}},r=(await access.request(f.credential,original,signal())).forServer();assert.equal(r.state,'committed');await stopFixtureExport(f,r.receipt.job);}
+ const saved=await facts(f),expected=(await client.query('SELECT id FROM crest_private.export_jobs WHERE business_id=$1 ORDER BY created_at DESC,id DESC',[f.business])).rows.map(r=>r.id),start=verifications;
+ await exportHttp(f,async post=>{
+  const first=parseSourceExportList(await httpValue(await post('list',sourceExportListToWire(null))),f.business);assert.equal(first.jobs.length,5);assert(first.next);assert.deepEqual(first.jobs.map(j=>j.id),expected.slice(0,5));
+  const second=parseSourceExportList(await httpValue(await post('list',sourceExportListToWire(first.next))),f.business,first.next);assert.deepEqual(second.jobs.map(j=>j.id),expected.slice(5));assert.equal(second.next,null);
+ });assert.equal(verifications-start,2);assert.deepEqual(await facts(f),saved);
+});
+test('genuine Auth owner export history refuses foreign owners and provider revocation while preserving paused reads',async()=>{
+ const f=await fixture(),other=await fixture(),access=createSourceExportOwnerAccess(config,boundary,tokens,f.business,release),saved=await facts(f);await assert.rejects(access.list(other.credential,null,signal()),e=>e.message==='SOURCE_EXPORT_READ_FAILED');
+ await exportHttp(f,async post=>{
+  assert.equal((await httpValue(await post('list',sourceExportListToWire(null)))).jobs[0].id,f.job.id);await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[f.business]);assert.equal((await httpValue(await post('list',sourceExportListToWire(null)))).jobs[0].id,f.job.id);
+  await client.query('DELETE FROM auth.sessions WHERE id=$1',[f.issued.evidence.provider.sessionId]);assert.deepEqual(await httpValue(await post('list',sourceExportListToWire(null)),503),{error:'SOURCE_EXPORT_READ_FAILED'});
  });assert.deepEqual(await facts(f),saved);
 });

@@ -9,7 +9,7 @@ import {migrationTestTarget} from '../../src/tooling/migration-coordinator.ts';
 import {connect,hash,normalizedSchema,postgresTool,roleDefinitions,run} from './recovery-drill.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url)),limit=67108864;
 const tool=join(root,'.local/tools/recovery/age/age'+(process.platform==='win32'?'.exe':''));
-const proposalPaths=['source-export-jobs.sql','source-export-snapshots.sql','source-export-parts.sql','source-export-ready.sql','source-export-journal-reads.sql','source-export-request-resolution.sql'].map(n=>'planning/proposals/'+n);
+const proposalPaths=['source-export-jobs.sql','source-export-snapshots.sql','source-export-parts.sql','source-export-ready.sql','source-export-journal-reads.sql','source-export-request-resolution.sql','source-export-owner-reads.sql'].map(n=>'planning/proposals/'+n);
 async function binding(){
  const raw=await readFile(join(root,'supabase/migration-checksums.json')),registry=JSON.parse(raw),pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));assert.equal(registry.migrations.length,42);
  const files=[];for(const path of proposalPaths)files.push({path,sha256:hash(await readFile(join(root,path)))});

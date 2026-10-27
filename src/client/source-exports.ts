@@ -3,9 +3,11 @@ import {customerUuid as uuid,exactCustomerObject as exact} from '../customer/cus
 import {parseSourceExportJob,parseSourceExportCommitted} from '../security/source-export-job-contract';
 import {parseExportRequestReference,parseExportRequestRetirement,parseExportRequestResolution} from '../security/source-export-request-resolution';
 import {sourceExportReferenceToWire,sourceExportRetirementToWire,sourceExportBodyLimit} from '../security/source-export-http-contract';
+import {parseSourceExportOwnerContext} from '../security/source-export-owner-context';
+import {parseSourceExportCursor,parseSourceExportList,sourceExportListToWire} from '../security/source-export-owner-list';
 
 type Kind='input'|'not_submitted'|'recovery'|'limited'|'unknown'|'unavailable';
-type Route='request'|'status'|'original'|'retire'|'resolution';
+type Route='context'|'list'|'request'|'status'|'original'|'retire'|'resolution';
 export class SourceExportClientError extends Error{readonly kind:Kind;constructor(kind:Kind){super('SOURCE_EXPORT_REQUEST_FAILED');this.name='SourceExportClientError';this.kind=kind;}}
 function require(value:unknown):asserts value{if(!value)throw new Error();}
 async function readResponse(response:Response,signal:AbortSignal){
@@ -42,6 +44,9 @@ async function post(route:Route,body:object,proof:Proof,external:AbortSignal){
 // Stateless, fixed expected principal; server authority comes from the cookie
 // and fresh verification. Caller must abort on principal changes. No IDs,
 // storage, worker dispatch, download, retries or pending-reference clearing.
+export async function sourceExportOwnerContext(proof:Proof,signal:AbortSignal){
+ const value=await post('context',{},proof,signal);try{return parseSourceExportOwnerContext(value);}catch{throw new SourceExportClientError('unavailable');}
+}
 export function createSourceExportClient(businessId:string,actorId:string){
  if(!uuid(businessId)||!uuid(actorId))throw new SourceExportClientError('input');const scope=businessId,actor=actorId;
  function original(input:unknown){try{const value=parseExportRequestReference(input);require(value.businessId===scope);return value;}catch{throw new SourceExportClientError('input');}}
@@ -54,6 +59,10 @@ export function createSourceExportClient(businessId:string,actorId:string){
   }catch{throw new SourceExportClientError(route==='request'?'unknown':'unavailable');}
  }
  return Object.freeze({
+  async list(input:unknown,proof:Proof,signal:AbortSignal){
+   let cursor:ReturnType<typeof parseSourceExportCursor>;try{cursor=parseSourceExportCursor(input);}catch{throw new SourceExportClientError('input');}
+   const value=await post('list',sourceExportListToWire(cursor),proof,signal);try{return parseSourceExportList(value,scope,cursor);}catch{throw new SourceExportClientError('unavailable');}
+  },
   request:(input:unknown,proof:Proof,signal:AbortSignal)=>receipt('request',input,proof,signal),
   lookupRequest:(input:unknown,proof:Proof,signal:AbortSignal)=>receipt('original',input,proof,signal),
   async status(exportJobId:string,proof:Proof,signal:AbortSignal){

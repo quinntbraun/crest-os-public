@@ -11,6 +11,7 @@ import {join} from 'node:path';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {parseSourceExportCommand,parseSourceExportCommitted} from '../../src/security/source-export-job-contract.ts';
+import {parseSourceExportList} from '../../src/security/source-export-owner-list.ts';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import {createJournalTextAssembler} from '../../src/security/source-export-journal-text.ts';
 import {createBusinessSourceJournalCollector} from '../../src/security/business-foundation-collector.ts';
@@ -25,7 +26,7 @@ import {readLogicalSourceExportCsv} from '../../src/security/source-export-csv-r
 import {exerciseNeutralJournalImport} from '../support/neutral-journal-import.mjs';
 import {backupJournalDatabase,restoreJournalDatabase,journalInventory} from '../support/journal-recovery-drill.mjs';
 import {connect as recoveryConnect,inventory as legacyRecoveryInventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase as legacyRestoreDatabase,run,hash as recoveryHash} from '../support/recovery-drill.mjs';
-let sandbox,target,client,web,web2,bootstrap,login,pid2,history,readerLogin,readerUrl,readerUnsafeRefused=false,unsafeRefused=false,resolutionUnsafeRefused=false,legacyResolutionDefinitions;
+let sandbox,target,client,web,web2,bootstrap,login,pid2,history,readerLogin,readerUrl,readerUnsafeRefused=false,unsafeRefused=false,resolutionUnsafeRefused=false,ownerReadsUnsafeRefused=false,legacyResolutionDefinitions;
 const issuer='https://auth.example.com/auth/v1',release='a'.repeat(40);
 const auth=f=>[f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+300000),f.business];
 const query=(c,sql,args)=>c.query(sql,args).then(r=>r.rows[0].value);
@@ -37,6 +38,7 @@ const expire=(f,job,version,lease,operation=randomUUID())=>query(web,'SELECT cre
 const stop=(f,job,version,operation=randomUUID())=>query(web,'SELECT crest_commands.stop_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS value',[...auth(f),f.epoch,operation,job,version]).then(value=>checked(value,reference(f,'export.stop',job,operation,{expectedVersion:version}),f.actor));
 const status=(f,job,c=web)=>query(c,'SELECT crest_commands.read_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9) AS value',[...auth(f),job]);
 const lookup=(f,operation,c=web)=>query(c,'SELECT crest_commands.lookup_source_export_operation($1,$2,$3,$4,$5,$6,$7,$8,$9) AS value',[...auth(f),operation]);
+const ownerList=(f,before=null)=>query(web,'SELECT crest_commands.list_source_exports($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS value',[...auth(f),before?.createdAt??null,before?.id??null]);
 async function session(f,age='1 second',c=client){
  const provider=randomUUID(),session=randomUUID(),hash=randomBytes(32);
  await c.query("INSERT INTO auth.sessions(id,user_id,aal,created_at,updated_at) VALUES($1,$2,'aal2',clock_timestamp(),clock_timestamp())",[provider,f.subject]);
@@ -57,7 +59,8 @@ before(async()=>{
  await client.query('BEGIN');try{
   await client.query(sql);for(const name of ['snapshots','parts','ready'])await client.query(await readFile(new URL('../../planning/proposals/source-export-'+name+'.sql',import.meta.url),'utf8'));
   const reads=await readFile(new URL('../../planning/proposals/source-export-journal-reads.sql',import.meta.url),'utf8');await client.query('ALTER ROLE crest_export_owner LOGIN');await client.query('SAVEPOINT unsafe_reader_owner');await assert.rejects(client.query(reads),e=>e.code==='42501'&&e.message==='CREST_JOURNAL_EXPORT_SOURCE_REVIEW_REQUIRED');await client.query('ROLLBACK TO SAVEPOINT unsafe_reader_owner');await client.query('ALTER ROLE crest_export_owner NOLOGIN');readerUnsafeRefused=true;await client.query(reads);
-  legacyResolutionDefinitions=await resolutionDefinitions(client);const resolution=await readFile(new URL('../../planning/proposals/source-export-request-resolution.sql',import.meta.url),'utf8');await client.query('SAVEPOINT unsafe_resolution_source');await client.query('ALTER FUNCTION crest_private.operation_retirement_digest(uuid,uuid,jsonb,text) SET search_path=public');await assert.rejects(client.query(resolution),e=>e.code==='42501'&&e.message==='CREST_EXPORT_REQUEST_RESOLUTION_SOURCE_REVIEW_REQUIRED');await client.query('ROLLBACK TO SAVEPOINT unsafe_resolution_source');resolutionUnsafeRefused=true;await client.query(resolution);assert.deepEqual(await resolutionDefinitions(client),legacyResolutionDefinitions);await client.query('COMMIT');
+  legacyResolutionDefinitions=await resolutionDefinitions(client);const resolution=await readFile(new URL('../../planning/proposals/source-export-request-resolution.sql',import.meta.url),'utf8');await client.query('SAVEPOINT unsafe_resolution_source');await client.query('ALTER FUNCTION crest_private.operation_retirement_digest(uuid,uuid,jsonb,text) SET search_path=public');await assert.rejects(client.query(resolution),e=>e.code==='42501'&&e.message==='CREST_EXPORT_REQUEST_RESOLUTION_SOURCE_REVIEW_REQUIRED');await client.query('ROLLBACK TO SAVEPOINT unsafe_resolution_source');resolutionUnsafeRefused=true;await client.query(resolution);assert.deepEqual(await resolutionDefinitions(client),legacyResolutionDefinitions);
+  const ownerReads=await readFile(new URL('../../planning/proposals/source-export-owner-reads.sql',import.meta.url),'utf8');await client.query('SAVEPOINT unsafe_owner_read_source');await client.query('ALTER FUNCTION crest_commands.authorize_source_export_read(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid) SET search_path=public');await assert.rejects(client.query(ownerReads),e=>e.code==='42501'&&e.message==='CREST_EXPORT_OWNER_READ_SOURCE_REVIEW_REQUIRED');await client.query('ROLLBACK TO SAVEPOINT unsafe_owner_read_source');ownerReadsUnsafeRefused=true;await client.query(ownerReads);await client.query('COMMIT');
  }catch(e){await client.query('ROLLBACK');throw e;}
  bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
  login='crest_export_jobs_probe_0'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=password;web=await sandbox.connect(url.toString());web2=await sandbox.connect(url.toString());for(const c of [web,web2]){await c.query('SET ROLE crest_web');await c.query("SET lock_timeout='3s'");}pid2=(await web2.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
@@ -548,8 +551,8 @@ test('proposed journal encrypted recovery preserves all114 fields and the origin
  let cluster,restored,restoredWeb,read,webRole,readRole,liveRows;const lateJob=randomUUID(),lateLease=randomUUID();
  try{
   const backup=await backupJournalDatabase(client,target,point,keys.recipient,async()=>{assert.equal((await request(s.f,lateJob)).state,'committed');assert.equal((await claim(s.f,lateJob,'1',lateLease)).state,'committed');const live=await recoveryConnect(target);try{liveRows=await journalInventory(live);}finally{await live.end();}});
-  assert.equal(backup.manifest.schemaVersion,42);assert.equal(backup.manifest.schemaProposal.registered,false);assert.equal(backup.manifest.schemaProposal.proposedMigration,43);assert.equal(backup.manifest.schemaProposal.files.length,6);assert.equal(backup.manifest.inventoryLimitBytes,67108864);assert.equal(backup.manifest.completeBackup,false);assert(backup.manifest.excluded.includes('external_objects'));assert.notDeepEqual(backup.manifest.rows,liveRows);
-  const expectedProposalPaths=['source-export-jobs.sql','source-export-snapshots.sql','source-export-parts.sql','source-export-ready.sql','source-export-journal-reads.sql','source-export-request-resolution.sql'].map(name=>'planning/proposals/'+name);assert.deepEqual(backup.manifest.schemaProposal.files.map(f=>f.path),expectedProposalPaths);
+  assert.equal(backup.manifest.schemaVersion,42);assert.equal(backup.manifest.schemaProposal.registered,false);assert.equal(backup.manifest.schemaProposal.proposedMigration,43);assert.equal(backup.manifest.schemaProposal.files.length,7);assert.equal(backup.manifest.inventoryLimitBytes,67108864);assert.equal(backup.manifest.completeBackup,false);assert(backup.manifest.excluded.includes('external_objects'));assert.notDeepEqual(backup.manifest.rows,liveRows);
+  const expectedProposalPaths=['source-export-jobs.sql','source-export-snapshots.sql','source-export-parts.sql','source-export-ready.sql','source-export-journal-reads.sql','source-export-request-resolution.sql','source-export-owner-reads.sql'].map(name=>'planning/proposals/'+name);assert.deepEqual(backup.manifest.schemaProposal.files.map(f=>f.path),expectedProposalPaths);
   for(const [i,file]of backup.manifest.schemaProposal.files.entries())assert.deepEqual(file,{path:expectedProposalPaths[i],sha256:sha(await readFile(new URL('../../'+expectedProposalPaths[i],import.meta.url)))});
   cluster=await recoveryCluster();const restoredUrl=await cluster.database();await unlink(keys.path);
   const allowed=['PATH','HOME','USER','LOGNAME','SHELL','TMPDIR','TEMP','TMP','SystemRoot','SYSTEMROOT','COMSPEC','PATHEXT','DOCKER_HOST','DOCKER_CONTEXT','DOCKER_CONFIG','XDG_RUNTIME_DIR','LANG','LC_ALL','TZ','NODE_EXTRA_CA_CERTS'],env=Object.fromEntries(allowed.filter(k=>process.env[k]!==undefined).map(k=>[k,process.env[k]]));
@@ -643,4 +646,26 @@ test('a current export retirement retains an older request epoch and stays reada
 });
 test('an absent export resolution is only a scoped observation and never creates a retirement',async()=>{
  const f=await state(),other=await state(),original=exportOriginal(f),kept=await evidence(f);assert.deepEqual(await lookupExportResolution(f,original),{state:'absent'});await assert.rejects(lookupExportResolution(other,original),e=>e.code==='22023');await assert.rejects(retireExport(other,original),e=>e.code==='22023');assert.deepEqual(await evidence(f),kept);assert.equal((await evidence(other)).operations.length,0);
+});
+
+test('owner export listing rejects source drift and exposes only one closed scoped read definer',async()=>{
+ assert.equal(ownerReadsUnsafeRefused,true);assert.deepEqual(await resolutionDefinitions(client),legacyResolutionDefinitions);
+ const f=await state(),signature='crest_commands.list_source_exports(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,text,uuid)';
+ const p=(await client.query("SELECT p.prosecdef,p.provolatile,r.rolname,p.proconfig,has_function_privilege('crest_web',p.oid,'EXECUTE') AS web,has_function_privilege('crest_export',p.oid,'EXECUTE') AS exporter FROM pg_proc p JOIN pg_roles r ON r.oid=p.proowner WHERE p.oid=to_regprocedure($1)",[signature])).rows[0];assert.equal(p.prosecdef,true);assert.equal(p.provolatile,'v');assert.equal(p.rolname,'crest_command_owner');assert.deepEqual(p.proconfig,['search_path=pg_catalog, pg_temp','row_security=on']);assert.equal(p.web,true);assert.equal(p.exporter,false);assert.equal((await client.query("SELECT has_schema_privilege('crest_command_owner','crest_commands','CREATE') AS allowed")).rows[0].allowed,false);await assert.rejects(web.query('SELECT id FROM crest_private.export_jobs'),e=>e.code==='42501');assert.deepEqual(await ownerList(f),{schemaVersion:1,jobs:[],next:null});
+});
+test('owner export listing observes an empty scope without creating jobs operations or audit history',async()=>{
+ const f=await state(),saved=await evidence(f);assert.deepEqual(parseSourceExportList(await ownerList(f),f.business),{schemaVersion:1,jobs:[],next:null});assert.deepEqual(await evidence(f),saved);
+});
+test('owner export listing pages real immutable jobs without duplicates and excludes a later head from older pages',async()=>{
+ const f=await state();for(let i=0;i<7;i++){const r=await request(f);await stop(f,r.receipt.job.id,'1');}
+ const expected=(await client.query('SELECT id FROM crest_private.export_jobs WHERE business_id=$1 ORDER BY created_at DESC,id DESC',[f.business])).rows.map(r=>r.id),first=parseSourceExportList(await ownerList(f),f.business);assert.equal(first.jobs.length,5);assert(first.next);assert.deepEqual(first.jobs.map(j=>j.id),expected.slice(0,5));
+ const late=await request(f),saved=await evidence(f),second=parseSourceExportList(await ownerList(f,first.next),f.business,first.next);assert.deepEqual(second.jobs.map(j=>j.id),expected.slice(5));assert.equal(second.next,null);assert(!second.jobs.some(j=>j.id===late.receipt.job.id));assert.equal((await ownerList(f)).jobs[0].id,late.receipt.job.id);assert.deepEqual(await evidence(f),saved);
+});
+test('owner export listing refuses malformed and foreign cursors and stale session authority',async()=>{
+ const f=await state(),other=await state(),row=(await request(other)).receipt.job,saved=await evidence(f);
+ for(const before of [{createdAt:row.created_at,id:row.id},{createdAt:row.created_at,id:randomUUID()},{createdAt:'2026-99-01T00:00:00.000000Z',id:row.id},{createdAt:null,id:row.id},{createdAt:row.created_at,id:null}])await assert.rejects(ownerList(f,before));
+ const stale=await state('16 minutes');await assert.rejects(ownerList(stale),e=>e.code==='42501');assert.deepEqual(await evidence(f),saved);
+});
+test('owner export listing remains read-only during pause and refuses local revocation',async()=>{
+ const f=await state(),r=await request(f),saved=await evidence(f);await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[f.business]);assert.equal((await ownerList(f)).jobs[0].id,r.receipt.job.id);assert.deepEqual(await evidence(f),saved);await client.query('UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),version=version+1 WHERE id=$1',[f.session]);await assert.rejects(ownerList(f),e=>e.code==='42501');assert.deepEqual(await evidence(f),saved);
 });

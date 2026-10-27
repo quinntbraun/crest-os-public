@@ -10,8 +10,9 @@ import {createSourceExportOwnerAccess,SourceExportOwnerAccessError} from './sour
 import {customerUuid as uuid} from '../customer/customer-contract.ts';
 import {sourceExportBodyLimit,sourceExportReferenceWireKeys,sourceExportRetirementWireKeys,sourceExportStatusWireKeys,parseSourceExportReferenceWire,parseSourceExportRetirementWire,parseSourceExportStatusWire} from './source-export-http-contract.ts';
 import type {SessionDatabaseConfiguration} from './session-database.ts';
+import {sourceExportListWireKeys,parseSourceExportListWire} from './source-export-owner-list.ts';
 
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;appReleaseId:string};
 const prefix='/api/business/exports/';
 function failure(status:400|404|405|503=400,error='SOURCE_EXPORT_REQUEST_FAILED'){
  const response=privateJsonResponse({error},status);if(status===405)response.headers.set('Allow','POST');return response;
@@ -19,26 +20,30 @@ function failure(status:400|404|405|503=400,error='SOURCE_EXPORT_REQUEST_FAILED'
 // Private composition only, disabled by default. This does not register a
 // route, adopt schema43, dispatch a worker or authorize file downloads.
 export function createSourceExportHttp(config:Configuration,provider:Parameters<typeof createSourceExportOwnerAccess>[1],tokens:Parameters<typeof createSourceExportOwnerAccess>[2],enabled=false){
- if(!uuid(config.businessId)||typeof enabled!=='boolean')throw new Error('SOURCE_EXPORT_HTTP_CONFIGURATION_REQUIRED');
- const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
- const access=enabled?createSourceExportOwnerAccess(config,provider,tokens,businessId):undefined;
+ if(!uuid(config.businessId)||typeof config.appReleaseId!=='string'||!/^[a-f0-9]{40}$/.test(config.appReleaseId)||typeof enabled!=='boolean')throw new Error('SOURCE_EXPORT_HTTP_CONFIGURATION_REQUIRED');
+ const businessId=config.businessId,appReleaseId=config.appReleaseId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
+ const access=enabled?createSourceExportOwnerAccess(config,provider,tokens,businessId,appReleaseId):undefined;
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>):Promise<Response>=>{
   let mutation:'request'|'resolution'|undefined,workStarted=false;
   try{
    const signal=AbortSignal.any([request.signal,AbortSignal.timeout(40000)]);if(signal.aborted)throw new Error();resolve(request,peer);
    const url=new URL(request.url),route=url.pathname.slice(prefix.length);
-   if(!enabled||url.search||url.hash||!url.pathname.startsWith(prefix)||!['request','status','original','retire','resolution'].includes(route))return failure(404);
+   if(!enabled||url.search||url.hash||!url.pathname.startsWith(prefix)||!['context','list','request','status','original','retire','resolution'].includes(route))return failure(404);
    if(request.method!=='POST')return failure(405);
    protect.requireOrigin(request);const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;if(!cookie)throw new Error();
-   const input=await readFlatJsonBody(bounded,route==='retire'?sourceExportRetirementWireKeys:route==='status'?sourceExportStatusWireKeys:sourceExportReferenceWireKeys,sourceExportBodyLimit);
+   const input=await readFlatJsonBody(bounded,route==='context'?[]:route==='list'?sourceExportListWireKeys:route==='retire'?sourceExportRetirementWireKeys:route==='status'?sourceExportStatusWireKeys:sourceExportReferenceWireKeys,sourceExportBodyLimit);
+   const cursor=route==='list'?parseSourceExportListWire(input):undefined;
    const retirement=route==='retire'?parseSourceExportRetirementWire(input,businessId):undefined;
    const jobId=route==='status'?parseSourceExportStatusWire(input):undefined;
-   const original=jobId?undefined:retirement?.original??parseSourceExportReferenceWire(input,businessId);
+   const original=jobId||route==='context'||route==='list'?undefined:retirement?.original??parseSourceExportReferenceWire(input,businessId);
+   if(route==='request'&&original?.reference.appReleaseId!==appReleaseId)throw Error();
    await csrf(bounded,cookie,signal);workStarted=true;
    if(!await admit(cookie,'ordinary',signal)){const response=privateJsonResponse({error:'SOURCE_EXPORT_REQUEST_LIMITED'},429);response.headers.set('Retry-After','60');return response;}
    if(signal.aborted)throw new Error();
    let value:object;
-   if(route==='request'){mutation='request';value=(await access!.request(cookie,original,signal)).forServer();}
+   if(route==='context')value=(await access!.context(cookie,signal)).forServer();
+   else if(route==='list')value=(await access!.list(cookie,cursor,signal)).forServer();
+   else if(route==='request'){mutation='request';value=(await access!.request(cookie,original,signal)).forServer();}
    else if(retirement){mutation='resolution';value=(await access!.retireRequest(cookie,retirement,signal)).forServer();}
    else if(jobId)value=(await access!.status(cookie,jobId,signal)).forServer();
    else if(route==='original')value=(await access!.lookupRequest(cookie,original,signal)).forServer();
