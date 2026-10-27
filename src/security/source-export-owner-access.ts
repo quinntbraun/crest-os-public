@@ -78,7 +78,7 @@ export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguratio
    try{
     const result=await authorized(credential,external,(args,actor,signal)=>{
      submitted=true;return database.commandTransaction(async(query,current)=>{
-      const value=await query('SELECT crest_commands.request_source_export($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::uuid,$12::text) AS result',[...args,r.recoveryEpoch,r.operationId,r.exportJobId,r.appReleaseId]);require(!current.aborted);
+      const value=await query('SELECT crest_commands.request_source_export_with_activity($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::uuid,$12::text) AS result',[...args,r.recoveryEpoch,r.operationId,r.exportJobId,r.appReleaseId]);require(!current.aborted);
       if(exact(value,['state','reason'])&&value.state==='conflict'&&(value.reason==='operation'||value.reason==='active_or_identity'))return Object.freeze({state:'conflict' as const,reason:value.reason});
       return parseSourceExportCommitted(value,command,actor);
      },signal);

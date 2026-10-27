@@ -48,6 +48,25 @@ REVOKE CREATE ON SCHEMA crest_commands FROM crest_command_owner;
 REVOKE ALL ON FUNCTION crest_commands.list_source_exports(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,text,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION crest_commands.list_source_exports(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,text,uuid) TO crest_web;
 
+-- Serialize the session before the read gate takes the recovery-root lock.
+-- Otherwise two metadata reads can both hold SHARE and deadlock when the
+-- subsequent mutation fence upgrades the same session to UPDATE.
+SET LOCAL ROLE crest_schema_owner;
+CREATE FUNCTION crest_commands.lock_source_export_download_context(credential_hash bytea,expected_session uuid,expected_actor uuid,expected_issuer text,expected_subject uuid,expected_provider_session uuid,provider_valid_until timestamptz,requested_business uuid)
+RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $$
+BEGIN
+ IF credential_hash IS NULL OR octet_length(credential_hash)<>32 OR expected_session IS NULL OR expected_actor IS NULL OR expected_issuer IS NULL OR length(expected_issuer) NOT BETWEEN 1 AND 500 OR expected_subject IS NULL OR expected_provider_session IS NULL OR provider_valid_until IS NULL OR NOT isfinite(provider_valid_until) OR requested_business IS NULL THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_EXPORT_DOWNLOAD_INPUT_REQUIRED';END IF;
+ PERFORM a.id FROM crest_private.actors a WHERE a.id=expected_actor FOR SHARE;
+ PERFORM b.id FROM crest.businesses b WHERE b.id=requested_business FOR SHARE;
+ PERFORM s.id FROM crest_private.app_sessions s WHERE s.id=expected_session FOR UPDATE;
+ RETURN crest_commands.authorize_source_export_read($1,$2,$3,$4,$5,$6,$7,$8);
+END $$;
+RESET ROLE;
+GRANT CREATE ON SCHEMA crest_commands TO crest_session_owner;
+ALTER FUNCTION crest_commands.lock_source_export_download_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid) OWNER TO crest_session_owner;
+REVOKE CREATE ON SCHEMA crest_commands FROM crest_session_owner;
+REVOKE ALL ON FUNCTION crest_commands.lock_source_export_download_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION crest_commands.lock_source_export_download_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid) TO crest_command_owner;
 -- Internal read gate. Root locks are released by the completed metadata query,
 -- before any later object-store/network I/O. Reacquire on every actual use.
 SET LOCAL ROLE crest_schema_owner;
@@ -57,7 +76,7 @@ DECLARE context jsonb;j crest_private.export_jobs;c record;
 BEGIN
  PERFORM set_config('crest.business_id','',true),set_config('crest.actor_id','',true),set_config('crest.operation_id','',true);
  IF requested_job IS NULL THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_EXPORT_DOWNLOAD_INPUT_REQUIRED';END IF;
- context:=crest_commands.authorize_source_export_read($1,$2,$3,$4,$5,$6,$7,$8);
+ context:=crest_commands.lock_source_export_download_context($1,$2,$3,$4,$5,$6,$7,$8);
  PERFORM set_config('crest.business_id',context->>'businessId',true),set_config('crest.actor_id',context->>'actorId',true);
  SELECT * INTO j FROM crest_private.export_jobs WHERE business_id=requested_business AND id=requested_job;
  IF NOT FOUND THEN RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='CREST_EXPORT_DOWNLOAD_UNAVAILABLE';END IF;
@@ -115,6 +134,42 @@ REVOKE CREATE ON SCHEMA crest_commands FROM crest_command_owner;
 REVOKE ALL ON FUNCTION crest_commands.current_source_export_download(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid),crest_commands.read_source_export_download_page(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer),crest_commands.read_source_export_download_part(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION crest_commands.read_source_export_download_page(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer),crest_commands.read_source_export_download_part(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid) TO crest_web;
 
+-- User-only completion, never called by worker checks or download metadata
+-- probes. Activity commits atomically with the durable foreground operation;
+-- authenticated_at/reauth_at and absolute expiry are never extended.
+SET LOCAL ROLE crest_schema_owner;
+CREATE FUNCTION crest_commands.finish_source_export_foreground_activity(credential_hash bytea,expected_session uuid,expected_actor uuid,expected_issuer text,expected_subject uuid,expected_provider_session uuid,provider_valid_until timestamptz,requested_business uuid,expected_epoch uuid,requested_operation uuid)
+RETURNS void LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $$
+BEGIN
+ IF requested_operation IS NULL THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_EXPORT_ACTIVITY_OPERATION_REQUIRED';END IF;
+ PERFORM crest_commands.lock_source_export_authority($1,$2,$3,$4,$5,$6,$7,$8,$9);
+ UPDATE crest_private.app_sessions SET last_active_at=clock_timestamp(),version=version+1,updated_by=expected_actor,operation_id=requested_operation WHERE id=expected_session AND actor_id=expected_actor AND token_hash=credential_hash;
+ IF NOT FOUND THEN RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='CREST_EXPORT_ACTIVITY_DENIED';END IF;
+END $$;
+RESET ROLE;
+GRANT CREATE ON SCHEMA crest_commands TO crest_session_owner;
+ALTER FUNCTION crest_commands.finish_source_export_foreground_activity(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid) OWNER TO crest_session_owner;
+REVOKE CREATE ON SCHEMA crest_commands FROM crest_session_owner;
+REVOKE ALL ON FUNCTION crest_commands.finish_source_export_foreground_activity(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION crest_commands.finish_source_export_foreground_activity(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid) TO crest_command_owner;
+SET LOCAL ROLE crest_schema_owner;
+CREATE FUNCTION crest_commands.request_source_export_with_activity(credential_hash bytea,expected_session uuid,expected_actor uuid,expected_issuer text,expected_subject uuid,expected_provider_session uuid,provider_valid_until timestamptz,requested_business uuid,expected_epoch uuid,requested_operation uuid,requested_job uuid,requested_release text)
+RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $$
+DECLARE result jsonb;
+BEGIN
+ result:=crest_commands.request_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12);
+ IF result->>'state'='committed' THEN
+  PERFORM crest_commands.finish_source_export_foreground_activity($1,$2,$3,$4,$5,$6,$7,$8,$9,$10);
+ END IF;
+ PERFORM set_config('crest.business_id','',true),set_config('crest.actor_id','',true),set_config('crest.operation_id','',true);
+ RETURN result;
+END $$;
+RESET ROLE;
+GRANT CREATE ON SCHEMA crest_commands TO crest_command_owner;
+ALTER FUNCTION crest_commands.request_source_export_with_activity(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,text) OWNER TO crest_command_owner;
+REVOKE CREATE ON SCHEMA crest_commands FROM crest_command_owner;
+REVOKE ALL ON FUNCTION crest_commands.request_source_export_with_activity(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION crest_commands.request_source_export_with_activity(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,text) TO crest_web;
 -- Durable sensitive-read evidence. This records authorization to hand off one
 -- verified file, never a claim that a network transfer completed. Existing
 -- append-only operations/audit are exported with ordinary business history.
@@ -136,6 +191,7 @@ BEGIN
  INSERT INTO crest_private.audit_events(business_id,operation_id,actor_id,created_by,entity_kind,entity_id,entity_version,action,delta,origin) VALUES(requested_business,operation,expected_actor,expected_actor,'export_accesses',operation,1,'authorized_handoff',jsonb_build_object('schemaVersion',1,'before',NULL,'after',scope),'manual') RETURNING id,recorded_at INTO event,stamp;
  receipt:=jsonb_build_object('schemaVersion',1,'state','authorized_handoff','operationId',operation,'auditEventId',event,'recordedAt',to_char(stamp AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),'scope',scope);
  UPDATE crest_private.operations SET state='committed',result_schema_version=1,result=receipt WHERE business_id=requested_business AND operation_id=operation AND actor_id=expected_actor;
+ PERFORM crest_commands.finish_source_export_foreground_activity($1,$2,$3,$4,$5,$6,$7,$8,(current_record->'authority'->>'recoveryEpoch')::uuid,operation);
  IF crest_commands.read_source_export_download_part($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) IS DISTINCT FROM current_record THEN RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='CREST_EXPORT_DOWNLOAD_UNAVAILABLE';END IF;
  RETURN receipt;
 END $$;
