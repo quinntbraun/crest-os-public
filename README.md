@@ -1,6 +1,6 @@
 # Crest OS
 
-Current development: [joint source/journal export worker, independent verification and original durable acknowledgments](planning/PHASE_4_JOINT_EXPORT_WORKER.md), following [explicit interrupted-save recovery](planning/PHASE_4_ORIGINAL_OPERATION_RESOLUTION.md) and [atomic lead conversion](planning/PHASE_4_LEAD_CONVERSION.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence. New native worker execution, schema 43 adoption and owner delivery remain gated.
+Current development: [private owner export request/status access](planning/PHASE_4_EXPORT_OWNER_ACCESS.md) and [audited interrupted-request resolution](planning/PHASE_4_EXPORT_REQUEST_RESOLUTION.md), following the [verified joint export worker](planning/PHASE_4_JOINT_EXPORT_WORKER.md), [interrupted-save recovery](planning/PHASE_4_ORIGINAL_OPERATION_RESOLUTION.md) and [atomic lead conversion](planning/PHASE_4_LEAD_CONVERSION.md). See [the active checkpoint](planning/WORKING_STATE.md) and live PR/CI evidence. New owner/resolution execution, schema 43 adoption and owner screens/download remain gated.
 
 Crest Detailing's internal business operating system.
 
