@@ -3,7 +3,7 @@
 import {customerUuid as uuid,customerVersion as version,customerInstant as instant} from '../customer/customer-contract.ts';
 type Common=Readonly<{operationId:string;recoveryEpoch:string;exportJobId:string}>;
 type Targets={
- 'export.request':Readonly<{appReleaseId:string;profile:'crest.business-source-bundle.v1';sourceSchemaVersion:43}>;
+ 'export.request':Readonly<{appReleaseId:string;profile:'crest.business-source-journal-bundle.v1';sourceSchemaVersion:43}>;
  'export.claim':Readonly<{expectedVersion:string;leaseId:string}>;
  'export.expire':Readonly<{expectedVersion:string;leaseId:string}>;
  'export.stop':Readonly<{expectedVersion:string}>;
@@ -11,7 +11,7 @@ type Targets={
 };
 export type SourceExportCommand={ [K in keyof Targets]:Readonly<{schemaVersion:1;businessId:string;commandType:K;reference:Common&Targets[K]}> }[keyof Targets];
 export type SourceExportJob=Readonly<{
- id:string;business_id:string;actor_id:string;profile:'crest.business-source-bundle.v1';app_release_id:string;source_schema_version:43;
+ id:string;business_id:string;actor_id:string;profile:'crest.business-source-journal-bundle.v1';app_release_id:string;source_schema_version:43;
  recovery_epoch:string;request_operation_id:string;state:'Queued'|'Running'|'Failed'|'Ready';attempt_count:number;lease_id:string|null;lease_until:string|null;
  next_run_at:string;failure_code:'LEASE_EXPIRED'|'OWNER_STOPPED'|null;version:string;created_at:string;updated_at:string;
  created_by:string;updated_by:string;origin:'manual';operation_id:string;import_row_id:null;
@@ -25,7 +25,7 @@ function object(value:unknown,keys:readonly string[]):Record<string,unknown>{
  return Object.fromEntries(keys.map(k=>[k,descriptors[k]!.value]));
 }
 const hash=(v:unknown):v is string=>typeof v==='string'&&/^[a-f0-9]{40}$/.test(v);
-const profile='crest.business-source-bundle.v1';
+const profile='crest.business-source-journal-bundle.v1';
 const fields={
  'export.request':['appReleaseId','profile','sourceSchemaVersion'],
  'export.claim':['expectedVersion','leaseId'],

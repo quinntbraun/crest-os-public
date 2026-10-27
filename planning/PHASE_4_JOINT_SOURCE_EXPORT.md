@@ -41,13 +41,12 @@ does not prove capture authenticity, full source relationships, current owner
 authorization, Ready status, whole-business export or complete backup. All those
 completeness/provenance claims remain false.
 
-Compatibility decision still pending: proposed SQL jobs currently freeze
-`crest.business-source-bundle.v1`, while the new joint package declares the
-distinct joint profile above. The existing schema 42 worker must not dispatch
-this package under that old profile. Before adoption, explicitly reconcile the
-unregistered SQL/job contract, worker plan, journal acknowledgments and independent
-download verifier, then execute fresh database/Auth/custody/recovery tests.
-No registered migration or SQL proposal is changed by this format construction.
+The later [joint worker revision](PHASE_4_JOINT_EXPORT_WORKER.md) explicitly
+reconciles the unregistered SQL/job contract and worker plan with this joint
+profile. It retains the existing schema 42 worker's closed contract. The revised
+proposal and composition require fresh database/Auth/custody/recovery execution,
+independent download composition and canonical adoption before use. This original
+format slice itself changed no registered migration or SQL proposal.
 
 Validation: all 5,331 local unit cases across 154 files pass, including 29 joint
 cases, the retained schema 42 regressions, coherent rehash substitutions, counter

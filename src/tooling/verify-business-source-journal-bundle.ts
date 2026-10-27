@@ -28,7 +28,8 @@ export function verifyBusinessSourceJournalBundle(manifestText:unknown,physical:
   const rawJournal=files.get('journal_capture.json');require(rawJournal);const j=JSON.parse(rawJournal.content);
   const bytes=[source.configuration,source.identity,source.history,source.crm,rawJournal.content].reduce((n,t)=>n+Buffer.byteLength(t),0);
   require(bytes<=33554432&&bytes===m.evidenceBytes&&m.sourceRecordCount===sourceJson.recordCount&&m.journalRecordCount===journal.recordCount&&m.recordCount===sourceJson.recordCount+journal.recordCount&&Number.isSafeInteger(m.recordCount)&&(m.recordCount as number)<=10000&&m.metadataBytes===sourceJson.evidenceBytes+j.metadataBytes&&m.originalBytes===j.originalBytes&&m.wireBytes===j.wireBytes);
-  const value=Object.freeze({...b,observedAt:source.observedAt,sourceRows:source.rows,journalRows:journal.rows,recordCount:m.recordCount,assurance:'included_source_consistency_only' as const,consistentCaptureProven:false as const,referenceClosureComplete:false as const,completePortableExport:false as const,completeBackup:false as const});
+  const originals=Object.freeze({configuration:source.configuration,identity:source.identity,history:source.history,crm:source.crm,journal:rawJournal.content});
+  const value=Object.freeze({...b,observedAt:source.observedAt,sourceRows:source.rows,journalRows:journal.rows,originals,recordCount:m.recordCount,assurance:'included_source_consistency_only' as const,consistentCaptureProven:false as const,referenceClosureComplete:false as const,completePortableExport:false as const,completeBackup:false as const});
   return Object.freeze({forJournalBundleVerification:()=>value,toJSON():never{throw new BusinessSourceJournalVerificationError();}});
  }catch{throw new BusinessSourceJournalVerificationError();}
 }

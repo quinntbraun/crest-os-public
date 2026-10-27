@@ -1,6 +1,6 @@
 // Genuine Auth SDK + encrypted local session + restricted PostgreSQL candidate.
-// Metadata journal only; existing seven separate SQL/SDK/HTTP custody cases
-// prove actual object effects. No hosted service or schema43 activation.
+// Includes a worker/port composition with simulated storage. Separate genuine
+// SQL/SDK/HTTP custody cases prove object effects. No hosted service activation.
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
 import {randomBytes,randomUUID,createHash} from 'node:crypto';
@@ -16,16 +16,20 @@ import {createSessionLifecycle} from '../../src/security/session-lifecycle.ts';
 import {sessionCredentialHash} from '../../src/security/session-credential.ts';
 import {sessionDatabase} from '../../src/security/session-database.ts';
 import {createSourceExportDatabaseJournal} from '../../src/security/source-export-database-journal.ts';
-let sandbox,target,client,service,login,config,boundary,tokens,lifecycle,database,verifications=0;
+import {createBusinessSourceJournalCollector} from '../../src/security/business-foundation-collector.ts';
+import {createBusinessSourceJournalExportWorker} from '../../src/security/business-source-export-worker.ts';
+import {bindSourceExportJournalWorker} from '../../src/security/source-export-journal-worker-port.ts';
+let sandbox,target,client,service,login,readerLogin,readerUrl,config,boundary,tokens,lifecycle,database,verifications=0;
 const signal=()=>new AbortController().signal,sha=text=>createHash('sha256').update(text).digest('hex'),release='a'.repeat(40);
 before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);assert.equal((await sandbox.apply(target)).history.length,42);
  await client.query('BEGIN');try{for(const name of ['jobs','snapshots','parts','ready','journal-reads'])await client.query(await readFile(new URL('../../planning/proposals/source-export-'+name+'.sql',import.meta.url),'utf8'));await client.query('COMMIT');}catch(e){await client.query('ROLLBACK');throw e;}
  login='crest_export_auth_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=password;config={connectionString:url.toString(),environment:'test'};database=sessionDatabase(config);
+ readerLogin='crest_export_read_0'+randomBytes(8).toString('hex');const readerPassword=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+readerLogin+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+readerPassword+"'");await sandbox.admin.query('GRANT crest_export TO '+readerLogin+' WITH INHERIT FALSE');const readerAddress=new URL(target);readerAddress.username=readerLogin;readerAddress.password=readerPassword;readerUrl=readerAddress.toString();
  service=await startRealAuthService(target);const actual=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},createLiveProviderSessionLookup(config));boundary={...actual,async verifyAccess(...args){verifications++;return actual.verifyAccess(...args);}};
  tokens=await createProviderTokenStore('synthetic-export-auth',[{id:'synthetic-export-auth',key:randomBytes(32)}]);lifecycle=createSessionLifecycle(config,boundary,tokens);
 },{timeout:240000});
-after(async()=>{await service?.close();if(login)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
+after(async()=>{await service?.close();if(login)await sandbox.admin.query('DROP ROLE '+login);if(readerLogin)await sandbox.admin.query('DROP ROLE '+readerLogin);await sandbox?.close();});
 async function fixture(){
  const email='synthetic-export-'+randomUUID()+'@example.com',password=randomBytes(32).toString('base64url'),user=authResult(await service.admin.admin.createUser({email,password,email_confirm:true}),'export_user').user;assert(user?.id);const sdk=service.sdk();await sdk.initialize();authResult(await sdk.signInWithPassword({email,password}),'export_enrollment_password');const factor=authResult(await sdk.mfa.enroll({factorType:'totp',friendlyName:'Synthetic export MFA'}),'export_enrollment'),totp=URI.parse(factor.totp.uri);assert(totp instanceof TOTP);authResult(await sdk.mfa.challengeAndVerify({factorId:factor.id,code:totp.generate()}),'export_enrollment_verify');
  const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;let actor,business,epoch;await client.query('BEGIN');try{
@@ -40,7 +44,7 @@ async function fixture(){
   await database.commandTransaction(q=>q('SELECT crest_commands.request_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS result',[...args,randomUUID(),jobId,release]),signal());
   job=(await database.commandTransaction(q=>q('SELECT crest_commands.claim_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) AS result',[...args,randomUUID(),jobId,'1',lease]),signal())).receipt.job;
  }finally{hash.fill(0);}
- const claim={formatVersion:1,profile:'crest.business-source-bundle.v1',businessId:business,actorId:actor,exportJobId:jobId,recoveryEpoch:epoch,leaseId:lease},observedAt=(await client.query("SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"+00:00\"') AS value")).rows[0].value;
+ const claim={formatVersion:1,profile:'crest.business-source-journal-bundle.v1',businessId:business,actorId:actor,exportJobId:jobId,recoveryEpoch:epoch,leaseId:lease},observedAt=(await client.query("SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"+00:00\"') AS value")).rows[0].value;
  const plan={formatVersion:1,claim,generationId:randomUUID(),observedAt,appReleaseId:release,sourceSchemaVersion:43,manifestSha256:'c'.repeat(64),parts:[{partId:randomUUID(),fileName:'example.csv',contentType:'text/csv; charset=utf-8',bytes:7,sha256:'b'.repeat(64)},{partId:randomUUID(),fileName:'source_manifest.json',contentType:'application/json',bytes:9,sha256:'c'.repeat(64)}],totalBytes:16,referenceClosureComplete:false,completePortableExport:false,completeBackup:false};
  const planSha256=sha(JSON.stringify(plan)),parts=plan.parts.map(p=>({claim,generationId:plan.generationId,planSha256,partId:p.partId,intent:{formatVersion:1,objectKey:'exports/'+business+'/'+jobId+'/'+plan.generationId+'/'+p.partId+'.jwe',keyId:'synthetic-export-key',plaintextBytes:p.bytes,plaintextSha256:p.sha256,ciphertextBytes:1024,ciphertextSha256:'d'.repeat(64)}}));
  return{business,actor,epoch,issued,credential,job,operation,claim,plan,parts,port:createSourceExportDatabaseJournal(config,boundary,tokens,job,operation),authorize:JSON.stringify(claim),snapshot:JSON.stringify({plan,planSha256}),ready:JSON.stringify({plan,planSha256,parts})};
@@ -72,4 +76,17 @@ test('genuine Auth journal refuses a different authenticated actor even when tha
 });
 test('genuine Auth Ready lookup is read-only during pause and an absent original remains unproven',async()=>{
  const f=await fixture(),before=await facts(f);assert.deepEqual((await f.port.lookupReady(f.credential,f.ready,signal())).forServer(),{state:'absent'});assert.deepEqual(await facts(f),before);await throughParts(f);await stage(f,'ready',f.ready);const saved=await facts(f);await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[f.business]);assert.equal((await f.port.lookupReady(f.credential,f.ready,signal())).forServer().state,'committed');await assert.rejects(f.port.ready(f.credential,f.ready,signal()),e=>e.message==='RECOVERY_REVIEW_REQUIRED');assert.deepEqual(await facts(f),saved);
+});
+
+test('genuine Auth joint worker commits every independently verified file through fresh database journal checks',{timeout:180000},async()=>{
+ const f=await fixture(),before=verifications,candidates=new WeakMap(),objects=new Map();let credentials=0,parts=0;
+ // Storage is intentionally simulated here; the separate real SQL/SDK/HTTP
+ // worker test proves encrypted custody. This case proves real Auth composition.
+ const store={
+  async prepare(bytes,binding){const intent={formatVersion:1,objectKey:'exports/'+binding.businessId+'/'+binding.exportJobId+'/'+binding.generationId+'/'+binding.partId+'.jwe',keyId:'synthetic-auth-worker',plaintextBytes:bytes.length,plaintextSha256:sha(bytes),ciphertextBytes:bytes.length+128,ciphertextSha256:'d'.repeat(64)},prepared={intentForServer:()=>intent,toJSON(){throw Error('PRIVATE');}};candidates.set(prepared,intent);return prepared;},
+  async writeCandidate(prepared){const intent=candidates.get(prepared);assert(intent);assert.equal(objects.has(intent.objectKey),false);const current=await facts(f);assert.equal(current.export_part_intents.length,parts+1);assert.equal(current.export_part_verifications.length,parts);objects.set(intent.objectKey,intent);parts++;return intent;}
+ };
+ const port=bindSourceExportJournalWorker(f.port,async()=>{credentials++;return f.credential;}),worker=createBusinessSourceJournalExportWorker({businessId:f.business,appReleaseId:release},createBusinessSourceJournalCollector({connectionString:readerUrl,environment:'test',businessId:f.business}),store,port),delivered=await worker.run(f.claim,signal()),result=delivered.forJournalWorker();
+ assert.equal(Object.hasOwn(delivered,'forServer'),false);assert.equal(result.parts,parts);assert(parts>100);assert.equal(credentials,2*parts+3);assert.equal(verifications-before,credentials);
+ const saved=await facts(f);assert.equal(saved.export_jobs[0].value.state,'Ready');assert.equal(saved.export_job_snapshots.length,1);assert.equal(saved.export_part_intents.length,parts);assert.equal(saved.export_part_verifications.length,parts);assert.equal(saved.export_job_completions.length,1);const raw=saved.export_job_completions[0].value.request_text,original=JSON.parse(raw);assert.equal(original.plan.sourceSchemaVersion,43);assert.equal(original.plan.claim.profile,'crest.business-source-journal-bundle.v1');assert.equal(original.parts.length,parts);assert.equal((await f.port.lookupReady(f.credential,raw,signal())).forServer().state,'committed');assert.deepEqual(await facts(f),saved);
 });

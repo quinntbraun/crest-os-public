@@ -20,6 +20,7 @@ import {formatSourceExportJournalCsv} from '../../src/security/source-export-jou
 import {verifyJournalCsv} from '../../src/tooling/verify-journal-csv.ts';
 import {formatBusinessSourceJournalBundle} from '../../src/security/business-source-journal-bundle.ts';
 import {verifyBusinessSourceJournalBundle} from '../../src/tooling/verify-business-source-journal-bundle.ts';
+import {createBusinessSourceJournalExportWorker} from '../../src/security/business-source-export-worker.ts';
 import {readLogicalSourceExportCsv} from '../../src/security/source-export-csv-reader.ts';
 import {exerciseNeutralJournalImport} from '../support/neutral-journal-import.mjs';
 import {backupJournalDatabase,restoreJournalDatabase,journalInventory} from '../support/journal-recovery-drill.mjs';
@@ -30,7 +31,7 @@ const auth=f=>[f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Dat
 const query=(c,sql,args)=>c.query(sql,args).then(r=>r.rows[0].value);
 const reference=(f,kind,job,operation,extras)=>({schemaVersion:1,businessId:f.business,commandType:kind,reference:{operationId:operation,recoveryEpoch:f.epoch,exportJobId:job,...extras}});
 const checked=(value,command,actor)=>{if(value.state==='committed')assert.deepEqual(parseSourceExportCommitted(value,parseSourceExportCommand(command),actor),value);return value;};
-const request=(f,job=randomUUID(),operation=randomUUID(),app=release,c=web)=>query(c,'SELECT crest_commands.request_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS value',[...auth(f),f.epoch,operation,job,app]).then(value=>checked(value,reference(f,'export.request',job,operation,{appReleaseId:app,profile:'crest.business-source-bundle.v1',sourceSchemaVersion:43}),f.actor));
+const request=(f,job=randomUUID(),operation=randomUUID(),app=release,c=web)=>query(c,'SELECT crest_commands.request_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS value',[...auth(f),f.epoch,operation,job,app]).then(value=>checked(value,reference(f,'export.request',job,operation,{appReleaseId:app,profile:'crest.business-source-journal-bundle.v1',sourceSchemaVersion:43}),f.actor));
 const claim=(f,job,version='1',lease=randomUUID(),operation=randomUUID(),c=web)=>query(c,'SELECT crest_commands.claim_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) AS value',[...auth(f),f.epoch,operation,job,version,lease]).then(value=>checked(value,reference(f,'export.claim',job,operation,{expectedVersion:version,leaseId:lease}),f.actor));
 const expire=(f,job,version,lease,operation=randomUUID())=>query(web,'SELECT crest_commands.expire_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) AS value',[...auth(f),f.epoch,operation,job,version,lease]).then(value=>checked(value,reference(f,'export.expire',job,operation,{expectedVersion:version,leaseId:lease}),f.actor));
 const stop=(f,job,version,operation=randomUUID())=>query(web,'SELECT crest_commands.stop_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS value',[...auth(f),f.epoch,operation,job,version]).then(value=>checked(value,reference(f,'export.stop',job,operation,{expectedVersion:version}),f.actor));
@@ -65,7 +66,7 @@ after(async()=>{await web?.end();await web2?.end();if(login)await sandbox.admin.
 
 test('proposed export jobs refuse unsafe source ownership and preserve all42 registered history rows',async()=>{assert(unsafeRefused);assert.equal(history.length,42);assert.equal((await client.query("SELECT count(*)::int AS n FROM crest_private.export_jobs")).rows[0].n,0);assert.deepEqual((await client.query("SELECT relname,relrowsecurity,relforcerowsecurity,relowner='crest_schema_owner'::regrole AS owner FROM pg_class WHERE oid IN('crest_private.export_jobs'::regclass,'crest_private.export_job_attempts'::regclass) ORDER BY relname")).rows.map(r=>[r.relname,r.relrowsecurity,r.relforcerowsecurity,r.owner]),[['export_job_attempts',true,true,true],['export_jobs',true,true,true]]);});
 test('a recent owner freezes one private source request and exact original receipt with a matching immutable audit',async()=>{
- const f=await state(),job=randomUUID(),op=randomUUID(),first=await request(f,job,op);assert.equal(first.state,'committed');assert.equal(first.receipt.schemaVersion,1);assert.equal(first.receipt.job.id,job);assert.equal(first.receipt.job.actor_id,f.actor);assert.equal(first.receipt.job.profile,'crest.business-source-bundle.v1');assert.equal(first.receipt.job.source_schema_version,43);assert.equal(first.receipt.job.app_release_id,release);assert.equal(first.receipt.job.state,'Queued');assert.equal(first.receipt.job.version,'1');assert.equal(first.receipt.job.lease_id,null);assert.deepEqual(await request(f,job,op),first);assert.deepEqual(await lookup(f,op),first);assert.deepEqual((await status(f,job)).job,first.receipt.job);
+ const f=await state(),job=randomUUID(),op=randomUUID(),first=await request(f,job,op);assert.equal(first.state,'committed');assert.equal(first.receipt.schemaVersion,1);assert.equal(first.receipt.job.id,job);assert.equal(first.receipt.job.actor_id,f.actor);assert.equal(first.receipt.job.profile,'crest.business-source-journal-bundle.v1');assert.equal(first.receipt.job.source_schema_version,43);assert.equal(first.receipt.job.app_release_id,release);assert.equal(first.receipt.job.state,'Queued');assert.equal(first.receipt.job.version,'1');assert.equal(first.receipt.job.lease_id,null);assert.deepEqual(await request(f,job,op),first);assert.deepEqual(await lookup(f,op),first);assert.deepEqual((await status(f,job)).job,first.receipt.job);
  const rows=(await client.query('SELECT count(*)::int AS n FROM crest_private.audit_events WHERE business_id=$1 AND operation_id=$2 AND event_hash=encode(sha256(convert_to(hash_input,\'UTF8\')),\'hex\')',[f.business,op])).rows;assert.equal(rows[0].n,1);assert(!JSON.stringify(first).includes(f.hash.toString('hex')));
 });
 test('changed release or job cannot reuse an original request operation',async()=>{const f=await state(),job=randomUUID(),op=randomUUID();await request(f,job,op);const kept=await evidence(f);assert.deepEqual(await request(f,job,op,'b'.repeat(40)),{state:'conflict',reason:'operation'});assert.deepEqual(await request(f,randomUUID(),op),{state:'conflict',reason:'operation'});assert.deepEqual(await evidence(f),kept);});
@@ -101,7 +102,7 @@ test('web credentials cannot read/write raw jobs, forge GUC access or assume com
 async function historicalRunning(f,count,expiryInMs){
  const job=randomUUID(),base=expiryInMs===undefined?Date.now()-86400000:Date.now()-count*3600000-900000+expiryInMs;let rootOperation,version=0,lastLease;
  async function fact(action,change){
-  const operation=randomUUID();rootOperation??=operation;const original=reference(f,'export.'+action,job,operation,action==='request'?{appReleaseId:release,profile:'crest.business-source-bundle.v1',sourceSchemaVersion:43}:{expectedVersion:String(version),...(action==='stop'?{}:{leaseId:lastLease})});
+  const operation=randomUUID();rootOperation??=operation;const original=reference(f,'export.'+action,job,operation,action==='request'?{appReleaseId:release,profile:'crest.business-source-journal-bundle.v1',sourceSchemaVersion:43}:{expectedVersion:String(version),...(action==='stop'?{}:{leaseId:lastLease})});
   await client.query("SELECT set_config('crest.business_id',$1,true),set_config('crest.actor_id',$2,true),set_config('crest.operation_id',$3,true)",[f.business,f.actor,operation]);
   const before=version===0?null:await query(client,'SELECT crest_private.source_export_job_projection(j) AS value FROM crest_private.export_jobs j WHERE business_id=$1 AND id=$2',[f.business,job]);
   await client.query("INSERT INTO crest_private.operations(business_id,operation_id,actor_id,command_type,schema_version,recovery_epoch,payload_hash,created_by,origin) VALUES($1,$2,$3,$4,1,$5,repeat('d',64),$3,'manual')",[f.business,operation,f.actor,'export.'+action,f.epoch]);
@@ -112,7 +113,7 @@ async function historicalRunning(f,count,expiryInMs){
  }
  await client.query('BEGIN');try{
   await client.query('ALTER TABLE crest_private.export_jobs DISABLE TRIGGER export_job_guard');await client.query('ALTER TABLE crest_private.export_job_attempts DISABLE TRIGGER export_attempt_guard');
-  await fact('request',async(operation,v)=>{await client.query("INSERT INTO crest_private.export_jobs(id,business_id,actor_id,profile,app_release_id,source_schema_version,recovery_epoch,request_operation_id,state,next_run_at,version,created_at,updated_at,created_by,updated_by,origin,operation_id) VALUES($1,$2,$3,'crest.business-source-bundle.v1',$4,43,$5,$6,'Queued',$7,$8,$7,$7,$3,$3,'manual',$6)",[job,f.business,f.actor,release,f.epoch,operation,new Date(base),v]);});
+  await fact('request',async(operation,v)=>{await client.query("INSERT INTO crest_private.export_jobs(id,business_id,actor_id,profile,app_release_id,source_schema_version,recovery_epoch,request_operation_id,state,next_run_at,version,created_at,updated_at,created_by,updated_by,origin,operation_id) VALUES($1,$2,$3,'crest.business-source-journal-bundle.v1',$4,43,$5,$6,'Queued',$7,$8,$7,$7,$3,$3,'manual',$6)",[job,f.business,f.actor,release,f.epoch,operation,new Date(base),v]);});
   for(let n=1;n<=count;n++){
    lastLease=randomUUID();const stamp=new Date(base+n*3600000),until=new Date(stamp.getTime()+900000);
    await fact('claim',async(operation,v)=>{
@@ -139,7 +140,7 @@ const authorizeWorker=(f,original,c=web)=>query(c,'SELECT crest_commands.authori
 const snapshot=(f,original,c=web)=>query(c,'SELECT crest_commands.record_source_export_snapshot($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS value',[...auth(f),f.epoch,original]);
 async function snapshotFixture(){
  const f=await state(),job=(await request(f)).receipt.job.id,lease=randomUUID();await claim(f,job,'1',lease);
- const current={formatVersion:1,profile:'crest.business-source-bundle.v1',businessId:f.business,actorId:f.actor,exportJobId:job,recoveryEpoch:f.epoch,leaseId:lease};
+ const current={formatVersion:1,profile:'crest.business-source-journal-bundle.v1',businessId:f.business,actorId:f.actor,exportJobId:job,recoveryEpoch:f.epoch,leaseId:lease};
  // Preserve the database microseconds; a JS millisecond can precede this lease.
  const observedAt=(await client.query("SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"+00:00\"') AS stamp")).rows[0].stamp;
  const plan={formatVersion:1,claim:current,generationId:randomUUID(),observedAt,appReleaseId:release,sourceSchemaVersion:43,manifestSha256:'c'.repeat(64),parts:[{partId:randomUUID(),fileName:'example.csv',contentType:'text/csv; charset=utf-8',bytes:7,sha256:'b'.repeat(64)},{partId:randomUUID(),fileName:'source_manifest.json',contentType:'application/json',bytes:9,sha256:'c'.repeat(64)}],totalBytes:16,referenceClosureComplete:false,completePortableExport:false,completeBackup:false};
@@ -562,4 +563,36 @@ test('proposed journal encrypted recovery preserves all114 fields and the origin
   for(const [table]of Object.values(journalKinds))await assert.rejects(restored.query('DELETE FROM crest_private.'+table+' WHERE business_id=$1',[s.f.business]),e=>e.code==='55000');
   assert.deepEqual(await journalInventory(client),liveRows);assert.equal((await client.query('SELECT active_epoch FROM crest_private.business_recovery_authorities WHERE business_id=$1',[s.f.business])).rows[0].active_epoch,s.f.epoch);assert.equal((await client.query('SELECT current_security_epoch FROM crest_private.actors WHERE id=$1',[s.f.actor])).rows[0].current_security_epoch,sourceEpoch);
  }finally{await restoredWeb?.end();await read?.end();if(restored&&webRole)await restored.query('DROP ROLE '+webRole.login);if(restored&&readRole)await restored.query('DROP ROLE '+readRole.login);await restored?.end();await cluster?.close();}
+});
+
+async function jointWorkerFixture(mode='normal'){
+ const f=await state(),job=randomUUID(),operation=randomUUID();await request(f,job);const claimed=(await claim(f,job)).receipt.job,current={formatVersion:1,profile:claimed.profile,businessId:f.business,actorId:f.actor,exportJobId:job,recoveryEpoch:f.epoch,leaseId:claimed.lease_id};let plan,readyRaw;
+ const jobs={
+  authorize:(r)=>authorizeWorker(f,JSON.stringify(r)),
+  snapshot:async r=>{plan=r.plan;const ack=await snapshot(f,JSON.stringify(r));if(mode==='lost-snapshot')throw Error('synthetic lost committed snapshot acknowledgment');return ack;},
+  intent:r=>intentPart(f,JSON.stringify(r)),verified:r=>verifyPart(f,JSON.stringify(r)),
+  ready:async r=>{readyRaw=JSON.stringify(r);return readyExport(f,readyRaw,operation);}
+ };
+ const h=await custodyFixture(async method=>{if(method==='GET'&&mode==='pause')await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[f.business]);});
+ const worker=createBusinessSourceJournalExportWorker({businessId:f.business,appReleaseId:release},()=>captureJournal(f),h.store,jobs);
+ return {f,job,operation,current,h,worker,get plan(){return plan;},get readyRaw(){return readyRaw;}};
+}
+test('joint schema43 worker delivers and independently recovers every real encrypted file before audited database Ready',{timeout:180000},async()=>{
+ const s=await jointWorkerFixture();try{
+  const delivered=await s.worker.run(s.current,new AbortController().signal),result=delivered.forJournalWorker();assert.equal(Object.hasOwn(delivered,'forServer'),false);assert.equal(s.plan.sourceSchemaVersion,43);assert.equal(s.plan.claim.profile,'crest.business-source-journal-bundle.v1');assert.equal(result.parts,s.plan.parts.length);
+  const persisted=await partRows(s.f);assert.equal(persisted.export_part_intents.length,s.plan.parts.length);assert.equal(persisted.export_part_verifications.length,s.plan.parts.length);assert.equal(s.h.objects.size,s.plan.parts.length);assert.deepEqual(s.h.requests.map(r=>r.method),s.plan.parts.flatMap(()=>['PUT','GET']));assert.equal((await status(s.f,s.job)).job.state,'Ready');assert.equal((await completions(s.f))[0].value.request_text,s.readyRaw);
+  const ready=JSON.parse(s.readyRaw),physical=[];let manifest;
+  for(const p of s.plan.parts){const recorded=ready.parts.find(r=>r.partId===p.partId),binding={businessId:s.f.business,actorId:s.f.actor,exportJobId:s.job,generationId:s.plan.generationId,recoveryEpoch:s.f.epoch,partId:p.partId,fileName:p.fileName,contentType:p.contentType},opened=await s.h.store.readVerified(recorded.intent,binding,new AbortController().signal);try{const bytes=opened.forServer().bytes;assert.equal(bytes.length,p.bytes);assert.equal(sha(bytes),p.sha256);if(p.fileName==='source_manifest.json')manifest=Buffer.from(bytes).toString();else physical.push({name:p.fileName,contentType:p.contentType,content:Buffer.from(bytes).toString(),bytes:bytes.length,sha256:sha(bytes)});}finally{opened.dispose();}}
+  const checked=verifyBusinessSourceJournalBundle(manifest,physical,{businessId:s.f.business,generationId:s.plan.generationId,appReleaseId:release,sourceSchemaVersion:43}).forJournalBundleVerification();assert.equal(Object.keys(checked.sourceRows).length,19);assert.equal(Object.keys(checked.journalRows).length,6);assert.equal(checked.journalRows.job[0].state,'Running');assert.equal(checked.journalRows.snapshot.length,0);assert.equal(checked.completeBackup,false);
+  const kept={evidence:await evidence(s.f),parts:await partRows(s.f),completions:await completions(s.f)};assert.deepEqual(await readyExport(s.f,s.readyRaw,s.operation),acknowledgment('ready',s.readyRaw));assert.deepEqual({evidence:await evidence(s.f),parts:await partRows(s.f),completions:await completions(s.f)},kept);
+ }finally{await s.h.close();}
+});
+test('joint schema43 worker retains its committed original snapshot and performs no HTTP after lost acknowledgment',async()=>{
+ const s=await jointWorkerFixture('lost-snapshot');try{await assert.rejects(s.worker.run(s.current,new AbortController().signal),e=>e.message==='SOURCE_EXPORT_RUN_REVIEW_REQUIRED');assert.equal(s.h.requests.length,0);assert.equal((await snapshots(s.f)).length,1);assert.equal((await snapshots(s.f))[0].value.request_text,JSON.stringify({plan:s.plan,planSha256:sha(JSON.stringify(s.plan))}));assert.equal((await partRows(s.f)).export_part_intents.length,0);assert.equal((await completions(s.f)).length,0);assert.equal((await status(s.f,s.job)).job.state,'Running');}finally{await s.h.close();}
+});
+test('joint schema43 worker preserves its original unverified ciphertext after authority changes during real GET',async()=>{
+ const s=await jointWorkerFixture('pause');try{await assert.rejects(s.worker.run(s.current,new AbortController().signal),e=>e.message==='SOURCE_EXPORT_RUN_REVIEW_REQUIRED');const rows=await partRows(s.f);assert.equal(rows.export_part_intents.length,1);assert.equal(rows.export_part_verifications.length,0);assert.equal((await completions(s.f)).length,0);assert.equal(s.h.objects.size,1);assert.deepEqual(s.h.requests.map(r=>r.method),['PUT','GET']);assert.equal((await client.query('SELECT state FROM crest_private.export_jobs WHERE id=$1',[s.job])).rows[0].state,'Running');}finally{await s.h.close();}
+});
+test('forward43 worker authorization refuses the legacy42 profile without changing its retained job',async()=>{
+ const s=await jointWorkerFixture();try{const kept=await evidence(s.f);await assert.rejects(authorizeWorker(s.f,JSON.stringify({...s.current,profile:'crest.business-source-bundle.v1'})),e=>e.code==='42501'&&e.message==='CREST_EXPORT_LIVE_LEASE_REQUIRED');assert.deepEqual(await evidence(s.f),kept);assert.equal((await snapshots(s.f)).length,0);assert.equal(s.h.requests.length,0);}finally{await s.h.close();}
 });

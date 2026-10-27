@@ -94,6 +94,7 @@ it('permits only one active invocation of the worker',async()=>{
 });
 it('copies the claim/config and fixes method references before asynchronous work',async()=>{
  const f=fixture(),expected={...f.claim},worker=f.create();let release!:()=>void;vi.mocked(f.jobs.authorize).mockImplementation(request=>new Promise(resolve=>{release=()=>resolve(ack('authorize',request));}));
+ const original=vi.mocked(f.store.prepare).getMockImplementation()!;vi.mocked(f.store.prepare).mockImplementation(async(bytes,binding,s)=>{if(binding.fileName==='source_manifest.json')expect(JSON.parse(Buffer.from(bytes).toString()).appReleaseId).toBe('a'.repeat(40));return original(bytes,binding,s);});
  const running=worker.run(f.claim,signal());Object.assign(f.claim,{actorId:randomUUID(),leaseId:randomUUID()});f.config.appReleaseId='b'.repeat(40);release();await running;expect(f.plan?.claim).toEqual(expected);expect(f.plan?.appReleaseId).toBe('a'.repeat(40));
 });
 it('a cancellation after Ready may have committed never returns a successful receipt or retries publication',async()=>{

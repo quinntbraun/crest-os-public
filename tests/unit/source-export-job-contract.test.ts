@@ -2,7 +2,10 @@ import {expect,it} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import {parseSourceExportCommand,parseSourceExportJob,parseSourceExportCommitted} from '../../src/security/source-export-job-contract.ts';
 import type {SourceExportCommand,SourceExportJob} from '../../src/security/source-export-job-contract.ts';
-const error='SOURCE_EXPORT_COMMAND_REVIEW_REQUIRED',profile='crest.business-source-bundle.v1',stamp='2026-10-26T01:02:03.123456Z';
+const error='SOURCE_EXPORT_COMMAND_REVIEW_REQUIRED',profile='crest.business-source-journal-bundle.v1',stamp='2026-10-26T01:02:03.123456Z';
+it('refuses the legacy42 profile in both a forward43 request and its job projection',()=>{
+ const f=fixture();expect(()=>parseSourceExportCommand({...f.command,reference:{...f.command.reference,profile:'crest.business-source-bundle.v1'}})).toThrow(error);expect(()=>parseSourceExportJob({...f.job,profile:'crest.business-source-bundle.v1'},f.businessId)).toThrow(error);
+});
 function fixture(kind:SourceExportCommand['commandType']='export.request',expectedVersion='1'){
  const businessId=randomUUID(),actor=randomUUID(),epoch=randomUUID(),operationId=randomUUID(),jobId=randomUUID(),leaseId=randomUUID();
  const command=parseSourceExportCommand({schemaVersion:1,businessId,commandType:kind,reference:{operationId,recoveryEpoch:epoch,exportJobId:jobId,...(kind==='export.request'?{appReleaseId:'a'.repeat(40),profile,sourceSchemaVersion:43}:{expectedVersion,...(kind==='export.stop'?{}:{leaseId}),...(kind==='export.ready'?{generationId:randomUUID(),requestSha256:'c'.repeat(64)}:{})})}});

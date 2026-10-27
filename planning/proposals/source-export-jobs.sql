@@ -14,7 +14,7 @@ CREATE TABLE crest_private.export_jobs(
  id uuid PRIMARY KEY,
  business_id uuid NOT NULL REFERENCES crest.businesses(id) ON DELETE RESTRICT,
  actor_id uuid NOT NULL,
- profile text NOT NULL CHECK(profile='crest.business-source-bundle.v1'),
+ profile text NOT NULL CHECK(profile='crest.business-source-journal-bundle.v1'),
  app_release_id text NOT NULL CHECK(app_release_id~'^[a-f0-9]{40}$'),
  source_schema_version integer NOT NULL CHECK(source_schema_version=43),
  recovery_epoch uuid NOT NULL,
@@ -154,7 +154,7 @@ CREATE FUNCTION crest_private.source_export_command(kind text,business uuid,epoc
 DECLARE reference jsonb;
 BEGIN
  reference:=jsonb_build_object('operationId',operation,'recoveryEpoch',epoch,'exportJobId',job);
- IF kind='export.request' THEN reference:=reference||jsonb_build_object('appReleaseId',release_id,'profile','crest.business-source-bundle.v1','sourceSchemaVersion',43);
+ IF kind='export.request' THEN reference:=reference||jsonb_build_object('appReleaseId',release_id,'profile','crest.business-source-journal-bundle.v1','sourceSchemaVersion',43);
  ELSIF kind IN('export.claim','export.expire') THEN reference:=reference||jsonb_build_object('expectedVersion',expected_version,'leaseId',lease);
  ELSIF kind='export.stop' THEN reference:=reference||jsonb_build_object('expectedVersion',expected_version);
  ELSE RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_EXPORT_JOB_INPUT_REQUIRED';END IF;
@@ -185,7 +185,7 @@ BEGIN
  IF operation IS NULL OR job IS NULL OR action IS NULL OR action NOT IN('request','claim','expire','stop') OR action='request' AND (release_id IS NULL OR release_id!~'^[a-f0-9]{40}$' OR expected_version IS NOT NULL OR lease IS NOT NULL) OR action<>'request' AND (expected_version IS NULL OR expected_version<1 OR release_id IS NOT NULL) OR action IN('claim','expire') AND lease IS NULL OR action='stop' AND lease IS NOT NULL THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_EXPORT_JOB_INPUT_REQUIRED';END IF;
  context:=crest_commands.lock_source_export_authority(credential_hash,expected_session,expected_actor,expected_issuer,expected_subject,expected_provider_session,provider_valid_until,requested_business,expected_epoch);
  PERFORM set_config('crest.business_id',context->>'businessId',true),set_config('crest.actor_id',context->>'actorId',true),set_config('crest.operation_id',operation::text,true);
- digest:=encode(sha256(convert_to(jsonb_build_object('schemaVersion',1,'commandType',kind,'businessId',requested_business,'actorId',expected_actor,'recoveryEpoch',expected_epoch,'jobId',job,'expectedVersion',expected_version::text,'leaseId',lease,'appReleaseId',release_id,'profile','crest.business-source-bundle.v1','sourceSchemaVersion',43)::text,'UTF8')),'hex');
+ digest:=encode(sha256(convert_to(jsonb_build_object('schemaVersion',1,'commandType',kind,'businessId',requested_business,'actorId',expected_actor,'recoveryEpoch',expected_epoch,'jobId',job,'expectedVersion',expected_version::text,'leaseId',lease,'appReleaseId',release_id,'profile','crest.business-source-journal-bundle.v1','sourceSchemaVersion',43)::text,'UTF8')),'hex');
  BEGIN
   INSERT INTO crest_private.operations(business_id,operation_id,actor_id,command_type,schema_version,recovery_epoch,payload_hash,created_by,origin) VALUES(requested_business,operation,expected_actor,kind,1,expected_epoch,digest,expected_actor,'manual') ON CONFLICT(business_id,operation_id) DO NOTHING RETURNING id INTO claimed;
   IF claimed IS NULL THEN
@@ -195,7 +195,7 @@ BEGIN
    RETURN crest_private.source_export_receipt(requested_business,expected_actor,operation);
   END IF;
   IF action='request' THEN
-   INSERT INTO crest_private.export_jobs(id,business_id,actor_id,profile,app_release_id,source_schema_version,recovery_epoch,request_operation_id,state,next_run_at,created_by,updated_by,origin,operation_id) VALUES(job,requested_business,expected_actor,'crest.business-source-bundle.v1',release_id,43,expected_epoch,operation,'Queued',clock_timestamp(),expected_actor,expected_actor,'manual',operation) RETURNING * INTO j;
+   INSERT INTO crest_private.export_jobs(id,business_id,actor_id,profile,app_release_id,source_schema_version,recovery_epoch,request_operation_id,state,next_run_at,created_by,updated_by,origin,operation_id) VALUES(job,requested_business,expected_actor,'crest.business-source-journal-bundle.v1',release_id,43,expected_epoch,operation,'Queued',clock_timestamp(),expected_actor,expected_actor,'manual',operation) RETURNING * INTO j;
   ELSE
    SELECT * INTO j FROM crest_private.export_jobs WHERE business_id=requested_business AND id=job FOR UPDATE SKIP LOCKED;
    IF NOT FOUND THEN RAISE EXCEPTION USING ERRCODE='P1101',MESSAGE='CREST_EXPORT_JOB_BUSY';END IF;
