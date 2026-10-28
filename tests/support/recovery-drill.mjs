@@ -52,8 +52,8 @@ export async function keyPair(directory){
 export async function postgresTool(name,url,args=[],input){
   assert(['pg_dump','pg_restore'].includes(name));const u=target(url);
   const env={...process.env,PGPASSWORD:decodeURIComponent(u.password)};
-  return run('docker',['run','--rm','--interactive','--network','host','--env','PGPASSWORD',pins.testDatabaseImage,name,
-    '--host',u.hostname.replace(/^\[|\]$/g,''),'--port',u.port||'5432','--username',decodeURIComponent(u.username),'--no-password',
+  return run('docker',['run','--rm','--interactive',...(process.platform==='win32'?[]:['--network','host']),'--env','PGPASSWORD',pins.testDatabaseImage,name,
+    '--host',process.platform==='win32'?'host.docker.internal':u.hostname.replace(/^\[|\]$/g,''),'--port',u.port||'5432','--username',decodeURIComponent(u.username),'--no-password',
     ...args,'--dbname',u.pathname.slice(1)],{input,env});
 }
 export async function connect(url){

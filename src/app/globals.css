@@ -183,6 +183,8 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
  .service-choice { border-top:0; padding:0; }
 }
 .service-directory button span { display:block; margin-top:.25rem; color:var(--muted); font-size:.875rem; font-weight:400; }
+.quote-layout .customer-list button strong { display:block; }
+.quote-layout .customer-list button span { display:block; margin-top:.25rem; color:var(--muted); font-size:.875rem; font-weight:400; }
 .customers label.checkbox { display:flex; align-items:center; gap:.75rem; min-height:44px; cursor:pointer; }
 .customers label.checkbox input { width:24px; height:24px; flex-shrink:0; accent-color:var(--black); }
 @media(max-width:390px) { .service-pair { grid-template-columns:1fr; gap:0; } }
