@@ -102,7 +102,10 @@ test("partial multi-file CLI failure leaves pending evidence and never automatic
   const f = await fixture(url, new Map([[first, sql], [second, "SELECT 1/0;\n"]]));
   await assert.rejects(f.apply({ bootstrapEmpty: true }), /MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);
   assert.equal((await f.query("SELECT count(*)::integer AS count FROM supabase_migrations.schema_migrations")).rows[0].count, 1);
-  assert.equal(typeof (await f.pending()).attempt, "string");
+  const pending = await f.pending();assert.equal(typeof pending.attempt, "string");
+  const diagnostic = JSON.parse(await readFile(join(await f.ledger(), `failed-cli-${pending.attempt}.json`), "utf8"));
+  assert.equal(diagnostic.outcome,"failed_review_required");assert.equal(diagnostic.rawOutputRetained,false);assert.deepEqual(diagnostic.publicErrorCodes,[]);
+  assert(diagnostic.publicMigrationFiles.every(file=>[first,second].includes(file)));assert(!JSON.stringify(diagnostic).includes(url));
   await assert.rejects(f.apply({ bootstrapEmpty: true }), /MIGRATION_PENDING_REVIEW_REQUIRED/);
 }));
 

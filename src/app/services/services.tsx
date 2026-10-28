@@ -23,6 +23,7 @@ export function ServiceScreen(){
  return <>
   <p className="intro">Define the work you offer. Saved versions retain earlier scope and guidance. Guidance never sets a quote price.</p>
   <p role="status" aria-label="Service status" className="notice">{view.message}</p>
+  {view.phase==='unavailable'&&<p><a href="/sign-in">Sign in to view services</a></p>}
   {view.phase!=='ready'&&view.phase!=='loading'&&<div className="actions">{view.phase==='pending'?<><button type="button" disabled={view.busy} onClick={()=>void current.current?.check()}>Check original save</button>{view.canRetry&&<button type="button" disabled={view.busy} onClick={()=>void current.current?.retry()}>Retry unchanged original</button>}<a href="/save-review">Review interrupted saves</a>{view.reference&&<p className="field-help">Original operation: <span className="record-reference">{view.reference}</span></p>}</>:<button type="button" disabled={view.busy} onClick={()=>void current.current?.load()}>Load current services</button>}</div>}
   {view.phase==='ready'&&<>
    <div className="actions"><button type="button" disabled={view.busy||view.writesPaused} onClick={create}>Add service</button><button type="button" className="secondary" disabled={view.busy} onClick={()=>{if(discard())void current.current?.load();}}>Reload saved services</button></div>
@@ -40,10 +41,10 @@ export function ServiceScreen(){
      <fieldset className="service-fields" disabled={view.busy||view.writesPaused}>
       <label>Service code<input value={draft.code} maxLength={80} autoCapitalize="none" autoCorrect="off" spellCheck={false} readOnly={!!view.selected} onChange={e=>current.current?.edit({...draft,code:e.target.value})} required/><span className="field-help">A permanent unique code: lowercase letters, numbers, hyphens or underscores. It cannot change after saving.</span></label>
       <label>Service name<input value={draft.name} maxLength={200} onChange={e=>current.current?.edit({...draft,name:e.target.value})} required/></label>
-      <label>What is included<textarea value={draft.inclusions} maxLength={8000} rows={4} onChange={e=>current.current?.edit({...draft,inclusions:e.target.value})} required/></label>
-      <label>What is excluded<textarea value={draft.exclusions} maxLength={8000} rows={3} onChange={e=>current.current?.edit({...draft,exclusions:e.target.value})}/></label>
+      <label htmlFor="service-inclusions">What is included</label><textarea id="service-inclusions" value={draft.inclusions} maxLength={8000} rows={4} onChange={e=>current.current?.edit({...draft,inclusions:e.target.value})} required/>
+      <label htmlFor="service-exclusions">What is excluded</label><textarea id="service-exclusions" value={draft.exclusions} maxLength={8000} rows={3} onChange={e=>current.current?.edit({...draft,exclusions:e.target.value})}/>
       <details><summary>Internal guidance and timing (optional)</summary>
-       <label>Internal notes<textarea value={draft.internalGuidance} maxLength={8000} rows={3} onChange={e=>current.current?.edit({...draft,internalGuidance:e.target.value})}/></label>
+       <label htmlFor="service-internal-notes">Internal notes</label><textarea id="service-internal-notes" value={draft.internalGuidance} maxLength={8000} rows={3} onChange={e=>current.current?.edit({...draft,internalGuidance:e.target.value})}/>
        <p className="field-help">These values are guidance only. Leave unknown values empty; no price or duration is assumed.</p>
        <div className="service-pair"><label>Starting guidance (USD)<input inputMode="decimal" value={draft.low} onChange={e=>current.current?.edit({...draft,low:e.target.value})}/></label><label>Upper guidance (USD)<input inputMode="decimal" value={draft.high} onChange={e=>current.current?.edit({...draft,high:e.target.value})}/></label></div>
        <div className="service-pair"><label>Estimated minutes<input inputMode="numeric" value={draft.minutes} onChange={e=>current.current?.edit({...draft,minutes:e.target.value})}/></label><label>Additional seconds (0–59)<input inputMode="numeric" value={draft.seconds} onChange={e=>current.current?.edit({...draft,seconds:e.target.value})}/></label></div>

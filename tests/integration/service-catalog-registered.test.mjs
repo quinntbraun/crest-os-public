@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
 import {randomBytes,randomUUID} from 'node:crypto';
-import {readFile,mkdir} from 'node:fs/promises';
+import {readFile,mkdir,readdir} from 'node:fs/promises';
 import {join} from 'node:path';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
@@ -56,6 +56,9 @@ after(async()=>{
 test('actual migration CLI refuses late validator drift and atomically retains registered43 with no partial catalog',async()=>{
  await guardClient.query('ALTER FUNCTION crest_private.original_operation_reference_valid(jsonb) SET search_path=public');const before=await definitions(guardClient);
  await assert.rejects(sandbox.apply(guardTarget),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);
+ const ledgerRoot=join(sandbox.workspace,'ledger'),targets=(await readdir(ledgerRoot)).filter(name=>/^[a-f0-9]{64}$/.test(name)),diagnostics=[];
+ for(const target of targets)for(const file of(await readdir(join(ledgerRoot,target))).filter(name=>name.startsWith('failed-cli-')&&name.endsWith('.json')))diagnostics.push(JSON.parse(await readFile(join(ledgerRoot,target,file),'utf8')));
+ assert.equal(diagnostics.length,1);assert.equal(diagnostics[0].rawOutputRetained,false);assert(diagnostics[0].publicErrorCodes.length>0);assert(diagnostics[0].publicErrorCodes.every(code=>sql.includes(code)));
  assert.equal(await value(guardClient,"SELECT count(*)::int AS value FROM supabase_migrations.schema_migrations"),43);assert.equal(await value(guardClient,"SELECT to_regclass('crest.services') AS value"),null);assert.equal(await value(guardClient,"SELECT to_regclass('crest.service_versions') AS value"),null);
  assert.equal(await value(sandbox.admin,"SELECT count(*)::int AS value FROM pg_roles WHERE rolname IN('crest_catalog_owner','crest_catalog_integrity_owner')"),0);assert.deepEqual(await definitions(guardClient),before);
  // The failed target's ledger is retained for review; never retry it blindly.

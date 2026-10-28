@@ -279,13 +279,37 @@ jobs:
         timeout-minutes: 6
         run: |
           npx --no-install playwright install --with-deps chromium webkit
-      - name: Production build and browser accessibility smoke
+      - name: Production build and focused service workflow
         run: |
           npm run build
+          npm run test:service-editor-browser
+      - name: Preserve synthetic service screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: service-review-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: .local/review/service-*.png
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: error
+      - name: Browser accessibility and retained workflows
+        run: |
           npm run test:e2e
           npm run review:test
           npm run review:test-browser
           npm run test:sign-in-browser
+      - name: Preserve synthetic settings screenshots
+        if: always()
+        # Successful synthetic UI screenshots contain no credentials or real data.
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: settings-review-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            .local/review/settings-*.png
+            .local/review/workspace-*.png
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: error
       - name: Build and smoke-test portable container
         timeout-minutes: 15
         run: |
@@ -314,18 +338,6 @@ jobs:
         with:
           name: phase-1-candidate-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: .local/release/
-          include-hidden-files: true
-          retention-days: 3
-          if-no-files-found: error
-      - name: Preserve synthetic settings screenshots
-        if: always()
-        # Successful synthetic UI screenshots contain no credentials or real data.
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: settings-review-${{ github.sha }}-attempt-${{ github.run_attempt }}
-          path: |
-            .local/review/settings-*.png
-            .local/review/workspace-*.png
           include-hidden-files: true
           retention-days: 3
           if-no-files-found: error
