@@ -6,8 +6,8 @@
   "productionActivation": "blocked",
   "migration": {
     "file": "20261028020000_quote_drafts.sql",
-    "sha256": "900531d72fcf0e30e661e7469eb57dbe851edd46dd0fe3a30d3d2f1b78f2cee9",
-    "bytes": 117564
+    "sha256": "cb54d2b3d200c02814eac873a969b6cf1915dc5c39bf088a4b26e202fb362e06",
+    "bytes": 117714
   },
   "previousRegistry": {
     "sha256": "6aa4291154f830fc6889128df1ed8f9ef163984c20b86ff33510412bd6e20305",
@@ -54,8 +54,8 @@
     {
       "order": 5,
       "path": "planning/proposals/quote-draft-resolution.sql",
-      "sha256": "d5b38f87882c025755a7942d786946aad9d81e8d5ebfc083b5486d7d90a5ee24",
-      "bytes": 10825,
+      "sha256": "aafe158f33a42c8d18f4bb5e419eefa9e06506a49a346ffdeaa474ed4f07dbd8",
+      "bytes": 10975,
       "offset": 106714
     }
   ],
