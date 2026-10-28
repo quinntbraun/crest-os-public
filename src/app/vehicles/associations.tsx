@@ -12,7 +12,7 @@ function LinkDetails({source}:{source:VehicleAssociationRow}){
  const text=(value:string|null)=>value===null?'Not recorded':value===''?'Recorded as empty':value;
  return <dl className="customer-values"><dt>Relationship</dt><dd>{source.relationship==='owner'?'Owner':'Keeper'}</dd><dt>Billing selected</dt><dd>{source.is_billing?'Yes':'No'}</dd><dt>Starts (UTC)</dt><dd>{source.valid_from}</dd><dt>Ends (UTC)</dt><dd>{source.valid_to??'Still open'}</dd><dt>Evidence</dt><dd>{text(source.evidence)}</dd><dt>End reason</dt><dd>{text(source.close_reason)}</dd></dl>;
 }
-export function AssociationPanel({businessId,vehicleId}:{businessId:string;vehicleId:string}){
+export function AssociationPanel({businessId,vehicleId,onEditStateChange}:{businessId:string;vehicleId:string;onEditStateChange?:(state:'clean'|'draft'|'pending')=>void}){
  const [view,setView]=useState(initialAssociationEditorView),current=useRef<ReturnType<typeof createAssociationEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null);
  useEffect(()=>{
   const controller=createAssociationEditorController({businessId,vehicleId,store:createPendingAssociationStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});current.current=controller;
@@ -21,6 +21,7 @@ export function AssociationPanel({businessId,vehicleId}:{businessId:string;vehic
   return ()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
  },[businessId,vehicleId]);
  const hasDraft=view.draft!==null,pending=view.phase==='pending';
+ useEffect(()=>{onEditStateChange?.(pending?'pending':hasDraft?'draft':'clean');return ()=>onEditStateChange?.('clean');},[hasDraft,pending,onEditStateChange]);
  useEffect(()=>{if(!hasDraft&&!pending)return;const leave=(event:BeforeUnloadEvent)=>{event.preventDefault();};window.addEventListener('beforeunload',leave);return ()=>window.removeEventListener('beforeunload',leave);},[hasDraft,pending]);
  async function action(kind:'load'|'more'|'save'|'check'|'retry'){const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
  function edit<K extends keyof AssociationDraft>(key:K,value:AssociationDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}

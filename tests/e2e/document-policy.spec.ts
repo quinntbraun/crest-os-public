@@ -51,5 +51,5 @@ test('error documents and caller prefetch hints cannot bypass policy or no-store
   expect((await page.goto('/missing.csv'))!.status()).toBe(404);
   await expect(page.getByRole('heading',{name:'Page not found',exact:true})).toBeVisible();
   await page.getByRole('link',{name:'Return to Crest OS',exact:true}).click();
-  await expect(page.getByRole('heading',{name:'Crest OS',exact:true})).toBeVisible();expect(errors).toEqual([]);
+  await expect(page.getByRole('heading',{name:'Today',exact:true})).toBeVisible();expect(errors).toEqual([]);
 });

@@ -17,7 +17,7 @@ export async function buildReview(directory=join(root,'.local','owner-review')){
  await writeFile(temporary,JSON.stringify({js,css}),{mode:0o600});await rename(temporary,assetFile);
  return{js,css,assetFile};
 }
-const headers={'cache-control':'private, no-store, max-age=0','x-content-type-options':'nosniff','referrer-policy':'no-referrer','cross-origin-resource-policy':'same-origin','content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"};
+const headers={'cache-control':'private, no-store, max-age=0','x-content-type-options':'nosniff','referrer-policy':'no-referrer','cross-origin-resource-policy':'same-origin','content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"};
 const html='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Crest OS — sample workspace</title><link rel="stylesheet" href="/review.css"></head><body><div id="review-root"></div><script src="/review.js" defer></script></body></html>';
 export async function startReviewServer({port=4318,assets,initial}={}){
  if(!Number.isInteger(port)||port<0||port>65535)throw Error('REVIEW_PORT_INVALID');
@@ -32,6 +32,10 @@ export async function startReviewServer({port=4318,assets,initial}={}){
     const url=new URL(incoming.url,origin),path=url.pathname;
     if(url.hash||url.search&&!(incoming.method==='GET'&&['/addresses','/vehicles'].includes(path))){send(404,{error:'REVIEW_ROUTE_UNAVAILABLE'});return;}
     if(incoming.method==='GET'){
+     if(['/fonts/IBMPlexSans-Regular.woff2','/fonts/IBMPlexSans-SemiBold.woff2'].includes(path)){
+      const bytes=await readFile(join(root,'public',path.slice(1)));if(bytes.length>131072||bytes.subarray(0,4).toString()!=='wOF2')throw Error();
+      send(200,bytes,'font/woff2');return;
+     }
      if(path==='/review.js'||path==='/review.css'){
       try{if(files.assetFile){const next=JSON.parse(await readFile(files.assetFile,'utf8'));if(typeof next.js==='string'&&Buffer.byteLength(next.js)<=2097152&&typeof next.css==='string'&&Buffer.byteLength(next.css)<=262144)lastAssets=next;}}catch{/* Keep the last working bundle if a rebuild is unavailable. */}
       const current=lastAssets;

@@ -247,7 +247,7 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
           await expect(page.getByLabel('Password',{exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Sign in',exact:true})).toHaveCount(0);
           await page.evaluate(()=>{window.dispatchEvent(new Event('focus'));window.dispatchEvent(new Event('pageshow'));});
           await expect.poll(()=>loginCalls).toBe(1);await page.goto(origin+'/');release();
-          await expect(page.getByText('Setup in progress',{exact:true})).toBeVisible();assert.equal(loginCalls,1,'no replay after navigation/focus');
+          await expect(page.getByRole('heading',{name:'Today',exact:true})).toBeVisible();assert.equal(loginCalls,1,'no replay after navigation/focus');
         }finally{release();}
       });
     }finally{await first?.close();await second?.close();await browser.close();}

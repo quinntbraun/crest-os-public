@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { headers } from "next/headers";
 import { requireDocumentNonce } from "../security/document-policy.ts";
 import "./globals.css";
+import {WorkspaceFrame} from './workspace-frame';
 
 export const metadata: Metadata = {
   title: "Crest OS",
@@ -14,5 +15,5 @@ export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   requireDocumentNonce(await headers());
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="en"><body><WorkspaceFrame>{children}</WorkspaceFrame></body></html>;
 }

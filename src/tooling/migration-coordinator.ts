@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { lstat, mkdir, mkdtemp, open, readFile, readdir, rename, unlink, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { join, resolve, toNamespacedPath } from "node:path";
 import { promisify } from "node:util";
 import pg from "pg";
 import { sha256, validateMigrationSet } from "./migrations.ts";
@@ -226,7 +226,9 @@ export async function applyTestMigrations(options: Options): Promise<MigrationRe
     await syncDirectory(ledger);
     // Every operator must use the SAME protected ledger root. Pending survives any uncertain
     // apply, process death or lost guard, including a CLI commit with no completed receipt.
-    const staging = await mkdtemp(join(ledger, "snapshot-"));
+    // Windows mkdtemp rejects otherwise valid deep checkout paths without the
+    // extended-length prefix. Other platforms retain the same absolute path.
+    const staging = await mkdtemp(toNamespacedPath(join(ledger, "snapshot-")));
     await mkdir(join(staging, "supabase/migrations"), { recursive: true });
     const config = 'project_id = "crest-migration-test"\n[db]\nmajor_version = 17\n[db.seed]\nenabled = false\n';
     await writeFile(join(staging, "supabase/config.toml"), config, { mode: 0o400 });
@@ -242,6 +244,9 @@ export async function applyTestMigrations(options: Options): Promise<MigrationRe
     if (oldHistory.length < input.registry.migrations.length) {
       const cliUrl = new URL(connectionString);
       cliUrl.password = "";
+      // This coordinator only accepts explicit loopback synthetic targets. The
+      // pinned CLI otherwise requires TLS even when that local cluster has none.
+      cliUrl.searchParams.set("sslmode", "disable");
       cliUrl.searchParams.set("lock_timeout", "3000");
       cliUrl.searchParams.set("statement_timeout", "30000");
       cliUrl.searchParams.set("application_name", `crest-migration-${attempt}`);
