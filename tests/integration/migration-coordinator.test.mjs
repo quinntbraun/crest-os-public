@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
+import {createServer,connect as connectSocket} from 'node:net';
 import pg from "pg";
 import { applyTestMigrations } from "../../src/tooling/migration-coordinator.ts";
 import { sha256 } from "../../src/tooling/migrations.ts";
@@ -70,6 +71,13 @@ async function fixture(connectionString, files = new Map([[first, sql]])) {
   const pending = async () => JSON.parse(await readFile(join(await ledger(), "pending.json"), "utf8"));
   return { apply, query, update, ledger, pending };
 }
+
+test('a nondefault loopback port preserves the verified migrator identity through the real CLI', {timeout:45000},async()=>withDatabase(async url=>{
+ const target=new URL(url),sockets=new Set();const proxy=createServer(incoming=>{const upstream=connectSocket({host:target.hostname,port:Number(target.port||5432)});sockets.add(incoming);sockets.add(upstream);incoming.pipe(upstream).pipe(incoming);incoming.on('error',()=>upstream.destroy());upstream.on('error',()=>incoming.destroy());incoming.on('close',()=>{sockets.delete(incoming);upstream.destroy();});upstream.on('close',()=>{sockets.delete(upstream);incoming.destroy();});});
+ await new Promise((resolve,reject)=>{proxy.once('error',reject);proxy.listen(0,'127.0.0.1',resolve);});
+ try{const address=proxy.address();assert(address&&typeof address!=='string');assert.notEqual(address.port,Number(target.port||5432));target.hostname='127.0.0.1';target.port=String(address.port);const f=await fixture(target.toString(),new Map([[first,'CREATE TABLE public.migrator_identity AS SELECT current_user::text AS name;\n']]));const receipt=await f.apply({bootstrapEmpty:true});assert.equal(receipt.history.length,1);assert.deepEqual((await f.query('SELECT name FROM public.migrator_identity')).rows,[{name:decodeURIComponent(target.username)}]);}
+ finally{for(const socket of sockets)socket.destroy();await new Promise(resolve=>proxy.close(resolve));}
+}));
 
 test("CLI bootstrap, append, no-op and receipt chain preserve applied bytes and SQL history", { timeout: 45000 }, async () => withDatabase(async (url) => {
   const f = await fixture(url);

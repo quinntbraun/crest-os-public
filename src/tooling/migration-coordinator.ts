@@ -231,11 +231,16 @@ export async function applyTestMigrations(options: Options): Promise<MigrationRe
     // extended-length prefix. Other platforms retain the same absolute path.
     const staging = await mkdtemp(toNamespacedPath(join(ledger, "snapshot-")));
     await mkdir(join(staging, "supabase/migrations"), { recursive: true });
-    const config = 'project_id = "crest-migration-test"\n[db]\nmajor_version = 17\n[db.seed]\nenabled = false\n';
+    // The pinned CLI classifies a direct URL as local using this declared port.
+    // Its default54322 would step a different loopback target down to a hosted
+    // postgres role, violating the unchanged closed-role migration guard.
+    const targetUrl = new URL(connectionString);
+    const config = `project_id = "crest-migration-test"\n[db]\nport = ${Number(targetUrl.port || '5432')}\nmajor_version = 17\n[db.seed]\nenabled = false\n`;
     await writeFile(join(staging, "supabase/config.toml"), config, { mode: 0o400 });
     await writeFile(join(staging, "supabase/migration-checksums.json"), input.registryBytes, { mode: 0o400 });
     for (const [file, bytes] of input.files) await writeFile(join(staging, "supabase/migrations", file), bytes, { mode: 0o400 });
     const env = childEnvironment(join(staging, "cli-home"), decodeURIComponent(new URL(connectionString).password));
+    env.SUPABASE_SERVICES_HOSTNAME = targetUrl.hostname.replace(/^\[|\]$/g, '');
     await mkdir(env.SUPABASE_HOME!, { recursive: true });
     const version = await execute(options.cliPath, ["--version"], { env, timeout: 10000, maxBuffer: 128000 });
     if (version.stdout.trim() !== cliVersion) throw new MigrationCoordinatorError("MIGRATION_CLI_VERSION_MISMATCH");

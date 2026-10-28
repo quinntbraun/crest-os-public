@@ -1,39 +1,42 @@
-# Free local durable CRM testing: setup handoff
+# Free local durable CRM testing
 
-2026-10-27. This is the prerequisite path for a genuine local PostgreSQL/Auth test installation. The existing sample preview continues working without it. No paid account is required for this local direction.
+The genuine synthetic workspace is initialized and running at **https://127.0.0.1:4319** on this Windows computer. This is fictional testing only, not an approved real-data release.
 
-## Current computer
+## Current installation — 2026-10-28
 
-2026-10-28 update: owner installed Docker Desktop/WSL2. Engine check succeeded: Linux Docker29.9.2, Docker Desktop4.97.0. Installation is no longer the blocker. The candidate scripts/synthetic-workspace.mjs creates a separate named synthetic volume, genuine official Auth/MFA and restricted application login; scripts/synthetic-migrations.mjs confines Linux migration inputs to public source/dependencies and nonsecret receipts. No complete initialization, restart-persistence proof or owner sign-in delivery has passed yet.
+Docker Desktop/WSL2 is installed. The explicitly approved pinned Linux coordinator applied all44 registered migrations. Genuine Auth/TOTP, one synthetic owner, restricted application login and an owned persistent volume are configured. Original setup failure evidence is retained; no database reset or role-guard relaxation was used.
 
-2026-10-28 current update: the owner explicitly approved the narrow local Linux runner. Its controlled attempt failed through the unchanged coordinator; zero Crest migration rows, schemas or roles remain. Original failure/pending evidence is retained. Shared worktree dependency copying is fixed and independently loaded; safe public-identifier-only CLI diagnostics are added for the next explicitly reviewed coordinator attempt. No successful initialization, owner login or restart proof yet. A direct privileged rollback probe was rejected and not executed. Earlier approval-pending wording below is historical.
+The local browser currently shows its self-signed certificate warning. The owner must review and perform any browser exception themselves. No automatic browser exception or host trust-store change is authorized. The application server independently passed normal HTTPS verification using that exact certificate as the request's local trust anchor. This is not a completed owner browser journey.
 
-The first native Windows attempt exposed a long-path temporary-directory failure; the next attempt found that the Windows CLI's migration role construction failed Crest's unchanged role invariant. No application migration or Crest record was committed. Failures/receipts remain private under .local; no pending migration marker was silently discarded. The runner now targets pinned Linux tooling rather than relaxing the role invariant. Auto-review rejected first a whole-checkout mount and then the narrowed runner's generated synthetic database credential. Explicit owner approval for that credential access is pending. Do not treat installed Docker or the new scripts as successful runtime acceptance.
+Private generated sign-in details are in **.local/synthetic-workspace/owner-credentials.json** in the active checkout. Do not copy these into chat, Git, CI or screenshots. Its totpUri is private enrollment material, not a public link.
 
-After approval, finish the existing isolated setup through the checked coordinator, then start with npm run workspace:start at https://127.0.0.1:4319. Verify official MFA, customer/vehicle/association saves, reload, a controlled service restart, history and limited record retrieval before advertising this as the working test build. The certificate is local/self-signed; no host trust-store edit or automatic browser exception is authorized. Private generated sign-in material stays in .local/synthetic-workspace/owner-credentials.json after successful setup, never in Git/chat/CI artifacts. npm run workspace:stop stops only the labeled synthetic containers and retains their volume; stopping the foreground app alone does not remove data. Initialization failures require engineering review, not deletion/reset or blindly repeating init.
+From the active checkout, with pinned Node24.22/npm11.19.1 available:
 
-The following inventory and installation instructions describe the earlier prerequisite assessment; the update above supersedes its missing-Docker status.
+- **npm run workspace:start** starts the existing owned services and genuine app at4319.
+- **npm run workspace:stop** stops only the labeled synthetic containers, retaining their data volume. Stop the foreground application before this command.
+- Do not rerun **workspace:init**, delete state/initialization markers, recreate users or reset the volume. Interrupted initialization requires review.
 
-Checks found the pinned Node24.22 and Supabase CLI2.121.0, but no Docker/Podman/PostgreSQL executable; Windows reports WSL is not installed. Existing Windows application-control restrictions must remain intact. The current compose.yaml uses a disposable tmpfs test database and deliberately is not a persistent business installation.
+Owner browser sign-in, customer/vehicle/link save/reload, history/limited JSON and a controlled service restart still require installation-specific verification. Current-source CI covers these functional paths in isolated synthetic installations; it does not prove this computer's owner handoff. The separate4318 sample remains temporary fictional data.
 
-## Owner's one-time Windows actions
+## Fresh installations: validate TLS before provisioning
 
-1. Save open work before any restart. Follow [Microsoft's WSL installation guide](https://learn.microsoft.com/en-us/windows/wsl/install): open an administrator PowerShell, run wsl --install and restart when required. Complete the distribution's user/password prompts yourself. Do not send passwords to the chat.
-2. Install and start Docker Desktop using the [official Windows guide](https://docs.docker.com/desktop/setup/install/windows-install/), choosing the WSL2/Linux-container backend. Review/accept its terms yourself. Docker documents free use for eligible small businesses (fewer than250 employees and under$10million annual revenue), personal use, education and noncommercial open source in its [license guide](https://docs.docker.com/subscription-billing/desktop-license/).
-3. Confirm Docker shows its engine running. Tell Codex that WSL/Docker are ready. Codex can then run bounded version/engine checks and continue the actual sample setup.
+The PostgreSQL image does not contain an openssl executable. The installer now reads and validates an explicitly prepared **.local/synthetic-workspace/tls.key** and **tls.pem** before writing an initialization marker or creating any container/database/account. It requires a matching, currently valid, self-signed non-CA certificate covering both127.0.0.1 and localhost. Start validates the same pair and stored certificate hash.
 
-The installer requires an eligible Windows build and virtualization support; follow the official guide if it reports a missing prerequisite. No BIOS, administrator, host-access group, security-policy or terms changes have been made by the agent. A restart cannot be safely completed while the owner is away.
+For a new checkout only, an already installed trusted OpenSSL can prepare the pair for free:
 
-## Engineering work after those prerequisites
+```text
+mkdir .local/synthetic-workspace
+openssl req -x509 -newkey rsa:2048 -noenc -keyout .local/synthetic-workspace/tls.key -out .local/synthetic-workspace/tls.pem -days 30 -subj /CN=localhost -addext subjectAltName=IP:127.0.0.1,DNS:localhost -addext basicConstraints=critical,CA:FALSE
+```
 
-Use pinned genuine PostgreSQL and Auth with a separate persistent synthetic workspace/volume and loopback-only ports. Do not turn the disposable CI tmpfs database into the persistent test store. Build/run the actual application in the supported Linux runtime, configure its existing trusted server composition, provision only a synthetic test owner, exercise real MFA/session/RLS/recovery gates and verify save/reopen across a controlled restart. Add portable export/recovery checks and show the resulting actual app.
+Keep the private key local with restrictive file permissions. Do not overwrite an existing installation's pair, install it as a trusted root, or disable certificate checks. Expiry/replacement requires explicit reviewed local maintenance. This computer's pair was generated with its already-bundled cryptography runtime; no purchase or software installation was needed.
 
-The default executable currently stays a closed setup shell; installing Docker alone will not activate an owner app. No environment switch, fake Auth, SQLite/JSON replacement, weakened roles or unreviewed production provisioning is part of this handoff. Ordinary source/CI acceptance and the known isolated export-admission issue remain separate.
+A fresh installation also requires the supported official Docker/WSL prerequisites and explicit provisioning authorization. Use [Microsoft's WSL guide](https://learn.microsoft.com/en-us/windows/wsl/install) and [Docker's Windows guide](https://docs.docker.com/desktop/setup/install/windows-install/); the owner handles administrator/restart/terms prompts. Docker's [license guide](https://docs.docker.com/subscription-billing/desktop-license/) determines eligibility for free use.
 
-## Free alternatives investigated
+## Setup defects and retained evidence
 
-Supabase's [native runtime guide](https://supabase.com/docs/guides/local-development/docker-and-native-runtimes) explicitly excludes Windows; updating the CLI cannot make that path supported. Native Linux or supported macOS can avoid Docker, including after a later deliberate machine transfer. [Portable PostgreSQL for Windows](https://www.postgresql.org/download/windows/) is available, but a standalone database omits the application's Auth/provider stack and required production-equivalent extensions/acceptance. It is not a quality-preserving shortcut here.
+The pinned CLI classifies local targets using hostname and the configured database port. The original staging configuration omitted the actual port and stepped the owned loopback connection down to postgres, tripping Crest's unchanged role invariant. The correction supplies the already-verified loopback hostname/port. Failed attempts, reviewed pending records and the successful44-migration receipt stay private in .local.
 
-A cloud free tier would need an owner account/consent and a separate backup/reliability assessment; none is necessary for the recommended local synthetic setup. No signup, cloud resource, purchase, public tunnel, production database or real business record was created.
+A direct privileged rollback probe was rejected by automatic approval review and was not executed. The successful path used read-only diagnostics and the approved coordinator. Never bypass that boundary with direct privileged SQL.
 
-Current preview data is still temporary. Keep using fictional records until a separately approved real-use release passes its required gates.
+No cloud account, paid service, public tunnel, real business record or financial activation is needed or authorized. Full exports, independent recovery and other real-use gates remain required. Installing Docker or starting this test server does not make Crest OS ready for real Crest data.

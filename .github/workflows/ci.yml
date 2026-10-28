@@ -271,6 +271,7 @@ jobs:
           npm run lint
           npm run typecheck
           npm test
+          node --test tests/integration/synthetic-workspace-tls.test.mjs
           npm run test:private-files
           npm run test:image-validation
           npm run test:pdf-validation

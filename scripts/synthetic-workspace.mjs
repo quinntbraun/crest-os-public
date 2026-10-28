@@ -2,7 +2,7 @@
 // Uses a separate persistent Docker cluster; never adopts CI or owner databases.
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
-import {createHash,randomBytes,randomUUID} from 'node:crypto';
+import {randomBytes,randomUUID} from 'node:crypto';
 import {createServer} from 'node:http';
 import {mkdir,readFile,writeFile,access} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
@@ -14,6 +14,7 @@ import {exportJWK,generateKeyPair,SignJWT} from 'jose';
 import {URI} from 'otpauth';
 import {applySyntheticMigrations} from './synthetic-migrations.mjs';
 import {importSyntheticSigningKey} from './synthetic-workspace-key.mjs';
+import {readSyntheticTls} from './synthetic-workspace-tls.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url)),directory=join(root,'.local/synthetic-workspace'),statePath=join(directory,'state.json');
 const origin='https://127.0.0.1:4319',issuer='http://127.0.0.1:54328/auth/v1';
@@ -49,6 +50,9 @@ try{
   await mkdir(directory,{recursive:true,mode:0o700});
   assert(!await exists(statePath),'SYNTHETIC_SETUP_EXISTS_REVIEW_REQUIRED');
   assert(!await exists(join(directory,'initializing.json')),'SYNTHETIC_SETUP_EXISTS_REVIEW_REQUIRED');
+  // Validate before creating a marker, container, volume, user or database.
+  // Pinned PostgreSQL does not include an openssl executable.
+  stage='local TLS preflight';const localTls=await readSyntheticTls(directory);
   const id=randomBytes(8).toString('hex'),{privateKey}=await generateKeyPair('ES256',{extractable:true});
   state=validate({schemaVersion:1,id,databaseName:`crest_migrate_${id}`,databaseContainer:`crest-synthetic-db-${id}`,authContainer:`crest-synthetic-auth-${id}`,volume:`crest-synthetic-data-${id}`,issuer,origin,databasePassword:randomBytes(32).toString('hex'),login:`crest_local_${id}`,loginPassword:randomBytes(32).toString('hex'),publicKey:`sb_publishable_${randomBytes(24).toString('base64url')}`,jwtSecret:randomBytes(48).toString('base64url'),jwk:{...await exportJWK(privateKey),kid:randomUUID(),alg:'ES256',use:'sig',key_ops:['sign','verify']},loginKey:randomBytes(32).toString('base64url'),tokenKey:randomBytes(32).toString('base64url')});
   await save(join(directory,'initializing.json'),{schemaVersion:1,id,startedAt:new Date().toISOString()});
@@ -99,23 +103,21 @@ try{
     }catch{await db.query('ROLLBACK');throw Error('SYNTHETIC_OWNER_BOOTSTRAP_FAILED');}
     await save(join(directory,'owner-credentials.json'),{purpose:'Fictional local testing only. Never use these credentials elsewhere.',email,password,totpUri:factor.totp.uri});
    }finally{await sdk.dispose();await adminSdk.dispose();}
-   // Generate a local certificate inside the owned container. No host trust-store edits.
    stage='local TLS';
-   docker(['exec',state.databaseContainer,'openssl','req','-x509','-newkey','rsa:2048','-noenc','-keyout','/tmp/crest-synthetic.key','-out','/tmp/crest-synthetic.pem','-days','30','-subj','/CN=localhost','-addext','subjectAltName=IP:127.0.0.1,DNS:localhost']);
-   docker(['cp',`${state.databaseContainer}:/tmp/crest-synthetic.key`,join(directory,'tls.key')]);docker(['cp',`${state.databaseContainer}:/tmp/crest-synthetic.pem`,join(directory,'tls.pem')]);
-   state.certificateSha256=createHash('sha256').update(await readFile(join(directory,'tls.pem'))).digest('hex');await save(statePath,state);
+   assert.equal((await readSyntheticTls(directory)).sha256,localTls.sha256,'SYNTHETIC_LOCAL_TLS_CHANGED');
+   state.certificateSha256=localTls.sha256;await save(statePath,state);
   }finally{await db.end();if(server){server.closeAllConnections();await new Promise(ok=>server.close(ok));server=null;}}
   console.log('Synthetic workspace initialized. Private sign-in details are in .local/synthetic-workspace/owner-credentials.json. No credentials printed. Start explicitly with workspace:start.');
  }else{
   state=validate(JSON.parse(await readFile(statePath,'utf8')));ownContainer(state,state.databaseContainer);ownContainer(state,state.authContainer);
   if(mode==='stop'){docker(['stop','--time','10',state.authContainer,state.databaseContainer]);console.log('Owned synthetic services stopped. Persistent data retained.');}
   else{
+   const tls=await readSyntheticTls(directory);assert.equal(tls.sha256,state.certificateSha256,'SYNTHETIC_LOCAL_TLS_CHANGED');
    docker(['start',state.databaseContainer]);await healthy(state);docker(['start',state.authContainer]);await authHealthy();server=await bridge();
    process.env.NODE_ENV='production';
    const {createCrestApplication,createAuthenticationRuntime}=await import('../.local/server/application.mjs');
    const runtime=await createAuthenticationRuntime({database:{connectionString:connection(state,true),environment:'test'},provider:{issuer,publicKey:state.publicKey,environment:'test'},owner:state.owner,loginKey:Buffer.from(state.loginKey,'base64url'),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:Buffer.from(state.tokenKey,'base64url')}]});
-   const cert=await readFile(join(directory,'tls.pem'));assert.equal(createHash('sha256').update(cert).digest('hex'),state.certificateSha256);
-   app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(join(directory,'tls.key')),cert},authentication:runtime.forServer(),business:{businessId:state.businessId},customers:true,vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true,syntheticCatalog:true});
+   app=await createCrestApplication({origin,environment:'test',tls:{key:tls.key,cert:tls.cert},authentication:runtime.forServer(),business:{businessId:state.businessId},customers:true,vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true,syntheticCatalog:true});
    await new Promise((ok,no)=>{app.server.once('error',no);app.server.listen(4319,'127.0.0.1',ok);});
    console.log('Synthetic Crest workspace: '+origin+' . Genuine sign-in required; self-signed local TLS, no automatic browser exception. Data lives in the owned Docker volume.');
    const close=async()=>{await app.close();server.closeAllConnections();await new Promise(ok=>server.close(ok));process.exit(0);};process.once('SIGINT',close);process.once('SIGTERM',close);
