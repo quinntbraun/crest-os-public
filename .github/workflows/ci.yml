@@ -83,6 +83,8 @@ jobs:
         run: npm run test:catalog-commands-proposal
       - name: Install pinned recovery tooling
         run: node scripts/install-recovery-tools.mjs
+      - name: Prove proposed catalog source CSV and independent encrypted recovery
+        run: npm run test:catalog-source-proposal
       - name: Prove registered original-operation retirement, complete source and independent encrypted recovery
         run: npm run test:operation-resolution-db
       - name: Prove registered atomic conversion, source export and encrypted recovery
