@@ -61,6 +61,8 @@ jobs:
         run: node scripts/install-recovery-tools.mjs
       - name: Prove proposed catalog source CSV and independent encrypted recovery
         run: npm run test:catalog-source-proposal
+      - name: Prove registered44 catalog upgrade, retained workflow and independent recovery
+        run: npm run test:catalog-registered
       - name: Run isolated regression group
         run: |
           npm run test:db

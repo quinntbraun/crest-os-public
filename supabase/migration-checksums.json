@@ -215,6 +215,11 @@
       "version": "20261027010000",
       "file": "20261027010000_source_export_journal.sql",
       "sha256": "d020f734b28dd3090e17c9092548a204f45c3e24c3e886a8557a92eef0540447"
+    },
+    {
+      "version": "20261028010000",
+      "file": "20261028010000_service_catalog.sql",
+      "sha256": "09a8ff9eeb415f879e56cdf5a43d74b0178e4b9d45c3efad806a16c621796729"
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Crest OS
 
-Current delivery,2026-10-28: the actual app now has a Crest-branded navigation shell, a home screen backed by genuine session/business checks, customer/vehicle/lead controls and protected single-record retrieval. The [active checkpoint](planning/WORKING_STATE.md) distinguishes implementation, exact-source verification, local delivery and real-use acceptance. The first complete signed-in customer/vehicle journey is the immediate milestone; full V1 scope remains in the canonical contracts and [usable-release milestones](planning/USABLE_RELEASE_MILESTONES.md).
+Current delivery,2026-10-28: the actual app now has a Crest-branded navigation shell, a home screen backed by genuine session/business checks, customer/vehicle/lead controls and protected single-record retrieval. The [active checkpoint](planning/WORKING_STATE.md) distinguishes implementation, exact-source verification, local delivery and real-use acceptance. The genuine signed-in customer/vehicle journey has passed complete CI; owner-delivered configuration and restart-persistence acceptance are the immediate milestone; full V1 scope remains in the canonical contracts and [usable-release milestones](planning/USABLE_RELEASE_MILESTONES.md).
 
 | What can be opened | Actual capability and limit |
 |---|---|
@@ -9,7 +9,7 @@ Current delivery,2026-10-28: the actual app now has a Crest-branded navigation s
 | Candidate persistent local workspace | Docker/WSL2 installed and engine verified. Controlled synthetic initialization, owner delivery and restart-persistence acceptance remain incomplete; see [local setup](planning/FREE_LOCAL_TEST_SETUP.md). Do not blindly repeat init or reset a failed setup. |
 | Configured product journey in CI | Genuine MFA/Auth/PostgreSQL fixture exercises the actual pages. Inspect the current feature PR/run for results; CI success does not install a working owner build. |
 
-The [catalog storage](planning/PHASE_5_CATALOG_STORAGE.md), [trusted commands](planning/PHASE_5_CATALOG_COMMANDS.md) and [private adapter](planning/PHASE_5_CATALOG_ADAPTER.md) passed their native construction cases on PR95/source a653ba5/run40637159976, including genuine adapter authentication. These proposed layers remain unregistered and do not enable permanent catalog or quote saving. Scheduling/jobs, financial posting/reporting and Calendar delivery remain unfinished.
+The [catalog storage](planning/PHASE_5_CATALOG_STORAGE.md), [trusted commands](planning/PHASE_5_CATALOG_COMMANDS.md) and [private adapter](planning/PHASE_5_CATALOG_ADAPTER.md) passed their native construction cases on PR95/source a653ba5/run40637159976, including genuine adapter authentication. The reviewed layers are now included in the append-only schema44 construction with preserved43/42 fixtures; see [catalog adoption](planning/PHASE_5_CATALOG_ADOPTION.md). Actual registered44 native/full acceptance and compatible44 export/runtime/editor integration remain required before permanent catalog or quote saving. Scheduling/jobs, financial posting/reporting and Calendar delivery remain unfinished.
 
 Crest Detailing's internal business operating system.
 

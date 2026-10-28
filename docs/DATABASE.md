@@ -1,6 +1,6 @@
 # Crest OS V1 - Database Contract
 
-Version: 1.6 | 2026-10-27 | ADR43 registered source-export journal; production gated
+Version: 1.7 | 2026-10-28 | ADR44 registered catalog construction; activation gated
 
 Schema43 implementation record,2026-10-27 (ADR43): the append-only export journal is represented by six forced-RLS private tables: export_jobs, export_job_attempts, export_job_snapshots, export_part_intents, export_part_verifications and export_job_completions. Their114 required fields preserve original requests/leases, exact snapshot/Ready text/hashes, ciphertext intents/verification and immutable completion/expiry evidence. planning/SOURCE_EXPORT_SCHEMA43_ADOPTION.json binds the registered migration to all seven exact reviewed proposal bodies. Global coverage becomes39 tables/613 columns (603 required, the same10 explicit credential exclusions). Actual registered43 catalogue/upgrade/Auth/recovery tests remain required. Original42 SQL, nonfinancial retirement semantics and every posted-history rule remain unchanged; source registration grants no production or product-route activation.
 
@@ -271,3 +271,8 @@ Every schema release runs introspection checks over these invariants, restores t
 Later versioned migrations add tenant-scoped connection/consent metadata, job/destination event mappings, typed scheduling outbox work and retained redacted attempts. Secret columns remain in a separate restricted encrypted credential boundary, never ordinary export/projection. Composite tenant FKs, uniqueness per job/destination and remote ID/destination, source versions, generation/lease/recovery fences and indexed bounded work claims are required. State-machine transitions retain unresolved attempts and cannot delete source history. Credential revocation state is distinct from confirmed event cleanup.
 
 The scheduling transaction writes its appointment/history/outbox atomically; provider network I/O occurs after commit. Record one opaque Google-compatible event identity before dispatch, stable through retries/confirmed reschedules, plus projection/consent version and observed etag. Neither title matching nor409/404 alone proves ownership or completion. Restore cannot replay old queues or self-upgrade epochs; reviewed provider reconciliation precedes new dispatch. Exact columns/functions/grants require the implementation migration review and GC01-GC18. No Calendar tables or grants exist merely because this logical contract was added.
+
+
+## 2026-10-28 — Registered44 catalog construction
+
+ADR44 appends one atomic catalogue migration with the four exact reviewed catalog bodies. The first43 SQL files/checksum entries remain immutable. Registered inventory becomes41 tables/642 columns (632 required source fields and the same10 explicit credential exclusions). Migration registration does not enable the catalog runtime or production data.

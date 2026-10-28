@@ -1,6 +1,6 @@
 # Crest OS V1 - Technical Architecture
 
-Version: 1.8 | 2026-10-27 | ADR43 registered source-export journal; production gated
+Version: 1.9 | 2026-10-28 | ADR44 registered catalog construction; activation gated
 
 Schema43 construction amendment,2026-10-27: ADR43 explicitly registers the reviewed bounded source-export journal and its39-table/613-column inventory while preserving all42 earlier migrations and closed legacy42 profiles. Fresh owner/lease/recovery authority, exact-original audit, independent reconstruction and version-specific encrypted restore remain mandatory. This source construction does not enable product routes, certify full backups or authorize production application/use. See DATABASE8, EXPORTS_AND_BACKUPS2 and planning/PHASE_4_SOURCE_EXPORT_ADOPTION.md.
 
@@ -234,3 +234,8 @@ Checked 2026-10-20; pricing and availability must be rechecked at provisioning. 
 Use the existing Node/PostgreSQL monolith and bounded worker, a transactional scheduling outbox and narrow Google Calendar adapter. No separate automation platform, Redis or proprietary calendar server. Dedicated app-created user-owned secondary calendar and least scopes isolate unrelated calendars. Integration credentials are encrypted server-side with separate purpose/key context; OAuth consent does not become Crest authentication. Typed mappings retain original external identity, source version, destination, connection generation and recovery/lease fences. Google calls cannot be atomic with PostgreSQL; uncertain results are reconciled and never described as globally exactly-once delivery.
 
 Use conditional provider updates, retain unresolved attempts, bound retries and shared budgets, surface divergence, and prohibit inbound Google changes to authoritative jobs. Fence/drain old workers and compare actual remote state before any post-restore dispatch. The researched design, alternatives, official evidence and GC01-GC18 gates are in planning/GOOGLE_CALENDAR_V1.md. Implementation follows Phase2/3 and authoritative Phase6 scheduling; current runtime remains default-closed. Free API feasibility is not proof of free always-on hosting or production recovery.
+
+
+## 2026-10-28 — Registered44 catalog construction
+
+ADR44 appends catalog storage/commands/source readers/original-save resolution as schema44 construction. Existing43/42 profiles remain explicit and unchanged. Catalog runtime/registered44 worker/editor integration and real-data release gates remain incomplete; see planning/CATALOG_SCHEMA44_ADOPTION.json.

@@ -8,7 +8,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {before,after,test} from 'node:test';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
-import {backupDatabase,connect,hash,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase,postgresTool,normalizedSchema} from '../support/recovery-drill.mjs';
+import {backupLegacy43Database as backupDatabase,connect,hash,inventory,keyPair,privateWorkspace,recoveryCluster,restoreLegacy43Database as restoreDatabase,postgresTool,normalizedSchema} from '../support/recovery-drill.mjs';
 import {formatServiceCatalogCsv} from '../../src/commercial/service-catalog-csv.ts';
 import {serviceColumns,serviceContentColumns} from '../../src/commercial/service-storage-contract.ts';
 import {decodeServiceCatalogCsv} from '../support/service-catalog-csv-fixture.ts';

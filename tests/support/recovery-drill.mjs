@@ -16,6 +16,9 @@ const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums
 const registryHash=hash(await readFile(join(root,'supabase/migration-checksums.json')));
 const legacy42Bytes=await readFile(join(root,'tests/support/registered42-migration-checksums.json')),legacy42=JSON.parse(legacy42Bytes);
 assert.equal(legacy42.migrations.length,42);assert.deepEqual(registry.migrations.slice(0,42),legacy42.migrations);
+const legacy43Bytes=await readFile(join(root,'tests/support/registered43-migration-checksums.json')),legacy43=JSON.parse(legacy43Bytes);
+assert.equal(legacy43.migrations.length,43);assert.deepEqual(registry.migrations.slice(0,43),legacy43.migrations);
+const legacy43Profile=Object.freeze({schemaVersion:43,registrySha256:hash(legacy43Bytes)});
 const currentProfile=Object.freeze({schemaVersion:registry.migrations.length,registrySha256:registryHash}),legacy42Profile=Object.freeze({schemaVersion:42,registrySha256:hash(legacy42Bytes)});
 const tool=name=>join(root,`.local/tools/recovery/age/${name}${process.platform==='win32'?'.exe':''}`);
 const maxBytes=32*1024*1024;
@@ -89,6 +92,7 @@ async function unseal(path,expected,identity){
   return run(tool('age'),['--decrypt','--identity',identity],{input:cipher});
 }
 export async function backupDatabase(...args){return backupWithProfile(currentProfile,...args);}
+export async function backupLegacy43Database(...args){return backupWithProfile(legacy43Profile,...args);}
 export async function backupLegacy42Database(...args){return backupWithProfile(legacy42Profile,...args);}
 async function backupWithProfile(profile,client,url,directory,recipient,duringSnapshot=async()=>{},objectCapture){
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -112,6 +116,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_RECOVERY_BACKUP_FAILED:'+stage);}
 }
 export async function restoreDatabase(...args){return restoreWithProfile(currentProfile,...args);}
+export async function restoreLegacy43Database(...args){return restoreWithProfile(legacy43Profile,...args);}
 export async function restoreLegacy42Database(...args){return restoreWithProfile(legacy42Profile,...args);}
 async function restoreWithProfile(profile,directory,identity,url,restoreObjects){
   target(url);const client=await connect(url);let stage='empty_destination';

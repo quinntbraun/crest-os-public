@@ -89,3 +89,18 @@ DATABASE.md: prior amended version1.5, SHA256 7b51a2362d6b9bfe302a1a012bc38d97fe
 EXPORTS_AND_BACKUPS.md: prior amended version1.5, SHA256 162b73eb711eee6562f04518d156744954d1f45c6831372086e92ac5f50ae27c, 28282 bytes at source00f21d77851e7603d99b8912bd6c1eeeda2e877b; now version1.6, SHA256 cb419895a528c8b5d9196326f63341d1df581846c8c5cf47390f8917948dd468, 29492 bytes. Original baseline hash/length retained.
 
 PUBLICATION.md: prior amended version1.8, SHA256 14dcd0b082ee74abd1d6c760bee09e9111b32d9e199963e06a37577880808e85, 5868 bytes at source00f21d77851e7603d99b8912bd6c1eeeda2e877b; now version1.9, SHA256 fb23f2c00ec0b81d4d46013081d768e71d35a5cdb8635d9c267537e6a33a41dd, 6258 bytes. Original baseline hash/length retained.
+
+
+## 2026-10-28 — ADR44 catalog construction registration
+
+Reason: advance the approved catalog→quote workflow by registering its accepted storage/command/source/recovery layers with append-only provenance. Registration is construction; runtime44 export/admission/editor and every production/real-data gate remain required. No original manifest/baseline/previous migration/proposal body or exclusion changes. See planning/CATALOG_SCHEMA44_ADOPTION.json.
+
+| Document | Prior version | Prior SHA256 | Prior bytes | New version | New SHA256 | New bytes |
+|---|---|---|---|---|---|---|
+| ARCHITECTURE.md | 1.8 | 12890f037e599232634e39823eeb978c8674585643bb54f66ad9ba06212d37ca | 39230 | 1.9 | a30e17f994e3ef0a131fe263e12beac23e1743dfeb4262538fc105e6153fba15 | 39590 |
+| DATABASE.md | 1.6 | 044a64693667be29ceee6ebbf58fd136b9cdf799d18138e7c4911d1ada001113 | 55826 | 1.7 | 5f327467ce74fbbbda987c09c29b6853ebdcd2bc45f344e493abae4500fc934c | 56232 |
+| EXPORTS_AND_BACKUPS.md | 1.6 | cb419895a528c8b5d9196326f63341d1df581846c8c5cf47390f8917948dd468 | 29492 | 1.7 | 37017d2c1a3f4523737d5aad9843aa6502a75baf1f4031c77d413df3dc93db10 | 30279 |
+| PUBLICATION.md | 1.9 | fb23f2c00ec0b81d4d46013081d768e71d35a5cdb8635d9c267537e6a33a41dd | 6258 | 1.10 | 0d21cdb14601c80292add46dd97134dfa36df975d0ba3da6939197751b788ead | 6656 |
+| ARCHITECTURE_DECISIONS.md | 1.14 | 795c07717f9e6b6f3a0bc2875ef2c544bce70281d1cc125e74e6beef8bf10ef8 | 54550 | 1.15 | 72f4009a4e31bfcf680db11325923195763179c2ff98bff1bd9a333cf592e6f2 | 56726 |
+
+ADR44 sequencing clarification: the bounded genuine synthetic catalog editor depends on actual44 domain authorization/history/concurrency, common-format retrieval, isolated recovery and browser acceptance. Complete business portability remains phase11 and a real-data/release gate; no requirement is waived or scope omitted. This corrects an over-broad construction dependency, following the owner's early usable-build instruction and existing ROADMAP/ADR41.

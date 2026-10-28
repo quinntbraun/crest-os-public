@@ -2,10 +2,10 @@ import {readFileSync} from 'node:fs';
 import {it,expect} from 'vitest';
 import {sha256,validateMigrationSet} from '../../src/tooling/migrations.ts';
 import type {MigrationRegistry} from '../../src/tooling/migrations.ts';
-import registry from '../../supabase/migration-checksums.json';
+import registry from '../support/registered43-migration-checksums.json';
 import legacy from '../support/registered42-migration-checksums.json';
 import adoption from '../../planning/SOURCE_EXPORT_SCHEMA43_ADOPTION.json';
-import compatibility from '../../release/compatibility.json';
+import compatibility from '../support/registered43-compatibility.json';
 const bytes=(path:string)=>readFileSync(new URL('../../'+path,import.meta.url));
 it('appends one checksummed journal migration and retains every reviewed42 migration entry and body',()=>{
  const files=new Map(registry.migrations.map(entry=>[entry.file,bytes('supabase/migrations/'+entry.file)]));expect(registry.migrations).toHaveLength(43);expect(registry.migrations.slice(0,42)).toEqual(legacy.migrations);expect(()=>validateMigrationSet(registry as MigrationRegistry,files,legacy as MigrationRegistry)).not.toThrow();expect(registry.migrations[42]).toEqual({version:adoption.migration.file.slice(0,14),file:adoption.migration.file,sha256:adoption.migration.sha256});expect(sha256(bytes('tests/support/registered42-migration-checksums.json'))).toBe(adoption.previousRegistry.sha256);

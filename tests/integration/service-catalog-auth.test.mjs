@@ -21,6 +21,8 @@ import {createServiceHttp} from '../../src/commercial/service-http.ts';
 import {createBrowserSessionFlow} from '../../src/security/browser-session-flow.ts';
 import {transportFromIncomingMessage} from '../../src/security/trusted-transport.ts';
 let sandbox,target,client,service,login,config,boundary,tokens,lifecycle,bootstrap;
+const registered44=process.env.CREST_CATALOG_TEST_PROFILE==='registered44';
+assert(process.env.CREST_CATALOG_TEST_PROFILE===undefined||registered44,'only the explicit catalog construction/registered44 fixtures are supported');
 const signal=()=>new AbortController().signal;
 const payload=(patch={})=>({code:'synthetic-'+randomUUID(),active:true,definition:{name:'Synthetic Auth interior',inclusions:'Vacuum.\nApplicable leather care.',exclusions:'No exterior protection.',internalGuidance:'Synthetic private note',rangeLowCents:'0',rangeHighCents:null,estimatedSeconds:'5430'},...patch});
 const request=(f,patch={})=>({schemaVersion:1,businessId:f.business,operationId:randomUUID(),recoveryEpoch:f.epoch,serviceId:randomUUID(),expectedRevision:'0',payload:payload(),...patch});
@@ -28,11 +30,16 @@ async function transaction(run){await client.query('BEGIN');try{const v=await ru
 before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
  await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);const prior=(await sandbox.apply(target,await sandbox.prefix(43))).history;
- for(const name of ['service-catalog-storage','service-catalog-commands','service-catalog-resolution']){
-  const sql=await readFile(new URL('../../planning/proposals/'+name+'.sql',import.meta.url),'utf8'),meta=JSON.parse(await readFile(new URL('../../planning/proposals/'+name+'.json',import.meta.url),'utf8'));
-  assert.equal(createHash('sha256').update(sql).digest('hex'),meta.sqlSha256);await transaction(()=>client.query(sql));
+ if(registered44){
+  const current=await sandbox.apply(target);assert.equal(current.history.length,44);assert.deepEqual(current.history.slice(0,43),prior);
+  assert.deepEqual((await sandbox.apply(target)).history,current.history);
+ }else{
+  for(const name of ['service-catalog-storage','service-catalog-commands','service-catalog-resolution']){
+   const sql=await readFile(new URL('../../planning/proposals/'+name+'.sql',import.meta.url),'utf8'),meta=JSON.parse(await readFile(new URL('../../planning/proposals/'+name+'.json',import.meta.url),'utf8'));
+   assert.equal(createHash('sha256').update(sql).digest('hex'),meta.sqlSha256);await transaction(()=>client.query(sql));
+  }
+  assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(43))).history,prior); // observe owned proposal roles for cleanup
  }
- assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(43))).history,prior); // observe owned proposal roles for cleanup
  login='crest_catalog_auth_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');
  await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_web TO '+login);
  const url=new URL(target);url.username=login;url.password=password;config={connectionString:url.toString(),environment:'test'};
