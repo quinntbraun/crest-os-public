@@ -4,19 +4,43 @@
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {cp,mkdir,readFile,writeFile,copyFile} from 'node:fs/promises';
-import {join} from 'node:path';
+import {join,dirname} from 'node:path';
+import {createRequire} from 'node:module';
+
+// Resolve the existing installed closure from the checkout's package context.
+// Worktrees may share their ancestor's locked installation. Do not mount that
+// ancestor or copy unrelated packages/private workspace state into the runner.
+export async function copySyntheticPgDependencies({root,output}){
+ const require=createRequire(join(root,'package.json')),copied=new Map();
+ async function dependency(name,parentRequire=require){
+  assert(/^(?:@[a-z0-9-]+\/)?[a-z0-9-]+$/.test(name));
+  let source=dirname(parentRequire.resolve(name)),pkg;
+  for(let depth=0;depth<8;depth++){
+   try{const candidate=JSON.parse(await readFile(join(source,'package.json'),'utf8'));if(candidate.name===name){pkg=candidate;break;}}
+   catch(error){if(error.code!=='ENOENT')throw error;}
+   const parent=dirname(source);if(parent===source)break;source=parent;
+  }
+  assert(pkg,'SYNTHETIC_DEPENDENCY_PACKAGE_REQUIRED');
+  // This narrow flattened closure must not silently substitute another nested
+  // version. A future conflicting lockfile graph requires explicit review.
+  if(copied.has(name)){assert.equal(copied.get(name),source,'SYNTHETIC_DEPENDENCY_CONFLICT');return;}
+  copied.set(name,source);await cp(source,join(output,'node_modules',name),{recursive:true});
+  const next=createRequire(join(source,'package.json'));
+  for(const child of Object.keys(pkg.dependencies??{}))await dependency(child,next);
+ }
+ await dependency('pg');
+}
 
 export async function applySyntheticMigrations({root,directory,state,bootstrap=false}){
  assert(/^[a-f0-9]{16}$/.test(state.id)&&state.databaseContainer===`crest-synthetic-db-${state.id}`&&state.databaseName===`crest_migrate_${state.id}`);
  const input=join(directory,bootstrap?'public-bootstrap-input':'public-migration-input'),tools=join(directory,'linux-tools'),ledger=join(directory,'migration-ledger');
  await mkdir(join(input,'src/tooling'),{recursive:true,mode:0o700});await mkdir(join(input,'supabase/migrations'),{recursive:true});await mkdir(join(input,'node_modules'),{recursive:true});await mkdir(tools,{recursive:true});await mkdir(ledger,{recursive:true});
- for(const file of ['migration-coordinator.ts','migrations.ts'])await copyFile(join(root,'src/tooling',file),join(input,'src/tooling',file));
+ for(const file of ['migration-coordinator.ts','migrations.ts','migration-cli-diagnostic.ts'])await copyFile(join(root,'src/tooling',file),join(input,'src/tooling',file));
  const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8'));if(bootstrap)registry.migrations=[];
  await writeFile(join(input,'supabase/migration-checksums.json'),JSON.stringify(registry)+'\n');
  for(const entry of registry.migrations)await copyFile(join(root,'supabase/migrations',entry.file),join(input,'supabase/migrations',entry.file));
  // Copy only the locked public pg dependency closure, never application state.
- const copied=new Set();async function dependency(name){assert(/^(?:@[a-z0-9-]+\/)?[a-z0-9-]+$/.test(name));if(copied.has(name))return;copied.add(name);const source=join(root,'node_modules',name),pkg=JSON.parse(await readFile(join(source,'package.json'),'utf8'));await cp(source,join(input,'node_modules',name),{recursive:true});for(const child of Object.keys(pkg.dependencies??{}))await dependency(child);}
- await dependency('pg');
+ await copySyntheticPgDependencies({root,output:input});
  const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8')),sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();assert(/^[a-f0-9]{40}$/.test(sourceCommit));
  await writeFile(join(input,'package.json'),'{"type":"module"}\n');await writeFile(join(input,'toolchain.json'),JSON.stringify(pins));
  const runner=`import {readFile,writeFile,access} from 'node:fs/promises';import {execFileSync} from 'node:child_process';import {createHash} from 'node:crypto';import {applyTestMigrations} from './src/tooling/migration-coordinator.ts';

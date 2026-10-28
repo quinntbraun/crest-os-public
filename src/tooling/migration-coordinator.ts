@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import pg from "pg";
 import { sha256, validateMigrationSet } from "./migrations.ts";
 import type { MigrationRegistry } from "./migrations.ts";
+import { migrationCliDiagnostic } from "./migration-cli-diagnostic.ts";
 
 const execute = promisify(execFile);
 export const migrationLock = [8291, 2] as const;
@@ -230,11 +231,16 @@ export async function applyTestMigrations(options: Options): Promise<MigrationRe
     // extended-length prefix. Other platforms retain the same absolute path.
     const staging = await mkdtemp(toNamespacedPath(join(ledger, "snapshot-")));
     await mkdir(join(staging, "supabase/migrations"), { recursive: true });
-    const config = 'project_id = "crest-migration-test"\n[db]\nmajor_version = 17\n[db.seed]\nenabled = false\n';
+    // The pinned CLI classifies a direct URL as local using this declared port.
+    // Its default54322 would step a different loopback target down to a hosted
+    // postgres role, violating the unchanged closed-role migration guard.
+    const targetUrl = new URL(connectionString);
+    const config = `project_id = "crest-migration-test"\n[db]\nport = ${Number(targetUrl.port || '5432')}\nmajor_version = 17\n[db.seed]\nenabled = false\n`;
     await writeFile(join(staging, "supabase/config.toml"), config, { mode: 0o400 });
     await writeFile(join(staging, "supabase/migration-checksums.json"), input.registryBytes, { mode: 0o400 });
     for (const [file, bytes] of input.files) await writeFile(join(staging, "supabase/migrations", file), bytes, { mode: 0o400 });
     const env = childEnvironment(join(staging, "cli-home"), decodeURIComponent(new URL(connectionString).password));
+    env.SUPABASE_SERVICES_HOSTNAME = targetUrl.hostname.replace(/^\[|\]$/g, '');
     await mkdir(env.SUPABASE_HOME!, { recursive: true });
     const version = await execute(options.cliPath, ["--version"], { env, timeout: 10000, maxBuffer: 128000 });
     if (version.stdout.trim() !== cliVersion) throw new MigrationCoordinatorError("MIGRATION_CLI_VERSION_MISMATCH");
@@ -253,8 +259,10 @@ export async function applyTestMigrations(options: Options): Promise<MigrationRe
       // No linked project, role/seed/vault processing, shell execution or history repair.
       cliUrl.searchParams.set("connect_timeout", "5");
       const result = new Promise<void>((complete, fail) => {
-        activeChild = execFile(options.cliPath, ["db", "push", "--db-url", cliUrl.toString(), "--workdir", staging, "--skip-vault", "--yes", "--agent", "no"], { env, timeout: 120000, maxBuffer: 128000, signal: abort.signal }, (error) => {
-          if (error) fail(new MigrationCoordinatorError("MIGRATION_CLI_FAILED_REVIEW_REQUIRED"));
+        activeChild = execFile(options.cliPath, ["db", "push", "--db-url", cliUrl.toString(), "--workdir", staging, "--skip-vault", "--yes", "--agent", "no"], { env, timeout: 120000, maxBuffer: 128000, signal: abort.signal }, (error, stdout, stderr) => {
+          if (error) void durableCreate(join(ledger, `failed-cli-${attempt}.json`), JSON.stringify({
+            ...migrationCliDiagnostic(input.files, String(stdout), String(stderr)), attempt, target, sourceCommit: options.sourceCommit, registrySha256: input.registrySha256
+          }) + "\n").then(()=>fail(new MigrationCoordinatorError("MIGRATION_CLI_FAILED_REVIEW_REQUIRED")),()=>fail(new MigrationCoordinatorError("MIGRATION_DIAGNOSTIC_WRITE_FAILED_REVIEW_REQUIRED")));
           else complete();
         });
         childClosed = new Promise<void>((closed) => activeChild!.once("close", () => closed()));

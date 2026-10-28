@@ -7,7 +7,8 @@ vi.mock('pg',()=>({default:{Client:class{
  on(name:string,fn:()=>void){this.events[name]=fn;return this;}once(name:string,fn:()=>void){return this.on(name,fn);}
  connect(){return db.connect();}query(...args:unknown[]){return db.query(...args);}end(){return db.end();}
 }}}));
-import {createBusinessFoundationCollector,createBusinessSourceCollector,createBusinessSourceJournalCollector} from '../../src/security/business-foundation-collector';
+import {createBusinessFoundationCollector,createBusinessSourceCollector,createBusinessSourceJournalCollector,createBusinessSourceCatalogCollector} from '../../src/security/business-foundation-collector';
+import {serviceStorageFixture} from '../support/service-storage-fixture';
 import {journalCollectionFixture} from '../support/journal-collection-fixture.ts';
 import {customerFixture} from '../support/customer-fixture.ts';
 import {addressFixture} from '../support/customer-address-fixture.ts';
@@ -235,4 +236,33 @@ it.each(['lead-parent','address-customer'])('rejects a conversion link whose exi
  const fixture=sourceFixture();if(issue==='lead-parent'){const other={...fixture.rows.leads![0],id:randomUUID()};fixture.rows.leads!.push(other);fixture.rows.leads!.sort((a,b)=>(a.id as string)<(b.id as string)?-1:1);contexts.leads=JSON.stringify({...JSON.parse(contexts.leads as string),rowCount:'2'});fixture.rows.leadVehicles![0]!.lead_id=other.id;}
  else{const other={...fixture.rows.customers![0],id:randomUUID()};fixture.rows.customers!.push(other);fixture.rows.customers!.sort((a,b)=>(a.id as string)<(b.id as string)?-1:1);contexts.customers=JSON.stringify({...JSON.parse(contexts.customers as string),rowCount:'2'});fixture.rows.addresses![0]!.customer_id=other.id;}
  await expect(createBusinessSourceCollector(config())(signal())).rejects.toThrow(error);expect(db.query.mock.calls.some(c=>c[0]==='COMMIT')).toBe(false);
+});
+
+function catalogFixture(){
+ const base=journalFixture(),catalog=serviceStorageFixture(),business=f.expected.businessId;
+ const rows={services:[{...catalog.service,business_id:business}],versions:[{...catalog.content,business_id:business}]};
+ const context={schemaVersion:1,scope:'service_catalog',businessId:business,snapshotToken:'c'.repeat(64),serviceCount:'1',versionCount:'1'};
+ contexts.catalog=JSON.stringify(context);
+ const original=async(sql:string,args:unknown[]=[])=>{
+  const entity=sql.includes('.service_catalog_snapshot_services(')?'services':sql.includes('.service_catalog_snapshot_versions(')?'versions':null;
+  return entity?{rows:[{page:JSON.stringify({schemaVersion:1,businessId:business,snapshotToken:context.snapshotToken,[entity]:args[2]===null?rows[entity]:[]})}]}:base.original(sql,args);
+ };
+ db.query.mockImplementation(original);return{base,catalog,rows,context,original};
+}
+it('adds catalog to the same owned snapshot and returns a separate honest unregistered candidate after commit',async()=>{
+ catalogFixture();const capture=await createBusinessSourceCatalogCollector(config())(signal()),out=capture.forCatalogServer(),catalog=JSON.parse(out.catalog);
+ expect(capture).not.toHaveProperty('forServer');expect(capture).not.toHaveProperty('forJournalServer');expect(()=>JSON.stringify(capture)).toThrow('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');
+ expect(out.registeredSourceSchemaVersion).toBe(43);expect(out.catalogRegistered).toBe(false);expect(out.source.sourceSchemaVersion).toBe(43);expect(Object.isFrozen(out.source)).toBe(true);
+ expect(catalog.generationId).toBe(out.source.generationId);expect(catalog.observedAt).toBe(out.source.observedAt);expect(out.recordCount).toBe(out.source.recordCount+2);
+ expect(out.metadataBytes).toBe(out.source.metadataBytes+catalog.metadataBytes);expect(out.evidenceBytes).toBe(out.source.evidenceBytes+Buffer.byteLength(out.catalog));
+ expect(db.configs).toHaveLength(1);const initial=db.query.mock.calls.filter(c=>c[0].includes('_context('));expect(initial).toHaveLength(1);expect(initial[0]![0]).toContain('source_export_journal_context');expect(initial[0]![0]).toContain('service_catalog_snapshot_context');
+ expect(db.query.mock.calls[1]![0]).toBe('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');expect(db.query.mock.calls.at(-1)![0]).toBe('COMMIT');
+});
+it.each(['missing','foreign','count','aggregate'])('rejects catalog %s context before reading any domain page',async issue=>{
+ const fixture=catalogFixture();if(issue==='missing')delete contexts.catalog;else if(issue==='foreign')contexts.catalog=JSON.stringify({...fixture.context,businessId:randomUUID()});else if(issue==='count')contexts.catalog=JSON.stringify({...fixture.context,versionCount:'1001'});else {fixture.base.journal.context.recordCounts.job='9999';contexts.journal=JSON.stringify(fixture.base.journal.context);}
+ await expect(createBusinessSourceCatalogCollector(config())(signal())).rejects.toThrow(error);expect(db.query.mock.calls.some(c=>c[0].includes('_page(')||c[0].includes('_snapshot_services('))).toBe(false);
+});
+it.each(['commit','bad-commit','late-cancel','catalog-page'])('never releases mixed source after %s',async issue=>{
+ const fixture=catalogFixture(),c=new AbortController();db.query.mockImplementation(async(sql,args)=>{if(sql==='COMMIT'){if(issue==='commit')throw new Error('private failure');if(issue==='bad-commit')return{command:'ROLLBACK'};if(issue==='late-cancel')c.abort();}if(issue==='catalog-page'&&sql.includes('.service_catalog_snapshot_versions('))return{rows:[{page:'{}'}]};return fixture.original(sql,args);});
+ await expect(createBusinessSourceCatalogCollector(config())(c.signal)).rejects.toThrow(error);expect(db.end).toHaveBeenCalledOnce();if(issue==='catalog-page')expect(db.query.mock.calls.some(c=>c[0]==='COMMIT')).toBe(false);
 });

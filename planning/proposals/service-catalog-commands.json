@@ -3,7 +3,7 @@
   "registered": false,
   "proposedMigration": null,
   "existingMigrationCount": 43,
-  "requiredSchemaSqlSha256": "463062296675b7f154552b9b227c537201d17c89d973d11b874e54aea2b68f70",
+  "requiredSchemaSqlSha256": "a801ba8995d64653dbcd4fc0551dd24e143033366cfc978dac03e7987d2d359c",
   "capability": "crm.manage",
   "commandType": "catalog.service.save",
   "httpRouteEnabled": false,
@@ -94,5 +94,6 @@
   "sqlBytes": 43342,
   "sqlSha256": "d0c97c0bb15d4f4ab6ee2ce6a10dff9e04f6b5f22387aa4e0c9aa30e5307cdc0",
   "nativeExecuted": false,
-  "productionActivation": "blocked"
+  "productionActivation": "blocked",
+  "priorRequiredSchemaSqlSha256": "463062296675b7f154552b9b227c537201d17c89d973d11b874e54aea2b68f70"
 }

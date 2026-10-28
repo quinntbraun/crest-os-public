@@ -1,0 +1,16 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "existingMigrationCount": 43,
+  "requiredOriginalMigration": "20261026010000_original_operation_resolution.sql",
+  "requiredOriginalMigrationSha256": "9dd564dd3c4bf54e0fc2a08347e51a8a0f51250a448fd75a8950395075ceb281",
+  "beforeBodySha256": "8b8d306061c3e703c366e1a91186a94fcc169c14a16aa47219daf83f36699cde",
+  "requiredSchemaSqlSha256": "a801ba8995d64653dbcd4fc0551dd24e143033366cfc978dac03e7987d2d359c",
+  "requiredCommandsSqlSha256": "d0c97c0bb15d4f4ab6ee2ce6a10dff9e04f6b5f22387aa4e0c9aa30e5307cdc0",
+  "sqlBytes": 4409,
+  "sqlSha256": "38b51a427aed56b9a05cc4ee2c9da5ff8b13fcad8b64b9108e6c0f7e2b7d5699",
+  "commandType": "catalog.service.save",
+  "newGrant": false,
+  "httpRouteEnabled": false
+}

@@ -50,17 +50,14 @@ export function LeadAddressPanel({businessId,leadId,disabled,onLock,assist:Assis
    <p className="field-help">Opening another location discards an unsaved draft. Original lead locations stay separate from customer addresses.</p>
    <button type="button" disabled={writeDisabled} onClick={()=>current.current?.create()}>Add lead address</button>
    {view.draft&&<>
-    <h3>{view.selected?'Edit lead address':'New lead address'}</h3><p className="field-help">Record what is known. An incomplete location can be saved; this does not confirm a customer job location. Unknown and explicitly empty values remain distinct.</p>
+    <h3>{view.selected?'Edit lead address':'New lead address'}</h3><p className="field-help">Record what is known; leave optional fields blank. An incomplete location can be saved; this does not confirm a customer job location.</p>
     <form onSubmit={submit} aria-label="Lead address editor"><fieldset disabled={writeDisabled}><legend>Location details</legend>
      {Assist&&!writeDisabled&&<Assist key={(view.selected?.id??'new')+':'+(view.selected?.version??'0')} draft={view.draft} change={next=>current.current?.edit(next)}/>}
      {fields.map(([name,label,limit,multiline])=><NullableText key={name} name={'lead-address-'+name} label={label} limit={limit} multiline={multiline} value={view.draft![name]} disabled={writeDisabled} change={value=>edit(name,value)}/>)}
      <details><summary>Location coordinates and verification</summary>
-      <label className="trust"><input type="checkbox" checked={view.draft.latitude!==null||view.draft.longitude!==null} onChange={event=>{if(view.draft)current.current?.edit({...view.draft,latitude:event.target.checked?'':null,longitude:event.target.checked?'':null});}}/>Record location coordinates</label>
-      {(view.draft.latitude!==null||view.draft.longitude!==null)&&<>
-       <label htmlFor="lead-address-latitude">Location latitude</label><input id="lead-address-latitude" type="text" autoComplete="off" maxLength={128} required value={view.draft.latitude??''} onChange={event=>edit('latitude',event.target.value)}/>
-       <label htmlFor="lead-address-longitude">Location longitude</label><input id="lead-address-longitude" type="text" autoComplete="off" maxLength={128} required value={view.draft.longitude??''} onChange={event=>edit('longitude',event.target.value)}/>
+       <label htmlFor="lead-address-latitude">Location latitude</label><input id="lead-address-latitude" type="text" autoComplete="off" maxLength={128} value={view.draft.latitude??''} onChange={event=>edit('latitude',event.target.value||null)}/>
+       <label htmlFor="lead-address-longitude">Location longitude</label><input id="lead-address-longitude" type="text" autoComplete="off" maxLength={128} value={view.draft.longitude??''} onChange={event=>edit('longitude',event.target.value||null)}/>
        <p className="field-help">Record both values: latitude −90 to 90, longitude −180 to 180. Decimal text is retained without rounding.</p>
-      </>}
       <NullableText name="lead-address-geocode-source" label="Location geocode source" limit={200} value={view.draft.geocodeSource} disabled={writeDisabled} change={value=>edit('geocodeSource',value)}/>
       <NullableText name="lead-address-geocode-accuracy" label="Location geocode accuracy" limit={200} value={view.draft.geocodeAccuracy} disabled={writeDisabled} change={value=>edit('geocodeAccuracy',value)}/>
       {view.draft.verifiedAt===null&&<button type="button" className="secondary" onClick={()=>edit('verifiedAt',new Date().toISOString().slice(0,-1)+'000Z')}>Mark lead location verified now</button>}

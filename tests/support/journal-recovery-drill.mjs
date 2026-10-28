@@ -12,7 +12,7 @@ const tool=join(root,'.local/tools/recovery/age/age'+(process.platform==='win32'
 const proposalPaths=['source-export-jobs.sql','source-export-snapshots.sql','source-export-parts.sql','source-export-ready.sql','source-export-journal-reads.sql','source-export-request-resolution.sql','source-export-owner-reads.sql'].map(n=>'planning/proposals/'+n);
 async function binding(registered){
  if(registered){
-  const raw=await readFile(join(root,'supabase/migration-checksums.json')),registry=JSON.parse(raw),pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));assert.equal(registry.migrations.length,43);
+  const raw=await readFile(join(root,'tests/support/registered43-migration-checksums.json')),registry=JSON.parse(raw),pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));assert.equal(registry.migrations.length,43);assert.deepEqual(JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8')).migrations.slice(0,43),registry.migrations);
   const last=registry.migrations[42];assert.equal(last.file,'20261027010000_source_export_journal.sql');assert.equal(hash(await readFile(join(root,'supabase/migrations',last.file))),last.sha256);
   return{scope:'synthetic_registered43_journal_drill',schemaVersion:43,registrySha256:hash(raw),databaseImage:pins.testDatabaseImage,registeredMigration:{file:last.file,sha256:last.sha256},inventoryLimitBytes:limit};
  }

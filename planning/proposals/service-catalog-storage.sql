@@ -70,10 +70,10 @@ CREATE TABLE crest.service_versions (
  FOREIGN KEY(business_id,service_id) REFERENCES crest.services(business_id,id) ON DELETE RESTRICT,
  FOREIGN KEY(business_id,created_by) REFERENCES crest.memberships(business_id,actor_id) ON DELETE RESTRICT,
  FOREIGN KEY(business_id,operation_id,created_by) REFERENCES crest_private.operations(business_id,operation_id,actor_id) ON DELETE RESTRICT,
- CHECK(char_length(name) BETWEEN 1 AND 200 AND btrim(name,E'\t\n\r\u000b\f \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff')<>'' AND name!~'[[:cntrl:]]'),
- CHECK(char_length(inclusions) BETWEEN 1 AND 4000 AND btrim(inclusions,E'\t\n\r\u000b\f \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff')<>'' AND translate(inclusions,E'\t\n\r','')!~'[[:cntrl:]]'),
+ CHECK(char_length(name)>=1 AND char_length(name)<=200 AND btrim(name,E'\t\n\r\u000b\f \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff')<>'' AND name!~'[[:cntrl:]]'),
+ CHECK(char_length(inclusions)>=1 AND char_length(inclusions)<=4000 AND btrim(inclusions,E'\t\n\r\u000b\f \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff')<>'' AND translate(inclusions,E'\t\n\r','')!~'[[:cntrl:]]'),
  CHECK(char_length(exclusions)<=4000 AND translate(exclusions,E'\t\n\r','')!~'[[:cntrl:]]'),
- CHECK(internal_guidance IS NULL OR (char_length(internal_guidance) BETWEEN 1 AND 4000 AND btrim(internal_guidance,E'\t\n\r\u000b\f \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff')<>'' AND translate(internal_guidance,E'\t\n\r','')!~'[[:cntrl:]]'))
+ CHECK(internal_guidance IS NULL OR (char_length(internal_guidance)>=1 AND char_length(internal_guidance)<=4000 AND btrim(internal_guidance,E'\t\n\r\u000b\f \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff')<>'' AND translate(internal_guidance,E'\t\n\r','')!~'[[:cntrl:]]'))
 );
 -- Both sides are tenant/service typed. Deferred publication permits creating
 -- the directory root and its first content row in one atomic transaction.

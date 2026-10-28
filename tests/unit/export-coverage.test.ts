@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest';
 // Preserve the historical42 construction profile; registered43 is separate.
 import manifest from '../support/registered42-export-coverage.json';
-import registered43 from '../../planning/SECURITY_EXPORT_COVERAGE.json';
+import registered43 from '../support/registered43-export-coverage.json';
 import proposedJournal from '../../planning/proposals/source-export-journal-coverage.json';
 import {verifyExportCoverage as verify} from '../../src/tooling/export-coverage.ts';
 

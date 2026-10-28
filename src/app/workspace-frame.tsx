@@ -12,7 +12,7 @@ export function WorkspaceFrame({children}:{children:ReactNode}){
       <a className="crest-wordmark" href="/" aria-label="Crest OS home">CREST <span>OS</span></a>
       <p className="workspace-purpose">Detailing workspace</p>
       <details className="workspace-menu"><summary>Workspace</summary><nav aria-label="Workspace tools">
-        <a href="/lead-sources">Lead sources</a><a href="/save-review">Interrupted saves</a><a href="/export-files">Data exports</a><a href="/settings">Business settings</a><a href="/sign-in">Sign in / sign out</a>
+        <a href="/services">Services</a><a href="/lead-sources">Lead sources</a><a href="/save-review">Interrupted saves</a><a href="/export-files">Data exports</a><a href="/settings">Business settings</a><a href="/sign-in">Sign in / sign out</a>
       </nav></details>
     </div>
     <p className="workspace-test-notice">Test workspace · Use fictional records only</p>

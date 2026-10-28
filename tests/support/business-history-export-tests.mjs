@@ -35,7 +35,7 @@ export function businessHistoryExportTests(get){
   owner=await actor('Synthetic history owner');author=await actor('Synthetic historical author');business=await root('Synthetic history scope');other=await root('Unrelated history scope');empty=await root('Empty history scope');
   for(let i=0;i<23;i++)await commit();await commit(other);
   await client.query('UPDATE crest.memberships SET active=false,version=version+1 WHERE actor_id=$1',[author]);await client.query('UPDATE crest_private.actors SET disabled_at=clock_timestamp(),version=version+1 WHERE id=$1',[author]);
-  manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+  manifest=JSON.parse(await readFile(new URL('./registered43-export-coverage.json',import.meta.url),'utf8'));
   reader=await sandbox.connect(get().target);await reader.query('SET ROLE crest_export');
  };
  test('history context counts every selected operation and audit and permits a valid empty history scope',async()=>{
@@ -147,7 +147,7 @@ export function businessHistoryExportTests(get){
   const rows=(await client.query("SELECT proconfig,prosecdef,provolatile,pg_get_userbyid(proowner) AS owner,has_function_privilege('crest_export',oid,'EXECUTE') AS caller,has_function_privilege('crest_web',oid,'EXECUTE') AS web FROM pg_proc WHERE pronamespace='crest_commands'::regnamespace AND proname LIKE 'business_history_export_%'")).rows;assert.equal(rows.length,2);for(const r of rows){assert.equal(r.owner,'crest_export_owner');assert(r.prosecdef);assert.equal(r.provolatile,'s');assert(r.caller);assert.equal(r.web,false);assert.deepEqual(r.proconfig.map(s=>s.toLowerCase()),['search_path=pg_catalog, pg_temp','row_security=on','timezone=utc','datestyle=iso, ymd']);}
  });
  test('history upgrade rejects preexisting provider-column privilege drift before adding routines',async()=>{
-  const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await get().installProviderSchema(c,t);await sandbox.apply(t,await sandbox.prefix(28));await c.query('GRANT SELECT(id) ON auth.sessions TO crest_export_owner');try{await assert.rejects(sandbox.apply(t));assert.equal((await c.query("SELECT to_regprocedure('crest_commands.business_history_export_context(uuid)') AS routine")).rows[0].routine,null);}finally{await c.query('REVOKE SELECT(id) ON auth.sessions FROM crest_export_owner');}
+  const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await get().installProviderSchema(c,t);await sandbox.apply(t,await sandbox.prefix(28));await c.query('GRANT SELECT(id) ON auth.sessions TO crest_export_owner');try{await assert.rejects(sandbox.apply(t,await sandbox.prefix(43)));assert.equal((await c.query("SELECT to_regprocedure('crest_commands.business_history_export_context(uuid)') AS routine")).rows[0].routine,null);}finally{await c.query('REVOKE SELECT(id) ON auth.sessions FROM crest_export_owner');}
  });
  return initialize;
 }

@@ -118,6 +118,12 @@ test('same-business service codes are unique but separate businesses may use the
  const code='shared-synthetic-'+randomUUID();await create(a,{code});await refused(()=>create(a,{code}),e=>e.code==='23505');await create(b,{code});
 });
 for(const patch of [{name:''},{inclusions:'\u00a0'},{internalGuidance:' '},{rangeHighCents:'9999'},{rangeLowCents:null},{rangeLowCents:'-1'},{estimatedSeconds:'0'},{estimatedSeconds:'1.5'}])test('invalid stored service definition is refused: '+JSON.stringify(patch),()=>refused(()=>create(a,{d:definition(patch)}),e=>['23514','22P02'].includes(e.code)));
+test('stable explicit length checks preserve Unicode boundaries and nullable guidance without weakening limits',async()=>{
+ const maximum=definition({name:'😀'.repeat(200),inclusions:'😀'.repeat(4000),internalGuidance:'G'.repeat(4000)}),saved=await create(a,{d:maximum});
+ assert.deepEqual(await scalar('SELECT crest_private.service_definition(v) AS value FROM crest.service_versions v WHERE id=$1',[saved.versionId]),maximum);
+ const minimum=definition({name:'N',inclusions:'I',internalGuidance:null});assert.equal((await create(a,{d:minimum})).v.internal_guidance,null);
+ for(const patch of [{name:'N'.repeat(201)},{inclusions:'I'.repeat(4001)},{internalGuidance:'G'.repeat(4001)},{name:''},{inclusions:''},{internalGuidance:''}])await refused(()=>create(a,{d:definition(patch)}),e=>e.code==='23514');
+});
 test('stored integer strings preserve bigint maxima and optional absence exactly',async()=>{
  const d=definition({rangeLowCents:'9007199254740993',rangeHighCents:'9223372036854775807',estimatedSeconds:'9223372036854775807'}),row=await create(a,{d});assert.deepEqual(await scalar('SELECT crest_private.service_definition(v) AS value FROM crest.service_versions v WHERE id=$1',[row.versionId]),d);
  const empty=await create(a,{d:definition({rangeLowCents:null,rangeHighCents:null,estimatedSeconds:null,internalGuidance:null})});assert.equal(empty.v.range_low_cents,null);assert.equal(empty.v.estimated_seconds,null);

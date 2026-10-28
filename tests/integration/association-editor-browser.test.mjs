@@ -59,7 +59,7 @@ after(async()=>{try{await app?.close();}finally{try{await service?.close();}fina
 
 async function fill(page,{trusted=false,password=fixture.password}={}){
   await page.getByLabel('Email',{exact:true}).fill(fixture.email);await page.getByLabel('Password',{exact:true}).fill(password);
-  await page.getByLabel('Authenticator code',{exact:true}).fill(fixture.totp.generate());await page.getByLabel('Trust this personal device').setChecked(trusted);
+  await page.getByLabel('Authenticator code',{exact:true}).fill(fixture.totp.generate());if(trusted)await page.getByText('Personal device options',{exact:true}).click();await page.getByLabel('Trust this personal device').setChecked(trusted);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
 }
 async function send(page,route,body={},proof=null){
@@ -106,7 +106,7 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     await openPanel(page,car);const box=panel(page);await expect(box.getByRole('status')).toContainText('Review the retained customer links');
     await box.getByRole('button',{name:'Add customer link',exact:true}).click();await expect(box.getByRole('button',{name:'Save customer link',exact:true})).toBeDisabled();await choose(page,one.displayName);
     await box.getByLabel('Relationship',{exact:true}).selectOption('keeper');await expect(box.getByRole('button',{name:'Save customer link',exact:true})).toBeDisabled();await box.getByLabel('Billing selection',{exact:true}).selectOption('no');await box.getByRole('button',{name:'Use current time',exact:true}).click();assert.match(await box.getByLabel('Effective time (UTC)',{exact:true}).inputValue(),/\.[0-9]{6}Z$/);
-    await box.getByLabel('Effective time (UTC)',{exact:true}).fill('2026-10-01T00:00:00.123456Z');await box.getByLabel('Record link evidence',{exact:true}).check();await box.getByLabel('Link evidence value',{exact:true}).fill('Synthetic screen retained é 😀');
+    await box.getByLabel('Effective time (UTC)',{exact:true}).fill('2026-10-01T00:00:00.123456Z');await box.getByLabel('Link evidence',{exact:true}).fill('Synthetic screen retained é 😀');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);assert(await box.getByRole('button',{name:'Save customer link',exact:true}).evaluate(el=>el.getBoundingClientRect().height>=44));
     await box.getByRole('button',{name:'Save customer link',exact:true}).click();await expect(box.getByRole('status')).toContainText('Customer link saved');
     const original=(await client.query('SELECT crest_private.association_projection(c) AS value FROM crest.customer_vehicles c WHERE business_id=$1 AND vehicle_id=$2',[business,car.vehicleId])).rows[0].value;assert.equal(original.valid_from,'2026-10-01T00:00:00.123456Z');assert.equal(original.customer_id,one.customerId);assert.equal(original.is_billing,false);assert.equal(original.evidence,'Synthetic screen retained é 😀');

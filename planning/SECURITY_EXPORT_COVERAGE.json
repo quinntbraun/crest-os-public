@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 43,
+  "migrationCount": 44,
   "tables": [
     {
       "table": "crest.businesses",
@@ -953,6 +953,51 @@
         "manifest_sha256",
         "completed_at",
         "expires_at",
+        "created_at",
+        "created_by",
+        "origin",
+        "operation_id",
+        "import_row_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.services",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "code",
+        "current_version_id",
+        "active",
+        "version",
+        "created_at",
+        "updated_at",
+        "created_by",
+        "updated_by",
+        "origin",
+        "operation_id",
+        "import_row_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.service_versions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "service_id",
+        "sequence",
+        "name",
+        "inclusions",
+        "exclusions",
+        "internal_guidance",
+        "range_low_cents",
+        "range_high_cents",
+        "estimated_seconds",
         "created_at",
         "created_by",
         "origin",

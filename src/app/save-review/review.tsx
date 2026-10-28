@@ -7,7 +7,7 @@ const choices:ReadonlyArray<readonly [OriginalOperationKind,string]>=[
  ['business.rename','Business name'],['crm.customer.save','Customer'],['crm.address.save','Customer address'],
  ['crm.vehicle.save','Vehicle'],['crm.vehicle.association','Vehicle customer link'],
  ['crm.lead.source.save','Lead source'],['crm.lead.save','Lead'],['crm.lead.state','Lead status'],
- ['crm.lead.vehicle.save','Reported lead vehicle'],['crm.lead.address.save','Lead address'],['crm.lead.convert','Lead conversion']
+ ['crm.lead.vehicle.save','Reported lead vehicle'],['crm.lead.address.save','Lead address'],['crm.lead.convert','Lead conversion'],['catalog.service.save','Service catalog']
 ];
 function Review({kind}:{kind:OriginalOperationKind}){
  const [view,setView]=useState(initialOriginalOperationReviewView),current=useRef<ReturnType<typeof createOriginalOperationReviewController>|null>(null),status=useRef<HTMLParagraphElement>(null);

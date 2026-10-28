@@ -19,9 +19,9 @@ import {createPendingLeadStateStore} from '../../client/pending-lead-state-edit'
 import {leadDollars,leadCents} from './intake-input';
 import {FollowUpInput} from './follow-up-input';
 
-function EstimateInput({value,change}:{value:string;change:(value:string)=>void}){
- const [text,setText]=useState(()=>leadDollars(value));
- return <><label htmlFor="lead-estimate">Estimated value (USD)</label><input id="lead-estimate" name="estimate" inputMode="decimal" autoComplete="off" maxLength={24} value={text} onChange={event=>{setText(event.target.value);change(leadCents(event.target.value));}} required/><p className="field-help">Enter dollars, such as 125.50. Zero is an explicit estimate; uncheck to leave it unknown. This estimate is not a quote or invoice.</p></>;
+function EstimateInput({value,change}:{value:string|null;change:(value:string|null)=>void}){
+ const [text,setText]=useState(()=>value===null?'':leadDollars(value));
+ return <><label htmlFor="lead-estimate">Estimated value (USD)</label><input id="lead-estimate" name="estimate" inputMode="decimal" autoComplete="off" maxLength={24} value={text} onChange={event=>{setText(event.target.value);change(event.target.value.length?leadCents(event.target.value):null);}}/><p className="field-help">Optional. Enter dollars, such as 125.50, or leave blank. Zero is an explicit estimate. This is not a quote or invoice.</p></>;
 }
 function LeadDetails({lead}:{lead:Lead}){
  const text=(value:string|null)=>value===null?'Not recorded':value===''?'Recorded as empty':value;
@@ -67,8 +67,8 @@ export function LeadScreen({addressAssist}:{addressAssist?:ComponentType<{draft:
      <NullableText name="phone" label="Phone" limit={512} value={view.draft.phone} disabled={disabled} change={value=>edit('phone',value)}/><NullableText name="email" label="Email" limit={512} value={view.draft.email} disabled={disabled} change={value=>edit('email',value)}/>
      <p className="field-help">Recording contact details does not record permission to send messages.</p>
      <NullableText name="referral" label="Referral evidence" multiline limit={2000} value={view.draft.referralText} disabled={disabled} change={value=>edit('referralText',value)}/><NullableText name="scope" label="Requested scope" multiline limit={4000} value={view.draft.requestedScope} disabled={disabled} change={value=>edit('requestedScope',value)}/><NullableText name="availability" label="Availability" multiline limit={4000} value={view.draft.availability} disabled={disabled} change={value=>edit('availability',value)}/>
-     <label className="trust"><input type="checkbox" checked={view.draft.estimatedCents!==null} onChange={event=>edit('estimatedCents',event.target.checked?'':null)}/>Record estimated value</label>{view.draft.estimatedCents!==null&&<EstimateInput key={key+':estimate'} value={view.draft.estimatedCents} change={value=>edit('estimatedCents',value)}/>}
-     <label className="trust"><input type="checkbox" checked={view.draft.followUpAt!==null} onChange={event=>edit('followUpAt',event.target.checked?'':null)}/>Record follow-up time</label>{view.draft.followUpAt!==null&&<FollowUpInput key={key+':follow-up'} value={view.draft.followUpAt} change={value=>edit('followUpAt',value)}/>}
+     <EstimateInput key={key+':estimate'} value={view.draft.estimatedCents} change={value=>edit('estimatedCents',value)}/>
+     <FollowUpInput key={key+':follow-up'} value={view.draft.followUpAt} change={value=>edit('followUpAt',value)}/>
      <NullableText name="notes" label="Notes" multiline limit={4000} value={view.draft.notes} disabled={disabled} change={value=>edit('notes',value)}/>
     </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}<button type="submit" disabled={!view.canSave||statusLocked||vehicleLocked||addressLocked||conversionLocked}>Save lead</button></form>
    </>}

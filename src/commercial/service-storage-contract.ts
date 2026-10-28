@@ -75,7 +75,7 @@ export function parseServiceHistoryPage(v:unknown,request:Readonly<{businessId:s
   }
   if(event.action==='create'||event.action==='edit')requireService(content.operation_id===event.operationId&&content.created_by===event.actorId);
   if(last!==null){requireService(before!==null&&same(last,before));requireService(lastContent!==null&&(event.action==='edit'?BigInt(content.sequence)===BigInt(lastContent.sequence)+1n:serviceContentColumns.every(k=>content[k]===lastContent![k])));}
-  last=after;lastContent=content;revision=BigInt(event.revision);return Object.freeze({...event,before,after,content});
+  last=after;lastContent=content;revision=BigInt(event.revision);return Object.freeze({revision:event.revision,eventId:event.eventId,actorId:event.actorId,operationId:event.operationId,at:event.at,action:event.action as 'create'|'edit'|'archive'|'reopen',before,after,content});
  });
  const remaining=BigInt(service.version)>BigInt(request.afterRevision)?BigInt(service.version)-BigInt(request.afterRevision):0n;
  requireService(BigInt(history.length)===(remaining>BigInt(request.pageSize)?BigInt(request.pageSize):remaining)&&v.hasMore===(remaining>BigInt(request.pageSize))&&(last===null||revision!==BigInt(service.version)||same(last,service)));

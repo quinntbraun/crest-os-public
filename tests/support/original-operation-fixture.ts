@@ -14,7 +14,8 @@ export function originalOperationFixture(kind:OriginalOperationKind='crm.custome
   'crm.lead.state':{leadId:id,expectedVersion:'1'},
   'crm.lead.vehicle.save':{leadId:randomUUID(),leadVehicleId:id,expectedVersion:'0'},
   'crm.lead.address.save':{leadId:randomUUID(),leadAddressId:id,expectedVersion:'0'},
-  'crm.lead.convert':{conversionId:id,leadId:randomUUID(),expectedLeadVersion:'1',customerId:randomUUID()}
+  'crm.lead.convert':{conversionId:id,leadId:randomUUID(),expectedLeadVersion:'1',customerId:randomUUID()},
+  'catalog.service.save':{serviceId:id,expectedRevision:'0'}
  };
  return parseOriginalOperationReference({schemaVersion:1,businessId:randomUUID(),commandType:kind,reference:{...common,...targets[kind]}});
 }

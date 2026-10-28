@@ -26,28 +26,28 @@
       "name": "ARCHITECTURE.md",
       "originalSha256": "80bb086a9369a25ae12053bda5f17eca06a199c21e496bdf329f05d025ab55af",
       "originalBytes": 35977,
-      "version": "1.8",
-      "sha256": "12890f037e599232634e39823eeb978c8674585643bb54f66ad9ba06212d37ca",
-      "bytes": 39230,
-      "reason": "2026-10-27 ADR43 registered source-export journal/coverage/recovery construction; exact prior hashes retained in CANONICAL_MAINTENANCE.md; production and complete-backup gates retained"
+      "version": "1.9",
+      "sha256": "a30e17f994e3ef0a131fe263e12beac23e1743dfeb4262538fc105e6153fba15",
+      "bytes": 39590,
+      "reason": "2026-10-28 ADR44 append-only catalog registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy43/42, privacy, source/recovery and production gates retained"
     },
     {
       "name": "ARCHITECTURE_DECISIONS.md",
       "originalSha256": "11acb9dc027cc8427823522193cb5518ab499dc8521c2682e4797ff6c0a47867",
       "originalBytes": 17703,
-      "version": "1.14",
-      "sha256": "795c07717f9e6b6f3a0bc2875ef2c544bce70281d1cc125e74e6beef8bf10ef8",
-      "bytes": 54550,
-      "reason": "2026-10-27 ADR43 registered source-export journal/coverage/recovery construction; exact prior hashes retained in CANONICAL_MAINTENANCE.md; production and complete-backup gates retained"
+      "version": "1.15",
+      "sha256": "72f4009a4e31bfcf680db11325923195763179c2ff98bff1bd9a333cf592e6f2",
+      "bytes": 56726,
+      "reason": "2026-10-28 ADR44 append-only catalog registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy43/42, privacy, source/recovery and production gates retained"
     },
     {
       "name": "DATABASE.md",
       "originalSha256": "d66147140019c214f48a2baf46828d866b77bf3b8c1d4279a5187d6fdf416661",
       "originalBytes": 53037,
-      "version": "1.6",
-      "sha256": "044a64693667be29ceee6ebbf58fd136b9cdf799d18138e7c4911d1ada001113",
-      "bytes": 55826,
-      "reason": "2026-10-27 ADR43 registered source-export journal/coverage/recovery construction; exact prior hashes retained in CANONICAL_MAINTENANCE.md; production and complete-backup gates retained"
+      "version": "1.7",
+      "sha256": "5f327467ce74fbbbda987c09c29b6853ebdcd2bc45f344e493abae4500fc934c",
+      "bytes": 56232,
+      "reason": "2026-10-28 ADR44 append-only catalog registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy43/42, privacy, source/recovery and production gates retained"
     },
     {
       "name": "SECURITY.md",
@@ -62,10 +62,10 @@
       "name": "EXPORTS_AND_BACKUPS.md",
       "originalSha256": "cebd4d21981aa060c02973dece9cff2ec3a2e9367d1467edb1694c2ebe39ecdd",
       "originalBytes": 26475,
-      "version": "1.6",
-      "sha256": "cb419895a528c8b5d9196326f63341d1df581846c8c5cf47390f8917948dd468",
-      "bytes": 29492,
-      "reason": "2026-10-27 ADR43 registered source-export journal/coverage/recovery construction; exact prior hashes retained in CANONICAL_MAINTENANCE.md; production and complete-backup gates retained"
+      "version": "1.7",
+      "sha256": "37017d2c1a3f4523737d5aad9843aa6502a75baf1f4031c77d413df3dc93db10",
+      "bytes": 30279,
+      "reason": "2026-10-28 ADR44 append-only catalog registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy43/42, privacy, source/recovery and production gates retained"
     },
     {
       "name": "ROADMAP.md",
@@ -107,10 +107,10 @@
       "name": "PUBLICATION.md",
       "originalSha256": "f53bcc738639bdf8d336cf970fd0c83715153becd536ab265bf442bdcfce5932",
       "originalBytes": 5584,
-      "version": "1.9",
-      "sha256": "fb23f2c00ec0b81d4d46013081d768e71d35a5cdb8635d9c267537e6a33a41dd",
-      "bytes": 6258,
-      "reason": "2026-10-27 ADR43 registered source-export journal/coverage/recovery construction; exact prior hashes retained in CANONICAL_MAINTENANCE.md; production and complete-backup gates retained"
+      "version": "1.10",
+      "sha256": "0d21cdb14601c80292add46dd97134dfa36df975d0ba3da6939197751b788ead",
+      "bytes": 6656,
+      "reason": "2026-10-28 ADR44 append-only catalog registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy43/42, privacy, source/recovery and production gates retained"
     }
   ]
 }

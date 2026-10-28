@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
+import {createServer,connect as connectSocket} from 'node:net';
 import pg from "pg";
 import { applyTestMigrations } from "../../src/tooling/migration-coordinator.ts";
 import { sha256 } from "../../src/tooling/migrations.ts";
@@ -71,6 +72,28 @@ async function fixture(connectionString, files = new Map([[first, sql]])) {
   return { apply, query, update, ledger, pending };
 }
 
+test('a nondefault loopback port preserves the verified migrator identity through the real CLI', {timeout:45000},async()=>withDatabase(async url=>{
+ const target=new URL(url),upstreamHost=target.hostname,upstreamPort=Number(target.port||5432),sockets=new Set();
+ // Capture the destination before changing the client URL. Reading a mutable
+ // URL inside this callback would send each new socket back into the proxy.
+ const proxy=createServer(incoming=>{
+  const upstream=connectSocket({host:upstreamHost,port:upstreamPort});
+  sockets.add(incoming);sockets.add(upstream);incoming.pipe(upstream).pipe(incoming);
+  incoming.on('error',()=>upstream.destroy());upstream.on('error',()=>incoming.destroy());
+  incoming.on('close',()=>{sockets.delete(incoming);upstream.destroy();});
+  upstream.on('close',()=>{sockets.delete(upstream);incoming.destroy();});
+ });
+ await new Promise((resolve,reject)=>{proxy.once('error',reject);proxy.listen(0,'127.0.0.1',resolve);});
+ try{
+  const address=proxy.address();assert(address&&typeof address!=='string');assert.notEqual(address.port,upstreamPort);
+  target.hostname='127.0.0.1';target.port=String(address.port);
+  const f=await fixture(target.toString(),new Map([[first,'CREATE TABLE public.migrator_identity AS SELECT current_user::text AS name;\n']]));
+  const receipt=await f.apply({bootstrapEmpty:true});assert.equal(receipt.history.length,1);
+  assert.deepEqual((await f.query('SELECT name FROM public.migrator_identity')).rows,[{name:decodeURIComponent(target.username)}]);
+ }
+ finally{for(const socket of sockets)socket.destroy();await new Promise(resolve=>proxy.close(resolve));}
+}));
+
 test("CLI bootstrap, append, no-op and receipt chain preserve applied bytes and SQL history", { timeout: 45000 }, async () => withDatabase(async (url) => {
   const f = await fixture(url);
   await assert.rejects(f.apply(), /EXPLICIT_EMPTY_BOOTSTRAP_REQUIRED/);
@@ -102,7 +125,10 @@ test("partial multi-file CLI failure leaves pending evidence and never automatic
   const f = await fixture(url, new Map([[first, sql], [second, "SELECT 1/0;\n"]]));
   await assert.rejects(f.apply({ bootstrapEmpty: true }), /MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);
   assert.equal((await f.query("SELECT count(*)::integer AS count FROM supabase_migrations.schema_migrations")).rows[0].count, 1);
-  assert.equal(typeof (await f.pending()).attempt, "string");
+  const pending = await f.pending();assert.equal(typeof pending.attempt, "string");
+  const diagnostic = JSON.parse(await readFile(join(await f.ledger(), `failed-cli-${pending.attempt}.json`), "utf8"));
+  assert.equal(diagnostic.outcome,"failed_review_required");assert.equal(diagnostic.rawOutputRetained,false);assert.deepEqual(diagnostic.publicErrorCodes,[]);
+  assert(diagnostic.publicMigrationFiles.every(file=>[first,second].includes(file)));assert(!JSON.stringify(diagnostic).includes(url));
   await assert.rejects(f.apply({ bootstrapEmpty: true }), /MIGRATION_PENDING_REVIEW_REQUIRED/);
 }));
 

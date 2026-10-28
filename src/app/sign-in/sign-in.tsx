@@ -5,6 +5,10 @@ import {authentication,AuthenticationError} from '../../client/authentication';
 import type {Proof,LoginInput} from '../../client/authentication';
 
 type View={phase:'checking'|'form'|'signed'|'unavailable'|'uncertain';message:string;busy:boolean};
+function PasswordInput(){
+  const [visible,setVisible]=useState(false);
+  return <div className="password-control"><input id="password" name="password" type={visible?'text':'password'} autoComplete="current-password" maxLength={1024} required/><button type="button" className="secondary" aria-controls="password" aria-pressed={visible} onClick={()=>setVisible(value=>!value)}>{visible?'Hide password':'Show password'}</button></div>;
+}
 export function SignIn(){
   const [view,setView]=useState<View>({phase:'checking',message:'Checking this device’s session…',busy:true});
   const current=useRef<Proof|null>(null),operation=useRef<{id:number;controller:AbortController}|null>(null),sequence=useRef(0),mounted=useRef(false);
@@ -53,11 +57,10 @@ export function SignIn(){
     <p ref={status} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
     {view.phase==='form'&&<form onSubmit={submit}>
       <label htmlFor="email">Email</label><input id="email" name="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={320} required/>
-      <label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="current-password" maxLength={1024} required/>
+      <label htmlFor="password">Password</label><PasswordInput/>
       <label htmlFor="code">Authenticator code</label><input id="code" name="code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength={6} maxLength={6} required aria-describedby="code-help"/>
       <p id="code-help" className="field-help">Enter the six-digit code from your authenticator app.</p>
-      <label className="trust"><input name="trusted" type="checkbox"/><span>Trust this personal device</span></label>
-      <p className="field-help">Optional. Stay signed in for up to 30 days, with a seven-day inactivity limit. Leave unchecked on a shared device.</p>
+      <details className="sign-in-device-options"><summary>Personal device options</summary><label className="trust"><input name="trusted" type="checkbox"/><span>Trust this personal device</span></label><p className="field-help">Stay signed in for up to 30 days, with a seven-day inactivity limit. Leave unchecked on a shared device.</p></details>
       <button type="submit">Sign in</button>
     </form>}
     {view.phase==='signed'&&<><h2>Session verified</h2><p>Your device is signed in. Workspace tools check your business access before loading records.</p><a className="primary-action" href="/">Open workspace</a><a href="/customers">Customers</a><a href="/leads">Leads</a><a href="/settings">Business settings</a><button type="button" className="secondary" onClick={()=>void run('logout')}>Sign out on this device</button></>}

@@ -131,3 +131,58 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
   .sign-in-workspace .workspace-content { grid-column:1/-1; }
 }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation:none!important; transition:none!important; } }
+
+/* Service scope stays readable on working phones and wide review screens. */
+.service-pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+.service-scope { white-space:pre-wrap; overflow-wrap:anywhere; }
+.record-reference { overflow-wrap:anywhere; }
+.optional-field { display:grid; gap:.5rem; min-width:0; }
+.optional-field label { font-weight:600; }
+.optional-field input,.optional-field textarea { font-weight:400; }
+.optional-field .field-help { margin:0; }
+.sign-in-brand { display:flex; justify-content:center; background:#000; padding:.5rem; border-radius:var(--radius) var(--radius) 0 0; }
+.sign-in-brand img { width:224px; height:224px; object-fit:contain; }
+.sign-in-panel { padding:1.5rem; background:var(--paper); border:1px solid var(--line); border-top:0; border-radius:0 0 var(--radius) var(--radius); }
+.sign-in-intro { margin-top:-.5rem; color:var(--muted); }
+.sign-in-panel h1 { margin-bottom:.5rem; }
+.sign-in-panel label { font-weight:600; }
+.sign-in-panel form > label { margin-top:.25rem; }
+.sign-in-device-options summary { min-height:44px; padding:.75rem 0; cursor:pointer; font-size:.875rem; }
+.password-control { display:flex; gap:.5rem; align-items:stretch; min-width:0; }
+.password-control input { flex:1; min-width:0; width:0; }
+.password-control button { width:auto; margin:0; font-size:.875rem; padding:.5rem .75rem; }
+@media(max-width:600px) {
+ .sign-in-brand img { width:112px; height:112px; }
+ .sign-in-panel { padding:1.25rem; }
+}
+@media(min-width:900px) {
+ .sign-in { max-width:58rem; display:grid; grid-template-columns:minmax(14rem,1fr) minmax(0,1.6fr); align-items:stretch; }
+ .sign-in-brand { align-items:center; border-radius:var(--radius) 0 0 var(--radius); }
+ .sign-in-panel { border:1px solid var(--line); border-left:0; border-radius:0 var(--radius) var(--radius) 0; }
+}
+.service-fields { display:grid; gap:.75rem; }
+.service-fields label { display:block; }
+.services-workspace > .intro { max-width:65ch; }
+.service-layout { display:grid; gap:1.5rem; margin-top:1.5rem; }
+.service-directory-panel,.service-definition-panel,.service-choice { min-width:0; }
+.service-layout h2 { margin-top:0; }
+.service-toolbar { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
+.service-toolbar button { margin-top:0; }
+.service-search { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.5rem .75rem; margin-top:.75rem; align-items:end; }
+.service-search > button { width:auto; margin:0; }
+.service-search > .checkbox { grid-column:1/-1; margin-top:0; }
+.service-fields label { font-weight:600; }
+.service-fields input,.service-fields textarea { font-weight:400; }
+.service-fields > .field-help { margin:0; }
+.service-directory button[aria-current='true'] { border-left:3px solid var(--gold-ink); background:#eee7d6; border-radius:var(--radius); }
+.service-choice { border-top:1px solid var(--line); padding-top:1.5rem; }
+@media(min-width:1100px) {
+ .services-workspace { max-width:80rem; }
+ .service-layout { grid-template-columns:minmax(15rem,1fr) minmax(0,2fr); gap:2rem; align-items:start; }
+ .service-directory-panel { border-right:1px solid var(--line); padding-right:1.5rem; }
+ .service-choice { border-top:0; padding:0; }
+}
+.service-directory button span { display:block; margin-top:.25rem; color:var(--muted); font-size:.875rem; font-weight:400; }
+.customers label.checkbox { display:flex; align-items:center; gap:.75rem; min-height:44px; cursor:pointer; }
+.customers label.checkbox input { width:24px; height:24px; flex-shrink:0; accent-color:var(--black); }
+@media(max-width:390px) { .service-pair { grid-template-columns:1fr; gap:0; } }

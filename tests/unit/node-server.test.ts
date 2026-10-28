@@ -1,7 +1,7 @@
 import {request as httpRequest} from 'node:http';
 import {describe,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn()}));
+const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn()}));
 vi.mock('../../src/security/browser-session-flow.ts',()=>({createBrowserSessionFlow:()=>flow}));
 vi.mock('../../src/security/business-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/business-http.ts')>(),createBusinessHttp:()=>flow.business}));
 vi.mock('../../src/customer/customer-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-http.ts')>(),createCustomerHttp:()=>flow.customers}));
@@ -11,10 +11,22 @@ vi.mock('../../src/customer/association-http.ts',async importOriginal=>({...awai
 vi.mock('../../src/customer/lead-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/lead-http.ts')>(),createLeadHttp:()=>flow.leads}));
 vi.mock('../../src/customer/lead-source-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/lead-source-http.ts')>(),createLeadSourceHttp:()=>flow.leadSources}));
 vi.mock('../../src/security/original-operation-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/original-operation-http.ts')>(),createOriginalOperationHttp:()=>flow.originalOperations}));
+vi.mock('../../src/commercial/service-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/service-http.ts')>(),createServiceHttp:()=>flow.services}));
 import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../../src/server/node-server.ts';
 import type {NodeConfiguration} from '../../src/server/node-server.ts';
 
 const origin='https://crest.example.com';
+it('catalog construction cannot be enabled in production or without genuine authentication and business configuration',()=>{
+  for(const config of [{origin,environment:'production',syntheticCatalog:true},{origin,environment:'test',syntheticCatalog:true},{origin,environment:'test',syntheticCatalog:'yes'},{origin,environment:'test',syntheticCatalog:true,business:{businessId:'synthetic'}}]){
+    const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,config as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();
+  }
+});
+it.each([false,true])('reserves catalog and encoded aliases with explicit synthetic enablement=%s',async enabled=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local=`http://127.0.0.1:${address.port}`,pages=vi.fn(),handler=vi.fn(async()=>new Response(JSON.stringify({synthetic:'protected service response'}),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));flow.services.mockImplementation(handler);
+ bindApplicationHandler(server,{origin:local,environment:'test',syntheticCatalog:enabled,business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{for(const path of ['/api/business/services/list','/api/business/%73ervices/history']){const r=await fetch(local+path,{method:'POST',body:'{}'});expect(r.status).toBe(enabled?200:503);expect(r.headers.get('cache-control')).toContain('no-store');}expect(pages).not.toHaveBeenCalled();expect(handler).toHaveBeenCalledTimes(enabled?2:0);}
+ finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
 async function withVehicleServer(enabled:boolean,work:(local:string,pages:ReturnType<typeof vi.fn>)=>Promise<void>){
   const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
   const address=server.address();if(!address||typeof address==='string')throw new Error();
