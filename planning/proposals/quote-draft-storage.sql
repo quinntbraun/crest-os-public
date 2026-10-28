@@ -35,7 +35,7 @@ CREATE TABLE crest.quote_revisions(
  UNIQUE(business_id,id),UNIQUE(business_id,family_id,id),UNIQUE(business_id,family_id,sequence),
  CHECK(jsonb_typeof(customer_safe_snapshot)='object' AND jsonb_typeof(internal_snapshot)='object'),
  CHECK(octet_length(canonical_content)<=16777216 AND canonical_content::jsonb=jsonb_build_object('schemaVersion',1,'customer',customer_safe_snapshot,'internal',internal_snapshot)),
- CHECK(content_hash~'^[a-f0-9]{64}$' AND content_hash=encode(sha256(convert_to(canonical_content,'UTF8')),'hex')),
+ CONSTRAINT quote_revision_content_hash CHECK(content_hash~'^[a-f0-9]{64}$' AND content_hash=encode(sha256(convert_to(canonical_content,'UTF8')),'hex')),
  CHECK(isfinite(created_at) AND isfinite(updated_at) AND (expiry_at IS NULL OR isfinite(expiry_at))),
  FOREIGN KEY(business_id,family_id) REFERENCES crest.quote_families(business_id,id) ON DELETE RESTRICT,
  FOREIGN KEY(business_id,created_by) REFERENCES crest.memberships(business_id,actor_id) ON DELETE RESTRICT,
@@ -181,7 +181,8 @@ BEGIN
   OR NOT(NEW.customer_safe_snapshot ?& ARRAY['schemaVersion','currency','title','recipient','workLocation','terms','timezone','expiryAt','proposedSchedule','lines','documentDiscount','grossCents','lineDiscountCents','documentDiscountCents','totalCents'])
   OR NEW.customer_safe_snapshot-ARRAY['schemaVersion','currency','title','recipient','workLocation','terms','timezone','expiryAt','proposedSchedule','lines','documentDiscount','grossCents','lineDiscountCents','documentDiscountCents','totalCents']<>'{}'::jsonb
   OR NOT(NEW.internal_snapshot ?& ARRAY['customerId','leadId','notes','sources','extremeReviewRequired']) OR NEW.internal_snapshot-ARRAY['customerId','leadId','notes','sources','extremeReviewRequired']<>'{}'::jsonb
-  OR NOT(NEW.customer_safe_snapshot->'recipient' ?& ARRAY['displayName','phone','email']) OR NEW.customer_safe_snapshot->'recipient'-ARRAY['displayName','phone','email']<>'{}'::jsonb
+  -- Extract first: subtraction binds more tightly than the JSON -> operator.
+  OR NOT((NEW.customer_safe_snapshot->'recipient') ?& ARRAY['displayName','phone','email']) OR (NEW.customer_safe_snapshot->'recipient')-ARRAY['displayName','phone','email']<>'{}'::jsonb
  THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='CREST_QUOTE_AGGREGATE_CONFLICT';END IF;
  RETURN NULL;
 END $aggregate$;

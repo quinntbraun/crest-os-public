@@ -46,16 +46,17 @@ async function create(f,{input=draft(f),transform=x=>x,missing=null,type='quote.
   await finish(f,operation);return {family,revision,itemIds,input,prepared,operation};
  });
 }
-async function editNotes(f,record,notes){
+async function editNotes(f,record,notes,{taxReadiness='not_configured'}={}){
  return transaction(async()=>{
   const oldFamily=await projection('family',record.family),oldRevision=await projection('revision',record.revision),operation=await claim(f),prepared=prepareQuoteContent({...record.input,internalNotes:notes});
-  await client.query('UPDATE crest.quote_revisions SET version=version+1,content_version=content_version+1,customer_safe_snapshot=$2,internal_snapshot=$3,canonical_content=$4,content_hash=$5,operation_id=$6,updated_by=$7 WHERE id=$1',[record.revision,prepared.customer,prepared.internal,prepared.canonical,createHash('sha256').update(prepared.canonical).digest('hex'),operation,f.actor]);
+  await client.query('UPDATE crest.quote_revisions SET version=version+1,content_version=content_version+1,customer_safe_snapshot=$2,internal_snapshot=$3,canonical_content=$4,content_hash=$5,operation_id=$6,updated_by=$7,tax_readiness=$8 WHERE id=$1',[record.revision,prepared.customer,prepared.internal,prepared.canonical,createHash('sha256').update(prepared.canonical).digest('hex'),operation,f.actor,taxReadiness]);
   await client.query('UPDATE crest.quote_families SET version=version+1,operation_id=$2,updated_by=$3 WHERE id=$1',[record.family,operation,f.actor]);
   await audit(f,operation,'quote_families',await projection('family',record.family),oldFamily);await audit(f,operation,'quote_revisions',await projection('revision',record.revision),oldRevision);await finish(f,operation);return prepared;
  });
 }
 async function evidence(f){return scalar("SELECT jsonb_build_object('families',(SELECT coalesce(jsonb_agg(to_jsonb(v) ORDER BY id),'[]') FROM crest.quote_families v WHERE business_id=$1),'revisions',(SELECT coalesce(jsonb_agg(to_jsonb(v) ORDER BY id),'[]') FROM crest.quote_revisions v WHERE business_id=$1),'items',(SELECT coalesce(jsonb_agg(to_jsonb(v) ORDER BY id),'[]') FROM crest.quote_items v WHERE business_id=$1),'operations',(SELECT coalesce(jsonb_agg(to_jsonb(v) ORDER BY id),'[]') FROM crest_private.operations v WHERE business_id=$1),'audit',(SELECT coalesce(jsonb_agg(to_jsonb(v) ORDER BY id),'[]') FROM crest_private.audit_events v WHERE business_id=$1)) AS value",[f.business]);}
-async function refused(run){const before=await evidence(a);await assert.rejects(run);assert.deepEqual(await evidence(a),before);}
+async function refused(run,expected){const before=await evidence(a);assert.equal(typeof expected.code,'string');await assert.rejects(run,error=>error.code===expected.code&&Object.entries(expected).every(([key,value])=>error[key]===value));assert.deepEqual(await evidence(a),before);}
+const auditFailure={code:'23514',message:'CREST_QUOTE_AUDIT_REQUIRED'},aggregateFailure={code:'23514',message:'CREST_QUOTE_AGGREGATE_CONFLICT'};
 before(async()=>{
  assert.equal(meta.registered,false);assert.equal(meta.runtimeEnabled,false);assert.equal(meta.existingMigrationCount,44);assert.equal(Buffer.byteLength(sql),meta.sqlBytes);assert.equal(createHash('sha256').update(sql).digest('hex'),meta.sqlSha256);
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
@@ -78,28 +79,29 @@ test('a complete typed Draft retains exact52500 cents, private/public snapshots 
  const next=await editNotes(a,record,'Changed synthetic assumption');assert.equal((await projection('revision',record.revision)).content_version,'2');assert.equal((await projection('family',record.family)).version,'2');
  assert.equal(await scalar("SELECT delta->'after'->'internal_snapshot'->>'notes' AS value FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='quote_revisions' AND entity_id=$2 AND entity_version=1",[a.business,record.revision]),record.input.internalNotes);assert.equal((await projection('revision',record.revision)).canonical_content,next.canonical);
 });
-for(const missing of ['family','revision','items'])test('missing '+missing+' audit rolls back the complete transaction',()=>refused(()=>create(a,{missing})));
-test('a mismatched command type cannot publish a draft through forged schema fixtures',()=>refused(()=>create(a,{type:'catalog.service.save'})));
-test('cross-business recipient references fail before retaining a family or operation',()=>refused(()=>create(a,{input:{...draft(a),recipient:{customerId:b.customer,leadId:null,displayName:'Synthetic foreign recipient',phone:null,email:null}}})));
-test('the content hash cannot disagree with exact retained serialization',()=>refused(()=>create(a,{hash:'0'.repeat(64)})));
+for(const missing of ['family','revision','items'])test('missing '+missing+' audit rolls back the complete transaction',()=>refused(()=>create(a,{missing}),auditFailure));
+test('a mismatched command type cannot publish a draft through forged schema fixtures',()=>refused(()=>create(a,{type:'catalog.service.save'}),auditFailure));
+test('cross-business recipient references fail before retaining a family or operation',()=>refused(()=>create(a,{input:{...draft(a),recipient:{customerId:b.customer,leadId:null,displayName:'Synthetic foreign recipient',phone:null,email:null}}}),{code:'23503',constraint:'quote_families_business_id_customer_id_fkey'}));
+test('the content hash cannot disagree with exact retained serialization',()=>refused(()=>create(a,{hash:'0'.repeat(64)}),{code:'23514',constraint:'quote_revision_content_hash'}));
 for(const [name,transform]of [
  ['wrong total',p=>({...p,customer:{...p.customer,totalCents:'1'}})],
  ['wrong discount share',p=>({...p,customer:{...p.customer,lines:p.customer.lines.map((row,i)=>i===0?{...row,allocatedDiscountCents:'1135',finalCents:'23865'}:row)}})],
  ['unreviewed Extreme flag',p=>({...p,internal:{...p.internal,extremeReviewRequired:true}})],
  ['private field in customer snapshot',p=>({...p,customer:{...p.customer,internalNotes:'Must not be exposed'}})],
  ['untyped customer field',p=>({...p,customer:{...p.customer,recipient:{...p.customer.recipient,privateSource:'Must not be exposed'}}})]
-])test('rejects '+name+' even with a matching newly computed hash',()=>refused(()=>create(a,{transform})));
+])test('rejects '+name+' even with a matching newly computed hash',()=>refused(()=>create(a,{transform}),aggregateFailure));
 test('explicit free work retains a reason without a fabricated charge or payment',async()=>{
  const record=await create(a,{input:{...draft(a),documentDiscount:null,lines:[{...line('0'),complimentaryReason:'Synthetic goodwill'}]}});assert.equal((await projection('revision',record.revision)).total_cents,'0');
 });
 test('line writes without a corresponding actual revision publication cannot commit',async()=>{
- const record=await create(a);await refused(()=>transaction(async()=>{const operation=await claim(a),old=await projection('item',record.itemIds[0]);await client.query('UPDATE crest.quote_items SET version=version+1,operation_id=$2 WHERE id=$1',[record.itemIds[0],operation]);await audit(a,operation,'quote_items',await projection('item',record.itemIds[0]),old);await finish(a,operation);}));
+ const record=await create(a);await refused(()=>transaction(async()=>{const operation=await claim(a),old=await projection('item',record.itemIds[0]);await client.query('UPDATE crest.quote_items SET version=version+1,operation_id=$2 WHERE id=$1',[record.itemIds[0],operation]);await audit(a,operation,'quote_items',await projection('item',record.itemIds[0]),old);await finish(a,operation);}),auditFailure);
 });
 test('Draft-only construction refuses premature sending, approval state or tax activation',async()=>{
- const record=await create(a);for(const patch of ["state='Sent'","state='Accepted'","tax_readiness='ready'"])await refused(()=>transaction(()=>client.query('UPDATE crest.quote_revisions SET '+patch+',version=version+1 WHERE id=$1',[record.revision])));
+ const record=await create(a);for(const patch of ["state='Sent'","state='Accepted'"])await refused(()=>transaction(()=>client.query('UPDATE crest.quote_revisions SET '+patch+',version=version+1 WHERE id=$1',[record.revision])),{code:'55000',message:'CREST_QUOTE_PROVENANCE_RETAINED'});
+ await refused(()=>editNotes(a,record,'Synthetic updated notes for tax gate',{taxReadiness:'ready'}),{code:'23514',constraint:'quote_revisions_tax_readiness_check'});
 });
 test('deletion and truncation cannot erase quote roots, revisions or removed-line history',async()=>{
  const record=await create(a);for(const [table,id]of [['quote_families',record.family],['quote_revisions',record.revision],['quote_items',record.itemIds[0]]]){
-  await refused(()=>transaction(()=>client.query('DELETE FROM crest.'+table+' WHERE id=$1',[id])));await refused(()=>transaction(()=>client.query('TRUNCATE crest.'+table+' CASCADE')));
+  await refused(()=>transaction(()=>client.query('DELETE FROM crest.'+table+' WHERE id=$1',[id])),{code:'55000',message:'CREST_QUOTE_HISTORY_RETAINED'});await refused(()=>transaction(()=>client.query('TRUNCATE crest.'+table+' CASCADE')),{code:'55000',message:'CREST_QUOTE_HISTORY_RETAINED'});
  }
 });
