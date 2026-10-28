@@ -15,6 +15,10 @@ import {decodeServiceCatalogCsv} from '../support/service-catalog-csv-fixture.ts
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import {bindServiceOriginalReceipt} from '../../src/commercial/service-original-operation.ts';
 import {parseOriginalOperationOutcome} from '../../src/security/original-operation-reference.ts';
+import pg from 'pg';
+import {createBusinessSourceCatalogCollector} from '../../src/security/business-foundation-collector.ts';
+import {formatBusinessSourceCatalogBundle} from '../../src/security/business-source-catalog-bundle.ts';
+import {verifyBusinessSourceCatalogBundle} from '../../src/tooling/verify-business-source-catalog-bundle.ts';
 const proposal=name=>new URL('../../planning/proposals/service-catalog-'+name,import.meta.url);
 const sql=await readFile(proposal('source.sql'),'utf8'),meta=JSON.parse(await readFile(proposal('source.json'),'utf8'));
 const storage=await readFile(proposal('storage.sql'),'utf8'),commands=await readFile(proposal('commands.sql'),'utf8');
@@ -245,3 +249,72 @@ test('actual capacity boundary includes 1000 inactive services and refuses 1001 
  assert.equal((await save(emptyBusiness,request({body:{...body,code:'capacity-over-limit'}}))).state,'committed');
  await transaction(exporter,()=>assert.rejects(context(emptyBusiness.business),e=>e.code==='54000'&&e.message==='CREST_CATALOG_SNAPSHOT_LIMIT'),'ISOLATION LEVEL REPEATABLE READ READ ONLY');
 },{timeout:180000});
+
+async function withCatalogCollector(f,run){
+ const source=await runtime(sandbox.admin,url,['crest_export']);
+ try{const collector=createBusinessSourceCatalogCollector({connectionString:source.url,environment:'test',businessId:f.business});await run(collector);}
+ finally{await sandbox.admin.query('DROP ROLE '+source.login);}
+}
+function catalogRows(capture){
+ const c=JSON.parse(capture.catalog),context=JSON.parse(c.context),services=c.pages.services.flatMap(t=>JSON.parse(t).services),versions=c.pages.versions.flatMap(t=>JSON.parse(t).versions);
+ return{c,input:{businessId:c.businessId,snapshotToken:context.snapshotToken,expectedServiceCount:context.serviceCount,expectedVersionCount:context.versionCount,services,versions}};
+}
+async function verifyJointPackage(capture){
+ const source=capture.forCatalogServer(),binding={businessId:source.source.businessId,generationId:source.source.generationId,appReleaseId:'a'.repeat(40),sourceSchemaVersion:43};
+ const formatted=(await formatBusinessSourceCatalogBundle(capture,binding)).forCatalogBundle();
+ const verified=verifyBusinessSourceCatalogBundle(formatted.manifest,formatted.parts,binding).forCatalogBundleVerification();
+ assert.equal(verified.originals.catalog,source.catalog);assert.equal(verified.originals.history,source.source.history);assert.equal(verified.originals.journal,source.source.journal);assert.equal(verified.recordCount,source.recordCount);assert.equal(verified.catalogRegistered,false);assert.equal(verified.completeBackup,false);return verified;
+}
+test('joint collector captures empty catalog with genuine foundation/CRM/journal and explicit unregistered status',async()=>{
+ const f=await state();await withCatalogCollector(f,async collector=>{
+  const sealed=await collector(new AbortController().signal),capture=sealed.forCatalogServer(),{c,input}=catalogRows(capture);
+  const verified=await verifyJointPackage(sealed);assert.equal(verified.catalogRows.services.length,0);
+  assert.throws(()=>JSON.stringify(sealed),/BUSINESS_FOUNDATION_CAPTURE_PRIVATE/);assert.equal(sealed.forJournalServer,undefined);
+  assert.equal(capture.registeredSourceSchemaVersion,43);assert.equal(capture.catalogRegistered,false);assert.equal(capture.source.sourceSchemaVersion,43);assert.equal(capture.completePortableExport,false);
+  assert.equal(c.generationId,capture.source.generationId);assert.equal(c.observedAt,capture.source.observedAt);assert.equal(c.recordCount,0);assert.equal(capture.recordCount,capture.source.recordCount);
+  const csv=formatServiceCatalogCsv(input);assert.deepEqual(decodeServiceCatalogCsv(csv.servicesCsv,csv.escapeMap,'services'),[]);
+  assert.equal(JSON.parse(capture.source.journal).businessId,f.business);
+ });
+});
+test('joint collector retains service versions and original source history for a portable catalog round trip',async()=>{
+ const f=await state(),first=request();assert.equal((await save(f,first)).state,'committed');
+ const second=request({service:first.service,revision:'1',body:{...first.body,definition:definition({name:'Revised joint snapshot scope'})}});assert.equal((await save(f,second)).state,'committed');
+ await withCatalogCollector(f,async collector=>{
+  const sealed=await collector(new AbortController().signal),capture=sealed.forCatalogServer(),{c,input}=catalogRows(capture),csv=formatServiceCatalogCsv(input);
+  const verified=await verifyJointPackage(sealed);assert.deepEqual(verified.catalogRows.services,input.services);assert.deepEqual(verified.catalogRows.versions,input.versions);
+  assert.equal(c.recordCount,3);assert.equal(input.services[0].version,'2');assert.equal(input.versions.length,2);assert.equal(capture.recordCount,capture.source.recordCount+3);
+  assert.deepEqual(decodeServiceCatalogCsv(csv.servicesCsv,csv.escapeMap,'services'),input.services);assert.deepEqual(decodeServiceCatalogCsv(csv.versionsCsv,csv.escapeMap,'service_versions'),input.versions);
+  const history=JSON.parse(capture.source.history);assert(history.records.some(r=>r.kind==='operation'&&r.canonicalEvidence.includes(first.operation)));assert(history.records.some(r=>r.kind==='operation'&&r.canonicalEvidence.includes(second.operation)));
+  assert.equal(capture.metadataBytes,capture.source.metadataBytes+c.metadataBytes);assert.equal(capture.evidenceBytes,capture.source.evidenceBytes+Buffer.byteLength(capture.catalog));
+ });
+});
+test('actual concurrent catalog commit cannot mix later content into the one-connection source snapshot',async()=>{
+ const f=await state(),first=request();assert.equal((await save(f,first)).state,'committed');
+ const second=request({service:first.service,revision:'1',body:{...first.body,definition:definition({name:'Committed during actual collection'})}});
+ await withCatalogCollector(f,async collector=>{
+  const originalQuery=pg.Client.prototype.query,calls=[],connections=new Set();let changed=false;
+  pg.Client.prototype.query=function(...args){
+   if(this.connectionParameters.application_name==='crest_business_capture'){
+    connections.add(this);calls.push(args[0]);
+    if(!changed&&typeof args[0]==='string'&&args[0].includes('.service_catalog_snapshot_services(')){
+     changed=true;return save(f,second).then(result=>{assert.equal(result.state,'committed');return originalQuery.apply(this,args);});
+    }
+   }
+   return originalQuery.apply(this,args);
+  };
+  let sealed,capture;try{sealed=await collector(new AbortController().signal);capture=sealed.forCatalogServer();}finally{pg.Client.prototype.query=originalQuery;}
+  assert.equal(changed,true);assert.equal(connections.size,1);assert(calls.includes('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY'));assert.equal(calls.at(-1),'COMMIT');assert.equal(calls.filter(s=>s.includes('business_configuration_export_context')).length,1);
+  const {input}=catalogRows(capture);assert.equal(input.services[0].version,'1');assert.equal(input.versions.length,1);assert.equal(input.versions[0].name,first.body.definition.name);
+  const history=JSON.parse(capture.source.history);assert(history.records.some(r=>r.kind==='operation'&&r.canonicalEvidence.includes(first.operation)));assert(!history.records.some(r=>r.kind==='operation'&&r.canonicalEvidence.includes(second.operation)));
+  assert.equal(await value(admin,'SELECT version::text AS value FROM crest.services WHERE business_id=$1 AND id=$2',[f.business,first.service]),'2');
+  const verified=await verifyJointPackage(sealed);assert.equal(verified.catalogRows.services[0].version,'1');assert(!verified.originals.history.includes(second.operation));
+ });
+});
+test('catalog page cancellation discards the whole joint capture and permits a fresh explicit read',async()=>{
+ const f=await state(),first=request();assert.equal((await save(f,first)).state,'committed');await withCatalogCollector(f,async collector=>{
+  const controller=new AbortController(),originalQuery=pg.Client.prototype.query;let read=false;
+  pg.Client.prototype.query=function(...args){if(this.connectionParameters.application_name==='crest_business_capture'&&typeof args[0]==='string'&&args[0].includes('.service_catalog_snapshot_versions(')){read=true;return originalQuery.apply(this,args).then(r=>{controller.abort();return r;});}return originalQuery.apply(this,args);};
+  try{await assert.rejects(collector(controller.signal),e=>e.message==='BUSINESS_FOUNDATION_COLLECTION_REVIEW_REQUIRED');assert.equal(read,true);}finally{pg.Client.prototype.query=originalQuery;}
+  const capture=(await collector(new AbortController().signal)).forCatalogServer();assert.equal(catalogRows(capture).input.services.length,1);
+ });
+});

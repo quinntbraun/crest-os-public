@@ -15,6 +15,7 @@ import {parseLeadAddress} from '../customer/lead-address-contract.ts';
 import {parseLeadConversionRecord,parseConversionLink,parseLeadConversionCollection} from '../customer/lead-conversion-record.ts';
 import {parseHistoryJson,historyJsonEqual} from './history-evidence-json.ts';
 import {collectJournalSources,journalCollectionContext} from './source-export-journal-collection.ts';
+import {collectServiceCatalogSources,catalogCollectionContext} from './service-catalog-collection.ts';
 
 type Configuration=Readonly<{connectionString:string;environment:'production'|'test';businessId:string}>;
 type Group='configuration'|'identity'|'history';
@@ -29,6 +30,8 @@ export type BusinessFoundationCapture=Readonly<{forServer:()=>Capture;toJSON:()=
 export type BusinessSourceCapture=Readonly<{forServer:()=>Capture&Readonly<{crm:string}>;toJSON:()=>never}>;
 type JournalCapture=Capture&Readonly<{sourceSchemaVersion:43;crm:string;journal:string;metadataBytes:number;originalBytes:number;wireBytes:number}>;
 export type BusinessSourceJournalCapture=Readonly<{forJournalServer:()=>JournalCapture;toJSON:()=>never}>;
+type CatalogCapture=Readonly<{formatVersion:1;registeredSourceSchemaVersion:43;catalogRegistered:false;source:JournalCapture;catalog:string;metadataBytes:number;evidenceBytes:number;recordCount:number;completePortableExport:false;completeBackup:false}>;
+export type BusinessSourceCatalogCapture=Readonly<{forCatalogServer:()=>CatalogCapture;toJSON:()=>never}>;
 export class BusinessFoundationCollectionError extends Error{
  constructor(){super('BUSINESS_FOUNDATION_COLLECTION_REVIEW_REQUIRED');this.name='BusinessFoundationCollectionError';}
 }
@@ -112,10 +115,14 @@ function record(value:unknown,group:Group,kind:string,after:string|null):Row{
 export function createBusinessFoundationCollector(config:Configuration){return createCollector(config,false);}
 export function createBusinessSourceCollector(config:Configuration){return createCollector(config,true);}
 export function createBusinessSourceJournalCollector(config:Configuration){return createCollector(config,true,true);}
+// Candidate catalog layers are explicitly separate from the immutable43
+// journal profile. No runtime/worker can silently mistake this for that type.
+export function createBusinessSourceCatalogCollector(config:Configuration){return createCollector(config,true,true,true);}
+function createCollector(config:Configuration,includeCrm:true,includeJournal:true,includeCatalog:true):(signal:AbortSignal)=>Promise<BusinessSourceCatalogCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal:true):(signal:AbortSignal)=>Promise<BusinessSourceJournalCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal?:false):(signal:AbortSignal)=>Promise<BusinessSourceCapture>;
 function createCollector(config:Configuration,includeCrm:false,includeJournal?:false):(signal:AbortSignal)=>Promise<BusinessFoundationCapture>;
-function createCollector(config:Configuration,includeCrm:boolean,includeJournal=false){
+function createCollector(config:Configuration,includeCrm:boolean,includeJournal=false,includeCatalog=false){
  let connectionString:string,businessId:string,ssl:false|{rejectUnauthorized:true};
  try{
   const url=new URL(config.connectionString);
@@ -146,13 +153,16 @@ function createCollector(config:Configuration,includeCrm:boolean,includeJournal=
     require(guard.rows.length===1&&exact(guard.rows[0],['allowed'])&&guard.rows[0].allowed===true);
     require((await query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')).command==='BEGIN');
     const contextSql='SELECT crest_commands.business_configuration_export_context($1::uuid) AS configuration,crest_commands.business_identity_export_context($1::uuid) AS identity,crest_commands.business_history_export_context($1::uuid) AS history';
-    const result=await query(contextSql+(includeCrm?crmContexts.map(n=>`,crest_commands.${crmSources[n].routine}_snapshot_context($1::uuid)::text AS "${n}"`).join(''):'')+(includeJournal?',crest_commands.source_export_journal_context($1::uuid)::text AS journal':''),[businessId]);
-    require(result.rows.length===1&&exact(result.rows[0],[...groups,...(includeCrm?crmContexts:[]),...(includeJournal?['journal']:[])]));
+    const result=await query(contextSql+(includeCrm?crmContexts.map(n=>`,crest_commands.${crmSources[n].routine}_snapshot_context($1::uuid)::text AS "${n}"`).join(''):'')+(includeJournal?',crest_commands.source_export_journal_context($1::uuid)::text AS journal':'')+(includeCatalog?',crest_commands.service_catalog_snapshot_context($1::uuid)::text AS catalog':''),[businessId]);
+    require(result.rows.length===1&&exact(result.rows[0],[...groups,...(includeCrm?crmContexts:[]),...(includeJournal?['journal']:[]),...(includeCatalog?['catalog']:[])]));
     const contexts={} as Record<Group,Context>;let declared=0;
     for(const group of groups){contexts[group]=context(result.rows[0][group],group,businessId);declared+=Object.values(contexts[group].recordCounts).reduce((n,c)=>n+Number(c),0);}
     const crm={} as Record<CrmSource,CrmContext>,rawContexts:Partial<Record<CrmSource,string>>={};let crmBytes=0;
     if(includeCrm)for(const name of crmContexts){const raw=sourceJson(result.rows[0][name]);crm[name]=crmContext(raw.value,name,businessId);rawContexts[name]=raw.text;crmBytes+=raw.bytes;declared+=name==='conversions'?Number(crm[name].conversionCount)+Number(crm[name].linkCount):Number(crm[name].rowCount);}
     const baseDeclared=declared;
+    const catalogContext=includeCatalog?catalogCollectionContext(result.rows[0].catalog,businessId):undefined;
+    const catalogDeclared=catalogContext?Number(catalogContext.serviceCount)+Number(catalogContext.versionCount):0;
+    declared+=catalogDeclared;
     if(includeJournal){const journal=journalCollectionContext(result.rows[0].journal,businessId,contexts.configuration.observedAt);declared+=Object.values(journal.recordCounts).reduce((n,c)=>n+Number(c),0);}
     require(declared<=maxRecords&&groups.every(g=>contexts[g].observedAt===contexts.configuration.observedAt));
     const generationId=randomUUID(),parts={} as Record<Group,string>;let evidenceBytes=0,recordCount=0;
@@ -206,13 +216,19 @@ function createCollector(config:Configuration,includeCrm:boolean,includeJournal=
     if(includeJournal){
      require(typeof result.rows[0].journal==='string');
      journal=await collectJournalSources(query,check,{rawContext:result.rows[0].journal,businessId,observedAt:contexts.configuration.observedAt,generationId,remainingMetadataBytes:maxBytes-evidenceBytes,remainingRecords:maxRecords-recordCount});
-     recordCount+=journal.recordCount;require(recordCount===declared);
+     recordCount+=journal.recordCount;require(recordCount===declared-catalogDeclared);
      const serializedBytes=Buffer.byteLength(parts.configuration)+Buffer.byteLength(parts.identity)+Buffer.byteLength(parts.history)+Buffer.byteLength(crmPart!)+journal.serializedBytes;
      require(serializedBytes<=33554432);
     }
+    const catalog=includeCatalog?await collectServiceCatalogSources(query,check,{rawContext:result.rows[0].catalog,businessId,generationId,observedAt:contexts.configuration.observedAt,remainingMetadataBytes:maxBytes-evidenceBytes-journal!.metadataBytes,remainingRecords:maxRecords-recordCount}):undefined;
+    if(catalog)require(recordCount+catalog.recordCount===declared&&Buffer.byteLength(parts.configuration)+Buffer.byteLength(parts.identity)+Buffer.byteLength(parts.history)+Buffer.byteLength(crmPart!)+journal!.serializedBytes+catalog.serializedBytes<=33554432);
     require((await query('COMMIT')).command==='COMMIT');check();
     if(journal){
      const value:JournalCapture=Object.freeze({formatVersion:1,sourceSchemaVersion:43,generationId,businessId,observedAt:contexts.configuration.observedAt,capture:'single_connection_repeatable_read',...parts,crm:crmPart!,journal:journal.journal,metadataBytes:evidenceBytes+journal.metadataBytes,originalBytes:journal.originalBytes,wireBytes:journal.wireBytes,evidenceBytes:Buffer.byteLength(parts.configuration)+Buffer.byteLength(parts.identity)+Buffer.byteLength(parts.history)+Buffer.byteLength(crmPart!)+journal.serializedBytes,recordCount,completePortableExport:false,completeBackup:false});
+     if(catalog){
+      const candidate:CatalogCapture=Object.freeze({formatVersion:1,registeredSourceSchemaVersion:43,catalogRegistered:false,source:value,catalog:catalog.catalog,metadataBytes:value.metadataBytes+catalog.metadataBytes,evidenceBytes:value.evidenceBytes+catalog.serializedBytes,recordCount:recordCount+catalog.recordCount,completePortableExport:false,completeBackup:false});
+      return Object.freeze({forCatalogServer:()=>candidate,toJSON():never{throw new Error('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');}});
+     }
      return Object.freeze({forJournalServer:()=>value,toJSON():never{throw new Error('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');}});
     }
     const value:Capture&{crm?:string}=Object.freeze({formatVersion:1,generationId,businessId,observedAt:contexts.configuration.observedAt,capture:'single_connection_repeatable_read',...parts,...(includeCrm?{crm:crmPart!}:{}),evidenceBytes,recordCount,completePortableExport:false,completeBackup:false});
