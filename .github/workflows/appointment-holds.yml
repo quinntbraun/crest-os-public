@@ -1,0 +1,64 @@
+name: Prospective appointment workflow
+
+on:
+  push:
+    branches: [feature/appointment-holds-cloud-20261028]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prospective-appointments-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  retained_holds:
+    name: Retained unconfirmed appointment workflow
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      CREST_ENV: test
+      CREST_TEST_DATABASE_URL: postgresql://supabase_admin:crest_local_test_only@127.0.0.1:54322/crest_test
+    services:
+      postgres:
+        image: supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2
+        env:
+          POSTGRES_USER: supabase_admin
+          POSTGRES_PASSWORD: crest_local_test_only
+          POSTGRES_DB: crest_test
+        ports:
+          - 127.0.0.1:54322:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d crest_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install pinned dependencies and native tooling
+        run: |
+          test "$(node --version)" = "v24.22.0"
+          test "$(npm --version)" = "11.19.1"
+          npm ci --ignore-scripts --no-fund
+          node scripts/install-tools.mjs
+          node scripts/install-recovery-tools.mjs
+      - name: Verify unchanged canonical and migration provenance
+        run: |
+          npm run verify:canonical
+          npm run verify:migrations
+          npm run typecheck
+          npx vitest run tests/unit/appointment-hold-contract.test.ts tests/unit/appointment-hold-controller.test.ts
+      - name: Prove actual retained saves, original results, tenant isolation and independent restore
+        run: node --test --test-concurrency=1 tests/integration/appointment-holds-storage.test.mjs
+      - name: Install pinned browser engines
+        run: npx playwright install --with-deps chromium webkit
+      - name: Prove actual proposal controls over HTTPS and provider MFA
+        run: node --test --test-concurrency=1 tests/integration/appointment-holds-browser.test.mjs
