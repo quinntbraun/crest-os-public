@@ -82,7 +82,7 @@
     "test:lead-state-db": "node --test --test-concurrency=1 tests/integration/lead-state-events.test.mjs",
     "test:lead-vehicles-db": "node --test --test-concurrency=1 tests/integration/lead-vehicle-intake.test.mjs",
     "test:lead-addresses-db": "node --test --test-concurrency=1 tests/integration/lead-address-intake.test.mjs",
-    "test:catalog-source-proposal": "node --test --test-concurrency=1 tests/integration/service-catalog-source.test.mjs",
+    "test:catalog-source-proposal": "node --conditions=react-server --test --test-concurrency=1 tests/integration/service-catalog-source.test.mjs",
     "review:test-browser": "node --test --test-concurrency=1 tests/integration/review-browser.test.mjs"
   },
   "dependencies": {
