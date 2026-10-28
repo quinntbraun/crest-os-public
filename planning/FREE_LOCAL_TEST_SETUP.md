@@ -4,6 +4,14 @@
 
 ## Current computer
 
+2026-10-28 update: owner installed Docker Desktop/WSL2. Engine check succeeded: Linux Docker29.9.2, Docker Desktop4.97.0. Installation is no longer the blocker. The candidate scripts/synthetic-workspace.mjs creates a separate named synthetic volume, genuine official Auth/MFA and restricted application login; scripts/synthetic-migrations.mjs confines Linux migration inputs to public source/dependencies and nonsecret receipts. No complete initialization, restart-persistence proof or owner sign-in delivery has passed yet.
+
+The first native Windows attempt exposed a long-path temporary-directory failure; the next attempt found that the Windows CLI's migration role construction failed Crest's unchanged role invariant. No application migration or Crest record was committed. Failures/receipts remain private under .local; no pending migration marker was silently discarded. The runner now targets pinned Linux tooling rather than relaxing the role invariant. Auto-review rejected first a whole-checkout mount and then the narrowed runner's generated synthetic database credential. Explicit owner approval for that credential access is pending. Do not treat installed Docker or the new scripts as successful runtime acceptance.
+
+After approval, finish the existing isolated setup through the checked coordinator, then start with npm run workspace:start at https://127.0.0.1:4319. Verify official MFA, customer/vehicle/association saves, reload, a controlled service restart, history and limited record retrieval before advertising this as the working test build. The certificate is local/self-signed; no host trust-store edit or automatic browser exception is authorized. Private generated sign-in material stays in .local/synthetic-workspace/owner-credentials.json after successful setup, never in Git/chat/CI artifacts. npm run workspace:stop stops only the labeled synthetic containers and retains their volume; stopping the foreground app alone does not remove data. Initialization failures require engineering review, not deletion/reset or blindly repeating init.
+
+The following inventory and installation instructions describe the earlier prerequisite assessment; the update above supersedes its missing-Docker status.
+
 Checks found the pinned Node24.22 and Supabase CLI2.121.0, but no Docker/Podman/PostgreSQL executable; Windows reports WSL is not installed. Existing Windows application-control restrictions must remain intact. The current compose.yaml uses a disposable tmpfs test database and deliberately is not a persistent business installation.
 
 ## Owner's one-time Windows actions

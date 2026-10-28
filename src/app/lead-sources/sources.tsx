@@ -1,5 +1,4 @@
 'use client';
-import Link from 'next/link';
 import {useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {createLeadSourceEditorController,initialLeadSourceEditorView,emptyLeadSourceDraft} from '../../client/lead-source-editor-controller';
@@ -45,7 +44,7 @@ export function LeadSourceScreen(){
   </>}
   {view.phase==='pending'&&<><p className="field-help">Keep the original save reference until the outcome is confirmed. No retry runs automatically.</p>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check lead source save status</button>{view.canRetry&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>void action('retry')}>Retry original lead source change</button>}</>}
   {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current lead sources</button>}
-<nav aria-label="Lead source navigation"><Link href="/save-review">Review interrupted save</Link><Link href="/leads">Leads</Link><Link href="/customers">Customers</Link><Link href="/sign-in">Device sign-in and sign-out</Link><Link href="/">Crest OS home</Link></nav>
+<nav aria-label="Lead source navigation"><a href="/save-review">Review interrupted save</a><a href="/leads">Leads</a><a href="/customers">Customers</a><a href="/sign-in">Device sign-in and sign-out</a><a href="/">Crest OS home</a></nav>
   <p className="field-help">Setup and synthetic testing are in progress. This screen does not approve real customer records or production use.</p>
  </section>;
 }

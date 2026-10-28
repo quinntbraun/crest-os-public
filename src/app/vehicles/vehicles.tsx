@@ -1,5 +1,4 @@
 'use client';
-import Link from 'next/link';
 import {useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {createVehicleEditorController,initialVehicleEditorView} from '../../client/vehicle-editor-controller';
@@ -10,6 +9,7 @@ import type {VehicleDraft} from '../../customer/customer-resource-contract';
 import {vehicleYearInput} from './year-input';
 import {AssociationPanel} from './associations';
 import {customerUuid} from '../../customer/customer-contract';
+import {SavedRecordDownload} from '../saved-record-download';
 
 function YearInput({value,change}:{value:number;change:(value:number)=>void}){
   const [text,setText]=useState(Number.isFinite(value)?String(value):'');
@@ -60,6 +60,7 @@ export function VehicleScreen({initialVehicleId=null}:{initialVehicleId?:string|
         </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}<button type="submit" disabled={!view.canSave}>Save vehicle</button>
       </form>}
       {view.history&&<section aria-label="Vehicle history"><h2>Retained history</h2><p>Current version: {view.history.vehicle.version}</p>
+        <SavedRecordDownload key={view.history.vehicle.id} kind="vehicle" record={view.history.vehicle} disabled={view.busy}/>
         {view.history.history.map(event=><details key={event.after.version}><summary>Version {event.after.version} · {event.after.updated_at}</summary>{event.before&&<><h3>Before</h3><VehicleDetails vehicle={event.before}/></>}<h3>After</h3><VehicleDetails vehicle={event.after}/></details>)}
         {view.history.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('moreHistory')}>Next history page</button>}
       </section>}
@@ -67,7 +68,7 @@ export function VehicleScreen({initialVehicleId=null}:{initialVehicleId?:string|
     </>}
     {view.phase==='pending'&&<><p className="field-help">Keep the original save reference until the outcome is confirmed. No retry runs automatically.</p>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check vehicle save status</button>{view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('retry')}>Retry original vehicle change</button>}</>}
     {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current vehicles</button>}
-<nav aria-label="Vehicle navigation"><Link href="/save-review">Review interrupted save</Link><Link href="/customers">Customers</Link><Link href="/leads">Leads</Link><Link href="/settings">Business settings</Link><Link href="/sign-in">Device sign-in and sign-out</Link><Link href="/">Crest OS home</Link></nav>
+<nav aria-label="Vehicle navigation"><a href="/save-review">Review interrupted save</a><a href="/customers">Customers</a><a href="/leads">Leads</a><a href="/settings">Business settings</a><a href="/sign-in">Device sign-in and sign-out</a><a href="/">Crest OS home</a></nav>
     <p className="field-help">Setup and synthetic testing are still in progress. This screen does not approve real customer records or production use.</p>
   </section>;
 }

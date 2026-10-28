@@ -1,5 +1,4 @@
 'use client';
-import Link from 'next/link';
 import {useEffect,useRef,useState} from 'react';
 import type {FormEvent,ComponentType} from 'react';
 import {createCustomerEditorController,initialCustomerEditorView} from '../../client/customer-editor-controller';
@@ -7,6 +6,7 @@ import {createPendingCustomerStore} from '../../client/pending-customer-edit';
 import {NullableText} from './nullable-text';
 import {phonePresentation} from '../../client/phone-presentation';
 import type {Customer,CustomerDraft} from '../../customer/customer-contract';
+import {SavedRecordDownload} from '../saved-record-download';
 
 function CustomerDetails({customer}:{customer:Customer}){
   const unknown=(value:string|null)=>value===null?'Not recorded':value===''?'Recorded as empty':value;
@@ -52,16 +52,17 @@ export function CustomerScreen({related:Related}:{related?:ComponentType<{custom
           </details>
         </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}<button type="submit" disabled={!view.canSave}>Save customer</button>
       </form>}
-      {view.selected&&<Link href={"/addresses?customer="+view.selected.id}>Manage customer addresses</Link>}
+      {view.selected&&<section className="home-panel"><h2>Vehicles and addresses</h2><p>Save vehicles in the vehicle directory, then add a customer link to record their relationship and billing selection.</p><a className="primary-action" href="/vehicles">Manage vehicles</a><a className="text-action" href={"/addresses?customer="+view.selected.id}>Manage customer addresses</a></section>}
       {view.selected&&Related&&<Related key={view.selected.id} customerId={view.selected.id}/>}
       {view.history&&<section aria-label="Customer history"><h2>Retained history</h2><p>Current version: {view.history.customer.version}</p>
+        <SavedRecordDownload key={view.history.customer.id} kind="customer" record={view.history.customer} disabled={view.busy}/>
         {view.history.history.map(event=><details key={event.after.version}><summary>Version {event.after.version} · {event.after.updated_at}</summary>{event.before&&<><h3>Before</h3><CustomerDetails customer={event.before}/></>}<h3>After</h3><CustomerDetails customer={event.after}/></details>)}
         {view.history.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('moreHistory')}>Next history page</button>}
       </section>}
     </>}
     {view.phase==='pending'&&<><p className="field-help">Keep the original save reference until the outcome is confirmed. No retry runs automatically.</p>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check customer save status</button>{view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('retry')}>Retry original customer change</button>}</>}
     {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current customers</button>}
-<nav aria-label="Customer navigation"><Link href="/save-review">Review interrupted save</Link><Link href="/vehicles">Vehicles</Link><Link href="/leads">Leads</Link><Link href="/addresses">Address save review</Link><Link href="/settings">Business settings</Link><Link href="/export-files">Business data exports</Link><Link href="/sign-in">Device sign-in and sign-out</Link><Link href="/">Crest OS home</Link></nav>
+<nav aria-label="Customer navigation"><a href="/save-review">Review interrupted save</a><a href="/vehicles">Vehicles</a><a href="/leads">Leads</a><a href="/addresses">Address save review</a><a href="/settings">Business settings</a><a href="/export-files">Business data exports</a><a href="/sign-in">Device sign-in and sign-out</a><a href="/">Crest OS home</a></nav>
     <p className="field-help">Setup and synthetic testing are still in progress. This screen does not approve real customer records or production use.</p>
   </section>;
 }

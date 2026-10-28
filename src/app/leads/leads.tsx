@@ -1,7 +1,6 @@
 'use client';
 import {createPendingLeadConversionStore} from '../../client/pending-lead-conversion';
 import {createPendingLeadAddressStore} from '../../client/pending-lead-address-edit';
-import Link from 'next/link';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {FormEvent,ComponentType} from 'react';
 import type {LeadAddressDraft} from '../../customer/lead-resource-contract';
@@ -77,7 +76,7 @@ export function LeadScreen({addressAssist}:{addressAssist?:ComponentType<{draft:
   </>}
   {view.phase==='pending'&&<><p className="field-help">Keep the original save reference until the outcome is confirmed. No retry runs automatically.</p>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void action('check')}>Check lead save status</button>{view.canRetry&&<button type="button" className="secondary" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void action('retry')}>Retry original lead change</button>}</>}
   {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void action('load')}>Load current leads</button>}
-<nav aria-label="Lead navigation"><Link href="/save-review">Review interrupted save</Link><Link href="/lead-sources">Lead sources</Link><Link href="/customers">Customers</Link><Link href="/vehicles">Vehicles</Link><Link href="/sign-in">Device sign-in and sign-out</Link><Link href="/">Crest OS home</Link></nav>
+<nav aria-label="Lead navigation"><a href="/save-review">Review interrupted save</a><a href="/lead-sources">Lead sources</a><a href="/customers">Customers</a><a href="/vehicles">Vehicles</a><a href="/sign-in">Device sign-in and sign-out</a><a href="/">Crest OS home</a></nav>
   <p className="field-help">Synthetic testing is in progress. Intake, manual status changes and explicitly enabled conversion are under synthetic testing. Real-data use remains unavailable.</p>
  </section>;
 }

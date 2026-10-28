@@ -8,10 +8,12 @@ test('interrupted-save review remains private, accessible and closed by default'
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
 });
 
-test("foundation shell is accessible at desktop and 360px width", async ({ page }) => {
+test("workspace honestly reports unconfigured access at desktop and 360px width", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Crest OS", exact: true })).toBeVisible();
-  await expect(page.getByText("Setup in progress", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Today", exact: true })).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Workspace access could not be verified');
+  await expect(page.getByText('No current business information is shown until access is confirmed.')).toBeVisible();
+  await expect(page.getByRole('link',{name:'Open customers',exact:true})).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   const audit = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
   expect(audit.violations).toEqual([]);
