@@ -44,8 +44,11 @@ function decode(files,entity){const matrix=readCustomerCsv(files[entity+'Csv']),
 before(async()=>{
  assert.equal(adoption.repositoryRegistration,45);assert.equal(hash(sql),adoption.migration.sha256);assert.equal(Buffer.byteLength(sql),adoption.migration.bytes);assert.equal(adoption.previousRegistry.migrationCount,44);assert.equal(hash(await readFile(new URL('../../'+adoption.previousRegistry.frozenFixture,import.meta.url))),adoption.previousRegistry.sha256);
  for(const body of adoption.proposalBodies){const bytes=await readFile(new URL('../../'+body.path,import.meta.url));assert.equal(hash(bytes),body.sha256);assert.equal(bytes.length,body.bytes);assert.deepEqual(Buffer.from(sql).subarray(body.offset,body.offset+body.bytes),bytes);}
- sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target,await sandbox.prefix(44));bootstrap=await value(client,"SELECT id AS value FROM crest_private.actors WHERE system_key='security_bootstrap'");web=await runtime(sandbox.admin,target,'crest_web');owner=await state();priorRows=await inventory(client);
+ sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target,await sandbox.prefix(44));
  guardTarget=await sandbox.database();guardClient=await sandbox.connect(guardTarget);await sandbox.apply(guardTarget,await sandbox.prefix(0),true);await installProviderSchema(guardClient,guardTarget);await sandbox.apply(guardTarget,await sandbox.prefix(44));
+ // Bootstrap both owned databases before creating a runtime membership: the
+ // original foundation must continue rejecting pre-existing global role grants.
+ bootstrap=await value(client,"SELECT id AS value FROM crest_private.actors WHERE system_key='security_bootstrap'");web=await runtime(sandbox.admin,target,'crest_web');owner=await state();priorRows=await inventory(client);
 },{timeout:240000});
 after(async()=>{await restoredExporter?.end();await restoredWeb?.end();await web?.end();await exporter?.end();for(const {admin,login}of logins.toReversed())await admin.query('DROP ROLE '+login);await restored?.end();await cluster?.close();await sandbox?.close();});
 
