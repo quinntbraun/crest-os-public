@@ -7,7 +7,10 @@ import {readFile,mkdir,copyFile,chmod,unlink} from 'node:fs/promises';
 import {join} from 'node:path';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
-import {parseOriginalOperationReference,parseOriginalOperationOutcome,originalOperationKinds} from '../../src/security/original-operation-reference.ts';
+import {parseOriginalOperationReference,parseOriginalOperationOutcome,originalOperationKinds as currentOriginalKinds} from '../../src/security/original-operation-reference.ts';
+// This fixture proves the immutable registered42/43 eleven-kind baseline.
+// Catalog resolution is proved after its explicit proposal in the catalog drill.
+const originalOperationKinds=currentOriginalKinds.filter(kind=>kind!=='catalog.service.save');
 import {verifyBusinessHistoryEvidence} from '../../src/security/business-history-evidence.ts';
 import {formatBusinessHistoryCsv} from '../../src/security/business-history-csv.ts';
 import {decodeCustomerCsv} from '../support/customer-fixture.ts';

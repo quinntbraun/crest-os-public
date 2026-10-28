@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
+import {setTimeout as delay} from 'node:timers/promises';
 import {before,after,test} from 'node:test';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
@@ -12,16 +13,24 @@ import {formatServiceCatalogCsv} from '../../src/commercial/service-catalog-csv.
 import {serviceColumns,serviceContentColumns} from '../../src/commercial/service-storage-contract.ts';
 import {decodeServiceCatalogCsv} from '../support/service-catalog-csv-fixture.ts';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
+import {bindServiceOriginalReceipt} from '../../src/commercial/service-original-operation.ts';
+import {parseOriginalOperationOutcome} from '../../src/security/original-operation-reference.ts';
 const proposal=name=>new URL('../../planning/proposals/service-catalog-'+name,import.meta.url);
 const sql=await readFile(proposal('source.sql'),'utf8'),meta=JSON.parse(await readFile(proposal('source.json'),'utf8'));
 const storage=await readFile(proposal('storage.sql'),'utf8'),commands=await readFile(proposal('commands.sql'),'utf8');
+const resolution=await readFile(proposal('resolution.sql'),'utf8'),resolutionMeta=JSON.parse(await readFile(proposal('resolution.json'),'utf8'));
 const issuer='https://auth.example.com/auth/v1';
 let sandbox,url,admin,web,exporter,login,a,b,bootstrap,original,edited,archive,emptyBusiness,firstSnapshot,point,keys,backup,cluster,restored,restoredUrl,restoredLogin,restoredWeb,sourceInventory;
+let catalogOwner,web2,catalogSaved,catalogReference,catalogCommitted,retiredOriginal,retiredDecision,retirementBeforeBackup;
 const value=(c,q,args=[])=>c.query(q,args).then(r=>r.rows[0].value);
 const auth=f=>[f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+120000),f.business];
 const definition=(patch={})=>({name:'Synthetic interior é',inclusions:'=SUM(A1)\nVacuum, "care"; literal \\N',exclusions:'',internalGuidance:'Private scope\nOwner only',rangeLowCents:'9007199254740993',rangeHighCents:'9223372036854775807',estimatedSeconds:'9007199254740993',...patch});
 const request=(patch={})=>({operation:randomUUID(),service:randomUUID(),revision:'0',body:{code:'sample-'+randomUUID(),active:true,definition:definition()},...patch});
 const save=(f,r,c=web)=>value(c,'SELECT crest_commands.save_service($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13) AS value',[...auth(f),f.epoch,r.operation,r.service,r.revision,r.body]);
+const reference=(f,r)=>({schemaVersion:1,businessId:f.business,commandType:'catalog.service.save',reference:{operationId:r.operation,recoveryEpoch:f.epoch,serviceId:r.service,expectedRevision:r.revision}});
+const retire=(f,ref,{reason='Owner reviewed the lost service scope.',epoch=f.epoch,c=web}={})=>value(c,'SELECT crest_commands.retire_original_operation($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS value',[...auth(f),epoch,ref,reason]);
+const resolved=(f,ref,c=web)=>value(c,'SELECT crest_commands.lookup_original_operation_resolution($1,$2,$3,$4,$5,$6,$7,$8,$9) AS value',[...auth(f),ref]);
+const lookup=(f,id,c=web)=>value(c,'SELECT crest_commands.lookup_service_operation($1,$2,$3,$4,$5,$6,$7,$8,$9) AS value',[...auth(f),id]);
 const context=(business,c=exporter)=>value(c,'SELECT crest_commands.service_catalog_snapshot_context($1) AS value',[business]);
 const page=(entity,business,token,after=null,size=1,c=exporter)=>value(c,'SELECT crest_commands.service_catalog_snapshot_'+entity+'($1,$2,$3,$4) AS value',[business,token,after,size]);
 async function transaction(c,run,mode=''){await c.query('BEGIN '+mode);try{const result=await run();await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');throw e;}}
@@ -58,13 +67,15 @@ async function collect(business,c=exporter){
 const catalogEvidence=(c,business)=>value(c,"SELECT jsonb_build_object('services',(SELECT coalesce(jsonb_agg(crest_private.service_projection(s) ORDER BY id),'[]') FROM crest.services s WHERE business_id=$1),'versions',(SELECT coalesce(jsonb_agg(crest_private.service_version_projection(v) ORDER BY id),'[]') FROM crest.service_versions v WHERE business_id=$1),'operations',(SELECT coalesce(jsonb_agg(to_jsonb(o) ORDER BY id),'[]') FROM crest_private.operations o WHERE business_id=$1),'audit',(SELECT coalesce(jsonb_agg(to_jsonb(a) ORDER BY id),'[]') FROM crest_private.audit_events a WHERE business_id=$1)) AS value",[business]);
 before(async()=>{
  assert.equal(hash(sql),meta.sqlSha256);assert.equal(hash(storage),meta.requiredSchemaSqlSha256);assert.equal(hash(commands),meta.requiredCommandsSqlSha256);
+ assert.equal(hash(resolution),resolutionMeta.sqlSha256);assert.equal(hash(storage),resolutionMeta.requiredSchemaSqlSha256);assert.equal(hash(commands),resolutionMeta.requiredCommandsSqlSha256);
+ assert.equal(hash(await readFile(new URL('../../supabase/migrations/'+resolutionMeta.requiredOriginalMigration,import.meta.url))),resolutionMeta.requiredOriginalMigrationSha256);
  sandbox=await migrationSandbox();url=await sandbox.database();admin=await sandbox.connect(url);
  await sandbox.apply(url,await sandbox.prefix(0),true);await installProviderSchema(admin,url);await sandbox.apply(url,await sandbox.prefix(43));
  await transaction(admin,()=>admin.query(storage));await transaction(admin,()=>admin.query(commands));
- bootstrap=await value(admin,"SELECT id AS value FROM crest_private.actors WHERE system_key='security_bootstrap'");a=await state();b=await state();emptyBusiness=await state();
- const r=await runtime(sandbox.admin,url,['crest_web','crest_export']);login=r.login;web=await sandbox.connect(r.url);exporter=await sandbox.connect(r.url);await web.query('SET ROLE crest_web');await exporter.query('SET ROLE crest_export');
+ bootstrap=await value(admin,"SELECT id AS value FROM crest_private.actors WHERE system_key='security_bootstrap'");a=await state();b=await state();emptyBusiness=await state();catalogOwner=await state();
+ const r=await runtime(sandbox.admin,url,['crest_web','crest_export']);login=r.login;web=await sandbox.connect(r.url);web2=await sandbox.connect(r.url);exporter=await sandbox.connect(r.url);await web.query('SET ROLE crest_web');await web2.query('SET ROLE crest_web');await exporter.query('SET ROLE crest_export');
 },{timeout:240000});
-after(async()=>{await restoredWeb?.end();if(restoredLogin)await restored.query('DROP ROLE '+restoredLogin);await restored?.end();await cluster?.close();await web?.end();await exporter?.end();if(login)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
+after(async()=>{await restoredWeb?.end();if(restoredLogin)await restored.query('DROP ROLE '+restoredLogin);await restored?.end();await cluster?.close();await web?.end();await web2?.end();await exporter?.end();if(login)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
 async function guard(change){await admin.query('BEGIN');try{await change();await assert.rejects(admin.query(sql),e=>e.code==='42501'&&e.message==='CREST_CATALOG_SOURCE_REVIEW_REQUIRED');}finally{await admin.query('ROLLBACK');}}
 test('source proposal rejects drifted source columns',()=>guard(()=>admin.query('ALTER TABLE crest.service_versions ADD COLUMN unreviewed text')));
 test('source proposal rejects changed projector search path',()=>guard(()=>admin.query('ALTER FUNCTION crest_private.service_projection(crest.services) SET search_path=public')));
@@ -75,6 +86,64 @@ test('install adds only isolated snapshot functions; registry43 and existing rou
  const prior=(await sandbox.apply(url,await sandbox.prefix(43))).history;
  await transaction(admin,()=>admin.query(sql));assert.deepEqual((await sandbox.apply(url,await sandbox.prefix(43))).history,prior);
  for(const f of before)assert.equal(await value(admin,'SELECT pg_get_functiondef($1::oid) AS value',[f.oid]),f.definition);
+});
+test('registered43 refuses catalog retirement before the explicit proposal',async()=>{
+ const ref=reference(catalogOwner,request());assert.equal(await value(admin,'SELECT crest_private.original_operation_reference_valid($1) AS value',[ref]),false);
+ await assert.rejects(retire(catalogOwner,ref),e=>e.code==='22023');
+});
+async function resolutionGuard(change){await admin.query('BEGIN');try{await change();await assert.rejects(admin.query(resolution),e=>e.code==='42501'&&e.message==='CREST_CATALOG_RESOLUTION_REVIEW_REQUIRED');}finally{await admin.query('ROLLBACK');}}
+test('catalog resolution refuses a changed original validator body',()=>resolutionGuard(async()=>{
+ const definition=await value(admin,"SELECT pg_get_functiondef('crest_private.original_operation_reference_valid(jsonb)'::regprocedure) AS value");await admin.query(definition.replace("WHEN 'crm.customer.save'","WHEN 'changed.customer.save'"));
+}));
+test('catalog resolution refuses changed validator search path',()=>resolutionGuard(()=>admin.query('ALTER FUNCTION crest_private.original_operation_reference_valid(jsonb) SET search_path=public')));
+test('catalog resolution refuses PUBLIC execution',()=>resolutionGuard(()=>admin.query('GRANT EXECUTE ON FUNCTION crest_private.original_operation_reference_valid(jsonb) TO PUBLIC')));
+test('catalog resolution refuses an unsafe existing role',()=>resolutionGuard(()=>admin.query('ALTER ROLE crest_catalog_owner LOGIN')));
+test('catalog recovery changes only the pinned validator, preserving its identity/ACL and registry43',async()=>{
+ const routines=()=>admin.query("SELECT p.oid::text,p.proowner::text,p.proacl::text,pg_get_functiondef(p.oid) AS definition FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN('crest','crest_private','crest_commands') ORDER BY p.oid").then(r=>r.rows);
+ const before=await routines(),id=await value(admin,"SELECT 'crest_private.original_operation_reference_valid(jsonb)'::regprocedure::oid::text AS value"),prior=(await sandbox.apply(url,await sandbox.prefix(43))).history;
+ await transaction(admin,()=>admin.query(resolution));const after=await routines();assert.equal(after.length,before.length);
+ for(const entry of before){const current=after.find(r=>r.oid===entry.oid);if(entry.oid===id){assert.notEqual(current.definition,entry.definition);assert.equal(current.proowner,entry.proowner);assert.equal(current.proacl,entry.proacl);}else assert.deepEqual(current,entry);}
+ assert.deepEqual((await sandbox.apply(url,await sandbox.prefix(43))).history,prior);
+});
+test('catalog original references agree with SQL without admitting draft, finance or malformed revisions',async()=>{
+ const ref=reference(catalogOwner,request());assert.equal(await value(admin,'SELECT crest_private.original_operation_reference_valid($1) AS value',[ref]),true);
+ for(const revision of ['-1','01','1.0','9223372036854775808','1\n',0,null])assert.equal(await value(admin,'SELECT crest_private.original_operation_reference_valid($1) AS value',[{...ref,reference:{...ref.reference,expectedRevision:revision}}]),false);
+ for(const bad of [{...ref,commandType:'finance.post'},{...ref,reference:{...ref.reference,definition:{name:'Never retained'}}},{...ref,reference:{...ref.reference,expectedVersion:'0'}}])assert.equal(await value(admin,'SELECT crest_private.original_operation_reference_valid($1) AS value',[bad]),false);
+});
+test('committed catalog originals retain typed results after later edits; generic observation cannot clear a mismatched service',async()=>{
+ catalogSaved=request();catalogCommitted=await save(catalogOwner,catalogSaved);const ref=catalogReference=reference(catalogOwner,catalogSaved);assert.equal(catalogCommitted.state,'committed');
+ assert.equal((await save(catalogOwner,request({service:catalogSaved.service,revision:'1',body:{...catalogSaved.body,definition:definition({name:'Later catalog scope'})}}))).state,'committed');
+ const before=await catalogEvidence(admin,catalogOwner.business),observation=await retire(catalogOwner,ref);assert.equal(observation.state,'original_recorded');
+ assert.deepEqual(bindServiceOriginalReceipt(await lookup(catalogOwner,catalogSaved.operation),ref),catalogCommitted);
+ const wrong={...ref,reference:{...ref.reference,serviceId:randomUUID()}};assert.equal((await resolved(catalogOwner,wrong)).state,'original_recorded');assert.throws(()=>bindServiceOriginalReceipt(catalogCommitted,wrong));
+ assert.throws(()=>bindServiceOriginalReceipt(observation,ref));assert.deepEqual(await catalogEvidence(admin,catalogOwner.business),before);
+});
+test('absent catalog original is retired once with immutable reason/audit; late original writes cannot create it',async()=>{
+ const requestToRetire=request();retiredOriginal=reference(catalogOwner,requestToRetire);assert.deepEqual(await resolved(catalogOwner,retiredOriginal),{state:'absent'});
+ retiredDecision=await retire(catalogOwner,retiredOriginal);assert.equal(retiredDecision.state,'retired');assert.deepEqual(parseOriginalOperationOutcome(retiredDecision,retiredOriginal),retiredDecision);
+ const before=await catalogEvidence(admin,catalogOwner.business);assert.deepEqual(await retire(catalogOwner,retiredOriginal),retiredDecision);assert.deepEqual(await resolved(catalogOwner,retiredOriginal),retiredDecision);
+ assert.equal((await retire(catalogOwner,retiredOriginal,{reason:'Different reviewed reason'})).state,'conflict');assert.equal((await save(catalogOwner,requestToRetire)).state,'conflict');
+ assert.equal(await value(admin,'SELECT count(*)::int AS value FROM crest.services WHERE id=$1',[requestToRetire.service]),0);
+ assert.equal(await value(admin,'SELECT count(*)::int AS value FROM crest_private.audit_events WHERE business_id=$1 AND operation_id=$2',[catalogOwner.business,requestToRetire.operation]),1);assert.deepEqual(await catalogEvidence(admin,catalogOwner.business),before);
+});
+test('catalog retirement rejects another owner and malformed reasons without source changes',async()=>{
+ const ref=reference(catalogOwner,request()),before=await catalogEvidence(admin,catalogOwner.business);
+ await assert.rejects(retire({...b,business:catalogOwner.business},ref,{epoch:catalogOwner.epoch}),e=>e.code==='42501');
+ for(const reason of ['', ' '.repeat(3),'x'.repeat(2001)])await assert.rejects(retire(catalogOwner,ref,{reason}),e=>e.code==='22023');assert.deepEqual(await catalogEvidence(admin,catalogOwner.business),before);
+});
+test('paused/rotated authority cannot rewrite the original epoch or admit a stale retirement',async()=>{
+ const ref=reference(catalogOwner,request());await admin.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[catalogOwner.business]);
+ assert.deepEqual(await resolved(catalogOwner,retiredOriginal),retiredDecision);await assert.rejects(retire(catalogOwner,ref),e=>e.code==='P0001'&&e.message==='RECOVERY_REVIEW_REQUIRED');
+ const epoch=randomUUID();await admin.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,active_epoch=$1,version=version+1 WHERE business_id=$2',[epoch,catalogOwner.business]);
+ await assert.rejects(retire(catalogOwner,ref),e=>e.code==='P0001'&&e.message==='RECOVERY_REVIEW_REQUIRED');const decision=await retire(catalogOwner,ref,{epoch});assert.equal(decision.retirement.recoveryEpoch,epoch);assert.equal(decision.original.reference.recoveryEpoch,catalogOwner.epoch);catalogOwner.epoch=epoch;
+});
+test('two actual SQL sessions race a catalog save and retirement through the same original identity',async()=>{
+ const r=request(),ref=reference(catalogOwner,r),pids=await Promise.all([web,web2].map(c=>value(c,'SELECT pg_backend_pid() AS value')));
+ await admin.query('BEGIN');await admin.query('SELECT 1 FROM crest_private.business_recovery_authorities WHERE business_id=$1 FOR UPDATE',[catalogOwner.business]);
+ const pending=Promise.all([save(catalogOwner,r,web),retire(catalogOwner,ref,{c:web2})]);pending.catch(()=>{});
+ let results;try{let waiting=false;for(let i=0;i<100;i++){if(await value(admin,"SELECT count(*)=2 AS value FROM pg_stat_activity WHERE pid=ANY($1::int[]) AND wait_event_type='Lock'",[pids])){waiting=true;break;}await delay(20);}assert(waiting,'both real sessions waited on command locks');await admin.query('COMMIT');results=await pending;}finally{await admin.query('ROLLBACK');await pending.catch(()=>{});}
+ const [saved,decision]=results;assert.equal(await value(admin,'SELECT count(*)::int AS value FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[catalogOwner.business,r.operation]),1);
+ if(saved.state==='committed'){assert.equal(decision.state,'original_recorded');assert.deepEqual(bindServiceOriginalReceipt(await lookup(catalogOwner,r.operation),ref),saved);}else{assert.equal(saved.state,'conflict');assert.equal(decision.state,'retired');assert.equal(await value(admin,'SELECT count(*)::int AS value FROM crest.services WHERE id=$1',[r.service]),0);}
 });
 test('ordinary web cannot read bulk source or tables; source role cannot execute catalog writes',async()=>{
  for(const signature of ['crest_commands.service_catalog_snapshot_context(uuid)','crest_commands.service_catalog_snapshot_services(uuid,text,uuid,integer)','crest_commands.service_catalog_snapshot_versions(uuid,text,uuid,integer)']){
@@ -122,6 +191,7 @@ test('one snapshot retains archive and every old version, excluding a concurrent
 test('encrypted independent restore preserves all catalog source, receipts, audits and grants at one point',async()=>{
  const directory=await privateWorkspace();point=join(directory,'point');await mkdir(point,{mode:0o700});keys=await keyPair(directory);
  const prior=await catalogEvidence(admin,a.business);
+ retirementBeforeBackup=await catalogEvidence(admin,catalogOwner.business);
  const sourceSchema=normalizedSchema(await postgresTool('pg_dump',url,['--schema-only']));
  backup=await backupDatabase(admin,url,point,keys.recipient,async()=>{
   const later=request({service:original.service,revision:'4',body:{...edited.body,active:false,definition:definition({name:'After encrypted point'})}});assert.equal((await save(a,later)).state,'committed');
@@ -140,6 +210,7 @@ test('encrypted independent restore preserves all catalog source, receipts, audi
   }throw error;
  }restored=await connect(restoredUrl);
  assert.deepEqual(await inventory(restored),backup.manifest.rows);assert.deepEqual(await catalogEvidence(restored,a.business),prior);
+ assert.deepEqual(await catalogEvidence(restored,catalogOwner.business),retirementBeforeBackup);
  const p=await runtime(restored,restoredUrl,['crest_web','crest_export']);restoredLogin=p.login;restoredWeb=await connect(p.url);await restoredWeb.query('SET ROLE crest_web');
  const restoredExport=await connect(p.url);await restoredExport.query('SET ROLE crest_export');try{
   await transaction(restoredExport,async()=>{const rows=await collect(a.business,restoredExport);assert.equal(rows.services[0].version,'4');assert.equal(rows.versions.length,3);const files=formatServiceCatalogCsv(rows);assert.deepEqual(decodeServiceCatalogCsv(files.versionsCsv,files.escapeMap,'service_versions'),rows.versions);},'ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -150,6 +221,7 @@ test('restored credentials are retired and the new incident epoch remains write-
  const epoch=randomUUID(),incident=randomUUID(),record=join(point,'independent-incident.json');await writeFile(record,JSON.stringify({businessId:a.business,priorEpoch:a.epoch,epoch,incident,writesEnabled:false}),{flag:'wx',mode:0o600});
  await transaction(restored,async()=>{
   await restored.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,active_epoch=$1,incident_id=$2,version=version+1 WHERE business_id=$3',[epoch,incident,a.business]);
+  await restored.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,active_epoch=gen_random_uuid(),incident_id=$1,version=version+1 WHERE business_id=$2',[incident,catalogOwner.business]);
   await restored.query('UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),version=version+1 WHERE revoked_at IS NULL');
   await restored.query("UPDATE crest_private.actors SET current_security_epoch=gen_random_uuid(),version=version+1 WHERE kind='owner'");await restored.query('DELETE FROM auth.sessions');
  });
@@ -157,6 +229,10 @@ test('restored credentials are retired and the new incident epoch remains write-
  const fresh=await session(restored,a);for(const f of [fresh,{...fresh,epoch}])await assert.rejects(save(f,request(),restoredWeb),e=>e.code==='P0001'&&e.message==='RECOVERY_REVIEW_REQUIRED');
  assert.equal(await value(restored,'SELECT writes_enabled AS value FROM crest_private.business_recovery_authorities WHERE business_id=$1',[a.business]),false);
  assert.equal(await value(restored,'SELECT count(*)::int AS value FROM crest_private.app_sessions WHERE revoked_at IS NOT NULL AND (provider_token_ciphertext IS NOT NULL OR key_id IS NOT NULL)'),0);
+ const catalogFresh=await session(restored,catalogOwner),catalogEpoch=await value(restored,'SELECT active_epoch AS value FROM crest_private.business_recovery_authorities WHERE business_id=$1',[catalogOwner.business]);
+ assert.deepEqual(await resolved(catalogFresh,retiredOriginal,restoredWeb),retiredDecision);
+ assert.deepEqual(bindServiceOriginalReceipt(await lookup(catalogFresh,catalogSaved.operation,restoredWeb),catalogReference),catalogCommitted);
+ await assert.rejects(retire(catalogFresh,reference(catalogFresh,request()),{epoch:catalogEpoch,c:restoredWeb}),e=>e.code==='P0001'&&e.message==='RECOVERY_REVIEW_REQUIRED');
  assert.deepEqual(await inventory(admin),sourceInventory);
 });
 test('actual capacity boundary includes 1000 inactive services and refuses 1001 instead of truncating',async()=>{

@@ -13,6 +13,7 @@ type Targets={
  'crm.lead.vehicle.save':Readonly<{leadId:string;leadVehicleId:string;expectedVersion:string}>;
  'crm.lead.address.save':Readonly<{leadId:string;leadAddressId:string;expectedVersion:string}>;
  'crm.lead.convert':Readonly<{conversionId:string;leadId:string;expectedLeadVersion:string;customerId:string}>;
+ 'catalog.service.save':Readonly<{serviceId:string;expectedRevision:string}>;
 };
 export type OriginalOperationKind=keyof Targets;
 export type OriginalOperationReference={
@@ -43,7 +44,8 @@ const fields={
  'crm.lead.state':['leadId','expectedVersion'],
  'crm.lead.vehicle.save':['leadId','leadVehicleId','expectedVersion'],
  'crm.lead.address.save':['leadId','leadAddressId','expectedVersion'],
- 'crm.lead.convert':['conversionId','leadId','expectedLeadVersion','customerId']
+ 'crm.lead.convert':['conversionId','leadId','expectedLeadVersion','customerId'],
+ 'catalog.service.save':['serviceId','expectedRevision']
 } as const satisfies Record<OriginalOperationKind,readonly string[]>;
 export const originalOperationKinds=Object.freeze(Object.keys(fields) as OriginalOperationKind[]);
 function reason(value:unknown):asserts value is string{
@@ -61,7 +63,7 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
   const kind=row.commandType as OriginalOperationKind,keys=['operationId','recoveryEpoch',...fields[kind]],ref=object(row.reference,keys);
   require(uuid(ref.operationId)&&uuid(ref.recoveryEpoch));
   for(const key of fields[kind]){
-   if(key==='expectedVersion')require(version(ref[key],kind!=='business.rename'&&kind!=='crm.lead.state'));
+   if(key==='expectedVersion'||key==='expectedRevision')require(version(ref[key],kind!=='business.rename'&&kind!=='crm.lead.state'));
    else if(key==='expectedLeadVersion')require(version(ref[key]));
    else if(key!=='action'&&key!=='nextAssociationId')require(uuid(ref[key]));
   }

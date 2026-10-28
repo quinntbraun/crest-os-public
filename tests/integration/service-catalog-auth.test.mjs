@@ -14,6 +14,8 @@ import {createProviderTokenStore} from '../../src/security/provider-token-store.
 import {createSessionLifecycle} from '../../src/security/session-lifecycle.ts';
 import {createServiceDirectory} from '../../src/commercial/service-directory.ts';
 import {createCustomerDirectory} from '../../src/customer/customer-directory.ts';
+import {createOriginalOperationDirectory} from '../../src/security/original-operation-directory.ts';
+import {bindServiceOriginalReceipt} from '../../src/commercial/service-original-operation.ts';
 let sandbox,target,client,service,login,config,boundary,tokens,lifecycle,bootstrap;
 const signal=()=>new AbortController().signal;
 const payload=(patch={})=>({code:'synthetic-'+randomUUID(),active:true,definition:{name:'Synthetic Auth interior',inclusions:'Vacuum.\nApplicable leather care.',exclusions:'No exterior protection.',internalGuidance:'Synthetic private note',rangeLowCents:'0',rangeHighCents:null,estimatedSeconds:'5430'},...patch});
@@ -22,7 +24,7 @@ async function transaction(run){await client.query('BEGIN');try{const v=await ru
 before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
  await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);const prior=(await sandbox.apply(target,await sandbox.prefix(43))).history;
- for(const name of ['service-catalog-storage','service-catalog-commands']){
+ for(const name of ['service-catalog-storage','service-catalog-commands','service-catalog-resolution']){
   const sql=await readFile(new URL('../../planning/proposals/'+name+'.sql',import.meta.url),'utf8'),meta=JSON.parse(await readFile(new URL('../../planning/proposals/'+name+'.json',import.meta.url),'utf8'));
   assert.equal(createHash('sha256').update(sql).digest('hex'),meta.sqlSha256);await transaction(()=>client.query(sql));
  }
@@ -104,4 +106,24 @@ test('genuine customer operation collision preserves the earlier customer and it
 });
 test('invalid input and cancellation never leave a catalog operation',async()=>{
  const f=await fixture(),before=await facts(f),r=request(f);await assert.rejects(f.api.save(f.credential,{...r,expectedRevision:'0\n'},signal()),e=>e.message==='SERVICE_SAVE_NOT_SUBMITTED');const abort=new AbortController();abort.abort();await assert.rejects(f.api.save(f.credential,r,abort.signal),e=>e.message==='SERVICE_SAVE_NOT_SUBMITTED');assert.equal(await facts(f),before);
+});
+const originalRef=(f,r)=>({schemaVersion:1,businessId:f.business,commandType:'catalog.service.save',reference:{operationId:r.operationId,recoveryEpoch:r.recoveryEpoch,serviceId:r.serviceId,expectedRevision:r.expectedRevision}});
+test('genuine MFA owner retires only the absent catalog original and late save cannot replay it',async()=>{
+ const f=await fixture(),r=request(f),original=originalRef(f,r),recovery=createOriginalOperationDirectory(config,boundary,tokens);
+ assert.equal((await recovery.lookup(f.credential,original,signal())).forServer().state,'absent');
+ const intent={schemaVersion:1,recoveryEpoch:f.epoch,original,reason:'Owner reviewed this lost service scope.'},saved=await recovery.retire(f.credential,intent,signal()),decision=saved.forServer();assert.equal(decision.state,'retired');assert.throws(()=>JSON.stringify(saved),/ORIGINAL_OPERATION_VALUE_PRIVATE/);
+ assert.deepEqual((await recovery.lookup(f.credential,original,signal())).forServer(),decision);assert.deepEqual((await recovery.retire(f.credential,intent,signal())).forServer(),decision);
+ assert.deepEqual((await f.api.save(f.credential,r,signal())).forServer(),{state:'conflict',reason:'operation'});
+ const stored=JSON.parse(await facts(f));assert.equal(stored.services.length,0);assert.equal(stored.operations.length,1);assert.equal(stored.audit.length,1);
+});
+test('genuine MFA catalog observation still requires its exact typed original receipt',async()=>{
+ const f=await fixture(),r=request(f),original=originalRef(f,r),first=(await f.api.save(f.credential,r,signal())).forServer(),recovery=createOriginalOperationDirectory(config,boundary,tokens);
+ const observation=(await recovery.retire(f.credential,{schemaVersion:1,recoveryEpoch:f.epoch,original,reason:'Check original before replacing.'},signal())).forServer();assert.equal(observation.state,'original_recorded');
+ assert.throws(()=>bindServiceOriginalReceipt(observation,original));assert.deepEqual(bindServiceOriginalReceipt((await f.api.lookup(f.credential,{businessId:f.business,operationId:r.operationId},signal())).forServer(),original),first);
+ const wrong={...original,reference:{...original.reference,serviceId:randomUUID()}};assert.throws(()=>bindServiceOriginalReceipt(first,wrong));assert.equal(JSON.parse(await facts(f)).operations.length,1);
+});
+test('genuine provider revocation blocks catalog retirement before claiming an original',async()=>{
+ const f=await fixture(),r=request(f),original=originalRef(f,r),recovery=createOriginalOperationDirectory(config,boundary,tokens),provider=JSON.parse(await facts(f)).sessions[0].provider_session_id;
+ await client.query('DELETE FROM auth.sessions WHERE id=$1',[provider]);const before=await facts(f);
+ await assert.rejects(recovery.retire(f.credential,{schemaVersion:1,recoveryEpoch:f.epoch,original,reason:'Must not commit after provider revocation.'},signal()),e=>e.message==='ORIGINAL_OPERATION_NOT_SUBMITTED');assert(await facts(f)===before,'provider loss must not claim a catalog retirement or change local activity');
 });

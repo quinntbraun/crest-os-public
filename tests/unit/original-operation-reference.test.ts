@@ -15,7 +15,8 @@ const targets:Record<OriginalOperationKind,Record<string,unknown>>={
  'crm.lead.state':{leadId:randomUUID(),expectedVersion:'1'},
  'crm.lead.vehicle.save':{leadId:randomUUID(),leadVehicleId:randomUUID(),expectedVersion:'0'},
  'crm.lead.address.save':{leadId:randomUUID(),leadAddressId:randomUUID(),expectedVersion:'0'},
- 'crm.lead.convert':{conversionId:randomUUID(),leadId:randomUUID(),expectedLeadVersion:'1',customerId:randomUUID()}
+ 'crm.lead.convert':{conversionId:randomUUID(),leadId:randomUUID(),expectedLeadVersion:'1',customerId:randomUUID()},
+ 'catalog.service.save':{serviceId:randomUUID(),expectedRevision:'0'}
 };
 function sample(kind:OriginalOperationKind='crm.customer.save'){
  return {schemaVersion:1,businessId,commandType:kind,reference:{operationId,recoveryEpoch:originalEpoch,...targets[kind]} as Record<string,unknown>};

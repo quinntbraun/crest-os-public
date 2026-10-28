@@ -5,7 +5,10 @@ import {originalOperationKinds} from '../../src/security/original-operation-refe
 import type {OriginalOperationKind} from '../../src/security/original-operation-reference';
 import {originalOperationFixture,retirementFixture,retiredOutcomeFixture} from '../support/original-operation-fixture';
 
-const keys:Record<OriginalOperationKind,string>={
+// Catalog wire/store connection is deliberately not enabled by this backend
+// proposal. Preserve the complete existing eleven-consumer matrix.
+const pendingKinds=originalOperationKinds.filter(kind=>kind!=='catalog.service.save');
+const keys:Partial<Record<OriginalOperationKind,string>>={
  'business.rename':'crest.business-name.pending.v1',
  'crm.customer.save':'crest.customer.pending-reference.v1',
  'crm.address.save':'crest.address.pending-reference.v1',
@@ -21,7 +24,7 @@ const keys:Record<OriginalOperationKind,string>={
 const fetcher=vi.fn(),signal=()=>new AbortController().signal,proof=()=>({csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000});
 function response(value:unknown){return new Response(JSON.stringify(value),{headers:{'content-type':'application/json','cache-control':'private, no-store'}});}
 function fixture(kind:OriginalOperationKind='crm.customer.save'){
- const original=originalOperationFixture(kind),binding=randomBytes(32).toString('base64url'),key=keys[kind];
+ const original=originalOperationFixture(kind),binding=randomBytes(32).toString('base64url'),key=keys[kind]!;
  const record=kind==='business.rename'?{journalSchema:1,businessId:original.businessId,binding,command:{schemaVersion:1,...original.reference,legalName:'Private synthetic proposed name'}}:{schemaVersion:1,businessId:original.businessId,binding,reference:original.reference};
  const raw=JSON.stringify(record),memory=new Map([[key,raw]]);
  const storage={getItem:vi.fn((key:string)=>memory.get(key)??null),setItem:vi.fn((key:string,value:string)=>{memory.set(key,value);}),removeItem:vi.fn((key:string)=>{memory.delete(key);})};
@@ -35,23 +38,23 @@ function customerReceipt(f:ReturnType<typeof fixture>){
 }
 beforeEach(()=>{vi.resetAllMocks();vi.stubGlobal('fetch',fetcher);});afterEach(()=>vi.unstubAllGlobals());
 
-it.each(originalOperationKinds)('opens %s as immutable original metadata without altering storage or exposing drafts',kind=>{
+it.each(pendingKinds)('opens %s as immutable original metadata without altering storage or exposing drafts',kind=>{
  const f=fixture(kind);expect(f.target.original).toEqual(f.original);expect(f.target.binding).toBe(f.binding);expect(Object.isFrozen(f.target)).toBe(true);expect(Object.isFrozen(f.target.original.reference)).toBe(true);
  expect(JSON.stringify(f.target)).not.toContain('Private synthetic');expect(f.storage.setItem).not.toHaveBeenCalled();expect(f.storage.removeItem).not.toHaveBeenCalled();expect(fetcher).not.toHaveBeenCalled();expect(f.memory.get(f.key)).toBe(f.raw);
 });
-it.each(originalOperationKinds)('releases only a verified retirement for exactly the retained %s',kind=>{
+it.each(pendingKinds)('releases only a verified retirement for exactly the retained %s',kind=>{
  const f=fixture(kind);f.target.releaseRetired(f.outcome,signal());expect(f.memory.has(f.key)).toBe(false);expect(f.storage.removeItem).toHaveBeenCalledExactlyOnceWith(f.key);expect(f.storage.setItem).not.toHaveBeenCalled();expect(fetcher).not.toHaveBeenCalled();
 });
-it.each(originalOperationKinds)('keeps an absent %s lookup through its existing typed domain transport',async kind=>{
+it.each(pendingKinds)('keeps an absent %s lookup through its existing typed domain transport',async kind=>{
  const f=fixture(kind);fetcher.mockResolvedValue(response({state:'absent'}));expect(await f.target.reconcile(proof(),signal())).toBe('absent');expect(f.memory.get(f.key)).toBe(f.raw);expect(f.storage.removeItem).not.toHaveBeenCalled();expect(fetcher).toHaveBeenCalledTimes(1);expect(JSON.parse(fetcher.mock.calls[0]![1].body)).toEqual({operationId:f.original.reference.operationId});
 });
-it.each(originalOperationKinds)('rejects replacement storage for %s before retirement acknowledgment',kind=>{
+it.each(pendingKinds)('rejects replacement storage for %s before retirement acknowledgment',kind=>{
  const f=fixture(kind);f.memory.set(f.key,JSON.stringify({...f.record,binding:randomBytes(32).toString('base64url')}));expect(()=>f.target.releaseRetired(f.outcome,signal())).toThrow(PendingOriginalOperationError);expect(f.storage.removeItem).not.toHaveBeenCalled();
 });
-it.each(originalOperationKinds)('fails closed on unreadable pending %s and another business',kind=>{
+it.each(pendingKinds)('fails closed on unreadable pending %s and another business',kind=>{
  const f=fixture(kind);expect(()=>openPendingOriginalOperation(kind,f.storage,randomUUID())).toThrow(PendingOriginalOperationError);f.memory.set(f.key,'{');expect(()=>openPendingOriginalOperation(kind,f.storage,f.original.businessId)).toThrow(PendingOriginalOperationError);expect(f.storage.removeItem).not.toHaveBeenCalled();
 });
-it.each(originalOperationKinds)('returns no target for missing %s without a replacement identity',kind=>{
+it.each(pendingKinds)('returns no target for missing %s without a replacement identity',kind=>{
  const storage={getItem:vi.fn(()=>null),setItem:vi.fn(),removeItem:vi.fn()};expect(openPendingOriginalOperation(kind,storage,randomUUID())).toBeNull();expect(storage.setItem).not.toHaveBeenCalled();expect(storage.removeItem).not.toHaveBeenCalled();
 });
 it.each([{state:'absent'},{state:'conflict',reason:'operation'},'original_recorded','wrong-original','wrong-receipt','extra'])('never clears from an insufficient retirement observation %s',input=>{
@@ -84,3 +87,5 @@ it('blocks a changed intent before original receipt lookup and never sends its r
 it('fails closed for unsupported runtime command kinds',()=>{
  const f=fixture();expect(()=>openPendingOriginalOperation('financial.post' as OriginalOperationKind,f.storage,f.original.businessId)).toThrow(PendingOriginalOperationError);expect(f.storage.removeItem).not.toHaveBeenCalled();
 });
+
+it('does not expose catalog pending storage before its actual transport/store connection',()=>{const storage={getItem:vi.fn(()=>null),setItem:vi.fn(),removeItem:vi.fn()};expect(()=>openPendingOriginalOperation('catalog.service.save',storage,randomUUID())).toThrow(PendingOriginalOperationError);expect(storage.getItem).not.toHaveBeenCalled();expect(storage.removeItem).not.toHaveBeenCalled();});
