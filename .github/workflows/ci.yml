@@ -57,6 +57,10 @@ jobs:
         run: npm run test:catalog-storage-proposal
       - name: Prove proposed trusted catalog saves, retries and scoped history
         run: npm run test:catalog-commands-proposal
+      - name: Prove exact proposed quote pricing against the independent application calculator
+        run: npm run test:quote-pricing-proposal
+      - name: Prove proposed typed Draft storage, exact audits and independent aggregate checks
+        run: npm run test:quote-storage-proposal
       - name: Install pinned recovery tooling
         run: node scripts/install-recovery-tools.mjs
       - name: Prove proposed catalog source CSV and independent encrypted recovery

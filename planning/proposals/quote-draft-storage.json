@@ -1,0 +1,17 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "existingMigrationCount": 44,
+  "runtimeEnabled": false,
+  "nativeExecuted": false,
+  "sqlBytes": 27173,
+  "sqlSha256": "d3d374678140fb88dc56a209a1dc00bfe27c46a4cfe737031bf6debb040537ac",
+  "tables": [
+    "crest.quote_families",
+    "crest.quote_revisions",
+    "crest.quote_items"
+  ],
+  "role": "crest_quote_integrity_owner",
+  "constructionOnly": "Complete Draft publication only. Approval/send/acceptance/amendment/billing are unavailable. Source/export/restore and trusted runtime commands remain required before registration or UI saves."
+}
