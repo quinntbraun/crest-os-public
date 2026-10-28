@@ -192,9 +192,9 @@ jobs:
   foundation:
     name: Foundation checks
     needs: [database_foundation, database_provider, authentication]
-    # Run even when a prerequisite fails/skips so branch protection cannot see
-    # a skipped required job as success. The guard rejects incomplete results.
-    if: ${{ always() }}
+    # Fail the required guard on unsuccessful/skipped prerequisites, but let
+    # obsolete runs cancel so they cannot block the newest source indefinitely.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     # Expanded real-browser and container checks need room for image packaging.
     # Keep individual test/network bounds and all release gates unchanged.
