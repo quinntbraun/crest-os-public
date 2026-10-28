@@ -9,6 +9,41 @@ import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
+for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' signed-in follow-up paging retains lost leads and opens the actual saved lead',async()=>{
+ const f=await sourceExportBrowserFixture({product:true,workspace:true});let browser;
+ try{
+  browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:360,height:780}}),page=await context.newPage();
+  await page.goto(f.origin+'/sign-in');const credentials=f.credentials();
+  await page.getByLabel('Email',{exact:true}).fill(credentials.email);await page.getByLabel('Password',{exact:true}).fill(credentials.password);await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
+  const labels={due:'Synthetic due follow-up '+name,upcoming:'Synthetic upcoming follow-up '+name,lost:'Synthetic retained lost follow-up '+name};
+  const seeded=await page.evaluate(async labels=>{
+   const send=async(path,body,csrf)=>{const response=await fetch('/api/'+path,{method:'POST',headers:{'content-type':'application/json',...csrf?{'x-crest-csrf':csrf}:{}},body:JSON.stringify(body)});return {status:response.status,body:await response.json()};};
+   const session=await send('auth/session',{});if(session.status!==200)throw Error('SYNTHETIC_FOLLOW_UP_SESSION_FAILED');
+   const csrf=session.body.csrfToken,current=await send('business/leads/context',{},csrf);if(current.status!==200)throw Error('SYNTHETIC_FOLLOW_UP_CONTEXT_FAILED');
+   let lost;
+   for(let i=1;i<=51;i++){
+    const leadId='00000000-0000-4000-8000-'+String(i).padStart(12,'0');
+    const result=await send('business/leads/save',{schemaVersion:1,operationId:crypto.randomUUID(),leadId,expectedVersion:'0',recoveryEpoch:current.body.recoveryEpoch,label:i===1?labels.due:i===2?labels.upcoming:i===51?labels.lost:'Synthetic undated inquiry '+i,customerId:null,sourceId:null,referralText:null,phone:null,email:null,requestedScope:null,availability:null,estimatedCents:null,followUpAt:i===1||i===51?'2020-01-01T12:00:00.000000Z':i===2?'2099-01-01T12:00:00.000000Z':null,notes:null},csrf);
+    if(result.status!==200)throw Error('SYNTHETIC_FOLLOW_UP_SEED_FAILED');if(i===51)lost=leadId;
+   }
+   const state=await send('business/leads/state',{schemaVersion:1,operationId:crypto.randomUUID(),leadId:lost,expectedVersion:'1',recoveryEpoch:current.body.recoveryEpoch,fromState:'new',toState:'lost',reason:'Synthetic owner retained an explicit follow-up'},csrf);if(state.status!==200)throw Error('SYNTHETIC_FOLLOW_UP_LOST_FAILED');return {lost};
+  },labels);
+  const response=await page.goto(f.origin+'/follow-ups');assert(response.headers()['cache-control'].includes('no-store'));
+  await expect(page.getByRole('status')).toHaveText('Recorded follow-ups loaded.');
+  await expect(page.getByRole('region',{name:'Follow-ups due now',exact:true}).getByRole('link',{name:labels.due,exact:true})).toBeVisible();
+  await expect(page.getByRole('region',{name:'Upcoming follow-ups',exact:true}).getByRole('link',{name:labels.upcoming,exact:true})).toBeVisible();
+  await expect(page.getByRole('link',{name:labels.lost,exact:true})).toHaveCount(0);await expect(page.getByText('More leads remain.',{exact:false})).toContainText('50 leads checked so far');
+  await page.getByRole('button',{name:'Check next 50 leads',exact:true}).click();await expect(page.getByRole('link',{name:labels.lost,exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Check next 50 leads',exact:true})).toHaveCount(0);await expect(page.getByText(/^All 51 leads checked\./)).toBeVisible();
+  await page.getByRole('link',{name:labels.lost,exact:true}).click();await expect(page).toHaveURL(f.origin+'/leads?lead='+seeded.lost);await expect(page.getByLabel('Lead label',{exact:true})).toHaveValue(labels.lost);await expect(page.getByRole('region',{name:'Lead history',exact:true})).toContainText('Current version: 2');
+  await page.getByRole('link',{name:'Due and upcoming follow-ups',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Recorded follow-ups loaded.');
+  for(const width of [360,390,768,1440]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);}
+  await page.route('**/api/business/leads/list',route=>route.abort('failed'));await page.getByRole('button',{name:'Refresh follow-ups',exact:true}).click();await expect(page.getByRole('status')).toContainText('does not mean there are none');await expect(page.getByRole('link',{name:labels.due,exact:true})).toHaveCount(0);await expect(page.getByRole('region',{name:'Follow-ups due now',exact:true})).toHaveCount(0);await page.unroute('**/api/business/leads/list');
+  await page.getByRole('button',{name:'Refresh follow-ups',exact:true}).click();await expect(page.getByRole('link',{name:labels.due,exact:true})).toBeVisible();
+  await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide')));await expect(page.getByRole('link',{name:labels.due,exact:true})).toHaveCount(0);await expect(page.getByRole('status')).toContainText('cleared while away');
+  await context.close();
+ }finally{try{await browser?.close();}finally{await f.close();}}
+});
+
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' complete signed-in customer / vehicle workspace journey',async()=>{
  const f=await sourceExportBrowserFixture({product:true,workspace:true});let browser;
  try{
