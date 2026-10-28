@@ -55,6 +55,10 @@ jobs:
           npm run verify:canonical
           npm run verify:migrations
           npm run typecheck
-          npx vitest run tests/unit/appointment-hold-contract.test.ts
+          npx vitest run tests/unit/appointment-hold-contract.test.ts tests/unit/appointment-hold-controller.test.ts
       - name: Prove actual retained saves, original results, tenant isolation and independent restore
         run: node --test --test-concurrency=1 tests/integration/appointment-holds-storage.test.mjs
+      - name: Install pinned browser engines
+        run: npx playwright install --with-deps chromium webkit
+      - name: Prove actual proposal controls over HTTPS and provider MFA
+        run: node --test --test-concurrency=1 tests/integration/appointment-holds-browser.test.mjs
