@@ -18,6 +18,9 @@ const legacy42Bytes=await readFile(join(root,'tests/support/registered42-migrati
 assert.equal(legacy42.migrations.length,42);assert.deepEqual(registry.migrations.slice(0,42),legacy42.migrations);
 const legacy43Bytes=await readFile(join(root,'tests/support/registered43-migration-checksums.json')),legacy43=JSON.parse(legacy43Bytes);
 assert.equal(legacy43.migrations.length,43);assert.deepEqual(registry.migrations.slice(0,43),legacy43.migrations);
+const legacy44Bytes=await readFile(join(root,'tests/support/registered44-migration-checksums.json')),legacy44=JSON.parse(legacy44Bytes);
+assert.equal(legacy44.migrations.length,44);assert.deepEqual(registry.migrations.slice(0,44),legacy44.migrations);
+const legacy44Profile=Object.freeze({schemaVersion:44,registrySha256:hash(legacy44Bytes)});
 const legacy43Profile=Object.freeze({schemaVersion:43,registrySha256:hash(legacy43Bytes)});
 const currentProfile=Object.freeze({schemaVersion:registry.migrations.length,registrySha256:registryHash}),legacy42Profile=Object.freeze({schemaVersion:42,registrySha256:hash(legacy42Bytes)});
 const tool=name=>join(root,`.local/tools/recovery/age/${name}${process.platform==='win32'?'.exe':''}`);
@@ -92,6 +95,7 @@ async function unseal(path,expected,identity){
   return run(tool('age'),['--decrypt','--identity',identity],{input:cipher});
 }
 export async function backupDatabase(...args){return backupWithProfile(currentProfile,...args);}
+export async function backupLegacy44Database(...args){return backupWithProfile(legacy44Profile,...args);}
 export async function backupLegacy43Database(...args){return backupWithProfile(legacy43Profile,...args);}
 export async function backupLegacy42Database(...args){return backupWithProfile(legacy42Profile,...args);}
 async function backupWithProfile(profile,client,url,directory,recipient,duringSnapshot=async()=>{},objectCapture){
@@ -116,6 +120,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_RECOVERY_BACKUP_FAILED:'+stage);}
 }
 export async function restoreDatabase(...args){return restoreWithProfile(currentProfile,...args);}
+export async function restoreLegacy44Database(...args){return restoreWithProfile(legacy44Profile,...args);}
 export async function restoreLegacy43Database(...args){return restoreWithProfile(legacy43Profile,...args);}
 export async function restoreLegacy42Database(...args){return restoreWithProfile(legacy42Profile,...args);}
 async function restoreWithProfile(profile,directory,identity,url,restoreObjects){

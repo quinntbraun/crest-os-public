@@ -20,14 +20,17 @@ import {createCustomerDirectory} from '../../src/customer/customer-directory.ts'
 import {createQuoteDirectory} from '../../src/commercial/quote-directory.ts';
 import {createQuoteHttp} from '../../src/commercial/quote-http.ts';
 let sandbox,target,client,service,login,config,boundary,tokens,lifecycle,bootstrap,base44;
+const registered45=process.env.CREST_QUOTE_TEST_PROFILE==='registered45';
+assert(process.env.CREST_QUOTE_TEST_PROFILE===undefined||registered45,'only explicit quote construction/registered45 fixtures are supported');
 const signal=()=>new AbortController().signal;
 async function transaction(run){await client.query('BEGIN');try{const result=await run();await client.query('COMMIT');return result;}catch(error){await client.query('ROLLBACK');throw error;}}
 before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);base44=await sandbox.prefix(44);const prior=(await sandbox.apply(target,base44)).history;assert.equal(prior.length,44);
- for(const name of ['quote-pricing','quote-draft-storage','quote-draft-commands']){
+ if(registered45){const current=await sandbox.apply(target);assert.equal(current.history.length,45);assert.deepEqual(current.history.slice(0,44),prior);assert.deepEqual((await sandbox.apply(target)).history,current.history);}
+ else for(const name of ['quote-pricing','quote-draft-storage','quote-draft-commands']){
   const sql=await readFile(new URL('../../planning/proposals/'+name+'.sql',import.meta.url),'utf8'),meta=JSON.parse(await readFile(new URL('../../planning/proposals/'+name+'.json',import.meta.url),'utf8'));assert.equal(meta.registered,false);assert.equal(meta.runtimeEnabled,false);assert.equal(Buffer.byteLength(sql),meta.sqlBytes);assert.equal(createHash('sha256').update(sql).digest('hex'),meta.sqlSha256);await transaction(()=>client.query(sql));
  }
- assert.deepEqual((await sandbox.apply(target,base44)).history,prior);
+ if(!registered45)assert.deepEqual((await sandbox.apply(target,base44)).history,prior);
  login='crest_quote_http_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=password;config={connectionString:url.toString(),environment:'test'};
  service=await startRealAuthService(target);boundary=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},createLiveProviderSessionLookup(config));tokens=await createProviderTokenStore('synthetic-quote-http',[{id:'synthetic-quote-http',key:randomBytes(32)}]);lifecycle=createSessionLifecycle(config,boundary,tokens);bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
 },{timeout:240000});

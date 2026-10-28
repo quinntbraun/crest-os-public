@@ -1,6 +1,6 @@
 # Crest OS V1 - Database Contract
 
-Version: 1.7 | 2026-10-28 | ADR44 registered catalog construction; activation gated
+Version: 1.8 | 2026-10-28 | ADR45 registered Draft quotes; activation gated
 
 Schema43 implementation record,2026-10-27 (ADR43): the append-only export journal is represented by six forced-RLS private tables: export_jobs, export_job_attempts, export_job_snapshots, export_part_intents, export_part_verifications and export_job_completions. Their114 required fields preserve original requests/leases, exact snapshot/Ready text/hashes, ciphertext intents/verification and immutable completion/expiry evidence. planning/SOURCE_EXPORT_SCHEMA43_ADOPTION.json binds the registered migration to all seven exact reviewed proposal bodies. Global coverage becomes39 tables/613 columns (603 required, the same10 explicit credential exclusions). Actual registered43 catalogue/upgrade/Auth/recovery tests remain required. Original42 SQL, nonfinancial retirement semantics and every posted-history rule remain unchanged; source registration grants no production or product-route activation.
 
@@ -276,3 +276,6 @@ The scheduling transaction writes its appointment/history/outbox atomically; pro
 ## 2026-10-28 — Registered44 catalog construction
 
 ADR44 appends one atomic catalogue migration with the four exact reviewed catalog bodies. The first43 SQL files/checksum entries remain immutable. Registered inventory becomes41 tables/642 columns (632 required source fields and the same10 explicit credential exclusions). Migration registration does not enable the catalog runtime or production data.
+
+
+ADR45 appends registered migration45 for quote_families, quote_revisions and quote_items (61 fully inventoried fields). Draft preparation retains original linked party identities, exact immutable audit images, copied customer/internal content, typed source references, inactive removed lines, independent exact pricing and concurrency/recovery fences. No approval, sending, acceptance, amendments, tax posting or billing transition is activated by registration. Prior44 migration bytes and legacy recovery identities remain immutable.

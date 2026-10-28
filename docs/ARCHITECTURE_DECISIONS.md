@@ -1,6 +1,6 @@
 # Crest OS - Initial Architecture Decision Register
 
-Version: 1.15 | 2026-10-28 | ADR44 registered catalog construction; activation gated
+Version: 1.16 | 2026-10-28 | ADR45 registered Draft quotes; activation gated
 
 ## ADR43 - Register the bounded source-export journal with explicit recovery profiles
 
@@ -217,3 +217,12 @@ Register the four reviewed service catalog storage, trusted commands, source rea
 The current inventory grows from39 tables/613 columns to41/642, including29 required catalog fields; the same10 credential exclusions remain. Freeze the exact43 registry, coverage and compatibility bytes beside the existing42 fixtures. Retain separate42/43 backup and historical export identities instead of treating an old artifact as44. Native tests must exercise the actual44 upgrade, old/source-role drift refusal, least privilege, genuine authentication/HTTP and independent encrypted44 restore.
 
 Construction registration is separate from production activation. Following ADR41 and ROADMAP phases5/11, a bounded synthetic catalog editor may be exposed only by explicit trusted test-environment configuration after actual44 migration/authorization/audit/concurrency/original-resolution, per-domain open-format retrieval, independent encrypted44 database recovery and phone/desktop browser acceptance. It uses genuine identity and data paths; no authentication bypass, fake success, real data or finance activation. Registration alone enables no route. The existing43 export worker/admission/protocol is not silently relabeled44: complete current business-export/profile/worker/admission and portability remain required before their own exposure and all real-data/release claims. Unsupported scopes stay clearly unavailable or explicitly partial. Default production runtime, productionActivation, independent custody/security/physical-device gates and complete export/backup requirements remain blocked or retained exactly as before. No new package, paid service, human identity/grant, financial activation or production apply is authorized.
+
+
+### ADR45 — Append-only retained Draft quote registration
+
+The approved Phase5 catalog-to-quote journey requires persistent Draft review content with trusted owner authorization, exact BR04 pricing, immutable audit history, concurrent-edit checks, original-save recovery and lossless domain retrieval. Register the five reviewed pricing, storage, command, source and reference-validator bodies as one atomic migration45, retaining each original byte/hash/offset in QUOTE_SCHEMA45_ADOPTION.json. Freeze the exact44 registry, coverage and compatibility alongside existing42/43 profiles; preserve every prior migration and original canonical baseline.
+
+The inventory becomes44tables/703columns with693required fields and the same10 credential exclusions. Registration is construction, not proof of source completeness or production readiness. Require actual44-to45 upgrade and early/late drift rollback, closed grants, genuine Auth/HTTP Draft saves and retained-history/original-resolution review, per-domain open-format retrieval and independent encrypted45 database restore. A bounded genuine synthetic quote UI may then proceed through explicit trusted test-only configuration and browser acceptance under ADR41/44. Current owner-only nonfinancial preparation uses existing crm.manage; no finance or new human capability is granted.
+
+This does not silently adopt approval/send/acceptance/amendments, taxes, scheduling, billing or payment semantics. The existing43 export worker and42/43/44 backup artifacts keep their exact identities. Full45 collector/formatter/verifier/worker/admission, complete portable exports/Excel, independent custody/recovery/physical-device gates and every approved V1 requirement remain required before their own exposure and real-data/release claims. No ordinary route flag, production apply/activation, real Crest data, paid service, credential disclosure or weakened release requirement is authorized.

@@ -94,7 +94,14 @@ test('unreasoned zero work fails while an explicit complimentary reason records 
 });
 test('paused recovery refuses saves but allows scoped original-result and retained-history review',async()=>{
  const q=request(a),saved=await save(a,q);await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[a.business]);
- try{const before=await evidence(a),session=await activity(a);assert.deepEqual(await save(a,request(a)),{state:'denied'});assert.deepEqual(await lookup(a,q.operation),saved);assert.equal((await history(a,q)).revision.id,q.revision);assert.equal(await evidence(a),before);assert.equal(await activity(a),session);}finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[a.business]);}
+ try{
+  const before=await evidence(a),session=await activity(a);
+  // Recovery is an explicit authority fence, distinct from authentication denial.
+  // The expected error must not prevent this case from exercising paused reads.
+  for(const blocked of [q,request(a)])await assert.rejects(save(a,blocked),error=>error.code==='P0001'&&error.message==='RECOVERY_REVIEW_REQUIRED');
+  assert.deepEqual(await lookup(a,q.operation),saved);assert.equal((await history(a,q)).revision.id,q.revision);assert((await directory(a)).quotes.some(row=>row.family.id===q.family));
+  assert.equal(await evidence(a),before);assert.equal(await activity(a),session);
+ }finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[a.business]);}
 });
 test('expired provider proof and a revoked session cannot submit or retrieve quote data',async()=>{
  const other=await extraSession(a),before=await evidence(a);assert.deepEqual(await save({...other,deadline:new Date(Date.now()-1000)},request(a)),{state:'denied'});await client.query('UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),version=version+1 WHERE id=$1',[other.session]);assert.deepEqual(await save(other,request(a)),{state:'denied'});await assert.rejects(directory(other),error=>error.code==='42501');assert.equal(await evidence(a),before);

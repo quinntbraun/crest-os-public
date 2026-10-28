@@ -186,3 +186,13 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .customers label.checkbox { display:flex; align-items:center; gap:.75rem; min-height:44px; cursor:pointer; }
 .customers label.checkbox input { width:24px; height:24px; flex-shrink:0; accent-color:var(--black); }
 @media(max-width:390px) { .service-pair { grid-template-columns:1fr; gap:0; } }
+.quote-worksheet { margin-top:1rem; padding:1.25rem; border:1px solid var(--line); border-top:3px solid var(--gold-ink); background:var(--paper); overflow-wrap:anywhere; }
+.quote-worksheet header { padding-bottom:1rem; border-bottom:1px solid var(--line); }
+.quote-worksheet header h2 { font-size:1.5rem; line-height:1.25; }
+.quote-worksheet section { margin-top:1.5rem; }
+.quote-worksheet h3 { font-size:1.0625rem; }
+.quote-preview-lines { list-style:none; padding:0; margin:0; }
+.quote-preview-lines li { padding:1rem 0; border-bottom:1px solid var(--line); }
+.quote-preview-lines h4 { margin:0 0 .5rem; font-size:1rem; }
+.quote-worksheet .record-reference { font-variant-numeric:tabular-nums; }
+@media(max-width:390px) { .quote-worksheet { padding:1rem; } }

@@ -26,28 +26,28 @@
       "name": "ARCHITECTURE.md",
       "originalSha256": "80bb086a9369a25ae12053bda5f17eca06a199c21e496bdf329f05d025ab55af",
       "originalBytes": 35977,
-      "version": "1.9",
-      "sha256": "a30e17f994e3ef0a131fe263e12beac23e1743dfeb4262538fc105e6153fba15",
-      "bytes": 39590,
-      "reason": "2026-10-28 ADR44 append-only catalog registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy43/42, privacy, source/recovery and production gates retained"
+      "version": "1.10",
+      "sha256": "f8a64dec11cb17ac2d34b4fbe7ab9646fdb91a12577830189c4599ff32fe00da",
+      "bytes": 40081,
+      "reason": "2026-10-28 ADR45 append-only Draft quote registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy44/43/42 and all privacy/recovery/production gates retained"
     },
     {
       "name": "ARCHITECTURE_DECISIONS.md",
       "originalSha256": "11acb9dc027cc8427823522193cb5518ab499dc8521c2682e4797ff6c0a47867",
       "originalBytes": 17703,
-      "version": "1.15",
-      "sha256": "72f4009a4e31bfcf680db11325923195763179c2ff98bff1bd9a333cf592e6f2",
-      "bytes": 56726,
-      "reason": "2026-10-28 ADR44 append-only catalog registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy43/42, privacy, source/recovery and production gates retained"
+      "version": "1.16",
+      "sha256": "03373d6be2d5cb054cf36cff5e3a8c51a87dbe8146df4293ce6746f4b1629109",
+      "bytes": 58655,
+      "reason": "2026-10-28 ADR45 append-only Draft quote registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy44/43/42 and all privacy/recovery/production gates retained"
     },
     {
       "name": "DATABASE.md",
       "originalSha256": "d66147140019c214f48a2baf46828d866b77bf3b8c1d4279a5187d6fdf416661",
       "originalBytes": 53037,
-      "version": "1.7",
-      "sha256": "5f327467ce74fbbbda987c09c29b6853ebdcd2bc45f344e493abae4500fc934c",
-      "bytes": 56232,
-      "reason": "2026-10-28 ADR44 append-only catalog registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy43/42, privacy, source/recovery and production gates retained"
+      "version": "1.8",
+      "sha256": "466c0440ac290f20d92f4239c39637f99f4e5efe708f64fec707bfa02111be35",
+      "bytes": 56761,
+      "reason": "2026-10-28 ADR45 append-only Draft quote registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy44/43/42 and all privacy/recovery/production gates retained"
     },
     {
       "name": "SECURITY.md",
@@ -62,10 +62,10 @@
       "name": "EXPORTS_AND_BACKUPS.md",
       "originalSha256": "cebd4d21981aa060c02973dece9cff2ec3a2e9367d1467edb1694c2ebe39ecdd",
       "originalBytes": 26475,
-      "version": "1.7",
-      "sha256": "37017d2c1a3f4523737d5aad9843aa6502a75baf1f4031c77d413df3dc93db10",
-      "bytes": 30279,
-      "reason": "2026-10-28 ADR44 append-only catalog registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy43/42, privacy, source/recovery and production gates retained"
+      "version": "1.8",
+      "sha256": "9cae0f502ec47327523c54f11632d7299c1f6bc252e6b9d30825edaeba039790",
+      "bytes": 30837,
+      "reason": "2026-10-28 ADR45 append-only Draft quote registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy44/43/42 and all privacy/recovery/production gates retained"
     },
     {
       "name": "ROADMAP.md",
@@ -107,10 +107,10 @@
       "name": "PUBLICATION.md",
       "originalSha256": "f53bcc738639bdf8d336cf970fd0c83715153becd536ab265bf442bdcfce5932",
       "originalBytes": 5584,
-      "version": "1.10",
-      "sha256": "0d21cdb14601c80292add46dd97134dfa36df975d0ba3da6939197751b788ead",
-      "bytes": 6656,
-      "reason": "2026-10-28 ADR44 append-only catalog registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy43/42, privacy, source/recovery and production gates retained"
+      "version": "1.11",
+      "sha256": "ea78c0ce35a80996e6110ea637e7885017f3ec297cd8387204b10507c9a53511",
+      "bytes": 7057,
+      "reason": "2026-10-28 ADR45 append-only Draft quote registration; exact prior hashes in CANONICAL_MAINTENANCE.md; legacy44/43/42 and all privacy/recovery/production gates retained"
     }
   ]
 }

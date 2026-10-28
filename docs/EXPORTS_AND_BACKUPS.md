@@ -1,6 +1,6 @@
 # Crest OS V1 - Portability and Recovery
 
-Version: 1.7 | 2026-10-28 | ADR44 registered catalog construction; activation gated
+Version: 1.8 | 2026-10-28 | ADR45 registered Draft quotes; activation gated
 
 Schema43 bounded partial-source protocol,2026-10-27 (ADR43): the explicit joint profile preserves25 source/journal projections and original evidence using fixed logical pieces and the existing independent verifier/neutral importer. Separate43 journal capture/recovery can handle32MiB logical files/64MiB aggregate inventory and1,024 pieces; physical logical pieces remain4MiB, private plaintext parts8MiB/encrypted parts16MiB, and owned capture30 seconds. This does not widen ordinary JSON, older42 collectors or the legacy8MiB recovery profile. Registered43 backups bind their own full registry identity; historical42 backups retain their original registry/profile. Original journal text/object-key/key-ID references remain required metadata, while only the ten explicitly reviewed credentials are excluded. Owner delivery freshly authorizes each part and audits authorized handoff before bytes; the browser prepares/saves/compares actual selected bytes with cancellation and private-copy expiry. None of this establishes complete portable export, full database/object/vault/key/image recovery, durable OS persistence or production readiness: completeness flags remain false and all applicable release/real-use gates remain.
 
@@ -129,3 +129,6 @@ Database restore does not restore Google. Freeze dispatch, fence/drain former wo
 ## 2026-10-28 — Registered44 catalog construction
 
 ADR44 preserves explicit42/43 registry/coverage/recovery identities and historical Ready artifacts. Catalog adds two required source tables/29 columns; no credential exclusion is added. The consistent catalog construction package remains distinct from an adopted44 worker/profile. A synthetic catalog slice requires per-domain open-format retrieval and independent encrypted44 recovery, along with the authorization/history/browser gates in ADR44. Complete current business-export/admission/compatibility remains required before its own exposure and real-data/release claims, rather than an extra construction dependency for the early bounded synthetic editor. Registration and CSV checks do not assert complete Crest export/backup.
+
+
+ADR45 adds61 required quote source fields, including inactive items and full copied/private review content, to the registered45 inventory (44tables/703columns;693required and the same10 explicit credential exclusions). Per-domain JSON/CSV retrieval and isolated encrypted45 restore are separate from complete business-export/Excel/worker/admission delivery. Preserve explicit42/43/44 identities and reject mismatched restore profiles before restored SQL; do not label partial retrieval, a schema inventory or a historical43 artifact a complete45 export or backup.

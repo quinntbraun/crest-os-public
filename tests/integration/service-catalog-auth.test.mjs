@@ -31,8 +31,8 @@ before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);
  await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);const prior=(await sandbox.apply(target,await sandbox.prefix(43))).history;
  if(registered44){
-  const current=await sandbox.apply(target);assert.equal(current.history.length,44);assert.deepEqual(current.history.slice(0,43),prior);
-  assert.deepEqual((await sandbox.apply(target)).history,current.history);
+  const current=await sandbox.apply(target,await sandbox.prefix(44));assert.equal(current.history.length,44);assert.deepEqual(current.history.slice(0,43),prior);
+  assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(44))).history,current.history);
  }else{
   for(const name of ['service-catalog-storage','service-catalog-commands','service-catalog-resolution']){
    const sql=await readFile(new URL('../../planning/proposals/'+name+'.sql',import.meta.url),'utf8'),meta=JSON.parse(await readFile(new URL('../../planning/proposals/'+name+'.json',import.meta.url),'utf8'));

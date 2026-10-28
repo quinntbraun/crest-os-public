@@ -1,4 +1,4 @@
-import {randomBytes,randomUUID} from 'node:crypto';
+import {randomBytes,randomUUID,createHash} from 'node:crypto';
 import {beforeEach,it,expect,vi} from 'vitest';
 import {quoteFixture} from '../support/quote-fixture';
 import {createQuoteEditorController} from '../../src/client/quote-editor-controller';
@@ -6,14 +6,17 @@ import {quoteDraftFromContent,draftFromQuote} from '../../src/client/quote-draft
 import {createPendingQuoteStore,pendingQuote} from '../../src/client/pending-quote-edit';
 import {quotes,QuoteClientError} from '../../src/client/quotes';
 import {customers} from '../../src/client/customers';
+import {leads} from '../../src/client/leads';
 import {vehicles} from '../../src/client/vehicles';
 import {services} from '../../src/client/services';
 import {addresses} from '../../src/client/customer-addresses';
 import {customerFixture} from '../support/customer-fixture';
+import {leadFixture} from '../support/lead-fixture';
 import {addressFixture} from '../support/customer-address-fixture';
 import {vehicleFixture} from '../support/vehicle-fixture';
 import {serviceStorageFixture} from '../support/service-storage-fixture';
 import {parseQuoteDirectoryPage,parseQuoteHistoryPage} from '../../src/commercial/quote-storage-contract';
+import {prepareQuoteContent} from '../../src/commercial/quote-content';
 const api={context:vi.fn<typeof quotes.context>(),list:vi.fn<typeof quotes.list>(),history:vi.fn<typeof quotes.history>(),save:vi.fn<typeof quotes.save>(),lookup:vi.fn<typeof quotes.lookup>()},session=vi.fn(),id=vi.fn();
 let f:ReturnType<typeof quoteFixture>,memory:Map<string,string>,store:ReturnType<typeof createPendingQuoteStore>;
 const binding=randomBytes(32).toString('base64url');
@@ -50,3 +53,35 @@ it('copies current service/vehicle scope once while retaining the owner-entered 
  const c=createQuoteEditorController({store,change:vi.fn(),api,session,id,vehicleApi,serviceApi,timezone:()=>f.input.timezone});await c.load();c.create();c.edit(quoteDraftFromContent(f.input));const lineId=f.input.lines[0]!.id;await c.findVehicles('SUV');c.chooseVehicle(lineId,vehicle.id);await c.findServices('Interior');c.copyService(lineId,s.service.id);expect(c.view().draft!.lines[0]).toMatchObject({id:lineId,scope:'vehicle',vehicleId:vehicle.id,vehicleLabel:vehicle.label,serviceVersionId:s.content.id,inclusions:'Copied exact scope',amount:'250.00'});expect(JSON.stringify(c.view().draft)).not.toContain('PRIVATE catalog guidance');serviceApi.list.mockResolvedValue({schemaVersion:1,businessId:f.business,services:[{...service,content:{...service.content,inclusions:'Later edited catalog'}}],hasMore:false});await c.findServices('Interior');expect(c.view().draft!.lines[0]!.inclusions).toBe('Copied exact scope');
 });
 it('a changed sign-in binding blocks a source lookup before any customer data request',async()=>{const customerApi={...customers,list:vi.fn<typeof customers.list>()};const c=createQuoteEditorController({store,change:vi.fn(),api,session,id,customerApi,timezone:()=>f.input.timezone});await c.load();c.create();api.context.mockResolvedValue({...context(),binding:randomBytes(32).toString('base64url')});await c.findCustomers('Synthetic');expect(customerApi.list).not.toHaveBeenCalled();expect(c.view()).toMatchObject({phase:'review',draft:null,customerRows:[],addressRows:[]});});
+
+it.each([null,'11111111-1111-4111-8111-111111111111'])('copies an explicitly chosen saved lead with existing customer link %j, without conversion, pricing or private-note defaults',async customerId=>{
+ const lead=leadFixture({business_id:f.business,customer_id:customerId,label:'Synthetic prospect é 😀',phone_raw:'(317) 555-0182',email_raw:null,notes:'PRIVATE lead notes',requested_scope:'Unreviewed requested work',estimated_cents:'1',availability:'Tentative lead availability'});
+ const leadApi={...leads,list:vi.fn<typeof leads.list>().mockResolvedValue({leads:[lead],hasMore:false}),save:vi.fn<typeof leads.save>()},addressApi={...addresses,list:vi.fn<typeof addresses.list>()};
+ const c=createQuoteEditorController({store,change:vi.fn(),api,session,id,leadApi,addressApi,timezone:()=>f.input.timezone});await c.load();c.create();c.edit(quoteDraftFromContent(f.input));const before=c.view().draft!;await c.findLeads('prospect');
+ expect(leadApi.list.mock.calls[0]!.slice(0,2)).toEqual([f.business,{search:'prospect',afterId:null,includeLost:false,pageSize:25}]);expect(c.view().draft).toEqual(before);expect(c.view()).toMatchObject({leadRows:[lead],leadSearch:'prospect',moreLeads:false});
+ c.chooseLead(randomUUID());expect(c.view().draft).toEqual(before);c.chooseLead(lead.id);expect(c.view().draft).toEqual({...before,customerId,leadId:lead.id,recipientName:lead.label,phone:lead.phone_raw,email:''});expect(c.view().draft!.lines).toEqual(before.lines);expect(c.view().draft!.proposedSchedule).toBe(before.proposedSchedule);expect(JSON.stringify(c.view().draft)).not.toContain('PRIVATE lead notes');
+ if(customerId===null){await c.loadAddresses();expect(addressApi.list).not.toHaveBeenCalled();}await c.save();expect(api.save.mock.calls[0]![0].content.recipient).toEqual({customerId,leadId:lead.id,displayName:lead.label,phone:lead.phone_raw,email:null});expect(leadApi.save).not.toHaveBeenCalled();expect(c.view()).toMatchObject({phase:'review',leadRows:[],leadSearch:'',moreLeads:false});
+});
+it('pages saved leads only on explicit request and clears their private rows on suspend',async()=>{
+ const first=leadFixture({business_id:f.business}),second=leadFixture({business_id:f.business,id:randomUUID(),label:'Next saved prospect'}),leadApi={...leads,list:vi.fn<typeof leads.list>().mockResolvedValueOnce({leads:[first],hasMore:true}).mockResolvedValueOnce({leads:[second],hasMore:false})};
+ const c=createQuoteEditorController({store,change:vi.fn(),api,session,id,leadApi,timezone:()=>f.input.timezone});await c.load();c.create();await c.findLeads('saved');await c.findLeads('different',true);expect(leadApi.list).toHaveBeenCalledTimes(1);await c.findLeads('saved',true);expect(leadApi.list.mock.calls[1]!.slice(0,2)).toEqual([f.business,{search:'saved',afterId:first.id,includeLost:false,pageSize:25}]);expect(c.view().leadRows).toEqual([second]);await c.findLeads('saved',true);expect(leadApi.list).toHaveBeenCalledTimes(2);c.suspend();expect(c.view()).toMatchObject({leadRows:[],leadSearch:'',moreLeads:false,draft:null});
+});
+it('does not change an existing quote family identity through customer or lead selectors',async()=>{
+ const lead=leadFixture({business_id:f.business}),leadApi={...leads,list:vi.fn<typeof leads.list>().mockResolvedValue({leads:[lead],hasMore:false})};const c=createQuoteEditorController({store,change:vi.fn(),api,session,id,leadApi,timezone:()=>f.input.timezone});await c.load();await c.open(f.family.id);const before=c.view().draft!;await c.findLeads('saved');c.chooseLead(lead.id);c.chooseCustomer(randomUUID());c.edit({...before,leadId:lead.id});expect(c.view().draft).toEqual(before);expect(c.view().canSave).toBe(false);
+});
+it('rejects lost or foreign-business leads even if a selection dependency returns them',async()=>{
+ const lost=leadFixture({business_id:f.business,state:'lost',lost_reason:'Owner recorded'}),foreign=leadFixture({business_id:randomUUID(),id:randomUUID()}),leadApi={...leads,list:vi.fn<typeof leads.list>().mockResolvedValue({leads:[lost,foreign],hasMore:false})};const c=createQuoteEditorController({store,change:vi.fn(),api,session,id,leadApi,timezone:()=>f.input.timezone});await c.load();c.create();const before=c.view().draft;await c.findLeads('saved');c.chooseLead(lost.id);c.chooseLead(foreign.id);expect(c.view().draft).toEqual(before);expect(api.save).not.toHaveBeenCalled();
+});
+it('blocks a lead lookup after the genuine context changes before sending the lead request',async()=>{
+ const leadApi={...leads,list:vi.fn<typeof leads.list>()};const c=createQuoteEditorController({store,change:vi.fn(),api,session,id,leadApi,timezone:()=>f.input.timezone});await c.load();c.create();api.context.mockResolvedValue({...context(),binding:randomBytes(32).toString('base64url')});await c.findLeads('private prospect');expect(leadApi.list).not.toHaveBeenCalled();expect(c.view()).toMatchObject({phase:'review',draft:null,leadRows:[],leadSearch:''});
+});
+it('replacing a customer with a lead clears selectable customer addresses without changing the entered work site',async()=>{
+ const customer=customerFixture({business_id:f.business}),address=addressFixture({business_id:f.business,customer_id:customer.id}),lead=leadFixture({business_id:f.business}),customerApi={...customers,list:vi.fn<typeof customers.list>().mockResolvedValue({customers:[customer],hasMore:false})},addressApi={...addresses,list:vi.fn<typeof addresses.list>().mockResolvedValue({addresses:[address],hasMore:false})},leadApi={...leads,list:vi.fn<typeof leads.list>().mockResolvedValue({leads:[lead],hasMore:false})};
+ const c=createQuoteEditorController({store,change:vi.fn(),api,session,id,leadApi,customerApi,addressApi,timezone:()=>f.input.timezone});await c.load();c.create();await c.findCustomers('saved');c.chooseCustomer(customer.id);await c.loadAddresses();const before=c.view().draft!.workLocation;await c.findLeads('saved');c.chooseLead(lead.id);expect(c.view()).toMatchObject({addressRows:[],addressesLoaded:false,moreAddresses:false});c.chooseAddress(address.id);expect(c.view().draft!.workLocation).toBe(before);
+});
+
+it('rehydrates a saved prospect-only quote and preserves its original lead identity on later edits',async()=>{
+ const leadId=randomUUID(),content={...f.input,recipient:{...f.input.recipient,customerId:null,leadId,displayName:'Saved synthetic prospect'}},preparedContent=prepareQuoteContent(content);f.family={...f.family,customer_id:null,lead_id:leadId};f.revision={...f.revision,customer_safe_snapshot:preparedContent.customer,internal_snapshot:preparedContent.internal,canonical_content:preparedContent.canonical,content_hash:createHash('sha256').update(preparedContent.canonical).digest('hex')};
+ api.list.mockResolvedValue(parseQuoteDirectoryPage({schemaVersion:1,businessId:f.business,quotes:[{family:f.family,revision:f.revision}],hasMore:false},{businessId:f.business,search:'',afterId:null,pageSize:25}));api.history.mockResolvedValue(parseQuoteHistoryPage(history(),{businessId:f.business,familyId:f.family.id,revisionId:f.revision.id,afterVersion:'0',pageSize:5}));
+ const c=controller();await c.load();await c.open(f.family.id);expect(c.view().draft).toMatchObject({customerId:null,leadId,recipientName:'Saved synthetic prospect'});c.edit({...c.view().draft!,customerId:randomUUID()});expect(c.view().draft!.customerId).toBeNull();c.edit({...c.view().draft!,title:'Revised prospect draft'});await c.save();expect(api.save.mock.calls[0]![0]).toMatchObject({familyId:f.family.id,revisionId:f.revision.id,expectedFamilyVersion:'1',expectedRevisionVersion:'1',content:{recipient:{customerId:null,leadId,displayName:'Saved synthetic prospect'}}});
+});

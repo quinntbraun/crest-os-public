@@ -1,6 +1,6 @@
 # Crest OS V1 - Technical Architecture
 
-Version: 1.9 | 2026-10-28 | ADR44 registered catalog construction; activation gated
+Version: 1.10 | 2026-10-28 | ADR45 registered Draft quotes; activation gated
 
 Schema43 construction amendment,2026-10-27: ADR43 explicitly registers the reviewed bounded source-export journal and its39-table/613-column inventory while preserving all42 earlier migrations and closed legacy42 profiles. Fresh owner/lease/recovery authority, exact-original audit, independent reconstruction and version-specific encrypted restore remain mandatory. This source construction does not enable product routes, certify full backups or authorize production application/use. See DATABASE8, EXPORTS_AND_BACKUPS2 and planning/PHASE_4_SOURCE_EXPORT_ADOPTION.md.
 
@@ -239,3 +239,6 @@ Use conditional provider updates, retain unresolved attempts, bound retries and 
 ## 2026-10-28 — Registered44 catalog construction
 
 ADR44 appends catalog storage/commands/source readers/original-save resolution as schema44 construction. Existing43/42 profiles remain explicit and unchanged. Catalog runtime/registered44 worker/editor integration and real-data release gates remain incomplete; see planning/CATALOG_SCHEMA44_ADOPTION.json.
+
+
+The registered45 Draft quote construction follows ADR45. Exact reviewed pricing, storage, trusted commands, domain source readers and original-reference validation are one atomic migration. Historical42/43/44 export/recovery profiles remain distinct; the43 worker is not relabeled. Genuine bounded synthetic UI activation requires registered authorization, domain retrieval, independent45 recovery and browser acceptance; full45 portability/worker/admission and production gates remain required.
