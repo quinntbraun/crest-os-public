@@ -131,3 +131,9 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
   .sign-in-workspace .workspace-content { grid-column:1/-1; }
 }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation:none!important; transition:none!important; } }
+
+/* Service scope stays readable on working phones and wide review screens. */
+.service-pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+.service-scope { white-space:pre-wrap; overflow-wrap:anywhere; }
+.record-reference { overflow-wrap:anywhere; }
+@media(max-width:390px) { .service-pair { grid-template-columns:1fr; gap:0; } }

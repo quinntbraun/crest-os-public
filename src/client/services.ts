@@ -5,6 +5,7 @@ import type {ServiceSave} from '../commercial/service-storage-contract';
 import {parseServiceOriginalOperation,bindServiceOriginalReceipt} from '../commercial/service-original-operation';
 import type {ServiceOriginalOperation} from '../commercial/service-original-operation';
 export type ServiceReference=ServiceOriginalOperation['reference'];
+export type ServiceContext=Readonly<{schemaVersion:1;businessId:string}&({writeState:'ready';recoveryEpoch:string}|{writeState:'paused';recoveryEpoch:null})>;
 type Kind='input'|'not_submitted'|'denied'|'recovery'|'limited'|'unknown'|'unavailable';
 export class ServiceClientError extends Error{readonly kind:Kind;constructor(kind:Kind){super('SERVICE_REQUEST_FAILED');this.name='ServiceClientError';this.kind=kind;}}
 function original(businessId:string,reference:ServiceReference){return parseServiceOriginalOperation({schemaVersion:1,businessId,commandType:'catalog.service.save',reference});}
@@ -33,7 +34,7 @@ async function post(route:'context'|'list'|'save'|'history'|'operation',body:obj
 export const services=Object.freeze({
  async context(proof:Proof,signal:AbortSignal){
   try{const r=await post('context',{},proof,signal),v=r.value;check(r.status===200&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding)&&exact(v,['schemaVersion','businessId','writeState','recoveryEpoch'])&&v.schemaVersion===1&&serviceId(v.businessId)&&(v.writeState==='ready'&&serviceId(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null));
-   return Object.freeze({context:Object.freeze({...v}),binding:r.binding});
+   return Object.freeze({context:Object.freeze({...v}) as ServiceContext,binding:r.binding});
   }catch(e){throw e instanceof ServiceClientError?e:new ServiceClientError('unavailable');}
  },
  async save(input:ServiceSave,proof:Proof,signal:AbortSignal){

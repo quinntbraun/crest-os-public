@@ -218,7 +218,7 @@ test('lead source snapshot, exact cents/microseconds, genuine customer and origi
   for(const role of ['crest_lead_owner','crest_lead_integrity_owner','crest_lead_source_owner','crest_lead_source_integrity_owner'])await assert.rejects(w.connection.query('SET ROLE '+role),e=>e.code==='42501');
   for(const table of ['leads','lead_sources'])await assert.rejects(w.connection.query('SELECT * FROM crest.'+table),e=>e.code==='42501');
  }finally{await w.connection.end();await restored.query('DROP ROLE '+w.login);}
- assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,39);
+ assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,41);
  const journalTables=['export_job_attempts','export_job_completions','export_job_snapshots','export_jobs','export_part_intents','export_part_verifications'];
  assert.deepEqual((await restored.query("SELECT c.relname AS name,c.relrowsecurity AND c.relforcerowsecurity AND c.relowner='crest_schema_owner'::regrole AS closed FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='crest_private' AND c.relkind='r' AND c.relname=ANY($1::text[]) ORDER BY c.relname",[journalTables])).rows,journalTables.map(name=>({name,closed:true})));
 });

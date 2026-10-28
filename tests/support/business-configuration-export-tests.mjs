@@ -35,7 +35,7 @@ export function businessConfigurationExportTests(get){
   ({client,sandbox}=get());bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
   owner=await actor();business=await root('Synthetic, "export" 雪 = text');other=await root('Unrelated synthetic business');
   for(let i=0;i<21;i++){const id=await actor();await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,active,created_by,updated_by,origin) VALUES($1,$2,'owner',false,$3,$3,'manual')",[business,id,owner]);}
-  manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+  manifest=JSON.parse(await readFile(new URL('./registered43-export-coverage.json',import.meta.url),'utf8'));
   reader=await sandbox.connect(get().target);await reader.query('SET ROLE crest_export');
  };
  test('business export context counts exactly one business root all memberships and recovery root',async()=>{
@@ -117,15 +117,15 @@ export function businessConfigurationExportTests(get){
  });
  test('business export migration rejects preexisting elevated role attributes before creating its routines',async()=>{
   const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await get().installProviderSchema(c,t);await sandbox.apply(t,await sandbox.prefix(27));
-  await client.query('ALTER ROLE crest_export LOGIN');try{await assert.rejects(sandbox.apply(t));assert.equal((await c.query("SELECT to_regprocedure('crest_commands.business_configuration_export_context(uuid)') AS routine")).rows[0].routine,null);}finally{await client.query('ALTER ROLE crest_export NOLOGIN');}
+  await client.query('ALTER ROLE crest_export LOGIN');try{await assert.rejects(sandbox.apply(t,await sandbox.prefix(43)));assert.equal((await c.query("SELECT to_regprocedure('crest_commands.business_configuration_export_context(uuid)') AS routine")).rows[0].routine,null);}finally{await client.query('ALTER ROLE crest_export NOLOGIN');}
  });
  test('business export migration rejects a preexisting role membership link',async()=>{
   const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await get().installProviderSchema(c,t);await sandbox.apply(t,await sandbox.prefix(27));
-  await client.query('GRANT crest_export TO crest_worker');try{await assert.rejects(sandbox.apply(t));assert.equal((await c.query("SELECT to_regprocedure('crest_commands.business_configuration_export_context(uuid)') AS routine")).rows[0].routine,null);}finally{await client.query('REVOKE crest_export FROM crest_worker');}
+  await client.query('GRANT crest_export TO crest_worker');try{await assert.rejects(sandbox.apply(t,await sandbox.prefix(43)));assert.equal((await c.query("SELECT to_regprocedure('crest_commands.business_configuration_export_context(uuid)') AS routine")).rows[0].routine,null);}finally{await client.query('REVOKE crest_export FROM crest_worker');}
  });
  test('business export migration rejects preexisting column grants without adopting them',async()=>{
   const t=await sandbox.database(),c=await sandbox.connect(t);await sandbox.apply(t,await sandbox.prefix(0),true);await get().installProviderSchema(c,t);await sandbox.apply(t,await sandbox.prefix(27));
-  await c.query('GRANT SELECT(id) ON crest_private.actors TO crest_export');try{await assert.rejects(sandbox.apply(t));assert.equal((await c.query("SELECT to_regprocedure('crest_commands.business_configuration_export_context(uuid)') AS routine")).rows[0].routine,null);}finally{await c.query('REVOKE SELECT(id) ON crest_private.actors FROM crest_export');}
+  await c.query('GRANT SELECT(id) ON crest_private.actors TO crest_export');try{await assert.rejects(sandbox.apply(t,await sandbox.prefix(43)));assert.equal((await c.query("SELECT to_regprocedure('crest_commands.business_configuration_export_context(uuid)') AS routine")).rows[0].routine,null);}finally{await c.query('REVOKE SELECT(id) ON crest_private.actors FROM crest_export');}
  });
  async function withCollector(work){
   const name='crest_capture_probe_'+randomBytes(8).toString('hex'),password=randomBytes(32).toString('hex');assert.match(name,/^crest_capture_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
