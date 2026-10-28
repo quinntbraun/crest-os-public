@@ -6,7 +6,7 @@ The genuine synthetic workspace is initialized and running at **https://127.0.0.
 
 Docker Desktop/WSL2 is installed. The explicitly approved pinned Linux coordinator applied all44 registered migrations. Genuine Auth/TOTP, one synthetic owner, restricted application login and an owned persistent volume are configured. Original setup failure evidence is retained; no database reset or role-guard relaxation was used.
 
-The local browser currently shows its self-signed certificate warning. The owner must review and perform any browser exception themselves. No automatic browser exception or host trust-store change is authorized. The application server independently passed normal HTTPS verification using that exact certificate as the request's local trust anchor. This is not a completed owner browser journey.
+The owner reviewed and completed the local browser certificate step. The agent then signed in through genuine Auth/TOTP and exercised the actual UI. No automatic browser exception or host trust-store change was used. The server also passed normal HTTPS verification using the exact certificate as the request's local trust anchor.
 
 Private generated sign-in details are in **.local/synthetic-workspace/owner-credentials.json** in the active checkout. Do not copy these into chat, Git, CI or screenshots. Its totpUri is private enrollment material, not a public link.
 
@@ -16,7 +16,7 @@ From the active checkout, with pinned Node24.22/npm11.19.1 available:
 - **npm run workspace:stop** stops only the labeled synthetic containers, retaining their data volume. Stop the foreground application before this command.
 - Do not rerun **workspace:init**, delete state/initialization markers, recreate users or reset the volume. Interrupted initialization requires review.
 
-Owner browser sign-in, customer/vehicle/link save/reload, history/limited JSON and a controlled service restart still require installation-specific verification. Current-source CI covers these functional paths in isolated synthetic installations; it does not prove this computer's owner handoff. The separate4318 sample remains temporary fictional data.
+Installation-specific checks PASSED: genuine browser sign-in; customer/vehicle/link save and reload; saved customer JSON/history; service create/reload/edit with both history revisions and saved JSON. A controlled complete app/Auth/database stop/start preserved the same customer, vehicle, link and service identities/versions, and the browser reopened saved records afterward. Private receipts/screenshots are retained. This demonstrates the first durable fictional workflow, not complete V1 or real-use acceptance. The separate4318 sample remains temporary fictional data.
 
 ## Fresh installations: validate TLS before provisioning
 

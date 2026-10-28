@@ -138,6 +138,26 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .record-reference { overflow-wrap:anywhere; }
 .service-fields { display:grid; gap:.75rem; }
 .service-fields label { display:block; }
+.services-workspace > .intro { max-width:65ch; }
+.service-layout { display:grid; gap:1.5rem; margin-top:1.5rem; }
+.service-directory-panel,.service-definition-panel,.service-choice { min-width:0; }
+.service-layout h2 { margin-top:0; }
+.service-toolbar { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
+.service-toolbar button { margin-top:0; }
+.service-search { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.5rem .75rem; margin-top:.75rem; align-items:end; }
+.service-search > button { width:auto; margin:0; }
+.service-search > .checkbox { grid-column:1/-1; margin-top:0; }
+.service-fields label { font-weight:600; }
+.service-fields input,.service-fields textarea { font-weight:400; }
+.service-fields > .field-help { margin:0; }
+.service-directory button[aria-current='true'] { border-left:3px solid var(--gold-ink); background:#eee7d6; border-radius:var(--radius); }
+.service-choice { border-top:1px solid var(--line); padding-top:1.5rem; }
+@media(min-width:1100px) {
+ .services-workspace { max-width:80rem; }
+ .service-layout { grid-template-columns:minmax(15rem,1fr) minmax(0,2fr); gap:2rem; align-items:start; }
+ .service-directory-panel { border-right:1px solid var(--line); padding-right:1.5rem; }
+ .service-choice { border-top:0; padding:0; }
+}
 .service-directory button span { display:block; margin-top:.25rem; color:var(--muted); font-size:.875rem; font-weight:400; }
 .customers label.checkbox { display:flex; align-items:center; gap:.75rem; min-height:44px; cursor:pointer; }
 .customers label.checkbox input { width:24px; height:24px; flex-shrink:0; accent-color:var(--black); }
