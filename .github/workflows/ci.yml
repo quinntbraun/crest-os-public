@@ -53,6 +53,14 @@ jobs:
           npm ci --ignore-scripts --no-fund
       - name: Install verified database tooling
         run: node scripts/install-tools.mjs
+      - name: Prove proposed immutable catalog storage and audit integrity
+        run: npm run test:catalog-storage-proposal
+      - name: Prove proposed trusted catalog saves, retries and scoped history
+        run: npm run test:catalog-commands-proposal
+      - name: Install pinned recovery tooling
+        run: node scripts/install-recovery-tools.mjs
+      - name: Prove proposed catalog source CSV and independent encrypted recovery
+        run: npm run test:catalog-source-proposal
       - name: Run isolated regression group
         run: |
           npm run test:db
@@ -77,14 +85,6 @@ jobs:
           npm run test:lead-state-db
           npm run test:lead-vehicles-db
           npm run test:lead-addresses-db
-      - name: Prove proposed immutable catalog storage and audit integrity
-        run: npm run test:catalog-storage-proposal
-      - name: Prove proposed trusted catalog saves, retries and scoped history
-        run: npm run test:catalog-commands-proposal
-      - name: Install pinned recovery tooling
-        run: node scripts/install-recovery-tools.mjs
-      - name: Prove proposed catalog source CSV and independent encrypted recovery
-        run: npm run test:catalog-source-proposal
       - name: Prove registered original-operation retirement, complete source and independent encrypted recovery
         run: npm run test:operation-resolution-db
       - name: Prove registered atomic conversion, source export and encrypted recovery
@@ -281,6 +281,8 @@ jobs:
         run: |
           npm run build
           npm run test:e2e
+          npm run review:test
+          npm run review:test-browser
           npm run test:sign-in-browser
       - name: Build and smoke-test portable container
         timeout-minutes: 15
