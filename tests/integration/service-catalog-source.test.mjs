@@ -7,7 +7,7 @@ import {join} from 'node:path';
 import {before,after,test} from 'node:test';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
-import {backupDatabase,connect,hash,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase} from '../support/recovery-drill.mjs';
+import {backupDatabase,connect,hash,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase,postgresTool,normalizedSchema} from '../support/recovery-drill.mjs';
 import {formatServiceCatalogCsv} from '../../src/commercial/service-catalog-csv.ts';
 import {serviceColumns,serviceContentColumns} from '../../src/commercial/service-storage-contract.ts';
 import {decodeServiceCatalogCsv} from '../support/service-catalog-csv-fixture.ts';
@@ -122,12 +122,22 @@ test('one snapshot retains archive and every old version, excluding a concurrent
 test('encrypted independent restore preserves all catalog source, receipts, audits and grants at one point',async()=>{
  const directory=await privateWorkspace();point=join(directory,'point');await mkdir(point,{mode:0o700});keys=await keyPair(directory);
  const prior=await catalogEvidence(admin,a.business);
+ const sourceSchema=normalizedSchema(await postgresTool('pg_dump',url,['--schema-only']));
  backup=await backupDatabase(admin,url,point,keys.recipient,async()=>{
   const later=request({service:original.service,revision:'4',body:{...edited.body,active:false,definition:definition({name:'After encrypted point'})}});assert.equal((await save(a,later)).state,'committed');
  });
  assert.equal(backup.manifest.schemaVersion,43);assert.equal(backup.manifest.completeBackup,false);
  cluster=await recoveryCluster();restoredUrl=await cluster.database();assert.notEqual(new URL(url).port,new URL(restoredUrl).port);
- await restoreDatabase(point,keys.path,restoredUrl);restored=await connect(restoredUrl);
+ try{await restoreDatabase(point,keys.path,restoredUrl);}catch(error){
+  if(error.message==='SYNTHETIC_RECOVERY_RESTORE_FAILED:schema'){
+   // Bounded diagnostics for public-schema permission/order differences only.
+   // Never print dump contents, row values, connection strings or credentials.
+   const destination=normalizedSchema(await postgresTool('pg_dump',restoredUrl,['--schema-only'])),before=sourceSchema.split('\n'),after=destination.split('\n');
+   const index=before.findIndex((line,i)=>line!==after[i]);
+   const describe=line=>line===undefined?'missing':/^(GRANT|REVOKE) [A-Za-z0-9_ (),.;]+$/.test(line)?line:'line-sha256:'+hash(line);
+   throw new Error('SYNTHETIC_CATALOG_SCHEMA_REVIEW_REQUIRED:'+JSON.stringify({line:index,source:describe(before[index]),restored:describe(after[index]),sameLineMultiset:JSON.stringify([...before].sort())===JSON.stringify([...after].sort())}),{cause:error});
+  }throw error;
+ }restored=await connect(restoredUrl);
  assert.deepEqual(await inventory(restored),backup.manifest.rows);assert.deepEqual(await catalogEvidence(restored,a.business),prior);
  const p=await runtime(restored,restoredUrl,['crest_web','crest_export']);restoredLogin=p.login;restoredWeb=await connect(p.url);await restoredWeb.query('SET ROLE crest_web');
  const restoredExport=await connect(p.url);await restoredExport.query('SET ROLE crest_export');try{
