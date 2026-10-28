@@ -12,6 +12,7 @@
   "scripts": {
     "workspace:init": "node scripts/synthetic-workspace.mjs init",
     "workspace:start": "node scripts/synthetic-workspace.mjs start",
+    "workspace:phone": "node scripts/synthetic-phone-preview.mjs",
     "workspace:stop": "node scripts/synthetic-workspace.mjs stop",
     "review": "node review/server.mjs",
     "review:build": "node review/server.mjs --build-only",

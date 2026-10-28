@@ -18,6 +18,18 @@ From the active checkout, with pinned Node24.22/npm11.19.1 available:
 
 Installation-specific checks PASSED: genuine browser sign-in; customer/vehicle/link save and reload; saved customer JSON/history; service create/reload/edit with both history revisions and saved JSON. A controlled complete app/Auth/database stop/start preserved the same customer, vehicle, link and service identities/versions, and the browser reopened saved records afterward. Private receipts/screenshots are retained. This demonstrates the first durable fictional workflow, not complete V1 or real-use acceptance. The separate4318 sample remains temporary fictional data.
 
+## Optional private iPhone preview
+
+The owner-approved Windows and iPhone NetBird clients are installed and signed into the same free account. The owner confirmed the actual iPhone can sign in with genuine password/TOTP authentication and open Customers, including through its private connection. This is an owned synthetic test endpoint, not production approval or a publicly hosted service.
+
+Keep `npm run workspace:start` running, then run **npm run workspace:phone** in a second terminal. The Windows-only runner reuses the existing owner, database, restricted application login and issuer bridge; it creates no account or database. It checks the saved private two-device binding against the installed NetBird client's current identity, binds only the laptop's private address, and rejects socket peers outside the two configured devices. Forwarded headers cannot grant access. Adding/changing devices or replacing an expired certificate requires reviewed local configuration; the runner fails closed.
+
+Private configuration lives in `.local/synthetic-workspace/phone-preview.json`, `phone.key` and `phone.pem`. The matching, currently valid, self-signed non-CA certificate must cover the configured private address and match its saved hash. Keep both key and binding private. No wildcard listener, public tunnel, host trust-store change, automatic browser certificate exception or authentication bypass is used. The owner handles any browser warning. The optional prepared firewall helper was blocked by Windows script policy before execution; no rule or execution-policy change was made. The actual phone connection already works.
+
+The local private sign-in sheet is `owner-phone-sign-in-private.txt`; its separate QR contains existing authenticator enrollment material. Neither belongs in chat, screenshots, Git or CI. Following the owner's explicit test-login change, the same provider subject and verified factor remain linked; previous provider sessions were revoked, and the new credentials passed an HTTPS session-confirmation/sign-out diagnostic. Keep the existing verification-code setup when editing the saved password-manager entry. The earlier failed iPhone attempt has no proven root cause; successful retry is confirmed by the owner.
+
+The laptop must remain awake, online and running Docker, the main workspace and phone runner; the iPhone must have NetBird connected. This does not establish independent hosting, unattended uptime, real-data readiness or full V1 acceptance. No paid plan was purchased.
+
 ## Fresh installations: validate TLS before provisioning
 
 The PostgreSQL image does not contain an openssl executable. The installer now reads and validates an explicitly prepared **.local/synthetic-workspace/tls.key** and **tls.pem** before writing an initialization marker or creating any container/database/account. It requires a matching, currently valid, self-signed non-CA certificate covering both127.0.0.1 and localhost. Start validates the same pair and stored certificate hash.
@@ -39,4 +51,4 @@ The pinned CLI classifies local targets using hostname and the configured databa
 
 A direct privileged rollback probe was rejected by automatic approval review and was not executed. The successful path used read-only diagnostics and the approved coordinator. Never bypass that boundary with direct privileged SQL.
 
-No cloud account, paid service, public tunnel, real business record or financial activation is needed or authorized. Full exports, independent recovery and other real-use gates remain required. Installing Docker or starting this test server does not make Crest OS ready for real Crest data.
+The loopback workspace needs no cloud account or paid service. Optional phone access uses the separately approved free private-network account described above. Public tunnels, real business records and financial activation remain outside this test setup. Full exports, independent recovery and other real-use gates remain required. Installing Docker or starting this test server does not make Crest OS ready for real Crest data.

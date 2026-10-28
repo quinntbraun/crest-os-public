@@ -5,6 +5,7 @@ import {mkdir,mkdtemp,readFile,writeFile,rm} from 'node:fs/promises';
 import {join,resolve,relative,dirname,isAbsolute} from 'node:path';
 import {createHash} from 'node:crypto';
 import {readSyntheticTls} from '../../scripts/synthetic-workspace-tls.mjs';
+import {readSyntheticPhoneTls} from '../../scripts/synthetic-phone-binding.mjs';
 
 test('local TLS preflight accepts the matching loopback pair and rejects unsafe inputs without disclosure',async()=>{
  const scope=resolve('.local/synthetic-tls-tests');await mkdir(scope,{recursive:true});const directory=await mkdtemp(join(scope,'case-'));
@@ -18,6 +19,11 @@ test('local TLS preflight accepts the matching loopback pair and rejects unsafe 
   generate('tls','IP:127.0.0.1');await assert.rejects(readSyntheticTls(directory),/^Error: SYNTHETIC_LOCAL_TLS_INPUT_REQUIRED$/);
   generate('tls','IP:127.0.0.1,DNS:localhost',true);await assert.rejects(readSyntheticTls(directory),/^Error: SYNTHETIC_LOCAL_TLS_INPUT_REQUIRED$/);
   await writeFile(join(directory,'tls.pem'),'invalid private-looking input');await assert.rejects(readSyntheticTls(directory),/^Error: SYNTHETIC_LOCAL_TLS_INPUT_REQUIRED$/);
+  generate('phone','IP:100.64.1.1');const phoneCert=await readFile(join(directory,'phone.pem')),phoneKey=await readFile(join(directory,'phone.key')),binding={laptopAddress:'100.64.1.1',certificateSha256:createHash('sha256').update(phoneCert).digest('hex')};
+  assert.deepEqual((await readSyntheticPhoneTls(directory,binding)).cert,phoneCert);
+  for(const patch of [{laptopAddress:'100.64.1.2'},{certificateSha256:'0'.repeat(64)}])await assert.rejects(readSyntheticPhoneTls(directory,{...binding,...patch}),/^Error: SYNTHETIC_PHONE_PREVIEW_REVIEW_REQUIRED$/);
+  await writeFile(join(directory,'phone.key'),await readFile(join(directory,'other.key')));await assert.rejects(readSyntheticPhoneTls(directory,binding),/^Error: SYNTHETIC_PHONE_PREVIEW_REVIEW_REQUIRED$/);await writeFile(join(directory,'phone.key'),phoneKey);
+  generate('phone','IP:100.64.1.1',true);const ca=await readFile(join(directory,'phone.pem'));await assert.rejects(readSyntheticPhoneTls(directory,{...binding,certificateSha256:createHash('sha256').update(ca).digest('hex')}),/^Error: SYNTHETIC_PHONE_PREVIEW_REVIEW_REQUIRED$/);
  }finally{
   const child=relative(scope,directory);assert(dirname(directory)===scope&&child.startsWith('case-')&&!child.includes('..')&&!isAbsolute(child));await rm(directory,{recursive:true,force:true});
  }
