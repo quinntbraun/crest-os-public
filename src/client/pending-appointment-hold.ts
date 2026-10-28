@@ -1,4 +1,4 @@
-import {customerUuid,customerVersion,exactHoldObject} from '../customer/customer-contract';
+import {customerUuid,customerVersion,exactCustomerObject as exactHoldObject} from '../customer/customer-contract';
 import type {HoldReference} from './appointment-holds';
 
 export const pendingHoldKey='crest.appointment-hold.pending-reference.v1';
