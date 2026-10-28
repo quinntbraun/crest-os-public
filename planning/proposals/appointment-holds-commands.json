@@ -1,0 +1,15 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "existingMigrationCount": 44,
+  "runtimeEnabled": false,
+  "nativeExecuted": false,
+  "sqlBytes": 23387,
+  "sqlSha256": "68eda7df11b9f1c144a1e3cecdbd49dad1a58b5bfbb28a722bff78febb7415a8",
+  "requiredStorageSqlSha256": "5620c009d081320da08df452914524dc5c2dd2e3baa0aafff3cc3ba00218ac9c",
+  "capability": "crm.manage",
+  "trustedCommandAcceptanceExecuted": false,
+  "sourceExportCoverageImplemented": false,
+  "productionActivation": "blocked"
+}

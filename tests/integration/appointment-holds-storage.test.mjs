@@ -8,7 +8,10 @@ import {before,after,test} from 'node:test';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {backupDatabase,restoreDatabase,connect,inventory,keyPair,privateWorkspace,recoveryCluster} from '../support/recovery-drill.mjs';
+import {holdPayloadKeys,parseStoredHold,parseHoldCommitted} from '../../src/operations/appointment-hold-contract.ts';
 const sql=await readFile(new URL('../../planning/proposals/appointment-holds-storage.sql',import.meta.url),'utf8');
+const commands=await readFile(new URL('../../planning/proposals/appointment-holds-commands.sql',import.meta.url),'utf8');
+const commandMetadata=JSON.parse(await readFile(new URL('../../planning/proposals/appointment-holds-commands.json',import.meta.url),'utf8'));
 const metadata=JSON.parse(await readFile(new URL('../../planning/proposals/appointment-holds-storage.json',import.meta.url),'utf8'));
 let sandbox,target,client,bootstrap,prior,a,b,first,revised,withdrawn,cluster,restored,login,web;
 const value=async(c,q,args=[])=>(await c.query(q,args)).rows[0]?.value;
@@ -24,7 +27,7 @@ async function state(){
  const customer=randomUUID(),lead=randomUUID(),auth=[hash,session,actor,issuer,subject,provider,new Date(Date.now()+300000),f.business];
  const customerResult=await value(client,'SELECT crest_commands.save_customer($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS value',[...auth,f.epoch,randomUUID(),customer,{displayName:'Synthetic hold customer',phone:null,email:null,contactPreference:null,outreachOptOut:false,notes:null,customerSince:null,archived:false,archiveReason:null}]);assert.equal(customerResult.state,'committed');
  const leadResult=await value(client,'SELECT crest_commands.save_lead($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS value',[...auth,f.epoch,randomUUID(),lead,{label:'Synthetic prospective inquiry',customerId:null,sourceId:null,referralText:null,phone:null,email:null,requestedScope:null,availability:'Owner-recorded availability remains unchanged',estimatedCents:null,followUpAt:null,notes:null}]);assert.equal(leadResult.state,'committed');
- return{...f,customer,lead};
+ return{...f,customer,lead,auth};
 }
 const base=f=>({id:randomUUID(),business_id:f.business,hold_id:randomUUID(),sequence:'1',replaces_sequence:null,customer_id:f.customer,lead_id:null,label:'Synthetic unconfirmed hold',state:'proposed',start_at:'2026-10-29T14:00:00.000000Z',end_at:'2026-10-29T15:30:00.000000Z',timezone:'America/Indiana/Indianapolis',local_start:'2026-10-29T10:00:00.000000',local_end:'2026-10-29T11:30:00.000000',start_offset_minutes:-240,end_offset_minutes:-240,notes:null,reason:null});
 const columns=['id','business_id','hold_id','sequence','replaces_sequence','customer_id','lead_id','label','state','start_at','end_at','timezone','local_start','local_end','start_offset_minutes','end_offset_minutes','notes','reason','created_by','operation_id'];
@@ -40,6 +43,7 @@ const evidence=async()=>({holds:(await client.query('SELECT crest_private.appoin
 async function refused(work,pattern){const before=await evidence();await assert.rejects(work,pattern);assert.deepEqual(await evidence(),before);}
 before(async()=>{
  assert.equal(metadata.registered,false);assert.equal(metadata.runtimeEnabled,false);assert.equal(metadata.existingMigrationCount,44);assert.equal(Buffer.byteLength(sql),metadata.sqlBytes);assert.equal(createHash('sha256').update(sql).digest('hex'),metadata.sqlSha256);
+ assert.equal(commandMetadata.registered,false);assert.equal(commandMetadata.runtimeEnabled,false);assert.equal(commandMetadata.requiredStorageSqlSha256,metadata.sqlSha256);assert.equal(Buffer.byteLength(commands),commandMetadata.sqlBytes);assert.equal(createHash('sha256').update(commands).digest('hex'),commandMetadata.sqlSha256);
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);prior=await sandbox.apply(target,await sandbox.prefix(44));bootstrap=await value(client,"SELECT id AS value FROM crest_private.actors WHERE system_key='security_bootstrap'");a=await state();b=await state();
 },{timeout:240000});
 after(async()=>{await restored?.end();await cluster?.close();await web?.end();if(login)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
@@ -74,6 +78,31 @@ test('history cannot update, delete or truncate even as fixture administrator',a
 test('withdrawn sequence cannot reopen, skip, change parties or revise its time',async()=>{await refused(()=>append(a,{...withdrawn,id:randomUUID(),sequence:'4',replaces_sequence:'3',state:'proposed',reason:'Invalid reopen'}),/CREST_HOLD_SEQUENCE_REVIEW_REQUIRED/);});
 test('stale branch, missing reason, no-op and changed party are refused before publication',async()=>{
  const live=await append(a,base(a));for(const patch of [{sequence:'3',replaces_sequence:'2',reason:'Skip'},{reason:null},{reason:'No change'},{reason:'Change party',customer_id:b.customer,label:'Changed'}])await refused(()=>append(a,{...live,id:randomUUID(),sequence:'2',replaces_sequence:'1',...patch}),e=>['23503','23514'].includes(e.code));
+});
+const command=(f,r,c=web)=>value(c,'SELECT crest_commands.save_appointment_hold($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13) AS value',[...f.auth,f.epoch,r.operation,r.hold,r.sequence,r.payload]);
+const lookup=(f,operation)=>value(web,'SELECT crest_commands.lookup_appointment_hold_operation($1,$2,$3,$4,$5,$6,$7,$8,$9) AS value',[...f.auth,operation]);
+const holdRequest=f=>({operation:randomUUID(),hold:randomUUID(),sequence:'0',payload:Object.fromEntries(holdPayloadKeys.map(k=>[k,base(f)[k]]))});
+let trustedFirst,trustedRevision;
+test('trusted commands install without changing registered44 and raw table access remains closed',async()=>{
+ await tx(client,()=>client.query(commands));assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(44))).history,prior.history);await web.query('SET ROLE crest_web');await assert.rejects(web.query('SELECT * FROM crest.appointment_hold_versions'),e=>e.code==='42501');
+});
+test('actual credential-bound save/replay and original lookup return the same retained receipt',async()=>{
+ trustedFirst=holdRequest(a);const saved=await command(a,trustedFirst);parseHoldCommitted(saved,a.business,trustedFirst.operation);const before=await evidence();assert.deepEqual(await command(a,trustedFirst),saved);assert.deepEqual(await lookup(a,trustedFirst.operation),saved);assert.deepEqual(await evidence(),before);
+});
+test('revision keeps the original result and rejects a reused operation with changed intent',async()=>{
+ trustedRevision={...trustedFirst,operation:randomUUID(),sequence:'1',payload:{...trustedFirst.payload,label:'Revised trusted hold',reason:'Owner revised this unconfirmed note'}};
+ const changed=await command(a,trustedRevision);assert.equal(changed.receipt.sequence,'2');assert.equal((await lookup(a,trustedFirst.operation)).receipt.sequence,'1');
+ const before=await evidence();assert.deepEqual(await command(a,{...trustedFirst,payload:{...trustedFirst.payload,label:'Different intent'}}),{state:'conflict',reason:'operation'});assert.deepEqual(await evidence(),before);
+});
+test('stale version leaves no new operation and directory reads retain exact source fields',async()=>{
+ const before=await evidence();assert.deepEqual(await command(a,{...trustedRevision,operation:randomUUID(),payload:{...trustedRevision.payload,label:'Stale edit'}}),{state:'conflict',reason:'version',currentSequence:'2'});assert.deepEqual(await evidence(),before);
+ const page=await value(web,'SELECT crest_commands.read_appointment_holds($1,$2,$3,$4,$5,$6,$7,$8,NULL,50) AS value',a.auth);assert.equal(page.businessId,a.business);assert.equal(page.hasMore,false);assert(page.holds.length>0);for(const row of page.holds){parseStoredHold(row,a.business);assert.deepEqual(row,await projection(client,row.id));}
+});
+test('wrong business, wrong actor and paused recovery cannot write; paused original lookup remains available',async()=>{
+ const other={...a,auth:a.auth.map((v,i)=>i===7?b.business:v)},wrongActor={...a,auth:a.auth.map((v,i)=>i===2?b.actor:v)};
+ for(const f of [other,wrongActor])await refused(()=>command(f,holdRequest(f)),e=>e.code==='42501');
+ await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[a.business]);
+ try{await refused(()=>command(a,holdRequest(a)),/RECOVERY_REVIEW_REQUIRED/);assert.equal((await lookup(a,trustedFirst.operation)).receipt.sequence,'1');}finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[a.business]);}
 });
 test('independent encrypted restore preserves all hold versions, exact audit rows, schema and denied runtime access',async()=>{
  const before=await evidence(),directory=await privateWorkspace(),point=join(directory,'point');await mkdir(point,{mode:0o700});const keys=await keyPair(directory);const backup=await backupDatabase(client,target,point,keys.recipient);assert.equal(backup.manifest.schemaVersion,44);assert.equal(backup.manifest.completeBackup,false);

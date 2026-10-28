@@ -16,7 +16,7 @@ export async function migrationSandbox() {
   await admin.connect();
   const roles = ["crest_schema_owner","crest_command_owner","crest_web","crest_worker","crest_recovery","crest_auth_reader","crest_session_owner","crest_login_owner","crest_integrity_owner","crest_inventory_owner","crest_inventory","crest_cleanup_owner","crest_cleanup","crest_export_owner","crest_export","crest_identity_export_owner","crest_session_export_owner","crest_customer_owner","crest_customer_integrity_owner","crest_address_owner","crest_address_integrity_owner","crest_vehicle_owner","crest_vehicle_integrity_owner","crest_lead_source_owner","crest_lead_source_integrity_owner","crest_lead_owner","crest_lead_integrity_owner"];
   roles.push("crest_catalog_integrity_owner","crest_catalog_owner");
-  roles.push("crest_hold_integrity_owner");
+  roles.push("crest_hold_integrity_owner","crest_hold_owner");
   try { assert.equal((await admin.query("SELECT count(*)::int AS n FROM pg_roles WHERE rolname=ANY($1::text[])",[roles])).rows[0].n,0,"refuse to adopt/drop other operators' roles"); }
   catch (error) { await admin.end(); throw error; }
   const databases = new Set(); const ownedRoles = new Set(); const connections = new Set();
