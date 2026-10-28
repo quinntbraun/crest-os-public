@@ -16,6 +16,10 @@ import {createServiceDirectory} from '../../src/commercial/service-directory.ts'
 import {createCustomerDirectory} from '../../src/customer/customer-directory.ts';
 import {createOriginalOperationDirectory} from '../../src/security/original-operation-directory.ts';
 import {bindServiceOriginalReceipt} from '../../src/commercial/service-original-operation.ts';
+import {createServer} from 'node:http';
+import {createServiceHttp} from '../../src/commercial/service-http.ts';
+import {createBrowserSessionFlow} from '../../src/security/browser-session-flow.ts';
+import {transportFromIncomingMessage} from '../../src/security/trusted-transport.ts';
 let sandbox,target,client,service,login,config,boundary,tokens,lifecycle,bootstrap;
 const signal=()=>new AbortController().signal;
 const payload=(patch={})=>({code:'synthetic-'+randomUUID(),active:true,definition:{name:'Synthetic Auth interior',inclusions:'Vacuum.\nApplicable leather care.',exclusions:'No exterior protection.',internalGuidance:'Synthetic private note',rangeLowCents:'0',rangeHighCents:null,estimatedSeconds:'5430'},...patch});
@@ -49,7 +53,7 @@ async function fixture(){
   const epoch=(await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,writes_enabled,created_by,updated_by,origin) VALUES($1,true,$2,$2,'manual') RETURNING active_epoch",[business,actor])).rows[0].active_epoch;return{actor,business,epoch};
  });
  const issued=await lifecycle.login({email,password,factorId:factor.id,code:totp.generate()},{subject:user.id},false,signal());
- return{...f,issued,credential:issued.cookieValueForResponse(),api:createServiceDirectory(config,boundary,tokens)};
+ return{...f,issued,subject:user.id,factorId:factor.id,credential:issued.cookieValueForResponse(),api:createServiceDirectory(config,boundary,tokens)};
 }
 async function facts(f){return(await client.query("SELECT jsonb_build_object('services',(SELECT coalesce(jsonb_agg(to_jsonb(s) ORDER BY id),'[]') FROM crest.services s WHERE business_id=$1),'content',(SELECT coalesce(jsonb_agg(to_jsonb(v) ORDER BY id),'[]') FROM crest.service_versions v WHERE business_id=$1),'operations',(SELECT coalesce(jsonb_agg(to_jsonb(o) ORDER BY id),'[]') FROM crest_private.operations o WHERE business_id=$1),'audit',(SELECT coalesce(jsonb_agg(to_jsonb(a) ORDER BY id),'[]') FROM crest_private.audit_events a WHERE business_id=$1),'sessions',(SELECT coalesce(jsonb_agg(to_jsonb(s) ORDER BY id),'[]') FROM crest_private.app_sessions s WHERE actor_id=$2))::text AS value",[f.business,f.actor])).rows[0].value;}
 const list=(f,patch={})=>f.api.list(f.credential,{businessId:f.business,search:'',afterId:null,includeInactive:true,pageSize:20,...patch},signal());
@@ -126,4 +130,60 @@ test('genuine provider revocation blocks catalog retirement before claiming an o
  const f=await fixture(),r=request(f),original=originalRef(f,r),recovery=createOriginalOperationDirectory(config,boundary,tokens),provider=JSON.parse(await facts(f)).sessions[0].provider_session_id;
  await client.query('DELETE FROM auth.sessions WHERE id=$1',[provider]);const before=await facts(f);
  await assert.rejects(recovery.retire(f.credential,{schemaVersion:1,recoveryEpoch:f.epoch,original,reason:'Must not commit after provider revocation.'},signal()),e=>e.message==='ORIGINAL_OPERATION_NOT_SUBMITTED');assert(await facts(f)===before,'provider loss must not claim a catalog retirement or change local activity');
+});
+
+async function withHttp(f,run,enabled=true){
+ let origin,handler;
+ // Actual loopback sockets are permitted only by environment:test. Production
+ // still requires TLS, fixed origin and trusted incoming-message evidence.
+ const server=createServer(async(req,res)=>{try{
+  const incoming=new Request(origin+req.url,{method:req.method,headers:req.headers,...(req.method==='POST'?{body:req,duplex:'half'}:{})});
+  const response=await handler(incoming,transportFromIncomingMessage(req));res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
+ }catch{res.writeHead(500);res.end();}});
+ await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
+ try{
+  origin='http://127.0.0.1:'+server.address().port;const httpConfig={...config,origin,businessId:f.business,ingress:{kind:'direct'}};
+  handler=createServiceHttp(httpConfig,boundary,tokens,enabled);
+  const flow=createBrowserSessionFlow({...httpConfig,loginKey:randomBytes(32),owner:{subject:f.subject,factorId:f.factorId}},boundary,tokens);
+  const session=await flow.session({method:'POST',headers:new Headers({origin,'content-type':'application/json'})},f.credential,signal());
+  const post=async(route,value={},headers={})=>{
+   const response=await fetch(origin+'/api/business/services/'+route,{method:'POST',redirect:'error',headers:{origin,'content-type':'application/json',cookie:'__Host-crest_session='+f.credential,'x-crest-csrf':session.csrfTokenForResponse(),...headers},body:typeof value==='string'?value:JSON.stringify(value)});
+   assert.match(response.headers.get('cache-control')??'',/no-store/);return{status:response.status,value:await response.json(),binding:response.headers.get('x-crest-edit-binding')};
+  };
+  await run(post);
+ }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+}
+function wire(r){const{businessId,payload,...ref}=r;void businessId;return{...ref,code:payload.code,active:payload.active,...payload.definition};}
+const businessFacts=async f=>{const all=JSON.parse(await facts(f));return JSON.stringify({services:all.services,operations:all.operations,audit:all.audit});};
+test('genuine authenticated catalog HTTP saves, reloads, edits and retains its original receipt/history',async()=>{
+ const f=await fixture(),r=request(f);await withHttp(f,async post=>{
+  const context=await post('context');assert.equal(context.status,200);assert.match(context.binding,/^[A-Za-z0-9_-]{43}$/);assert.equal(context.value.businessId,f.business);assert.equal(context.value.recoveryEpoch,f.epoch);
+  const saved=await post('save',wire(r));assert.equal(saved.status,200);const first=bindServiceOriginalReceipt(saved.value,originalRef(f,r));assert.equal(first.receipt.serviceRevision,'1');
+  let page=await post('list',{search:'Auth interior',afterId:null,includeInactive:false,pageSize:20});assert.equal(page.status,200);assert.equal(page.value.services[0].content.name,r.payload.definition.name);
+  const edit=request(f,{serviceId:r.serviceId,expectedRevision:'1',payload:{...r.payload,definition:{...r.payload.definition,name:'Synthetic revised scope'}}});
+  const changed=await post('save',wire(edit));assert.equal(changed.status,200);assert.equal(changed.value.receipt.serviceRevision,'2');
+  const original=await post('operation',{operationId:r.operationId});assert.deepEqual(original.value,first);
+  const history=await post('history',{serviceId:r.serviceId,afterRevision:'0',pageSize:20});assert.equal(history.status,200);assert.equal(history.value.history.length,2);assert.equal(history.value.history[0].content.name,r.payload.definition.name);assert.equal(history.value.history[1].content.name,edit.payload.definition.name);
+  const stale=await post('save',wire(request(f,{serviceId:r.serviceId,expectedRevision:'1',payload:r.payload})));assert.equal(stale.status,409);assert.deepEqual(stale.value,{state:'conflict',reason:'version',currentRevision:'2'});
+  const noChange=await post('save',wire(request(f,{serviceId:r.serviceId,expectedRevision:'2',payload:edit.payload})));assert.deepEqual(noChange.value,{state:'unchanged',serviceId:r.serviceId,currentRevision:'2'});
+ });
+});
+test('actual catalog HTTP rejects authority injection, duplicate keys and invalid CSRF without business writes',async()=>{
+ const f=await fixture(),r=request(f);await withHttp(f,async post=>{
+  const before=await businessFacts(f);
+  assert.equal((await post('save',{...wire(r),businessId:randomUUID()})).status,400);
+  const duplicate=JSON.stringify(wire(r)).replace('"schemaVersion":1','"schemaVersion":1,"schema\\u0056ersion":1');assert.equal((await post('save',duplicate)).status,400);
+  assert.equal((await post('save',wire(r),{'x-crest-csrf':randomBytes(32).toString('base64url')})).status,400);
+  assert.equal((await post('save',wire(r),{origin:'https://foreign.example.com'})).status,400);
+  assert(await businessFacts(f)===before,'rejected catalog requests must not change source, operations or audit');
+ });
+});
+test('actual catalog HTTP provider loss rejects a save without claiming the operation',async()=>{
+ const f=await fixture(),r=request(f);await withHttp(f,async post=>{
+  await client.query('DELETE FROM auth.sessions WHERE id=$1',[f.issued.evidence.provider.sessionId]);const before=await businessFacts(f),result=await post('save',wire(r));
+  assert.equal(result.status,503);assert.equal(result.value.error,'SERVICE_SAVE_NOT_SUBMITTED');assert(await businessFacts(f)===before,'revoked provider cannot claim a catalog save');
+ });
+});
+test('actual catalog HTTP remains closed without explicit candidate composition',async()=>{
+ const f=await fixture();await withHttp(f,async post=>{const before=await businessFacts(f);assert.equal((await post('context')).status,404);assert.equal((await post('save',wire(request(f)))).status,404);assert(await businessFacts(f)===before,'closed candidate HTTP must not change business facts');},false);
 });

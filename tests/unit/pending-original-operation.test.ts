@@ -5,10 +5,10 @@ import {originalOperationKinds} from '../../src/security/original-operation-refe
 import type {OriginalOperationKind} from '../../src/security/original-operation-reference';
 import {originalOperationFixture,retirementFixture,retiredOutcomeFixture} from '../support/original-operation-fixture';
 
-// Catalog wire/store connection is deliberately not enabled by this backend
-// proposal. Preserve the complete existing eleven-consumer matrix.
-const pendingKinds=originalOperationKinds.filter(kind=>kind!=='catalog.service.save');
-const keys:Partial<Record<OriginalOperationKind,string>>={
+// Every connected pending transport, including candidate catalog construction.
+// Runtime exposure still requires catalog migration/source/recovery adoption.
+const pendingKinds=originalOperationKinds;
+const keys:Record<OriginalOperationKind,string>={
  'business.rename':'crest.business-name.pending.v1',
  'crm.customer.save':'crest.customer.pending-reference.v1',
  'crm.address.save':'crest.address.pending-reference.v1',
@@ -19,7 +19,8 @@ const keys:Partial<Record<OriginalOperationKind,string>>={
  'crm.lead.state':'crest.lead-state.pending-reference.v1',
  'crm.lead.vehicle.save':'crest.lead-vehicle.pending-reference.v1',
  'crm.lead.address.save':'crest.lead-address.pending-reference.v1',
- 'crm.lead.convert':'crest.lead-conversion.pending-reference.v1'
+ 'crm.lead.convert':'crest.lead-conversion.pending-reference.v1',
+ 'catalog.service.save':'crest.service.pending-reference.v1'
 };
 const fetcher=vi.fn(),signal=()=>new AbortController().signal,proof=()=>({csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000});
 function response(value:unknown){return new Response(JSON.stringify(value),{headers:{'content-type':'application/json','cache-control':'private, no-store'}});}
@@ -88,4 +89,16 @@ it('fails closed for unsupported runtime command kinds',()=>{
  const f=fixture();expect(()=>openPendingOriginalOperation('financial.post' as OriginalOperationKind,f.storage,f.original.businessId)).toThrow(PendingOriginalOperationError);expect(f.storage.removeItem).not.toHaveBeenCalled();
 });
 
-it('does not expose catalog pending storage before its actual transport/store connection',()=>{const storage={getItem:vi.fn(()=>null),setItem:vi.fn(),removeItem:vi.fn()};expect(()=>openPendingOriginalOperation('catalog.service.save',storage,randomUUID())).toThrow(PendingOriginalOperationError);expect(storage.getItem).not.toHaveBeenCalled();expect(storage.removeItem).not.toHaveBeenCalled();});
+it('clears a catalog original only after its exact typed retained receipt',async()=>{
+ const f=fixture('catalog.service.save');if(f.original.commandType!=='catalog.service.save')throw new Error();
+ const ref=f.original.reference,value={state:'committed',operationId:ref.operationId,recoveryEpoch:ref.recoveryEpoch,receipt:{schemaVersion:1,businessId:f.original.businessId,serviceId:ref.serviceId,serviceRevision:(BigInt(ref.expectedRevision)+1n).toString(),contentVersionId:randomUUID(),contentSequence:'1',auditEventId:randomUUID(),contentAuditEventId:randomUUID()}};
+ fetcher.mockResolvedValue(response(value));expect(await f.target.reconcile(proof(),signal())).toBe('committed');expect(f.memory.has(f.key)).toBe(false);expect(fetcher).toHaveBeenCalledExactlyOnceWith('/api/business/services/operation',expect.any(Object));
+});
+it.each(['recorded','service','epoch','revision','abort','replace'])('retains the catalog original on insufficient or late evidence: %s',async which=>{
+ const f=fixture('catalog.service.save');if(f.original.commandType!=='catalog.service.save')throw new Error();
+ const ref=f.original.reference,value={state:'committed',operationId:ref.operationId,recoveryEpoch:ref.recoveryEpoch,receipt:{schemaVersion:1,businessId:f.original.businessId,serviceId:ref.serviceId,serviceRevision:'1',contentVersionId:randomUUID(),contentSequence:'1',auditEventId:randomUUID(),contentAuditEventId:randomUUID()}};
+ if(which==='service')value.receipt.serviceId=randomUUID();if(which==='epoch')value.recoveryEpoch=randomUUID();if(which==='revision')value.receipt.serviceRevision='2';
+ const controller=new AbortController();let resolve!:(v:Response)=>void;fetcher.mockImplementation(()=>new Promise<Response>(r=>{resolve=r;}));const pending=f.target.reconcile(proof(),controller.signal);
+ if(which==='abort')controller.abort();if(which==='replace')f.memory.set(f.key,JSON.stringify({...f.record,binding:randomBytes(32).toString('base64url')}));
+ resolve(response(which==='recorded'?{schemaVersion:1,state:'original_recorded',original:f.original}:value));await expect(pending).rejects.toThrow(PendingOriginalOperationError);expect(f.memory.has(f.key)).toBe(true);expect(f.storage.removeItem).not.toHaveBeenCalled();
+});
