@@ -122,9 +122,8 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
   .customer-values dd { margin-bottom:.75rem; }
 }
 @media (min-width:1100px) {
-  .workspace { display:grid; grid-template-columns:13rem minmax(0,1fr); grid-template-rows:auto auto 1fr; min-height:100vh; }
-  .workspace-header { grid-column:1/-1; }
-  .workspace-test-notice { grid-column:1/-1; }
+  .workspace { display:grid; grid-template-columns:13rem minmax(0,1fr); grid-template-rows:auto 1fr; min-height:100vh; }
+  .workspace-masthead { grid-column:1/-1; }
   .workspace-destinations { flex-direction:column; gap:.5rem; padding:1.5rem 1rem; border-bottom:0; border-right:1px solid var(--line); }
   .workspace-destinations a { border-bottom:0; border-left:3px solid transparent; border-radius:0 var(--radius) var(--radius) 0; }
   .workspace-destinations a[aria-current] { border-left-color:var(--gold-ink); background:var(--canvas); }
