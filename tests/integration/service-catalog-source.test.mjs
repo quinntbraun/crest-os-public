@@ -134,8 +134,9 @@ test('encrypted independent restore preserves all catalog source, receipts, audi
    // Never print dump contents, row values, connection strings or credentials.
    const destination=normalizedSchema(await postgresTool('pg_dump',restoredUrl,['--schema-only'])),before=sourceSchema.split('\n'),after=destination.split('\n');
    const index=before.findIndex((line,i)=>line!==after[i]);
-   const describe=line=>line===undefined?'missing':/^(GRANT|REVOKE) [A-Za-z0-9_ (),.;]+$/.test(line)?line:'line-sha256:'+hash(line);
-   throw new Error('SYNTHETIC_CATALOG_SCHEMA_REVIEW_REQUIRED:'+JSON.stringify({line:index,source:describe(before[index]),restored:describe(after[index]),sameLineMultiset:JSON.stringify([...before].sort())===JSON.stringify([...after].sort())}),{cause:error});
+   const describe=line=>line===undefined?'missing':line.replace(/'(?:''|[^'])*'|'.*$/g,"'<redacted literal>'").slice(0,512);
+   const object=before.slice(0,index+1).filter(line=>line.startsWith('-- Name:')).at(-1);
+   throw new Error('SYNTHETIC_CATALOG_SCHEMA_REVIEW_REQUIRED:'+JSON.stringify({line:index,object:describe(object),source:describe(before[index]),restored:describe(after[index]),sameLineMultiset:JSON.stringify([...before].sort())===JSON.stringify([...after].sort())}),{cause:error});
   }throw error;
  }restored=await connect(restoredUrl);
  assert.deepEqual(await inventory(restored),backup.manifest.rows);assert.deepEqual(await catalogEvidence(restored,a.business),prior);
