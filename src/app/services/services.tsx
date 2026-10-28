@@ -30,14 +30,14 @@ export function ServiceScreen(){
     <label>Find a service<input name="search" type="search" maxLength={200} defaultValue={view.search} key={view.search} disabled={view.busy}/></label>
     <label className="checkbox"><input name="inactive" type="checkbox" defaultChecked={view.includeInactive} key={String(view.includeInactive)} disabled={view.busy}/>Include inactive services</label><button className="secondary" disabled={view.busy}>Search</button>
    </form>
-   <ul className="customer-list" aria-label="Saved services">{view.rows.map(row=><li key={row.service.id}><button type="button" className="secondary" disabled={view.busy} onClick={()=>void open(row.service.id)}><strong>{row.content.name}</strong><span>{row.service.code} · {row.service.active?'Active':'Inactive'} · revision {row.service.version}</span></button></li>)}</ul>
+   <ul className="customer-list service-directory" aria-label="Saved services">{view.rows.map(row=><li key={row.service.id}><button type="button" className="secondary" disabled={view.busy} onClick={()=>void open(row.service.id)}><strong>{row.content.name}</strong><span>{row.service.code} · {row.service.active?'Active':'Inactive'} · revision {row.service.version}</span></button></li>)}</ul>
    {!view.rows.length&&<p>No services match this search. Add a service or change the search.</p>}
    {view.hasMore&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>{if(discard())void current.current?.query(view.search,view.includeInactive,true);}}>Next service page</button>}
    {draft&&<section aria-labelledby="service-editor-heading">
     <h2 id="service-editor-heading" tabIndex={-1} ref={heading}>{view.selected?'Edit service':'New service'}</h2>
     <p className="field-help">{dirty?'Unsaved changes stay only on this page.':view.selected?'Showing the saved service.':'New service; nothing has been saved.'} Leaving or hiding this page clears private details.</p>
     <form onSubmit={e=>{e.preventDefault();void current.current?.save();}}>
-     <fieldset disabled={view.busy||view.writesPaused}>
+     <fieldset className="service-fields" disabled={view.busy||view.writesPaused}>
       <label>Service code<input value={draft.code} maxLength={80} autoCapitalize="none" autoCorrect="off" spellCheck={false} readOnly={!!view.selected} onChange={e=>current.current?.edit({...draft,code:e.target.value})} required/><span className="field-help">A permanent unique code: lowercase letters, numbers, hyphens or underscores. It cannot change after saving.</span></label>
       <label>Service name<input value={draft.name} maxLength={200} onChange={e=>current.current?.edit({...draft,name:e.target.value})} required/></label>
       <label>What is included<textarea value={draft.inclusions} maxLength={8000} rows={4} onChange={e=>current.current?.edit({...draft,inclusions:e.target.value})} required/></label>
