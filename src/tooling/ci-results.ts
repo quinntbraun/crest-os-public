@@ -1,7 +1,8 @@
 const requiredJobs = ["database_foundation", "database_provider", "authentication"] as const;
 
 // GitHub skips dependent jobs by default, which can appear successful to branch
-// protection. The required job always runs and must reject every incomplete group.
+// protection. Unless the run is canceled, the required job runs even after
+// failed/skipped prerequisites and must reject every incomplete group.
 export function verifyCiResults(json: string | undefined): void {
   let needs: unknown;
   try {
