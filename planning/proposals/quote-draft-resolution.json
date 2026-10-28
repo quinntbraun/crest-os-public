@@ -1,0 +1,111 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "existingMigrationCount": 44,
+  "runtimeEnabled": false,
+  "nativeExecuted": false,
+  "sqlBytes": 10825,
+  "sqlSha256": "d5b38f87882c025755a7942d786946aad9d81e8d5ebfc083b5486d7d90a5ee24",
+  "requiredOriginalMigration": "20261026010000_original_operation_resolution.sql",
+  "requiredOriginalMigrationSha256": "9dd564dd3c4bf54e0fc2a08347e51a8a0f51250a448fd75a8950395075ceb281",
+  "requiredRegistered44Migration": "20261028010000_service_catalog.sql",
+  "requiredRegistered44MigrationSha256": "09a8ff9eeb415f879e56cdf5a43d74b0178e4b9d45c3efad806a16c621796729",
+  "beforeBodySha256": "e45d3e0aa06e3bc83c513b409567ae579970113311abba752058f4f2acf3bdd4",
+  "afterBodySha256": "c8caf7868d3b96aee4d0b07c41d82dd08801ee658e685354084ddcc806a82b47",
+  "existingFunctionBodies": [
+    {
+      "signature": "crest_private.original_operation_uuid(jsonb)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "language": "sql",
+      "bodySha256": "ec8d31108ca4387c2217d4d29e5d016938825802365afbda2e2667ea2a7557ee"
+    },
+    {
+      "signature": "crest_private.original_operation_version(jsonb,boolean)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "language": "plpgsql",
+      "bodySha256": "efe0ebe382ffed396dab47c3935c5389b15bc025c7d7b647bee8ee85213df741"
+    },
+    {
+      "signature": "crest_private.original_operation_reference_valid(jsonb)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "language": "plpgsql",
+      "bodySha256": "e45d3e0aa06e3bc83c513b409567ae579970113311abba752058f4f2acf3bdd4"
+    },
+    {
+      "signature": "crest_private.operation_retirement_digest(uuid,uuid,jsonb,text)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "language": "sql",
+      "bodySha256": "5359d819c2d454b3378d67fb3ff84d009b2d88f8a68675836666fd29ef66fbf5"
+    },
+    {
+      "signature": "crest_commands.authorize_operation_resolution_read(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid)",
+      "owner": "crest_session_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "language": "plpgsql",
+      "bodySha256": "bfde61feafbca626187eb4a50f52cecc8a902a0550bdaff3cf1050ebeaf7aea4"
+    },
+    {
+      "signature": "crest_commands.lock_operation_retirement_authority(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)",
+      "owner": "crest_session_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "language": "plpgsql",
+      "bodySha256": "a2201e2c378a47d11053dfef8297f70652eddf060fc8728c173730157fe19a1d"
+    },
+    {
+      "signature": "crest_commands.finish_operation_retirement_activity(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid)",
+      "owner": "crest_session_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "language": "plpgsql",
+      "bodySha256": "3b796c52c8e7ae4261e75ede6c06c41b36e997a53d5a1199829b8aa7c77fb0ab"
+    },
+    {
+      "signature": "crest_private.operation_retirement_result(uuid,uuid,jsonb)",
+      "owner": "crest_command_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "rowSecurity": false,
+      "language": "plpgsql",
+      "bodySha256": "da9672544c00bc815b105aae6e37b051dd5ab29594fb18ce31650de5c8f580fc"
+    },
+    {
+      "signature": "crest_commands.retire_original_operation(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,jsonb,text)",
+      "owner": "crest_command_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "language": "plpgsql",
+      "bodySha256": "7cebfed84d50d2f4fb5a61fbc83062e04bee58ea39528171abd5425287a88d60"
+    },
+    {
+      "signature": "crest_commands.lookup_original_operation_resolution(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,jsonb)",
+      "owner": "crest_command_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "language": "plpgsql",
+      "bodySha256": "52995ea9ef5188a6340f6ac90456dde6cac25a93662fbbddbe8d73e6e18959db"
+    }
+  ],
+  "commandType": "quote.draft.save",
+  "newGrant": false,
+  "httpRouteEnabled": false
+}

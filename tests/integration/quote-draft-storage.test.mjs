@@ -9,7 +9,7 @@ import {prepareQuoteContent} from '../../src/commercial/quote-content.ts';
 const sql=await readFile(new URL('../../planning/proposals/quote-draft-storage.sql',import.meta.url),'utf8');
 const pricing=await readFile(new URL('../../planning/proposals/quote-pricing.sql',import.meta.url),'utf8');
 const meta=JSON.parse(await readFile(new URL('../../planning/proposals/quote-draft-storage.json',import.meta.url),'utf8'));
-let sandbox,client,target,bootstrap,a,b;
+let sandbox,client,target,bootstrap,a,b,base44;
 const scalar=async(query,parameters=[])=> (await client.query(query,parameters)).rows[0].value;
 async function transaction(run){await client.query('BEGIN');try{const result=await run();await client.query('COMMIT');return result;}catch(error){await client.query('ROLLBACK');throw error;}}
 async function claim(f,type='quote.draft.save'){
@@ -59,11 +59,11 @@ async function refused(run,expected){const before=await evidence(a);assert.equal
 const auditFailure={code:'23514',message:'CREST_QUOTE_AUDIT_REQUIRED'},aggregateFailure={code:'23514',message:'CREST_QUOTE_AGGREGATE_CONFLICT'};
 before(async()=>{
  assert.equal(meta.registered,false);assert.equal(meta.runtimeEnabled,false);assert.equal(meta.existingMigrationCount,44);assert.equal(Buffer.byteLength(sql),meta.sqlBytes);assert.equal(createHash('sha256').update(sql).digest('hex'),meta.sqlSha256);
- sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
+ sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);base44=await sandbox.prefix(44);await sandbox.apply(target,base44);
  await transaction(()=>client.query(pricing));await transaction(()=>client.query(sql));
  // The harness refused all these roles before provisioning. Observe the newly
  // created closed quote role through the established ownership collector.
- await sandbox.apply(target);bootstrap=await scalar("SELECT id AS value FROM crest_private.actors WHERE system_key='security_bootstrap'");a=await state();b=await state();
+ await sandbox.apply(target,base44);bootstrap=await scalar("SELECT id AS value FROM crest_private.actors WHERE system_key='security_bootstrap'");a=await state();b=await state();
 },{timeout:240000});
 after(async()=>{await sandbox?.close();});
 test('three forced-RLS tables and private helpers stay closed to web, worker and export roles',async()=>{

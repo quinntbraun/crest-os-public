@@ -8,7 +8,7 @@ import {calculateQuote} from '../../src/commercial/quote-pricing.ts';
 
 const sql=await readFile(new URL('../../planning/proposals/quote-pricing.sql',import.meta.url),'utf8');
 const provenance=JSON.parse(await readFile(new URL('../../planning/proposals/quote-pricing.json',import.meta.url),'utf8'));
-let sandbox,client;
+let sandbox,client,base44;
 const line=(grossCents,patch={})=>({id:randomUUID(),grossCents,lineDiscount:null,documentDiscountEligible:true,complimentaryReason:null,...patch});
 const calculate=async(lines,discount=null)=>(await client.query('SELECT crest_private.calculate_quote_pricing($1::jsonb,$2::jsonb) AS value',[JSON.stringify(lines),JSON.stringify(discount)])).rows[0].value;
 const matching=async(lines,discount=null)=>{const expected=calculateQuote(lines,discount);assert.deepEqual(await calculate(lines,discount),expected);return expected;};
@@ -16,7 +16,7 @@ before(async()=>{
  assert.equal(provenance.registered,false);assert.equal(provenance.runtimeEnabled,false);assert.equal(provenance.existingMigrationCount,44);
  assert.equal(Buffer.byteLength(sql),provenance.sqlBytes);assert.equal(createHash('sha256').update(sql).digest('hex'),provenance.sqlSha256);
  sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);
- await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
+ await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);base44=await sandbox.prefix(44);await sandbox.apply(target,base44);
  await client.query('BEGIN');try{await client.query(sql);await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}
 },{timeout:240000});
 after(async()=>{await sandbox?.close();});

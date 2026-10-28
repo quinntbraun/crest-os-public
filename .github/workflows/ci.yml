@@ -61,6 +61,10 @@ jobs:
         run: npm run test:quote-pricing-proposal
       - name: Prove proposed typed Draft storage, exact audits and independent aggregate checks
         run: npm run test:quote-storage-proposal
+      - name: Prove trusted owner Draft saves, replay, concurrency and scoped history
+        run: npm run test:quote-commands-proposal
+      - name: Prove typed quote original-save review without weakening historical kinds
+        run: npm run test:quote-resolution-proposal
       - name: Install pinned recovery tooling
         run: node scripts/install-recovery-tools.mjs
       - name: Prove proposed catalog source CSV and independent encrypted recovery

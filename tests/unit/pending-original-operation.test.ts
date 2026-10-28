@@ -20,7 +20,8 @@ const keys:Record<OriginalOperationKind,string>={
  'crm.lead.vehicle.save':'crest.lead-vehicle.pending-reference.v1',
  'crm.lead.address.save':'crest.lead-address.pending-reference.v1',
  'crm.lead.convert':'crest.lead-conversion.pending-reference.v1',
- 'catalog.service.save':'crest.service.pending-reference.v1'
+ 'catalog.service.save':'crest.service.pending-reference.v1',
+ 'quote.draft.save':'crest.quote.pending-reference.v1'
 };
 const fetcher=vi.fn(),signal=()=>new AbortController().signal,proof=()=>({csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000});
 function response(value:unknown){return new Response(JSON.stringify(value),{headers:{'content-type':'application/json','cache-control':'private, no-store'}});}

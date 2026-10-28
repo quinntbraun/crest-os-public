@@ -1,0 +1,118 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "existingMigrationCount": 44,
+  "runtimeEnabled": false,
+  "nativeExecuted": false,
+  "sqlBytes": 60326,
+  "sqlSha256": "ccc70d6166274d830e0aaa4062912d6dc8a295b6f99c85f8a80c03c4e01f8a26",
+  "requiredSchemaSqlSha256": "10931d4249a4a4a720eb4a9919d6bc38f4d7061346717127f517bd23e71f0900",
+  "requiredPricingSqlSha256": "033ff0397702b783ac32578a3e8f010e8930efb8a7e197cca27865ee2bb5d2dc",
+  "existingFunctionBodies": [
+    {
+      "signature": "crest_private.quote_family_projection(crest.quote_families)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "e52360a7f1d1f2db24ddd11122876563d436cf1ad722d038aa9be0eeb0bc7e01"
+    },
+    {
+      "signature": "crest_private.quote_revision_projection(crest.quote_revisions)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "403998e14bcb7f79eaf6e4869bf0787711ce84855a89af58f465036866166895"
+    },
+    {
+      "signature": "crest_private.quote_item_projection(crest.quote_items)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "b04d429fde9e8d08381c5705ccea735649181731fa50cba51f7331043718aa1d"
+    },
+    {
+      "signature": "crest_private.reject_quote_history_change()",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "rowSecurity": false,
+      "bodySha256": "561eb0e11c186a935c72df0016ad0030db2a86962958b390866d8d9642728a0a"
+    },
+    {
+      "signature": "crest_private.validate_quote_family_change()",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "rowSecurity": false,
+      "bodySha256": "e71e1344d974341d24e615566bde20920dbc075246f9b3ea398cba30730f5825"
+    },
+    {
+      "signature": "crest_private.validate_quote_revision_change()",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "rowSecurity": false,
+      "bodySha256": "8a85fa2ec4309efffcfb6d96c7caaa5085393c49da0a808902caeaffa10ed444"
+    },
+    {
+      "signature": "crest_private.validate_quote_item_change()",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "rowSecurity": false,
+      "bodySha256": "d40743aacdfe4f1bbbd06659d7e26cbd48a92f7a65ffb0e192e277700a9c73be"
+    },
+    {
+      "signature": "crest_private.check_quote_audit()",
+      "owner": "crest_quote_integrity_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "e93aa14954d249192fa52a2da0b6a66d6f7d1dd566eac5cc9e04e029682caba3"
+    },
+    {
+      "signature": "crest_private.check_quote_aggregate()",
+      "owner": "crest_quote_integrity_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "90572fe90e63d466d0aec4d9529e9d63df974c97a091f78fa351e39a45ceed97"
+    },
+    {
+      "signature": "crest_private.quote_discount_cents(jsonb,numeric)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "ff13fa6fd1b102045953e137ef7af34ddfa5f9a8763757e8cd18f7b3618b67d0"
+    },
+    {
+      "signature": "crest_private.calculate_quote_pricing(jsonb,jsonb)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "2915d99f70eeb1f948567a7ea1c37d8741eb337a21b1d60fa0f19a3fc628868f"
+    },
+    {
+      "signature": "crest_commands.read_authorized_business_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid)",
+      "owner": "crest_session_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "614b87966124be9297a7658a86bc3ee84a29f19f381a80ca23ecf702ffa0e952"
+    },
+    {
+      "signature": "crest_commands.lock_mutation_authority(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,text,boolean)",
+      "owner": "crest_session_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "9b2d19abde943ad1353250275d1b3bf66b34b9ff5fbe1a6d16b73a0ef42cae35"
+    }
+  ]
+}

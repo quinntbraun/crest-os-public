@@ -1,7 +1,7 @@
 import {request as httpRequest} from 'node:http';
 import {describe,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn()}));
+const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn(),quotes:vi.fn()}));
 vi.mock('../../src/security/browser-session-flow.ts',()=>({createBrowserSessionFlow:()=>flow}));
 vi.mock('../../src/security/business-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/business-http.ts')>(),createBusinessHttp:()=>flow.business}));
 vi.mock('../../src/customer/customer-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-http.ts')>(),createCustomerHttp:()=>flow.customers}));
@@ -12,6 +12,7 @@ vi.mock('../../src/customer/lead-http.ts',async importOriginal=>({...await impor
 vi.mock('../../src/customer/lead-source-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/lead-source-http.ts')>(),createLeadSourceHttp:()=>flow.leadSources}));
 vi.mock('../../src/security/original-operation-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/original-operation-http.ts')>(),createOriginalOperationHttp:()=>flow.originalOperations}));
 vi.mock('../../src/commercial/service-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/service-http.ts')>(),createServiceHttp:()=>flow.services}));
+vi.mock('../../src/commercial/quote-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/quote-http.ts')>(),createQuoteHttp:()=>flow.quotes}));
 import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../../src/server/node-server.ts';
 import type {NodeConfiguration} from '../../src/server/node-server.ts';
 
@@ -26,6 +27,21 @@ it.each([false,true])('reserves catalog and encoded aliases with explicit synthe
  bindApplicationHandler(server,{origin:local,environment:'test',syntheticCatalog:enabled,business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
  try{for(const path of ['/api/business/services/list','/api/business/%73ervices/history']){const r=await fetch(local+path,{method:'POST',body:'{}'});expect(r.status).toBe(enabled?200:503);expect(r.headers.get('cache-control')).toContain('no-store');}expect(pages).not.toHaveBeenCalled();expect(handler).toHaveBeenCalledTimes(enabled?2:0);}
  finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+it('quote construction requires explicit test-only authentication and business composition',()=>{
+ for(const config of [{origin,environment:'production',syntheticQuotes:true},{origin,environment:'test',syntheticQuotes:true},{origin,environment:'test',syntheticQuotes:'yes'},{origin,environment:'test',syntheticQuotes:true,business:{businessId:'synthetic'}}]){
+  const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,config as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();
+ }
+});
+it.each([false,true])('reserves quote aliases and keeps its4MiB response limit independent: %s',async enabled=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();
+ const local=`http://127.0.0.1:${address.port}`,pages=vi.fn();flow.quotes.mockReset();flow.quotes.mockImplementation(async request=>new Response(request.url.endsWith('/oversize')?'x'.repeat(4194305):request.url.endsWith('/large')?'x'.repeat(4194304):JSON.stringify({synthetic:'private quote boundary'}),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',syntheticQuotes:enabled,business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{
+  for(const path of ['/api/business/quotes/list','/api/business/%71uotes/history']){const r=await fetch(local+path,{method:'POST',body:'{}'});expect(r.status).toBe(enabled?200:503);expect(r.headers.get('cache-control')).toContain('no-store');await r.text();}
+  if(enabled){const large=await fetch(local+'/api/business/quotes/large',{method:'POST',body:'{}'});expect((await large.text()).length).toBe(4194304);await expect(fetch(local+'/api/business/quotes/oversize',{method:'POST',body:'{}'})).rejects.toThrow();}
+  expect(pages).not.toHaveBeenCalled();expect(flow.quotes).toHaveBeenCalledTimes(enabled?4:0);
+ }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });
 async function withVehicleServer(enabled:boolean,work:(local:string,pages:ReturnType<typeof vi.fn>)=>Promise<void>){
   const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));

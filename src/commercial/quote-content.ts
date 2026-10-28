@@ -16,6 +16,18 @@ const identifier=(value:unknown):value is string=>customerUuid(value)&&value===v
 const optionalId=(value:unknown):value is string|null=>value===null||identifier(value);
 const discountCopy=(value:QuoteDiscount|null):QuoteDiscount|null=>value===null?null:Object.freeze(value.kind==='fixed'?{kind:'fixed',cents:value.cents}:{kind:'percent',rate:value.rate});
 const lineKeys=['id','vehicleId','jobWide','vehicleLabel','serviceVersionId','description','inclusions','exclusions','condition','grossCents','lineDiscount','documentDiscountEligible','complimentaryReason'] as const;
+export function parseQuoteContentLine(row:unknown):QuoteContentLine{
+ if(!exact(row,lineKeys)||!identifier(row.id)||!optionalId(row.vehicleId)||typeof row.jobWide!=='boolean'||!optionalId(row.serviceVersionId)
+  ||!text(row.description,200,true)||!text(row.inclusions,8000,false,true)||!text(row.exclusions,8000,false,true)
+  ||!(row.condition===null||initialConditionClasses.includes(row.condition as typeof initialConditionClasses[number])))return fail('line');
+ if(row.vehicleId===null?!row.jobWide||row.vehicleLabel!==null:row.jobWide||!text(row.vehicleLabel,500,true))return fail('scope');
+ let price:ReturnType<typeof calculateQuote>['lines'][number];
+ try{price=calculateQuote([{id:row.id,grossCents:row.grossCents,lineDiscount:row.lineDiscount,documentDiscountEligible:row.documentDiscountEligible,complimentaryReason:row.complimentaryReason} as QuotePriceLine],null).lines[0]!;}
+ catch(error){return fail(error instanceof QuotePricingError?error.code:'pricing');}
+ return Object.freeze({id:row.id,vehicleId:row.vehicleId,jobWide:row.jobWide,vehicleLabel:row.vehicleLabel as string|null,serviceVersionId:row.serviceVersionId,
+  description:row.description,inclusions:row.inclusions,exclusions:row.exclusions,condition:row.condition as QuoteContentLine['condition'],grossCents:price.grossCents,
+  lineDiscount:discountCopy(row.lineDiscount as QuoteDiscount|null),documentDiscountEligible:price.documentDiscountEligible,complimentaryReason:price.complimentaryReason});
+}
 
 /** BR04/05 complete review content, not a save, approval or sent offer.
  * Referential ownership/current versions must still be verified in the trusted
@@ -31,13 +43,7 @@ export function prepareQuoteContent(value:unknown){
  if(!exact(recipient,['customerId','leadId','displayName','phone','email'])||!optionalId(recipient.customerId)||!optionalId(recipient.leadId)||recipient.customerId===null&&recipient.leadId===null
   ||!text(recipient.displayName,200,true)||!optional(recipient.phone,512)||!optional(recipient.email,512))return fail('recipient');
  if(!Array.isArray(value.lines)||value.lines.length===0||value.lines.length>1000)return fail('lines');
- const rows=value.lines.map(row=>{
-  if(!exact(row,lineKeys)||!identifier(row.id)||!optionalId(row.vehicleId)||typeof row.jobWide!=='boolean'||!optionalId(row.serviceVersionId)
-   ||!text(row.description,200,true)||!text(row.inclusions,8000,false,true)||!text(row.exclusions,8000,false,true)
-   ||!(row.condition===null||initialConditionClasses.includes(row.condition as typeof initialConditionClasses[number])))return fail('line');
-  if(row.vehicleId===null?!row.jobWide||row.vehicleLabel!==null:row.jobWide||!text(row.vehicleLabel,500,true))return fail('scope');
-  return row;
- });
+ const rows=value.lines.map(parseQuoteContentLine);
  let pricing:ReturnType<typeof calculateQuote>;
  try{pricing=calculateQuote(rows.map(row=>({id:row.id,grossCents:row.grossCents,lineDiscount:row.lineDiscount,documentDiscountEligible:row.documentDiscountEligible,complimentaryReason:row.complimentaryReason})) as QuotePriceLine[],value.documentDiscount as QuoteDiscount|null);}
  catch(error){return fail(error instanceof QuotePricingError?error.code:'pricing');}
