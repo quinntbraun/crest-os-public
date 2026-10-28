@@ -13,9 +13,9 @@ import {SavedRecordDownload} from '../saved-record-download';
 import {draftFromVehicle} from '../../customer/vehicle-contract';
 import {draftChanged} from '../../client/draft-changed';
 
-function YearInput({value,change}:{value:number;change:(value:number)=>void}){
+function YearInput({value,change}:{value:number|null;change:(value:number|null)=>void}){
   const [text,setText]=useState(Number.isFinite(value)?String(value):'');
-  return <><label htmlFor="vehicle-year">Year value</label><input id="vehicle-year" name="year" type="text" autoComplete="off" maxLength={16} pattern="-?[0-9]+" value={text} onChange={event=>{setText(event.target.value);change(vehicleYearInput(event.target.value));}} required/><p className="field-help">Enter a whole year. Unusual years are allowed.</p></>;
+  return <><label htmlFor="vehicle-year">Year</label><input id="vehicle-year" name="year" type="text" inputMode="numeric" autoComplete="off" maxLength={16} pattern="-?[0-9]+" value={text} onChange={event=>{setText(event.target.value);change(event.target.value.length?vehicleYearInput(event.target.value):null);}}/><p className="field-help">Optional. Enter a whole year, or leave blank. Unusual years are allowed.</p></>;
 }
 function VehicleDetails({vehicle}:{vehicle:Vehicle}){
   const unknown=(value:string|number|null)=>value===null?'Not recorded':value===''?'Recorded as empty':String(value);
@@ -59,8 +59,7 @@ export function VehicleScreen({initialVehicleId=null}:{initialVehicleId?:string|
         <p className="field-help">Only the label is required. Unknown details stay unknown. Leaving or hiding this page clears private drafts; closing this tab can also lose its save reference.</p>
         <fieldset disabled={view.busy||view.writesPaused}><legend>Vehicle details</legend>
           <label htmlFor="vehicle-label">Vehicle label</label><input id="vehicle-label" name="vehicle-label" autoComplete="off" maxLength={400} value={view.draft.label} onChange={event=>edit('label',event.target.value)} required/><p className="field-help">{[...view.draft.label].length}/200 characters.</p>
-          <label className="trust"><input type="checkbox" checked={view.draft.year!==null} onChange={event=>edit('year',event.target.checked?NaN:null)}/>Record year</label>
-          {view.draft.year!==null&&<YearInput key={(view.selected?.id??'new')+':'+(view.selected?.version??'0')} value={view.draft.year} change={value=>edit('year',value)}/>}
+          <YearInput key={(view.selected?.id??'new')+':'+(view.selected?.version??'0')} value={view.draft.year} change={value=>edit('year',value)}/>
           <NullableText name="make" label="Make" limit={200} value={view.draft.make} disabled={view.busy} change={value=>edit('make',value)}/>
           <NullableText name="model" label="Model" limit={200} value={view.draft.model} disabled={view.busy} change={value=>edit('model',value)}/>
           <NullableText name="color" label="Color" limit={128} value={view.draft.color} disabled={view.busy} change={value=>edit('color',value)}/>

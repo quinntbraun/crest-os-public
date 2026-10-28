@@ -43,17 +43,14 @@ export function AddressScreen({customerId,assist:Assist}:{customerId:string|null
    {view.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void current.current?.query(view.search,view.includeArchived,true)}>Next address page</button>}
    <button type="button" disabled={view.busy||view.writesPaused} onClick={()=>current.current?.create()}>Add address</button>
    {view.draft&&<form onSubmit={save} aria-label="Address editor"><h2>{view.selected?'Edit address':'New address'}</h2>
-    <p className="field-help">Record what you know; unknown and explicitly empty values remain distinct. This record does not confirm a job location. Leaving or hiding the page clears private drafts; closing the tab may also lose its save reference.</p>
+    <p className="field-help">Record what you know; leave optional fields blank. This record does not confirm a job location. Leaving or hiding the page clears private drafts; closing the tab may also lose its save reference.</p>
     <fieldset disabled={view.busy||view.writesPaused}><legend>Location details</legend>
      {Assist&&<Assist draft={view.draft} change={next=>current.current?.edit(next)}/>}
      {optionalFields.map(([name,title,limit,multiline])=><NullableText key={name} name={'address-'+name} label={title} limit={limit} multiline={multiline} value={view.draft![name]} disabled={view.busy} change={v=>edit(name,v)}/>)}
      <details><summary>Coordinates and verification</summary>
-      <label className="trust"><input type="checkbox" checked={view.draft.latitude!==null||view.draft.longitude!==null} onChange={e=>current.current?.edit({...view.draft!,latitude:e.target.checked?'':null,longitude:e.target.checked?'':null})}/>Record coordinates</label>
-      {(view.draft.latitude!==null||view.draft.longitude!==null)&&<>
-       <label htmlFor="address-latitude">Latitude</label><input id="address-latitude" name="latitude" type="text" inputMode="text" autoComplete="off" maxLength={128} value={view.draft.latitude??''} onChange={e=>edit('latitude',e.target.value)}/>
-       <label htmlFor="address-longitude">Longitude</label><input id="address-longitude" name="longitude" type="text" inputMode="text" autoComplete="off" maxLength={128} value={view.draft.longitude??''} onChange={e=>edit('longitude',e.target.value)}/>
+       <label htmlFor="address-latitude">Latitude</label><input id="address-latitude" name="latitude" type="text" inputMode="text" autoComplete="off" maxLength={128} value={view.draft.latitude??''} onChange={e=>edit('latitude',e.target.value||null)}/>
+       <label htmlFor="address-longitude">Longitude</label><input id="address-longitude" name="longitude" type="text" inputMode="text" autoComplete="off" maxLength={128} value={view.draft.longitude??''} onChange={e=>edit('longitude',e.target.value||null)}/>
        <p className="field-help">Both values are required when recorded. Latitude: −90 to 90; longitude: −180 to 180. Decimal text is retained without rounding.</p>
-      </>}
       <NullableText name="address-geocode-source" label="Geocode source" limit={200} value={view.draft.geocodeSource} disabled={view.busy} change={v=>edit('geocodeSource',v)}/>
       <NullableText name="address-geocode-accuracy" label="Geocode accuracy" limit={200} value={view.draft.geocodeAccuracy} disabled={view.busy} change={v=>edit('geocodeAccuracy',v)}/>
       {view.draft.verifiedAt===null&&<button className="secondary" type="button" onClick={()=>edit('verifiedAt',new Date().toISOString().slice(0,-1)+'000Z')}>Mark location verified now</button>}
