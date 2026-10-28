@@ -21,6 +21,14 @@ it('retains all five reviewed quote bodies byte-for-byte in dependency order',()
  expect(adoption.proposalBodies.map(p=>p.path)).toEqual(['quote-pricing','quote-draft-storage','quote-draft-commands','quote-draft-source','quote-draft-resolution'].map(n=>'planning/proposals/'+n+'.sql'));let end=0;
  for(const [i,p]of adoption.proposalBodies.entries()){const original=bytes(p.path);expect(p.order).toBe(i+1);expect(p.offset).toBeGreaterThan(end);expect(p.bytes).toBe(original.length);expect(p.sha256).toBe(sha256(original));expect(sql.subarray(p.offset,p.offset+p.bytes)).toEqual(original);end=p.offset+p.bytes;}
 });
+it('restores the migration caller between transaction-local role scopes without granting schema owners role creation',()=>{
+ const sql=bytes('supabase/migrations/'+adoption.migration.file).toString();expect(adoption.resetCallerRoleBetweenBodies).toBe(true);
+ for(const [index,body]of adoption.proposalBodies.entries()){
+  const end=body.offset+body.bytes,next=adoption.proposalBodies[index+1]?.offset??Buffer.byteLength(sql);
+  expect(Buffer.from(sql).subarray(end,next).toString()).toContain('RESET ROLE;');
+ }
+ expect(sql).not.toMatch(/ALTER ROLE crest_schema_owner[^;]*CREATEROLE/);
+});
 it('keeps44 artifacts distinct and includes every current quote column without new credential exclusions',()=>{
  expect(sha256(bytes(adoption.previousCoverage.frozenFixture))).toBe(adoption.previousCoverage.sha256);expect(sha256(bytes(adoption.previousCompatibility.frozenFixture))).toBe(adoption.previousCompatibility.sha256);
  expect(priorCoverage.migrationCount).toBe(44);expect(priorCoverage.tables).toHaveLength(41);expect(priorCompatibility.schemaMaximum).toBe(44);expect(compatibility).toEqual({...priorCompatibility,schemaMaximum:45});

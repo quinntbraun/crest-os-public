@@ -8,6 +8,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {prepareQuoteContent} from '../../src/commercial/quote-content.ts';
+import {quoteDraftAuditBytes,quoteDraftAuditLimit} from '../../src/commercial/quote-draft-budget.ts';
 const sql=await readFile(new URL('../../planning/proposals/quote-draft-commands.sql',import.meta.url),'utf8'),meta=JSON.parse(await readFile(new URL('../../planning/proposals/quote-draft-commands.json',import.meta.url),'utf8'));
 const schema=await readFile(new URL('../../planning/proposals/quote-draft-storage.sql',import.meta.url),'utf8'),pricing=await readFile(new URL('../../planning/proposals/quote-pricing.sql',import.meta.url),'utf8');
 const issuer='https://auth.example.com/auth/v1';let sandbox,target,client,web,web2,login,bootstrap,a,b,prior,source,base44;
@@ -66,6 +67,16 @@ test('create/reload returns exact52500 cents, scoped receipt, history and genuin
 test('replay remains the original immutable result after later edits and session activity advances only for saves',async()=>{
  const q=request(a),first=await save(a,q),changed=edit(a,q,first.receipt,{internalNotes:'Later private assumption'}),second=await save(a,changed);assert.equal(second.receipt.revisionVersion,'2');assert.equal(second.receipt.itemAuditEventIds.length,0);assert.notEqual(second.receipt.contentHash,first.receipt.contentHash);const before=await evidence(a);assert.deepEqual(await save(a,q),first);assert.deepEqual(await lookup(a,q.operation),first);assert.equal(await evidence(a),before);
  const page=await history(a,q,{size:1});assert.equal(page.hasMore,true);assert.equal(page.history[0].after.internal_snapshot.notes,q.input.internalNotes);const next=await history(a,q,{after:'1'});assert.equal(next.history[0].after.internal_snapshot.notes,'Later private assumption');assert.equal(next.history[0].before.content_hash,first.receipt.contentHash);
+});
+test('editor audit budget equals PostgreSQL bytes and rejects a create-fit but oversized edit before UI submission',async()=>{
+ const q=request(a,{input:{...draft(a),title:'Synthetic 雪 quote "quoted" \\ path',internalNotes:'Private\nsecond line 😀'}}),saved=await save(a,q),before=(await history(a,q)).revision;
+ const bytes=operation=>scalar("SELECT octet_length(delta::text) AS value FROM crest_private.audit_events WHERE business_id=$1 AND operation_id=$2 AND entity_kind='quote_revisions'",[a.business,operation]);
+ assert.equal(quoteDraftAuditBytes(q.body,null),await bytes(q.operation));
+ const edited=edit(a,q,saved.receipt,{title:'Changed é 雪 title',internalNotes:'Private\tnew line\n😀 "quote" \\ backslash'});assert.equal((await save(a,edited)).state,'committed');assert.equal(quoteDraftAuditBytes(edited.body,before),await bytes(edited.operation));
+ const large=request(a,{input:{...draft(a),documentDiscount:null,lines:Array.from({length:15},()=>({...line('1'),inclusions:'S'.repeat(7200)}))}}),created=await save(a,large),largeBefore=(await history(a,large)).revision;
+ assert.equal(created.state,'committed');assert.equal(quoteDraftAuditBytes(large.body,null),await bytes(large.operation));assert(quoteDraftAuditBytes(large.body,null)<=quoteDraftAuditLimit);
+ const tooLarge=edit(a,large,created.receipt,{title:'Changed large quote'}),facts=await evidence(a);assert(quoteDraftAuditBytes(tooLarge.body,largeBefore)>quoteDraftAuditLimit);
+ await assert.rejects(save(a,tooLarge),error=>error.code==='23514'&&error.constraint==='audit_events_delta_check');assert.equal(await evidence(a),facts);assert.deepEqual(await lookup(a,tooLarge.operation),{state:'absent'});
 });
 test('unchanged content creates no claim, audit, line rewrite or foreground activity',async()=>{
  const q=request(a),first=await save(a,q),same=edit(a,q,first.receipt),before=await evidence(a),session=await activity(a);assert.deepEqual(await save(a,same),{state:'unchanged',familyId:q.family,familyVersion:'1',revisionId:q.revision,revisionVersion:'1',contentHash:first.receipt.contentHash});assert.equal(await evidence(a),before);assert.equal(await activity(a),session);assert.deepEqual(await lookup(a,same.operation),{state:'absent'});

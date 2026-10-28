@@ -110,6 +110,8 @@ END $calculate$;
 REVOKE ALL ON FUNCTION crest_private.quote_discount_cents(jsonb,numeric),crest_private.calculate_quote_pricing(jsonb,jsonb) FROM PUBLIC;
 
 -- END REVIEWED QUOTE 1
+-- Restore the migration caller before the next independently reviewed body.
+RESET ROLE;
 
 -- BEGIN REVIEWED QUOTE 2 quote-draft-storage
 -- Unregistered Draft-only construction over registered44 + quote-pricing.sql.
@@ -333,6 +335,8 @@ REVOKE CREATE ON SCHEMA crest_private FROM crest_quote_integrity_owner;
 REVOKE ALL ON FUNCTION crest_private.quote_family_projection(crest.quote_families),crest_private.quote_revision_projection(crest.quote_revisions),crest_private.quote_item_projection(crest.quote_items),crest_private.reject_quote_history_change(),crest_private.validate_quote_family_change(),crest_private.validate_quote_revision_change(),crest_private.validate_quote_item_change(),crest_private.check_quote_audit(),crest_private.check_quote_aggregate() FROM PUBLIC;
 
 -- END REVIEWED QUOTE 2
+-- Restore the migration caller before the next independently reviewed body.
+RESET ROLE;
 
 -- BEGIN REVIEWED QUOTE 3 quote-draft-commands
 -- Unregistered trusted Draft construction over registered44 + accepted quote
@@ -630,6 +634,8 @@ GRANT EXECUTE ON FUNCTION crest_commands.lock_mutation_authority(bytea,uuid,uuid
 GRANT EXECUTE ON FUNCTION crest_commands.save_quote_draft(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,uuid,uuid,bigint,bigint,jsonb),crest_commands.lookup_quote_draft_operation(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid),crest_commands.read_quote_draft_directory(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,text,uuid,integer),crest_commands.read_quote_draft_history(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,bigint,integer) TO crest_web;
 
 -- END REVIEWED QUOTE 3
+-- Restore the migration caller before the next independently reviewed body.
+RESET ROLE;
 
 -- BEGIN REVIEWED QUOTE 4 quote-draft-source
 -- Unregistered construction over registered44 plus the pinned quote proposals.
@@ -712,6 +718,8 @@ REVOKE ALL ON FUNCTION crest_commands.quote_draft_snapshot_context(uuid),crest_c
 GRANT EXECUTE ON FUNCTION crest_commands.quote_draft_snapshot_context(uuid),crest_commands.quote_draft_snapshot_families(uuid,text,uuid,integer),crest_commands.quote_draft_snapshot_revisions(uuid,text,uuid,integer),crest_commands.quote_draft_snapshot_items(uuid,text,uuid,integer) TO crest_export;
 
 -- END REVIEWED QUOTE 4
+-- Restore the migration caller before the next independently reviewed body.
+RESET ROLE;
 
 -- BEGIN REVIEWED QUOTE 5 quote-draft-resolution
 -- Unregistered quote Draft original-save review over registered44.
@@ -772,3 +780,5 @@ END $$;
 RESET ROLE;
 
 -- END REVIEWED QUOTE 5
+-- Restore the migration caller before the next independently reviewed body.
+RESET ROLE;

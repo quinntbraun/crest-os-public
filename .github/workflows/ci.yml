@@ -77,6 +77,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: npm run test:quote-source-proposal
       - name: Prove actual registered45 Draft upgrade, workflow and independent recovery
+        if: ${{ !cancelled() }}
         run: npm run test:quote-registered
       - name: Prove registered44 catalog upgrade, retained workflow and independent recovery
         run: npm run test:catalog-registered

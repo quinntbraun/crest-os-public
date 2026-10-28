@@ -6,8 +6,8 @@
   "productionActivation": "blocked",
   "migration": {
     "file": "20261028020000_quote_drafts.sql",
-    "sha256": "cb54d2b3d200c02814eac873a969b6cf1915dc5c39bf088a4b26e202fb362e06",
-    "bytes": 117714
+    "sha256": "896aa5031e92b7eb4c3d264b8ee7fa024e82e550da650c4c7eb5f06ab4e900fc",
+    "bytes": 118159
   },
   "previousRegistry": {
     "sha256": "6aa4291154f830fc6889128df1ed8f9ef163984c20b86ff33510412bd6e20305",
@@ -35,28 +35,28 @@
       "path": "planning/proposals/quote-draft-storage.sql",
       "sha256": "10931d4249a4a4a720eb4a9919d6bc38f4d7061346717127f517bd23e71f0900",
       "bytes": 27294,
-      "offset": 8009
+      "offset": 8098
     },
     {
       "order": 3,
       "path": "planning/proposals/quote-draft-commands.sql",
       "sha256": "ccc70d6166274d830e0aaa4062912d6dc8a295b6f99c85f8a80c03c4e01f8a26",
       "bytes": 60326,
-      "offset": 35376
+      "offset": 35554
     },
     {
       "order": 4,
       "path": "planning/proposals/quote-draft-source.sql",
       "sha256": "9286f04a6cb9557053a3927d81e207edbd944b120d0ee06e2cd83bf4a3b36ff1",
       "bytes": 10866,
-      "offset": 95773
+      "offset": 96040
     },
     {
       "order": 5,
       "path": "planning/proposals/quote-draft-resolution.sql",
       "sha256": "aafe158f33a42c8d18f4bb5e419eefa9e06506a49a346ffdeaa474ed4f07dbd8",
       "bytes": 10975,
-      "offset": 106714
+      "offset": 107070
     }
   ],
   "quoteTables": [
@@ -89,5 +89,6 @@
     "Genuine test-only quote editor requires browser acceptance; complete45 business-export/worker/admission remains required before its exposure and real-data/release claims",
     "Complete exact-source browser/build/container/artifact release"
   ],
-  "canonicalDecision": "ADR45"
+  "canonicalDecision": "ADR45",
+  "resetCallerRoleBetweenBodies": true
 }
