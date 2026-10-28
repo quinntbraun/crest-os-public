@@ -3,7 +3,7 @@
   "registered": false,
   "proposedMigration": null,
   "existingMigrationCount": 43,
-  "requiredSchemaSqlSha256": "463062296675b7f154552b9b227c537201d17c89d973d11b874e54aea2b68f70",
+  "requiredSchemaSqlSha256": "a801ba8995d64653dbcd4fc0551dd24e143033366cfc978dac03e7987d2d359c",
   "requiredCommandsSqlSha256": "d0c97c0bb15d4f4ab6ee2ce6a10dff9e04f6b5f22387aa4e0c9aa30e5307cdc0",
   "sqlSha256": "c5d94543d7fbe4dbb25ccf3c1a3f26351d322538ee848df0a5c3a7f82e313fd9",
   "scope": "service_catalog",
@@ -13,5 +13,6 @@
   "sourceColumns": 29,
   "profile": "crest.service-catalog.sources.v1",
   "completeCrestExport": false,
-  "completeBackup": false
+  "completeBackup": false,
+  "priorRequiredSchemaSqlSha256": "463062296675b7f154552b9b227c537201d17c89d973d11b874e54aea2b68f70"
 }

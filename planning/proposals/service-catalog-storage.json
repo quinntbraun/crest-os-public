@@ -6,9 +6,9 @@
   "sourceProjectionVersion": 43,
   "runtimeEnabled": false,
   "nativeExecuted": false,
-  "nativeCasesWritten": 29,
-  "sqlBytes": 19437,
-  "sqlSha256": "463062296675b7f154552b9b227c537201d17c89d973d11b874e54aea2b68f70",
+  "nativeCasesWritten": 30,
+  "sqlBytes": 19492,
+  "sqlSha256": "a801ba8995d64653dbcd4fc0551dd24e143033366cfc978dac03e7987d2d359c",
   "tables": {
     "crest.services": 13,
     "crest.service_versions": 16
@@ -33,5 +33,16 @@
   "priorNativeRun": 40592213936,
   "priorNativePassed": 28,
   "priorNativeFailed": 1,
-  "currentSourceNativeAccepted": false
+  "currentSourceNativeAccepted": false,
+  "amendments": [
+    {
+      "date": "2026-10-28",
+      "priorSqlBytes": 19437,
+      "priorSqlSha256": "463062296675b7f154552b9b227c537201d17c89d973d11b874e54aea2b68f70",
+      "reason": "PG17 dump/restore flattens parser-expanded BETWEEN conjunctions. Use the equivalent explicit lower/upper comparisons in the three service content length CHECKs so the original schema has the same stable expression tree. No limit or null behavior changes; strict recovery comparison retained.",
+      "evidenceSource": "3c3141237d96038dacc8fe3d0d7f1f5ec9aee14c",
+      "evidenceRun": 40655494499,
+      "registeredMigrationsChanged": false
+    }
+  ]
 }
