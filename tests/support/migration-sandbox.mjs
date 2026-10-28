@@ -9,9 +9,9 @@ import pg from "pg";
 import { applyTestMigrations } from "../../src/tooling/migration-coordinator.ts";
 import { testDatabaseConnection } from "../../src/tooling/test-database.ts";
 
-export async function migrationSandbox() {
+export async function migrationSandbox(testConnection=process.env.CREST_TEST_DATABASE_URL) {
   const root = fileURLToPath(new URL("../../",import.meta.url));
-  const base = testDatabaseConnection(process.env.CREST_ENV,process.env.CREST_TEST_DATABASE_URL);
+  const base = testDatabaseConnection(process.env.CREST_ENV,testConnection);
   const admin = new pg.Client({ connectionString:base,connectionTimeoutMillis:5000,statement_timeout:5000 });
   await admin.connect();
   const roles = ["crest_schema_owner","crest_command_owner","crest_web","crest_worker","crest_recovery","crest_auth_reader","crest_session_owner","crest_login_owner","crest_integrity_owner","crest_inventory_owner","crest_inventory","crest_cleanup_owner","crest_cleanup","crest_export_owner","crest_export","crest_identity_export_owner","crest_session_export_owner","crest_customer_owner","crest_customer_integrity_owner","crest_address_owner","crest_address_integrity_owner","crest_vehicle_owner","crest_vehicle_integrity_owner","crest_lead_source_owner","crest_lead_source_integrity_owner","crest_lead_owner","crest_lead_integrity_owner"];

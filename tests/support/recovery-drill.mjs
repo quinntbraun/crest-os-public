@@ -166,7 +166,7 @@ export async function recoveryCluster(){
       try{await probe.connect();admin=probe;break;}catch{await probe.end().catch(()=>{});await delay(250);}
     }
     assert(admin,'recovery cluster not ready');clients.push(admin);
-    return {async database(){
+    return {testDatabaseUrl:base+'/crest_test',async database(){
       const db=`crest_migrate_${randomBytes(8).toString('hex')}`;await admin.query(`CREATE DATABASE "${db}" TEMPLATE template0`);return base+'/'+db;
     },async close(){for(const c of clients)await c.end();if(owned){await run('docker',['rm','--force','--volumes',name]);owned=false;}}};
   }catch{for(const c of clients)await c.end().catch(()=>{});if(owned)await run('docker',['rm','--force','--volumes',name]);throw new Error('SYNTHETIC_RECOVERY_CLUSTER_FAILED');}
