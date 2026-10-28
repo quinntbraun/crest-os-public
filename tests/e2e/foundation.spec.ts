@@ -11,6 +11,7 @@ test('interrupted-save review remains private, accessible and closed by default'
 test("workspace honestly reports unconfigured access at desktop and 360px width", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Today", exact: true })).toBeVisible();
+  await expect(page.getByRole('link',{name:'Crest OS home',exact:true})).toHaveText('CREST OS');
   await expect(page.getByRole('status')).toContainText('Workspace access could not be verified');
   await expect(page.getByText('No current business information is shown until access is confirmed.')).toBeVisible();
   await expect(page.getByRole('link',{name:'Open customers',exact:true})).toHaveCount(0);

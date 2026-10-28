@@ -42,7 +42,7 @@ export function WorkspaceHome(){
         {view.followUps===null?<p>Follow-ups could not be loaded. Open leads to check; this does not mean there are none.</p>:<>
           {view.followUps.hasMore&&<p className="notice">Showing reminders from the first 50 leads. Open leads to review the remaining records.</p>}
           {reminders.length===0?<p>No follow-up dates recorded{view.followUps.hasMore?' in this page of leads':''}.</p>:<ul className="follow-up-list">{reminders.map(lead=><li key={lead.id}><strong>{lead.label}</strong><span>{new Date(lead.follow_up_at!).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'})}</span><span>{lead.state==='lost'?'Lost lead · follow-up retained':lead.state.replaceAll('_',' ')}</span></li>)}</ul>}
-          <p className="field-help">Recorded lead reminders, including lost leads. These are not booked jobs.</p>
+          <p className="field-help">Recorded lead reminders, including lost leads. These are not booked jobs. Times use this device’s timezone.</p>
         </>}
       </section>
       <section className="home-panel"><h2>Something didn’t save?</h2><p>Review an interrupted save before submitting the change again.</p><a href="/save-review">Review interrupted saves</a></section>

@@ -29,6 +29,10 @@ before(async()=>{
  context=(await post('/api/business/customers/context',{})).value;
 },{timeout:30000});
 after(async()=>{await app?.close();});
+test('sample review self-hosts only the two licensed fonts without exposing filesystem paths',async()=>{
+ for(const name of ['Regular','SemiBold']){const response=await fetch(app.origin+'/fonts/IBMPlexSans-'+name+'.woff2');assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'font/woff2');assert(response.headers.get('cache-control').includes('no-store'));assert(response.headers.get('content-security-policy').includes("font-src 'self'"));const bytes=Buffer.from(await response.arrayBuffer());assert.equal(bytes.subarray(0,4).toString(),'wOF2');assert(bytes.length<131072);}
+ for(const path of ['/fonts/unknown.woff2','/fonts/%2e%2e/.local/owner-review/preserved-sample.json','/fonts/IBMPlexSans-Regular.woff2?file=.env'])assert.equal((await fetch(app.origin+path)).status,404);
+});
 const customer=(label='Test customer (sample)')=>({schemaVersion:1,operationId:randomUUID(),customerId:randomUUID(),expectedVersion:'0',recoveryEpoch:context.recoveryEpoch,displayName:label,phone:null,email:null,contactPreference:null,outreachOptOut:false,notes:null,customerSince:null,archived:false,archiveReason:null});
 test('sample HTTP save/reopen/edit preserves exact receipts and refuses stale or conflicting originals',async()=>{
  const original=customer(),first=await post('/api/business/customers/save',original);assert.equal(first.status,200);assert.equal(first.value.receipt.customerVersion,'1');

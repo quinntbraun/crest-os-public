@@ -10,9 +10,10 @@ import {join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import pg from 'pg';
 import {AuthClient} from '@supabase/auth-js';
-import {exportJWK,generateKeyPair,importJWK,SignJWT} from 'jose';
+import {exportJWK,generateKeyPair,SignJWT} from 'jose';
 import {URI} from 'otpauth';
 import {applySyntheticMigrations} from './synthetic-migrations.mjs';
+import {importSyntheticSigningKey} from './synthetic-workspace-key.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url)),directory=join(root,'.local/synthetic-workspace'),statePath=join(directory,'state.json');
 const origin='https://127.0.0.1:4319',issuer='http://127.0.0.1:54328/auth/v1';
@@ -77,7 +78,7 @@ try{
    docker(['create','--name',state.authContainer,'--label',`crest.synthetic-workspace=${id}`,'--network',`container:${state.databaseContainer}`,'--read-only','--tmpfs','/tmp','--cap-drop','ALL','--security-opt','no-new-privileges','--log-driver','none',...Object.keys(authEnv).flatMap(key=>['--env',key]),pins.testAuthImage,'auth','serve'],authEnv);
    stage='provider startup';
    docker(['start',state.authContainer]);await authHealthy();server=await bridge();
-   const signingKey=await importJWK(state.jwk,'ES256');
+   const signingKey=await importSyntheticSigningKey(state.jwk);
    const jwt=await new SignJWT({role:'service_role',aud:'authenticated',iss:issuer}).setProtectedHeader({alg:'ES256',kid:state.jwk.kid,typ:'JWT'}).setIssuedAt().setExpirationTime('5m').sign(signingKey);
    stage='synthetic owner enrollment';
    const adminSdk=client(jwt),sdk=client();await adminSdk.initialize();await sdk.initialize();

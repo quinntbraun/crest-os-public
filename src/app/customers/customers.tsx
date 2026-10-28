@@ -1,41 +1,50 @@
 'use client';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent,ComponentType} from 'react';
-import {createCustomerEditorController,initialCustomerEditorView} from '../../client/customer-editor-controller';
+import {createCustomerEditorController,initialCustomerEditorView,emptyCustomerDraft} from '../../client/customer-editor-controller';
 import {createPendingCustomerStore} from '../../client/pending-customer-edit';
 import {NullableText} from './nullable-text';
 import {phonePresentation} from '../../client/phone-presentation';
 import type {Customer,CustomerDraft} from '../../customer/customer-contract';
 import {SavedRecordDownload} from '../saved-record-download';
+import {draftFromCustomer} from '../../customer/customer-contract';
+import {draftChanged} from '../../client/draft-changed';
 
 function CustomerDetails({customer}:{customer:Customer}){
   const unknown=(value:string|null)=>value===null?'Not recorded':value===''?'Recorded as empty':value;
   return <dl className="customer-values"><dt>Name</dt><dd>{customer.display_name}</dd><dt>Phone</dt><dd>{unknown(customer.phone_raw)}</dd><dt>Email</dt><dd>{unknown(customer.email_raw)}</dd><dt>Contact preference</dt><dd>{unknown(customer.contact_preference)}</dd><dt>Outreach</dt><dd>{customer.outreach_opt_out?'Opted out':'Not opted out'}</dd><dt>Customer since</dt><dd>{unknown(customer.customer_since)}</dd><dt>Notes</dt><dd>{unknown(customer.notes)}</dd><dt>Status</dt><dd>{customer.archived_at===null?'Active':'Archived: '+customer.archived_reason}</dd></dl>;
 }
 export function CustomerScreen({related:Related}:{related?:ComponentType<{customerId:string}>}={}){
-  const [view,setView]=useState(initialCustomerEditorView),current=useRef<ReturnType<typeof createCustomerEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null);
+  const [view,setView]=useState(initialCustomerEditorView),current=useRef<ReturnType<typeof createCustomerEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null),heading=useRef<HTMLHeadingElement>(null);
+  const dirty=draftChanged(view.draft,view.selected?draftFromCustomer(view.selected):emptyCustomerDraft);
+  const focusRequest=useRef<{controller:NonNullable<typeof current.current>;id:string|null}|null>(null),editorVisible=view.draft!==null,selectedId=view.selected?.id??null;
+  useLayoutEffect(()=>{const requested=focusRequest.current;if(!requested||view.busy)return;if(current.current===requested.controller&&view.phase==='ready'&&editorVisible&&selectedId===requested.id)heading.current?.focus();focusRequest.current=null;},[view,editorVisible,selectedId]);
   useEffect(()=>{
     const controller=createCustomerEditorController({store:createPendingCustomerStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});current.current=controller;void controller.load();
     const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
     document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
     return ()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
   },[]);
-  useEffect(()=>{if(!view.canSave&&view.phase!=='pending'&&!view.busy)return;const leaving=(event:BeforeUnloadEvent)=>{event.preventDefault();};window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[view.canSave,view.phase,view.busy]);
+  useEffect(()=>{if(!dirty&&view.phase!=='pending'&&!view.busy)return;const leaving=(event:BeforeUnloadEvent)=>{event.preventDefault();};window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[dirty,view.phase,view.busy]);
+  function discardAllowed(){const state=current.current?.view();return !state||!draftChanged(state.draft,state.selected?draftFromCustomer(state.selected):emptyCustomerDraft)||window.confirm('Discard your unsaved customer changes? Choose Cancel to keep editing.');}
+  async function open(id:string){const controller=current.current;if(!controller||!discardAllowed())return;focusRequest.current={controller,id};await controller.open(id);}
+  function create(){const controller=current.current;if(!controller||!discardAllowed())return;focusRequest.current={controller,id:null};controller.create();}
+  function query(search:string,archived:boolean,more=false){if(discardAllowed())void current.current?.query(search,archived,more);}
   async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory') {const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
   function edit<K extends keyof CustomerDraft>(key:K,value:CustomerDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
   function submit(event:FormEvent){event.preventDefault();void action('save');}
-  function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const data=new FormData(event.currentTarget);void current.current?.query(String(data.get('search')??''),data.get('archived')==='on');}
+  function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const data=new FormData(event.currentTarget);query(String(data.get('search')??''),data.get('archived')==='on');}
   return <section aria-label="Customer directory" aria-busy={view.busy}>
     <p ref={status} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
     {view.phase==='ready'&&<>
       {view.writesPaused&&<p className="notice">Customer changes are paused. You can review current records and history.</p>}
       <form onSubmit={search} aria-label="Search customers"><label htmlFor="customer-search">Customer search</label><input id="customer-search" name="search" type="search" autoComplete="off" maxLength={400} defaultValue={view.search} disabled={view.busy}/><label className="trust"><input name="archived" type="checkbox" defaultChecked={view.includeArchived} disabled={view.busy}/>Include archived customers</label><button className="secondary" type="submit" disabled={view.busy}>Search customers</button></form>
-      <p className="field-help">Search names, email or phone text. Shared contact details do not merge customers. Searching or opening another record discards an unsaved draft.</p>
-      <ul className="customer-list">{view.rows.map(row=><li key={row.id}><button type="button" className="secondary" disabled={view.busy} onClick={()=>void current.current?.open(row.id)}>{row.display_name}{row.archived_at!==null?' — archived':''}</button><p className="contact-summary">{[row.phone_raw===null?null:phonePresentation(row.phone_raw),row.email_raw].filter(value=>value!==null).join(' · ')||'Contact details not recorded'}</p></li>)}</ul>
+      <p className="field-help">Search names, email or phone text. Shared contact details do not merge customers. You’ll be asked before a search or record change discards unsaved edits.</p>
+      <ul className="customer-list">{view.rows.map(row=><li key={row.id}><button type="button" className="secondary" disabled={view.busy} onClick={()=>void open(row.id)}>{row.display_name}{row.archived_at!==null?' — archived':''}</button><p className="contact-summary">{[row.phone_raw===null?null:phonePresentation(row.phone_raw),row.email_raw].filter(value=>value!==null).join(' · ')||'Contact details not recorded'}</p></li>)}</ul>
       {view.rows.length===0&&<p>No customers found on this page.</p>}
-      {view.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void current.current?.query(view.search,view.includeArchived,true)}>Next customer page</button>}
-      <button type="button" disabled={view.busy||view.writesPaused} onClick={()=>current.current?.create()}>Add customer</button>
-      {view.draft&&<form onSubmit={submit} aria-label="Customer editor"><h2>{view.selected?'Edit customer':'New customer'}</h2>
+      {view.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>query(view.search,view.includeArchived,true)}>Next customer page</button>}
+      <button type="button" disabled={view.busy||view.writesPaused} onClick={create}>Add customer</button>
+      {view.draft&&<form onSubmit={submit} aria-label="Customer editor"><h2 ref={heading} tabIndex={-1} className="editor-heading">{view.selected?'Edit customer':'New customer'}</h2>
         <p className="field-help">Name is required. Phone and email are optional. Unsaved changes clear when you leave or hide this page.</p>
         <fieldset disabled={view.busy||view.writesPaused}><legend>Customer details</legend><label htmlFor="customer-name">Customer name</label><input id="customer-name" name="customer-name" autoComplete="off" maxLength={400} value={view.draft.displayName} onChange={event=>edit('displayName',event.target.value)} required/><p className="field-help">{[...view.draft.displayName].length}/200 characters.</p>
           <NullableText name="phone" label="Phone" limit={512} value={view.draft.phone} disabled={view.busy} change={value=>edit('phone',value)}/>
