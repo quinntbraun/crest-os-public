@@ -9,6 +9,8 @@ import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
+
+
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' complete signed-in customer / vehicle workspace journey',async()=>{
  const f=await sourceExportBrowserFixture({product:true,workspace:true});let browser;
  try{
@@ -61,3 +63,31 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await context.close();
  }finally{await browser?.close();await f.close();}
 });
+
+// Independent fixtures keep this contact-review acceptance out of the original
+// journey's admission budget and preserve its existing scope unchanged.
+async function sharedContactJourney(name,engine){
+ const f=await sourceExportBrowserFixture({product:true,workspace:true});let browser;
+ try{
+  browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:360,height:780}}),page=await context.newPage();
+  await page.goto(f.origin+'/sign-in');const credentials=f.credentials();await page.getByLabel('Email',{exact:true}).fill(credentials.email);await page.getByLabel('Password',{exact:true}).fill(credentials.password);await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
+  const existing='Synthetic archived household '+name;
+  const seed=await page.evaluate(async label=>{
+   const post=async(path,body,csrf)=>{const r=await fetch('/api/'+path,{method:'POST',headers:{'content-type':'application/json',...csrf?{'x-crest-csrf':csrf}:{}},body:JSON.stringify(body)});if(r.status!==200)throw Error('SYNTHETIC_CONTACT_SETUP_FAILED');return r.json();};
+   const p=await post('auth/session',{}),c=await post('business/customers/context',{},p.csrfToken),customerId=crypto.randomUUID();
+   await post('business/customers/save',{schemaVersion:1,operationId:crypto.randomUUID(),customerId,expectedVersion:'0',recoveryEpoch:c.recoveryEpoch,displayName:label,phone:'(317) 555-0123',email:'Household@Example.com',contactPreference:null,outreachOptOut:true,notes:'Synthetic retained source',customerSince:null,archived:true,archiveReason:'Synthetic retained archive'},p.csrfToken);return customerId;
+  },existing);
+  const count=async()=>Number((await f.client.query('SELECT count(*) AS n FROM crest.customers WHERE business_id=$1',[f.business])).rows[0].n);
+  await page.goto(f.origin+'/customers');await page.getByRole('button',{name:'Add customer',exact:true}).click();await page.getByLabel('Customer name',{exact:true}).fill('Synthetic phone household member '+name);await page.getByLabel('Phone value',{exact:true}).fill('3175550123');
+  await page.getByRole('button',{name:'Save customer',exact:true}).click();const review=page.getByRole('region',{name:'Shared contact review',exact:true});await expect(review).toBeVisible();await expect(review.getByRole('button',{name:'Review '+existing+' — archived',exact:true})).toBeVisible();await expect(review).toContainText('Phone matches');assert.equal(await count(),1);assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.customer.pending-reference.v1')),null);
+  page.once('dialog',dialog=>{assert.equal(dialog.type(),'confirm');void dialog.dismiss();});await review.getByRole('button',{name:'Review '+existing+' — archived',exact:true}).click();await expect(page.getByLabel('Customer name',{exact:true})).toHaveValue('Synthetic phone household member '+name);assert.equal(await count(),1);
+  for(const width of [360,390,768,1440]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);}
+  await page.getByRole('button',{name:'Save as separate customer',exact:true}).click();await expect(page.getByRole('status')).toContainText('Customer saved');assert.equal(await count(),2);
+  await page.getByRole('button',{name:'Load current customers',exact:true}).click();await page.getByRole('button',{name:'Add customer',exact:true}).click();await page.getByLabel('Customer name',{exact:true}).fill('Synthetic email household member '+name);await page.getByLabel('Email value',{exact:true}).fill('Household@Example.com');await page.getByRole('button',{name:'Save customer',exact:true}).click();await expect(review).toContainText('Email search result');await expect(review.getByText('Phone matches',{exact:true})).toHaveCount(0);assert.equal(await count(),2);
+  await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide')));await expect(review).toHaveCount(0);await expect(page.getByLabel('Customer name',{exact:true})).toHaveCount(0);assert.equal(await count(),2);assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.customer.pending-reference.v1')),null);
+  await page.getByRole('button',{name:'Load current customers',exact:true}).click();await page.getByRole('button',{name:'Add customer',exact:true}).click();await page.getByLabel('Customer name',{exact:true}).fill('Synthetic email household member '+name);await page.getByLabel('Email value',{exact:true}).fill('Household@Example.com');await page.getByRole('button',{name:'Save customer',exact:true}).click();await expect(review).toBeVisible();await page.getByRole('button',{name:'Save as separate customer',exact:true}).click();await expect(page.getByRole('status')).toContainText('Customer saved');assert.equal(await count(),3);
+  const retained=(await f.client.query('SELECT display_name,phone_raw,email_raw,notes,archived_reason,version::text FROM crest.customers WHERE business_id=$1 AND id=$2',[f.business,seed])).rows[0];assert.deepEqual(retained,{display_name:existing,phone_raw:'(317) 555-0123',email_raw:'Household@Example.com',notes:'Synthetic retained source',archived_reason:'Synthetic retained archive',version:'1'});
+  await context.close();
+ }finally{try{await browser?.close();}finally{await f.close();}}
+}
+for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' shared phone/email prompts review and preserves distinct household records',()=>sharedContactJourney(name,engine));
