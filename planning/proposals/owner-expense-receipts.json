@@ -57,5 +57,11 @@
   "independentDatabaseRestoreProven": false,
   "receiptByteArchiveComponentProven": true,
   "productionWorkerComposed": false,
-  "genuineIntegratedBrowserProven": false
+  "genuineIntegratedBrowserProven": false,
+  "constructedDatabaseAndReceiptRestoreProven": true,
+  "constructedRestoreBases": [
+    45,
+    46
+  ],
+  "registered49RestoreProven": false
 }

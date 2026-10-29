@@ -51,7 +51,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-fund
       - run: node scripts/install-tools.mjs
       - run: node scripts/install-recovery-tools.mjs
-      - run: node --conditions=react-server --test --test-concurrency=1 tests/integration/owner-expenses.test.mjs tests/integration/owner-expenses-http.test.mjs tests/integration/owner-expenses-receipts.test.mjs tests/integration/owner-expenses-receipt-auth.test.mjs tests/integration/owner-expenses-receipt-http.test.mjs tests/integration/owner-expenses-receipt-objects.test.mjs tests/integration/owner-expenses-receipt-recovery.test.mjs
+      - run: node --conditions=react-server --test --test-concurrency=1 tests/integration/owner-expenses.test.mjs tests/integration/owner-expenses-http.test.mjs tests/integration/owner-expenses-receipts.test.mjs tests/integration/owner-expenses-receipt-auth.test.mjs tests/integration/owner-expenses-receipt-http.test.mjs tests/integration/owner-expenses-receipt-objects.test.mjs tests/integration/owner-expenses-receipt-recovery.test.mjs tests/integration/owner-expenses-combined-recovery.test.mjs tests/integration/owner-expenses-production-gates.test.mjs
       - run: npm exec vitest run tests/unit/expense-contract.test.ts tests/unit/expense-receipts.test.ts
       - run: npx playwright install --with-deps chromium webkit
       - run: node --test tests/integration/owner-expenses-layout.test.mjs
