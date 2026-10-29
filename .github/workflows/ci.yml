@@ -303,6 +303,8 @@ jobs:
           npm run test:image-validation
           npm run test:pdf-validation
           npm run test:heic-validation
+      - name: Install pinned recovery tools before appointment restore proof
+        run: node scripts/install-recovery-tools.mjs
       - name: Prove registered47 appointment proposals and independent restore
         run: npm run test:appointment-registered
       - name: Preserve historical appointment storage and command acceptance
