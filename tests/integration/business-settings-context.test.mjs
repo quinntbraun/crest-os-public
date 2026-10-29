@@ -1,6 +1,7 @@
 // DB invariants use synthetic provider rows; real SDK/JWT composition is also
 // required in real-auth.test.mjs. These rows alone are not authentication proof.
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {randomBytes,randomUUID,createHash} from 'node:crypto';
 import {before,after,test} from 'node:test';
 import {setTimeout as delay} from 'node:timers/promises';
@@ -52,7 +53,7 @@ before(async()=>{
 });
 after(async()=>{await web?.end();if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();});
 test('schema14/15 upgrades preserve prior receipts and genuine committed source/session/audit/history',async()=>{
-  assert.equal(prior.history.length,14);assert.equal(previous.history.length,15);assert.equal(receipt.history.length,46);
+  assert.equal(prior.history.length,14);assert.equal(previous.history.length,15);const currentRegistry=JSON.parse(await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url),'utf8'));assert.deepEqual(receipt.registry,currentRegistry);assert.equal(receipt.history.length,currentRegistry.migrations.length);
   assert.deepEqual(previous.history.slice(0,14),prior.history);assert.deepEqual(receipt.history.slice(0,15),previous.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);
   assert.equal(await evidence(legacy),retained);assert.equal((await read(legacy)).rows[0].result.legalName,'Retained synthetic name');
   const result=(await web.query('SELECT crest_commands.lookup_business_name_operation($1,$2,$3,$4,$5,$6,$7,$8,$9) AS result',[...parameters(legacy),operation])).rows[0].result;

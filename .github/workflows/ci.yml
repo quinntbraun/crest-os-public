@@ -339,6 +339,8 @@ jobs:
           path: |
             .local/review/settings-*.png
             .local/review/workspace-*.png
+            .local/review/quote-*.png
+            .local/review/appointment-*.png
           include-hidden-files: true
           retention-days: 3
           if-no-files-found: error
