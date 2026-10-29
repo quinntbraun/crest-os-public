@@ -1,0 +1,30 @@
+# Nginx location-context fragment, NOT a complete public ingress configuration.
+# Do not enable before the Render-edge HTTP trust boundary and header provenance
+# are reviewed. This fragment only verifies the proxy -> private Node TLS hop.
+# It does not establish confidentiality of Render edge -> public proxy HTTP.
+proxy_pass https://crest_node_private;
+proxy_ssl_verify on;
+proxy_ssl_verify_depth 2;
+proxy_ssl_trusted_certificate /run/crest/node-upstream-ca.pem;
+proxy_ssl_server_name on;
+proxy_ssl_name node.crest.internal.invalid;
+proxy_ssl_protocols TLSv1.2 TLSv1.3;
+proxy_set_header Host app.crest.example.invalid;
+# These deliberately unpopulated variables are NOT a forwarded-header algorithm.
+# The ingress owner must supply one validated client address and review exact
+# peer IP resolution/redeploy behavior. Never trust the leftmost caller XFF or '*'.
+proxy_set_header X-Forwarded-For $crest_verified_client_address;
+proxy_set_header X-Forwarded-Proto https;
+proxy_set_header Connection "";
+# No transparent request replay or private response spooling/caching at this hop.
+proxy_http_version 1.1;
+proxy_next_upstream off;
+proxy_cache off;
+proxy_buffering off;
+proxy_request_buffering off;
+proxy_max_temp_file_size 0;
+access_log off;
+proxy_connect_timeout 5s;
+proxy_read_timeout 45s;
+# Private Node ingress must pin only the reviewed proxy instance IPs (1..16)
+# and reject plaintext, wrong Host, unknown peers and ambiguous headers.

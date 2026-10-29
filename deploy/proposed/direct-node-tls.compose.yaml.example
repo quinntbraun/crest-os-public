@@ -1,0 +1,38 @@
+# Review-only draft. No build/provision command. Production entrypoint is unfinished.
+# Requires explicit owner approval, admitted release and private runtime configuration.
+services:
+  app:
+    image: ${CREST_RELEASE_IMAGE:?Set the reviewed immutable image digest}
+    # Contract proposed for the bootstrap owner; this file does not exist yet.
+    command: [node, server/production.mjs]
+    user: node
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    init: true
+    restart: unless-stopped
+    ports: ["443:8443"]
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+    volumes:
+      - type: bind
+        source: ${CREST_PRIVATE_CONFIG_DIRECTORY:?Private reviewed runtime configuration required}
+        target: /run/crest
+        read_only: true
+    tmpfs:
+      - /tmp:size=67108864,mode=1777
+    # Initial benchmark ceiling, not certified capacity; separate worker budget needed.
+    mem_limit: 768m
+    cpus: 0.75
+    pids_limit: 128
+    # Proposed command must be implemented with the reviewed bootstrap. Never use
+    # insecure TLS or a successful setup-shell response as production readiness.
+    healthcheck:
+      test: [CMD, node, server/production-readiness.mjs]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+# No database, public object server, Docker socket, vault key or receipt worker
+# is mounted into this web service. Worker/backup composition remains separately owned.
