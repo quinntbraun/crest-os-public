@@ -9,6 +9,9 @@ import {originalOperationFixture,retirementFixture,retiredOutcomeFixture} from '
 // Runtime exposure still requires catalog migration/source/recovery adoption.
 const pendingKinds=originalOperationKinds;
 const keys:Record<OriginalOperationKind,string>={
+ 'bookkeeping.expense.save':'crest.expense.pending-reference.v1',
+ 'bookkeeping.receipt.reserve':'crest.receipt.pending-reference.v1',
+ 'bookkeeping.receipt.publish':'crest.receipt.pending-reference.v1',
  'operations.appointment_hold.save':'crest.appointment-hold.pending-reference.v1',
  'business.rename':'crest.business-name.pending.v1',
  'crm.customer.save':'crest.customer.pending-reference.v1',
@@ -31,6 +34,7 @@ const keys:Record<OriginalOperationKind,string>={
 };
 const fetcher=vi.fn(),signal=()=>new AbortController().signal,proof=()=>({csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000});
 function response(value:unknown){return new Response(JSON.stringify(value),{headers:{'content-type':'application/json','cache-control':'private, no-store'}});}
+function contextResponse(businessId:string,binding=randomBytes(32).toString('base64url')){return new Response(JSON.stringify({businessId,recoveryEpoch:null,writeState:'paused'}),{headers:{'content-type':'application/json','cache-control':'private, no-store','x-crest-edit-binding':binding}});}
 function fixture(kind:OriginalOperationKind='crm.customer.save'){
  const original=originalOperationFixture(kind),binding=randomBytes(32).toString('base64url'),key=keys[kind]!;
  const reference=original.commandType==='quote.review.submit'||original.commandType==='quote.review.approve'?{...original.reference,action:original.commandType==='quote.review.submit'?'submit':'approve',approvalId:original.commandType==='quote.review.approve'?original.reference.approvalId:null}:original.commandType==='quote.manual.send'||original.commandType==='quote.confirmation.accept'?{...original.reference,action:original.commandType==='quote.manual.send'?'send':'accept'}:original.reference;
@@ -55,7 +59,10 @@ it.each(pendingKinds)('releases only a verified retirement for exactly the retai
  const f=fixture(kind);f.target.releaseRetired(f.outcome,signal());expect(f.memory.has(f.key)).toBe(false);expect(f.storage.removeItem).toHaveBeenCalledExactlyOnceWith(f.key);expect(f.storage.setItem).not.toHaveBeenCalled();expect(fetcher).not.toHaveBeenCalled();
 });
 it.each(pendingKinds)('keeps an absent %s lookup through its existing typed domain transport',async kind=>{
- const f=fixture(kind);fetcher.mockResolvedValue(response({state:'absent'}));expect(await f.target.reconcile(proof(),signal())).toBe('absent');expect(f.memory.get(f.key)).toBe(f.raw);expect(f.storage.removeItem).not.toHaveBeenCalled();expect(fetcher).toHaveBeenCalledTimes(1);expect(JSON.parse(fetcher.mock.calls[0]![1].body)).toEqual({operationId:f.original.reference.operationId});
+ const f=fixture(kind),financial=kind.startsWith('bookkeeping.'),freshBinding=randomBytes(32).toString('base64url');
+ if(financial)fetcher.mockResolvedValueOnce(contextResponse(f.original.businessId,freshBinding));
+ fetcher.mockResolvedValue(response({state:'absent'}));expect(await f.target.reconcile(proof(),signal())).toBe('absent');expect(f.memory.get(f.key)).toBe(f.raw);expect(f.storage.removeItem).not.toHaveBeenCalled();expect(fetcher).toHaveBeenCalledTimes(financial?2:1);
+ const request=fetcher.mock.calls.at(-1)![1];expect(JSON.parse(request.body)).toEqual(financial?f.original.reference:{operationId:f.original.reference.operationId});if(financial)expect(request.headers['x-crest-edit-binding']).toBe(freshBinding);
 });
 it.each(pendingKinds)('rejects replacement storage for %s before retirement acknowledgment',kind=>{
  const f=fixture(kind);f.memory.set(f.key,JSON.stringify({...f.record,binding:randomBytes(32).toString('base64url')}));expect(()=>f.target.releaseRetired(f.outcome,signal())).toThrow(PendingOriginalOperationError);expect(f.storage.removeItem).not.toHaveBeenCalled();
@@ -110,3 +117,27 @@ it.each(['recorded','service','epoch','revision','abort','replace'])('retains th
  if(which==='abort')controller.abort();if(which==='replace')f.memory.set(f.key,JSON.stringify({...f.record,binding:randomBytes(32).toString('base64url')}));
  resolve(response(which==='recorded'?{schemaVersion:1,state:'original_recorded',original:f.original}:value));await expect(pending).rejects.toThrow(PendingOriginalOperationError);expect(f.memory.has(f.key)).toBe(true);expect(f.storage.removeItem).not.toHaveBeenCalled();
 });
+
+const financialKinds=['bookkeeping.expense.save','bookkeeping.receipt.reserve','bookkeeping.receipt.publish'] as const;
+function financialReceipt(f:ReturnType<typeof fixture>){
+ const original=f.original;if(original.commandType==='bookkeeping.expense.save')return {state:'committed',expense:{businessId:original.businessId,expenseId:original.reference.expenseId,revision:'1',operationId:original.reference.operationId,actorId:randomUUID(),recordedAt:'2026-10-29T08:00:00.123456Z',payload:{paidOn:'2026-10-29',amountCents:'1500',currency:'USD',category:'supplies',description:'Synthetic towels',vendor:null,paymentMethod:'cash',reference:null,notes:null,voided:false,changeReason:null}}};
+ if(original.commandType!=='bookkeeping.receipt.reserve'&&original.commandType!=='bookkeeping.receipt.publish')throw Error();
+ const r=original.reference,published=r.expectedRevision==='1';return {state:'committed',original:r,receipt:{receiptId:r.receiptId,expenseId:r.expenseId,expenseRevision:r.expenseRevision,receiptVersion:published?'2':'1',status:published?'available':'reserved',declaredType:'image/png',byteSize:100,sourceSha256:published?'a'.repeat(64):null}};
+}
+it.each(financialKinds)('reconciles %s through fresh financial context after a changed sign-in binding',async kind=>{
+ const f=fixture(kind),binding=randomBytes(32).toString('base64url');fetcher.mockResolvedValueOnce(contextResponse(f.original.businessId,binding)).mockResolvedValueOnce(response(financialReceipt(f)));
+ expect(await f.target.reconcile(proof(),signal())).toBe('committed');expect(f.memory.has(f.key)).toBe(false);expect(fetcher.mock.calls.map(c=>c[0])).toEqual(['/api/business/expenses/context',kind==='bookkeeping.expense.save'?'/api/business/expenses/operation':'/api/business/expense-receipts/operation']);expect(fetcher.mock.calls[1]![1].headers['x-crest-edit-binding']).toBe(binding);expect(JSON.parse(fetcher.mock.calls[1]![1].body)).toEqual(f.original.reference);
+});
+it.each(financialKinds.flatMap(kind=>['recorded','wrong-target','wrong-business','abort','replace'].map(fault=>({kind,fault}))))('keeps financial reference on insufficient or late evidence: $kind / $fault',async({kind,fault})=>{
+ const f=fixture(kind),controller=new AbortController();let resolve!:(value:Response)=>void;
+ fetcher.mockResolvedValueOnce(contextResponse(fault==='wrong-business'?randomUUID():f.original.businessId)).mockImplementationOnce(()=>new Promise<Response>(r=>{resolve=r;}));
+ const pending=f.target.reconcile(proof(),controller.signal);
+ if(fault==='wrong-business'){await expect(pending).rejects.toThrow(PendingOriginalOperationError);expect(fetcher).toHaveBeenCalledTimes(1);}else{
+  await vi.waitFor(()=>expect(resolve).toBeTypeOf('function'));
+  if(fault==='abort')controller.abort();if(fault==='replace')f.memory.set(f.key,JSON.stringify({...f.record,binding:randomBytes(32).toString('base64url')}));
+  const value=financialReceipt(f);if(fault==='wrong-target'){if('expense' in value)value.expense!.expenseId=randomUUID();else value.receipt!.receiptId=randomUUID();}
+  resolve(response(fault==='recorded'?{schemaVersion:1,state:'original_recorded',original:f.original}:value));await expect(pending).rejects.toThrow(PendingOriginalOperationError);
+ }
+ expect(f.memory.has(f.key)).toBe(true);expect(f.storage.removeItem).not.toHaveBeenCalled();
+});
+it.each(['bookkeeping.receipt.reserve','bookkeeping.receipt.publish'] as const)('does not interpret the other receipt stage as %s',kind=>{const f=fixture(kind);expect(openPendingOriginalOperation(kind==='bookkeeping.receipt.reserve'?'bookkeeping.receipt.publish':'bookkeeping.receipt.reserve',f.storage,f.original.businessId)).toBeNull();expect(f.memory.get(f.key)).toBe(f.raw);});

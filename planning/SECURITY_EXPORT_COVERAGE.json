@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 48,
+  "migrationCount": 49,
   "tables": [
     {
       "table": "crest.businesses",
@@ -1358,6 +1358,39 @@
         "origin",
         "operation_id",
         "import_row_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.expense_revisions",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "expense_id",
+        "revision",
+        "operation_id",
+        "actor_id",
+        "recorded_at",
+        "payload"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.expense_receipt_revisions",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "receipt_id",
+        "revision",
+        "expense_id",
+        "expense_revision",
+        "operation_id",
+        "actor_id",
+        "recorded_at",
+        "reservation",
+        "candidate"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

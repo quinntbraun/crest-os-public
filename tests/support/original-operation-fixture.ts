@@ -4,6 +4,9 @@ import type {OriginalOperationKind,OriginalOperationReference,OriginalOperationR
 export function originalOperationFixture(kind:OriginalOperationKind='crm.customer.save'){
  const common={operationId:randomUUID(),recoveryEpoch:randomUUID()},id=randomUUID();
  const targets={
+ 'bookkeeping.expense.save':{expenseId:id,expectedRevision:'0'},
+ 'bookkeeping.receipt.reserve':{receiptId:id,expenseId:randomUUID(),expenseRevision:'1',expectedRevision:'0'},
+ 'bookkeeping.receipt.publish':{receiptId:id,expenseId:randomUUID(),expenseRevision:'1',expectedRevision:'1'},
   'operations.appointment_hold.save':{holdId:id,expectedSequence:'0'},
   'business.rename':{expectedVersion:'1'},
   'crm.customer.save':{customerId:id,expectedVersion:'0'},

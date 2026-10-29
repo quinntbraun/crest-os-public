@@ -5,6 +5,9 @@ import type {OriginalOperationKind} from '../../src/security/original-operation-
 
 const businessId=randomUUID(),operationId=randomUUID(),originalEpoch=randomUUID(),authorityEpoch=randomUUID();
 const targets:Record<OriginalOperationKind,Record<string,unknown>>={
+ 'bookkeeping.expense.save':{expenseId:randomUUID(),expectedRevision:'0'},
+ 'bookkeeping.receipt.reserve':{receiptId:randomUUID(),expenseId:randomUUID(),expenseRevision:'1',expectedRevision:'0'},
+ 'bookkeeping.receipt.publish':{receiptId:randomUUID(),expenseId:randomUUID(),expenseRevision:'1',expectedRevision:'1'},
  'operations.appointment_hold.save':{holdId:randomUUID(),expectedSequence:'0'},
  'business.rename':{expectedVersion:'1'},
  'crm.customer.save':{customerId:randomUUID(),expectedVersion:'0'},
@@ -33,7 +36,7 @@ const intent=()=>({schemaVersion:1,recoveryEpoch:authorityEpoch,original:origina
 const retired=()=>({schemaVersion:1,state:'retired',original:original(),retirement:{operationRowId:randomUUID(),auditEventId:randomUUID(),recoveryEpoch:authorityEpoch,reason:intent().reason,recordedAt:'2026-10-25T01:02:03.123456Z'}});
 const rejects=(work:()=>unknown)=>expect(work).toThrow(OriginalOperationReferenceError);
 
-describe('original nonfinancial operation identity',()=>{
+describe('typed original operation identity',()=>{
  it.each(originalOperationKinds)('preserves complete %s reference without inventing an identity or retaining a mutable input',kind=>{
   const raw=sample(kind),pinned=parseOriginalOperationReference(raw);expect(pinned).toEqual(raw);raw.reference.operationId=randomUUID();expect(pinned.reference.operationId).toBe(operationId);expect(Object.isFrozen(pinned)).toBe(true);expect(Object.isFrozen(pinned.reference)).toBe(true);
  });

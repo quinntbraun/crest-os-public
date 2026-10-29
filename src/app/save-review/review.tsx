@@ -4,6 +4,7 @@ import {createOriginalOperationReviewController,initialOriginalOperationReviewVi
 import type {OriginalOperationKind} from '../../security/original-operation-reference';
 
 const choices:ReadonlyArray<readonly [OriginalOperationKind,string]>=[
+ ['bookkeeping.expense.save','Expense'],['bookkeeping.receipt.reserve','Receipt upload reservation'],['bookkeeping.receipt.publish','Receipt publication'],
  ['business.rename','Business name'],['crm.customer.save','Customer'],['crm.address.save','Customer address'],
  ['crm.vehicle.save','Vehicle'],['crm.vehicle.association','Vehicle customer link'],
  ['crm.lead.source.save','Lead source'],['crm.lead.save','Lead'],['crm.lead.state','Lead status'],
@@ -46,7 +47,7 @@ function Review({kind}:{kind:OriginalOperationKind}){
 export function SaveReviewScreen({initialKind='crm.customer.save'}:{initialKind?:OriginalOperationKind}={}){
  const [kind,setKind]=useState<OriginalOperationKind>(initialKind);
  return <>
-  <p>Resolve a retained nonfinancial save from this browser tab. Keep this tab open until its outcome is verified. Retirement requires a recently authenticated business owner.</p>
+  <p>Resolve a retained save from this browser tab. Keep this tab open until its outcome is verified. Retirement requires a recently authenticated business owner. Expense and receipt retirement also requires financial authority.</p>
   <label htmlFor="save-review-kind">Interrupted save type</label>
   <select id="save-review-kind" value={kind} onChange={event=>{const selected=choices.find(([kind])=>kind===event.target.value);if(selected)setKind(selected[0]);}}>{choices.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
   <Review key={kind} kind={kind}/>

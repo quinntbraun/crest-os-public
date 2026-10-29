@@ -240,6 +240,11 @@
       "version": "20261028050000",
       "file": "20261028050000_quote_acceptance.sql",
       "sha256": "1010212bc3fe6b734a511f05968103a4f88de37452a3340b1d70da5f243819c7"
+    },
+    {
+      "version": "20261029050000",
+      "file": "20261029050000_owner_expenses.sql",
+      "sha256": "8bf39dc6502ef1bba4e45cb04efe0afdbc2c6efe0d8b3a0d25948dcf37ffee18"
     }
   ]
 }

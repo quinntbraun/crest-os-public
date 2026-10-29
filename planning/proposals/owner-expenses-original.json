@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "registered": false,
+  "runtimeEnabled": false,
+  "baseMigrationCount": 48,
+  "sqlBytes": 5083,
+  "sqlSha256": "075fac103f18fe7cb98eae1e935cd9e347795afc284e939324cf2a42825e4670",
+  "appliedAfter": [
+    "owner-expenses.sql",
+    "owner-expense-receipts.sql",
+    "owner-expenses-activity.sql"
+  ],
+  "purpose": "Read the exact retained original expense receipt with matching epoch/target/revision, financial payload hash, immutable source and audit image; no retry, retirement, session extension, financial posting or runtime activation.",
+  "nativeAcceptance": {
+    "tests": 17,
+    "passed": 17,
+    "failed": 0,
+    "testSha256": "8283c11fdabd13ed12b5b5eec837b0960f94c29ba7df0415090e561fd3fed696",
+    "logSha256": "cf3e015fbc3df112e7d141b64ec020836644d068d8f46003747a8f08ad236065",
+    "sourceStable": true,
+    "ownedClusterCleaned": true
+  },
+  "genuineAuthAcceptance": {
+    "tests": 5,
+    "passed": 5,
+    "failed": 0,
+    "testSha256": "484d98fac35b1f8a0f5a1591f94bf23904c60af256de684f5984fdcb1c5bdad5",
+    "logSha256": "6af446c87d750c8930973099e5b045502f004527b5e5bfa8d37575e2794c2b59",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "scope": "actual provider MFA, restricted login, direct synthetic loopback HTTP; not deployed TLS or integrated browser acceptance"
+  },
+  "registered49Verified": false,
+  "sharedRetirementIntegrated": false,
+  "productionActivation": false
+}

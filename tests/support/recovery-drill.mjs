@@ -21,6 +21,9 @@ assert.equal(legacy43.migrations.length,43);assert.deepEqual(registry.migrations
 const legacy46Bytes=await readFile(join(root,'tests/support/registered46-migration-checksums.json')),legacy46=JSON.parse(legacy46Bytes);
 assert.equal(legacy46.migrations.length,46);assert.deepEqual(registry.migrations.slice(0,46),legacy46.migrations);
 const legacy46Profile=Object.freeze({schemaVersion:46,registrySha256:hash(legacy46Bytes)});
+const legacy48Bytes=await readFile(join(root,'tests/support/registered48-migration-checksums.json')),legacy48=JSON.parse(legacy48Bytes);
+assert.equal(legacy48.migrations.length,48);assert.deepEqual(registry.migrations.slice(0,48),legacy48.migrations);
+const legacy48Profile=Object.freeze({schemaVersion:48,registrySha256:hash(legacy48Bytes)});
 const legacy47Bytes=await readFile(join(root,'tests/support/registered47-migration-checksums.json')),legacy47=JSON.parse(legacy47Bytes);
 assert.equal(legacy47.migrations.length,47);assert.deepEqual(registry.migrations.slice(0,47),legacy47.migrations);
 const legacy47Profile=Object.freeze({schemaVersion:47,registrySha256:hash(legacy47Bytes)});
@@ -104,6 +107,7 @@ async function unseal(path,expected,identity){
   return run(tool('age'),['--decrypt','--identity',identity],{input:cipher});
 }
 export async function backupDatabase(...args){return backupWithProfile(currentProfile,...args);}
+export async function backupLegacy48Database(...args){return backupWithProfile(legacy48Profile,...args);}
 export async function backupLegacy47Database(...args){return backupWithProfile(legacy47Profile,...args);}
 export async function backupLegacy46Database(...args){return backupWithProfile(legacy46Profile,...args);}
 export async function backupLegacy45Database(...args){return backupWithProfile(legacy45Profile,...args);}
@@ -132,6 +136,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_RECOVERY_BACKUP_FAILED:'+stage);}
 }
 export async function restoreDatabase(...args){return restoreWithProfile(currentProfile,...args);}
+export async function restoreLegacy48Database(...args){return restoreWithProfile(legacy48Profile,...args);}
 export async function restoreLegacy47Database(...args){return restoreWithProfile(legacy47Profile,...args);}
 export async function restoreLegacy46Database(...args){return restoreWithProfile(legacy46Profile,...args);}
 export async function restoreLegacy45Database(...args){return restoreWithProfile(legacy45Profile,...args);}

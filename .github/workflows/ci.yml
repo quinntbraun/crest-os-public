@@ -97,6 +97,9 @@ jobs:
       - name: Prove registered48 upgrade, refusal, source and independent recovery
         if: ${{ !cancelled() }}
         run: npm run test:quote-commercial-registered
+      - name: Prove registered49 expense upgrade, source history and independent receipt recovery
+        if: ${{ !cancelled() }}
+        run: npm run test:expenses-registered
       - name: Prove registered44 catalog upgrade, retained workflow and independent recovery
         run: npm run test:catalog-registered
       - name: Run isolated regression group
@@ -223,6 +226,8 @@ jobs:
           npm ci --ignore-scripts --no-fund
       - name: Install verified database tooling
         run: node scripts/install-tools.mjs
+      - name: Install pinned recovery tools for registered49 receipt acceptance
+        run: node scripts/install-recovery-tools.mjs
       - name: Run isolated regression group
         run: |
           npm run test:real-auth
@@ -234,9 +239,9 @@ jobs:
     # obsolete runs cancel so they cannot block the newest source indefinitely.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
-    # Expanded real-browser and container checks need room for image packaging.
-    # Keep individual test/network bounds and all release gates unchanged.
-    timeout-minutes: 45
+    # Cold browser + portable decoder/container builds exceeded 45 minutes.
+    # Keep every required check and the separate 15-minute container-step bound.
+    timeout-minutes: 60
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"

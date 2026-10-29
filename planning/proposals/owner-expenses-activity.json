@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "registered": false,
+  "runtimeEnabled": false,
+  "baseMigrationCount": 48,
+  "sqlBytes": 16717,
+  "sqlSha256": "50509e065d6b0ced2e58439d02fc68ff0bbcd91cd0b6ed631a502fee353f7ca5",
+  "appliedAfter": [
+    "owner-expenses.sql",
+    "owner-expense-receipts.sql"
+  ],
+  "purpose": "Audited foreground session use after a newly committed expense/reservation/publication, not original replay or a declined/conflicting request.",
+  "commands": [
+    {
+      "path": "planning/proposals/owner-expenses.sql",
+      "name": "save_expense",
+      "signature": "crest_commands.save_expense(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,bigint,jsonb)",
+      "beforeSha256": "97188fd01ae728d305ad72dd29529d07f8189297d38bda279e25f74c2459e152",
+      "afterSha256": "cd1fe2a5c155aac879f3eb98d0b5583e34d82ab8c6157dcaca5b53a9289c72b3"
+    },
+    {
+      "path": "planning/proposals/owner-expense-receipts.sql",
+      "name": "reserve_expense_receipt",
+      "signature": "crest_commands.reserve_expense_receipt(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,uuid,bigint,text,integer)",
+      "beforeSha256": "6ccded40154e15efe9291b841018638a29a9cf1bcbe4d57c45bfcaf4da04eb5f",
+      "afterSha256": "1852190ca87d6dde1a6fe84c360e9a9014955c839fc847a1e1d73e90e13a7117"
+    },
+    {
+      "path": "planning/proposals/owner-expense-receipts.sql",
+      "name": "publish_expense_receipt",
+      "signature": "crest_commands.publish_expense_receipt(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,jsonb)",
+      "beforeSha256": "feb817dba2c4e779e2f7eaa1e3b9a10f0ffe3cb6c176603a4e0bd992cf2dec51",
+      "afterSha256": "3b634bc312f1fed1ab3650872d9cfd5674a31a897d6d3ae63bac9b7d4a41c3c7"
+    }
+  ],
+  "nativeVerified": true,
+  "genuineAuthVerified": false,
+  "productionActivation": false,
+  "nativeAcceptance": {
+    "scope": "registered48_unregistered_expense_foreground_activity",
+    "tests": 13,
+    "passed": 13,
+    "failed": 0,
+    "testSha256": "2a9c8f594edcbfcdfe99cc6be01551d2178347272c52ea316278b575da1f5de6",
+    "logSha256": "73f7cec2c1107a3f0415824edaea02e0c5d8760abf4975cb8cc9faec4381dcd2",
+    "fixtureSourceUnchanged": true,
+    "ownedClusterCleaned": true,
+    "registered49Verified": false,
+    "genuineProviderAuthVerified": false,
+    "startedAt": "2026-10-29T03:50:15.878Z",
+    "finishedAt": "2026-10-29T03:50:33.038Z"
+  }
+}

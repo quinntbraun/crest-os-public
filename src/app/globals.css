@@ -198,3 +198,18 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .quote-preview-lines h4 { margin:0 0 .5rem; font-size:1rem; }
 .quote-worksheet .record-reference { font-variant-numeric:tabular-nums; }
 @media(max-width:390px) { .quote-worksheet { padding:1rem; } }
+
+/* Expense notes use the same readable, full-width work surface as other forms. */
+.expense-editor label { display:block; }
+.expense-editor textarea { display:block; width:100%; min-width:0; min-height:6rem; padding:.75rem; font:inherit; color:inherit; border:1px solid #827e73; border-radius:var(--radius); background:var(--paper); resize:vertical; }
+.expense-layout { display:grid; gap:1.5rem; align-items:start; }
+.expense-layout > *, .expense-form > * { min-width:0; }
+.expense-editor .expense-form { display:grid; gap:.75rem; margin:1rem 0; padding:1.25rem; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); }
+.expense-form legend { padding:0 .35rem; font-weight:600; }
+.expense-form label { margin-top:0; font-weight:600; }
+.expense-form input,.expense-form select,.expense-form textarea { font-weight:400; }
+.expense-editor .expense-form details { margin:.25rem 0; padding:.75rem; background:var(--canvas); }
+.expense-records { padding-top:.75rem; }
+.expense-records > h2:first-child { margin-top:0; }
+.expense-records > article { padding-bottom:1rem; margin-bottom:1.5rem; border-bottom:1px solid var(--line); }
+@media (min-width:1200px) { .expense-layout { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:2rem; } }
