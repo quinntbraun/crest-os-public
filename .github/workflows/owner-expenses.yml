@@ -1,0 +1,58 @@
+name: Owner expense acceptance
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/owner-expenses.yml'
+      - 'src/bookkeeping/expenses/**'
+      - 'src/client/expenses.ts'
+      - 'src/client/expense-receipts.ts'
+      - 'src/app/expenses/**'
+      - 'planning/proposals/owner-expenses*'
+      - 'planning/proposals/owner-expense-receipts*'
+      - 'tests/integration/owner-expenses*'
+      - 'tests/unit/expense-contract.test.ts'
+      - 'tests/unit/expense-receipts.test.ts'
+      - 'tests/fixtures/owner-expenses-editor.tsx'
+      - 'tests/fixtures/owner-expenses-lifecycle.tsx'
+permissions:
+  contents: read
+concurrency:
+  group: owner-expenses-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  expense_acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+      CREST_ENV: test
+      CREST_TEST_DATABASE_URL: postgresql://supabase_admin:crest_local_test_only@127.0.0.1:54322/crest_test
+    services:
+      postgres:
+        image: supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2
+        env:
+          POSTGRES_USER: supabase_admin
+          POSTGRES_PASSWORD: crest_local_test_only
+          POSTGRES_DB: crest_test
+        ports:
+          - 127.0.0.1:54322:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d crest_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci --ignore-scripts --no-fund
+      - run: node scripts/install-tools.mjs
+      - run: node scripts/install-recovery-tools.mjs
+      - run: node --conditions=react-server --test --test-concurrency=1 tests/integration/owner-expenses.test.mjs tests/integration/owner-expenses-http.test.mjs tests/integration/owner-expenses-receipts.test.mjs tests/integration/owner-expenses-receipt-auth.test.mjs tests/integration/owner-expenses-receipt-http.test.mjs tests/integration/owner-expenses-receipt-objects.test.mjs tests/integration/owner-expenses-receipt-recovery.test.mjs tests/integration/owner-expenses-combined-recovery.test.mjs tests/integration/owner-expenses-production-gates.test.mjs tests/integration/owner-expenses-receipt-delivery.test.mjs
+      - run: npm exec vitest run tests/unit/expense-contract.test.ts tests/unit/expense-receipts.test.ts
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node --test tests/integration/owner-expenses-layout.test.mjs tests/integration/owner-expenses-lifecycle.test.mjs
