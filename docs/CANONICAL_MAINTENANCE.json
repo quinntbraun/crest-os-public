@@ -35,19 +35,19 @@
       "name": "ARCHITECTURE_DECISIONS.md",
       "originalSha256": "11acb9dc027cc8427823522193cb5518ab499dc8521c2682e4797ff6c0a47867",
       "originalBytes": 17703,
-      "version": "1.17",
-      "sha256": "cf2dae92debdd5d88b42dc80c741ba79efdc52b71f9a4e5c3f06fd97f8363221",
-      "bytes": 61059,
-      "reason": "2026-10-28 ADR46 append-only exact owner quote review registration; prior hashes in CANONICAL_MAINTENANCE.md; legacy45/44/43/42, V1 scope and all privacy/recovery/production gates retained"
+      "version": "1.18",
+      "sha256": "2a7a79d5ae3fe0c1ca2c1fdb2f46c4e6d6cfa2d62133553dfa7dc006cf050953",
+      "bytes": 63245,
+      "reason": "2026-10-29 ADR47 owner-authorized retained unconfirmed appointment proposals; all46 and baseline identities preserved; see CANONICAL_MAINTENANCE.md"
     },
     {
       "name": "DATABASE.md",
       "originalSha256": "d66147140019c214f48a2baf46828d866b77bf3b8c1d4279a5187d6fdf416661",
       "originalBytes": 53037,
-      "version": "1.9",
-      "sha256": "bd771b0870aaa2b4c02f63ab6bb51edc20671f6a343df6402d61b0f1abe4fb25",
-      "bytes": 57471,
-      "reason": "2026-10-28 ADR46 append-only exact owner quote review registration; prior hashes in CANONICAL_MAINTENANCE.md; legacy45/44/43/42, V1 scope and all privacy/recovery/production gates retained"
+      "version": "1.10",
+      "sha256": "87c9f594231f27d96dba68fb067182203ba217fcdd00ae7f5ec865357a989017",
+      "bytes": 58214,
+      "reason": "2026-10-29 ADR47 owner-authorized retained unconfirmed appointment proposals; all46 and baseline identities preserved; see CANONICAL_MAINTENANCE.md"
     },
     {
       "name": "SECURITY.md",
@@ -62,10 +62,10 @@
       "name": "EXPORTS_AND_BACKUPS.md",
       "originalSha256": "cebd4d21981aa060c02973dece9cff2ec3a2e9367d1467edb1694c2ebe39ecdd",
       "originalBytes": 26475,
-      "version": "1.9",
-      "sha256": "fde08fbf440df8852f4e1c1e6189c896008fbeb1bfd8d8ee700ea0278a718f90",
-      "bytes": 31637,
-      "reason": "2026-10-28 ADR46 append-only exact owner quote review registration; prior hashes in CANONICAL_MAINTENANCE.md; legacy45/44/43/42, V1 scope and all privacy/recovery/production gates retained"
+      "version": "1.10",
+      "sha256": "4829d201eee975423191d0ca535cfd196bc1253f7d02ca96edd6aa123f1af221",
+      "bytes": 32627,
+      "reason": "2026-10-29 ADR47 owner-authorized retained unconfirmed appointment proposals; all46 and baseline identities preserved; see CANONICAL_MAINTENANCE.md"
     },
     {
       "name": "ROADMAP.md",
@@ -107,10 +107,10 @@
       "name": "PUBLICATION.md",
       "originalSha256": "f53bcc738639bdf8d336cf970fd0c83715153becd536ab265bf442bdcfce5932",
       "originalBytes": 5584,
-      "version": "1.12",
-      "sha256": "fd772eb250879cab7b769497ed21311e9d94cee77b793dddd6630dd9a5e834a4",
-      "bytes": 7477,
-      "reason": "2026-10-28 ADR46 append-only exact owner quote review registration; prior hashes in CANONICAL_MAINTENANCE.md; legacy45/44/43/42, V1 scope and all privacy/recovery/production gates retained"
+      "version": "1.13",
+      "sha256": "0f0048eb6e4179ab0f62ceacbe1fc0fcfd49de61e69563ca3482e37485086081",
+      "bytes": 7830,
+      "reason": "2026-10-29 ADR47 owner-authorized retained unconfirmed appointment proposals; all46 and baseline identities preserved; see CANONICAL_MAINTENANCE.md"
     }
   ]
 }

@@ -5,6 +5,7 @@ import type {OriginalOperationKind} from '../../src/security/original-operation-
 
 const businessId=randomUUID(),operationId=randomUUID(),originalEpoch=randomUUID(),authorityEpoch=randomUUID();
 const targets:Record<OriginalOperationKind,Record<string,unknown>>={
+ 'operations.appointment_hold.save':{holdId:randomUUID(),expectedSequence:'0'},
  'business.rename':{expectedVersion:'1'},
  'crm.customer.save':{customerId:randomUUID(),expectedVersion:'0'},
  'crm.address.save':{customerId:randomUUID(),addressId:randomUUID(),expectedVersion:'0'},

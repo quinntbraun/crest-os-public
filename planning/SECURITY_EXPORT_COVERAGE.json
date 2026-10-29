@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 46,
+  "migrationCount": 47,
   "tables": [
     {
       "table": "crest.businesses",
@@ -1142,6 +1142,36 @@
         "origin",
         "operation_id",
         "import_row_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.appointment_hold_versions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "hold_id",
+        "sequence",
+        "replaces_sequence",
+        "customer_id",
+        "lead_id",
+        "label",
+        "state",
+        "start_at",
+        "end_at",
+        "timezone",
+        "local_start",
+        "local_end",
+        "start_offset_minutes",
+        "end_offset_minutes",
+        "notes",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

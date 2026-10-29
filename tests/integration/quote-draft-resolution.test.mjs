@@ -12,7 +12,7 @@ import {bindQuoteOriginalReceipt} from '../../src/commercial/quote-original-oper
 import {originalOperationKinds as currentOriginalKinds,parseOriginalOperationReference,parseOriginalOperationOutcome} from '../../src/security/original-operation-reference.ts';
 // The45 proposal supports its original thirteen kinds. Forward review actions
 // require the separate lifecycle SQL and its actual retirement tests.
-const originalOperationKinds=currentOriginalKinds.filter(kind=>!['quote.review.submit','quote.review.approve'].includes(kind));
+const originalOperationKinds=currentOriginalKinds.filter(kind=>!['quote.review.submit','quote.review.approve','operations.appointment_hold.save'].includes(kind));
 import {originalOperationFixture} from '../support/original-operation-fixture.ts';
 const sql=await readFile(new URL('../../planning/proposals/quote-draft-resolution.sql',import.meta.url),'utf8'),meta=JSON.parse(await readFile(new URL('../../planning/proposals/quote-draft-resolution.json',import.meta.url),'utf8'));
 const issuer='https://auth.example.com/auth/v1',reason=' Owner reviewed this lost synthetic quote draft.\nRetire only this original. ';

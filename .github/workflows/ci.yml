@@ -303,6 +303,10 @@ jobs:
           npm run test:image-validation
           npm run test:pdf-validation
           npm run test:heic-validation
+      - name: Prove registered47 appointment proposals and independent restore
+        run: npm run test:appointment-registered
+      - name: Preserve historical appointment storage and command acceptance
+        run: npm run test:appointment-storage
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 6
         run: |

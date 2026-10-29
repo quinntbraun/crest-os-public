@@ -126,3 +126,16 @@ Authority: continuing owner-approved V1 implementation. Finite requirement: regi
 - DATABASE.md v1.8 — 466c0440ac290f20d92f4239c39637f99f4e5efe708f64fec707bfa02111be35 (56761 bytes)
 - EXPORTS_AND_BACKUPS.md v1.8 — 9cae0f502ec47327523c54f11632d7299c1f6bc252e6b9d30825edaeba039790 (30837 bytes)
 - PUBLICATION.md v1.11 — ea78c0ce35a80996e6110ea637e7885017f3ec297cd8387204b10507c9a53511 (7057 bytes)
+
+
+## 2026-10-29 — ADR47 retained unconfirmed appointment proposals
+
+Owner-authorized continuation integrates the exact publicly reviewed appointment source as a forward47 migration over46. No original manifest/hash,46 SQL, financial rule, confirmed booking/acceptance or production gate is changed. Twelve distinct amended documents remain; only four current amendments advance.
+
+ARCHITECTURE_DECISIONS.md: prior SHA256 cf2dae92debdd5d88b42dc80c741ba79efdc52b71f9a4e5c3f06fd97f8363221, 61059 bytes; now version 1.18, SHA256 2a7a79d5ae3fe0c1ca2c1fdb2f46c4e6d6cfa2d62133553dfa7dc006cf050953, 63245 bytes.
+
+DATABASE.md: prior SHA256 bd771b0870aaa2b4c02f63ab6bb51edc20671f6a343df6402d61b0f1abe4fb25, 57471 bytes; now version 1.10, SHA256 87c9f594231f27d96dba68fb067182203ba217fcdd00ae7f5ec865357a989017, 58214 bytes.
+
+EXPORTS_AND_BACKUPS.md: prior SHA256 fde08fbf440df8852f4e1c1e6189c896008fbeb1bfd8d8ee700ea0278a718f90, 31637 bytes; now version 1.10, SHA256 4829d201eee975423191d0ca535cfd196bc1253f7d02ca96edd6aa123f1af221, 32627 bytes.
+
+PUBLICATION.md: prior SHA256 fd772eb250879cab7b769497ed21311e9d94cee77b793dddd6630dd9a5e834a4, 7477 bytes; now version 1.13, SHA256 0f0048eb6e4179ab0f62ceacbe1fc0fcfd49de61e69563ca3482e37485086081, 7830 bytes.

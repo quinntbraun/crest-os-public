@@ -1,6 +1,6 @@
 # Crest OS V1 - Portability and Recovery
 
-Version: 1.9 | 2026-10-28 | ADR46 exact owner quote review; activation gated
+Version: 1.10 | 2026-10-28 | ADR46 exact owner quote review; activation gated
 
 Schema43 bounded partial-source protocol,2026-10-27 (ADR43): the explicit joint profile preserves25 source/journal projections and original evidence using fixed logical pieces and the existing independent verifier/neutral importer. Separate43 journal capture/recovery can handle32MiB logical files/64MiB aggregate inventory and1,024 pieces; physical logical pieces remain4MiB, private plaintext parts8MiB/encrypted parts16MiB, and owned capture30 seconds. This does not widen ordinary JSON, older42 collectors or the legacy8MiB recovery profile. Registered43 backups bind their own full registry identity; historical42 backups retain their original registry/profile. Original journal text/object-key/key-ID references remain required metadata, while only the ten explicitly reviewed credentials are excluded. Owner delivery freshly authorizes each part and audits authorized handoff before bytes; the browser prepares/saves/compares actual selected bytes with cancellation and private-copy expiry. None of this establishes complete portable export, full database/object/vault/key/image recovery, durable OS persistence or production readiness: completeness flags remain false and all applicable release/real-use gates remain.
 
@@ -137,3 +137,9 @@ ADR45 adds61 required quote source fields, including inactive items and full cop
 ### Registered46 review construction
 
 ADR46 adds38 required source fields and retains exact45/44/43/42 restore identities. Current inventory is46 tables/741 columns,731 required and unchanged10 credential exclusions. New review profile2 retrieves all category/assessment/approval/normalized-item facts, including exact retained public presentation and private source notes; paired existing business-history CSV from the same RO/RR snapshot preserves original operations and audit/history images. Profile1 and historical workers are not relabeled. Registered encrypted46 independent database restore, complete46 portable exports/Excel/worker/admission, independent custody and real-data gates remain separate mandatory acceptance. Partial domain retrieval is not a complete Crest export or backup.
+
+
+
+## ADR47 appointment proposal source coverage
+
+Registered47 coverage declares every22-column appointment_hold_versions source field with no credential exclusion. Export-role appointment_hold_snapshot_context/versions require one read-only repeatable-read transaction, exact business/token and bounded ID-keyset paging with exact counts. Collection is bounded to10000 versions and1MiB pages; overflow refuses the entire capture. Pair source bytes with existing same-snapshot operation/audit history and typed customer/lead references before claiming closure. One proposal's saved-history CSV/original JSON ZIP is explicitly partial, excludes unsaved drafts and is neither a complete Crest export nor a backup. Frozen46 export/recovery identity remains separately readable; current47 encrypted independent restore must preserve immutable proposal/history bytes and reject46 schema identity before executing SQL. All original recovery-key custody, real-data and full release gates remain.

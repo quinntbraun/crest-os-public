@@ -3,16 +3,20 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {authentication,AuthenticationError} from '../client/authentication';
 import {businessSettings} from '../client/business-settings';
 import {leads} from '../client/leads';
+import {appointmentHolds} from '../client/appointment-holds';
 
+type HoldPage=Awaited<ReturnType<typeof appointmentHolds.list>>;
 type LeadPage=Awaited<ReturnType<typeof leads.list>>;
-type View={phase:'checking'|'signed-out'|'unavailable'|'ready';name:string;paused:boolean;followUps:LeadPage|null;message:string;checkedAt:number|null};
-const initial:View={phase:'checking',name:'',paused:false,followUps:null,message:'Checking workspace access…',checkedAt:null};
+type View={phase:'checking'|'signed-out'|'unavailable'|'ready';name:string;paused:boolean;followUps:LeadPage|null;proposals:HoldPage|null;message:string;checkedAt:number|null};
+const initial:View={phase:'checking',name:'',paused:false,followUps:null,proposals:null,message:'Checking workspace access…',checkedAt:null};
 async function snapshot(signal:AbortSignal):Promise<View>{
   try{
     const proof=await authentication.session(signal),{context}=await businessSettings.settings(proof,signal);
     let followUps:LeadPage|null=null;
     try{followUps=await leads.list(context.businessId,{search:'',afterId:null,includeLost:true,pageSize:50},proof,signal);}catch{/* Unavailable is not empty. */}
-    return {phase:'ready',name:context.legalName,paused:context.writeState==='paused',followUps,message:'Workspace access verified.',checkedAt:Date.now()};
+    let proposals:HoldPage|null=null;
+    try{proposals=await appointmentHolds.list(context.businessId,{afterId:null,pageSize:5},proof,signal);}catch{/* Unavailable is not an empty schedule. */}
+    return {phase:'ready',name:context.legalName,paused:context.writeState==='paused',followUps,proposals,message:'Workspace access verified.',checkedAt:Date.now()};
   }catch(error){return {...initial,phase:error instanceof AuthenticationError&&error.kind==='denied'?'signed-out':'unavailable',message:error instanceof AuthenticationError&&error.kind==='denied'?'Sign in to open your workspace.':'Workspace access could not be verified. Check the local services and try again.'};}
 }
 export function WorkspaceHome(){
@@ -46,6 +50,7 @@ export function WorkspaceHome(){
           <p className="field-help">Recorded lead reminders, including lost leads. These are not booked jobs. Times use this device’s timezone.</p>
         </>}
       </section>
+      {view.proposals!==null&&<section className="home-panel" aria-label="Unconfirmed appointment proposals"><div className="section-heading"><h2>Proposed times</h2><a href="/appointment-holds">Review proposals</a></div>{view.proposals.holds.length===0?<p>No saved proposals on this page.</p>:<ul className="follow-up-list">{view.proposals.holds.map(hold=><li key={hold.id}><strong>{hold.label}</strong><span>{hold.local_start.slice(0,16).replace('T',' ')} · {hold.timezone}</span><span>{hold.state==='withdrawn'?'Withdrawn':'Unconfirmed · does not reserve time'}</span></li>)}</ul>}<p className="field-help">First page of retained proposals, including withdrawals. {view.proposals.hasMore?'More proposals are available. ':''}These are not confirmed bookings.</p><a className="primary-action" href="/appointment-holds">Propose a time</a></section>}
       <section className="home-panel"><h2>Something didn’t save?</h2><p>Review an interrupted save before submitting the change again.</p><a href="/save-review">Review interrupted saves</a></section>
       <aside className="capability-note"><h2>Still being built</h2><p>Quote approval and sending, scheduling, jobs, photos, invoices, payments, expenses, reporting, complete business exports, and Google Calendar are not available in this workspace yet.</p></aside>
       <p className="field-help">Checked {view.checkedAt===null?'':new Date(view.checkedAt).toLocaleTimeString()}. Refresh for current information.</p>

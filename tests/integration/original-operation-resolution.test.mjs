@@ -14,7 +14,7 @@ import {parseOriginalOperationReference,parseOriginalOperationOutcome,originalOp
 // catalog/quote extensions have their own mandatory current-source fixtures.
 // Review/approval are introduced after45 and proved with the lifecycle fixture;
 // they must not be silently treated as supported by immutable registered42.
-const originalOperationKinds=currentOriginalKinds.filter(kind=>!['catalog.service.save','quote.draft.save','quote.review.submit','quote.review.approve'].includes(kind));
+const originalOperationKinds=currentOriginalKinds.filter(kind=>!['catalog.service.save','quote.draft.save','quote.review.submit','quote.review.approve','operations.appointment_hold.save'].includes(kind));
 import {verifyBusinessHistoryEvidence} from '../../src/security/business-history-evidence.ts';
 import {formatBusinessHistoryCsv} from '../../src/security/business-history-csv.ts';
 import {decodeCustomerCsv} from '../support/customer-fixture.ts';

@@ -1,0 +1,86 @@
+{
+  "formatVersion": 1,
+  "repositoryRegistration": 47,
+  "executionStatus": "constructed_pending_acceptance",
+  "databaseApplied": false,
+  "productionActivation": "blocked",
+  "source": {
+    "pr": 102,
+    "head": "4e0acf4689518dbc8afab484e90ca8c558b167c8",
+    "portability": "ce11acbaf22616d5438a8e06c93dff9b8d5a7ec0",
+    "headFullCi": 40788819775,
+    "integration": "259ab90c29e6f283e907aca80ccc8cf9f7a3b91f",
+    "integrationFullCi": "40797720358_cancelled"
+  },
+  "migration": {
+    "file": "20261028040000_appointment_proposals.sql",
+    "sha256": "5f21dce7af0944388e39c456c2a06614f63c111557958acf9528f311f25bf4fc",
+    "bytes": 50844
+  },
+  "previousRegistry": {
+    "sha256": "8eccbc0d73c27711ac301708f31a964989276237d96c7653c17544631dd601b8",
+    "frozenFixture": "tests/support/registered46-migration-checksums.json",
+    "migrationCount": 46
+  },
+  "previousCoverage": {
+    "sha256": "4aa7e9b127aed697f86d64cbda80a373e9a3445e6d2dd0a5dd59ed6d2c9695ee",
+    "frozenFixture": "tests/support/registered46-export-coverage.json"
+  },
+  "previousCompatibility": {
+    "sha256": "e4cbc6c65ef11fd04860edab9f573c1bd5c4b0d1549ef3ed02eff894cc43f514",
+    "frozenFixture": "tests/support/registered46-compatibility.json"
+  },
+  "proposalBodies": [
+    {
+      "order": 1,
+      "path": "planning/proposals/appointment-holds-storage.sql",
+      "sha256": "5620c009d081320da08df452914524dc5c2dd2e3baa0aafff3cc3ba00218ac9c",
+      "bytes": 14269,
+      "offset": 152
+    },
+    {
+      "order": 2,
+      "path": "planning/proposals/appointment-holds-commands.sql",
+      "sha256": "8b82110a9a11883b6e653289a5ababa4e426bd12f3500889ac50bd5639cddb59",
+      "bytes": 25681,
+      "offset": 14479
+    },
+    {
+      "order": 3,
+      "path": "planning/proposals/appointment-holds-resolution.sql",
+      "sha256": "986fcb7e83c3e29878fd7efc62801979ce3888a6d9f5bbfbfbc9e6770f3f7475",
+      "bytes": 4906,
+      "offset": 40218
+    },
+    {
+      "order": 4,
+      "path": "planning/proposals/appointment-holds-source.sql",
+      "sha256": "c669c91631fb82e0c36172c4ffe5ad7e47b125080d8ec4615a3d6f42a2dc50ff",
+      "bytes": 5649,
+      "offset": 45182
+    }
+  ],
+  "appointmentTables": [
+    "crest.appointment_hold_versions"
+  ],
+  "requiredAddedColumns": 22,
+  "sourceCoverage": {
+    "tables": 47,
+    "actualColumns": 763,
+    "requiredColumns": 753,
+    "excludedCredentialColumns": 10,
+    "actualRegistered47Verified": false
+  },
+  "legacyProfiles": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "runtimeAppointmentEnabled": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "canonicalDecision": "ADR47",
+  "resetCallerRoleBetweenBodies": true
+}

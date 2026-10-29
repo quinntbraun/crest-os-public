@@ -2,6 +2,7 @@ import {customerUuid as uuid,customerVersion as version,customerInstant as insta
 
 type Common=Readonly<{operationId:string;recoveryEpoch:string}>;
 type Targets={
+ 'operations.appointment_hold.save':Readonly<{holdId:string;expectedSequence:string}>;
  'business.rename':Readonly<{expectedVersion:string}>;
  'crm.customer.save':Readonly<{customerId:string;expectedVersion:string}>;
  'crm.address.save':Readonly<{customerId:string;addressId:string;expectedVersion:string}>;
@@ -37,6 +38,7 @@ function object(value:unknown,keys:readonly string[]):Record<string,unknown>{
  return Object.fromEntries(keys.map(key=>[key,descriptors[key]!.value]));
 }
 const fields={
+ 'operations.appointment_hold.save':['holdId','expectedSequence'],
  'business.rename':['expectedVersion'],
  'crm.customer.save':['customerId','expectedVersion'],
  'crm.address.save':['customerId','addressId','expectedVersion'],
@@ -69,7 +71,7 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
   const kind=row.commandType as OriginalOperationKind,keys=['operationId','recoveryEpoch',...fields[kind]],ref=object(row.reference,keys);
   require(uuid(ref.operationId)&&uuid(ref.recoveryEpoch));
   for(const key of fields[kind]){
-   if(key==='expectedVersion'||key==='expectedRevision'||key==='expectedFamilyVersion'||key==='expectedRevisionVersion')require(version(ref[key],!['business.rename','crm.lead.state','quote.review.submit','quote.review.approve'].includes(kind)));
+   if(key==='expectedSequence'||key==='expectedVersion'||key==='expectedRevision'||key==='expectedFamilyVersion'||key==='expectedRevisionVersion')require(version(ref[key],!['business.rename','crm.lead.state','quote.review.submit','quote.review.approve'].includes(kind)));
    else if(key==='expectedContentVersion')require(version(ref[key]));
    else if(key==='expectedLeadVersion')require(version(ref[key]));
    else if(key!=='action'&&key!=='nextAssociationId')require(uuid(ref[key]));

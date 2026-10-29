@@ -1,7 +1,7 @@
 import {request as httpRequest} from 'node:http';
 import {describe,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn(),quotes:vi.fn(),quoteReview:vi.fn()}));
+const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn(),quotes:vi.fn(),quoteReview:vi.fn(),holds:vi.fn()}));
 vi.mock('../../src/security/browser-session-flow.ts',()=>({createBrowserSessionFlow:()=>flow}));
 vi.mock('../../src/security/business-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/business-http.ts')>(),createBusinessHttp:()=>flow.business}));
 vi.mock('../../src/customer/customer-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-http.ts')>(),createCustomerHttp:()=>flow.customers}));
@@ -14,6 +14,7 @@ vi.mock('../../src/security/original-operation-http.ts',async importOriginal=>({
 vi.mock('../../src/commercial/service-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/service-http.ts')>(),createServiceHttp:()=>flow.services}));
 vi.mock('../../src/commercial/quote-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/quote-http.ts')>(),createQuoteHttp:()=>flow.quotes}));
 vi.mock('../../src/commercial/quote-review-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/quote-review-http.ts')>(),createQuoteReviewHttp:()=>flow.quoteReview}));
+vi.mock('../../src/operations/appointment-hold-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/operations/appointment-hold-http.ts')>(),createHoldHttp:()=>flow.holds}));
 import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../../src/server/node-server.ts';
 import type {NodeConfiguration} from '../../src/server/node-server.ts';
 
@@ -202,4 +203,11 @@ describe('Node hosting boundary',()=>{
       const next=await send();expect(next.status).toBe(400);await next.text();expect(count).toBe(33);
     }finally{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
   });
+});
+
+it('appointment history uses the private1MiB directory boundary rather than the8KiB authentication limit',async()=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn(),payload={schemaVersion:1,retainedHistory:'x'.repeat(20000)};
+ flow.holds.mockImplementation(async()=>new Response(JSON.stringify(payload),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',customers:true,operationResolution:true,syntheticAppointmentHolds:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{const response=await fetch(local+'/api/business/appointment-holds/history',{method:'POST',body:'{}'});expect(response.status).toBe(200);expect(await response.json()).toEqual(payload);expect(pages).not.toHaveBeenCalled();}finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });

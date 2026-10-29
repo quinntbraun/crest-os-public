@@ -1,6 +1,6 @@
 # Crest OS - Initial Architecture Decision Register
 
-Version: 1.17 | 2026-10-28 | ADR46 exact owner quote review; activation gated
+Version: 1.18 | 2026-10-28 | ADR46 exact owner quote review; activation gated
 
 ## ADR43 - Register the bounded source-export journal with explicit recovery profiles
 
@@ -237,3 +237,15 @@ V2 content adds supplied canonical category and immutable actual-vehicle assessm
 Inventory becomes46 tables/741 columns,731 required with unchanged10 credential exclusions. Profile crest.quote-review.sources.v2 includes all27 item columns, immutable assessments/approvals and exact retained public presentation; pair existing business-history evidence from the same RO/RR snapshot for original operations/audit/private history. Do not relabel profile1 or the43 worker complete46. Require actual45-to46 atomic upgrade/refusal, native inventory/grants, genuine Auth/HTTP, common-format reconstruction, registered encrypted46 independent restore and exact-source browser acceptance. Registration is construction, not production activation or complete exports/backups.
 
 Owner approval is not actual sharing, customer acceptance, a service agreement, tax/invoice/payment posting or lead conversion. Manual confirmed sharing, Sent/current-unexpired acceptance, agreement/entitlement conversion, replacements/amendments and remaining scheduling/finance/Calendar scope remain explicit approved V1 follow-on work. No new human capability, auth bypass, cost, real-data authority or weakened release gate.
+
+
+
+## ADR47 — Retained unconfirmed appointment proposals
+
+2026-10-29. Approved owner continuation; PR102 exact4e0acf4689518dbc8afab484e90ca8c558b167c8 and appointment-only portability ce11acbaf22616d5438a8e06c93dff9b8d5a7ec0 supply the reviewed starting source. Registration47 appends to46; all46 migration identities, quote-review behavior and historical export/recovery profiles remain frozen. No acceptance or confirmed-scheduler shortcut is authorized.
+
+An appointment proposal is a prospective note attached to exactly one saved customer or lead. Retain append-only proposed/withdrawn versions, explicit UTC/local/IANA/offset time facts, reasons, actors, operations and exact audits. It creates no confirmed booking, operator reservation, contracted job, payment, accepted revenue or Calendar event. No new commercial, tax or financial rule is introduced. Confirmed work still requires the approved immutable agreement/scheduler workflow.
+
+Use the current session/provider/capability/recovery fences and restricted command transaction. Persist only opaque original IDs/versions/epoch before dispatch. Unknown outcomes preserve that reference; no automatic retry or draft reconstruction. A lost absent original is resolved by the existing explicit retirement workflow, extended with one closed appointment kind while preserving all15 earlier kinds. Private drafts clear on suspension. Synthetic HTTP composition stays default-off and rejects production activation.
+
+A dedicated export-role source reader requires one read-only repeatable-read snapshot and binds business, snapshot token, keyset pages and exact declared counts. Every22-column immutable version is included; finite limits reject the entire operation rather than truncate. Same-snapshot existing operation/audit export remains required for source-history closure. Per-proposal CSV/JSON copies do not claim complete business export or backup. Actual registered upgrade/refusal, trusted Auth/UI and independent encrypted47 restore gates are mandatory before synthetic adoption; production remains blocked. This forward decision changes no immutable baseline, finance contract, confirmed scheduling or Calendar scope.

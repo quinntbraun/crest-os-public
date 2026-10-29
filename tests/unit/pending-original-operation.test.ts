@@ -9,6 +9,7 @@ import {originalOperationFixture,retirementFixture,retiredOutcomeFixture} from '
 // Runtime exposure still requires catalog migration/source/recovery adoption.
 const pendingKinds=originalOperationKinds;
 const keys:Record<OriginalOperationKind,string>={
+ 'operations.appointment_hold.save':'crest.appointment-hold.pending-reference.v1',
  'business.rename':'crest.business-name.pending.v1',
  'crm.customer.save':'crest.customer.pending-reference.v1',
  'crm.address.save':'crest.address.pending-reference.v1',

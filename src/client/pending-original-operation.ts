@@ -1,3 +1,5 @@
+import {appointmentHolds} from './appointment-holds';
+import {createPendingHoldStore} from './pending-appointment-hold';
 import type {Proof} from './authentication';
 import {businessSettings} from './business-settings';
 import {customers} from './customers';
@@ -73,6 +75,7 @@ function target<T extends {businessId:string;binding:string}>(
 }
 export function openPendingOriginalOperation(kind:OriginalOperationKind,storage:StorageAccess,businessId:string):PendingOriginalOperation|null{
  switch(kind){
+  case 'operations.appointment_hold.save':return target(createPendingHoldStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>appointmentHolds.lookup(p.businessId,p.reference,proof,signal));
   case 'business.rename':return target(createPendingEditStore(storage),kind,businessId,p=>({operationId:p.command.operationId,recoveryEpoch:p.command.recoveryEpoch,expectedVersion:p.command.expectedVersion}),(p,proof,signal)=>businessSettings.lookup(p.businessId,p.command,proof,signal));
   case 'crm.customer.save':return target(createPendingCustomerStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>customers.lookup(p.businessId,p.reference,proof,signal));
   case 'crm.address.save':return target(createPendingAddressStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>addresses.lookup(p.businessId,p.reference,proof,signal));
