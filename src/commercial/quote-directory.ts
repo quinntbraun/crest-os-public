@@ -4,7 +4,7 @@ import {sessionDatabase} from '../security/session-database.ts';
 import {sessionCredentialHash} from '../security/session-credential.ts';
 import {createSessionLifecycle} from '../security/session-lifecycle.ts';
 import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
-import {prepareQuoteContent} from './quote-content.ts';
+import {prepareVersionedQuoteContent as prepareQuoteContent} from './quote-review-content.ts';
 import {quoteId,quoteVersion,quoteHistoryPageLimit,requireQuoteStorage as check,parseQuoteSave,parseQuoteCommitted,parseQuoteDirectoryPage,parseQuoteHistoryPage} from './quote-storage-contract.ts';
 import type {QuoteSave} from './quote-storage-contract.ts';
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
@@ -27,10 +27,10 @@ export function createQuoteDirectory(config:SessionDatabaseConfiguration,provide
     const request=parseQuoteSave(input),payload=prepareQuoteContent(request.content),contentHash=createHash('sha256').update(payload.canonical).digest('hex');
     const outcome=await authorized(credential,request.businessId,signal,(args,bounded)=>database.commandTransaction(async(query,currentSignal)=>{
      if(currentSignal.aborted)throw new Error();submitted=true;
-     const value=await query('SELECT crest_commands.save_quote_draft($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::integer,$12::uuid,$13::uuid,$14::bigint,$15::bigint,$16::jsonb) AS result',[...args,request.recoveryEpoch,request.operationId,1,request.familyId,request.revisionId,request.expectedFamilyVersion,request.expectedRevisionVersion,{customer:payload.customer,internal:payload.internal,canonical:payload.canonical}]);
+     const value=await query('SELECT crest_commands.save_quote_draft($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::integer,$12::uuid,$13::uuid,$14::bigint,$15::bigint,$16::jsonb) AS result',[...args,request.recoveryEpoch,request.operationId,request.content.schemaVersion,request.familyId,request.revisionId,request.expectedFamilyVersion,request.expectedRevisionVersion,{customer:payload.customer,internal:payload.internal,canonical:payload.canonical}]);
      if(currentSignal.aborted)throw new Error();
      if(exact(value,['state'])&&value.state==='denied')return null;
-     if(exact(value,['state','reason'])&&value.state==='conflict'&&['operation','family','revision','state'].includes(value.reason as string))return new PrivateQuoteValue(Object.freeze({state:'conflict' as const,reason:value.reason as 'operation'|'family'|'revision'|'state'}));
+     if(exact(value,['state','reason'])&&value.state==='conflict'&&(request.content.schemaVersion===2?['operation','family','revision','state','assessment']:['operation','family','revision','state']).includes(value.reason as string))return new PrivateQuoteValue(Object.freeze({state:'conflict' as const,reason:value.reason as 'operation'|'family'|'revision'|'state'|'assessment'}));
      if(exact(value,['state','reason','currentFamilyVersion','currentRevisionVersion'])&&value.state==='conflict'&&value.reason==='version'&&quoteVersion(value.currentFamilyVersion,true)&&quoteVersion(value.currentRevisionVersion,true))return new PrivateQuoteValue(Object.freeze({state:'conflict' as const,reason:'version' as const,currentFamilyVersion:value.currentFamilyVersion,currentRevisionVersion:value.currentRevisionVersion}));
      if(exact(value,['state','familyId','familyVersion','revisionId','revisionVersion','contentHash'])&&value.state==='unchanged'){
       check(request.expectedFamilyVersion!=='0'&&value.familyId===request.familyId&&value.revisionId===request.revisionId&&value.familyVersion===request.expectedFamilyVersion&&value.revisionVersion===request.expectedRevisionVersion&&value.contentHash===contentHash);

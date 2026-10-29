@@ -1,0 +1,197 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "existingMigrationCount": 45,
+  "runtimeEnabled": false,
+  "nativeExecuted": false,
+  "requiredRegistered45Migration": "20261028020000_quote_drafts.sql",
+  "requiredRegistered45MigrationSha256": "896aa5031e92b7eb4c3d264b8ee7fa024e82e550da650c4c7eb5f06ab4e900fc",
+  "existingFunctionBodies": [
+    {
+      "signature": "crest_private.quote_family_projection(crest.quote_families)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "e52360a7f1d1f2db24ddd11122876563d436cf1ad722d038aa9be0eeb0bc7e01"
+    },
+    {
+      "signature": "crest_private.quote_revision_projection(crest.quote_revisions)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "403998e14bcb7f79eaf6e4869bf0787711ce84855a89af58f465036866166895"
+    },
+    {
+      "signature": "crest_private.quote_item_projection(crest.quote_items)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "b04d429fde9e8d08381c5705ccea735649181731fa50cba51f7331043718aa1d"
+    },
+    {
+      "signature": "crest_private.reject_quote_history_change()",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "rowSecurity": false,
+      "bodySha256": "561eb0e11c186a935c72df0016ad0030db2a86962958b390866d8d9642728a0a"
+    },
+    {
+      "signature": "crest_private.validate_quote_family_change()",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "rowSecurity": false,
+      "bodySha256": "e71e1344d974341d24e615566bde20920dbc075246f9b3ea398cba30730f5825"
+    },
+    {
+      "signature": "crest_private.validate_quote_revision_change()",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "rowSecurity": false,
+      "bodySha256": "8a85fa2ec4309efffcfb6d96c7caaa5085393c49da0a808902caeaffa10ed444"
+    },
+    {
+      "signature": "crest_private.validate_quote_item_change()",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "rowSecurity": false,
+      "bodySha256": "d40743aacdfe4f1bbbd06659d7e26cbd48a92f7a65ffb0e192e277700a9c73be"
+    },
+    {
+      "signature": "crest_private.check_quote_audit()",
+      "owner": "crest_quote_integrity_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "e93aa14954d249192fa52a2da0b6a66d6f7d1dd566eac5cc9e04e029682caba3"
+    },
+    {
+      "signature": "crest_private.check_quote_aggregate()",
+      "owner": "crest_quote_integrity_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "90572fe90e63d466d0aec4d9529e9d63df974c97a091f78fa351e39a45ceed97"
+    },
+    {
+      "signature": "crest_private.quote_discount_cents(jsonb,numeric)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "ff13fa6fd1b102045953e137ef7af34ddfa5f9a8763757e8cd18f7b3618b67d0"
+    },
+    {
+      "signature": "crest_private.calculate_quote_pricing(jsonb,jsonb)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "2915d99f70eeb1f948567a7ea1c37d8741eb337a21b1d60fa0f19a3fc628868f"
+    },
+    {
+      "signature": "crest_commands.read_authorized_business_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid)",
+      "owner": "crest_session_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "614b87966124be9297a7658a86bc3ee84a29f19f381a80ca23ecf702ffa0e952"
+    },
+    {
+      "signature": "crest_commands.lock_mutation_authority(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,text,boolean)",
+      "owner": "crest_session_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "9b2d19abde943ad1353250275d1b3bf66b34b9ff5fbe1a6d16b73a0ef42cae35"
+    },
+    {
+      "signature": "crest_private.valid_quote_draft_payload(jsonb)",
+      "owner": "crest_quote_owner",
+      "securityDefiner": false,
+      "volatility": "s",
+      "rowSecurity": false,
+      "bodySha256": "c91cc7b2106bedc972a4ed1f50530a75b4cbcd85290369a26a49cbf9e26c8b0b"
+    },
+    {
+      "signature": "crest_private.quote_operation_result(uuid,uuid,uuid)",
+      "owner": "crest_quote_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "25aea41ca2536f61a36e9f155f9d03a2a58bed89356a3ef2a7c2cde3c6a949a3"
+    },
+    {
+      "signature": "crest_commands.save_quote_draft(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,uuid,uuid,bigint,bigint,jsonb)",
+      "owner": "crest_quote_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "a241dec27c988108bde4693474dc1b6a29be324ef32a6f017e83df2214b63823"
+    },
+    {
+      "signature": "crest_commands.authorize_quote_read(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid)",
+      "owner": "crest_session_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "fd2d20fa2b547e6237a13458365630838a7f98dc427644532eb800ad43121b5c"
+    },
+    {
+      "signature": "crest_commands.finish_quote_activity(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid)",
+      "owner": "crest_session_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "rowSecurity": true,
+      "bodySha256": "17e62a3fa5b3db44af09ee5ae2ee7fb7fea827db354dce63fd97668c73fb24f0"
+    },
+    {
+      "signature": "crest_private.original_operation_reference_valid(jsonb)",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "rowSecurity": false,
+      "bodySha256": "c8caf7868d3b96aee4d0b07c41d82dd08801ee658e685354084ddcc806a82b47"
+    }
+  ],
+  "completedScope": [
+    "versioned Draft",
+    "submit for review",
+    "exact owner approval",
+    "edit invalidation"
+  ],
+  "unfinishedScope": [
+    "send",
+    "acceptance",
+    "replacement",
+    "amendment",
+    "registered adoption",
+    "source profile",
+    "independent lifecycle recovery",
+    "real data"
+  ],
+  "sqlSha256": "aed67ab9c81e6a24234f3b794f22675e64e0f6a499d88826861179cceb311d35",
+  "sqlBytes": 124914,
+  "originalValidatorBeforeSha256": "c8caf7868d3b96aee4d0b07c41d82dd08801ee658e685354084ddcc806a82b47",
+  "originalValidatorAfterSha256": "63a1f92b206081c6734f0b081913a3974e30342c95a993029c02b1ff4fe26d61",
+  "newOriginalOperationKinds": [
+    "quote.review.submit",
+    "quote.review.approve"
+  ],
+  "sourceProfilesActivated": false,
+  "candidateSourceProfile": "crest.quote-review.sources.v2",
+  "candidateSourceTables": [
+    "quote_families",
+    "quote_revisions",
+    "quote_items",
+    "condition_assessments",
+    "quote_approvals"
+  ]
+}

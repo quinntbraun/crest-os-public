@@ -10,6 +10,7 @@ import {transportFromIncomingMessage} from '../security/trusted-transport.ts';
 import {createBusinessHttp,businessFailureResponse} from '../security/business-http.ts';
 import {createServiceHttp,serviceFailureResponse} from '../commercial/service-http.ts';
 import {createQuoteHttp,quoteFailureResponse} from '../commercial/quote-http.ts';
+import {createQuoteReviewHttp} from '../commercial/quote-review-http.ts';
 import {quoteResponseLimit} from '../commercial/quote-storage-contract.ts';
 import {createCustomerHttp,customerFailureResponse} from '../customer/customer-http.ts';
 import {createCustomerAddressHttp,addressFailureResponse} from '../customer/customer-address-http.ts';
@@ -28,7 +29,7 @@ export type AuthenticationConfiguration=Readonly<{
   provider:Parameters<typeof createAuthenticationHttp>[1];tokens:Parameters<typeof createAuthenticationHttp>[2];
 }>;
 export type SourceExportConfiguration=Readonly<{appReleaseId:string;store:NonNullable<Parameters<typeof createSourceExportDownloadHttp>[3]>}>;
-export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>;customers?:boolean;vehicles?:boolean;associations?:boolean;leads?:boolean;leadConversions?:boolean;operationResolution?:boolean;syntheticCatalog?:boolean;syntheticQuotes?:boolean;sourceExports?:SourceExportConfiguration}>;
+export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>;customers?:boolean;vehicles?:boolean;associations?:boolean;leads?:boolean;leadConversions?:boolean;operationResolution?:boolean;syntheticCatalog?:boolean;syntheticQuotes?:boolean;syntheticQuoteReview?:boolean;sourceExports?:SourceExportConfiguration}>;
 export type PageHandler=(request:IncomingMessage,response:ServerResponse)=>Promise<void>;
 
 export function createBoundedNodeServer(tls?:NodeConfiguration['tls']):Server{
@@ -116,10 +117,11 @@ async function writePrivateResponse(outgoing:ServerResponse,response:Response,si
 }
 
 export function bindApplicationHandler(server:Server,config:NodeConfiguration,pages:PageHandler):void{
-  const {origin,environment,authentication,business,customers,vehicles,associations,leads,leadConversions,operationResolution,sourceExports,syntheticCatalog,syntheticQuotes}=config;
+  const {origin,environment,authentication,business,customers,vehicles,associations,leads,leadConversions,operationResolution,sourceExports,syntheticCatalog,syntheticQuotes,syntheticQuoteReview}=config;
   const url=new URL(origin);
   if(syntheticCatalog!==undefined&&(typeof syntheticCatalog!=='boolean'||syntheticCatalog&&(environment!=='test'||!authentication||!business)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(syntheticQuotes!==undefined&&(typeof syntheticQuotes!=='boolean'||syntheticQuotes&&(environment!=='test'||!authentication||!business)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  if(syntheticQuoteReview!==undefined&&(typeof syntheticQuoteReview!=='boolean'||syntheticQuoteReview&&(environment!=='test'||!authentication||!business||syntheticQuotes!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(sourceExports!==undefined&&(!sourceExports||typeof sourceExports!=='object'||Array.isArray(sourceExports)||!business||!authentication||typeof sourceExports.appReleaseId!=='string'||!/^([a-f0-9]{40})$/.test(sourceExports.appReleaseId)||typeof sourceExports.store?.readVerified!=='function'))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(operationResolution!==undefined&&typeof operationResolution!=='boolean'||operationResolution&&(!business||!authentication))throw new Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(url.origin!==origin||url.username||url.password||!['http:','https:'].includes(url.protocol)||!['production','test'].includes(environment)
@@ -127,7 +129,9 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
   const dispatch=authentication?createAuthenticationHttp({...authentication.configuration,origin,environment},authentication.provider,authentication.tokens):undefined;
   const dispatchBusiness=business&&authentication?createBusinessHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
   const dispatchServices=syntheticCatalog===true&&business&&authentication?createServiceHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
-  const dispatchQuotes=syntheticQuotes===true&&business&&authentication?createQuoteHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
+  const dispatchDraftQuotes=syntheticQuotes===true&&business&&authentication?createQuoteHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true,syntheticQuoteReview===true):undefined;
+  const dispatchQuoteReview=syntheticQuoteReview===true&&business&&authentication?createQuoteReviewHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
+  const dispatchQuotes=dispatchDraftQuotes?(request:Request,peer:Parameters<NonNullable<typeof dispatchDraftQuotes>>[1])=>new URL(request.url).pathname.startsWith('/api/business/quotes/review/')?(dispatchQuoteReview?dispatchQuoteReview(request,peer):Promise.resolve(quoteFailureResponse(404))):dispatchDraftQuotes(request,peer):undefined;
   const dispatchCustomers=customers&&business&&authentication?createCustomerHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
   const dispatchAddresses=customers&&business&&authentication?createCustomerAddressHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
   const dispatchVehicles=vehicles&&business&&authentication?createVehicleHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;

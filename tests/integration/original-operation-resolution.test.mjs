@@ -12,7 +12,9 @@ import {parseOriginalOperationReference,parseOriginalOperationOutcome,originalOp
 // Catalog resolution is proved after its explicit proposal in the catalog drill.
 // This fixture proves the immutable registered42 eleven-kind contract. Later
 // catalog/quote extensions have their own mandatory current-source fixtures.
-const originalOperationKinds=currentOriginalKinds.filter(kind=>kind!=='catalog.service.save'&&kind!=='quote.draft.save');
+// Review/approval are introduced after45 and proved with the lifecycle fixture;
+// they must not be silently treated as supported by immutable registered42.
+const originalOperationKinds=currentOriginalKinds.filter(kind=>!['catalog.service.save','quote.draft.save','quote.review.submit','quote.review.approve'].includes(kind));
 import {verifyBusinessHistoryEvidence} from '../../src/security/business-history-evidence.ts';
 import {formatBusinessHistoryCsv} from '../../src/security/business-history-csv.ts';
 import {decodeCustomerCsv} from '../support/customer-fixture.ts';

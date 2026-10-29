@@ -26,7 +26,7 @@ const signal=()=>new AbortController().signal;
 async function transaction(run){await client.query('BEGIN');try{const result=await run();await client.query('COMMIT');return result;}catch(error){await client.query('ROLLBACK');throw error;}}
 before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);base44=await sandbox.prefix(44);const prior=(await sandbox.apply(target,base44)).history;assert.equal(prior.length,44);
- if(registered45){const current=await sandbox.apply(target);assert.equal(current.history.length,45);assert.deepEqual(current.history.slice(0,44),prior);assert.deepEqual((await sandbox.apply(target)).history,current.history);}
+ if(registered45){const current=await sandbox.apply(target,await sandbox.prefix(45));assert.equal(current.history.length,45);assert.deepEqual(current.history.slice(0,44),prior);assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(45))).history,current.history);}
  else for(const name of ['quote-pricing','quote-draft-storage','quote-draft-commands']){
   const sql=await readFile(new URL('../../planning/proposals/'+name+'.sql',import.meta.url),'utf8'),meta=JSON.parse(await readFile(new URL('../../planning/proposals/'+name+'.json',import.meta.url),'utf8'));assert.equal(meta.registered,false);assert.equal(meta.runtimeEnabled,false);assert.equal(Buffer.byteLength(sql),meta.sqlBytes);assert.equal(createHash('sha256').update(sql).digest('hex'),meta.sqlSha256);await transaction(()=>client.query(sql));
  }

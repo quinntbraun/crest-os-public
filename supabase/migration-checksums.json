@@ -225,6 +225,11 @@
       "version": "20261028020000",
       "file": "20261028020000_quote_drafts.sql",
       "sha256": "896aa5031e92b7eb4c3d264b8ee7fa024e82e550da650c4c7eb5f06ab4e900fc"
+    },
+    {
+      "version": "20261028030000",
+      "file": "20261028030000_quote_review.sql",
+      "sha256": "4b802d624d8db4dd0ebd79280df669ee3d5fe82852765c3034717ae83ce8d6c0"
     }
   ]
 }

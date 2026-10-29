@@ -3,12 +3,12 @@ import {it,expect} from 'vitest';
 import {sha256,validateMigrationSet} from '../../src/tooling/migrations';
 import type {MigrationRegistry} from '../../src/tooling/migrations';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage';
-import registry from '../../supabase/migration-checksums.json';
+import registry from '../support/registered45-migration-checksums.json';
 import previous from '../support/registered44-migration-checksums.json';
 import priorCoverage from '../support/registered44-export-coverage.json';
 import priorCompatibility from '../support/registered44-compatibility.json';
-import coverage from '../../planning/SECURITY_EXPORT_COVERAGE.json';
-import compatibility from '../../release/compatibility.json';
+import coverage from '../support/registered45-export-coverage.json';
+import compatibility from '../support/registered45-compatibility.json';
 import adoption from '../../planning/QUOTE_SCHEMA45_ADOPTION.json';
 const bytes=(path:string)=>readFileSync(new URL('../../'+path,import.meta.url));
 it('registers one append-only quote migration and preserves every prior checksum',()=>{

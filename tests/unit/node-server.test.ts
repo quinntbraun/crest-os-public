@@ -1,7 +1,7 @@
 import {request as httpRequest} from 'node:http';
 import {describe,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn(),quotes:vi.fn()}));
+const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn(),quotes:vi.fn(),quoteReview:vi.fn()}));
 vi.mock('../../src/security/browser-session-flow.ts',()=>({createBrowserSessionFlow:()=>flow}));
 vi.mock('../../src/security/business-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/business-http.ts')>(),createBusinessHttp:()=>flow.business}));
 vi.mock('../../src/customer/customer-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-http.ts')>(),createCustomerHttp:()=>flow.customers}));
@@ -13,10 +13,24 @@ vi.mock('../../src/customer/lead-source-http.ts',async importOriginal=>({...awai
 vi.mock('../../src/security/original-operation-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/original-operation-http.ts')>(),createOriginalOperationHttp:()=>flow.originalOperations}));
 vi.mock('../../src/commercial/service-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/service-http.ts')>(),createServiceHttp:()=>flow.services}));
 vi.mock('../../src/commercial/quote-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/quote-http.ts')>(),createQuoteHttp:()=>flow.quotes}));
+vi.mock('../../src/commercial/quote-review-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/quote-review-http.ts')>(),createQuoteReviewHttp:()=>flow.quoteReview}));
 import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../../src/server/node-server.ts';
 import type {NodeConfiguration} from '../../src/server/node-server.ts';
 
 const origin='https://crest.example.com';
+it('review construction requires its own explicit synthetic quote/auth/business configuration',()=>{
+ for(const config of [{origin,environment:'test',syntheticQuoteReview:true},{origin,environment:'test',syntheticQuoteReview:'yes'},{origin,environment:'production',syntheticQuotes:true,syntheticQuoteReview:true},{origin,environment:'test',syntheticQuotes:false,syntheticQuoteReview:true,business:{businessId:'synthetic'},authentication:{}}]){
+  const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,config as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();
+ }
+});
+it.each([undefined,false,true])('review routes remain separate from draft activation: %s',async enabled=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();
+ const local=`http://127.0.0.1:${address.port}`,pages=vi.fn();flow.quotes.mockReset();flow.quoteReview.mockReset();
+ flow.quotes.mockImplementation(async()=>new Response('{}',{headers:{'cache-control':'private, no-store'}}));flow.quoteReview.mockImplementation(async()=>new Response('{}',{headers:{'cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',syntheticQuotes:true,...enabled===undefined?{}:{syntheticQuoteReview:enabled},business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{const draft=await fetch(local+'/api/business/quotes/list',{method:'POST',body:'{}'});expect(draft.status).toBe(200);await draft.text();const review=await fetch(local+'/api/business/quotes/review/read',{method:'POST',body:'{}'});expect(review.status).toBe(enabled?200:404);expect(review.headers.get('cache-control')).toContain('no-store');await review.text();expect(flow.quotes).toHaveBeenCalledTimes(1);expect(flow.quoteReview).toHaveBeenCalledTimes(enabled?1:0);expect(pages).not.toHaveBeenCalled();}
+ finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
 it('catalog construction cannot be enabled in production or without genuine authentication and business configuration',()=>{
   for(const config of [{origin,environment:'production',syntheticCatalog:true},{origin,environment:'test',syntheticCatalog:true},{origin,environment:'test',syntheticCatalog:'yes'},{origin,environment:'test',syntheticCatalog:true,business:{businessId:'synthetic'}}]){
     const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,config as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();

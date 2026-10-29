@@ -115,3 +115,14 @@ Authority: owner-approved V1 implementation in the existing proven architecture.
 - EXPORTS_AND_BACKUPS.md v1.7 — 37017d2c1a3f4523737d5aad9843aa6502a75baf1f4031c77d413df3dc93db10 (30279 bytes)
 - ARCHITECTURE_DECISIONS.md v1.15 — 72f4009a4e31bfcf680db11325923195763179c2ff98bff1bd9a333cf592e6f2 (56726 bytes)
 - PUBLICATION.md v1.10 — 0d21cdb14601c80292add46dd97134dfa36df975d0ba3da6939197751b788ead (6656 bytes)
+
+
+## 2026-10-28 — ADR46 exact owner quote review registration
+
+Authority: continuing owner-approved V1 implementation. Finite requirement: register verified v2 assessment-backed Draft review/approval, preserve exact v1 original results, prove current upgrade/retrieval/independent recovery, then allow bounded genuine synthetic browser acceptance. Send/acceptance/agreement/replacement/amendments and every remaining approved V1 requirement remain visible; no tax/finance/real-data/production gate is relaxed. Original baseline and all45 existing migrations remain unchanged. Prior amendment bytes:
+
+- ARCHITECTURE.md v1.10 — f8a64dec11cb17ac2d34b4fbe7ab9646fdb91a12577830189c4599ff32fe00da (40081 bytes)
+- ARCHITECTURE_DECISIONS.md v1.16 — 03373d6be2d5cb054cf36cff5e3a8c51a87dbe8146df4293ce6746f4b1629109 (58655 bytes)
+- DATABASE.md v1.8 — 466c0440ac290f20d92f4239c39637f99f4e5efe708f64fec707bfa02111be35 (56761 bytes)
+- EXPORTS_AND_BACKUPS.md v1.8 — 9cae0f502ec47327523c54f11632d7299c1f6bc252e6b9d30825edaeba039790 (30837 bytes)
+- PUBLICATION.md v1.11 — ea78c0ce35a80996e6110ea637e7885017f3ec297cd8387204b10507c9a53511 (7057 bytes)

@@ -24,7 +24,7 @@ async function post(route:'context'|'list'|'save'|'history'|'operation',body:obj
    const errors:Record<string,readonly[number,Kind]>={QUOTE_SAVE_NOT_SUBMITTED:[503,'not_submitted'],QUOTE_SAVE_DENIED:[403,'denied'],RECOVERY_REVIEW_REQUIRED:[409,'recovery'],QUOTE_REQUEST_LIMITED:[429,'limited'],QUOTE_SAVE_OUTCOME_UNKNOWN:[503,'unknown']},mapped=typeof value.error==='string'&&Object.hasOwn(errors,value.error)?errors[value.error]:undefined;
    if(mapped&&response.status===mapped[0])throw new QuoteClientError(mapped[1]);throw Error();
   }
-  return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding')};
+  return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding'),reviewAvailable:response.headers.get('x-crest-quote-review')==='1'};
  }catch(error){throw error instanceof QuoteClientError?error:new QuoteClientError(route==='save'?'unknown':'unavailable');}
 }
 function bindReceipt(value:unknown,businessId:string,reference:QuoteReference){
@@ -33,14 +33,14 @@ function bindReceipt(value:unknown,businessId:string,reference:QuoteReference){
 }
 export const quotes=Object.freeze({
  async context(proof:Proof,signal:AbortSignal){
-  try{const r=await post('context',{},proof,signal),v=r.value;check(r.status===200&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding)&&exact(v,['schemaVersion','businessId','writeState','recoveryEpoch'])&&v.schemaVersion===1&&quoteId(v.businessId)&&(v.writeState==='ready'&&quoteId(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null));return Object.freeze({context:Object.freeze({...v}) as QuoteContext,binding:r.binding});}catch(error){throw error instanceof QuoteClientError?error:new QuoteClientError('unavailable');}
+  try{const r=await post('context',{},proof,signal),v=r.value;check(r.status===200&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding)&&exact(v,['schemaVersion','businessId','writeState','recoveryEpoch'])&&v.schemaVersion===1&&quoteId(v.businessId)&&(v.writeState==='ready'&&quoteId(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null));return Object.freeze({context:Object.freeze({...v}) as QuoteContext,binding:r.binding,...r.reviewAvailable?{reviewAvailable:true as const}:{}});}catch(error){throw error instanceof QuoteClientError?error:new QuoteClientError('unavailable');}
  },
  async save(input:QuoteSave,proof:Proof,signal:AbortSignal){
   let command:QuoteSave;try{command=parseQuoteSave(input);}catch{throw new QuoteClientError('input');}
   const {businessId,...body}=command;if(new TextEncoder().encode(JSON.stringify(body)).byteLength>quoteBodyLimit)throw new QuoteClientError('input');
   const r=await post('save',body,proof,signal),v=r.value;
   try{
-   if(r.status===409&&exact(v,['state','reason'])&&v.state==='conflict'&&['operation','family','revision','state'].includes(v.reason as string))return Object.freeze({state:'conflict' as const,reason:v.reason as 'operation'|'family'|'revision'|'state'});
+   if(r.status===409&&exact(v,['state','reason'])&&v.state==='conflict'&&(command.content.schemaVersion===2?['operation','family','revision','state','assessment']:['operation','family','revision','state']).includes(v.reason as string))return Object.freeze({state:'conflict' as const,reason:v.reason as 'operation'|'family'|'revision'|'state'|'assessment'});
    if(r.status===409&&exact(v,['state','reason','currentFamilyVersion','currentRevisionVersion'])&&v.state==='conflict'&&v.reason==='version'&&quoteVersion(v.currentFamilyVersion,true)&&quoteVersion(v.currentRevisionVersion,true))return Object.freeze({state:'conflict' as const,reason:'version' as const,currentFamilyVersion:v.currentFamilyVersion,currentRevisionVersion:v.currentRevisionVersion});
    check(r.status===200);
    if(exact(v,['state','familyId','familyVersion','revisionId','revisionVersion','contentHash'])&&v.state==='unchanged'){check(command.expectedFamilyVersion!=='0'&&v.familyId===command.familyId&&v.revisionId===command.revisionId&&v.familyVersion===command.expectedFamilyVersion&&v.revisionVersion===command.expectedRevisionVersion&&typeof v.contentHash==='string'&&/^[a-f0-9]{64}$/.test(v.contentHash));return Object.freeze({...v}) as Readonly<{state:'unchanged';familyId:string;familyVersion:string;revisionId:string;revisionVersion:string;contentHash:string}>;}

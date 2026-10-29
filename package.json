@@ -32,7 +32,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:sign-in-browser": "node --test --test-concurrency=1 tests/integration/sign-in-browser.test.mjs tests/integration/customer-address-browser.test.mjs tests/integration/vehicle-http-browser.test.mjs tests/integration/association-http-browser.test.mjs tests/integration/association-editor-browser.test.mjs tests/integration/lead-http-browser.test.mjs tests/integration/lead-editor-browser.test.mjs tests/integration/lead-address-editor-browser.test.mjs tests/integration/lead-conversion-http-browser.test.mjs tests/integration/lead-conversion-editor-browser.test.mjs tests/integration/source-export-browser.test.mjs tests/integration/source-export-product-browser.test.mjs tests/integration/workspace-journey-browser.test.mjs tests/integration/quote-draft-editor-browser.test.mjs",
+    "test:sign-in-browser": "node --test --test-concurrency=1 tests/integration/sign-in-browser.test.mjs tests/integration/customer-address-browser.test.mjs tests/integration/vehicle-http-browser.test.mjs tests/integration/association-http-browser.test.mjs tests/integration/association-editor-browser.test.mjs tests/integration/lead-http-browser.test.mjs tests/integration/lead-editor-browser.test.mjs tests/integration/lead-address-editor-browser.test.mjs tests/integration/lead-conversion-http-browser.test.mjs tests/integration/lead-conversion-editor-browser.test.mjs tests/integration/source-export-browser.test.mjs tests/integration/source-export-product-browser.test.mjs tests/integration/workspace-journey-browser.test.mjs tests/integration/quote-draft-editor-browser.test.mjs tests/integration/quote-review-browser.test.mjs",
     "test:tenant-read-db": "node --test --test-concurrency=1 tests/integration/tenant-read.test.mjs",
     "test:mutation-fence-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/mutation-fence.test.mjs",
     "test:operation-storage-db": "node --test --test-concurrency=1 tests/integration/operation-storage.test.mjs",
@@ -55,7 +55,7 @@
     "release:manifest": "node scripts/release-manifest.mjs",
     "test:provider-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-session.test.mjs",
     "test:login-admission-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/login-admission.test.mjs",
-    "test:real-auth": "node --conditions=react-server --test --test-concurrency=1 tests/integration/real-auth.test.mjs tests/integration/source-export-journal-auth.test.mjs tests/integration/source-export-execution-auth.test.mjs tests/integration/service-catalog-auth.test.mjs tests/integration/service-catalog-registered-auth.test.mjs tests/integration/quote-draft-http.test.mjs tests/integration/quote-draft-registered-auth.test.mjs",
+    "test:real-auth": "node --conditions=react-server --test --test-concurrency=1 tests/integration/real-auth.test.mjs tests/integration/source-export-journal-auth.test.mjs tests/integration/source-export-execution-auth.test.mjs tests/integration/service-catalog-auth.test.mjs tests/integration/service-catalog-registered-auth.test.mjs tests/integration/quote-draft-http.test.mjs tests/integration/quote-draft-registered-auth.test.mjs tests/integration/quote-review-auth.test.mjs tests/integration/quote-review-registered-auth.test.mjs",
     "test:catalog-auth": "node --conditions=react-server --test --test-concurrency=1 tests/integration/service-catalog-auth.test.mjs",
     "test:session-commands-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/session-revocation.test.mjs",
     "test:business-settings-db": "node --test --test-concurrency=1 tests/integration/business-settings-context.test.mjs",
@@ -92,7 +92,10 @@
     "test:catalog-registered": "node --conditions=react-server --test --test-concurrency=1 tests/integration/service-catalog-registered.test.mjs",
     "test:service-editor-browser": "node --test --test-concurrency=1 tests/integration/service-editor-browser.test.mjs",
     "test:quote-source-proposal": "node --test --test-concurrency=1 tests/integration/quote-draft-source.test.mjs",
-    "test:quote-registered": "node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-draft-registered.test.mjs"
+    "test:quote-registered": "node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-draft-registered.test.mjs",
+    "test:quote-review-proposal": "node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-lifecycle.test.mjs",
+    "test:quote-review-source": "node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-review-source.test.mjs",
+    "test:quote-review-registered": "node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-review-registered.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1156.0",
