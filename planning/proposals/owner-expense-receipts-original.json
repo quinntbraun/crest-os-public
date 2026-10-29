@@ -25,11 +25,11 @@
     "tests": 1,
     "passed": 1,
     "failed": 0,
-    "testSha256": "cbeca75ba23a8f8abc9678c0ec1caa55619d93a0e67c1971665bf344da6e5eee",
-    "logSha256": "cf21553097574bd62c8b73b74ccf3aa87a1d572fe6d5e20994ea6fe6d9c04fab",
+    "testSha256": "cd983b5c9b1cad8c3b26c7ac733cb3a0421123bdec6fc327d3570a4e214c6374",
+    "logSha256": "9f803b6c0d82a8be383b863d21c17ef73c2d03f7a58cf4a92b880bd78a5ede55",
     "sourceStable": true,
     "ownedClusterCleaned": true,
-    "scope": "genuine provider MFA/restricted login, actual receipt client bundled from source, direct synthetic HTTP with an explicit browser-cookie/origin adapter, SDK private-file/archive pipeline and a decoder seam; not browser cookie/TLS, complete held-database restore or registered49 acceptance",
+    "scope": "Actual provider MFA/restricted login, actual browser-client source bundled through explicit direct-HTTP cookie/Origin adapter, all three original_recorded/typed reconciliation and absent/retired acknowledgements; preserved receipt SDK/archive/lost-publication proof with a decoder seam. Not real browser cookies/TLS, registered49 or complete held DB plus receipts restore.",
     "exactPublicationOperationVerified": true,
     "explicitPublicationEpochAndExpenseBound": true,
     "opaqueReferenceBeforeDispatch": true,
@@ -37,7 +37,7 @@
     "duplicateReserveOrPublish": false
   },
   "registered49Verified": false,
-  "sharedRetirementIntegrated": false,
+  "sharedRetirementIntegrated": "unregistered construction only; see owner-expenses-resolution.json",
   "productionActivation": false,
   "preJournalGenuineAuthAcceptance": {
     "tests": 1,
@@ -55,7 +55,7 @@
     "storeSha256": "3d253a1afa0dd0aebc9e4b81c6acde5885bd27e9c619a694eb7866150f905d4c",
     "clientSha256": "b309558ab76ccbdc4cc2068295220a74a6ca7807dba6f9694fb4401e8290e490",
     "httpSha256": "7dd748053c201d360e86f7b1fccb17fd8458d550e3f21b002bed1104f9146fde",
-    "sharedRetirementIntegrated": false,
+    "sharedRetirementIntegrated": "unregistered construction only; see owner-expenses-resolution.json",
     "registered49Verified": false,
     "unitAcceptance": {
       "tests": 102,
@@ -80,8 +80,8 @@
       "realDevice": false,
       "genuineIntegratedBrowser": false,
       "sourceSha256": {
-        "src/app/expenses/expense-editor.tsx": "93cfce8cda4e2afa6023fba58d50ad3355734e56a6354eb2a621ba938d6450e5",
-        "src/app/expenses/expense-receipts.tsx": "47e65c32b5cd0e87dc7287356e7b038285601bda171b1195bc1a05c773296084",
+        "src/app/expenses/expense-editor.tsx": "1df1452a2eb74c44eed04f886d247b2c971def3292dd72867f8c2acf35d8cea6",
+        "src/app/expenses/expense-receipts.tsx": "1750dd74b85ec0fdb0e3d69c511e03a200d7b2eb3bad30cd824fc79c9346ec31",
         "src/app/globals.css": "91ce329bafba22099fdf6dc1940861bb674aa9918b926d21b7bb07ee001a640f",
         "tests/integration/owner-expenses-layout.test.mjs": "8240718f429c9b9a17f02700eb7ced6b04a1b11b1ebcc561828671f0c5b27a8f",
         "tests/integration/owner-expenses-lifecycle.test.mjs": "099c878426240233e1fb9ae29b67048ccaf5c70d062a843c42813bec17f17aaf",
@@ -89,5 +89,20 @@
         "tests/fixtures/owner-expenses-lifecycle.tsx": "8408a1ea4666c4757e49cb9ae80a13a75d952d28b6a58cc642b6df81a64fd797"
       }
     }
+  },
+  "preSharedReviewGenuineAuthAcceptance": {
+    "tests": 1,
+    "passed": 1,
+    "failed": 0,
+    "testSha256": "cbeca75ba23a8f8abc9678c0ec1caa55619d93a0e67c1971665bf344da6e5eee",
+    "logSha256": "cf21553097574bd62c8b73b74ccf3aa87a1d572fe6d5e20994ea6fe6d9c04fab",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "scope": "genuine provider MFA/restricted login, actual receipt client bundled from source, direct synthetic HTTP with an explicit browser-cookie/origin adapter, SDK private-file/archive pipeline and a decoder seam; not browser cookie/TLS, complete held-database restore or registered49 acceptance",
+    "exactPublicationOperationVerified": true,
+    "explicitPublicationEpochAndExpenseBound": true,
+    "opaqueReferenceBeforeDispatch": true,
+    "lostReplyAfterActualPublicationRecovered": true,
+    "duplicateReserveOrPublish": false
   }
 }

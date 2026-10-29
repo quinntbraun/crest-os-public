@@ -1,4 +1,8 @@
 import {appointmentHolds} from './appointment-holds';
+import {createExpenseClient} from './expenses';
+import {createReceiptClient} from './expense-receipts';
+import {createPendingExpenseStore} from './pending-expense';
+import {createPendingReceiptStore} from './pending-receipt';
 import {createPendingHoldStore} from './pending-appointment-hold';
 import type {Proof} from './authentication';
 import {businessSettings} from './business-settings';
@@ -79,6 +83,20 @@ function target<T extends {businessId:string;binding:string}>(
 }
 export function openPendingOriginalOperation(kind:OriginalOperationKind,storage:StorageAccess,businessId:string):PendingOriginalOperation|null{
  switch(kind){
+  case 'bookkeeping.expense.save':return target(createPendingExpenseStore(storage),kind,businessId,p=>p.reference,async(p,proof,signal)=>{
+   const client=createExpenseClient(async()=>proof),context=await client.context(signal);
+   if(context.businessId!==p.businessId)throw new PendingOriginalOperationError();
+   return client.lookup(context,p.reference,signal);
+  });
+  case 'bookkeeping.receipt.reserve':case 'bookkeeping.receipt.publish':{
+   try{const store=createPendingReceiptStore(storage),pending=store.read();if(pending===null||kind!==(pending.reference.expectedRevision==='0'?'bookkeeping.receipt.reserve':'bookkeeping.receipt.publish'))return null;
+    return target(store,kind,businessId,p=>p.reference,async(p,proof,signal)=>{
+     const context=await createExpenseClient(async()=>proof).context(signal);
+     if(context.businessId!==p.businessId)throw new PendingOriginalOperationError();
+     return createReceiptClient(async()=>proof).lookup(context,p.reference,()=>!signal.aborted,signal);
+    });
+   }catch{throw new PendingOriginalOperationError();}
+  }
   case 'operations.appointment_hold.save':return target(createPendingHoldStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>appointmentHolds.lookup(p.businessId,p.reference,proof,signal));
   case 'business.rename':return target(createPendingEditStore(storage),kind,businessId,p=>({operationId:p.command.operationId,recoveryEpoch:p.command.recoveryEpoch,expectedVersion:p.command.expectedVersion}),(p,proof,signal)=>businessSettings.lookup(p.businessId,p.command,proof,signal));
   case 'crm.customer.save':return target(createPendingCustomerStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>customers.lookup(p.businessId,p.reference,proof,signal));

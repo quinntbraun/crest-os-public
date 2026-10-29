@@ -7,6 +7,9 @@ on:
       - 'src/bookkeeping/expenses/**'
       - 'src/server/node-server.ts'
       - 'src/client/expenses.ts'
+      - 'src/client/pending-original-operation.ts'
+      - 'src/security/original-operation-reference.ts'
+      - 'src/app/save-review/**'
       - 'src/client/pending-expense.ts'
       - 'src/client/pending-receipt.ts'
       - 'src/client/expense-receipts.ts'
@@ -23,6 +26,10 @@ on:
       - 'tests/unit/expense-receipts.test.ts'
       - 'tests/fixtures/owner-expenses-editor.tsx'
       - 'tests/fixtures/owner-expenses-lifecycle.tsx'
+      - 'tests/fixtures/owner-expenses-save-review.tsx'
+      - 'tests/fixtures/owner-expenses-original-clients.ts'
+      - 'tests/unit/pending-original-operation.test.ts'
+      - 'tests/unit/original-operation*.test.ts'
 permissions:
   contents: read
 concurrency:
@@ -60,7 +67,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-fund
       - run: node scripts/install-tools.mjs
       - run: node scripts/install-recovery-tools.mjs
-      - run: node --conditions=react-server --test --test-concurrency=1 tests/integration/owner-expenses.test.mjs tests/integration/owner-expenses-http.test.mjs tests/integration/owner-expenses-receipts.test.mjs tests/integration/owner-expenses-receipt-auth.test.mjs tests/integration/owner-expenses-receipt-http.test.mjs tests/integration/owner-expenses-receipt-objects.test.mjs tests/integration/owner-expenses-receipt-recovery.test.mjs tests/integration/owner-expenses-combined-recovery.test.mjs tests/integration/owner-expenses-production-gates.test.mjs tests/integration/owner-expenses-receipt-delivery.test.mjs tests/integration/owner-expenses-history-delivery.test.mjs tests/integration/owner-expenses-activity.test.mjs tests/integration/owner-expenses-original.test.mjs tests/integration/owner-expenses-original-http.test.mjs tests/integration/owner-expenses-receipt-original.test.mjs
-      - run: npm exec vitest run tests/unit/expense-contract.test.ts tests/unit/expense-receipts.test.ts tests/unit/expense-client.test.ts tests/unit/pending-expense.test.ts tests/unit/pending-receipt.test.ts
+      - run: node --conditions=react-server --test --test-concurrency=1 tests/integration/owner-expenses.test.mjs tests/integration/owner-expenses-http.test.mjs tests/integration/owner-expenses-receipts.test.mjs tests/integration/owner-expenses-receipt-auth.test.mjs tests/integration/owner-expenses-receipt-http.test.mjs tests/integration/owner-expenses-receipt-objects.test.mjs tests/integration/owner-expenses-receipt-recovery.test.mjs tests/integration/owner-expenses-combined-recovery.test.mjs tests/integration/owner-expenses-production-gates.test.mjs tests/integration/owner-expenses-receipt-delivery.test.mjs tests/integration/owner-expenses-history-delivery.test.mjs tests/integration/owner-expenses-activity.test.mjs tests/integration/owner-expenses-original.test.mjs tests/integration/owner-expenses-original-http.test.mjs tests/integration/owner-expenses-receipt-original.test.mjs tests/integration/owner-expenses-resolution.test.mjs tests/integration/owner-expenses-source.test.mjs
+      - run: npm exec vitest run tests/unit/expense-contract.test.ts tests/unit/expense-receipts.test.ts tests/unit/expense-client.test.ts tests/unit/pending-expense.test.ts tests/unit/pending-receipt.test.ts tests/unit/pending-original-operation.test.ts tests/unit/original-operation-reference.test.ts tests/unit/original-operation-http-contract.test.ts tests/unit/original-operation-review-controller.test.ts
       - run: npx playwright install --with-deps chromium webkit
-      - run: node --test tests/integration/owner-expenses-layout.test.mjs tests/integration/owner-expenses-lifecycle.test.mjs
+      - run: node --test tests/integration/owner-expenses-layout.test.mjs tests/integration/owner-expenses-lifecycle.test.mjs tests/integration/owner-expenses-save-review.test.mjs

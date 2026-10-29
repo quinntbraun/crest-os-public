@@ -45,7 +45,7 @@ export function ExpenseEditor({client,receiptClient}:{client:ReturnType<typeof c
    const result=await client.lookup(fresh,attempt.record.reference,signal);if(!current())return;store.current.require(attempt.record);
    if(result.state==='absent'){
     setRetryChecked(attempt.request!==null&&attempt.context!==null&&fresh.writeState==='ready'&&fresh.recoveryEpoch===attempt.record.reference.recoveryEpoch);
-    setStatus(attempt.request?'The original save is not recorded yet. This does not prove failure. Only the same in-memory request may be retried while its access remains current.':'No recorded original save was found. Its private form is gone; typed retirement review is still being integrated. The reference and duplicate-prevention lock were kept.');return;
+    setStatus(attempt.request?'The original save is not recorded yet. This does not prove failure. Only the same in-memory request may be retried while its access remains current.':'No recorded original save was found. Its private form is gone; open interrupted save review to retire that original request explicitly. The reference and duplicate-prevention lock were kept.');return;
    }
    if(attempt.request&&!Object.entries(attempt.request.payload).every(([key,value])=>result.expense.payload[key as keyof typeof result.expense.payload]===value))throw Error();
    const saved=await client.history(fresh,signal);if(!current())return;store.current.require(attempt.record);
@@ -58,7 +58,7 @@ export function ExpenseEditor({client,receiptClient}:{client:ReturnType<typeof c
  return <section className="expense-editor" aria-label="Business expenses">
   <p className="eyebrow">Bookkeeping</p><h1>Expenses</h1><p>Record money already paid for your business. Keep corrections visible for your tax preparer.</p>
   <button className="secondary" type="button" disabled={busy||!!pending||referenceBlocked} onClick={()=>void reload()}>Load saved expenses</button><p role="status" aria-live="polite">{status}</p>
-  {pending&&<aside aria-label="Unconfirmed expense save"><p>A save needs confirmation. This form stays locked to prevent a duplicate. Only its original identifiers are stored in this browser tab.</p>{pending.context&&pending.request&&<button type="button" disabled={busy||!retryChecked} onClick={()=>void send(pending)}>Retry the same save</button>}<button type="button" className="secondary" disabled={busy||referenceBlocked} onClick={()=>void resolve()}>Check original save</button></aside>}
+  {pending&&<aside aria-label="Unconfirmed expense save"><p>A save needs confirmation. This form stays locked to prevent a duplicate. Only its original identifiers are stored in this browser tab.</p>{pending.context&&pending.request&&<button type="button" disabled={busy||!retryChecked} onClick={()=>void send(pending)}>Retry the same save</button>}<button type="button" className="secondary" disabled={busy||referenceBlocked} onClick={()=>void resolve()}>Check original save</button><a href="/save-review?kind=bookkeeping.expense.save">Review interrupted expense</a></aside>}
   <form aria-label="Paid expense" onSubmit={e=>{e.preventDefault();void submit();}}><fieldset disabled={busy||!!pending||context?.writeState!=='ready'} style={{border:0,padding:0,minWidth:0,display:'grid',gap:8}}>
    <legend>{editing?'Correct an expense':'Record a paid expense'}</legend>
    <label>Payment date<input type="date" value={draft.paidOn} required onChange={e=>patch({paidOn:e.target.value})}/></label>

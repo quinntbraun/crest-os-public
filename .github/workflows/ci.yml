@@ -234,9 +234,9 @@ jobs:
     # obsolete runs cancel so they cannot block the newest source indefinitely.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
-    # Expanded real-browser and container checks need room for image packaging.
-    # Keep individual test/network bounds and all release gates unchanged.
-    timeout-minutes: 45
+    # Cold browser + portable decoder/container builds exceeded 45 minutes.
+    # Keep every required check and the separate 15-minute container-step bound.
+    timeout-minutes: 60
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"

@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "registered": false,
+  "runtimeEnabled": false,
+  "baseMigrationCount": 48,
+  "sqlBytes": 7999,
+  "sqlSha256": "afbe519b1dba0465cf2d24f377809fe278b7e7e3410cbcb8e5a4e87237074cda",
+  "purpose": "Private retained physical expense/receipt source rows with actual composite identities, exact revisions, JSON and UTC microsecond text; bounded held-snapshot retrieval and neutral CSV reimport. Separate from accountant period totals and full backup acceptance.",
+  "appliedAfter": [
+    "owner-expenses.sql",
+    "owner-expense-receipts.sql",
+    "owner-expenses-activity.sql",
+    "owner-expenses-original.sql",
+    "owner-expense-receipts-original.sql",
+    "owner-expenses-resolution.sql"
+  ],
+  "nativeAcceptance": {
+    "tests": 7,
+    "passed": 7,
+    "failed": 0,
+    "logSha256": "ed0264241757b0bcf618c60b396f0490f2e5147dca4707e7f9b4564502850572",
+    "testSha256": "586f95976b8aca1ba4dd320fb0266feef4ff487b1349515d4f09b36a3ebd1aed",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "scope": "Actual registered48 plus unregistered proposals in an owned synthetic cluster; restricted export LOGIN, held read-only repeatable-read source, concurrent later write excluded and neutral same-cluster empty-database CSV reimport. No genuine browser or independent-cluster full recovery claim."
+  },
+  "candidateCoverage": {
+    "previousTables": 54,
+    "previousColumns": 893,
+    "tables": 56,
+    "actualColumns": 910,
+    "requiredColumns": 900,
+    "excludedCredentialColumns": 10,
+    "newTables": 2,
+    "newColumns": 17,
+    "observedFromPgCatalog": true,
+    "registered49Applied": false
+  },
+  "privileges": {
+    "ordinaryWebMayReadSources": false,
+    "exportRoleMayReadRawExpenseTables": false,
+    "newLoginRole": false
+  },
+  "sourceSha256": {
+    "planning/proposals/owner-expenses-source.sql": "afbe519b1dba0465cf2d24f377809fe278b7e7e3410cbcb8e5a4e87237074cda",
+    "planning/proposals/owner-expenses-coverage.json": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828",
+    "src/bookkeeping/expenses/expense-source-csv.ts": "bc3d61c1c917906e49eb5e7ef42fabeaa27ca6250588dfe1aa89c4c5ace1f804",
+    "tests/integration/owner-expenses-source.test.mjs": "586f95976b8aca1ba4dd320fb0266feef4ff487b1349515d4f09b36a3ebd1aed",
+    "tests/support/registered48-migration-checksums.json": "f56732ca0627858e495c217f83fe5795b6278fa28f9686c6960dc327592a65cb",
+    "tests/support/registered48-export-coverage.json": "344de6f7e3e81718767fabbc64779d69e98a3d1aea5d8faba4e86c43394ebfee",
+    "tests/support/registered48-compatibility.json": "b241eaafc6d21905edd7b86c05906990ccf7325fb56b56ce823a741dc4dc9d13"
+  },
+  "sourceDomainInternalReferencesVerified": true,
+  "externalActorOperationAuditClosureVerified": false,
+  "completePortableExport": false,
+  "completeDatabaseAndReceiptRestore": false,
+  "ledgerPosting": false,
+  "productionActivation": false
+}

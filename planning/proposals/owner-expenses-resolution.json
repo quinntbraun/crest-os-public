@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "registered": false,
+  "runtimeEnabled": false,
+  "baseMigrationCount": 48,
+  "sqlBytes": 17265,
+  "sqlSha256": "8ee7d81802aa9a7af302ed778e9ce90faab8b67fee2d0e50da4ab064684c8691",
+  "appliedAfter": [
+    "owner-expenses.sql",
+    "owner-expense-receipts.sql",
+    "owner-expenses-activity.sql",
+    "owner-expenses-original.sql",
+    "owner-expense-receipts-original.sql"
+  ],
+  "purpose": "Exact original review/explicit retirement for expense save and receipt reservation/publication; finance.post plus existing owner/recent-step-up/recovery fences; no financial payload retention, financial posting or automatic retry.",
+  "existingKindsPreserved": 19,
+  "financialKindsAdded": 3,
+  "nativeAcceptance": {
+    "tests": 17,
+    "passed": 17,
+    "failed": 0,
+    "testSha256": "d5c737c982ab5a83f11f1475306da6f63cec7f8fe9079587e0e124cdc7ddb486",
+    "logSha256": "f8254381285927b881433ea2f3b266c9316b04347eeae44b04d6349a8f542478",
+    "sourceStable": true,
+    "ownedClusterCleaned": true
+  },
+  "genuineAuthAcceptance": {
+    "tests": 1,
+    "passed": 1,
+    "failed": 0,
+    "testSha256": "cd983b5c9b1cad8c3b26c7ac733cb3a0421123bdec6fc327d3570a4e214c6374",
+    "logSha256": "9f803b6c0d82a8be383b863d21c17ef73c2d03f7a58cf4a92b880bd78a5ede55",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "scope": "Actual provider MFA/restricted login, actual browser-client source bundled through explicit direct-HTTP cookie/Origin adapter, all three original_recorded/typed reconciliation and absent/retired acknowledgements; preserved receipt SDK/archive/lost-publication proof with a decoder seam. Not real browser cookies/TLS, registered49 or complete held DB plus receipts restore."
+  },
+  "clientAcceptance": {
+    "unitFiles": 12,
+    "unitTests": 603,
+    "passed": 603,
+    "failed": 0,
+    "typecheck": true,
+    "focusedLint": true,
+    "browserComponentSuitesPassed": 3,
+    "engines": [
+      "chromium",
+      "webkit"
+    ],
+    "widths": [
+      360,
+      390,
+      768,
+      1440
+    ],
+    "keyboardAndAxePassed": true,
+    "renderedScreenshotsInspected": true,
+    "genuineIntegratedBrowser": false,
+    "physicalIPhone": false,
+    "completeUnitSuite": {
+      "files": 252,
+      "tests": 7205,
+      "passed": 7205,
+      "failed": 0,
+      "logSha256": "0b30c1d078b320653f97261779643e05350c9e5541e97f32e6e5a507372543c0",
+      "execution": "owned local loopback/filesystem test permission; initial restricted run denied connections and is not acceptance"
+    },
+    "canonicalProvenanceVerified": true,
+    "registeredMigrationCountVerified": 48
+  },
+  "sourceSha256": {
+    "planning/proposals/owner-expenses-resolution.sql": "8ee7d81802aa9a7af302ed778e9ce90faab8b67fee2d0e50da4ab064684c8691",
+    "tests/integration/owner-expenses-resolution.test.mjs": "d5c737c982ab5a83f11f1475306da6f63cec7f8fe9079587e0e124cdc7ddb486",
+    "tests/integration/owner-expenses-receipt-http.test.mjs": "cd983b5c9b1cad8c3b26c7ac733cb3a0421123bdec6fc327d3570a4e214c6374",
+    "tests/fixtures/owner-expenses-original-clients.ts": "2a281924ff0bff89c025b63bd487c5c3515bca840e84b501a9dac35d2abbb899",
+    "src/security/original-operation-reference.ts": "eb761a61c57bac3a38229cea6545fee56f2a5b2691dd77beafc8f1d2f3e8c312",
+    "src/client/pending-original-operation.ts": "4296946047d86212b616f70c2ada5e2c86a96907fbef75693bebad909319a555",
+    "src/app/save-review/review.tsx": "7c85b78719d952a00727e94a6ce49fce5efb319fa3f32a5d14e164bb6282fd51",
+    "src/app/expenses/expense-editor.tsx": "1df1452a2eb74c44eed04f886d247b2c971def3292dd72867f8c2acf35d8cea6",
+    "src/app/expenses/expense-receipts.tsx": "1750dd74b85ec0fdb0e3d69c511e03a200d7b2eb3bad30cd824fc79c9346ec31",
+    "tests/integration/owner-expenses-save-review.test.mjs": "0f4cfd1ad65f84ab0cd8b2dbd244b7d0319ad559de85170a2cbb57e78d7d2c55",
+    "tests/fixtures/owner-expenses-save-review.tsx": "8bcc002c2a645005d61b93558a6b2a1e51dc16b7693cbdf994d6692cfda1d13f"
+  },
+  "registered49Verified": false,
+  "completeSourceClosureVerified": false,
+  "completeDatabaseAndReceiptRestoreVerified": false,
+  "ledgerPosting": false,
+  "productionActivation": false
+}
