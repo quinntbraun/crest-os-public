@@ -14,6 +14,7 @@ type Targets={
  'crm.lead.address.save':Readonly<{leadId:string;leadAddressId:string;expectedVersion:string}>;
  'crm.lead.convert':Readonly<{conversionId:string;leadId:string;expectedLeadVersion:string;customerId:string}>;
  'catalog.service.save':Readonly<{serviceId:string;expectedRevision:string}>;
+ 'operations.appointment_hold.save':Readonly<{holdId:string;expectedSequence:string}>;
  'quote.draft.save':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string}>;
  'quote.review.submit':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string;expectedContentVersion:string}>;
  'quote.review.approve':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string;expectedContentVersion:string;approvalId:string}>;
@@ -49,6 +50,7 @@ const fields={
  'crm.lead.address.save':['leadId','leadAddressId','expectedVersion'],
  'crm.lead.convert':['conversionId','leadId','expectedLeadVersion','customerId'],
  'catalog.service.save':['serviceId','expectedRevision'],
+ 'operations.appointment_hold.save':['holdId','expectedSequence'],
  'quote.draft.save':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion'],
  'quote.review.submit':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion'],
  'quote.review.approve':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','approvalId']
@@ -69,7 +71,7 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
   const kind=row.commandType as OriginalOperationKind,keys=['operationId','recoveryEpoch',...fields[kind]],ref=object(row.reference,keys);
   require(uuid(ref.operationId)&&uuid(ref.recoveryEpoch));
   for(const key of fields[kind]){
-   if(key==='expectedVersion'||key==='expectedRevision'||key==='expectedFamilyVersion'||key==='expectedRevisionVersion')require(version(ref[key],!['business.rename','crm.lead.state','quote.review.submit','quote.review.approve'].includes(kind)));
+   if(key==='expectedSequence'||key==='expectedVersion'||key==='expectedRevision'||key==='expectedFamilyVersion'||key==='expectedRevisionVersion')require(version(ref[key],!['business.rename','crm.lead.state','quote.review.submit','quote.review.approve'].includes(kind)));
    else if(key==='expectedContentVersion')require(version(ref[key]));
    else if(key==='expectedLeadVersion')require(version(ref[key]));
    else if(key!=='action'&&key!=='nextAssociationId')require(uuid(ref[key]));
