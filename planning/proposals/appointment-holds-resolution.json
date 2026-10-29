@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "runtimeEnabled": false,
+  "requiredRegisteredSchemaVersion": 45,
+  "reviewedQuoteSource": "31c582d5ade8d42bc5e4870788aba62bd4473249",
+  "requiredPredecessorBodySha256": "c8caf7868d3b96aee4d0b07c41d82dd08801ee658e685354084ddcc806a82b47",
+  "replacementBodySha256": "ae7d8b2a3a3b585b0afed82020293958e33a6b24bfadc2368283cf3654be366d",
+  "sqlBytes": 4541,
+  "sqlSha256": "6a20c675b69c5d475a584c45e38e7d63d4996f697d3a15c5be5eca41a70889f6",
+  "productionActivation": "blocked"
+}

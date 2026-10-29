@@ -1,0 +1,38 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "requiredRegisteredSchemaVersion": 45,
+  "table": {
+    "table": "crest.appointment_hold_versions",
+    "scope": "business",
+    "required": [
+      "id",
+      "business_id",
+      "hold_id",
+      "sequence",
+      "replaces_sequence",
+      "customer_id",
+      "lead_id",
+      "label",
+      "state",
+      "start_at",
+      "end_at",
+      "timezone",
+      "local_start",
+      "local_end",
+      "start_offset_minutes",
+      "end_offset_minutes",
+      "notes",
+      "reason",
+      "created_at",
+      "created_by",
+      "operation_id",
+      "origin"
+    ],
+    "excluded": [],
+    "partialEvidenceGroup": null
+  },
+  "globalCoverageUpdated": false,
+  "productionActivation": "blocked"
+}

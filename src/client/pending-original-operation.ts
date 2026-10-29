@@ -5,6 +5,8 @@ import {addresses} from './customer-addresses';
 import {vehicles} from './vehicles';
 import {services} from './services';
 import {quotes} from './quotes';
+import {appointmentHolds} from './appointment-holds';
+import {createPendingHoldStore} from './pending-appointment-hold';
 import {createPendingServiceStore} from './pending-service-edit';
 import {createPendingQuoteStore} from './pending-quote-edit';
 import {associations} from './associations';
@@ -76,6 +78,7 @@ export function openPendingOriginalOperation(kind:OriginalOperationKind,storage:
   case 'crm.address.save':return target(createPendingAddressStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>addresses.lookup(p.businessId,p.reference,proof,signal));
   case 'crm.vehicle.save':return target(createPendingVehicleStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>vehicles.lookup(p.businessId,p.reference,proof,signal));
   case 'catalog.service.save':return target(createPendingServiceStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>services.lookup(p.businessId,p.reference,proof,signal));
+  case 'operations.appointment_hold.save':return target(createPendingHoldStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>appointmentHolds.lookup(p.businessId,p.reference,proof,signal));
   case 'quote.draft.save':return target(createPendingQuoteStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>quotes.lookup(p.businessId,p.reference,proof,signal));
   case 'crm.vehicle.association':return target(createPendingAssociationStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>associations.lookup(p.businessId,p.reference,proof,signal));
   case 'crm.lead.source.save':return target(createPendingLeadSourceStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>leadSources.lookup(p.businessId,p.reference,proof,signal));

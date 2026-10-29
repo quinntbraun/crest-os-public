@@ -14,6 +14,7 @@ type Targets={
  'crm.lead.address.save':Readonly<{leadId:string;leadAddressId:string;expectedVersion:string}>;
  'crm.lead.convert':Readonly<{conversionId:string;leadId:string;expectedLeadVersion:string;customerId:string}>;
  'catalog.service.save':Readonly<{serviceId:string;expectedRevision:string}>;
+ 'operations.appointment_hold.save':Readonly<{holdId:string;expectedSequence:string}>;
  'quote.draft.save':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string}>;
 };
 export type OriginalOperationKind=keyof Targets;
@@ -47,6 +48,7 @@ const fields={
  'crm.lead.address.save':['leadId','leadAddressId','expectedVersion'],
  'crm.lead.convert':['conversionId','leadId','expectedLeadVersion','customerId'],
  'catalog.service.save':['serviceId','expectedRevision'],
+ 'operations.appointment_hold.save':['holdId','expectedSequence'],
  'quote.draft.save':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion']
 } as const satisfies Record<OriginalOperationKind,readonly string[]>;
 export const originalOperationKinds=Object.freeze(Object.keys(fields) as OriginalOperationKind[]);
@@ -65,7 +67,7 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
   const kind=row.commandType as OriginalOperationKind,keys=['operationId','recoveryEpoch',...fields[kind]],ref=object(row.reference,keys);
   require(uuid(ref.operationId)&&uuid(ref.recoveryEpoch));
   for(const key of fields[kind]){
-   if(key==='expectedVersion'||key==='expectedRevision'||key==='expectedFamilyVersion'||key==='expectedRevisionVersion')require(version(ref[key],kind!=='business.rename'&&kind!=='crm.lead.state'));
+   if(key==='expectedSequence'||key==='expectedVersion'||key==='expectedRevision'||key==='expectedFamilyVersion'||key==='expectedRevisionVersion')require(version(ref[key],kind!=='business.rename'&&kind!=='crm.lead.state'));
    else if(key==='expectedLeadVersion')require(version(ref[key]));
    else if(key!=='action'&&key!=='nextAssociationId')require(uuid(ref[key]));
   }
