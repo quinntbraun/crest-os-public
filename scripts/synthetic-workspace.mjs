@@ -117,7 +117,7 @@ try{
    process.env.NODE_ENV='production';
    const {createCrestApplication,createAuthenticationRuntime}=await import('../.local/server/application.mjs');
    const runtime=await createAuthenticationRuntime({database:{connectionString:connection(state,true),environment:'test'},provider:{issuer,publicKey:state.publicKey,environment:'test'},owner:state.owner,loginKey:Buffer.from(state.loginKey,'base64url'),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:Buffer.from(state.tokenKey,'base64url')}]});
-   app=await createCrestApplication({origin,environment:'test',tls:{key:tls.key,cert:tls.cert},authentication:runtime.forServer(),business:{businessId:state.businessId},customers:true,vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true,syntheticCatalog:true});
+   app=await createCrestApplication({origin,environment:'test',tls:{key:tls.key,cert:tls.cert},authentication:runtime.forServer(),business:{businessId:state.businessId},customers:true,vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true,syntheticCatalog:true,syntheticQuotes:true});
    await new Promise((ok,no)=>{app.server.once('error',no);app.server.listen(4319,'127.0.0.1',ok);});
    console.log('Synthetic Crest workspace: '+origin+' . Genuine sign-in required; self-signed local TLS, no automatic browser exception. Data lives in the owned Docker volume.');
    const close=async()=>{await app.close();server.closeAllConnections();await new Promise(ok=>server.close(ok));process.exit(0);};process.once('SIGINT',close);process.once('SIGTERM',close);

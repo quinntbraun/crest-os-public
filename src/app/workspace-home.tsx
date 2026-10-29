@@ -38,6 +38,7 @@ export function WorkspaceHome(){
       <p className="business-name">{view.name}</p>
       {view.paused&&<p className="notice">Changes are paused for recovery review. You can still review available records and history.</p>}
       <section className="home-panel"><h2>Start with a customer</h2><p>Find contact details, add a customer, or review their saved history.</p><a className="primary-action" href="/customers">Open customers</a><a className="text-action" href="/vehicles">Find a vehicle</a></section>
+      <section className="home-panel"><h2>Prepare the next quote</h2><p>Copy a saved service scope, enter your amounts, and retain the draft and its history.</p><a className="primary-action" href="/quotes">Open quote drafts</a><a className="text-action" href="/services">Manage services</a><p className="field-help">Draft preparation only. Approval, sending and acceptance are still being built.</p></section>
       <section className="home-panel" aria-label="Lead follow-ups"><div className="section-heading"><h2>Follow-ups</h2><a href="/leads">All leads</a></div>
         {view.followUps===null?<p>Follow-ups could not be loaded. Open leads to check; this does not mean there are none.</p>:<>
           {view.followUps.hasMore&&<p className="notice">Showing reminders from the first 50 leads. Open leads to review the remaining records.</p>}
@@ -46,7 +47,7 @@ export function WorkspaceHome(){
         </>}
       </section>
       <section className="home-panel"><h2>Something didn’t save?</h2><p>Review an interrupted save before submitting the change again.</p><a href="/save-review">Review interrupted saves</a></section>
-      <aside className="capability-note"><h2>Still being built</h2><p>Connected quotes, scheduling, jobs, photos, invoices, payments, expenses, reporting, and Google Calendar are not available in this workspace yet.</p></aside>
+      <aside className="capability-note"><h2>Still being built</h2><p>Quote approval and sending, scheduling, jobs, photos, invoices, payments, expenses, reporting, complete business exports, and Google Calendar are not available in this workspace yet.</p></aside>
       <p className="field-help">Checked {view.checkedAt===null?'':new Date(view.checkedAt).toLocaleTimeString()}. Refresh for current information.</p>
     </>}
     {view.phase!=='checking'&&<button type="button" className="secondary" onClick={()=>{setView(initial);void load();}}>Refresh workspace</button>}

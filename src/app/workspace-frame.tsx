@@ -2,7 +2,7 @@
 import {usePathname} from 'next/navigation';
 import type {ReactNode} from 'react';
 
-const destinations=[['/','Today'],['/customers','Customers'],['/vehicles','Vehicles'],['/leads','Leads']] as const;
+const destinations=[['/','Today'],['/customers','Customers'],['/vehicles','Vehicles'],['/leads','Leads'],['/quotes','Quotes']] as const;
 // Document navigation preserves the editors' native unsaved-change warning.
 export function WorkspaceFrame({children}:{children:ReactNode}){
   const path=usePathname();

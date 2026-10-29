@@ -1,0 +1,23 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "existingMigrationCount": 44,
+  "requiredPricingSqlSha256": "033ff0397702b783ac32578a3e8f010e8930efb8a7e197cca27865ee2bb5d2dc",
+  "requiredSchemaSqlSha256": "10931d4249a4a4a720eb4a9919d6bc38f4d7061346717127f517bd23e71f0900",
+  "requiredCommandsSqlSha256": "ccc70d6166274d830e0aaa4062912d6dc8a295b6f99c85f8a80c03c4e01f8a26",
+  "sqlSha256": "9286f04a6cb9557053a3927d81e207edbd944b120d0ee06e2cd83bf4a3b36ff1",
+  "sqlBytes": 10866,
+  "scope": "quote_draft",
+  "grant": "crest_export",
+  "httpRouteEnabled": false,
+  "ordinaryTableAccess": false,
+  "sourceColumns": 61,
+  "profile": "crest.quote-draft.sources.v1",
+  "maximumPageRows": 20,
+  "maximumPageBytes": 4194304,
+  "nativeExecuted": false,
+  "completeCrestExport": false,
+  "completeBackup": false,
+  "maximumIncludedRows": 10000
+}

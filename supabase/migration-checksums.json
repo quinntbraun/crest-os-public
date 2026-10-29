@@ -220,6 +220,11 @@
       "version": "20261028010000",
       "file": "20261028010000_service_catalog.sql",
       "sha256": "09a8ff9eeb415f879e56cdf5a43d74b0178e4b9d45c3efad806a16c621796729"
+    },
+    {
+      "version": "20261028020000",
+      "file": "20261028020000_quote_drafts.sql",
+      "sha256": "896aa5031e92b7eb4c3d264b8ee7fa024e82e550da650c4c7eb5f06ab4e900fc"
     }
   ]
 }

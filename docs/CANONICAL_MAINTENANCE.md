@@ -104,3 +104,14 @@ Reason: advance the approved catalog→quote workflow by registering its accepte
 | ARCHITECTURE_DECISIONS.md | 1.14 | 795c07717f9e6b6f3a0bc2875ef2c544bce70281d1cc125e74e6beef8bf10ef8 | 54550 | 1.15 | 72f4009a4e31bfcf680db11325923195763179c2ff98bff1bd9a333cf592e6f2 | 56726 |
 
 ADR44 sequencing clarification: the bounded genuine synthetic catalog editor depends on actual44 domain authorization/history/concurrency, common-format retrieval, isolated recovery and browser acceptance. Complete business portability remains phase11 and a real-data/release gate; no requirement is waived or scope omitted. This corrects an over-broad construction dependency, following the owner's early usable-build instruction and existing ROADMAP/ADR41.
+
+
+## 2026-10-28 — ADR45 retained Draft quote registration
+
+Authority: owner-approved V1 implementation in the existing proven architecture. Finite requirement: adopt the reviewed Draft quote save/read/source/original-reference dependency atomically, prove actual current-schema upgrade and isolated recovery, then expose the genuine synthetic editor for browser acceptance. Full current business exports/Excel/worker/admission and all later quote/operational/financial/Calendar scope remain required; no production or real-data gate is weakened. Changed versions: ARCHITECTURE1.10, ARCHITECTURE_DECISIONS1.16, DATABASE1.8, EXPORTS_AND_BACKUPS1.8, PUBLICATION1.11. Original baseline manifest and all44 existing migration bytes remain unchanged. Prior amendment bytes retained here:
+
+- ARCHITECTURE.md v1.9 — a30e17f994e3ef0a131fe263e12beac23e1743dfeb4262538fc105e6153fba15 (39590 bytes)
+- DATABASE.md v1.7 — 5f327467ce74fbbbda987c09c29b6853ebdcd2bc45f344e493abae4500fc934c (56232 bytes)
+- EXPORTS_AND_BACKUPS.md v1.7 — 37017d2c1a3f4523737d5aad9843aa6502a75baf1f4031c77d413df3dc93db10 (30279 bytes)
+- ARCHITECTURE_DECISIONS.md v1.15 — 72f4009a4e31bfcf680db11325923195763179c2ff98bff1bd9a333cf592e6f2 (56726 bytes)
+- PUBLICATION.md v1.10 — 0d21cdb14601c80292add46dd97134dfa36df975d0ba3da6939197751b788ead (6656 bytes)

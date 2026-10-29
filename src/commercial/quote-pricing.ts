@@ -1,4 +1,4 @@
-import {customerUuid,exactCustomerObject as exact} from '../customer/customer-contract';
+import {customerUuid,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 const maximum=9223372036854775807n,scale=100000000n;
 export type QuoteDiscount=Readonly<{kind:'fixed';cents:string}|{kind:'percent';rate:string}>;
 export type QuotePriceLine=Readonly<{id:string;grossCents:string;lineDiscount:QuoteDiscount|null;documentDiscountEligible:boolean;complimentaryReason:string|null}>;

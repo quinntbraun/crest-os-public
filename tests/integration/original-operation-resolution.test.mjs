@@ -10,7 +10,9 @@ import {installProviderSchema} from '../support/provider-schema.mjs';
 import {parseOriginalOperationReference,parseOriginalOperationOutcome,originalOperationKinds as currentOriginalKinds} from '../../src/security/original-operation-reference.ts';
 // This fixture proves the immutable registered42/43 eleven-kind baseline.
 // Catalog resolution is proved after its explicit proposal in the catalog drill.
-const originalOperationKinds=currentOriginalKinds.filter(kind=>kind!=='catalog.service.save');
+// This fixture proves the immutable registered42 eleven-kind contract. Later
+// catalog/quote extensions have their own mandatory current-source fixtures.
+const originalOperationKinds=currentOriginalKinds.filter(kind=>kind!=='catalog.service.save'&&kind!=='quote.draft.save');
 import {verifyBusinessHistoryEvidence} from '../../src/security/business-history-evidence.ts';
 import {formatBusinessHistoryCsv} from '../../src/security/business-history-csv.ts';
 import {decodeCustomerCsv} from '../support/customer-fixture.ts';

@@ -1,0 +1,94 @@
+{
+  "formatVersion": 1,
+  "repositoryRegistration": 45,
+  "executionStatus": "constructed_pending_acceptance",
+  "databaseApplied": false,
+  "productionActivation": "blocked",
+  "migration": {
+    "file": "20261028020000_quote_drafts.sql",
+    "sha256": "896aa5031e92b7eb4c3d264b8ee7fa024e82e550da650c4c7eb5f06ab4e900fc",
+    "bytes": 118159
+  },
+  "previousRegistry": {
+    "sha256": "6aa4291154f830fc6889128df1ed8f9ef163984c20b86ff33510412bd6e20305",
+    "frozenFixture": "tests/support/registered44-migration-checksums.json",
+    "migrationCount": 44
+  },
+  "previousCoverage": {
+    "sha256": "81b324ec6a9643426fa177f37a5965f898ffacea238e1244f3d965013548bf40",
+    "frozenFixture": "tests/support/registered44-export-coverage.json"
+  },
+  "previousCompatibility": {
+    "sha256": "37a9090fe3552075ca64d070ba92b72a21a218b1c087ca36cdc699ac7bd7281f",
+    "frozenFixture": "tests/support/registered44-compatibility.json"
+  },
+  "proposalBodies": [
+    {
+      "order": 1,
+      "path": "planning/proposals/quote-pricing.sql",
+      "sha256": "033ff0397702b783ac32578a3e8f010e8930efb8a7e197cca27865ee2bb5d2dc",
+      "bytes": 7621,
+      "offset": 316
+    },
+    {
+      "order": 2,
+      "path": "planning/proposals/quote-draft-storage.sql",
+      "sha256": "10931d4249a4a4a720eb4a9919d6bc38f4d7061346717127f517bd23e71f0900",
+      "bytes": 27294,
+      "offset": 8098
+    },
+    {
+      "order": 3,
+      "path": "planning/proposals/quote-draft-commands.sql",
+      "sha256": "ccc70d6166274d830e0aaa4062912d6dc8a295b6f99c85f8a80c03c4e01f8a26",
+      "bytes": 60326,
+      "offset": 35554
+    },
+    {
+      "order": 4,
+      "path": "planning/proposals/quote-draft-source.sql",
+      "sha256": "9286f04a6cb9557053a3927d81e207edbd944b120d0ee06e2cd83bf4a3b36ff1",
+      "bytes": 10866,
+      "offset": 96040
+    },
+    {
+      "order": 5,
+      "path": "planning/proposals/quote-draft-resolution.sql",
+      "sha256": "aafe158f33a42c8d18f4bb5e419eefa9e06506a49a346ffdeaa474ed4f07dbd8",
+      "bytes": 10975,
+      "offset": 107070
+    }
+  ],
+  "quoteTables": [
+    "crest.quote_families",
+    "crest.quote_revisions",
+    "crest.quote_items"
+  ],
+  "requiredQuoteColumns": 61,
+  "sourceCoverage": {
+    "tables": 44,
+    "requiredColumns": 693,
+    "excludedCredentialColumns": 10,
+    "actualRegistered45QuoteVerified": false
+  },
+  "legacyProfiles": [
+    42,
+    43,
+    44
+  ],
+  "runtimeQuotesEnabled": false,
+  "registeredQuoteWorkerEnabled": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "requiredAcceptance": [
+    "Actual registered44-to45 atomic upgrade with early and late source-drift rollback",
+    "Registered45 inventory, closed grants, trusted Draft save/history and original-operation review",
+    "Genuine Auth/HTTP quote journey on actual registered45",
+    "Per-domain common-format source retrieval and independent encrypted registered45 restore",
+    "Preserved explicit42/43/44 schema/profile/recovery fixtures",
+    "Genuine test-only quote editor requires browser acceptance; complete45 business-export/worker/admission remains required before its exposure and real-data/release claims",
+    "Complete exact-source browser/build/container/artifact release"
+  ],
+  "canonicalDecision": "ADR45",
+  "resetCallerRoleBetweenBodies": true
+}

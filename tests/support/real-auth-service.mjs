@@ -73,9 +73,10 @@ export async function startRealAuthService(target,{jwtExpiry=3600}={}) {
   try {
     const {privateKey}=await generateKeyPair('ES256',{extractable:true});const kid=randomUUID();
     const key={...await exportJWK(privateKey),kid,alg:'ES256',use:'sig',key_ops:['sign','verify']};
+    if(process.platform==='win32')db.hostname='host.docker.internal';
     db.searchParams.set('options','-c role=supabase_auth_admin -c search_path=auth,public');
     const env={...process.env,GOTRUE_DB_DATABASE_URL:db.toString(),GOTRUE_DB_DRIVER:'postgres',GOTRUE_DB_NAMESPACE:'auth',
-      GOTRUE_SITE_URL:'http://127.0.0.1:3000',API_EXTERNAL_URL:issuer,GOTRUE_API_HOST:'127.0.0.1',GOTRUE_API_PORT:String(port),
+      GOTRUE_SITE_URL:'http://127.0.0.1:3000',API_EXTERNAL_URL:issuer,GOTRUE_API_HOST:process.platform==='win32'?'0.0.0.0':'127.0.0.1',GOTRUE_API_PORT:String(port),
       GOTRUE_JWT_SECRET:randomBytes(48).toString('base64url'),GOTRUE_JWT_KEYS:JSON.stringify([key]),GOTRUE_JWT_ISSUER:issuer,
       GOTRUE_JWT_AUD:'authenticated',GOTRUE_JWT_DEFAULT_GROUP_NAME:'authenticated',GOTRUE_JWT_EXP:String(jwtExpiry),
       GOTRUE_DISABLE_SIGNUP:'true',GOTRUE_EXTERNAL_EMAIL_ENABLED:'true',GOTRUE_MAILER_AUTOCONFIRM:'false',
@@ -85,7 +86,7 @@ export async function startRealAuthService(target,{jwtExpiry=3600}={}) {
     const allowed=['DB_DATABASE_URL','DB_DRIVER','DB_NAMESPACE','SITE_URL','API_HOST','API_PORT','JWT_SECRET','JWT_KEYS','JWT_ISSUER','JWT_AUD','JWT_DEFAULT_GROUP_NAME','JWT_EXP',
       'DISABLE_SIGNUP','EXTERNAL_EMAIL_ENABLED','MAILER_AUTOCONFIRM','MFA_TOTP_ENROLL_ENABLED','MFA_TOTP_VERIFY_ENABLED','SESSIONS_SINGLE_PER_USER',
       'MFA_RATE_LIMIT_CHALLENGE_AND_VERIFY','RATE_LIMIT_TOKEN_REFRESH','RATE_LIMIT_SIGN_IN_SIGN_UP','LOG_LEVEL'].map(k=>`GOTRUE_${k}`);
-    const created=docker(['create','--network','host','--read-only','--tmpfs','/tmp','--cap-drop','ALL','--security-opt','no-new-privileges','--log-driver','none',
+    const created=docker(['create',...(process.platform==='win32'?['--publish',`127.0.0.1:${port}:${port}`]:['--network','host']),'--read-only','--tmpfs','/tmp','--cap-drop','ALL','--security-opt','no-new-privileges','--log-driver','none',
       '--label',`crest.synthetic-auth=${randomUUID()}`,...[...allowed,'API_EXTERNAL_URL'].flatMap(k=>['--env',k]),testAuthImage,'auth','serve'],env);
     assert.match(created,/^[a-f0-9]{64}$/);container=created;docker(['start',container]);
     await waitHealthy();

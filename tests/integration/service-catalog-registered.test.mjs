@@ -10,7 +10,7 @@ import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import {formatServiceCatalogCsv} from '../../src/commercial/service-catalog-csv.ts';
 import {verifyServiceCatalogCsv} from '../../src/tooling/verify-service-catalog-csv.ts';
 import {bindServiceOriginalReceipt} from '../../src/commercial/service-original-operation.ts';
-import {backupDatabase,restoreDatabase,restoreLegacy43Database,connect,hash,inventory,keyPair,privateWorkspace,recoveryCluster} from '../support/recovery-drill.mjs';
+import {backupLegacy44Database as backupDatabase,restoreLegacy44Database as restoreDatabase,restoreLegacy43Database,connect,hash,inventory,keyPair,privateWorkspace,recoveryCluster} from '../support/recovery-drill.mjs';
 const adoption=JSON.parse(await readFile(new URL('../../planning/CATALOG_SCHEMA44_ADOPTION.json',import.meta.url),'utf8'));
 const sql=await readFile(new URL('../../supabase/migrations/'+adoption.migration.file,import.meta.url),'utf8');
 const issuer='https://auth.example.com/auth/v1';
@@ -55,7 +55,7 @@ after(async()=>{
 });
 test('actual migration CLI refuses late validator drift and atomically retains registered43 with no partial catalog',async()=>{
  await guardClient.query('ALTER FUNCTION crest_private.original_operation_reference_valid(jsonb) SET search_path=public');const before=await definitions(guardClient);
- await assert.rejects(sandbox.apply(guardTarget),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);
+ await assert.rejects(sandbox.apply(guardTarget,await sandbox.prefix(44)),/MIGRATION_CLI_FAILED_REVIEW_REQUIRED/);
  const ledgerRoot=join(sandbox.workspace,'ledger'),targets=(await readdir(ledgerRoot)).filter(name=>/^[a-f0-9]{64}$/.test(name)),diagnostics=[];
  for(const target of targets)for(const file of(await readdir(join(ledgerRoot,target))).filter(name=>name.startsWith('failed-cli-')&&name.endsWith('.json')))diagnostics.push(JSON.parse(await readFile(join(ledgerRoot,target,file),'utf8')));
  assert.equal(diagnostics.length,1);assert.equal(diagnostics[0].rawOutputRetained,false);assert(diagnostics[0].publicErrorCodes.length>0);assert(diagnostics[0].publicErrorCodes.every(code=>sql.includes(code)));
@@ -73,11 +73,11 @@ for(const [name,change,message]of [
  assert.equal(await value(sandbox.admin,"SELECT count(*)::int AS value FROM pg_roles WHERE rolname IN('crest_catalog_owner','crest_catalog_integrity_owner')"),0);
 });
 test('actual registered43-to44 migration preserves every historical row and reapplies idempotently',async()=>{
- receipt=await sandbox.apply(target);assert.equal(receipt.history.length,44);assert.deepEqual(receipt.history.slice(0,43),prior.history);assert.deepEqual((await sandbox.apply(target)).history,receipt.history);
+ receipt=await sandbox.apply(target,await sandbox.prefix(44));assert.equal(receipt.history.length,44);assert.deepEqual(receipt.history.slice(0,43),prior.history);assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(44))).history,receipt.history);
  bootstrap=await value(client,"SELECT id AS value FROM crest_private.actors WHERE system_key='security_bootstrap'");web=await runtime(sandbox.admin,target,'crest_web');exporter=await runtime(sandbox.admin,target,'crest_export');
 });
 test('registered44 actual catalog accounts for every642 column with unchanged credential exclusions and closed privileges',async()=>{
- const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8')),columns=(await client.query("SELECT n.nspname||'.'||c.relname AS table,a.attname AS column FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN('crest','crest_private') AND c.relkind IN('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2")).rows;
+ const manifest=JSON.parse(await readFile(new URL('../support/registered44-export-coverage.json',import.meta.url),'utf8')),columns=(await client.query("SELECT n.nspname||'.'||c.relname AS table,a.attname AS column FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN('crest','crest_private') AND c.relkind IN('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2")).rows;
  assert.deepEqual(verifyExportCoverage(manifest,columns,44),{assurance:'schema_inventory_only',tables:41,requiredColumns:632,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
  for(const table of adoption.catalogTables){assert.equal(await value(client,"SELECT relrowsecurity AND relforcerowsecurity AND relowner='crest_schema_owner'::regrole AS value FROM pg_class WHERE oid=$1::regclass",[table]),true);await assert.rejects(web.query('SELECT * FROM '+table),e=>e.code==='42501');}
  assert.equal(await value(client,"SELECT count(*)::int AS value FROM pg_roles WHERE rolname IN('crest_catalog_owner','crest_catalog_integrity_owner') AND NOT(rolcanlogin OR rolinherit OR rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls) AND rolconfig IS NULL"),2);
