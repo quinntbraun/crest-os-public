@@ -20,7 +20,7 @@ export function ExpensesScreen(){
  return <>
   <p>Record paid purchases and keep their corrections and history.</p>
   <p className="field-help">Receipt attachments and full accounting are still in development for this test build.</p>
-  <ExpenseEditor client={client}/>
+  <ExpenseEditor client={client} embedded/>
   <nav aria-label="Expense workspace navigation"><a href="/save-review?kind=bookkeeping.expense.save">Review an interrupted expense</a><a href="/sign-in">Check sign-in</a></nav>
  </>;
 }

@@ -226,6 +226,8 @@ jobs:
           npm ci --ignore-scripts --no-fund
       - name: Install verified database tooling
         run: node scripts/install-tools.mjs
+      - name: Install pinned recovery tools for registered49 receipt acceptance
+        run: node scripts/install-recovery-tools.mjs
       - name: Run isolated regression group
         run: |
           npm run test:real-auth
