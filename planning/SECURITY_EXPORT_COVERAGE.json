@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 45,
+  "migrationCount": 46,
   "tables": [
     {
       "table": "crest.businesses",
@@ -1080,6 +1080,60 @@
         "final_cents",
         "complimentary_reason",
         "customer_snapshot",
+        "version",
+        "created_at",
+        "updated_at",
+        "created_by",
+        "updated_by",
+        "origin",
+        "operation_id",
+        "import_row_id",
+        "assessment_id",
+        "category_override_note"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.condition_assessments",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "vehicle_id",
+        "condition_class",
+        "source",
+        "assessed_at",
+        "notes",
+        "version",
+        "created_at",
+        "updated_at",
+        "created_by",
+        "updated_by",
+        "origin",
+        "operation_id",
+        "import_row_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.quote_approvals",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "family_id",
+        "revision_id",
+        "approved_content_version",
+        "approved_content_hash",
+        "actor_id",
+        "reviewed_at",
+        "extreme_acknowledged",
+        "template_version",
+        "customer_representation",
+        "presentation_text",
+        "presentation_hash",
         "version",
         "created_at",
         "updated_at",

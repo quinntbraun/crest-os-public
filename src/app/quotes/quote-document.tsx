@@ -1,10 +1,11 @@
 import {useId} from 'react';
-import type {prepareQuoteContent} from '../../commercial/quote-content';
+import type {prepareVersionedQuoteContent as prepareQuoteContent} from '../../commercial/quote-review-content';
+import {phonePresentation} from '../../client/phone-presentation';
 import {quoteMoney} from '../../commercial/quote-pricing';
 import type {QuoteDiscount} from '../../commercial/quote-pricing';
 
 export type QuoteDocumentContent=ReturnType<typeof prepareQuoteContent>['customer'];
-type Props=Readonly<{quote:QuoteDocumentContent}>;
+type Props=Readonly<{quote:QuoteDocumentContent;stage?:'draft'|'review'|'approved'}>;
 const invalid=():never=>{throw Error('QUOTE_DOCUMENT_CUSTOMER_PROJECTION_REQUIRED');};
 function exact(value:unknown,keys:readonly string[]):value is Record<string,unknown>{return !!value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key));}
 const text=(value:unknown):string=>typeof value==='string'?value:invalid();
@@ -19,24 +20,24 @@ function discountDescription(discount:QuoteDiscount):string{
 
 /** Only a prepared customer projection belongs here. This component grants no
  * access and performs no persistence, approval, delivery or financial action. */
-export function QuoteDocument({quote}:Props){
+export function QuoteDocument({quote,stage='draft'}:Props){
  const titleId=useId();
  // Fail closed on an accidentally supplied whole/private value. Rendering also
  // names every field explicitly rather than serializing unknown properties.
  const supplied:unknown=quote;
- if(!exact(supplied,rootKeys)||!exact(supplied.recipient,['displayName','phone','email'])||!Array.isArray(supplied.lines)||!supplied.lines.every(line=>exact(line,lineKeys)))return invalid();
+ if(!exact(supplied,rootKeys)||![1,2].includes(supplied.schemaVersion as number)||!exact(supplied.recipient,['displayName','phone','email'])||!Array.isArray(supplied.lines)||!supplied.lines.every(line=>exact(line,supplied.schemaVersion===1?lineKeys:[...lineKeys,'category'])))return invalid();
  const expiry=quote.expiryAt===null?null:new Intl.DateTimeFormat('en-US',{timeZone:quote.timezone,dateStyle:'medium',timeStyle:'long'}).format(new Date(quote.expiryAt));
  return <article className="quote-worksheet" aria-labelledby={titleId}>
-  <header><p className="eyebrow">Crest Detailing</p><h2 id={titleId}>{quote.title}</h2><p className="notice"><strong>Draft</strong> · Not sent or accepted</p><p>USD · All-in quoted amounts</p></header>
+  <header><p className="eyebrow">Crest Detailing</p><h2 id={titleId}>{quote.title}</h2><p className="notice"><strong>{stage==='approved'?'Approved':stage==='review'?'Ready for review':'Draft'}</strong> · Not sent or accepted</p><p>USD · All-in quoted amounts</p></header>
   <section aria-label="Quote recipient"><h3>Prepared for</h3><p className="service-scope">{quote.recipient.displayName}</p>
    {(quote.recipient.phone!==null||quote.recipient.email!==null)&&<dl className="customer-values">
-    {quote.recipient.phone!==null&&<><dt>Phone</dt><dd className="service-scope">{quote.recipient.phone}</dd></>}
+    {quote.recipient.phone!==null&&<><dt>Phone</dt><dd className="service-scope">{phonePresentation(quote.recipient.phone)}</dd></>}
     {quote.recipient.email!==null&&<><dt>Email</dt><dd className="service-scope">{quote.recipient.email}</dd></>}
    </dl>}
   </section>
   <section aria-label="Quoted work location"><h3>Work location</h3><p className="service-scope">{quote.workLocation}</p></section>
   <section aria-label="Quoted scope"><h3>Quoted work</h3><ol className="quote-preview-lines">{quote.lines.map((line,index)=><li key={index}>
-   <h4 className="service-scope">{text(line.description)}</h4><p className="service-scope">{line.vehicle===null?'Job-wide scope':text(line.vehicle)}{line.condition!==null?' · '+text(line.condition)+' condition':''}</p>
+   <h4 className="service-scope">{text(line.description)}</h4><p className="service-scope">{line.vehicle===null?'Job-wide scope':text(line.vehicle)}{'category' in line&&line.category!==null?' · '+text(line.category):''}{line.condition!==null?' · '+text(line.condition)+' condition':''}</p>
    {text(line.inclusions).length>0&&<><p><strong>Included work</strong></p><p className="service-scope">{text(line.inclusions)}</p></>}
    {text(line.exclusions).length>0&&<><p><strong>Exclusions</strong></p><p className="service-scope">{text(line.exclusions)}</p></>}
    <dl className="customer-values"><dt>All-in amount</dt><dd className="record-reference">{quoteMoney(line.grossCents)}</dd>

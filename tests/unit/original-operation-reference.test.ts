@@ -17,7 +17,9 @@ const targets:Record<OriginalOperationKind,Record<string,unknown>>={
  'crm.lead.address.save':{leadId:randomUUID(),leadAddressId:randomUUID(),expectedVersion:'0'},
  'crm.lead.convert':{conversionId:randomUUID(),leadId:randomUUID(),expectedLeadVersion:'1',customerId:randomUUID()},
  'catalog.service.save':{serviceId:randomUUID(),expectedRevision:'0'},
- 'quote.draft.save':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'0',expectedRevisionVersion:'0'}
+ 'quote.draft.save':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'0',expectedRevisionVersion:'0'},
+ 'quote.review.submit':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'2',expectedRevisionVersion:'2',expectedContentVersion:'1'},
+ 'quote.review.approve':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'3',expectedRevisionVersion:'3',expectedContentVersion:'1',approvalId:randomUUID()}
 };
 function sample(kind:OriginalOperationKind='crm.customer.save'){
  return {schemaVersion:1,businessId,commandType:kind,reference:{operationId,recoveryEpoch:originalEpoch,...targets[kind]} as Record<string,unknown>};

@@ -1,6 +1,6 @@
 # Crest OS V1 - Database Contract
 
-Version: 1.8 | 2026-10-28 | ADR45 registered Draft quotes; activation gated
+Version: 1.9 | 2026-10-28 | ADR46 exact owner quote review; activation gated
 
 Schema43 implementation record,2026-10-27 (ADR43): the append-only export journal is represented by six forced-RLS private tables: export_jobs, export_job_attempts, export_job_snapshots, export_part_intents, export_part_verifications and export_job_completions. Their114 required fields preserve original requests/leases, exact snapshot/Ready text/hashes, ciphertext intents/verification and immutable completion/expiry evidence. planning/SOURCE_EXPORT_SCHEMA43_ADOPTION.json binds the registered migration to all seven exact reviewed proposal bodies. Global coverage becomes39 tables/613 columns (603 required, the same10 explicit credential exclusions). Actual registered43 catalogue/upgrade/Auth/recovery tests remain required. Original42 SQL, nonfinancial retirement semantics and every posted-history rule remain unchanged; source registration grants no production or product-route activation.
 
@@ -279,3 +279,8 @@ ADR44 appends one atomic catalogue migration with the four exact reviewed catalo
 
 
 ADR45 appends registered migration45 for quote_families, quote_revisions and quote_items (61 fully inventoried fields). Draft preparation retains original linked party identities, exact immutable audit images, copied customer/internal content, typed source references, inactive removed lines, independent exact pricing and concurrency/recovery fences. No approval, sending, acceptance, amendments, tax posting or billing transition is activated by registration. Prior44 migration bytes and legacy recovery identities remain immutable.
+
+
+### Registered46 review construction
+
+ADR46 appends migration46 with condition_assessments (15 fields), quote_approvals (21 fields) and quote_items.assessment_id/category_override_note, adding38 required fields. Forced scoped RLS, closed existing roles, append-only assessment/approval history and same-business typed vehicle/revision/operation FKs remain enforced. Exact content/row versions are separate: submit/approve preserve canonical content version/hash while advancing audited row versions; edits invalidate current approval and preserve its retained presentation. Registered45 SQL and v1 receipt/history bytes remain immutable. Approval does not create financial, acceptance or agreement effects.

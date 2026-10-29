@@ -1,6 +1,6 @@
 # Crest OS - Initial Architecture Decision Register
 
-Version: 1.16 | 2026-10-28 | ADR45 registered Draft quotes; activation gated
+Version: 1.17 | 2026-10-28 | ADR46 exact owner quote review; activation gated
 
 ## ADR43 - Register the bounded source-export journal with explicit recovery profiles
 
@@ -226,3 +226,14 @@ The approved Phase5 catalog-to-quote journey requires persistent Draft review co
 The inventory becomes44tables/703columns with693required fields and the same10 credential exclusions. Registration is construction, not proof of source completeness or production readiness. Require actual44-to45 upgrade and early/late drift rollback, closed grants, genuine Auth/HTTP Draft saves and retained-history/original-resolution review, per-domain open-format retrieval and independent encrypted45 database restore. A bounded genuine synthetic quote UI may then proceed through explicit trusted test-only configuration and browser acceptance under ADR41/44. Current owner-only nonfinancial preparation uses existing crm.manage; no finance or new human capability is granted.
 
 This does not silently adopt approval/send/acceptance/amendments, taxes, scheduling, billing or payment semantics. The existing43 export worker and42/43/44 backup artifacts keep their exact identities. Full45 collector/formatter/verifier/worker/admission, complete portable exports/Excel, independent custody/recovery/physical-device gates and every approved V1 requirement remain required before their own exposure and real-data/release claims. No ordinary route flag, production apply/activation, real Crest data, paid service, credential disclosure or weakened release requirement is authorized.
+
+
+### ADR46 — Exact owner quote review and approval
+
+Approved V1 review requires Draft → Ready for Review → exact owner approval, with edits returning to Draft and invalidating current approval while retaining immutable prior evidence. Register the exact reviewed quote-lifecycle proposal body as one atomic migration46, recording byte offset/hash in QUOTE_REVIEW_SCHEMA46_ADOPTION.json. Preserve all45 prior SQL bodies and freeze exact45 registry, coverage and compatibility; do not rewrite original canonical baseline or historical42/43/44/45 recovery identities.
+
+V2 content adds supplied canonical category and immutable actual-vehicle assessment identity/class/source/exact time/private notes plus private category-override note. Incomplete facts may remain Draft; readiness requires complete applicable facts, job-wide lines have no invented vehicle assessment, and Extreme approval requires explicit owner acknowledgement. Save/submit/approve use existing owner crm.manage, fresh trusted authority, acknowledged COMMIT, exact versions/hash, audit and recovery fences. V1 bytes and original receipt1 remain valid; v2 saves use receipt2 with assessment audit IDs, and typed original submit/approve review never stores customer content or clears an absent result automatically.
+
+Inventory becomes46 tables/741 columns,731 required with unchanged10 credential exclusions. Profile crest.quote-review.sources.v2 includes all27 item columns, immutable assessments/approvals and exact retained public presentation; pair existing business-history evidence from the same RO/RR snapshot for original operations/audit/private history. Do not relabel profile1 or the43 worker complete46. Require actual45-to46 atomic upgrade/refusal, native inventory/grants, genuine Auth/HTTP, common-format reconstruction, registered encrypted46 independent restore and exact-source browser acceptance. Registration is construction, not production activation or complete exports/backups.
+
+Owner approval is not actual sharing, customer acceptance, a service agreement, tax/invoice/payment posting or lead conversion. Manual confirmed sharing, Sent/current-unexpired acceptance, agreement/entitlement conversion, replacements/amendments and remaining scheduling/finance/Calendar scope remain explicit approved V1 follow-on work. No new human capability, auth bypass, cost, real-data authority or weakened release gate.

@@ -79,6 +79,15 @@ jobs:
       - name: Prove actual registered45 Draft upgrade, workflow and independent recovery
         if: ${{ !cancelled() }}
         run: npm run test:quote-registered
+      - name: Prove exact owner review, approval, immutable history and interrupted-action retirement
+        if: ${{ !cancelled() }}
+        run: npm run test:quote-review-proposal
+      - name: Prove review source CSV and independent encrypted recovery
+        if: ${{ !cancelled() }}
+        run: npm run test:quote-review-source
+      - name: Prove registered46 upgrade, source, refusal and independent recovery
+        if: ${{ !cancelled() }}
+        run: npm run test:quote-review-registered
       - name: Prove registered44 catalog upgrade, retained workflow and independent recovery
         run: npm run test:catalog-registered
       - name: Run isolated regression group

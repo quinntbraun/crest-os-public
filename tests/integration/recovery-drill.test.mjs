@@ -218,21 +218,21 @@ test('lead source snapshot, exact cents/microseconds, genuine customer and origi
   for(const role of ['crest_lead_owner','crest_lead_integrity_owner','crest_lead_source_owner','crest_lead_source_integrity_owner'])await assert.rejects(w.connection.query('SET ROLE '+role),e=>e.code==='42501');
   for(const table of ['leads','lead_sources'])await assert.rejects(w.connection.query('SELECT * FROM crest.'+table),e=>e.code==='42501');
  }finally{await w.connection.end();await restored.query('DROP ROLE '+w.login);}
- assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,44);
- const quoteTables=['quote_families','quote_items','quote_revisions'];
+ assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,46);
+ const quoteTables=['condition_assessments','quote_approvals','quote_families','quote_items','quote_revisions'];
  assert.deepEqual((await restored.query("SELECT c.relname AS name,c.relrowsecurity AND c.relforcerowsecurity AND c.relowner='crest_schema_owner'::regrole AND NOT has_table_privilege('crest_web',c.oid,'SELECT') AS closed FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='crest' AND c.relkind='r' AND c.relname=ANY($1::text[]) ORDER BY c.relname",[quoteTables])).rows,quoteTables.map(name=>({name,closed:true})));
  const journalTables=['export_job_attempts','export_job_completions','export_job_snapshots','export_jobs','export_part_intents','export_part_verifications'];
  assert.deepEqual((await restored.query("SELECT c.relname AS name,c.relrowsecurity AND c.relforcerowsecurity AND c.relowner='crest_schema_owner'::regrole AS closed FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='crest_private' AND c.relkind='r' AND c.relname=ANY($1::text[]) ORDER BY c.relname",[journalTables])).rows,journalTables.map(name=>({name,closed:true})));
 });
 
 test('registered coverage accounts for every actual source column and rejects omissions on the restored schema',async()=>{
- const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,45);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_vehicles').required,[...leadVehicleColumns]);
+ const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,46);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_vehicles').required,[...leadVehicleColumns]);
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_addresses').required,[...leadAddressColumns]);
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_events').required,[...leadEventColumns]);
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_sources').required,[...leadSourceColumns]);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.leads').required,[...leadColumns]);
  const columns=(await restored.query(`SELECT n.nspname||'.'||c.relname AS "table",a.attname AS "column" FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN ('crest','crest_private') AND c.relkind IN ('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2`)).rows;
- assert.deepEqual(verifyExportCoverage(manifest,columns,45),{assurance:'schema_inventory_only',tables:44,requiredColumns:693,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
- const missing=structuredClone(manifest);missing.tables.find(t=>t.table==='crest.leads').required.pop();assert.throws(()=>verifyExportCoverage(missing,columns,45),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
+ assert.deepEqual(verifyExportCoverage(manifest,columns,46),{assurance:'schema_inventory_only',tables:46,requiredColumns:731,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
+ const missing=structuredClone(manifest);missing.tables.find(t=>t.table==='crest.leads').required.pop();assert.throws(()=>verifyExportCoverage(missing,columns,46),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
 });
 
 test('immutable18-column Lost event restores exactly before the later reopen',async()=>{
