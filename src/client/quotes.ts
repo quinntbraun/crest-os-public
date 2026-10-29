@@ -24,7 +24,7 @@ async function post(route:'context'|'list'|'save'|'history'|'operation',body:obj
    const errors:Record<string,readonly[number,Kind]>={QUOTE_SAVE_NOT_SUBMITTED:[503,'not_submitted'],QUOTE_SAVE_DENIED:[403,'denied'],RECOVERY_REVIEW_REQUIRED:[409,'recovery'],QUOTE_REQUEST_LIMITED:[429,'limited'],QUOTE_SAVE_OUTCOME_UNKNOWN:[503,'unknown']},mapped=typeof value.error==='string'&&Object.hasOwn(errors,value.error)?errors[value.error]:undefined;
    if(mapped&&response.status===mapped[0])throw new QuoteClientError(mapped[1]);throw Error();
   }
-  return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding'),reviewAvailable:response.headers.get('x-crest-quote-review')==='1'};
+  return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding'),reviewAvailable:response.headers.get('x-crest-quote-review')==='1',commercialAvailable:response.headers.get('x-crest-quote-commercial')==='1'};
  }catch(error){throw error instanceof QuoteClientError?error:new QuoteClientError(route==='save'?'unknown':'unavailable');}
 }
 function bindReceipt(value:unknown,businessId:string,reference:QuoteReference){
@@ -33,7 +33,7 @@ function bindReceipt(value:unknown,businessId:string,reference:QuoteReference){
 }
 export const quotes=Object.freeze({
  async context(proof:Proof,signal:AbortSignal){
-  try{const r=await post('context',{},proof,signal),v=r.value;check(r.status===200&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding)&&exact(v,['schemaVersion','businessId','writeState','recoveryEpoch'])&&v.schemaVersion===1&&quoteId(v.businessId)&&(v.writeState==='ready'&&quoteId(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null));return Object.freeze({context:Object.freeze({...v}) as QuoteContext,binding:r.binding,...r.reviewAvailable?{reviewAvailable:true as const}:{}});}catch(error){throw error instanceof QuoteClientError?error:new QuoteClientError('unavailable');}
+  try{const r=await post('context',{},proof,signal),v=r.value;check(r.status===200&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding)&&exact(v,['schemaVersion','businessId','writeState','recoveryEpoch'])&&v.schemaVersion===1&&quoteId(v.businessId)&&(v.writeState==='ready'&&quoteId(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null));return Object.freeze({context:Object.freeze({...v}) as QuoteContext,binding:r.binding,...r.reviewAvailable?{reviewAvailable:true as const}:{},...r.commercialAvailable&&r.reviewAvailable?{commercialAvailable:true as const}:{}});}catch(error){throw error instanceof QuoteClientError?error:new QuoteClientError('unavailable');}
  },
  async save(input:QuoteSave,proof:Proof,signal:AbortSignal){
   let command:QuoteSave;try{command=parseQuoteSave(input);}catch{throw new QuoteClientError('input');}

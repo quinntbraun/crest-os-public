@@ -17,7 +17,7 @@ try{
  process.env.NODE_ENV='production';
  const {createCrestApplication,createAuthenticationRuntime}=await import('../.local/server/application.mjs');
  const runtime=await createAuthenticationRuntime({database:{connectionString:`postgresql://${state.login}:${state.loginPassword}@127.0.0.1:54329/${state.databaseName}`,environment:'test'},provider:{issuer:state.issuer,publicKey:state.publicKey,environment:'test'},owner:state.owner,loginKey:Buffer.from(state.loginKey,'base64url'),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:Buffer.from(state.tokenKey,'base64url')}]});
- app=await createCrestApplication({origin:binding.origin,environment:'test',tls,authentication:runtime.forServer(),business:{businessId:state.businessId},customers:true,vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true,syntheticCatalog:true,syntheticQuotes:true,syntheticQuoteReview:true});
+ app=await createCrestApplication({origin:binding.origin,environment:'test',tls,authentication:runtime.forServer(),business:{businessId:state.businessId},customers:true,vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true,syntheticCatalog:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticAppointmentHolds:true,syntheticQuoteCommercial:true});
  restrictSyntheticPhoneSockets(app.server,binding);
  await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(4319,binding.laptopAddress,resolve);});
  console.log('Private synthetic Crest preview: '+binding.origin+' . Only the two configured device addresses are accepted. Genuine sign-in required. Review any local certificate warning yourself. Keep workspace:start running.');

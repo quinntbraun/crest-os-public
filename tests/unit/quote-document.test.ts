@@ -48,3 +48,8 @@ it('labels proposed scheduling as tentative and preserves precise expiry alongsi
  const expiryAt='2026-10-29T01:02:03.123456Z',html=render(prepareQuoteContent({...draft(),expiryAt,proposedSchedule:'Thursday afternoon <tentative>'}).customer);
  expect(html).toContain('Proposed timing · tentative');expect(html).toContain('not a confirmed appointment');expect(html).toContain('Thursday afternoon &lt;tentative&gt;');expect(html).toContain('Oct 28, 2026');expect(html).toContain('America/Indianapolis');expect(html).toContain('Exact expiry time');expect(html).toContain('dateTime="'+expiryAt+'"');expect(html).toContain(expiryAt+'</time> (UTC)');
 });
+
+it.each([['sent','Shared','Awaiting customer acceptance'],['accepted','Accepted','Customer agreement recorded'],['superseded','Superseded','Retained earlier offer']] as const)('labels retained %s customer content without inferring payment or exposing private sources',(stage,label,detail)=>{
+ const input=draft(),prepared=prepareQuoteContent(input),html=renderToStaticMarkup(createElement(QuoteDocument,{quote:prepared.customer,stage}));
+ expect(html).toContain(label);expect(html).toContain(detail);expect(html).not.toContain('Not sent or accepted');expect(html).not.toContain(input.internalNotes!);expect(html).not.toContain(input.recipient.customerId!);expect(html).not.toMatch(/<(button|input|form)\b|Payment received|Paid in full/);
+});

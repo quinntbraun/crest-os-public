@@ -1,0 +1,113 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "existingMigrationCount": 47,
+  "runtimeEnabled": false,
+  "nativeExecuted": true,
+  "requiredAcceptanceSqlSha256": "b7136905ac115ce9d849d92afdd21a15fa647acb270f3c60254fbac0e5687148",
+  "existingFunctionBodies": [
+    {
+      "signature": "crest_private.quote_family_commercial_state_projection(crest.quote_family_commercial_state)",
+      "bodySha256": "19083618b92a168f2eb8723daaf7be7d69ba846fc43492b6a519f8868e304254"
+    },
+    {
+      "signature": "crest_private.quote_sends_projection(crest.quote_sends)",
+      "bodySha256": "52afb5d01516cd726ff2b12f63bac8c98bb18d09864767f405098f99233a1f55"
+    },
+    {
+      "signature": "crest_private.quote_acceptances_projection(crest.quote_acceptances)",
+      "bodySha256": "0a4422a3f8846b366fc836d32d04eeb82104b1e9bae62857e358fda5007dc63d"
+    },
+    {
+      "signature": "crest_private.agreements_projection(crest.agreements)",
+      "bodySha256": "c6ea03a4ddc9680fe637cfe4e5edd3210a652dabb3d743fd61bdb10253d50315"
+    },
+    {
+      "signature": "crest_private.scope_entitlements_projection(crest.scope_entitlements)",
+      "bodySha256": "19083618b92a168f2eb8723daaf7be7d69ba846fc43492b6a519f8868e304254"
+    },
+    {
+      "signature": "crest_private.entitlement_versions_projection(crest.entitlement_versions)",
+      "bodySha256": "6b7e9be93804e3074c2378635ab84fd3d19f16f5993df613b7cd9a7838f1401d"
+    },
+    {
+      "signature": "crest_private.scope_allocations_projection(crest.scope_allocations)",
+      "bodySha256": "a1cc57329364be59aea5b6338604f7e260d7679cb2af0fe021d15464becda2fe"
+    }
+  ],
+  "profile": "crest.quote-commercial.sources.v1",
+  "tables": [
+    {
+      "name": "commercialState",
+      "suffix": "commercial_state",
+      "table": "crest.quote_family_commercial_state"
+    },
+    {
+      "name": "sends",
+      "suffix": "sends",
+      "table": "crest.quote_sends"
+    },
+    {
+      "name": "acceptances",
+      "suffix": "acceptances",
+      "table": "crest.quote_acceptances"
+    },
+    {
+      "name": "agreements",
+      "suffix": "agreements",
+      "table": "crest.agreements"
+    },
+    {
+      "name": "entitlements",
+      "suffix": "entitlements",
+      "table": "crest.scope_entitlements"
+    },
+    {
+      "name": "entitlementVersions",
+      "suffix": "entitlement_versions",
+      "table": "crest.entitlement_versions"
+    },
+    {
+      "name": "allocations",
+      "suffix": "allocations",
+      "table": "crest.scope_allocations"
+    }
+  ],
+  "sqlBytes": 19992,
+  "sqlSha256": "e11f9476cb138b57ea123ef4fc356708348d0df7b97288dbb487dbf748b5b9c5",
+  "completePortableExport": false,
+  "completeBackup": false,
+  "previousReadProjectionNativeExecution": {
+    "scope": "Owned disposable registered47 plus exact acceptance/source candidates; included-domain source/neutral reconstruction/encrypted candidate restore, not global export or production acceptance",
+    "testFile": "tests/integration/quote-commercial-source.test.mjs",
+    "testSha256": "c6127c664afb75f317f04c27cc199f0f14df6611b6499501ee8333245efe80f5",
+    "tests": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "logSha256": "36ed87ed563d00d672f526f148a3f78a837963de73ea801d34e4a8dfdf668877",
+    "startedAt": "2026-10-29T01:50:02.452Z",
+    "finishedAt": "2026-10-29T01:50:25.540Z",
+    "sourceUnchangedDuringExecution": true,
+    "ownedPrimaryClusterCleaned": true,
+    "sqlSha256": "e11f9476cb138b57ea123ef4fc356708348d0df7b97288dbb487dbf748b5b9c5",
+    "sqlBytes": 19992
+  },
+  "nativeExecution": {
+    "scope": "Owned disposable registered47 plus exact acceptance/source candidates; included-domain source/neutral reconstruction/encrypted candidate restore, not global export or production acceptance",
+    "testFile": "tests/integration/quote-commercial-source.test.mjs",
+    "testSha256": "c6127c664afb75f317f04c27cc199f0f14df6611b6499501ee8333245efe80f5",
+    "tests": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "logSha256": "874dba5b5153c4dce518949779e1313a3680eb6a2c7a47014b23e61191c061f1",
+    "startedAt": "2026-10-29T02:28:32.712Z",
+    "finishedAt": "2026-10-29T02:29:39.844Z",
+    "sourceUnchangedDuringExecution": false,
+    "fixtureSourceUnchanged": true,
+    "ownedPrimaryClusterCleaned": true,
+    "sqlSha256": "e11f9476cb138b57ea123ef4fc356708348d0df7b97288dbb487dbf748b5b9c5",
+    "sqlBytes": 19992
+  }
+}

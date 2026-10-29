@@ -16,6 +16,9 @@ type Targets={
  'crm.lead.convert':Readonly<{conversionId:string;leadId:string;expectedLeadVersion:string;customerId:string}>;
  'catalog.service.save':Readonly<{serviceId:string;expectedRevision:string}>;
  'quote.draft.save':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string}>;
+ 'quote.replacement.create':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:'0'}>;
+ 'quote.manual.send':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string;expectedContentVersion:string;sendId:string;approvalId:string}>;
+ 'quote.confirmation.accept':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string;expectedContentVersion:string;acceptanceId:string;agreementId:string}>;
  'quote.review.submit':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string;expectedContentVersion:string}>;
  'quote.review.approve':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string;expectedContentVersion:string;approvalId:string}>;
 };
@@ -52,6 +55,9 @@ const fields={
  'crm.lead.convert':['conversionId','leadId','expectedLeadVersion','customerId'],
  'catalog.service.save':['serviceId','expectedRevision'],
  'quote.draft.save':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion'],
+ 'quote.replacement.create':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion'],
+ 'quote.manual.send':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','sendId','approvalId'],
+ 'quote.confirmation.accept':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','acceptanceId','agreementId'],
  'quote.review.submit':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion'],
  'quote.review.approve':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','approvalId']
 } as const satisfies Record<OriginalOperationKind,readonly string[]>;
@@ -71,14 +77,15 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
   const kind=row.commandType as OriginalOperationKind,keys=['operationId','recoveryEpoch',...fields[kind]],ref=object(row.reference,keys);
   require(uuid(ref.operationId)&&uuid(ref.recoveryEpoch));
   for(const key of fields[kind]){
-   if(key==='expectedSequence'||key==='expectedVersion'||key==='expectedRevision'||key==='expectedFamilyVersion'||key==='expectedRevisionVersion')require(version(ref[key],!['business.rename','crm.lead.state','quote.review.submit','quote.review.approve'].includes(kind)));
+   if(key==='expectedSequence'||key==='expectedVersion'||key==='expectedRevision'||key==='expectedFamilyVersion'||key==='expectedRevisionVersion')require(version(ref[key],!['business.rename','crm.lead.state','quote.review.submit','quote.review.approve','quote.manual.send','quote.confirmation.accept'].includes(kind)));
    else if(key==='expectedContentVersion')require(version(ref[key]));
    else if(key==='expectedLeadVersion')require(version(ref[key]));
    else if(key!=='action'&&key!=='nextAssociationId')require(uuid(ref[key]));
   }
   if(kind==='crm.vehicle.association')require(['open','close','transfer'].includes(ref.action as string)&&ref.expectedVersion===(ref.action==='open'?'0':'1')&&(ref.action==='transfer'?uuid(ref.nextAssociationId)&&ref.nextAssociationId!==ref.associationId:ref.nextAssociationId===null));
+  if(kind==='quote.replacement.create')require(version(ref.expectedFamilyVersion)&&ref.expectedRevisionVersion==='0');
   if(kind==='quote.draft.save')require((ref.expectedFamilyVersion==='0')===(ref.expectedRevisionVersion==='0'));
-  if(kind==='quote.review.submit'||kind==='quote.review.approve')require(BigInt(ref.expectedContentVersion as string)<=BigInt(ref.expectedRevisionVersion as string));
+  if(kind==='quote.review.submit'||kind==='quote.review.approve'||kind==='quote.manual.send'||kind==='quote.confirmation.accept')require(BigInt(ref.expectedContentVersion as string)<=BigInt(ref.expectedRevisionVersion as string));
   return Object.freeze({schemaVersion:1,businessId:row.businessId,commandType:kind,reference:Object.freeze(ref)}) as OriginalOperationReference;
  }catch{throw new OriginalOperationReferenceError();}
 }

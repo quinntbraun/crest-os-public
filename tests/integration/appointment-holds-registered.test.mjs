@@ -10,7 +10,7 @@ import {readFile} from 'node:fs/promises';
 import {before,after,test} from 'node:test';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
-import {backupDatabase,restoreDatabase,restoreLegacy46Database,connect,inventory,keyPair,privateWorkspace,recoveryCluster} from '../support/recovery-drill.mjs';
+import {backupLegacy47Database as backupDatabase,restoreLegacy47Database as restoreDatabase,restoreLegacy46Database,connect,inventory,keyPair,privateWorkspace,recoveryCluster} from '../support/recovery-drill.mjs';
 import {holdColumns,holdPayloadKeys,parseStoredHold,parseHoldCommitted} from '../../src/operations/appointment-hold-contract.ts';
 let sandbox,target,client,bootstrap,prior,a,b,cluster,restored,login,web;
 const value=async(c,q,args=[])=>(await c.query(q,args)).rows[0]?.value;
@@ -72,7 +72,7 @@ test('source reader requires one snapshot and binds tenant/token/pages with all2
  await txMode(exporter,async()=>{const c=await value(exporter,'SELECT crest_commands.appointment_hold_snapshot_context($1) AS value',[b.business]);await assert.rejects(value(exporter,'SELECT crest_commands.appointment_hold_snapshot_versions($1,$2,NULL,1) AS value',[a.business,c.snapshotToken]),e=>e.code==='22023');});
 });
 test('registered47 inventory covers all763 fields with unchanged credential exclusions',async()=>{
- const {verifyExportCoverage}=await import('../../src/tooling/export-coverage.ts'),coverage=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+ const {verifyExportCoverage}=await import('../../src/tooling/export-coverage.ts'),coverage=JSON.parse(await readFile(new URL('../support/registered47-export-coverage.json',import.meta.url),'utf8'));
  const observed=(await client.query("SELECT n.nspname||'.'||c.relname AS table,a.attname AS column FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN('crest','crest_private') AND c.relkind='r' AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2")).rows;
  assert.deepEqual(verifyExportCoverage(coverage,observed,47),{assurance:'schema_inventory_only',tables:47,requiredColumns:753,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
 });

@@ -1,6 +1,6 @@
 # Crest OS - Initial Architecture Decision Register
 
-Version: 1.18 | 2026-10-28 | ADR46 exact owner quote review; activation gated
+Version: 1.19 | 2026-10-28 | ADR48 manual sharing and initial acceptance; activation gated
 
 ## ADR43 - Register the bounded source-export journal with explicit recovery profiles
 
@@ -249,3 +249,16 @@ An appointment proposal is a prospective note attached to exactly one saved cust
 Use the current session/provider/capability/recovery fences and restricted command transaction. Persist only opaque original IDs/versions/epoch before dispatch. Unknown outcomes preserve that reference; no automatic retry or draft reconstruction. A lost absent original is resolved by the existing explicit retirement workflow, extended with one closed appointment kind while preserving all15 earlier kinds. Private drafts clear on suspension. Synthetic HTTP composition stays default-off and rejects production activation.
 
 A dedicated export-role source reader requires one read-only repeatable-read snapshot and binds business, snapshot token, keyset pages and exact declared counts. Every22-column immutable version is included; finite limits reject the entire operation rather than truncate. Same-snapshot existing operation/audit export remains required for source-history closure. Per-proposal CSV/JSON copies do not claim complete business export or backup. Actual registered upgrade/refusal, trusted Auth/UI and independent encrypted47 restore gates are mandatory before synthetic adoption; production remains blocked. This forward decision changes no immutable baseline, finance contract, confirmed scheduling or Calendar scope.
+
+
+### ADR48 — Owner-confirmed sharing, immutable initial acceptance and typed commercial control
+
+Approved BR05/P05 manual sharing and recorded external confirmation use the exact approved v2 representation and immutable content fingerprint. Register the reviewed acceptance and commercial-source bodies atomically as migration48 with byte/hash/offset provenance. Preserve every47 prior migration and frozen47 registry/coverage/compatibility, all older profiles and the original canonical baseline.
+
+Keep quote_families physical13-field history unchanged. Its normalized one-to-one quote_family_commercial_state carries typed same-business/family active-offer, initial-acceptance and current-agreement pointers under the identical family lock; a separate versioned control read exposes all pointers. Manual sharing requires explicit actual-sharing confirmation, channel/recipient and exact retained approval/presentation; evidence is optional for sharing and required for recorded acceptance. The owner recording stamp never invents actual message-delivery time. Acceptance records its factual effective time separately, bounded by exact approval/current server time; authoritative expiry eligibility always uses server now. Repeated actual deliveries remain distinct; latestSend and acceptanceSend are separate truthful projections.
+
+A replacement Draft/review retains the prior Sent offer until actual replacement sharing atomically supersedes it. Acceptance-versus-replacement serializes; Accepted remains immutable forever. Initial acceptance appends one immutable agreement, stable entitlements/versions and one entire unassigned amount/scope partition per line, including zero-price identity, with exact inclusive gross/discount/final conservation. This is initial scope only: assignment/splitting/current partition projections need actual job/conservation proof. No invoice, journal, payment or confirmed job is created.
+
+Lead-only quoted customerId and Sent bytes/hash remain untouched. Acceptance customer binding requires a genuine retained explicit conversion and typed business/lead/customer FK. Actual send/acceptance source FKs derive QuoteSent/Won; existing manual targets remain closed. Opaque original send/accept/replacement references and exact immutable receipts support deliberate unknown-save review, never automatic retry or clearing an absent lookup.
+
+Inventory adds7 tables/130 required fields:54 tables/893 columns,883 required and the same10 credential exclusions. New commercial source CSV pairs quote profile2, actual lead/conversion/event references and existing business-history evidence within one RO/RR snapshot. Preserve previous profiles/workers; partial source retrieval, construction or an unkeyed manifest is not a complete Crest export/backup. Require actual47-to48 atomic upgrade/refusal, native inventory/grants, genuine Auth/HTTP, neutral reconstruction, registered encrypted48 independent restore and exact-source browser/build acceptance before bounded synthetic activation. Decline/cancel, accepted amendments, job/financial effects and all other approved V1 scope remain explicit unfinished requirements. No spending, real data, auth bypass or production activation.
