@@ -2,7 +2,7 @@ name: Prospective appointment workflow
 
 on:
   push:
-    branches: [feature/appointment-holds-cloud-20261028]
+    branches: [feature/appointment-holds-cloud-20261028, feature/appointment-portability-cloud-20261028]
   workflow_dispatch:
 
 permissions:
@@ -55,7 +55,7 @@ jobs:
           npm run verify:canonical
           npm run verify:migrations
           npm run typecheck
-          npx vitest run tests/unit/appointment-hold-contract.test.ts tests/unit/appointment-hold-controller.test.ts
+          npx vitest run tests/unit/appointment-hold-contract.test.ts tests/unit/appointment-hold-controller.test.ts tests/unit/appointment-hold-archive.test.ts
       - name: Prove actual retained saves, original results, tenant isolation and independent restore
         run: node --test --test-concurrency=1 tests/integration/appointment-holds-storage.test.mjs
       - name: Install pinned browser engines

@@ -5,6 +5,7 @@ import type {createPendingHoldStore,PendingHold} from './pending-appointment-hol
 import {holdPayload,holdPayloadKeys,parseHoldPayload,parseHoldSave} from '../operations/appointment-hold-contract';
 import type {HoldPayload,HoldSave,StoredHold} from '../operations/appointment-hold-contract';
 import type {Proof} from './authentication';
+import {buildHoldArchive} from '../operations/appointment-hold-archive';
 type Context=Awaited<ReturnType<typeof appointmentHolds.context>>;
 type History=Extract<Awaited<ReturnType<typeof appointmentHolds.history>>,{state:'found'}>;
 type Phase='loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';
@@ -23,7 +24,7 @@ export function createHoldController(deps:{store:ReturnType<typeof createPending
  const clearPrivate=()=>{clearData();proof=null;context=null;original=null;canRetry=false;};
  const live=(signal:AbortSignal)=>{if(!alive||signal.aborted||active?.signal!==signal)throw Error();};
  async function fresh(signal:AbortSignal){const p=await session(signal);live(signal);const c=await api.context(p,signal);live(signal);proof=p;context=c;}
- async function run(work:(signal:AbortSignal)=>Promise<void>,failure:(e:unknown)=>void){if(!alive||active)return;const c=new AbortController();active=c;emit();try{await work(c.signal);}catch(e){if(alive&&!c.signal.aborted&&active===c)failure(e);}finally{if(active===c){active=null;emit();}}}
+ async function run<T>(work:(signal:AbortSignal)=>Promise<T>,failure:(e:unknown)=>void){if(!alive||active)return;const c=new AbortController();active=c;emit();try{return await work(c.signal);}catch(e){if(alive&&!c.signal.aborted&&active===c)failure(e);}finally{if(active===c){active=null;emit();}}}
  function retain(text:string){clearData();phase='pending';message=text;canRetry=false;}
  function finish(result:Awaited<ReturnType<typeof appointmentHolds.save>>){
   if(!pending)throw Error();if(result.state==='conflict'){
@@ -54,7 +55,12 @@ export function createHoldController(deps:{store:ReturnType<typeof createPending
  const moreHistory=()=>{if(phase!=='ready'||!context||!selected||!history?.hasMore)return Promise.resolve();const prior=context,source=selected,afterSequence=history.versions.at(-1)?.sequence??'0';return run(async signal=>{history=null;await fresh(signal);if(!same(prior,context!))throw Error();const result=await api.history(prior.context.businessId,{holdId:source.hold_id,afterSequence,pageSize:20},proof!,signal);live(signal);if(result.state==='absent'||result.currentSequence!==source.sequence){selected=null;draft=null;message='This proposal changed while history was loading. Load current records.';return;}history=result;message='Showing the next retained proposal history page.';},()=>{clearPrivate();phase='unavailable';message='Retained history could not be verified. Load current proposals again.';});};
  const check=()=>{if(phase!=='pending'||!pending)return Promise.resolve();return run(async signal=>{canRetry=false;await fresh(signal);await inspect(signal);},()=>retain('The original save could not be verified. Keep its reference and check again.'));};
  const retry=()=>{if(phase!=='pending'||!view().canRetry||!pending||!original||!context)return Promise.resolve();const command=original,prior=context;return run(async signal=>{canRetry=false;await fresh(signal);if(!same(prior,context!)||!eligible()||context!.context.writeState!=='ready'||context!.context.recoveryEpoch!==command.recoveryEpoch)throw Error();deps.store.require(pending!);const result=await api.save(command,proof!,signal);live(signal);finish(result);},error=>failedSave(error,false));};
- return Object.freeze({view,load,more,open,save,check,retry,moreHistory,
+ const archive=()=>{if(phase!=='ready'||!selected||!context)return Promise.resolve(undefined);const source=selected,prior=context;if(BigInt(source.sequence)>1000n){message='No file was requested. This proposal exceeds the 1,000-version browser export limit.';emit();return Promise.resolve(undefined);}let verifying=true;return run(async signal=>{let bytes:Uint8Array<ArrayBuffer>|undefined;try{
+  await fresh(signal);if(!same(prior,context!))throw Error();const versions:StoredHold[]=[];let afterSequence='0';
+  for(let page=0;page<50;page++){const result=await api.history(source.business_id,{holdId:source.hold_id,afterSequence,pageSize:20},proof!,signal);live(signal);if(result.state!=='found'||result.currentSequence!==source.sequence)throw Error();versions.push(...result.versions);if(!result.hasMore)break;if(result.versions.length===0)throw Error();afterSequence=result.versions.at(-1)!.sequence;}
+  verifying=false;bytes=await buildHoldArchive({head:source,versions});live(signal);verifying=true;await fresh(signal);if(!same(prior,context!))throw Error();live(signal);return bytes;
+ }catch(error){bytes?.fill(0);throw error;}},()=>{if(verifying){clearPrivate();phase='unavailable';}message='No file was requested. Saved history or access could not be verified, or the record exceeds the 8 MiB export limit. Load current proposals before trying again.';});};
+ return Object.freeze({view,load,more,open,save,check,retry,moreHistory,archive,
   create(){if(active||phase!=='ready'||context?.context.writeState!=='ready')return;selected=null;history=null;draft=emptyHoldPayload;message='Choose an existing customer and review the proposed time. This creates no confirmed job.';emit();},
   edit(value:HoldPayload){if(!active&&phase==='ready'&&draft&&context?.context.writeState==='ready'&&selected?.state!=='withdrawn'){draft=Object.freeze({...value});emit();}},
   suspend(){active?.abort();active=null;clearPrivate();phase='review';message='Private proposal details cleared. Load current records before continuing.';emit();},
