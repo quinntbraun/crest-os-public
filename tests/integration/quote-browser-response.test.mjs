@@ -34,5 +34,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.getByRole('button',{name:'Request synthetic refusal',exact:true}).click();
   assert.deepEqual(await captured.outcome,{status:503,body:failure,requestBody:{operationId,refuse:true}});
   await page.waitForURL(origin+'/after');assert.equal(requests.length,2);assert.deepEqual(requests,[{operationId,refuse:false},{operationId,refuse:true}]);
+  const absent=await captureQuoteResponse(page,'/api/business/quotes/review/submit',{timeoutMs:50});
+  await assert.rejects(absent.outcome,/QUOTE_CAPTURE_DEADLINE/);
+  assert.equal(requests.length,2,'A missing dispatch must not trigger a write or retry.');
  }finally{await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 });

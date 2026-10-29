@@ -2,10 +2,15 @@
 // Forward exactly one genuine request and buffer its actual server bytes before
 // returning them unchanged to the browser. No Auth/result/persistence mock,
 // second write, redirect or automatic retry is introduced.
-export async function captureQuoteResponse(page,path){
+export async function captureQuoteResponse(page,path,{timeoutMs=30000}={}){
  if(!/^\/api\/business\/quotes\/[a-z/]+$/.test(path))throw Error('QUOTE_CAPTURE_PATH_REQUIRED');
+ if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>30000)throw Error('QUOTE_CAPTURE_TIMEOUT_REQUIRED');
  let resolve,reject;
  const outcome=new Promise((yes,no)=>{resolve=yes;reject=no;});
+ // A control that never dispatches must fail this observer rather than consume
+ // the entire release job. This deadline neither retries nor sends a request.
+ const deadline=setTimeout(()=>reject(Error('QUOTE_CAPTURE_DEADLINE: '+path)),timeoutMs);
+ void outcome.then(()=>clearTimeout(deadline),()=>clearTimeout(deadline));
  await page.route('**'+path,async route=>{
   try{
    const request=route.request();if(request.method()!=='POST')throw Error('QUOTE_CAPTURE_POST_REQUIRED');
