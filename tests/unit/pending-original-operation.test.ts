@@ -21,6 +21,7 @@ const keys:Record<OriginalOperationKind,string>={
  'crm.lead.address.save':'crest.lead-address.pending-reference.v1',
  'crm.lead.convert':'crest.lead-conversion.pending-reference.v1',
  'catalog.service.save':'crest.service.pending-reference.v1',
+ 'operations.appointment_hold.save':'crest.appointment-hold.pending-reference.v1',
  'quote.draft.save':'crest.quote.pending-reference.v1',
  'quote.review.submit':'crest.quote-review.pending-reference.v1',
  'quote.review.approve':'crest.quote-review.pending-reference.v1'

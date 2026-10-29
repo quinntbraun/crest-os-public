@@ -1,0 +1,18 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "existingMigrationCount": 44,
+  "runtimeEnabled": false,
+  "nativeExecuted": false,
+  "sqlBytes": 14269,
+  "sqlSha256": "5620c009d081320da08df452914524dc5c2dd2e3baa0aafff3cc3ba00218ac9c",
+  "tables": {
+    "crest.appointment_hold_versions": 22
+  },
+  "ordinaryTableGrants": false,
+  "trustedCommandsImplemented": false,
+  "sourceExportCoverageImplemented": false,
+  "recoveryAcceptanceExecuted": false,
+  "productionActivation": "blocked"
+}
