@@ -5,6 +5,7 @@ import type {createReceiptObjectStore} from './receipt-object-store.ts';
 import {parseReceiptReservation,parseReceiptCandidate} from './receipt-contract.ts';
 import type {ReceiptReservation,ReceiptCandidate} from './receipt-contract.ts';
 import {expenseCheck as check,expenseId} from './expense-contract.ts';
+import {receiptDownloadResponse} from './receipt-download-response.ts';
 type AuthorizedReceipt=Readonly<{reservation:ReceiptReservation;candidate:ReceiptCandidate|null}>;
 export type ReceiptAuthority=Readonly<{
  // Each call MUST freshly verify owner/provider/session, exact business and (for
@@ -18,7 +19,8 @@ function seal(input:AuthorizedReceipt,businessId:string,receiptId:string){const 
 // Ordinary authenticated byte reads need no decoder or worker dispatch capability.
 export function createReceiptDownload(authority:Pick<ReceiptAuthority,'read'>,objects:ReturnType<typeof createReceiptObjectStore>){return async(credential:string,businessId:string,receiptId:string,variant:'original'|'preview',signal:AbortSignal)=>{try{check(expenseId(businessId)&&expenseId(receiptId));const first=seal(await authority.read(credential,businessId,receiptId,signal),businessId,receiptId);check(first.candidate);const bytes=await objects.readAvailable(first.reservation,first.candidate,variant,signal);const latest=seal(await authority.read(credential,businessId,receiptId,signal),businessId,receiptId);check(!signal.aborted&&latest.candidate&&latest.candidate.original.sha256===first.candidate.original.sha256&&latest.candidate.preview.sha256===first.candidate.preview.sha256&&Object.entries(first.reservation).every(([k,v])=>latest.reservation[k as keyof typeof first.reservation]===v));
  const type=variant==='preview'?'image/jpeg':first.reservation.declaredType,extension=type==='application/pdf'?'pdf':type==='image/png'?'png':type==='image/heic'?'heic':'jpg';
- return new Response(bytes.forResponse(),{status:200,headers:{'content-type':type,'content-length':String(variant==='original'?first.candidate.original.byteSize:first.candidate.preview.byteSize),'content-disposition':`attachment; filename="receipt-${receiptId}${variant==='preview'?'-preview':''}.${extension}"`,'cache-control':'private, no-store','pragma':'no-cache','referrer-policy':'no-referrer','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; sandbox"}});
+ const object=variant==='original'?first.candidate.original:first.candidate.preview;
+ return receiptDownloadResponse(bytes.forResponse(),{type,name:`receipt-${receiptId}${variant==='preview'?'-preview':''}.${extension}`,byteSize:object.byteSize,sha256:object.sha256});
  }catch{throw new ReceiptWorkflowError();}};}
 // Trusted dispatcher construction only. Never give an ordinary web process a
 // Docker socket or accept candidate metadata/keys from a browser.
