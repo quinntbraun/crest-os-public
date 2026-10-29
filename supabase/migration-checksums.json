@@ -235,6 +235,11 @@
       "version": "20261028040000",
       "file": "20261028040000_appointment_proposals.sql",
       "sha256": "5f21dce7af0944388e39c456c2a06614f63c111557958acf9528f311f25bf4fc"
+    },
+    {
+      "version": "20261028050000",
+      "file": "20261028050000_quote_acceptance.sql",
+      "sha256": "1010212bc3fe6b734a511f05968103a4f88de37452a3340b1d70da5f243819c7"
     }
   ]
 }

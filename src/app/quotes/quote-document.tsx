@@ -5,7 +5,7 @@ import {quoteMoney} from '../../commercial/quote-pricing';
 import type {QuoteDiscount} from '../../commercial/quote-pricing';
 
 export type QuoteDocumentContent=ReturnType<typeof prepareQuoteContent>['customer'];
-type Props=Readonly<{quote:QuoteDocumentContent;stage?:'draft'|'review'|'approved'}>;
+type Props=Readonly<{quote:QuoteDocumentContent;stage?:'draft'|'review'|'approved'|'sent'|'accepted'|'superseded'}>;
 const invalid=():never=>{throw Error('QUOTE_DOCUMENT_CUSTOMER_PROJECTION_REQUIRED');};
 function exact(value:unknown,keys:readonly string[]):value is Record<string,unknown>{return !!value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key));}
 const text=(value:unknown):string=>typeof value==='string'?value:invalid();
@@ -28,7 +28,7 @@ export function QuoteDocument({quote,stage='draft'}:Props){
  if(!exact(supplied,rootKeys)||![1,2].includes(supplied.schemaVersion as number)||!exact(supplied.recipient,['displayName','phone','email'])||!Array.isArray(supplied.lines)||!supplied.lines.every(line=>exact(line,supplied.schemaVersion===1?lineKeys:[...lineKeys,'category'])))return invalid();
  const expiry=quote.expiryAt===null?null:new Intl.DateTimeFormat('en-US',{timeZone:quote.timezone,dateStyle:'medium',timeStyle:'long'}).format(new Date(quote.expiryAt));
  return <article className="quote-worksheet" aria-labelledby={titleId}>
-  <header><p className="eyebrow">Crest Detailing</p><h2 id={titleId}>{quote.title}</h2><p className="notice"><strong>{stage==='approved'?'Approved':stage==='review'?'Ready for review':'Draft'}</strong> · Not sent or accepted</p><p>USD · All-in quoted amounts</p></header>
+  <header><p className="eyebrow">Crest Detailing</p><h2 id={titleId}>{quote.title}</h2><p className="notice"><strong>{stage==='accepted'?'Accepted':stage==='sent'?'Shared':stage==='superseded'?'Superseded':stage==='approved'?'Approved':stage==='review'?'Ready for review':'Draft'}</strong> · {stage==='accepted'?'Customer agreement recorded':stage==='sent'?'Awaiting customer acceptance':stage==='superseded'?'Retained earlier offer':'Not sent or accepted'}</p><p>USD · All-in quoted amounts</p></header>
   <section aria-label="Quote recipient"><h3>Prepared for</h3><p className="service-scope">{quote.recipient.displayName}</p>
    {(quote.recipient.phone!==null||quote.recipient.email!==null)&&<dl className="customer-values">
     {quote.recipient.phone!==null&&<><dt>Phone</dt><dd className="service-scope">{phonePresentation(quote.recipient.phone)}</dd></>}

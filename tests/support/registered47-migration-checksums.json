@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "migrations": [
+    {
+      "version": "20261021031357",
+      "file": "20261021031357_database_boundary.sql",
+      "sha256": "3834826b6ac68d71a768c3afb8dcafdb85f67790e7d556a056709f95399fcbfa"
+    },
+    {
+      "version": "20261021032954",
+      "file": "20261021032954_identity_foundation.sql",
+      "sha256": "0b43e1a8271db3aa24decffc36bbb320e94682302470eb1076df7a850e6eef5c"
+    },
+    {
+      "version": "20261021113648",
+      "file": "20261021113648_session_foundation.sql",
+      "sha256": "52beabfd373a8224e2fb691967ccdc4ba50dc0bbe4cda2949d23038f588cdba0"
+    },
+    {
+      "version": "20261021144015",
+      "file": "20261021144015_live_provider_session.sql",
+      "sha256": "d67fbca8e1042e2c28c8c7b8b35c59faa32b4b09ccdd555e98c5737823ffac27"
+    },
+    {
+      "version": "20261021172958",
+      "file": "20261021172958_local_session_revocation.sql",
+      "sha256": "f2e3d76c2bb9c0144bbd87a063a57dc62a225ee133103a2f194225eea3fad361"
+    },
+    {
+      "version": "20261021180111",
+      "file": "20261021180111_session_issuance.sql",
+      "sha256": "849d1e230f1699266bacc8e904cc2268f2b0ad6ea64012cec9e1b4088667c674"
+    },
+    {
+      "version": "20261021183931",
+      "file": "20261021183931_locked_session_refresh.sql",
+      "sha256": "0df851bdd8f36b678c6eba8da0e2f94446d89c133620ea4275ed588fcd419859"
+    },
+    {
+      "version": "20261021215031",
+      "file": "20261021215031_login_admission.sql",
+      "sha256": "48fbabeadabb03be9a432b9681c06f545223326ec7ff1f65dfd77ae12ee19971"
+    },
+    {
+      "version": "20261021222140",
+      "file": "20261021222140_browser_session_state.sql",
+      "sha256": "cb57cf5ae1de679038be6710074530b149a1ade67a944579b13c2e703bba2f4a"
+    },
+    {
+      "version": "20261021232210",
+      "file": "20261021232210_session_request_admission.sql",
+      "sha256": "66de3a95fe08ba0d3f1e64b373bda728541448d88b5fddc5ded4f8eb53e99864"
+    },
+    {
+      "version": "20261022061000",
+      "file": "20261022061000_tenant_read_boundary.sql",
+      "sha256": "d3ae4914d14e039fa78547f2148676c0e558bc46f208291c4fbf527504b37a96"
+    },
+    {
+      "version": "20261022174500",
+      "file": "20261022174500_mutation_recovery_fence.sql",
+      "sha256": "84365e4209ee0c4af9ba4000fa62f30baa66f78ee4462b909688c3aa71fcc11b"
+    },
+    {
+      "version": "20261022183000",
+      "file": "20261022183000_operation_audit_storage.sql",
+      "sha256": "b927b7fc2cdbdfb6c6f2b5eebb08208065fa412e170a2ef1aacb06b3976f60a7"
+    },
+    {
+      "version": "20261022194000",
+      "file": "20261022194000_operation_lookup_integrity.sql",
+      "sha256": "943a516a717bda082b6fd228581285b6dd0b30618dbf85996fb4c5e2d4265d31"
+    },
+    {
+      "version": "20261022204800",
+      "file": "20261022204800_business_name_command.sql",
+      "sha256": "1074a3043aa0b12275c0b8a6c9f72f24b06f0ea8049cf9dc661fc4a880d5691f"
+    },
+    {
+      "version": "20261022221500",
+      "file": "20261022221500_business_settings_context.sql",
+      "sha256": "b90f1d1b074286af8c77b0dab2bb4301e1eeabff18b879e0e0bcb01100fee808"
+    },
+    {
+      "version": "20261022235000",
+      "file": "20261022235000_provider_cleanup_references.sql",
+      "sha256": "55e3538459e818115a53dcbfa212f1fe9a9be42e61a35cb6e1c71edd3d1c3f61"
+    },
+    {
+      "version": "20261023002000",
+      "file": "20261023002000_provider_session_inventory.sql",
+      "sha256": "fea6fd7a221849f1b9ca1a01316524eeb24bfb47677bf2fcf39836cad89a2db9"
+    },
+    {
+      "version": "20261023021500",
+      "file": "20261023021500_provider_reconciliation_evidence.sql",
+      "sha256": "5a418e0536b87000419859d4b2919ea9532c1e3bf51e20c49e0d5c7dd7338a6f"
+    },
+    {
+      "version": "20261023035000",
+      "file": "20261023035000_provider_login_attempts.sql",
+      "sha256": "ecfc93e97b8aefafb2f3579025a227acf1db16aba20606669433776823aaa389"
+    },
+    {
+      "version": "20261023043000",
+      "file": "20261023043000_provider_login_targets.sql",
+      "sha256": "5ee3f8eabf225b0b2953925f30d2e0407daa6022a0f32630b62eef2915fc479c"
+    },
+    {
+      "version": "20261023050000",
+      "file": "20261023050000_login_attempt_fences.sql",
+      "sha256": "d2bb223f2b3ff7615a76a098d7b2f8b5a48268c77a6fd22f7c35646e7ef639ce"
+    },
+    {
+      "version": "20261023054500",
+      "file": "20261023054500_provider_cleanup_requests.sql",
+      "sha256": "eade0749863ee69eb8387b9cf3cc50be6588e3ae33b43cae5991f84f842505c3"
+    },
+    {
+      "version": "20261023063000",
+      "file": "20261023063000_provider_cleanup_executor.sql",
+      "sha256": "e779ae5b1fafd457892ccdf7e0c3385574f2b472aac52c770afd6db4abd496b5"
+    },
+    {
+      "version": "20261023083000",
+      "file": "20261023083000_provider_reconciliation_review.sql",
+      "sha256": "73041923ed3fa37e45b2855ab117f34dba0f95c7fc11aca2d39b05257932968f"
+    },
+    {
+      "version": "20261023110000",
+      "file": "20261023110000_provider_evidence_snapshot.sql",
+      "sha256": "3711ec4b3f7a07b1bb9efdb36e905190d93cf37a3ee8cba3bfbed91c08c96b35"
+    },
+    {
+      "version": "20261023143000",
+      "file": "20261023143000_provider_reference_snapshot.sql",
+      "sha256": "e6d5c1b939657f94123a59f5cd8741a56fcdf9b322936de487c2bd74df73cc49"
+    },
+    {
+      "version": "20261024062000",
+      "file": "20261024062000_business_configuration_export.sql",
+      "sha256": "929d2e6136e1c59ce88194467d16381b83cf1b7695cd342ec35cd8509f1f8b5e"
+    },
+    {
+      "version": "20261024070000",
+      "file": "20261024070000_business_history_export.sql",
+      "sha256": "3ff1f2df9b2c3146dece09f2d0f6b29d062a1b9668c12499c2f1c89629104706"
+    },
+    {
+      "version": "20261024090000",
+      "file": "20261024090000_business_identity_export.sql",
+      "sha256": "09907b15904b0940050162c822ec14df66d8a020a54e611473921b6d4294c07c"
+    },
+    {
+      "version": "20261024111000",
+      "file": "20261024111000_session_metadata_export.sql",
+      "sha256": "4b8f6bcecdc597b7d847885d333aae21a786b7a4bcb8dee9b40b36c8affc6d63"
+    },
+    {
+      "version": "20261025020000",
+      "file": "20261025020000_customer_directory.sql",
+      "sha256": "bc78d2ee002180a1d4b11409944e53f9e969320c3e8565708423be826389fc01"
+    },
+    {
+      "version": "20261025030000",
+      "file": "20261025030000_customer_check_roundtrip.sql",
+      "sha256": "559761cd526077fa97cd11cc07d1f8e4ddfd7a87e975dca433592d760ba7ee30"
+    },
+    {
+      "version": "20261025040000",
+      "file": "20261025040000_customer_addresses.sql",
+      "sha256": "71fdce77577e293457ee4d2321ca1cbb5dfce171d97988813deacf03303249ed"
+    },
+    {
+      "version": "20261025060000",
+      "file": "20261025060000_vehicle_directory.sql",
+      "sha256": "395ab79a844bf29db39689a6b186ce9bf2e8da455b30b283758e0c4ef705a626"
+    },
+    {
+      "version": "20261025080000",
+      "file": "20261025080000_vehicle_associations.sql",
+      "sha256": "d1277347d6a2b6771290aa7fda2a1eab277cc7cd1bff742231e130fc074900b3"
+    },
+    {
+      "version": "20261025100000",
+      "file": "20261025100000_lead_intake.sql",
+      "sha256": "365d261422a647e6b39ce21b0fc3ae1f22ea54f58e9892e5aa0a0a79c5a85f0c"
+    },
+    {
+      "version": "20261025120000",
+      "file": "20261025120000_lead_state_events.sql",
+      "sha256": "026b02ca64ccd410161ab2ec187a6e3e8da0774f024b675142027f5463a1021a"
+    },
+    {
+      "version": "20261025140000",
+      "file": "20261025140000_lead_vehicles.sql",
+      "sha256": "394d1254c38843c7fa028a3c72c08fbb2851b28392ecad6570c7df47121c1cf7"
+    },
+    {
+      "version": "20261025160000",
+      "file": "20261025160000_lead_addresses.sql",
+      "sha256": "d5fcffe23ddc02ed8814ddb6d1c9fbd43495e6c476575a704f6f2815246dd4ba"
+    },
+    {
+      "version": "20261025180000",
+      "file": "20261025180000_lead_conversion.sql",
+      "sha256": "4ebe1d190cc9e7d7dce08a281aa1c0ee8b6c2fa754fdca423bd4acbcdc7c4d2e"
+    },
+    {
+      "version": "20261026010000",
+      "file": "20261026010000_original_operation_resolution.sql",
+      "sha256": "9dd564dd3c4bf54e0fc2a08347e51a8a0f51250a448fd75a8950395075ceb281"
+    },
+    {
+      "version": "20261027010000",
+      "file": "20261027010000_source_export_journal.sql",
+      "sha256": "d020f734b28dd3090e17c9092548a204f45c3e24c3e886a8557a92eef0540447"
+    },
+    {
+      "version": "20261028010000",
+      "file": "20261028010000_service_catalog.sql",
+      "sha256": "09a8ff9eeb415f879e56cdf5a43d74b0178e4b9d45c3efad806a16c621796729"
+    },
+    {
+      "version": "20261028020000",
+      "file": "20261028020000_quote_drafts.sql",
+      "sha256": "896aa5031e92b7eb4c3d264b8ee7fa024e82e550da650c4c7eb5f06ab4e900fc"
+    },
+    {
+      "version": "20261028030000",
+      "file": "20261028030000_quote_review.sql",
+      "sha256": "4b802d624d8db4dd0ebd79280df669ee3d5fe82852765c3034717ae83ce8d6c0"
+    },
+    {
+      "version": "20261028040000",
+      "file": "20261028040000_appointment_proposals.sql",
+      "sha256": "5f21dce7af0944388e39c456c2a06614f63c111557958acf9528f311f25bf4fc"
+    }
+  ]
+}

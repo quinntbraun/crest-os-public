@@ -139,3 +139,14 @@ DATABASE.md: prior SHA256 bd771b0870aaa2b4c02f63ab6bb51edc20671f6a343df6402d61b0
 EXPORTS_AND_BACKUPS.md: prior SHA256 fde08fbf440df8852f4e1c1e6189c896008fbeb1bfd8d8ee700ea0278a718f90, 31637 bytes; now version 1.10, SHA256 4829d201eee975423191d0ca535cfd196bc1253f7d02ca96edd6aa123f1af221, 32627 bytes.
 
 PUBLICATION.md: prior SHA256 fd772eb250879cab7b769497ed21311e9d94cee77b793dddd6630dd9a5e834a4, 7477 bytes; now version 1.13, SHA256 0f0048eb6e4179ab0f62ceacbe1fc0fcfd49de61e69563ca3482e37485086081, 7830 bytes.
+
+
+## 2026-10-28 — ADR48 owner-confirmed sharing and immutable initial acceptance
+
+Authority: continuing owner-approved V1 implementation. Finite requirement: integrate exact approved sharing, recorded confirmation, stable initial accepted scope, replacement serialization, linked-lead source lineage and original-save recovery with actual upgrade/retrieval/independent restore proof. Normalized typed commercial control preserves the physical family13-field history; assignment/splitting, decline/cancel and accepted amendments remain explicit unfinished V1 work. No original baseline,47 prior SQL body, privacy/accounting/recovery requirement or production gate is changed. Prior amendment bytes:
+
+- ARCHITECTURE.md v1.11 — 8c7049e331d348919a0e1405ab04c5adecf9484045cc6b15a2908c36e1650f79 (40742 bytes)
+- ARCHITECTURE_DECISIONS.md v1.18 — 2a7a79d5ae3fe0c1ca2c1fdb2f46c4e6d6cfa2d62133553dfa7dc006cf050953 (63245 bytes)
+- DATABASE.md v1.10 — 87c9f594231f27d96dba68fb067182203ba217fcdd00ae7f5ec865357a989017 (58214 bytes)
+- EXPORTS_AND_BACKUPS.md v1.10 — 4829d201eee975423191d0ca535cfd196bc1253f7d02ca96edd6aa123f1af221 (32627 bytes)
+- PUBLICATION.md v1.13 — 0f0048eb6e4179ab0f62ceacbe1fc0fcfd49de61e69563ca3482e37485086081 (7830 bytes)

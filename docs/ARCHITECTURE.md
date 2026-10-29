@@ -1,6 +1,6 @@
 # Crest OS V1 - Technical Architecture
 
-Version: 1.11 | 2026-10-28 | ADR46 exact owner quote review; activation gated
+Version: 1.12 | 2026-10-28 | ADR48 manual sharing and initial acceptance; activation gated
 
 Schema43 construction amendment,2026-10-27: ADR43 explicitly registers the reviewed bounded source-export journal and its39-table/613-column inventory while preserving all42 earlier migrations and closed legacy42 profiles. Fresh owner/lease/recovery authority, exact-original audit, independent reconstruction and version-specific encrypted restore remain mandatory. This source construction does not enable product routes, certify full backups or authorize production application/use. See DATABASE8, EXPORTS_AND_BACKUPS2 and planning/PHASE_4_SOURCE_EXPORT_ADOPTION.md.
 
@@ -247,3 +247,8 @@ The registered45 Draft quote construction follows ADR45. Exact reviewed pricing,
 ### Registered46 review construction
 
 ADR46 preserves the registered45 foundation and adds exact owner quote review/approval as append-only migration46. V2 content seals supplied category and immutable condition-assessment provenance; existing v1 bytes, hashes, receipts and history remain readable without inferred facts. Owner crm.manage remains the nonfinancial capability. Require actual45-to46 upgrade, current inventory, genuine Auth/HTTP, domain profile2 plus paired history, independent encrypted46 restore and browser acceptance before bounded synthetic exposure. Full V1, complete46 portability/admission and all production gates remain unchanged.
+
+
+### Registered48 initial commercial acceptance
+
+ADR48 registers exact owner-confirmed manual sharing and external customer acceptance as one append-only migration48, preserving all47 prior SQL bodies and profile identities. A normalized one-to-one commercial control row carries same-family offer/acceptance/agreement pointers under the existing family lock, preserving legacy13-field family snapshots and receipts. This is nonfinancial owner crm.manage work; original operation review, source retrieval, independent recovery and exact-source browser gates remain mandatory.

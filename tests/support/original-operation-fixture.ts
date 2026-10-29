@@ -18,6 +18,9 @@ export function originalOperationFixture(kind:OriginalOperationKind='crm.custome
   'crm.lead.convert':{conversionId:id,leadId:randomUUID(),expectedLeadVersion:'1',customerId:randomUUID()},
   'catalog.service.save':{serviceId:id,expectedRevision:'0'},
   'quote.draft.save':{familyId:id,revisionId:randomUUID(),expectedFamilyVersion:'0',expectedRevisionVersion:'0'},
+  'quote.replacement.create':{familyId:id,revisionId:randomUUID(),expectedFamilyVersion:'4',expectedRevisionVersion:'0'},
+  'quote.manual.send':{familyId:id,revisionId:randomUUID(),expectedFamilyVersion:'4',expectedRevisionVersion:'4',expectedContentVersion:'1',sendId:randomUUID(),approvalId:randomUUID()},
+  'quote.confirmation.accept':{familyId:id,revisionId:randomUUID(),expectedFamilyVersion:'5',expectedRevisionVersion:'5',expectedContentVersion:'1',acceptanceId:randomUUID(),agreementId:randomUUID()},
   'quote.review.submit':{familyId:id,revisionId:randomUUID(),expectedFamilyVersion:'2',expectedRevisionVersion:'2',expectedContentVersion:'1'},
   'quote.review.approve':{familyId:id,revisionId:randomUUID(),expectedFamilyVersion:'3',expectedRevisionVersion:'3',expectedContentVersion:'1',approvalId:randomUUID()}
  };

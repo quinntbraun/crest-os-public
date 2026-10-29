@@ -1,6 +1,6 @@
 # Crest OS V1 - Database Contract
 
-Version: 1.10 | 2026-10-28 | ADR46 exact owner quote review; activation gated
+Version: 1.11 | 2026-10-28 | ADR48 manual sharing and initial acceptance; activation gated
 
 Schema43 implementation record,2026-10-27 (ADR43): the append-only export journal is represented by six forced-RLS private tables: export_jobs, export_job_attempts, export_job_snapshots, export_part_intents, export_part_verifications and export_job_completions. Their114 required fields preserve original requests/leases, exact snapshot/Ready text/hashes, ciphertext intents/verification and immutable completion/expiry evidence. planning/SOURCE_EXPORT_SCHEMA43_ADOPTION.json binds the registered migration to all seven exact reviewed proposal bodies. Global coverage becomes39 tables/613 columns (603 required, the same10 explicit credential exclusions). Actual registered43 catalogue/upgrade/Auth/recovery tests remain required. Original42 SQL, nonfinancial retirement semantics and every posted-history rule remain unchanged; source registration grants no production or product-route activation.
 
@@ -290,3 +290,8 @@ ADR46 appends migration46 with condition_assessments (15 fields), quote_approval
 ## ADR47 forward source: unconfirmed appointment proposals
 
 Registered47 adds crest.appointment_hold_versions with22 declared columns. Exactly one typed customer or lead parent, tenant-scoped predecessor/sequence uniqueness, finite reviewed UTC/local/IANA/offset endpoints and reasoned append-only revisions/withdrawals are database-enforced. The table is forced-RLS, schema-owned; ordinary runtime table access remains closed. Exact deferred operation/audit linkage and retained immutable originals apply. No confirmed appointment/job is inferred. Registration46 identities and quote review/assessment/approval history are unchanged. See ADR47 and planning/APPOINTMENT_SCHEMA47_ADOPTION.json for exact source bytes and acceptance status.
+
+
+### Registered48 initial commercial acceptance
+
+ADR48 adds quote_family_commercial_state, quote_sends, quote_acceptances, agreements, scope_entitlements, entitlement_versions and scope_allocations (130 required fields). Commercial pointers are physically normalized in a one-to-one row, preserving the base family13-field projection and immutable prior snapshots/receipts; same-family FKs and the existing family lock enforce their semantics. Sent content freezes, initial acceptance is family-unique, agreements/entitlements/initial unassigned partitions append immutable evidence, and source/audit/amount closure is independently checked. Lead events now bind genuine same-lead send/acceptance sources; explicit retained conversion binds a lead-only accepted customer without rewriting quoted history. Initial partition assignment/splitting, decline/cancel and accepted amendments remain closed before their full dependency proofs.

@@ -8,6 +8,10 @@ import {vehicles} from './vehicles';
 import {services} from './services';
 import {quotes} from './quotes';
 import {quoteReview} from './quote-review';
+import {quoteCommercial} from './quote-commercial';
+import {quoteReplacement} from './quote-replacement';
+import {createPendingQuoteReplacementStore} from './pending-quote-replacement';
+import {createPendingQuoteCommercialStore,quoteCommercialOriginalReference} from './pending-quote-commercial';
 import {createPendingQuoteReviewStore,quoteReviewOriginalReference} from './pending-quote-review';
 import {createPendingServiceStore} from './pending-service-edit';
 import {createPendingQuoteStore} from './pending-quote-edit';
@@ -82,6 +86,12 @@ export function openPendingOriginalOperation(kind:OriginalOperationKind,storage:
   case 'crm.vehicle.save':return target(createPendingVehicleStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>vehicles.lookup(p.businessId,p.reference,proof,signal));
   case 'catalog.service.save':return target(createPendingServiceStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>services.lookup(p.businessId,p.reference,proof,signal));
   case 'quote.draft.save':return target(createPendingQuoteStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>quotes.lookup(p.businessId,p.reference,proof,signal));
+  case 'quote.replacement.create':return target(createPendingQuoteReplacementStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>quoteReplacement.lookup(p.businessId,p.reference,proof,signal));
+  case 'quote.manual.send':case 'quote.confirmation.accept':{
+   try{const store=createPendingQuoteCommercialStore(storage),pending=store.read();if(pending===null||kind!==(pending.reference.action==='send'?'quote.manual.send':'quote.confirmation.accept'))return null;
+    return target(store,kind,businessId,p=>quoteCommercialOriginalReference(p.reference),(p,proof,signal)=>quoteCommercial.lookup(p.businessId,p.reference,proof,signal));
+   }catch{throw new PendingOriginalOperationError();}
+  }
   case 'quote.review.submit':case 'quote.review.approve':{
    try{const store=createPendingQuoteReviewStore(storage),pending=store.read();if(pending===null||kind!=='quote.review.'+pending.reference.action)return null;
     return target(store,kind,businessId,p=>quoteReviewOriginalReference(p.reference),(p,proof,signal)=>quoteReview.lookup(p.businessId,p.reference,proof,signal));

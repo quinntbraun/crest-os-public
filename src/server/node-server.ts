@@ -12,6 +12,7 @@ import {createBusinessHttp,businessFailureResponse} from '../security/business-h
 import {createServiceHttp,serviceFailureResponse} from '../commercial/service-http.ts';
 import {createQuoteHttp,quoteFailureResponse} from '../commercial/quote-http.ts';
 import {createQuoteReviewHttp} from '../commercial/quote-review-http.ts';
+import {createQuoteCommercialHttp} from '../commercial/quote-commercial-http.ts';
 import {quoteResponseLimit} from '../commercial/quote-storage-contract.ts';
 import {createCustomerHttp,customerFailureResponse} from '../customer/customer-http.ts';
 import {createCustomerAddressHttp,addressFailureResponse} from '../customer/customer-address-http.ts';
@@ -30,7 +31,7 @@ export type AuthenticationConfiguration=Readonly<{
   provider:Parameters<typeof createAuthenticationHttp>[1];tokens:Parameters<typeof createAuthenticationHttp>[2];
 }>;
 export type SourceExportConfiguration=Readonly<{appReleaseId:string;store:NonNullable<Parameters<typeof createSourceExportDownloadHttp>[3]>}>;
-export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>;customers?:boolean;vehicles?:boolean;associations?:boolean;leads?:boolean;leadConversions?:boolean;operationResolution?:boolean;syntheticCatalog?:boolean;syntheticQuotes?:boolean;syntheticQuoteReview?:boolean;syntheticAppointmentHolds?:boolean;sourceExports?:SourceExportConfiguration}>;
+export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>;customers?:boolean;vehicles?:boolean;associations?:boolean;leads?:boolean;leadConversions?:boolean;operationResolution?:boolean;syntheticCatalog?:boolean;syntheticQuotes?:boolean;syntheticQuoteReview?:boolean;syntheticQuoteCommercial?:boolean;syntheticAppointmentHolds?:boolean;sourceExports?:SourceExportConfiguration}>;
 export type PageHandler=(request:IncomingMessage,response:ServerResponse)=>Promise<void>;
 
 export function createBoundedNodeServer(tls?:NodeConfiguration['tls']):Server{
@@ -118,12 +119,13 @@ async function writePrivateResponse(outgoing:ServerResponse,response:Response,si
 }
 
 export function bindApplicationHandler(server:Server,config:NodeConfiguration,pages:PageHandler):void{
-  const {origin,environment,authentication,business,customers,vehicles,associations,leads,leadConversions,operationResolution,sourceExports,syntheticCatalog,syntheticQuotes,syntheticQuoteReview,syntheticAppointmentHolds}=config;
+  const {origin,environment,authentication,business,customers,vehicles,associations,leads,leadConversions,operationResolution,sourceExports,syntheticCatalog,syntheticQuotes,syntheticQuoteReview,syntheticQuoteCommercial,syntheticAppointmentHolds}=config;
   const url=new URL(origin);
   if(syntheticAppointmentHolds!==undefined&&(typeof syntheticAppointmentHolds!=='boolean'||syntheticAppointmentHolds&&(environment!=='test'||!authentication||!business||customers!==true||operationResolution!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(syntheticCatalog!==undefined&&(typeof syntheticCatalog!=='boolean'||syntheticCatalog&&(environment!=='test'||!authentication||!business)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(syntheticQuotes!==undefined&&(typeof syntheticQuotes!=='boolean'||syntheticQuotes&&(environment!=='test'||!authentication||!business)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(syntheticQuoteReview!==undefined&&(typeof syntheticQuoteReview!=='boolean'||syntheticQuoteReview&&(environment!=='test'||!authentication||!business||syntheticQuotes!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  if(syntheticQuoteCommercial!==undefined&&(typeof syntheticQuoteCommercial!=='boolean'||syntheticQuoteCommercial&&(environment!=='test'||!authentication||!business||syntheticQuotes!==true||syntheticQuoteReview!==true||operationResolution!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(sourceExports!==undefined&&(!sourceExports||typeof sourceExports!=='object'||Array.isArray(sourceExports)||!business||!authentication||typeof sourceExports.appReleaseId!=='string'||!/^([a-f0-9]{40})$/.test(sourceExports.appReleaseId)||typeof sourceExports.store?.readVerified!=='function'))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(operationResolution!==undefined&&typeof operationResolution!=='boolean'||operationResolution&&(!business||!authentication))throw new Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(url.origin!==origin||url.username||url.password||!['http:','https:'].includes(url.protocol)||!['production','test'].includes(environment)
@@ -132,9 +134,10 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
   const dispatchBusiness=business&&authentication?createBusinessHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
   const dispatchHolds=syntheticAppointmentHolds===true&&business&&authentication?createHoldHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
   const dispatchServices=syntheticCatalog===true&&business&&authentication?createServiceHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
-  const dispatchDraftQuotes=syntheticQuotes===true&&business&&authentication?createQuoteHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true,syntheticQuoteReview===true):undefined;
+  const dispatchDraftQuotes=syntheticQuotes===true&&business&&authentication?createQuoteHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true,syntheticQuoteReview===true,syntheticQuoteCommercial===true):undefined;
   const dispatchQuoteReview=syntheticQuoteReview===true&&business&&authentication?createQuoteReviewHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
-  const dispatchQuotes=dispatchDraftQuotes?(request:Request,peer:Parameters<NonNullable<typeof dispatchDraftQuotes>>[1])=>new URL(request.url).pathname.startsWith('/api/business/quotes/review/')?(dispatchQuoteReview?dispatchQuoteReview(request,peer):Promise.resolve(quoteFailureResponse(404))):dispatchDraftQuotes(request,peer):undefined;
+  const dispatchQuoteCommercial=syntheticQuoteCommercial===true&&business&&authentication?createQuoteCommercialHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
+  const dispatchQuotes=dispatchDraftQuotes?(request:Request,peer:Parameters<NonNullable<typeof dispatchDraftQuotes>>[1])=>{const path=decodeURIComponent(new URL(request.url).pathname);if(path.startsWith('/api/business/quotes/commercial/'))return dispatchQuoteCommercial?dispatchQuoteCommercial(request,peer):Promise.resolve(quoteFailureResponse(404));if(path.startsWith('/api/business/quotes/review/'))return dispatchQuoteReview?dispatchQuoteReview(request,peer):Promise.resolve(quoteFailureResponse(404));return dispatchDraftQuotes(request,peer);}:undefined;
   const dispatchCustomers=customers&&business&&authentication?createCustomerHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
   const dispatchAddresses=customers&&business&&authentication?createCustomerAddressHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
   const dispatchVehicles=vehicles&&business&&authentication?createVehicleHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;

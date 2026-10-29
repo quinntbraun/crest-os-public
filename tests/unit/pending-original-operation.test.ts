@@ -23,6 +23,9 @@ const keys:Record<OriginalOperationKind,string>={
  'crm.lead.convert':'crest.lead-conversion.pending-reference.v1',
  'catalog.service.save':'crest.service.pending-reference.v1',
  'quote.draft.save':'crest.quote.pending-reference.v1',
+ 'quote.replacement.create':'crest.quote-replacement.pending-reference.v1',
+ 'quote.manual.send':'crest.quote-commercial.pending-reference.v1',
+ 'quote.confirmation.accept':'crest.quote-commercial.pending-reference.v1',
  'quote.review.submit':'crest.quote-review.pending-reference.v1',
  'quote.review.approve':'crest.quote-review.pending-reference.v1'
 };
@@ -30,7 +33,7 @@ const fetcher=vi.fn(),signal=()=>new AbortController().signal,proof=()=>({csrfTo
 function response(value:unknown){return new Response(JSON.stringify(value),{headers:{'content-type':'application/json','cache-control':'private, no-store'}});}
 function fixture(kind:OriginalOperationKind='crm.customer.save'){
  const original=originalOperationFixture(kind),binding=randomBytes(32).toString('base64url'),key=keys[kind]!;
- const reference=original.commandType==='quote.review.submit'||original.commandType==='quote.review.approve'?{...original.reference,action:original.commandType==='quote.review.submit'?'submit':'approve',approvalId:original.commandType==='quote.review.approve'?original.reference.approvalId:null}:original.reference;
+ const reference=original.commandType==='quote.review.submit'||original.commandType==='quote.review.approve'?{...original.reference,action:original.commandType==='quote.review.submit'?'submit':'approve',approvalId:original.commandType==='quote.review.approve'?original.reference.approvalId:null}:original.commandType==='quote.manual.send'||original.commandType==='quote.confirmation.accept'?{...original.reference,action:original.commandType==='quote.manual.send'?'send':'accept'}:original.reference;
  const record=kind==='business.rename'?{journalSchema:1,businessId:original.businessId,binding,command:{schemaVersion:1,...original.reference,legalName:'Private synthetic proposed name'}}:{schemaVersion:1,businessId:original.businessId,binding,reference};
  const raw=JSON.stringify(record),memory=new Map([[key,raw]]);
  const storage={getItem:vi.fn((key:string)=>memory.get(key)??null),setItem:vi.fn((key:string,value:string)=>{memory.set(key,value);}),removeItem:vi.fn((key:string)=>{memory.delete(key);})};

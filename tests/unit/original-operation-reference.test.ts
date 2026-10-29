@@ -19,6 +19,9 @@ const targets:Record<OriginalOperationKind,Record<string,unknown>>={
  'crm.lead.convert':{conversionId:randomUUID(),leadId:randomUUID(),expectedLeadVersion:'1',customerId:randomUUID()},
  'catalog.service.save':{serviceId:randomUUID(),expectedRevision:'0'},
  'quote.draft.save':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'0',expectedRevisionVersion:'0'},
+ 'quote.replacement.create':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'4',expectedRevisionVersion:'0'},
+ 'quote.manual.send':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'4',expectedRevisionVersion:'4',expectedContentVersion:'1',sendId:randomUUID(),approvalId:randomUUID()},
+ 'quote.confirmation.accept':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'5',expectedRevisionVersion:'5',expectedContentVersion:'1',acceptanceId:randomUUID(),agreementId:randomUUID()},
  'quote.review.submit':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'2',expectedRevisionVersion:'2',expectedContentVersion:'1'},
  'quote.review.approve':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'3',expectedRevisionVersion:'3',expectedContentVersion:'1',approvalId:randomUUID()}
 };

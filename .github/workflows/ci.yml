@@ -88,6 +88,15 @@ jobs:
       - name: Prove registered46 upgrade, source, refusal and independent recovery
         if: ${{ !cancelled() }}
         run: npm run test:quote-review-registered
+      - name: Prove actual sharing, exact whole-quote acceptance and immutable agreements
+        if: ${{ !cancelled() }}
+        run: npm run test:quote-commercial-proposal
+      - name: Prove commercial source retrieval, exact CSV reimport and independent restore
+        if: ${{ !cancelled() }}
+        run: npm run test:quote-commercial-source
+      - name: Prove registered48 upgrade, refusal, source and independent recovery
+        if: ${{ !cancelled() }}
+        run: npm run test:quote-commercial-registered
       - name: Prove registered44 catalog upgrade, retained workflow and independent recovery
         run: npm run test:catalog-registered
       - name: Run isolated regression group
