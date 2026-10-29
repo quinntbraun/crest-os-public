@@ -1,6 +1,6 @@
 # Crest OS V1 - Database Contract
 
-Version: 1.9 | 2026-10-28 | ADR46 exact owner quote review; activation gated
+Version: 1.10 | 2026-10-28 | ADR46 exact owner quote review; activation gated
 
 Schema43 implementation record,2026-10-27 (ADR43): the append-only export journal is represented by six forced-RLS private tables: export_jobs, export_job_attempts, export_job_snapshots, export_part_intents, export_part_verifications and export_job_completions. Their114 required fields preserve original requests/leases, exact snapshot/Ready text/hashes, ciphertext intents/verification and immutable completion/expiry evidence. planning/SOURCE_EXPORT_SCHEMA43_ADOPTION.json binds the registered migration to all seven exact reviewed proposal bodies. Global coverage becomes39 tables/613 columns (603 required, the same10 explicit credential exclusions). Actual registered43 catalogue/upgrade/Auth/recovery tests remain required. Original42 SQL, nonfinancial retirement semantics and every posted-history rule remain unchanged; source registration grants no production or product-route activation.
 
@@ -284,3 +284,9 @@ ADR45 appends registered migration45 for quote_families, quote_revisions and quo
 ### Registered46 review construction
 
 ADR46 appends migration46 with condition_assessments (15 fields), quote_approvals (21 fields) and quote_items.assessment_id/category_override_note, adding38 required fields. Forced scoped RLS, closed existing roles, append-only assessment/approval history and same-business typed vehicle/revision/operation FKs remain enforced. Exact content/row versions are separate: submit/approve preserve canonical content version/hash while advancing audited row versions; edits invalidate current approval and preserve its retained presentation. Registered45 SQL and v1 receipt/history bytes remain immutable. Approval does not create financial, acceptance or agreement effects.
+
+
+
+## ADR47 forward source: unconfirmed appointment proposals
+
+Registered47 adds crest.appointment_hold_versions with22 declared columns. Exactly one typed customer or lead parent, tenant-scoped predecessor/sequence uniqueness, finite reviewed UTC/local/IANA/offset endpoints and reasoned append-only revisions/withdrawals are database-enforced. The table is forced-RLS, schema-owned; ordinary runtime table access remains closed. Exact deferred operation/audit linkage and retained immutable originals apply. No confirmed appointment/job is inferred. Registration46 identities and quote review/assessment/approval history are unchanged. See ADR47 and planning/APPOINTMENT_SCHEMA47_ADOPTION.json for exact source bytes and acceptance status.

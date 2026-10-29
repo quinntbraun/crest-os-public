@@ -7,7 +7,7 @@ const choices:ReadonlyArray<readonly [OriginalOperationKind,string]>=[
  ['business.rename','Business name'],['crm.customer.save','Customer'],['crm.address.save','Customer address'],
  ['crm.vehicle.save','Vehicle'],['crm.vehicle.association','Vehicle customer link'],
  ['crm.lead.source.save','Lead source'],['crm.lead.save','Lead'],['crm.lead.state','Lead status'],
- ['crm.lead.vehicle.save','Reported lead vehicle'],['crm.lead.address.save','Lead address'],['crm.lead.convert','Lead conversion'],['catalog.service.save','Service catalog'],['quote.draft.save','Quote draft'],['quote.review.submit','Quote review submission'],['quote.review.approve','Quote approval']
+ ['crm.lead.vehicle.save','Reported lead vehicle'],['crm.lead.address.save','Lead address'],['crm.lead.convert','Lead conversion'],['catalog.service.save','Service catalog'],['quote.draft.save','Quote draft'],['quote.review.submit','Quote review submission'],['quote.review.approve','Quote approval'],['operations.appointment_hold.save','Appointment proposal']
 ];
 function Review({kind}:{kind:OriginalOperationKind}){
  const [view,setView]=useState(initialOriginalOperationReviewView),current=useRef<ReturnType<typeof createOriginalOperationReviewController>|null>(null),status=useRef<HTMLParagraphElement>(null);
@@ -43,8 +43,8 @@ function Review({kind}:{kind:OriginalOperationKind}){
   <p className="field-help">Each check is explicit. A missing result leaves the original reference in place. Hiding or leaving this page clears private review details.</p>
  </section>;
 }
-export function SaveReviewScreen(){
- const [kind,setKind]=useState<OriginalOperationKind>('crm.customer.save');
+export function SaveReviewScreen({initialKind='crm.customer.save'}:{initialKind?:OriginalOperationKind}={}){
+ const [kind,setKind]=useState<OriginalOperationKind>(initialKind);
  return <>
   <p>Resolve a retained nonfinancial save from this browser tab. Keep this tab open until its outcome is verified. Retirement requires a recently authenticated business owner.</p>
   <label htmlFor="save-review-kind">Interrupted save type</label>
