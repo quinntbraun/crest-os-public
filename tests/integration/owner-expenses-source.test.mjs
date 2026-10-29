@@ -7,10 +7,13 @@ import {randomUUID,randomBytes} from 'node:crypto';
 import pg from 'pg';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
+import {formatExpenseSourceHistory} from '../../src/bookkeeping/expenses/expense-source-history.ts';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import {formatExpenseSourceCsv,expenseSourceTables} from '../../src/bookkeeping/expenses/expense-source-csv.ts';
 import {readCustomerCsv} from '../support/customer-fixture.ts';
-let sandbox,client,target,ownsRole=false,exportLogin,exporter,baseline,f,source;
+let sandbox,client,target,ownsRole=false,exportLogin,exporter,baseline,f,source,sourceWithHistory;
+const registered49=process.env.CREST_EXPENSE_SOURCE_TEST_PROFILE==='registered49';
+assert(process.env.CREST_EXPENSE_SOURCE_TEST_PROFILE===undefined||registered49);
 const value=(query,args=[])=>client.query(query,args).then(r=>r.rows[0].value);
 async function transaction(fn){await client.query('BEGIN');try{const r=await fn();await client.query('COMMIT');return r;}catch(e){await client.query('ROLLBACK');throw e;}}
 const issuer='https://auth.example.com/auth/v1';
@@ -37,9 +40,17 @@ async function observed(){return (await client.query("SELECT n.nspname||'.'||c.r
 async function snapshot(work){await exporter.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');try{return await work();}finally{await exporter.query('ROLLBACK');}}
 async function context(business){return (await exporter.query('SELECT crest_commands.expense_source_snapshot_context($1) AS value',[business])).rows[0].value;}
 async function pages(business,c){const rows={};for(const group of ['expenses','receipts']){rows[group]=[];let lastId=null,lastRevision=null;for(let n=0;;n++){assert(n<10000);const result=(await exporter.query('SELECT crest_commands.expense_source_snapshot_'+group+'($1,$2,$3,$4,1) AS value',[business,c.snapshotToken,lastId,lastRevision])).rows[0].value;assert.equal(result.snapshotToken,c.snapshotToken);assert.equal(result.businessId,business);rows[group].push(...result[group]);if(!result.hasMore)break;const last=result[group].at(-1);assert(last);lastId=last[expenseSourceTables[group].key[0]];lastRevision=last.revision;}}return {businessId:business,snapshotToken:c.snapshotToken,commercialSnapshotToken:c.commercialSnapshotToken,expectedCounts:c.expectedCounts,rows};}
+async function foundationEvidence(business){
+ const generationId=randomUUID(),result={},contexts=(await exporter.query('SELECT crest_commands.business_configuration_export_context($1) AS configuration,crest_commands.business_identity_export_context($1) AS identity,crest_commands.business_history_export_context($1) AS history',[business])).rows[0];for(const [group,prefix,kinds]of [['configuration','business_configuration',['business','membership','recovery_authority']],['identity','business_identity',['actor','role_capability','identity_event']],['history','business_history',['operation','audit_event']]]){
+  const context=contexts[group],records=[];
+  for(const kind of kinds){let after=null,done=false;for(let n=0;n<100;n++){const page=(await exporter.query('SELECT * FROM crest_commands.'+prefix+'_export_page($1,$2,$3,$4,20)',[business,context.snapshotToken,kind,after])).rows;if(!page.length){done=true;break;}records.push(...page.map(r=>({kind,recordId:r.record_id,representation:r.representation,canonicalEvidence:r.canonical_evidence,evidenceHash:r.evidence_hash})));after=page.at(-1).record_id;}assert(done);}
+  result[group]=JSON.stringify({formatVersion:1,assurance:'snapshot_bytes_only',generationId,context,evidenceBytes:records.reduce((n,r)=>n+Buffer.byteLength(r.canonicalEvidence),0),records});
+ }return result;
+}
 before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target,await sandbox.prefix(48));baseline=await observed();
- for(const file of ['owner-expenses.sql','owner-expense-receipts.sql','owner-expenses-activity.sql','owner-expenses-original.sql','owner-expense-receipts-original.sql','owner-expenses-resolution.sql','owner-expenses-source.sql']){await transaction(async()=>client.query(await readFile(new URL('../../planning/proposals/'+file,import.meta.url),'utf8')));if(file==='owner-expenses.sql')ownsRole=true;}
+ if(registered49)await sandbox.apply(target,await sandbox.prefix(49));
+ else for(const file of ['owner-expenses.sql','owner-expense-receipts.sql','owner-expenses-activity.sql','owner-expenses-original.sql','owner-expense-receipts-original.sql','owner-expenses-resolution.sql','owner-expenses-source.sql']){await transaction(async()=>client.query(await readFile(new URL('../../planning/proposals/'+file,import.meta.url),'utf8')));if(file==='owner-expenses.sql')ownsRole=true;}
  exportLogin='crest_expense_source_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await client.query("CREATE ROLE "+exportLogin+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await client.query('GRANT crest_export TO '+exportLogin);const url=new URL(target);url.username=exportLogin;url.password=password;exporter=new pg.Client({connectionString:url.toString()});await exporter.connect();await exporter.query('SET ROLE crest_export');
  f=await state();const receipt=await receiptFixture(f);await publication(f,receipt);await save(f,request({id:receipt.expense,version:'1',payload:{...payload,amountCents:'1399',description:'=Synthetic, "quote" é 😀\n\\N',notes:'Comma, newline\n and literal \\N',changeReason:'Synthetic correction'}}));await save(f,request({id:receipt.expense,version:'2',payload:{...payload,amountCents:'1399',description:'=Synthetic, "quote" é 😀\n\\N',notes:'Comma, newline\n and literal \\N',voided:true,changeReason:'Synthetic void'}}));await save(f,request());
 },{timeout:240000});
@@ -55,7 +66,7 @@ test('empty business produces truthful empty source tables, distinct snapshot bi
  const foreign=await state();await snapshot(async()=>{const c=await context(foreign.business),input=await pages(foreign.business,c);assert.deepEqual(input.expectedCounts,{expenses:'0',receipts:'0'});const files=formatExpenseSourceCsv(input);assert.equal(readCustomerCsv(files.expenses.csv).length,1);assert.equal(readCustomerCsv(files.receipts.csv).length,1);assert(!files.expenses.csv.includes(f.business));assert.equal(JSON.parse(files.manifest).completeBackup,false);});
 });
 test('held export preserves every correction and receipt revision while excluding a later committed expense',async()=>{
- await snapshot(async()=>{const c=await context(f.business);assert.deepEqual(c.expectedCounts,{expenses:'4',receipts:'2'});await save(f,request());source=await pages(f.business,c);assert.equal(source.rows.expenses.length,4);assert.equal(source.rows.receipts.length,2);assert.equal(source.rows.expenses.filter(r=>r.payload.voided).length,1);formatExpenseSourceCsv(source);});
+ await snapshot(async()=>{const c=await context(f.business);assert.deepEqual(c.expectedCounts,{expenses:'4',receipts:'2'});await save(f,request());source=await pages(f.business,c);sourceWithHistory={source,historySnapshotToken:c.historySnapshotToken,...await foundationEvidence(f.business)};assert.equal(source.rows.expenses.length,4);assert.equal(source.rows.receipts.length,2);assert.equal(source.rows.expenses.filter(r=>r.payload.voided).length,1);formatExpenseSourceCsv(source);});
  await snapshot(async()=>assert.equal((await context(f.business)).expectedCounts.expenses,'5'));
 });
 test('wrong token, malformed composite cursor, foreign-scope token and excess page size are refused',async()=>{
@@ -71,4 +82,16 @@ test('all17 physical source columns round-trip through CSV into an empty neutral
 });
 test('source formatter refuses missing or mismatched expense/receipt revisions and count claims',()=>{
  for(const mutate of [v=>{v.expectedCounts.expenses='999';},v=>{v.rows.receipts[0].expense_revision='99';},v=>{v.rows.expenses[0].actor_id='not-an-actor';},v=>{v.rows.expenses[0].created_by=randomUUID();},v=>{v.rows.receipts.push(v.rows.receipts[0]);v.expectedCounts.receipts=String(v.rows.receipts.length);}]){const changed=structuredClone(source);mutate(changed);assert.throws(()=>formatExpenseSourceCsv(changed));}
+});
+
+test('financial source rows match every exact original operation, audit image and retained actor in the same held snapshot',()=>{
+ const bundle=formatExpenseSourceHistory(sourceWithHistory),manifest=JSON.parse(bundle.manifest);assert.equal(manifest.includedFinancialReferencesVerified,true);assert.equal(manifest.financialOperations,6);assert.equal(manifest.financialAudits,6);assert.deepEqual(manifest.requiredFinancialActorIds,[f.actor]);assert.equal(manifest.completePortableExport,false);assert.equal(manifest.completeBackup,false);assert(bundle.parts.some(p=>p.name==='actors.csv'));assert(bundle.parts.some(p=>p.name==='operations.csv'));assert(bundle.parts.some(p=>p.name==='audit_events.csv'));assert(bundle.parts.some(p=>p.name==='expense_revisions.csv'));assert.equal(new Set(bundle.parts.map(p=>p.name)).size,bundle.parts.length);
+});
+test('internally valid financial CSV cannot hide omitted receipts, invented amounts, another actor or stale history',()=>{
+ const mutations=[
+  v=>{v.historySnapshotToken='a'.repeat(64);},
+  v=>{v.source.rows.receipts=[];v.source.expectedCounts.receipts='0';},
+  v=>{const counts=new Map();for(const row of v.source.rows.expenses)counts.set(row.expense_id,(counts.get(row.expense_id)??0)+1);const row=v.source.rows.expenses.find(r=>counts.get(r.expense_id)===1);assert(row);row.payload.amountCents='9999';},
+  v=>{for(const row of v.source.rows.receipts)row.actor_id=randomUUID();}
+ ];for(const mutate of mutations){const changed=structuredClone(sourceWithHistory);mutate(changed);formatExpenseSourceCsv(changed.source);assert.throws(()=>formatExpenseSourceHistory(changed));}
 });

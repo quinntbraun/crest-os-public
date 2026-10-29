@@ -3,8 +3,8 @@
   "registered": false,
   "runtimeEnabled": false,
   "baseMigrationCount": 48,
-  "sqlBytes": 7999,
-  "sqlSha256": "afbe519b1dba0465cf2d24f377809fe278b7e7e3410cbcb8e5a4e87237074cda",
+  "sqlBytes": 8802,
+  "sqlSha256": "762830384c324c2e0ff30d276d6d95bc8fdd0bc5c73d7158b29ca2e5dca7e589",
   "purpose": "Private retained physical expense/receipt source rows with actual composite identities, exact revisions, JSON and UTC microsecond text; bounded held-snapshot retrieval and neutral CSV reimport. Separate from accountant period totals and full backup acceptance.",
   "appliedAfter": [
     "owner-expenses.sql",
@@ -15,14 +15,14 @@
     "owner-expenses-resolution.sql"
   ],
   "nativeAcceptance": {
-    "tests": 7,
-    "passed": 7,
+    "tests": 9,
+    "passed": 9,
     "failed": 0,
-    "logSha256": "ed0264241757b0bcf618c60b396f0490f2e5147dca4707e7f9b4564502850572",
-    "testSha256": "586f95976b8aca1ba4dd320fb0266feef4ff487b1349515d4f09b36a3ebd1aed",
+    "logSha256": "ae4ab825b0d7b969a72f04e3a0dad448f4ef119b309715382b77e2b06290b5cf",
+    "testSha256": "d92947e8b9284e3bfd77ff6668e192a2156d66b20af51fdf3339613e2192fb44",
     "sourceStable": true,
     "ownedClusterCleaned": true,
-    "scope": "Actual registered48 plus unregistered proposals in an owned synthetic cluster; restricted export LOGIN, held read-only repeatable-read source, concurrent later write excluded and neutral same-cluster empty-database CSV reimport. No genuine browser or independent-cluster full recovery claim."
+    "scope": "Actual registered48 plus unregistered overlays, restricted export LOGIN, single held read-only repeatable-read financial/foundation sources, exact actor/operation/audit/source bijection, neutral same-cluster financial CSV reimport and invalid/omitted sources refused. No genuine integrated browser, registered49 or independent full recovery claim."
   },
   "candidateCoverage": {
     "previousTables": 54,
@@ -42,18 +42,55 @@
     "newLoginRole": false
   },
   "sourceSha256": {
-    "planning/proposals/owner-expenses-source.sql": "afbe519b1dba0465cf2d24f377809fe278b7e7e3410cbcb8e5a4e87237074cda",
+    "planning/proposals/owner-expenses-source.sql": "762830384c324c2e0ff30d276d6d95bc8fdd0bc5c73d7158b29ca2e5dca7e589",
     "planning/proposals/owner-expenses-coverage.json": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828",
     "src/bookkeeping/expenses/expense-source-csv.ts": "bc3d61c1c917906e49eb5e7ef42fabeaa27ca6250588dfe1aa89c4c5ace1f804",
-    "tests/integration/owner-expenses-source.test.mjs": "586f95976b8aca1ba4dd320fb0266feef4ff487b1349515d4f09b36a3ebd1aed",
+    "tests/integration/owner-expenses-source.test.mjs": "d92947e8b9284e3bfd77ff6668e192a2156d66b20af51fdf3339613e2192fb44",
     "tests/support/registered48-migration-checksums.json": "f56732ca0627858e495c217f83fe5795b6278fa28f9686c6960dc327592a65cb",
     "tests/support/registered48-export-coverage.json": "344de6f7e3e81718767fabbc64779d69e98a3d1aea5d8faba4e86c43394ebfee",
-    "tests/support/registered48-compatibility.json": "b241eaafc6d21905edd7b86c05906990ccf7325fb56b56ce823a741dc4dc9d13"
+    "tests/support/registered48-compatibility.json": "b241eaafc6d21905edd7b86c05906990ccf7325fb56b56ce823a741dc4dc9d13",
+    "src/bookkeeping/expenses/expense-source-history.ts": "990e95184052b2edaa08c7c3863e7f5dce7230bda03db2cba6db95c6379f570d"
   },
   "sourceDomainInternalReferencesVerified": true,
-  "externalActorOperationAuditClosureVerified": false,
+  "externalActorOperationAuditClosureVerified": "verified for included financial rows only; no complete-business closure claim",
   "completePortableExport": false,
   "completeDatabaseAndReceiptRestore": false,
   "ledgerPosting": false,
-  "productionActivation": false
+  "productionActivation": false,
+  "previousSourceConstruction": {
+    "publicCommit": "587404028c25761006c292229db00e2eba5986eb",
+    "sqlBytes": 7999,
+    "sqlSha256": "afbe519b1dba0465cf2d24f377809fe278b7e7e3410cbcb8e5a4e87237074cda",
+    "nativeAcceptance": {
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "logSha256": "ed0264241757b0bcf618c60b396f0490f2e5147dca4707e7f9b4564502850572",
+      "testSha256": "586f95976b8aca1ba4dd320fb0266feef4ff487b1349515d4f09b36a3ebd1aed",
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "scope": "Actual registered48 plus unregistered proposals in an owned synthetic cluster; restricted export LOGIN, held read-only repeatable-read source, concurrent later write excluded and neutral same-cluster empty-database CSV reimport. No genuine browser or independent-cluster full recovery claim."
+    },
+    "sourceSha256": {
+      "planning/proposals/owner-expenses-source.sql": "762830384c324c2e0ff30d276d6d95bc8fdd0bc5c73d7158b29ca2e5dca7e589",
+      "planning/proposals/owner-expenses-coverage.json": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828",
+      "src/bookkeeping/expenses/expense-source-csv.ts": "bc3d61c1c917906e49eb5e7ef42fabeaa27ca6250588dfe1aa89c4c5ace1f804",
+      "tests/integration/owner-expenses-source.test.mjs": "d92947e8b9284e3bfd77ff6668e192a2156d66b20af51fdf3339613e2192fb44",
+      "tests/support/registered48-migration-checksums.json": "f56732ca0627858e495c217f83fe5795b6278fa28f9686c6960dc327592a65cb",
+      "tests/support/registered48-export-coverage.json": "344de6f7e3e81718767fabbc64779d69e98a3d1aea5d8faba4e86c43394ebfee",
+      "tests/support/registered48-compatibility.json": "b241eaafc6d21905edd7b86c05906990ccf7325fb56b56ce823a741dc4dc9d13",
+      "src/bookkeeping/expenses/expense-source-history.ts": "990e95184052b2edaa08c7c3863e7f5dce7230bda03db2cba6db95c6379f570d"
+    }
+  },
+  "constructionVersion": 2,
+  "includedFinancialActorOperationAuditClosureVerified": true,
+  "sourceHistoryBundle": {
+    "historySnapshotTokenBound": true,
+    "retainedActorSourcesIncluded": true,
+    "operationAndAuditCsvIncluded": true,
+    "missingFinancialRowsRefused": true,
+    "maximumBytesIncludingManifest": 67108864,
+    "maximumParts": 1024,
+    "consistentCaptureProvenByFormatter": false
+  }
 }

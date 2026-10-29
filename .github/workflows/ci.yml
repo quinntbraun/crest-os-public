@@ -97,6 +97,9 @@ jobs:
       - name: Prove registered48 upgrade, refusal, source and independent recovery
         if: ${{ !cancelled() }}
         run: npm run test:quote-commercial-registered
+      - name: Prove registered49 expense upgrade, source history and independent receipt recovery
+        if: ${{ !cancelled() }}
+        run: npm run test:expenses-registered
       - name: Prove registered44 catalog upgrade, retained workflow and independent recovery
         run: npm run test:catalog-registered
       - name: Run isolated regression group

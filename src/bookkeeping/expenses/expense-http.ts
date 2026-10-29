@@ -14,6 +14,7 @@ import {expenseCheck,expenseId,parseExpenseSave,parseExpenseOriginal} from './ex
 const payloadKeys=['paidOn','amountCents','currency','category','description','vendor','paymentMethod','reference','notes','voided','changeReason'] as const;
 const fields={context:[],history:['afterExpenseId','afterRevision'],operation:['operationId','recoveryEpoch','expenseId','expectedRevision'],save:['recoveryEpoch','operationId','expenseId','expectedRevision',...payloadKeys]} as const;
 type Config=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+export function expenseFailureResponse(status:400|404|405|503=400){const response=privateJsonResponse({error:'EXPENSE_REQUEST_FAILED'},status);if(status===405)response.headers.set('Allow','POST');return response;}
 // Disabled until registered source/recovery/receipt integration is independently accepted.
 export function createExpenseHttp(config:Config,provider:Parameters<typeof createExpenseDirectory>[1],tokens:Parameters<typeof createExpenseDirectory>[2],enabled=false){
  expenseCheck(expenseId(config.businessId)&&typeof enabled==='boolean');const resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config),directory=enabled?createExpenseDirectory(config,provider,tokens):undefined,context=enabled?createBusinessSettingsContextReader(config,provider,tokens):undefined;

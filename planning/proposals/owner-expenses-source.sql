@@ -4,17 +4,19 @@ DO $review$ BEGIN
  IF (SELECT count(*) FROM pg_roles WHERE rolname IN('crest_expense_owner','crest_export') AND NOT(rolcanlogin OR rolinherit OR rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls) AND rolconfig IS NULL)<>2 OR EXISTS(SELECT 1 FROM pg_auth_members m JOIN pg_roles r ON r.oid=m.roleid OR r.oid=m.member WHERE r.rolname='crest_expense_owner') OR EXISTS(SELECT 1 FROM pg_namespace WHERE nspname IN('crest','crest_private','crest_commands') AND has_schema_privilege('crest_expense_owner',oid,'CREATE')) THEN RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='CREST_EXPENSE_SOURCE_REVIEW_REQUIRED';END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid=to_regprocedure('crest_commands.quote_commercial_snapshot_context(uuid)') AND proowner='crest_quote_owner'::regrole AND prosecdef AND provolatile='v' AND NOT proleakproof AND lower(array_to_string(proconfig,','))='search_path=pg_catalog, pg_temp,row_security=on' AND encode(sha256(convert_to(prosrc,'UTF8')),'hex')='695968b644450c9789c86ba205962e17c6708f1e709fe1aa297f742cc28b5300') THEN RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='CREST_EXPENSE_SOURCE_REVIEW_REQUIRED';END IF;
  IF (SELECT count(*) FROM pg_class WHERE oid IN('crest.expense_revisions'::regclass,'crest.expense_receipt_revisions'::regclass) AND relowner='crest_schema_owner'::regrole AND relrowsecurity AND relforcerowsecurity)<>2 THEN RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='CREST_EXPENSE_SOURCE_REVIEW_REQUIRED';END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid=to_regprocedure('crest_commands.business_history_export_context(uuid)') AND proowner='crest_export_owner'::regrole AND prosecdef AND provolatile='s' AND NOT proleakproof AND lower(array_to_string(proconfig,','))='search_path=pg_catalog, pg_temp,row_security=on,timezone=utc,datestyle=iso, ymd' AND encode(sha256(convert_to(prosrc,'UTF8')),'hex')='4bffab5c3da874672971ecdea9a0353dc7a8b861c92384c8e2966811a967566e') THEN RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='CREST_EXPENSE_SOURCE_REVIEW_REQUIRED';END IF;
 END $review$;
 SET ROLE crest_schema_owner;
 CREATE FUNCTION crest_commands.expense_source_snapshot_context(requested_business uuid) RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $context$
-DECLARE commercial jsonb;expenses bigint;receipts bigint;BEGIN
+DECLARE commercial jsonb;history jsonb;expenses bigint;receipts bigint;BEGIN
  IF current_setting('transaction_isolation')<>'repeatable read' OR current_setting('transaction_read_only')<>'on' THEN RAISE EXCEPTION USING ERRCODE='25001',MESSAGE='CREST_EXPENSE_SOURCE_SNAPSHOT_REQUIRED';END IF;
  IF requested_business IS NULL THEN RAISE EXCEPTION USING ERRCODE='22023',MESSAGE='CREST_EXPENSE_SOURCE_SCOPE_REQUIRED';END IF;
  commercial:=crest_commands.quote_commercial_snapshot_context(requested_business);
+ history:=crest_commands.business_history_export_context(requested_business);
  SELECT count(*) INTO expenses FROM crest.expense_revisions WHERE business_id=requested_business;
  SELECT count(*) INTO receipts FROM crest.expense_receipt_revisions WHERE business_id=requested_business;
  IF expenses+receipts>10000 THEN RAISE EXCEPTION USING ERRCODE='54000',MESSAGE='CREST_EXPENSE_SOURCE_LIMIT';END IF;
- RETURN jsonb_build_object('schemaVersion',1,'scope','owner_expense_sources','businessId',requested_business,'snapshotToken',encode(sha256(convert_to(jsonb_build_object('domain','crest.expense-source.snapshot/1','businessId',requested_business,'snapshot',pg_current_snapshot()::text)::text,'UTF8')),'hex'),'commercialSnapshotToken',commercial->>'snapshotToken','expectedCounts',jsonb_build_object('expenses',expenses::text,'receipts',receipts::text));
+ RETURN jsonb_build_object('schemaVersion',1,'scope','owner_expense_sources','businessId',requested_business,'snapshotToken',encode(sha256(convert_to(jsonb_build_object('domain','crest.expense-source.snapshot/1','businessId',requested_business,'snapshot',pg_current_snapshot()::text)::text,'UTF8')),'hex'),'commercialSnapshotToken',commercial->>'snapshotToken','historySnapshotToken',history->>'snapshotToken','expectedCounts',jsonb_build_object('expenses',expenses::text,'receipts',receipts::text));
 END $context$;
 CREATE FUNCTION crest_commands.expense_source_snapshot_expenses(requested_business uuid,expected_snapshot text,after_id uuid,after_revision bigint,page_limit integer) RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $page$
 DECLARE context jsonb;result jsonb;BEGIN
@@ -41,3 +43,4 @@ REVOKE CREATE ON SCHEMA crest_commands FROM crest_expense_owner;
 REVOKE ALL ON FUNCTION crest_commands.expense_source_snapshot_context(uuid),crest_commands.expense_source_snapshot_expenses(uuid,text,uuid,bigint,integer),crest_commands.expense_source_snapshot_receipts(uuid,text,uuid,bigint,integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION crest_commands.expense_source_snapshot_context(uuid),crest_commands.expense_source_snapshot_expenses(uuid,text,uuid,bigint,integer),crest_commands.expense_source_snapshot_receipts(uuid,text,uuid,bigint,integer) TO crest_export;
 GRANT EXECUTE ON FUNCTION crest_commands.quote_commercial_snapshot_context(uuid) TO crest_expense_owner;
+GRANT EXECUTE ON FUNCTION crest_commands.business_history_export_context(uuid) TO crest_expense_owner;

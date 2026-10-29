@@ -1,0 +1,1006 @@
+{
+  "formatVersion": 1,
+  "repositoryRegistration": 49,
+  "executionStatus": "scoped_registered_upgrade_source_auth_recovery_pass_pending_browser_and_release",
+  "databaseApplied": false,
+  "ownerDatabaseApplied": false,
+  "productionActivation": "blocked",
+  "migration": {
+    "file": "20261029050000_owner_expenses.sql",
+    "sha256": "8bf39dc6502ef1bba4e45cb04efe0afdbc2c6efe0d8b3a0d25948dcf37ffee18",
+    "bytes": 104658
+  },
+  "previousRegistry": {
+    "sha256": "f56732ca0627858e495c217f83fe5795b6278fa28f9686c6960dc327592a65cb",
+    "frozenFixture": "tests/support/registered48-migration-checksums.json",
+    "migrationCount": 48
+  },
+  "previousCoverage": {
+    "sha256": "344de6f7e3e81718767fabbc64779d69e98a3d1aea5d8faba4e86c43394ebfee",
+    "frozenFixture": "tests/support/registered48-export-coverage.json"
+  },
+  "previousCompatibility": {
+    "sha256": "b241eaafc6d21905edd7b86c05906990ccf7325fb56b56ce823a741dc4dc9d13",
+    "frozenFixture": "tests/support/registered48-compatibility.json"
+  },
+  "previousSourceCommit": "4828d883b37e4124bd25cf079c0f3c40dd4e4375",
+  "proposalBodies": [
+    {
+      "path": "planning/proposals/owner-expenses.sql",
+      "offset": 833,
+      "bytes": 17546,
+      "sha256": "aa8c72c489399404f82a29e8353b0e391972253d1a8a6aaff58ea4bcb831ba10"
+    },
+    {
+      "path": "planning/proposals/owner-expense-receipts.sql",
+      "offset": 18485,
+      "bytes": 30857,
+      "sha256": "91ffaa86db818444dc76ff47bf0438262ae803980477db42d0f1ca2ac051cdfb"
+    },
+    {
+      "path": "planning/proposals/owner-expenses-activity.sql",
+      "offset": 49457,
+      "bytes": 16717,
+      "sha256": "50509e065d6b0ced2e58439d02fc68ff0bbcd91cd0b6ed631a502fee353f7ca5"
+    },
+    {
+      "path": "planning/proposals/owner-expenses-original.sql",
+      "offset": 66290,
+      "bytes": 5083,
+      "sha256": "075fac103f18fe7cb98eae1e935cd9e347795afc284e939324cf2a42825e4670"
+    },
+    {
+      "path": "planning/proposals/owner-expense-receipts-original.sql",
+      "offset": 71497,
+      "bytes": 6797,
+      "sha256": "0fb4b96b0744e31a1e5cd0dba5a828be087c609f330abc192b50882a3d72bc37"
+    },
+    {
+      "path": "planning/proposals/owner-expenses-resolution.sql",
+      "offset": 78420,
+      "bytes": 17265,
+      "sha256": "8ee7d81802aa9a7af302ed778e9ce90faab8b67fee2d0e50da4ab064684c8691"
+    },
+    {
+      "path": "planning/proposals/owner-expenses-source.sql",
+      "offset": 95801,
+      "bytes": 8802,
+      "sha256": "762830384c324c2e0ff30d276d6d95bc8fdd0bc5c73d7158b29ca2e5dca7e589"
+    }
+  ],
+  "resetCallerRoleBetweenBodies": true,
+  "financialTables": [
+    "crest.expense_revisions",
+    "crest.expense_receipt_revisions"
+  ],
+  "requiredAddedColumns": 17,
+  "sourceCoverage": {
+    "tables": 56,
+    "actualColumns": 910,
+    "requiredColumns": 900,
+    "excludedCredentialColumns": 10,
+    "unregisteredOverlayVerified": true,
+    "actualRegistered49Verified": true
+  },
+  "legacyProfiles": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48
+  ],
+  "physicalModelDecision": "Append-only paid-expense and receipt revisions keep their real composite identities. Source closure maps actor_id/recorded_at and complete revision images; no invented id/created_by/created_at. Manual source records do not post a ledger or amend full V1 accounting.",
+  "runtimeExpenseEnabled": false,
+  "runtimeFinancePostingEnabled": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "previousPackagingNativeAcceptance": {
+    "tests": 5,
+    "passed": 5,
+    "failed": 0,
+    "logSha256": "fc3edbec15ad21348920cf8b9b0181658a5f8b06416bef49cdf68e4f9f821e36",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "helperSha256": "55ac2ef0bb836f55b350cda089ab54fa8974fcf9272f6064023e602db56ef08d",
+    "scope": "Previous candidate header, same seven exact SQL bodies; actual48-to49 coordinator, early/late rollback, replay, retained customer and financial save. Fresh registered packaging acceptance still required."
+  },
+  "requiredAcceptance": [
+    "Exact frozen48 prefix and seven source bodies; current registry/schema inventory/closed roles",
+    "Atomic48-to49 upgrade, idempotency, early/late refusal and unchanged existing rows",
+    "Complete financial source/actor/operation/audit closure with common-format reconstruction",
+    "Independent encrypted held registered49 database plus receipt recovery, pending-file refusal and frozen48 profile refusal",
+    "Genuine registered49 MFA/HTTP, private isolated validator/object transport, integrated browser/phone workflow",
+    "Exact-source full CI/build/container/artifact acceptance before synthetic preview upgrade; separate real-data/finance activation gates"
+  ],
+  "nativeAcceptance": {
+    "tests": 5,
+    "passed": 5,
+    "failed": 0,
+    "logSha256": "69dcc9e3467c23d8a7b3478e1fa103627b5dd8016f55e4c4a265b51109890d09",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "completeCrestAcceptance": false,
+    "realCrestDatabaseApplied": false,
+    "sourceFiles": [
+      {
+        "path": "tests/integration/owner-expenses-registered.test.mjs",
+        "sha256": "a9e8a699341361b53c8c50f2c51cb8cb432b62898090bd7ab090b4706ad36c3a"
+      },
+      {
+        "path": "tests/support/owner-expense49-candidate.mjs",
+        "sha256": "a98f794fbe42663db0df5d19c37c12e5aac2c43858601d560da93f14be47a738"
+      },
+      {
+        "path": "tests/support/migration-sandbox.mjs",
+        "sha256": "916f5e80976a94831d4e2e88df32c4ddc11f7e3c58dcf537550262937e50719e"
+      },
+      {
+        "path": "tests/support/recovery-drill.mjs",
+        "sha256": "51d98eb534483c5b4df648e3767946600e6830e964baed3b3cbc78c7ab46e195"
+      },
+      {
+        "path": "supabase/migrations/20261029050000_owner_expenses.sql",
+        "sha256": "8bf39dc6502ef1bba4e45cb04efe0afdbc2c6efe0d8b3a0d25948dcf37ffee18"
+      },
+      {
+        "path": "planning/OWNER_EXPENSES_SCHEMA49_ADOPTION.json",
+        "sha256": "2b1d6d9e3d12a268ca0eda3ee0cf1f8b3475c99de9482747f8582c4ec525a1dc"
+      },
+      {
+        "path": "planning/SECURITY_EXPORT_COVERAGE.json",
+        "sha256": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828"
+      },
+      {
+        "path": "release/compatibility.json",
+        "sha256": "1aae2fedb345424d07b947b42d5f4599017e142001dd57c146ec247bfcbb505e"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-source.sql",
+        "sha256": "762830384c324c2e0ff30d276d6d95bc8fdd0bc5c73d7158b29ca2e5dca7e589"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-coverage.json",
+        "sha256": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828"
+      },
+      {
+        "path": "src/bookkeeping/expenses/expense-source-csv.ts",
+        "sha256": "bc3d61c1c917906e49eb5e7ef42fabeaa27ca6250588dfe1aa89c4c5ace1f804"
+      },
+      {
+        "path": "src/bookkeeping/expenses/expense-source-history.ts",
+        "sha256": "990e95184052b2edaa08c7c3863e7f5dce7230bda03db2cba6db95c6379f570d"
+      },
+      {
+        "path": "tests/support/registered48-export-coverage.json",
+        "sha256": "344de6f7e3e81718767fabbc64779d69e98a3d1aea5d8faba4e86c43394ebfee"
+      },
+      {
+        "path": "tests/support/registered48-migration-checksums.json",
+        "sha256": "f56732ca0627858e495c217f83fe5795b6278fa28f9686c6960dc327592a65cb"
+      },
+      {
+        "path": "tests/support/registered48-compatibility.json",
+        "sha256": "b241eaafc6d21905edd7b86c05906990ccf7325fb56b56ce823a741dc4dc9d13"
+      },
+      {
+        "path": "tests/fixtures/owner-expenses-original-clients.ts",
+        "sha256": "2a281924ff0bff89c025b63bd487c5c3515bca840e84b501a9dac35d2abbb899"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-resolution.sql",
+        "sha256": "8ee7d81802aa9a7af302ed778e9ce90faab8b67fee2d0e50da4ab064684c8691"
+      },
+      {
+        "path": "src/client/pending-original-operation.ts",
+        "sha256": "4296946047d86212b616f70c2ada5e2c86a96907fbef75693bebad909319a555"
+      },
+      {
+        "path": "src/client/expenses.ts",
+        "sha256": "1a01bc659b0fc1b0670aa868ec191acfaa3c9dc0c0c0433e54c59f07792da779"
+      },
+      {
+        "path": "src/client/original-operations.ts",
+        "sha256": "2f5404b6095e77725abb1f73aef90d3698a286c951c45baac93ca4df547528ed"
+      },
+      {
+        "path": "src/security/original-operation-reference.ts",
+        "sha256": "eb761a61c57bac3a38229cea6545fee56f2a5b2691dd77beafc8f1d2f3e8c312"
+      },
+      {
+        "path": "planning/proposals/owner-expenses.sql",
+        "sha256": "aa8c72c489399404f82a29e8353b0e391972253d1a8a6aaff58ea4bcb831ba10"
+      },
+      {
+        "path": "planning/proposals/owner-expense-receipts.sql",
+        "sha256": "91ffaa86db818444dc76ff47bf0438262ae803980477db42d0f1ca2ac051cdfb"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-activity.sql",
+        "sha256": "50509e065d6b0ced2e58439d02fc68ff0bbcd91cd0b6ed631a502fee353f7ca5"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-original.sql",
+        "sha256": "075fac103f18fe7cb98eae1e935cd9e347795afc284e939324cf2a42825e4670"
+      },
+      {
+        "path": "planning/proposals/owner-expense-receipts-original.sql",
+        "sha256": "0fb4b96b0744e31a1e5cd0dba5a828be087c609f330abc192b50882a3d72bc37"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-contract.ts",
+        "sha256": "4a3d02177b422f75d7aca0c6dc325dec53890be4e3225277aa492e9711a303f0"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-directory.ts",
+        "sha256": "3333a2e66ce3a248d52a631bde0459e9664169f0033898ab65762ed63cd40960"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-http.ts",
+        "sha256": "7dd748053c201d360e86f7b1fccb17fd8458d550e3f21b002bed1104f9146fde"
+      },
+      {
+        "path": "src/client/expense-receipts.ts",
+        "sha256": "b309558ab76ccbdc4cc2068295220a74a6ca7807dba6f9694fb4401e8290e490"
+      },
+      {
+        "path": "src/client/pending-receipt.ts",
+        "sha256": "3d253a1afa0dd0aebc9e4b81c6acde5885bd27e9c619a694eb7866150f905d4c"
+      },
+      {
+        "path": "src/operations/appointment-hold-http.ts",
+        "sha256": "5c36e90109a8825172a249ee4ace831f18a8c93f57bb69ec0e4a0b8cbe74cfb9"
+      },
+      {
+        "path": "src/client/appointment-holds.ts",
+        "sha256": "241af73658f00e93c7e0335829fa50ddb20794e1b390a0a9595c229864083e9f"
+      },
+      {
+        "path": "supabase/migrations/20261028040000_appointment_proposals.sql",
+        "sha256": "5f21dce7af0944388e39c456c2a06614f63c111557958acf9528f311f25bf4fc"
+      },
+      {
+        "path": "planning/QUOTE_ACCEPTANCE_SCHEMA48_ADOPTION.json",
+        "sha256": "8d7b79a8975ef00f8a375d046ea6adcaf4c880005abef020163a18c5633161a8"
+      },
+      {
+        "path": "supabase/migrations/20261028050000_quote_acceptance.sql",
+        "sha256": "1010212bc3fe6b734a511f05968103a4f88de37452a3340b1d70da5f243819c7"
+      },
+      {
+        "path": "supabase/migration-checksums.json",
+        "sha256": "68ced1706217b33cf5ed6a8b87ccdaf4324b714e7e01fb26e283412c05de5871"
+      }
+    ]
+  },
+  "genuineAuthAcceptance": {
+    "tests": 1,
+    "passed": 1,
+    "failed": 0,
+    "logSha256": "abf4243be0a04d17ef72371d287f1ccde1108ee599501eaedc353aa1a38e6a27",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "completeCrestAcceptance": false,
+    "scope": "Actual registered49, genuine provider MFA/restricted login, actual clients/private HTTP/SDK and original-operation recovery; explicit direct-HTTP cookie/Origin and decoder seams, not integrated browser/TLS or production custody.",
+    "sourceFiles": [
+      {
+        "path": "tests/integration/owner-expenses-registered-auth.test.mjs",
+        "sha256": "513b3832271877930ccfd8f31e5293dff252ab1d150d577e8cf4e322a2b0f3e9"
+      },
+      {
+        "path": "tests/integration/owner-expenses-receipt-http.test.mjs",
+        "sha256": "3195bdc7721fbcafb18e055ec1e67b8f171521d881d46bd882d0070e836307cc"
+      },
+      {
+        "path": "tests/support/owner-expense49-candidate.mjs",
+        "sha256": "a98f794fbe42663db0df5d19c37c12e5aac2c43858601d560da93f14be47a738"
+      },
+      {
+        "path": "tests/support/migration-sandbox.mjs",
+        "sha256": "916f5e80976a94831d4e2e88df32c4ddc11f7e3c58dcf537550262937e50719e"
+      },
+      {
+        "path": "tests/support/recovery-drill.mjs",
+        "sha256": "51d98eb534483c5b4df648e3767946600e6830e964baed3b3cbc78c7ab46e195"
+      },
+      {
+        "path": "supabase/migrations/20261029050000_owner_expenses.sql",
+        "sha256": "8bf39dc6502ef1bba4e45cb04efe0afdbc2c6efe0d8b3a0d25948dcf37ffee18"
+      },
+      {
+        "path": "planning/OWNER_EXPENSES_SCHEMA49_ADOPTION.json",
+        "sha256": "2b1d6d9e3d12a268ca0eda3ee0cf1f8b3475c99de9482747f8582c4ec525a1dc"
+      },
+      {
+        "path": "planning/SECURITY_EXPORT_COVERAGE.json",
+        "sha256": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828"
+      },
+      {
+        "path": "release/compatibility.json",
+        "sha256": "1aae2fedb345424d07b947b42d5f4599017e142001dd57c146ec247bfcbb505e"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-source.sql",
+        "sha256": "762830384c324c2e0ff30d276d6d95bc8fdd0bc5c73d7158b29ca2e5dca7e589"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-coverage.json",
+        "sha256": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828"
+      },
+      {
+        "path": "src/bookkeeping/expenses/expense-source-csv.ts",
+        "sha256": "bc3d61c1c917906e49eb5e7ef42fabeaa27ca6250588dfe1aa89c4c5ace1f804"
+      },
+      {
+        "path": "src/bookkeeping/expenses/expense-source-history.ts",
+        "sha256": "990e95184052b2edaa08c7c3863e7f5dce7230bda03db2cba6db95c6379f570d"
+      },
+      {
+        "path": "tests/support/registered48-export-coverage.json",
+        "sha256": "344de6f7e3e81718767fabbc64779d69e98a3d1aea5d8faba4e86c43394ebfee"
+      },
+      {
+        "path": "tests/support/registered48-migration-checksums.json",
+        "sha256": "f56732ca0627858e495c217f83fe5795b6278fa28f9686c6960dc327592a65cb"
+      },
+      {
+        "path": "tests/support/registered48-compatibility.json",
+        "sha256": "b241eaafc6d21905edd7b86c05906990ccf7325fb56b56ce823a741dc4dc9d13"
+      },
+      {
+        "path": "tests/fixtures/owner-expenses-original-clients.ts",
+        "sha256": "2a281924ff0bff89c025b63bd487c5c3515bca840e84b501a9dac35d2abbb899"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-resolution.sql",
+        "sha256": "8ee7d81802aa9a7af302ed778e9ce90faab8b67fee2d0e50da4ab064684c8691"
+      },
+      {
+        "path": "src/client/pending-original-operation.ts",
+        "sha256": "4296946047d86212b616f70c2ada5e2c86a96907fbef75693bebad909319a555"
+      },
+      {
+        "path": "src/client/expenses.ts",
+        "sha256": "1a01bc659b0fc1b0670aa868ec191acfaa3c9dc0c0c0433e54c59f07792da779"
+      },
+      {
+        "path": "src/client/original-operations.ts",
+        "sha256": "2f5404b6095e77725abb1f73aef90d3698a286c951c45baac93ca4df547528ed"
+      },
+      {
+        "path": "src/security/original-operation-reference.ts",
+        "sha256": "eb761a61c57bac3a38229cea6545fee56f2a5b2691dd77beafc8f1d2f3e8c312"
+      },
+      {
+        "path": "planning/proposals/owner-expenses.sql",
+        "sha256": "aa8c72c489399404f82a29e8353b0e391972253d1a8a6aaff58ea4bcb831ba10"
+      },
+      {
+        "path": "planning/proposals/owner-expense-receipts.sql",
+        "sha256": "91ffaa86db818444dc76ff47bf0438262ae803980477db42d0f1ca2ac051cdfb"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-activity.sql",
+        "sha256": "50509e065d6b0ced2e58439d02fc68ff0bbcd91cd0b6ed631a502fee353f7ca5"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-original.sql",
+        "sha256": "075fac103f18fe7cb98eae1e935cd9e347795afc284e939324cf2a42825e4670"
+      },
+      {
+        "path": "planning/proposals/owner-expense-receipts-original.sql",
+        "sha256": "0fb4b96b0744e31a1e5cd0dba5a828be087c609f330abc192b50882a3d72bc37"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-contract.ts",
+        "sha256": "4a3d02177b422f75d7aca0c6dc325dec53890be4e3225277aa492e9711a303f0"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-directory.ts",
+        "sha256": "3333a2e66ce3a248d52a631bde0459e9664169f0033898ab65762ed63cd40960"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-http.ts",
+        "sha256": "7dd748053c201d360e86f7b1fccb17fd8458d550e3f21b002bed1104f9146fde"
+      },
+      {
+        "path": "src/client/expense-receipts.ts",
+        "sha256": "b309558ab76ccbdc4cc2068295220a74a6ca7807dba6f9694fb4401e8290e490"
+      },
+      {
+        "path": "src/client/pending-receipt.ts",
+        "sha256": "3d253a1afa0dd0aebc9e4b81c6acde5885bd27e9c619a694eb7866150f905d4c"
+      },
+      {
+        "path": "src/operations/appointment-hold-http.ts",
+        "sha256": "5c36e90109a8825172a249ee4ace831f18a8c93f57bb69ec0e4a0b8cbe74cfb9"
+      },
+      {
+        "path": "src/client/appointment-holds.ts",
+        "sha256": "241af73658f00e93c7e0335829fa50ddb20794e1b390a0a9595c229864083e9f"
+      },
+      {
+        "path": "supabase/migrations/20261028040000_appointment_proposals.sql",
+        "sha256": "5f21dce7af0944388e39c456c2a06614f63c111557958acf9528f311f25bf4fc"
+      },
+      {
+        "path": "planning/QUOTE_ACCEPTANCE_SCHEMA48_ADOPTION.json",
+        "sha256": "8d7b79a8975ef00f8a375d046ea6adcaf4c880005abef020163a18c5633161a8"
+      },
+      {
+        "path": "supabase/migrations/20261028050000_quote_acceptance.sql",
+        "sha256": "1010212bc3fe6b734a511f05968103a4f88de37452a3340b1d70da5f243819c7"
+      },
+      {
+        "path": "supabase/migration-checksums.json",
+        "sha256": "68ced1706217b33cf5ed6a8b87ccdaf4324b714e7e01fb26e283412c05de5871"
+      }
+    ]
+  },
+  "sourceAcceptance": {
+    "tests": 9,
+    "passed": 9,
+    "failed": 0,
+    "logSha256": "383f8399a691417b6a01b2af1650b479dd05a8465792e2cfd87cd82db8214f67",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "completeCrestAcceptance": false,
+    "scope": "Actual registered49, held read-only sources, complete included financial actor/operation/audit references and neutral financial CSV reimport; no complete-business export claim.",
+    "sourceFiles": [
+      {
+        "path": "tests/integration/owner-expenses-registered-source.test.mjs",
+        "sha256": "fd782836b84ebe65cefb73f060d1a6ac276b8c5c46d9850eb152718b3940dd0c"
+      },
+      {
+        "path": "tests/integration/owner-expenses-source.test.mjs",
+        "sha256": "753d7d4c0155c0595b986f0a0bad39c27f2a38567d0dae95a147498dcb6f9a58"
+      },
+      {
+        "path": "src/bookkeeping/expenses/expense-source-history.ts",
+        "sha256": "990e95184052b2edaa08c7c3863e7f5dce7230bda03db2cba6db95c6379f570d"
+      },
+      {
+        "path": "tests/support/owner-expense49-candidate.mjs",
+        "sha256": "a98f794fbe42663db0df5d19c37c12e5aac2c43858601d560da93f14be47a738"
+      },
+      {
+        "path": "tests/support/migration-sandbox.mjs",
+        "sha256": "916f5e80976a94831d4e2e88df32c4ddc11f7e3c58dcf537550262937e50719e"
+      },
+      {
+        "path": "tests/support/recovery-drill.mjs",
+        "sha256": "51d98eb534483c5b4df648e3767946600e6830e964baed3b3cbc78c7ab46e195"
+      },
+      {
+        "path": "supabase/migrations/20261029050000_owner_expenses.sql",
+        "sha256": "8bf39dc6502ef1bba4e45cb04efe0afdbc2c6efe0d8b3a0d25948dcf37ffee18"
+      },
+      {
+        "path": "planning/OWNER_EXPENSES_SCHEMA49_ADOPTION.json",
+        "sha256": "2b1d6d9e3d12a268ca0eda3ee0cf1f8b3475c99de9482747f8582c4ec525a1dc"
+      },
+      {
+        "path": "planning/SECURITY_EXPORT_COVERAGE.json",
+        "sha256": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828"
+      },
+      {
+        "path": "release/compatibility.json",
+        "sha256": "1aae2fedb345424d07b947b42d5f4599017e142001dd57c146ec247bfcbb505e"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-source.sql",
+        "sha256": "762830384c324c2e0ff30d276d6d95bc8fdd0bc5c73d7158b29ca2e5dca7e589"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-coverage.json",
+        "sha256": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828"
+      },
+      {
+        "path": "src/bookkeeping/expenses/expense-source-csv.ts",
+        "sha256": "bc3d61c1c917906e49eb5e7ef42fabeaa27ca6250588dfe1aa89c4c5ace1f804"
+      },
+      {
+        "path": "tests/support/registered48-export-coverage.json",
+        "sha256": "344de6f7e3e81718767fabbc64779d69e98a3d1aea5d8faba4e86c43394ebfee"
+      },
+      {
+        "path": "tests/support/registered48-migration-checksums.json",
+        "sha256": "f56732ca0627858e495c217f83fe5795b6278fa28f9686c6960dc327592a65cb"
+      },
+      {
+        "path": "tests/support/registered48-compatibility.json",
+        "sha256": "b241eaafc6d21905edd7b86c05906990ccf7325fb56b56ce823a741dc4dc9d13"
+      },
+      {
+        "path": "tests/fixtures/owner-expenses-original-clients.ts",
+        "sha256": "2a281924ff0bff89c025b63bd487c5c3515bca840e84b501a9dac35d2abbb899"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-resolution.sql",
+        "sha256": "8ee7d81802aa9a7af302ed778e9ce90faab8b67fee2d0e50da4ab064684c8691"
+      },
+      {
+        "path": "src/client/pending-original-operation.ts",
+        "sha256": "4296946047d86212b616f70c2ada5e2c86a96907fbef75693bebad909319a555"
+      },
+      {
+        "path": "src/client/expenses.ts",
+        "sha256": "1a01bc659b0fc1b0670aa868ec191acfaa3c9dc0c0c0433e54c59f07792da779"
+      },
+      {
+        "path": "src/client/original-operations.ts",
+        "sha256": "2f5404b6095e77725abb1f73aef90d3698a286c951c45baac93ca4df547528ed"
+      },
+      {
+        "path": "src/security/original-operation-reference.ts",
+        "sha256": "eb761a61c57bac3a38229cea6545fee56f2a5b2691dd77beafc8f1d2f3e8c312"
+      },
+      {
+        "path": "planning/proposals/owner-expenses.sql",
+        "sha256": "aa8c72c489399404f82a29e8353b0e391972253d1a8a6aaff58ea4bcb831ba10"
+      },
+      {
+        "path": "planning/proposals/owner-expense-receipts.sql",
+        "sha256": "91ffaa86db818444dc76ff47bf0438262ae803980477db42d0f1ca2ac051cdfb"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-activity.sql",
+        "sha256": "50509e065d6b0ced2e58439d02fc68ff0bbcd91cd0b6ed631a502fee353f7ca5"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-original.sql",
+        "sha256": "075fac103f18fe7cb98eae1e935cd9e347795afc284e939324cf2a42825e4670"
+      },
+      {
+        "path": "planning/proposals/owner-expense-receipts-original.sql",
+        "sha256": "0fb4b96b0744e31a1e5cd0dba5a828be087c609f330abc192b50882a3d72bc37"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-contract.ts",
+        "sha256": "4a3d02177b422f75d7aca0c6dc325dec53890be4e3225277aa492e9711a303f0"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-directory.ts",
+        "sha256": "3333a2e66ce3a248d52a631bde0459e9664169f0033898ab65762ed63cd40960"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-http.ts",
+        "sha256": "7dd748053c201d360e86f7b1fccb17fd8458d550e3f21b002bed1104f9146fde"
+      },
+      {
+        "path": "src/client/expense-receipts.ts",
+        "sha256": "b309558ab76ccbdc4cc2068295220a74a6ca7807dba6f9694fb4401e8290e490"
+      },
+      {
+        "path": "src/client/pending-receipt.ts",
+        "sha256": "3d253a1afa0dd0aebc9e4b81c6acde5885bd27e9c619a694eb7866150f905d4c"
+      },
+      {
+        "path": "src/operations/appointment-hold-http.ts",
+        "sha256": "5c36e90109a8825172a249ee4ace831f18a8c93f57bb69ec0e4a0b8cbe74cfb9"
+      },
+      {
+        "path": "src/client/appointment-holds.ts",
+        "sha256": "241af73658f00e93c7e0335829fa50ddb20794e1b390a0a9595c229864083e9f"
+      },
+      {
+        "path": "supabase/migrations/20261028040000_appointment_proposals.sql",
+        "sha256": "5f21dce7af0944388e39c456c2a06614f63c111557958acf9528f311f25bf4fc"
+      },
+      {
+        "path": "planning/QUOTE_ACCEPTANCE_SCHEMA48_ADOPTION.json",
+        "sha256": "8d7b79a8975ef00f8a375d046ea6adcaf4c880005abef020163a18c5633161a8"
+      },
+      {
+        "path": "supabase/migrations/20261028050000_quote_acceptance.sql",
+        "sha256": "1010212bc3fe6b734a511f05968103a4f88de37452a3340b1d70da5f243819c7"
+      },
+      {
+        "path": "supabase/migration-checksums.json",
+        "sha256": "68ced1706217b33cf5ed6a8b87ccdaf4324b714e7e01fb26e283412c05de5871"
+      }
+    ]
+  },
+  "recoveryAcceptance": {
+    "tests": 1,
+    "passed": 1,
+    "failed": 0,
+    "logSha256": "f6d80578e1a5bf95db2ca6d566697e39a39643e9447122c6d8097a74a7d6c5cc",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "completeCrestAcceptance": false,
+    "scope": "Actual registered49 held database plus receipt archive, concurrent later writes excluded and uncertain reservation backup refused, source/original key removed, emergency key recovery into an independent cluster, old session denied and fresh writes paused. Not actual-owner custody or a complete production backup.",
+    "sourceFiles": [
+      {
+        "path": "tests/integration/owner-expenses-combined-recovery.test.mjs",
+        "sha256": "a229a2a1379f5450f7907e0ce24e0656bbf6be40a744dcbbc0df6b67a19564a2"
+      },
+      {
+        "path": "tests/support/owner-expense49-candidate.mjs",
+        "sha256": "a98f794fbe42663db0df5d19c37c12e5aac2c43858601d560da93f14be47a738"
+      },
+      {
+        "path": "tests/support/migration-sandbox.mjs",
+        "sha256": "916f5e80976a94831d4e2e88df32c4ddc11f7e3c58dcf537550262937e50719e"
+      },
+      {
+        "path": "tests/support/recovery-drill.mjs",
+        "sha256": "51d98eb534483c5b4df648e3767946600e6830e964baed3b3cbc78c7ab46e195"
+      },
+      {
+        "path": "tests/support/object-recovery-drill.mjs",
+        "sha256": "5c8a0a15f0d62f93c9b08484969655b95cfed98499656678a12fb5893a351e56"
+      },
+      {
+        "path": "src/tooling/object-recovery.ts",
+        "sha256": "0c80eef324e9a1696574f12f9c67b496512008fdb3fde2d8f551c72ddf0fe772"
+      },
+      {
+        "path": "src/bookkeeping/expenses/expense-export.ts",
+        "sha256": "15899cfa9da57fc24a46492b98cb3d9337a7d586afa10a1c9949947bb29c0c2e"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-export.ts",
+        "sha256": "c0a009e060a9521a5e6aa85c0f723b4ffda29262e59f1eb1b76cce8e872f485c"
+      },
+      {
+        "path": "supabase/migrations/20261029050000_owner_expenses.sql",
+        "sha256": "8bf39dc6502ef1bba4e45cb04efe0afdbc2c6efe0d8b3a0d25948dcf37ffee18"
+      },
+      {
+        "path": "planning/OWNER_EXPENSES_SCHEMA49_ADOPTION.json",
+        "sha256": "2b1d6d9e3d12a268ca0eda3ee0cf1f8b3475c99de9482747f8582c4ec525a1dc"
+      },
+      {
+        "path": "planning/SECURITY_EXPORT_COVERAGE.json",
+        "sha256": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828"
+      },
+      {
+        "path": "release/compatibility.json",
+        "sha256": "1aae2fedb345424d07b947b42d5f4599017e142001dd57c146ec247bfcbb505e"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-source.sql",
+        "sha256": "762830384c324c2e0ff30d276d6d95bc8fdd0bc5c73d7158b29ca2e5dca7e589"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-coverage.json",
+        "sha256": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828"
+      },
+      {
+        "path": "src/bookkeeping/expenses/expense-source-csv.ts",
+        "sha256": "bc3d61c1c917906e49eb5e7ef42fabeaa27ca6250588dfe1aa89c4c5ace1f804"
+      },
+      {
+        "path": "src/bookkeeping/expenses/expense-source-history.ts",
+        "sha256": "990e95184052b2edaa08c7c3863e7f5dce7230bda03db2cba6db95c6379f570d"
+      },
+      {
+        "path": "tests/support/registered48-export-coverage.json",
+        "sha256": "344de6f7e3e81718767fabbc64779d69e98a3d1aea5d8faba4e86c43394ebfee"
+      },
+      {
+        "path": "tests/support/registered48-migration-checksums.json",
+        "sha256": "f56732ca0627858e495c217f83fe5795b6278fa28f9686c6960dc327592a65cb"
+      },
+      {
+        "path": "tests/support/registered48-compatibility.json",
+        "sha256": "b241eaafc6d21905edd7b86c05906990ccf7325fb56b56ce823a741dc4dc9d13"
+      },
+      {
+        "path": "tests/fixtures/owner-expenses-original-clients.ts",
+        "sha256": "2a281924ff0bff89c025b63bd487c5c3515bca840e84b501a9dac35d2abbb899"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-resolution.sql",
+        "sha256": "8ee7d81802aa9a7af302ed778e9ce90faab8b67fee2d0e50da4ab064684c8691"
+      },
+      {
+        "path": "src/client/pending-original-operation.ts",
+        "sha256": "4296946047d86212b616f70c2ada5e2c86a96907fbef75693bebad909319a555"
+      },
+      {
+        "path": "src/client/expenses.ts",
+        "sha256": "1a01bc659b0fc1b0670aa868ec191acfaa3c9dc0c0c0433e54c59f07792da779"
+      },
+      {
+        "path": "src/client/original-operations.ts",
+        "sha256": "2f5404b6095e77725abb1f73aef90d3698a286c951c45baac93ca4df547528ed"
+      },
+      {
+        "path": "src/security/original-operation-reference.ts",
+        "sha256": "eb761a61c57bac3a38229cea6545fee56f2a5b2691dd77beafc8f1d2f3e8c312"
+      },
+      {
+        "path": "planning/proposals/owner-expenses.sql",
+        "sha256": "aa8c72c489399404f82a29e8353b0e391972253d1a8a6aaff58ea4bcb831ba10"
+      },
+      {
+        "path": "planning/proposals/owner-expense-receipts.sql",
+        "sha256": "91ffaa86db818444dc76ff47bf0438262ae803980477db42d0f1ca2ac051cdfb"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-activity.sql",
+        "sha256": "50509e065d6b0ced2e58439d02fc68ff0bbcd91cd0b6ed631a502fee353f7ca5"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-original.sql",
+        "sha256": "075fac103f18fe7cb98eae1e935cd9e347795afc284e939324cf2a42825e4670"
+      },
+      {
+        "path": "planning/proposals/owner-expense-receipts-original.sql",
+        "sha256": "0fb4b96b0744e31a1e5cd0dba5a828be087c609f330abc192b50882a3d72bc37"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-contract.ts",
+        "sha256": "4a3d02177b422f75d7aca0c6dc325dec53890be4e3225277aa492e9711a303f0"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-directory.ts",
+        "sha256": "3333a2e66ce3a248d52a631bde0459e9664169f0033898ab65762ed63cd40960"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-http.ts",
+        "sha256": "7dd748053c201d360e86f7b1fccb17fd8458d550e3f21b002bed1104f9146fde"
+      },
+      {
+        "path": "src/client/expense-receipts.ts",
+        "sha256": "b309558ab76ccbdc4cc2068295220a74a6ca7807dba6f9694fb4401e8290e490"
+      },
+      {
+        "path": "src/client/pending-receipt.ts",
+        "sha256": "3d253a1afa0dd0aebc9e4b81c6acde5885bd27e9c619a694eb7866150f905d4c"
+      },
+      {
+        "path": "src/operations/appointment-hold-http.ts",
+        "sha256": "5c36e90109a8825172a249ee4ace831f18a8c93f57bb69ec0e4a0b8cbe74cfb9"
+      },
+      {
+        "path": "src/client/appointment-holds.ts",
+        "sha256": "241af73658f00e93c7e0335829fa50ddb20794e1b390a0a9595c229864083e9f"
+      },
+      {
+        "path": "supabase/migrations/20261028040000_appointment_proposals.sql",
+        "sha256": "5f21dce7af0944388e39c456c2a06614f63c111557958acf9528f311f25bf4fc"
+      },
+      {
+        "path": "planning/QUOTE_ACCEPTANCE_SCHEMA48_ADOPTION.json",
+        "sha256": "8d7b79a8975ef00f8a375d046ea6adcaf4c880005abef020163a18c5633161a8"
+      },
+      {
+        "path": "supabase/migrations/20261028050000_quote_acceptance.sql",
+        "sha256": "1010212bc3fe6b734a511f05968103a4f88de37452a3340b1d70da5f243819c7"
+      },
+      {
+        "path": "supabase/migration-checksums.json",
+        "sha256": "68ced1706217b33cf5ed6a8b87ccdaf4324b714e7e01fb26e283412c05de5871"
+      }
+    ]
+  },
+  "frozen48Regression": {
+    "tests": 8,
+    "passed": 8,
+    "failed": 0,
+    "logSha256": "e6da61686e0db4bba5953568be0e9e736716ceb13ec0551819f9bf24249e0d19",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "completeCrestAcceptance": false,
+    "scope": "Frozen48 quote acceptance/source/independent recovery preserved under repository49 without relabeling48 profile or changing its expected893-column schema.",
+    "sourceFiles": [
+      {
+        "path": "tests/integration/quote-commercial-registered.test.mjs",
+        "sha256": "f42f0a0f906671530581b9cebc130488be56dfd308c1517f770e976affb67c62"
+      },
+      {
+        "path": "tests/support/owner-expense49-candidate.mjs",
+        "sha256": "a98f794fbe42663db0df5d19c37c12e5aac2c43858601d560da93f14be47a738"
+      },
+      {
+        "path": "tests/support/migration-sandbox.mjs",
+        "sha256": "916f5e80976a94831d4e2e88df32c4ddc11f7e3c58dcf537550262937e50719e"
+      },
+      {
+        "path": "tests/support/recovery-drill.mjs",
+        "sha256": "51d98eb534483c5b4df648e3767946600e6830e964baed3b3cbc78c7ab46e195"
+      },
+      {
+        "path": "supabase/migrations/20261029050000_owner_expenses.sql",
+        "sha256": "8bf39dc6502ef1bba4e45cb04efe0afdbc2c6efe0d8b3a0d25948dcf37ffee18"
+      },
+      {
+        "path": "planning/OWNER_EXPENSES_SCHEMA49_ADOPTION.json",
+        "sha256": "2b1d6d9e3d12a268ca0eda3ee0cf1f8b3475c99de9482747f8582c4ec525a1dc"
+      },
+      {
+        "path": "planning/SECURITY_EXPORT_COVERAGE.json",
+        "sha256": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828"
+      },
+      {
+        "path": "release/compatibility.json",
+        "sha256": "1aae2fedb345424d07b947b42d5f4599017e142001dd57c146ec247bfcbb505e"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-source.sql",
+        "sha256": "762830384c324c2e0ff30d276d6d95bc8fdd0bc5c73d7158b29ca2e5dca7e589"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-coverage.json",
+        "sha256": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828"
+      },
+      {
+        "path": "src/bookkeeping/expenses/expense-source-csv.ts",
+        "sha256": "bc3d61c1c917906e49eb5e7ef42fabeaa27ca6250588dfe1aa89c4c5ace1f804"
+      },
+      {
+        "path": "src/bookkeeping/expenses/expense-source-history.ts",
+        "sha256": "990e95184052b2edaa08c7c3863e7f5dce7230bda03db2cba6db95c6379f570d"
+      },
+      {
+        "path": "tests/support/registered48-export-coverage.json",
+        "sha256": "344de6f7e3e81718767fabbc64779d69e98a3d1aea5d8faba4e86c43394ebfee"
+      },
+      {
+        "path": "tests/support/registered48-migration-checksums.json",
+        "sha256": "f56732ca0627858e495c217f83fe5795b6278fa28f9686c6960dc327592a65cb"
+      },
+      {
+        "path": "tests/support/registered48-compatibility.json",
+        "sha256": "b241eaafc6d21905edd7b86c05906990ccf7325fb56b56ce823a741dc4dc9d13"
+      },
+      {
+        "path": "tests/fixtures/owner-expenses-original-clients.ts",
+        "sha256": "2a281924ff0bff89c025b63bd487c5c3515bca840e84b501a9dac35d2abbb899"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-resolution.sql",
+        "sha256": "8ee7d81802aa9a7af302ed778e9ce90faab8b67fee2d0e50da4ab064684c8691"
+      },
+      {
+        "path": "src/client/pending-original-operation.ts",
+        "sha256": "4296946047d86212b616f70c2ada5e2c86a96907fbef75693bebad909319a555"
+      },
+      {
+        "path": "src/client/expenses.ts",
+        "sha256": "1a01bc659b0fc1b0670aa868ec191acfaa3c9dc0c0c0433e54c59f07792da779"
+      },
+      {
+        "path": "src/client/original-operations.ts",
+        "sha256": "2f5404b6095e77725abb1f73aef90d3698a286c951c45baac93ca4df547528ed"
+      },
+      {
+        "path": "src/security/original-operation-reference.ts",
+        "sha256": "eb761a61c57bac3a38229cea6545fee56f2a5b2691dd77beafc8f1d2f3e8c312"
+      },
+      {
+        "path": "planning/proposals/owner-expenses.sql",
+        "sha256": "aa8c72c489399404f82a29e8353b0e391972253d1a8a6aaff58ea4bcb831ba10"
+      },
+      {
+        "path": "planning/proposals/owner-expense-receipts.sql",
+        "sha256": "91ffaa86db818444dc76ff47bf0438262ae803980477db42d0f1ca2ac051cdfb"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-activity.sql",
+        "sha256": "50509e065d6b0ced2e58439d02fc68ff0bbcd91cd0b6ed631a502fee353f7ca5"
+      },
+      {
+        "path": "planning/proposals/owner-expenses-original.sql",
+        "sha256": "075fac103f18fe7cb98eae1e935cd9e347795afc284e939324cf2a42825e4670"
+      },
+      {
+        "path": "planning/proposals/owner-expense-receipts-original.sql",
+        "sha256": "0fb4b96b0744e31a1e5cd0dba5a828be087c609f330abc192b50882a3d72bc37"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-contract.ts",
+        "sha256": "4a3d02177b422f75d7aca0c6dc325dec53890be4e3225277aa492e9711a303f0"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-directory.ts",
+        "sha256": "3333a2e66ce3a248d52a631bde0459e9664169f0033898ab65762ed63cd40960"
+      },
+      {
+        "path": "src/bookkeeping/expenses/receipt-http.ts",
+        "sha256": "7dd748053c201d360e86f7b1fccb17fd8458d550e3f21b002bed1104f9146fde"
+      },
+      {
+        "path": "src/client/expense-receipts.ts",
+        "sha256": "b309558ab76ccbdc4cc2068295220a74a6ca7807dba6f9694fb4401e8290e490"
+      },
+      {
+        "path": "src/client/pending-receipt.ts",
+        "sha256": "3d253a1afa0dd0aebc9e4b81c6acde5885bd27e9c619a694eb7866150f905d4c"
+      },
+      {
+        "path": "src/operations/appointment-hold-http.ts",
+        "sha256": "5c36e90109a8825172a249ee4ace831f18a8c93f57bb69ec0e4a0b8cbe74cfb9"
+      },
+      {
+        "path": "src/client/appointment-holds.ts",
+        "sha256": "241af73658f00e93c7e0335829fa50ddb20794e1b390a0a9595c229864083e9f"
+      },
+      {
+        "path": "supabase/migrations/20261028040000_appointment_proposals.sql",
+        "sha256": "5f21dce7af0944388e39c456c2a06614f63c111557958acf9528f311f25bf4fc"
+      },
+      {
+        "path": "planning/QUOTE_ACCEPTANCE_SCHEMA48_ADOPTION.json",
+        "sha256": "8d7b79a8975ef00f8a375d046ea6adcaf4c880005abef020163a18c5633161a8"
+      },
+      {
+        "path": "supabase/migrations/20261028050000_quote_acceptance.sql",
+        "sha256": "1010212bc3fe6b734a511f05968103a4f88de37452a3340b1d70da5f243819c7"
+      },
+      {
+        "path": "supabase/migration-checksums.json",
+        "sha256": "68ced1706217b33cf5ed6a8b87ccdaf4324b714e7e01fb26e283412c05de5871"
+      }
+    ]
+  },
+  "localUnitAcceptance": {
+    "files": 253,
+    "tests": 7208,
+    "passed": 7208,
+    "failed": 0,
+    "logSha256": "37cf0a8bcdbd6e4699a3290e1eceac62de407a4363dfb5e37a938d6cd4065692"
+  },
+  "applicationConstruction": {
+    "syntheticOptInImplemented": true,
+    "defaultApiClosed": true,
+    "productionActivationDenied": true,
+    "ownerDeployment": false,
+    "genuineIntegratedBrowserVerified": false,
+    "physicalPhoneVerified": false,
+    "typecheck": true,
+    "focusedLint": true,
+    "productionBuild": true,
+    "buildLogSha256": "cd34cb7937bb56d7f5aa55f87af13812b60c2355d67f859f21ae5b6e6c2bdf71",
+    "unitFiles": 253,
+    "unitTests": 7213,
+    "unitPassed": 7213,
+    "unitFailed": 0,
+    "unitLogSha256": "460502a571bc0e46f77044444c0ca27e713cbf171171e7880d1fdef6c661f794",
+    "componentSuitesPassed": 4,
+    "engines": [
+      "chromium",
+      "webkit"
+    ],
+    "componentScope": "UI-only expense layout/lifetime/original review and access screen. Explicit HTTP fixtures are not app authentication/persistence proof.",
+    "sourceFiles": [
+      {
+        "path": "src/app/expenses/page.tsx",
+        "sha256": "91a51bb22007f3cd998e402e3b1daad09b396171072d3d27d95581b0ba41e6ff"
+      },
+      {
+        "path": "src/app/expenses/expenses.tsx",
+        "sha256": "4ff7eb8784a6beb305a19c49a6303448a6047afe83405c941e763b61721ed638"
+      },
+      {
+        "path": "src/app/expenses/expense-editor.tsx",
+        "sha256": "2ed0059021ac894366b9729128b0914fe4bc007e2c18e2791d494dc944df120d"
+      },
+      {
+        "path": "src/app/workspace-frame.tsx",
+        "sha256": "9a6a2857d2a6e7b3bef2929e679d9867634312190af74167ae68da2fff2ebeb6"
+      },
+      {
+        "path": "src/server/node-server.ts",
+        "sha256": "95f0e8b8188b74e19eb28b01cea14be3045057e69aff7acd123724b3aba72a51"
+      },
+      {
+        "path": "src/bookkeeping/expenses/expense-http.ts",
+        "sha256": "f4d3628c160dce0b5115e31ea1e5b5aac368adf86a70a1a9074a4bbda8a33d70"
+      },
+      {
+        "path": "tests/integration/owner-expenses-product-browser.test.mjs",
+        "sha256": "7a3c5cd9e943c374b885a28451e9f2effa42ca6095863c5f94f78b60a75d3880"
+      },
+      {
+        "path": "tests/integration/owner-expenses-access.test.mjs",
+        "sha256": "230db45115c843684d6d29a2c9a640e5da3a6a772ac61e1e4811a7688257edf2"
+      }
+    ],
+    "receiptAttachmentInApp": false
+  }
+}

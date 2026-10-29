@@ -1,7 +1,7 @@
 import {request as httpRequest} from 'node:http';
 import {describe,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn(),quotes:vi.fn(),quoteReview:vi.fn(),quoteCommercial:vi.fn(),holds:vi.fn()}));
+const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn(),quotes:vi.fn(),quoteReview:vi.fn(),quoteCommercial:vi.fn(),holds:vi.fn(),expenses:vi.fn()}));
 vi.mock('../../src/security/browser-session-flow.ts',()=>({createBrowserSessionFlow:()=>flow}));
 vi.mock('../../src/security/business-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/business-http.ts')>(),createBusinessHttp:()=>flow.business}));
 vi.mock('../../src/customer/customer-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-http.ts')>(),createCustomerHttp:()=>flow.customers}));
@@ -14,6 +14,7 @@ vi.mock('../../src/security/original-operation-http.ts',async importOriginal=>({
 vi.mock('../../src/commercial/service-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/service-http.ts')>(),createServiceHttp:()=>flow.services}));
 vi.mock('../../src/commercial/quote-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/quote-http.ts')>(),createQuoteHttp:()=>flow.quotes}));
 vi.mock('../../src/commercial/quote-review-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/quote-review-http.ts')>(),createQuoteReviewHttp:()=>flow.quoteReview}));
+vi.mock('../../src/bookkeeping/expenses/expense-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/bookkeeping/expenses/expense-http.ts')>(),createExpenseHttp:()=>flow.expenses}));
 vi.mock('../../src/operations/appointment-hold-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/operations/appointment-hold-http.ts')>(),createHoldHttp:()=>flow.holds}));
 vi.mock('../../src/commercial/quote-commercial-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/quote-commercial-http.ts')>(),createQuoteCommercialHttp:()=>flow.quoteCommercial}));
 import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../../src/server/node-server.ts';
@@ -225,4 +226,19 @@ it.each([false,true])('commercial routes have their own opt-in and never fall th
  bindApplicationHandler(server,{origin:local,environment:'test',syntheticQuotes:true,syntheticQuoteReview:true,syntheticQuoteCommercial:enabled,operationResolution:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
  try{for(const route of ['/api/business/quotes/commercial/read','/api/business/%71uotes/commercial/accept']){const response=await fetch(local+route,{method:'POST',body:'{}'});expect(response.status).toBe(enabled?200:404);expect(response.headers.get('cache-control')).toContain('no-store');await response.text();}expect(flow.quoteCommercial).toHaveBeenCalledTimes(enabled?2:0);expect(flow.quotes).not.toHaveBeenCalled();expect(flow.quoteReview).not.toHaveBeenCalled();expect(pages).not.toHaveBeenCalled();}
  finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+
+it('expense activation requires genuine synthetic workspace dependencies and stays forbidden in production',()=>{
+ const base={origin,environment:'test',syntheticExpenses:true,customers:true,operationResolution:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}},provider:{},tokens:{}}};
+ for(const patch of [{environment:'production'},{authentication:undefined},{business:undefined},{customers:false},{operationResolution:false},{syntheticExpenses:'yes'}]){const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,{...base,...patch} as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();}
+});
+it.each([undefined,false,true])('expense namespace and encoded aliases stay reserved with explicit activation=%s',async enabled=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn();flow.expenses.mockReset();flow.expenses.mockImplementation(async()=>new Response('{}',{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',customers:true,operationResolution:true,...enabled===undefined?{}:{syntheticExpenses:enabled},business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{for(const path of ['/api/business/expenses/context','/api/business/%65xpenses/context','/api/business/expenses%2Fcontext']){const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(enabled?200:503);expect(response.headers.get('cache-control')).toContain('no-store');await response.text();}expect(flow.expenses).toHaveBeenCalledTimes(enabled?3:0);expect(pages).not.toHaveBeenCalled();}finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+it('expense history uses its8MiB response boundary independently of customer and quote limits',async()=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn(),payload={syntheticProtocolFixture:'x'.repeat(1048576+17)};flow.expenses.mockImplementation(async()=>new Response(JSON.stringify(payload),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',customers:true,operationResolution:true,syntheticExpenses:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{const response=await fetch(local+'/api/business/expenses/history',{method:'POST',body:'{}'});expect(response.status).toBe(200);expect(await response.json()).toEqual(payload);expect(pages).not.toHaveBeenCalled();}finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });

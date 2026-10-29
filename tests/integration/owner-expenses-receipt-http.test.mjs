@@ -41,12 +41,14 @@ import {S3Client} from '@aws-sdk/client-s3';
 import {createBrowserSessionFlow} from '../../src/security/browser-session-flow.ts';
 import {transportFromIncomingMessage} from '../../src/security/trusted-transport.ts';
 const receiptSql=await readFile(new URL('../../planning/proposals/owner-expense-receipts.sql',import.meta.url),'utf8');
+const registered49=process.env.CREST_EXPENSE_TEST_PROFILE==='registered49';
+assert(process.env.CREST_EXPENSE_TEST_PROFILE===undefined||registered49);
 let sandbox,target,client,service,login,config,boundary,tokens,lifecycle,bootstrap,ownsRole=false;
 const signal=()=>new AbortController().signal;
 async function transaction(run){await client.query('BEGIN');try{const r=await run();await client.query('COMMIT');return r;}catch(e){await client.query('ROLLBACK');throw e;}}
 before(async()=>{
- sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target,await sandbox.prefix(48));
- const sql=await readFile(new URL('../../planning/proposals/owner-expenses.sql',import.meta.url),'utf8');await transaction(()=>client.query(sql));ownsRole=true;await transaction(()=>client.query(receiptSql));for(const file of ['owner-expenses-activity.sql','owner-expenses-original.sql','owner-expense-receipts-original.sql','owner-expenses-resolution.sql'])await transaction(async()=>client.query(await readFile(new URL('../../planning/proposals/'+file,import.meta.url),'utf8')));
+ sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target,await sandbox.prefix(registered49?49:48));
+ if(!registered49){const sql=await readFile(new URL('../../planning/proposals/owner-expenses.sql',import.meta.url),'utf8');await transaction(()=>client.query(sql));ownsRole=true;await transaction(()=>client.query(receiptSql));for(const file of ['owner-expenses-activity.sql','owner-expenses-original.sql','owner-expense-receipts-original.sql','owner-expenses-resolution.sql'])await transaction(async()=>client.query(await readFile(new URL('../../planning/proposals/'+file,import.meta.url),'utf8')));}
  login='crest_expense_http_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=password;config={connectionString:url.toString(),environment:'test'};
  service=await startRealAuthService(target);boundary=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},createLiveProviderSessionLookup(config));tokens=await createProviderTokenStore('synthetic-expense-http',[{id:'synthetic-expense-http',key:randomBytes(32)}]);lifecycle=createSessionLifecycle(config,boundary,tokens);bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
 },{timeout:240000});
