@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "registered": false,
+  "runtimeEnabled": false,
+  "existingMigrationCount": 45,
+  "sqlBytes": 30857,
+  "sqlSha256": "91ffaa86db818444dc76ff47bf0438262ae803980477db42d0f1ca2ac051cdfb",
+  "requiredExpenseSqlSha256": "aa8c72c489399404f82a29e8353b0e391972253d1a8a6aaff58ea4bcb831ba10",
+  "requiredExpenseFunctions": [
+    {
+      "owner": "crest_schema_owner",
+      "config": "search_path=pg_catalog, pg_temp",
+      "volatility": "i",
+      "tag": "valid",
+      "sha256": "a8de4a625d47dc34f1c5af2f1aeb8d69b08ae283eabfc55e09c647a16ca3ef6f",
+      "security": false,
+      "signature": "crest_private.valid_expense_payload(jsonb)"
+    },
+    {
+      "owner": "crest_schema_owner",
+      "config": "search_path=pg_catalog, pg_temp",
+      "volatility": "i",
+      "tag": "projection",
+      "sha256": "2bc3eb456f7db3738217a617a91f07c15498cc5d63f8f2dbf6603fc72c5b06cc",
+      "security": false,
+      "signature": "crest_private.expense_projection(crest.expense_revisions)"
+    },
+    {
+      "owner": "crest_expense_owner",
+      "config": "search_path=pg_catalog, pg_temp,row_security=on",
+      "volatility": "v",
+      "tag": "check",
+      "sha256": "7b6554151fdbff8d984c6e4a58f32507f69f530a6153f19598f076e584e39caf",
+      "security": true,
+      "signature": "crest_private.check_expense_append()"
+    },
+    {
+      "owner": "crest_expense_owner",
+      "config": "search_path=pg_catalog, pg_temp,row_security=on",
+      "volatility": "v",
+      "tag": "save",
+      "sha256": "97188fd01ae728d305ad72dd29529d07f8189297d38bda279e25f74c2459e152",
+      "security": true,
+      "signature": "crest_commands.save_expense(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,bigint,jsonb)"
+    },
+    {
+      "owner": "crest_expense_owner",
+      "config": "search_path=pg_catalog, pg_temp,row_security=on",
+      "volatility": "v",
+      "tag": "read",
+      "sha256": "3a5e3f3635798d063180e986aa1d96c4293d7ca79ca7f30c864408b8584fe9dc",
+      "security": true,
+      "signature": "crest_commands.read_expense_history(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,bigint)"
+    }
+  ],
+  "completeSourceExportProven": false,
+  "independentDatabaseRestoreProven": false,
+  "receiptByteArchiveComponentProven": true,
+  "productionWorkerComposed": false,
+  "genuineIntegratedBrowserProven": false
+}
