@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "registered": false,
+  "runtimeEnabled": false,
+  "baseMigrationCount": 48,
+  "sqlBytes": 6797,
+  "sqlSha256": "0fb4b96b0744e31a1e5cd0dba5a828be087c609f330abc192b50882a3d72bc37",
+  "appliedAfter": [
+    "owner-expenses.sql",
+    "owner-expense-receipts.sql",
+    "owner-expenses-activity.sql",
+    "owner-expenses-original.sql"
+  ],
+  "purpose": "Read the exact original receipt reservation/publication, preserving original epoch, operation kind, receipt/expense versions, retained metadata digest, result and audit; no retry, financial posting or session extension.",
+  "nativeAcceptance": {
+    "tests": 5,
+    "passed": 5,
+    "failed": 0,
+    "testSha256": "c3aa42e2d8639c79e50ca1ba7db50b09cffc9433d5bde786c67e74530164d4ce",
+    "logSha256": "be0c1d0485798d861d6ec4c46680ee62bf2e94105f11c1d625fe0f1d9a5fe2e2",
+    "sourceStable": true,
+    "ownedClusterCleaned": true
+  },
+  "genuineAuthAcceptance": {
+    "tests": 1,
+    "passed": 1,
+    "failed": 0,
+    "testSha256": "cbeca75ba23a8f8abc9678c0ec1caa55619d93a0e67c1971665bf344da6e5eee",
+    "logSha256": "cf21553097574bd62c8b73b74ccf3aa87a1d572fe6d5e20994ea6fe6d9c04fab",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "scope": "genuine provider MFA/restricted login, actual receipt client bundled from source, direct synthetic HTTP with an explicit browser-cookie/origin adapter, SDK private-file/archive pipeline and a decoder seam; not browser cookie/TLS, complete held-database restore or registered49 acceptance",
+    "exactPublicationOperationVerified": true,
+    "explicitPublicationEpochAndExpenseBound": true,
+    "opaqueReferenceBeforeDispatch": true,
+    "lostReplyAfterActualPublicationRecovered": true,
+    "duplicateReserveOrPublish": false
+  },
+  "registered49Verified": false,
+  "sharedRetirementIntegrated": false,
+  "productionActivation": false,
+  "preJournalGenuineAuthAcceptance": {
+    "tests": 1,
+    "passed": 1,
+    "failed": 0,
+    "testSha256": "a9241e0bbeef451577ee6575c1aabdd4cf290773bf29ba4d720065016392b9d1",
+    "logSha256": "ba519d808f60408146c402299ac669fc134670324c222392ae9a7c79ac989e10",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "scope": "genuine provider MFA, restricted login, synthetic direct loopback HTTP and actual SDK private-file/archive pipeline with an explicit decoder seam; not deployed TLS, complete held-database restore or integrated browser acceptance",
+    "exactPublicationOperationVerified": true
+  },
+  "receiptJournalConstruction": {
+    "storage": "per-tab opaque originals only; no File, private metadata, signed URL, amount or credentials",
+    "storeSha256": "3d253a1afa0dd0aebc9e4b81c6acde5885bd27e9c619a694eb7866150f905d4c",
+    "clientSha256": "b309558ab76ccbdc4cc2068295220a74a6ca7807dba6f9694fb4401e8290e490",
+    "httpSha256": "7dd748053c201d360e86f7b1fccb17fd8458d550e3f21b002bed1104f9146fde",
+    "sharedRetirementIntegrated": false,
+    "registered49Verified": false,
+    "unitAcceptance": {
+      "tests": 102,
+      "files": 5,
+      "passed": 102,
+      "failed": 0
+    },
+    "browserComponentAcceptance": {
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "layoutAndLifecyclePassed": true,
+      "keyboardOriginalCheckPassed": true,
+      "axePassed": true,
+      "realDevice": false,
+      "genuineIntegratedBrowser": false,
+      "sourceSha256": {
+        "src/app/expenses/expense-editor.tsx": "93cfce8cda4e2afa6023fba58d50ad3355734e56a6354eb2a621ba938d6450e5",
+        "src/app/expenses/expense-receipts.tsx": "47e65c32b5cd0e87dc7287356e7b038285601bda171b1195bc1a05c773296084",
+        "src/app/globals.css": "91ce329bafba22099fdf6dc1940861bb674aa9918b926d21b7bb07ee001a640f",
+        "tests/integration/owner-expenses-layout.test.mjs": "8240718f429c9b9a17f02700eb7ced6b04a1b11b1ebcc561828671f0c5b27a8f",
+        "tests/integration/owner-expenses-lifecycle.test.mjs": "099c878426240233e1fb9ae29b67048ccaf5c70d062a843c42813bec17f17aaf",
+        "tests/fixtures/owner-expenses-editor.tsx": "ff63186f9135c02436a187371a45f3b38286c0e18fea5294a834b785d2c756c7",
+        "tests/fixtures/owner-expenses-lifecycle.tsx": "8408a1ea4666c4757e49cb9ae80a13a75d952d28b6a58cc642b6df81a64fd797"
+      }
+    }
+  }
+}

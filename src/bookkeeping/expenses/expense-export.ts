@@ -1,0 +1,16 @@
+import {expenseCheck,expenseDate,expenseDollars,expenseHistory} from './expense-contract.ts';
+// This accountant handoff is deliberately separate from complete source export/backup.
+export function exportExpenses(input:Readonly<{businessId:string;from:string;through:string;history:unknown}>){
+ expenseCheck(expenseDate(input.from)&&expenseDate(input.through)&&input.from<=input.through);
+ const history=expenseHistory(input.history,input.businessId),escapes:{row:number;column:string}[]=[];
+ const columns=['expense_id','revision','is_current','status','paid_on','currency','amount_cents','amount_usd','reportable_amount_cents','reportable_amount_usd','category','description','vendor','payment_method','reference','notes','change_reason','recorded_at','operation_id','actor_id'];
+ const csvRows=[columns],included=history.latest.filter(r=>r.payload.paidOn>=input.from&&r.payload.paidOn<=input.through);
+ let total=0n;const categories=new Map<string,bigint>();
+ for(const row of included){if(!row.payload.voided){total+=BigInt(row.payload.amountCents);categories.set(row.payload.category,(categories.get(row.payload.category)??0n)+BigInt(row.payload.amountCents));}}
+ // All corrections are included, even when the payment date moved outside the period.
+ const current=new Map(included.map(r=>[r.expenseId,r.revision]));
+ for(const row of history.rows.filter(r=>current.has(r.expenseId))){const p=row.payload,isCurrent=current.get(row.expenseId)===row.revision,reportable=isCurrent&&!p.voided?p.amountCents:'0';csvRows.push([row.expenseId,row.revision,String(isCurrent),p.voided?'void':'recorded',p.paidOn,p.currency,p.amountCents,expenseDollars(p.amountCents),reportable,expenseDollars(reportable),p.category,p.description,p.vendor??'',p.paymentMethod,p.reference??'',p.notes??'',p.changeReason??'',row.recordedAt,row.operationId,row.actorId]);}
+ const csv=csvRows.map((row,index)=>row.map((value,column)=>{let cell=value;if(index>0&&(cell.startsWith("'")||['=','+','-','@'].includes(cell.trimStart()[0]??''))){cell="'"+cell;escapes.push({row:index+1,column:columns[column]!});}return '"'+cell.replaceAll('"','""')+'"';}).join(',')).join('\r\n')+'\r\n';
+ expenseCheck(new TextEncoder().encode(csv).byteLength<=8*1024*1024);
+ return Object.freeze({csv,metadata:JSON.stringify({profile:'crest.owner-cash-expenses.v1',businessId:input.businessId,from:input.from,through:input.through,currency:'USD',basis:'Owner-entered paid expenses; latest revision per expense; voids excluded from totals.',amountColumns:'amount_cents/amount_usd retain each historical amount. Sum reportable_amount_cents/reportable_amount_usd; superseded and void revisions contribute zero. is_current identifies the latest revision.',recordedExpenseCents:total.toString(),recordedExpenseUsd:expenseDollars(total.toString()),categories:Object.fromEntries([...categories].map(([k,v])=>[k,v.toString()])),currentRecordCount:included.length,revisionRowCount:csvRows.length-1,formulaEscapes:escapes,privacy:'Private business data. No receipt bytes or public receipt URLs.',limitations:'Not profit, tax deductibility, bank reconciliation, formal books, a complete source export, or a recoverable backup. No receipt completeness assertion.'},null,2)+'\n'});
+}

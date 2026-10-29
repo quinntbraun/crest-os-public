@@ -69,6 +69,11 @@ export async function writeCustomerResponse(outgoing:ServerResponse,response:Res
 export async function writeQuoteResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
   return writePrivateResponse(outgoing,response,signal,quoteResponseLimit);
 }
+// Expense history admits6MiB of retained JSON; its existing client accepts8MiB
+// including the response envelope. Customer/quote limits remain independent.
+export async function writeExpenseResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
+  return writePrivateResponse(outgoing,response,signal,8388608);
+}
 export async function writeOriginalOperationResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
   return writePrivateResponse(outgoing,response,signal,16384);
 }
