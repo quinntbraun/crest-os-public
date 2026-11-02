@@ -18,10 +18,11 @@ import {parseBookJobSave,parseCancelScheduledJobSave,requireBooking as check} fr
 import {parseChangeJobScheduleSave} from './confirmed-reschedule-contract.ts';
 import {parseFulfillmentModeSave} from './fulfillment-mode-contract.ts';
 import {parseJobListRequest,parseJobHistoryRequest} from './confirmed-job-read-contract.ts';
+import {parseBookingConflictRequest} from './booking-conflict-review-contract.ts';
 import {parsePendingChangesRequest} from './booking-context-contract.ts';
 type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
 const prefix='/api/business/scheduling/';
-const fields={original:['originalJson'],workspace:[],agreement:['familyId'],resources:['jobId'],pending:['afterCreatedAt','afterAppointmentId','pageSize'],list:['from','until','afterStart','afterJob','pageSize'],read:['jobId'],history:['jobId','throughVersion','afterVersion','pageSize'],'mode-history':['afterSequence','pageSize'],'mode-save':['schemaVersion','operationId','recoveryEpoch','expectedSequence','payload'],book:['schemaVersion','operationId','recoveryEpoch','jobId','expectedModeSequence','payload'],cancel:['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','payload'],reschedule:['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','payload']} as const;
+const fields={'slot-review':['schemaVersion','operatorId','rescheduledJobId','startAt','endAt','travelBeforeSeconds','travelAfterSeconds'],original:['originalJson'],workspace:[],agreement:['familyId'],resources:['jobId'],pending:['afterCreatedAt','afterAppointmentId','pageSize'],list:['from','until','afterStart','afterJob','pageSize'],read:['jobId'],history:['jobId','throughVersion','afterVersion','pageSize'],'mode-history':['afterSequence','pageSize'],'mode-save':['schemaVersion','operationId','recoveryEpoch','expectedSequence','payload'],book:['schemaVersion','operationId','recoveryEpoch','jobId','expectedModeSequence','payload'],cancel:['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','payload'],reschedule:['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','payload']} as const;
 type Route=keyof typeof fields;
 const mutation=(route:Route)=>['mode-save','book','cancel','reschedule'].includes(route);
 function failed(status:400|404|405|503){const r=privateJsonResponse({error:'SCHEDULING_REQUEST_FAILED'},status);if(status===405)r.headers.set('Allow','POST');return r;}
@@ -39,6 +40,7 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
    const input=mutation(route)?await readNestedJsonBody(bounded,fields[route],131072):await readFlatJsonBody(bounded,fields[route],16384);
    const original=route==='original'?parseSchedulingOriginal(parseOriginalOperationLookupWire(input,businessId)):undefined;
    const book=route==='book'?parseBookJobSave({...input,businessId}):undefined,cancel=route==='cancel'?parseCancelScheduledJobSave({...input,businessId}):undefined,reschedule=route==='reschedule'?parseChangeJobScheduleSave({...input,businessId}):undefined,mode=route==='mode-save'?parseFulfillmentModeSave({...input,businessId}):undefined;
+   const slotReview=route==='slot-review'?parseBookingConflictRequest({...input,businessId}):undefined;
    const list=route==='list'?parseJobListRequest({...input,businessId}):undefined,history=route==='history'?parseJobHistoryRequest({...input,businessId}):undefined,pending=route==='pending'?parsePendingChangesRequest({...input,businessId}):undefined;
    if(route==='agreement')check(customerUuid(input.familyId));if(route==='resources'||route==='read')check(customerUuid(input.jobId));if(route==='mode-history')check(customerVersion(input.afterSequence,true)&&typeof input.pageSize==='number'&&Number.isInteger(input.pageSize)&&input.pageSize>=1&&input.pageSize<=20);
    const sessionId=await csrf(bounded,cookie,signal);workStarted=true;if(!await admit(cookie,'ordinary',signal)){const r=privateJsonResponse({error:'SCHEDULING_REQUEST_LIMITED'},429);r.headers.set('Retry-After','60');return r;}check(!signal.aborted);
@@ -49,6 +51,7 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
    else if(route==='reschedule'){submitted=true;result=(await directory.reschedule(cookie,reschedule!,signal)).forServer();}
    else if(route==='mode-save'){submitted=true;result=(await modes.save(cookie,mode!,signal)).forServer();}
    else if(route==='original')result=(await directory.lookupOriginal(cookie,original!,signal)).forServer();
+   else if(route==='slot-review')result=(await directory.reviewSlot(cookie,slotReview!,signal)).forServer();
    else if(route==='agreement')result=(await directory.agreement(cookie,{businessId,familyId:input.familyId as string},signal)).forServer();
    else if(route==='resources')result=(await directory.resources(cookie,{businessId,jobId:input.jobId as string},signal)).forServer();
    else if(route==='pending')result=(await directory.pending(cookie,pending!,signal)).forServer();

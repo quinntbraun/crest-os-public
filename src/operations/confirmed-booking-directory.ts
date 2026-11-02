@@ -15,6 +15,8 @@ import type {JobListRequest,JobHistoryRequest} from './confirmed-job-read-contra
 import {parseSchedulingOriginal,parseSchedulingOriginalResult} from './scheduling-original-contract.ts';
 import {parseBookingWorkspace,parseBookingAgreement,parseJobResources,parsePendingChangesRequest,parsePendingChangesPage} from './booking-context-contract.ts';
 import type {PendingChangesRequest} from './booking-context-contract.ts';
+import {parseBookingConflictRequest,parseBookingConflictReview} from './booking-conflict-review-contract.ts';
+import type {BookingConflictRequest} from './booking-conflict-review-contract.ts';
 export class BookingDirectoryError extends Error{constructor(code:string){super(code);this.name='BookingDirectoryError';}}
 class PrivateValue<T>{#value:T;constructor(value:T){this.#value=value;}forServer(){return this.#value;}toJSON():never{throw new BookingDirectoryError('BOOKING_VALUE_PRIVATE');}}
 export function createBookingDirectory(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>){
@@ -26,6 +28,9 @@ export function createBookingDirectory(config:SessionDatabaseConfiguration,provi
  return Object.freeze({
   async workspace(credential:string,businessId:string,signal:AbortSignal){
    try{return await authorized(credential,businessId,signal,async(args,bounded)=>{const value=await database('SELECT crest_commands.read_booking_workspace($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid) AS result',args,bounded);requireBooking(!bounded.aborted);return new PrivateValue(parseBookingWorkspace(value,businessId));});}catch{throw new BookingDirectoryError('BOOKING_REQUEST_FAILED');}
+  },
+  async reviewSlot(credential:string,input:BookingConflictRequest,signal:AbortSignal){
+   try{const request=parseBookingConflictRequest(input);return await authorized(credential,request.businessId,signal,async(args,bounded)=>{const value=await database('SELECT crest_commands.review_booking_slot($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::timestamptz,$12::timestamptz,$13::integer,$14::integer) AS result',[...args,request.operatorId,request.rescheduledJobId,request.startAt,request.endAt,request.travelBeforeSeconds,request.travelAfterSeconds],bounded);requireBooking(!bounded.aborted);return new PrivateValue(parseBookingConflictReview(value,request));});}catch{throw new BookingDirectoryError('BOOKING_REQUEST_FAILED');}
   },
   async agreement(credential:string,input:{businessId:string;familyId:string},signal:AbortSignal){
    try{requireBooking(exact(input,['businessId','familyId'])&&customerUuid(input.businessId)&&customerUuid(input.familyId));const request=Object.freeze({...input});return await authorized(credential,request.businessId,signal,async(args,bounded)=>{const value=await database('SELECT crest_commands.read_booking_agreement($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid) AS result',[...args,request.familyId],bounded);requireBooking(!bounded.aborted);return new PrivateValue(parseBookingAgreement(value,request.businessId,request.familyId));});}catch{throw new BookingDirectoryError('BOOKING_REQUEST_FAILED');}

@@ -1,6 +1,6 @@
 import type {Proof} from './authentication';
 import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
-const routes=['original','workspace','agreement','resources','pending','list','read','history','mode-history','mode-save','book','cancel','reschedule'] as const;
+const routes=['slot-review','original','workspace','agreement','resources','pending','list','read','history','mode-history','mode-save','book','cancel','reschedule'] as const;
 export type SchedulingRoute=typeof routes[number];
 type Kind='input'|'not_submitted'|'recovery'|'limited'|'unknown'|'unavailable';
 export class SchedulingClientError extends Error{readonly kind:Kind;constructor(kind:Kind){super('SCHEDULING_REQUEST_FAILED');this.name='SchedulingClientError';this.kind=kind;}}

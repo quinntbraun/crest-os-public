@@ -10,6 +10,8 @@ import {parseChangeJobScheduleSave,parseRescheduledJobCommitted} from '../operat
 import type {ChangeJobScheduleSave} from '../operations/confirmed-reschedule-contract.ts';
 import {parseFulfillmentModeSave,parseFulfillmentModeCommitted,parseFulfillmentModeHistory} from '../operations/fulfillment-mode-contract.ts';
 import type {FulfillmentModeSave} from '../operations/fulfillment-mode-contract.ts';
+import {parseBookingConflictRequest,parseBookingConflictReview} from '../operations/booking-conflict-review-contract.ts';
+import type {BookingConflictRequest} from '../operations/booking-conflict-review-contract.ts';
 import {postScheduling,SchedulingClientError} from './scheduling-transport.ts';
 export {SchedulingClientError};
 function failure(error:unknown,kind:'input'|'unknown'|'unavailable'):never{throw error instanceof SchedulingClientError?error:new SchedulingClientError(kind);}
@@ -20,6 +22,7 @@ export const scheduling=Object.freeze({
   const workspace=parseBookingWorkspace({schemaVersion:v.schemaVersion,businessId:v.businessId,operatorId:v.operatorId,timezone:v.timezone,modeVersion:v.modeVersion},v.businessId as string);check(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null);
   return Object.freeze({context:Object.freeze({...workspace,...v.writeState==='ready'?{writeState:'ready' as const,recoveryEpoch:v.recoveryEpoch as string}:{writeState:'paused' as const,recoveryEpoch:null}}),binding:r.binding});
  }catch(e){failure(e,'unavailable');}},
+ async reviewSlot(input:BookingConflictRequest,proof:Proof,signal:AbortSignal){let request:BookingConflictRequest;try{request=parseBookingConflictRequest(input);}catch{throw new SchedulingClientError('input');}try{const {businessId,...body}=request,r=await postScheduling('slot-review',body,proof,signal);check(r.status===200&&businessId===request.businessId);return parseBookingConflictReview(r.value,request);}catch(e){failure(e,'unavailable');}},
  async agreement(businessId:string,familyId:string,proof:Proof,signal:AbortSignal){try{check(uuid(businessId)&&uuid(familyId));const r=await postScheduling('agreement',{familyId},proof,signal);check(r.status===200);return parseBookingAgreement(r.value,businessId,familyId);}catch(e){failure(e,'unavailable');}},
  async resources(businessId:string,jobId:string,proof:Proof,signal:AbortSignal){try{check(uuid(businessId)&&uuid(jobId));const r=await postScheduling('resources',{jobId},proof,signal);check(r.status===200);return parseJobResources(r.value,businessId,jobId);}catch(e){failure(e,'unavailable');}},
  async read(businessId:string,jobId:string,proof:Proof,signal:AbortSignal){try{check(uuid(businessId)&&uuid(jobId));const r=await postScheduling('read',{jobId},proof,signal);check(r.status===200);return parseJobDetail(r.value,businessId,jobId);}catch(e){failure(e,'unavailable');}},
