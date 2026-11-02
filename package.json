@@ -108,7 +108,8 @@
     "test:quote-commercial-registered": "node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-commercial-registered.test.mjs",
     "test:expenses-registered": "node --conditions=react-server --test --test-concurrency=1 tests/integration/owner-expenses-registered.test.mjs tests/integration/owner-expenses-registered-source.test.mjs tests/integration/owner-expenses-combined-recovery.test.mjs",
     "test:expenses-browser": "node --test --test-concurrency=1 tests/integration/owner-expenses-product-browser.test.mjs",
-    "test:booking-conflict-review-proposal": "node --test --test-concurrency=1 tests/integration/booking-conflict-review.test.mjs"
+    "test:booking-conflict-review-proposal": "node --test --test-concurrency=1 tests/integration/booking-conflict-review.test.mjs",
+    "test:booking-conflict-registered": "node --conditions=react-server --test --test-concurrency=1 tests/integration/booking-conflict51-candidate.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1156.0",

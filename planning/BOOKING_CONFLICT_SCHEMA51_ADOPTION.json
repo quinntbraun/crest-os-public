@@ -1,0 +1,65 @@
+{
+  "formatVersion": 1,
+  "repositoryRegistration": 51,
+  "executionStatus": "registered_source_native_and_chromium_verified_pending_linux_release_and_owner_upgrade",
+  "ownerDatabaseApplied": false,
+  "productionDatabaseApplied": false,
+  "productionActivation": "blocked",
+  "migration": {
+    "file": "20261102180000_booking_conflict_review.sql",
+    "sha256": "f3aa951660979be7d9974933640675c24570dda879aac800713592280c2ca831",
+    "bytes": 17873,
+    "registrySha256": "6460d57d51c41f89c7dffffc456610c730566fde414dd13352e9a1844fc1a4a4"
+  },
+  "previousSourceCommit": "082793c234602994b118da5f01cdce0e5349f983",
+  "previousRegistry": {
+    "frozenFixture": "tests/support/registered50-migration-checksums.json",
+    "sha256": "15f9e5245112299565911c3efa8dc198e34861976d0e4df1a3f0e38b06351b2e",
+    "migrationCount": 50
+  },
+  "previousCoverage": {
+    "frozenFixture": "tests/support/registered50-export-coverage.json",
+    "sha256": "fb780633e92ffff940849b6fc72c57eca60f7aa73d89dbc7c583ba65f8c90561"
+  },
+  "previousCompatibility": {
+    "frozenFixture": "tests/support/registered50-compatibility.json",
+    "sha256": "a185e34267a118ed0c2d2a77bbe6302f3f595059ecd3fb538d2b3a91ba1d394d"
+  },
+  "proposalBody": {
+    "path": "planning/proposals/booking-conflict-review.sql",
+    "offset": 433,
+    "bytes": 11848,
+    "sha256": "fd772ae0aa60515b1b7b4d0fe18ebe0072be4bcfaf7933646f0d791bbad93d84"
+  },
+  "sourceTablesAdded": [],
+  "sourceColumnsAdded": 0,
+  "physicalCoverageUnchanged": true,
+  "coverage": {
+    "tables": 68,
+    "physicalColumns": 1064,
+    "requiredColumns": 1054,
+    "excludedColumns": 10,
+    "partialEvidenceTables": 9
+  },
+  "candidateVerification": "planning/proposals/booking-conflict51-candidate-verification.json",
+  "originalRowsAndHistoryRewritten": false,
+  "reviewUsesExistingReservationWriterLock": true,
+  "runtimeFinancePostingEnabled": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "requiredAcceptance": [
+    "Registered51 coordinator/replay/refusal/source/grants and exact current-profile independent recovery, with frozen50 recovery retained.",
+    "Integrated initial booking and proposed-time confirmation review, explicit unknown travel acknowledgment and reasoned overlap override; stale interval/context clears review.",
+    "Genuine MFA/PostgreSQL/browser save/reload/history/uncertain-save flows; keyboard/Axe/visual four-width and required Linux engines.",
+    "Full new-source release gates before accepted immutable preview upgrade. Fresh independently restored50 point and saved-data preservation before owner51 adoption.",
+    "Full approved V1 scope, real-device, production/security/accounting/portability/recovery and Calendar gates remain."
+  ],
+  "proposalHistoryBody": {
+    "path": "planning/proposals/booking-conflict-history.sql",
+    "offset": 12398,
+    "bytes": 5417,
+    "sha256": "aab961591b23dd5a8104b050d0672ba9ad506db005f4f4fd1062507818188fbd"
+  },
+  "historyProtocol": "Scoped normalized review facts added to existing private history; original SQL payloads, audit/hash inputs and all source rows remain unchanged. Historical50 display archives retain explicit missing-review state.",
+  "integratedVerification": "planning/proposals/booking-conflict-ui-verification.json"
+}

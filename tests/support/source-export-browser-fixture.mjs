@@ -15,8 +15,9 @@ import {installProviderSchema} from './provider-schema.mjs';
 import {startRealAuthService,authResult} from './real-auth-service.mjs';
 import {buildSourceExportBrowserFixture} from './source-export-browser-build.mjs';
 const signal=()=>new AbortController().signal,sha=value=>createHash('sha256').update(value).digest('hex'),release='a'.repeat(40);
-export async function sourceExportBrowserFixture({product=false,workspace=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,bookingConflictReview=false}={}){
- assert.equal(typeof bookingConflictReview,'boolean');assert(!bookingConflictReview||scheduling,'proposed conflict reads require the explicit registered50 scheduling fixture');
+export async function sourceExportBrowserFixture({product=false,workspace=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,bookingConflictReview=false,additionalSchedulingAgreement=false}={}){
+ assert.equal(typeof additionalSchedulingAgreement,'boolean');assert(!additionalSchedulingAgreement||scheduling,'an additional accepted agreement requires scheduling');
+ assert.equal(typeof bookingConflictReview,'boolean');assert(!bookingConflictReview||scheduling,'conflict reads require the registered scheduling fixture');
  assert.equal(typeof scheduling,'boolean');assert(!scheduling||product&&workspace&&quotes&&quoteReview&&quoteCommercial,'scheduling requires the genuine accepted-quote product server');
  assert.equal(typeof expenses,'boolean');assert(!expenses||product&&workspace,'expenses require the genuine workspace product server');
  assert.equal(typeof appointmentHolds,'boolean');assert(!appointmentHolds||product&&workspace,'appointment proposals require the actual workspace product server');
@@ -36,8 +37,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   if(appointmentHolds){const adopted=await sandbox.apply(target,await sandbox.prefix(47));assert.equal(adopted.history.length,47);assert.deepEqual(adopted.history.slice(0,43),registered.history);}
   if(quoteCommercial){const adopted=await sandbox.apply(target,await sandbox.prefix(48));assert.equal(adopted.history.length,48);assert.deepEqual(adopted.history.slice(0,43),registered.history);}
   if(expenses){const adopted=await sandbox.apply(target,await sandbox.prefix(49));assert.equal(adopted.history.length,49);assert.deepEqual(adopted.history.slice(0,43),registered.history);}
-  if(scheduling){const adopted=await sandbox.apply(target,await sandbox.prefix(50));assert.equal(adopted.history.length,50);assert.deepEqual(adopted.history.slice(0,43),registered.history);}
-  if(bookingConflictReview){await client.query('BEGIN');try{await client.query(await readFile(new URL('../../planning/proposals/booking-conflict-review.sql',import.meta.url),'utf8'));await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}}
+  if(scheduling){const adopted=await sandbox.apply(target,await sandbox.prefix(51));assert.equal(adopted.history.length,51);assert.deepEqual(adopted.history.slice(0,43),registered.history);}
+  // Registered51 includes the reviewed reader; never apply its SQL a second time.
   const compiled=await buildSourceExportBrowserFixture(sandbox.workspace),runtime=await import(pathToFileURL(compiled.server).href);
   login='crest_export_browser_'+randomBytes(8).toString('hex');const secret=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+secret+"'");owned=true;await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=secret;const config={connectionString:url.toString(),environment:'test'};
   service=await startRealAuthService(target);const email='synthetic-browser-export-'+randomUUID()+'@example.com',password=randomBytes(32).toString('base64url'),user=authResult(await service.admin.admin.createUser({email,password,email_confirm:true}),'export_browser_user').user;assert(user?.id);
@@ -51,10 +52,10 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   const auth=(await runtime.createAuthenticationRuntime({database:config,provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},owner:{subject:user.id,factorId:factor.id},loginKey:randomBytes(32),ingress:{kind:'direct'},activeKeyId:'synthetic-browser',keys:[{id:'synthetic-browser',key:randomBytes(32)}]})).forServer(),lifecycle=runtime.createSessionLifecycle(config,auth.provider,auth.tokens),database=runtime.sessionDatabase(config);
   const issued=await lifecycle.login({email,password,factorId:factor.id,code:totp.generate()},{subject:user.id},false,signal()),credential=issued.cookieValueForResponse(),verified=await lifecycle.verify(credential,signal(),'background',true),hash=runtime.sessionCredentialHash(credential),jobId=randomUUID(),leaseId=randomUUID(),operation=randomUUID();let job;
   try{const args=[hash,verified.sessionId,actor,service.issuer,user.id,verified.provider.sessionId,new Date(verified.provider.expiresAt),business,epoch];await database.commandTransaction(q=>q('SELECT crest_commands.request_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS result',[...args,randomUUID(),jobId,release]),signal());job=(await database.commandTransaction(q=>q('SELECT crest_commands.claim_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) AS result',[...args,randomUUID(),jobId,'1',leaseId]),signal())).receipt.job;}finally{hash.fill(0);}
-  let bookingRequest,bookingFamilyId;
+  let bookingRequest,bookingFamilyId,additionalBookingRequest;
   if(scheduling){
    const web=await sandbox.connect(url.toString()),seedHash=runtime.sessionCredentialHash(credential);
-   try{await web.query('SET ROLE crest_web');const principal=await lifecycle.verify(credential,signal(),'background',true),parent=await createConfirmedBookingFixture({client,web,bootstrap})({hash:seedHash,session:principal.sessionId,actor,issuer:service.issuer,subject:user.id,provider:principal.provider.sessionId,deadline:new Date(principal.provider.expiresAt),business,epoch});bookingRequest=confirmedBookingRequest(parent);bookingFamilyId=parent.familyId;}
+   try{await web.query('SET ROLE crest_web');const principal=await lifecycle.verify(credential,signal(),'background',true),parent=await createConfirmedBookingFixture({client,web,bootstrap})({hash:seedHash,session:principal.sessionId,actor,issuer:service.issuer,subject:user.id,provider:principal.provider.sessionId,deadline:new Date(principal.provider.expiresAt),business,epoch});bookingRequest=confirmedBookingRequest(parent);bookingFamilyId=parent.familyId;if(additionalSchedulingAgreement){const other=await createConfirmedBookingFixture({client,web,bootstrap})({hash:seedHash,session:principal.sessionId,actor,issuer:service.issuer,subject:user.id,provider:principal.provider.sessionId,deadline:new Date(principal.provider.expiresAt),business,epoch});additionalBookingRequest=confirmedBookingRequest(other);}}
    finally{seedHash.fill(0);await web.end();}
   }
   const claim={formatVersion:1,profile:'crest.business-source-journal-bundle.v1',businessId:business,actorId:actor,exportJobId:jobId,recoveryEpoch:epoch,leaseId},observedAt=(await client.query("SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"+00:00\"') AS value")).rows[0].value,bytes=[product?Buffer.alloc(20000,97):Buffer.from('example'),Buffer.from('{"x":123}')];
@@ -87,6 +88,6 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   })();});
   }
   async function facts(){const out={};for(const table of ['export_jobs','export_job_snapshots','export_part_intents','export_part_verifications','export_job_completions','operations','audit_events'])out[table]=(await client.query('SELECT to_jsonb(v) AS value FROM crest_private.'+table+' v WHERE business_id=$1 ORDER BY to_jsonb(v)::text',[business])).rows;return out;}
-  return{origin,product,bookingRequest,bookingFamilyId,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,setupGets,facts,credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
+  return{origin,product,bookingRequest,bookingFamilyId,additionalBookingRequest,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,setupGets,facts,credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
  }catch(error){await close();throw error;}
 }

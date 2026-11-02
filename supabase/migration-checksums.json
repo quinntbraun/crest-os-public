@@ -250,6 +250,11 @@
       "version": "20261030160000",
       "file": "20261030160000_confirmed_bookings.sql",
       "sha256": "4691321409ddf4705f17c068dc105d360c593662198bdab0f78260f9435ba8bd"
+    },
+    {
+      "version": "20261102180000",
+      "file": "20261102180000_booking_conflict_review.sql",
+      "sha256": "f3aa951660979be7d9974933640675c24570dda879aac800713592280c2ca831"
     }
   ]
 }
