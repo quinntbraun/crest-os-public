@@ -4,14 +4,19 @@ import {sha256,validateMigrationSet} from '../../src/tooling/migrations';
 import type {MigrationRegistry} from '../../src/tooling/migrations';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage';
 import {expenseSourceTables} from '../../src/bookkeeping/expenses/expense-source-csv';
-import registry from '../../supabase/migration-checksums.json';
-import coverage from '../../planning/SECURITY_EXPORT_COVERAGE.json';
-import compatibility from '../../release/compatibility.json';
+import currentRegistry from '../../supabase/migration-checksums.json';
+import currentCoverage from '../../planning/SECURITY_EXPORT_COVERAGE.json';
+import registry from '../support/registered49-migration-checksums.json';
+import coverage from '../support/registered49-export-coverage.json';
+import compatibility from '../support/registered49-compatibility.json';
 import prior from '../support/registered48-migration-checksums.json';
 import priorCoverage from '../support/registered48-export-coverage.json';
 import priorCompatibility from '../support/registered48-compatibility.json';
 import adoption from '../../planning/OWNER_EXPENSES_SCHEMA49_ADOPTION.json';
 const bytes=(path:string)=>readFileSync(new URL('../../'+path,import.meta.url));
+it('preserves the exact historical49 registry and coverage within the current package',()=>{
+ expect(currentRegistry.migrations.slice(0,49)).toEqual(registry.migrations);expect(currentCoverage.tables.slice(0,coverage.tables.length)).toEqual(coverage.tables);
+});
 it('appends49 with exact frozen48 provenance and all seven reviewed bodies',()=>{
  expect(registry.migrations).toHaveLength(49);expect(registry.migrations.slice(0,48)).toEqual(prior.migrations);
  expect(()=>validateMigrationSet(registry as MigrationRegistry,new Map(registry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),prior as MigrationRegistry)).not.toThrow();

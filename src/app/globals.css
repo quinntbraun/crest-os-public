@@ -213,3 +213,14 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .expense-records > h2:first-child { margin-top:0; }
 .expense-records > article { padding-bottom:1rem; margin-bottom:1.5rem; border-bottom:1px solid var(--line); }
 @media (min-width:1200px) { .expense-layout { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:2rem; } }
+.schedule-date-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+.schedule-layout { display:grid; gap:2rem; margin-top:1.5rem; }
+.schedule-layout > * { min-width:0; }
+.schedule-reader .customer-list button { width:100%; text-align:left; white-space:normal; overflow-wrap:anywhere; }
+.schedule-reader details > summary { min-height:44px; padding:.75rem 0; cursor:pointer; }
+.schedule-detail { border-top:1px solid var(--line); padding-top:1.25rem; overflow-wrap:anywhere; }
+.schedule-detail address { font-style:normal; }
+.schedule-detail textarea { font-size:1rem; }
+.booking-time-fields { display:grid; gap:1rem; }
+@media (min-width:640px) { .booking-time-fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (min-width:1100px) { .schedule-layout { grid-template-columns:minmax(16rem,2fr) minmax(0,3fr); } .schedule-detail { border-top:0; border-left:1px solid var(--line); padding:0 0 0 2rem; } }

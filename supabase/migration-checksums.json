@@ -245,6 +245,11 @@
       "version": "20261029050000",
       "file": "20261029050000_owner_expenses.sql",
       "sha256": "8bf39dc6502ef1bba4e45cb04efe0afdbc2c6efe0d8b3a0d25948dcf37ffee18"
+    },
+    {
+      "version": "20261030160000",
+      "file": "20261030160000_confirmed_bookings.sql",
+      "sha256": "4691321409ddf4705f17c068dc105d360c593662198bdab0f78260f9435ba8bd"
     }
   ]
 }

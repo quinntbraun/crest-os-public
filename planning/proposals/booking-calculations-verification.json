@@ -1,0 +1,81 @@
+{
+  "formatVersion": 1,
+  "scope": "booking_arithmetic_and_time_data_only",
+  "recordedAt": "2026-10-30T07:57:44.853Z",
+  "existingMigrationCount": 49,
+  "registered": false,
+  "runtimeEnabled": false,
+  "productionActivation": false,
+  "completeCrestAcceptance": false,
+  "native": {
+    "finishedAt": "2026-10-30T07:52:28.032Z",
+    "sourceCommit": "60a276dc3a1850050bcfe8b0bf2015982b68f4ab",
+    "passed": 12,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "coverage": "Actual registered SQL time validation, PostgreSQL tstzrange travel overlap, numeric partition sums. No trusted booking transaction or browser claim."
+  },
+  "localChecks": {
+    "focusedCases": 43,
+    "newCases": 25,
+    "fullUnits": 7245,
+    "unitFiles": 257,
+    "types": true,
+    "lint": true,
+    "canonicalAndMigrations": true,
+    "productionNextAndServerBuild": true
+  },
+  "implementation": {
+    "allocation": "Complete explicit partition set; nonnegative exact bigint cents; each gross minus discount equals final; gross/discount/final totals equal accepted source; assigned and unassigned scope; unique zero-dollar partition identity; sealed copies. Pure arithmetic does not authorize sources, jobs or historical reallocation.",
+    "time": "Existing appointment validation is shared unchanged with booking. Exact UTC/local/offset/microsecond agreement and positive actual duration; gap rejected, fold explicit. Existing hold error surface retained.",
+    "conflicts": "Half-open exact microsecond intervals include each known before/after travel buffer. Unknown travel stays flagged. Explicit same-job reschedule exclusion, exact business/operator scope and duplicate identity rejection. Trusted operator-lock recheck and override evidence remain required."
+  },
+  "files": [
+    {
+      "path": "src/operations/scope-allocation-plan.ts",
+      "bytes": 3087,
+      "sha256": "34f1a966b8f9782c82abe8cf4c96b5e3d691350223a6bc0154d308b7975e1e92"
+    },
+    {
+      "path": "src/operations/schedule-time.ts",
+      "bytes": 2360,
+      "sha256": "78263abfbed481ff1c213b3a7234b4f914f4d3e7fc08db131c235f316e15c46f"
+    },
+    {
+      "path": "src/operations/schedule-conflicts.ts",
+      "bytes": 2938,
+      "sha256": "05fa3c39f9c3c140563fb64f60e7f0dad895257f922c8418eb7f58699d95dad3"
+    },
+    {
+      "path": "src/operations/appointment-hold-contract.ts",
+      "bytes": 4568,
+      "sha256": "add3892eb919721481c5ed33c68f37f06c57fe20f93956114a2be0af7f6a6867"
+    },
+    {
+      "path": "tests/unit/scope-allocation-plan.test.ts",
+      "bytes": 3583,
+      "sha256": "3003dad620c8bcb844c9e990901193a0a4cb74e1f03e1281f8ef3363fd3c1b87"
+    },
+    {
+      "path": "tests/unit/schedule-time.test.ts",
+      "bytes": 2403,
+      "sha256": "c83d575cfb64d7f0fb376030a873a2872897630ecfac2511356d7c1fc4b7bceb"
+    },
+    {
+      "path": "tests/unit/schedule-conflicts.test.ts",
+      "bytes": 3724,
+      "sha256": "a5b2820f6d99e7c458a90ad3819e1b520e9d5d8caf8fc98865fc9f82fa9504f7"
+    },
+    {
+      "path": "tests/integration/booking-calculations.test.mjs",
+      "bytes": 5549,
+      "sha256": "3bd8d120b519de6a046c6e3d344a480d8583033692626d7b05e9d7185807ca55"
+    }
+  ],
+  "remaining": [
+    "Implement canonical jobs/vehicles/encounters, appointment history and current reservation/override/operator locking.",
+    "Keep original accepted49 unassigned source rows immutable; add reviewed append-only allocation revisions/current projection and enforce accepted-source/customer/vehicle/retained-consumption invariants in the same trusted transaction.",
+    "Authorization, typed original-save recovery, complete source export/restore/compatibility and genuine booking UI/browser/device gates before exposure.",
+    "Full approved field/financial/portability/recovery/Google Calendar scope remains unfinished."
+  ]
+}

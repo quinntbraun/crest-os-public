@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 49,
+  "migrationCount": 50,
   "tables": [
     {
       "table": "crest.businesses",
@@ -1391,6 +1391,256 @@
         "recorded_at",
         "reservation",
         "candidate"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.fulfillment_mode_versions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "sequence",
+        "replaces_sequence",
+        "mobile_enabled",
+        "dropoff_enabled",
+        "pickup_return_enabled",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.jobs",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "customer_id",
+        "operator_actor_id",
+        "fulfillment_mode",
+        "mode_version_id",
+        "work_address_id",
+        "work_location_snapshot",
+        "state",
+        "current_appointment_id",
+        "first_work_at",
+        "completed_at",
+        "completion_outcome",
+        "version",
+        "updated_at",
+        "updated_by",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.job_vehicles",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "vehicle_id",
+        "customer_vehicle_id",
+        "vehicle_snapshot",
+        "customer_snapshot",
+        "pickup_address_id",
+        "return_address_id",
+        "pickup_location_snapshot",
+        "return_location_snapshot",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.job_encounters",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "customer_id",
+        "family_id",
+        "agreement_id",
+        "encounter_id",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.appointments",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "sequence",
+        "replaces_id",
+        "start_at",
+        "end_at",
+        "timezone",
+        "local_start",
+        "local_end",
+        "start_offset_minutes",
+        "end_offset_minutes",
+        "travel_before_seconds",
+        "travel_after_seconds",
+        "confirmation_state",
+        "customer_confirmation",
+        "contact_snapshot",
+        "unknown_travel_reviewed",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.operator_controls",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "operator_actor_id",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.schedule_reservations",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "appointment_id",
+        "operator_actor_id",
+        "blocked_interval",
+        "unknown_travel",
+        "override_id",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.schedule_overrides",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "appointment_id",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.schedule_override_conflicts",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "override_id",
+        "conflicting_appointment_id",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.allocation_plan_versions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "source_allocation_id",
+        "sequence",
+        "replaces_id",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.allocation_plan_parts",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "plan_id",
+        "stable_partition_id",
+        "job_id",
+        "allocation_state",
+        "gross_inclusive_cents",
+        "discount_inclusive_cents",
+        "amount_cents",
+        "scope_description",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.job_events",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "sequence",
+        "from_state",
+        "to_state",
+        "effective_at",
+        "reason",
+        "evidence",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

@@ -1,0 +1,142 @@
+{
+  "formatVersion": 1,
+  "scope": "unregistered_book_reschedule_proposal_confirmation_withdrawal_and_cancellation_over49",
+  "baseCommit": "79ab8e24ea97d5e6a00b3a8b53f2f2e33b5cc5da",
+  "startedAt": "2026-10-30T11:26:00.796Z",
+  "finishedAt": "2026-10-30T11:27:39.772Z",
+  "registeredSchemaVersion": 49,
+  "registeredLaterMigration": false,
+  "runtimeActivated": false,
+  "productionReady": false,
+  "executed": {
+    "postgresCommandReadAndScheduleLifecycleCases": 39,
+    "genuinePasswordTotpPrivateAdapterCases": 9,
+    "passed": 48,
+    "failed": 0,
+    "forcedBookingCancellationAndScheduleWaitsObserved": true,
+    "independentEncryptedExactSchemaRowsAndGrantsRestore": true,
+    "sourceStable": true,
+    "ownedClustersCleaned": true
+  },
+  "behavior": [
+    "An initial confirmed booking and each proposed/confirmed time change retain a server-generated confirmation draft. Prepared is never treated as sent. Internal quote notes and the rescheduling reason are not copied into the customer message body.",
+    "Propose retains the current confirmed appointment pointer and its original reservation. The proposed interval is not reserved. Explicit withdrawal retains the confirmed slot, preserves the proposed version and clears the active draft/pending marker.",
+    "Confirmation requires factual customer evidence for the exact current proposed appointment, fresh authority/mode/source/conflict/travel review, and atomic release/create of the reservation. Accepted assignment plans, job identity, money and zero-dollar scope remain unchanged.",
+    "Old reservation conflict evidence stays historical when later reasoned overlaps are added by another job. A new proposal does not retroactively rewrite the old reservation evidence.",
+    "Cancelling with a pending proposal appends after the full appointment chain, retains the proposed version, and cancels the last actually confirmed time.",
+    "Known stale/missing/malformed inputs and unacknowledged unknown travel leave no partial changes. Another job can book an unconfirmed proposed slot; confirmation recomputes conflicts and requires exact IDs and a reasoned override.",
+    "Two competing edits with the same expected version serialize to one commit and a version conflict. Same-operation duplicates return one retained original receipt. Waits are actually observed, not inferred from promises.",
+    "Genuine password/TOTP and fresh provider/local-session checks reach book, propose, confirm, cancel and original lookups through the private server adapter. Cross-tenant denial, recovery pause and normal sign-out preserve retained data.",
+    "Independent encrypted exact-schema/source-row/grant restore preserves the complete recorded proposal/confirmation/withdrawal/cancellation and original-operation source history. This is a database construction proof, not complete application recovery."
+  ],
+  "decision": {
+    "basis": "P06, BR06 and DATABASE appointment confirmation states",
+    "representation": "Derive the active pending change from the latest immutable appointment when it is proposed and later than jobs.current_appointment_id. Retain the job pointer to the confirmed appointment until explicit factual confirmation. No extra mutable pending-state table or column is introduced.",
+    "scope": "Before physical work only. Active-work interruption/closure and field transitions remain separate approved V1 work."
+  },
+  "limitations": [
+    "No registered50 migration or booking/scheduling HTTP/UI activation.",
+    "Typed calendar/detail/history retrieval, complete source/export closure, original-save retirement and legacy49 helper binding remain before integrated release.",
+    "No full current-source public CI, new browser/physical-iPhone acceptance, field/custody execution, finance posting or Google Calendar activation.",
+    "The accepted49 synthetic preview is unchanged. No real Crest data is approved."
+  ],
+  "files": [
+    {
+      "path": "planning/proposals/fulfillment-mode-storage.sql",
+      "sha256": "981e0b94c99df0d521bef32d14b12957d792ea766f13c5b1397efa8a8b9a2e5e"
+    },
+    {
+      "path": "planning/proposals/fulfillment-mode-commands.sql",
+      "sha256": "4bd4c2d4bd44f2817e160d72b815a34b526ac57b5ebc0713cfc8c15cbe087736"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-storage.sql",
+      "sha256": "e034d7307f88994ca88f3123ccd1049d2cdab97954cf157e17b7c6b27c29d2ed"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-history.sql",
+      "sha256": "dc13a14fc59b7be3988060d5eaf08ab5039bdf376b18ea14c824d4d0a74b691c"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-invariants.sql",
+      "sha256": "a52d5bd6cd715a6b316068fdf13d1723ee9277b901833c0ceb945f363a6209ed"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-job-invariants.sql",
+      "sha256": "39cb681b634aafdded8bc9bcf1d5f6cf82f848e64e82b23d4efa17fe6439a26a"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-commands.sql",
+      "sha256": "74ca7f070313d5463fbe6e3a6ae84486915d0e47bf3f4af7eb273b2b4db8968c"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-reads.sql",
+      "sha256": "e3fae0e64c204a38247aa2011afefd67faeff3c0925f917c2aa2f14d28262046"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-enable.sql",
+      "sha256": "b4d45ba8147d026f8f2d1d5ec45a0ebbf6f5fbe02bffd999a0a86f8808cfbfa3"
+    },
+    {
+      "path": "src/operations/confirmed-booking-contract.ts",
+      "sha256": "c3cef6e57929fe87dc3b8c610d7c94ad81e4a06d5be723ad50e56819be95b9e4"
+    },
+    {
+      "path": "src/operations/confirmed-booking-directory.ts",
+      "sha256": "3059602c72961cc767ba14d2e9850321920e1615d6af558432a29ee768407104"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-commands.test.mjs",
+      "sha256": "72b60d1274ef31eba297a7fdf6d4f46a36d97f3be0844bad67c7e6d1b71e89c8"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-auth.test.mjs",
+      "sha256": "cf87060161eece1d450ab8ff410b9e725f9fc724d86f2e79175505852729867c"
+    },
+    {
+      "path": "tests/support/confirmed-booking-fixture.mjs",
+      "sha256": "48fd5391013404bbb7e21f2a09275cc71f8f1a57c38e18d8ac6f3bfb74b54c96"
+    },
+    {
+      "path": "tests/support/migration-sandbox.mjs",
+      "sha256": "4c5842f1e71b9dfc1528674937133282d3d143ee6ebf84497c44165409e12325"
+    },
+    {
+      "path": "tests/fixtures/confirmed-booking.ts",
+      "sha256": "aa9391bbe53a30b71d246d6e4318fa9a5e8909d386529c58aac61064921ec7a6"
+    },
+    {
+      "path": "tests/unit/confirmed-booking-contract.test.ts",
+      "sha256": "a0ff070761efa7b283021efc68a06a07f6062bf228dd463655b45ef3a5950332"
+    },
+    {
+      "path": "package.json",
+      "sha256": "695f01250ff04bc6521433008f616dcf42d352169b94fabf3dec011873c995f2"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "5abe599410887be425dbea8bc3506ea7963adcb516d071752169d641fe1ae5f9"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-cancel.sql",
+      "sha256": "b62e5f6518da098880a6cdc5da276eed3209eb69372f594c7dcac435f0c5f5de"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-reschedule.sql",
+      "sha256": "e003e6bf2e24ae2b433e185fcba95922ac6255a26ac6009a6c62c1ec97b59784"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-reschedule-commands.sql",
+      "sha256": "4911d2d251d1f98ccea50e373ef17c755065a85d19d41a73c1e896745bc83e50"
+    },
+    {
+      "path": "src/operations/confirmed-reschedule-contract.ts",
+      "sha256": "97a7ff90c3478ede05a4f918d38b1c624f90dcc58955b52a2fa5cb0773ba3669"
+    },
+    {
+      "path": "tests/unit/confirmed-reschedule-contract.test.ts",
+      "sha256": "1a3ee5ff9bf57a8cc4222721cd0eeccbd870d0a2c876f949e228af378c92ab97"
+    }
+  ],
+  "privateReceiptSha256": "a40dccf93f78841b195e2c1e2739f9207fb64b13fd1161d025e483e831f9eb45"
+}

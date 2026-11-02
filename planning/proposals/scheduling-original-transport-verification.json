@@ -1,0 +1,168 @@
+{
+  "formatVersion": 1,
+  "scope": "unregistered_full_typed_scheduling_original_recovery_transport_and_real_unique_key_interleavings_over49",
+  "baseCommit": "90ce73dc8afe6fc4acf30f208a3d1d72dc956e7c",
+  "registeredSchemaVersion": 49,
+  "registeredLaterMigration": false,
+  "runtimeActivated": false,
+  "productionReady": false,
+  "executed": {
+    "postgresBookingHistoryAndTypedOriginalCases": 50,
+    "genuinePasswordTotpAdapterAndLoopbackHttpCases": 13,
+    "observedRetirementVersusOriginalInterleavings": 10,
+    "registered49FinancialRecoveryCases": 18,
+    "physicalSourceCsvCases": 7,
+    "totalPassed": 98,
+    "failed": 0,
+    "currentReferenceKinds": 27,
+    "historicalRegistered49ReferenceKinds": 22,
+    "sourceStableEachRun": true,
+    "ownedClustersCleaned": true,
+    "independentEncryptedExactSchemaRowsAndGrantsRestore": true
+  },
+  "runs": [
+    {
+      "kind": "current_scheduling_auth_http_and_races",
+      "startedAt": "2026-10-30T13:24:08.861Z",
+      "finishedAt": "2026-10-30T13:26:47.018Z",
+      "passed": 73,
+      "failed": 0,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "receiptSha256": "c031d1f84cba818d31b329e552730652ec7d73e0d7eda7d5502838dd21101a70",
+      "logSha256": "129049292e3f56c6d55b1704b0ca74fe9c2db6b475ac9a1352af5cfce127b84c"
+    },
+    {
+      "kind": "registered49_financial_recovery_compatibility",
+      "startedAt": "2026-10-30T13:24:07.838Z",
+      "finishedAt": "2026-10-30T13:24:30.492Z",
+      "passed": 18,
+      "failed": 0,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "receiptSha256": "b9d4d843862b64a9b21a22d815a1bd1f2116585a33e406727d3c31d1e01c92f1",
+      "logSha256": "3469e0dc102302dc402d7ee03d6fd79ef1be65149b9ef8f3a1e9c0a87f30414f"
+    },
+    {
+      "kind": "physical_source_and_csv_with_new_lookup_installed",
+      "startedAt": "2026-10-30T13:24:08.715Z",
+      "finishedAt": "2026-10-30T13:24:35.953Z",
+      "passed": 7,
+      "failed": 0,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "receiptSha256": "41bb704cc1d3d6f290a9cabc781d85b3a39aafdfb88613899f2df8a1dd38d49c",
+      "logSha256": "d9de27de1d585118b2db341bfab4558e349af12b89b974206e4fbfcf8ce9f282"
+    }
+  ],
+  "behavior": [
+    "Initial mode setup, subsequent mode save, job booking, before-work cancellation and propose/confirm/withdraw metadata have closed typed identities. Pending stores retain only IDs/versions/action and a per-tab binding, not drafts/contact/worksite/amounts/credentials. No automatic retries, expiry clearing or absent-result clearing.",
+    "The server reconstructs every full original identity from the verified retained command source. Matching an operation ID alone is insufficient. A changed expected mode, job version, previous proposed appointment or epoch cannot produce a matching typed original receipt.",
+    "Genuine password/TOTP and fresh provider/local-session verification reach original retirement, late original rejection, retained command lookup and controlled real loopback HTTP. Recorded observation is separate from a typed receipt. Cross-business, sign-out, CSRF/origin/cookie errors, extra fields, query aliases, wrong methods and disabled construction are exercised. Authorized original reads survive a recovery write pause.",
+    "All five original kinds execute both original-first and retirement-first with distinct restricted sessions. The observer requires an actual blocked transactionid wait, the same blocker and an already granted operations RowExclusiveLock before release. One shared operation key survives; the losing side returns original_recorded or operation conflict.",
+    "All27 TypeScript reference shapes match the new SQL validator. Registered49 retains its exact22 frozen shapes and rejects all five later scheduling shapes. The frozen corpus is independently checked against its existing Git blob and digest. Its18 financial recovery cases remain green.",
+    "Source retrieval with the new lookup installed still preserves all154 columns across12 source tables, original JSONB numeric scale, exact cents/microseconds/null/backslashes/formula/Unicode and held-snapshot consistency. Independent exact-schema/row/grant restore passes."
+  ],
+  "regressions": [
+    {
+      "cause": "Closed booking principal could call the extended reference validator but lacked execute on its two pure UUID/version helper functions.",
+      "fix": "Grant only those pure validation dependencies to the existing closed NOLOGIN booking principal; no web raw table or financial mutation grant."
+    },
+    {
+      "cause": "A legacy regression test was registered before awaited module setup had initialized its value helper and hooks.",
+      "fix": "Register after setup declarations; retain the same18-case legacy contract and its original assertions."
+    }
+  ],
+  "limitations": [
+    "HTTP is tested through explicit disposable direct loopback transport, not deployed TLS/browser cookie or physical-device acceptance. Ordinary app composition remains closed.",
+    "Save-review destinations/booking UI and runtime opt-in still require coordinated schema50/source/recovery adoption and complete browser/device acceptance.",
+    "Historical agreement packets remain immutable initial-acceptance views. A dedicated current-assignment view is needed for booking. Existing replacement-draft code already refuses an accepted quote; accepted amendments remain unfinished approved V1 scope.",
+    "Complete business source actor/operation/audit/commercial closure and legacy49 recovery helper binding remain before adoption. No real data, financial posting or Calendar activation."
+  ],
+  "files": [
+    {
+      "path": "planning/proposals/confirmed-bookings-resolution.sql",
+      "sha256": "5e94d68fe776e8fa42d7a15750cfedbbd3c75297998e1d07a61b0f5f194ce0ad"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-original.sql",
+      "sha256": "9a754b0a324000979736c8ffbb7a693ebdb46e62049786f34dfe147df518bba4"
+    },
+    {
+      "path": "src/security/original-operation-reference.ts",
+      "sha256": "e86103c5940919eda65de9b511bff69ba3d12a841a994919cc81cc0b5400df57"
+    },
+    {
+      "path": "src/operations/scheduling-original-contract.ts",
+      "sha256": "29a4e958bce83690477f7fea720042017aeac5a2afca07d84f4e987361616677"
+    },
+    {
+      "path": "src/operations/scheduling-http.ts",
+      "sha256": "74e3a0866ba5c42cc025db093c7077dbe7871e81d556d2d553727dfd665c5614"
+    },
+    {
+      "path": "src/operations/confirmed-booking-directory.ts",
+      "sha256": "05a2ee2e24f0fc0b3f84213ed2bbfd9e69452f755d0215a0ad68342cf7285af6"
+    },
+    {
+      "path": "src/client/pending-scheduling.ts",
+      "sha256": "b83b1efab82c34bd1712cdf844bbece8df5f6f26386bf65177611f6eddd4a010"
+    },
+    {
+      "path": "src/client/scheduling-original.ts",
+      "sha256": "d08bc3685c7dd4e7df76fd06dbb60fce002d657751a7371e5e0c16f1843e11c5"
+    },
+    {
+      "path": "src/client/pending-original-operation.ts",
+      "sha256": "d1215b0ee8a6d0f3394d9948a6a2d070e2c74874f6e2c85c915f859120b42ce8"
+    },
+    {
+      "path": "tests/fixtures/scheduling-original.ts",
+      "sha256": "5843b3ad6c99124cfb483b0c880ad07ca1542d303aa2a557bb1320c0b0773d27"
+    },
+    {
+      "path": "tests/support/original-operation-fixture.ts",
+      "sha256": "6e0dba17a49b513e2563e677ad50e98939b0523e03ebba4e32a7cf95d65d6143"
+    },
+    {
+      "path": "tests/support/registered49-original-operation-kinds.json",
+      "sha256": "eae410f29975bd326b74321e43ab8246527393672345912b7859d7f4bc808a55"
+    },
+    {
+      "path": "tests/unit/original-operation-reference.test.ts",
+      "sha256": "409b10474431579bfe08a1a3121d059881e5328b54251f7480d75bd1cb6d3ef3"
+    },
+    {
+      "path": "tests/unit/pending-original-operation.test.ts",
+      "sha256": "13e9bc9b186b6c9065da3444576c490985514c47a3a3c006a51130ce7b4c287a"
+    },
+    {
+      "path": "tests/unit/scheduling-original-recovery.test.ts",
+      "sha256": "f5316f219a1a03d7562b7343afd10d51567a026d5a14f0a6ac57d8be7c899c2b"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-commands.test.mjs",
+      "sha256": "a03a145db349ec1205863e01fddb7d9500e7f6b2b7b7a5568db41c0c46ce285f"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-auth.test.mjs",
+      "sha256": "e84813d77f10d932b61cacddadf8622e591ade0bba1661818ca883dbb3a5eb42"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-resolution-race.test.mjs",
+      "sha256": "e9f05244e1d191fdbedc9db5b4dbf24defc5af8b4c5f4eace834cafe73e47cef"
+    },
+    {
+      "path": "tests/integration/owner-expenses-resolution.test.mjs",
+      "sha256": "2c173710e1475bf743f3daa138c9694774644514fbe9cf328ffc4410b4ada919"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-source.test.mjs",
+      "sha256": "9cdb74a751ffb7325838da37a05af2b35bbd410c059aa1132ed29d38c7a6d8e9"
+    },
+    {
+      "path": "package.json",
+      "sha256": "98496945d48ad2c73f971cf96f266e35b70ff73cd0a760d51f13eb0f3fc8cac1"
+    }
+  ]
+}

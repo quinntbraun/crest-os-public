@@ -1,5 +1,6 @@
 import {createHoldHttp,holdFailureResponse} from '../operations/appointment-hold-http.ts';
 import 'server-only';
+import {createSchedulingHttp,schedulingFailureResponse} from '../operations/scheduling-http.ts';
 import {createServer} from 'node:http';
 import type {IncomingMessage,ServerResponse,Server} from 'node:http';
 import {createServer as createTlsServer} from 'node:https';
@@ -32,7 +33,7 @@ export type AuthenticationConfiguration=Readonly<{
   provider:Parameters<typeof createAuthenticationHttp>[1];tokens:Parameters<typeof createAuthenticationHttp>[2];
 }>;
 export type SourceExportConfiguration=Readonly<{appReleaseId:string;store:NonNullable<Parameters<typeof createSourceExportDownloadHttp>[3]>}>;
-export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>;customers?:boolean;vehicles?:boolean;associations?:boolean;leads?:boolean;leadConversions?:boolean;operationResolution?:boolean;syntheticCatalog?:boolean;syntheticQuotes?:boolean;syntheticQuoteReview?:boolean;syntheticQuoteCommercial?:boolean;syntheticAppointmentHolds?:boolean;syntheticExpenses?:boolean;sourceExports?:SourceExportConfiguration}>;
+export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>;customers?:boolean;vehicles?:boolean;associations?:boolean;leads?:boolean;leadConversions?:boolean;operationResolution?:boolean;syntheticCatalog?:boolean;syntheticQuotes?:boolean;syntheticQuoteReview?:boolean;syntheticQuoteCommercial?:boolean;syntheticAppointmentHolds?:boolean;syntheticExpenses?:boolean;syntheticScheduling?:boolean;sourceExports?:SourceExportConfiguration}>;
 export type PageHandler=(request:IncomingMessage,response:ServerResponse)=>Promise<void>;
 
 export function createBoundedNodeServer(tls?:NodeConfiguration['tls']):Server{
@@ -74,6 +75,9 @@ export async function writeQuoteResponse(outgoing:ServerResponse,response:Respon
 // including the response envelope. Customer/quote limits remain independent.
 export async function writeExpenseResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
   return writePrivateResponse(outgoing,response,signal,8388608);
+}
+export async function writeSchedulingResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
+  return writePrivateResponse(outgoing,response,signal,4194304);
 }
 export async function writeOriginalOperationResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
   return writePrivateResponse(outgoing,response,signal,16384);
@@ -125,8 +129,9 @@ async function writePrivateResponse(outgoing:ServerResponse,response:Response,si
 }
 
 export function bindApplicationHandler(server:Server,config:NodeConfiguration,pages:PageHandler):void{
-  const {origin,environment,authentication,business,customers,vehicles,associations,leads,leadConversions,operationResolution,sourceExports,syntheticCatalog,syntheticQuotes,syntheticQuoteReview,syntheticQuoteCommercial,syntheticAppointmentHolds,syntheticExpenses}=config;
+  const {origin,environment,authentication,business,customers,vehicles,associations,leads,leadConversions,operationResolution,sourceExports,syntheticCatalog,syntheticQuotes,syntheticQuoteReview,syntheticQuoteCommercial,syntheticAppointmentHolds,syntheticExpenses,syntheticScheduling}=config;
   const url=new URL(origin);
+  if(syntheticScheduling!==undefined&&(typeof syntheticScheduling!=='boolean'||syntheticScheduling&&(environment!=='test'||!authentication||!business||customers!==true||vehicles!==true||associations!==true||operationResolution!==true||syntheticQuoteCommercial!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(syntheticExpenses!==undefined&&(typeof syntheticExpenses!=='boolean'||syntheticExpenses&&(environment!=='test'||!authentication||!business||customers!==true||operationResolution!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(syntheticAppointmentHolds!==undefined&&(typeof syntheticAppointmentHolds!=='boolean'||syntheticAppointmentHolds&&(environment!=='test'||!authentication||!business||customers!==true||operationResolution!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(syntheticCatalog!==undefined&&(typeof syntheticCatalog!=='boolean'||syntheticCatalog&&(environment!=='test'||!authentication||!business)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
@@ -139,6 +144,7 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
     ||business&&!authentication||customers!==undefined&&typeof customers!=='boolean'||customers&&(!business||!authentication)||vehicles!==undefined&&typeof vehicles!=='boolean'||vehicles&&(!business||!authentication)||associations!==undefined&&typeof associations!=='boolean'||associations&&(!business||!authentication)||leadConversions!==undefined&&typeof leadConversions!=='boolean'||leadConversions&&!leads||leads!==undefined&&typeof leads!=='boolean'||leads&&(!business||!authentication)||authentication&&environment==='production'&&!config.tls||server.listenerCount('request'))throw new Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   const dispatch=authentication?createAuthenticationHttp({...authentication.configuration,origin,environment},authentication.provider,authentication.tokens):undefined;
   const dispatchBusiness=business&&authentication?createBusinessHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
+  const dispatchScheduling=syntheticScheduling===true&&business&&authentication?createSchedulingHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
   const dispatchExpenses=syntheticExpenses===true&&business&&authentication?createExpenseHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
   const dispatchHolds=syntheticAppointmentHolds===true&&business&&authentication?createHoldHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
   const dispatchServices=syntheticCatalog===true&&business&&authentication?createServiceHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
@@ -160,13 +166,14 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
     const controller=new AbortController();
     const abort=()=>controller.abort();incoming.once('aborted',abort);
     outgoing.once('close',()=>{if(!outgoing.writableFinished)abort();});
-    let reserved=false,businessRequest=false,serviceRequest=false,quoteRequest=false,holdRequest=false,expenseRequest=false,customerRequest=false,addressRequest=false,vehicleRequest=false,associationRequest=false,leadRequest=false,leadSourceRequest=false,originalOperationRequest=false,exportRequest=false,exportDownloadRequest=false;
+    let reserved=false,businessRequest=false,serviceRequest=false,quoteRequest=false,holdRequest=false,expenseRequest=false,schedulingRequest=false,customerRequest=false,addressRequest=false,vehicleRequest=false,associationRequest=false,leadRequest=false,leadSourceRequest=false,originalOperationRequest=false,exportRequest=false,exportDownloadRequest=false;
     try{
       if(incoming.rawHeaders.length>256)throw new Error();
       const target=requestTarget(incoming.url,origin);
       businessRequest=target.business;
       const decoded=decodeURIComponent(target.url.pathname);customerRequest=target.business&&(decoded==='/api/business/customers'||decoded.startsWith('/api/business/customers/'));
       serviceRequest=target.business&&(decoded==='/api/business/services'||decoded.startsWith('/api/business/services/'));
+      schedulingRequest=target.business&&(decoded==='/api/business/scheduling'||decoded.startsWith('/api/business/scheduling/'));
       expenseRequest=target.business&&(decoded==='/api/business/expenses'||decoded.startsWith('/api/business/expenses/'));
       holdRequest=target.business&&(decoded==='/api/business/appointment-holds'||decoded.startsWith('/api/business/appointment-holds/'));
       quoteRequest=target.business&&(decoded==='/api/business/quotes'||decoded.startsWith('/api/business/quotes/'));
@@ -180,7 +187,7 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
       exportDownloadRequest=exportRequest&&(decoded==='/api/business/exports/downloads'||decoded.startsWith('/api/business/exports/downloads/')||decoded==='/api/business/exports/file'||decoded.startsWith('/api/business/exports/file/'));
       const exportFileRequest=decoded==='/api/business/exports/file';
       if(!target.authentication&&!target.business){await pages(incoming,outgoing);return;}
-      const handler=expenseRequest?dispatchExpenses:holdRequest?dispatchHolds:quoteRequest?dispatchQuotes:serviceRequest?dispatchServices:exportRequest?(exportDownloadRequest?dispatchExportDownloads:dispatchExports):originalOperationRequest?dispatchOriginalOperations:leadSourceRequest?dispatchLeadSources:leadRequest?dispatchLeads:associationRequest?dispatchAssociations:vehicleRequest?dispatchVehicles:addressRequest?dispatchAddresses:customerRequest?dispatchCustomers:target.business?dispatchBusiness:dispatch,failure=expenseRequest?expenseFailureResponse:holdRequest?holdFailureResponse:quoteRequest?quoteFailureResponse:serviceRequest?serviceFailureResponse:exportRequest?(exportDownloadRequest?sourceExportDownloadFailureResponse:sourceExportFailureResponse):originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:target.business?businessFailureResponse:browserFailureResponse;
+      const handler=schedulingRequest?dispatchScheduling:expenseRequest?dispatchExpenses:holdRequest?dispatchHolds:quoteRequest?dispatchQuotes:serviceRequest?dispatchServices:exportRequest?(exportDownloadRequest?dispatchExportDownloads:dispatchExports):originalOperationRequest?dispatchOriginalOperations:leadSourceRequest?dispatchLeadSources:leadRequest?dispatchLeads:associationRequest?dispatchAssociations:vehicleRequest?dispatchVehicles:addressRequest?dispatchAddresses:customerRequest?dispatchCustomers:target.business?dispatchBusiness:dispatch,failure=schedulingRequest?schedulingFailureResponse:expenseRequest?expenseFailureResponse:holdRequest?holdFailureResponse:quoteRequest?quoteFailureResponse:serviceRequest?serviceFailureResponse:exportRequest?(exportDownloadRequest?sourceExportDownloadFailureResponse:sourceExportFailureResponse):originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:target.business?businessFailureResponse:browserFailureResponse;
       if(!handler||activeProtected>=32){await writeAuthenticationResponse(outgoing,failure(503),controller.signal);return;}
       activeProtected++;reserved=true;
       const peer=transportFromIncomingMessage(incoming),headers=new Headers();
@@ -189,9 +196,9 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
         ...(!['GET','HEAD'].includes(incoming.method??'')?{body:Readable.toWeb(incoming),duplex:'half'}:{})} as RequestInit);
       const response=await handler(request,peer);
       if(exportRequest)await writeSourceExportResponse(outgoing,response,controller.signal,exportFileRequest);
-      else await (expenseRequest?writeExpenseResponse:holdRequest?writeCustomerResponse:quoteRequest?writeQuoteResponse:originalOperationRequest?writeOriginalOperationResponse:serviceRequest||customerRequest||vehicleRequest||associationRequest||leadRequest||leadSourceRequest?writeCustomerResponse:writeAuthenticationResponse)(outgoing,response,controller.signal);
+      else await (schedulingRequest?writeSchedulingResponse:expenseRequest?writeExpenseResponse:holdRequest?writeCustomerResponse:quoteRequest?writeQuoteResponse:originalOperationRequest?writeOriginalOperationResponse:serviceRequest||customerRequest||vehicleRequest||associationRequest||leadRequest||leadSourceRequest?writeCustomerResponse:writeAuthenticationResponse)(outgoing,response,controller.signal);
     }catch{
-      if(!outgoing.destroyed&&!outgoing.headersSent)try{await writeAuthenticationResponse(outgoing,(expenseRequest?expenseFailureResponse:holdRequest?holdFailureResponse:quoteRequest?quoteFailureResponse:serviceRequest?serviceFailureResponse:exportRequest?(exportDownloadRequest?sourceExportDownloadFailureResponse:sourceExportFailureResponse):originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:businessRequest?businessFailureResponse:browserFailureResponse)(),controller.signal);}catch{outgoing.destroy();}
+      if(!outgoing.destroyed&&!outgoing.headersSent)try{await writeAuthenticationResponse(outgoing,(schedulingRequest?schedulingFailureResponse:expenseRequest?expenseFailureResponse:holdRequest?holdFailureResponse:quoteRequest?quoteFailureResponse:serviceRequest?serviceFailureResponse:exportRequest?(exportDownloadRequest?sourceExportDownloadFailureResponse:sourceExportFailureResponse):originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:businessRequest?businessFailureResponse:browserFailureResponse)(),controller.signal);}catch{outgoing.destroy();}
       else outgoing.destroy();
     }finally{if(reserved)activeProtected--;incoming.off('aborted',abort);}
   })();});

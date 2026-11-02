@@ -1,0 +1,10 @@
+import {randomUUID} from 'node:crypto';
+import {confirmedJobRecords} from './confirmed-job-records.ts';
+import {customerFixture} from '../support/customer-fixture.ts';
+export function bookingContextFixture(){
+ const saved=confirmedJobRecords(),{q,head}=saved,agreementId=randomUUID(),familyId=randomUUID();
+ const sources=q.payload.allocationPlans.map((plan,index)=>{const part=plan.parts[0]!;return {sourceAllocationId:plan.sourceAllocationId,entitlementId:randomUUID(),entitlementVersionId:randomUUID(),agreementId,sourcePartitionId:part.partitionId,vehicleId:index===0?q.payload.vehicles[0]!.vehicleId:null,jobWide:index!==0,grossInclusiveCents:part.grossInclusiveCents,discountInclusiveCents:part.discountInclusiveCents,amountCents:part.amountCents,scopeDescription:part.scopeDescription,planId:null,planSequence:'0',parts:[{...part,jobId:null,state:'unassigned'}]};});
+ const agreement={schemaVersion:1,businessId:q.businessId,familyId,familyVersion:'5',agreementId,agreementVersion:'1',customer:customerFixture({id:q.payload.customerId,business_id:q.businessId}),vehicles:[{id:q.payload.vehicles[0]!.vehicleId,label:'Synthetic sedan',version:'1',archivedAt:null}],sources};
+ const proposedAt=new Date(new Date(head.job.updated_at).getTime()+1000).toISOString().replace(/\.(\d{3})Z$/,'.$1000Z');Object.assign(head.job,{version:'2',updated_at:proposedAt});Object.assign(head.latestAppointment,{id:randomUUID(),sequence:'2',replaces_id:head.appointment.id,confirmation_state:'proposed',customer_confirmation:null,reason:'Customer requested a different time',operation_id:randomUUID(),created_at:proposedAt,start_at:'2027-02-12T14:00:00.654321Z',end_at:'2027-02-12T15:00:00.654321Z',local_start:'2027-02-12T14:00:00.654321',local_end:'2027-02-12T15:00:00.654321'});Object.assign(head.confirmationDraft,{appointmentId:head.latestAppointment.id,confirmationState:'proposed',startAt:head.latestAppointment.start_at,endAt:head.latestAppointment.end_at});
+ return {...saved,agreement,proposedAt,pending:{schemaVersion:1,businessId:q.businessId,items:[{proposedAt,head}],hasMore:false}};
+}

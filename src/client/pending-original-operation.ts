@@ -1,4 +1,6 @@
 import {appointmentHolds} from './appointment-holds';
+import {createPendingSchedulingStore} from './pending-scheduling';
+import {lookupSchedulingOriginal} from './scheduling-original';
 import {createExpenseClient} from './expenses';
 import {createReceiptClient} from './expense-receipts';
 import {createPendingExpenseStore} from './pending-expense';
@@ -83,6 +85,7 @@ function target<T extends {businessId:string;binding:string}>(
 }
 export function openPendingOriginalOperation(kind:OriginalOperationKind,storage:StorageAccess,businessId:string):PendingOriginalOperation|null{
  switch(kind){
+  case 'operations.fulfillment_modes.initialize':case 'operations.fulfillment_modes.save':case 'operations.job.book':case 'operations.job.cancel':case 'operations.job.reschedule':return target(createPendingSchedulingStore(storage,kind),kind,businessId,p=>p.reference,(p,proof,signal)=>lookupSchedulingOriginal({schemaVersion:1,businessId:p.businessId,commandType:kind,reference:p.reference},proof,signal));
   case 'bookkeeping.expense.save':return target(createPendingExpenseStore(storage),kind,businessId,p=>p.reference,async(p,proof,signal)=>{
    const client=createExpenseClient(async()=>proof),context=await client.context(signal);
    if(context.businessId!==p.businessId)throw new PendingOriginalOperationError();
