@@ -1,5 +1,7 @@
 # Usable release milestones and execution reporting
 
+Current delivery, Nov2: immutable accepted50/source236bd/full394 now runs on the laptop with confirmed booking, explicit two-visit scope division, saved Schedule/history and before-work appointment changes/cancellation. All release groups/Linux browser/container/artifact gates passed; fresh encrypted49 independent restore and exact preservation of40 existing business tables precede the verified deployed genuine MFA/Schedule/CRM/expense-history walkthrough. [Delivery proof](proposals/confirmed-bookings-delivery50-verification.json). New mode settings remain separate construction awaiting their own release. The private NetBird route is responding after owner sign-in; actual-device acceptance is deferred by the owner. Full V1 scope and real-use gates below remain; earlier accepted49 statements are historical where superseded by this delivery.
+
 2026-10-24. Execution map under canonical ROADMAP/TESTING/EXPORTS_AND_BACKUPS/SECURITY. No V1 requirement, security/accounting invariant, M/D/N/R gate, production approval or paid service authorization changes. Use actual source/UI/CI evidence rather than test counts or merged-PR counts to measure product progress.
 
 ## Current execution state (2026-10-30)

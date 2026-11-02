@@ -1,0 +1,81 @@
+{
+  "formatVersion": 1,
+  "scope": "owned_synthetic_confirmed_schedule50_delivery",
+  "verifiedAt": "2026-11-02T19:58:31.521Z",
+  "localSource": "89bb02d9110cc8cfa4a77661118bc51afa58202c",
+  "publicSource": "236bd81616e8e79b213b730c4f1d44e55b5728d3",
+  "tree": "84f6d683392efe0fbb8066db8f19569b60c08b28",
+  "testedMerge": "93b8dd53effb3c915de3683881008fe93a5f31b1",
+  "testedMergeTreeVerified": true,
+  "fullRun": 41502471588,
+  "fullRunNumber": 394,
+  "allFourReleaseGroupsPassed": true,
+  "expenseRun": 41502469853,
+  "commercialRun": 41502469798,
+  "focusedBothPassed": true,
+  "linuxChromiumAndWebkitPassed": true,
+  "artifactIds": [
+    13175115596,
+    13172064666,
+    13170169918
+  ],
+  "productionBuildSourceFilesVerified": 1267,
+  "migration": {
+    "from": 49,
+    "to": 50,
+    "registrySha256": "8c7daa355264e2485b07f94489a0b1faddaf2a0496c8a5aad52285e5e17de93a",
+    "existingBusinessSourceTables": 40,
+    "exactOriginalRowTextPreserved": true,
+    "existingCredentialsAndCertificatesPreserved": true,
+    "resetPerformed": false
+  },
+  "recovery": {
+    "encrypted": true,
+    "independentlyRestored": true,
+    "sourceTables": 84,
+    "freshQuiescentPoint": true,
+    "sourceCredentialsProvidedToRestore": false,
+    "ownedClusterCleaned": true,
+    "receiptSha256": "47bd15fe027151aec809fe9cc02cce43e48bbdbe694acfb698e89d64db67cc0a",
+    "completeBackup": false,
+    "productionBackup": false
+  },
+  "deployed": {
+    "genuineMfa": true,
+    "scheduleRead": true,
+    "refreshAndDateErrorRecovery": true,
+    "existingCrmRead": true,
+    "existingExpenseHistoryRead": true,
+    "businessMutationsPerformed": false,
+    "diagnosticSessionClosed": true,
+    "pinnedTls": true,
+    "screenshotsWidths": [
+      360,
+      390,
+      768,
+      1440
+    ],
+    "screenshotsInspected": true,
+    "axeWcag2a2aa21aaViolations": 0,
+    "overflow": false,
+    "realDeviceTest": false,
+    "privateResult": ".local/delivered-schedule50-result.json"
+  },
+  "start": {
+    "laptop": "https://127.0.0.1:4319/",
+    "launcher": "project-root Start Crest OS.cmd",
+    "immutableStage": ".local/scheduling-build-89bb02d",
+    "privatePhoneOrigin": "configured private NetBird origin responding with pinned TLS after owner sign-in",
+    "phoneAcceptance": false,
+    "ownerDeviceTest": "owner chose to test later"
+  },
+  "firstDeployedAttempt": {
+    "result": "genuine MFA passed; diagnostic used nonexistent Primary navigation label",
+    "correction": "use actual Main navigation; same deployed source and unchanged assertions pass",
+    "businessWrites": false
+  },
+  "newModesUiIncluded": false,
+  "realCrestUseReady": false,
+  "financialPostingEnabled": false,
+  "spend": 0
+}
