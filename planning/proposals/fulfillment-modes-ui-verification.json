@@ -1,0 +1,105 @@
+{
+  "formatVersion": 1,
+  "scope": "synthetic_service_arrangement_settings_and_retained_history",
+  "recordedAt": "2026-11-02T19:40:30.086Z",
+  "parentLocalSource": "89bb02d9110cc8cfa4a77661118bc51afa58202c",
+  "sourceFiles": {
+    "src/client/fulfillment-mode-controller.ts": "d2cf40812fba0f8db17e2f4d9bd331f59a6bdeb50a225e0193a91217aa8579fd",
+    "src/operations/fulfillment-mode-archive.ts": "30dc4b8437afbc3259aa9d5d5f78c5df08d39442a5e6eee5a7a4b0e9ae213a1d",
+    "src/app/schedule/modes/page.tsx": "50139ab03ab3f59d5c108cc20adfa4148b85ff7fb46133d992e54dc79496ba49",
+    "src/app/schedule/modes/screen.tsx": "8bcacfe19bfdbdec41f2eae29014580318a7bb7b30a7089462ffe7507db96b77",
+    "tests/fixtures/fulfillment-modes.ts": "df57e914dfd382fea48403f93be55a2721495817b2d144c658b1d7bc6137f5ed",
+    "tests/unit/fulfillment-mode-controller.test.ts": "363810e31cf801c7976d414b7d6c7d95776c3586529106717e79a6c066c08574",
+    "tests/unit/fulfillment-mode-archive.test.ts": "0c210dec6a165ff9320b9ff3f47b90af2a951a9d42a6ebcf645b270147c26bdd",
+    "tests/integration/fulfillment-modes-product-browser.test.mjs": "68f310bacc72ff7626519e50e2f86be6ea67cbea25b09ff2f4c1ab39e79085d6",
+    "src/app/schedule/screen.tsx": "7f7fb71f368021bd88da9eeabaab7d882482d70b510dfb5ae44fee521eae6389",
+    "package.json": "0c0f918d7ec50150684ba837a9c9e974239293a53cfae7fe374fcd932605fde1"
+  },
+  "canonicalOrMigrationChanged": false,
+  "existingSchema": 50,
+  "runtimeActivation": "explicit_syntheticScheduling_only",
+  "defaults": {
+    "mobile": true,
+    "dropoff": true,
+    "pickupReturn": false
+  },
+  "native": {
+    "engine": "chromium",
+    "realMfa": true,
+    "realDatabase": true,
+    "actualNextProduct": true,
+    "tests": 1,
+    "passed": 1,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "localResult": ".local/fulfillment-modes-browser-native-v2/result.json"
+  },
+  "journeys": [
+    "signed-out access hides saved settings",
+    "approved initial defaults only; distinct initialization original-reference kind",
+    "lost successful initialization reply; reload recovers exact original, no duplicate",
+    "no-op reason-only request rejected before dispatch",
+    "all arrangements disabled; new booking options unavailable",
+    "explicit fictional mobile and pickup/return enablement with retained reason",
+    "reload/current mode history and exact three retained versions/audits",
+    "bounded CSV/normalized JSON ZIP with escaped formulas and verified checksums",
+    "read network failure clears private form/history; explicit reload recovery",
+    "Schedule navigation/back/current saved values; no booking invented"
+  ],
+  "unit": {
+    "passed": 7431,
+    "failed": 0,
+    "files": 272,
+    "focusedControllerAndArchiveCases": 24,
+    "localReport": ".local/fulfillment-modes-unit-native.json"
+  },
+  "visual": {
+    "widths": [
+      360,
+      390,
+      768,
+      1440
+    ],
+    "screenshotsReviewed": true,
+    "axeWcag2a2aa21aaViolations": 0,
+    "overflow": false,
+    "keyboardSubmit": true,
+    "realPhoneTested": false,
+    "screenshots": "ignored .local/review/fulfillment-modes-chromium-WIDTH.png"
+  },
+  "build": {
+    "production": true,
+    "localLog": ".local/fulfillment-modes-build.log"
+  },
+  "unverified": [
+    "new mode UI WebKit: Windows signing policy blocks local engine; normal Linux gate retained",
+    "new source full release CI",
+    "owner preview50 preserved-data upgrade and actual phone acceptance"
+  ],
+  "failedRuns": [
+    {
+      "scope": "restricted full-unit attempt",
+      "cause": "loopback socket EACCES; unchanged full suite passes with native loopback permission"
+    },
+    {
+      "scope": "first native browser wrapper",
+      "result": "TAP header only; no leaf result, not counted as pass; no surviving owned test process; diagnostic run passes normally without assertion changes"
+    }
+  ],
+  "activation": {
+    "ownerPreviewUpdated": false,
+    "realCrestUseReady": false,
+    "transportOrCustodyOperationalApproval": false,
+    "financialPosting": false,
+    "spend": 0
+  },
+  "remaining": [
+    "combined agreements/additional vehicles",
+    "full conflict preview and override controls",
+    "accepted amendments",
+    "field/time/custody/photos/completion/follow-up",
+    "invoices/payments/double-entry/reconciliation/reports/mileage",
+    "complete portability/recovery/import/cutover",
+    "Google Calendar and real-use gates"
+  ]
+}

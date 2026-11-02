@@ -1,0 +1,162 @@
+{
+  "formatVersion": 1,
+  "scope": "initial_accepted_agreement_whole_part_booking_ui",
+  "baseCommit": "44414cd6dfe90e782113c8788287fc8abdd6bb7a",
+  "registeredSchemaVersion": 50,
+  "ownerPreviewSchemaVersion": 49,
+  "ownerDatabaseUpgraded": false,
+  "productionReady": false,
+  "executed": {
+    "finalGenuineBrowserJourneys": 2,
+    "earlierBookingAndExistingReaderJourneys": 4,
+    "allUnitPassed": 7374,
+    "allUnitFiles": 267,
+    "bookingControllerAndTimeRegressions": 15,
+    "lint": true,
+    "typecheck": true,
+    "productionNextAndServerBuild": true,
+    "sourceStableDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "startedAt": "2026-10-30T20:39:14.047Z",
+  "finishedAt": "2026-10-30T20:41:20.768Z",
+  "receiptSha256": "8bf8dd125032c1d0fce681e1f264b291290513680a47cb78594308e3da182597",
+  "logSha256": "6e7054e4d0873971aea5856d0ce60970c957e84f9df0f67f290e46d39ebb99e9",
+  "unitReportSha256": "900d88a1608ceb8c6d57ab46675077f47f654a920a357a8bc75305248ff4c258",
+  "buildLogSha256": "4e59de41e242d93a14e556a043ef3cf5776a10f867f94dfd31cfc461f7775317",
+  "behavior": [
+    "Genuine MFA → open retained accepted quote → verified scheduling availability → booking form → saved Schedule detail and reload.",
+    "Selected remaining whole scope/vehicles, operating arrangement, manual or versioned saved location, explicit real time/zone/end, travel/contact and actual customer confirmation; no automatic send, prices or financial posting.",
+    "Both engines deliberately lose the successful booking reply, reload, verify the exact original, clear only its matching pending reference and retrieve the one saved job. PostgreSQL contains exactly one scheduled version1 job and exact0/25000-cent allocations.",
+    "Only opaque original identity persists per tab. No draft/contact/address/amount/password/code storage, automatic retry or reference expiry. Hidden-page late replies, missing draft, changed binding, stale scope, failed storage and false accepted totals have regressions.",
+    "A confirmed server save stays confirmed when only local-reference cleanup fails; known rollback and unknown submission remain distinct.",
+    "Manual four-width inspection, Axe/overflow checks, keyboard submit and phone date-time widths at least240px. Native controls and existing Crest tokens/font remain."
+  ],
+  "limitations": [
+    "Initial form assigns whole unassigned parts from one agreement using its linked vehicles. Explicit part splitting, combining agreements and selecting additional existing vehicles remain approved unfinished work.",
+    "Conflict/unknown-travel facts are still rechecked by PostgreSQL; conflicting bookings are rejected. Complete conflict-preview/override and operating-mode control screens remain unfinished.",
+    "Reschedule/cancel/proposal confirmation UI, field work, accepted amendments, remaining finance, portability/recovery delivery, Calendar and full V1 gates remain unfinished.",
+    "Saved address and pickup/return fields are implemented but not exercised by this specific browser fixture; no physical iPhone or new owner-preview release claim.",
+    "Full exact-source public CI and tested preserved-data owner upgrade remain pending."
+  ],
+  "screenshots": [
+    {
+      "engine": "chromium",
+      "width": 360,
+      "sha256": "18ec0344a611ab19857c544119a7af672123802ff716819644836458b42e9bf3",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "chromium",
+      "width": 390,
+      "sha256": "f5801ceebc297a6acf63aae6169d6848ce4e4b408835cfe83cf277c0d7f712e7",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "chromium",
+      "width": 768,
+      "sha256": "101d604a74b856c76b2f6b74a6c2271cae715b8914046d0950992ef0e227d716",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "chromium",
+      "width": 1440,
+      "sha256": "b09933d2ab7116df90bafead63a98d282a182a8068027a2f64cae865b4698e07",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "webkit",
+      "width": 360,
+      "sha256": "e5928b79ed70956cc09a48fefb2261586994761d6b1e4d98fd5d917257af6888",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "webkit",
+      "width": 390,
+      "sha256": "1eed171bad47e40351b1ebedff203195e40d8be1473b9b0d856b10a9fcb64ee9",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "webkit",
+      "width": 768,
+      "sha256": "b6d7558fc1a86661d03734e9c211152043e5870e41be0ff6fb89ec7843011c75",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "webkit",
+      "width": 1440,
+      "sha256": "2ecc002868eea158bacd1821d19a0e7d352278f3e81b24047215ba817925bd75",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    }
+  ],
+  "files": [
+    {
+      "path": "package.json",
+      "sha256": "d07c5d7aab8d407746d5a8597acb7f0a638b7545a494311482965a486e62374b"
+    },
+    {
+      "path": "src/client/book-job-controller.ts",
+      "sha256": "836b216c2dc68016d3df09b862fd73e225d6bdd819a68f38c8a15f57403a1c38"
+    },
+    {
+      "path": "src/client/booking-form.ts",
+      "sha256": "ab74b4f41d76237c88b87ef64896e33bfeacb1bae9318fe252aa7df18e8dee3c"
+    },
+    {
+      "path": "src/app/schedule/booking-fields.tsx",
+      "sha256": "85b3a01a39940933ed71f336dd2ac0a54c6257315e3ff510e876c51485e75319"
+    },
+    {
+      "path": "src/app/schedule/new/page.tsx",
+      "sha256": "b155b9a8567206a6b0823da79a7b272fa2f0e6936525d96aa375c29589496d37"
+    },
+    {
+      "path": "src/app/schedule/new/booking.tsx",
+      "sha256": "e3a648a1eb09fc96a45210a62bedf28d60786938cbd816989315599209d18200"
+    },
+    {
+      "path": "src/app/schedule/page.tsx",
+      "sha256": "1ce939d42eeb9a8b762718f8bc763f8986e4f62036da33204b70b19fb8f23d2c"
+    },
+    {
+      "path": "src/app/schedule/screen.tsx",
+      "sha256": "d6e543dde1c59277d8b27b8d9a7abe026a445d19ac826690c848ff89dc4179c1"
+    },
+    {
+      "path": "src/app/quotes/quote-commercial-panel.tsx",
+      "sha256": "83f84d7f805e84b43461cccd8462ace9e362d96e38212d39271a1929782cabd0"
+    },
+    {
+      "path": "src/app/workspace-frame.tsx",
+      "sha256": "6e37e99dd66e2917120dd0ae8bb473d1824b39a3dfa41222469590282ad6326d"
+    },
+    {
+      "path": "src/app/workspace-home.tsx",
+      "sha256": "21ef1f523eb6663e81f698a88cd8e1458259378f9a90bea9660aeef476746518"
+    },
+    {
+      "path": "src/app/globals.css",
+      "sha256": "d77ba213b84d01ba6d4fd3437fc7c04743de089ce9e1651453a8392f3562e2fc"
+    },
+    {
+      "path": "tests/unit/book-job-controller.test.ts",
+      "sha256": "518d22ebece3df7d55f696d279f11ac06835349b592f2e4cf0b1c5d23324d3d4"
+    },
+    {
+      "path": "tests/integration/book-job-product-browser.test.mjs",
+      "sha256": "b042fe0c9d3f721365c2a7d8a40f077d5db853a438884d0691415fb5ba480a1a"
+    },
+    {
+      "path": "tests/support/source-export-browser-fixture.mjs",
+      "sha256": "1dee4e3fb0dd54368af0983605d413fb293a7db8ea6534cb0428f9b89b90bbf7"
+    }
+  ]
+}

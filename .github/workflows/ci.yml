@@ -239,9 +239,9 @@ jobs:
     # obsolete runs cancel so they cannot block the newest source indefinitely.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
-    # Cold browser + portable decoder/container builds exceeded 45 minutes.
-    # Keep every required check and the separate 15-minute container-step bound.
-    timeout-minutes: 60
+    # Source e14/full395 took 57m47s before the new mandatory conflict and Home
+    # journeys. Allow their measured runtime; preserve all checks and step bounds.
+    timeout-minutes: 75
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"
@@ -323,6 +323,18 @@ jobs:
         run: npm run test:appointment-registered
       - name: Preserve historical appointment storage and command acceptance
         run: npm run test:appointment-storage
+      - name: Verify fulfillment settings, conflicts and independent restore
+        run: npm run test:fulfillment-modes
+      - name: Verify proposed private conflict review, stable neighbours and locking
+        run: npm run test:booking-conflict-review-proposal
+      - name: Compare booking times, travel intervals and partitions with PostgreSQL
+        run: npm run test:booking-calculations
+      - name: Preserve booking schema closure, private history and independent restore
+        run: npm run test:confirmed-booking-storage
+      - name: Verify confirmed booking transactions, genuine authentication and recovery
+        run: npm run test:confirmed-bookings
+      - name: Confirmed booking original source retrieval
+        run: npm run test:confirmed-booking-source
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 6
         run: |
@@ -355,6 +367,7 @@ jobs:
           path: |
             .local/review/settings-*.png
             .local/review/workspace-*.png
+            .local/review/home-*.png
             .local/review/quote-*.png
             .local/review/appointment-*.png
           include-hidden-files: true

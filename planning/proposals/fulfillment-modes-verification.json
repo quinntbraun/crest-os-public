@@ -1,0 +1,99 @@
+{
+  "formatVersion": 1,
+  "scope": "unregistered_confirmed_job_fulfillment_dependency",
+  "recordedAt": "2026-10-30T07:37:49.213Z",
+  "existingMigrationCount": 49,
+  "registered": false,
+  "runtimeEnabled": false,
+  "productionActivation": false,
+  "completeCrestAcceptance": false,
+  "decisions": {
+    "initialModes": [
+      "mobile",
+      "dropoff"
+    ],
+    "pickupReturnInitiallyEnabled": false,
+    "capability": "crm.manage",
+    "capabilityReason": "Existing owner-only nonfinancial business authority; no new capability, finance permission or runtime route.",
+    "history": "Immutable per-business versions with original before/after audits; later changes require a reason and serialize on the same business lock.",
+    "jobScope": "Mode settings do not confirm a job, assign accepted scope, establish custody or legal sufficiency."
+  },
+  "native": {
+    "finishedAt": "2026-10-30T07:36:58.926Z",
+    "sourceCommit": "89d0a180021f88893499eb43b2e6e5e0ba7b1086",
+    "trackedDiffSha256": "530551facc84f74dd8833dabc2c0d6a088536e351a4e4fddc87999c0ee3aa17e",
+    "storageAndCommandCases": 14,
+    "genuinePasswordTotpAdapterCases": 6,
+    "passed": 20,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "includes": "Actual restricted PostgreSQL, exact original operation lookup/replay, stale edit and tenant denials, recovery pause, sign-out rejection, concurrent revisions and separate-cluster encrypted exact-schema restoration."
+  },
+  "localChecks": {
+    "unitFiles": 254,
+    "unitsPassed": 7220,
+    "types": true,
+    "lint": true,
+    "publicCanonicalMigrationsAndPins": true,
+    "productionNextAndServerBuild": true,
+    "initialUnitRestriction": "First non-escalated full-unit run hit loopback EACCES; exact unchanged suite passed with temporary local-server access. No test weakened."
+  },
+  "files": [
+    {
+      "path": "planning/proposals/fulfillment-mode-storage.sql",
+      "bytes": 10143,
+      "sha256": "981e0b94c99df0d521bef32d14b12957d792ea766f13c5b1397efa8a8b9a2e5e"
+    },
+    {
+      "path": "planning/proposals/fulfillment-mode-commands.sql",
+      "bytes": 20917,
+      "sha256": "4bd4c2d4bd44f2817e160d72b815a34b526ac57b5ebc0713cfc8c15cbe087736"
+    },
+    {
+      "path": "src/operations/fulfillment-mode-contract.ts",
+      "bytes": 6357,
+      "sha256": "5609a8194c37b1e03609b0389344014527b661298c10100a9ad6143b09aa12c7"
+    },
+    {
+      "path": "src/operations/fulfillment-mode-directory.ts",
+      "bytes": 5759,
+      "sha256": "583c4542112aae3a542d1c3043943a3f01b9d88f47fe4877f370906d8c70c0ad"
+    },
+    {
+      "path": "tests/integration/fulfillment-mode-storage.test.mjs",
+      "bytes": 20966,
+      "sha256": "1e0b484af2918910fa58a9adb610563f05a0659b675358a29d4cf8c2e9d9d0dd"
+    },
+    {
+      "path": "tests/integration/fulfillment-mode-auth.test.mjs",
+      "bytes": 9905,
+      "sha256": "5eccb41771fe645d448fb6ca0bab0f145be55f5ab740bf41fce20ff2231eb409"
+    },
+    {
+      "path": "tests/unit/fulfillment-mode-contract.test.ts",
+      "bytes": 5610,
+      "sha256": "0727d1948bb810adc89175b0b07983e62067c346ff7a7901c17b7f819b6bbd23"
+    },
+    {
+      "path": "tests/support/migration-sandbox.mjs",
+      "bytes": 4567,
+      "sha256": "4895aae4c2a139ce34b134b89ec70a33723422e25965f3659484cf67798b812e"
+    },
+    {
+      "path": "package.json",
+      "bytes": 13014,
+      "sha256": "0cec3da9ce598ce62f1c56b522976378a917aca7a60e7f512bcc0e7289e0581d"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 18546,
+      "sha256": "961895ce7902a188503c6288358b869cba814990a7cd74ce0326d22b60e4f4f0"
+    }
+  ],
+  "remaining": [
+    "Complete accepted-scope allocation and confirmed booking workflow, including exact location, customer/vehicles, timezone/duration, contact/confirmation and conflict/travel review.",
+    "Mode source CSV/same-snapshot closure and schema adoption/compatibility before exposure.",
+    "Original uncertain-save recovery, actual UI/runtime integration and browser/device/release acceptance before delivery.",
+    "All jobs/field/custody/photos, financial, complete portability/recovery and Google Calendar V1 requirements remain."
+  ]
+}

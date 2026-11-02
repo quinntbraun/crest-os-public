@@ -1,0 +1,11 @@
+# Reviewed tooling security override — 2026-11-02
+
+PR109/source995e4eb6 failed run41496022162#393 at the unchanged dependency audit. All five other groups passed. The cause was one newly published minimatch advisory affecting11 dependency paths, not a scheduling or financial assertion failure. The earlier seasonal test failure is fixed and its provider group passes in393.
+
+[GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) identifies versions below11.0.1 as affected. The current ESLint/config-array/typescript-estree releases still request10.x. A flat exact override pins minimatch11.0.1 without downgrading ESLint, suppressing advisories or changing the low-severity audit gate. All locked override copies must match the reviewed version; registry/SHA512/license checks remain mandatory.
+
+This crosses an upstream major version and therefore requires compatibility evidence. The actual three lint consumers are tested with TypeScript/TSX, dotfile, ignore and negative-extglob patterns; a separate bounded process checks repeated globstar-parent amplification. Full lint, types, application tests/build and the complete release pipeline remain required. Passing a small matcher test alone is not release acceptance.
+
+Reviewed official artifacts: minimatch11.0.1 and its actual locked @isaacs/nonrecursive-glob-match1.0.3. The preliminary1.0.1 review was not used as evidence for1.0.3. Both actual archives are registry-checksummed, BlueOak-1.0.0 licensed, and contain JavaScript/TypeScript, declarations, maps and documentation. No native binaries are included. The matcher source imports only its local character-class parser; no network/process/filesystem execution is introduced. Published development prepare scripts were inspected and never executed: installation uses --ignore-scripts. The Node24 runtime is supported by the published package engines.
+
+The updated lock contains only the matcher replacement and its new nonrecursive matcher. Existing production package pins, architecture, financial rules, schema50/frozen profiles and owner preview are unchanged. npm audit --audit-level=low reports zero vulnerabilities locally after the update; full current-source CI still decides release acceptance. Private downloaded archives/checksums stay under .local/dependency-review/minimatch-11.

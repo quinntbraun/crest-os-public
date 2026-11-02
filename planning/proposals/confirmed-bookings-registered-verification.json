@@ -1,0 +1,1664 @@
+{
+  "formatVersion": 1,
+  "scope": "registered50_native_acceptance_preserving_frozen49",
+  "baseCommit": "4c5dc5a0ec786504a8d724e9ee4233f68ea36557",
+  "registeredSchemaVersion": 50,
+  "ownerPreviewSchemaVersion": 49,
+  "runtimeActivated": false,
+  "ownerDatabaseUpgraded": false,
+  "productionReady": false,
+  "executed": {
+    "nativePassed": 224,
+    "nativeFailed": 0,
+    "allUnitPassed": 7350,
+    "allUnitFiles": 265,
+    "lint": true,
+    "typecheck": true,
+    "canonical": true,
+    "publicBoundary": true,
+    "migrationRegistry": true,
+    "productionNextAndServerBuild": true
+  },
+  "runs": [
+    {
+      "scope": "registered50-scheduling-native",
+      "startedAt": "2026-10-30T19:08:18.149Z",
+      "finishedAt": "2026-10-30T19:15:24.278Z",
+      "passed": 170,
+      "failed": 0,
+      "sourceStableDuringExecution": true,
+      "ownedClusterCleaned": true,
+      "receiptSha256": "70302e6b1c2280bd4cbf48e0d6e2bdd8d8a92358b4fbd37b941258bf2ab9973a",
+      "logSha256": "2e8fad55309a9d38f6acfa07d51cfbc8bd16c643f14fbb29fbaf459755d509c9",
+      "testedFiles": [
+        {
+          "path": "README.md",
+          "sha256": "51600dd67fb178d17a72b99fa7da85ec64ba61ba34109dacf8df6dd8b8cc50a3"
+        },
+        {
+          "path": "planning/WORKING_STATE.md",
+          "sha256": "367b55e854b32adde550bcde1ffa5b6a6e7dbe104c8e9db7d3f4be6d25761d49"
+        },
+        {
+          "path": "planning/CONFIRMED_BOOKINGS_SCHEMA50_ADOPTION.json",
+          "sha256": "701a0d9a13fb106bcb83fc7672e87ebafb50900e69f968390c97467662d20aa4"
+        },
+        {
+          "path": "supabase/migration-checksums.json",
+          "sha256": "15f9e5245112299565911c3efa8dc198e34861976d0e4df1a3f0e38b06351b2e"
+        },
+        {
+          "path": "supabase/migrations/20261030160000_confirmed_bookings.sql",
+          "sha256": "4691321409ddf4705f17c068dc105d360c593662198bdab0f78260f9435ba8bd"
+        },
+        {
+          "path": "planning/SECURITY_EXPORT_COVERAGE.json",
+          "sha256": "fb780633e92ffff940849b6fc72c57eca60f7aa73d89dbc7c583ba65f8c90561"
+        },
+        {
+          "path": "release/compatibility.json",
+          "sha256": "a185e34267a118ed0c2d2a77bbe6302f3f595059ecd3fb538d2b3a91ba1d394d"
+        },
+        {
+          "path": "tests/unit/confirmed-bookings-adoption.test.ts",
+          "sha256": "f6ba0e5f36c552ef46c0fc4aa02340055e512521caa0729865b4c8ebbe0704ea"
+        },
+        {
+          "path": "tests/unit/owner-expenses-adoption.test.ts",
+          "sha256": "79159b2bf5eb55ca134e41110650efa9a782f094dba95abd757bb41eb21687c5"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-storage.test.mjs",
+          "sha256": "8075d7c150a9be7f1926b8960ffef4727539a457f2805e86d83bb3a1a7d789b6"
+        },
+        {
+          "path": "tests/integration/fulfillment-mode-storage.test.mjs",
+          "sha256": "2cf5e2591e40fbe381ea8f9da0455bc1e635db954273e669992765cd7afca06c"
+        },
+        {
+          "path": "tests/integration/fulfillment-mode-auth.test.mjs",
+          "sha256": "5aaf2740e449397b9e012e000fae78d1696b7cd2db6e46a8342e58ec29944a76"
+        },
+        {
+          "path": "tests/integration/owner-expenses-registered.test.mjs",
+          "sha256": "59f8101024a85d7700673daf21cb6e187df75aee40c5171acafa5f56dbb4a45a"
+        },
+        {
+          "path": "tests/integration/owner-expenses-registered-source.test.mjs",
+          "sha256": "fd782836b84ebe65cefb73f060d1a6ac276b8c5c46d9850eb152718b3940dd0c"
+        },
+        {
+          "path": "tests/integration/owner-expenses-combined-recovery.test.mjs",
+          "sha256": "a229a2a1379f5450f7907e0ce24e0656bbf6be40a744dcbbc0df6b67a19564a2"
+        },
+        {
+          "path": "tests/integration/recovery-drill.test.mjs",
+          "sha256": "1c0325ec16bf92d9e9a4b3d79213e1061b555f79142b147b07657f4fdbb90927"
+        },
+        {
+          "path": "tests/integration/owner-expenses-receipt-http.test.mjs",
+          "sha256": "3195bdc7721fbcafb18e055ec1e67b8f171521d881d46bd882d0070e836307cc"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-coverage.json",
+          "sha256": "fb780633e92ffff940849b6fc72c57eca60f7aa73d89dbc7c583ba65f8c90561"
+        },
+        {
+          "path": "tests/support/confirmed-booking50-candidate.mjs",
+          "sha256": "eea7d60bf8709fd071cc03a49378da04e4544b636b95994db4488dcdce1128c1"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-candidate.test.mjs",
+          "sha256": "c5af495b8769217d47b49d98b2996bb7254d2540f2a4fbe9d7a71ffd77f188f4"
+        },
+        {
+          "path": "tests/support/registered49-migration-checksums.json",
+          "sha256": "68ced1706217b33cf5ed6a8b87ccdaf4324b714e7e01fb26e283412c05de5871"
+        },
+        {
+          "path": "src/operations/confirmed-booking-source-history.ts",
+          "sha256": "d883e1e3e9fa594e36a86251ccc7e52483bd2f7ae2d0f063a4e6d2925000c5d6"
+        },
+        {
+          "path": "tests/support/booking-source-evidence.mjs",
+          "sha256": "629673a94d1efd5d522c9622aaf1947c4870ab476bb3fb432cfd35e182231fa5"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-context.sql",
+          "sha256": "8ff2773ed5dc888482d6b5dfdfa42ced06bf57a201555afdc9c029bfc99241e8"
+        },
+        {
+          "path": "src/operations/booking-context-contract.ts",
+          "sha256": "d1d882d1fe2a02600a85746afbbdce64cfcdc5b3d0d6814b5087c934dce16fa5"
+        },
+        {
+          "path": "src/client/scheduling-transport.ts",
+          "sha256": "6faab2feb1905ae7910f7abf09523c486fda56af024d4ffa538453ea6c1de1d8"
+        },
+        {
+          "path": "src/client/scheduling.ts",
+          "sha256": "c40b9b4a4ad368bc2357065d7781785ca4c584ee68626e571c951254deb0334e"
+        },
+        {
+          "path": "tests/fixtures/booking-context.ts",
+          "sha256": "39466c3b02e724e6a90307bf2944a2005ac9d2a3c3fbdfa44c3b190c71b06a5d"
+        },
+        {
+          "path": "tests/unit/booking-context.test.ts",
+          "sha256": "bf005cbb88a8c098eb14932bc9e6e31caf08878f57eb3437842c5f8eee2d6275"
+        },
+        {
+          "path": "tests/unit/scheduling-client.test.ts",
+          "sha256": "8dd29a4d98e2313a147338bfc87585352554263eb3c6a56130b15f028e01619b"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-context.test.mjs",
+          "sha256": "909098c2919b6a44c7e0ac0525c61cfad163cae649c2d512698c29ac3b07e29a"
+        },
+        {
+          "path": "tests/support/scheduling-client-native-journey.mjs",
+          "sha256": "9411fe9520f0e6f0c9b8f6cc7f5f98c5e08f6d84bf965359d6379882b23d38e6"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-original.sql",
+          "sha256": "9a754b0a324000979736c8ffbb7a693ebdb46e62049786f34dfe147df518bba4"
+        },
+        {
+          "path": "src/operations/scheduling-original-contract.ts",
+          "sha256": "29a4e958bce83690477f7fea720042017aeac5a2afca07d84f4e987361616677"
+        },
+        {
+          "path": "src/operations/scheduling-http.ts",
+          "sha256": "86edd380515b45c272dfe830cff0e9ee6263a21ccfe406de0c91469dd8181a7c"
+        },
+        {
+          "path": "src/client/scheduling-original.ts",
+          "sha256": "ccb90cbd075a7e23145501608e58465db925d0fb821dc7f9a94df014b4f89620"
+        },
+        {
+          "path": "src/client/pending-scheduling.ts",
+          "sha256": "b83b1efab82c34bd1712cdf844bbece8df5f6f26386bf65177611f6eddd4a010"
+        },
+        {
+          "path": "src/client/pending-original-operation.ts",
+          "sha256": "d1215b0ee8a6d0f3394d9948a6a2d070e2c74874f6e2c85c915f859120b42ce8"
+        },
+        {
+          "path": "src/security/original-operation-reference.ts",
+          "sha256": "e86103c5940919eda65de9b511bff69ba3d12a841a994919cc81cc0b5400df57"
+        },
+        {
+          "path": "src/security/original-operation-directory.ts",
+          "sha256": "84ddefa47854074321cd69235417877c091181b308c49addc982081fc5b7d274"
+        },
+        {
+          "path": "src/security/original-operation-http-contract.ts",
+          "sha256": "9ff6ac1fb5aa5d57dfbd3e9c914128c3906af14c097512cd9fcc670f16d45be3"
+        },
+        {
+          "path": "tests/fixtures/scheduling-original.ts",
+          "sha256": "5843b3ad6c99124cfb483b0c880ad07ca1542d303aa2a557bb1320c0b0773d27"
+        },
+        {
+          "path": "tests/unit/scheduling-original-recovery.test.ts",
+          "sha256": "f5316f219a1a03d7562b7343afd10d51567a026d5a14f0a6ac57d8be7c899c2b"
+        },
+        {
+          "path": "tests/unit/original-operation-reference.test.ts",
+          "sha256": "409b10474431579bfe08a1a3121d059881e5328b54251f7480d75bd1cb6d3ef3"
+        },
+        {
+          "path": "tests/unit/pending-original-operation.test.ts",
+          "sha256": "13e9bc9b186b6c9065da3444576c490985514c47a3a3c006a51130ce7b4c287a"
+        },
+        {
+          "path": "tests/support/original-operation-fixture.ts",
+          "sha256": "6e0dba17a49b513e2563e677ad50e98939b0523e03ebba4e32a7cf95d65d6143"
+        },
+        {
+          "path": "tests/support/registered49-original-operation-kinds.json",
+          "sha256": "eae410f29975bd326b74321e43ab8246527393672345912b7859d7f4bc808a55"
+        },
+        {
+          "path": "tests/integration/owner-expenses-resolution.test.mjs",
+          "sha256": "2c173710e1475bf743f3daa138c9694774644514fbe9cf328ffc4410b4ada919"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-resolution-race.test.mjs",
+          "sha256": "c70b123a65158ab8442a4daedcf961bc269dd6a3e1a9c1d4f97682aae76741a9"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-resolution.sql",
+          "sha256": "5e94d68fe776e8fa42d7a15750cfedbbd3c75297998e1d07a61b0f5f194ce0ad"
+        },
+        {
+          "path": "src/operations/confirmed-job-archive.ts",
+          "sha256": "3e3ec73091b1e6d67e9f6e7a9fc0fcf280f251b87a46f4d31958d18ec2831ae1"
+        },
+        {
+          "path": "tests/unit/confirmed-job-archive.test.ts",
+          "sha256": "146e52f50ef3d401da8efb013df72886f653d6c0812787abe3ce3166f2465ee5"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-history-reads.sql",
+          "sha256": "bc0cb0578bf1be267e83cbcddc0d70ffaaace1775ec20f246847bc96d090ba3c"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-source.sql",
+          "sha256": "e4034c2b0b7d4baff265c63e7ee175df2b7f190f96c51135259f8eef3b49d748"
+        },
+        {
+          "path": "src/operations/confirmed-booking-record-schema.ts",
+          "sha256": "48a4de2b772274f3e616eb22bfca892fa18cadef47cf404b6ae6c0b33860d96f"
+        },
+        {
+          "path": "src/operations/confirmed-booking-records.ts",
+          "sha256": "2c9665b3f798feda299bd1d6c24fa820826832473e8b3714156c8ecc5730f304"
+        },
+        {
+          "path": "src/operations/confirmed-booking-source-csv.ts",
+          "sha256": "d5e07d03369c5f1a3d4dd3164c18dccb17372a9e271826e764dc93f77c3c76fb"
+        },
+        {
+          "path": "src/operations/confirmed-job-read-contract.ts",
+          "sha256": "c9a39020a91519de043cad72fcfd5d545aeafd74b6c8e29ca10feea60d4879ae"
+        },
+        {
+          "path": "tests/fixtures/confirmed-job-records.ts",
+          "sha256": "456e21f6301b6e9f693413ef35844735afd9098f3d127c7fe2600435ced1e930"
+        },
+        {
+          "path": "tests/unit/confirmed-job-read-contract.test.ts",
+          "sha256": "230a70ae0d6b73ffb77bd9d2949d150a789c130ba700776b094441ae3114ff37"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-source.test.mjs",
+          "sha256": "0f515b4b1abb7f0565c5fd3fa52061922920f7f4793d70214bd53d8bc946c298"
+        },
+        {
+          "path": "src/operations/confirmed-reschedule-contract.ts",
+          "sha256": "97a7ff90c3478ede05a4f918d38b1c624f90dcc58955b52a2fa5cb0773ba3669"
+        },
+        {
+          "path": "tests/unit/confirmed-reschedule-contract.test.ts",
+          "sha256": "1a3ee5ff9bf57a8cc4222721cd0eeccbd870d0a2c876f949e228af378c92ab97"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-reschedule-commands.sql",
+          "sha256": "4911d2d251d1f98ccea50e373ef17c755065a85d19d41a73c1e896745bc83e50"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-reschedule.sql",
+          "sha256": "e003e6bf2e24ae2b433e185fcba95922ac6255a26ac6009a6c62c1ec97b59784"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-cancel.sql",
+          "sha256": "b62e5f6518da098880a6cdc5da276eed3209eb69372f594c7dcac435f0c5f5de"
+        },
+        {
+          "path": "src/operations/confirmed-booking-contract.ts",
+          "sha256": "98b24939d45252c461bafc43d11a62ce172dc54e86f5776c309512aa4b9791d3"
+        },
+        {
+          "path": "src/operations/confirmed-booking-directory.ts",
+          "sha256": "6fc467ea89cba487b16818221b2c7cbac23adbb865aa30bcad10728f28017254"
+        },
+        {
+          "path": "tests/fixtures/confirmed-booking.ts",
+          "sha256": "aa9391bbe53a30b71d246d6e4318fa9a5e8909d386529c58aac61064921ec7a6"
+        },
+        {
+          "path": "tests/unit/confirmed-booking-contract.test.ts",
+          "sha256": "a0ff070761efa7b283021efc68a06a07f6062bf228dd463655b45ef3a5950332"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-auth.test.mjs",
+          "sha256": "ba2b465ea5208ff82d422025202027d9591ead9468c32b98d5720dc066400fc4"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-reads.sql",
+          "sha256": "08f8008da6f8282515649f3be95417d5a63781458189fa1f0623d74bd389540b"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-commands.sql",
+          "sha256": "74ca7f070313d5463fbe6e3a6ae84486915d0e47bf3f4af7eb273b2b4db8968c"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-enable.sql",
+          "sha256": "b4d45ba8147d026f8f2d1d5ec45a0ebbf6f5fbe02bffd999a0a86f8808cfbfa3"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-invariants.sql",
+          "sha256": "a52d5bd6cd715a6b316068fdf13d1723ee9277b901833c0ceb945f363a6209ed"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-job-invariants.sql",
+          "sha256": "39cb681b634aafdded8bc9bcf1d5f6cf82f848e64e82b23d4efa17fe6439a26a"
+        },
+        {
+          "path": "tests/support/confirmed-booking-fixture.mjs",
+          "sha256": "48fd5391013404bbb7e21f2a09275cc71f8f1a57c38e18d8ac6f3bfb74b54c96"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-history.sql",
+          "sha256": "dc13a14fc59b7be3988060d5eaf08ab5039bdf376b18ea14c824d4d0a74b691c"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-storage.sql",
+          "sha256": "e034d7307f88994ca88f3123ccd1049d2cdab97954cf157e17b7c6b27c29d2ed"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-commands.test.mjs",
+          "sha256": "fb00469e5a6df6139889f9614d41f6e8fad5e5ecd8d73f7fbe72e45cc8a9df8e"
+        },
+        {
+          "path": "src/operations/scope-allocation-plan.ts",
+          "sha256": "3e2d7e6756566db5cced98b23d7d1cb93edd3bccdd4acd6b710f732147d0f2b6"
+        },
+        {
+          "path": "src/operations/schedule-time.ts",
+          "sha256": "78263abfbed481ff1c213b3a7234b4f914f4d3e7fc08db131c235f316e15c46f"
+        },
+        {
+          "path": "src/operations/schedule-conflicts.ts",
+          "sha256": "05fa3c39f9c3c140563fb64f60e7f0dad895257f922c8418eb7f58699d95dad3"
+        },
+        {
+          "path": "src/operations/appointment-hold-contract.ts",
+          "sha256": "add3892eb919721481c5ed33c68f37f06c57fe20f93956114a2be0af7f6a6867"
+        },
+        {
+          "path": "tests/unit/scope-allocation-plan.test.ts",
+          "sha256": "cc7dfde9a39ce8a104df75a1ef7a6669700c22aa99051387a71bb26ec57d0978"
+        },
+        {
+          "path": "tests/unit/schedule-time.test.ts",
+          "sha256": "c83d575cfb64d7f0fb376030a873a2872897630ecfac2511356d7c1fc4b7bceb"
+        },
+        {
+          "path": "tests/unit/schedule-conflicts.test.ts",
+          "sha256": "a5b2820f6d99e7c458a90ad3819e1b520e9d5d8caf8fc98865fc9f82fa9504f7"
+        },
+        {
+          "path": "tests/integration/booking-calculations.test.mjs",
+          "sha256": "e23960f44b0422b7f2816c895689b426acc48d2f23b2fdd18523065f7f7eba6c"
+        },
+        {
+          "path": "src/operations/fulfillment-mode-directory.ts",
+          "sha256": "583c4542112aae3a542d1c3043943a3f01b9d88f47fe4877f370906d8c70c0ad"
+        },
+        {
+          "path": "package.json",
+          "sha256": "4efec4a88e99b35261973061fcc35160894fab694d0e1d3ee2f44c53f4030042"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "sha256": "795e65cbf2983486a033ac6dcf5b9ffe3798bcd71bc12ce70a532ca55fd3dfa6"
+        },
+        {
+          "path": "planning/proposals/fulfillment-mode-commands.sql",
+          "sha256": "4bd4c2d4bd44f2817e160d72b815a34b526ac57b5ebc0713cfc8c15cbe087736"
+        },
+        {
+          "path": "planning/proposals/fulfillment-mode-storage.sql",
+          "sha256": "981e0b94c99df0d521bef32d14b12957d792ea766f13c5b1397efa8a8b9a2e5e"
+        },
+        {
+          "path": "src/operations/fulfillment-mode-contract.ts",
+          "sha256": "5609a8194c37b1e03609b0389344014527b661298c10100a9ad6143b09aa12c7"
+        },
+        {
+          "path": "tests/unit/fulfillment-mode-contract.test.ts",
+          "sha256": "0727d1948bb810adc89175b0b07983e62067c346ff7a7901c17b7f819b6bbd23"
+        },
+        {
+          "path": "tests/support/owner-expense49-candidate.mjs",
+          "sha256": "a98f794fbe42663db0df5d19c37c12e5aac2c43858601d560da93f14be47a738"
+        },
+        {
+          "path": "tests/support/migration-sandbox.mjs",
+          "sha256": "4c5842f1e71b9dfc1528674937133282d3d143ee6ebf84497c44165409e12325"
+        },
+        {
+          "path": "tests/support/recovery-drill.mjs",
+          "sha256": "df994802152c90db8f2b7a61e95fbd619c4763807461bb4e03b46b7ea5cb1f07"
+        },
+        {
+          "path": "tests/support/object-recovery-drill.mjs",
+          "sha256": "5c8a0a15f0d62f93c9b08484969655b95cfed98499656678a12fb5893a351e56"
+        },
+        {
+          "path": "src/tooling/object-recovery.ts",
+          "sha256": "0c80eef324e9a1696574f12f9c67b496512008fdb3fde2d8f551c72ddf0fe772"
+        },
+        {
+          "path": "src/bookkeeping/expenses/expense-export.ts",
+          "sha256": "15899cfa9da57fc24a46492b98cb3d9337a7d586afa10a1c9949947bb29c0c2e"
+        },
+        {
+          "path": "src/bookkeeping/expenses/receipt-export.ts",
+          "sha256": "c0a009e060a9521a5e6aa85c0f723b4ffda29262e59f1eb1b76cce8e872f485c"
+        },
+        {
+          "path": "supabase/migrations/20261029050000_owner_expenses.sql",
+          "sha256": "8bf39dc6502ef1bba4e45cb04efe0afdbc2c6efe0d8b3a0d25948dcf37ffee18"
+        },
+        {
+          "path": "planning/OWNER_EXPENSES_SCHEMA49_ADOPTION.json",
+          "sha256": "4ff01557113fac413715ee1b67efe89412636bfd0198e4f2a0385913ffb49a23"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-source.sql",
+          "sha256": "762830384c324c2e0ff30d276d6d95bc8fdd0bc5c73d7158b29ca2e5dca7e589"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-coverage.json",
+          "sha256": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828"
+        },
+        {
+          "path": "src/bookkeeping/expenses/expense-source-csv.ts",
+          "sha256": "bc3d61c1c917906e49eb5e7ef42fabeaa27ca6250588dfe1aa89c4c5ace1f804"
+        },
+        {
+          "path": "src/bookkeeping/expenses/expense-source-history.ts",
+          "sha256": "990e95184052b2edaa08c7c3863e7f5dce7230bda03db2cba6db95c6379f570d"
+        },
+        {
+          "path": "tests/support/registered48-export-coverage.json",
+          "sha256": "344de6f7e3e81718767fabbc64779d69e98a3d1aea5d8faba4e86c43394ebfee"
+        },
+        {
+          "path": "tests/support/registered48-migration-checksums.json",
+          "sha256": "f56732ca0627858e495c217f83fe5795b6278fa28f9686c6960dc327592a65cb"
+        },
+        {
+          "path": "tests/support/registered48-compatibility.json",
+          "sha256": "b241eaafc6d21905edd7b86c05906990ccf7325fb56b56ce823a741dc4dc9d13"
+        },
+        {
+          "path": "tests/fixtures/owner-expenses-original-clients.ts",
+          "sha256": "2a281924ff0bff89c025b63bd487c5c3515bca840e84b501a9dac35d2abbb899"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-resolution.sql",
+          "sha256": "8ee7d81802aa9a7af302ed778e9ce90faab8b67fee2d0e50da4ab064684c8691"
+        },
+        {
+          "path": "src/client/expenses.ts",
+          "sha256": "1a01bc659b0fc1b0670aa868ec191acfaa3c9dc0c0c0433e54c59f07792da779"
+        },
+        {
+          "path": "src/client/original-operations.ts",
+          "sha256": "2f5404b6095e77725abb1f73aef90d3698a286c951c45baac93ca4df547528ed"
+        },
+        {
+          "path": "planning/proposals/owner-expenses.sql",
+          "sha256": "aa8c72c489399404f82a29e8353b0e391972253d1a8a6aaff58ea4bcb831ba10"
+        },
+        {
+          "path": "planning/proposals/owner-expense-receipts.sql",
+          "sha256": "91ffaa86db818444dc76ff47bf0438262ae803980477db42d0f1ca2ac051cdfb"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-activity.sql",
+          "sha256": "50509e065d6b0ced2e58439d02fc68ff0bbcd91cd0b6ed631a502fee353f7ca5"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-original.sql",
+          "sha256": "075fac103f18fe7cb98eae1e935cd9e347795afc284e939324cf2a42825e4670"
+        },
+        {
+          "path": "planning/proposals/owner-expense-receipts-original.sql",
+          "sha256": "0fb4b96b0744e31a1e5cd0dba5a828be087c609f330abc192b50882a3d72bc37"
+        },
+        {
+          "path": "src/bookkeeping/expenses/receipt-contract.ts",
+          "sha256": "4a3d02177b422f75d7aca0c6dc325dec53890be4e3225277aa492e9711a303f0"
+        },
+        {
+          "path": "src/bookkeeping/expenses/receipt-directory.ts",
+          "sha256": "3333a2e66ce3a248d52a631bde0459e9664169f0033898ab65762ed63cd40960"
+        },
+        {
+          "path": "src/bookkeeping/expenses/receipt-http.ts",
+          "sha256": "7dd748053c201d360e86f7b1fccb17fd8458d550e3f21b002bed1104f9146fde"
+        },
+        {
+          "path": "src/client/expense-receipts.ts",
+          "sha256": "b309558ab76ccbdc4cc2068295220a74a6ca7807dba6f9694fb4401e8290e490"
+        },
+        {
+          "path": "src/client/pending-receipt.ts",
+          "sha256": "3d253a1afa0dd0aebc9e4b81c6acde5885bd27e9c619a694eb7866150f905d4c"
+        },
+        {
+          "path": "src/operations/appointment-hold-http.ts",
+          "sha256": "5c36e90109a8825172a249ee4ace831f18a8c93f57bb69ec0e4a0b8cbe74cfb9"
+        },
+        {
+          "path": "src/client/appointment-holds.ts",
+          "sha256": "241af73658f00e93c7e0335829fa50ddb20794e1b390a0a9595c229864083e9f"
+        },
+        {
+          "path": "supabase/migrations/20261028040000_appointment_proposals.sql",
+          "sha256": "5f21dce7af0944388e39c456c2a06614f63c111557958acf9528f311f25bf4fc"
+        },
+        {
+          "path": "planning/QUOTE_ACCEPTANCE_SCHEMA48_ADOPTION.json",
+          "sha256": "8d7b79a8975ef00f8a375d046ea6adcaf4c880005abef020163a18c5633161a8"
+        },
+        {
+          "path": "supabase/migrations/20261028050000_quote_acceptance.sql",
+          "sha256": "1010212bc3fe6b734a511f05968103a4f88de37452a3340b1d70da5f243819c7"
+        }
+      ]
+    },
+    {
+      "scope": "registered49-history-native",
+      "startedAt": "2026-10-30T19:18:44.285Z",
+      "finishedAt": "2026-10-30T19:20:16.382Z",
+      "passed": 15,
+      "failed": 0,
+      "sourceStableDuringExecution": true,
+      "ownedClusterCleaned": true,
+      "receiptSha256": "a15c3cc19e2effa0a0bb7ad0c83103a65e9f3574502324ff47e8b7c7846abc14",
+      "logSha256": "9adf21d1e30237beff0f63f63f40cb2f52e090379dd14ad8f3285eaf09acae22",
+      "testedFiles": [
+        {
+          "path": "README.md",
+          "sha256": "51600dd67fb178d17a72b99fa7da85ec64ba61ba34109dacf8df6dd8b8cc50a3"
+        },
+        {
+          "path": "planning/WORKING_STATE.md",
+          "sha256": "367b55e854b32adde550bcde1ffa5b6a6e7dbe104c8e9db7d3f4be6d25761d49"
+        },
+        {
+          "path": "planning/CONFIRMED_BOOKINGS_SCHEMA50_ADOPTION.json",
+          "sha256": "701a0d9a13fb106bcb83fc7672e87ebafb50900e69f968390c97467662d20aa4"
+        },
+        {
+          "path": "supabase/migration-checksums.json",
+          "sha256": "15f9e5245112299565911c3efa8dc198e34861976d0e4df1a3f0e38b06351b2e"
+        },
+        {
+          "path": "supabase/migrations/20261030160000_confirmed_bookings.sql",
+          "sha256": "4691321409ddf4705f17c068dc105d360c593662198bdab0f78260f9435ba8bd"
+        },
+        {
+          "path": "planning/SECURITY_EXPORT_COVERAGE.json",
+          "sha256": "fb780633e92ffff940849b6fc72c57eca60f7aa73d89dbc7c583ba65f8c90561"
+        },
+        {
+          "path": "release/compatibility.json",
+          "sha256": "a185e34267a118ed0c2d2a77bbe6302f3f595059ecd3fb538d2b3a91ba1d394d"
+        },
+        {
+          "path": "tests/unit/confirmed-bookings-adoption.test.ts",
+          "sha256": "f6ba0e5f36c552ef46c0fc4aa02340055e512521caa0729865b4c8ebbe0704ea"
+        },
+        {
+          "path": "tests/unit/owner-expenses-adoption.test.ts",
+          "sha256": "79159b2bf5eb55ca134e41110650efa9a782f094dba95abd757bb41eb21687c5"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-storage.test.mjs",
+          "sha256": "8075d7c150a9be7f1926b8960ffef4727539a457f2805e86d83bb3a1a7d789b6"
+        },
+        {
+          "path": "tests/integration/fulfillment-mode-storage.test.mjs",
+          "sha256": "2cf5e2591e40fbe381ea8f9da0455bc1e635db954273e669992765cd7afca06c"
+        },
+        {
+          "path": "tests/integration/fulfillment-mode-auth.test.mjs",
+          "sha256": "5aaf2740e449397b9e012e000fae78d1696b7cd2db6e46a8342e58ec29944a76"
+        },
+        {
+          "path": "tests/integration/owner-expenses-registered.test.mjs",
+          "sha256": "59f8101024a85d7700673daf21cb6e187df75aee40c5171acafa5f56dbb4a45a"
+        },
+        {
+          "path": "tests/integration/owner-expenses-registered-source.test.mjs",
+          "sha256": "fd782836b84ebe65cefb73f060d1a6ac276b8c5c46d9850eb152718b3940dd0c"
+        },
+        {
+          "path": "tests/integration/owner-expenses-combined-recovery.test.mjs",
+          "sha256": "a229a2a1379f5450f7907e0ce24e0656bbf6be40a744dcbbc0df6b67a19564a2"
+        },
+        {
+          "path": "tests/integration/recovery-drill.test.mjs",
+          "sha256": "1c0325ec16bf92d9e9a4b3d79213e1061b555f79142b147b07657f4fdbb90927"
+        },
+        {
+          "path": "tests/integration/owner-expenses-receipt-http.test.mjs",
+          "sha256": "3195bdc7721fbcafb18e055ec1e67b8f171521d881d46bd882d0070e836307cc"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-coverage.json",
+          "sha256": "fb780633e92ffff940849b6fc72c57eca60f7aa73d89dbc7c583ba65f8c90561"
+        },
+        {
+          "path": "tests/support/confirmed-booking50-candidate.mjs",
+          "sha256": "eea7d60bf8709fd071cc03a49378da04e4544b636b95994db4488dcdce1128c1"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-candidate.test.mjs",
+          "sha256": "c5af495b8769217d47b49d98b2996bb7254d2540f2a4fbe9d7a71ffd77f188f4"
+        },
+        {
+          "path": "tests/support/registered49-migration-checksums.json",
+          "sha256": "68ced1706217b33cf5ed6a8b87ccdaf4324b714e7e01fb26e283412c05de5871"
+        },
+        {
+          "path": "src/operations/confirmed-booking-source-history.ts",
+          "sha256": "d883e1e3e9fa594e36a86251ccc7e52483bd2f7ae2d0f063a4e6d2925000c5d6"
+        },
+        {
+          "path": "tests/support/booking-source-evidence.mjs",
+          "sha256": "629673a94d1efd5d522c9622aaf1947c4870ab476bb3fb432cfd35e182231fa5"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-context.sql",
+          "sha256": "8ff2773ed5dc888482d6b5dfdfa42ced06bf57a201555afdc9c029bfc99241e8"
+        },
+        {
+          "path": "src/operations/booking-context-contract.ts",
+          "sha256": "d1d882d1fe2a02600a85746afbbdce64cfcdc5b3d0d6814b5087c934dce16fa5"
+        },
+        {
+          "path": "src/client/scheduling-transport.ts",
+          "sha256": "6faab2feb1905ae7910f7abf09523c486fda56af024d4ffa538453ea6c1de1d8"
+        },
+        {
+          "path": "src/client/scheduling.ts",
+          "sha256": "c40b9b4a4ad368bc2357065d7781785ca4c584ee68626e571c951254deb0334e"
+        },
+        {
+          "path": "tests/fixtures/booking-context.ts",
+          "sha256": "39466c3b02e724e6a90307bf2944a2005ac9d2a3c3fbdfa44c3b190c71b06a5d"
+        },
+        {
+          "path": "tests/unit/booking-context.test.ts",
+          "sha256": "bf005cbb88a8c098eb14932bc9e6e31caf08878f57eb3437842c5f8eee2d6275"
+        },
+        {
+          "path": "tests/unit/scheduling-client.test.ts",
+          "sha256": "8dd29a4d98e2313a147338bfc87585352554263eb3c6a56130b15f028e01619b"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-context.test.mjs",
+          "sha256": "909098c2919b6a44c7e0ac0525c61cfad163cae649c2d512698c29ac3b07e29a"
+        },
+        {
+          "path": "tests/support/scheduling-client-native-journey.mjs",
+          "sha256": "9411fe9520f0e6f0c9b8f6cc7f5f98c5e08f6d84bf965359d6379882b23d38e6"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-original.sql",
+          "sha256": "9a754b0a324000979736c8ffbb7a693ebdb46e62049786f34dfe147df518bba4"
+        },
+        {
+          "path": "src/operations/scheduling-original-contract.ts",
+          "sha256": "29a4e958bce83690477f7fea720042017aeac5a2afca07d84f4e987361616677"
+        },
+        {
+          "path": "src/operations/scheduling-http.ts",
+          "sha256": "86edd380515b45c272dfe830cff0e9ee6263a21ccfe406de0c91469dd8181a7c"
+        },
+        {
+          "path": "src/client/scheduling-original.ts",
+          "sha256": "ccb90cbd075a7e23145501608e58465db925d0fb821dc7f9a94df014b4f89620"
+        },
+        {
+          "path": "src/client/pending-scheduling.ts",
+          "sha256": "b83b1efab82c34bd1712cdf844bbece8df5f6f26386bf65177611f6eddd4a010"
+        },
+        {
+          "path": "src/client/pending-original-operation.ts",
+          "sha256": "d1215b0ee8a6d0f3394d9948a6a2d070e2c74874f6e2c85c915f859120b42ce8"
+        },
+        {
+          "path": "src/security/original-operation-reference.ts",
+          "sha256": "e86103c5940919eda65de9b511bff69ba3d12a841a994919cc81cc0b5400df57"
+        },
+        {
+          "path": "src/security/original-operation-directory.ts",
+          "sha256": "84ddefa47854074321cd69235417877c091181b308c49addc982081fc5b7d274"
+        },
+        {
+          "path": "src/security/original-operation-http-contract.ts",
+          "sha256": "9ff6ac1fb5aa5d57dfbd3e9c914128c3906af14c097512cd9fcc670f16d45be3"
+        },
+        {
+          "path": "tests/fixtures/scheduling-original.ts",
+          "sha256": "5843b3ad6c99124cfb483b0c880ad07ca1542d303aa2a557bb1320c0b0773d27"
+        },
+        {
+          "path": "tests/unit/scheduling-original-recovery.test.ts",
+          "sha256": "f5316f219a1a03d7562b7343afd10d51567a026d5a14f0a6ac57d8be7c899c2b"
+        },
+        {
+          "path": "tests/unit/original-operation-reference.test.ts",
+          "sha256": "409b10474431579bfe08a1a3121d059881e5328b54251f7480d75bd1cb6d3ef3"
+        },
+        {
+          "path": "tests/unit/pending-original-operation.test.ts",
+          "sha256": "13e9bc9b186b6c9065da3444576c490985514c47a3a3c006a51130ce7b4c287a"
+        },
+        {
+          "path": "tests/support/original-operation-fixture.ts",
+          "sha256": "6e0dba17a49b513e2563e677ad50e98939b0523e03ebba4e32a7cf95d65d6143"
+        },
+        {
+          "path": "tests/support/registered49-original-operation-kinds.json",
+          "sha256": "eae410f29975bd326b74321e43ab8246527393672345912b7859d7f4bc808a55"
+        },
+        {
+          "path": "tests/integration/owner-expenses-resolution.test.mjs",
+          "sha256": "2c173710e1475bf743f3daa138c9694774644514fbe9cf328ffc4410b4ada919"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-resolution-race.test.mjs",
+          "sha256": "c70b123a65158ab8442a4daedcf961bc269dd6a3e1a9c1d4f97682aae76741a9"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-resolution.sql",
+          "sha256": "5e94d68fe776e8fa42d7a15750cfedbbd3c75297998e1d07a61b0f5f194ce0ad"
+        },
+        {
+          "path": "src/operations/confirmed-job-archive.ts",
+          "sha256": "3e3ec73091b1e6d67e9f6e7a9fc0fcf280f251b87a46f4d31958d18ec2831ae1"
+        },
+        {
+          "path": "tests/unit/confirmed-job-archive.test.ts",
+          "sha256": "146e52f50ef3d401da8efb013df72886f653d6c0812787abe3ce3166f2465ee5"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-history-reads.sql",
+          "sha256": "bc0cb0578bf1be267e83cbcddc0d70ffaaace1775ec20f246847bc96d090ba3c"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-source.sql",
+          "sha256": "e4034c2b0b7d4baff265c63e7ee175df2b7f190f96c51135259f8eef3b49d748"
+        },
+        {
+          "path": "src/operations/confirmed-booking-record-schema.ts",
+          "sha256": "48a4de2b772274f3e616eb22bfca892fa18cadef47cf404b6ae6c0b33860d96f"
+        },
+        {
+          "path": "src/operations/confirmed-booking-records.ts",
+          "sha256": "2c9665b3f798feda299bd1d6c24fa820826832473e8b3714156c8ecc5730f304"
+        },
+        {
+          "path": "src/operations/confirmed-booking-source-csv.ts",
+          "sha256": "d5e07d03369c5f1a3d4dd3164c18dccb17372a9e271826e764dc93f77c3c76fb"
+        },
+        {
+          "path": "src/operations/confirmed-job-read-contract.ts",
+          "sha256": "c9a39020a91519de043cad72fcfd5d545aeafd74b6c8e29ca10feea60d4879ae"
+        },
+        {
+          "path": "tests/fixtures/confirmed-job-records.ts",
+          "sha256": "456e21f6301b6e9f693413ef35844735afd9098f3d127c7fe2600435ced1e930"
+        },
+        {
+          "path": "tests/unit/confirmed-job-read-contract.test.ts",
+          "sha256": "230a70ae0d6b73ffb77bd9d2949d150a789c130ba700776b094441ae3114ff37"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-source.test.mjs",
+          "sha256": "0f515b4b1abb7f0565c5fd3fa52061922920f7f4793d70214bd53d8bc946c298"
+        },
+        {
+          "path": "src/operations/confirmed-reschedule-contract.ts",
+          "sha256": "97a7ff90c3478ede05a4f918d38b1c624f90dcc58955b52a2fa5cb0773ba3669"
+        },
+        {
+          "path": "tests/unit/confirmed-reschedule-contract.test.ts",
+          "sha256": "1a3ee5ff9bf57a8cc4222721cd0eeccbd870d0a2c876f949e228af378c92ab97"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-reschedule-commands.sql",
+          "sha256": "4911d2d251d1f98ccea50e373ef17c755065a85d19d41a73c1e896745bc83e50"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-reschedule.sql",
+          "sha256": "e003e6bf2e24ae2b433e185fcba95922ac6255a26ac6009a6c62c1ec97b59784"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-cancel.sql",
+          "sha256": "b62e5f6518da098880a6cdc5da276eed3209eb69372f594c7dcac435f0c5f5de"
+        },
+        {
+          "path": "src/operations/confirmed-booking-contract.ts",
+          "sha256": "98b24939d45252c461bafc43d11a62ce172dc54e86f5776c309512aa4b9791d3"
+        },
+        {
+          "path": "src/operations/confirmed-booking-directory.ts",
+          "sha256": "6fc467ea89cba487b16818221b2c7cbac23adbb865aa30bcad10728f28017254"
+        },
+        {
+          "path": "tests/fixtures/confirmed-booking.ts",
+          "sha256": "aa9391bbe53a30b71d246d6e4318fa9a5e8909d386529c58aac61064921ec7a6"
+        },
+        {
+          "path": "tests/unit/confirmed-booking-contract.test.ts",
+          "sha256": "a0ff070761efa7b283021efc68a06a07f6062bf228dd463655b45ef3a5950332"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-auth.test.mjs",
+          "sha256": "ba2b465ea5208ff82d422025202027d9591ead9468c32b98d5720dc066400fc4"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-reads.sql",
+          "sha256": "08f8008da6f8282515649f3be95417d5a63781458189fa1f0623d74bd389540b"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-commands.sql",
+          "sha256": "74ca7f070313d5463fbe6e3a6ae84486915d0e47bf3f4af7eb273b2b4db8968c"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-enable.sql",
+          "sha256": "b4d45ba8147d026f8f2d1d5ec45a0ebbf6f5fbe02bffd999a0a86f8808cfbfa3"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-invariants.sql",
+          "sha256": "a52d5bd6cd715a6b316068fdf13d1723ee9277b901833c0ceb945f363a6209ed"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-job-invariants.sql",
+          "sha256": "39cb681b634aafdded8bc9bcf1d5f6cf82f848e64e82b23d4efa17fe6439a26a"
+        },
+        {
+          "path": "tests/support/confirmed-booking-fixture.mjs",
+          "sha256": "48fd5391013404bbb7e21f2a09275cc71f8f1a57c38e18d8ac6f3bfb74b54c96"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-history.sql",
+          "sha256": "dc13a14fc59b7be3988060d5eaf08ab5039bdf376b18ea14c824d4d0a74b691c"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-storage.sql",
+          "sha256": "e034d7307f88994ca88f3123ccd1049d2cdab97954cf157e17b7c6b27c29d2ed"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-commands.test.mjs",
+          "sha256": "fb00469e5a6df6139889f9614d41f6e8fad5e5ecd8d73f7fbe72e45cc8a9df8e"
+        },
+        {
+          "path": "src/operations/scope-allocation-plan.ts",
+          "sha256": "3e2d7e6756566db5cced98b23d7d1cb93edd3bccdd4acd6b710f732147d0f2b6"
+        },
+        {
+          "path": "src/operations/schedule-time.ts",
+          "sha256": "78263abfbed481ff1c213b3a7234b4f914f4d3e7fc08db131c235f316e15c46f"
+        },
+        {
+          "path": "src/operations/schedule-conflicts.ts",
+          "sha256": "05fa3c39f9c3c140563fb64f60e7f0dad895257f922c8418eb7f58699d95dad3"
+        },
+        {
+          "path": "src/operations/appointment-hold-contract.ts",
+          "sha256": "add3892eb919721481c5ed33c68f37f06c57fe20f93956114a2be0af7f6a6867"
+        },
+        {
+          "path": "tests/unit/scope-allocation-plan.test.ts",
+          "sha256": "cc7dfde9a39ce8a104df75a1ef7a6669700c22aa99051387a71bb26ec57d0978"
+        },
+        {
+          "path": "tests/unit/schedule-time.test.ts",
+          "sha256": "c83d575cfb64d7f0fb376030a873a2872897630ecfac2511356d7c1fc4b7bceb"
+        },
+        {
+          "path": "tests/unit/schedule-conflicts.test.ts",
+          "sha256": "a5b2820f6d99e7c458a90ad3819e1b520e9d5d8caf8fc98865fc9f82fa9504f7"
+        },
+        {
+          "path": "tests/integration/booking-calculations.test.mjs",
+          "sha256": "e23960f44b0422b7f2816c895689b426acc48d2f23b2fdd18523065f7f7eba6c"
+        },
+        {
+          "path": "src/operations/fulfillment-mode-directory.ts",
+          "sha256": "583c4542112aae3a542d1c3043943a3f01b9d88f47fe4877f370906d8c70c0ad"
+        },
+        {
+          "path": "package.json",
+          "sha256": "4efec4a88e99b35261973061fcc35160894fab694d0e1d3ee2f44c53f4030042"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "sha256": "795e65cbf2983486a033ac6dcf5b9ffe3798bcd71bc12ce70a532ca55fd3dfa6"
+        },
+        {
+          "path": "planning/proposals/fulfillment-mode-commands.sql",
+          "sha256": "4bd4c2d4bd44f2817e160d72b815a34b526ac57b5ebc0713cfc8c15cbe087736"
+        },
+        {
+          "path": "planning/proposals/fulfillment-mode-storage.sql",
+          "sha256": "981e0b94c99df0d521bef32d14b12957d792ea766f13c5b1397efa8a8b9a2e5e"
+        },
+        {
+          "path": "src/operations/fulfillment-mode-contract.ts",
+          "sha256": "5609a8194c37b1e03609b0389344014527b661298c10100a9ad6143b09aa12c7"
+        },
+        {
+          "path": "tests/unit/fulfillment-mode-contract.test.ts",
+          "sha256": "0727d1948bb810adc89175b0b07983e62067c346ff7a7901c17b7f819b6bbd23"
+        },
+        {
+          "path": "tests/support/owner-expense49-candidate.mjs",
+          "sha256": "a98f794fbe42663db0df5d19c37c12e5aac2c43858601d560da93f14be47a738"
+        },
+        {
+          "path": "tests/support/migration-sandbox.mjs",
+          "sha256": "4c5842f1e71b9dfc1528674937133282d3d143ee6ebf84497c44165409e12325"
+        },
+        {
+          "path": "tests/support/recovery-drill.mjs",
+          "sha256": "df994802152c90db8f2b7a61e95fbd619c4763807461bb4e03b46b7ea5cb1f07"
+        },
+        {
+          "path": "tests/support/object-recovery-drill.mjs",
+          "sha256": "5c8a0a15f0d62f93c9b08484969655b95cfed98499656678a12fb5893a351e56"
+        },
+        {
+          "path": "src/tooling/object-recovery.ts",
+          "sha256": "0c80eef324e9a1696574f12f9c67b496512008fdb3fde2d8f551c72ddf0fe772"
+        },
+        {
+          "path": "src/bookkeeping/expenses/expense-export.ts",
+          "sha256": "15899cfa9da57fc24a46492b98cb3d9337a7d586afa10a1c9949947bb29c0c2e"
+        },
+        {
+          "path": "src/bookkeeping/expenses/receipt-export.ts",
+          "sha256": "c0a009e060a9521a5e6aa85c0f723b4ffda29262e59f1eb1b76cce8e872f485c"
+        },
+        {
+          "path": "supabase/migrations/20261029050000_owner_expenses.sql",
+          "sha256": "8bf39dc6502ef1bba4e45cb04efe0afdbc2c6efe0d8b3a0d25948dcf37ffee18"
+        },
+        {
+          "path": "planning/OWNER_EXPENSES_SCHEMA49_ADOPTION.json",
+          "sha256": "4ff01557113fac413715ee1b67efe89412636bfd0198e4f2a0385913ffb49a23"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-source.sql",
+          "sha256": "762830384c324c2e0ff30d276d6d95bc8fdd0bc5c73d7158b29ca2e5dca7e589"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-coverage.json",
+          "sha256": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828"
+        },
+        {
+          "path": "src/bookkeeping/expenses/expense-source-csv.ts",
+          "sha256": "bc3d61c1c917906e49eb5e7ef42fabeaa27ca6250588dfe1aa89c4c5ace1f804"
+        },
+        {
+          "path": "src/bookkeeping/expenses/expense-source-history.ts",
+          "sha256": "990e95184052b2edaa08c7c3863e7f5dce7230bda03db2cba6db95c6379f570d"
+        },
+        {
+          "path": "tests/support/registered48-export-coverage.json",
+          "sha256": "344de6f7e3e81718767fabbc64779d69e98a3d1aea5d8faba4e86c43394ebfee"
+        },
+        {
+          "path": "tests/support/registered48-migration-checksums.json",
+          "sha256": "f56732ca0627858e495c217f83fe5795b6278fa28f9686c6960dc327592a65cb"
+        },
+        {
+          "path": "tests/support/registered48-compatibility.json",
+          "sha256": "b241eaafc6d21905edd7b86c05906990ccf7325fb56b56ce823a741dc4dc9d13"
+        },
+        {
+          "path": "tests/fixtures/owner-expenses-original-clients.ts",
+          "sha256": "2a281924ff0bff89c025b63bd487c5c3515bca840e84b501a9dac35d2abbb899"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-resolution.sql",
+          "sha256": "8ee7d81802aa9a7af302ed778e9ce90faab8b67fee2d0e50da4ab064684c8691"
+        },
+        {
+          "path": "src/client/expenses.ts",
+          "sha256": "1a01bc659b0fc1b0670aa868ec191acfaa3c9dc0c0c0433e54c59f07792da779"
+        },
+        {
+          "path": "src/client/original-operations.ts",
+          "sha256": "2f5404b6095e77725abb1f73aef90d3698a286c951c45baac93ca4df547528ed"
+        },
+        {
+          "path": "planning/proposals/owner-expenses.sql",
+          "sha256": "aa8c72c489399404f82a29e8353b0e391972253d1a8a6aaff58ea4bcb831ba10"
+        },
+        {
+          "path": "planning/proposals/owner-expense-receipts.sql",
+          "sha256": "91ffaa86db818444dc76ff47bf0438262ae803980477db42d0f1ca2ac051cdfb"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-activity.sql",
+          "sha256": "50509e065d6b0ced2e58439d02fc68ff0bbcd91cd0b6ed631a502fee353f7ca5"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-original.sql",
+          "sha256": "075fac103f18fe7cb98eae1e935cd9e347795afc284e939324cf2a42825e4670"
+        },
+        {
+          "path": "planning/proposals/owner-expense-receipts-original.sql",
+          "sha256": "0fb4b96b0744e31a1e5cd0dba5a828be087c609f330abc192b50882a3d72bc37"
+        },
+        {
+          "path": "src/bookkeeping/expenses/receipt-contract.ts",
+          "sha256": "4a3d02177b422f75d7aca0c6dc325dec53890be4e3225277aa492e9711a303f0"
+        },
+        {
+          "path": "src/bookkeeping/expenses/receipt-directory.ts",
+          "sha256": "3333a2e66ce3a248d52a631bde0459e9664169f0033898ab65762ed63cd40960"
+        },
+        {
+          "path": "src/bookkeeping/expenses/receipt-http.ts",
+          "sha256": "7dd748053c201d360e86f7b1fccb17fd8458d550e3f21b002bed1104f9146fde"
+        },
+        {
+          "path": "src/client/expense-receipts.ts",
+          "sha256": "b309558ab76ccbdc4cc2068295220a74a6ca7807dba6f9694fb4401e8290e490"
+        },
+        {
+          "path": "src/client/pending-receipt.ts",
+          "sha256": "3d253a1afa0dd0aebc9e4b81c6acde5885bd27e9c619a694eb7866150f905d4c"
+        },
+        {
+          "path": "src/operations/appointment-hold-http.ts",
+          "sha256": "5c36e90109a8825172a249ee4ace831f18a8c93f57bb69ec0e4a0b8cbe74cfb9"
+        },
+        {
+          "path": "src/client/appointment-holds.ts",
+          "sha256": "241af73658f00e93c7e0335829fa50ddb20794e1b390a0a9595c229864083e9f"
+        },
+        {
+          "path": "supabase/migrations/20261028040000_appointment_proposals.sql",
+          "sha256": "5f21dce7af0944388e39c456c2a06614f63c111557958acf9528f311f25bf4fc"
+        },
+        {
+          "path": "planning/QUOTE_ACCEPTANCE_SCHEMA48_ADOPTION.json",
+          "sha256": "8d7b79a8975ef00f8a375d046ea6adcaf4c880005abef020163a18c5633161a8"
+        },
+        {
+          "path": "supabase/migrations/20261028050000_quote_acceptance.sql",
+          "sha256": "1010212bc3fe6b734a511f05968103a4f88de37452a3340b1d70da5f243819c7"
+        }
+      ]
+    },
+    {
+      "scope": "registered50-recovery-native-v2",
+      "startedAt": "2026-10-30T19:32:05.041Z",
+      "finishedAt": "2026-10-30T19:33:51.813Z",
+      "passed": 39,
+      "failed": 0,
+      "sourceStableDuringExecution": true,
+      "ownedClusterCleaned": true,
+      "receiptSha256": "c27096503f4f6dc0bb95d48439d2c40226cb96cfc5b22d3d3a8c8ec98890a64b",
+      "logSha256": "9ac62d737988b37f331e21dd2cd7292a91936bb02deb4b8d63116b86a1d50775",
+      "testedFiles": [
+        {
+          "path": "tests/support/private-recovery-permissions.mjs",
+          "sha256": "f43acd645fd63eff9f9f4a91997f9b93a12e54b3a3d20d51696285d92b37d207"
+        },
+        {
+          "path": "tests/integration/private-recovery-permissions.test.mjs",
+          "sha256": "baec7fb36946e5e2e45d0a5a6170329bc6c89458e026f1bfc05197ef6dcb8a1a"
+        },
+        {
+          "path": "README.md",
+          "sha256": "51600dd67fb178d17a72b99fa7da85ec64ba61ba34109dacf8df6dd8b8cc50a3"
+        },
+        {
+          "path": "planning/WORKING_STATE.md",
+          "sha256": "367b55e854b32adde550bcde1ffa5b6a6e7dbe104c8e9db7d3f4be6d25761d49"
+        },
+        {
+          "path": "planning/CONFIRMED_BOOKINGS_SCHEMA50_ADOPTION.json",
+          "sha256": "701a0d9a13fb106bcb83fc7672e87ebafb50900e69f968390c97467662d20aa4"
+        },
+        {
+          "path": "supabase/migration-checksums.json",
+          "sha256": "15f9e5245112299565911c3efa8dc198e34861976d0e4df1a3f0e38b06351b2e"
+        },
+        {
+          "path": "supabase/migrations/20261030160000_confirmed_bookings.sql",
+          "sha256": "4691321409ddf4705f17c068dc105d360c593662198bdab0f78260f9435ba8bd"
+        },
+        {
+          "path": "planning/SECURITY_EXPORT_COVERAGE.json",
+          "sha256": "fb780633e92ffff940849b6fc72c57eca60f7aa73d89dbc7c583ba65f8c90561"
+        },
+        {
+          "path": "release/compatibility.json",
+          "sha256": "a185e34267a118ed0c2d2a77bbe6302f3f595059ecd3fb538d2b3a91ba1d394d"
+        },
+        {
+          "path": "tests/unit/confirmed-bookings-adoption.test.ts",
+          "sha256": "f6ba0e5f36c552ef46c0fc4aa02340055e512521caa0729865b4c8ebbe0704ea"
+        },
+        {
+          "path": "tests/unit/owner-expenses-adoption.test.ts",
+          "sha256": "79159b2bf5eb55ca134e41110650efa9a782f094dba95abd757bb41eb21687c5"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-storage.test.mjs",
+          "sha256": "8075d7c150a9be7f1926b8960ffef4727539a457f2805e86d83bb3a1a7d789b6"
+        },
+        {
+          "path": "tests/integration/fulfillment-mode-storage.test.mjs",
+          "sha256": "2cf5e2591e40fbe381ea8f9da0455bc1e635db954273e669992765cd7afca06c"
+        },
+        {
+          "path": "tests/integration/fulfillment-mode-auth.test.mjs",
+          "sha256": "5aaf2740e449397b9e012e000fae78d1696b7cd2db6e46a8342e58ec29944a76"
+        },
+        {
+          "path": "tests/integration/owner-expenses-registered.test.mjs",
+          "sha256": "59f8101024a85d7700673daf21cb6e187df75aee40c5171acafa5f56dbb4a45a"
+        },
+        {
+          "path": "tests/integration/owner-expenses-registered-source.test.mjs",
+          "sha256": "fd782836b84ebe65cefb73f060d1a6ac276b8c5c46d9850eb152718b3940dd0c"
+        },
+        {
+          "path": "tests/integration/owner-expenses-combined-recovery.test.mjs",
+          "sha256": "a229a2a1379f5450f7907e0ce24e0656bbf6be40a744dcbbc0df6b67a19564a2"
+        },
+        {
+          "path": "tests/integration/recovery-drill.test.mjs",
+          "sha256": "c1d3dea109baaa0ba1fa676c970963e26aceaa6c8deaebdc26fee3ebc590e287"
+        },
+        {
+          "path": "tests/integration/owner-expenses-receipt-http.test.mjs",
+          "sha256": "3195bdc7721fbcafb18e055ec1e67b8f171521d881d46bd882d0070e836307cc"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-coverage.json",
+          "sha256": "fb780633e92ffff940849b6fc72c57eca60f7aa73d89dbc7c583ba65f8c90561"
+        },
+        {
+          "path": "tests/support/confirmed-booking50-candidate.mjs",
+          "sha256": "eea7d60bf8709fd071cc03a49378da04e4544b636b95994db4488dcdce1128c1"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-candidate.test.mjs",
+          "sha256": "c5af495b8769217d47b49d98b2996bb7254d2540f2a4fbe9d7a71ffd77f188f4"
+        },
+        {
+          "path": "tests/support/registered49-migration-checksums.json",
+          "sha256": "68ced1706217b33cf5ed6a8b87ccdaf4324b714e7e01fb26e283412c05de5871"
+        },
+        {
+          "path": "src/operations/confirmed-booking-source-history.ts",
+          "sha256": "d883e1e3e9fa594e36a86251ccc7e52483bd2f7ae2d0f063a4e6d2925000c5d6"
+        },
+        {
+          "path": "tests/support/booking-source-evidence.mjs",
+          "sha256": "629673a94d1efd5d522c9622aaf1947c4870ab476bb3fb432cfd35e182231fa5"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-context.sql",
+          "sha256": "8ff2773ed5dc888482d6b5dfdfa42ced06bf57a201555afdc9c029bfc99241e8"
+        },
+        {
+          "path": "src/operations/booking-context-contract.ts",
+          "sha256": "d1d882d1fe2a02600a85746afbbdce64cfcdc5b3d0d6814b5087c934dce16fa5"
+        },
+        {
+          "path": "src/client/scheduling-transport.ts",
+          "sha256": "6faab2feb1905ae7910f7abf09523c486fda56af024d4ffa538453ea6c1de1d8"
+        },
+        {
+          "path": "src/client/scheduling.ts",
+          "sha256": "c40b9b4a4ad368bc2357065d7781785ca4c584ee68626e571c951254deb0334e"
+        },
+        {
+          "path": "tests/fixtures/booking-context.ts",
+          "sha256": "39466c3b02e724e6a90307bf2944a2005ac9d2a3c3fbdfa44c3b190c71b06a5d"
+        },
+        {
+          "path": "tests/unit/booking-context.test.ts",
+          "sha256": "bf005cbb88a8c098eb14932bc9e6e31caf08878f57eb3437842c5f8eee2d6275"
+        },
+        {
+          "path": "tests/unit/scheduling-client.test.ts",
+          "sha256": "8dd29a4d98e2313a147338bfc87585352554263eb3c6a56130b15f028e01619b"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-context.test.mjs",
+          "sha256": "909098c2919b6a44c7e0ac0525c61cfad163cae649c2d512698c29ac3b07e29a"
+        },
+        {
+          "path": "tests/support/scheduling-client-native-journey.mjs",
+          "sha256": "9411fe9520f0e6f0c9b8f6cc7f5f98c5e08f6d84bf965359d6379882b23d38e6"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-original.sql",
+          "sha256": "9a754b0a324000979736c8ffbb7a693ebdb46e62049786f34dfe147df518bba4"
+        },
+        {
+          "path": "src/operations/scheduling-original-contract.ts",
+          "sha256": "29a4e958bce83690477f7fea720042017aeac5a2afca07d84f4e987361616677"
+        },
+        {
+          "path": "src/operations/scheduling-http.ts",
+          "sha256": "86edd380515b45c272dfe830cff0e9ee6263a21ccfe406de0c91469dd8181a7c"
+        },
+        {
+          "path": "src/client/scheduling-original.ts",
+          "sha256": "ccb90cbd075a7e23145501608e58465db925d0fb821dc7f9a94df014b4f89620"
+        },
+        {
+          "path": "src/client/pending-scheduling.ts",
+          "sha256": "b83b1efab82c34bd1712cdf844bbece8df5f6f26386bf65177611f6eddd4a010"
+        },
+        {
+          "path": "src/client/pending-original-operation.ts",
+          "sha256": "d1215b0ee8a6d0f3394d9948a6a2d070e2c74874f6e2c85c915f859120b42ce8"
+        },
+        {
+          "path": "src/security/original-operation-reference.ts",
+          "sha256": "e86103c5940919eda65de9b511bff69ba3d12a841a994919cc81cc0b5400df57"
+        },
+        {
+          "path": "src/security/original-operation-directory.ts",
+          "sha256": "84ddefa47854074321cd69235417877c091181b308c49addc982081fc5b7d274"
+        },
+        {
+          "path": "src/security/original-operation-http-contract.ts",
+          "sha256": "9ff6ac1fb5aa5d57dfbd3e9c914128c3906af14c097512cd9fcc670f16d45be3"
+        },
+        {
+          "path": "tests/fixtures/scheduling-original.ts",
+          "sha256": "5843b3ad6c99124cfb483b0c880ad07ca1542d303aa2a557bb1320c0b0773d27"
+        },
+        {
+          "path": "tests/unit/scheduling-original-recovery.test.ts",
+          "sha256": "f5316f219a1a03d7562b7343afd10d51567a026d5a14f0a6ac57d8be7c899c2b"
+        },
+        {
+          "path": "tests/unit/original-operation-reference.test.ts",
+          "sha256": "409b10474431579bfe08a1a3121d059881e5328b54251f7480d75bd1cb6d3ef3"
+        },
+        {
+          "path": "tests/unit/pending-original-operation.test.ts",
+          "sha256": "13e9bc9b186b6c9065da3444576c490985514c47a3a3c006a51130ce7b4c287a"
+        },
+        {
+          "path": "tests/support/original-operation-fixture.ts",
+          "sha256": "6e0dba17a49b513e2563e677ad50e98939b0523e03ebba4e32a7cf95d65d6143"
+        },
+        {
+          "path": "tests/support/registered49-original-operation-kinds.json",
+          "sha256": "eae410f29975bd326b74321e43ab8246527393672345912b7859d7f4bc808a55"
+        },
+        {
+          "path": "tests/integration/owner-expenses-resolution.test.mjs",
+          "sha256": "2c173710e1475bf743f3daa138c9694774644514fbe9cf328ffc4410b4ada919"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-resolution-race.test.mjs",
+          "sha256": "c70b123a65158ab8442a4daedcf961bc269dd6a3e1a9c1d4f97682aae76741a9"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-resolution.sql",
+          "sha256": "5e94d68fe776e8fa42d7a15750cfedbbd3c75297998e1d07a61b0f5f194ce0ad"
+        },
+        {
+          "path": "src/operations/confirmed-job-archive.ts",
+          "sha256": "3e3ec73091b1e6d67e9f6e7a9fc0fcf280f251b87a46f4d31958d18ec2831ae1"
+        },
+        {
+          "path": "tests/unit/confirmed-job-archive.test.ts",
+          "sha256": "146e52f50ef3d401da8efb013df72886f653d6c0812787abe3ce3166f2465ee5"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-history-reads.sql",
+          "sha256": "bc0cb0578bf1be267e83cbcddc0d70ffaaace1775ec20f246847bc96d090ba3c"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-source.sql",
+          "sha256": "e4034c2b0b7d4baff265c63e7ee175df2b7f190f96c51135259f8eef3b49d748"
+        },
+        {
+          "path": "src/operations/confirmed-booking-record-schema.ts",
+          "sha256": "48a4de2b772274f3e616eb22bfca892fa18cadef47cf404b6ae6c0b33860d96f"
+        },
+        {
+          "path": "src/operations/confirmed-booking-records.ts",
+          "sha256": "2c9665b3f798feda299bd1d6c24fa820826832473e8b3714156c8ecc5730f304"
+        },
+        {
+          "path": "src/operations/confirmed-booking-source-csv.ts",
+          "sha256": "d5e07d03369c5f1a3d4dd3164c18dccb17372a9e271826e764dc93f77c3c76fb"
+        },
+        {
+          "path": "src/operations/confirmed-job-read-contract.ts",
+          "sha256": "c9a39020a91519de043cad72fcfd5d545aeafd74b6c8e29ca10feea60d4879ae"
+        },
+        {
+          "path": "tests/fixtures/confirmed-job-records.ts",
+          "sha256": "456e21f6301b6e9f693413ef35844735afd9098f3d127c7fe2600435ced1e930"
+        },
+        {
+          "path": "tests/unit/confirmed-job-read-contract.test.ts",
+          "sha256": "230a70ae0d6b73ffb77bd9d2949d150a789c130ba700776b094441ae3114ff37"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-source.test.mjs",
+          "sha256": "0f515b4b1abb7f0565c5fd3fa52061922920f7f4793d70214bd53d8bc946c298"
+        },
+        {
+          "path": "src/operations/confirmed-reschedule-contract.ts",
+          "sha256": "97a7ff90c3478ede05a4f918d38b1c624f90dcc58955b52a2fa5cb0773ba3669"
+        },
+        {
+          "path": "tests/unit/confirmed-reschedule-contract.test.ts",
+          "sha256": "1a3ee5ff9bf57a8cc4222721cd0eeccbd870d0a2c876f949e228af378c92ab97"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-reschedule-commands.sql",
+          "sha256": "4911d2d251d1f98ccea50e373ef17c755065a85d19d41a73c1e896745bc83e50"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-reschedule.sql",
+          "sha256": "e003e6bf2e24ae2b433e185fcba95922ac6255a26ac6009a6c62c1ec97b59784"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-cancel.sql",
+          "sha256": "b62e5f6518da098880a6cdc5da276eed3209eb69372f594c7dcac435f0c5f5de"
+        },
+        {
+          "path": "src/operations/confirmed-booking-contract.ts",
+          "sha256": "98b24939d45252c461bafc43d11a62ce172dc54e86f5776c309512aa4b9791d3"
+        },
+        {
+          "path": "src/operations/confirmed-booking-directory.ts",
+          "sha256": "6fc467ea89cba487b16818221b2c7cbac23adbb865aa30bcad10728f28017254"
+        },
+        {
+          "path": "tests/fixtures/confirmed-booking.ts",
+          "sha256": "aa9391bbe53a30b71d246d6e4318fa9a5e8909d386529c58aac61064921ec7a6"
+        },
+        {
+          "path": "tests/unit/confirmed-booking-contract.test.ts",
+          "sha256": "a0ff070761efa7b283021efc68a06a07f6062bf228dd463655b45ef3a5950332"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-auth.test.mjs",
+          "sha256": "ba2b465ea5208ff82d422025202027d9591ead9468c32b98d5720dc066400fc4"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-reads.sql",
+          "sha256": "08f8008da6f8282515649f3be95417d5a63781458189fa1f0623d74bd389540b"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-commands.sql",
+          "sha256": "74ca7f070313d5463fbe6e3a6ae84486915d0e47bf3f4af7eb273b2b4db8968c"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-enable.sql",
+          "sha256": "b4d45ba8147d026f8f2d1d5ec45a0ebbf6f5fbe02bffd999a0a86f8808cfbfa3"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-invariants.sql",
+          "sha256": "a52d5bd6cd715a6b316068fdf13d1723ee9277b901833c0ceb945f363a6209ed"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-job-invariants.sql",
+          "sha256": "39cb681b634aafdded8bc9bcf1d5f6cf82f848e64e82b23d4efa17fe6439a26a"
+        },
+        {
+          "path": "tests/support/confirmed-booking-fixture.mjs",
+          "sha256": "48fd5391013404bbb7e21f2a09275cc71f8f1a57c38e18d8ac6f3bfb74b54c96"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-history.sql",
+          "sha256": "dc13a14fc59b7be3988060d5eaf08ab5039bdf376b18ea14c824d4d0a74b691c"
+        },
+        {
+          "path": "planning/proposals/confirmed-bookings-storage.sql",
+          "sha256": "e034d7307f88994ca88f3123ccd1049d2cdab97954cf157e17b7c6b27c29d2ed"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-commands.test.mjs",
+          "sha256": "fb00469e5a6df6139889f9614d41f6e8fad5e5ecd8d73f7fbe72e45cc8a9df8e"
+        },
+        {
+          "path": "src/operations/scope-allocation-plan.ts",
+          "sha256": "3e2d7e6756566db5cced98b23d7d1cb93edd3bccdd4acd6b710f732147d0f2b6"
+        },
+        {
+          "path": "src/operations/schedule-time.ts",
+          "sha256": "78263abfbed481ff1c213b3a7234b4f914f4d3e7fc08db131c235f316e15c46f"
+        },
+        {
+          "path": "src/operations/schedule-conflicts.ts",
+          "sha256": "05fa3c39f9c3c140563fb64f60e7f0dad895257f922c8418eb7f58699d95dad3"
+        },
+        {
+          "path": "src/operations/appointment-hold-contract.ts",
+          "sha256": "add3892eb919721481c5ed33c68f37f06c57fe20f93956114a2be0af7f6a6867"
+        },
+        {
+          "path": "tests/unit/scope-allocation-plan.test.ts",
+          "sha256": "cc7dfde9a39ce8a104df75a1ef7a6669700c22aa99051387a71bb26ec57d0978"
+        },
+        {
+          "path": "tests/unit/schedule-time.test.ts",
+          "sha256": "c83d575cfb64d7f0fb376030a873a2872897630ecfac2511356d7c1fc4b7bceb"
+        },
+        {
+          "path": "tests/unit/schedule-conflicts.test.ts",
+          "sha256": "a5b2820f6d99e7c458a90ad3819e1b520e9d5d8caf8fc98865fc9f82fa9504f7"
+        },
+        {
+          "path": "tests/integration/booking-calculations.test.mjs",
+          "sha256": "e23960f44b0422b7f2816c895689b426acc48d2f23b2fdd18523065f7f7eba6c"
+        },
+        {
+          "path": "src/operations/fulfillment-mode-directory.ts",
+          "sha256": "583c4542112aae3a542d1c3043943a3f01b9d88f47fe4877f370906d8c70c0ad"
+        },
+        {
+          "path": "package.json",
+          "sha256": "6470552fb79e40d817d0a4bbf206eb1748270a1efa42186ba0ab4ac4bed8deba"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "sha256": "795e65cbf2983486a033ac6dcf5b9ffe3798bcd71bc12ce70a532ca55fd3dfa6"
+        },
+        {
+          "path": "planning/proposals/fulfillment-mode-commands.sql",
+          "sha256": "4bd4c2d4bd44f2817e160d72b815a34b526ac57b5ebc0713cfc8c15cbe087736"
+        },
+        {
+          "path": "planning/proposals/fulfillment-mode-storage.sql",
+          "sha256": "981e0b94c99df0d521bef32d14b12957d792ea766f13c5b1397efa8a8b9a2e5e"
+        },
+        {
+          "path": "src/operations/fulfillment-mode-contract.ts",
+          "sha256": "5609a8194c37b1e03609b0389344014527b661298c10100a9ad6143b09aa12c7"
+        },
+        {
+          "path": "tests/unit/fulfillment-mode-contract.test.ts",
+          "sha256": "0727d1948bb810adc89175b0b07983e62067c346ff7a7901c17b7f819b6bbd23"
+        },
+        {
+          "path": "tests/support/owner-expense49-candidate.mjs",
+          "sha256": "a98f794fbe42663db0df5d19c37c12e5aac2c43858601d560da93f14be47a738"
+        },
+        {
+          "path": "tests/support/migration-sandbox.mjs",
+          "sha256": "4c5842f1e71b9dfc1528674937133282d3d143ee6ebf84497c44165409e12325"
+        },
+        {
+          "path": "tests/support/recovery-drill.mjs",
+          "sha256": "48da18643bf9d133b4c5ded794028346d4f98163c47cfc9e1a739d4bcae73b21"
+        },
+        {
+          "path": "tests/support/object-recovery-drill.mjs",
+          "sha256": "5c8a0a15f0d62f93c9b08484969655b95cfed98499656678a12fb5893a351e56"
+        },
+        {
+          "path": "src/tooling/object-recovery.ts",
+          "sha256": "0c80eef324e9a1696574f12f9c67b496512008fdb3fde2d8f551c72ddf0fe772"
+        },
+        {
+          "path": "src/bookkeeping/expenses/expense-export.ts",
+          "sha256": "15899cfa9da57fc24a46492b98cb3d9337a7d586afa10a1c9949947bb29c0c2e"
+        },
+        {
+          "path": "src/bookkeeping/expenses/receipt-export.ts",
+          "sha256": "c0a009e060a9521a5e6aa85c0f723b4ffda29262e59f1eb1b76cce8e872f485c"
+        },
+        {
+          "path": "supabase/migrations/20261029050000_owner_expenses.sql",
+          "sha256": "8bf39dc6502ef1bba4e45cb04efe0afdbc2c6efe0d8b3a0d25948dcf37ffee18"
+        },
+        {
+          "path": "planning/OWNER_EXPENSES_SCHEMA49_ADOPTION.json",
+          "sha256": "4ff01557113fac413715ee1b67efe89412636bfd0198e4f2a0385913ffb49a23"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-source.sql",
+          "sha256": "762830384c324c2e0ff30d276d6d95bc8fdd0bc5c73d7158b29ca2e5dca7e589"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-coverage.json",
+          "sha256": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828"
+        },
+        {
+          "path": "src/bookkeeping/expenses/expense-source-csv.ts",
+          "sha256": "bc3d61c1c917906e49eb5e7ef42fabeaa27ca6250588dfe1aa89c4c5ace1f804"
+        },
+        {
+          "path": "src/bookkeeping/expenses/expense-source-history.ts",
+          "sha256": "990e95184052b2edaa08c7c3863e7f5dce7230bda03db2cba6db95c6379f570d"
+        },
+        {
+          "path": "tests/support/registered48-export-coverage.json",
+          "sha256": "344de6f7e3e81718767fabbc64779d69e98a3d1aea5d8faba4e86c43394ebfee"
+        },
+        {
+          "path": "tests/support/registered48-migration-checksums.json",
+          "sha256": "f56732ca0627858e495c217f83fe5795b6278fa28f9686c6960dc327592a65cb"
+        },
+        {
+          "path": "tests/support/registered48-compatibility.json",
+          "sha256": "b241eaafc6d21905edd7b86c05906990ccf7325fb56b56ce823a741dc4dc9d13"
+        },
+        {
+          "path": "tests/fixtures/owner-expenses-original-clients.ts",
+          "sha256": "2a281924ff0bff89c025b63bd487c5c3515bca840e84b501a9dac35d2abbb899"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-resolution.sql",
+          "sha256": "8ee7d81802aa9a7af302ed778e9ce90faab8b67fee2d0e50da4ab064684c8691"
+        },
+        {
+          "path": "src/client/expenses.ts",
+          "sha256": "1a01bc659b0fc1b0670aa868ec191acfaa3c9dc0c0c0433e54c59f07792da779"
+        },
+        {
+          "path": "src/client/original-operations.ts",
+          "sha256": "2f5404b6095e77725abb1f73aef90d3698a286c951c45baac93ca4df547528ed"
+        },
+        {
+          "path": "planning/proposals/owner-expenses.sql",
+          "sha256": "aa8c72c489399404f82a29e8353b0e391972253d1a8a6aaff58ea4bcb831ba10"
+        },
+        {
+          "path": "planning/proposals/owner-expense-receipts.sql",
+          "sha256": "91ffaa86db818444dc76ff47bf0438262ae803980477db42d0f1ca2ac051cdfb"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-activity.sql",
+          "sha256": "50509e065d6b0ced2e58439d02fc68ff0bbcd91cd0b6ed631a502fee353f7ca5"
+        },
+        {
+          "path": "planning/proposals/owner-expenses-original.sql",
+          "sha256": "075fac103f18fe7cb98eae1e935cd9e347795afc284e939324cf2a42825e4670"
+        },
+        {
+          "path": "planning/proposals/owner-expense-receipts-original.sql",
+          "sha256": "0fb4b96b0744e31a1e5cd0dba5a828be087c609f330abc192b50882a3d72bc37"
+        },
+        {
+          "path": "src/bookkeeping/expenses/receipt-contract.ts",
+          "sha256": "4a3d02177b422f75d7aca0c6dc325dec53890be4e3225277aa492e9711a303f0"
+        },
+        {
+          "path": "src/bookkeeping/expenses/receipt-directory.ts",
+          "sha256": "3333a2e66ce3a248d52a631bde0459e9664169f0033898ab65762ed63cd40960"
+        },
+        {
+          "path": "src/bookkeeping/expenses/receipt-http.ts",
+          "sha256": "7dd748053c201d360e86f7b1fccb17fd8458d550e3f21b002bed1104f9146fde"
+        },
+        {
+          "path": "src/client/expense-receipts.ts",
+          "sha256": "b309558ab76ccbdc4cc2068295220a74a6ca7807dba6f9694fb4401e8290e490"
+        },
+        {
+          "path": "src/client/pending-receipt.ts",
+          "sha256": "3d253a1afa0dd0aebc9e4b81c6acde5885bd27e9c619a694eb7866150f905d4c"
+        },
+        {
+          "path": "src/operations/appointment-hold-http.ts",
+          "sha256": "5c36e90109a8825172a249ee4ace831f18a8c93f57bb69ec0e4a0b8cbe74cfb9"
+        },
+        {
+          "path": "src/client/appointment-holds.ts",
+          "sha256": "241af73658f00e93c7e0335829fa50ddb20794e1b390a0a9595c229864083e9f"
+        },
+        {
+          "path": "supabase/migrations/20261028040000_appointment_proposals.sql",
+          "sha256": "5f21dce7af0944388e39c456c2a06614f63c111557958acf9528f311f25bf4fc"
+        },
+        {
+          "path": "planning/QUOTE_ACCEPTANCE_SCHEMA48_ADOPTION.json",
+          "sha256": "8d7b79a8975ef00f8a375d046ea6adcaf4c880005abef020163a18c5633161a8"
+        },
+        {
+          "path": "supabase/migrations/20261028050000_quote_acceptance.sql",
+          "sha256": "1010212bc3fe6b734a511f05968103a4f88de37452a3340b1d70da5f243819c7"
+        }
+      ]
+    }
+  ],
+  "unitReportSha256": "97c7251603c3970a18accf79a6cfb2c419c4c608064e52de1f51aabb11d8b4ee",
+  "productionBuildLogSha256": "fc53ca253ecb0bd947d3525fd31431c052244886c0668a592f15fd4c08743b7d",
+  "correction": {
+    "failedReceiptSha256": "cb4c20ef0d56b83b39bd86eb16df2f4a57b7056579cd56d737611eb282d902dd",
+    "originalCurrentRecoveryPassed": 37,
+    "originalCurrentRecoveryFailed": 1,
+    "reason": "POSIX stat mode does not prove NTFS privacy. Inspection also found an extra inherited local-reader group. New empty synthetic recovery directories now use owner/System/Administrators-only inheritable ACLs; existing directories, owner preview and host policy are untouched. The actual extra-reader sentinel test must fail, and all39 recovery cases now pass.",
+    "officialReference": "https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/set-acl?view=powershell-5.1"
+  },
+  "timing": [
+    "Each native run binds its original file hashes and Git diff and was source-stable; the earlier170/15 runs precede the new platform-specific private-fixture helper. Unchanged database/business assertions remain intact.",
+    "After the final39-case recovery run, the only helper change removed its unused mkdir import. Final full lint/type/unit checks cover that cleanup. The production build preceded that unused test-helper import cleanup and documentation updates; application source was unchanged.",
+    "New unimported src/app/schedule/job-details.tsx typechecks/builds but is not routed, browser-accepted or claimed as delivered."
+  ],
+  "limitations": [
+    "No scheduling runtime/server composition or booking-screen release; full exact-source public CI and rendered Chromium/WebKit/actual phone acceptance remain required.",
+    "No owner database upgrade or activation, production data, financial posting or complete portability/backup claim.",
+    "All approved V1 scope, immutable canonical provenance and release protections remain."
+  ],
+  "files": {
+    "package.json": "6470552fb79e40d817d0a4bbf206eb1748270a1efa42186ba0ab4ac4bed8deba",
+    "planning/CONFIRMED_BOOKINGS_SCHEMA50_ADOPTION.json": "5dff6b2eaa06d8d98f3eeb8b0ec670757b84d1bd4d6ef20493e4c03b553bf18d",
+    "supabase/migration-checksums.json": "15f9e5245112299565911c3efa8dc198e34861976d0e4df1a3f0e38b06351b2e",
+    "supabase/migrations/20261030160000_confirmed_bookings.sql": "4691321409ddf4705f17c068dc105d360c593662198bdab0f78260f9435ba8bd",
+    "planning/SECURITY_EXPORT_COVERAGE.json": "fb780633e92ffff940849b6fc72c57eca60f7aa73d89dbc7c583ba65f8c90561",
+    "release/compatibility.json": "a185e34267a118ed0c2d2a77bbe6302f3f595059ecd3fb538d2b3a91ba1d394d",
+    "tests/support/private-recovery-permissions.mjs": "f43acd645fd63eff9f9f4a91997f9b93a12e54b3a3d20d51696285d92b37d207",
+    "tests/support/recovery-drill.mjs": "ed3710e089f6f9c65a22e74504683d7718ce0aca362475a8034f31eda51f08f1",
+    "tests/integration/private-recovery-permissions.test.mjs": "baec7fb36946e5e2e45d0a5a6170329bc6c89458e026f1bfc05197ef6dcb8a1a",
+    "tests/integration/recovery-drill.test.mjs": "c1d3dea109baaa0ba1fa676c970963e26aceaa6c8deaebdc26fee3ebc590e287",
+    "tests/unit/confirmed-bookings-adoption.test.ts": "f6ba0e5f36c552ef46c0fc4aa02340055e512521caa0729865b4c8ebbe0704ea",
+    "tests/unit/owner-expenses-adoption.test.ts": "79159b2bf5eb55ca134e41110650efa9a782f094dba95abd757bb41eb21687c5"
+  }
+}

@@ -1,0 +1,9 @@
+import {randomUUID} from 'node:crypto';
+import {originalOperationFixture} from '../support/original-operation-fixture.ts';
+import {parseSchedulingOriginal} from '../../src/operations/scheduling-original-contract.ts';
+import type {SchedulingOriginalKind} from '../../src/operations/scheduling-original-contract.ts';
+export function schedulingOriginalFixture(kind:SchedulingOriginalKind){
+ const original=parseSchedulingOriginal(originalOperationFixture(kind)),ref=original.reference,audit=randomUUID(),latest=randomUUID(),version='expectedJobVersion' in ref?(BigInt(ref.expectedJobVersion)+1n).toString():'1';
+ const receipt=kind.startsWith('operations.fulfillment_modes.')?{schemaVersion:1,businessId:original.businessId,sequence:(BigInt((ref as {expectedSequence:string}).expectedSequence)+1n).toString(),versionId:randomUUID(),auditEventId:audit}:kind==='operations.job.reschedule'?{schemaVersion:1,businessId:original.businessId,jobId:(ref as {jobId:string}).jobId,version,latestAppointmentId:latest,appointmentSequence:'2',currentAppointmentId:randomUUID(),confirmationState:'proposed',action:'propose',jobAuditEventId:audit,sourceAuditIds:[audit]}:{schemaVersion:1,businessId:original.businessId,jobId:(ref as {jobId:string}).jobId,version,appointmentId:latest,appointmentSequence:kind==='operations.job.book'?'1':'2',jobAuditEventId:audit,sourceAuditIds:[audit]};
+ return {original,envelope:{schemaVersion:1,original,result:{state:'committed',operationId:ref.operationId,recoveryEpoch:ref.recoveryEpoch,receipt}}};
+}

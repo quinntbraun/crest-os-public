@@ -32,7 +32,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:sign-in-browser": "node --test --test-concurrency=1 tests/integration/sign-in-browser.test.mjs tests/integration/customer-address-browser.test.mjs tests/integration/vehicle-http-browser.test.mjs tests/integration/association-http-browser.test.mjs tests/integration/association-editor-browser.test.mjs tests/integration/lead-http-browser.test.mjs tests/integration/lead-editor-browser.test.mjs tests/integration/lead-address-editor-browser.test.mjs tests/integration/lead-conversion-http-browser.test.mjs tests/integration/lead-conversion-editor-browser.test.mjs tests/integration/source-export-browser.test.mjs tests/integration/source-export-product-browser.test.mjs tests/integration/workspace-journey-browser.test.mjs tests/integration/quote-draft-editor-browser.test.mjs tests/integration/quote-review-browser.test.mjs tests/integration/appointment-holds-browser.test.mjs tests/integration/appointment-holds-product-browser.test.mjs tests/integration/quote-commercial-browser.test.mjs tests/integration/quote-browser-response.test.mjs tests/integration/owner-expenses-product-browser.test.mjs",
+    "test:sign-in-browser": "node --test --test-concurrency=1 tests/integration/sign-in-browser.test.mjs tests/integration/customer-address-browser.test.mjs tests/integration/vehicle-http-browser.test.mjs tests/integration/association-http-browser.test.mjs tests/integration/association-editor-browser.test.mjs tests/integration/lead-http-browser.test.mjs tests/integration/lead-editor-browser.test.mjs tests/integration/lead-address-editor-browser.test.mjs tests/integration/lead-conversion-http-browser.test.mjs tests/integration/lead-conversion-editor-browser.test.mjs tests/integration/source-export-browser.test.mjs tests/integration/source-export-product-browser.test.mjs tests/integration/workspace-journey-browser.test.mjs tests/integration/quote-draft-editor-browser.test.mjs tests/integration/quote-review-browser.test.mjs tests/integration/appointment-holds-browser.test.mjs tests/integration/appointment-holds-product-browser.test.mjs tests/integration/quote-commercial-browser.test.mjs tests/integration/quote-browser-response.test.mjs tests/integration/owner-expenses-product-browser.test.mjs tests/integration/confirmed-bookings-product-browser.test.mjs tests/integration/book-job-product-browser.test.mjs tests/integration/job-change-product-browser.test.mjs tests/integration/booking-divisions-product-browser.test.mjs tests/integration/fulfillment-modes-product-browser.test.mjs tests/integration/booking-conflict-review-product-browser.test.mjs",
     "test:tenant-read-db": "node --test --test-concurrency=1 tests/integration/tenant-read.test.mjs",
     "test:mutation-fence-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/mutation-fence.test.mjs",
     "test:operation-storage-db": "node --test --test-concurrency=1 tests/integration/operation-storage.test.mjs",
@@ -69,7 +69,7 @@
     "test:provider-executor-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-cleanup-executor.test.mjs",
     "test:provider-export-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-evidence-snapshot.test.mjs tests/integration/provider-reference-snapshot.test.mjs",
     "test:provider-review-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-reconciliation-review.test.mjs",
-    "test:recovery-db": "node --test --test-concurrency=1 tests/integration/recovery-drill.test.mjs",
+    "test:recovery-db": "node --test --test-concurrency=1 tests/integration/private-recovery-permissions.test.mjs tests/integration/recovery-drill.test.mjs",
     "test:private-files": "node --conditions=react-server --test --test-concurrency=1 tests/integration/private-object-store.test.mjs tests/integration/export-part-store.test.mjs",
     "test:image-validation": "node --conditions=react-server --test --test-concurrency=1 tests/integration/image-validation.test.mjs",
     "test:image-sandbox": "node --test --test-concurrency=1 tests/integration/image-sandbox.test.mjs",
@@ -97,12 +97,18 @@
     "test:quote-review-source": "node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-review-source.test.mjs",
     "test:quote-review-registered": "node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-review-registered.test.mjs",
     "test:appointment-storage": "node --conditions=react-server --test --test-concurrency=1 tests/integration/appointment-holds-storage.test.mjs",
+    "test:fulfillment-modes": "node --conditions=react-server --test --test-concurrency=1 tests/integration/fulfillment-mode-storage.test.mjs tests/integration/fulfillment-mode-auth.test.mjs",
+    "test:booking-calculations": "node --conditions=react-server --test --test-concurrency=1 tests/integration/booking-calculations.test.mjs",
+    "test:confirmed-booking-storage": "node --conditions=react-server --test --test-concurrency=1 tests/integration/confirmed-bookings-storage.test.mjs",
+    "test:confirmed-bookings": "node --conditions=react-server --test --test-concurrency=1 tests/integration/confirmed-bookings-commands.test.mjs tests/integration/confirmed-bookings-auth.test.mjs tests/integration/confirmed-bookings-resolution-race.test.mjs tests/integration/confirmed-bookings-context.test.mjs tests/integration/confirmed-bookings-candidate.test.mjs",
+    "test:confirmed-booking-source": "node --conditions=react-server --test --test-concurrency=1 tests/integration/confirmed-bookings-source.test.mjs",
     "test:appointment-registered": "node --conditions=react-server --test --test-concurrency=1 tests/integration/appointment-holds-registered.test.mjs",
     "test:quote-commercial-proposal": "node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-acceptance.test.mjs",
     "test:quote-commercial-source": "node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-commercial-source.test.mjs",
     "test:quote-commercial-registered": "node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-commercial-registered.test.mjs",
     "test:expenses-registered": "node --conditions=react-server --test --test-concurrency=1 tests/integration/owner-expenses-registered.test.mjs tests/integration/owner-expenses-registered-source.test.mjs tests/integration/owner-expenses-combined-recovery.test.mjs",
-    "test:expenses-browser": "node --test --test-concurrency=1 tests/integration/owner-expenses-product-browser.test.mjs"
+    "test:expenses-browser": "node --test --test-concurrency=1 tests/integration/owner-expenses-product-browser.test.mjs",
+    "test:booking-conflict-review-proposal": "node --test --test-concurrency=1 tests/integration/booking-conflict-review.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1156.0",
@@ -134,5 +140,8 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.0",
     "vitest": "5.0.5"
+  },
+  "overrides": {
+    "minimatch": "11.0.1"
   }
 }

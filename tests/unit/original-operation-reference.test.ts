@@ -5,6 +5,11 @@ import type {OriginalOperationKind} from '../../src/security/original-operation-
 
 const businessId=randomUUID(),operationId=randomUUID(),originalEpoch=randomUUID(),authorityEpoch=randomUUID();
 const targets:Record<OriginalOperationKind,Record<string,unknown>>={
+ 'operations.fulfillment_modes.initialize':{expectedSequence:'0'},
+ 'operations.fulfillment_modes.save':{expectedSequence:'1'},
+ 'operations.job.book':{jobId:randomUUID(),expectedModeSequence:'0'},
+ 'operations.job.cancel':{jobId:randomUUID(),expectedJobVersion:'1'},
+ 'operations.job.reschedule':{jobId:randomUUID(),expectedJobVersion:'1',action:'propose',latestAppointmentId:randomUUID()},
  'bookkeeping.expense.save':{expenseId:randomUUID(),expectedRevision:'0'},
  'bookkeeping.receipt.reserve':{receiptId:randomUUID(),expenseId:randomUUID(),expenseRevision:'1',expectedRevision:'0'},
  'bookkeeping.receipt.publish':{receiptId:randomUUID(),expenseId:randomUUID(),expenseRevision:'1',expectedRevision:'1'},

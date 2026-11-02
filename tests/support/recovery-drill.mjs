@@ -3,7 +3,8 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
-import { chmod, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
+import {privateRecoveryWorkspace} from './private-recovery-permissions.mjs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -24,6 +25,9 @@ const legacy46Profile=Object.freeze({schemaVersion:46,registrySha256:hash(legacy
 const legacy48Bytes=await readFile(join(root,'tests/support/registered48-migration-checksums.json')),legacy48=JSON.parse(legacy48Bytes);
 assert.equal(legacy48.migrations.length,48);assert.deepEqual(registry.migrations.slice(0,48),legacy48.migrations);
 const legacy48Profile=Object.freeze({schemaVersion:48,registrySha256:hash(legacy48Bytes)});
+const legacy49Bytes=await readFile(join(root,'tests/support/registered49-migration-checksums.json')),legacy49=JSON.parse(legacy49Bytes);
+assert.equal(legacy49.migrations.length,49);assert.deepEqual(registry.migrations.slice(0,49),legacy49.migrations);
+const legacy49Profile=Object.freeze({schemaVersion:49,registrySha256:hash(legacy49Bytes)});
 const legacy47Bytes=await readFile(join(root,'tests/support/registered47-migration-checksums.json')),legacy47=JSON.parse(legacy47Bytes);
 assert.equal(legacy47.migrations.length,47);assert.deepEqual(registry.migrations.slice(0,47),legacy47.migrations);
 const legacy47Profile=Object.freeze({schemaVersion:47,registrySha256:hash(legacy47Bytes)});
@@ -51,9 +55,7 @@ export function run(command,args,{input,env=process.env,signal}={}){
 }
 function target(value){return new URL(migrationTestTarget(process.env.CREST_ENV,value));}
 export async function privateWorkspace(){
-  assert.equal(process.env.CREST_ENV,'test');
-  const base=join(root,'.local/recovery-drill');await mkdir(base,{recursive:true,mode:0o700});
-  const directory=await mkdtemp(join(base,'case-'));await chmod(directory,0o700);return directory;
+  return privateRecoveryWorkspace();
 }
 export async function keyPair(directory){
   const path=join(directory,`key-${randomBytes(8).toString('hex')}.txt`);
@@ -107,6 +109,10 @@ async function unseal(path,expected,identity){
   return run(tool('age'),['--decrypt','--identity',identity],{input:cipher});
 }
 export async function backupDatabase(...args){return backupWithProfile(currentProfile,...args);}
+export async function backupLegacy49Database(client,...args){
+  assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(r=>r.version),legacy49.migrations.map(m=>m.version));
+  return backupWithProfile(legacy49Profile,client,...args);
+}
 export async function backupLegacy48Database(...args){return backupWithProfile(legacy48Profile,...args);}
 export async function backupLegacy47Database(...args){return backupWithProfile(legacy47Profile,...args);}
 export async function backupLegacy46Database(...args){return backupWithProfile(legacy46Profile,...args);}
@@ -114,6 +120,22 @@ export async function backupLegacy45Database(...args){return backupWithProfile(l
 export async function backupLegacy44Database(...args){return backupWithProfile(legacy44Profile,...args);}
 export async function backupLegacy43Database(...args){return backupWithProfile(legacy43Profile,...args);}
 export async function backupLegacy42Database(...args){return backupWithProfile(legacy42Profile,...args);}
+// Explicit synthetic candidate profile; never relabel a50 dump as registered49.
+// Existing current/legacy entry points retain their exact bounds and hashes.
+async function booking50CandidateProfile(candidate){
+  assert.equal(candidate.file,'20261030160000_confirmed_bookings.sql');
+  const bytes=await readFile(join(candidate.directory,'supabase/migration-checksums.json')),value=JSON.parse(bytes);
+  const frozen=JSON.parse(await readFile(join(root,'tests/support/registered49-migration-checksums.json')));
+  assert.equal(value.migrations.length,50);assert.equal(frozen.migrations.length,49);assert.deepEqual(value.migrations.slice(0,49),frozen.migrations);
+  assert.equal(hash(bytes),candidate.registrySha256);assert.equal(value.migrations.at(-1).file,candidate.file);assert.equal(value.migrations.at(-1).sha256,candidate.sha256);
+  assert.equal(hash(await readFile(join(candidate.directory,'supabase/migrations',candidate.file))),candidate.sha256);
+  return {profile:Object.freeze({schemaVersion:50,registrySha256:candidate.registrySha256}),versions:value.migrations.map(m=>m.version)};
+}
+export async function backupBooking50CandidateDatabase(candidate,client,...args){
+  const checked=await booking50CandidateProfile(candidate);
+  assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(r=>r.version),checked.versions);
+  return backupWithProfile(checked.profile,client,...args);
+}
 async function backupWithProfile(profile,client,url,directory,recipient,duringSnapshot=async()=>{},objectCapture){
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   try{
@@ -136,6 +158,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_RECOVERY_BACKUP_FAILED:'+stage);}
 }
 export async function restoreDatabase(...args){return restoreWithProfile(currentProfile,...args);}
+export async function restoreLegacy49Database(...args){return restoreWithProfile(legacy49Profile,...args);}
 export async function restoreLegacy48Database(...args){return restoreWithProfile(legacy48Profile,...args);}
 export async function restoreLegacy47Database(...args){return restoreWithProfile(legacy47Profile,...args);}
 export async function restoreLegacy46Database(...args){return restoreWithProfile(legacy46Profile,...args);}
@@ -143,6 +166,7 @@ export async function restoreLegacy45Database(...args){return restoreWithProfile
 export async function restoreLegacy44Database(...args){return restoreWithProfile(legacy44Profile,...args);}
 export async function restoreLegacy43Database(...args){return restoreWithProfile(legacy43Profile,...args);}
 export async function restoreLegacy42Database(...args){return restoreWithProfile(legacy42Profile,...args);}
+export async function restoreBooking50CandidateDatabase(candidate,...args){return restoreWithProfile((await booking50CandidateProfile(candidate)).profile,...args);}
 async function restoreWithProfile(profile,directory,identity,url,restoreObjects){
   target(url);const client=await connect(url);let stage='empty_destination';
   try{

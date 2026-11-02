@@ -6,7 +6,8 @@ import {parseLead,parseLeadSource,leadColumns,leadSourceColumns} from '../../src
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import assert from 'node:assert/strict';
 import { randomBytes,randomUUID } from 'node:crypto';
-import { chmod,copyFile,mkdir,readFile,readdir,stat,unlink,writeFile } from 'node:fs/promises';
+import { chmod,copyFile,mkdir,readFile,readdir,unlink,writeFile } from 'node:fs/promises';
+import {assertPrivateRecoveryArtifact} from '../support/private-recovery-permissions.mjs';
 import { join } from 'node:path';
 import { after,before,test } from 'node:test';
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
@@ -168,7 +169,7 @@ test('actual encrypted database recovery works in a fresh process and separate c
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,backup.manifest.schemaVersion);
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM auth.schema_migrations')).rows[0].n,(await source.query('SELECT count(*)::int AS n FROM auth.schema_migrations')).rows[0].n);
   assert.equal(backup.manifest.completeBackup,false); // vault/files/config/full release remain unfinished
-  assert.equal(backup.manifest.schemaVersion,49);
+  assert.equal(backup.manifest.schemaVersion,50);
 });
 test('one exported snapshot preserves prior operations and excludes concurrent committed changes',async()=>{
   assert.equal((await restored.query('SELECT legal_name FROM crest.businesses WHERE id=$1',[owner.business])).rows[0].legal_name,original.name);
@@ -220,7 +221,7 @@ test('lead source snapshot, exact cents/microseconds, genuine customer and origi
   for(const role of ['crest_lead_owner','crest_lead_integrity_owner','crest_lead_source_owner','crest_lead_source_integrity_owner'])await assert.rejects(w.connection.query('SET ROLE '+role),e=>e.code==='42501');
   for(const table of ['leads','lead_sources'])await assert.rejects(w.connection.query('SELECT * FROM crest.'+table),e=>e.code==='42501');
  }finally{await w.connection.end();await restored.query('DROP ROLE '+w.login);}
- assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,56);
+ assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,68);
  const quoteTables=['condition_assessments','quote_approvals','quote_families','quote_items','quote_revisions'];
  assert.deepEqual((await restored.query("SELECT c.relname AS name,c.relrowsecurity AND c.relforcerowsecurity AND c.relowner='crest_schema_owner'::regrole AND NOT has_table_privilege('crest_web',c.oid,'SELECT') AS closed FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='crest' AND c.relkind='r' AND c.relname=ANY($1::text[]) ORDER BY c.relname",[quoteTables])).rows,quoteTables.map(name=>({name,closed:true})));
  const commercialTables=['agreements','entitlement_versions','quote_acceptances','quote_family_commercial_state','quote_sends','scope_allocations','scope_entitlements'];
@@ -230,14 +231,14 @@ test('lead source snapshot, exact cents/microseconds, genuine customer and origi
 });
 
 test('registered coverage accounts for every actual source column and rejects omissions on the restored schema',async()=>{
- const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,49);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_vehicles').required,[...leadVehicleColumns]);
+ const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,50);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_vehicles').required,[...leadVehicleColumns]);
  for(const spec of Object.values(expenseSourceTables)){const table='crest.'+spec.entity;assert.deepEqual(manifest.tables.find(t=>t.table===table).required,[...spec.columns]);assert.equal((await restored.query("SELECT relrowsecurity AND relforcerowsecurity AND relowner='crest_schema_owner'::regrole AS protected FROM pg_class WHERE oid=$1::regclass",[table])).rows[0].protected,true);}
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_addresses').required,[...leadAddressColumns]);
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_events').required,[...leadEventColumns]);
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_sources').required,[...leadSourceColumns]);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.leads').required,[...leadColumns]);
  const columns=(await restored.query(`SELECT n.nspname||'.'||c.relname AS "table",a.attname AS "column" FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN ('crest','crest_private') AND c.relkind IN ('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2`)).rows;
- assert.equal(columns.length,910);assert.deepEqual(verifyExportCoverage(manifest,columns,49),{assurance:'schema_inventory_only',tables:56,requiredColumns:900,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
- for(const table of ['crest.expense_revisions','crest.expense_receipt_revisions','crest.leads','crest.agreements','crest.entitlement_versions','crest.quote_acceptances','crest.quote_family_commercial_state','crest.quote_sends','crest.scope_allocations','crest.scope_entitlements']){const missing=structuredClone(manifest);missing.tables.find(t=>t.table===table).required.pop();assert.throws(()=>verifyExportCoverage(missing,columns,49),/EXPORT_COVERAGE_REVIEW_REQUIRED/);}
+ assert.equal(columns.length,1064);assert.deepEqual(verifyExportCoverage(manifest,columns,50),{assurance:'schema_inventory_only',tables:68,requiredColumns:1054,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
+ for(const table of ['crest.expense_revisions','crest.expense_receipt_revisions','crest.leads','crest.agreements','crest.entitlement_versions','crest.quote_acceptances','crest.quote_family_commercial_state','crest.quote_sends','crest.scope_allocations','crest.scope_entitlements','crest.fulfillment_mode_versions','crest.jobs','crest.job_vehicles','crest.job_encounters','crest.appointments','crest.operator_controls','crest.schedule_reservations','crest.schedule_overrides','crest.schedule_override_conflicts','crest.allocation_plan_versions','crest.allocation_plan_parts','crest.job_events']){const missing=structuredClone(manifest);missing.tables.find(t=>t.table===table).required.pop();assert.throws(()=>verifyExportCoverage(missing,columns,50),/EXPORT_COVERAGE_REVIEW_REQUIRED/);}
 });
 
 test('immutable18-column Lost event restores exactly before the later reopen',async()=>{
@@ -347,8 +348,8 @@ test('unknown-schema rows retain exact bigint, microseconds, binary bytes and se
 });
 test('private recovery point contains ciphertext and a non-secret receipt, without the original key',async()=>{
   assert.deepEqual((await readdir(point)).sort(),['database.age','manifest.age','receipt.json']);
-  for(const file of ['database.age','manifest.age']){const bytes=await readFile(join(point,file));assert.match(bytes.subarray(0,32).toString(),/^age-encryption.org\/v1/);assert.equal((await stat(join(point,file))).mode&0o077,0);}
-  await assert.rejects(readFile(keys.path),e=>e.code==='ENOENT');assert.equal((await stat(emergencyKey)).mode&0o077,0);
+  for(const file of ['database.age','manifest.age']){const bytes=await readFile(join(point,file));assert.match(bytes.subarray(0,32).toString(),/^age-encryption.org\/v1/);await assertPrivateRecoveryArtifact(join(point,file));}
+  await assert.rejects(readFile(keys.path),e=>e.code==='ENOENT');await assertPrivateRecoveryArtifact(emergencyKey);
 });
 test('wrong emergency key fails before creating schema or business rows',async()=>{
   const other=await keyPair(directory),f=await emptyRestore();try{await closed(restoreDatabase(point,other.path,f.url));assert.deepEqual(await inventory(f.client),[]);}finally{await f.client.end();}

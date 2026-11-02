@@ -1,0 +1,30 @@
+{
+  "formatVersion": 1,
+  "sourceCommit": "90ce73dc8afe6fc4acf30f208a3d1d72dc956e7c",
+  "sourcePath": "src/security/original-operation-reference.ts",
+  "sourceSha256": "eb761a61c57bac3a38229cea6545fee56f2a5b2691dd77beafc8f1d2f3e8c312",
+  "kinds": [
+    "bookkeeping.expense.save",
+    "bookkeeping.receipt.reserve",
+    "bookkeeping.receipt.publish",
+    "operations.appointment_hold.save",
+    "business.rename",
+    "crm.customer.save",
+    "crm.address.save",
+    "crm.vehicle.save",
+    "crm.vehicle.association",
+    "crm.lead.source.save",
+    "crm.lead.save",
+    "crm.lead.state",
+    "crm.lead.vehicle.save",
+    "crm.lead.address.save",
+    "crm.lead.convert",
+    "catalog.service.save",
+    "quote.draft.save",
+    "quote.replacement.create",
+    "quote.manual.send",
+    "quote.confirmation.accept",
+    "quote.review.submit",
+    "quote.review.approve"
+  ]
+}

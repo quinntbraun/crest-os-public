@@ -1,0 +1,30 @@
+import type {Proof} from './authentication';
+import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
+const routes=['slot-review','original','workspace','agreement','resources','pending','list','read','history','mode-history','mode-save','book','cancel','reschedule'] as const;
+export type SchedulingRoute=typeof routes[number];
+type Kind='input'|'not_submitted'|'recovery'|'limited'|'unknown'|'unavailable';
+export class SchedulingClientError extends Error{readonly kind:Kind;constructor(kind:Kind){super('SCHEDULING_REQUEST_FAILED');this.name='SchedulingClientError';this.kind=kind;}}
+// Domain-only private transport. No retries, storage, auth bypass or external URL.
+export async function postScheduling(route:SchedulingRoute,body:object,proof:Proof,external:AbortSignal){
+ const mutation=['book','cancel','reschedule','mode-save'].includes(route);let sent=false;
+ try{
+  if(!routes.includes(route)||typeof proof?.csrfToken!=='string'||!/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(proof.csrfToken)||!Number.isSafeInteger(proof.expiresAt)||proof.expiresAt<=Date.now())throw Error();
+  const signal=AbortSignal.any([external,AbortSignal.timeout(40000)]),encoded=JSON.stringify(body);if(signal.aborted||new TextEncoder().encode(encoded).length>(mutation?131072:16384))throw Error();sent=true;
+  const response=await fetch('/api/business/scheduling/'+route,{method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer',headers:{'content-type':'application/json','x-crest-csrf':proof.csrfToken},body:encoded,signal});
+  if(!/^application\/json(?:;\s*charset=utf-8)?$/i.test(response.headers.get('content-type')??'')||!response.headers.get('cache-control')?.includes('no-store'))throw Error();
+  const reader=response.body?.getReader();if(!reader)throw Error();let size=0;const parts:Uint8Array[]=[];const limit=route==='agreement'||route==='resources'?4194304:1048576;
+  try{for(;;){const part=await new Promise<ReadableStreamReadResult<Uint8Array>>((resolve,reject)=>{const abort=()=>reject(Error());if(signal.aborted){abort();return;}signal.addEventListener('abort',abort,{once:true});reader.read().then(resolve,reject).finally(()=>signal.removeEventListener('abort',abort));});if(part.done)break;if(!(part.value instanceof Uint8Array)||part.value.byteLength===0||(size+=part.value.byteLength)>limit)throw Error();parts.push(part.value);}}
+  finally{void reader.cancel().catch(()=>{});reader.releaseLock();}
+  if(signal.aborted)throw Error();const bytes=new Uint8Array(size);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.length;}
+  const text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes),value:unknown=JSON.parse(text),nodes:{value:unknown;depth:number}[]=[{value,depth:0}];let fields=0,visited=0;
+  while(nodes.length){const node=nodes.pop()!;if(++visited>(route==='original'?10000:20000)||node.depth>32)throw Error();if(node.value&&typeof node.value==='object'){if(!Array.isArray(node.value))fields+=Object.keys(node.value).length;nodes.push(...Object.values(node.value).map(v=>({value:v,depth:node.depth+1})));}}
+  if((text.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(t=>t===':').length!==fields)throw Error();
+  if(exact(value,['error'])){
+   if(value.error==='SCHEDULING_REQUEST_LIMITED'&&response.status===429)throw new SchedulingClientError('limited');
+   if(mutation&&value.error==='SCHEDULING_SAVE_NOT_SUBMITTED'&&response.status===503)throw new SchedulingClientError('not_submitted');
+   if(mutation&&value.error==='RECOVERY_REVIEW_REQUIRED'&&response.status===409)throw new SchedulingClientError('recovery');
+   if(mutation&&value.error==='SCHEDULING_SAVE_OUTCOME_UNKNOWN'&&response.status===503)throw new SchedulingClientError('unknown');throw Error();
+  }
+  return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding')};
+ }catch(error){throw error instanceof SchedulingClientError?error:new SchedulingClientError(mutation?(sent?'unknown':'not_submitted'):'unavailable');}
+}

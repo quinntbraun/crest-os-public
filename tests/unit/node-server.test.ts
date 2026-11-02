@@ -1,7 +1,8 @@
 import {request as httpRequest} from 'node:http';
 import {describe,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn(),quotes:vi.fn(),quoteReview:vi.fn(),quoteCommercial:vi.fn(),holds:vi.fn(),expenses:vi.fn()}));
+vi.mock('../../src/operations/scheduling-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/operations/scheduling-http.ts')>(),createSchedulingHttp:()=>flow.scheduling}));
+const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn(),quotes:vi.fn(),quoteReview:vi.fn(),quoteCommercial:vi.fn(),holds:vi.fn(),expenses:vi.fn(),scheduling:vi.fn()}));
 vi.mock('../../src/security/browser-session-flow.ts',()=>({createBrowserSessionFlow:()=>flow}));
 vi.mock('../../src/security/business-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/business-http.ts')>(),createBusinessHttp:()=>flow.business}));
 vi.mock('../../src/customer/customer-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-http.ts')>(),createCustomerHttp:()=>flow.customers}));
@@ -241,4 +242,21 @@ it('expense history uses its8MiB response boundary independently of customer and
  const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn(),payload={syntheticProtocolFixture:'x'.repeat(1048576+17)};flow.expenses.mockImplementation(async()=>new Response(JSON.stringify(payload),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));
  bindApplicationHandler(server,{origin:local,environment:'test',customers:true,operationResolution:true,syntheticExpenses:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
  try{const response=await fetch(local+'/api/business/expenses/history',{method:'POST',body:'{}'});expect(response.status).toBe(200);expect(await response.json()).toEqual(payload);expect(pages).not.toHaveBeenCalled();}finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+
+it('requires the complete explicit test-only scheduling composition',()=>{
+ const base={origin,environment:'test',syntheticScheduling:true,customers:true,vehicles:true,associations:true,operationResolution:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticQuoteCommercial:true,business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}},provider:{},tokens:{}}};
+ for(const patch of [{environment:'production'},{syntheticScheduling:'yes'},{business:undefined},{authentication:undefined},{customers:false},{vehicles:false},{associations:false},{operationResolution:false},{syntheticQuoteCommercial:false}]){
+  const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,{...base,...patch} as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();
+ }
+});
+it.each([false,true])('reserves scheduling and encoded aliases with a separate bounded response: %s',async enabled=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn();
+ flow.scheduling.mockReset();flow.scheduling.mockImplementation(async request=>new Response(request.url.endsWith('/large')?'x'.repeat(4194304):request.url.endsWith('/oversize')?'x'.repeat(4194305):JSON.stringify({synthetic:'private scheduling boundary'}),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',syntheticScheduling:enabled,customers:true,vehicles:true,associations:true,operationResolution:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticQuoteCommercial:true,business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{
+  for(const path of ['/api/business/scheduling/resources','/api/business/%73cheduling/history','/api%2fbusiness/scheduling/read']){const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(enabled?200:503);expect(response.headers.get('cache-control')).toContain('no-store');await response.text();}
+  expect(pages).not.toHaveBeenCalled();expect(flow.scheduling).toHaveBeenCalledTimes(enabled?3:0);
+  if(enabled){expect((await(await fetch(local+'/api/business/scheduling/large',{method:'POST',body:'{}'})).text()).length).toBe(4194304);await expect(fetch(local+'/api/business/scheduling/oversize',{method:'POST',body:'{}'})).rejects.toThrow();}
+ }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));flow.scheduling.mockReset();}
 });

@@ -4,6 +4,11 @@ import type {OriginalOperationKind,OriginalOperationReference,OriginalOperationR
 export function originalOperationFixture(kind:OriginalOperationKind='crm.customer.save'){
  const common={operationId:randomUUID(),recoveryEpoch:randomUUID()},id=randomUUID();
  const targets={
+ 'operations.fulfillment_modes.initialize':{expectedSequence:'0'},
+ 'operations.fulfillment_modes.save':{expectedSequence:'1'},
+ 'operations.job.book':{jobId:id,expectedModeSequence:'0'},
+ 'operations.job.cancel':{jobId:id,expectedJobVersion:'1'},
+ 'operations.job.reschedule':{jobId:id,expectedJobVersion:'1',action:'propose',latestAppointmentId:randomUUID()},
  'bookkeeping.expense.save':{expenseId:id,expectedRevision:'0'},
  'bookkeeping.receipt.reserve':{receiptId:id,expenseId:randomUUID(),expenseRevision:'1',expectedRevision:'0'},
  'bookkeeping.receipt.publish':{receiptId:id,expenseId:randomUUID(),expenseRevision:'1',expectedRevision:'1'},

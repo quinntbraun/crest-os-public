@@ -1,0 +1,120 @@
+{
+  "formatVersion": 1,
+  "scope": "unregistered_scheduled_job_cancellation_with_retained_booking_over49",
+  "baseCommit": "701eb2c8eca99bdd93773a4d7dadc61e7209d0fb",
+  "startedAt": "2026-10-30T10:54:10.926Z",
+  "finishedAt": "2026-10-30T10:55:39.361Z",
+  "registeredSchemaVersion": 49,
+  "registeredLaterMigration": false,
+  "runtimeActivated": false,
+  "productionReady": false,
+  "executed": {
+    "postgresCommandReadAndCancellationCases": 31,
+    "genuinePasswordTotpPrivateAdapterCases": 7,
+    "passed": 38,
+    "failed": 0,
+    "forcedBookAndCancellationDuplicateWaitsObserved": true,
+    "independentEncryptedExactSchemaRowsAndGrantsRestore": true,
+    "sourceStable": true,
+    "ownedClustersCleaned": true
+  },
+  "behavior": [
+    "Before-work scheduled cancellation retains the job ID, both appointment versions, reason, actor and factual customer-communication state. It releases the active reservation without a fee, financial write or automatic message.",
+    "Complete new allocation plans preserve all accepted money and stable zero-dollar scope while marking only the cancelled visit parts cancelled. Another split visit and its reservation remain assigned and scheduled.",
+    "Original booking and cancellation receipts survive replay and independent exact-schema/source-row/grant restore. Terminal, stale and missing jobs are rejected without partial changes.",
+    "Both duplicate book and duplicate cancel operations are forced to wait at an observed lock; each pair returns one retained original receipt with one resulting job revision.",
+    "Future or malformed communication evidence is rejected. A sent state is an owner-recorded factual observation, not evidence that this software dispatched a message.",
+    "Fresh provider/local-session authorization, cross-business denial, recovery write pause and normal sign-out are exercised through genuine password/TOTP and the private server adapter."
+  ],
+  "limitations": [
+    "No registered50 migration or booking/cancellation UI/HTTP composition is activated.",
+    "Reschedule proposal/confirmation and field/custody transitions remain unimplemented; this command refuses cancellation after physical work starts. Active-work closure must be verified when that field workflow exists.",
+    "Complete source export/original-save retirement, legacy49 recovery helper binding and full release acceptance remain.",
+    "No real financial posting, Google Calendar or real-data activation.",
+    "No new browser or physical-iPhone acceptance. The running preview remains accepted49."
+  ],
+  "fixtureCorrection": "The lock observer now clears PostgreSQL statistics snapshots on each bounded poll, and observes both promises with allSettled immediately. It still requires an actual lock wait and two successful identical results; SQL timeouts and integrity checks remain unchanged.",
+  "files": [
+    {
+      "path": "planning/proposals/fulfillment-mode-storage.sql",
+      "sha256": "981e0b94c99df0d521bef32d14b12957d792ea766f13c5b1397efa8a8b9a2e5e"
+    },
+    {
+      "path": "planning/proposals/fulfillment-mode-commands.sql",
+      "sha256": "4bd4c2d4bd44f2817e160d72b815a34b526ac57b5ebc0713cfc8c15cbe087736"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-storage.sql",
+      "sha256": "e034d7307f88994ca88f3123ccd1049d2cdab97954cf157e17b7c6b27c29d2ed"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-history.sql",
+      "sha256": "dc13a14fc59b7be3988060d5eaf08ab5039bdf376b18ea14c824d4d0a74b691c"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-invariants.sql",
+      "sha256": "a52d5bd6cd715a6b316068fdf13d1723ee9277b901833c0ceb945f363a6209ed"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-job-invariants.sql",
+      "sha256": "1f911bcad1b27df653d2254b06be936505a40469a54c644b3cdb4b5df262ef03"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-commands.sql",
+      "sha256": "9940372e07040b4e502575b307164af36726b0e56330883218472887effa2f6f"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-reads.sql",
+      "sha256": "859d0404c817766136c3bc66504ae1db24a5a9e00808acf62bb5c66ccd9eb1e4"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-enable.sql",
+      "sha256": "b4d45ba8147d026f8f2d1d5ec45a0ebbf6f5fbe02bffd999a0a86f8808cfbfa3"
+    },
+    {
+      "path": "src/operations/confirmed-booking-contract.ts",
+      "sha256": "c3cef6e57929fe87dc3b8c610d7c94ad81e4a06d5be723ad50e56819be95b9e4"
+    },
+    {
+      "path": "src/operations/confirmed-booking-directory.ts",
+      "sha256": "1a9494cacc44be53e10a2ed5941d223b238882037101af80b352c750d51d5c4f"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-commands.test.mjs",
+      "sha256": "87063025b47fd40921ae9a84b151ffca805533783fe6ae47e562ae4542f0ac2e"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-auth.test.mjs",
+      "sha256": "43114ff7c001ecf9fcf62f1b5627cba89db898c22f9a4616cb90598df7a2e212"
+    },
+    {
+      "path": "tests/support/confirmed-booking-fixture.mjs",
+      "sha256": "48fd5391013404bbb7e21f2a09275cc71f8f1a57c38e18d8ac6f3bfb74b54c96"
+    },
+    {
+      "path": "tests/support/migration-sandbox.mjs",
+      "sha256": "4c5842f1e71b9dfc1528674937133282d3d143ee6ebf84497c44165409e12325"
+    },
+    {
+      "path": "tests/fixtures/confirmed-booking.ts",
+      "sha256": "aa9391bbe53a30b71d246d6e4318fa9a5e8909d386529c58aac61064921ec7a6"
+    },
+    {
+      "path": "tests/unit/confirmed-booking-contract.test.ts",
+      "sha256": "a0ff070761efa7b283021efc68a06a07f6062bf228dd463655b45ef3a5950332"
+    },
+    {
+      "path": "package.json",
+      "sha256": "695f01250ff04bc6521433008f616dcf42d352169b94fabf3dec011873c995f2"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "5abe599410887be425dbea8bc3506ea7963adcb516d071752169d641fe1ae5f9"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-cancel.sql",
+      "sha256": "373e8b257b9a25e9f8894bcca565c3c9f26a0f6520d3c23826fb595ae25ad621"
+    }
+  ],
+  "privateReceiptSha256": "f882270167b81950120e6a03db37a0dd228e5a72af3769db847c32a1ec4362e1"
+}

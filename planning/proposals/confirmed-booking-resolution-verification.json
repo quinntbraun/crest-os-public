@@ -1,0 +1,50 @@
+{
+  "formatVersion": 1,
+  "scope": "unregistered_booking_original_review_sql_targets_over49",
+  "baseCommit": "29dacb9dcd7fa05e6c7ae978685d32843f706215",
+  "registeredSchemaVersion": 49,
+  "registeredLaterMigration": false,
+  "runtimeActivated": false,
+  "productionReady": false,
+  "executed": {
+    "postgresCommandHistoryAndOriginalReviewCases": 49,
+    "genuinePasswordTotpExistingBookingAdapterCases": 12,
+    "totalPassed": 61,
+    "failed": 0,
+    "addedOriginalReviewCases": 9,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "independentEncryptedExactSchemaRowsAndGrantsRestore": true
+  },
+  "startedAt": "2026-10-30T12:56:02.872Z",
+  "finishedAt": "2026-10-30T12:57:56.007Z",
+  "receiptSha256": "e25bbda3e8b5cd6890859d7627f7f6f16f1f562447175a11e108bf51090fb37a",
+  "logSha256": "9482800b080ea4e5b21f21ee640d935ee986f8a9f0277c644e61f880b835d698",
+  "behavior": [
+    "Exact registered49 validator body is required before adding four closed original-reference shapes: fulfillment mode save, job book, before-work cancellation and schedule change. This proposal does not yet add the separate initialization reference shape.",
+    "Existing owner/recent-MFA/recovery retirement authority, unique operation key, immutable audit, original_recorded observation and independent financial capability requirements are reused unchanged. No new grant, table or generic payload is added.",
+    "For all four kinds a previously absent request can be reviewed and retired; its later actual original command returns an operation conflict without changing retained domain/operation/audit counts. Repeated retirement returns the same decision.",
+    "For all four kinds a recorded command remains original_recorded, no retirement replaces it, its original counts remain unchanged and the original command still returns its retained receipt.",
+    "Malformed versions/actions, hidden drafts, missing identifiers and attempted installation over a different validator body fail. New cases reuse one genuine retained synthetic agreement without raising recovery capacity."
+  ],
+  "limitations": [
+    "The9 new original-review cases use restricted SQL session fixtures. The12 genuine password/TOTP cases cover the existing booking adapter, not the new original-reference transport.",
+    "Typed original-reference parser/client/private adapter/pending stores, initialization recovery handling and owner review UI still need connection before adoption. Original_recorded alone must never clear a pending reference; typed original receipt validation remains required.",
+    "Concurrent retirement-versus-original interleavings for these new kinds remain to be exercised before integrated release. Existing command concurrency tests remain in this61-case suite.",
+    "No registered50 adoption, booking screens, new full public CI/browser/device proof or preview activation. Full V1 scope remains unfinished."
+  ],
+  "files": [
+    {
+      "path": "planning/proposals/confirmed-bookings-resolution.sql",
+      "sha256": "d9efae77bb605b853d612a8b4ebc65ca3594935838d2c657c5d110c7002de7a0"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-commands.test.mjs",
+      "sha256": "5a1ac26be0baac7c1fa4399f5445041630f0244b5fc8711b5138a6718c3d0d3d"
+    },
+    {
+      "path": "planning/proposals/owner-expenses-resolution.sql",
+      "sha256": "8ee7d81802aa9a7af302ed778e9ce90faab8b67fee2d0e50da4ab064684c8691"
+    }
+  ]
+}

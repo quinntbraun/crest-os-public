@@ -2,6 +2,11 @@ import {customerUuid as uuid,customerVersion as version,customerInstant as insta
 
 type Common=Readonly<{operationId:string;recoveryEpoch:string}>;
 type Targets={
+ 'operations.fulfillment_modes.initialize':Readonly<{expectedSequence:'0'}>;
+ 'operations.fulfillment_modes.save':Readonly<{expectedSequence:string}>;
+ 'operations.job.book':Readonly<{jobId:string;expectedModeSequence:string}>;
+ 'operations.job.cancel':Readonly<{jobId:string;expectedJobVersion:string}>;
+ 'operations.job.reschedule':Readonly<{jobId:string;expectedJobVersion:string;action:'propose'|'confirm'|'withdraw';latestAppointmentId:string}>;
  'bookkeeping.expense.save':Readonly<{expenseId:string;expectedRevision:string}>;
  'bookkeeping.receipt.reserve':Readonly<{receiptId:string;expenseId:string;expenseRevision:string;expectedRevision:'0'}>;
  'bookkeeping.receipt.publish':Readonly<{receiptId:string;expenseId:string;expenseRevision:string;expectedRevision:'1'}>;
@@ -44,6 +49,11 @@ function object(value:unknown,keys:readonly string[]):Record<string,unknown>{
  return Object.fromEntries(keys.map(key=>[key,descriptors[key]!.value]));
 }
 const fields={
+ 'operations.fulfillment_modes.initialize':['expectedSequence'],
+ 'operations.fulfillment_modes.save':['expectedSequence'],
+ 'operations.job.book':['jobId','expectedModeSequence'],
+ 'operations.job.cancel':['jobId','expectedJobVersion'],
+ 'operations.job.reschedule':['jobId','expectedJobVersion','action','latestAppointmentId'],
  'bookkeeping.expense.save':['expenseId','expectedRevision'],
  'bookkeeping.receipt.reserve':['receiptId','expenseId','expenseRevision','expectedRevision'],
  'bookkeeping.receipt.publish':['receiptId','expenseId','expenseRevision','expectedRevision'],
@@ -84,11 +94,15 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
   require(uuid(ref.operationId)&&uuid(ref.recoveryEpoch));
   for(const key of fields[kind]){
    if(key==='expectedSequence'||key==='expectedVersion'||key==='expectedRevision'||key==='expectedFamilyVersion'||key==='expectedRevisionVersion')require(version(ref[key],!['business.rename','crm.lead.state','quote.review.submit','quote.review.approve','quote.manual.send','quote.confirmation.accept'].includes(kind)));
-   else if(key==='expectedContentVersion')require(version(ref[key]));
+   else if(key==='expectedModeSequence')require(version(ref[key],true));
+   else if(key==='expectedJobVersion'||key==='expectedContentVersion')require(version(ref[key]));
    else if(key==='expenseRevision')require(version(ref[key]));
    else if(key==='expectedLeadVersion')require(version(ref[key]));
    else if(key!=='action'&&key!=='nextAssociationId')require(uuid(ref[key]));
   }
+  if(kind==='operations.fulfillment_modes.initialize')require(ref.expectedSequence==='0');
+  if(kind==='operations.fulfillment_modes.save')require(version(ref.expectedSequence));
+  if(kind==='operations.job.reschedule')require(['propose','confirm','withdraw'].includes(ref.action as string));
   if(kind==='bookkeeping.receipt.reserve')require(ref.expectedRevision==='0');
   if(kind==='bookkeeping.receipt.publish')require(ref.expectedRevision==='1');
   if(kind==='crm.vehicle.association')require(['open','close','transfer'].includes(ref.action as string)&&ref.expectedVersion===(ref.action==='open'?'0':'1')&&(ref.action==='transfer'?uuid(ref.nextAssociationId)&&ref.nextAssociationId!==ref.associationId:ref.nextAssociationId===null));
