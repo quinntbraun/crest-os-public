@@ -1,0 +1,116 @@
+{
+  "formatVersion": 1,
+  "scope": "explicit_accepted_scope_division_and_tooling_security_fix",
+  "baseCommit": "3a390f22a002adfc6c1ebedad2406c0c5973be76",
+  "registeredSchemaVersion": 50,
+  "ownerPreviewSchemaVersion": 49,
+  "ownerDatabaseUpgraded": false,
+  "productionReady": false,
+  "executed": {
+    "nativeBrowserTests": 1,
+    "nativeBrowserPassed": 1,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "startedAt": "2026-11-02T18:29:02.435Z",
+    "finishedAt": "2026-11-02T18:30:26.063Z",
+    "receiptSha256": "cf57c46c2bcbe2d5bd4060153101e99b86f2e9d15f658d009bc2cd894734addf",
+    "logSha256": "e0710d518962bbcc7d6c0f23caa5d12d6d55f32a6ba7b20ad474054fadc18a66",
+    "allUnitPassed": 7407,
+    "allUnitFiles": 270,
+    "scopeDivisionRegressions": 14,
+    "toolingSecurityRegressions": 2,
+    "unitReportSha256": "bb801546abd6ff9de78335acb991572b232213f4f2e77ccfeec1a7e30847fc86",
+    "buildLogSha256": "52d63465e3a50372728e524bf27261d5ab79bc3d0d373c1ba7b658d70996f902",
+    "lint": true,
+    "typecheck": true,
+    "productionNextAndServerBuild": true,
+    "dependencyAuditAtLowSeverity": "zero_vulnerabilities",
+    "directPinsRegistryIntegrityAndLicenses": true
+  },
+  "behavior": [
+    "Genuine MFA → retained accepted quote → actual booking division form → first visit/lost reply/reload/original review → saved Schedule → retained remainder assigned to a second visit → refresh and no remaining work.",
+    "Partially completed optional division fields block submission with no job created; all blank means assign the whole selected part. Typed descriptions/amounts stay only in private memory until the booking command.",
+    "Explicit owner-entered net amount and any existing discount allocation use BigInt exact arithmetic and the existing scope validator. No proportional pricing, tax, due-date or financial-posting rule is inferred.",
+    "The first $100 paid slice, original complimentary scope identity and their assigned job remain identical when the second $150 remainder is booked. Exactly two jobs, three current parts and unchanged accepted source bytes.",
+    "Existing assigned work stays read-only, prior plan sequence/reason remain mandatory, and the same original-save/concurrency/privacy protocol is reused.",
+    "Four viewport widths with Axe, no horizontal overflow, keyboard submission, validation recovery and reload; screenshots are synthetic and not physical-device proof."
+  ],
+  "sourceFiles": {
+    "package-lock.json": "41b9e374bcdf805f29725226981f905364b3a1a26e2ff6002db209bda0420a0c",
+    "scripts/verify-dependencies.mjs": "1f26b47567d4161c67cd0f42472c587bcebb801ea795e6de184a77210fda0235",
+    "tests/unit/tooling-glob-security.test.ts": "a6ece10e06a0a911483d04988b2b4c590348bcd1387f3f3cdd7a91d1b9164610",
+    "src/client/booking-scope-division.ts": "465d25d143a38f02951102f4255214882f2ee7aaab6f063af73237add347b34b",
+    "src/app/schedule/new/scope-division.tsx": "61b39531085e9e8c9fc2b89a42294df350cc025c0cc828a8ab713259091a18f7",
+    "tests/unit/booking-scope-division.test.ts": "c5ed6b1a267e510ab803ff689eba3e66a5c2a3690c58a8901343ecf160dad2f9",
+    "tests/integration/booking-divisions-product-browser.test.mjs": "a605e20410fba226057bafad65a0cb449934a8b5324af4622a65c393228d52aa",
+    "src/app/schedule/new/booking.tsx": "e399d71088400bb8cd9ca3ad1a2e7935451e068dac673b6e7e052320b499d0c1",
+    "package.json": "fbe8eb233fdfb7cd90fbd077579fcd417b286f6b3b0a6a5d6adcb536da099497"
+  },
+  "screenshots": [
+    {
+      "engine": "chromium",
+      "width": 360,
+      "sha256": "758aadb8fc37f17863d8e5dfbc40dbfcab8c4814cf9cace09b43906741026533",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "chromium",
+      "width": 390,
+      "sha256": "ea3867869bd2fe68e3668a1a679c72c864217fa9fd4b286641e0a663bb7d905f",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "chromium",
+      "width": 768,
+      "sha256": "6ba41c9fd07648f868f912aefe12c970f01d4611f46ca3be61fe4e2aff3feaee",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "chromium",
+      "width": 1440,
+      "sha256": "ad8207c3f3c2025b1b3cc722baeedd86b151eb430150d07227a41a347ae3e18c",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    }
+  ],
+  "securityFix": {
+    "advisory": "https://github.com/advisories/GHSA-g3hv-75wg-m249",
+    "historicalFailedHead": "995e4eb6f83ff3d734b01df71c62b8bfc6ade129",
+    "historicalFailedRun": 41496022162,
+    "runNumber": 393,
+    "failedStep": "Dependency security gate",
+    "otherGroups": "Database foundation, genuine authentication, provider/evidence, expense and commercial all passed.",
+    "override": {
+      "minimatch": "11.0.1"
+    },
+    "newLockedMatcher": {
+      "name": "@isaacs/nonrecursive-glob-match",
+      "version": "1.0.3",
+      "license": "BlueOak-1.0.0",
+      "nativeBinaries": false,
+      "lifecycleScriptsExecuted": false
+    },
+    "lowSeverityAuditGateUnchanged": true,
+    "reviewNotes": "planning/DEPENDENCY_SECURITY_NOTES.md"
+  },
+  "failedChecksRetained": [
+    {
+      "path": ".local/booking-divisions-browser-native/result.json",
+      "cause": "Test locator matched both its form validation and Next route announcer. Scoped to the real form; all assertions retained."
+    },
+    {
+      "path": ".local/booking-divisions-browser-native-v2/result.json",
+      "result": "Earlier complete two-visit browser proof passed before the reviewed dependency installation; final proof above reruns with the actual patched lock."
+    }
+  ],
+  "limitations": [
+    "Local new-UI WebKit remains blocked by Windows signing policy; both engines remain mandatory in the full Linux pipeline. No new physical-phone or preview deployment acceptance.",
+    "This form divides positive-valued remaining parts from one accepted agreement; existing zero-valued parts are retained whole. Combining agreements, additional vehicle selection, complete conflict-preview/override and operating-mode controls remain approved unfinished scope.",
+    "Discount division, very large amounts and explicit zero-valued visit slices have focused unit coverage; this browser fixture exercises one undiscounted paid split plus retained complimentary scope.",
+    "Full current-source release CI and owner50 deployment/preserved-data acceptance remain pending. The owner49 encrypted preparation point independently restored84 source tables but is not a complete backup and does not establish freshness at cutover.",
+    "The immutable3a/995 stage built but its full release failed393; never mark or start it as an accepted preview. Remaining full V1 remains unchanged."
+  ]
+}
