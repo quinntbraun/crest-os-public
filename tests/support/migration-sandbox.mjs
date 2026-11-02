@@ -50,10 +50,18 @@ export async function migrationSandbox(testConnection=process.env.CREST_TEST_DAT
       finally { for(const r of (await admin.query("SELECT rolname FROM pg_roles WHERE rolname=ANY($1::text[])",[roles])).rows) ownedRoles.add(r.rolname); }
     },
     async close() {
-      for(const client of connections) await client.end();
-      for(const name of databases) { assert.match(name,/^crest_migrate_[a-f0-9]{16}$/); await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`); }
-      for(const role of ownedRoles) { assert(roles.includes(role)); await admin.query(`DROP ROLE "${role}"`); }
-      await admin.end();
+      try {
+        for(const client of connections) await client.end();
+        // DROP DATABASE checkpoints can exceed the query-test budget on local
+        // Docker disks. Only owned cleanup gets this bounded maintenance budget.
+        await admin.query("SET statement_timeout = '30s'");
+        for(const name of databases) { assert.match(name,/^crest_migrate_[a-f0-9]{16}$/); await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`); }
+        for(const role of ownedRoles) { assert(roles.includes(role)); await admin.query(`DROP ROLE "${role}"`); }
+      } finally {
+        // A failed cleanup must still release the connection and fail the test,
+        // rather than leaving Node alive until its outer watchdog expires.
+        await admin.end();
+      }
     }
   };
 }

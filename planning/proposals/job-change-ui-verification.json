@@ -1,0 +1,216 @@
+{
+  "formatVersion": 1,
+  "scope": "before_work_saved_appointment_changes_and_cancellation",
+  "baseCommit": "e8ea8a5712b28f94c78f97b8b1ee07e2f4772ea9",
+  "registeredSchemaVersion": 50,
+  "ownerPreviewSchemaVersion": 49,
+  "ownerDatabaseUpgraded": false,
+  "productionReady": false,
+  "executed": {
+    "chromium": {
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "startedAt": "2026-11-02T17:49:56.390Z",
+      "finishedAt": "2026-11-02T17:51:46.916Z",
+      "receiptSha256": "4654b99879092f2bc3e0d4bf0d44a66264f871434a23ecfcbcbc4853891eb193",
+      "logSha256": "bbd941f7dc021ea0bf75257221c9b37a013b1aa5e74057a63fcbf770ce3b86d7"
+    },
+    "providerReference": {
+      "tests": 167,
+      "passed": 167,
+      "failed": 0,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "startedAt": "2026-11-02T17:49:56.345Z",
+      "finishedAt": "2026-11-02T17:53:05.413Z",
+      "receiptSha256": "25588c9b14766960e5cb112d31d7b16dfac2ae740fe03600ae17b11f3280f999",
+      "logSha256": "d6bbe492cd5b17a151d8611fd1b9516491947254d1d275e08f8a8b610f20309c"
+    },
+    "allUnitPassed": 7391,
+    "allUnitFiles": 268,
+    "unitReportSha256": "45a560891810795a2d2d424ba99a4b54fa94141699fb011dd1435356a4ffc62f",
+    "newControllerRegressions": 17,
+    "lint": true,
+    "typecheck": true,
+    "productionNextAndServerBuild": true,
+    "buildTiming": "Final browser-tested application build passed before the native journey. Later changes only enable the same existing scheduling composition in explicit synthetic startup scripts and update execution records; the owner preview is unchanged."
+  },
+  "behavior": [
+    "Genuine MFA → API-created accepted booking → Schedule → actual change forms → propose/confirm/propose/withdraw/cancel → retained six-event history and normalized download.",
+    "Successful proposal and cancellation replies are deliberately lost. Refresh verifies the exact retained originals without repeating the mutation; only opaque identity is retained per tab.",
+    "One job advances from version1 to6. Proposal and withdrawal retain the current confirmed reservation; confirmation moves it; cancellation removes it. Accepted source bytes stay identical.",
+    "Before-work state, saved version/latest appointment, actor/business/session/recovery context and existing authorization remain mandatory. No active-work rescheduling, fees/refunds/GL or automatic customer messages.",
+    "Known saved, known rollback, unknown outcome and local reference-cleanup failure remain distinct. Hidden-page late replies, failed storage, wrong receipt version, stale job and missing draft have meaningful regressions.",
+    "Blank optional cancellation communication note maps to null. Actual sent/no-contact facts remain explicit where required.",
+    "Four widths with Axe/overflow, keyboard submission, refresh, proposed queue beyond selected dates and history retrieval. Dropdowns have explicit stable labels."
+  ],
+  "verifiedSourceFiles": {
+    "src/client/job-change-controller.ts": "f04cfa11b2242c05f31556f868935fa09c84060f0ccbfb720f0d6126a04bce61",
+    "src/app/schedule/change/page.tsx": "816a9ba071f9bf5561a80c57b0b102dfd1b70b2755279d6b38d16d5942b2664c",
+    "src/app/schedule/change/change.tsx": "3078b6e5c4769a3c0a79efc42ebe209be7027494dd83aae2594b4f74e24a9663",
+    "tests/integration/job-change-product-browser.test.mjs": "8e82e57e1094cf3e08c0c152d1995612ac7fcde4ff8409c8a6622af311d24112",
+    "src/client/book-job-controller.ts": "836b216c2dc68016d3df09b862fd73e225d6bdd819a68f38c8a15f57403a1c38",
+    "src/client/booking-form.ts": "ab74b4f41d76237c88b87ef64896e33bfeacb1bae9318fe252aa7df18e8dee3c",
+    "src/app/schedule/booking-fields.tsx": "85b3a01a39940933ed71f336dd2ac0a54c6257315e3ff510e876c51485e75319",
+    "src/app/schedule/new/page.tsx": "b155b9a8567206a6b0823da79a7b272fa2f0e6936525d96aa375c29589496d37",
+    "src/app/schedule/new/booking.tsx": "e3a648a1eb09fc96a45210a62bedf28d60786938cbd816989315599209d18200",
+    "src/app/quotes/quote-commercial-panel.tsx": "83f84d7f805e84b43461cccd8462ace9e362d96e38212d39271a1929782cabd0",
+    "src/app/workspace-home.tsx": "21ef1f523eb6663e81f698a88cd8e1458259378f9a90bea9660aeef476746518",
+    "src/client/schedule-reader.ts": "8e1f9a42802db43424315e019651f53935d75ed85d55b6dd02bd1c139d88f49b",
+    "src/app/schedule/page.tsx": "1ce939d42eeb9a8b762718f8bc763f8986e4f62036da33204b70b19fb8f23d2c",
+    "src/app/schedule/screen.tsx": "2c28a77ac4ee8b9e32d047fe68ea689ef6cae3e922520ed0c4a339203678235a",
+    "src/app/schedule/job-details.tsx": "608605854aaf36f2ddb83dfe1d00d21d5878c3fe43c363dc9c14ed3b2a164375",
+    "src/app/globals.css": "d77ba213b84d01ba6d4fd3437fc7c04743de089ce9e1651453a8392f3562e2fc",
+    "src/app/workspace-frame.tsx": "6e37e99dd66e2917120dd0ae8bb473d1824b39a3dfa41222469590282ad6326d",
+    "src/server/node-server.ts": "0053741969c642b4cd2c785c5b33fffefbcc21738e5fa52abcba08c511604fe7",
+    "src/operations/confirmed-booking-source-history.ts": "d883e1e3e9fa594e36a86251ccc7e52483bd2f7ae2d0f063a4e6d2925000c5d6",
+    "src/operations/booking-context-contract.ts": "d1d882d1fe2a02600a85746afbbdce64cfcdc5b3d0d6814b5087c934dce16fa5",
+    "src/client/scheduling-transport.ts": "6faab2feb1905ae7910f7abf09523c486fda56af024d4ffa538453ea6c1de1d8",
+    "src/client/scheduling.ts": "c40b9b4a4ad368bc2357065d7781785ca4c584ee68626e571c951254deb0334e",
+    "src/operations/scheduling-original-contract.ts": "29a4e958bce83690477f7fea720042017aeac5a2afca07d84f4e987361616677",
+    "src/operations/scheduling-http.ts": "717126af47f65b5525863d440b24c020754ee355e204f7caff286360381e078d",
+    "src/client/scheduling-original.ts": "ccb90cbd075a7e23145501608e58465db925d0fb821dc7f9a94df014b4f89620",
+    "src/client/pending-scheduling.ts": "b83b1efab82c34bd1712cdf844bbece8df5f6f26386bf65177611f6eddd4a010",
+    "src/client/pending-original-operation.ts": "d1215b0ee8a6d0f3394d9948a6a2d070e2c74874f6e2c85c915f859120b42ce8",
+    "src/security/original-operation-reference.ts": "e86103c5940919eda65de9b511bff69ba3d12a841a994919cc81cc0b5400df57",
+    "src/security/original-operation-directory.ts": "84ddefa47854074321cd69235417877c091181b308c49addc982081fc5b7d274",
+    "src/security/original-operation-http-contract.ts": "9ff6ac1fb5aa5d57dfbd3e9c914128c3906af14c097512cd9fcc670f16d45be3",
+    "src/operations/confirmed-job-archive.ts": "3e3ec73091b1e6d67e9f6e7a9fc0fcf280f251b87a46f4d31958d18ec2831ae1",
+    "src/operations/confirmed-booking-record-schema.ts": "48a4de2b772274f3e616eb22bfca892fa18cadef47cf404b6ae6c0b33860d96f",
+    "src/operations/confirmed-booking-records.ts": "2c9665b3f798feda299bd1d6c24fa820826832473e8b3714156c8ecc5730f304",
+    "src/operations/confirmed-booking-source-csv.ts": "d5e07d03369c5f1a3d4dd3164c18dccb17372a9e271826e764dc93f77c3c76fb",
+    "src/operations/confirmed-job-read-contract.ts": "c9a39020a91519de043cad72fcfd5d545aeafd74b6c8e29ca10feea60d4879ae",
+    "src/operations/confirmed-reschedule-contract.ts": "97a7ff90c3478ede05a4f918d38b1c624f90dcc58955b52a2fa5cb0773ba3669",
+    "src/operations/confirmed-booking-contract.ts": "98b24939d45252c461bafc43d11a62ce172dc54e86f5776c309512aa4b9791d3",
+    "src/operations/confirmed-booking-directory.ts": "6fc467ea89cba487b16818221b2c7cbac23adbb865aa30bcad10728f28017254",
+    "src/operations/scope-allocation-plan.ts": "3e2d7e6756566db5cced98b23d7d1cb93edd3bccdd4acd6b710f732147d0f2b6",
+    "src/operations/schedule-time.ts": "78263abfbed481ff1c213b3a7234b4f914f4d3e7fc08db131c235f316e15c46f",
+    "src/operations/schedule-conflicts.ts": "05fa3c39f9c3c140563fb64f60e7f0dad895257f922c8418eb7f58699d95dad3",
+    "src/operations/appointment-hold-contract.ts": "add3892eb919721481c5ed33c68f37f06c57fe20f93956114a2be0af7f6a6867",
+    "src/operations/fulfillment-mode-directory.ts": "583c4542112aae3a542d1c3043943a3f01b9d88f47fe4877f370906d8c70c0ad",
+    "src/operations/fulfillment-mode-contract.ts": "5609a8194c37b1e03609b0389344014527b661298c10100a9ad6143b09aa12c7",
+    "tests/support/migration-sandbox.mjs": "faf94d0799da4027d9bc7149bea7e773cfb2e2bd3038aa82718621fcff06f9d1",
+    "src/tooling/object-recovery.ts": "0c80eef324e9a1696574f12f9c67b496512008fdb3fde2d8f551c72ddf0fe772",
+    "src/bookkeeping/expenses/expense-export.ts": "15899cfa9da57fc24a46492b98cb3d9337a7d586afa10a1c9949947bb29c0c2e",
+    "src/bookkeeping/expenses/receipt-export.ts": "c0a009e060a9521a5e6aa85c0f723b4ffda29262e59f1eb1b76cce8e872f485c",
+    "src/bookkeeping/expenses/expense-source-csv.ts": "bc3d61c1c917906e49eb5e7ef42fabeaa27ca6250588dfe1aa89c4c5ace1f804",
+    "src/bookkeeping/expenses/expense-source-history.ts": "990e95184052b2edaa08c7c3863e7f5dce7230bda03db2cba6db95c6379f570d",
+    "src/client/expenses.ts": "1a01bc659b0fc1b0670aa868ec191acfaa3c9dc0c0c0433e54c59f07792da779",
+    "src/client/original-operations.ts": "2f5404b6095e77725abb1f73aef90d3698a286c951c45baac93ca4df547528ed",
+    "src/bookkeeping/expenses/receipt-contract.ts": "4a3d02177b422f75d7aca0c6dc325dec53890be4e3225277aa492e9711a303f0",
+    "src/bookkeeping/expenses/receipt-directory.ts": "3333a2e66ce3a248d52a631bde0459e9664169f0033898ab65762ed63cd40960",
+    "src/bookkeeping/expenses/receipt-http.ts": "7dd748053c201d360e86f7b1fccb17fd8458d550e3f21b002bed1104f9146fde",
+    "src/client/expense-receipts.ts": "b309558ab76ccbdc4cc2068295220a74a6ca7807dba6f9694fb4401e8290e490",
+    "src/client/pending-receipt.ts": "3d253a1afa0dd0aebc9e4b81c6acde5885bd27e9c619a694eb7866150f905d4c",
+    "src/operations/appointment-hold-http.ts": "5c36e90109a8825172a249ee4ace831f18a8c93f57bb69ec0e4a0b8cbe74cfb9",
+    "src/client/appointment-holds.ts": "241af73658f00e93c7e0335829fa50ddb20794e1b390a0a9595c229864083e9f"
+  },
+  "screenshots": [
+    {
+      "screen": "job-change",
+      "engine": "chromium",
+      "width": 360,
+      "sha256": "1a7fc1d4b599264bb17242e1c1526d81d2edcbb8961a463bfa6362984bc1d723",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "screen": "job-change",
+      "engine": "chromium",
+      "width": 390,
+      "sha256": "07ee0a7417745ac1bc375afe4b6042c0759009c830d464dc298949ab56f71d13",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "screen": "job-change",
+      "engine": "chromium",
+      "width": 768,
+      "sha256": "c701b5694f8106176fdeae14c05bb41aa831aeb9ce9683966d0cd8cba5dcbf0f",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "screen": "job-change",
+      "engine": "chromium",
+      "width": 1440,
+      "sha256": "01e538e8d4927f4dfd5d0953330e74baf899c25fd16c41a62804e62e941ec8f1",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "screen": "job-cancel",
+      "engine": "chromium",
+      "width": 360,
+      "sha256": "4e0bb79a04155732efc64c46066305de237f911d51f29803eb8826427396774c",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "screen": "job-cancel",
+      "engine": "chromium",
+      "width": 390,
+      "sha256": "613ca14021b4dc9301f12835c7fa4cae0952b7f838d06b2aff00d07ad444c158",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "screen": "job-cancel",
+      "engine": "chromium",
+      "width": 768,
+      "sha256": "1c963f3630b45ae0bfc4c493ee0b35b9d0a174c9287f98603777f5c35cd4970c",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "screen": "job-cancel",
+      "engine": "chromium",
+      "width": 1440,
+      "sha256": "59d549790a76804ac63443cb83977bb312d9b65e243566494ba0b18507ec6d0c",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    }
+  ],
+  "failedRunInvestigations": [
+    {
+      "receipt": ".local/job-change-browser-native/result.json",
+      "reason": "Test queried nonexistent separate reservation time columns; corrected to actual lower/upper blocked_interval bounds. Both fixed-offset regressions passed; overall run and cleanup failed."
+    },
+    {
+      "receipt": ".local/job-change-browser-native-v2/result.json",
+      "reason": "Implicit dropdown label included option text; Windows blocked WebKit DLL signing; owned cleanup DROP DATABASE exceeded five seconds and leaked the admin connection on error."
+    },
+    {
+      "receipt": ".local/job-change-browser-native-v3/result.json",
+      "reason": "Diagnostic confirmed saved job loaded; exact dropdown selection still failed before explicit labels."
+    },
+    {
+      "receipt": ".local/job-change-browser-native-v4/result.json",
+      "reason": "Synthetic-only label inspection isolated option text in the control label. Temporary diagnostic output was removed."
+    }
+  ],
+  "limitations": [
+    "Windows Code Integrity events3077/3033 reject WebKit2.dll signing. No host policy was changed; local WebKit is unverified for this increment. The ordinary full Linux CI retains both engines and every release gate.",
+    "Sent/no-contact cancellation branches, alternate zones/folds and edited travel/contact branches are implemented with shared contracts but not exercised by this specific browser journey. No physical iPhone testing claim.",
+    "Conflicting confirmations are rejected by existing SQL. Complete conflict-preview/override and operating-mode control UI, split/combined/additional-vehicle allocation and accepted amendments remain unfinished V1.",
+    "Full current-source public CI, independently restored fresh owner49 point, preservation-checked owner50 upgrade and deployed browser/phone acceptance remain pending.",
+    "Remaining field work/custody/photos/completion/follow-up, finance/reporting, complete portability/recovery/import/cutover and Google Calendar remain approved unfinished scope."
+  ],
+  "cleanupRepair": {
+    "scope": "owned synthetic test teardown only",
+    "queryTestBudgetSeconds": 5,
+    "cleanupMaintenanceBudgetSeconds": 30,
+    "adminClosedOnFailure": true,
+    "allOriginalSecurityAndDataAssertionsRetained": true
+  },
+  "historicalCiFailure": {
+    "source": "e7c0c4f5b8ff31da42b128f40f781a75e767d1a6",
+    "run": 41474104958,
+    "assertion": "Native session original offset test incorrectly assumed New York always used -04:00.",
+    "correction": "Explicit fixed-offset zones exercise -04:00 and -05:00 throughout the year with unchanged original-evidence/activity checks.",
+    "currentPublicCiPassed": false
+  }
+}
