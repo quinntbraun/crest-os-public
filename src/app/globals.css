@@ -219,6 +219,22 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .expense-records > article { padding-bottom:1rem; margin-bottom:1.5rem; border-bottom:1px solid var(--line); }
 @media (min-width:1200px) { .expense-layout { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:2rem; } }
 .schedule-date-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+.schedule-calendar { margin:1.25rem 0; }
+.calendar-heading,.calendar-toolbar,.calendar-toolbar > div { display:flex; align-items:center; flex-wrap:wrap; gap:.5rem; }
+.calendar-heading,.calendar-toolbar { justify-content:space-between; margin-bottom:.75rem; }
+.calendar-heading h2 { margin:0; font-size:1.125rem; }
+.calendar-heading button,.calendar-toolbar button { width:auto; margin:0; padding:.5rem .75rem; min-height:44px; }
+.calendar-toolbar button[aria-pressed='true'] { background:var(--black); color:var(--paper); border-color:var(--black); }
+.calendar-days { width:100%; table-layout:fixed; border-collapse:collapse; }
+.calendar-days th { font-size:.75rem; font-weight:400; color:var(--muted); padding:.375rem 0; }
+.calendar-days th abbr { text-decoration:none; }
+.calendar-days td { padding:0; vertical-align:top; }
+.calendar-days button { display:grid; align-content:center; gap:.125rem; width:100%; min-width:0; min-height:54px; margin:0; padding:.375rem 0; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); color:var(--ink); font-size:1rem; }
+.calendar-days button[aria-current='date'] { border:2px solid var(--gold-ink); }
+.calendar-days button[aria-pressed='true'] { background:var(--black); color:var(--paper); border-color:var(--black); }
+.calendar-visit-count { font-size:.75rem; line-height:1.2; color:var(--muted); }
+.calendar-days button[aria-pressed='true'] .calendar-visit-count { color:inherit; }
+.calendar-days .visually-hidden { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 .schedule-layout { display:grid; gap:2rem; margin-top:1.5rem; }
 .schedule-layout > * { min-width:0; }
 .schedule-reader .customer-list button { width:100%; text-align:left; white-space:normal; overflow-wrap:anywhere; }

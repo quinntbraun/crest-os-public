@@ -1,5 +1,8 @@
 # Usable release milestones and execution reporting
 
+Internal calendar construction now supports Day,7 days and Month, Today/previous/next, explicit custom ranges and loaded saved-visit counts in the business zone. Genuine MFA/PostgreSQL/Chromium month→day→saved-job/reload/history/error recovery passes;7505units, lint/types/build and four-width Day/Month Axe/44px/rendered review pass. Actual self-hosted Plex rendering checked. No new schema/provider/package. This is not yet in the owner preview and does not implement Google Calendar. [Evidence](proposals/schedule-calendar-ui-verification.json).
+
+
 Combined booking construction is now verified locally: select accepted work from multiple same-customer agreements and additional saved vehicles without changing accepted prices or ownership. Genuine MFA/PostgreSQL/Chromium save, two encounters/two vehicles, exact source preservation, refresh and CSV/JSON history pass; four-width visual/Axe/keyboard checks and7497units pass. No new migration. This is not yet in the owner preview; current-source Linux release gates and the51 upgrade/recovery gate remain. [Evidence](proposals/combined-booking-ui-verification.json).
 
 
