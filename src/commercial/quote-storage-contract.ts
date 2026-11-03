@@ -21,6 +21,7 @@ export const quoteItemColumns=['id','business_id','revision_id','stable_line_key
 export const quoteReviewItemColumns=[...quoteItemColumns,'assessment_id','category_override_note'] as const;
 export type StoredQuoteFamily=Provenance&Readonly<{lead_id:string|null;customer_id:string|null;current_revision_id:string;version:string}>;
 export type StoredQuoteRevision=Provenance&Readonly<{family_id:string;sequence:string;kind:'initial';state:'Draft'|'Ready for Review'|'Sent'|'Accepted'|'Superseded';version:string;content_version:string;customer_safe_snapshot:Prepared['customer'];internal_snapshot:Prepared['internal'];canonical_content:string;content_hash:string;total_cents:string;expiry_at:string|null;timezone:string;tax_readiness:'not_configured'}>;
+export type StoredQuoteAmendmentRevision=Omit<StoredQuoteRevision,'kind'>&Readonly<{kind:'amendment';parent_agreement_id:string}>;
 export type StoredQuoteItem=Provenance&Readonly<{revision_id:string;stable_line_key:string;active:boolean;position:number|null;vehicle_id:string|null;job_wide:boolean;service_version_id:string|null;gross_cents:string;line_discount:QuoteDiscount|null;document_discount_eligible:boolean;line_discount_cents:string;allocated_discount_cents:string;final_cents:string;complimentary_reason:string|null;customer_snapshot:Prepared['customer']['lines'][number];version:string;assessment_id?:string|null;category_override_note?:string|null}>;
 export type QuoteSave=Readonly<{schemaVersion:1;businessId:string;operationId:string;recoveryEpoch:string;familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string;content:QuoteContentInput}>;
 export type QuoteReceipt=Readonly<{businessId:string;familyId:string;familyVersion:string;revisionId:string;revisionVersion:string;contentVersion:string;contentHash:string;familyAuditEventId:string;revisionAuditEventId:string;itemAuditEventIds:readonly string[]}>&(Readonly<{schemaVersion:1}>|Readonly<{schemaVersion:2;assessmentAuditEventIds:readonly string[]}>);
@@ -60,12 +61,18 @@ function provenance(v:Record<string,unknown>,business:string){
 export function parseStoredQuoteFamily(v:unknown,business:string):StoredQuoteFamily{
  check(exact(v,quoteFamilyColumns));provenance(v,business);check((v.customer_id===null||quoteId(v.customer_id))&&(v.lead_id===null||quoteId(v.lead_id))&&(v.customer_id!==null||v.lead_id!==null)&&quoteId(v.current_revision_id)&&quoteVersion(v.version));return Object.freeze({...v}) as StoredQuoteFamily;
 }
-export function parseStoredQuoteRevision(v:unknown,business:string,family:string):StoredQuoteRevision{
- check(exact(v,quoteRevisionColumns));provenance(v,business);check(quoteId(family)&&v.family_id===family&&quoteVersion(v.sequence)&&v.kind==='initial'&&['Draft','Ready for Review','Sent','Accepted','Superseded'].includes(v.state as string)&&quoteVersion(v.version)&&quoteVersion(v.content_version)&&BigInt(v.content_version)<=BigInt(v.version)&&hash(v.content_hash)&&quoteVersion(v.total_cents,true)&&v.tax_readiness==='not_configured');
+function revisionData(v:Record<string,unknown>,business:string,family:string){
+ provenance(v,business);check(quoteId(family)&&v.family_id===family&&quoteVersion(v.sequence)&&['Draft','Ready for Review','Sent','Accepted','Superseded'].includes(v.state as string)&&quoteVersion(v.version)&&quoteVersion(v.content_version)&&BigInt(v.content_version)<=BigInt(v.version)&&hash(v.content_hash)&&quoteVersion(v.total_cents,true)&&v.tax_readiness==='not_configured');
  const content=quoteInputFromSnapshots(v.customer_safe_snapshot,v.internal_snapshot),p=prepareQuoteContent(content);check(v.canonical_content===p.canonical&&v.total_cents===p.customer.totalCents&&v.timezone===p.customer.timezone&&v.expiry_at===p.customer.expiryAt);
  check(content.schemaVersion===2||v.state==='Draft'&&v.content_version===v.version);
  if(v.state!=='Draft')check(quoteReviewReadiness(content)===null);
- return Object.freeze({...v,customer_safe_snapshot:p.customer,internal_snapshot:p.internal}) as StoredQuoteRevision;
+ return Object.freeze({...v,customer_safe_snapshot:p.customer,internal_snapshot:p.internal}) as Omit<StoredQuoteRevision,'kind'>;
+}
+export function parseStoredQuoteRevision(v:unknown,business:string,family:string):StoredQuoteRevision{
+ check(exact(v,quoteRevisionColumns)&&v.kind==='initial');return Object.freeze({...revisionData(v,business,family),kind:'initial'});
+}
+export function parseStoredQuoteAmendmentRevision(v:unknown,business:string,family:string):StoredQuoteAmendmentRevision{
+ check(exact(v,[...quoteRevisionColumns,'parent_agreement_id'])&&v.kind==='amendment'&&quoteId(v.parent_agreement_id));const row=revisionData(v,business,family);check(row.customer_safe_snapshot.schemaVersion===2);return Object.freeze({...row,kind:'amendment',parent_agreement_id:v.parent_agreement_id});
 }
 export function parseStoredQuoteItem(v:unknown,business:string,revision:string):StoredQuoteItem{
  check(exact(v,quoteItemColumns)||exact(v,quoteReviewItemColumns));provenance(v,business);check(quoteId(revision)&&v.revision_id===revision&&quoteId(v.stable_line_key)&&typeof v.active==='boolean'&&(v.active?Number.isSafeInteger(v.position)&&Number(v.position)>=1&&Number(v.position)<=1000:v.position===null)&&quoteVersion(v.version)&&(exact(v.customer_snapshot,publicLineKeys)||exact(v.customer_snapshot,[...publicLineKeys,'category'])));
@@ -89,6 +96,21 @@ export function parseQuoteCommitted(v:unknown,business:string,operation:string):
 export function parseQuoteDirectoryPage(v:unknown,request:{businessId:string;search:string;afterId:string|null;pageSize:number}){
  check(exact(v,['schemaVersion','businessId','quotes','hasMore'])&&v.schemaVersion===1&&v.businessId===request.businessId&&Array.isArray(v.quotes)&&v.quotes.length<=request.pageSize&&typeof v.hasMore==='boolean');let after=request.afterId;
  const quotes=v.quotes.map(entry=>{check(exact(entry,['family','revision']));const family=parseStoredQuoteFamily(entry.family,request.businessId),revision=parseStoredQuoteRevision(entry.revision,request.businessId,family.id);check((after===null||family.id>after)&&family.current_revision_id===revision.id&&revision.internal_snapshot.customerId===family.customer_id&&revision.internal_snapshot.leadId===family.lead_id);after=family.id;return Object.freeze({family,revision});});
+ check(!v.hasMore||quotes.length===request.pageSize);return Object.freeze({schemaVersion:1 as const,businessId:request.businessId,quotes:Object.freeze(quotes),hasMore:v.hasMore});
+}
+/** Current workspace list only. Initial history/editor contracts stay strict.
+ * An amendment keeps its explicit kind and parent identity; the dedicated
+ * amendment read rebinds its actual agreement/customer before any action. */
+export function parseQuoteWorkspaceDirectoryPage(v:unknown,request:{businessId:string;search:string;afterId:string|null;pageSize:number}){
+ check(exact(v,['schemaVersion','businessId','quotes','hasMore'])&&v.schemaVersion===1&&v.businessId===request.businessId&&Array.isArray(v.quotes)&&v.quotes.length<=request.pageSize&&typeof v.hasMore==='boolean');let after=request.afterId;
+ const quotes=v.quotes.map(entry=>{
+  check(exact(entry,['family','revision'])&&entry.revision!==null&&typeof entry.revision==='object'&&!Array.isArray(entry.revision));
+  const family=parseStoredQuoteFamily(entry.family,request.businessId),revision=Object.hasOwn(entry.revision,'parent_agreement_id')?parseStoredQuoteAmendmentRevision(entry.revision,request.businessId,family.id):parseStoredQuoteRevision(entry.revision,request.businessId,family.id);
+  check((after===null||family.id>after)&&family.current_revision_id===revision.id&&revision.internal_snapshot.leadId===family.lead_id);
+  if(revision.kind==='initial')check(revision.internal_snapshot.customerId===family.customer_id);
+  else check(quoteId(revision.internal_snapshot.customerId)&&(family.customer_id===null?family.lead_id!==null:revision.internal_snapshot.customerId===family.customer_id));
+  after=family.id;return Object.freeze({family,revision});
+ });
  check(!v.hasMore||quotes.length===request.pageSize);return Object.freeze({schemaVersion:1 as const,businessId:request.businessId,quotes:Object.freeze(quotes),hasMore:v.hasMore});
 }
 export function parseQuoteHistoryPage(v:unknown,request:{businessId:string;familyId:string;revisionId:string;afterVersion:string;pageSize:number}){

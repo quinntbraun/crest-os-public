@@ -329,6 +329,16 @@ jobs:
         run: npm run test:booking-conflict-review-proposal
       - name: Verify registered51 upgrade and independent frozen50 and current51 recovery
         run: npm run test:booking-conflict-registered
+      - name: Verify amendment storage and preserve initial quote workflows
+        run: node --test --test-concurrency=1 tests/integration/quote-amendment-storage.test.mjs
+      - name: Verify parent-bound amendment Draft commands and exact original results
+        run: node --test --test-concurrency=1 tests/integration/quote-amendment-draft-commands.test.mjs
+      - name: Verify amendment sharing, saved history and exact original recovery
+        run: node --test --test-concurrency=1 tests/integration/quote-amendment-sharing.test.mjs
+      - name: Verify complete amendment sources and independent neutral reconstruction
+        run: npm run test:quote-amendment-source
+        - name: Verify preserved-data amendment upgrade and frozen/current independent recovery
+          run: npm run test:quote-amendment-candidate
       - name: Compare booking times, travel intervals and partitions with PostgreSQL
         run: npm run test:booking-calculations
       - name: Preserve booking schema closure, private history and independent restore

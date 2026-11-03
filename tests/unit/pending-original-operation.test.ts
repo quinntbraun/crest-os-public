@@ -31,6 +31,8 @@ const keys:Record<OriginalOperationKind,string>={
  'crm.lead.convert':'crest.lead-conversion.pending-reference.v1',
  'catalog.service.save':'crest.service.pending-reference.v1',
  'quote.draft.save':'crest.quote.pending-reference.v1',
+ 'quote.amendment.create':'crest.quote-amendment-draft.pending-reference.v1',
+ 'quote.amendment.send':'crest.quote-amendment-send.pending-reference.v1',
  'quote.replacement.create':'crest.quote-replacement.pending-reference.v1',
  'quote.manual.send':'crest.quote-commercial.pending-reference.v1',
  'quote.confirmation.accept':'crest.quote-commercial.pending-reference.v1',
@@ -67,7 +69,7 @@ it.each(pendingKinds)('keeps an absent %s lookup through its existing typed doma
  const f=fixture(kind),financial=kind.startsWith('bookkeeping.'),freshBinding=randomBytes(32).toString('base64url');
  if(financial)fetcher.mockResolvedValueOnce(contextResponse(f.original.businessId,freshBinding));
  fetcher.mockResolvedValue(response({state:'absent'}));expect(await f.target.reconcile(proof(),signal())).toBe('absent');expect(f.memory.get(f.key)).toBe(f.raw);expect(f.storage.removeItem).not.toHaveBeenCalled();expect(fetcher).toHaveBeenCalledTimes(financial?2:1);
- const request=fetcher.mock.calls.at(-1)![1],scheduling=kind.startsWith('operations.job.')||kind.startsWith('operations.fulfillment_modes.');expect(JSON.parse(request.body)).toEqual(financial?f.original.reference:scheduling?{originalJson:JSON.stringify(f.original)}:{operationId:f.original.reference.operationId});if(financial)expect(request.headers['x-crest-edit-binding']).toBe(freshBinding);
+ const request=fetcher.mock.calls.at(-1)![1],scheduling=kind.startsWith('operations.job.')||kind.startsWith('operations.fulfillment_modes.');expect(JSON.parse(request.body)).toEqual(financial?f.original.reference:kind.startsWith("quote.amendment.")?{reference:f.original.reference}:scheduling?{originalJson:JSON.stringify(f.original)}:{operationId:f.original.reference.operationId});if(financial)expect(request.headers['x-crest-edit-binding']).toBe(freshBinding);
 });
 it.each(pendingKinds)('rejects replacement storage for %s before retirement acknowledgment',kind=>{
  const f=fixture(kind);f.memory.set(f.key,JSON.stringify({...f.record,binding:randomBytes(32).toString('base64url')}));expect(()=>f.target.releaseRetired(f.outcome,signal())).toThrow(PendingOriginalOperationError);expect(f.storage.removeItem).not.toHaveBeenCalled();

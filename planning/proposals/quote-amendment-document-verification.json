@@ -1,0 +1,84 @@
+{
+  "formatVersion": 1,
+  "scope": "customer_only_accepted_amendment_comparison_presentation",
+  "status": "construction_verified_not_app_integrated",
+  "files": [
+    {
+      "path": "src/commercial/quote-amendment-comparison.ts",
+      "sha256": "a7cfeb545e75ef326fc96c7a1060e3e01238d67828d9c70f1daf3a9232446f9e"
+    },
+    {
+      "path": "src/app/quotes/quote-amendment-document.tsx",
+      "sha256": "49964ddbaf7ba6e4fa0f758712a798364b734ca2fc9c741def9665818eef2b2e"
+    },
+    {
+      "path": "src/app/globals.css",
+      "sha256": "a0fe0ae9ab8c602614bd17dc3f4ec62a952ea5d87c9c07324794c815c79aa0ee"
+    },
+    {
+      "path": "tests/unit/quote-amendment-document.test.ts",
+      "sha256": "9a4543a3222b62a7fe2b36edee793445cb840137718875ffc7c47202636823d5"
+    },
+    {
+      "path": "tests/unit/quote-amendment-comparison.test.ts",
+      "sha256": "a3e8a7c3fc6962ceafc44788533b18b68ffce6cbacd9ca0c51ac993d56416e7b"
+    }
+  ],
+  "requirements": [
+    "P05",
+    "BR05",
+    "BR06"
+  ],
+  "finiteCriterion": "Render exact accepted/proposed customer scope, terms and full all-in total with signed price change; refuse accidental private data and misleading reorder/amount projections; native disclosure and mobile-readable comparison.",
+  "verification": {
+    "focusedCustomerDocumentAndComparisonUnits": 31,
+    "typesPassed": true,
+    "focusedLintPassed": true,
+    "productionBuildPassed": true,
+    "actualChromiumComponentReviewPassed": true,
+    "appAuthenticationJourneyClaimed": false,
+    "nativeKeyboardDisclosure": true,
+    "refreshBack": true,
+    "widths": [
+      360,
+      390,
+      768,
+      1440
+    ],
+    "axeViolations": 0,
+    "overflow": false,
+    "disclosureTargetsAtLeast44": true,
+    "screenshotsInspected": true,
+    "screenshots": [
+      ".local/review/amendment-document-360.png",
+      ".local/review/amendment-document-390.png",
+      ".local/review/amendment-document-768.png",
+      ".local/review/amendment-document-1440.png"
+    ]
+  },
+  "behavior": [
+    "Exact positive/negative/zero dollar changes; zero-price additions/removals keep distinct scope.",
+    "Expandable before/after customer contacts, location, scope, inclusions/exclusions, terms, discount, expiry and tentative timing.",
+    "Accepted agreement remains effective until separately accepted change; no invoice/payment/refund action.",
+    "Customer-only input boundary rejects whole private comparisons and nested private fields.",
+    "Read-only component has no route, write, approval, acceptance or financial authority."
+  ],
+  "remaining": [
+    "Persist parent-bound amendment Draft through existing quote workflow, with typed authorization/operations/audit/concurrency.",
+    "Separate owner approval/manual share/customer acceptance under current-parent/family/allocation/financial locks.",
+    "Append coherent agreement/entitlement/allocation versions; preserve existing completed/billed/credited history.",
+    "Integrate actual UI/controller and genuine MFA/PG/browser/history/export/recovery/full release."
+  ],
+  "retainedDiagnostics": [
+    "Initial isolated renderer entry used a relative dot-folder path; absolute entry fixed resolution.",
+    "Fixture live nth locators shrank while details opened; bounded first remaining native disclosure fixes it.",
+    "Axe requires explicit browser.newContext; fixture corrected, no product/accessibility waiver.",
+    "Initial fixture inferred discount as null-only; widened its declared existing content type.",
+    "Rendered review found excess inherited section margins and narrow amount labels; scoped CSS corrected and all four widths rechecked."
+  ],
+  "databaseMigrationAdded": false,
+  "ownerPreviewModified": false,
+  "fullAmendmentWorkflowImplemented": false,
+  "realCrestUseReady": false,
+  "currentSpend": 0
+}

@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 51,
+  "migrationCount": 52,
   "tables": [
     {
       "table": "crest.businesses",
@@ -1054,7 +1054,8 @@
         "updated_by",
         "origin",
         "operation_id",
-        "import_row_id"
+        "import_row_id",
+        "parent_agreement_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

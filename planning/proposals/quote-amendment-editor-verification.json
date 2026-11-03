@@ -1,0 +1,279 @@
+{
+  "formatVersion": 1,
+  "status": "actual_next_amendment_edit_review_approval_actual_sharing_and_original_recovery_verified_construction",
+  "sourceHeadBefore": "243badcce614835ae694f92cb93acb0891a0edd7",
+  "files": [
+    {
+      "path": "src/app/quotes/amendments/workspace.tsx",
+      "bytes": 6317,
+      "sha256": "a0f2fa09f04b4859ad506b9262de1813c6207c79b2360c79709d8374812ebf43"
+    },
+    {
+      "path": "src/app/quotes/amendments/draft-editor.tsx",
+      "bytes": 11258,
+      "sha256": "c7badeca0b2814331c3c8e44631678b8355f38948539ce7495a58bf02e2196f0"
+    },
+    {
+      "path": "src/app/quotes/amendments/review-and-sharing.tsx",
+      "bytes": 5131,
+      "sha256": "af1111dd36473352d31c890a6ecc01f87d3dc2b94ac62d72ccbcc9265f0e6343"
+    },
+    {
+      "path": "src/app/quotes/quote-fields.tsx",
+      "bytes": 3520,
+      "sha256": "38f3d87d153b3ac4e799ac00e5b4f75308bfe2d8906cfc774c6b577bbf247ff6"
+    },
+    {
+      "path": "src/app/quotes/quotes.tsx",
+      "bytes": 28302,
+      "sha256": "4d3b3a26f65b5177b3b81ae3af19a351e80e6008df1415e11766ddfe35bf4ce7"
+    },
+    {
+      "path": "src/client/quote-amendment-workspace.ts",
+      "bytes": 33672,
+      "sha256": "a8a278b94b3bf0fbcd7fb9e4ff17370cd208e02c2dc5423873c9192a40cea282"
+    },
+    {
+      "path": "src/commercial/quote-draft-budget.ts",
+      "bytes": 2956,
+      "sha256": "15814a67ff826df68686a5d4677fb933a6d73709643785e3137dd9c60e7b2db8"
+    },
+    {
+      "path": "tests/unit/quote-amendment-workspace.test.ts",
+      "bytes": 23371,
+      "sha256": "f91c7a5c6946acfd19b36024a275511857563752004ff0e6b82965854b05244f"
+    },
+    {
+      "path": "tests/integration/quote-amendment-workspace-browser.test.mjs",
+      "bytes": 20394,
+      "sha256": "f9f913285af0741c055721c0f75863ddd96b68286868fefe7f691c5a5e459b64"
+    }
+  ],
+  "registered": false,
+  "existingMigrationCount": 51,
+  "normalNextPage": "/quotes/amendments",
+  "amendmentApiTestMountOnly": true,
+  "normalAmendmentApiRegistered": false,
+  "ownerPreviewModified": false,
+  "ownerDatabaseApplied": false,
+  "financialPostingEnabled": false,
+  "realCrestUseReady": false,
+  "currentSpend": 0,
+  "completedInConstruction": [
+    "Existing genuine Next MFA/TLS/private API paths: edit saved amendment work and exact prices, explicit new job-wide/vehicle scope, saved vehicle/service/address selection, condition observations, discounts, private notes and precise optional expiry. Existing search/discount/expiry helpers moved byte-exact without behavior changes.",
+    "Accepted scope keys keep their vehicle/job-wide identity; zero-dollar work needs its factual reason. No fictitious cancellation placeholder. Blank optional contact fields become null. Drafts remain memory-only.",
+    "Fresh binding/business/epoch/current parent/family/revision/hash/approval checks precede delivery. Explicit review and approval are separate from confirmed actual sharing. Edits block sharing immediately; saving approved content returns to Draft and invalidates approval.",
+    "Two actual accepted families exercise real create/edit/review/approval/sharing and separately dropped real committed create/edit/sharing acknowledgments. Exactly two create, two edit and two sharing requests; opaque per-tab originals reopen and typed lookup reconciles without retry.",
+    "Accepted revisions/items/agreements/acceptances/entitlements/allocations and accepted commercial parent bindings remain byte-exact; recording actual sharing changes only its permitted offer state. Customer acceptance is visibly unavailable."
+  ],
+  "checks": {
+    "units": {
+      "passed": 7762,
+      "failed": 0,
+      "skipped": 0,
+      "reportPath": ".local/amendment-edit-units-v3.json"
+    },
+    "focusedControllerTests": 20,
+    "types": "passed_in_production_build_and_separate_typecheck",
+    "fullLint": "passed",
+    "finalAffectedTestLint": "passed",
+    "productionBuild": {
+      "status": "passed",
+      "logPath": ".local/amendment-edit-build-v4.log"
+    },
+    "canonical": "baseline_plus12_verified",
+    "migrations": "51_unchanged_verified",
+    "dependencies": "298_exact_pins_integrity_licenses_verified_no_new_package",
+    "browser": {
+      "status": "passed",
+      "engine": "chromium",
+      "tests": 1,
+      "failed": 0,
+      "skipped": 0,
+      "reportPath": ".local/amendment-edit-native-v7/result.json",
+      "logPath": ".local/amendment-edit-native-v7/run.log",
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "normalNextPage": true,
+      "genuineMfa": true,
+      "physicalDevice": false,
+      "currentLinuxWebKitAcceptance": false
+    },
+    "priorBackend": {
+      "proofPath": "planning/proposals/quote-amendment-workspace-verification.json",
+      "priorNativeCases": 156,
+      "currentFull156Rerun": false,
+      "unchangedFiles": [
+        "src/client/quote-amendments.ts",
+        "src/client/quotes.ts",
+        "src/commercial/quote-amendment-directory.ts",
+        "src/commercial/quote-amendment-http.ts",
+        "src/commercial/quote-amendment-read.ts",
+        "src/commercial/quote-directory.ts",
+        "src/commercial/quote-storage-contract.ts",
+        "planning/proposals/quote-amendment-targets.sql",
+        "src/commercial/quote-amendment-targets.ts"
+      ],
+      "meaning": "Prior backend evidence retained; no claim that the older full run accepted this new UI source."
+    }
+  },
+  "design": {
+    "system": "Existing Crest black/gold/light neutral tokens, licensed self-hosted Plex and native accessible controls. Line-level disclosure keeps secondary scope folded. Explicit labels separate field names from help text.",
+    "audit": "All10 current captures inspected (8 viewport/full workspace plus2 expanded sharing phone/desktop) at360/390/768/1440; Axe0/no overflow. Visible buttons/inputs/selects/textareas/summaries and full checkbox-label touch targets meet44px. Fixed mobile navigation in full-page/element captures is a screenshot-position artifact; ordinary scrolling and the actual sharing clicks pass. This is viewport emulation, not physical iPhone testing.",
+    "images": [
+      {
+        "width": 360,
+        "kind": "full_page",
+        "path": ".local/review/amendment-workspace-chromium-360.png",
+        "bytes": 145633,
+        "sha256": "59b5aff47c5b1e8e7dd4d18db691bbf3a0997830775ff69eb4f56f907db05a2f",
+        "visuallyInspected": true
+      },
+      {
+        "width": 360,
+        "kind": "viewport",
+        "path": ".local/review/amendment-workspace-chromium-360-viewport.png",
+        "bytes": 34360,
+        "sha256": "2e0dd63147bc883f708b1a4e4b280cfd3b973be3bae522b761f82bcece635abb",
+        "visuallyInspected": true
+      },
+      {
+        "width": 390,
+        "kind": "full_page",
+        "path": ".local/review/amendment-workspace-chromium-390.png",
+        "bytes": 146966,
+        "sha256": "8f847fd0c47e41f0b7c19457c6166a5e46f3e15d273407f73788810e16b511b9",
+        "visuallyInspected": true
+      },
+      {
+        "width": 390,
+        "kind": "viewport",
+        "path": ".local/review/amendment-workspace-chromium-390-viewport.png",
+        "bytes": 34855,
+        "sha256": "e414f6bc2bb4377a53d3ca97b5693f1e0eda74ec0f3396a0afada5f5943f0a01",
+        "visuallyInspected": true
+      },
+      {
+        "width": 768,
+        "kind": "full_page",
+        "path": ".local/review/amendment-workspace-chromium-768.png",
+        "bytes": 157210,
+        "sha256": "c9419ee34953e2188407581784c7431be660874fe24383d389c67d79f971c695",
+        "visuallyInspected": true
+      },
+      {
+        "width": 768,
+        "kind": "viewport",
+        "path": ".local/review/amendment-workspace-chromium-768-viewport.png",
+        "bytes": 46745,
+        "sha256": "54bc595e0d8c991351c0c0f4265094f26e55893fa1271824e9f5088e615b260f",
+        "visuallyInspected": true
+      },
+      {
+        "width": 1440,
+        "kind": "full_page",
+        "path": ".local/review/amendment-workspace-chromium-1440.png",
+        "bytes": 169050,
+        "sha256": "f7bb477c277019575ae25d23e5c28d02643e00c55d7c99eae63ba8d9642659ba",
+        "visuallyInspected": true
+      },
+      {
+        "width": 1440,
+        "kind": "viewport",
+        "path": ".local/review/amendment-workspace-chromium-1440-viewport.png",
+        "bytes": 53367,
+        "sha256": "51611e60fb5ee578cc68e385f3e504bbcebe6fb88bf14ed1c1fe1290eb5329dd",
+        "visuallyInspected": true
+      },
+      {
+        "width": 390,
+        "kind": "expanded_sharing_form",
+        "path": ".local/review/amendment-sharing-chromium-390.png",
+        "bytes": 26719,
+        "sha256": "463ea3dbe69a835fc3a734d930287c68600080c6d1c157de3ed358b96f4812a5",
+        "visuallyInspected": true
+      },
+      {
+        "width": 1440,
+        "kind": "expanded_sharing_form",
+        "path": ".local/review/amendment-sharing-chromium-1440.png",
+        "bytes": 27080,
+        "sha256": "17472386295e6be050b17a2ec977a22a78bed5d0a647b9e03893336cf6f9b7dc",
+        "visuallyInspected": true
+      }
+    ]
+  },
+  "diagnostics": [
+    {
+      "path": ".local/amendment-edit-native-v1/result.json",
+      "passed": 0,
+      "failed": 1,
+      "reason": "Added scope existed, but nested label text prevented exact field-name targeting; v2 retained failure capture, then explicit scope label added."
+    },
+    {
+      "path": ".local/amendment-edit-native-v3/result.json",
+      "passed": 0,
+      "failed": 1,
+      "reason": "Separate reason-help text was included in the nested label; explicit reason label/describedby fixed it."
+    },
+    {
+      "path": ".local/amendment-edit-native-v4/result.json",
+      "passed": 1,
+      "failed": 0,
+      "reason": "Editor-only real save/reload and lost edit acknowledgment passed before review/sharing UI was added."
+    },
+    {
+      "path": ".local/amendment-edit-units-v2.json",
+      "passed": 7761,
+      "failed": 1,
+      "reason": "Approved-edit mock incorrectly retained Ready for Review instead of returning the actual Draft state. Fixture corrected; final full7762 passes."
+    },
+    {
+      "path": ".local/amendment-edit-native-v5/result.json",
+      "passed": 0,
+      "failed": 1,
+      "reason": "Touch audit measured a checkbox square rather than its clickable44px label and included collapsed controls. Audit now checks visible controls/full checkbox labels and additionally selects/textareas/summaries; final full journey passes."
+    },
+    {
+      "path": ".local/amendment-edit-native-v6/result.json",
+      "passed": 1,
+      "failed": 0,
+      "reason": "Complete real edit/review/sharing/unknown-response journey passed; finalv7 additionally captures/audits expanded sharing at390/1440, with unchanged app source."
+    }
+  ],
+  "remainingBeforeOwnerDelivery": [
+    "Full history paging/common-format retained retrieval and per-slice source composition.",
+    "Frozen51/current independent recovery, registry52/adoption and full current-source Linux/Chromium/WebKit/release gates.",
+    "Preserved-data owner installation and deployed walkthrough."
+  ],
+  "remainingFullV1": [
+    "Separate customer acceptance/resulting agreement and remaining allocation/financial limits; version2+ accepted chains/full cancellation.",
+    "Field/time/custody/photos/completion/follow-up; full finance/reporting/mileage; private receipts; complete portability/recovery/import/cutover; approved Google Calendar; real-use gates."
+  ],
+  "publicEvidence": {
+    "pr": 112,
+    "head": "3db75821863a1d0c6f2c92ac30f9b9b041ea04b8",
+    "fullRun": 41569607737,
+    "conclusion": "success",
+    "focusedExpenseRun": 41569607704,
+    "focusedExpenseConclusion": "success",
+    "newAmendmentSourcePublished": false
+  },
+  "ownerPreview": {
+    "laptop": "https://127.0.0.1:4319/",
+    "phone": "https://100.78.42.185:4319/",
+    "lastLauncherResult": "both_already_responding",
+    "physicalPhoneTest": "owner_deferred"
+  },
+  "estimate": {
+    "fullV1CodedRoughPercent": 40,
+    "activeHoursRemaining": [
+      200,
+      350
+    ],
+    "confidence": "very_low",
+    "waitsIncluded": false,
+    "reliableCumulativeActiveLedger": false
+  },
+  "next": "Complete full saved history/retrieval/source and independent recovery/adoption/full release; keep customer acceptance and remaining full V1 visible. No helper-only PR."
+}

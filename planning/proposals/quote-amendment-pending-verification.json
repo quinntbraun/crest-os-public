@@ -1,0 +1,196 @@
+{
+  "formatVersion": 1,
+  "status": "opaque_pending_and_genuine_generic_original_review_verified_not_owner_app_integrated",
+  "registered": false,
+  "runtimeEnabled": false,
+  "normalApplicationRoutesRegistered": false,
+  "existingMigrationCount": 51,
+  "sourceHeadBefore": "f1b30256f176af83d5d64cd4d584458942b8c8fb",
+  "files": [
+    {
+      "path": "src/security/original-operation-reference.ts",
+      "bytes": 13851,
+      "sha256": "fda440a123afffc43e95d215aecdfc1a432f2560d7b1414b13226f05c595370e"
+    },
+    {
+      "path": "src/client/pending-quote-amendment.ts",
+      "bytes": 3755,
+      "sha256": "bd1d4c44e56ffd3df9d973ddfdd78903c946f420ce87565b59808725b632ca89"
+    },
+    {
+      "path": "src/client/pending-original-operation.ts",
+      "bytes": 11153,
+      "sha256": "672e1bbec7ebc054a6acca909f4dabb642ccde442a8493b4e6e5f0bcd373858e"
+    },
+    {
+      "path": "src/app/save-review/review.tsx",
+      "bytes": 6427,
+      "sha256": "f4b5acb3dc8a95137bcc4e43f311dd85f3b8d886ea56f3a94786ed49f583c6be"
+    },
+    {
+      "path": "tests/support/registered51-original-operation-kinds.json",
+      "bytes": 839,
+      "sha256": "0bf52ed9d252ccc3f6a49a3d21798deec490bb25d5959799949a3f9073db06ff"
+    },
+    {
+      "path": "tests/support/original-operation-fixture.ts",
+      "bytes": 4299,
+      "sha256": "9696a6d4b6f556db778dd071b0d4e8ed7bbd52b131eec0aca1398f7718c4f04b"
+    },
+    {
+      "path": "tests/unit/original-operation-reference.test.ts",
+      "bytes": 13610,
+      "sha256": "616153fc7a20f3487e1b5f3f94247806216686eff61080c364b65ace7d56e625"
+    },
+    {
+      "path": "tests/unit/pending-original-operation.test.ts",
+      "bytes": 18467,
+      "sha256": "a17bc5df9c582538b0643caf205ce9cf77e9df35da7eec34eb96f588dfe97570"
+    },
+    {
+      "path": "tests/unit/pending-quote-amendment.test.ts",
+      "bytes": 6639,
+      "sha256": "7457a28a80d93d6ef6d5c38e7f6f0ab444128e8439353d03d8a3dd52d3949587"
+    },
+    {
+      "path": "tests/unit/pending-quote-amendment-recovery.test.ts",
+      "bytes": 3642,
+      "sha256": "56de025a5f0f8e52eb27bb88d4cbc089d558f8dae4282c9400cf457f2bbf9990"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-commands.test.mjs",
+      "bytes": 57797,
+      "sha256": "f69ede078b8f55b40bf008c80edbd62034ab0fd071a7df8c05d2bb836167ed56"
+    },
+    {
+      "path": "tests/integration/quote-amendment-auth.test.mjs",
+      "bytes": 43163,
+      "sha256": "10ff50fc2782cfc8fa9468be349e54c1b6a95656f9e91e3b74695cc0197b123b"
+    }
+  ],
+  "workflow": {
+    "stored": "Only exact business, sign-in binding and opaque original IDs/versions in separate per-tab draft/sharing slots. No content, hash, contact, evidence, amount or credential.",
+    "recovery": "Reopening uses genuine typed original lookup. Confirmed exact receipts clear the pinned reference; absent, uncertain, mismatched or late results keep it. No automatic retry, epoch/binding rewrite or inferred failure.",
+    "retirement": "Generic original_recorded cannot clear a pending reference. Only the exact typed receipt or explicitly reviewed durable retirement may do so. A retired absent original rejects late create/sharing delivery.",
+    "authority": "Existing provider/session/origin/CSRF/recovery/SQL command paths unchanged. Generic adapters use fresh authority to inspect historical opaque references; no old permission is promoted.",
+    "compatibility": "Frozen 27-kind51-era composition still accepts every old reference and rejects later amendment kinds; candidate SQL agrees with all29 current exact kinds. No migration/source/grant waiver.",
+    "signInBoundary": "Two default-closed/unknown/method route checks are correctly anonymous and assert they perform no sign-in. Every data workflow retains genuine password/TOTP. An explicit genuine HTTP regression reaches20 anonymous contexts then refuses the21st, preserving the existing fingerprint and never calling provider authentication."
+  },
+  "checks": {
+    "native": {
+      "reportPath": ".local/amendment-auth-native-v9/result.json",
+      "logPath": ".local/amendment-auth-native-v9/run.log",
+      "result": {
+        "exitCode": 0,
+        "tests": 148,
+        "passed": 148,
+        "failed": 0,
+        "logPath": ".local/amendment-auth-native-v9/run.log"
+      },
+      "sourceUnchangedDuringExecution": true,
+      "completeCrestAcceptance": false,
+      "registeredReleaseClaim": false,
+      "ownedClusterCleaned": true,
+      "failed": 0,
+      "skipped": 0,
+      "coverage": {
+        "frozenBookingOriginalAndRecoveryCompatibility": 50,
+        "amendmentStorageDraftSharingReadAndGenuineAuth": 98
+      },
+      "scope": "All five complete suites, no name filter. Source stable before/after; final148/148 with owned cleanup."
+    },
+    "units": {
+      "passed": 7699,
+      "failed": 0,
+      "skipped": 0,
+      "reportPath": ".local/amendment-pending-full-units.json"
+    },
+    "focused": {
+      "passed": 502,
+      "failed": 0,
+      "reportPath": ".local/amendment-pending-focused-v3.json"
+    },
+    "types": "passed",
+    "fullLint": "passed",
+    "productionBuild": {
+      "status": "passed",
+      "logPath": ".local/amendment-pending-build.log"
+    },
+    "canonical": "passed",
+    "immutable51MigrationRegistry": "passed",
+    "dependencyPinsAndLicenses": "passed_298_locked_packages",
+    "affectedFixtureLint": "passed after final diagnostic/anonymous-route/saturation additions",
+    "publicSourceBoundary": {
+      "status": "passed",
+      "trackedFiles": 1352
+    },
+    "stagedSecretScan": "passed_no_leaks"
+  },
+  "diagnostics": [
+    {
+      "path": ".local/amendment-pending-focused-v1.json",
+      "passed": 430,
+      "failed": 2,
+      "reason": "Old all-kind transport assertion assumed every nonfinancial/nonbooking lookup sent operationId only. New amendment lookups intentionally use the existing exact reference envelope."
+    },
+    {
+      "path": ".local/amendment-store-units-v1.json",
+      "passed": 50,
+      "failed": 0,
+      "reason": "Subsequent typecheck caught readonly mutation in malformed-input tests; changed only test setup to Object.assign."
+    },
+    {
+      "path": ".local/amendment-pending-focused-v2.json",
+      "passed": 498,
+      "failed": 4,
+      "reason": "Two old and two new transport assertions expected an unwrapped reference. Corrected to the actual existing {reference} wire. Application protocol and caps unchanged."
+    },
+    {
+      "path": ".local/amendment-auth-native-v5/result.json",
+      "passed": 146,
+      "failed": 1,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "reason": "Expanded suite exhausted the retained20-context/address/15-minute bootstrap limit. Last new paused-sharing case stopped at fixture sign-in before its workflow."
+    },
+    {
+      "path": ".local/amendment-auth-native-v6/result.json",
+      "passed": 1,
+      "failed": 0,
+      "scope": "Only the isolated failed case; not full acceptance."
+    },
+    {
+      "path": ".local/amendment-auth-native-v7/result.json",
+      "passed": 146,
+      "failed": 1,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "reason": "Bounded diagnostics reproduced anonymous bootstrap400 before any provider call/failure. The shared loopback fixture crossed the unchanged admission cap; this was not a password/TOTP failure.",
+      "diagnostic": {
+        "kind": "denied",
+        "lastResponses": [
+          {
+            "path": "/api/auth/bootstrap",
+            "status": 400
+          }
+        ],
+        "providerFailures": [],
+        "elapsedMs": 31
+      }
+    },
+    {
+      "path": ".local/amendment-auth-native-v8/result.json",
+      "passed": 2,
+      "failed": 0,
+      "scope": "Focused anonymous-route and actual20-context saturation regressions; not full acceptance."
+    }
+  ],
+  "limitations": [
+    "No new rendered amendment workflow or physical-device proof.",
+    "Amendment normal directories, controllers/screens, per-slice open-format source, independent restore, registered52 adoption, browser/Linux/current-source CI and owner delivery are unfinished.",
+    "Customer acceptance/resulting agreement/remaining allocations and full cancellation/empty scope remain mandatory V1 work.",
+    "Genuine Auth/HTTP clients use the documented Node relative-URL/cookie bridge; not browser/TLS acceptance.",
+    "Owner preview remains accepted calendar51/public3db/full400. No owner data/schema/account/certificate/network/security change, production/finance activation or spend.",
+    "No production authentication/admission/clock policy, automatic retry, fixture state reset, key rotation, timeout, RLS, trigger or release gate was changed. The two earlier full failures and focused runs remain retained."
+  ]
+}

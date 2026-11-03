@@ -1,0 +1,123 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "runtimeEnabled": false,
+  "existingMigrationCount": 51,
+  "status": "actual_postgres_saved_unaccepted_amendment_read_and_comparison_verified_not_app_integrated",
+  "sourceHeadBefore": "0410ba79be92a94e856a8de66ddfc922b88769c2",
+  "files": [
+    {
+      "path": "src/commercial/quote-amendment-read.ts",
+      "bytes": 11101,
+      "sha256": "cf85fc000e905a0a05df873970d63d105122aefab7ab7ae7c94d49ef08bfd0f0"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-read.sql",
+      "bytes": 8244,
+      "sha256": "8fca6b7da5932fe454da53a024f11c05f32afc6d53bd0903409091f230a5e6ca"
+    },
+    {
+      "path": "tests/unit/quote-amendment-read.test.ts",
+      "bytes": 8791,
+      "sha256": "ee13e7398c47ede21495ae75af79518729c208dfe5a597ebece8d993cfad6d5b"
+    },
+    {
+      "path": "src/commercial/quote-storage-contract.ts",
+      "bytes": 22149,
+      "sha256": "7396f5ea20613e38f5c1858f1a70c9e4414373c2ea8ba32921007331f71cf29d"
+    },
+    {
+      "path": "src/commercial/quote-commercial-read.ts",
+      "bytes": 12559,
+      "sha256": "4488d36e243dfa65ad4fecde1c6fe0954f965626921225505196dd627552b129"
+    },
+    {
+      "path": "src/commercial/quote-amendment-comparison.ts",
+      "bytes": 7094,
+      "sha256": "fe70fa64c52e342dbc5594ea4237ecf376b21350b3b5a0d099bc25178f573094"
+    },
+    {
+      "path": "tests/integration/quote-amendment-sharing.test.mjs",
+      "bytes": 35093,
+      "sha256": "8ef8ce22acffb7e922ccca75fda8d6820939d4636e705b9f2df7d6db3b241e87"
+    },
+    {
+      "path": "tests/support/confirmed-booking-fixture.mjs",
+      "bytes": 11135,
+      "sha256": "b894d710c71272bd0623a7001072a96bfd250ff946749994dbabe4ad6a59f87d"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 19933,
+      "sha256": "0efe4eb8d7fbe8027d4d4c8614c50ce5101f0ca65158eb52191cc75b71d99ac4"
+    },
+    {
+      "path": "supabase/migration-checksums.json",
+      "bytes": 9681,
+      "sha256": "6460d57d51c41f89c7dffffc456610c730566fde414dd13352e9a1844fc1a4a4"
+    }
+  ],
+  "verification": {
+    "actualDatabaseCases": 78,
+    "storageCases": 23,
+    "draftCases": 17,
+    "sharingOriginalAndReadCases": 38,
+    "passed": 78,
+    "failed": 0,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true,
+    "fullUnits": 7554,
+    "unitFailures": 0,
+    "unitSkips": 0,
+    "newReadBoundaryUnits": 12,
+    "fullLintAndFinalAffectedLintPassed": true,
+    "typesPassed": true,
+    "productionBuildPassed": true,
+    "publicBoundary1339FilesPassed": true,
+    "canonicalAndImmutable51RegistryPassed": true,
+    "stagedSecretScanPassed": true,
+    "mandatoryCiStepConfigured": true,
+    "currentSourceHostedReleaseRun": null,
+    "genuineMfaClaimed": false,
+    "completeAppWorkflowClaimed": false
+  },
+  "decisions": [
+    "Dedicated read_quote_amendment_workspace returns unaccepted amendment state with its immutable accepted parent, actual current control, current active items, exact approval/latest sharing and paginated before/after revision history. Legacy initial-only SQL reader bytes and grants are preserved; they are not safe amendment-aware app readers.",
+    "The existing revision content/provenance validation is shared by two explicit closed parsers. The original parser still accepts only its original initial shape; the amendment parser requires its actual amendment kind, immutable UUID parent and v2 content. No amendment is relabelled as initial for validation.",
+    "A shared family lock keeps the multi-query packet coherent with serialized commercial commands. Fresh existing authorization runs before any row read. This reader changes no business/operation/audit source and remains available when writes are paused.",
+    "The parent agreement acceptance is explicit and binds to the family initial-acceptance observation for version1. Both canonical fingerprints and the exact approval presentation hash are recomputed before customer comparison. Current/stale parent status remains explicit, never silently rebound or treated as write authority.",
+    "Latest sharing is selected by its actual Sent revision version rather than wall-clock order. Supersession of an earlier revision is not mistaken for a delivery of it. No clock-regression acceptance claim is inferred from this query choice.",
+    "The reader returns active current items. Removed identities remain in exact retained before/after history and in underlying inactive quote items; complete business source export/recovery remains separate unfinished work.",
+    "The new read protocol currently refuses an Accepted selected amendment. Its resulting-agreement/acceptance/allocation view must be completed alongside the acceptance command before adoption or owner delivery. Generic quote directory/initial acceptance views, app HTTP/controller/pending references also remain unfinished integration."
+  ],
+  "verified": [
+    "Actual saved Draft, accepted parent, pricing delta, stable zero-dollar identity and customer-safe comparison consumed by the real app parser.",
+    "Actual separate approval/sharing, contiguous paginated history with exact before/after frames, final current-version equality and honest empty/hasMore states.",
+    "Actual edited Draft and removed complimentary identity, preserved before-history and retained inactive source row.",
+    "Superseded original amendment retains its own true latest delivery/history while the newer active offer and original accepted parent remain distinct.",
+    "Converted-lead parent preserves original null quoted-customer binding and Won state while the amendment uses its real resolved customer.",
+    "Fresh foreign principal/expired provider refusal, unavailable direct table/worker access, revoked schema CREATE and unexpected default-grant refusal.",
+    "Paused write authority still reads; invalid bounds refuse; missing/initial revisions yield exact absent; actual read waits on the shared family consistency lock.",
+    "All prior storage/Draft/sharing/original-retirement cases pass in the final run. Initial fixture timestamp is observed from PostgreSQL and retained exactly.",
+    "All7554 units pass after the final parent-acceptance binding, including strict initial shape, bad hash/party/control/history/item refusal and sealing before asynchronous hashing."
+  ],
+  "retainedDiagnostics": [
+    "First complete unit attempt under restricted execution:7482/7553 passed,71 failed/65 unhandled EACCES loopback-connection errors. Tool output and .local summary retained. Same source with required local-network permission:7553/7553; final source after one new binding regression:7554/7554. No test filter or skip.",
+    "Nativev5 passed75/77:all ten new reader cases passed; two existing fixture initial-acceptance assertions returned conflict under load. Exact old conflict reason was not included by that assertion, so it is not retrospectively invented. The fixture mixed host millisecond timestamps with database microsecond validation. It now uses a database-observed confirmation stamp and includes exact refusal details if this setup ever fails again.",
+    "Nativev6 passed78/78, adding exact timestamp retention. Finalv7 passed78/78 after explicit parent-acceptance binding and typed closed history output; source stable and owned cluster cleaned. Old fixture/report and pre-binding reader SQL/TS retained separately.",
+    "First production build hit filesystem EPERM creating .next/server/app/api. Final build with normal host filesystem permission passed. Original build log retained. No directory deletion, source rewrite or security/gate change.",
+    "Typecheck caught missing narrowing for v2 assessment fields and callback-based flow inference. Explicit source shape checks and the typed final page frame fixed both; no cast bypass of content validation."
+  ],
+  "remaining": [
+    "Genuine server/HTTP/controller/owner-screen integration, complete original HTTP/pending-store composition and actual MFA/browser/four-width customer journey.",
+    "Separate customer acceptance, resulting agreement/successor entitlements and explicit remaining-allocation changes with atomic financial limits. Extend this read protocol to retained Accepted amendment results before adoption.",
+    "Version2+ agreement chains and full cancellation/empty scope semantics, preserving issued/completed/billed/credited/refunded history without placeholder scope.",
+    "Full source coverage/frozen51/current restore and registered52 adoption, then exact-source Linux/full release and owner delivery. No helper-only PR."
+  ],
+  "ownerDatabaseApplied": false,
+  "ownerPreviewModified": false,
+  "financialPostingEnabled": false,
+  "completeBackup": false,
+  "realCrestUseReady": false,
+  "currentSpend": 0
+}

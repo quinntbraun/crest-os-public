@@ -1,0 +1,93 @@
+{
+  "formatVersion": 1,
+  "scope": "owned_synthetic51_combined_booking_and_conflict_delivery",
+  "verifiedAt": "2026-11-03T03:37:12.287Z",
+  "localSource": "8e0a2461675171d20916633fbd3b4d1bb55bf026",
+  "publicSource": "d084b1200f427908409c4682d89decaa3add3122",
+  "tree": "a9236837ae509a00fe36d8e3992cc7983f08b11e",
+  "testedMerge": "66b510a8e800c2ff1b956234f9b2577029b70bf2",
+  "testedMergeTreeVerified": true,
+  "fullRun": 41564722446,
+  "fullRunNumber": 399,
+  "expenseRun": 41564722635,
+  "commercialRun": 41564722527,
+  "allReleaseAndFocusedGroupsPassed": true,
+  "actualLinuxChromiumAndWebkitBookingJourneysPassed": true,
+  "browserCases": 295,
+  "browserFailures": 0,
+  "browserSkipped": 0,
+  "artifacts": [
+    {
+      "id": 13201191791,
+      "name": "settings-review-66b510a8e800c2ff1b956234f9b2577029b70bf2-attempt-1",
+      "digest": "sha256:3a5e968cdaa579b4c49e48dfacce9f37e46e96ec3bc75cd8f65dfbcfc1bd2117",
+      "expiresAt": "2026-11-06T03:09:04Z"
+    },
+    {
+      "id": 13200474766,
+      "name": "phase-1-candidate-66b510a8e800c2ff1b956234f9b2577029b70bf2-attempt-1",
+      "digest": "sha256:c6224d26768b0cd8eeeeebd9e5ea4357400d2ba3ced0392a2600ab0681a75e73",
+      "expiresAt": "2026-11-06T03:14:09Z"
+    },
+    {
+      "id": 13199632292,
+      "name": "service-review-66b510a8e800c2ff1b956234f9b2577029b70bf2-attempt-1",
+      "digest": "sha256:c9f06b868800121056418c49838ef01900aeb60ae2376c85ca96baccfdf77991",
+      "expiresAt": "2026-11-06T02:36:04Z"
+    }
+  ],
+  "immutableSourceFilesVerified": 1309,
+  "schemaVersion": 51,
+  "databaseMigrationExecuted": true,
+  "originalBusinessSourceTablesPreserved": 52,
+  "exactOriginalPgRowTextPreservedBeforeAndAfterUpgradeStartupAndReadOnlyWalkthrough": true,
+  "existingCredentialsCertificatesAndOriginal49to50ReceiptPreserved": true,
+  "freshEncrypted50PointReceipt": "16c3fe0c45b3db863e7aedb5619830046b3826e45174f2cfe28393afa014e1e0",
+  "migrationReceipt": "4cd35d1ae86fa9962c11065d0f9b1b503405f14e9648e711a753d4ce06e7f2a5",
+  "coordinatorCompactRegistry": "ba03057443a686cb6858226b2a01f04478dfd1ce4f183c6f4543797f7dfe9679",
+  "sourcePrettyRegistry": "6460d57d51c41f89c7dffffc456610c730566fde414dd13352e9a1844fc1a4a4",
+  "registryParsedEntriesVerifiedEqual": true,
+  "pinnedTlsVerified": true,
+  "genuineMfa": true,
+  "savedWorkRead": true,
+  "scheduleReloadAndAccessRecovery": true,
+  "refreshBackAndKeyboard": true,
+  "existingCustomerNavigation": true,
+  "businessMutationsPerformedDuringWalkthrough": false,
+  "diagnosticSessionClosed": true,
+  "laptopAndPrivatePhoneResponding": true,
+  "ownerWillTestPhoneLater": true,
+  "actualPhoneAcceptance": false,
+  "widths": [
+    360,
+    390,
+    768,
+    1440
+  ],
+  "axeAndOverflowPassed": true,
+  "screenshotsManuallyInspected": true,
+  "screenshots": [
+    ".local/review/delivered-booking51-360.png",
+    ".local/review/delivered-booking51-390.png",
+    ".local/review/delivered-booking51-768.png",
+    ".local/review/delivered-booking51-1440.png",
+    ".local/review/delivered-booking51-schedule-360.png",
+    ".local/review/delivered-booking51-schedule-390.png",
+    ".local/review/delivered-booking51-schedule-768.png",
+    ".local/review/delivered-booking51-schedule-1440.png"
+  ],
+  "currentOwnerState": "No saved jobs in the current range; existing fictional follow-up and unconfirmed proposal retained. Populated combined booking, conflict review, changes and history retrieval passed both Linux engines; no fake owner jobs added.",
+  "realCrestUseReady": false,
+  "completeBackup": false,
+  "currentSpend": 0,
+  "limitations": [
+    "Physical iPhone acceptance remains owner-deferred.",
+    "Home contains a stale combined-booking-unavailable sentence; correction is saved in the evolving source for its next coherent reviewed release.",
+    "Internal calendar is separate PR112/full400, not yet delivered. Google Calendar remains unfinished.",
+    "Full approved V1 and production/real-data/finance/recovery/portability gates remain."
+  ],
+  "retainedDiagnostics": [
+    "Windows/NetBird silently dropped closed-port probes before backup. Verified exact old processes exited, zero preview listeners and exclusive bind availability of the exact private address. No firewall/policy change.",
+    "First read-only walkthrough removed its error interceptor during the intermediate loading state. Retained attempt1; final walkthrough waits for the actual abort and exact unavailable state, then verifies fresh authorized recovery. No product patch, timeout increase or weakened assertion."
+  ]
+}

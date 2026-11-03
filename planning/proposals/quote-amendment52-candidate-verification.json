@@ -1,0 +1,116 @@
+{
+  "formatVersion": 1,
+  "status": "disposable_candidate52_preserved_data_and_frozen51_current52_independent_encrypted_recovery_verified",
+  "sourceHeadBefore": "83d682c091b9579d06d4d6cd00efac51ba6f5692",
+  "files": [
+    {
+      "path": "tests/support/quote-amendment52-candidate.mjs",
+      "bytes": 2039,
+      "sha256": "1ceafbc06438600f816e9d1356c2c7db1dbfd8db96fc34d0ad2be54cdb93d99a"
+    },
+    {
+      "path": "tests/integration/quote-amendment52-candidate.test.mjs",
+      "bytes": 13841,
+      "sha256": "3a3deb5a1de63230cb9cd68098b96d6e11cbae78b6436de332ae2957c2233315"
+    },
+    {
+      "path": "tests/support/registered51-migration-checksums.json",
+      "bytes": 9681,
+      "sha256": "6460d57d51c41f89c7dffffc456610c730566fde414dd13352e9a1844fc1a4a4"
+    },
+    {
+      "path": "tests/support/recovery-drill.mjs",
+      "bytes": 24161,
+      "sha256": "54238ecc74052d8159514d6149257ec8c80dabdc32220f81fcf05cae91498eda"
+    },
+    {
+      "path": "package.json",
+      "bytes": 15056,
+      "sha256": "17327bb6ad64dfae5912a0a0df386522a6a29169455a321f831fa4a269d2d476"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 20219,
+      "sha256": "e82b73ea5667f54fded2d3075c611d12adbe506c0fc72c91d042a6e98a6766ad"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-storage.sql",
+      "bytes": 9387,
+      "sha256": "a0b2772afee14b45479824c23f8dfcf10992d27545d7bf533c700057d3cb2fc0"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-draft-commands.sql",
+      "bytes": 72590,
+      "sha256": "9c3c2cb7decbc8871e6a4f5fd5dd3f2900b1f320b4cbe3c680dd928f4b663861"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-sharing-core.sql",
+      "bytes": 34350,
+      "sha256": "99f8264c1236a3c6f964773380a85e0de598e801cab9422674804799455d01a6"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-sharing-guards.sql",
+      "bytes": 18190,
+      "sha256": "4eea99a531f551a8156fa9f2986ed14f90a46478395f8f1d9dc0d62cbe451271"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-originals.sql",
+      "bytes": 12329,
+      "sha256": "215dd7831a6e254025ddab3261a0c87df075a8253888117516a80febdefa8877"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-read.sql",
+      "bytes": 8244,
+      "sha256": "8fca6b7da5932fe454da53a024f11c05f32afc6d53bd0903409091f230a5e6ca"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-targets.sql",
+      "bytes": 5879,
+      "sha256": "228bbf5fd0c1654e05ed769c56a87af8fdd98c2c7081a23239013363be66cfca"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-source.sql",
+      "bytes": 7384,
+      "sha256": "cf11ffd11777c3da9b15a87c225b37abba17991a987aa790b925d0ed4ca56f6e"
+    }
+  ],
+  "verification": {
+    "native": {
+      "path": ".local/amendment-upgrade52-native-v1/result.json",
+      "sha256": "8fa173b2ffcba72cb9640d1752debfc156e16f3e5d9c7b31100f5cb2bf295c0c",
+      "tests": 8,
+      "passed": 8,
+      "failed": 0,
+      "sourceUnchanged": true,
+      "ownedClusterCleaned": true
+    },
+    "affectedLint": "passed",
+    "nodeSyntax": "passed",
+    "priorProductSourceCheck": {
+      "head": "83d682c091b9579d06d4d6cd00efac51ba6f5692",
+      "unitPassed": 7797,
+      "types": "passed",
+      "fullLint": "passed",
+      "productionBuild": "passed",
+      "newCandidateChanges": "test_and_CI_only_no_application_source_change"
+    },
+    "hostedCurrentSourceAcceptance": false
+  },
+  "verified": [
+    "All eight reviewed preparation SQL bodies are byte-exact within one disposable coordinator migration package; repository registry51 remains unchanged.",
+    "Unsafe widened authority refuses atomically before adding amendment definitions.",
+    "A genuine frozen51 encrypted point is captured before upgrade; candidate52 cannot relabel it.",
+    "Actual coordinator upgrades51 to52 and replays without rewriting prior records. Every old column value is compared exactly; the new parent column is null on every prior initial revision.",
+    "Restricted genuine SQL commands create/review/approve/share a converted-lead amendment after the actual upgrade; its accepted parent and two retained scope identities remain unchanged.",
+    "Candidate physical inventory explicitly includes1055 required columns over68 business/private tables with ten exact secret exclusions; portable/backup completeness flags remain false.",
+    "Independent encrypted52 restoration compares all captured rows and exact normalized schema, closed roles, grants and constraints; restricted source recapture and strict CSV validation succeed afterward.",
+    "Independent encrypted frozen51 restoration succeeds after52 exists, retains original rows, and contains no amendment definitions. Each opposite profile refuses before executing SQL."
+  ],
+  "limits": [
+    "Disposable candidate only: no repository migration52 registration, normal application activation, owner data migration, production/finance activation or deployment.",
+    "Encrypted fixtures cover synthetic database recovery only; objects, application image, independent vault and production configuration/authority remain excluded. This is not complete Crest backup or production recovery.",
+    "Full current-source Linux browser/release verification and owner installation remain required. Prior immutable UI/browser evidence remains historical, not relabeled by this test-only increment.",
+    "Customer acceptance/resulting agreements/remaining allocations/full cancellation and the remaining full V1 scope stay unfinished."
+  ],
+  "spend": 0
+}

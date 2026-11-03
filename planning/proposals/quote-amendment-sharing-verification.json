@@ -1,0 +1,117 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "runtimeEnabled": false,
+  "existingMigrationCount": 51,
+  "status": "actual_postgres_sharing_and_original_retirement_verified_not_app_integrated",
+  "files": [
+    {
+      "path": "planning/proposals/quote-amendment-sharing-core.sql",
+      "bytes": 34350,
+      "sha256": "99f8264c1236a3c6f964773380a85e0de598e801cab9422674804799455d01a6"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-sharing-guards.sql",
+      "bytes": 18190,
+      "sha256": "4eea99a531f551a8156fa9f2986ed14f90a46478395f8f1d9dc0d62cbe451271"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-originals.sql",
+      "bytes": 12329,
+      "sha256": "215dd7831a6e254025ddab3261a0c87df075a8253888117516a80febdefa8877"
+    },
+    {
+      "path": "src/commercial/quote-amendment-sharing-contract.ts",
+      "bytes": 8375,
+      "sha256": "04d91f3b83977352201fd7028188d3a6c2b6b8a8ee5786e1f02b0b02d6aa8889"
+    },
+    {
+      "path": "tests/unit/quote-amendment-sharing-contract.test.ts",
+      "bytes": 7585,
+      "sha256": "8bcb5e1e5dfee44ddfa845095b5a98bd829385e5e7fce2a2603f0cd970ca7b23"
+    },
+    {
+      "path": "tests/integration/quote-amendment-sharing.test.mjs",
+      "bytes": 25682,
+      "sha256": "8591c03ec04836bf09ceca4fbd3fc4e1b9076941a760acc770ab930e9761e19e"
+    },
+    {
+      "path": "tests/support/confirmed-booking-fixture.mjs",
+      "bytes": 10654,
+      "sha256": "91239499e339cea81e506899db2e251c4e0eee9a06dd369f5a667fd5456d9b29"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 19934,
+      "sha256": "17cc2f07b04fed8cb0f740621b8081f6a3b37e0e8836319bc4bafdd6aab82983"
+    },
+    {
+      "path": "supabase/migration-checksums.json",
+      "bytes": 9681,
+      "sha256": "6460d57d51c41f89c7dffffc456610c730566fde414dd13352e9a1844fc1a4a4"
+    }
+  ],
+  "verification": {
+    "actualPostgresCases": 67,
+    "storageCases": 23,
+    "draftCommandCases": 17,
+    "sharingAndOriginalCases": 27,
+    "passed": 67,
+    "failed": 0,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true,
+    "focusedContractComparisonAndDocumentUnits": 46,
+    "typesPassed": true,
+    "fullLintPassed": true,
+    "finalSqlFixtureFocusedLintPassed": true,
+    "productionBuildPassed": true,
+    "buildScope": "Current app TypeScript source; later edits only extend SQL and integration fixtures.",
+    "canonicalAnd51RegistryPassed": true,
+    "publicBoundaryPassed": true,
+    "stagedSecretScanPassed": true,
+    "currentSourceHostedReleaseRun": null,
+    "mandatoryCiStepConfigured": true,
+    "genuineMfaClaimed": false,
+    "completeAppWorkflowClaimed": false
+  },
+  "decisions": [
+    "Dedicated quote.amendment.send/schema1 binds expected parent ID/version/accepted hash and actual shared content/approval/presentation. Old quote.manual.send receipts, schemas and preimages remain unchanged.",
+    "Sharing records explicit actual external sharing; this SQL neither sends a message nor substitutes owner approval for customer acceptance. Accepted scope and financial obligations do not change.",
+    "A newer unshared Draft does not withdraw the active offer. Re-sharing the exact active Sent revision remains possible; replacing a different Sent offer requires its explicit ID and retains a Superseded event.",
+    "Four existing guards change narrowly under exact registered51/Draft function pins. New deferred result integrity checks exact audited row images, closed receipt fields, digest, parent, approval and audit-set cardinality. Browser/worker direct grants stay closed; temporary schema CREATE is revoked.",
+    "Opaque sharing references contain only twelve IDs/versions including the explicit replaced revision ID. Accepted/proposed hashes, content, contacts, amounts, credentials and evidence are never included. A live request additionally pins all three fingerprints.",
+    "The staged original-reference validator admits exact amendment create/send identities. The original-recorded observation recognizes the new create/schema3 but never authorizes clearing a reference without the independent typed original receipt. Existing generic app HTTP/pending-store integration remains unfinished; this SQL is not exposed in the owner app."
+  ],
+  "verified": [
+    "Actual create/edit/submit/separate approval and initial lifecycle remain working on registered51 plus proposals.",
+    "Manual amendment sharing and re-sharing bind current parent, exact approval/presentation and expected versions, with no accepted agreement/entitlement/allocation changes.",
+    "Actual converted lead reaches Won through initial acceptance; subsequent amendment sharing retains its exact lead/events/accepted source and original canonical content.",
+    "Changed-payload or parent replay refuses, original replay/lookup remains exact after re-sharing and explicit supersession, with no duplicate send/audit.",
+    "Stale or forged parent/family/revision versions and implicit replacement refuse with no partial operation; competing sends serialize.",
+    "A newer unshared Draft retains its cursor while the earlier active Sent amendment is explicitly re-shared.",
+    "Actual app parser consumes the PG result and checks all opaque identities/versions plus live content/presentation/parent hashes.",
+    "Sent content remains frozen; foreign principal, private helper/table/schema access and unexpected inherited default grants refuse.",
+    "Actual deferred COMMIT failure rolls back send, control, audit and operation; original lookup remains absent.",
+    "Exact absent Draft/send originals retire idempotently and reject delayed execution. Recorded originals stay observations; concurrent retirement/send has one durable original outcome.",
+    "Fabricated committed result refuses at deferred integrity evaluation. Test-owned databases/roles/container are cleaned; no RLS/trigger is disabled."
+  ],
+  "retainedDiagnostics": [
+    "Nativev1:40/57 passed;17 new cases stopped at setup because fixture used nonexistent lead_state_events instead of actual lead_events. Original fixture/guard sources and failed report retained. Review also caught a deferred trigger incorrectly reading historical INSERT NEW.state; it now validates authoritative final operation/result, as existing guards do.",
+    "Nativev2:57/57 passed. Nativev3:61/61 includes actual typed consumer, converted-lead, frozen-source and COMMIT rollback. Finalv4:67/67 additionally verifies original retirement/observation/late execution/race; source stable and owned cluster cleaned.",
+    "A preparatory inline Windows/Node command failed quoting before executing. Replaced it with a reviewed local script; no source or account mutation from the failed command.",
+    "An initial focused Vitest invocation matched only three existing .ts files because two requested document paths used .tsx. Ran the actual .ts document files separately:30+16=46 passing, not an inferred pass for nonexistent paths."
+  ],
+  "remaining": [
+    "Customer acceptance of amendments, full resulting agreement/successor entitlement and explicit remaining-allocation transitions, including atomic completed/billed/credited/refunded limits.",
+    "Version2+ agreement chains and full cancellation/empty resulting-scope semantics before adoption; never invent a complimentary placeholder.",
+    "Versioned amendment-aware saved readers/history, genuine app controller/UI and generic original HTTP/pending-store integration.",
+    "Full common-format source coverage, frozen51/current independent restore, registered52 adoption and actual MFA/browser/Linux/full exact-source release before owner delivery."
+  ],
+  "ownerDatabaseApplied": false,
+  "ownerPreviewModified": false,
+  "productionDatabaseApplied": false,
+  "financialPostingEnabled": false,
+  "completeBackup": false,
+  "realCrestUseReady": false,
+  "currentSpend": 0
+}

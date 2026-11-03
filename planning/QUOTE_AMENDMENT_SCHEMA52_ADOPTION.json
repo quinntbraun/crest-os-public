@@ -1,0 +1,107 @@
+{
+  "formatVersion": 1,
+  "repositoryRegistration": 52,
+  "executionStatus": "registered_source_pending_current_source_native_browser_linux_release_and_owner_upgrade",
+  "ownerDatabaseApplied": false,
+  "productionDatabaseApplied": false,
+  "productionActivation": "blocked",
+  "migration": {
+    "file": "20261103180000_quote_amendment_preparation.sql",
+    "sha256": "1bcfd0e0772f9710829d1832aa3616864a91e3a9c52734b1cfe884d5af09e84a",
+    "bytes": 169798,
+    "registrySha256": "2b69990d3bdc8d957207d80055799dfeed8ef3ca6dd871182f6859464888d78f"
+  },
+  "previousSourceCommit": "0f6c7f1c90ebc8274878f8df491f89b117297e1f",
+  "previousRegistry": {
+    "frozenFixture": "tests/support/registered51-migration-checksums.json",
+    "sha256": "6460d57d51c41f89c7dffffc456610c730566fde414dd13352e9a1844fc1a4a4"
+  },
+  "previousCoverage": {
+    "frozenFixture": "tests/support/registered51-export-coverage.json",
+    "sha256": "b9d0b727b2e40cd7e75d973ca4717d91f1bae6075047f4ae7a0393c599b423cf"
+  },
+  "previousCompatibility": {
+    "frozenFixture": "tests/support/registered51-compatibility.json",
+    "sha256": "d393ab62b32ef9c15edfd50b6a6cd3e12ac4a44eb60879fc0108907516034218"
+  },
+  "proposalBodies": [
+    {
+      "path": "planning/proposals/quote-amendment-storage.sql",
+      "offset": 257,
+      "bytes": 9387,
+      "sha256": "a0b2772afee14b45479824c23f8dfcf10992d27545d7bf533c700057d3cb2fc0"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-draft-commands.sql",
+      "offset": 9805,
+      "bytes": 72590,
+      "sha256": "9c3c2cb7decbc8871e6a4f5fd5dd3f2900b1f320b4cbe3c680dd928f4b663861"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-sharing-core.sql",
+      "offset": 82561,
+      "bytes": 34350,
+      "sha256": "99f8264c1236a3c6f964773380a85e0de598e801cab9422674804799455d01a6"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-sharing-guards.sql",
+      "offset": 117077,
+      "bytes": 18190,
+      "sha256": "4eea99a531f551a8156fa9f2986ed14f90a46478395f8f1d9dc0d62cbe451271"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-originals.sql",
+      "offset": 135430,
+      "bytes": 12329,
+      "sha256": "215dd7831a6e254025ddab3261a0c87df075a8253888117516a80febdefa8877"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-read.sql",
+      "offset": 147912,
+      "bytes": 8244,
+      "sha256": "8fca6b7da5932fe454da53a024f11c05f32afc6d53bd0903409091f230a5e6ca"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-targets.sql",
+      "offset": 156307,
+      "bytes": 5879,
+      "sha256": "228bbf5fd0c1654e05ed769c56a87af8fdd98c2c7081a23239013363be66cfca"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-source.sql",
+      "offset": 162339,
+      "bytes": 7384,
+      "sha256": "cf11ffd11777c3da9b15a87c225b37abba17991a987aa790b925d0ed4ca56f6e"
+    }
+  ],
+  "sourceTablesAdded": [],
+  "sourceColumnsAdded": 1,
+  "originalRowsAndHistoryRewritten": false,
+  "runtimeAmendmentPreparationEnabled": false,
+  "runtimeFinancePostingEnabled": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "constructionEvidence": [
+    "planning/proposals/quote-amendment-source-verification.json",
+    "planning/proposals/quote-amendment52-candidate-verification.json",
+    "planning/proposals/quote-amendment-record-verification.json"
+  ],
+  "requiredAcceptance": [
+    "Fresh registered52 coordinator/replay, exact frozen51 preservation and actual restricted amendment commands.",
+    "Fresh registered52 source inventory, complete included CSV, paired immutable audit/original history and independent neutral reconstruction.",
+    "Frozen51 and current52 independently authenticated encrypted restoration with exact rows, schema, roles, grants and constraints.",
+    "Normal synthetic runtime routing with genuine MFA, authorization and original-operation recovery; no test-only API listener.",
+    "Actual registered Next journey with Chromium and WebKit; keyboard, refresh/back, empty/error recovery, four-width visual/accessibility and unknown-save checks.",
+    "All required current-source Linux release groups, accounting/security/database/recovery/build/container/artifact gates.",
+    "Fresh encrypted owner51 recovery point, exact preserved-data upgrade and deployed smoke; physical iPhone test remains owner-deferred."
+  ],
+  "remainingV1": [
+    "amendment customer acceptance and resulting agreement chains",
+    "remaining allocations, completed/billed/credited bounds and full cancellation",
+    "field work, time, custody, photos, completion and follow-up",
+    "invoices, payments, immutable double-entry accounting, reporting and mileage",
+    "receipt transport and complete portability/recovery/import/cutover",
+    "approved Google Calendar capability",
+    "all real-data/production activation gates"
+  ]
+}

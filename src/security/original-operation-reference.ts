@@ -1,5 +1,10 @@
 import {customerUuid as uuid,customerVersion as version,customerInstant as instant} from '../customer/customer-contract.ts';
 
+import {parseQuoteAmendmentDraftReference} from '../commercial/quote-amendment-contract.ts';
+import type {QuoteAmendmentDraftReference} from '../commercial/quote-amendment-contract.ts';
+import {parseQuoteAmendmentSendReference} from '../commercial/quote-amendment-sharing-contract.ts';
+import type {QuoteAmendmentSendReference} from '../commercial/quote-amendment-sharing-contract.ts';
+
 type Common=Readonly<{operationId:string;recoveryEpoch:string}>;
 type Targets={
  'operations.fulfillment_modes.initialize':Readonly<{expectedSequence:'0'}>;
@@ -23,6 +28,8 @@ type Targets={
  'crm.lead.address.save':Readonly<{leadId:string;leadAddressId:string;expectedVersion:string}>;
  'crm.lead.convert':Readonly<{conversionId:string;leadId:string;expectedLeadVersion:string;customerId:string}>;
  'catalog.service.save':Readonly<{serviceId:string;expectedRevision:string}>;
+ 'quote.amendment.create':Omit<QuoteAmendmentDraftReference,keyof Common>;
+ 'quote.amendment.send':Omit<QuoteAmendmentSendReference,keyof Common>;
  'quote.draft.save':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string}>;
  'quote.replacement.create':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:'0'}>;
  'quote.manual.send':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string;expectedContentVersion:string;sendId:string;approvalId:string}>;
@@ -70,6 +77,8 @@ const fields={
  'crm.lead.address.save':['leadId','leadAddressId','expectedVersion'],
  'crm.lead.convert':['conversionId','leadId','expectedLeadVersion','customerId'],
  'catalog.service.save':['serviceId','expectedRevision'],
+ 'quote.amendment.create':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedParentAgreementId','expectedParentAgreementVersion'],
+ 'quote.amendment.send':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','sendId','approvalId','expectedParentAgreementId','expectedParentAgreementVersion','replacesRevisionId'],
  'quote.draft.save':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion'],
  'quote.replacement.create':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion'],
  'quote.manual.send':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','sendId','approvalId'],
@@ -84,7 +93,7 @@ function reason(value:unknown):asserts value is string{
 }
 
 // Original IDs/versions only. No draft reconstruction, credentials, permission,
-// sign-in binding, caller-supplied actor, financial payload or replacement ID.
+// sign-in binding, caller-supplied actor, financial payload or replacement command.
 // This is a pure contract: no storage, database, network or retirement action.
 export function parseOriginalOperationReference(value:unknown):OriginalOperationReference{
  try{
@@ -92,6 +101,8 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
   require(row.schemaVersion===1&&uuid(row.businessId)&&typeof row.commandType==='string'&&Object.hasOwn(fields,row.commandType));
   const kind=row.commandType as OriginalOperationKind,keys=['operationId','recoveryEpoch',...fields[kind]],ref=object(row.reference,keys);
   require(uuid(ref.operationId)&&uuid(ref.recoveryEpoch));
+  if(kind==='quote.amendment.create')return Object.freeze({schemaVersion:1,businessId:row.businessId,commandType:kind,reference:parseQuoteAmendmentDraftReference(ref)});
+  if(kind==='quote.amendment.send')return Object.freeze({schemaVersion:1,businessId:row.businessId,commandType:kind,reference:parseQuoteAmendmentSendReference(ref)});
   for(const key of fields[kind]){
    if(key==='expectedSequence'||key==='expectedVersion'||key==='expectedRevision'||key==='expectedFamilyVersion'||key==='expectedRevisionVersion')require(version(ref[key],!['business.rename','crm.lead.state','quote.review.submit','quote.review.approve','quote.manual.send','quote.confirmation.accept'].includes(kind)));
    else if(key==='expectedModeSequence')require(version(ref[key],true));

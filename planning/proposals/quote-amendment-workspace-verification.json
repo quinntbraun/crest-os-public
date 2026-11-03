@@ -1,0 +1,339 @@
+{
+  "formatVersion": 1,
+  "status": "actual_next_accepted_selector_create_read_and_unknown_save_recovery_verified_construction",
+  "sourceHeadBefore": "a6179a7371d44783aa3f84e62d61eff7f65fc87a",
+  "registered": false,
+  "existingMigrationCount": 51,
+  "normalNextPageImplemented": "/quotes/amendments",
+  "normalAmendmentApiRegistered": false,
+  "isolatedTestApiOptIn": true,
+  "ownerPreviewModified": false,
+  "ownerDatabaseApplied": false,
+  "financialPostingEnabled": false,
+  "realCrestUseReady": false,
+  "currentSpend": 0,
+  "files": [
+    {
+      "path": "package.json",
+      "bytes": 14754,
+      "sha256": "89ada4aba747399a426a636f618c5b5c322727c8d5b87ee4643fc569df38aa0c"
+    },
+    {
+      "path": "src/app/globals.css",
+      "bytes": 21254,
+      "sha256": "cb73a89c19dcb449c2965dd545e9b57d743440be52aee8a0b57dd0f3aac14857"
+    },
+    {
+      "path": "src/app/quotes/quotes.tsx",
+      "bytes": 31636,
+      "sha256": "72660fcbcf67691d7a1b97b0c7ec2127b5b2eb96ff14b61c375b744fd3d30ad1"
+    },
+    {
+      "path": "src/client/quote-amendments.ts",
+      "bytes": 8500,
+      "sha256": "a3b53e2afde8f6188fd6467b5ccc761f11c2eefb5c4f0cc4c40d9df6a3ba2db9"
+    },
+    {
+      "path": "src/client/quote-editor-controller.ts",
+      "bytes": 32898,
+      "sha256": "83f334d1a63fbd6a29fa1028196cf0658e63935417f5cbfceca91bc2b2128822"
+    },
+    {
+      "path": "src/client/quotes.ts",
+      "bytes": 9053,
+      "sha256": "25d7dce88ae19486a9df335c878b26e26a49faebc2be7d5d6df14922a7321052"
+    },
+    {
+      "path": "src/commercial/quote-amendment-directory.ts",
+      "bytes": 10052,
+      "sha256": "9c6eaca88ceec89f4d6bd88cccccace9f646b374b662517456f7bb186276accf"
+    },
+    {
+      "path": "src/commercial/quote-amendment-http.ts",
+      "bytes": 6363,
+      "sha256": "c6703aa0c0fb9685071e0f55d1b15db73ab3fe670e6de485a54351250ba26180"
+    },
+    {
+      "path": "src/commercial/quote-amendment-read.ts",
+      "bytes": 12131,
+      "sha256": "34ea54002dd7ea6d545952701907fbe0e1d606eac7c508acfa5a562b13bc22c8"
+    },
+    {
+      "path": "src/commercial/quote-directory.ts",
+      "bytes": 8917,
+      "sha256": "64586e7861b62ae1d8ecf19eebbe798d3ab28724817e07f586e63e29b70236b2"
+    },
+    {
+      "path": "src/commercial/quote-storage-contract.ts",
+      "bytes": 23864,
+      "sha256": "e514334431ff171177c68d73484a34192ceaf9d656f0876e8a76b305261ba6a4"
+    },
+    {
+      "path": "tests/integration/quote-amendment-auth.test.mjs",
+      "bytes": 44544,
+      "sha256": "7c6934541235b9a104cb8b4661c9d4dc3fc5a41708ac5f2813466a0099075621"
+    },
+    {
+      "path": "tests/integration/quote-amendment-sharing.test.mjs",
+      "bytes": 41867,
+      "sha256": "e9199a728059dc7be46f9cd9319d8486a3041e1e10a661d1dc13877f3c039eaa"
+    },
+    {
+      "path": "tests/support/source-export-browser-fixture.mjs",
+      "bytes": 19661,
+      "sha256": "2c1626e298e2a5a9c0c35d343ce5e7b26fbeb6cc20c7a6d6ef00daddda87fd30"
+    },
+    {
+      "path": "tests/support/source-export-browser-server.ts",
+      "bytes": 1489,
+      "sha256": "41c6dc16d445714c215feca72fbd44ebc079b0f301ee0cae66522819c6738a0f"
+    },
+    {
+      "path": "tests/unit/quote-amendment-directory.test.ts",
+      "bytes": 11692,
+      "sha256": "e2cb92fd63de3108cab59da2ac030ed8c704785f1149d8291cb0f6835b37a8fc"
+    },
+    {
+      "path": "tests/unit/quote-amendments-client.test.ts",
+      "bytes": 10019,
+      "sha256": "9c61629b42d7516c031fc288a09fd2c67776c8145c8daf6171cc54b1d666df33"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-targets.sql",
+      "bytes": 5879,
+      "sha256": "228bbf5fd0c1654e05ed769c56a87af8fdd98c2c7081a23239013363be66cfca"
+    },
+    {
+      "path": "src/app/quotes/amendments/page.tsx",
+      "bytes": 325,
+      "sha256": "2511166b9bced731cb55a970af6550b20cf1be01775fddc1aef897c23c413458"
+    },
+    {
+      "path": "src/app/quotes/amendments/workspace.tsx",
+      "bytes": 5491,
+      "sha256": "26515dfad71d21e4e213cf6f364b916259cbe7f58a069840af3c1bd1dedde28f"
+    },
+    {
+      "path": "src/client/quote-amendment-workspace.ts",
+      "bytes": 12283,
+      "sha256": "5ef16cc823bb58b84fa235f5fc43802a6879d1b4a92594b7c82cda6c9f49dfb4"
+    },
+    {
+      "path": "src/commercial/quote-amendment-targets.ts",
+      "bytes": 3980,
+      "sha256": "166708b6ab9b39f31e728fabc3f927a38a42c9b98916dffabf842781fcd14d75"
+    },
+    {
+      "path": "tests/integration/quote-amendment-workspace-browser.test.mjs",
+      "bytes": 9464,
+      "sha256": "6d038ab9bd19baba1f7d01af7a429044f1737e832a75d85d7dac4cca98396de3"
+    },
+    {
+      "path": "tests/unit/quote-amendment-target-fixture.ts",
+      "bytes": 1337,
+      "sha256": "097392a04a381a339c97b51e25b301d7c3f6f897323d6c70667d8c6c8b521cd9"
+    },
+    {
+      "path": "tests/unit/quote-amendment-targets.test.ts",
+      "bytes": 4105,
+      "sha256": "c8355a6db92350d5431e4fe7ccc04bc12b431e699e46f925b71c4d67e2b21e3a"
+    },
+    {
+      "path": "tests/unit/quote-amendment-workspace.test.ts",
+      "bytes": 6638,
+      "sha256": "6c7e5c8e8954cda73f1e86ee3921dbcf614793606f49bcb9292f075c0d9d74ae"
+    },
+    {
+      "path": "tests/unit/quote-workspace-directory.test.ts",
+      "bytes": 1936,
+      "sha256": "ec37bb276ab4aa34814f3d005266bdd63f491d4406ca317239b17efade9d6d67"
+    }
+  ],
+  "completedInConstruction": [
+    "Genuine Next password/TOTP/TLS sign-in and browser-accepted Secure HttpOnly cookie, current business/CSRF/private APIs, accepted work selection and a single saved/reloaded amendment Draft.",
+    "One-statement accepted selector binds the family/current revision/current accepted agreement, explicit parent/control/identity, exact hashes, bounded keyset pages and exact-family refresh. Role/grant/foreign/expired/paused/default/reinstall/statement-consistency checks pass.",
+    "Normal quote context and directory recognize explicit amendment revisions. Legacy initial parser/history/editor remain strict; amendment rows navigate to their own workspace. Pending amendment references also block competing legacy quote changes.",
+    "Read-only accepted terms, current saved amendment/customer-safe comparison and first retained history page, with clear unfinished edit/approval/sharing/retrieval/acceptance controls rather than fake buttons.",
+    "Two genuine accepted families: first creates/reloads normally; second loses only delivery of its real committed acknowledgment. Its opaque per-tab original survives refresh and explicit typed lookup confirms it without retry. Exactly two create requests; all prior accepted/entitlement/allocation source rows stay byte-exact.",
+    "Refresh, All-quotes navigation, keyboard focus/back, explicit read-network recovery and empty search pass. Private details clear on errors/hiding/leaving; no body/hash/contact/credential is stored in pending references."
+  ],
+  "checks": {
+    "native": {
+      "status": "passed",
+      "tests": 156,
+      "failed": 0,
+      "skipped": 0,
+      "reportPath": ".local/amendment-workspace-native-v8/result.json",
+      "logPath": ".local/amendment-workspace-native-v8/run.log",
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "coverage": "50 prior booking/original/legacy recovery compatibility plus106 amendment storage/commands/read/genuine Auth; not complete amendment export/restore adoption"
+    },
+    "units": {
+      "passed": 7748,
+      "failed": 0,
+      "skipped": 0,
+      "reportPath": ".local/amendment-workspace-full-units-v2.json"
+    },
+    "types": "passed",
+    "fullLint": "passed_with_final_affected_lint",
+    "productionBuild": {
+      "status": "passed",
+      "logPath": ".local/amendment-workspace-build-v3.log"
+    },
+    "browser": {
+      "status": "passed",
+      "engine": "chromium",
+      "filter": "chromium genuine amendment workspace",
+      "tests": 1,
+      "failed": 0,
+      "skipped": 0,
+      "normalNextPage": true,
+      "testApiMount": true,
+      "reportPath": ".local/amendment-workspace-native-v5/result.json",
+      "logPath": ".local/amendment-workspace-native-v5/run.log",
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "physicalDevice": false,
+      "linuxWebKitCurrentSourceAcceptance": false
+    },
+    "canonical": "passed_baseline_and12_amendments",
+    "immutableMigrationRegistry": "passed51",
+    "dependencies": "passed_exact_pins_integrity_and_licenses_298_locked_packages",
+    "publicSourceBoundary": {
+      "status": "passed",
+      "trackedFiles": 1363
+    },
+    "stagedSecretScan": "passed_no_leaks"
+  },
+  "design": {
+    "system": "Existing Crest black/gold/light-neutral tokens, self-hosted licensed IBM Plex Sans, standard accessible controls and existing immutable customer-safe quote/amendment documents.",
+    "audit": "Actual viewport and full-page captures at360/390/768/1440. All8 inspected; Axe0/no horizontal overflow and visible buttons/inputs44px minimum. Action links separated and introduction limited to existing65ch. Offscreen skip link is verified hidden in the viewport; scroll-to-top capture avoids a full-page screenshot artifact without changing its accessibility behavior.",
+    "images": [
+      {
+        "width": 360,
+        "kind": "full_page",
+        "path": ".local/review/amendment-workspace-chromium-360.png",
+        "bytes": 61198,
+        "sha256": "1db708acb070c34aa640ea5595ed3d545ffdbc7cb2866eb896caa78e9a9bf4da",
+        "visuallyInspected": true
+      },
+      {
+        "width": 360,
+        "kind": "viewport",
+        "path": ".local/review/amendment-workspace-chromium-360-viewport.png",
+        "bytes": 33200,
+        "sha256": "44d99b1b5fbdc3dc4d84640ebd387a5bb1efb11c4e745e4e295e65ec09a3f1fb",
+        "visuallyInspected": true
+      },
+      {
+        "width": 390,
+        "kind": "full_page",
+        "path": ".local/review/amendment-workspace-chromium-390.png",
+        "bytes": 62221,
+        "sha256": "bdff5f9c015ebeda121cb2031c60973045566997c46d4eec157655dc05ca59bc",
+        "visuallyInspected": true
+      },
+      {
+        "width": 390,
+        "kind": "viewport",
+        "path": ".local/review/amendment-workspace-chromium-390-viewport.png",
+        "bytes": 33692,
+        "sha256": "dccb30f4095c12bd1281626ed9f6b6ce428eb2026c538b60fa2d27f4c615029a",
+        "visuallyInspected": true
+      },
+      {
+        "width": 768,
+        "kind": "full_page",
+        "path": ".local/review/amendment-workspace-chromium-768.png",
+        "bytes": 65651,
+        "sha256": "ed8199ef0ae340dd90c4fe80b7d2f961f8dd91b7ca1f843e92520f58442507e3",
+        "visuallyInspected": true
+      },
+      {
+        "width": 768,
+        "kind": "viewport",
+        "path": ".local/review/amendment-workspace-chromium-768-viewport.png",
+        "bytes": 44990,
+        "sha256": "e41b7915b2e557534fe8e07fd63a85f5b31e1b058fd790b40b6ca6bc7e64fc77",
+        "visuallyInspected": true
+      },
+      {
+        "width": 1440,
+        "kind": "full_page",
+        "path": ".local/review/amendment-workspace-chromium-1440.png",
+        "bytes": 70447,
+        "sha256": "72c78c32246f6fe42a0f58e3e006ddb8fc4690d3b2742774706985578b968e60",
+        "visuallyInspected": true
+      },
+      {
+        "width": 1440,
+        "kind": "viewport",
+        "path": ".local/review/amendment-workspace-chromium-1440-viewport.png",
+        "bytes": 51070,
+        "sha256": "b95a49280aa1aae00a51d4db2b2255b6064d3109a3b8dd1fcde6c0c82dd73d9c",
+        "visuallyInspected": true
+      }
+    ]
+  },
+  "diagnostics": [
+    {
+      "path": ".local/amendment-workspace-native-v1/result.json",
+      "passed": 8,
+      "failed": 1,
+      "reason": "All8 new selector DB cases passed. The standalone construction UI saved the Draft, then correctly reported confirmed-save/reload-failure rather than fabricating a successful read."
+    },
+    {
+      "path": ".local/amendment-workspace-native-v2/result.json",
+      "passed": 0,
+      "failed": 1,
+      "reason": "Focused private probe:actual targets/read HTTP200 and Node parser passed; failure was outside the amendment reader. Fictional packet retained only under ignored.local."
+    },
+    {
+      "path": ".local/amendment-workspace-native-v3/result.json",
+      "passed": 0,
+      "failed": 1,
+      "reason": "Bounded error category/source frames isolated quotes.context. Its real access preflight called the old initial-only directory, which refused after the current revision became an amendment. Added an explicit workspace directory/parser, retained strict initial history/editing and routed actual amendment rows to their real Next page. Temporary probes restored from exact saved pre-probe bytes before the fix/final verification; no auth/RLS/limit bypass."
+    },
+    {
+      "path": ".local/amendment-workspace-native-v4/result.json",
+      "passed": 1,
+      "failed": 0,
+      "reason": "Actual Next Chromium journey passed after the directory fix. Visual review found touching action links and a full-page capture artifact from an offscreen fixed skip link; final spacing and viewport/full-page capture checks cover both."
+    },
+    {
+      "path": ".local/amendment-workspace-native-v5/result.json",
+      "passed": 1,
+      "failed": 0,
+      "reason": "Final actual Next/two-family happy+unknown-save journeys, explicit original lookup, error/empty/back/keyboard and eight captures pass."
+    },
+    {
+      "path": ".local/amendment-workspace-native-v6/result.json",
+      "passed": 155,
+      "failed": 1,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "reason": "One initial-quote acceptance setup failed before the foreign-owner test reached its amendment checks. The stack reported a sanitized QuoteCommercialClientError; cause was not established. All other cases passed."
+    },
+    {
+      "path": ".local/amendment-workspace-native-v7/result.json",
+      "passed": 1,
+      "failed": 0,
+      "scope": "Isolated foreign-owner case only; not full suite acceptance. Added failure-only bounded name/kind/route/status/provider-error categories, never raw bodies/tokens/credentials or command content."
+    },
+    {
+      "path": ".local/amendment-workspace-native-v8/result.json",
+      "passed": 156,
+      "failed": 0,
+      "reason": "Final complete five-suite run passes all156 with no skips, source stable/owned clean. No application/authentication/retry/rate-limit/timeout/gate change was made to hide the earlier setup failure."
+    }
+  ],
+  "limitations": [
+    "Owner preview remains accepted calendar51/public3db/full400. No new owner migration/account/certificate/network/service setup, spending or real-data/finance activation.",
+    "Current-source Linux Chromium/WebKit and full hosted release are unrun. Local Chromium viewport emulation is not actual iPhone/physical-device testing.",
+    "Draft editing, separate owner review/approval, actual sharing UI, full history paging and common-format retrieval still need completion. Backend operations are proven construction; no customer acceptance UI or resulting agreement/allocation claim.",
+    "Complete per-slice source coverage, frozen51/current independent restore, registered52 adoption and full release remain required before owner delivery. Legacy compatibility recovery checks do not establish complete candidate business backups.",
+    "Customer acceptance/resulting agreements/remaining allocations/full cancellation remain mandatory V1. Full field/job/finance/recovery/Calendar scope remains open.",
+    "The earlier initial-acceptance setup failure did not reproduce in its isolated case or final full run; its cause remains unconfirmed. Retain evidence and investigate any recurrence; a green construction run is not a bug-free or real-use claim."
+  ]
+}

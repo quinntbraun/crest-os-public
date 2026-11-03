@@ -14,3 +14,5 @@ export {createSourceExportDatabaseJournal} from '../../src/security/source-expor
 export {custodyFixture} from './source-export-custody-fixture.mjs';
 
 export {createCrestApplication} from '../../src/server/application.ts';
+export {createQuoteAmendmentHttp} from '../../src/commercial/quote-amendment-http.ts';
+export {writeQuoteResponse} from '../../src/server/node-server.ts';
