@@ -1,5 +1,5 @@
 import type {BookingPayload} from '../operations/confirmed-booking-contract';
-import type {BookingAgreement} from './book-job-controller';
+import type {BookingWork} from './booking-work';
 import {parseScheduleTime} from '../operations/schedule-time';
 export function bookingTimeFacts(instant:string,timezone:string){
  if(!instant)return {local:'',offset:0};
@@ -7,6 +7,6 @@ export function bookingTimeFacts(instant:string,timezone:string){
  const local=get('year').padStart(4,'0')+'-'+get('month')+'-'+get('day')+'T'+get('hour')+':'+get('minute')+':'+get('second')+'.'+instant.slice(20,26);return {local,offset:(Date.parse(local+'Z')-Date.parse(instant))/60000};
 }
 export function bookingWindow(start_at:string,end_at:string,timezone:string){const start=bookingTimeFacts(start_at,timezone),end=bookingTimeFacts(end_at,timezone);return parseScheduleTime({start_at,end_at,timezone,local_start:start.local,local_end:end.local,start_offset_minutes:start.offset,end_offset_minutes:end.offset});}
-export function initialBookingPayload(agreement:BookingAgreement,operatorId:string,jobId:string,timezone:string):BookingPayload{
+export function initialBookingPayload(agreement:Pick<BookingWork,'customer'|'vehicles'|'sources'>,operatorId:string,jobId:string,timezone:string):BookingPayload{
  return {customerId:agreement.customer.id,expectedCustomerVersion:agreement.customer.version,operatorId,fulfillmentMode:'mobile',workLocation:{schemaVersion:1,kind:'manual',locationText:'',instructions:null},vehicles:agreement.vehicles.filter(vehicle=>vehicle.archivedAt===null).map(vehicle=>({vehicleId:vehicle.id,expectedVersion:vehicle.version,customerVehicleId:null,pickupLocation:null,returnLocation:null})),appointment:{start_at:'',end_at:'',timezone,local_start:'',local_end:'',start_offset_minutes:0,end_offset_minutes:0,travel_before_seconds:null,travel_after_seconds:null,customer_confirmation:{channel:'in_person',effectiveAt:'',evidenceNote:''},contact_snapshot:{kind:'no_contact',reason:''},unknown_travel_reviewed:false},allocationPlans:agreement.sources.filter(source=>source.parts.some(part=>part.state==='unassigned')).map(source=>({sourceAllocationId:source.sourceAllocationId,expectedSequence:source.planSequence,reason:null,parts:source.parts.map(part=>part.state==='unassigned'?{...part,jobId,state:'assigned'}:part)})),conflictReview:{expectedAppointmentIds:[],expectedUnknownTravel:true,overrideReason:null}};
 }

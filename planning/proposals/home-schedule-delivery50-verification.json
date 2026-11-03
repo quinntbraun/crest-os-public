@@ -1,0 +1,62 @@
+{
+  "formatVersion": 1,
+  "scope": "owned_synthetic50_home_delivery",
+  "verifiedAt": "2026-11-03T00:04:43.421Z",
+  "localSource": "687cdf3dc86aad4b6816b60967b5c329e407117b",
+  "publicSource": "9cb1509be779efac96d0d3daccda2c96ff22ac51",
+  "tree": "ad3c5255f5aa27621a991c204377194d244e0a51",
+  "testedMerge": "5356f816d451aa84b0e8b077fd9bb5c04d746314",
+  "testedMergeTreeVerified": true,
+  "fullRun": 41539667245,
+  "fullRunNumber": 396,
+  "expenseRun": 41539666988,
+  "commercialRun": 41539666974,
+  "allReleaseAndFocusedGroupsPassed": true,
+  "actualLinuxChromiumAndWebkitHomeJourneysPassed": true,
+  "artifacts": [
+    13189611849,
+    13189449199,
+    13186789205
+  ],
+  "immutableSourceFilesVerified": 1288,
+  "schemaVersion": 50,
+  "databaseMigrationExecuted": false,
+  "originalBusinessSourceTablesPreserved": 52,
+  "exactOriginalPgRowTextPreservedBeforeAndAfterStartupAndReadOnlyWalkthrough": true,
+  "existingCredentialsCertificatesAndOriginal49to50ReceiptPreserved": true,
+  "pinnedTlsVerified": true,
+  "genuineMfa": true,
+  "savedWorkRead": true,
+  "refreshBackAndKeyboard": true,
+  "independentReadFailureRecovery": true,
+  "existingCustomerNavigation": true,
+  "businessMutationsPerformed": false,
+  "diagnosticSessionClosed": true,
+  "laptopAndPrivatePhoneResponding": true,
+  "ownerWillTestPhoneLater": true,
+  "actualPhoneAcceptance": false,
+  "widths": [
+    360,
+    390,
+    768,
+    1440
+  ],
+  "axeAndOverflowPassed": true,
+  "screenshotsManuallyInspected": true,
+  "screenshots": [
+    ".local/review/delivered-home50-360.png",
+    ".local/review/delivered-home50-390.png",
+    ".local/review/delivered-home50-768.png",
+    ".local/review/delivered-home50-1440.png"
+  ],
+  "currentOwnerState": "No active saved visits in the next seven business dates; existing fictional follow-up and unconfirmed proposal remain visible. Populated booking/change journeys independently passed both Linux engines; no fake jobs added.",
+  "realCrestUseReady": false,
+  "completeBackup": false,
+  "currentSpend": 0,
+  "limitations": [
+    "Physical iPhone acceptance remains deferred.",
+    "Advanced conflict/override51 is separate PR110/full397; not installed in this schema50 preview.",
+    "Full approved V1 and production/real-data/finance/recovery/portability/Calendar gates remain."
+  ],
+  "operatorFailureRetained": "Initial optional Windows listener-count check refused before any stop. Pinned HTTPS and exact executable/script/process identities verified ownership; Windows socket inventory labelled the active socket CLOSED. Switched only those two verified processes; original data/auth/Docker services retained."
+}
