@@ -1,0 +1,215 @@
+{
+  "formatVersion": 1,
+  "status": "current_recovery_profile_and_pending_read_navigation_regressions_fixed_verified_pending_hosted_successor",
+  "sourceHeadBefore": "846289725f5cab206b0004c7514e3a632be8d760",
+  "publicFailureSource": "545e396e8d75f1a5b2e80092412a8dad88ea5d9e",
+  "pr": "https://github.com/quinntbraun/crest-os-public/pull/113",
+  "files": [
+    {
+      "path": "src/app/quotes/quotes.tsx",
+      "bytes": 28416,
+      "sha256": "b9e5a5d844dd6f39f10de0c7711d8e380ad931629ec2606f9f7ac978c643b643"
+    },
+    {
+      "path": "tests/integration/quote-commercial-browser.test.mjs",
+      "bytes": 34325,
+      "sha256": "aebcd61e7665eb6adc2cec5fd2f2acae3e4c6e937862bb44e2e1a49691685034"
+    },
+    {
+      "path": "tests/integration/quote-review-browser.test.mjs",
+      "bytes": 25936,
+      "sha256": "ec69b1b6e149678c9406f8330f1f68a63954fb693673f20a3f97e82881c9677d"
+    },
+    {
+      "path": "tests/integration/recovery-drill.test.mjs",
+      "bytes": 61442,
+      "sha256": "0af9a90f56f97a176fade95eb2ab1e73b3723fb2f684a366065a765b4fa61cba"
+    }
+  ],
+  "rootCauses": [
+    {
+      "run": 41736677048,
+      "number": 402,
+      "job": 126267544827,
+      "defect": "General current recovery assertions still expected schema51 and1054 required columns after valid registered52 restore.",
+      "fix": "Expect52 and1055 required plus10 excluded columns. Run missing-column refusals with the matching52 ordinal, not stale50; explicitly reject omitted parent_agreement_id.",
+      "productDatabaseOrRuleChanged": false
+    },
+    {
+      "run": 41736677049,
+      "number": 14,
+      "job": 126267795654,
+      "defect": "New global pendingNotice disabled saved-quote read navigation before a pending review/acceptance could be reopened; both Linux engines timed out on a disabled button.",
+      "fix": "Saved directory load/search/paging/open retains its established operation lock; pendingNotice continues to fence every new write. Real lost-acknowledgment tests now explicitly require enabled saved-row navigation and disabled New quote before typed original reconciliation.",
+      "timeoutsOrFencesWeakened": false
+    }
+  ],
+  "verification": {
+    "generalRecovery": {
+      "path": ".local/amendment52-recovery-native-v1/result.json",
+      "sha256": "5bdcb35dc45e2e6d5b9ceca122277e3c124e3c1393804d595b3bb433d6a5eabb",
+      "passed": 37,
+      "failed": 0,
+      "skipped": 0,
+      "sourceUnchanged": true,
+      "ownedClusterCleaned": true,
+      "scope": "actual current52 encrypted snapshot, independent fresh-process cluster restore, all rows/schema/grants,1055+10 physical columns and same-profile omission refusals"
+    },
+    "browser": {
+      "path": ".local/amendment52-navigation-browser-native-v1/result.json",
+      "sha256": "790204822d9fa329539113f8a7863d400c54d9ef2cc3cb08d5beac0c056eed0e",
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0,
+      "engine": "Windows Chromium",
+      "sourceUnchanged": true,
+      "ownedClusterCleaned": true,
+      "scope": "genuine legacy review and initial acceptance with lost-response reopening/original reconciliation, and complete normal-server registered52 amendment journey",
+      "newWritesFencedWhileSavedReadReopens": true,
+      "pendingOpaqueReferencePreserved": true,
+      "duplicateCommandCountUnchanged": true,
+      "finalCorrectedNormalRoutingDiagnosticExecuted": true
+    },
+    "unit": {
+      "passed": 7805,
+      "failed": 0,
+      "skipped": 0
+    },
+    "typecheck": "passed",
+    "affectedLint": "passed",
+    "productionBuild": "passed",
+    "hostedSuccessorAcceptance": false
+  },
+  "images": [
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/amendment-record-download-chromium-1440.png",
+      "sha256": "aa78e4a7839765bd6985d48cba2116001183b3e0503f7b2daf24ed932a81ef7e",
+      "bytes": 16802,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/amendment-record-download-chromium-390.png",
+      "sha256": "8f1996893ebe359c77f7f149db0b25a702cf33dd0a518b4bb0b75e7c1c8d7b12",
+      "bytes": 17884,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/amendment-record-sharing-chromium-1440.png",
+      "sha256": "17472386295e6be050b17a2ec977a22a78bed5d0a647b9e03893336cf6f9b7dc",
+      "bytes": 27080,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/amendment-record-sharing-chromium-390.png",
+      "sha256": "6a38d5414fdfbc5e286550729c263b176c3f710601ab438362012a48869895a5",
+      "bytes": 26741,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/amendment-record-workspace-chromium-1440-viewport.png",
+      "sha256": "23965ba4d841a6d73afc53563c2cd2dff599d1f82a97817a261349ee6e3e60b4",
+      "bytes": 51778,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/amendment-record-workspace-chromium-1440.png",
+      "sha256": "41a8cc02d9aeb5deca552e3921b56ecff01a5977974d0afefc2734b3e3109b32",
+      "bytes": 191719,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/amendment-record-workspace-chromium-360-viewport.png",
+      "sha256": "324bef62cb3182410e9f5a9db29413a61b25e8f6c5fba4e5c50b18998ba7ce06",
+      "bytes": 34516,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/amendment-record-workspace-chromium-360.png",
+      "sha256": "26e27c3ec8a40cd747a20ac9c0f28f610d33e3a04e7f269f4b77279ec097fe7b",
+      "bytes": 166945,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/amendment-record-workspace-chromium-390-viewport.png",
+      "sha256": "630fb56b880b7d135783fcbf609c3661f95d014b9e75a4415ac1de4953b4741e",
+      "bytes": 35054,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/amendment-record-workspace-chromium-390.png",
+      "sha256": "a2d223b014eea325a20c5d75c34bbdb15941839ea6c0aa6413c6fbcf9b41486c",
+      "bytes": 168004,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/amendment-record-workspace-chromium-768-viewport.png",
+      "sha256": "95ac4a153f182365b637d2866dc3c13def670d6cee84ea1438171ff7e76a1029",
+      "bytes": 46092,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/amendment-record-workspace-chromium-768.png",
+      "sha256": "0affb1064c526042a05e3d31b22a9f9860168d00096f7c3353c4ce3594fd8a7b",
+      "bytes": 177925,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/quote-commercial-chromium-1440.png",
+      "sha256": "f2fbb85a8a0490cd90096012c86063d93ca536ef3c9f7fab44c87d94db3a462e",
+      "bytes": 480770,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/quote-commercial-chromium-360.png",
+      "sha256": "eb3aebb30231bb9d37ed120e202601a0d0f9f01577fe67cf1acdf4514138df73",
+      "bytes": 398327,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/quote-commercial-chromium-390.png",
+      "sha256": "a8f360c34c422120ee3fe32bb05b951b03adc38c0111e3c433acb890ea5ffee5",
+      "bytes": 400925,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/quote-commercial-chromium-768.png",
+      "sha256": "c296616790b07c315c6698a267145528f30b452f3265e57cfa1b21990e93a2f9",
+      "bytes": 442256,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/quote-review-chromium-1440.png",
+      "sha256": "c0d2d904d159b9000ec41b801e589c07897c1437eee742537444675956f6d44a",
+      "bytes": 329959,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/quote-review-chromium-360.png",
+      "sha256": "1c3a5f41331b83ac091253774647ac8a8b18787bae334850c7830ed614674c7e",
+      "bytes": 272707,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/quote-review-chromium-390.png",
+      "sha256": "f5453f7507a3eaf8e011c71e07a3d1caf2fc6156cf5acb4e530434136aaf91f7",
+      "bytes": 276440,
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-navigation-verified-v1/quote-review-chromium-768.png",
+      "sha256": "4a6059624de6393fb8b7117dba6a1341040a7d456b9ae8887dc1afba577c5766",
+      "bytes": 305733,
+      "manuallyInspected": true
+    }
+  ],
+  "limits": [
+    "Both Linux engines and every required full/focused current-source release group remain mandatory for the successor commit. No owner migration or preview replacement yet.",
+    "Registered52 SQL/business rules/roles, original-reference formats, admission limits, stored pending metadata and all timeouts remain unchanged.",
+    "Prior native23/source/recovery construction remains exact for unchanged backend bodies; general37 and browser14 provide the new affected verification.",
+    "Complete Crest backup/export/real-use approval, accepted amendments/resulting agreements/remaining allocations/full cancellation and remaining V1 stay incomplete.",
+    "The source846/public545 candidate build and its one-time owner cutover scripts remain unaccepted/unserved and stale after this product fix. Recreate against the final accepted source; do not deploy it."
+  ],
+  "ownerAction": "none",
+  "spend": 0,
+  "realUseReady": false
+}
