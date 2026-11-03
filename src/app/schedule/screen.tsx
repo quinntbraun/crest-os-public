@@ -13,7 +13,11 @@ export function ScheduleScreen({initialJobId}:{initialJobId?:string}){
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',clear);window.addEventListener('pageshow',restored);
   return()=>{reader.current=null;current.dispose();revoke();document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',clear);window.removeEventListener('pageshow',restored);};
  },[initialJobId]);
- async function action(kind:'load'|'more'|'morePending'|'moreHistory',dates?:{fromDate:string;throughDate:string}){const current=reader.current;if(!current)return;await(kind==='load'?current.load(dates):current[kind]());if(current===reader.current){if(kind==='load'||current.view().phase!=='ready')status.current?.focus();else if(kind==='moreHistory')review.current?.focus();}}
+ async function action(kind:'load'|'more'|'morePending'|'moreHistory',dates?:{fromDate:string;throughDate:string}){const current=reader.current;if(!current)return;await(kind==='load'?current.load(dates):current[kind]());if(current!==reader.current)return;
+  // An explicit access retry should recover the requested job after verifying
+  // fresh access. A changed date filter continues to show the chosen list.
+  if(kind==='load'&&!dates&&initialJobId&&current.view().phase==='ready'){await current.open(initialJobId);if(current!==reader.current)return;if(current.view().selected?.jobId===initialJobId){review.current?.focus();return;}}
+  if(kind==='load'||current.view().phase!=='ready')status.current?.focus();else if(kind==='moreHistory')review.current?.focus();}
  async function open(jobId:string){const current=reader.current;if(!current)return;setDownloadMessage('');await current.open(jobId);if(current!==reader.current)return;if(current.view().phase==='ready'&&current.view().selected?.jobId===jobId)review.current?.focus();else status.current?.focus();}
  async function download(){
   const current=reader.current,selected=view.selected;if(!current||!selected||view.busy)return;let bytes:Uint8Array<ArrayBuffer>|undefined;
