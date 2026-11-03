@@ -15,6 +15,9 @@ const root=fileURLToPath(new URL('../../',import.meta.url));
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
 const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8'));
 const registryHash=hash(await readFile(join(root,'supabase/migration-checksums.json')));
+const legacy50Bytes=await readFile(join(root,'tests/support/registered50-migration-checksums.json')),legacy50=JSON.parse(legacy50Bytes);
+assert.equal(legacy50.migrations.length,50);assert.deepEqual(registry.migrations.slice(0,50),legacy50.migrations);
+const legacy50Profile=Object.freeze({schemaVersion:50,registrySha256:hash(legacy50Bytes)});
 const legacy42Bytes=await readFile(join(root,'tests/support/registered42-migration-checksums.json')),legacy42=JSON.parse(legacy42Bytes);
 assert.equal(legacy42.migrations.length,42);assert.deepEqual(registry.migrations.slice(0,42),legacy42.migrations);
 const legacy43Bytes=await readFile(join(root,'tests/support/registered43-migration-checksums.json')),legacy43=JSON.parse(legacy43Bytes);
@@ -109,6 +112,10 @@ async function unseal(path,expected,identity){
   return run(tool('age'),['--decrypt','--identity',identity],{input:cipher});
 }
 export async function backupDatabase(...args){return backupWithProfile(currentProfile,...args);}
+export async function backupLegacy50Database(client,...args){
+  assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(r=>r.version),legacy50.migrations.map(m=>m.version));
+  return backupWithProfile(legacy50Profile,client,...args);
+}
 export async function backupLegacy49Database(client,...args){
   assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(r=>r.version),legacy49.migrations.map(m=>m.version));
   return backupWithProfile(legacy49Profile,client,...args);
@@ -136,6 +143,22 @@ export async function backupBooking50CandidateDatabase(candidate,client,...args)
   assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(r=>r.version),checked.versions);
   return backupWithProfile(checked.profile,client,...args);
 }
+// Narrow disposable51 profile. Frozen50 remains separately identified and
+// recoverable; never relabel a51 dump as the currently registered50 release.
+async function booking51CandidateProfile(candidate){
+  assert.equal(candidate.file,'20261102180000_booking_conflict_review.sql');
+  const bytes=await readFile(join(candidate.directory,'supabase/migration-checksums.json')),value=JSON.parse(bytes),frozen=JSON.parse(await readFile(join(root,'tests/support/registered50-migration-checksums.json')));
+  assert.equal(frozen.migrations.length,50);assert.equal(value.migrations.length,51);assert.deepEqual(value.migrations.slice(0,50),frozen.migrations);
+  assert.equal(hash(bytes),candidate.registrySha256);assert.equal(value.migrations.at(-1).file,candidate.file);assert.equal(value.migrations.at(-1).sha256,candidate.sha256);
+  assert.equal(hash(await readFile(join(candidate.directory,'supabase/migrations',candidate.file))),candidate.sha256);
+  return {profile:Object.freeze({schemaVersion:51,registrySha256:candidate.registrySha256}),versions:value.migrations.map(m=>m.version)};
+}
+export async function backupBooking51CandidateDatabase(candidate,client,...args){
+  const checked=await booking51CandidateProfile(candidate);
+  assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(r=>r.version),checked.versions);
+  return backupWithProfile(checked.profile,client,...args);
+}
+export async function restoreBooking51CandidateDatabase(candidate,...args){return restoreWithProfile((await booking51CandidateProfile(candidate)).profile,...args);}
 async function backupWithProfile(profile,client,url,directory,recipient,duringSnapshot=async()=>{},objectCapture){
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   try{
@@ -158,6 +181,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_RECOVERY_BACKUP_FAILED:'+stage);}
 }
 export async function restoreDatabase(...args){return restoreWithProfile(currentProfile,...args);}
+export async function restoreLegacy50Database(...args){return restoreWithProfile(legacy50Profile,...args);}
 export async function restoreLegacy49Database(...args){return restoreWithProfile(legacy49Profile,...args);}
 export async function restoreLegacy48Database(...args){return restoreWithProfile(legacy48Profile,...args);}
 export async function restoreLegacy47Database(...args){return restoreWithProfile(legacy47Profile,...args);}

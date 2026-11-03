@@ -1,0 +1,54 @@
+{
+  "formatVersion": 1,
+  "scope": "disposable_booking_conflict51_candidate_upgrade_and_recovery",
+  "parentLocalSource": "687cdf3dc86aad4b6816b60967b5c329e407117b",
+  "registeredSchema": 50,
+  "candidateSchema": 51,
+  "repository51Registered": false,
+  "ownerDatabaseApplied": false,
+  "productionDatabaseApplied": false,
+  "sourceFiles": {
+    "tests/support/booking-conflict51-candidate.mjs": "1b5cfbc39946a05da5fd2224f68ab752e2d0500a53dd6b73469248854cff0fda",
+    "tests/support/recovery-drill.mjs": "eef06c605866921194c1e3b00471a9878c3cbecf261bb074b2eb9ff91c8cb9a9",
+    "tests/integration/booking-conflict51-candidate.test.mjs": "e53238f0dff797f41b56a84396c2c25db3aaaf21f3d6118b46c4b63fce1fc264",
+    "tests/support/registered50-migration-checksums.json": "15f9e5245112299565911c3efa8dc198e34861976d0e4df1a3f0e38b06351b2e",
+    "tests/support/registered50-export-coverage.json": "fb780633e92ffff940849b6fc72c57eca60f7aa73d89dbc7c583ba65f8c90561",
+    "tests/support/registered50-compatibility.json": "a185e34267a118ed0c2d2a77bbe6302f3f595059ecd3fb538d2b3a91ba1d394d",
+    "planning/proposals/booking-conflict-review.sql": "fd772ae0aa60515b1b7b4d0fe18ebe0072be4bcfaf7933646f0d791bbad93d84"
+  },
+  "native": {
+    "exitCode": 0,
+    "tests": 8,
+    "passed": 8,
+    "failed": 0,
+    "logPath": ".local/booking-conflict51-native-v1/run.log",
+    "result": ".local/booking-conflict51-native-v1/result.json",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "coverage": [
+      "exact reviewed SQL bytes, frozen50 registry prefix, repository remains registered50",
+      "unsafe existing role refuses atomically before reader definitions; original source rows unchanged",
+      "encrypted frozen50 point preserves retained customer/vehicle/quote/review/share/acceptance facts",
+      "real coordinator50-to51 upgrade and replay preserve all prior migration history and business rows",
+      "restricted read and original booking command compose after upgrade; direct reservation reads denied",
+      "actual68-table/1064-column inventory matches unchanged coverage declared for51",
+      "independent encrypted51 restore preserves exact source rows/schema/grants; rejects frozen50 label before SQL",
+      "independent frozen50 restore remains available and candidate51 refuses to relabel it before SQL"
+    ]
+  },
+  "recoveryAssurance": "Synthetic database drill only; completeBackup:false, no production recovery/custody certification.",
+  "next": "Register the exact tested51 package only with current-profile compatibility/coverage, retained50 runtime/recovery checks and integrated booking/reschedule review forms. Run full new-source release before a fresh owned50 point and any owner upgrade.",
+  "limitations": [
+    "No51 repository registration or owner migration yet.",
+    "No integrated conflict/override form or actual-device acceptance.",
+    "Full current-source release and existingV1 real-use gates remain."
+  ],
+  "latestUnits": {
+    "passed": 7455,
+    "failed": 0,
+    "files": 275
+  },
+  "lint": "passed",
+  "typecheck": "passed",
+  "restrictedRunnerFailure": "Initial restricted unit runner failed70 cases requiring local HTTP or filesystem permissions; unchanged suite rerun with normal authorized native permissions passes. Failed report retained privately, no test/timeout weakened."
+}

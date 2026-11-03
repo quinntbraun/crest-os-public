@@ -4,9 +4,10 @@ import {sha256,validateMigrationSet} from '../../src/tooling/migrations';
 import type {MigrationRegistry} from '../../src/tooling/migrations';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage';
 import {bookingRecordGroups,bookingRecordSchema} from '../../src/operations/confirmed-booking-records';
-import registry from '../../supabase/migration-checksums.json';
-import coverage from '../../planning/SECURITY_EXPORT_COVERAGE.json';
-import compatibility from '../../release/compatibility.json';
+// Preserve the original50 adoption acceptance against its exact frozen profile.
+import registry from '../support/registered50-migration-checksums.json';
+import coverage from '../support/registered50-export-coverage.json';
+import compatibility from '../support/registered50-compatibility.json';
 import prior from '../support/registered49-migration-checksums.json';
 import priorCoverage from '../support/registered49-export-coverage.json';
 import priorCompatibility from '../support/registered49-compatibility.json';

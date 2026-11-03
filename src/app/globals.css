@@ -227,5 +227,9 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .schedule-detail address { font-style:normal; }
 .schedule-detail textarea { font-size:1rem; }
 .booking-time-fields { display:grid; gap:1rem; }
+.slot-review { border-top:1px solid var(--line); margin-top:1.5rem; padding-top:1rem; overflow-wrap:anywhere; }
+.slot-review summary { min-height:44px; padding:.75rem 0; cursor:pointer; }
+.slot-review .follow-up-list { margin-top:.5rem; }
+.slot-review > label[for] { display:block; margin-top:1rem; }
 @media (min-width:640px) { .booking-time-fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (min-width:1100px) { .schedule-layout { grid-template-columns:minmax(16rem,2fr) minmax(0,3fr); } .schedule-detail { border-top:0; border-left:1px solid var(--line); padding:0 0 0 2rem; } }
