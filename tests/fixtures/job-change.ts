@@ -5,6 +5,7 @@ import {customerFixture} from '../support/customer-fixture';
 import {vehicleFixture} from '../support/vehicle-fixture';
 import {parseJobResources} from '../../src/operations/booking-context-contract';
 import type {CancelScheduledJobSave} from '../../src/operations/confirmed-booking-contract';
+import type {CancelJobCommand} from '../../src/operations/amended-booking-contract';
 import type {ChangeJobScheduleSave,ScheduleChangePayload} from '../../src/operations/confirmed-reschedule-contract';
 export function jobChangeFixture(proposed=false){
  const f=proposed?bookingContextFixture():confirmedJobRecords(),{q,head}=f,business=q.businessId,actor=q.payload.operatorId,stamp=head.job.created_at,agreement=randomUUID(),family=randomUUID(),shared={business_id:business,created_at:stamp,created_by:actor,operation_id:q.operationId,origin:'manual'},part=q.payload.allocationPlans[0]!.parts[0]!;
@@ -14,8 +15,9 @@ export function jobChangeFixture(proposed=false){
  const appointment=head.latestAppointment,proposal:ScheduleChangePayload={action:'propose',reason:'Synthetic customer requested a later visit.',latestAppointmentId:appointment.id,expectedModeSequence:'1',appointment:{start_at:appointment.start_at,end_at:appointment.end_at,timezone:appointment.timezone,local_start:appointment.local_start,local_end:appointment.local_end,start_offset_minutes:appointment.start_offset_minutes,end_offset_minutes:appointment.end_offset_minutes,travel_before_seconds:appointment.travel_before_seconds,travel_after_seconds:appointment.travel_after_seconds,contact_snapshot:q.payload.appointment.contact_snapshot},customerConfirmation:null,conflictReview:null};
  return {q,resources,mode,cancel,proposal};
 }
-export function jobChangeCommitted(request:CancelScheduledJobSave|ChangeJobScheduleSave){
+export function jobChangeCommitted(request:CancelJobCommand|ChangeJobScheduleSave){
  const audit=randomUUID(),latest=randomUUID(),version=(BigInt(request.expectedJobVersion)+1n).toString(),base={state:'committed' as const,operationId:request.operationId,recoveryEpoch:request.recoveryEpoch},common={schemaVersion:1 as const,businessId:request.businessId,jobId:request.jobId,version,appointmentSequence:version,jobAuditEventId:audit,sourceAuditIds:[audit]};
  if('action'in request.payload){const action=request.payload.action;return {...base,receipt:{...common,action,latestAppointmentId:latest,currentAppointmentId:action==='confirm'?latest:randomUUID(),confirmationState:({propose:'proposed',confirm:'confirmed',withdraw:'withdrawn'} as const)[action]}};}
+ if(request.schemaVersion===2)return {...base,receipt:{...common,schemaVersion:2 as const,appointmentId:latest}};
  return {...base,receipt:{...common,appointmentId:latest}};
 }

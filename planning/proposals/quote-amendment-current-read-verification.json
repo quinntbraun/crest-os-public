@@ -1,0 +1,830 @@
+{
+  "formatVersion": 1,
+  "scope": "Unregistered current/historical accepted-amendment, booking agreement and confirmed-job saved reads; private selected-record retrieval, not source export or product release",
+  "testedCheckoutHead": "dfcf5b94faa7236f63a4df7eb3d1b0182dbd797c",
+  "uncommittedAtVerification": true,
+  "sourceFiles": [
+    {
+      "path": "planning/PHASE_5_AMENDMENT_ACCEPTANCE.md",
+      "sha256": "1948708fea5aafb2d50a2d38572c96437ba31d364fac09a461b0e5a9bd7d5aac"
+    },
+    {
+      "path": "src/commercial/quote-amendment-acceptance-receipt.ts",
+      "sha256": "2260389dee95a5582b3acf96454e81ec378f5742cd1e4a845ccf070b3d2687a6"
+    },
+    {
+      "path": "tests/unit/quote-amendment-acceptance-receipt.test.ts",
+      "sha256": "d0014409ff8bbf967bd195a204807610185748051afbbc06521686d1c993bd1f"
+    },
+    {
+      "path": "tests/unit/quote-amendment-acceptance-receipt-fixture.ts",
+      "sha256": "e75f15f9d9884fd6f933cb6ea992ef22a77ab432d5de3cb8562cb100e5583785"
+    },
+    {
+      "path": "src/commercial/quote-amendment-directory.ts",
+      "sha256": "4e4889d80a47c0c64567ff7e3d56334937e8e5661aa1db90321d2e8dedc0c900"
+    },
+    {
+      "path": "tests/unit/quote-amendment-directory.test.ts",
+      "sha256": "3680793308bbde093783aab011cc9e9f5ac6af11840e80adf8965944150b5de1"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-originals.sql",
+      "sha256": "137af2e310af50739a4a3fa8e20f8c76034a3fc26cfd01e2f1afaa87dc6f1303"
+    },
+    {
+      "path": "src/security/original-operation-reference.ts",
+      "sha256": "1cab12bd01de765f8182700710746011748f336f40ad90801981bcc7d2856058"
+    },
+    {
+      "path": "src/client/pending-original-operation.ts",
+      "sha256": "750f1150c9bc83868ee7544ae4b2453093d022fa940d927ae0e594a6754c8b5a"
+    },
+    {
+      "path": "src/client/pending-quote-amendment.ts",
+      "sha256": "5c9d9573a4b3b0349418d56a9ed509fe863ca7185ea69daefd5688ee33b558b3"
+    },
+    {
+      "path": "src/client/quote-amendments.ts",
+      "sha256": "3b9c7c7e2b12489b1d8731383a359e4216e1f2c4da90095d3a9dee329981a23c"
+    },
+    {
+      "path": "tests/support/original-operation-fixture.ts",
+      "sha256": "c5b0c126b66d1dd7d30232aad0e30de3f12cefed6802e772449d9f521fab7efb"
+    },
+    {
+      "path": "tests/unit/original-operation-reference.test.ts",
+      "sha256": "a9cbb276c964a52700ec54360aceb784432d695a9122a5ce6a221dc26907386d"
+    },
+    {
+      "path": "tests/unit/pending-original-operation.test.ts",
+      "sha256": "def2caf4709b0217bf0dd5c6b47611c5f6454fea8be092978f28461306c17b1a"
+    },
+    {
+      "path": "tests/unit/pending-quote-amendment.test.ts",
+      "sha256": "b2319c82c58ca64546329f0224baae65aa6349685a1232bff7354f52d7fee155"
+    },
+    {
+      "path": "tests/unit/pending-quote-amendment-recovery.test.ts",
+      "sha256": "caf2eb60992bcf829a4619e80ff1321e8cc5f156239a740f2d5fe39388ba2573"
+    },
+    {
+      "path": "tests/unit/quote-amendments-client.test.ts",
+      "sha256": "1393db6c0c44e04ffa43befeba3e5445178b95d6ccb0f15b6b5ce076629e668d"
+    },
+    {
+      "path": "src/client/quote-amendment-workspace.ts",
+      "sha256": "ebaa99c2d15f35041862a8ba19d8bc59ee2f7eeccd9bfdd92434bd7b874015b4"
+    },
+    {
+      "path": "tests/unit/quote-amendment-workspace.test.ts",
+      "sha256": "db21a870f636d4b14e7c76ec2aea631613e0857d079da9791d602ff30f2bdb47"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-booking-commands.sql",
+      "sha256": "e4e72a6c3fba18d99b114e42dd8d626542a38372a0714865fca204a20aba6274"
+    },
+    {
+      "path": "src/operations/amended-booking-contract.ts",
+      "sha256": "cc7d03acb6aeca8117c25ab07d8972804be8cd499cee3750c46df465f78a5a37"
+    },
+    {
+      "path": "src/operations/scheduling-original-contract.ts",
+      "sha256": "0ee7b2e2c1587f03dcdf47b8e58b247a235b1aba1b1058e4cabf7ab940d86ae8"
+    },
+    {
+      "path": "tests/unit/amended-booking-contract.test.ts",
+      "sha256": "14efc76a2f9dddb02e60dd40a951588349d998d11716aa2f573029c20e42b954"
+    },
+    {
+      "path": "tests/unit/scheduling-original-recovery.test.ts",
+      "sha256": "f5316f219a1a03d7562b7343afd10d51567a026d5a14f0a6ac57d8be7c899c2b"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-current-reads.sql",
+      "sha256": "351b5027bf5b97b02b82d1b96d3746e3fe18806b0519b73a28d730b2641829be"
+    },
+    {
+      "path": "src/commercial/quote-amendment-read.ts",
+      "sha256": "5c06f918034b69dec94448b05d1c1cfb87a41695b463c13f3a9cf126e3a59ea8"
+    },
+    {
+      "path": "src/commercial/quote-amendment-history.ts",
+      "sha256": "5247d72245cf32fe2c78ae07e88a4a2feb5fdc98bf25aee73d3eea2c34ec8baa"
+    },
+    {
+      "path": "src/commercial/quote-amendment-record.ts",
+      "sha256": "cf8f9ded3f002949bc87458db68a75b56f3ec6b21e716d3081b76928dc19926c"
+    },
+    {
+      "path": "src/operations/booking-context-contract.ts",
+      "sha256": "9d554e4fadf6cf81e757829cc41d34c9b1ad7df8c466fbadf38d56b293570cc0"
+    },
+    {
+      "path": "src/operations/confirmed-job-read-contract.ts",
+      "sha256": "290bc96c55b11090bcbae74e7d3e35873be7b10090c3f4dbdd3437f5c27940d4"
+    },
+    {
+      "path": "tests/unit/amendment-current-read.test.ts",
+      "sha256": "cdf3f84bd3a0a79aecf1d33a755d0f9caf7d3405461d64884c3189ab5078616b"
+    },
+    {
+      "path": "tests/unit/pending-quote-replacement.test.ts",
+      "sha256": "798e25b8b064be08e52a1682c281dc54fcd57236a0487e8371c050cd3341b2f7"
+    },
+    {
+      "path": "tests/unit/booking-context.test.ts",
+      "sha256": "bf005cbb88a8c098eb14932bc9e6e31caf08878f57eb3437842c5f8eee2d6275"
+    },
+    {
+      "path": "tests/unit/quote-amendment-read.test.ts",
+      "sha256": "ee13e7398c47ede21495ae75af79518729c208dfe5a597ebece8d993cfad6d5b"
+    },
+    {
+      "path": "tests/unit/quote-amendment-record.test.ts",
+      "sha256": "93d1ec9e79da04e6bc3543b9e966df0c7a3ea0f0cc0054dd8b4986f3c6d3dd29"
+    },
+    {
+      "path": "tests/unit/quote-amendment-targets.test.ts",
+      "sha256": "c8355a6db92350d5431e4fe7ccc04bc12b431e699e46f925b71c4d67e2b21e3a"
+    },
+    {
+      "path": "tests/unit/confirmed-job-read-contract.test.ts",
+      "sha256": "230a70ae0d6b73ffb77bd9d2949d150a789c130ba700776b094441ae3114ff37"
+    },
+    {
+      "path": "src/commercial/quote-amendment-scope-plan.ts",
+      "sha256": "fb562f3aa363b20dc56cd303f2d07d5e8bf4c1bc69af90e0e646ff33d12e08cd"
+    },
+    {
+      "path": "src/commercial/quote-amendment-acceptance-contract.ts",
+      "sha256": "fb3e35a7a5a42db37e68b89befcfca41cdd58f5044c4adef01f06303eca470d5"
+    },
+    {
+      "path": "tests/unit/quote-amendment-scope-plan.test.ts",
+      "sha256": "f073395e743f216d8ff74a9701918c2965054f19e8d149e3571ff3d2101fccf0"
+    },
+    {
+      "path": "tests/unit/quote-amendment-acceptance-contract.test.ts",
+      "sha256": "0ef75af7621faca65168253bcbf81f50c5ccad25e5b9875bd146447842e75be3"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-input.sql",
+      "sha256": "f0c60495a18f1481a070f1e94ab44dda0035ce293e21c5abaa877051f277982d"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-ledger.sql",
+      "sha256": "e8f1209e616efe29804260c1b12316580bdd5c508dd465cc3855822401a42427"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-core.sql",
+      "sha256": "eee4575bab30a1cf82f3ed0945fcfb07607d65ce37610c44146fd8947c7c4232"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-result.sql",
+      "sha256": "a672c78d09438650103769572aa406b6e093692aae3d7e8a631b1194fdf7904b"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-closure.sql",
+      "sha256": "000969fdd8b6db7bed3a8a39996c00f27806954c878fdc6ede2dde3fcd1be33a"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-storage.sql",
+      "sha256": "3b4580242ffa6170e87cc4b895afe7fc0fc39359eff13744d56caa104f4fba9e"
+    },
+    {
+      "path": "tests/integration/quote-amendment-acceptance-storage.test.mjs",
+      "sha256": "50840b5150442a5f9db15ecd6d565aafaf34dc15ed1446d62471b8a6b700e6ad"
+    },
+    {
+      "path": "tests/support/recovery-drill.mjs",
+      "sha256": "5201ed0d1914304a9cc18d96161bfb5a36864b753f3d49d2b066481b4653b3dd"
+    },
+    {
+      "path": "src/server/node-server.ts",
+      "sha256": "0f48d32895e6fdd940aaec307fc3e2eb012f6fcfb59540843a0866848c9fc333"
+    },
+    {
+      "path": "src/commercial/quote-amendment-http.ts",
+      "sha256": "512374f4938e3c6d2aa7ebfaf963625fc68de544d77ad199011e44ad03a06636"
+    },
+    {
+      "path": "scripts/synthetic-workspace.mjs",
+      "sha256": "9a908f47b19d8afc68ba3a8ac2a50269db76f223d65b2fd3807977bcdb5c95a8"
+    },
+    {
+      "path": "scripts/synthetic-phone-preview.mjs",
+      "sha256": "92fcee814578c98dbceb357e61e549edec15b1be791e5347362c46d67c3e0012"
+    },
+    {
+      "path": "release/compatibility.json",
+      "sha256": "2e6e962ece0ba28c3026783f2390f7e29412b33008c33293b1267a750098baf6"
+    },
+    {
+      "path": "planning/SECURITY_EXPORT_COVERAGE.json",
+      "sha256": "d3c6bb2549a93daad8a1023866626de4398dbdeaabef58f330ad5b9cedd169a6"
+    },
+    {
+      "path": "planning/QUOTE_AMENDMENT_SCHEMA52_ADOPTION.json",
+      "sha256": "29dec9b2529ede648f1e777470e415a66203e83c83275f9723d6f54a232f915a"
+    },
+    {
+      "path": "supabase/migrations/20261103180000_quote_amendment_preparation.sql",
+      "sha256": "1bcfd0e0772f9710829d1832aa3616864a91e3a9c52734b1cfe884d5af09e84a"
+    },
+    {
+      "path": "tests/support/registered51-export-coverage.json",
+      "sha256": "b9d0b727b2e40cd7e75d973ca4717d91f1bae6075047f4ae7a0393c599b423cf"
+    },
+    {
+      "path": "tests/support/registered51-compatibility.json",
+      "sha256": "d393ab62b32ef9c15edfd50b6a6cd3e12ac4a44eb60879fc0108907516034218"
+    },
+    {
+      "path": "tests/support/registered51-migration-checksums.json",
+      "sha256": "6460d57d51c41f89c7dffffc456610c730566fde414dd13352e9a1844fc1a4a4"
+    },
+    {
+      "path": "tests/support/quote-amendment52-candidate.mjs",
+      "sha256": "1ceafbc06438600f816e9d1356c2c7db1dbfd8db96fc34d0ad2be54cdb93d99a"
+    },
+    {
+      "path": "tests/integration/quote-amendment52-candidate.test.mjs",
+      "sha256": "2366ce1cd85313bf78a1b5ed51223e12137cdbe8d3c5c994b0ed17bbf4cd14b6"
+    },
+    {
+      "path": "tests/unit/quote-amendment52-adoption.test.ts",
+      "sha256": "526feb43a0e5c33cab3e1bb0bbe8a71ca3e4a7b85e9ce09966435cd591d4bedd"
+    },
+    {
+      "path": "tests/unit/node-server.test.ts",
+      "sha256": "ffa950d4f29f13c7476eb6e84a65e39b3612e8d530476cff132b39642525e0e8"
+    },
+    {
+      "path": "tests/unit/owner-expenses-adoption.test.ts",
+      "sha256": "414f7cfd2c108d857f999a0adbe5712767eef90dbdc623ae949f855cb4964c90"
+    },
+    {
+      "path": "tests/unit/booking-conflict51-adoption.test.ts",
+      "sha256": "611c85d1aea42a6f829f76a36c3d722fba0a898ac358cd2b04f22354d6e17b45"
+    },
+    {
+      "path": "tests/integration/booking-conflict51-candidate.test.mjs",
+      "sha256": "1152ad50d9429b0e54ca49a09771ca822767533b87eb282f9ad7ebe47fe02cad"
+    },
+    {
+      "path": "tests/integration/quote-amendment-workspace-browser.test.mjs",
+      "sha256": "dde767db7462991700169bfa604480257b33ad39a670149d27afbfb2f296fe06"
+    },
+    {
+      "path": "tests/support/amendment-source-fixture.mjs",
+      "sha256": "387df928f48e3b6227919c8157f51aa5472e6e45402ab01c0130734591c47692"
+    },
+    {
+      "path": "tests/integration/quote-amendment-source.test.mjs",
+      "sha256": "0994692d0c941ae8b8f321ef390a24718f26d316c17ff29d37e040d2e2056e04"
+    },
+    {
+      "path": "src/commercial/quote-amendment-review-csv.ts",
+      "sha256": "6a83738413eab7c2bf9753a98f571635df67f98b47418fbada50c11f688b2613"
+    },
+    {
+      "path": "src/commercial/quote-amendment-source-csv.ts",
+      "sha256": "34cb1c8cd3c52dce70137151aeb77cf78d76ff4a52dfb009fbf5d6fed1faba9a"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-source.sql",
+      "sha256": "cf11ffd11777c3da9b15a87c225b37abba17991a987aa790b925d0ed4ca56f6e"
+    },
+    {
+      "path": "tests/unit/quote-amendment-source-csv.test.ts",
+      "sha256": "4c8e9b3c8e57b26a0461ff7f3459cbf71147d725ac54b63b814dc7fd4aed1854"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "40c10fa7bb13c105482d930a03eb86ef00f41d9878c624bee6650c159e543cf0"
+    },
+    {
+      "path": "src/app/quotes/amendments/saved-record-download.tsx",
+      "sha256": "36bcd19b8088ba26fb885ce741069c0c6cdc637876ac85cb35a1c08aff6c5dfa"
+    },
+    {
+      "path": "tests/unit/quote-amendment-history-fixture.ts",
+      "sha256": "5254ca9ec1b842ca0b27093e5aff45c58e50738fde4b7b032a674a6fc4a1e158"
+    },
+    {
+      "path": "tests/unit/quote-amendment-record-controller.test.ts",
+      "sha256": "e7ece46e58787077545e2836f5d38dba60d9ce1482fceefcb183bce03dbcbc53"
+    },
+    {
+      "path": "src/app/quotes/amendments/review-and-sharing.tsx",
+      "sha256": "af1111dd36473352d31c890a6ecc01f87d3dc2b94ac62d72ccbcc9265f0e6343"
+    },
+    {
+      "path": "src/app/quotes/amendments/draft-editor.tsx",
+      "sha256": "c7badeca0b2814331c3c8e44631678b8355f38948539ce7495a58bf02e2196f0"
+    },
+    {
+      "path": "src/app/quotes/quote-fields.tsx",
+      "sha256": "38f3d87d153b3ac4e799ac00e5b4f75308bfe2d8906cfc774c6b577bbf247ff6"
+    },
+    {
+      "path": "src/commercial/quote-draft-budget.ts",
+      "sha256": "15814a67ff826df68686a5d4677fb933a6d73709643785e3137dd9c60e7b2db8"
+    },
+    {
+      "path": "src/app/quotes/amendments/page.tsx",
+      "sha256": "2511166b9bced731cb55a970af6550b20cf1be01775fddc1aef897c23c413458"
+    },
+    {
+      "path": "src/app/quotes/quotes.tsx",
+      "sha256": "b9e5a5d844dd6f39f10de0c7711d8e380ad931629ec2606f9f7ac978c643b643"
+    },
+    {
+      "path": "src/client/quotes.ts",
+      "sha256": "25d7dce88ae19486a9df335c878b26e26a49faebc2be7d5d6df14922a7321052"
+    },
+    {
+      "path": "src/client/quote-editor-controller.ts",
+      "sha256": "83f334d1a63fbd6a29fa1028196cf0658e63935417f5cbfceca91bc2b2128822"
+    },
+    {
+      "path": "src/commercial/quote-directory.ts",
+      "sha256": "64586e7861b62ae1d8ecf19eebbe798d3ab28724817e07f586e63e29b70236b2"
+    },
+    {
+      "path": "src/commercial/quote-http.ts",
+      "sha256": "74302bde102381d5163181dd78fe259abe7312586c9f80fa8008478758f9c47e"
+    },
+    {
+      "path": "tests/unit/quote-workspace-directory.test.ts",
+      "sha256": "ec37bb276ab4aa34814f3d005266bdd63f491d4406ca317239b17efade9d6d67"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-targets.sql",
+      "sha256": "228bbf5fd0c1654e05ed769c56a87af8fdd98c2c7081a23239013363be66cfca"
+    },
+    {
+      "path": "src/commercial/quote-amendment-targets.ts",
+      "sha256": "166708b6ab9b39f31e728fabc3f927a38a42c9b98916dffabf842781fcd14d75"
+    },
+    {
+      "path": "src/app/quotes/amendments/workspace.tsx",
+      "sha256": "9f8eb56f43420e284d4eadffafc3ffdebd9c6cb317edadfccd02745f3d62cd3f"
+    },
+    {
+      "path": "tests/unit/quote-amendment-target-fixture.ts",
+      "sha256": "097392a04a381a339c97b51e25b301d7c3f6f897323d6c70667d8c6c8b521cd9"
+    },
+    {
+      "path": "tests/support/source-export-browser-build.mjs",
+      "sha256": "f6c5a706ac58a55840f0610fbfa42de9a1babe36720eaf9df7c2f36e35155804"
+    },
+    {
+      "path": "tests/support/source-export-browser-fixture.mjs",
+      "sha256": "3fb8e1a5226505c10d08ae197ff58a8adb7f2ff1fc2cf175104048541d092d1d"
+    },
+    {
+      "path": "tests/support/source-export-browser-server.ts",
+      "sha256": "41c6dc16d445714c215feca72fbd44ebc079b0f301ee0cae66522819c6738a0f"
+    },
+    {
+      "path": "src/app/globals.css",
+      "sha256": "cb73a89c19dcb449c2965dd545e9b57d743440be52aee8a0b57dd0f3aac14857"
+    },
+    {
+      "path": "src/app/quotes/quote-amendment-document.tsx",
+      "sha256": "49964ddbaf7ba6e4fa0f758712a798364b734ca2fc9c741def9665818eef2b2e"
+    },
+    {
+      "path": "src/security/original-operation-http-contract.ts",
+      "sha256": "9ff6ac1fb5aa5d57dfbd3e9c914128c3906af14c097512cd9fcc670f16d45be3"
+    },
+    {
+      "path": "src/client/original-operations.ts",
+      "sha256": "2f5404b6095e77725abb1f73aef90d3698a286c951c45baac93ca4df547528ed"
+    },
+    {
+      "path": "src/app/save-review/review.tsx",
+      "sha256": "f4b5acb3dc8a95137bcc4e43f311dd85f3b8d886ea56f3a94786ed49f583c6be"
+    },
+    {
+      "path": "tests/support/registered51-original-operation-kinds.json",
+      "sha256": "0bf52ed9d252ccc3f6a49a3d21798deec490bb25d5959799949a3f9073db06ff"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-commands.test.mjs",
+      "sha256": "f69ede078b8f55b40bf008c80edbd62034ab0fd071a7df8c05d2bb836167ed56"
+    },
+    {
+      "path": "package.json",
+      "sha256": "17327bb6ad64dfae5912a0a0df386522a6a29169455a321f831fa4a269d2d476"
+    },
+    {
+      "path": "tests/integration/quote-amendment-auth.test.mjs",
+      "sha256": "7c6934541235b9a104cb8b4661c9d4dc3fc5a41708ac5f2813466a0099075621"
+    },
+    {
+      "path": "tests/support/real-auth-service.mjs",
+      "sha256": "3959f65daa4c11f1670f485dccc9965bb9545988eaae5f9f90dabd28ca46c0ae"
+    },
+    {
+      "path": "tests/unit/quote-amendment-fixture.ts",
+      "sha256": "e17a83250285d031748cbec1631e963c3e55dd996147db531b5a0585cc00f2d2"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-read.sql",
+      "sha256": "8fca6b7da5932fe454da53a024f11c05f32afc6d53bd0903409091f230a5e6ca"
+    },
+    {
+      "path": "src/commercial/quote-storage-contract.ts",
+      "sha256": "e514334431ff171177c68d73484a34192ceaf9d656f0876e8a76b305261ba6a4"
+    },
+    {
+      "path": "src/commercial/quote-commercial-read.ts",
+      "sha256": "4488d36e243dfa65ad4fecde1c6fe0954f965626921225505196dd627552b129"
+    },
+    {
+      "path": "src/commercial/quote-amendment-comparison.ts",
+      "sha256": "fe70fa64c52e342dbc5594ea4237ecf376b21350b3b5a0d099bc25178f573094"
+    },
+    {
+      "path": "src/commercial/quote-amendment-sharing-contract.ts",
+      "sha256": "04d91f3b83977352201fd7028188d3a6c2b6b8a8ee5786e1f02b0b02d6aa8889"
+    },
+    {
+      "path": "tests/unit/quote-amendment-sharing-contract.test.ts",
+      "sha256": "8bcb5e1e5dfee44ddfa845095b5a98bd829385e5e7fce2a2603f0cd970ca7b23"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-sharing-core.sql",
+      "sha256": "99f8264c1236a3c6f964773380a85e0de598e801cab9422674804799455d01a6"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-sharing-guards.sql",
+      "sha256": "4eea99a531f551a8156fa9f2986ed14f90a46478395f8f1d9dc0d62cbe451271"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-originals.sql",
+      "sha256": "215dd7831a6e254025ddab3261a0c87df075a8253888117516a80febdefa8877"
+    },
+    {
+      "path": "tests/integration/quote-amendment-sharing.test.mjs",
+      "sha256": "26d8f656fc7e39de1b6267ed5c688c65fae0d7d7e3f81fdbc11f89478f0a0670"
+    },
+    {
+      "path": "src/commercial/quote-amendment-contract.ts",
+      "sha256": "8939c1eecece39f957cb3dfda7a932640e301f30a3ce00a8b45ffe1396f0938a"
+    },
+    {
+      "path": "tests/unit/quote-amendment-contract.test.ts",
+      "sha256": "565716cd4623d4ed384d88a48c913450751412072cc03180e6f3c4f8a0efe64e"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-draft-commands.sql",
+      "sha256": "9c3c2cb7decbc8871e6a4f5fd5dd3f2900b1f320b4cbe3c680dd928f4b663861"
+    },
+    {
+      "path": "tests/integration/quote-amendment-draft-commands.test.mjs",
+      "sha256": "a6310d2f8fb7f87e1d378f97c9cb3dcc0762bd45c0325ab4b0732a0b604ac1ba"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-storage.sql",
+      "sha256": "a0b2772afee14b45479824c23f8dfcf10992d27545d7bf533c700057d3cb2fc0"
+    },
+    {
+      "path": "tests/integration/quote-amendment-storage.test.mjs",
+      "sha256": "950e7433e07e43fd93f5aa8b5b0b7bb9e205fe2536cbf80682ec1dd945b25757"
+    },
+    {
+      "path": "tests/support/confirmed-booking-fixture.mjs",
+      "sha256": "b894d710c71272bd0623a7001072a96bfd250ff946749994dbabe4ad6a59f87d"
+    },
+    {
+      "path": "tests/support/migration-sandbox.mjs",
+      "sha256": "faf94d0799da4027d9bc7149bea7e773cfb2e2bd3038aa82718621fcff06f9d1"
+    },
+    {
+      "path": "tests/support/provider-schema.mjs",
+      "sha256": "cb73fc6050529946391a0e2b10462db9336fc42a4e91c0414e1042e74f7d68b7"
+    },
+    {
+      "path": "src/tooling/migration-coordinator.ts",
+      "sha256": "7c4a4d2e7cd1827fd06618ff76378ac79da47f5488bf6a747f5bd8bad9415feb"
+    },
+    {
+      "path": "src/tooling/migrations.ts",
+      "sha256": "281a395ba0535859fa3597f4b57cb344f074cd399d01dafea23d913a57dc07f0"
+    },
+    {
+      "path": "src/tooling/migration-cli-diagnostic.ts",
+      "sha256": "51f3d16c51118d90dbc4984e79d9fbac734a1ca7f266fba489b4c68d8dc236b3"
+    },
+    {
+      "path": "src/commercial/quote-content.ts",
+      "sha256": "c1588691aff6669445e2332f5ac84b2c263300a5f34ff6e3e41d1dbd54879e1e"
+    },
+    {
+      "path": "src/commercial/quote-review-content.ts",
+      "sha256": "3477c6bdb0c45eb54376941dbba8fb46ee504ef31fc9082205f72b84ec1b4bea"
+    },
+    {
+      "path": "release/toolchain.json",
+      "sha256": "6cc61fdba6928f3473072563c7688cc67d42eeea132553aa451d1b999652575b"
+    },
+    {
+      "path": "supabase/migration-checksums.json",
+      "sha256": "2b69990d3bdc8d957207d80055799dfeed8ef3ca6dd871182f6859464888d78f"
+    },
+    {
+      "path": "supabase/migrations/20261021031357_database_boundary.sql",
+      "sha256": "3834826b6ac68d71a768c3afb8dcafdb85f67790e7d556a056709f95399fcbfa"
+    },
+    {
+      "path": "supabase/migrations/20261021032954_identity_foundation.sql",
+      "sha256": "0b43e1a8271db3aa24decffc36bbb320e94682302470eb1076df7a850e6eef5c"
+    },
+    {
+      "path": "supabase/migrations/20261021113648_session_foundation.sql",
+      "sha256": "52beabfd373a8224e2fb691967ccdc4ba50dc0bbe4cda2949d23038f588cdba0"
+    },
+    {
+      "path": "supabase/migrations/20261021144015_live_provider_session.sql",
+      "sha256": "d67fbca8e1042e2c28c8c7b8b35c59faa32b4b09ccdd555e98c5737823ffac27"
+    },
+    {
+      "path": "supabase/migrations/20261021172958_local_session_revocation.sql",
+      "sha256": "f2e3d76c2bb9c0144bbd87a063a57dc62a225ee133103a2f194225eea3fad361"
+    },
+    {
+      "path": "supabase/migrations/20261021180111_session_issuance.sql",
+      "sha256": "849d1e230f1699266bacc8e904cc2268f2b0ad6ea64012cec9e1b4088667c674"
+    },
+    {
+      "path": "supabase/migrations/20261021183931_locked_session_refresh.sql",
+      "sha256": "0df851bdd8f36b678c6eba8da0e2f94446d89c133620ea4275ed588fcd419859"
+    },
+    {
+      "path": "supabase/migrations/20261021215031_login_admission.sql",
+      "sha256": "48fbabeadabb03be9a432b9681c06f545223326ec7ff1f65dfd77ae12ee19971"
+    },
+    {
+      "path": "supabase/migrations/20261021222140_browser_session_state.sql",
+      "sha256": "cb57cf5ae1de679038be6710074530b149a1ade67a944579b13c2e703bba2f4a"
+    },
+    {
+      "path": "supabase/migrations/20261021232210_session_request_admission.sql",
+      "sha256": "66de3a95fe08ba0d3f1e64b373bda728541448d88b5fddc5ded4f8eb53e99864"
+    },
+    {
+      "path": "supabase/migrations/20261022061000_tenant_read_boundary.sql",
+      "sha256": "d3ae4914d14e039fa78547f2148676c0e558bc46f208291c4fbf527504b37a96"
+    },
+    {
+      "path": "supabase/migrations/20261022174500_mutation_recovery_fence.sql",
+      "sha256": "84365e4209ee0c4af9ba4000fa62f30baa66f78ee4462b909688c3aa71fcc11b"
+    },
+    {
+      "path": "supabase/migrations/20261022183000_operation_audit_storage.sql",
+      "sha256": "b927b7fc2cdbdfb6c6f2b5eebb08208065fa412e170a2ef1aacb06b3976f60a7"
+    },
+    {
+      "path": "supabase/migrations/20261022194000_operation_lookup_integrity.sql",
+      "sha256": "943a516a717bda082b6fd228581285b6dd0b30618dbf85996fb4c5e2d4265d31"
+    },
+    {
+      "path": "supabase/migrations/20261022204800_business_name_command.sql",
+      "sha256": "1074a3043aa0b12275c0b8a6c9f72f24b06f0ea8049cf9dc661fc4a880d5691f"
+    },
+    {
+      "path": "supabase/migrations/20261022221500_business_settings_context.sql",
+      "sha256": "b90f1d1b074286af8c77b0dab2bb4301e1eeabff18b879e0e0bcb01100fee808"
+    },
+    {
+      "path": "supabase/migrations/20261022235000_provider_cleanup_references.sql",
+      "sha256": "55e3538459e818115a53dcbfa212f1fe9a9be42e61a35cb6e1c71edd3d1c3f61"
+    },
+    {
+      "path": "supabase/migrations/20261023002000_provider_session_inventory.sql",
+      "sha256": "fea6fd7a221849f1b9ca1a01316524eeb24bfb47677bf2fcf39836cad89a2db9"
+    },
+    {
+      "path": "supabase/migrations/20261023021500_provider_reconciliation_evidence.sql",
+      "sha256": "5a418e0536b87000419859d4b2919ea9532c1e3bf51e20c49e0d5c7dd7338a6f"
+    },
+    {
+      "path": "supabase/migrations/20261023035000_provider_login_attempts.sql",
+      "sha256": "ecfc93e97b8aefafb2f3579025a227acf1db16aba20606669433776823aaa389"
+    },
+    {
+      "path": "supabase/migrations/20261023043000_provider_login_targets.sql",
+      "sha256": "5ee3f8eabf225b0b2953925f30d2e0407daa6022a0f32630b62eef2915fc479c"
+    },
+    {
+      "path": "supabase/migrations/20261023050000_login_attempt_fences.sql",
+      "sha256": "d2bb223f2b3ff7615a76a098d7b2f8b5a48268c77a6fd22f7c35646e7ef639ce"
+    },
+    {
+      "path": "supabase/migrations/20261023054500_provider_cleanup_requests.sql",
+      "sha256": "eade0749863ee69eb8387b9cf3cc50be6588e3ae33b43cae5991f84f842505c3"
+    },
+    {
+      "path": "supabase/migrations/20261023063000_provider_cleanup_executor.sql",
+      "sha256": "e779ae5b1fafd457892ccdf7e0c3385574f2b472aac52c770afd6db4abd496b5"
+    },
+    {
+      "path": "supabase/migrations/20261023083000_provider_reconciliation_review.sql",
+      "sha256": "73041923ed3fa37e45b2855ab117f34dba0f95c7fc11aca2d39b05257932968f"
+    },
+    {
+      "path": "supabase/migrations/20261023110000_provider_evidence_snapshot.sql",
+      "sha256": "3711ec4b3f7a07b1bb9efdb36e905190d93cf37a3ee8cba3bfbed91c08c96b35"
+    },
+    {
+      "path": "supabase/migrations/20261023143000_provider_reference_snapshot.sql",
+      "sha256": "e6d5c1b939657f94123a59f5cd8741a56fcdf9b322936de487c2bd74df73cc49"
+    },
+    {
+      "path": "supabase/migrations/20261024062000_business_configuration_export.sql",
+      "sha256": "929d2e6136e1c59ce88194467d16381b83cf1b7695cd342ec35cd8509f1f8b5e"
+    },
+    {
+      "path": "supabase/migrations/20261024070000_business_history_export.sql",
+      "sha256": "3ff1f2df9b2c3146dece09f2d0f6b29d062a1b9668c12499c2f1c89629104706"
+    },
+    {
+      "path": "supabase/migrations/20261024090000_business_identity_export.sql",
+      "sha256": "09907b15904b0940050162c822ec14df66d8a020a54e611473921b6d4294c07c"
+    },
+    {
+      "path": "supabase/migrations/20261024111000_session_metadata_export.sql",
+      "sha256": "4b8f6bcecdc597b7d847885d333aae21a786b7a4bcb8dee9b40b36c8affc6d63"
+    },
+    {
+      "path": "supabase/migrations/20261025020000_customer_directory.sql",
+      "sha256": "bc78d2ee002180a1d4b11409944e53f9e969320c3e8565708423be826389fc01"
+    },
+    {
+      "path": "supabase/migrations/20261025030000_customer_check_roundtrip.sql",
+      "sha256": "559761cd526077fa97cd11cc07d1f8e4ddfd7a87e975dca433592d760ba7ee30"
+    },
+    {
+      "path": "supabase/migrations/20261025040000_customer_addresses.sql",
+      "sha256": "71fdce77577e293457ee4d2321ca1cbb5dfce171d97988813deacf03303249ed"
+    },
+    {
+      "path": "supabase/migrations/20261025060000_vehicle_directory.sql",
+      "sha256": "395ab79a844bf29db39689a6b186ce9bf2e8da455b30b283758e0c4ef705a626"
+    },
+    {
+      "path": "supabase/migrations/20261025080000_vehicle_associations.sql",
+      "sha256": "d1277347d6a2b6771290aa7fda2a1eab277cc7cd1bff742231e130fc074900b3"
+    },
+    {
+      "path": "supabase/migrations/20261025100000_lead_intake.sql",
+      "sha256": "365d261422a647e6b39ce21b0fc3ae1f22ea54f58e9892e5aa0a0a79c5a85f0c"
+    },
+    {
+      "path": "supabase/migrations/20261025120000_lead_state_events.sql",
+      "sha256": "026b02ca64ccd410161ab2ec187a6e3e8da0774f024b675142027f5463a1021a"
+    },
+    {
+      "path": "supabase/migrations/20261025140000_lead_vehicles.sql",
+      "sha256": "394d1254c38843c7fa028a3c72c08fbb2851b28392ecad6570c7df47121c1cf7"
+    },
+    {
+      "path": "supabase/migrations/20261025160000_lead_addresses.sql",
+      "sha256": "d5fcffe23ddc02ed8814ddb6d1c9fbd43495e6c476575a704f6f2815246dd4ba"
+    },
+    {
+      "path": "supabase/migrations/20261025180000_lead_conversion.sql",
+      "sha256": "4ebe1d190cc9e7d7dce08a281aa1c0ee8b6c2fa754fdca423bd4acbcdc7c4d2e"
+    },
+    {
+      "path": "supabase/migrations/20261026010000_original_operation_resolution.sql",
+      "sha256": "9dd564dd3c4bf54e0fc2a08347e51a8a0f51250a448fd75a8950395075ceb281"
+    },
+    {
+      "path": "supabase/migrations/20261027010000_source_export_journal.sql",
+      "sha256": "d020f734b28dd3090e17c9092548a204f45c3e24c3e886a8557a92eef0540447"
+    },
+    {
+      "path": "supabase/migrations/20261028010000_service_catalog.sql",
+      "sha256": "09a8ff9eeb415f879e56cdf5a43d74b0178e4b9d45c3efad806a16c621796729"
+    },
+    {
+      "path": "supabase/migrations/20261028020000_quote_drafts.sql",
+      "sha256": "896aa5031e92b7eb4c3d264b8ee7fa024e82e550da650c4c7eb5f06ab4e900fc"
+    },
+    {
+      "path": "supabase/migrations/20261028030000_quote_review.sql",
+      "sha256": "4b802d624d8db4dd0ebd79280df669ee3d5fe82852765c3034717ae83ce8d6c0"
+    },
+    {
+      "path": "supabase/migrations/20261028040000_appointment_proposals.sql",
+      "sha256": "5f21dce7af0944388e39c456c2a06614f63c111557958acf9528f311f25bf4fc"
+    },
+    {
+      "path": "supabase/migrations/20261028050000_quote_acceptance.sql",
+      "sha256": "1010212bc3fe6b734a511f05968103a4f88de37452a3340b1d70da5f243819c7"
+    },
+    {
+      "path": "supabase/migrations/20261029050000_owner_expenses.sql",
+      "sha256": "8bf39dc6502ef1bba4e45cb04efe0afdbc2c6efe0d8b3a0d25948dcf37ffee18"
+    },
+    {
+      "path": "supabase/migrations/20261030160000_confirmed_bookings.sql",
+      "sha256": "4691321409ddf4705f17c068dc105d360c593662198bdab0f78260f9435ba8bd"
+    },
+    {
+      "path": "supabase/migrations/20261102180000_booking_conflict_review.sql",
+      "sha256": "f3aa951660979be7d9974933640675c24570dda879aac800713592280c2ca831"
+    }
+  ],
+  "verification": {
+    "native": {
+      "path": ".local/amendment-current-read-native-v3/result.json",
+      "cases": 83,
+      "passed": 83,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "retainedPublicSourceFiles": 184,
+      "phasing": "75 retained acceptance/booking cases before current-read installation; eight actual-current-read cases after installation. Not all75 rerun after the final read installation, and not a complete release."
+    },
+    "units": {
+      "path": ".local/amendment-current-read-all-units-v2.json",
+      "passed": 7990,
+      "failed": 0,
+      "skipped": 0
+    },
+    "types": {
+      "path": ".local/amendment-current-read-types-v5.log",
+      "passed": true
+    },
+    "affectedLint": {
+      "path": ".local/amendment-current-read-lint-v5.log",
+      "passed": true
+    },
+    "build": {
+      "path": ".local/amendment-current-read-build-v1.log",
+      "passed": true
+    },
+    "canonicalAmendments": 12,
+    "registeredMigrations": 52,
+    "lockedDependencies": 298
+  },
+  "behaviors": [
+    "Exact legacy1 unbound agreement/job and unaccepted preparation responses remain unchanged",
+    "Accepted current and historical amendment reads bind actual saved confirmation, independently reconstructed original receipt and immutable acceptance event; targets already follow current agreement",
+    "Current source amounts/authorization and original source provenance are separate; all family entitlements, including withdrawn and complimentary identities, are represented with an independently counted source set and authoritative current total",
+    "Original job encounters retain their historical agreement while current parts identify the latest authorized agreement; mixed encounter/family packets refuse",
+    "Cancelled visits with no current parts remain readable after later accepted withdrawal; empty scheduled visits refuse",
+    "Private v2 selected record includes original confirmation/receipt, complete version-pinned accept history and checked archive hashes; all full-export/recovery flags remain false",
+    "All three actual saved reads remain business-authorized/read-only with no direct web/worker table grant"
+  ],
+  "diagnostics": [
+    {
+      "path": ".local/amendment-current-read-native-v1/result.json",
+      "passed": 82,
+      "failed": 1,
+      "sourceStable": true,
+      "cleaned": true,
+      "cause": "A zero-value source could be omitted without changing money totals. Added independent same-snapshot sourceCount and strict length binding; retained exact regression."
+    },
+    {
+      "path": ".local/amendment-current-read-native-v2/result.json",
+      "passed": 83,
+      "failed": 0,
+      "sourceStable": true,
+      "cleaned": true,
+      "cause": "All83 cases passed. Finalv3 adds accept to the inferred action union and snapshots the corrected random-token privacy unit; product SQL is unchanged fromv2."
+    }
+  ],
+  "unitDiagnostic": {
+    "path": ".local/amendment-current-read-all-units-v1.json",
+    "passed": 7989,
+    "failed": 1,
+    "cause": "An existing privacy assertion searched random opaque token values for forbidden field names. The token happened to contain csrf. Replaced it with exact root/reference key assertions and a deterministic valid binding containing csrf; no product storage change."
+  },
+  "limitations": [
+    "SQL remains unregistered and is installed only in disposable synthetic fixtures",
+    "No acceptance or version2 scheduling HTTP/UI/browser integration, owner database change or full release acceptance",
+    "Current single-owner reconstruction honors existing actor-bound original lookup; no inferred future cross-actor authority extension",
+    "Full empty-scope cancellation grammar/lifecycle, complete live financial/field consumption bounds, amended source reconstruction/export, registered53 and frozen52/current independent recovery still required",
+    "No new rendered interface or real-phone verification in this backend slice; physical iPhone testing remains owner-deferred"
+  ],
+  "ownerPreview": {
+    "source": "94acb9304602dfcff3466a641e94c125004582d3",
+    "publicHead": "07311f85fe8df407f2396019e1237e67c7b33581",
+    "schema": 52,
+    "ownerApplied": false,
+    "acceptanceEnabled": false,
+    "version2BookingEnabled": false,
+    "laptop": "https://127.0.0.1:4319/",
+    "phone": "https://100.78.42.185:4319/",
+    "health": "Both endpoints already responding at final launcher check",
+    "physicalPhoneCheck": "owner-deferred",
+    "realDataReady": false
+  },
+  "newServiceSpend": 0
+}

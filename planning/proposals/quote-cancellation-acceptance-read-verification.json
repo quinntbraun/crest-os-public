@@ -1,0 +1,226 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-11-04T11:01:20.036Z",
+  "scope": "Unregistered cancellation acceptance/reopening core and current/historical saved reads, private selected records and customer projections",
+  "testedCheckoutHead": "85d2b2375630a6b47e562a14555d6a1d790fa95c",
+  "sourceFiles": [
+    {
+      "path": "src/app/quotes/amendments/review-and-sharing.tsx",
+      "bytes": 5444,
+      "sha256": "2271e67d450a9d473aacb71854fb575c5646a3b8769f0c065bc2f146a12deaa8"
+    },
+    {
+      "path": "src/app/quotes/amendments/workspace.tsx",
+      "bytes": 8333,
+      "sha256": "c8f91c3aee3360e9d24d7c867175abf6a1145ea6125f785397567798b70cf1ab"
+    },
+    {
+      "path": "src/app/quotes/quote-amendment-document.tsx",
+      "bytes": 11697,
+      "sha256": "90452a1d3776bc018919e58b51db42940ed70ae52804f4a6cdb9a79e1783df27"
+    },
+    {
+      "path": "src/app/quotes/quote-document.tsx",
+      "bytes": 10004,
+      "sha256": "5222fc60be0330b1e5dc48fa045f47562daebd610bb752e7cb1c615ad2d80fa8"
+    },
+    {
+      "path": "src/commercial/quote-amendment-comparison.ts",
+      "bytes": 7980,
+      "sha256": "5cc7e26f505ff642deba01465ca438d7f10a3b9c3fe4b9121bff128ad83a08e2"
+    },
+    {
+      "path": "src/commercial/quote-amendment-read.ts",
+      "bytes": 15181,
+      "sha256": "ab5709ad6f025f60500b1b9cd8c472febf2c5ae82fcee15dff774c7c9f3ed316"
+    },
+    {
+      "path": "src/commercial/quote-amendment-record.ts",
+      "bytes": 7434,
+      "sha256": "36aeaad02d6aad86961de837ab7433e6e03321957cfab3b5eaf81946434a5d48"
+    },
+    {
+      "path": "src/commercial/quote-cancellation-comparison.ts",
+      "bytes": 5259,
+      "sha256": "fbc4e11d9a6fb81f06f5df554973c6a216b4a2cdc568abb15ff275d78d894619"
+    },
+    {
+      "path": "tests/integration/quote-amendment-acceptance-storage.test.mjs",
+      "bytes": 176185,
+      "sha256": "b8f5072bb07f68bb322d937f775112d83bff89503057ba382256e4b2aab44a73"
+    },
+    {
+      "path": "tests/unit/quote-cancellation-accepted-parent.test.ts",
+      "bytes": 4124,
+      "sha256": "ce5323c7e3e0be130883681a5de2e129d3d8634046291b44e834e702adab30d8"
+    },
+    {
+      "path": "tests/unit/quote-cancellation-presentation.test.ts",
+      "bytes": 3527,
+      "sha256": "23144e79a4cdae704720de0221945f334b8c425560bc69f53ee2fff7f06c99c3"
+    }
+  ],
+  "registeredReleaseClaim": false,
+  "completeV1": false,
+  "genuineAuthVerifiedForCurrentChanges": false,
+  "verification": {
+    "postgres": {
+      "path": ".local/cancellation-acceptance-native-v3/result.json",
+      "cases": 112,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "scope": "Actual restricted web-role PostgreSQL commands and outer COMMIT; seeded authority fixtures, not genuine password/TOTP or whole-app acceptance"
+    },
+    "units": {
+      "path": ".local/cancellation-acceptance-all-units-v1.json",
+      "cases": 8116
+    },
+    "typecheck": {
+      "passed": true,
+      "path": ".local/cancellation-acceptance-types-v4.log"
+    },
+    "lint": {
+      "passed": true,
+      "path": ".local/cancellation-acceptance-lint-v1.log",
+      "finalNativeFixture": ".local/cancellation-acceptance-lint-v2.log"
+    },
+    "build": {
+      "passed": true,
+      "path": ".local/cancellation-acceptance-build-v1.log"
+    },
+    "browser": {
+      "scope": "Actual accepted cancellation and reopening comparison React components using safe projections from the real synthetic SQL journey; Chromium only, no command controls/auth/whole-app/WebKit/physical-device acceptance",
+      "screens": [
+        {
+          "width": 360,
+          "saved": ".local/cancellation-acceptance-browser/accepted-360.png",
+          "reopened": ".local/cancellation-acceptance-browser/reopened-360.png",
+          "axeViolations": 0,
+          "overflow": false,
+          "minimumControlHeight": 44,
+          "keyboard": true,
+          "refresh": true,
+          "privateFieldsExcluded": true
+        },
+        {
+          "width": 390,
+          "saved": ".local/cancellation-acceptance-browser/accepted-390.png",
+          "reopened": ".local/cancellation-acceptance-browser/reopened-390.png",
+          "axeViolations": 0,
+          "overflow": false,
+          "minimumControlHeight": 44,
+          "keyboard": true,
+          "refresh": true,
+          "privateFieldsExcluded": true
+        },
+        {
+          "width": 768,
+          "saved": ".local/cancellation-acceptance-browser/accepted-768.png",
+          "reopened": ".local/cancellation-acceptance-browser/reopened-768.png",
+          "axeViolations": 0,
+          "overflow": false,
+          "minimumControlHeight": 44,
+          "keyboard": true,
+          "refresh": true,
+          "privateFieldsExcluded": true
+        },
+        {
+          "width": 1440,
+          "saved": ".local/cancellation-acceptance-browser/accepted-1440.png",
+          "reopened": ".local/cancellation-acceptance-browser/reopened-1440.png",
+          "axeViolations": 0,
+          "overflow": false,
+          "minimumControlHeight": 44,
+          "keyboard": true,
+          "refresh": true,
+          "privateFieldsExcluded": true
+        }
+      ],
+      "passed": true,
+      "browserVersion": "156.0.8078.4",
+      "captures": [
+        {
+          "path": ".local/cancellation-acceptance-browser/accepted-360.png",
+          "width": 360,
+          "bytes": 40159,
+          "sha256": "f72c33c274f6c904545103457a091bdff84768db503be20b99a4ac73dd1b7e46"
+        },
+        {
+          "path": ".local/cancellation-acceptance-browser/reopened-360.png",
+          "width": 360,
+          "bytes": 54269,
+          "sha256": "4134648b55995b3b81d5f5f1410219d307903aca76582ba9a62b7f1d7e0893b2"
+        },
+        {
+          "path": ".local/cancellation-acceptance-browser/accepted-390.png",
+          "width": 390,
+          "bytes": 40092,
+          "sha256": "34c3ec04374abfec69cfaf769b0c287927f3e5ae08d40556314ff9cb23c642a0"
+        },
+        {
+          "path": ".local/cancellation-acceptance-browser/reopened-390.png",
+          "width": 390,
+          "bytes": 54119,
+          "sha256": "7d4a9f4b7d3d6060ecebc08ec4ab849532711b2682f00b6f09d207a55786b631"
+        },
+        {
+          "path": ".local/cancellation-acceptance-browser/accepted-768.png",
+          "width": 768,
+          "bytes": 41364,
+          "sha256": "37fbcd6472a8c04e3458635dfb25c818389dd4a842f1238eb6b27643f670f904"
+        },
+        {
+          "path": ".local/cancellation-acceptance-browser/reopened-768.png",
+          "width": 768,
+          "bytes": 54495,
+          "sha256": "bed0c469b5fa12714142c55b4a344a4ee936cf842a4fdf65b5842e2a97c96eaf"
+        },
+        {
+          "path": ".local/cancellation-acceptance-browser/accepted-1440.png",
+          "width": 1440,
+          "bytes": 42275,
+          "sha256": "e5a87b96838bb8251761a2bb60e016b1f6a7992143921943a02258deaae4f1f2"
+        },
+        {
+          "path": ".local/cancellation-acceptance-browser/reopened-1440.png",
+          "width": 1440,
+          "bytes": 56899,
+          "sha256": "980117c395c1736f4ef2013d62a52aa1d6dd3814e8eda47e425b72c072955527"
+        }
+      ],
+      "renderedDataMatchesFinalNative": true
+    }
+  },
+  "behavior": [
+    "Reuses the existing restricted acceptance command, complete observed withdrawal plans and exact separate customer confirmation. No new SQL function, role, grant, migration, package or operation kind",
+    "Unassigned positive and complimentary roots become explicit zero authorization, with no fake free service, new entitlement or source-allocation identity. Original source agreements/items/allocations and historical visits remain intact",
+    "Assigned scheduled scope refuses acceptance with no partial claim. Separately cancelling a visit releases its scope first; later commercial cancellation preserves the cancelled visit, history and released slot",
+    "Actual deferred COMMIT failure keeps the Sent proposal, old source and absent original. Competing acceptance requests create only one agreement and one original",
+    "Repeated agreement chain1→2 cancellation→3 reopened paid/complimentary work→4 cancellation→5 separately confirmed reason amendment retains every original, accepted parent and historical3 read",
+    "Saved accepted cancellation validates its exact confirmation, independently reconstructed receipt and all-withdrawn plans. Retained cancelled parents may be compared with later nonempty work without weakening ordinary empty-quote refusal",
+    "Accepted cancellation private record4 explicitly distinguishes the accepted change from proposal3 and includes its command/receipt. All complete-source/export/backup flags remain false",
+    "Customer comparison3 explicitly represents an already empty cancellation parent; old comparison2 still requires actual removal rows. Prior reason is shown in changed details, including removal when reopening normal work. Customer documents distinguish accepted remaining total and preserve separate visit/refund/fee history"
+  ],
+  "limits": [
+    "No HTTP acceptance route, owner confirmation/allocation controls or ordinary-work creation UI from a cancelled parent is activated by this increment",
+    "Live completed/billed/credited/refunded/custody bounds and their financial consumption integration remain required; current construction is synthetic under the unchanged physical-source fence",
+    "Complete amended source/reconstruction/export, registered53/frozen52+current independent recovery and genuine whole-app/TLS/Chromium/WebKit/device/full release remain required before preview delivery",
+    "Current genuine-MFA acceptance is not established. Earlier31 genuine-Auth sharing cases belong to parent85d2b23 and are not attributed to these changed reads",
+    "Owner preview, database, accounts, MFA, network and financial/real-data activation unchanged; no source publication or service spending"
+  ],
+  "diagnostics": [
+    {
+      "path": ".local/cancellation-acceptance-probe-v1/result.json",
+      "passed": 107,
+      "failed": 1,
+      "cause": "New fixture incorrectly required an existing allocation-plan row for an unbooked root. Left lateral lookup now retains the legitimate absent plan/sequence0. Product SQL unchanged."
+    },
+    {
+      "path": ".local/cancellation-acceptance-native-v2/result.json",
+      "passed": 109,
+      "failed": 0,
+      "cause": "Core/read/reopening chain passed before three additional visit/COMMIT/concurrency regressions were added. Final112-case execution supersedes it."
+    }
+  ],
+  "newServiceSpend": 0
+}

@@ -2,11 +2,20 @@ import {customerInstant,customerUuid,exactCustomerObject as exact} from '../cust
 import {initialConditionClasses,initialVehicleCategories} from './catalog-options.ts';
 import {prepareQuoteContent,parseQuoteContentLine,QuoteContentError} from './quote-content.ts';
 import type {QuoteContentInput,QuoteContentLine} from './quote-content.ts';
+import {prepareQuoteCancellationContent} from './quote-cancellation-content.ts';
+import type {QuoteCancellationContentInput} from './quote-cancellation-content.ts';
 
 export type QuoteAssessment=Readonly<{id:string;class:typeof initialConditionClasses[number];source:'reported'|'photo'|'on_site';assessedAt:string;notes:string|null}>;
 export type QuoteReviewLine=QuoteContentLine&Readonly<{category:typeof initialVehicleCategories[number]|null;assessment:QuoteAssessment|null;categoryOverrideNote:string|null}>;
 export type QuoteReviewContentInput=Omit<QuoteContentInput,'schemaVersion'|'lines'>&Readonly<{schemaVersion:2;lines:readonly QuoteReviewLine[]}>;
 export type VersionedQuoteContentInput=QuoteContentInput|QuoteReviewContentInput;
+export type QuoteAmendmentContentInput=QuoteReviewContentInput|QuoteCancellationContentInput;
+/** Amendment-only discriminator. The ordinary versioned dispatcher below
+ * retains its v1/v2 boundary and never treats empty normal quotes as cancellation. */
+export function prepareQuoteAmendmentContent(value:unknown){
+ if(value&&typeof value==='object'&&'schemaVersion'in value&&value.schemaVersion===3){const p=prepareQuoteCancellationContent(value);return Object.freeze({customer:p.customer,internal:p.internal,canonical:p.canonical});}
+ return prepareQuoteReviewContent(value);
+}
 const lineKeys=['id','vehicleId','jobWide','vehicleLabel','serviceVersionId','description','inclusions','exclusions','condition','grossCents','lineDiscount','documentDiscountEligible','complimentaryReason','category','assessment','categoryOverrideNote'] as const;
 const rootKeys=['schemaVersion','title','recipient','workLocation','terms','timezone','expiryAt','proposedSchedule','internalNotes','documentDiscount','lines'] as const;
 const fail=(code:string):never=>{throw new QuoteContentError(code);};

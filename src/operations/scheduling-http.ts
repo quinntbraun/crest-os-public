@@ -14,7 +14,8 @@ import {createBusinessSettingsContextReader} from '../security/business-settings
 import {parseSchedulingOriginal} from './scheduling-original-contract.ts';
 import {createBookingDirectory,BookingDirectoryError} from './confirmed-booking-directory.ts';
 import {createFulfillmentModeDirectory,FulfillmentModeDirectoryError} from './fulfillment-mode-directory.ts';
-import {parseBookJobSave,parseCancelScheduledJobSave,requireBooking as check} from './confirmed-booking-contract.ts';
+import {requireBooking as check} from './confirmed-booking-contract.ts';
+import {parseBookJobCommand,parseCancelJobCommand} from './amended-booking-contract.ts';
 import {parseChangeJobScheduleSave} from './confirmed-reschedule-contract.ts';
 import {parseFulfillmentModeSave} from './fulfillment-mode-contract.ts';
 import {parseJobListRequest,parseJobHistoryRequest} from './confirmed-job-read-contract.ts';
@@ -29,9 +30,9 @@ function failed(status:400|404|405|503){const r=privateJsonResponse({error:'SCHE
 export function schedulingFailureResponse(status:400|404|405|503=400){return failed(status);}
 // Synthetic construction only. Ordinary application composition stays closed
 // until coordinated migration/source/recovery and browser release acceptance.
-export function createSchedulingHttp(config:Configuration,provider:Parameters<typeof createBookingDirectory>[1],tokens:Parameters<typeof createBookingDirectory>[2],enabled=false){
- if(!customerUuid(config.businessId)||typeof enabled!=='boolean'||enabled&&config.environment!=='test')throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
- const resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config),directory=enabled?createBookingDirectory(config,provider,tokens):undefined,modes=enabled?createFulfillmentModeDirectory(config,provider,tokens):undefined,context=enabled?createBusinessSettingsContextReader(config,provider,tokens):undefined,businessId=config.businessId;
+export function createSchedulingHttp(config:Configuration,provider:Parameters<typeof createBookingDirectory>[1],tokens:Parameters<typeof createBookingDirectory>[2],enabled=false,amendedEnabled=false){
+ if(!customerUuid(config.businessId)||typeof enabled!=='boolean'||typeof amendedEnabled!=='boolean'||amendedEnabled&&!enabled||enabled&&config.environment!=='test')throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
+ const resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config),directory=enabled?createBookingDirectory(config,provider,tokens,amendedEnabled):undefined,modes=enabled?createFulfillmentModeDirectory(config,provider,tokens):undefined,context=enabled?createBusinessSettingsContextReader(config,provider,tokens):undefined,businessId=config.businessId;
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>)=>{let workStarted=false,submitted=false;
   try{
    const signal=AbortSignal.any([request.signal,AbortSignal.timeout(40000)]);if(signal.aborted)throw Error();resolve(request,peer);const url=new URL(request.url);
@@ -39,12 +40,13 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
    protect.requireOrigin(request);const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;if(!cookie)throw Error();
    const input=mutation(route)?await readNestedJsonBody(bounded,fields[route],131072):await readFlatJsonBody(bounded,fields[route],16384);
    const original=route==='original'?parseSchedulingOriginal(parseOriginalOperationLookupWire(input,businessId)):undefined;
-   const book=route==='book'?parseBookJobSave({...input,businessId}):undefined,cancel=route==='cancel'?parseCancelScheduledJobSave({...input,businessId}):undefined,reschedule=route==='reschedule'?parseChangeJobScheduleSave({...input,businessId}):undefined,mode=route==='mode-save'?parseFulfillmentModeSave({...input,businessId}):undefined;
+   const book=route==='book'?parseBookJobCommand({...input,businessId}):undefined,cancel=route==='cancel'?parseCancelJobCommand({...input,businessId}):undefined,reschedule=route==='reschedule'?parseChangeJobScheduleSave({...input,businessId}):undefined,mode=route==='mode-save'?parseFulfillmentModeSave({...input,businessId}):undefined;
+   if(!amendedEnabled&&(book?.schemaVersion===2||cancel?.schemaVersion===2))throw Error();
    const slotReview=route==='slot-review'?parseBookingConflictRequest({...input,businessId}):undefined;
    const list=route==='list'?parseJobListRequest({...input,businessId}):undefined,history=route==='history'?parseJobHistoryRequest({...input,businessId}):undefined,pending=route==='pending'?parsePendingChangesRequest({...input,businessId}):undefined;
    if(route==='agreement')check(customerUuid(input.familyId));if(route==='resources'||route==='read')check(customerUuid(input.jobId));if(route==='mode-history')check(customerVersion(input.afterSequence,true)&&typeof input.pageSize==='number'&&Number.isInteger(input.pageSize)&&input.pageSize>=1&&input.pageSize<=20);
    const sessionId=await csrf(bounded,cookie,signal);workStarted=true;if(!await admit(cookie,'ordinary',signal)){const r=privateJsonResponse({error:'SCHEDULING_REQUEST_LIMITED'},429);r.headers.set('Retry-After','60');return r;}check(!signal.aborted);
-   if(route==='workspace'){const workspace=(await directory.workspace(cookie,businessId,signal)).forServer(),authority=(await context(cookie,businessId,signal)).forServer();check(!signal.aborted);const response=privateJsonResponse({...workspace,writeState:authority.writeState,recoveryEpoch:authority.recoveryEpoch});response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.scheduling.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));return response;}
+   if(route==='workspace'){const workspace=(await directory.workspace(cookie,businessId,signal)).forServer(),authority=(await context(cookie,businessId,signal)).forServer();check(!signal.aborted);const response=privateJsonResponse({...workspace,writeState:authority.writeState,recoveryEpoch:authority.recoveryEpoch});response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.scheduling.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));if(amendedEnabled)response.headers.set('X-Crest-Amended-Scheduling','1');return response;}
    let result:object;
    if(route==='book'){submitted=true;result=(await directory.book(cookie,book!,signal)).forServer();}
    else if(route==='cancel'){submitted=true;result=(await directory.cancel(cookie,cancel!,signal)).forServer();}

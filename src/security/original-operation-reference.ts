@@ -4,6 +4,8 @@ import {parseQuoteAmendmentDraftReference} from '../commercial/quote-amendment-c
 import type {QuoteAmendmentDraftReference} from '../commercial/quote-amendment-contract.ts';
 import {parseQuoteAmendmentSendReference} from '../commercial/quote-amendment-sharing-contract.ts';
 import type {QuoteAmendmentSendReference} from '../commercial/quote-amendment-sharing-contract.ts';
+import {parseQuoteAmendmentAcceptReference} from '../commercial/quote-amendment-acceptance-contract.ts';
+import type {QuoteAmendmentAcceptReference} from '../commercial/quote-amendment-acceptance-contract.ts';
 
 type Common=Readonly<{operationId:string;recoveryEpoch:string}>;
 type Targets={
@@ -30,6 +32,7 @@ type Targets={
  'catalog.service.save':Readonly<{serviceId:string;expectedRevision:string}>;
  'quote.amendment.create':Omit<QuoteAmendmentDraftReference,keyof Common>;
  'quote.amendment.send':Omit<QuoteAmendmentSendReference,keyof Common>;
+ 'quote.amendment.accept':Omit<QuoteAmendmentAcceptReference,keyof Common>;
  'quote.draft.save':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string}>;
  'quote.replacement.create':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:'0'}>;
  'quote.manual.send':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string;expectedContentVersion:string;sendId:string;approvalId:string}>;
@@ -79,6 +82,7 @@ const fields={
  'catalog.service.save':['serviceId','expectedRevision'],
  'quote.amendment.create':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedParentAgreementId','expectedParentAgreementVersion'],
  'quote.amendment.send':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','sendId','approvalId','expectedParentAgreementId','expectedParentAgreementVersion','replacesRevisionId'],
+ 'quote.amendment.accept':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','acceptanceId','agreementId','sendId','customerId','expectedParentAgreementId','expectedParentAgreementVersion'],
  'quote.draft.save':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion'],
  'quote.replacement.create':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion'],
  'quote.manual.send':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','sendId','approvalId'],
@@ -103,6 +107,7 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
   require(uuid(ref.operationId)&&uuid(ref.recoveryEpoch));
   if(kind==='quote.amendment.create')return Object.freeze({schemaVersion:1,businessId:row.businessId,commandType:kind,reference:parseQuoteAmendmentDraftReference(ref)});
   if(kind==='quote.amendment.send')return Object.freeze({schemaVersion:1,businessId:row.businessId,commandType:kind,reference:parseQuoteAmendmentSendReference(ref)});
+  if(kind==='quote.amendment.accept')return Object.freeze({schemaVersion:1,businessId:row.businessId,commandType:kind,reference:parseQuoteAmendmentAcceptReference(ref)});
   for(const key of fields[kind]){
    if(key==='expectedSequence'||key==='expectedVersion'||key==='expectedRevision'||key==='expectedFamilyVersion'||key==='expectedRevisionVersion')require(version(ref[key],!['business.rename','crm.lead.state','quote.review.submit','quote.review.approve','quote.manual.send','quote.confirmation.accept'].includes(kind)));
    else if(key==='expectedModeSequence')require(version(ref[key],true));

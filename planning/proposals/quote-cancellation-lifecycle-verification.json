@@ -1,0 +1,213 @@
+{
+  "formatVersion": 1,
+  "scope": "Unregistered restricted SQL cancellation Draft creation/submission/owner approval, history projection and independently reconstructed originals; no application/customer-acceptance/release claim",
+  "testedCheckoutHead": "a893e2a9e4912f1a91e015676705d96e78a23a43",
+  "uncommittedAtVerification": true,
+  "sourceFiles": [
+    {
+      "path": "planning/proposals/quote-cancellation-lifecycle.sql",
+      "sha256": "4ae3b6803736d04dbfe47ac37945ecba38d1b9c611ddb670678f31aad212a8a9"
+    },
+    {
+      "path": "tests/integration/quote-amendment-acceptance-storage.test.mjs",
+      "sha256": "e4e6bb395d87c27edc671fe73600496de6389a4ca7d0fa51862e4a444f34747f"
+    },
+    {
+      "path": "src/commercial/quote-cancellation-content.ts",
+      "sha256": "04ba5b0972fde1a4575b68584fcb367e63b15ffbf1a5cf775f1bb4883d7276fa"
+    },
+    {
+      "path": "src/commercial/quote-content.ts",
+      "sha256": "801b930c724a76468dc49eb925f443c57d650b957a3ddba8f87cd9cadbfc5aec"
+    },
+    {
+      "path": "src/commercial/quote-review-content.ts",
+      "sha256": "3477c6bdb0c45eb54376941dbba8fb46ee504ef31fc9082205f72b84ec1b4bea"
+    },
+    {
+      "path": "src/commercial/quote-storage-contract.ts",
+      "sha256": "e514334431ff171177c68d73484a34192ceaf9d656f0876e8a76b305261ba6a4"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-booking-commands.sql",
+      "sha256": "e4e72a6c3fba18d99b114e42dd8d626542a38372a0714865fca204a20aba6274"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-current-reads.sql",
+      "sha256": "351b5027bf5b97b02b82d1b96d3746e3fe18806b0519b73a28d730b2641829be"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-storage.sql",
+      "sha256": "3b4580242ffa6170e87cc4b895afe7fc0fc39359eff13744d56caa104f4fba9e"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-input.sql",
+      "sha256": "f0c60495a18f1481a070f1e94ab44dda0035ce293e21c5abaa877051f277982d"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-ledger.sql",
+      "sha256": "e8f1209e616efe29804260c1b12316580bdd5c508dd465cc3855822401a42427"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-core.sql",
+      "sha256": "eee4575bab30a1cf82f3ed0945fcfb07607d65ce37610c44146fd8947c7c4232"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-result.sql",
+      "sha256": "a672c78d09438650103769572aa406b6e093692aae3d7e8a631b1194fdf7904b"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-closure.sql",
+      "sha256": "000969fdd8b6db7bed3a8a39996c00f27806954c878fdc6ede2dde3fcd1be33a"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-originals.sql",
+      "sha256": "137af2e310af50739a4a3fa8e20f8c76034a3fc26cfd01e2f1afaa87dc6f1303"
+    }
+  ],
+  "predecessors": [
+    {
+      "name": "valid_quote_draft_payload",
+      "signature": "crest_private.valid_quote_draft_payload(jsonb)",
+      "owner": "crest_quote_owner",
+      "predecessorSha256": "4e610f0e5612dc0fead5ab5fbef6b140faa9f42c2f72792aa0605545ef95a906"
+    },
+    {
+      "name": "quote_review_ready",
+      "signature": "crest_private.quote_review_ready(jsonb)",
+      "owner": "crest_quote_owner",
+      "predecessorSha256": "a607247252d6cf7adee73c19f001b352c260883b43efe96b25409f1d81642ce5"
+    },
+    {
+      "name": "validate_quote_revision_change",
+      "signature": "crest_private.validate_quote_revision_change()",
+      "owner": "crest_schema_owner",
+      "predecessorSha256": "b741e8ced6fe4d4ddb6d406a9d31b18ec0697f24e736af80b3a66d5c14138536"
+    },
+    {
+      "name": "check_quote_aggregate",
+      "signature": "crest_private.check_quote_aggregate()",
+      "owner": "crest_quote_integrity_owner",
+      "predecessorSha256": "63ee2a6894d1de07b7ad1f652349cd2274398deb484559459fdf0e41f0068dd8"
+    },
+    {
+      "name": "create_quote_amendment_draft",
+      "signature": "crest_commands.create_quote_amendment_draft(bytea,uuid,uuid,text,uuid,uuid,timestamp with time zone,uuid,uuid,uuid,integer,uuid,uuid,bigint,uuid,bigint,text,jsonb)",
+      "owner": "crest_quote_owner",
+      "predecessorSha256": "4cbe7341409c6562d04e6e02da4598cc654128e3d887f90c482375c6ef9d1c63"
+    },
+    {
+      "name": "quote_operation_result",
+      "signature": "crest_private.quote_operation_result(uuid,uuid,uuid)",
+      "owner": "crest_quote_owner",
+      "predecessorSha256": "1288380399e52d02d6de4f7c474997c3595037ef8099d2ecc2fa4c52f711b117"
+    },
+    {
+      "name": "save_quote_draft",
+      "signature": "crest_commands.save_quote_draft(bytea,uuid,uuid,text,uuid,uuid,timestamp with time zone,uuid,uuid,uuid,integer,uuid,uuid,bigint,bigint,jsonb)",
+      "owner": "crest_quote_owner",
+      "predecessorSha256": "c936d5573144e3c89c59c1358c6b359ea680caf9c498168ef232a3a8047f6627"
+    },
+    {
+      "name": "apply_quote_review",
+      "signature": "crest_private.apply_quote_review(bytea,uuid,uuid,text,uuid,uuid,timestamp with time zone,uuid,uuid,uuid,integer,uuid,uuid,bigint,bigint,bigint,text,uuid,boolean,text)",
+      "owner": "crest_quote_owner",
+      "predecessorSha256": "5215771184806960101859c5f4cf2a7705486e65c89d3642aa3bffe620adb832"
+    },
+    {
+      "name": "stamp_quote_review_history",
+      "signature": "crest_private.stamp_quote_review_history()",
+      "owner": "crest_schema_owner",
+      "predecessorSha256": "f7cd6e0b7d0527219b169822af2feecc1e268906d1dec4c5eaca3d52e640d2d8"
+    },
+    {
+      "name": "quote_approval_packet",
+      "signature": "crest_private.quote_approval_packet(crest.quote_approvals)",
+      "owner": "crest_quote_owner",
+      "predecessorSha256": "881d54437b496129067038d5659e05076bcf1a23963361c7dc19e31eecc750bd"
+    },
+    {
+      "name": "quote_review_result",
+      "signature": "crest_private.quote_review_result(uuid,uuid,uuid)",
+      "owner": "crest_quote_owner",
+      "predecessorSha256": "3e1b5e4f2aa6a819abf95824f8829ae2e0515cb7967ce1bf0211f9a2954dca28"
+    }
+  ],
+  "constraintPredecessors": [
+    {
+      "relation": "crest.quote_revisions",
+      "name": "quote_versioned_canonical",
+      "definition": "CHECK (((octet_length(canonical_content) <= 16777216) AND ((canonical_content)::jsonb = jsonb_build_object('schemaVersion', (customer_safe_snapshot -> 'schemaVersion'::text), 'customer', customer_safe_snapshot, 'internal', internal_snapshot)) AND ((customer_safe_snapshot -> 'schemaVersion'::text) = ANY (ARRAY['1'::jsonb, '2'::jsonb]))))"
+    },
+    {
+      "relation": "crest.quote_approvals",
+      "name": "quote_approvals_template_version_check",
+      "definition": "CHECK ((template_version = 'crest.quote.review.v2'::text))"
+    }
+  ],
+  "verification": {
+    "native": {
+      "path": ".local/cancellation-lifecycle-native-v1/result.json",
+      "cases": 91,
+      "passed": 91,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "retainedPublicSourceFiles": 187,
+      "phasing": "Prior83 acceptance/booking/current-read cases before cancellation installation; eight cancellation cases after. One complete normal amended acceptance and typed read is rerun after installation. Not all83 rerun after final installation; no complete release."
+    },
+    "lint": {
+      "path": ".local/cancellation-lifecycle-lint-v1.log",
+      "passed": true
+    },
+    "nodeSyntax": true,
+    "reusedUnchangedApplicationGates": {
+      "sourceCommit": "a893e2a9e4912f1a91e015676705d96e78a23a43",
+      "priorProof": "planning/proposals/quote-cancellation-content-verification.json",
+      "fullUnits": 8021,
+      "types": true,
+      "affectedTypeScriptLint": true,
+      "productionBuild": true,
+      "explanation": "No src/ or tests/unit tracked source changed from the committed application baseline. All six prior preparation source hashes match. SQL and database integration test changed and were executed natively; prior application gates were not rerun or relabelled as new runs."
+    }
+  },
+  "completed": [
+    "Exact11 predecessor functions, two validated constraints and closed global/namespace defaults are checked before installation; reinstall/source substitution refuses",
+    "Cancellation3 validation independently enforces explicit purpose/reason/zero scope, metadata, null discount/schedule, exact zero string amounts and application parity including Unicode boundaries",
+    "Restricted existing amendment.create schema3 saves a genuine Draft with zero item/assessment rows and exactly two audit events; no fake service or new operation kind/schema",
+    "Exact original creation replays once and remains independently retrievable after real submission and owner approval",
+    "Explicit cancellation approval template crest.quote.cancellation.v3 binds the actual immutable customer representation, reason, content hash and independently checked presentation fingerprint; normal approvals retain v2",
+    "Preparing/reviewing/approving cancellation changes no accepted agreement, entitlement, booking, appointment or initial history; the existing visit remains scheduled",
+    "Wrong customer/invalid reason/stale parent refuse without partial claims; a real deferred COMMIT error leaves no Draft/history/claim/original and subsequent genuine save succeeds",
+    "Normal amended acceptance and typed saved reads still complete after installation; private source/validator grants remain closed and temporary CREATE grants are revoked"
+  ],
+  "limits": [
+    "SQL remains unregistered and is applied only to owned disposable synthetic fixtures",
+    "Cancellation reason editing, sharing, separate customer acceptance, resulting withdrawal and historical3 reopening/repeated chains are not implemented",
+    "Typed application Draft/approval/read/original contracts, opaque pending handling, HTTP/UI/browser and coherent full release remain required",
+    "No current live completed/billed/credited/refunded/custody consumption claim, financial posting, fee/refund inference or automatic visit cancellation",
+    "Complete amended source/export and registered53/frozen52-current independent recovery remain required",
+    "No owner migration/runtime update, genuine new MFA/browser walkthrough, rendered screen or physical iPhone claim"
+  ],
+  "ownerPreview": {
+    "source": "94acb9304602dfcff3466a641e94c125004582d3",
+    "publicHead": "07311f85fe8df407f2396019e1237e67c7b33581",
+    "schema": 52,
+    "ownerApplied": false,
+    "cancellationControlsEnabled": false,
+    "realDataReady": false,
+    "physicalPhoneCheck": "owner-deferred"
+  },
+  "livePr": {
+    "number": 113,
+    "state": "draft/open/not merged",
+    "head": "07311f85fe8df407f2396019e1237e67c7b33581",
+    "base": "3db75821863a1d0c6f2c92ac30f9b9b041ea04b8",
+    "fullRun": "41753012689",
+    "focusedRuns": [
+      "41753012686",
+      "41753012720"
+    ],
+    "conclusions": "All three SUCCESS, independently fetched this turn; these runs cover accepted52, not this construction"
+  },
+  "newServiceSpend": 0
+}

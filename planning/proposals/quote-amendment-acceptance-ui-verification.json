@@ -1,0 +1,228 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-11-04T12:07:41.360Z",
+  "scope": "Default-off synthetic normal-app amendment acceptance HTTP, exact current-root/allocation review, in-memory customer confirmation, accepted-record reload and opaque original-save recovery",
+  "testedCheckoutHead": "37185eb755c68d2cba95feaa81a30f123164a061",
+  "sourceFiles": [
+    {
+      "path": "src/app/quotes/amendments/workspace.tsx",
+      "bytes": 8510,
+      "sha256": "0e0a8b3add95bde4e315bfd33c80b5a1e490dbe06dd52927b7edd7d1847e5b82"
+    },
+    {
+      "path": "src/client/quote-amendment-workspace.ts",
+      "bytes": 52079,
+      "sha256": "fb1738f35107fb664f0036574b353f043057a06ce6af93619bb519eb4298a11e"
+    },
+    {
+      "path": "src/client/quote-amendments.ts",
+      "bytes": 10867,
+      "sha256": "911c3cda62f7ddf9e8ef65738c0f2c075599d32714fea7c6fa884a8d2470a6e8"
+    },
+    {
+      "path": "src/client/quotes.ts",
+      "bytes": 11852,
+      "sha256": "fc0a5cac61609dd2e308b2baecb23fcc8f39dec0c51d654b63d30ca303a0f8ac"
+    },
+    {
+      "path": "src/commercial/quote-amendment-directory.ts",
+      "bytes": 16390,
+      "sha256": "9599edb52363bae72804c28e3a337bdb57abc94629d615659c43915432c49d4d"
+    },
+    {
+      "path": "src/commercial/quote-amendment-http.ts",
+      "bytes": 7786,
+      "sha256": "9e5765605827cd0dad48a3a67a1ac87f12c8ae887451178a60f01b25744bd972"
+    },
+    {
+      "path": "src/commercial/quote-commercial-read.ts",
+      "bytes": 14125,
+      "sha256": "a415dd7cb3f36685299b563966c4fc5f604be297b59a06d1f44ec9a60b43fa6d"
+    },
+    {
+      "path": "src/commercial/quote-http.ts",
+      "bytes": 6973,
+      "sha256": "97044cde43f1fa36d69e4ae6f8b15bd6a7d77ce3d4d7f953c706e4ed587cf91b"
+    },
+    {
+      "path": "src/server/node-server.ts",
+      "bytes": 25307,
+      "sha256": "e0376d2205079362eb77922efdca82e4a46a34a4ece74c32719275f7e97c79f8"
+    },
+    {
+      "path": "tests/integration/quote-amendment-auth.test.mjs",
+      "bytes": 84157,
+      "sha256": "b3aa5b830bb80d7bdcc8cf03b36fdf39d91018faa53594c611dc88985e44073f"
+    },
+    {
+      "path": "tests/unit/node-server.test.ts",
+      "bytes": 44258,
+      "sha256": "331666c694db38c942e729db63ee48825d3ef192ea7604ad2947f88aeb96b7fb"
+    },
+    {
+      "path": "src/app/quotes/amendments/acceptance.tsx",
+      "bytes": 9911,
+      "sha256": "31389ce1c707311a72cbbae3ca1f2730e2fa6c970e2da41dcce85bdf95b53bac"
+    },
+    {
+      "path": "src/client/amendment-acceptance-planning.ts",
+      "bytes": 9845,
+      "sha256": "5873e02af39ef72b4a6eab6830c90cfac17059b4a1ee5279c3b55157361d7a96"
+    },
+    {
+      "path": "src/commercial/quote-amendment-acceptance-context.ts",
+      "bytes": 2507,
+      "sha256": "30dcf254001c5bd0ae9fbec52bf0862dc28931f85f633141fb7a234558bc4c96"
+    },
+    {
+      "path": "tests/unit/amendment-acceptance-fixture.ts",
+      "bytes": 4505,
+      "sha256": "fe482f4d7f1990054a3df368790263147a12cb278892c94e86537a4a6069c45c"
+    },
+    {
+      "path": "tests/unit/amendment-acceptance-planning.test.ts",
+      "bytes": 5711,
+      "sha256": "94ba7fe17ed2e3ad3467e6ae2c27c7101aea02b0e94e2f7408a0d10fee740f82"
+    },
+    {
+      "path": "tests/unit/amendment-acceptance-transport.test.ts",
+      "bytes": 5761,
+      "sha256": "5c17fb27d6c2e4f11d5cb333ac3dc869c89c4aa258fb6fa92d471c26bab2adc8"
+    },
+    {
+      "path": "tests/integration/quote-amendment-acceptance-auth.test.mjs",
+      "bytes": 212,
+      "sha256": "b0891c366bf23de1e9a2b7bb03c38876ea4ac5b9c6486b5be9c4cc9f93c8c436"
+    }
+  ],
+  "registeredReleaseClaim": false,
+  "ownerApplied": false,
+  "completeV1": false,
+  "verification": {
+    "genuineAuth": {
+      "path": ".local/amendment-acceptance-ui-auth-v1/result.json",
+      "cases": 11,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "scope": "Actual normal Node app dispatch, password/TOTP, sessions, CSRF, private HTTP, restricted PostgreSQL and outer COMMIT in an owned schema52 plus unregistered proposals fixture; not browser/TLS/device/full release",
+      "casesCovered": [
+        "capability-off routes closed before provider invocation",
+        "ordinary amendment acceptance and original/history reload after fresh sign-in",
+        "cancellation acceptance with zero remaining scope",
+        "actual assigned visit portions retained through acceptance",
+        "lost acknowledgment keeps only13 opaque identities; fresh-sign-in lookup without resend",
+        "actual deferred COMMIT failure leaves prior source unchanged and absent original pending",
+        "missing auth, forged CSRF, business override and extra request keys refused",
+        "paused recovery stops dispatch after allocation review",
+        "accepted amended parent roots reused for separately confirmed cancellation",
+        "unchanged20-context admission bound"
+      ],
+      "runnerReportLabel": "Copied runner scope label predates this profile; executed entry is tests/integration/quote-amendment-acceptance-auth.test.mjs and all11 actual test names are retained in run.log"
+    },
+    "units": {
+      "path": ".local/amendment-acceptance-all-units-v2.json",
+      "cases": 8134,
+      "passed": 8134,
+      "failed": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "path": ".local/amendment-acceptance-ui-types-final.log"
+    },
+    "lint": {
+      "passed": true,
+      "path": ".local/amendment-acceptance-ui-lint-final.log"
+    },
+    "productionBuild": {
+      "passed": true,
+      "path": ".local/amendment-acceptance-ui-build-final.log"
+    },
+    "componentBrowser": {
+      "scope": "Actual React form, planner and workspace controller with synthetic authority/API doubles; Chromium only. Independent actual HTTP/auth/database coverage is above. No whole-app/WebKit/physical-device claim.",
+      "screens": [
+        {
+          "width": 360,
+          "form": ".local/amendment-acceptance-ui-browser/form-360.png",
+          "saved": ".local/amendment-acceptance-ui-browser/saved-360.png",
+          "axeViolations": 0,
+          "overflow": false,
+          "minimumControlHeight": 44,
+          "inputText": 16,
+          "keyboard": true,
+          "explicitAllocation": true,
+          "attestationRequired": true,
+          "confirmedReload": true,
+          "uncertainClearsPrivate": true
+        },
+        {
+          "width": 390,
+          "form": ".local/amendment-acceptance-ui-browser/form-390.png",
+          "saved": ".local/amendment-acceptance-ui-browser/saved-390.png",
+          "axeViolations": 0,
+          "overflow": false,
+          "minimumControlHeight": 44,
+          "inputText": 16,
+          "keyboard": true,
+          "explicitAllocation": true,
+          "attestationRequired": true,
+          "confirmedReload": true,
+          "uncertainClearsPrivate": true
+        },
+        {
+          "width": 768,
+          "form": ".local/amendment-acceptance-ui-browser/form-768.png",
+          "saved": ".local/amendment-acceptance-ui-browser/saved-768.png",
+          "axeViolations": 0,
+          "overflow": false,
+          "minimumControlHeight": 44,
+          "inputText": 16,
+          "keyboard": true,
+          "explicitAllocation": true,
+          "attestationRequired": true,
+          "confirmedReload": true,
+          "uncertainClearsPrivate": true
+        },
+        {
+          "width": 1440,
+          "form": ".local/amendment-acceptance-ui-browser/form-1440.png",
+          "saved": ".local/amendment-acceptance-ui-browser/saved-1440.png",
+          "axeViolations": 0,
+          "overflow": false,
+          "minimumControlHeight": 44,
+          "inputText": 16,
+          "keyboard": true,
+          "explicitAllocation": true,
+          "attestationRequired": true,
+          "confirmedReload": true,
+          "uncertainClearsPrivate": true
+        }
+      ],
+      "passed": true,
+      "browserVersion": "156.0.8078.4",
+      "manualVisualReview": true,
+      "screenCount": 8
+    }
+  },
+  "decisions": [
+    "No new SQL, migration, role, operation kind, persistent private draft, package or service",
+    "Acceptance is a separate default-off test-only capability requiring existing amendment and scheduling capabilities; no owner startup flag enabled",
+    "Complete stable parent roots come from existing genuine readers and are bound independently to the exact live Sent amendment/current accepted parent. Initial-read observations preserve actual control data and do not relax ordinary parsing",
+    "Owner explicitly chooses/reviews unassigned portions and separately attests actual customer confirmation. Assigned/completed portions remain immutable; optional blank contacts are null",
+    "Command is captured before access recheck. Only an exact13-field opaque original may persist before dispatch. No automatic resend, fabricated saved state or clearing of an absent original",
+    "Accepted-selection regression fixed: load the complete versioned saved acceptance rather than skipping Accepted revisions or discarding their acceptance payload"
+  ],
+  "retainedDiagnostics": [
+    "Initial browser label ambiguity fixed with explicit label/control association",
+    "Browser exposed Accepted selection skipping the saved confirmation; full versioned wire now loads and regression succeeds at all4 widths",
+    "Planner fixture corrected to include required item position and explicit balancing of existing document-discount shares; production conservation remained unchanged"
+  ],
+  "unverifiedOrRemaining": [
+    "Owner preview remains accepted immutable52/public07311f85/full405; new acceptance unavailable there",
+    "Revised booking/cancellation client and HTTP profiles must consume resulting agreement versions",
+    "Ordinary creation UI from an accepted cancelled parent remains closed",
+    "Future field/finance/custody integration needs actual live consumption limits; the715-column physical-source fence is not that proof",
+    "Complete amended source/export reconstruction, registered53 and frozen52/current independent recovery",
+    "Genuine whole-app normal browser Chromium/WebKit/full release and physical iPhone acceptance",
+    "All remaining approved V1 including field/time/photos/completion, invoices/payments/double-entry/reconciliation/reporting/mileage/receipts, portability/import/cutover and Google Calendar"
+  ]
+}

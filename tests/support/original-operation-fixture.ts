@@ -27,6 +27,7 @@ export function originalOperationFixture(kind:OriginalOperationKind='crm.custome
   'catalog.service.save':{serviceId:id,expectedRevision:'0'},
   'quote.draft.save':{familyId:id,revisionId:randomUUID(),expectedFamilyVersion:'0',expectedRevisionVersion:'0'},
   'quote.amendment.create':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'7',expectedRevisionVersion:'0',expectedParentAgreementId:randomUUID(),expectedParentAgreementVersion:'1'},
+ 'quote.amendment.accept':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'11',expectedRevisionVersion:'4',expectedContentVersion:'1',acceptanceId:randomUUID(),agreementId:randomUUID(),sendId:randomUUID(),customerId:randomUUID(),expectedParentAgreementId:randomUUID(),expectedParentAgreementVersion:'1'},
  'quote.amendment.send':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'10',expectedRevisionVersion:'3',expectedContentVersion:'1',sendId:randomUUID(),approvalId:randomUUID(),expectedParentAgreementId:randomUUID(),expectedParentAgreementVersion:'1',replacesRevisionId:null},
  'quote.replacement.create':{familyId:id,revisionId:randomUUID(),expectedFamilyVersion:'4',expectedRevisionVersion:'0'},
   'quote.manual.send':{familyId:id,revisionId:randomUUID(),expectedFamilyVersion:'4',expectedRevisionVersion:'4',expectedContentVersion:'1',sendId:randomUUID(),approvalId:randomUUID()},

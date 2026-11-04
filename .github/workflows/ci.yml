@@ -339,6 +339,10 @@ jobs:
         run: npm run test:quote-amendment-source
       - name: Verify preserved-data amendment upgrade and frozen/current independent recovery
         run: npm run test:quote-amendment-candidate
+      - name: Verify retained52 amendment acceptance, cancellation and complete source history
+        run: npm run test:amendment-acceptance-storage
+      - name: Verify registered53 upgrade and independent frozen52/current53 recovery
+        run: npm run test:amendment-upgrade-registered
       - name: Compare booking times, travel intervals and partitions with PostgreSQL
         run: npm run test:booking-calculations
       - name: Preserve booking schema closure, private history and independent restore
@@ -381,6 +385,7 @@ jobs:
             .local/review/workspace-*.png
             .local/review/home-*.png
             .local/review/quote-*.png
+            .local/review/amendment-*.png
             .local/review/appointment-*.png
           include-hidden-files: true
           retention-days: 3

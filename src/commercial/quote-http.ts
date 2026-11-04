@@ -11,14 +11,15 @@ import {createBusinessSettingsContextReader} from '../security/business-settings
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
 import {createQuoteDirectory,QuoteDirectoryError} from './quote-directory.ts';
 import {quoteId,quoteVersion,quoteBodyLimit,quoteHistoryPageLimit,requireQuoteStorage as check,parseQuoteSave} from './quote-storage-contract.ts';
+import {parseQuoteCancellationEdit} from './quote-cancellation-edit-contract.ts';
 const prefix='/api/business/quotes/';
 const fields={context:[],list:['search','afterId','pageSize'],history:['familyId','revisionId','afterVersion','pageSize'],operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','content']} as const;
 type Route=keyof typeof fields;
 type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
 export function quoteFailureResponse(status:400|404|405|503=400){const r=privateJsonResponse({error:'QUOTE_REQUEST_FAILED'},status);if(status===405)r.headers.set('Allow','POST');return r;}
 // Default closed construction. Source/recovery/adoption must precede wiring.
-export function createQuoteHttp(config:Configuration,provider:Parameters<typeof createQuoteDirectory>[1],tokens:Parameters<typeof createQuoteDirectory>[2],enabled=false,reviewAvailable=false,commercialAvailable=false){
- if(!quoteId(config.businessId)||(typeof enabled!=='boolean'||typeof reviewAvailable!=='boolean'||typeof commercialAvailable!=='boolean'||reviewAvailable&&!enabled||commercialAvailable&&!reviewAvailable))throw Error('QUOTE_HTTP_CONFIGURATION_REQUIRED');
+export function createQuoteHttp(config:Configuration,provider:Parameters<typeof createQuoteDirectory>[1],tokens:Parameters<typeof createQuoteDirectory>[2],enabled=false,reviewAvailable=false,commercialAvailable=false,amendmentAcceptanceAvailable=false){
+ if(!quoteId(config.businessId)||(typeof enabled!=='boolean'||typeof reviewAvailable!=='boolean'||typeof commercialAvailable!=='boolean'||reviewAvailable&&!enabled||commercialAvailable&&!reviewAvailable||typeof amendmentAcceptanceAvailable!=='boolean'||amendmentAcceptanceAvailable&&(!commercialAvailable||config.environment!=='test')))throw Error('QUOTE_HTTP_CONFIGURATION_REQUIRED');
  const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
  const directory=enabled?createQuoteDirectory(config,provider,tokens):undefined,context=enabled?createBusinessSettingsContextReader(config,provider,tokens):undefined;
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>):Promise<Response>=>{
@@ -30,7 +31,7 @@ export function createQuoteHttp(config:Configuration,provider:Parameters<typeof 
    if(request.method!=='POST')return quoteFailureResponse(405);
    protect.requireOrigin(request);const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;if(!cookie)throw new Error();
    const input=route==='save'?await readNestedJsonBody(bounded,fields.save,quoteBodyLimit):await readFlatJsonBody(bounded,fields[route]);
-   const command=route==='save'?parseQuoteSave({...input,businessId}):undefined;
+   const command=route==='save'?(input.schemaVersion===2?parseQuoteCancellationEdit({...input,businessId}):parseQuoteSave({...input,businessId})):undefined;
    if(route==='operation')check(quoteId(input.operationId));
    if(route==='list')check(typeof input.search==='string'&&[...input.search].length<=200&&(input.afterId===null||quoteId(input.afterId))&&Number.isSafeInteger(input.pageSize)&&Number(input.pageSize)>=1&&Number(input.pageSize)<=50);
    if(route==='history')check(quoteId(input.familyId)&&quoteId(input.revisionId)&&quoteVersion(input.afterVersion,true)&&Number.isSafeInteger(input.pageSize)&&Number(input.pageSize)>=1&&Number(input.pageSize)<=quoteHistoryPageLimit);
@@ -39,9 +40,9 @@ export function createQuoteHttp(config:Configuration,provider:Parameters<typeof 
    if(signal.aborted)throw new Error();
    if(route==='context'){
     await directory!.list(cookie,{businessId,search:'',afterId:null,pageSize:1},signal);const value=(await context!(cookie,businessId,signal)).forServer();if(signal.aborted)throw new Error();
-    const response=privateJsonResponse({schemaVersion:value.schemaVersion,businessId:value.businessId,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});if(reviewAvailable)response.headers.set('X-Crest-Quote-Review','1');if(commercialAvailable)response.headers.set('X-Crest-Quote-Commercial','1');response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.quote.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));return response;
+    const response=privateJsonResponse({schemaVersion:value.schemaVersion,businessId:value.businessId,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});if(reviewAvailable)response.headers.set('X-Crest-Quote-Review','1');if(commercialAvailable)response.headers.set('X-Crest-Quote-Commercial','1');if(amendmentAcceptanceAvailable)response.headers.set('X-Crest-Quote-Amendment-Acceptance','1');response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.quote.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));return response;
    }
-   if(route==='save'){submitted=true;const value=(await directory!.save(cookie,command!,signal)).forServer();if(signal.aborted)throw new Error();return privateJsonResponse(value,value.state==='conflict'?409:200);}
+   if(route==='save'){submitted=true;const value=(command!.schemaVersion===2?await directory!.saveCancellation(cookie,command!,signal):await directory!.save(cookie,command!,signal)).forServer();if(signal.aborted)throw new Error();return privateJsonResponse(value,value.state==='conflict'?409:200);}
    const value=route==='operation'?(await directory!.lookup(cookie,{businessId,operationId:input.operationId as string},signal)).forServer()
     :route==='history'?(await directory!.history(cookie,{businessId,familyId:input.familyId as string,revisionId:input.revisionId as string,afterVersion:input.afterVersion as string,pageSize:input.pageSize as number},signal)).forServer()
     :(await directory!.list(cookie,{businessId,search:input.search as string,afterId:input.afterId as string|null,pageSize:input.pageSize as number},signal)).forServer();

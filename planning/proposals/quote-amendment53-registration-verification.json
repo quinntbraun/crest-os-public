@@ -1,0 +1,305 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-11-04T21:37:40.227Z",
+  "scope": "Registered53 synthetic acceptance, current booking/cancellation, private included-source records and reopened Draft integration preparation",
+  "testedCheckoutHead": "6d7121e22ede62e4a14e5f427bd66b228f91defa",
+  "sourceFiles": [
+    {
+      "path": "supabase/migration-checksums.json",
+      "bytes": 10070,
+      "sha256": "033199a5f2e528f629799cdba48901bf2a4687df1eea3166b0cf7bfcf5ec3c67"
+    },
+    {
+      "path": "supabase/migrations/20261104180000_quote_amendment_acceptance.sql",
+      "bytes": 424683,
+      "sha256": "5ecdf7ecab6563d908ae87fd69d59308241596efca7ffabfd289f01d10f39a1c"
+    },
+    {
+      "path": "planning/SECURITY_EXPORT_COVERAGE.json",
+      "bytes": 36920,
+      "sha256": "6a53ee21d999cc3761fc04dfce57e747c56cdb38b0111290b23888a091791d9e"
+    },
+    {
+      "path": "planning/QUOTE_AMENDMENT53_REGISTRATION.json",
+      "bytes": 3935,
+      "sha256": "6651bdc9c7774937807dd45697daa322d28c485a7a8a52a9f2e35dc8b8067460"
+    },
+    {
+      "path": "tests/integration/quote-amendment-auth.test.mjs",
+      "bytes": 106429,
+      "sha256": "ba3150803a5154453eda9a2c91b9091f8c2462df39e2cb389ab958dc868bda28"
+    },
+    {
+      "path": "tests/integration/quote-amendment-acceptance-auth.test.mjs",
+      "bytes": 208,
+      "sha256": "b30c43a035b11db0939e33062f45978c9575f89be8501952b6be8b07ffc759e6"
+    },
+    {
+      "path": "tests/integration/quote-amendment-acceptance-storage.test.mjs",
+      "bytes": 188249,
+      "sha256": "991d09816de44c65bfd6b091b63623f1f363dba824131076ffd43164c880d393"
+    },
+    {
+      "path": "tests/integration/quote-amendment52-candidate.test.mjs",
+      "bytes": 14587,
+      "sha256": "40346bce9b264b01d44704fce65daef38a152dc83ebd1dd3e55e3e5b88bb5c29"
+    },
+    {
+      "path": "tests/integration/quote-amendment53-candidate.test.mjs",
+      "bytes": 15149,
+      "sha256": "102a8310fbbc7802797fcc4c6ac647a14c29b2929a00d16dbbf9b9a3702e7073"
+    },
+    {
+      "path": "tests/support/recovery-drill.mjs",
+      "bytes": 29237,
+      "sha256": "85a86606a08b812c2553a9a6d5f2c60d707997796dcb91eb67690c0cee694ff8"
+    },
+    {
+      "path": "package.json",
+      "bytes": 15976,
+      "sha256": "560b6c2f28c2c2be0a07d743111391ab29abcf0f9a650169d69dd7c5e0c176d0"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 20548,
+      "sha256": "be9bf70efb580a546b2801c154a2a8773c76b152eb21b55ecf5b49ad4995d2ec"
+    },
+    {
+      "path": "release/compatibility.json",
+      "bytes": 200,
+      "sha256": "a4204dfcee69d6a12b888c797455609bf6aaaa1bb421bc2ab61b462fe27aced2"
+    },
+    {
+      "path": "tests/support/registered52-compatibility.json",
+      "bytes": 200,
+      "sha256": "2e6e962ece0ba28c3026783f2390f7e29412b33008c33293b1267a750098baf6"
+    },
+    {
+      "path": "tests/unit/quote-amendment53-adoption.test.ts",
+      "bytes": 3613,
+      "sha256": "bb32f9ef42f0139eeb7703dca5e818b6ceadce532a9e0b9621452946e8ea945d"
+    },
+    {
+      "path": "tests/unit/quote-amendment52-adoption.test.ts",
+      "bytes": 4261,
+      "sha256": "cf020c2ca9f4fd29563ca235f7fc9eae4e6c704454b8c11867d6eed4c79214d3"
+    },
+    {
+      "path": "tests/unit/owner-expenses-adoption.test.ts",
+      "bytes": 4500,
+      "sha256": "a56494a429adcef3fe634d6524881001b8371aa589a19817cac165c020ee1c27"
+    },
+    {
+      "path": "scripts/synthetic-workspace.mjs",
+      "bytes": 15919,
+      "sha256": "466fbe439d4aa55b1ddbc7d16d2146bcc12b5b04bab25976d587ceda35f6bf19"
+    },
+    {
+      "path": "scripts/synthetic-phone-preview.mjs",
+      "bytes": 3329,
+      "sha256": "9c9ab40dcb36c4bac28cd78865bcc3db85886f6ada15024438a8d1580677b0f4"
+    },
+    {
+      "path": "tests/support/source-export-browser-fixture.mjs",
+      "bytes": 18774,
+      "sha256": "a5cb509e51463621a87be1d44f3054c2dc35bb33c44d3f783d6ba52e74408b44"
+    },
+    {
+      "path": "src/app/quotes/amendments/review-and-sharing.tsx",
+      "bytes": 5427,
+      "sha256": "bc3bab2b19f4d16c494db3a9a42e6ed171615772e44d743938baf28ca9ce109f"
+    },
+    {
+      "path": "tests/integration/quote-amendment-acceptance-product-browser.test.mjs",
+      "bytes": 22940,
+      "sha256": "8cb8ae3ae719f442f5520d4c7f69403e05e18da062eb062c0cf35f5f12de546c"
+    },
+    {
+      "path": "tests/integration/quote-amendment-reopening-auth.test.mjs",
+      "bytes": 225,
+      "sha256": "188d2b4d25d020f20d748eb5fa10564ecf1d34a20c0cd66afe058e78ae68e5b3"
+    },
+    {
+      "path": "src/app/quotes/amendments/workspace.tsx",
+      "bytes": 9468,
+      "sha256": "a8687b07893487f0027483247a4a9cc62c13046e233d5fb3243ca9dd90f7b11a"
+    },
+    {
+      "path": "src/app/quotes/quote-amendment-document.tsx",
+      "bytes": 12409,
+      "sha256": "21638583b8e13a5106ca974e8f85c8218686635baeea406d9e3193346a2d081e"
+    },
+    {
+      "path": "tests/unit/quote-amendment-document.test.ts",
+      "bytes": 8362,
+      "sha256": "b71c921ecbcdb45c368d0ceab9f562bbd4877e8f1ed63bf6ffcd1304ae186a2b"
+    },
+    {
+      "path": "tests/unit/quote-cancellation-presentation.test.ts",
+      "bytes": 4266,
+      "sha256": "808d3af8047deac17f6cb927caefb2668f85cda4b5f9acc915c0d6be731bcf3c"
+    },
+    {
+      "path": "src/app/schedule/new/booking.tsx",
+      "bytes": 25042,
+      "sha256": "6e6b8db2bd394beed9d68d4ee7c268da7df5c187608e66718bd59bab2c80d543"
+    },
+    {
+      "path": "tests/support/real-auth-service.mjs",
+      "bytes": 9182,
+      "sha256": "ecfc1f132c5db4ae9f0c7d48498217d9446b9350c0d96d64044bc51ecb9d3b75"
+    },
+    {
+      "path": "tests/support/real-auth-diagnostics.mjs",
+      "bytes": 1825,
+      "sha256": "2ff74636f9fde2ba42a734b5b40691d3d4078b19bb26116379f6f8905b039a1e"
+    },
+    {
+      "path": "tests/unit/real-auth-diagnostics.test.ts",
+      "bytes": 2095,
+      "sha256": "08f17f43abbeee84baa659bfac0bd23929bcc28c08d275c97ff71a63b7298980"
+    },
+    {
+      "path": "src/client/amendment-acceptance-planning.ts",
+      "bytes": 10033,
+      "sha256": "7120eafc278d08fb01222a5eb62db4fb78e3c9f37fd32958fed04e71522e77cf"
+    },
+    {
+      "path": "tests/unit/amendment-acceptance-planning.test.ts",
+      "bytes": 8067,
+      "sha256": "5b2c53591356c4ced2c3c2c9d5553d2e733d1f4718b2f6dddb0cec6fc0d71cf5"
+    },
+    {
+      "path": "tests/unit/amendment-acceptance-fixture.ts",
+      "bytes": 4573,
+      "sha256": "8f42022761c450f587cae87e2949ac7ca7a474a2e82c5f27e30f280f647ab821"
+    }
+  ],
+  "repositorySchema": 53,
+  "ownerSchema": 52,
+  "ownerApplied": false,
+  "fullReleasePassed": false,
+  "currentSourceHostedCIPassed": false,
+  "realCrestUseReady": false,
+  "completeV1": false,
+  "completeCrestExport": false,
+  "completeBackup": false,
+  "implementation": [
+    "Exact append-only12-body migration; frozen52 compatibility remains explicit",
+    "Ordinary/cancellation acceptance and original recovery in the genuine test app; current-version visits and reopened paid/complimentary Draft",
+    "Accepted document wording, stale-parent notice and booking label association corrected",
+    "Cancelled allocation planner now retains assigned/completed portions only; old cancelled plans/history remain unchanged; explicit reallocation required for active new work"
+  ],
+  "verification": {
+    "sourceGates": {
+      "startedAt": "2026-11-04T21:31:17.137Z",
+      "ownerPreviewUnchanged": true,
+      "steps": [
+        {
+          "name": "units",
+          "status": "passed",
+          "log": ".local/registered53-units-v6.log",
+          "startedAt": "2026-11-04T21:31:17.138Z",
+          "exitCode": 0,
+          "finishedAt": "2026-11-04T21:31:38.412Z"
+        },
+        {
+          "name": "types",
+          "status": "passed",
+          "log": ".local/registered53-types-v6.log",
+          "startedAt": "2026-11-04T21:31:38.413Z",
+          "exitCode": 0,
+          "finishedAt": "2026-11-04T21:31:44.381Z"
+        },
+        {
+          "name": "lint",
+          "status": "passed",
+          "log": ".local/registered53-lint-v6.log",
+          "startedAt": "2026-11-04T21:31:44.382Z",
+          "exitCode": 0,
+          "finishedAt": "2026-11-04T21:32:19.210Z"
+        },
+        {
+          "name": "build",
+          "status": "passed",
+          "log": ".local/registered53-build-v6.log",
+          "startedAt": "2026-11-04T21:32:19.211Z",
+          "exitCode": 0,
+          "finishedAt": "2026-11-04T21:32:50.772Z"
+        },
+        {
+          "name": "server",
+          "status": "passed",
+          "log": ".local/registered53-server-v6.log",
+          "startedAt": "2026-11-04T21:32:50.774Z",
+          "exitCode": 0,
+          "finishedAt": "2026-11-04T21:32:50.989Z"
+        }
+      ],
+      "unitTests": 8165,
+      "unitFailures": 0,
+      "passed": true,
+      "finishedAt": "2026-11-04T21:32:51.011Z"
+    },
+    "registeredUpgrade": {
+      "report": ".local/registered53-upgrade-v1/result.json",
+      "passed": 7,
+      "scope": "Exact unchanged registered SQL/registry; independent encrypted52/current53 restore of96 covered tables and24 included-domain source tables. Does not verify later UI/planner changes."
+    },
+    "serialGenuine": {
+      "report": ".local/registered53-auth-v6/result.json",
+      "passed": 18,
+      "total": 20,
+      "failed": 2,
+      "sourceStable": true,
+      "ownedCleaned": true,
+      "failures": [
+        "Test-user setup bridge503",
+        "Existing session400 during revised visit fixture setup"
+      ],
+      "resolved": false
+    },
+    "focusedReproduction": {
+      "report": ".local/registered53-auth-focus-v1/result.json",
+      "passed": 2,
+      "total": 2,
+      "sourceStable": true,
+      "ownedCleaned": true,
+      "serviceEvents": [],
+      "scope": "Previously failing stories passed in isolation before final planner fix; does not override full20 failure"
+    },
+    "browser": {
+      "chromium": ".local/registered53-browser-v10/result.json",
+      "webkit": ".local/registered53-webkit-v6/result.json",
+      "passed": false,
+      "chromiumObserved": "Genuine sign-in, accepted amendment/save/reload, private ZIP and actual revised booking/separate visit cancellation passed before exposing cancelled-allocation planner defect.",
+      "webkitObserved": "Genuine accepted amendment/read and four-width captures; latest run interrupted after Home wait. Priorv5 downloaded private ZIP and booked current scope.",
+      "postPlannerFixWholeJourneyVerified": false,
+      "actualPhysicalPhone": false,
+      "ownerPhoneCheckDeferred": true,
+      "diagnostics": "Finite test step bounds, actual response/history waits and two animation-frame capture settling; no mutation retries or increased app limits."
+    },
+    "regression": {
+      "focusedPlannerAndPrivacy": 19,
+      "plannerNewCases": 4,
+      "fullUnits": 8165,
+      "failed": 0,
+      "skipped": 0
+    },
+    "retainedAuthCleanup": ".local/registered53-webkit-v6-auth-cleanup.json"
+  },
+  "delivery": {
+    "acceptedLocal": "94acb9304602dfcff3466a641e94c125004582d3",
+    "public": "07311f85fe8df407f2396019e1237e67c7b33581",
+    "pr": 113,
+    "fullRun": 41753012689,
+    "unchanged": true,
+    "health": ".local/registered53-owner-preview-health.json"
+  },
+  "next": [
+    "Exact-source Linux full CI, both browser journeys and all genuine cases after the planner fix; investigate failures without waiving gates",
+    "Fresh independent prior-schema recovery and immutable accepted source before any owner53 upgrade",
+    "Full V1 field/time/custody/photos/completion/follow-up; finance/reporting/mileage/receipts; complete portability/recovery/import/cutover; Google Calendar"
+  ],
+  "spend": 0
+}

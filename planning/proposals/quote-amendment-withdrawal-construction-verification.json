@@ -1,0 +1,77 @@
+{
+  "formatVersion": 1,
+  "scope": "Explicit amendment scope inputs and unregistered active/withdrawn allocation binding storage",
+  "testedBaseCommit": "94acb9304602dfcff3466a641e94c125004582d3",
+  "uncommittedConstruction": true,
+  "sourceFiles": {
+    "planning/proposals/quote-amendment-acceptance-storage.sql": "3b4580242ffa6170e87cc4b895afe7fc0fc39359eff13744d56caa104f4fba9e",
+    "tests/integration/quote-amendment-acceptance-storage.test.mjs": "161cbe80cd366b1eea80e8521d0c4063d9e6cc04254158ebd4d941e12c0ebed6",
+    "tests/support/recovery-drill.mjs": "5201ed0d1914304a9cc18d96161bfb5a36864b753f3d49d2b066481b4653b3dd",
+    "src/commercial/quote-amendment-scope-plan.ts": "fb562f3aa363b20dc56cd303f2d07d5e8bf4c1bc69af90e0e646ff33d12e08cd",
+    "src/commercial/quote-amendment-acceptance-contract.ts": "fb3e35a7a5a42db37e68b89befcfca41cdd58f5044c4adef01f06303eca470d5",
+    "tests/unit/quote-amendment-scope-plan.test.ts": "f073395e743f216d8ff74a9701918c2965054f19e8d149e3571ff3d2101fccf0",
+    "tests/unit/quote-amendment-acceptance-contract.test.ts": "0ef75af7621faca65168253bcbf81f50c5ccad25e5b9875bd146447842e75be3"
+  },
+  "verification": {
+    "native": {
+      "path": ".local/amendment-acceptance-storage-native-v5/result.json",
+      "tests": 17,
+      "passed": 17,
+      "failed": 0,
+      "sourceStable": true,
+      "ownedClusterCleaned": true
+    },
+    "focusedUnits": {
+      "path": ".local/amendment-scope-plan-focused-v4.json",
+      "passed": 46,
+      "failed": 0
+    },
+    "types": {
+      "path": ".local/amendment-scope-plan-types-v2.log",
+      "passed": true
+    },
+    "affectedLint": {
+      "path": ".local/amendment-withdrawal-lint-v2.log",
+      "passed": true
+    }
+  },
+  "coverage": [
+    "Explicit owner-selected gross/discount/net parts; exact integer and aggregate bounds; frozen input; whole128KiB body budget and no truncation",
+    "Stable/new source and entitlement observations; duplicate/crossed histories refused; plans excluded from opaque original metadata",
+    "Active complimentary identity distinct from withdrawn zero authorization/no remaining parts",
+    "Both new fields null/omitted for legacy rows; prior source values/view/audit projections/restricted booking/original lookup remain exact",
+    "Foreign/missing/crossed binding and missing/unknown authorization state rejected through real booking fault injection with complete rollback",
+    "Legacy booking cannot write new command profile or withdraw complimentary scope while retaining active parts",
+    "Unregistered physical additions refuse current52 backup before files; pre-proposal encrypted52 point independently restores"
+  ],
+  "retainedFailures": {
+    "nativeV4": {
+      "path": ".local/amendment-acceptance-storage-native-v4/result.json",
+      "passed": 16,
+      "failed": 1,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "reason": "Fixture assumed index1 was complimentary, but source records are sorted by random source ID. Correct binding guard rejected a positive authorization. Test now locates the actual amount-zero source and observes the intended parts guard; no database guard or timeout weakened."
+    },
+    "typesV1": "An empty frozen parts array inferred never[] in a validated record cast; explicit readonly AllocationPart[] annotation fixes the type without changing runtime rules."
+  },
+  "limits": {
+    "registeredSchema": 52,
+    "proposalRegistered": false,
+    "acceptanceCommandImplemented": false,
+    "acceptedWithdrawalCommitted": false,
+    "resultingAgreementChainWorkflowVerified": false,
+    "jobCancellationAuthorizedByParser": false,
+    "financialRulesImplementedByParser": false,
+    "normalUiConnected": false,
+    "fullCancellationWorkflowComplete": false,
+    "currentProposalFullSourceExportAndRecoveryVerified": false,
+    "completeExport": false,
+    "completeBackup": false,
+    "ownerDatabaseChanged": false,
+    "ownerPreviewUpdated": false,
+    "realCrestUseReady": false,
+    "spend": 0
+  },
+  "recordedAt": "2026-11-04T01:50:35.561Z"
+}

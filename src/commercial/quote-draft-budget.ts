@@ -27,7 +27,8 @@ export function quoteJsonbTextBytes(value:QuoteJsonbValue):number{
  * values. Placeholders below are size-only, never records or save payloads. */
 export function quoteDraftAuditBytes(prepared:Pick<ReturnType<typeof prepareQuoteContent>,'customer'|'internal'|'canonical'>,previous:StoredQuoteRevision|StoredQuoteAmendmentRevision|null):number{
  const uuid='00000000-0000-0000-0000-000000000000',stamp='2000-01-01T00:00:00.000000Z';
- const candidate:StoredQuoteRevision|StoredQuoteAmendmentRevision={...(previous??{id:uuid,business_id:uuid,family_id:uuid,sequence:'1',kind:'initial',state:'Draft',version:'1',content_version:'1',tax_readiness:'not_configured',created_at:stamp,created_by:uuid,origin:'manual',import_row_id:null}),
+ // A size-only JSON shape; the save contract validates an actual revision.
+ const candidate={...(previous??{id:uuid,business_id:uuid,family_id:uuid,sequence:'1',kind:'initial',state:'Draft',version:'1',content_version:'1',tax_readiness:'not_configured',created_at:stamp,created_by:uuid,origin:'manual',import_row_id:null}),
   state:'Draft',version:previous?(BigInt(previous.version)+1n).toString():'1',content_version:previous?(BigInt(previous.content_version)+1n).toString():'1',
   customer_safe_snapshot:prepared.customer,internal_snapshot:prepared.internal,canonical_content:prepared.canonical,content_hash:'0'.repeat(64),total_cents:prepared.customer.totalCents,expiry_at:prepared.customer.expiryAt,timezone:prepared.customer.timezone,
   updated_at:stamp,updated_by:uuid,operation_id:uuid};

@@ -1,0 +1,14 @@
+// Controller boundary doubles; genuine database/MFA proof is separate.
+import {it,expect,vi} from 'vitest';
+import {randomBytes} from 'node:crypto';
+import {cancellationAppFixture} from './quote-cancellation-app-fixture';
+import {createQuoteAmendmentWorkspace} from '../../src/client/quote-amendment-workspace';
+import {quoteAmendments} from '../../src/client/quote-amendments';
+import {parseQuoteAmendmentTargets} from '../../src/commercial/quote-amendment-targets';
+import {parseQuoteAmendmentRead} from '../../src/commercial/quote-amendment-read';
+import type {QuoteAmendmentReadRequest} from '../../src/commercial/quote-amendment-read';
+import {unzipSync,strFromU8} from 'fflate';
+it.each([false,true])('opens saved cancellation approved=%s without feeding empty scope into an ordinary quote editor',async approved=>{
+ const f=cancellationAppFixture(approved),binding=randomBytes(32).toString('base64url'),memory=new Map<string,string>(),storage={getItem:(key:string)=>memory.get(key)??null,setItem:(key:string,value:string)=>{memory.set(key,value);},removeItem:(key:string)=>{memory.delete(key);}},api={...quoteAmendments,targets:vi.fn(async(input:Parameters<typeof parseQuoteAmendmentTargets>[1])=>parseQuoteAmendmentTargets({schemaVersion:1,businessId:f.request.businessId,targets:[f.target],hasMore:false},input)),read:vi.fn(async(input:QuoteAmendmentReadRequest)=>parseQuoteAmendmentRead(f.packet,input)),send:vi.fn(quoteAmendments.send)},controller=createQuoteAmendmentWorkspace({storage,change:vi.fn(),api,session:vi.fn(async()=>({csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000})),context:vi.fn(async()=>({binding,context:{schemaVersion:1 as const,businessId:f.request.businessId,writeState:'ready' as const,recoveryEpoch:f.draft.recoveryEpoch},reviewAvailable:true as const,commercialAvailable:true as const}))});
+ await controller.load();await controller.open(f.request.familyId);expect(controller.view()).toMatchObject({phase:'ready',draft:null,dirty:false,canEdit:false,canSave:false,canSend:approved,canReadHistory:true,canSubmit:!approved,reviewIssue:''});expect(controller.view().amendment?.revision.customer_safe_snapshot.schemaVersion).toBe(3);const zip=await controller.archive();expect(zip).toBeInstanceOf(Uint8Array);const record=JSON.parse(strFromU8(unzipSync(zip!)['amendment_original.json']!));expect(record.profile).toBe('crest.amendment-cancellation-record.v3');expect(record.source.revision.customer_safe_snapshot.cancellationReason).toBe(f.p.customer.cancellationReason);zip?.fill(0);if(!approved)await controller.send({channel:'in_person',recipientSnapshot:f.p.customer.recipient,evidenceNote:null,confirmedActualSharing:true});expect(api.send).not.toHaveBeenCalled();expect(memory.size).toBe(0);controller.clearPrivate();expect(controller.view().amendment).toBe(null);controller.dispose();
+});

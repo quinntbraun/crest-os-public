@@ -1,0 +1,198 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-11-04T10:35:38.457Z",
+  "scope": "Unregistered cancellation actual sharing and explicit selected-offer re-sharing with immutable history, private selected-record retrieval and original-save recovery",
+  "testedCheckoutHead": "bd4f049cc4d3c8cd87751ab86a523d0d0afa6503",
+  "registeredReleaseClaim": false,
+  "completeV1": false,
+  "sourceFiles": [
+    {
+      "path": "src/app/quotes/amendments/cancellation-creator.tsx",
+      "sha256": "98196058d985b3a51b74b1f570474ec5cc56d1cccdd0b039aaa582b60fe978d3",
+      "bytes": 2604
+    },
+    {
+      "path": "src/app/quotes/amendments/cancellation-editor.tsx",
+      "sha256": "7b5286c35b2730dd4c2941219e984be40ba5bc4a55405c81e4189cc78e7c80c1",
+      "bytes": 2030
+    },
+    {
+      "path": "src/app/quotes/amendments/review-and-sharing.tsx",
+      "sha256": "6ae741b355847fce2656c4eecd4c2cb077b48bab0067c14dcc4c3cd13d21eb9d",
+      "bytes": 5275
+    },
+    {
+      "path": "src/app/quotes/quote-document.tsx",
+      "sha256": "c18dce2758e86202532e5deb1953e0f209776e0634e1a9b192e7baa9b4a6cf11",
+      "bytes": 9704
+    },
+    {
+      "path": "src/client/quote-amendment-workspace.ts",
+      "sha256": "d9a5d91675025c63fa5ce475a14f3fb87823bd8a22362c45669e2ecf7918eba0",
+      "bytes": 45460
+    },
+    {
+      "path": "src/commercial/quote-amendment-read.ts",
+      "sha256": "8c1b6c8f503226dc42b6d5c7077aabdc077356966ddf22fb98e614b9e388711e",
+      "bytes": 15136
+    },
+    {
+      "path": "src/commercial/quote-amendment-record.ts",
+      "sha256": "61d9e6dfb91c19b0edbc576ff2fe93b29d7a0b46bd4ebd79e2bad494c1de07c4",
+      "bytes": 7007
+    },
+    {
+      "path": "src/commercial/quote-commercial-read.ts",
+      "sha256": "9f1b3a464b81288b09a561c4e1334d38f94307cbce0582ffd06c6f4fd50edc0e",
+      "bytes": 12747
+    },
+    {
+      "path": "tests/integration/quote-amendment-acceptance-storage.test.mjs",
+      "sha256": "21390bdef4275a37caf50953a5cf512b0f818903a3286289a85ec0e2caa6b1b9",
+      "bytes": 160147
+    },
+    {
+      "path": "tests/integration/quote-amendment-auth.test.mjs",
+      "sha256": "becc764a6373471d0fde8aaf5608373bc60300e285e4abd53c90005cfa42ddb2",
+      "bytes": 66227
+    },
+    {
+      "path": "tests/unit/quote-amendment-workspace.test.ts",
+      "sha256": "a87344fd73d174cdae3d183e6c047e47374a9cff539b0014cd36a40436ea74dd",
+      "bytes": 24917
+    },
+    {
+      "path": "tests/unit/quote-cancellation-presentation.test.ts",
+      "sha256": "18345c96dd363ee745da7894592e6a89d505ab5c619a3da5e303bfb60dcb1ac9",
+      "bytes": 3329
+    },
+    {
+      "path": "tests/unit/quote-cancellation-sharing.test.ts",
+      "sha256": "91f116f170eb09caefe8f52704384021238f22aa0d095eaff94cd4b3d13b07f3",
+      "bytes": 7259
+    },
+    {
+      "path": "tests/unit/quote-cancellation-workspace.test.ts",
+      "sha256": "21aae7c688c2366a41c38308ae23d0b0ba5abbb99621ffba45253dc824fe5623",
+      "bytes": 2855
+    }
+  ],
+  "verification": {
+    "initialRunDiagnostic": {
+      "overallPassed": false,
+      "result": {
+        "exitCode": 1,
+        "tests": 137,
+        "passed": 134,
+        "failed": 3,
+        "logPath": ".local/cancellation-sharing-native-v1/run.log"
+      },
+      "error": null,
+      "sourceStable": true,
+      "ownedClusterCleaned": true
+    },
+    "restrictedPostgres": {
+      "cases": 106,
+      "path": ".local/cancellation-sharing-auth-v2/result.json",
+      "limitation": "The corrected full native run passed137/137 in one source-stable execution:106 PostgreSQL cases and31 genuine Auth cases. The initial failed run remains diagnostic only; no SQL/application source changed for its test-helper scope correction."
+    },
+    "genuineAuth": {
+      "cases": 31,
+      "path": ".local/cancellation-sharing-auth-v2/result.json",
+      "profiles": [
+        51,
+        52
+      ],
+      "unchangedSourceFiles": 203,
+      "scope": "Actual password/TOTP/private HTTP/controller: cancellation share/re-share, fresh-sign-in reload, lost acknowledgment/original lookup without resend, and actual deferred COMMIT rollback/absent pending. Existing normal and cancellation Auth cases retained; admission context cap remains20."
+    },
+    "units": {
+      "cases": 8112,
+      "path": ".local/cancellation-sharing-all-units-v1.json"
+    },
+    "types": {
+      "passed": true,
+      "path": ".local/cancellation-sharing-types-v2.log"
+    },
+    "lint": {
+      "passed": true,
+      "path": ".local/cancellation-sharing-lint-v2.log"
+    },
+    "build": {
+      "passed": true,
+      "path": ".local/cancellation-sharing-build-v1.log",
+      "scope": "Next application and server; before test-only helper scope correction"
+    },
+    "componentBrowser": {
+      "scope": "Actual React sharing form/controller/comparison/customer document with synthetic authority/API doubles, Chromium only; not genuine browser authentication, WebKit, whole-app acceptance or physical iPhone verification",
+      "screens": [
+        {
+          "path": ".local/cancellation-sharing-browser/form-360.png",
+          "width": 360,
+          "sha256": "16dde014700036a6c08262c58f3133bdc8ea98767f1e8d1a4b9d8a75822bb6a8",
+          "bytes": 80331
+        },
+        {
+          "path": ".local/cancellation-sharing-browser/saved-360.png",
+          "width": 360,
+          "sha256": "a3406c88d85685739d39a32798b7c586369d7a038bf45b3e464834700a44a5d7",
+          "bytes": 102744
+        },
+        {
+          "path": ".local/cancellation-sharing-browser/form-390.png",
+          "width": 390,
+          "sha256": "389c0143ba00e91f7688c5c8a347446fa298c0cb0f0d2a99095e77e1bf64c6aa",
+          "bytes": 81385
+        },
+        {
+          "path": ".local/cancellation-sharing-browser/saved-390.png",
+          "width": 390,
+          "sha256": "167e6e313418985264c6873aaa9fa75438c38a5a8665b9e4dcdd8fd73ecebc05",
+          "bytes": 103080
+        },
+        {
+          "path": ".local/cancellation-sharing-browser/form-768.png",
+          "width": 768,
+          "sha256": "2e2c7fa7659b96ca853f6b44c5cdf087077fa7a618e69b67652abd28929b8bac",
+          "bytes": 90539
+        },
+        {
+          "path": ".local/cancellation-sharing-browser/saved-768.png",
+          "width": 768,
+          "sha256": "c62831bc3bed1a3e260396d24ff47c2cc37b1e8deb82a568b78cf488de12f48c",
+          "bytes": 107841
+        },
+        {
+          "path": ".local/cancellation-sharing-browser/form-1440.png",
+          "width": 1440,
+          "sha256": "0009b4d8a4bf52c5f1f5e780adbeb03d5344f0e0665945166509cebc1939698f",
+          "bytes": 101714
+        },
+        {
+          "path": ".local/cancellation-sharing-browser/saved-1440.png",
+          "width": 1440,
+          "sha256": "f4f610881cf4473768be8360823b2afcc96245b96ab81cba744afdbd1837e4d4",
+          "bytes": 112417
+        }
+      ],
+      "passed": true,
+      "browserVersion": "156.0.8078.4"
+    }
+  },
+  "behavior": [
+    "Reuses the existing restricted sharing command, actor/epoch authorization, exact content/approval/presentation/current-parent and receipt1 originals; adds no SQL migration, role, grant, package or operation kind",
+    "Approved cancellation3 may be recorded as actually shared and reloaded as Sent. Explicit re-sharing retains every send and uses no self-replacement; sharing a replacement retains the prior Superseded document and its original receipt",
+    "Requires actual channel/recipient/factual attestation; optional contact/note blanks remain absent. The component remounts by revision version and resets channel, note and attestation after a successful save",
+    "Strict saved cancellation approval3 and presentation hash feed the representation-neutral sharing reader. Wrong approval/hash/chronology/active offer and unimplemented Accepted3 are refused",
+    "History and checksummed private CSV/JSON retain exact saved reason, approval and latest sharing. These records are explicitly partial, not complete Crest export/backup",
+    "No accepted agreement, entitlement, allocation, visit, fee/refund or financial posting changes follow sharing. Unknown saves keep only opaque identity and never automatically resend"
+  ],
+  "limits": [
+    "This is unpublished construction; owner preview remains immutable accepted52 and does not enable cancellation3",
+    "Customer acceptance3/resulting withdrawal, historical3 reopening/repeated chains and live completed/billed/credited/refunded/custody bounds remain unfinished",
+    "Complete amended source/export reconstruction, registered53/frozen52+current recovery and genuine whole-app/TLS/Chromium/WebKit/device/full release remain required",
+    "Explicit re-sharing UI operates on the selected current revision. Re-sharing an earlier active offer while a newer Draft is current is not added here",
+    "No source publication, owner database/account/MFA/network change, real-data/finance/production activation or service spending"
+  ],
+  "newServiceSpend": 0
+}

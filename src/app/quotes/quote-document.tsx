@@ -3,8 +3,10 @@ import type {prepareVersionedQuoteContent as prepareQuoteContent} from '../../co
 import {phonePresentation} from '../../client/phone-presentation';
 import {quoteMoney} from '../../commercial/quote-pricing';
 import type {QuoteDiscount} from '../../commercial/quote-pricing';
+import type {prepareQuoteCancellationContent} from '../../commercial/quote-cancellation-content';
 
-export type QuoteDocumentContent=ReturnType<typeof prepareQuoteContent>['customer'];
+type Cancellation=ReturnType<typeof prepareQuoteCancellationContent>['customer'];
+export type QuoteDocumentContent=ReturnType<typeof prepareQuoteContent>['customer']|Cancellation;
 type Props=Readonly<{quote:QuoteDocumentContent;stage?:'draft'|'review'|'approved'|'sent'|'accepted'|'superseded'}>;
 const invalid=():never=>{throw Error('QUOTE_DOCUMENT_CUSTOMER_PROJECTION_REQUIRED');};
 function exact(value:unknown,keys:readonly string[]):value is Record<string,unknown>{return !!value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key));}
@@ -22,6 +24,7 @@ function discountDescription(discount:QuoteDiscount):string{
  * access and performs no persistence, approval, delivery or financial action. */
 export function QuoteDocument({quote,stage='draft'}:Props){
  const titleId=useId();
+ if(quote.schemaVersion===3)return <CancellationDocument quote={quote} stage={stage} titleId={titleId}/>;
  // Fail closed on an accidentally supplied whole/private value. Rendering also
  // names every field explicitly rather than serializing unknown properties.
  const supplied:unknown=quote;
@@ -58,4 +61,10 @@ export function QuoteDocument({quote,stage='draft'}:Props){
   {quote.proposedSchedule!==null&&<section aria-label="Tentative schedule proposal"><h3>Proposed timing · tentative</h3><p className="service-scope">{quote.proposedSchedule}</p><p className="field-help">This proposal is not a confirmed appointment.</p></section>}
   {expiry!==null&&<section aria-label="Quote expiry"><h3>Expires</h3><p><time dateTime={quote.expiryAt!}>{expiry}</time> · <span className="service-scope">{quote.timezone}</span></p><details><summary>Exact expiry time</summary><p className="service-scope"><time dateTime={quote.expiryAt!}>{quote.expiryAt}</time> (UTC)</p></details></section>}
  </article>;
+}
+function CancellationDocument({quote,stage,titleId}:{quote:Cancellation;stage:NonNullable<Props['stage']>;titleId:string}){
+ const supplied:unknown=quote;
+ if(!exact(supplied,[...rootKeys,'purpose','cancellationReason'])||supplied.schemaVersion!==3||supplied.currency!=='USD'||supplied.purpose!=='cancel_all_remaining_scope'||!exact(supplied.recipient,['displayName','phone','email'])||typeof supplied.recipient.displayName!=='string'||!(supplied.recipient.phone===null||typeof supplied.recipient.phone==='string')||!(supplied.recipient.email===null||typeof supplied.recipient.email==='string')||!['title','workLocation','terms','timezone'].every(k=>typeof supplied[k]==='string')||!(supplied.expiryAt===null||typeof supplied.expiryAt==='string')||!Array.isArray(supplied.lines)||supplied.lines.length!==0||supplied.documentDiscount!==null||supplied.proposedSchedule!==null||!['grossCents','lineDiscountCents','documentDiscountCents','totalCents'].every(k=>supplied[k]==='0')||typeof supplied.cancellationReason!=='string'||!supplied.cancellationReason.trim()||[...supplied.cancellationReason].length>2000)return invalid();
+ const phone=quote.recipient.phone===null?null:phonePresentation(quote.recipient.phone);
+ return <article className="quote-worksheet quote-cancellation" aria-labelledby={titleId}><header><p className="eyebrow">Crest Detailing</p><h2 id={titleId}>{stage==='accepted'?'Accepted cancellation of remaining work':'Cancellation proposal'}</h2><p>{text(quote.title)}</p><p className="notice"><strong>{stage==='accepted'?'Accepted cancellation':stage==='sent'?'Shared proposal':stage==='superseded'?'Superseded proposal':stage==='approved'?'Owner-approved proposal':stage==='review'?'For owner review':'Draft proposal'}</strong></p></header><section aria-label="Cancellation reason"><h3>Reason</h3><p className="service-scope">{quote.cancellationReason}</p></section><dl className="customer-values"><dt>Customer</dt><dd>{text(quote.recipient.displayName)}</dd>{quote.recipient.phone!==null&&<><dt>Phone</dt><dd>{phone}</dd></>}{quote.recipient.email!==null&&<><dt>Email</dt><dd className="service-scope">{text(quote.recipient.email)}</dd></>}<dt>{stage==='accepted'?'Accepted remaining total':'Proposed remaining total'}</dt><dd><strong>{quoteMoney(quote.totalCents)}</strong></dd></dl>{quote.terms!==''&&<details><summary>Terms</summary><p className="service-scope">{text(quote.terms)}</p></details>}<p className="field-help">{stage==='accepted'?'This accepted change withdraws the remaining authorized work. It records no fee, credit or refund. Visits retain their recorded history.':'The existing agreement remains in effect until this proposal is separately accepted. Booked visits retain their recorded status.'}</p></article>;
 }

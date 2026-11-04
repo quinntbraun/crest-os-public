@@ -16,6 +16,18 @@ const identifier=(value:unknown):value is string=>customerUuid(value)&&value===v
 const optionalId=(value:unknown):value is string|null=>value===null||identifier(value);
 const discountCopy=(value:QuoteDiscount|null):QuoteDiscount|null=>value===null?null:Object.freeze(value.kind==='fixed'?{kind:'fixed',cents:value.cents}:{kind:'percent',rate:value.rate});
 const lineKeys=['id','vehicleId','jobWide','vehicleLabel','serviceVersionId','description','inclusions','exclusions','condition','grossCents','lineDiscount','documentDiscountEligible','complimentaryReason'] as const;
+/** Shared immutable metadata validation. This grants no line, price or save
+ * permission; ordinary quotes still require their existing nonempty scope. */
+export function parseQuoteContentHeader(value:unknown){
+ if(!exact(value,['title','recipient','workLocation','terms','timezone','expiryAt','proposedSchedule','internalNotes'])
+  ||!text(value.title,200,true)||!text(value.workLocation,4000,true,true)||!text(value.terms,8000,false,true)||!text(value.timezone,100,true)
+  ||!(value.expiryAt===null||customerInstant(value.expiryAt))||!optional(value.proposedSchedule,2000,true)||!optional(value.internalNotes,8000,true))return fail('content');
+ try{new Intl.DateTimeFormat('en-US',{timeZone:value.timezone}).format(0);}catch{return fail('timezone');}
+ const recipient=value.recipient;
+ if(!exact(recipient,['customerId','leadId','displayName','phone','email'])||!optionalId(recipient.customerId)||!optionalId(recipient.leadId)||recipient.customerId===null&&recipient.leadId===null
+  ||!text(recipient.displayName,200,true)||!optional(recipient.phone,512)||!optional(recipient.email,512))return fail('recipient');
+ return Object.freeze({title:value.title,recipient:Object.freeze({customerId:recipient.customerId,leadId:recipient.leadId,displayName:recipient.displayName,phone:recipient.phone,email:recipient.email}),workLocation:value.workLocation,terms:value.terms,timezone:value.timezone,expiryAt:value.expiryAt,proposedSchedule:value.proposedSchedule,internalNotes:value.internalNotes});
+}
 export function parseQuoteContentLine(row:unknown):QuoteContentLine{
  if(!exact(row,lineKeys)||!identifier(row.id)||!optionalId(row.vehicleId)||typeof row.jobWide!=='boolean'||!optionalId(row.serviceVersionId)
   ||!text(row.description,200,true)||!text(row.inclusions,8000,false,true)||!text(row.exclusions,8000,false,true)
@@ -35,13 +47,8 @@ export function parseQuoteContentLine(row:unknown):QuoteContentLine{
  * Fixed property order and decimal strings define content serialization v1.
  */
 export function prepareQuoteContent(value:unknown){
- if(!exact(value,['schemaVersion','title','recipient','workLocation','terms','timezone','expiryAt','proposedSchedule','internalNotes','documentDiscount','lines'])||value.schemaVersion!==1
-  ||!text(value.title,200,true)||!text(value.workLocation,4000,true,true)||!text(value.terms,8000,false,true)||!text(value.timezone,100,true)
-  ||!(value.expiryAt===null||customerInstant(value.expiryAt))||!optional(value.proposedSchedule,2000,true)||!optional(value.internalNotes,8000,true))return fail('content');
- try{new Intl.DateTimeFormat('en-US',{timeZone:value.timezone}).format(0);}catch{return fail('timezone');}
- const recipient=value.recipient;
- if(!exact(recipient,['customerId','leadId','displayName','phone','email'])||!optionalId(recipient.customerId)||!optionalId(recipient.leadId)||recipient.customerId===null&&recipient.leadId===null
-  ||!text(recipient.displayName,200,true)||!optional(recipient.phone,512)||!optional(recipient.email,512))return fail('recipient');
+ if(!exact(value,['schemaVersion','title','recipient','workLocation','terms','timezone','expiryAt','proposedSchedule','internalNotes','documentDiscount','lines'])||value.schemaVersion!==1)return fail('content');
+ const header=parseQuoteContentHeader({title:value.title,recipient:value.recipient,workLocation:value.workLocation,terms:value.terms,timezone:value.timezone,expiryAt:value.expiryAt,proposedSchedule:value.proposedSchedule,internalNotes:value.internalNotes}),recipient=header.recipient;
  if(!Array.isArray(value.lines)||value.lines.length===0||value.lines.length>1000)return fail('lines');
  const rows=value.lines.map(parseQuoteContentLine);
  let pricing:ReturnType<typeof calculateQuote>;
@@ -49,12 +56,12 @@ export function prepareQuoteContent(value:unknown){
  catch(error){return fail(error instanceof QuotePricingError?error.code:'pricing');}
  // Only these explicit fields can enter the customer representation. Source IDs,
  // internal notes and future private fields are never copied with object spread.
- const customer=Object.freeze({schemaVersion:1 as const,currency:'USD' as const,title:value.title,
-  recipient:Object.freeze({displayName:recipient.displayName,phone:recipient.phone,email:recipient.email}),workLocation:value.workLocation,terms:value.terms,timezone:value.timezone,expiryAt:value.expiryAt,proposedSchedule:value.proposedSchedule,
+ const customer=Object.freeze({schemaVersion:1 as const,currency:'USD' as const,title:header.title,
+  recipient:Object.freeze({displayName:recipient.displayName,phone:recipient.phone,email:recipient.email}),workLocation:header.workLocation,terms:header.terms,timezone:header.timezone,expiryAt:header.expiryAt,proposedSchedule:header.proposedSchedule,
   lines:Object.freeze(rows.map((row,index)=>{const price=pricing.lines[index]!;return Object.freeze({description:row.description,inclusions:row.inclusions,exclusions:row.exclusions,vehicle:row.vehicleLabel,condition:row.condition,
    grossCents:price.grossCents,lineDiscount:discountCopy(row.lineDiscount as QuoteDiscount|null),lineDiscountCents:price.lineDiscountCents,documentDiscountEligible:price.documentDiscountEligible,allocatedDiscountCents:price.allocatedDiscountCents,finalCents:price.finalCents,complimentaryReason:price.complimentaryReason});})),
   documentDiscount:discountCopy(value.documentDiscount as QuoteDiscount|null),grossCents:pricing.grossCents,lineDiscountCents:pricing.lineDiscountCents,documentDiscountCents:pricing.documentDiscountCents,totalCents:pricing.totalCents});
- const internal=Object.freeze({customerId:recipient.customerId,leadId:recipient.leadId,notes:value.internalNotes,
+ const internal=Object.freeze({customerId:recipient.customerId,leadId:recipient.leadId,notes:header.internalNotes,
   sources:Object.freeze(rows.map(row=>Object.freeze({stableLineKey:row.id,vehicleId:row.vehicleId,jobWide:row.jobWide,serviceVersionId:row.serviceVersionId}))),
   extremeReviewRequired:rows.some(row=>row.condition==='Extreme')});
  return Object.freeze({customer,internal,canonical:JSON.stringify({schemaVersion:1,customer,internal})});

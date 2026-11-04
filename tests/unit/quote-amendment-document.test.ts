@@ -10,6 +10,11 @@ import {prepareVersionedQuoteContent} from '../../src/commercial/quote-review-co
 import {QuoteAmendmentDocument} from '../../src/app/quotes/quote-amendment-document';
 function fixture(){const f=quoteFixture(),content={...f.input,documentDiscount:null as QuoteContentInput['documentDiscount']},parent={agreementId:randomUUID(),versionNo:'1',revisionId:f.revision.id,customerId:content.recipient.customerId!,sourceLeadId:null,content,contentHash:createHash('sha256').update(prepareVersionedQuoteContent(content).canonical).digest('hex')};return {f,input:{schemaVersion:1,businessId:f.business,familyId:f.family.id,parent,proposedContent:structuredClone(content)}};}
 const render=(comparison:QuoteAmendmentCustomerComparison)=>renderToStaticMarkup(createElement(QuoteAmendmentDocument,{comparison}));
+it('shows an accepted comparison as accepted while preserving earlier values and private-data boundaries',async()=>{
+ const {input,f}=fixture();input.proposedContent.lines=[{...input.proposedContent.lines[0]!,grossCents:'27001'},input.proposedContent.lines[1]!];const prepared=await prepareQuoteAmendmentComparison(input),html=renderToStaticMarkup(createElement(QuoteAmendmentDocument,{comparison:prepared.customer,accepted:true}));
+ for(const text of ['Accepted change to work','This change is accepted.','Earlier accepted total','Accepted total','Increase of $20.01','$550.00','$570.01','records no invoice, payment or refund'])expect(html).toContain(text);
+ for(const text of ['Proposed total','Proposed work','remains in effect until this change is separately accepted',f.input.internalNotes!,f.business,f.family.id,input.parent.agreementId])expect(html).not.toContain(text);
+});
 it('shows exact accepted/proposed amounts and honest unaccepted status without exposing actions or private source identities',async()=>{
  const {input,f}=fixture();input.proposedContent.lines=[{...input.proposedContent.lines[0]!,grossCents:'27001'},input.proposedContent.lines[1]!];const result=await prepareQuoteAmendmentComparison(input),html=render(result.customer);
  for(const label of ['Increase of $20.01','$550.00','$570.01','version 1','version 2','remains in effect until this change is separately accepted','records no invoice, payment or refund','<details','<summary','Accepted work','Proposed work'])expect(html).toContain(label);

@@ -1,0 +1,456 @@
+{
+  "formatVersion": 1,
+  "scope": "Saved cancellation-reason editing: actual UI/controller, private HTTP/client/directory, schema4 command and typed original recovery/reapproval/history; unregistered synthetic construction, not full cancellation or owner delivery",
+  "testedCheckoutHead": "7ada8443274247b31bdcdcc1551b634e361df3b3",
+  "uncommittedAtVerification": true,
+  "sourceFiles": [
+    {
+      "path": "src/app/quotes/amendments/review-and-sharing.tsx",
+      "sha256": "3d61a5b0170d1d2187d591fb00a8bdae7c15b3b224b3fdceccfdee293b648716"
+    },
+    {
+      "path": "src/app/quotes/amendments/workspace.tsx",
+      "sha256": "a77d92acb3762c069466751fdc681550f92a3032b9f392fbbc512f5e06f2dcbd"
+    },
+    {
+      "path": "src/app/quotes/quote-amendment-document.tsx",
+      "sha256": "0b32d81a5fd049631c42773d9016f9c3d39ffa66548d100225cfe586941f5532"
+    },
+    {
+      "path": "src/app/quotes/quote-document.tsx",
+      "sha256": "699c8961ceaaacda623cf6c667cf09fe9de38d510e28a213653d7a8299b607d1"
+    },
+    {
+      "path": "src/client/quote-amendment-workspace.ts",
+      "sha256": "17fb1e4c949b398e33aa0389ee985a0de452669a166b1ebd7de033a8b4de3432"
+    },
+    {
+      "path": "src/commercial/quote-amendment-contract.ts",
+      "sha256": "e3b0e27da05e3dbba82a25b01b2245b1916322f630b12b4a26e9cbf72d2cdebe"
+    },
+    {
+      "path": "src/commercial/quote-amendment-directory.ts",
+      "sha256": "fc1459d36c6b3bbaaf5db9b3586aa5e10cd15a625daebf155bf61a1055d8ccff"
+    },
+    {
+      "path": "src/commercial/quote-amendment-read.ts",
+      "sha256": "93715578b8d5064057849ada1f9fb19abc220812514bf7f594e4f861674ebc68"
+    },
+    {
+      "path": "src/commercial/quote-amendment-record.ts",
+      "sha256": "c1caa7c7258921905a2150078c496bd3875fadcf7212f5ec9da61cc8e42a6515"
+    },
+    {
+      "path": "src/commercial/quote-amendment-review-csv.ts",
+      "sha256": "7ad847f86f585dcc95a8245e78c578ebb42cbefa47d610891598dc793f46685a"
+    },
+    {
+      "path": "src/commercial/quote-cancellation-content.ts",
+      "sha256": "cd11416aacf6c130838814532fe36172fb4a5f57b3a965f831bb1e206eb1f504"
+    },
+    {
+      "path": "src/commercial/quote-draft-budget.ts",
+      "sha256": "f9708eeb3d11b2915886802b5e5f22b480352948b07c396c88991fe74bfe9724"
+    },
+    {
+      "path": "src/commercial/quote-review-content.ts",
+      "sha256": "e036858fbadfe23ff21e85c805738065ef7c5ebc13de5d4b837c37a263f8d1dd"
+    },
+    {
+      "path": "src/commercial/quote-storage-contract.ts",
+      "sha256": "40c4fea410ddde40acc5e0cb23a6508ecab74cd6db71d38b135076f1152af1be"
+    },
+    {
+      "path": "tests/integration/quote-amendment-acceptance-storage.test.mjs",
+      "sha256": "1d8d3c0d48d27a3a6f25a10c2e6a5c6575350dacba1eddcb849c630b14fad514"
+    },
+    {
+      "path": "tests/unit/quote-amendment-directory.test.ts",
+      "sha256": "70d23831ee9715857d78d3c4e006ab9bce4a04cafbbce578d11b356e2f0a8e66"
+    },
+    {
+      "path": "tests/unit/quote-amendment-source-csv.test.ts",
+      "sha256": "ed784d8eaa4afce9f4c9756c6a68f886f0741bb5c448f651717bcdb6128eccad"
+    },
+    {
+      "path": "tests/unit/quote-cancellation-content.test.ts",
+      "sha256": "38344f147dd111300dbaa7af438bd8be59a36bbf670a7fc5adc2c17657b6e677"
+    },
+    {
+      "path": "src/commercial/quote-cancellation-approval.ts",
+      "sha256": "dc99369e6fb65f951fb6a86818eab91554d6e43da62dc41ff4de8cfd1a506685"
+    },
+    {
+      "path": "src/commercial/quote-cancellation-comparison.ts",
+      "sha256": "c1e363b9645f937c6529495893f5b24eed43d6b34621c6f3dbb1b0166987b34f"
+    },
+    {
+      "path": "src/commercial/quote-limits.ts",
+      "sha256": "455e41a6a5e506d91cc08f22f25d568b16d7245f43e988a858788fe5d1fe7213"
+    },
+    {
+      "path": "tests/unit/quote-cancellation-app-contract.test.ts",
+      "sha256": "0c5e7d5caad0cba59aabdbcdceea1b8e603b2bd5a25ac2e381294790e4c05172"
+    },
+    {
+      "path": "tests/unit/quote-cancellation-app-fixture.ts",
+      "sha256": "4193b30f3c384b1b9988fb830abcd1b2892f29c64d41988ac7407f6bc4cc5c3e"
+    },
+    {
+      "path": "tests/unit/quote-cancellation-presentation.test.ts",
+      "sha256": "aa4f286731006fc12636bc210dfa2cec94939a4eec8e65fa72564ed0d078593f"
+    },
+    {
+      "path": "tests/unit/quote-cancellation-workspace.test.ts",
+      "sha256": "5b8c0ee44ea9f41e23cc35a623bfe93e8e3f816ed93c0987c791376a69651d8c"
+    },
+    {
+      "path": "src/app/globals.css",
+      "sha256": "d1dd06b8ddb172ceeacf448410eaa750c772d2c5c3c66ff3d7068e600005650f"
+    },
+    {
+      "path": "src/commercial/quote-content.ts",
+      "sha256": "801b930c724a76468dc49eb925f443c57d650b957a3ddba8f87cd9cadbfc5aec"
+    },
+    {
+      "path": "planning/proposals/quote-cancellation-lifecycle.sql",
+      "sha256": "4ae3b6803736d04dbfe47ac37945ecba38d1b9c611ddb670678f31aad212a8a9"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-booking-commands.sql",
+      "sha256": "e4e72a6c3fba18d99b114e42dd8d626542a38372a0714865fca204a20aba6274"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-current-reads.sql",
+      "sha256": "351b5027bf5b97b02b82d1b96d3746e3fe18806b0519b73a28d730b2641829be"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-storage.sql",
+      "sha256": "3b4580242ffa6170e87cc4b895afe7fc0fc39359eff13744d56caa104f4fba9e"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-input.sql",
+      "sha256": "f0c60495a18f1481a070f1e94ab44dda0035ce293e21c5abaa877051f277982d"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-ledger.sql",
+      "sha256": "e8f1209e616efe29804260c1b12316580bdd5c508dd465cc3855822401a42427"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-core.sql",
+      "sha256": "eee4575bab30a1cf82f3ed0945fcfb07607d65ce37610c44146fd8947c7c4232"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-result.sql",
+      "sha256": "a672c78d09438650103769572aa406b6e093692aae3d7e8a631b1194fdf7904b"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-closure.sql",
+      "sha256": "000969fdd8b6db7bed3a8a39996c00f27806954c878fdc6ede2dde3fcd1be33a"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-originals.sql",
+      "sha256": "137af2e310af50739a4a3fa8e20f8c76034a3fc26cfd01e2f1afaa87dc6f1303"
+    },
+    {
+      "path": "package.json",
+      "sha256": "aee982d60abc7d6dd035321f4167ead5e3810d1d6f225a58383215ed33861cab"
+    },
+    {
+      "path": "src/app/quotes/amendments/cancellation-creator.tsx",
+      "sha256": "a1d8b6598c0d54b2d476bd8164607cde314127b244aea6ccb6dc8f06e9f2f6f6"
+    },
+    {
+      "path": "src/client/quote-amendments.ts",
+      "sha256": "c1e3b2e8389d50d529f73599f32660ad294fa6ada9774712f23e2d4fd85b72d5"
+    },
+    {
+      "path": "tests/unit/quote-cancellation-creation.test.ts",
+      "sha256": "e27ff326ac8bc916d0a2e40428ed699824c6ef62006090d8f607bde9aa53f66b"
+    },
+    {
+      "path": "tests/integration/quote-amendment-auth.test.mjs",
+      "sha256": "ef974feb60ddecd945372844147c82162acf800e970c255e3194565ca763aedb"
+    },
+    {
+      "path": "tests/integration/quote-cancellation-auth.test.mjs",
+      "sha256": "13963df651ea8e4d4d2415087a0f4eba18d8a42a0cbf814df053e3998468bdcc"
+    },
+    {
+      "path": "planning/PHASE_5_AMENDMENT_ACCEPTANCE.md",
+      "sha256": "6490f32cb420bab98a10677d863f3e184b7658026c971baf65c721442dd91b72"
+    },
+    {
+      "path": "src/app/quotes/amendments/cancellation-editor.tsx",
+      "sha256": "54dcd19b172ef2ebeb43ce6ab2b3da82e47454376accab9ccfbc04debbde7378"
+    },
+    {
+      "path": "src/client/quote-editor-controller.ts",
+      "sha256": "b4bb79d9b6e1706c4deed97e275ededb71f90da081d553464e5f3b57a1ab5f69"
+    },
+    {
+      "path": "src/client/quotes.ts",
+      "sha256": "d018769d6f7980c8e7200b7836ef49d414ace2aa46b8ac1e7effb04216ef8046"
+    },
+    {
+      "path": "src/commercial/quote-directory.ts",
+      "sha256": "fe1ba3481b29c1fe6379e915b2f80dccb1488cb7f5822ac80b21249f27bf0e15"
+    },
+    {
+      "path": "src/commercial/quote-http.ts",
+      "sha256": "86c081bf1f6a5ee0915daa6b100000f03a9750c8196889e9ec351f6e8482009e"
+    },
+    {
+      "path": "src/commercial/quote-cancellation-edit-contract.ts",
+      "sha256": "eeeacaa2b49e6e6548d99c573d95e05ea78779348cc411641822b4dba336fec3"
+    },
+    {
+      "path": "tests/unit/quote-cancellation-edit.test.ts",
+      "sha256": "42728fc6e8bfdd3cf35c7de5b8b04130464dfa84ba05cd2e83f4b5d46d329da8"
+    },
+    {
+      "path": "tests/unit/quote-editor-controller.test.ts",
+      "sha256": "457d11bdac559c43c7129385d4232bac5e0ab29856d8658ed462cad2a991d53a"
+    },
+    {
+      "path": "planning/proposals/quote-cancellation-edit.sql",
+      "sha256": "c154e9be9b0391b722905dcdb7fb80687d00b4e32409c75615a7e4a3b628589a"
+    },
+    {
+      "path": "tests/support/quote-cancellation-edit-fixture.ts",
+      "sha256": "fb6e1b9c41ac94d9d2d096d0b9b06484cda7e1c381bd56a7bda3984bdd3b7b84"
+    }
+  ],
+  "predecessorFunctions": [
+    {
+      "name": "save_quote_draft",
+      "signature": "crest_commands.save_quote_draft(bytea,uuid,uuid,text,uuid,uuid,timestamp with time zone,uuid,uuid,uuid,integer,uuid,uuid,bigint,bigint,jsonb)",
+      "owner": "crest_quote_owner",
+      "predecessorSha256": "12954b3677bbbac5741361b579c14e9668895302c4da9bf336c752f18557c970"
+    },
+    {
+      "name": "quote_operation_result",
+      "signature": "crest_private.quote_operation_result(uuid,uuid,uuid)",
+      "owner": "crest_quote_owner",
+      "predecessorSha256": "aa85ec724a63de6d33ec284fe6ca1fcc92c1aa8da1e67b9ea3fb0fb4fa7274a7"
+    },
+    {
+      "name": "check_quote_audit",
+      "signature": "crest_private.check_quote_audit()",
+      "owner": "crest_quote_integrity_owner",
+      "predecessorSha256": "adf3c16782d884b7ffc17b832e1b7ff742d9e47c6c55a4bd9bc9cb14f3eaa55d"
+    },
+    {
+      "name": "valid_quote_cancellation_payload",
+      "signature": "crest_private.valid_quote_cancellation_payload(jsonb)",
+      "owner": "crest_quote_owner",
+      "predecessorSha256": "94ba655f2ae720fdc2472d48e0e622c1de3302fa08e8422ecc541d29511159a6"
+    },
+    {
+      "name": "validate_quote_revision_change",
+      "signature": "crest_private.validate_quote_revision_change()",
+      "owner": "crest_schema_owner",
+      "predecessorSha256": "0b8af9ef98b1aa8445dc41f7dbd5479e44ca458b25c120309df1389efe9f1380"
+    },
+    {
+      "name": "check_quote_aggregate",
+      "signature": "crest_private.check_quote_aggregate()",
+      "owner": "crest_quote_integrity_owner",
+      "predecessorSha256": "e41043dc20fb46edfcd31fe330ef482024cd0ecb5ed01c9efa73adf04edcf7a4"
+    }
+  ],
+  "claimPolicy": {
+    "name": "quote_command_operations_create",
+    "previousExpressionSha256": "fc4c7a47221db1d2acd5f3a5eed9488a42bc212e480b9f8b7105f3208723c826",
+    "onlyNewPermission": "quote.draft.save schema4 under the existing owner/business/operation/origin conditions; no new role or table grant"
+  },
+  "formats": {
+    "wire": 2,
+    "customerContent": 3,
+    "operation": "quote.draft.save",
+    "operationAndReceipt": 4,
+    "initialAndOrdinarySaves": "Strict existing wire1/content1/2 and receipt1/2 remain separate",
+    "creation": "Existing amendment creation/receipt3 unchanged",
+    "pendingReference": "Existing six opaque IDs/versions; no reason/content/hash/contact/authentication payload"
+  },
+  "verification": {
+    "coveredNativeCases": 128,
+    "genuineAuth": {
+      "path": ".local/cancellation-edit-native-v2/result.json",
+      "cases": 28,
+      "passed": 28,
+      "caseRange": [
+        101,
+        128
+      ],
+      "unchangedAuthSourceFiles": 201,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "sourceReportOverallPassed": false,
+      "limitation": "The original combined128-case report is retained as127/128, with its sole failure in SQL fixture99 before intended DB assertions. All28 actual Auth cases passed. Final SQL-only100 reruns that corrected case; every application/SQL/Auth test and fixture source byte is identical, excluding only the corrected SQL test and its new unit regression."
+    },
+    "native": {
+      "path": ".local/cancellation-edit-native-v3/result.json",
+      "cases": 100,
+      "passed": 100,
+      "failed": 0,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "retainedPublicSourceFiles": 204,
+      "phasing": "Final focused run repeats all100 affected phased actual-PG cases (93 retained plus7 edit cases), including corrected retirement99. Separately retains28 individually passed genuine-Auth cases from source-identical application/SQL/HTTP test inputs in v2. No skipped tests or waived guard; not all prefix cases rerun after each proposal, and not a full release."
+    },
+    "fullUnits": {
+      "path": ".local/cancellation-edit-all-units-v2.json",
+      "passed": 8104,
+      "failed": 0,
+      "skipped": 0
+    },
+    "types": {
+      "path": ".local/cancellation-edit-types-v6.log",
+      "passed": true
+    },
+    "affectedLint": {
+      "path": ".local/cancellation-edit-lint-v1.log",
+      "finalFixturePaths": [
+        ".local/cancellation-edit-lint-v2-fixtures.log",
+        ".local/cancellation-edit-lint-v3-fixtures.log"
+      ],
+      "passed": true
+    },
+    "productionBuild": {
+      "path": ".local/cancellation-edit-build-v1.log",
+      "passed": true
+    },
+    "componentBrowser": {
+      "path": ".local/cancellation-edit-browser/result.json",
+      "browser": "156.0.8078.4",
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screenshots": [
+        {
+          "path": ".local/cancellation-edit-browser/filled-360.png",
+          "width": 360,
+          "sample": "filled",
+          "sha256": "64509c5c8a0ad7d8ed73777f744c5620e63d13544c2633e97681f96d9a4495f9",
+          "bytes": 79240,
+          "manuallyInspected": true
+        },
+        {
+          "path": ".local/cancellation-edit-browser/invalid-360.png",
+          "width": 360,
+          "sample": "invalid",
+          "sha256": "88f09a9b5b4db94e1c2d71f91732b8f7d1c116a86beb8fe8ec1ad011e82084bf",
+          "bytes": 75166,
+          "manuallyInspected": true
+        },
+        {
+          "path": ".local/cancellation-edit-browser/filled-390.png",
+          "width": 390,
+          "sample": "filled",
+          "sha256": "61d65ada63bab4c76baf9ed1d6e7a8b38d5265417aab17e1d182b839c9010cdf",
+          "bytes": 79721,
+          "manuallyInspected": true
+        },
+        {
+          "path": ".local/cancellation-edit-browser/invalid-390.png",
+          "width": 390,
+          "sample": "invalid",
+          "sha256": "430f6a3192ed1c5cd36a13248d82ee2ab8b663291451c3224e7bc94a683d979a",
+          "bytes": 75638,
+          "manuallyInspected": true
+        },
+        {
+          "path": ".local/cancellation-edit-browser/filled-768.png",
+          "width": 768,
+          "sample": "filled",
+          "sha256": "12d558cda1a3665b41ed2f2e0c7f35be11192a2a89d7c336462aa7a36a20fc0e",
+          "bytes": 90492,
+          "manuallyInspected": true
+        },
+        {
+          "path": ".local/cancellation-edit-browser/invalid-768.png",
+          "width": 768,
+          "sample": "invalid",
+          "sha256": "5c176bf65b6df25cab5a2c104668b67c096db287cd74d32a9d8c9cf5933557a2",
+          "bytes": 81537,
+          "manuallyInspected": true
+        },
+        {
+          "path": ".local/cancellation-edit-browser/filled-1440.png",
+          "width": 1440,
+          "sample": "filled",
+          "sha256": "566ef14e4dd98c776b33b4eb6905ea227bf191221e3d1d166563e53765b41e6b",
+          "bytes": 98974,
+          "manuallyInspected": true
+        },
+        {
+          "path": ".local/cancellation-edit-browser/invalid-1440.png",
+          "width": 1440,
+          "sample": "invalid",
+          "sha256": "977ce7565f70f8cd6812adc6c14fccc5e18ef2aa2fc8faa616924f1999188d34",
+          "bytes": 85347,
+          "manuallyInspected": true
+        }
+      ],
+      "axeViolations": 0,
+      "overflow": false,
+      "minimumControlHeight": 44,
+      "keyboardFocus": true,
+      "unicodeAndInvalidReason": true,
+      "discard": true,
+      "uncertainSaveClearsPrivate": true,
+      "scope": "Actual cancellation editor/controller/comparison with synthetic authority/read/save doubles; not app authentication, database-save, WebKit, owner or device acceptance"
+    }
+  },
+  "completed": [
+    "Exact source/ACL/default-role/claim-policy guards protect the proposed extension; normal1/2, creation3 and all original source formats remain separate. A closed deferred verifier independently reconstructs result4 before COMMIT",
+    "Existing cancellation edits require a live existing content3 amendment, current parent and expected family/revision. Saves increment family/revision/content, return to Draft, retain the old approval/history and expose no current approval until separately reviewed again",
+    "Actual native edits preserve accepted obligations, visits and every unrelated business source. Exact old originals survive later edits; changed-body collisions, no-op content, stale observations and initial/ordinary profile substitution cannot create partial claims",
+    "Actual concurrent edits serialize to one saved version; genuine deferred COMMIT failure rolls back reason/approval/source/operation. Explicit absent-original retirement rejects late execution without any new operation kind",
+    "Typed server/client lookup recognizes4 explicitly and binds positive pending versions, epoch, IDs and optional live hash. Initial save parsers still refuse4; the initial editor keeps a cancellation original for Save review rather than treating it as its own save",
+    "The collapsed mobile editor validates the exact reason, labels saved versus unsaved comparison, fences review/history while dirty and clears private wording on hiding or an uncertain save. No checkbox, automatic retry, body persistence, financial/visit cancellation, fee or refund is added",
+    "Genuine password/TOTP/private HTTP/controller edits an approved cancellation, reopens after fresh sign-in, reviews/approves again and retrieves the complete selected record while preserving the previous approval. Dropped actual edit acknowledgment resolves one receipt4 original after genuine fresh sign-in with no resubmission",
+    "Actual HTTP outer-COMMIT failure never becomes a successful save; the prior reason remains saved and an absent original stays pending"
+  ],
+  "limits": [
+    "Cancellation editor currently exposes the reason; other metadata remain copied from preparation. No claim of a complete new general cancellation-metadata editor",
+    "Actual cancellation sharing/separate customer acceptance/resulting withdrawal/historical3 reopening/repeated chains and live completed/billed/credited/refunded/custody bounds remain unfinished",
+    "Complete amended source/export, registered53/frozen52-current independent recovery and genuine rendered whole-app/TLS/Chromium/WebKit/iPhone/full hosted release remain required",
+    "Browser evidence covers actual editor/controller/comparison with synthetic authority/API doubles. Genuine authentication/database commands are proven separately by native HTTP tests; no real-device or fake logged-in preview claim",
+    "No owner preview upgrade, source publication, real-data/finance/production activation, credential/MFA change or new service cost"
+  ],
+  "diagnostics": [
+    {
+      "path": ".local/cancellation-edit-native-v1/result.json",
+      "passed": 126,
+      "failed": 2,
+      "sourceStable": true,
+      "cleaned": true,
+      "cause": "The new retirement setup added recoveryEpoch to the strict four-field root. The HTTP failed-COMMIT trigger fixture also lost a dollar from each SQL delimiter through replacement-string semantics and could not install. Product SQL/application checks were unchanged."
+    },
+    {
+      "path": ".local/cancellation-edit-native-v2/result.json",
+      "passed": 127,
+      "failed": 1,
+      "sourceStable": true,
+      "cleaned": true,
+      "cause": "Corrected SQL fault installation passed, including all28 genuine Auth cases. The first reference-fixture repair incorrectly moved operation/epoch out of its six-field reference. The parser correctly refused that malformed test setup. A shared test-only fixture now constructs the actual four-field root/six-field reference, with an immediate pure regression before rerunning all100 affected SQL cases. No application, SQL, parser, grant, source, admission or release check was weakened."
+    }
+  ],
+  "ownerPreview": {
+    "source": "94acb9304602dfcff3466a641e94c125004582d3",
+    "publicHead": "07311f85fe8df407f2396019e1237e67c7b33581",
+    "schema": 52,
+    "ownerApplied": false,
+    "cancellationEnabled": false,
+    "laptop": "https://127.0.0.1:4319/",
+    "phone": "https://100.78.42.185:4319/",
+    "physicalPhoneCheck": "owner-deferred",
+    "realDataReady": false
+  },
+  "newServiceSpend": 0
+}

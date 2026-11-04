@@ -3,17 +3,18 @@ import {it,expect} from 'vitest';
 import {sha256,validateMigrationSet} from '../../src/tooling/migrations';
 import type {MigrationRegistry} from '../../src/tooling/migrations';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage';
-import registry from '../../supabase/migration-checksums.json';
-import coverage from '../../planning/SECURITY_EXPORT_COVERAGE.json';
-import compatibility from '../../release/compatibility.json';
+import registry from '../support/registered52-migration-checksums.json';
+import currentRegistry from '../../supabase/migration-checksums.json';
+import coverage from '../support/registered52-export-coverage.json';
+import compatibility from '../support/registered52-compatibility.json';
 import previous from '../support/registered51-migration-checksums.json';
 import previousCoverage from '../support/registered51-export-coverage.json';
 import previousCompatibility from '../support/registered51-compatibility.json';
 import adoption from '../../planning/QUOTE_AMENDMENT_SCHEMA52_ADOPTION.json';
 const bytes=(path:string)=>readFileSync(new URL('../../'+path,import.meta.url));
 it('registers all eight byte-exact reviewed bodies while retaining the entire51 migration prefix',()=>{
- expect(registry.migrations).toHaveLength(52);expect(registry.migrations.slice(0,51)).toEqual(previous.migrations);expect(()=>validateMigrationSet(registry as MigrationRegistry,new Map(registry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),previous as MigrationRegistry)).not.toThrow();
- const sql=bytes('supabase/migrations/'+adoption.migration.file);expect(sql.length).toBe(adoption.migration.bytes);expect(sha256(sql)).toBe(adoption.migration.sha256);expect(registry.migrations.at(-1)?.sha256).toBe(adoption.migration.sha256);expect(sha256(bytes('supabase/migration-checksums.json'))).toBe(adoption.migration.registrySha256);expect(adoption.proposalBodies).toHaveLength(8);let end=0;
+ expect(currentRegistry.migrations.slice(0,52)).toEqual(registry.migrations);expect(registry.migrations).toHaveLength(52);expect(registry.migrations.slice(0,51)).toEqual(previous.migrations);expect(()=>validateMigrationSet(registry as MigrationRegistry,new Map(registry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),previous as MigrationRegistry)).not.toThrow();
+ const sql=bytes('supabase/migrations/'+adoption.migration.file);expect(sql.length).toBe(adoption.migration.bytes);expect(sha256(sql)).toBe(adoption.migration.sha256);expect(registry.migrations.at(-1)?.sha256).toBe(adoption.migration.sha256);expect(sha256(bytes('tests/support/registered52-migration-checksums.json'))).toBe(adoption.migration.registrySha256);expect(adoption.proposalBodies).toHaveLength(8);let end=0;
  for(const part of adoption.proposalBodies){const original=bytes(part.path);expect(part.bytes).toBe(original.length);expect(sha256(original)).toBe(part.sha256);expect(sql.subarray(part.offset,part.offset+part.bytes)).toEqual(original);expect(sql.subarray(end,part.offset).toString()).toContain('RESET ROLE;');end=part.offset+part.bytes;}expect(sql.subarray(end).toString()).toContain('RESET ROLE;');
 });
 it('keeps immutable51 registry, coverage and compatibility separately identifiable',()=>{

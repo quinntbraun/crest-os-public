@@ -4,8 +4,10 @@ import {lookupSchedulingOriginal} from './scheduling-original';
 import {addresses} from './customer-addresses';
 import type {CustomerAddress} from '../customer/customer-address-contract';
 import type {createPendingSchedulingStore,PendingScheduling} from './pending-scheduling';
-import {parseBookJobSave,parseBookingPayload} from '../operations/confirmed-booking-contract';
-import type {BookJobSave,BookingPayload} from '../operations/confirmed-booking-contract';
+import {parseBookingPayload} from '../operations/confirmed-booking-contract';
+import type {BookingPayload} from '../operations/confirmed-booking-contract';
+import {parseBookJobCommand} from '../operations/amended-booking-contract';
+import type {BookJobCommand} from '../operations/amended-booking-contract';
 import {customerUuid} from '../customer/customer-contract';
 import {validateScopeAllocationPlan} from '../operations/scope-allocation-plan';
 import {quotes,QuoteClientError} from './quotes';
@@ -22,12 +24,12 @@ export type BookJobView=Readonly<{phase:Phase;busy:boolean;message:string;contex
 export const initialBookJobView:BookJobView=Object.freeze({phase:'loading',busy:true,message:'Checking accepted scope and booking access…',context:null,agreement:null,work:null,quoteRows:[],quotesMore:false,vehicleRows:[],vehiclesMore:false,jobId:'',reference:'',canRetry:false,savedJobId:'',addresses:[],addressesMore:false,addressesAvailable:false});
 export function createBookJobController(deps:{store:Store;blockers?:readonly Store[];change:(view:BookJobView)=>void;api?:typeof scheduling;session?:typeof authentication.session;lookup?:typeof lookupSchedulingOriginal;addressApi?:typeof addresses;quoteApi?:typeof quotes;vehicleApi?:typeof vehicles;id?:()=>string}){
  const api=deps.api??scheduling,session=deps.session??authentication.session,lookup=deps.lookup??lookupSchedulingOriginal,addressApi=deps.addressApi??addresses,id=deps.id??(()=>crypto.randomUUID());
- let alive=true,active:AbortController|null=null,phase:Phase='loading',message=initialBookJobView.message,context:Context|null=null,agreement:BookingAgreement|null=null,pending:PendingScheduling|null=null,original:BookJobSave|null=null,jobId='',savedJobId='',canRetry=false,rows:readonly CustomerAddress[]=[],addressesMore=false,addressesAvailable=false;
+ let alive=true,active:AbortController|null=null,phase:Phase='loading',message=initialBookJobView.message,context:Context|null=null,agreement:BookingAgreement|null=null,pending:PendingScheduling|null=null,original:BookJobCommand|null=null,jobId='',savedJobId='',canRetry=false,rows:readonly CustomerAddress[]=[],addressesMore=false,addressesAvailable=false;
  const quoteApi=deps.quoteApi??quotes,vehicleApi=deps.vehicleApi??vehicles;
  let selected:readonly BookingAgreement[]=[],extraVehicles:readonly BookingVehicleChoice[]=[],quoteRows:readonly QuoteChoice[]=[],vehicleRows:readonly Vehicle[]=[],quotesMore=false,vehiclesMore=false,quoteSearch='',vehicleSearch='',quoteCursor:string|null=null,vehicleCursor:string|null=null;
  const work=()=>combineBookingWork(selected,extraVehicles);
  const eligible=()=>!!pending&&!!context&&pending.businessId===context.context.businessId&&pending.binding===context.binding;
- const same=(a:Context,b:Context)=>a.binding===b.binding&&a.context.businessId===b.context.businessId&&a.context.operatorId===b.context.operatorId&&a.context.writeState===b.context.writeState&&a.context.recoveryEpoch===b.context.recoveryEpoch;
+ const same=(a:Context,b:Context)=>a.binding===b.binding&&a.context.businessId===b.context.businessId&&a.context.operatorId===b.context.operatorId&&a.amendedSchedulingAvailable===b.amendedSchedulingAvailable&&a.context.writeState===b.context.writeState&&a.context.recoveryEpoch===b.context.recoveryEpoch;
  const view=():BookJobView=>Object.freeze({phase,busy:!!active,message,context:phase==='ready'?context:null,agreement:phase==='ready'?agreement:null,work:phase==='ready'&&agreement?work():null,quoteRows:phase==='ready'?quoteRows:[],quotesMore:phase==='ready'&&quotesMore,vehicleRows:phase==='ready'?vehicleRows:[],vehiclesMore:phase==='ready'&&vehiclesMore,jobId:phase==='ready'?jobId:'',reference:phase==='pending'&&eligible()?pending!.reference.operationId:'',canRetry:phase==='pending'&&!active&&canRetry,savedJobId:phase==='committed'||phase==='pending'&&eligible()?savedJobId:'',addresses:phase==='ready'?rows:[],addressesMore:phase==='ready'&&addressesMore,addressesAvailable:phase==='ready'&&addressesAvailable});
  const emit=()=>{if(alive)deps.change(view());};
  function clearPrivate(){agreement=null;selected=[];extraVehicles=[];quoteRows=[];vehicleRows=[];quotesMore=false;vehiclesMore=false;quoteSearch='';vehicleSearch='';quoteCursor=null;vehicleCursor=null;original=null;rows=[];addressesMore=false;addressesAvailable=false;jobId='';canRetry=false;savedJobId='';}
@@ -137,9 +139,12 @@ export function createBookJobController(deps:{store:Store;blockers?:readonly Sto
  }
  const save=(payload:BookingPayload)=>{
   if(active||phase!=='ready'||!agreement||!context||context.context.writeState!=='ready')return Promise.resolve();
-  let parsed:BookingPayload;try{parsed=parseBookingPayload(payload,context.context.businessId);if(parsed.customerId!==agreement.customer.id||parsed.expectedCustomerVersion!==agreement.customer.version||parsed.operatorId!==context.context.operatorId)throw Error();const available=work();if(parsed.vehicles.some(row=>!available.vehicles.some(v=>v.id===row.vehicleId&&v.version===row.expectedVersion&&v.archivedAt===null)))throw Error();for(const plan of parsed.allocationPlans){const source=available.sources.find(source=>source.sourceAllocationId===plan.sourceAllocationId&&source.planSequence===plan.expectedSequence);if(!source)throw Error();validateScopeAllocationPlan({id:source.sourceAllocationId,grossInclusiveCents:source.grossInclusiveCents,discountInclusiveCents:source.discountInclusiveCents,amountCents:source.amountCents},plan.parts);}}
+  const prior=context;let parsed:BookingPayload,request:BookJobCommand;try{parsed=parseBookingPayload(payload,context.context.businessId);if(parsed.customerId!==agreement.customer.id||parsed.expectedCustomerVersion!==agreement.customer.version||parsed.operatorId!==context.context.operatorId)throw Error();const available=work();if(parsed.vehicles.some(row=>!available.vehicles.some(v=>v.id===row.vehicleId&&v.version===row.expectedVersion&&v.archivedAt===null)))throw Error();for(const plan of parsed.allocationPlans){const source=available.sources.find(source=>source.sourceAllocationId===plan.sourceAllocationId&&source.planSequence===plan.expectedSequence);if(!source)throw Error();validateScopeAllocationPlan({id:source.sourceAllocationId,grossInclusiveCents:source.grossInclusiveCents,discountInclusiveCents:source.discountInclusiveCents,amountCents:source.amountCents},plan.parts);}
+   const common={businessId:prior.context.businessId,operationId:id(),jobId,recoveryEpoch:prior.context.recoveryEpoch,expectedModeSequence:prior.context.modeVersion?.sequence??'0'};
+   const amended=available.agreements.some(row=>row.schemaVersion===2);if(amended&&!prior.amendedSchedulingAvailable)throw Error();
+   request=parseBookJobCommand(amended?{...common,schemaVersion:2,payload:{...parsed,allocationPlans:parsed.allocationPlans.map(plan=>({...plan,entitlementVersionId:available.sources.find(source=>source.sourceAllocationId===plan.sourceAllocationId)!.entitlementVersionId}))}}:{...common,schemaVersion:1,payload:parsed});
+  }
   catch{message='Review the vehicle, accepted work, location, actual times, travel and customer-confirmation fields. No booking was submitted.';emit();return Promise.resolve();}
-  const prior=context,request=parseBookJobSave({schemaVersion:1,businessId:prior.context.businessId,operationId:id(),jobId,recoveryEpoch:prior.context.recoveryEpoch,expectedModeSequence:prior.context.modeVersion?.sequence??'0',payload:parsed});
   let submitted=false;
   return run(async signal=>{
    const {proof,next}=await fresh(signal);if(!same(prior,next)||deps.store.read()!==null||deps.blockers?.some(store=>store.read()!==null))throw Error();context=next;

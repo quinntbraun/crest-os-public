@@ -1,0 +1,103 @@
+{
+  "formatVersion": 1,
+  "schemaVersion": 53,
+  "migration": {
+    "version": "20261104180000",
+    "file": "20261104180000_quote_amendment_acceptance.sql",
+    "sha256": "5ecdf7ecab6563d908ae87fd69d59308241596efca7ffabfd289f01d10f39a1c"
+  },
+  "bytes": 424683,
+  "registrySha256": "033199a5f2e528f629799cdba48901bf2a4687df1eea3166b0cf7bfcf5ec3c67",
+  "previousRegistrySha256": "2b69990d3bdc8d957207d80055799dfeed8ef3ca6dd871182f6859464888d78f",
+  "parts": [
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-storage.sql",
+      "offset": 267,
+      "bytes": 9663,
+      "sha256": "3b4580242ffa6170e87cc4b895afe7fc0fc39359eff13744d56caa104f4fba9e"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-input.sql",
+      "offset": 10104,
+      "bytes": 8920,
+      "sha256": "f0c60495a18f1481a070f1e94ab44dda0035ce293e21c5abaa877051f277982d"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-ledger.sql",
+      "offset": 19197,
+      "bytes": 6463,
+      "sha256": "e8f1209e616efe29804260c1b12316580bdd5c508dd465cc3855822401a42427"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-core.sql",
+      "offset": 25832,
+      "bytes": 27927,
+      "sha256": "eee4575bab30a1cf82f3ed0945fcfb07607d65ce37610c44146fd8947c7c4232"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-result.sql",
+      "offset": 53931,
+      "bytes": 29440,
+      "sha256": "a672c78d09438650103769572aa406b6e093692aae3d7e8a631b1194fdf7904b"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-closure.sql",
+      "offset": 83546,
+      "bytes": 78316,
+      "sha256": "000969fdd8b6db7bed3a8a39996c00f27806954c878fdc6ede2dde3fcd1be33a"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-acceptance-originals.sql",
+      "offset": 162040,
+      "bytes": 10133,
+      "sha256": "137af2e310af50739a4a3fa8e20f8c76034a3fc26cfd01e2f1afaa87dc6f1303"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-booking-commands.sql",
+      "offset": 172349,
+      "bytes": 90189,
+      "sha256": "e4e72a6c3fba18d99b114e42dd8d626542a38372a0714865fca204a20aba6274"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-current-reads.sql",
+      "offset": 262707,
+      "bytes": 21961,
+      "sha256": "351b5027bf5b97b02b82d1b96d3746e3fe18806b0519b73a28d730b2641829be"
+    },
+    {
+      "path": "planning/proposals/quote-cancellation-lifecycle.sql",
+      "offset": 284833,
+      "bytes": 85752,
+      "sha256": "4ae3b6803736d04dbfe47ac37945ecba38d1b9c611ddb670678f31aad212a8a9"
+    },
+    {
+      "path": "planning/proposals/quote-cancellation-edit.sql",
+      "offset": 370744,
+      "bytes": 44289,
+      "sha256": "c154e9be9b0391b722905dcdb7fb80687d00b4e32409c75615a7e4a3b628589a"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-accepted-source.sql",
+      "offset": 415195,
+      "bytes": 9404,
+      "sha256": "74d4dc8a8a6c95c376bb21afefe2230671d19e09d313918fd7599537e30bd1dd"
+    }
+  ],
+  "sourceProof": "planning/proposals/quote-amendment53-candidate-verification.json",
+  "candidateHeaderRetainedByteExact": true,
+  "headerMeaning": "The candidate provenance header is retained as part of the exact verified package, as with registered52. This registry entry registers those bytes; the header does not control registration.",
+  "ownerApplied": false,
+  "completeCrestExport": false,
+  "completeBackup": false,
+  "productionActivation": false,
+  "previousCoverage": {
+    "frozenFixture": "tests/support/registered52-export-coverage.json",
+    "sha256": "d3c6bb2549a93daad8a1023866626de4398dbdeaabef58f330ad5b9cedd169a6"
+  },
+  "previousCompatibility": {
+    "frozenFixture": "tests/support/registered52-compatibility.json",
+    "sha256": "2e6e962ece0ba28c3026783f2390f7e29412b33008c33293b1267a750098baf6"
+  },
+  "runtimeFinancePostingEnabled": false,
+  "originalRowsAndHistoryRewritten": false
+}
