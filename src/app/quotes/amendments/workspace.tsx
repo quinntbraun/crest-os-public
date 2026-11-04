@@ -7,6 +7,7 @@ import {quoteMoney} from '../../../commercial/quote-pricing';
 import {AmendmentDraftEditor} from './draft-editor';
 import {AmendmentReviewAndSharing} from './review-and-sharing';
 import {SavedAmendmentDownload} from './saved-record-download';
+import {AmendmentAllocationReview} from './allocation-review';
 
 /** Construction view. Amendment APIs remain closed by default; the complete
  * amendment feature, source/recovery adoption and release gates are pending. */
@@ -38,6 +39,7 @@ export function QuoteAmendmentWorkspace(){
    <p>{selected.parent.revision.customer_safe_snapshot.recipient.displayName} · Accepted agreement {selected.parent.versionNo} · {quoteMoney(selected.parent.revision.total_cents)}</p>
    {view.writesPaused&&<p className="notice">Changes are paused. Saved terms and history remain available.</p>}
    <details><summary>Accepted scope and terms</summary><QuoteDocument quote={selected.parent.revision.customer_safe_snapshot} stage="accepted"/></details>
+   <AmendmentAllocationReview key={JSON.stringify(['allocations',selected.family.business_id,selected.family.id,selected.family.version,selected.parent.agreementId,selected.parent.versionNo,selected.parent.customerId,selected.parent.revision.total_cents])} target={selected}/>
    {amendment&&<>
     <h3>Current amendment · {amendment.revision.state}</h3>
     {!amendment.parentIsCurrent&&<p className="notice">This amendment refers to an earlier accepted agreement. Review the current accepted terms before preparing further changes.</p>}
