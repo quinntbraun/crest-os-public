@@ -8,6 +8,9 @@ on:
       - 'src/commercial/quote-*'
       - 'src/client/quote-*'
       - 'src/client/quotes.ts'
+      - 'src/client/amendment-acceptance-planning.ts'
+      - 'src/app/schedule/**'
+      - 'tests/integration/quote-amendment-acceptance-product-browser.test.mjs'
       - 'tests/integration/quote-commercial-browser.test.mjs'
       - 'tests/integration/quote-review-browser.test.mjs'
       - 'tests/integration/quote-browser-response.test.mjs'
@@ -22,6 +25,10 @@ jobs:
   browser_feedback:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [commercial, amendment]
     env:
       CI: 'true'
       NEXT_TELEMETRY_DISABLED: '1'
@@ -53,12 +60,17 @@ jobs:
       - run: npm run build
       # Fast, genuine Auth/PostgreSQL/actual Next feedback. This does not replace
       # any mandatory full release/security/recovery/container gate in ci.yml.
-      - run: node --test --test-concurrency=1 tests/integration/quote-browser-response.test.mjs tests/integration/quote-commercial-browser.test.mjs tests/integration/quote-review-browser.test.mjs
+      - if: matrix.suite == 'commercial'
+        run: node --test --test-concurrency=1 tests/integration/quote-browser-response.test.mjs tests/integration/quote-commercial-browser.test.mjs tests/integration/quote-review-browser.test.mjs
+      - if: matrix.suite == 'amendment'
+        run: node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-amendment-acceptance-product-browser.test.mjs
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
-          name: commercial-browser-feedback-${{ github.sha }}-${{ github.run_attempt }}
-          path: .local/review/quote-commercial-*.png
+          name: commercial-browser-feedback-${{ matrix.suite }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            .local/review/quote-commercial-*.png
+            .local/review/amendment-acceptance-*.png
           include-hidden-files: true
           retention-days: 3
           if-no-files-found: warn

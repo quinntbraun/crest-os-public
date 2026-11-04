@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
-  "observedAt": "2026-11-04T21:47:51.347Z",
+  "observedAt": "2026-11-04T22:07:52.717Z",
   "scope": "Registered53 synthetic acceptance, current booking/cancellation, private included-source records and reopened Draft integration preparation",
-  "testedCheckoutHead": "6d7121e22ede62e4a14e5f427bd66b228f91defa",
+  "testedCheckoutHead": "4d4096b3d30f249360ba84c7d7f4a2f9bc79ebd2",
   "sourceFiles": [
     {
       "path": "supabase/migration-checksums.json",
@@ -173,6 +173,21 @@
       "path": "tests/unit/amendment-acceptance-fixture.ts",
       "bytes": 4573,
       "sha256": "8f42022761c450f587cae87e2949ac7ca7a474a2e82c5f27e30f280f647ab821"
+    },
+    {
+      "path": "tests/integration/recovery-drill.test.mjs",
+      "bytes": 62127,
+      "sha256": "f2d1cbf0c0f3019ab7ece48a920c6f12ed675a9572614600dcea9a192422431f"
+    },
+    {
+      "path": "src/app/workspace-home.tsx",
+      "bytes": 10209,
+      "sha256": "272e5c16a6ac317eebed569bd5de01d753de11db1b2437c5bb3fd934da7a3b02"
+    },
+    {
+      "path": ".github/workflows/quote-commercial-browser.yml",
+      "bytes": 3205,
+      "sha256": "b64dcec34fbf7149d81d116a151e40ccf2ffdc5a34467ea14a1c0ecefe444e0e"
     }
   ],
   "repositorySchema": 53,
@@ -188,58 +203,59 @@
     "Exact append-only12-body migration; frozen52 compatibility remains explicit",
     "Ordinary/cancellation acceptance and original recovery in the genuine test app; current-version visits and reopened paid/complimentary Draft",
     "Accepted document wording, stale-parent notice and booking label association corrected",
-    "Cancelled allocation planner now retains assigned/completed portions only; old cancelled plans/history remain unchanged; explicit reallocation required for active new work"
+    "Cancelled allocation planner now retains assigned/completed portions only; old cancelled plans/history remain unchanged; explicit reallocation required for active new work",
+    "Home no longer lists accepted quote amendments as unfinished; other unfinished V1 capabilities remain explicit."
   ],
   "verification": {
     "sourceGates": {
-      "startedAt": "2026-11-04T21:31:17.137Z",
+      "startedAt": "2026-11-04T22:04:18.808Z",
       "ownerPreviewUnchanged": true,
       "steps": [
         {
           "name": "units",
           "status": "passed",
-          "log": ".local/registered53-units-v6.log",
-          "startedAt": "2026-11-04T21:31:17.138Z",
+          "log": ".local/registered53-units-v7.log",
+          "startedAt": "2026-11-04T22:04:18.810Z",
           "exitCode": 0,
-          "finishedAt": "2026-11-04T21:31:38.412Z"
+          "finishedAt": "2026-11-04T22:04:45.810Z"
         },
         {
           "name": "types",
           "status": "passed",
-          "log": ".local/registered53-types-v6.log",
-          "startedAt": "2026-11-04T21:31:38.413Z",
+          "log": ".local/registered53-types-v7.log",
+          "startedAt": "2026-11-04T22:04:45.811Z",
           "exitCode": 0,
-          "finishedAt": "2026-11-04T21:31:44.381Z"
+          "finishedAt": "2026-11-04T22:04:52.198Z"
         },
         {
           "name": "lint",
           "status": "passed",
-          "log": ".local/registered53-lint-v6.log",
-          "startedAt": "2026-11-04T21:31:44.382Z",
+          "log": ".local/registered53-lint-v7.log",
+          "startedAt": "2026-11-04T22:04:52.199Z",
           "exitCode": 0,
-          "finishedAt": "2026-11-04T21:32:19.210Z"
+          "finishedAt": "2026-11-04T22:05:25.571Z"
         },
         {
           "name": "build",
           "status": "passed",
-          "log": ".local/registered53-build-v6.log",
-          "startedAt": "2026-11-04T21:32:19.211Z",
+          "log": ".local/registered53-build-v7.log",
+          "startedAt": "2026-11-04T22:05:25.572Z",
           "exitCode": 0,
-          "finishedAt": "2026-11-04T21:32:50.772Z"
+          "finishedAt": "2026-11-04T22:05:57.186Z"
         },
         {
           "name": "server",
           "status": "passed",
-          "log": ".local/registered53-server-v6.log",
-          "startedAt": "2026-11-04T21:32:50.774Z",
+          "log": ".local/registered53-server-v7.log",
+          "startedAt": "2026-11-04T22:05:57.187Z",
           "exitCode": 0,
-          "finishedAt": "2026-11-04T21:32:50.989Z"
+          "finishedAt": "2026-11-04T22:05:57.453Z"
         }
       ],
       "unitTests": 8165,
       "unitFailures": 0,
       "passed": true,
-      "finishedAt": "2026-11-04T21:32:51.011Z"
+      "finishedAt": "2026-11-04T22:05:57.478Z"
     },
     "registeredUpgrade": {
       "report": ".local/registered53-upgrade-v1/result.json",
@@ -302,6 +318,51 @@
       "affectedLintPassed": true,
       "newFullCIPassed": false,
       "sourceGateScope": "8165 units/types/full lint/build were on73a01d4 before this test-support-only correction. This helper has final affected lint and actual combined recovery proof; fresh full CI remains required."
+    },
+    "currentSchemaRecovery": {
+      "report": ".local/registered53-current-recovery-v1/result.json",
+      "passed": 37,
+      "total": 37,
+      "failed": 0,
+      "skipped": 0,
+      "sourceStable": true,
+      "ownedCleaned": true,
+      "registeredSchema": 53,
+      "sourceTables": 68,
+      "requiredColumns": 1058,
+      "excludedColumns": 10,
+      "physicalColumns": 1068,
+      "allThreeNewColumnsIndividuallyOmissionTested": true,
+      "wrong52LabelRejected": true,
+      "scope": "Actual encrypted source-loss recovery in fresh process and separate cluster, exact schema/grants/table inventory and retained operational/customer/history/object facts. Frozen52 profile/candidate checks unchanged. Not complete production recovery or real-use acceptance."
+    },
+    "ci407Diagnostic": {
+      "publicSource": "cebe54ed7e13a7ac835ffd2de6af791e4b4d0e9f",
+      "run": 41919671988,
+      "expense": 41919671954,
+      "expensePassed": true,
+      "providerEvidencePassed": true,
+      "failure": "General current-schema recovery still expected52 and1065 columns although actual recovery correctly restored53.",
+      "correction": "Explicit53/1068-column current expectations, all three new-column omission checks and wrong52-label refusal. No restore/coverage verifier or frozen52 assertion weakened.",
+      "currentNativePassed": 37,
+      "newFullCIPassed": false
+    },
+    "focusedBrowserWorkflow": {
+      "checkedAt": "2026-11-04T22:11:16.947Z",
+      "parser": "existing local yaml2.8.1",
+      "addedDependencies": 0,
+      "permissionsUnchanged": true,
+      "databaseAndEnvironmentUnchanged": true,
+      "fullReleaseWorkflowUnchanged": true,
+      "originalThreeCommercialSuitesRetained": true,
+      "newGenuineAmendmentJourneyInBothEngines": true,
+      "matrixJobInstances": 2,
+      "jobDeadlineMinutes": 15,
+      "failFast": false,
+      "artifactNamesDoNotCollide": true,
+      "successScreenshotGlobsOnly": true,
+      "scope": "Early actual commercial/amendment feedback on separate owned Linux jobs; does not replace any full CI, authorization, accounting, recovery or release gate.",
+      "actualExecutionPassed": false
     }
   },
   "delivery": {
@@ -317,5 +378,6 @@
     "Fresh independent prior-schema recovery and immutable accepted source before any owner53 upgrade",
     "Full V1 field/time/custody/photos/completion/follow-up; finance/reporting/mileage/receipts; complete portability/recovery/import/cutover; Google Calendar"
   ],
-  "spend": 0
+  "spend": 0,
+  "testedWorkingTree": true
 }
