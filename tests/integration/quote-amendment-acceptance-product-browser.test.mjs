@@ -12,12 +12,26 @@ async function command(page,label,path,message){
  let committed=false;
  const response=page.waitForResponse(r=>{if(new URL(r.url()).pathname===path&&r.request().method()==='POST'){committed=true;return true;}return false;});
  const read=page.waitForResponse(r=>committed&&new URL(r.url()).pathname==='/api/business/quotes/amendments/read'&&r.request().method()==='POST');
+ // Observe both immediately: a primary click/assertion failure closes the
+ // browser and rejects unused waiters. Their rejection must not interrupt
+ // fixture cleanup or replace that primary failure. Normal awaits still fail.
+ void response.catch(()=>undefined);void read.catch(()=>undefined);
  await page.getByRole('button',{name:label,exact:true}).click();
  const saved=await response;assert.equal(saved.status(),200);const result=await saved.json();assert.equal(result.state,'committed');
  const current=await read;assert.equal(current.status(),200);await current.finished();
  if(message)await expect(page.getByRole('status')).toContainText(message);
  return result.receipt;
 }
+test('browser command waiters preserve primary failures through cleanup',async()=>{
+ for(const fault of ['http','click']){
+  const primary=new Error('SYNTHETIC_PRIMARY_CLICK_FAILURE'),pending=[];let waits=0;
+  const page={waitForResponse(){const first=waits++===0;return fault==='http'&&first?Promise.resolve({status:()=>503}):new Promise((_,reject)=>pending.push(reject));},getByRole(){return {async click(){if(fault==='click')throw primary;}};}};
+  await assert.rejects(command(page,'Synthetic action','/api/business/quotes/amendments/create'),error=>fault==='click'?error===primary:error.name==='AssertionError'&&error.actual===503&&error.expected===200);
+  for(const reject of pending)reject(new Error('SYNTHETIC_BROWSER_CLOSED_AFTER_PRIMARY_FAILURE'));
+  // Node's test runner fails on any unhandled rejection from these waiters.
+  await new Promise(resolve=>setImmediate(resolve));
+ }
+});
 async function reviewAndShare(page){
  await command(page,'Request review of saved amendment','/api/business/quotes/review/submit','Amendment review requested and reloaded.');
  await command(page,'Approve this exact amendment','/api/business/quotes/review/approve','Amendment approval recorded and reloaded.');
@@ -46,7 +60,7 @@ async function confirm(page){
 for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' genuine53 amendment acceptance, bound visit, cancellation recovery and reopened Draft',{timeout:600000},async t=>{
  const phase=step=>console.log('SYNTHETIC_AMENDMENT_BROWSER_PHASE '+name+' '+step);
  const bounded=async(label,run)=>{phase(label+'_started');let timer;try{return await Promise.race([Promise.resolve().then(run),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('SYNTHETIC_BROWSER_STEP_TIMEOUT_'+label)),20000);})]);}finally{clearTimeout(timer);phase(label+'_finished');}};
- const f=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true});let browser,page;
+ const f=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true});let browser,page;const transportFailures=[];
  t.signal.addEventListener('abort',()=>{void browser?.close().catch(()=>{});},{once:true});
  try{
   assert.equal((await f.client.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,53);
@@ -54,7 +68,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   let next=0,limited=0,accepts=0;const errors=[];
   // Human reading pace, not retries or a changed server admission window.
   await page.route('**/api/**',async route=>{const now=Date.now(),wait=Math.max(0,next-now);next=Math.max(next,now)+650;if(wait)await new Promise(resolve=>setTimeout(resolve,wait));await route.continue();});
-  page.on('response',r=>{if(new URL(r.url()).pathname.startsWith('/api/')&&r.status()===429)limited++;});
+  page.on('response',r=>{const path=new URL(r.url()).pathname;if(!path.startsWith('/api/'))return;if(r.status()===429)limited++;if(r.status()>=400){const category=path==='/api/auth/session'?'auth_session':path==='/api/business/quotes/amendments/create'?'amendment_create':path==='/api/business/quotes/amendments/read'?'amendment_read':path.startsWith('/api/business/quotes/')?'quote_other':path.startsWith('/api/business/scheduling/')?'scheduling':'other_api';transportFailures.push({category,status:r.status()});if(transportFailures.length>8)transportFailures.shift();}});
   page.on('request',r=>{if(new URL(r.url()).pathname==='/api/business/quotes/amendments/accept')accepts++;});
   page.on('pageerror',error=>errors.push(error.name));
   await page.goto(f.origin+'/sign-in');const credentials=f.credentials();
@@ -123,6 +137,6 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await reopened.getByRole('button',{name:'Add proposed line',exact:true}).click();await reopened.getByLabel('Scope',{exact:true}).selectOption('job-wide');await reopened.getByLabel('Work description',{exact:true}).fill('Synthetic separately requested final inspection');await reopened.getByLabel('All-in amount (USD)',{exact:true}).fill('35.50');
   await reopened.getByRole('button',{name:'Add proposed line',exact:true}).click();const complimentary=reopened.getByRole('group',{name:'Proposed line 2',exact:true});await complimentary.getByLabel('Scope',{exact:true}).selectOption('job-wide');await complimentary.getByLabel('Work description',{exact:true}).fill('Synthetic courtesy review');await complimentary.getByLabel('All-in amount (USD)',{exact:true}).fill('0');await expect(reopened.getByRole('button',{name:'Save new amendment Draft',exact:true})).toBeDisabled();await complimentary.getByLabel('Complimentary-work reason',{exact:true}).fill('Synthetic explicitly offered courtesy inspection.');await expect(reopened.getByRole('group',{name:'Proposed line 1',exact:true}).getByLabel('Complimentary-work reason',{exact:true})).toHaveCount(0);
   await capture('reopening',reopened);console.log('SYNTHETIC_AMENDMENT_BROWSER_PHASE '+name+' prepared_reopening');const reopenedReceipt=await command(page,'Save new amendment Draft','/api/business/quotes/amendments/create','saved');assert.deepEqual((await f.client.query('SELECT gross_cents::text AS gross,final_cents::text AS amount,complimentary_reason AS reason FROM crest.quote_items WHERE business_id=$1 AND revision_id=$2 ORDER BY gross_cents DESC,stable_line_key',[f.business,reopenedReceipt.revisionId])).rows,[{gross:'3550',amount:'3550',reason:null},{gross:'0',amount:'0',reason:'Synthetic explicitly offered courtesy inspection.'}]);await selectCurrent();await page.getByText('Edit proposed work and pricing',{exact:true}).click();await expect(page.getByLabel('All-in amount (USD)',{exact:true}).first()).toHaveValue('35.50');await expect(page.getByLabel('All-in amount (USD)',{exact:true}).last()).toHaveValue('0.00');await expect(page.getByRole('form',{name:'Amendment draft',exact:true}).getByRole('group',{name:'Proposed line 2',exact:true}).getByLabel('Complimentary-work reason',{exact:true})).toHaveValue('Synthetic explicitly offered courtesy inspection.');assert.equal(accepts,2);assert.deepEqual(errors,[]);assert.equal(limited,0);console.log('SYNTHETIC_AMENDMENT_BROWSER_PHASE '+name+' complete');
- }catch(error){console.log('SYNTHETIC_AMENDMENT_BROWSER_FAILURE '+JSON.stringify({engine:name,events:f.authDiagnostics(),kind:error?.message?.startsWith('SYNTHETIC_BROWSER_STEP_TIMEOUT_')?error.message:error.name}));if(page)await page.screenshot({path:'.local/amendment-acceptance-'+name+'-failure.png',fullPage:true}).catch(()=>{});throw error;}
+ }catch(error){console.log('SYNTHETIC_AMENDMENT_BROWSER_FAILURE '+JSON.stringify({engine:name,events:f.authDiagnostics(),transportFailures,matcher:typeof error?.matcherResult?.name==='string'&&/^[A-Za-z0-9_]{1,40}$/.test(error.matcherResult.name)?error.matcherResult.name:null,kind:error?.message?.startsWith('SYNTHETIC_BROWSER_STEP_TIMEOUT_')?error.message:error.name}));if(page)await page.screenshot({path:'.local/amendment-acceptance-'+name+'-failure.png',fullPage:true}).catch(()=>{});throw error;}
  finally{try{await browser?.close();}finally{await f.close();}}
 });
