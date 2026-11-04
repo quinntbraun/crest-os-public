@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "observedAt": "2026-11-04T22:07:52.717Z",
+  "observedAt": "2026-11-04T22:24:34.705Z",
   "scope": "Registered53 synthetic acceptance, current booking/cancellation, private included-source records and reopened Draft integration preparation",
   "testedCheckoutHead": "4d4096b3d30f249360ba84c7d7f4a2f9bc79ebd2",
   "sourceFiles": [
@@ -111,8 +111,8 @@
     },
     {
       "path": "tests/integration/quote-amendment-acceptance-product-browser.test.mjs",
-      "bytes": 22940,
-      "sha256": "8cb8ae3ae719f442f5520d4c7f69403e05e18da062eb062c0cf35f5f12de546c"
+      "bytes": 23416,
+      "sha256": "de84fc47225ab876238c2f86d6fc190b22608c38c0eea91578a21c230e68e253"
     },
     {
       "path": "tests/integration/quote-amendment-reopening-auth.test.mjs",
@@ -363,6 +363,21 @@
       "successScreenshotGlobsOnly": true,
       "scope": "Early actual commercial/amendment feedback on separate owned Linux jobs; does not replace any full CI, authorization, accounting, recovery or release gate.",
       "actualExecutionPassed": false
+    },
+    "focused408": {
+      "source": "df27ba6f99ec665617118c6a26169002120dcd96",
+      "run": 41923323514,
+      "amendmentJob": 126901152095,
+      "commercialPassed": true,
+      "enginesReachedAcceptedCancellationAndLostReplyRecovery": [
+        "chromium",
+        "webkit"
+      ],
+      "journeysPassed": 0,
+      "total": 2,
+      "failure": "Final reopened Draft test locator matched both lines complimentary-reason controls.",
+      "correction": "Scope the input to Proposed line2, retain blank paid-line reason assertion and assert the exact saved complimentary reason after reload. No application or existing journey check removed.",
+      "fullReleasePassed": false
     }
   },
   "delivery": {
