@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "observedAt": "2026-11-04T22:24:34.705Z",
+  "observedAt": "2026-11-04T22:37:26.760Z",
   "scope": "Registered53 synthetic acceptance, current booking/cancellation, private included-source records and reopened Draft integration preparation",
   "testedCheckoutHead": "4d4096b3d30f249360ba84c7d7f4a2f9bc79ebd2",
   "sourceFiles": [
@@ -111,8 +111,8 @@
     },
     {
       "path": "tests/integration/quote-amendment-acceptance-product-browser.test.mjs",
-      "bytes": 23416,
-      "sha256": "de84fc47225ab876238c2f86d6fc190b22608c38c0eea91578a21c230e68e253"
+      "bytes": 23849,
+      "sha256": "327a76b4a853586e5e94a28f4e355ac69fff77eeb28ee2c104131207a803bece"
     },
     {
       "path": "tests/integration/quote-amendment-reopening-auth.test.mjs",
@@ -377,6 +377,20 @@
       "total": 2,
       "failure": "Final reopened Draft test locator matched both lines complimentary-reason controls.",
       "correction": "Scope the input to Proposed line2, retain blank paid-line reason assertion and assert the exact saved complimentary reason after reload. No application or existing journey check removed.",
+      "fullReleasePassed": false
+    },
+    "focused409": {
+      "source": "2e9c2c149dd0dc2b50bc792cbc4fa3235cea07ff",
+      "run": 41925331796,
+      "amendmentJob": 126908115249,
+      "journeysPassed": 0,
+      "total": 2,
+      "enginesReachedAcceptedCancellationAndLostReplyRecovery": [
+        "chromium",
+        "webkit"
+      ],
+      "failure": "Test expected an empty reason control on a paid line after progressive validation deliberately removed that unused control.",
+      "correction": "Assert paid-line reason is absent in UI and NULL in actual committed items; retain exact complimentary reason UI reload and durable-row assertions for the zero-price line. Product behavior and validation unchanged.",
       "fullReleasePassed": false
     }
   },
