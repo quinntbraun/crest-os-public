@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "observedAt": "2026-11-04T21:37:40.227Z",
+  "observedAt": "2026-11-04T21:47:51.347Z",
   "scope": "Registered53 synthetic acceptance, current booking/cancellation, private included-source records and reopened Draft integration preparation",
   "testedCheckoutHead": "6d7121e22ede62e4a14e5f427bd66b228f91defa",
   "sourceFiles": [
@@ -51,8 +51,8 @@
     },
     {
       "path": "tests/support/recovery-drill.mjs",
-      "bytes": 29237,
-      "sha256": "85a86606a08b812c2553a9a6d5f2c60d707997796dcb91eb67690c0cee694ff8"
+      "bytes": 29408,
+      "sha256": "38c9be255a7216bf841680bffa9dbfd2e1d4212ec12e453c4b47b1066bf942a1"
     },
     {
       "path": "package.json",
@@ -286,7 +286,23 @@
       "failed": 0,
       "skipped": 0
     },
-    "retainedAuthCleanup": ".local/registered53-webkit-v6-auth-cleanup.json"
+    "retainedAuthCleanup": ".local/registered53-webkit-v6-auth-cleanup.json",
+    "ci406Diagnostic": {
+      "publicSource": "6f91b5338cd8eb9a06b8615df2a6799f760bb277",
+      "fullRun": 41918388720,
+      "expenseRun": 41918388717,
+      "expensePassed": 117,
+      "expenseTotal": 118,
+      "failure": "Pending-receipt capture correctly refused, but successful coverage phase remained the failure label instead of snapshot.",
+      "correction": "Reset stage to snapshot after coverage succeeds. Actual coverage checks, pending-receipt refusal, empty output directory and independent database/object restore assertions unchanged.",
+      "nativeReport": ".local/registered53-expense-recovery-v1/result.json",
+      "nativePassed": 1,
+      "sourceStable": true,
+      "ownedCleaned": true,
+      "affectedLintPassed": true,
+      "newFullCIPassed": false,
+      "sourceGateScope": "8165 units/types/full lint/build were on73a01d4 before this test-support-only correction. This helper has final affected lint and actual combined recovery proof; fresh full CI remains required."
+    }
   },
   "delivery": {
     "acceptedLocal": "94acb9304602dfcff3466a641e94c125004582d3",

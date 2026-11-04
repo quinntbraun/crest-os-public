@@ -220,7 +220,9 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       const columns=(await client.query("SELECT n.nspname||'.'||c.relname AS \"table\",a.attname AS \"column\" FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN('crest','crest_private') AND c.relkind IN('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2")).rows;
       verifyExportCoverage(profile===legacy52Profile?legacy52Coverage:profile.schemaVersion===53?amendment53Coverage:currentCoverage,columns,profile.schemaVersion);
     }
-    const rows=await inventory(client),roles=await roleDefinitions(client);
+    // Coverage has passed. Pending-object/source refusal belongs to snapshot
+    // capture, rather than being misreported as a schema-coverage failure.
+    stage='snapshot';const rows=await inventory(client),roles=await roleDefinitions(client);
     // PG stores a policy's role set in OID order. Preserve the relative role
     // creation order for53 so a multi-role policy deparses byte-exact after
     // restore; do not normalize away policy or permission differences.
