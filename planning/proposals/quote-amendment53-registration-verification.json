@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "observedAt": "2026-11-04T22:54:31.916Z",
+  "observedAt": "2026-11-04T23:05:25.423Z",
   "scope": "Registered53 synthetic acceptance, current booking/cancellation, private included-source records and reopened Draft integration preparation",
   "testedCheckoutHead": "4d4096b3d30f249360ba84c7d7f4a2f9bc79ebd2",
   "sourceFiles": [
@@ -111,8 +111,8 @@
     },
     {
       "path": "tests/integration/quote-amendment-acceptance-product-browser.test.mjs",
-      "bytes": 25692,
-      "sha256": "2a8249ccb13829cff07a44646f6ceae54665e6ba051467d83103717cf57e2dcb"
+      "bytes": 25827,
+      "sha256": "1b55a05a8423eb970c93287ed4d6f643b7a78e5c94dffee6180bcb6c749bb9ff"
     },
     {
       "path": "tests/integration/quote-amendment-reopening-auth.test.mjs",
@@ -424,6 +424,26 @@
       "rolesOrLimitsChanged": false,
       "mutationRetriesAdded": false,
       "fullReleasePassed": false
+    },
+    "focused411": {
+      "source": "11ee0ddf35df02b39d6b2c006941c815be588093",
+      "run": 41929470826,
+      "amendmentJob": 126922384994,
+      "regressionPassed": 1,
+      "journeysPassed": 0,
+      "total": 2,
+      "enginesReachedReopenedDraftDurableRows": [
+        "chromium",
+        "webkit"
+      ],
+      "paidAndComplimentaryRowsExact": true,
+      "fixtureCleanupCompleted": true,
+      "prior410PrimaryFailureReproduced": false,
+      "failure": "Last UI assertion searched for Proposed line2 inside the intentionally collapsed saved work-line disclosure. Both engines had already verified exact committed paid and complimentary rows.",
+      "correction": "Explicitly open the saved Line2 summary before asserting its accessible complimentary-reason value. Retain all real-MFA/API/database, history, private export, revised booking, cancellation, lost-reply recovery and read/reload assertions. Product behavior unchanged.",
+      "affectedLintPassed": true,
+      "waiterRegressionPassed": 1,
+      "newFullReleasePassed": false
     }
   },
   "delivery": {
