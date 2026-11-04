@@ -1,0 +1,132 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "runtimeEnabled": false,
+  "normalApplicationRoutesRegistered": false,
+  "isolatedTestFactoryOptIn": true,
+  "existingMigrationCount": 51,
+  "status": "genuine_mfa_private_http_real_clients_and_pg_verified_not_owner_app_integrated",
+  "sourceHeadBefore": "b18b09c943322108ad72873db860dea4af14164c",
+  "files": [
+    {
+      "path": "src/commercial/quote-amendment-directory.ts",
+      "bytes": 9181,
+      "sha256": "a60b7197e71b71b39115f35e8d27c9bc7ac48f94c0a5ec0ae9a9a78828164078"
+    },
+    {
+      "path": "src/commercial/quote-amendment-http.ts",
+      "bytes": 5942,
+      "sha256": "1791962b37c60f260a31978a518cb0bfcc777a15ed5f34f59f1f7b47068d595e"
+    },
+    {
+      "path": "src/client/quote-amendments.ts",
+      "bytes": 7770,
+      "sha256": "64bfafd57888990118c3e9b5f67bdfc7aeeef26965a9c00317dfdd3b64718f89"
+    },
+    {
+      "path": "src/commercial/quote-amendment-read.ts",
+      "bytes": 11685,
+      "sha256": "8dfbf9527cf5911ad51d62b4793a0f405067e917fbd05c8fea805103eec3dcaa"
+    },
+    {
+      "path": "tests/integration/quote-amendment-auth.test.mjs",
+      "bytes": 34158,
+      "sha256": "830d47f23feb0404996a416d107859df191e57d5dfdd89aaad5d145c8fb32625"
+    },
+    {
+      "path": "tests/unit/quote-amendment-fixture.ts",
+      "bytes": 3249,
+      "sha256": "e17a83250285d031748cbec1631e963c3e55dd996147db531b5a0585cc00f2d2"
+    },
+    {
+      "path": "tests/unit/quote-amendment-directory.test.ts",
+      "bytes": 10318,
+      "sha256": "1b761c2cdfa033ff646ddca71e7783ecb5989a4db23e69b28e560220e81e760f"
+    },
+    {
+      "path": "tests/unit/quote-amendments-client.test.ts",
+      "bytes": 8659,
+      "sha256": "63e6205fc95d937cf2f140f1bf5b4f5a4d68291bdfeb31ff57a0d44080730639"
+    },
+    {
+      "path": "tests/support/real-auth-service.mjs",
+      "bytes": 8134,
+      "sha256": "3959f65daa4c11f1670f485dccc9965bb9545988eaae5f9f90dabd28ca46c0ae"
+    },
+    {
+      "path": "package.json",
+      "bytes": 14693,
+      "sha256": "664ab9723aabc105bd5bd6d539eba57005810015552676138ddc72d795c4fd66"
+    },
+    {
+      "path": "supabase/migration-checksums.json",
+      "bytes": 9681,
+      "sha256": "6460d57d51c41f89c7dffffc456610c730566fde414dd13352e9a1844fc1a4a4"
+    }
+  ],
+  "verification": {
+    "actualDatabaseAndAuthCases": 90,
+    "priorDatabaseCases": 78,
+    "genuinePasswordTotpHttpClientCases": 12,
+    "passed": 90,
+    "failed": 0,
+    "skipped": 0,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true,
+    "fullUnits": 7609,
+    "unitFailures": 0,
+    "unitSkips": 0,
+    "newBoundaryDoubleCases": 55,
+    "typesPassed": true,
+    "fullLintAndFinalFixtureLintPassed": true,
+    "productionBuildPassed": true,
+    "publicBoundary1347FilesPassed": true,
+    "canonicalAndImmutable51RegistryPassed": true,
+    "directPinsRegistryLicenses298PackagesPassed": true,
+    "stagedSecretScanPassed": true,
+    "mandatoryGenuineAuthCiScriptUpdated": true,
+    "currentSourceHostedReleaseRun": null,
+    "genuineMfaClaimed": true,
+    "browserCookieOrTlsAcceptanceClaimed": false,
+    "physicalPhoneClaimed": false,
+    "completeAmendmentAppWorkflowClaimed": false
+  },
+  "decisions": [
+    "Reuse the existing provider/session, restricted sessionDatabase, CSRF/origin, ordinary request admission and private response boundaries. Dedicated fixed18-argument create and23-argument sharing calls bind immutable parent/current versions, prepared content, exact original receipts and live fingerprints.",
+    "No acknowledgment escapes before commandTransaction confirms COMMIT. Pre-submit, definite denial/conflict/recovery pause and unknown post-submission outcomes remain distinct. Unknown outcomes are never automatically retried or retired.",
+    "Directory results stay private non-serializable values until explicitly handled inside the protected HTTP factory. Opaque original lookup validates the complete retained reference and its historical epoch without current-epoch rebasing or persisted content/hashes.",
+    "The private HTTP factory is closed by default and refuses enabled production construction. It is not registered in the normal application/owner preview. The isolated test mount uses actual authentication and the existing bounded quote writer; no authentication/session/CSRF/role bypass is introduced.",
+    "The browser transport uses same-origin POST, Secure-cookie protocol, no-store/no-referrer/redirect:error, bounded strict UTF8/JSON/duplicate-key response validation, explicit error/status pairs and exact receipt binding. Invalid proof/pre-I/O cancellation submits nothing; uncertain writes remain unknown.",
+    "Read wire carries exact private source only. Derived comparison/current-parent observations are recomputed from validated source by the browser, never accepted as write authority.",
+    "The Node test-only relative-URL/cookie jar bridge transports real provider/app responses and credentials from disposable fictional accounts. It does not establish real browser cookie/TLS, rendered-screen or physical-device acceptance."
+  ],
+  "verified": [
+    "Real GoTrue password/TOTP enrollment, genuine app sign-in/session/CSRF, actual CRM and initial quote review/sharing/customer confirmation establish the parent through the existing complete paths.",
+    "Real amendment create, edit via existing quote save, separate review/owner approval, sharing, private comparison/history and reload through a fresh genuine sign-in; accepted agreements/entitlements/allocations stay byte-exact.",
+    "Historical original Draft/send receipt lookup after later editing/sharing; initial acceptance original lookup remains correct with a new active amendment.",
+    "Dropped actual create/sharing acknowledgments remain unknown with exactly one command delivery and resolve their one original commit; references contain only opaque IDs/versions.",
+    "Exact replay/changed-parent collision, wrong origin/CSRF/business injection and an actual foreign MFA owner fail without changing source.",
+    "Paused write authority keeps saved history/original reads while new sharing is blocked. Actual deferred COMMIT failure yields unknown/absent original and leaves no tentative source or leaked database diagnostic.",
+    "Default-closed factory, production refusal, GET405/unknown/query404, unchanged51 registered metadata and construction-listener cleanup all pass.",
+    "Actual private read response exceeds8192 bytes, uses the existing4MiB quote writer and includes no derived comparison/current-parent flags on the wire. Browser client recomputes its customer-only comparison."
+  ],
+  "retainedDiagnostics": [
+    "Nativev1 79/89 passed:ten HTTP setup cases correctly failed APPLICATION_SERVER_CONFIGURATION_REQUIRED because the copied fixture omitted mandatory operationResolution:true. Setup was outside cleanup and leaked listeners; the specifically identity-verified failed test child was closed, remaining tests/owned cleanup finished. Source/report retained. Added the required existing setting and finally-scoped cleanup plus a refused-startup regression; no application requirement removed.",
+    "Nativev2 83/90 passed:seven read-dependent cases failed through the test connection while actual creation/original lookup and other gates worked. Nativev3 was a focused failing read diagnostic only, not suite acceptance:actual restricted SQL and real parser passed in307ms. Its HTTP status observation was the prior session response because the read connection closed before a response; it was not proof of an HTTP200 read.",
+    "The isolated fixture used writeAuthenticationResponse, whose unchanged8KiB limit correctly rejects larger quote history. Replaced only the test mount with the existing writeQuoteResponse/4MiB limit used by quote routes. Added an actual>8192-byte read regression. No egress limit was increased.",
+    "Temporary non-secret stage probe and fictional raw packet are retained only under ignored .local; probe code was removed by restoring the exact source-hash-verified pre-probe fixture. Finalv4 runs all90 cases/0skips with source stable and owned cluster cleaned.",
+    "A strict preparatory source assertion caught two occurrences where one was expected before generating the initial fixture; corrected exact occurrence handling before output. Early typecheck caught guessed module paths; imports were corrected to the existing private-http/browser-http/session-request-guard modules before verification."
+  ],
+  "remaining": [
+    "Connect normal app routing/capability configuration, amendment-aware directories/initial commercial views and mobile screens, then genuine rendered browser/four-width/keyboard/error workflows. No owner preview update until applicable release/adoption gates.",
+    "Compose opaque create/send pending stores and the generic original HTTP/retirement UI; currently the stateless APIs preserve original references but do not manage browser storage.",
+    "Separate customer acceptance/resulting agreement reads, full successor entitlement and explicit remaining-allocation changes with atomic financial limits, version2+ chains and full cancellation/empty scope semantics.",
+    "Complete common-format source/frozen51/current independent recovery, registered52 adoption and full exact-source Linux release; one coherent feature PR, no helper-only release."
+  ],
+  "ownerDatabaseApplied": false,
+  "ownerPreviewModified": false,
+  "financialPostingEnabled": false,
+  "completeBackup": false,
+  "realCrestUseReady": false,
+  "currentSpend": 0
+}

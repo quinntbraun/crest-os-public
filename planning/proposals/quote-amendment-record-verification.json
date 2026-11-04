@@ -1,0 +1,266 @@
+{
+  "formatVersion": 1,
+  "status": "actual_next_complete_saved_revision_history_and_private_record_download_verified_construction",
+  "sourceHeadBefore": "0044e38f386fb8b0e49bfd35d1ffb49789095d17",
+  "files": [
+    {
+      "path": "src/commercial/quote-amendment-history.ts",
+      "bytes": 4675,
+      "sha256": "0af1855ac813d077354af1b5408424a2bab5770200a139e823311be19d936c38"
+    },
+    {
+      "path": "src/commercial/quote-amendment-record.ts",
+      "bytes": 6005,
+      "sha256": "31748f4c3929b5c53102d619a62cecc2e75d4e96fca92f002dd1bdcde721cbaa"
+    },
+    {
+      "path": "src/client/quote-amendment-workspace.ts",
+      "bytes": 37353,
+      "sha256": "168747becc25346013de22193795ed8fb4c18680e117197362935a7cf8dbe5bc"
+    },
+    {
+      "path": "src/app/quotes/amendments/workspace.tsx",
+      "bytes": 7615,
+      "sha256": "97fb909a0d18db9212c83d42ea7e330b2f4638cc77eb9ee21cb104e58992263e"
+    },
+    {
+      "path": "src/app/quotes/amendments/saved-record-download.tsx",
+      "bytes": 2675,
+      "sha256": "36bcd19b8088ba26fb885ce741069c0c6cdc637876ac85cb35a1c08aff6c5dfa"
+    },
+    {
+      "path": "tests/unit/quote-amendment-history-fixture.ts",
+      "bytes": 2553,
+      "sha256": "5254ca9ec1b842ca0b27093e5aff45c58e50738fde4b7b032a674a6fc4a1e158"
+    },
+    {
+      "path": "tests/unit/quote-amendment-record.test.ts",
+      "bytes": 6971,
+      "sha256": "93d1ec9e79da04e6bc3543b9e966df0c7a3ea0f0cc0054dd8b4986f3c6d3dd29"
+    },
+    {
+      "path": "tests/unit/quote-amendment-record-controller.test.ts",
+      "bytes": 6251,
+      "sha256": "e7ece46e58787077545e2836f5d38dba60d9ce1482fceefcb183bce03dbcbc53"
+    },
+    {
+      "path": "tests/integration/quote-amendment-workspace-browser.test.mjs",
+      "bytes": 26460,
+      "sha256": "36c82fbc3bd371f54a033ada3a906f378e8755aad53f2fc6af18868910f8077e"
+    }
+  ],
+  "registered": false,
+  "existingMigrationCount": 51,
+  "normalNextPage": "/quotes/amendments",
+  "amendmentApiTestMountOnly": true,
+  "normalAmendmentApiRegistered": false,
+  "ownerPreviewModified": false,
+  "ownerDatabaseApplied": false,
+  "financialPostingEnabled": false,
+  "realCrestUseReady": false,
+  "currentSpend": 0,
+  "completedInConstruction": [
+    "First/next history pages freshly authorize, bind exact family/revision/parent/control/items/approval/sharing observations, verify historical content fingerprints and the exact prior page boundary, and clear private data on drift/failure. Unsaved edits block paging/download without being discarded. Stable paused access stays read-only.",
+    "Explicit selected-record download collects every retained revision event through the pinned current version, verifies contiguous versions/unique events/all fingerprints/final exact row, and rechecks sign-in context and saved source before returning bytes. Successful sequential reads are paced750ms under unchanged ordinary admission limits; refusals stop without automatic retries.",
+    "ZIP contains RFC4180 CSV, original JSON, reversible escape map, dictionary, README and SHA-256/byte manifest. Exact cents/IDs/versions/microseconds, nulls/apostrophes/backslashes/Unicode and formula-looking titles independently round-trip. Current active items, parent/current approval/latest sharing are included, other source tables explicitly excluded. 1,000-version/8MiB record guard refuses oversize instead of truncating. No claim of a database snapshot, complete source export or backup.",
+    "Actual Next/MFA/TLS/owned PG journey edits approved content back to Draft, requests fresh review/approval, pages through more than5 events, shares, downloads and verifies all8 events/CSV/formula protection/checksums, then loses a later read and produces no second file. Existing create/edit/sharing unknown-original recovery stays intact. Exactly2 creates/3edits/2sharing/1download, accepted obligations unchanged."
+  ],
+  "checks": {
+    "units": {
+      "passed": 7785,
+      "failed": 0,
+      "skipped": 0,
+      "reportPath": ".local/amendment-record-units-v2.json"
+    },
+    "newFocusedHistoryAndRecordCases": 23,
+    "types": "passed",
+    "fullLint": "passed_with_final_affected_browser_lint",
+    "productionBuild": {
+      "status": "passed",
+      "logPath": ".local/amendment-record-build-v1.log"
+    },
+    "canonical": "baseline_plus12_verified",
+    "migrations": "51_unchanged_verified",
+    "dependencies": "298_pins_integrity_licenses_verified_no_new_package",
+    "browser": {
+      "status": "passed",
+      "engine": "chromium",
+      "tests": 1,
+      "failed": 0,
+      "skipped": 0,
+      "reportPath": ".local/amendment-record-native-v3/result.json",
+      "logPath": ".local/amendment-record-native-v3/run.log",
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "genuineMfa": true,
+      "normalNextPage": true,
+      "physicalDevice": false,
+      "currentSourceLinuxWebKitAcceptance": false
+    },
+    "priorBackend": {
+      "nativeCases": 156,
+      "proof": "planning/proposals/quote-amendment-workspace-verification.json",
+      "freshFullBackendRerun": false,
+      "meaning": "Older unchanged-backend evidence; not current UI/full-release acceptance."
+    }
+  },
+  "design": {
+    "system": "Existing Crest tokens/Plex/native controls; historical content, download and privacy details use disclosure. Existing44px controls/16px inputs, focus and reduced-motion behavior retained.",
+    "audit": "12 actual rendered captures inspected: workspace full/viewport360/390/768/1440 plus expanded sharing and record panels390/1440. Axe0/no overflow; visible native controls and checkbox-label touch targets44px. Fixed bottom navigation in tall element/full-page capture is a screenshot-position artifact; actual scrolling/clicks/download passed. No physical iPhone claim.",
+    "immutableCaptureFolder": ".local/review/amendment-record-0044e38-verified-v3",
+    "images": [
+      {
+        "width": 360,
+        "kind": "workspace_full_or_panel",
+        "path": ".local/review/amendment-record-0044e38-verified-v3/amendment-record-workspace-chromium-360.png",
+        "bytes": 167090,
+        "sha256": "87c62801c5fa4a6f3f262ea905372ab63dac5381173222a842acc8e61aa173e0",
+        "visuallyInspected": true
+      },
+      {
+        "width": 360,
+        "kind": "workspace_viewport",
+        "path": ".local/review/amendment-record-0044e38-verified-v3/amendment-record-workspace-chromium-360-viewport.png",
+        "bytes": 34516,
+        "sha256": "324bef62cb3182410e9f5a9db29413a61b25e8f6c5fba4e5c50b18998ba7ce06",
+        "visuallyInspected": true
+      },
+      {
+        "width": 390,
+        "kind": "workspace_full_or_panel",
+        "path": ".local/review/amendment-record-0044e38-verified-v3/amendment-record-workspace-chromium-390.png",
+        "bytes": 168158,
+        "sha256": "c46b8fc294fb9be1939b6f736439fd484f48aaab6750a6637613cea8cf9f8f4f",
+        "visuallyInspected": true
+      },
+      {
+        "width": 390,
+        "kind": "workspace_viewport",
+        "path": ".local/review/amendment-record-0044e38-verified-v3/amendment-record-workspace-chromium-390-viewport.png",
+        "bytes": 35054,
+        "sha256": "630fb56b880b7d135783fcbf609c3661f95d014b9e75a4415ac1de4953b4741e",
+        "visuallyInspected": true
+      },
+      {
+        "width": 768,
+        "kind": "workspace_full_or_panel",
+        "path": ".local/review/amendment-record-0044e38-verified-v3/amendment-record-workspace-chromium-768.png",
+        "bytes": 178009,
+        "sha256": "03b740af15c052ec2a59e590e7122bd1ae438de89c287484df383260c9a7f7c3",
+        "visuallyInspected": true
+      },
+      {
+        "width": 768,
+        "kind": "workspace_viewport",
+        "path": ".local/review/amendment-record-0044e38-verified-v3/amendment-record-workspace-chromium-768-viewport.png",
+        "bytes": 46092,
+        "sha256": "95ac4a153f182365b637d2866dc3c13def670d6cee84ea1438171ff7e76a1029",
+        "visuallyInspected": true
+      },
+      {
+        "width": 1440,
+        "kind": "workspace_full_or_panel",
+        "path": ".local/review/amendment-record-0044e38-verified-v3/amendment-record-workspace-chromium-1440.png",
+        "bytes": 191816,
+        "sha256": "a18881a7d6e4622d7586ab02b837aca3c82f98a3b97a9f0d7aa4c0c96a8a4f9e",
+        "visuallyInspected": true
+      },
+      {
+        "width": 1440,
+        "kind": "workspace_viewport",
+        "path": ".local/review/amendment-record-0044e38-verified-v3/amendment-record-workspace-chromium-1440-viewport.png",
+        "bytes": 51778,
+        "sha256": "23965ba4d841a6d73afc53563c2cd2dff599d1f82a97817a261349ee6e3e60b4",
+        "visuallyInspected": true
+      },
+      {
+        "width": 390,
+        "kind": "sharing_full_or_panel",
+        "path": ".local/review/amendment-record-0044e38-verified-v3/amendment-record-sharing-chromium-390.png",
+        "bytes": 26741,
+        "sha256": "6a38d5414fdfbc5e286550729c263b176c3f710601ab438362012a48869895a5",
+        "visuallyInspected": true
+      },
+      {
+        "width": 1440,
+        "kind": "sharing_full_or_panel",
+        "path": ".local/review/amendment-record-0044e38-verified-v3/amendment-record-sharing-chromium-1440.png",
+        "bytes": 27080,
+        "sha256": "17472386295e6be050b17a2ec977a22a78bed5d0a647b9e03893336cf6f9b7dc",
+        "visuallyInspected": true
+      },
+      {
+        "width": 390,
+        "kind": "record_full_or_panel",
+        "path": ".local/review/amendment-record-0044e38-verified-v3/amendment-record-download-chromium-390.png",
+        "bytes": 17884,
+        "sha256": "8f1996893ebe359c77f7f149db0b25a702cf33dd0a518b4bb0b75e7c1c8d7b12",
+        "visuallyInspected": true
+      },
+      {
+        "width": 1440,
+        "kind": "record_full_or_panel",
+        "path": ".local/review/amendment-record-0044e38-verified-v3/amendment-record-download-chromium-1440.png",
+        "bytes": 16802,
+        "sha256": "aa78e4a7839765bd6985d48cba2116001183b3e0503f7b2daf24ed932a81ef7e",
+        "visuallyInspected": true
+      }
+    ]
+  },
+  "diagnostics": [
+    {
+      "path": ".local/amendment-record-units-v1.json",
+      "passed": 7784,
+      "failed": 1,
+      "reason": "Existing offline wrong-business process test hit its unchanged5s limit during a concurrent build. All10 isolated diagnostic cases and full7785 after the competing build finished pass; exact cause unconfirmed, no timeout/product/gate changed.",
+      "diagnosticPath": ".local/amendment-record-cli-diagnostic.json"
+    },
+    {
+      "path": ".local/amendment-record-native-v1/result.json",
+      "passed": 1,
+      "failed": 0,
+      "reason": "Complete new history/download/refusal journey passed before final expanded record panel capture."
+    },
+    {
+      "path": ".local/amendment-record-native-v2/result.json",
+      "passed": 0,
+      "failed": 1,
+      "reason": "Generic5s final-state assertion expired while the precheck/real sharing request was still in progress. Finalv3 additionally waits for/asserts the actual committed response and subsequent fresh read, then checks rendered state under the unchanged5s render/20s network and application40s bounds. Dropped-response checks await the real request-failure event. No business/policy/retry cap changed."
+    }
+  ],
+  "historicalEvidenceNote": "The first record run reused older editor screenshot filenames and overwrote those local PNGs; older proof hashes/logs were not relabeled and are retained as historical evidence, not current image files. Final record captures use distinct names plus byte-verified, write-once copies in the immutableCaptureFolder above; future raw screenshot runs must not overwrite these accepted copies.",
+  "remainingBeforeOwnerDelivery": [
+    "Complete amendment-aware source inventory/CSV/neutral round-trip: legacy quote-review formatter is initial-only and commercial formatter assumes accepted control has no active offer. Preserve frozen formats/actual source; do not synthesize initial rows or drop amendments.",
+    "Frozen51/current independent restore, registered52/adoption, current-source full Linux/Chromium/WebKit release and preserved-data owner installation/walkthrough."
+  ],
+  "remainingFullV1": [
+    "Separate customer amendment acceptance/resulting agreements/remaining allocations/financial limits/version2+ accepted chains/full cancellation.",
+    "Field/time/custody/photos/completion/follow-up; full finance/reporting/mileage; private receipts; complete portability/recovery/import/cutover; Google Calendar; real-use gates."
+  ],
+  "publicEvidence": {
+    "pr": 112,
+    "head": "3db75821863a1d0c6f2c92ac30f9b9b041ea04b8",
+    "fullRun": 41569607737,
+    "conclusion": "success",
+    "focusedExpenseRun": 41569607704,
+    "focusedExpenseConclusion": "success",
+    "recordSourcePublished": false
+  },
+  "ownerPreview": {
+    "laptop": "https://127.0.0.1:4319/",
+    "phone": "https://100.78.42.185:4319/",
+    "lastLauncherResult": "both_already_responding",
+    "physicalPhoneTest": "owner_deferred"
+  },
+  "estimate": {
+    "fullV1CodedRoughPercent": 40,
+    "remainingActiveHours": [
+      200,
+      350
+    ],
+    "confidence": "very_low",
+    "waitsIncluded": false,
+    "reliableCumulativeActiveLedger": false
+  },
+  "next": "Implement explicit complete amendment-aware source capture/format/independent reconstruction, preserving frozen51 profiles; then independent restore/adoption/full release before owner delivery. Full goal remains active; no helper-only PR."
+}

@@ -1,0 +1,163 @@
+{
+  "formatVersion": 1,
+  "scope": "Registered52 amendment preparation and exact read-only existing allocation review",
+  "testedBaseCommit": "7fb174501d4cbca0668863fea9d6626debbf88aa",
+  "sourceFiles": {
+    "src/client/amendment-allocation-review.ts": "3e3bee9a8fdb417377074d4bdcafc4aa30feb093aa02d1577e9c396e25444ae8",
+    "src/app/quotes/amendments/allocation-review.tsx": "ffa66905583f4bd7177accfce01974afba4d040b9b2cbb64164d15bd02eedc0c",
+    "src/app/quotes/amendments/workspace.tsx": "9f8eb56f43420e284d4eadffafc3ffdebd9c6cb317edadfccd02745f3d62cd3f",
+    "tests/unit/amendment-allocation-review.test.ts": "feb5d170792b2e30df577d70a7bb03ecc04c22bec0bc214a8ae17956507d25f8",
+    "tests/integration/quote-amendment-workspace-browser.test.mjs": "dde767db7462991700169bfa604480257b33ad39a670149d27afbfb2f296fe06",
+    "tests/integration/booking-conflict51-candidate.test.mjs": "1152ad50d9429b0e54ca49a09771ca822767533b87eb282f9ad7ebe47fe02cad"
+  },
+  "verification": {
+    "genuineChromium": {
+      "path": ".local/amendment-allocation-browser-native-v4/result.json",
+      "sha256": "a50addf703b8192a9007640ca0dfdab375f7acfdda1189b09f5b049a0eff70f9",
+      "cases": 1,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "genuineMfa": true,
+      "normalApplicationRouting": true,
+      "registeredSchemaVersion": 52,
+      "genuinePartialBooking": true,
+      "readErrorRecovery": true,
+      "closingClearsPrivateReview": true,
+      "keyboardEnter": true,
+      "linuxWebKitPending": true,
+      "physicalIphone": false
+    },
+    "frozenRecovery": {
+      "path": ".local/registry51-serialization-native-v1/result.json",
+      "sha256": "5ea7ea65dc6df3fd40d4085681196f3ba62aef880aa01d01fad3f2660301e72a",
+      "cases": 54,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "actualSubmittedRegistryHashChecked": true,
+      "fullParsedRegistryEqualityChecked": true,
+      "frozenRecoveryProfileUnchanged": true
+    },
+    "localWorktreeUnits": {
+      "path": ".local/amendment-allocation-all-units-v1.json",
+      "passed": 7830,
+      "failed": 0,
+      "skipped": 0,
+      "unpublishedNextAcceptanceContractCases": 12,
+      "publicCandidateUnitCountRequiresCurrentSourceCI": true
+    },
+    "focusedAllocationCases": 13,
+    "productionBuild": ".local/amendment-allocation-build-v2.log",
+    "productionBuildSha256": "0236ad806af8355fb72ae71df6d9d5c415184e8465593dd5d44128ec31833ddc",
+    "types": true,
+    "affectedLint": true,
+    "typesLog": ".local/amendment-allocation-types-v1.log",
+    "affectedLintLog": ".local/amendment-allocation-lint-v1.log"
+  },
+  "screenshots": [
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-workspace-chromium-360.png",
+      "sha256": "202e9c26425d38eab9d072d381a8a8b82b238b3408e58a521b2f575d88e92682",
+      "bytes": 200707
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-workspace-chromium-360-viewport.png",
+      "sha256": "ad3e5a49506d00ab8571e1d6cd68614c9d477f2e602ac0ba13a339ef2d615245",
+      "bytes": 32158
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-detail-chromium-360.png",
+      "sha256": "e49a5181f524bad9ea47d21242ca1fab80c1989a525a61958506aac00accf216",
+      "bytes": 35184
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-workspace-chromium-390.png",
+      "sha256": "c8ae1cb8e8a9910cab75e6de59b06ad0689df00090d00295a34bf9581dea56c6",
+      "bytes": 201989
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-workspace-chromium-390-viewport.png",
+      "sha256": "804093179749ca66b50de807342edd9a74eb3b4d9d33068f2f4aa096546a8edd",
+      "bytes": 32678
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-detail-chromium-390.png",
+      "sha256": "867ac1c9accf8660a8a2f17125d37c8af0d106c0f47353d97c0f2f0272009067",
+      "bytes": 36445
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-workspace-chromium-768.png",
+      "sha256": "8529e4bc340c1afecbdcef52d9ff06fcc0564d976cb9aeb20f5e81c0bd23292b",
+      "bytes": 216027
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-workspace-chromium-768-viewport.png",
+      "sha256": "2828be33aae3ad0d7b3402dcd17ca53b85466c0b7d30ce906e5321b1ae50981b",
+      "bytes": 44051
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-detail-chromium-768.png",
+      "sha256": "19e21f532e7621dd9961d59c52eeb4e3710cd8eaa7beb6e26b51def474a72bb1",
+      "bytes": 37395
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-workspace-chromium-1440.png",
+      "sha256": "ec29de2ec74fe882e43204aff2a726584ef36dd9abcfbd39bfa0a3198b307d21",
+      "bytes": 231408
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-workspace-chromium-1440-viewport.png",
+      "sha256": "ae9dee95d24113254477c15936f6717c183bad7027652a6d8d14485d99398b36",
+      "bytes": 49988
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-detail-chromium-1440.png",
+      "sha256": "98d8bc0b5da3c73d428ccd48dd238ca8cca2eab547d38793ff9d06f153c118e5",
+      "bytes": 38272
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-sharing-chromium-390.png",
+      "sha256": "b6f27fca2cdd36ebcf3970245749bbfad080e487467e3f5cb3d03321abf747b2",
+      "bytes": 26709
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-sharing-chromium-1440.png",
+      "sha256": "59d2d40ab10e3efbf5a52e8ef9e62701ffce3d717c4bb726508f0a9ee2cf771c",
+      "bytes": 27073
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-download-chromium-390.png",
+      "sha256": "623301364936142fb7fba2ddce7408890179821d578f85f860f3dd6ff3438c06",
+      "bytes": 17893
+    },
+    {
+      "path": ".local/review/amendment-allocation-verified-v4/amendment-allocations-download-chromium-1440.png",
+      "sha256": "aa78e4a7839765bd6985d48cba2116001183b3e0503f7b2daf24ed932a81ef7e",
+      "bytes": 16802
+    }
+  ],
+  "manualRenderedReviewComplete": true,
+  "limitations": {
+    "selectedRecordDoesNotIncludeAllocationSources": true,
+    "existingScheduleHistoryAndRetrievalUnchanged": true,
+    "customerAmendmentAcceptanceImplemented": false,
+    "sourceSchemaChanged": false,
+    "dependenciesChanged": false,
+    "authenticationOrAdmissionLimitsChanged": false,
+    "automaticRetriesAdded": false,
+    "ownerPreviewUpdated": false,
+    "ownerDatabaseChanged": false,
+    "fullCurrentSourceHostedAcceptance": false,
+    "completeCrestExport": false,
+    "completeBackup": false,
+    "productionReady": false
+  },
+  "diagnostics": {
+    "browserV1": "The longer scripted journey received429 on a fresh read after a recorded sharing command. Exact rejecting bucket was not captured; unchanged ordinary admission is120/minute. No automatic retry or altered policy.",
+    "browserV2": "Synthetic pacing exposed a premature5s UI assertion before an actual review command completed. All review/approval actions now await actual commit and fresh read before the unchanged5s render check.",
+    "browserV3": "Sign-in was still processing at the premature5s heading assertion while full units ran. Exact cause of slower response unconfirmed. Sign-in now awaits actual200 response before the unchanged render check; bootstrap/login are not synthetically delayed.",
+    "browserV4": "Final actual genuine workflow passed with650ms synthetic API pacing,0limited responses, no policy/timeout waiver.",
+    "recovery403": "Coordinator submitted compact51 registry bytes; stale test expected the pretty recovery profile hash. Both byte provenance and parsed entries are now verified without relabeling either profile."
+  },
+  "recordedAt": "2026-11-04T00:23:05.480Z",
+  "manualReviewScope": "All16 copied captures inspected: full and viewport360/390/768/1440, expanded current-work detail at all4 widths, sharing/private-download390/1440. Fixed mobile navigation remains positioned at the viewport in element/full captures; actual scrolling, keyboard action and download pass. No physical iPhone claim."
+}

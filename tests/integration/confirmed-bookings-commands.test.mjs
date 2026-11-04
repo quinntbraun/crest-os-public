@@ -8,8 +8,10 @@ import {randomBytes,randomUUID} from 'node:crypto';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixture.mjs';
-import {originalOperationKinds,parseOriginalOperationReference} from '../../src/security/original-operation-reference.ts';
+import {originalOperationKinds as currentOriginalKinds,parseOriginalOperationReference} from '../../src/security/original-operation-reference.ts';
 import {originalOperationFixture} from '../support/original-operation-fixture.ts';
+const originalOperationKinds=JSON.parse(await readFile(new URL('../support/registered51-original-operation-kinds.json',import.meta.url),'utf8')).kinds;
+assert.equal(originalOperationKinds.length,27);assert(originalOperationKinds.every(kind=>currentOriginalKinds.includes(kind)));
 import {parseSchedulingOriginalResult} from '../../src/operations/scheduling-original-contract.ts';
 // Explicit construction over immutable49, even when the repository registers later schemas.
 import {backupLegacy49Database as backupDatabase,restoreLegacy49Database as restoreDatabase,inventory,keyPair,privateWorkspace,recoveryCluster,connect} from '../support/recovery-drill.mjs';
@@ -256,6 +258,7 @@ for(const kind of ['operations.job.book','operations.job.reschedule','operations
 
 test('all27 original-reference kinds match TypeScript while new original-review targets reject malformed versions, drafts and source drift',async()=>{
  assert.equal(originalOperationKinds.length,27);for(const kind of originalOperationKinds){const original=originalOperationFixture(kind);assert.deepEqual(parseOriginalOperationReference(original),original);assert.equal(await value(client,'SELECT crest_private.original_operation_reference_valid($1) AS value',[original]),true);assert.equal(await value(client,'SELECT crest_private.original_operation_reference_valid($1) AS value',[{...original,reference:{...original.reference,privateDraft:'forbidden'}}]),false);}
+ for(const kind of currentOriginalKinds.filter(kind=>!originalOperationKinds.includes(kind)))assert.equal(await value(client,'SELECT crest_private.original_operation_reference_valid($1) AS value',[originalOperationFixture(kind)]),false,'registered51 must reject later original kinds');
  const {f}=booked,base={schemaVersion:1,businessId:f.business,commandType:'operations.job.reschedule',reference:{operationId:randomUUID(),recoveryEpoch:f.epoch,jobId:randomUUID(),expectedJobVersion:'1',action:'propose',latestAppointmentId:randomUUID()}};
  assert.equal(await value(client,'SELECT crest_private.original_operation_reference_valid($1) AS value',[base]),true);
  for(const reference of [{...base.reference,expectedJobVersion:'0'},{...base.reference,expectedJobVersion:'01'},{...base.reference,action:'send'},{...base.reference,notes:'Lost draft must not be stored'},{...base.reference,latestAppointmentId:null}])await assert.rejects(retire(f,{...base,reference}),e=>e.code==='22023');

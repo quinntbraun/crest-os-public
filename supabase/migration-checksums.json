@@ -255,6 +255,11 @@
       "version": "20261102180000",
       "file": "20261102180000_booking_conflict_review.sql",
       "sha256": "f3aa951660979be7d9974933640675c24570dda879aac800713592280c2ca831"
+    },
+    {
+      "version": "20261103180000",
+      "file": "20261103180000_quote_amendment_preparation.sql",
+      "sha256": "1bcfd0e0772f9710829d1832aa3616864a91e3a9c52734b1cfe884d5af09e84a"
     }
   ]
 }

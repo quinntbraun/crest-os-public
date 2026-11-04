@@ -168,6 +168,8 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .service-fields { display:grid; gap:.75rem; }
 .service-fields label { display:block; }
 .services-workspace > .intro { max-width:65ch; }
+.amendment-actions { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem 1rem; margin:1rem 0 1.5rem; }
+.amendment-actions button { width:auto; margin:0; }
 .service-layout { display:grid; gap:1.5rem; margin-top:1.5rem; }
 .service-directory-panel,.service-definition-panel,.service-choice { min-width:0; }
 .service-layout h2 { margin-top:0; }
@@ -201,6 +203,14 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .quote-preview-lines { list-style:none; padding:0; margin:0; }
 .quote-preview-lines li { padding:1rem 0; border-bottom:1px solid var(--line); }
 .quote-preview-lines h4 { margin:0 0 .5rem; font-size:1rem; }
+.quote-amendment summary { min-height:44px; padding:.75rem 0; overflow-wrap:anywhere; }
+.quote-amendment details { border-top:1px solid var(--line); }
+.amendment-comparison { display:grid; gap:1.25rem; padding:.5rem 0 1rem; }
+.quote-amendment .amendment-comparison > section { min-width:0; margin-top:0; }
+.quote-amendment .amendment-comparison h4 { margin:0 0 .5rem; color:var(--muted); }
+.amendment-comparison p { margin:.5rem 0; }
+.quote-amendment .quote-preview-lines li { margin:.5rem 0; padding:.5rem 0; }
+@media(min-width:48rem) { .amendment-comparison { grid-template-columns:repeat(2,minmax(0,1fr)); gap:2rem; } .quote-amendment .customer-values { grid-template-columns:minmax(0,1fr) auto; align-items:baseline; } }
 .quote-worksheet .record-reference { font-variant-numeric:tabular-nums; }
 @media(max-width:390px) { .quote-worksheet { padding:1rem; } }
 

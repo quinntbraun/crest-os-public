@@ -5,7 +5,7 @@ import {sessionCredentialHash} from '../security/session-credential.ts';
 import {createSessionLifecycle} from '../security/session-lifecycle.ts';
 import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {prepareVersionedQuoteContent as prepareQuoteContent} from './quote-review-content.ts';
-import {quoteId,quoteVersion,quoteHistoryPageLimit,requireQuoteStorage as check,parseQuoteSave,parseQuoteCommitted,parseQuoteDirectoryPage,parseQuoteHistoryPage} from './quote-storage-contract.ts';
+import {quoteId,quoteVersion,quoteHistoryPageLimit,requireQuoteStorage as check,parseQuoteSave,parseQuoteCommitted,parseQuoteWorkspaceDirectoryPage,parseQuoteHistoryPage} from './quote-storage-contract.ts';
 import type {QuoteSave} from './quote-storage-contract.ts';
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
 import type {createProviderBoundary} from '../security/provider-auth.ts';
@@ -51,7 +51,7 @@ export function createQuoteDirectory(config:SessionDatabaseConfiguration,provide
   },
   async list(credential:string,input:{businessId:string;search:string;afterId:string|null;pageSize:number},signal:AbortSignal){
    try{check(exact(input,['businessId','search','afterId','pageSize'])&&quoteId(input.businessId)&&typeof input.search==='string'&&[...input.search].length<=200&&(input.afterId===null||quoteId(input.afterId))&&Number.isSafeInteger(input.pageSize)&&input.pageSize>=1&&input.pageSize<=50);const request=Object.freeze({...input});return await authorized(credential,request.businessId,signal,async(args,bounded)=>{
-    const value=await database('SELECT crest_commands.read_quote_draft_directory($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::text,$10::uuid,$11::integer) AS result',[...args,request.search,request.afterId,request.pageSize],bounded);if(bounded.aborted)throw new Error();return new PrivateQuoteValue(parseQuoteDirectoryPage(value,request));
+    const value=await database('SELECT crest_commands.read_quote_draft_directory($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::text,$10::uuid,$11::integer) AS result',[...args,request.search,request.afterId,request.pageSize],bounded);if(bounded.aborted)throw new Error();return new PrivateQuoteValue(parseQuoteWorkspaceDirectoryPage(value,request));
    });}catch{throw new QuoteDirectoryError('QUOTE_REQUEST_FAILED');}
   },
   async history(credential:string,input:{businessId:string;familyId:string;revisionId:string;afterVersion:string;pageSize:number},signal:AbortSignal){

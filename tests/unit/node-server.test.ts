@@ -1,8 +1,9 @@
 import {request as httpRequest} from 'node:http';
 import {describe,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
+vi.mock('../../src/commercial/quote-amendment-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/quote-amendment-http.ts')>(),createQuoteAmendmentHttp:()=>flow.quoteAmendments}));
 vi.mock('../../src/operations/scheduling-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/operations/scheduling-http.ts')>(),createSchedulingHttp:()=>flow.scheduling}));
-const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn(),quotes:vi.fn(),quoteReview:vi.fn(),quoteCommercial:vi.fn(),holds:vi.fn(),expenses:vi.fn(),scheduling:vi.fn()}));
+const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn(),quotes:vi.fn(),quoteReview:vi.fn(),quoteCommercial:vi.fn(),quoteAmendments:vi.fn(),holds:vi.fn(),expenses:vi.fn(),scheduling:vi.fn()}));
 vi.mock('../../src/security/browser-session-flow.ts',()=>({createBrowserSessionFlow:()=>flow}));
 vi.mock('../../src/security/business-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/business-http.ts')>(),createBusinessHttp:()=>flow.business}));
 vi.mock('../../src/customer/customer-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-http.ts')>(),createCustomerHttp:()=>flow.customers}));
@@ -22,6 +23,16 @@ import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../.
 import type {NodeConfiguration} from '../../src/server/node-server.ts';
 
 const origin='https://crest.example.com';
+it('amendment preparation requires explicit synthetic CRM/commercial/original recovery composition',()=>{
+ const base={origin,environment:'test',syntheticQuoteAmendments:true,customers:true,vehicles:true,operationResolution:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticQuoteCommercial:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}},provider:{},tokens:{}}};
+ for(const patch of [{environment:'production'},{syntheticQuoteAmendments:'yes'},{authentication:undefined},{business:undefined},{customers:false},{vehicles:false},{operationResolution:false},{syntheticQuotes:false},{syntheticQuoteReview:false},{syntheticQuoteCommercial:false}]){const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,{...base,...patch} as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();}
+});
+it.each([undefined,false,true])('normal amendment namespace has a separate opt-in and the existing private quote response boundary: %s',async enabled=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn(),payload={retainedHistory:'x'.repeat(20000)};
+ for(const mock of [flow.quoteAmendments,flow.quotes,flow.quoteReview,flow.quoteCommercial])mock.mockReset();flow.quoteAmendments.mockImplementation(async()=>new Response(JSON.stringify(payload),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',...enabled===undefined?{}:{syntheticQuoteAmendments:enabled},customers:true,vehicles:true,operationResolution:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticQuoteCommercial:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{for(const path of ['/api/business/quotes/amendments/read','/api/business/%71uotes/amendments/create','/api/business/quotes/%61mendments/send']){const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(enabled?200:404);expect(response.headers.get('cache-control')).toContain('no-store');if(enabled)expect(await response.json()).toEqual(payload);else await response.text();}expect(flow.quoteAmendments).toHaveBeenCalledTimes(enabled?3:0);for(const other of [flow.quotes,flow.quoteReview,flow.quoteCommercial,pages])expect(other).not.toHaveBeenCalled();}finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
 it('review construction requires its own explicit synthetic quote/auth/business configuration',()=>{
  for(const config of [{origin,environment:'test',syntheticQuoteReview:true},{origin,environment:'test',syntheticQuoteReview:'yes'},{origin,environment:'production',syntheticQuotes:true,syntheticQuoteReview:true},{origin,environment:'test',syntheticQuotes:false,syntheticQuoteReview:true,business:{businessId:'synthetic'},authentication:{}}]){
   const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,config as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();

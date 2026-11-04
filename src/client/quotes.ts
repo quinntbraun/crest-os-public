@@ -1,5 +1,5 @@
 import type {Proof} from './authentication';
-import {quoteId,quoteVersion,quoteBodyLimit,quoteResponseLimit,quoteHistoryPageLimit,requireQuoteStorage as check,parseQuoteSave,parseQuoteCommitted,parseQuoteDirectoryPage,parseQuoteHistoryPage} from '../commercial/quote-storage-contract';
+import {quoteId,quoteVersion,quoteBodyLimit,quoteResponseLimit,quoteHistoryPageLimit,requireQuoteStorage as check,parseQuoteSave,parseQuoteCommitted,parseQuoteWorkspaceDirectoryPage,parseQuoteHistoryPage} from '../commercial/quote-storage-contract';
 import type {QuoteSave} from '../commercial/quote-storage-contract';
 import {exactCustomerObject as exact} from '../customer/customer-contract';
 import {quoteReference} from './pending-quote-edit';
@@ -51,7 +51,7 @@ export const quotes=Object.freeze({
   try{check(quoteId(businessId));const pinned=quoteReference(reference),r=await post('operation',{operationId:pinned.operationId},proof,signal);check(r.status===200);return exact(r.value,['state'])&&r.value.state==='absent'?Object.freeze({state:'absent' as const}):bindReceipt(r.value,businessId,pinned);}catch(error){throw error instanceof QuoteClientError?error:new QuoteClientError('unavailable');}
  },
  async list(businessId:string,input:{search:string;afterId:string|null;pageSize:number},proof:Proof,signal:AbortSignal){
-  try{check(quoteId(businessId)&&exact(input,['search','afterId','pageSize'])&&typeof input.search==='string'&&[...input.search].length<=200&&(input.afterId===null||quoteId(input.afterId))&&Number.isSafeInteger(input.pageSize)&&input.pageSize>=1&&input.pageSize<=50);const pinned=Object.freeze({...input}),r=await post('list',pinned,proof,signal);check(r.status===200);return parseQuoteDirectoryPage(r.value,{businessId,...pinned});}catch(error){throw error instanceof QuoteClientError?error:new QuoteClientError('unavailable');}
+  try{check(quoteId(businessId)&&exact(input,['search','afterId','pageSize'])&&typeof input.search==='string'&&[...input.search].length<=200&&(input.afterId===null||quoteId(input.afterId))&&Number.isSafeInteger(input.pageSize)&&input.pageSize>=1&&input.pageSize<=50);const pinned=Object.freeze({...input}),r=await post('list',pinned,proof,signal);check(r.status===200);return parseQuoteWorkspaceDirectoryPage(r.value,{businessId,...pinned});}catch(error){throw error instanceof QuoteClientError?error:new QuoteClientError('unavailable');}
  },
  async history(businessId:string,input:{familyId:string;revisionId:string;afterVersion:string;pageSize:number},proof:Proof,signal:AbortSignal){
   try{check(quoteId(businessId)&&exact(input,['familyId','revisionId','afterVersion','pageSize'])&&quoteId(input.familyId)&&quoteId(input.revisionId)&&quoteVersion(input.afterVersion,true)&&Number.isSafeInteger(input.pageSize)&&input.pageSize>=1&&input.pageSize<=quoteHistoryPageLimit);const pinned=Object.freeze({...input}),r=await post('history',pinned,proof,signal);check(r.status===200);return parseQuoteHistoryPage(r.value,{businessId,...pinned});}catch(error){throw error instanceof QuoteClientError?error:new QuoteClientError('unavailable');}

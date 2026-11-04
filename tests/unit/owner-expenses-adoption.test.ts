@@ -14,8 +14,8 @@ import priorCoverage from '../support/registered48-export-coverage.json';
 import priorCompatibility from '../support/registered48-compatibility.json';
 import adoption from '../../planning/OWNER_EXPENSES_SCHEMA49_ADOPTION.json';
 const bytes=(path:string)=>readFileSync(new URL('../../'+path,import.meta.url));
-it('preserves the exact historical49 registry and coverage within the current package',()=>{
- expect(currentRegistry.migrations.slice(0,49)).toEqual(registry.migrations);expect(currentCoverage.tables.slice(0,coverage.tables.length)).toEqual(coverage.tables);
+it('preserves historical49 coverage with only the explicitly registered52 accepted-parent extension',()=>{
+ expect(currentRegistry.migrations.slice(0,49)).toEqual(registry.migrations);const expected=structuredClone(coverage.tables);expected.find(table=>table.table==='crest.quote_revisions')!.required.push('parent_agreement_id');expect(currentCoverage.tables.slice(0,coverage.tables.length)).toEqual(expected);
 });
 it('appends49 with exact frozen48 provenance and all seven reviewed bodies',()=>{
  expect(registry.migrations).toHaveLength(49);expect(registry.migrations.slice(0,48)).toEqual(prior.migrations);

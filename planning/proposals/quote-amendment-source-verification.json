@@ -1,0 +1,100 @@
+{
+  "formatVersion": 1,
+  "status": "amendment_preparation_complete_included_source_csv_and_independent_neutral_reconstruction_verified_construction",
+  "sourceHeadBefore": "d457e348981dda61419e7e96272fc0fb73d7ba90",
+  "files": [
+    {
+      "path": "src/commercial/quote-amendment-review-csv.ts",
+      "bytes": 21131,
+      "sha256": "6a83738413eab7c2bf9753a98f571635df67f98b47418fbada50c11f688b2613"
+    },
+    {
+      "path": "src/commercial/quote-amendment-source-csv.ts",
+      "bytes": 22939,
+      "sha256": "34cb1c8cd3c52dce70137151aeb77cf78d76ff4a52dfb009fbf5d6fed1faba9a"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-source.sql",
+      "bytes": 7384,
+      "sha256": "cf11ffd11777c3da9b15a87c225b37abba17991a987aa790b925d0ed4ca56f6e"
+    },
+    {
+      "path": "tests/support/amendment-source-fixture.mjs",
+      "bytes": 4797,
+      "sha256": "387df928f48e3b6227919c8157f51aa5472e6e45402ab01c0130734591c47692"
+    },
+    {
+      "path": "tests/integration/quote-amendment-source.test.mjs",
+      "bytes": 24083,
+      "sha256": "cb86e65c2656c91677a75a163d9d9afdb48f13fd2d451c172280f1e83bea37c1"
+    },
+    {
+      "path": "tests/unit/quote-amendment-source-csv.test.ts",
+      "bytes": 7944,
+      "sha256": "4c8e9b3c8e57b26a0461ff7f3459cbf71147d725ac54b63b814dc7fd4aed1854"
+    },
+    {
+      "path": "package.json",
+      "bytes": 14901,
+      "sha256": "d2c2c00c33fb8e25518d2a9da4090108ea519a7ec12ed5dde7e10b3c4a8e6bfc"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 20069,
+      "sha256": "6fea560a67616f6d8c013985c643c3032b08fda38ea55515c490ee9ef9a221e6"
+    }
+  ],
+  "verification": {
+    "native": {
+      "path": ".local/amendment-source-native-v6/result.json",
+      "sha256": "d8daad0926fabec54b9a099950a144ac689a61bfcf822d4e277cfd86262bec7a",
+      "tests": 14,
+      "passed": 14,
+      "failed": 0,
+      "sourceUnchanged": true,
+      "ownedClusterCleaned": true
+    },
+    "unit": {
+      "passed": 7797,
+      "failed": 0,
+      "skipped": 0,
+      "focusedNewCases": 12
+    },
+    "typecheck": "passed",
+    "lint": "passed",
+    "productionBuild": "passed",
+    "canonical": "baseline_and_12_explicit_amendments_verified",
+    "migrationRegistry": "unchanged_51",
+    "dependencies": "298_exact_locked_packages_and_licenses_verified",
+    "hostedCurrentSourceAcceptance": false
+  },
+  "verified": [
+    "All12 included quote/commercial tables captured through one held repeatable-read read-only connection using the separate restricted export credential; ordinary web/direct source access refused.",
+    "Physical nullable parent column retained for initial revisions, explicit exact accepted parent for amendments; converted-lead binding preserved without relabeling source.",
+    "Actual edited/approved/edited/reapproved/shared/replaced amendments retain inactive items, all approvals, earlier superseded offers and original operation/audit evidence.",
+    "Independent template0 database imports every included CSV table and compares every captured typed row with20 actual internal foreign keys; exact cents, Unicode, formula escaping, JSON, null and UTC microseconds retained.",
+    "Concurrent new Draft remains outside held snapshot; later transaction sees it and refuses the old token.",
+    "Unsafe default grants, reviewed function body/owner drift, wrong scope/token/bounds/reinstall, omitted or changed source and old initial-only formatter confusion refuse.",
+    "Accepted agreement, entitlement, allocation, initial revision and original lead history remain unchanged."
+  ],
+  "retainedDiagnostics": [
+    "Nativev1/v2 stopped at installation: test proposal expected the wrong owner for existing snapshot-context functions. Corrected to actual restricted crest_quote_owner while keeping exact reviewed function hashes, RLS and both-owner default-ACL checks.",
+    "Nativev3 empty-business fixture omitted mandatory creator membership; v4 then exposed its omitted recovery authority. Both are now created atomically through the existing synthetic setup pattern; no constraint changed.",
+    "Nativev5 passed11/14 but used the nonexistent confirm_quote_amendment_sent test command; corrected to the existing confirm_quote_amendment_send. Dependent results from that incomplete scenario are not acceptance; finalv6 all14 pass."
+  ],
+  "limits": [
+    "This is a bounded new source profile, not a runtime export worker, complete Crest export, external-reference closure or complete backup. All completeness flags remain false.",
+    "Frozen initial-only readers, formatters, registered migration bytes and recovery profiles remain unchanged.",
+    "Customer acceptance of amendments, resulting agreements, entitlement/remaining-allocation and finance/cancellation behavior remain unfinished mandatory V1.",
+    "Frozen51/current-candidate independent encrypted recovery, registration52, current-source Linux browser/full release and owner installation remain required.",
+    "No browser screen changed in this source-only slice; existing immutable rendered evidence is retained, not rerun or relabeled."
+  ],
+  "ownerPreview": {
+    "laptop": "https://127.0.0.1:4319/",
+    "phone": "https://100.78.42.185:4319/",
+    "status": "both_already_responding_accepted_calendar51_unchanged",
+    "physicalPhoneTest": "owner_deferred",
+    "realUseReady": false
+  },
+  "spend": 0
+}

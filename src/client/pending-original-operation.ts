@@ -15,6 +15,8 @@ import {services} from './services';
 import {quotes} from './quotes';
 import {quoteReview} from './quote-review';
 import {quoteCommercial} from './quote-commercial';
+import {quoteAmendments} from './quote-amendments';
+import {createPendingQuoteAmendmentStore} from './pending-quote-amendment';
 import {quoteReplacement} from './quote-replacement';
 import {createPendingQuoteReplacementStore} from './pending-quote-replacement';
 import {createPendingQuoteCommercialStore,quoteCommercialOriginalReference} from './pending-quote-commercial';
@@ -107,6 +109,8 @@ export function openPendingOriginalOperation(kind:OriginalOperationKind,storage:
   case 'crm.vehicle.save':return target(createPendingVehicleStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>vehicles.lookup(p.businessId,p.reference,proof,signal));
   case 'catalog.service.save':return target(createPendingServiceStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>services.lookup(p.businessId,p.reference,proof,signal));
   case 'quote.draft.save':return target(createPendingQuoteStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>quotes.lookup(p.businessId,p.reference,proof,signal));
+  case 'quote.amendment.create':return target(createPendingQuoteAmendmentStore(storage,kind),kind,businessId,p=>p.reference,(p,proof,signal)=>quoteAmendments.lookupDraft(p.businessId,p.reference,proof,signal));
+  case 'quote.amendment.send':return target(createPendingQuoteAmendmentStore(storage,kind),kind,businessId,p=>p.reference,(p,proof,signal)=>quoteAmendments.lookupSend(p.businessId,p.reference,proof,signal));
   case 'quote.replacement.create':return target(createPendingQuoteReplacementStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>quoteReplacement.lookup(p.businessId,p.reference,proof,signal));
   case 'quote.manual.send':case 'quote.confirmation.accept':{
    try{const store=createPendingQuoteCommercialStore(storage),pending=store.read();if(pending===null||kind!==(pending.reference.action==='send'?'quote.manual.send':'quote.confirmation.accept'))return null;
