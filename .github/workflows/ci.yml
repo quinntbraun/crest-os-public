@@ -232,15 +232,93 @@ jobs:
         run: |
           npm run test:real-auth
 
+  # These are the same complete29 retained browser files, partitioned with an
+  # exact union check. Each matrix entry owns its cluster and stays serial.
+  browser_workflows:
+    name: Browser workflows (${{ matrix.suite }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [crm, intake, commercial, amendments, schedule, records]
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      CREST_ENV: test
+      CREST_TEST_DATABASE_URL: postgresql://supabase_admin:crest_local_test_only@127.0.0.1:54322/crest_test
+    services:
+      postgres:
+        image: supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2
+        env:
+          POSTGRES_USER: supabase_admin
+          POSTGRES_PASSWORD: crest_local_test_only
+          POSTGRES_DB: crest_test
+        ports:
+          - 127.0.0.1:54322:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d crest_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Verify runtime and install exact lockfile
+        run: |
+          test "$(node --version)" = "v24.22.0"
+          test "$(npm --version)" = "11.19.1"
+          npm ci --ignore-scripts --no-fund
+      - name: Verify complete browser partition
+        run: node scripts/run-browser-group.mjs --list
+      - name: Install verified database and recovery tooling
+        run: |
+          node scripts/install-tools.mjs
+          node scripts/install-recovery-tools.mjs
+      - name: Install browser dependencies with bounded Ubuntu downloads
+        timeout-minutes: 6
+        run: |
+          test -f /etc/apt/apt-mirrors.txt
+          grep -qF 'mirror+file:/etc/apt/apt-mirrors.txt' /etc/apt/sources.list.d/ubuntu.sources
+          printf '%s\tpriority:1\n%s\tpriority:2\n' 'https://archive.ubuntu.com/ubuntu/' 'https://security.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/99crest-ci-downloads > /dev/null
+          npx --no-install playwright install --with-deps chromium webkit
+      - name: Build actual product source
+        run: npm run build
+      - name: Run required browser group
+        env:
+          CREST_BROWSER_JOB_TOTAL: ${{ strategy.job-total }}
+        run: node scripts/run-browser-group.mjs ${{ matrix.suite }}
+      - name: Preserve synthetic screenshots and exact group result
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: settings-review-${{ matrix.suite }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            .local/ci-browser/${{ matrix.suite }}.json
+            .local/review/settings-*.png
+            .local/review/workspace-*.png
+            .local/review/home-*.png
+            .local/review/quote-*.png
+            .local/review/amendment-*.png
+            .local/review/appointment-*.png
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: error
+
   foundation:
     name: Foundation checks
-    needs: [database_foundation, database_provider, authentication]
+    needs: [database_foundation, database_provider, authentication, browser_workflows]
     # Fail the required guard on unsuccessful/skipped prerequisites, but let
     # obsolete runs cancel so they cannot block the newest source indefinitely.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
-    # Source e14/full395 took 57m47s before the new mandatory conflict and Home
-    # journeys. Allow their measured runtime; preserve all checks and step bounds.
+    # Keep the existing75-minute deadline. The unchanged complete browser
+    # command runs in required isolated groups, not in this serial lifetime.
     timeout-minutes: 75
     env:
       CI: "true"
@@ -373,23 +451,6 @@ jobs:
           npm run test:e2e
           npm run review:test
           npm run review:test-browser
-          npm run test:sign-in-browser
-      - name: Preserve synthetic settings screenshots
-        if: always()
-        # Successful synthetic UI screenshots contain no credentials or real data.
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: settings-review-${{ github.sha }}-attempt-${{ github.run_attempt }}
-          path: |
-            .local/review/settings-*.png
-            .local/review/workspace-*.png
-            .local/review/home-*.png
-            .local/review/quote-*.png
-            .local/review/amendment-*.png
-            .local/review/appointment-*.png
-          include-hidden-files: true
-          retention-days: 3
-          if-no-files-found: error
       - name: Build and smoke-test portable container
         timeout-minutes: 15
         run: |

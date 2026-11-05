@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "observedAt": "2026-11-05T00:42:03.735Z",
+  "observedAt": "2026-11-05T02:42:00.395Z",
   "scope": "Registered53 synthetic acceptance, current booking/cancellation, private included-source records and reopened Draft integration preparation",
   "testedCheckoutHead": "4d4096b3d30f249360ba84c7d7f4a2f9bc79ebd2",
   "sourceFiles": [
@@ -61,8 +61,8 @@
     },
     {
       "path": ".github/workflows/ci.yml",
-      "bytes": 20548,
-      "sha256": "be9bf70efb580a546b2801c154a2a8773c76b152eb21b55ecf5b49ad4995d2ec"
+      "bytes": 23316,
+      "sha256": "b6f4d7749baa4f5c0d09e226c0e89a6be04bd9062c740de7f01b92f85588cd5c"
     },
     {
       "path": "release/compatibility.json",
@@ -188,6 +188,36 @@
       "path": ".github/workflows/quote-commercial-browser.yml",
       "bytes": 4448,
       "sha256": "81806faf87cb57cbe9b5976c770a97608c169f4ca7f08c252c2df841a8af5600"
+    },
+    {
+      "path": "scripts/run-browser-group.mjs",
+      "bytes": 2178,
+      "sha256": "a3a4c91036658e58e334c465248eaa91de67b918925624c05e88a4836928a079"
+    },
+    {
+      "path": "scripts/verify-ci-results.mjs",
+      "bytes": 194,
+      "sha256": "5a0ec9445cb69da1f83b4d14cebe3eee1e8ab4e39d7c317092cde670179f1958"
+    },
+    {
+      "path": "src/tooling/browser-groups.ts",
+      "bytes": 2164,
+      "sha256": "d7532c37858e2edde2d315a436c276f8ea080a158e73f536784e66656dbe8c17"
+    },
+    {
+      "path": "src/tooling/ci-results.ts",
+      "bytes": 1103,
+      "sha256": "cbedc4cd724b4bd4cf0a18b046842f2f72a99905d2f8509c923ed633cc4f9e84"
+    },
+    {
+      "path": "tests/unit/browser-groups.test.ts",
+      "bytes": 2675,
+      "sha256": "4e2229f4c71ea0d8904aacf276073ef55ed88cfed0d4c58414d635dd1aa39d76"
+    },
+    {
+      "path": "tests/unit/ci-results.test.ts",
+      "bytes": 2122,
+      "sha256": "96a92ea5b703562d6285a69e0626293ff76dfccc157864d2f1a3b844e4cdf0de"
     }
   ],
   "repositorySchema": 53,
@@ -540,6 +570,158 @@
         "normalStatusStateAndReadAssertionsRetained": true
       },
       "newCurrentSourceBrowserOrFullReleasePassed": false
+    },
+    "current414Release": {
+      "source": "c0daed37fcc46c58e75fd665b6e6dcd0a75ade95",
+      "run": 41943366813,
+      "foundationJob": 126976950113,
+      "conclusion": "cancelled",
+      "verifiedAnnotation": "The job has exceeded the maximum execution time of 1h15m0s",
+      "databaseProviderAuthPassed": true,
+      "genuineAuthCases": 277,
+      "allEarlyFocusedJobsPassed": true,
+      "earlyIntegrityCases": 170,
+      "completeGenuineBrowserJourneys": 2,
+      "browserHelperRegressions": 2,
+      "fullRetainedBrowserCases": 301,
+      "browserFailed": 0,
+      "browserSkipped": 0,
+      "containerStepIncomplete": true,
+      "releaseArtifactNotProduced": true,
+      "fullReleasePassed": false,
+      "ownerUpgraded": false
+    },
+    "requiredBrowserPartition": {
+      "verification": {
+        "checkedAt": "2026-11-05T02:31:37.370Z",
+        "workflowSha256": "b6f4d7749baa4f5c0d09e226c0e89a6be04bd9062c740de7f01b92f85588cd5c",
+        "sourceBefore": "38f1a3cf4c1348901fe9a67ce64e43d048849b01",
+        "reason": "Full414 source had all301 retained browser checks pass, then exceeded the verified75-minute job deadline during container checks. Retrying the same serial lifetime would retain this measured bottleneck.",
+        "browserFiles": 29,
+        "groups": {
+          "crm": {
+            "files": 5
+          },
+          "intake": {
+            "files": 5
+          },
+          "commercial": {
+            "files": 4
+          },
+          "amendments": {
+            "files": 2
+          },
+          "schedule": {
+            "files": 9
+          },
+          "records": {
+            "files": 4
+          }
+        },
+        "sameFullPackageCommandRetained": true,
+        "allNativeJobsUnchanged": true,
+        "allOtherFoundationStepsUnchanged": true,
+        "threeFoundationBrowserReviewCommandsRetained": true,
+        "oldScreenshotPatternsAllRetainedAcrossGroups": true,
+        "requiredAggregateFailsOnMissingFailedSkippedCancelledBrowserMatrix": true,
+        "mainDeadlineMinutes": 75,
+        "newBrowserGroupDeadlineMinutes": 25,
+        "browserDependencyStepDeadlineMinutes": 6,
+        "containerStepDeadlineMinutes": 15,
+        "permissionsActionsDependenciesUnchanged": true,
+        "parser": "existing yaml2.8.1",
+        "addedPackages": 0,
+        "actualNewLinuxExecutionPassed": false
+      },
+      "measurement": {
+        "source": "c0daed37fcc46c58e75fd665b6e6dcd0a75ade95",
+        "run": 41943366813,
+        "job": 126976950113,
+        "browserCases": 301,
+        "browserFailures": 0,
+        "browserSkipped": 0,
+        "serialBrowserStartedAt": "2026-11-05T01:19:51.8757407Z",
+        "serialBrowserFinishedAt": "2026-11-05T02:11:59.8140433Z",
+        "serialBrowserSeconds": 3127.938,
+        "verifiedTimeoutMinutes": 75,
+        "jobStartedAt": "2026-11-05T01:01:40Z",
+        "jobCompletedAt": "2026-11-05T02:17:29Z",
+        "annotation": "The job has exceeded the maximum execution time of 1h15m0s",
+        "groupCaseTime": [
+          {
+            "group": "crm",
+            "files": 5,
+            "measuredCaseSeconds": 430
+          },
+          {
+            "group": "intake",
+            "files": 5,
+            "measuredCaseSeconds": 580
+          },
+          {
+            "group": "commercial",
+            "files": 4,
+            "measuredCaseSeconds": 500
+          },
+          {
+            "group": "amendments",
+            "files": 2,
+            "measuredCaseSeconds": 659
+          },
+          {
+            "group": "schedule",
+            "files": 9,
+            "measuredCaseSeconds": 756
+          },
+          {
+            "group": "records",
+            "files": 4,
+            "measuredCaseSeconds": 182
+          }
+        ],
+        "basis": "Actual top-level test/suite durations mapped to unchanged files; all titles matched uniquely. Group figures exclude fixture/inter-file/install/build overhead and do not promise new CI runtime."
+      },
+      "localGates": {
+        "startedAt": "2026-11-05T02:33:32.595Z",
+        "sourceScope": "CI partition/required aggregate and unit regressions; application/SQL unchanged",
+        "steps": [
+          {
+            "name": "units",
+            "log": ".local/partition415-units.log",
+            "exitCode": 0
+          },
+          {
+            "name": "types",
+            "log": ".local/partition415-types.log",
+            "exitCode": 0
+          },
+          {
+            "name": "lint",
+            "log": ".local/partition415-lint.log",
+            "exitCode": 0
+          },
+          {
+            "name": "build",
+            "log": ".local/partition415-build.log",
+            "exitCode": 0
+          },
+          {
+            "name": "server",
+            "log": ".local/partition415-server.log",
+            "exitCode": 0
+          }
+        ],
+        "passed": true,
+        "ownerPreviewUnchanged": true,
+        "unitCases": 8198,
+        "unitFailed": 0,
+        "finishedAt": "2026-11-05T02:35:24.259Z"
+      },
+      "focusedUnitCases": 75,
+      "focusedUnitFailed": 0,
+      "sourceFilesUnchanged": "All29 existing browser files and their original full package command remain byte-exact; no app/SQL, dependency, access policy, native prerequisite or existing time limit changed.",
+      "currentLinuxMatrixPassed": false,
+      "currentFullReleasePassed": false
     }
   },
   "delivery": {
