@@ -11,6 +11,18 @@ on:
       - 'src/client/amendment-acceptance-planning.ts'
       - 'src/app/schedule/**'
       - 'tests/integration/quote-amendment-acceptance-product-browser.test.mjs'
+      - 'tests/integration/quote-amendment-acceptance-storage.test.mjs'
+      - 'tests/integration/quote-amendment53-candidate.test.mjs'
+      - 'tests/integration/recovery-drill.test.mjs'
+      - 'tests/support/recovery-drill.mjs'
+      - 'tests/support/registered52-*.json'
+      - 'tests/support/amendment53-export-coverage.json'
+      - 'tests/support/quote-amendment53-candidate.mjs'
+      - 'planning/SECURITY_EXPORT_COVERAGE.json'
+      - 'supabase/migration-checksums.json'
+      - 'supabase/migrations/**'
+      - 'src/tooling/**'
+      - 'scripts/install-recovery-tools.mjs'
       - 'tests/integration/quote-commercial-browser.test.mjs'
       - 'tests/integration/quote-review-browser.test.mjs'
       - 'tests/integration/quote-browser-response.test.mjs'
@@ -28,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [commercial, amendment]
+        suite: [commercial, amendment, amendment_integrity]
     env:
       CI: 'true'
       NEXT_TELEMETRY_DISABLED: '1'
@@ -56,16 +68,24 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-fund
       - run: node scripts/install-tools.mjs
-      - run: npx --no-install playwright install --with-deps chromium webkit
-      - run: npm run build
+      - if: matrix.suite != 'amendment_integrity'
+        run: npx --no-install playwright install --with-deps chromium webkit
+      - if: matrix.suite != 'amendment_integrity'
+        run: npm run build
       # Fast, genuine Auth/PostgreSQL/actual Next feedback. This does not replace
       # any mandatory full release/security/recovery/container gate in ci.yml.
       - if: matrix.suite == 'commercial'
         run: node --test --test-concurrency=1 tests/integration/quote-browser-response.test.mjs tests/integration/quote-commercial-browser.test.mjs tests/integration/quote-review-browser.test.mjs
       - if: matrix.suite == 'amendment'
         run: node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-amendment-acceptance-product-browser.test.mjs
+      # Legacy/current profile refusal and independent recovery need early
+      # feedback too. These same suites remain mandatory in the full release.
+      - if: matrix.suite == 'amendment_integrity'
+        run: |
+          node scripts/install-recovery-tools.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-amendment-acceptance-storage.test.mjs tests/integration/quote-amendment53-candidate.test.mjs tests/integration/recovery-drill.test.mjs
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        if: always()
+        if: always() && matrix.suite != 'amendment_integrity'
         with:
           name: commercial-browser-feedback-${{ matrix.suite }}-${{ github.sha }}-${{ github.run_attempt }}
           path: |

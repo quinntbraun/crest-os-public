@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "observedAt": "2026-11-04T23:05:25.423Z",
+  "observedAt": "2026-11-05T00:26:01.857Z",
   "scope": "Registered53 synthetic acceptance, current booking/cancellation, private included-source records and reopened Draft integration preparation",
   "testedCheckoutHead": "4d4096b3d30f249360ba84c7d7f4a2f9bc79ebd2",
   "sourceFiles": [
@@ -36,8 +36,8 @@
     },
     {
       "path": "tests/integration/quote-amendment-acceptance-storage.test.mjs",
-      "bytes": 188249,
-      "sha256": "991d09816de44c65bfd6b091b63623f1f363dba824131076ffd43164c880d393"
+      "bytes": 188242,
+      "sha256": "515a728ed27912ec55ef0d4812db2b319c3ad2a7466f453b1a9d88ce344a66db"
     },
     {
       "path": "tests/integration/quote-amendment52-candidate.test.mjs",
@@ -186,8 +186,8 @@
     },
     {
       "path": ".github/workflows/quote-commercial-browser.yml",
-      "bytes": 3205,
-      "sha256": "b64dcec34fbf7149d81d116a151e40ccf2ffdc5a34467ea14a1c0ecefe444e0e"
+      "bytes": 4448,
+      "sha256": "81806faf87cb57cbe9b5976c770a97608c169f4ca7f08c252c2df841a8af5600"
     }
   ],
   "repositorySchema": 53,
@@ -444,6 +444,73 @@
       "affectedLintPassed": true,
       "waiterRegressionPassed": 1,
       "newFullReleasePassed": false
+    },
+    "current412": {
+      "source": "a79658246773ad259326b53f1512ef2b9b33200d",
+      "fullRun": 41930964701,
+      "foundationJob": 126937416499,
+      "databasePassed": true,
+      "providerPassed": true,
+      "genuineAuth": {
+        "passed": 277,
+        "failed": 0,
+        "skipped": 0
+      },
+      "completeBrowserJourneys": {
+        "passed": 2,
+        "total": 2,
+        "engines": [
+          "chromium",
+          "webkit"
+        ],
+        "regressionPassed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "commercialAndExpenseFocusedPassed": true,
+      "fullReleasePassed": false,
+      "storageCases": {
+        "passed": 125,
+        "total": 126
+      },
+      "failure": "Retained construction fixture has ledger52 plus proposed added columns. It invoked default backupDatabase, which now expects registered53 and correctly refused the ledger before the intended legacy52 coverage check.",
+      "correction": "Use explicit backupLegacy52Database for this frozen52 wrong-physical-schema test. Coverage refusal and empty output directory assertions, recovery implementation, current53 checks, migrations and all product behavior unchanged.",
+      "focusedNative": {
+        "report": ".local/registered53-frozen52-refusal-v2/result.json",
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "sourceStable": true,
+        "ownedCleaned": true,
+        "scope": "Real52 construction install, added-column refusal with empty directory, and independent original encrypted52 restore. Does not establish complete126 pass."
+      },
+      "interruptedNative": {
+        "report": ".local/registered53-frozen52-refusal-v1/result.json",
+        "completedPassingSubtests": 68,
+        "completeReport": false,
+        "complete126Passed": false,
+        "sourceStable": true,
+        "ownedParentCleaned": true,
+        "orphanCleanup": ".local/registered53-frozen52-refusal-v1/orphan-cleanup.json"
+      },
+      "earlyIntegrityWorkflow": {
+        "checkedAt": "2026-11-05T00:25:07.971Z",
+        "sourceSha256": "81806faf87cb57cbe9b5976c770a97608c169f4ca7f08c252c2df841a8af5600",
+        "existingParser": "yaml2.8.1",
+        "addedDependencies": 0,
+        "matrixSuites": 3,
+        "originalCommandsRetained": true,
+        "permissionsServiceEnvironmentRunnerConcurrencyUnchanged": true,
+        "jobDeadlineMinutes": 15,
+        "fullReleaseWorkflowUnchanged": true,
+        "nativeSuiteRunsAllThreeFilesWithoutFilter": true,
+        "browserSuitesBothRetained": true,
+        "screenshotUploadsBrowserSuitesOnly": true,
+        "actualNewCIExecutionPassed": false,
+        "requirement": "Current412 full release discovered a stale frozen52 test profile after early browser checks passed; expose existing acceptance-storage/current-upgrade/recovery assertions in early feedback.",
+        "completionCriterion": "All170 existing native cases and both browser suites succeed in independent focused jobs, followed by all unchanged full release gates."
+      },
+      "newSourceFullCIPassed": false
     }
   },
   "delivery": {
