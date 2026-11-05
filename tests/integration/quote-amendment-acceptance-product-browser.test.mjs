@@ -6,62 +6,70 @@ import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {unzipSync,strFromU8} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {captureQuoteResponse} from '../support/quote-browser-response.mjs';
 import {pendingQuoteAmendmentKeys} from '../../src/client/pending-quote-amendment.ts';
 
+const commandPacing=new WeakMap();
 async function command(page,label,path,message){
- let committed=false;
- const response=page.waitForResponse(r=>{if(new URL(r.url()).pathname===path&&r.request().method()==='POST'){committed=true;return true;}return false;}).then(async saved=>{
-  // Read while the response is available, before click completion or later
-  // browser activity can discard Chromium's response-body resource.
-  assert.equal(saved.status(),200);const result=await saved.json();assert.equal(result.state,'committed');return result.receipt;
- });
- const read=page.waitForResponse(r=>committed&&new URL(r.url()).pathname==='/api/business/quotes/amendments/read'&&r.request().method()==='POST').then(async current=>{
-  // Consume the actual refresh bytes when headers arrive. A later finished()
-  // observer can miss Chromium's retired request lifecycle after UI activity.
-  assert.equal(current.status(),200);await current.json();
- });
- // Observe both immediately: a primary click/assertion failure closes the
- // browser and rejects unused waiters. Their rejection must not interrupt
- // fixture cleanup or replace that primary failure. Normal awaits still fail.
- void response.catch(()=>undefined);void read.catch(()=>undefined);
- await page.getByRole('button',{name:label,exact:true}).click();
- const receipt=await response;
- await read;
- if(message)await expect(page.getByRole('status')).toContainText(message);
- return receipt;
+ const pace=commandPacing.get(page),captures=[];let committed=false;
+ const observe=response=>{if(new URL(response.url()).pathname===path&&response.request().method()==='POST')committed=true;};
+ page.on('response',observe);
+ try{
+  const response=await captureQuoteResponse(page,path,{beforeForward:pace});captures.push(response);
+  const read=await captureQuoteResponse(page,'/api/business/quotes/amendments/read',{beforeForward:async()=>{assert(committed,'Read must follow the command response');await pace?.();}});captures.push(read);
+  // The helper forwards each real request once and captures its server bytes
+  // before returning them unchanged. No Browser Response body is read here.
+  await page.getByRole('button',{name:label,exact:true}).click();
+  const saved=await response.outcome;assert.equal(saved.status,200);assert.equal(saved.body.state,'committed');
+  const current=await read.outcome;assert.equal(current.status,200);assert(current.body&&typeof current.body==='object');
+  if(message)await expect(page.getByRole('status')).toContainText(message);
+  return saved.body.receipt;
+ }finally{page.off('response',observe);await Promise.allSettled(captures.map(capture=>capture.cancel()));}
+}
+
+// A deterministic request lifecycle for the actual observer, with retired
+// page Response bodies. Real Chromium/WebKit/HTTP and product journeys follow.
+function observerPage({fault=null}={}){
+ const routes=new Map(),listeners=new Set(),pending=[],receipt={synthetic:'one original receipt'},requests=[];
+ const primary=new Error('SYNTHETIC_PRIMARY_CLICK_FAILURE');let retiredReads=0,paceCalls=0;
+ const page={
+  on(event,fn){assert.equal(event,'response');listeners.add(fn);},off(event,fn){assert.equal(event,'response');listeners.delete(fn);},
+  async route(pattern,handler){routes.set(pattern,handler);},async unroute(pattern,handler){if(routes.get(pattern)===handler)routes.delete(pattern);},
+  waitForResponse(){return new Promise((resolve,reject)=>pending.push({resolve,reject}));},
+  getByRole(){return {async click(){
+   if(fault==='click')throw primary;
+   for(const [i,path]of ['/api/business/quotes/amendments/create','/api/business/quotes/amendments/read'].entries()){
+    const status=fault==='http'&&i===0||fault==='read'&&i===1?503:200,body=i===0?{state:'committed',receipt}:{synthetic:'actual saved refresh'};
+    const request={method:()=> 'POST',postDataJSON:()=>({synthetic:'same submitted request'}),url:()=> 'https://synthetic.example'+path};
+    const response={status:()=>status,async body(){return Buffer.from(JSON.stringify(body));}};
+    const pageResponse={url:request.url,request:()=>request,status:()=>status,async json(){retiredReads++;throw Error('SYNTHETIC_RETIRED_BROWSER_RESPONSE');},finished(){retiredReads++;return new Promise(()=>{});}};
+    const handler=routes.get('**'+path);
+    if(handler)await handler({request:()=>request,async fetch(options){assert.deepEqual(options,{maxRetries:0,maxRedirects:0});requests.push(path);return response;},async fulfill({response:original,body:bytes}){assert.equal(original,response);assert.deepEqual(JSON.parse(bytes.toString()),body);for(const fn of listeners)fn(pageResponse);},async abort(){}});
+    else{for(const fn of listeners)fn(pageResponse);pending[i]?.resolve(pageResponse);}
+   }
+  }};}
+ };
+ commandPacing.set(page,async()=>{paceCalls++;});
+ return {page,primary,receipt,requests,counts:()=>({retiredReads,paceCalls,routes:routes.size,listeners:listeners.size}),close(){for(const p of pending)p.reject(Error('SYNTHETIC_PAGE_CLOSED'));}};
 }
 test('browser command waiters preserve primary failures through cleanup',async()=>{
- for(const fault of ['http','click']){
-  const primary=new Error('SYNTHETIC_PRIMARY_CLICK_FAILURE'),pending=[];let waits=0;
-  const page={waitForResponse(){const first=waits++===0;return fault==='http'&&first?Promise.resolve({status:()=>503}):new Promise((_,reject)=>pending.push(reject));},getByRole(){return {async click(){if(fault==='click')throw primary;}};}};
-  await assert.rejects(command(page,'Synthetic action','/api/business/quotes/amendments/create'),error=>fault==='click'?error===primary:error.name==='AssertionError'&&error.actual===503&&error.expected===200);
-  for(const reject of pending)reject(new Error('SYNTHETIC_BROWSER_CLOSED_AFTER_PRIMARY_FAILURE'));
-  // Node's test runner fails on any unhandled rejection from these waiters.
-  await new Promise(resolve=>setImmediate(resolve));
+ for(const fault of ['http','read','click']){
+  const f=observerPage({fault});
+  await assert.rejects(command(f.page,'Synthetic action','/api/business/quotes/amendments/create'),error=>fault==='click'?error===f.primary:error.name==='AssertionError'&&error.actual===503&&error.expected===200);
+  f.close();await new Promise(resolve=>setImmediate(resolve));assert.equal(f.counts().routes,0);assert.equal(f.counts().listeners,0);
  }
 });
 test('browser command consumes its response before action completion discards the body',async()=>{
- const pending=[];let available=true,reads=0;
- const receipt={synthetic:'captured once without another command'};
- const page={waitForResponse(){return new Promise(resolve=>pending.push(resolve));},getByRole(){return {async click(){
-  pending[0]({status:()=>200,async json(){assert(available,'SYNTHETIC_RESPONSE_BODY_DISCARDED_AFTER_ACTION');reads++;return {state:'committed',receipt};}});
-  pending[1]({status:()=>200,async json(){assert(available);return {synthetic:'actual refresh'};}});
-  await new Promise(resolve=>setImmediate(resolve));available=false;
- }};}};
- assert.deepEqual(await command(page,'Synthetic action','/api/business/quotes/amendments/create'),receipt);assert.equal(reads,1);assert.equal(pending.length,2);
+ const f=observerPage();assert.deepEqual(await command(f.page,'Synthetic action','/api/business/quotes/amendments/create'),f.receipt);
+ assert.deepEqual(f.requests,['/api/business/quotes/amendments/create','/api/business/quotes/amendments/read']);assert.deepEqual(f.counts(),{retiredReads:0,paceCalls:2,routes:0,listeners:0});
 });
 test('browser command consumes refreshed bytes without waiting on a retired completion observer',async()=>{
- const pending=[];let refreshReads=0,lateCompletionReads=0;
- const page={waitForResponse(){return new Promise(resolve=>pending.push(resolve));},getByRole(){return {async click(){
-  pending[0]({status:()=>200,async json(){return {state:'committed',receipt:{synthetic:'original receipt'}};}});
-  pending[1]({status:()=>200,async json(){refreshReads++;return {synthetic:'actual refresh'};},finished(){lateCompletionReads++;return new Promise(()=>{});}});
-  await new Promise(resolve=>setImmediate(resolve));
- }};}};
- let timer;try{
-  const receipt=await Promise.race([command(page,'Synthetic action','/api/business/quotes/amendments/create'),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('SYNTHETIC_RETIRED_REFRESH_OBSERVER')),100);})]);
-  assert.deepEqual(receipt,{synthetic:'original receipt'});assert.equal(refreshReads,1);assert.equal(lateCompletionReads,0);
- }finally{clearTimeout(timer);}
+ const f=observerPage();let timer;try{
+  assert.deepEqual(await Promise.race([command(f.page,'Synthetic action','/api/business/quotes/amendments/create'),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('SYNTHETIC_RETIRED_REFRESH_OBSERVER')),100);})]),f.receipt);
+  assert.equal(f.counts().retiredReads,0);assert.equal(f.requests.length,2);
+ }finally{clearTimeout(timer);f.close();}
 });
+
 async function reviewAndShare(page){
  await command(page,'Request review of saved amendment','/api/business/quotes/review/submit','Amendment review requested and reloaded.');
  await command(page,'Approve this exact amendment','/api/business/quotes/review/approve','Amendment approval recorded and reloaded.');
@@ -98,7 +106,8 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:900},timezoneId:'America/Indianapolis',reducedMotion:'reduce'});page=await context.newPage();page.setDefaultTimeout(20000);page.setDefaultNavigationTimeout(30000);
   let next=0,limited=0,accepts=0;const errors=[];
   // Human reading pace, not retries or a changed server admission window.
-  await page.route('**/api/**',async route=>{const now=Date.now(),wait=Math.max(0,next-now);next=Math.max(next,now)+650;if(wait)await new Promise(resolve=>setTimeout(resolve,wait));await route.continue();});
+  const pace=async()=>{const now=Date.now(),wait=Math.max(0,next-now);next=Math.max(next,now)+650;if(wait)await new Promise(resolve=>setTimeout(resolve,wait));};commandPacing.set(page,pace);
+  await page.route('**/api/**',async route=>{await pace();await route.continue();});
   page.on('response',r=>{const path=new URL(r.url()).pathname;if(!path.startsWith('/api/'))return;if(r.status()===429)limited++;if(r.status()>=400){const category=path==='/api/auth/session'?'auth_session':path==='/api/business/quotes/amendments/create'?'amendment_create':path==='/api/business/quotes/amendments/read'?'amendment_read':path.startsWith('/api/business/quotes/')?'quote_other':path.startsWith('/api/business/scheduling/')?'scheduling':'other_api';transportFailures.push({category,status:r.status()});if(transportFailures.length>8)transportFailures.shift();}});
   page.on('request',r=>{if(new URL(r.url()).pathname==='/api/business/quotes/amendments/accept')accepts++;});
   page.on('pageerror',error=>errors.push(error.name));

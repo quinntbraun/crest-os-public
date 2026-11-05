@@ -1,6 +1,6 @@
 # Usable release milestones and execution reporting
 
-Current construction: registered53 is implemented and owner delivery stays accepted52. Current415 retained five browser groups pass295 cases and WebKit completes the amendment journey; Chromium read-completion observation fails. The eager-read correction passes3 helper regressions/affected lint, but fresh exact-source genuine browser/full release acceptance remains mandatory. Application/SQL unchanged. WORKING_STATE.md and the source proof control current status.
+Current construction: registered53 is implemented and owner delivery stays accepted52. Source416 focused amendment5/5, native170/commercial/expense and five full browser groups pass; full Chromium still loses a read-body resource, so full release fails. Current correction reuses the existing single-forward response capture, preserves pacing/assertions and passes3 helper plus4 real Chromium/WebKit HTTP regression cases/affected lint. Fresh current-source genuine/full acceptance remains required; application/SQL unchanged. WORKING_STATE.md and the source proof control current status.
 
 ## Current delivery — 2026-11-04
 

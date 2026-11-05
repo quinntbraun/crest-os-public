@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
-  "observedAt": "2026-11-05T03:02:35.475Z",
+  "observedAt": "2026-11-05T03:23:39.301Z",
   "scope": "Registered53 synthetic acceptance, current booking/cancellation, private included-source records and reopened Draft integration preparation",
-  "testedCheckoutHead": "0463c2169d9c25a33a3a9ae19b6f5b98fd2e4365",
+  "testedCheckoutHead": "696e3ab6aecf59c33fd4495bd3707d1f30cb2252",
   "sourceFiles": [
     {
       "path": "supabase/migration-checksums.json",
@@ -111,8 +111,8 @@
     },
     {
       "path": "tests/integration/quote-amendment-acceptance-product-browser.test.mjs",
-      "bytes": 28198,
-      "sha256": "94db1df811180bae7ced7d8cafecf1b1d1c246de0228d918d4f0656f0eafe8cb"
+      "bytes": 29261,
+      "sha256": "c534d487a3d60bd1a66074f2cdf6d5e9f1f5b18ed2016367c96bac5fc78340b5"
     },
     {
       "path": "tests/integration/quote-amendment-reopening-auth.test.mjs",
@@ -218,6 +218,16 @@
       "path": "tests/unit/ci-results.test.ts",
       "bytes": 2122,
       "sha256": "96a92ea5b703562d6285a69e0626293ff76dfccc157864d2f1a3b844e4cdf0de"
+    },
+    {
+      "path": "tests/integration/quote-browser-response.test.mjs",
+      "bytes": 6750,
+      "sha256": "c9f872a1afdc955bb6e33a38d71a928de2d03f863709665ee63e5d0eeab1e5f0"
+    },
+    {
+      "path": "tests/support/quote-browser-response.mjs",
+      "bytes": 1892,
+      "sha256": "359349b4193cfab58b1818e0f3e368b6f06428dcff1360f9382db3e858675dbb"
     }
   ],
   "repositorySchema": 53,
@@ -775,6 +785,66 @@
       "raisedLimits": false,
       "genuineCurrentLinuxPassed": false,
       "fullReleasePassed": false
+    },
+    "captureObserver417": {
+      "previousPublic": "0857f7991689eb9e8ed4f4f17ebcb84434de09d4",
+      "previousTree": "fc9f6b3d8676ca38f9b8576272dd2a197e23a1ce",
+      "full": 41959236580,
+      "focused": 41959236665,
+      "focusedAmendment": {
+        "job": 127021368044,
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "bothGenuineEnginesComplete": true
+      },
+      "fullAmendment": {
+        "job": 127021368017,
+        "passed": 6,
+        "failed": 1,
+        "skipped": 0,
+        "webkitWholeJourneyComplete": true,
+        "chromiumFailure": "Eager following-read response.json still loses Network.getResponseBody resource during cancellation preparation; immediate body reading alone is insufficient."
+      },
+      "otherFiveBrowserGroupsPassed": true,
+      "nativeIntegrity": 170,
+      "commercialAndExpenseFocusedPassed": true,
+      "correction": "Reuse existing captureQuoteResponse for both the genuine command and following read, buffering each actual server body before returning identical bytes to the browser. Preserve read-after-response check, original650ms pacing, status/receipt/UI/SQL assertions and one write. Cancel unused test observers/routes after primary failure without another request.",
+      "regression": {
+        "checkedAt": "2026-11-05T03:22:43.441Z",
+        "before": "696e3ab6aecf59c33fd4495bd3707d1f30cb2252",
+        "scope": "Actual command observer sequencing with retired page Response bodies; genuine Auth/database journeys remain required",
+        "results": [
+          {
+            "name": "before",
+            "exitCode": 1
+          },
+          {
+            "name": "after",
+            "exitCode": 0
+          }
+        ],
+        "beforeRetiredBodyFailureReproduced": true,
+        "afterSameRequestCapturePasses": true,
+        "localRealHTTPChromiumAndWebkitCases": 4,
+        "allCommandHelperRegressions": 3,
+        "failed": 0,
+        "original650msPacingPreserved": true,
+        "forwardedRequestsPerCommandAndFollowingRead": 2,
+        "writeRequestsPerCommand": 1,
+        "mutationRetryAdded": false,
+        "productionCodeChanged": false
+      },
+      "realHTTPChromiumAndWebkitCases": 4,
+      "commandHelperCases": 3,
+      "affectedLintPassed": true,
+      "appOrSQLChanged": false,
+      "newDependency": false,
+      "mutationRetryAdded": false,
+      "raisedLimits": false,
+      "currentFullBrowserCasesExpected": 304,
+      "currentLinuxPassed": false,
+      "currentFullReleasePassed": false
     }
   },
   "delivery": {
