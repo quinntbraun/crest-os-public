@@ -16,7 +16,7 @@ async function command(page,label,path,message){
  page.on('response',observe);
  try{
   const response=await captureQuoteResponse(page,path,{beforeForward:pace});captures.push(response);
-  const read=await captureQuoteResponse(page,'/api/business/quotes/amendments/read',{beforeForward:async()=>{assert(committed,'Read must follow the command response');await pace?.();}});captures.push(read);
+  const read=await captureQuoteResponse(page,'/api/business/quotes/amendments/read',{matchesRequest:()=>committed,beforeForward:async()=>{assert(committed,'Read must follow the command response');await pace?.();}});captures.push(read);
   // The helper forwards each real request once and captures its server bytes
   // before returning them unchanged. No Browser Response body is read here.
   await page.getByRole('button',{name:label,exact:true}).click();

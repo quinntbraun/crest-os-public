@@ -1,6 +1,6 @@
 # Usable release milestones and execution reporting
 
-Current construction: registered53 is implemented and owner delivery stays accepted52. Source416 focused amendment5/5, native170/commercial/expense and five full browser groups pass; full Chromium still loses a read-body resource, so full release fails. Current correction reuses the existing single-forward response capture, preserves pacing/assertions and passes3 helper plus4 real Chromium/WebKit HTTP regression cases/affected lint. Fresh current-source genuine/full acceptance remains required; application/SQL unchanged. WORKING_STATE.md and the source proof control current status.
+Current construction: registered53 is implemented and owner delivery stays accepted52. The preflight-aware observer correction passes both COMPLETE genuine local Chromium/WebKit amendment/booking/cancellation/recovery/reopening journeys2/2 with stable source and owned cleanup, plus4 real HTTP observer cases/3 command regressions/lint. Fresh exact-source Linux/full release remains mandatory. Application/SQL unchanged; no owner upgrade or current full acceptance. WORKING_STATE.md and source proof control current status.
 
 ## Current delivery — 2026-11-04
 

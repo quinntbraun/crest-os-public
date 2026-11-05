@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
-  "observedAt": "2026-11-05T03:23:39.301Z",
+  "observedAt": "2026-11-05T03:45:06.227Z",
   "scope": "Registered53 synthetic acceptance, current booking/cancellation, private included-source records and reopened Draft integration preparation",
-  "testedCheckoutHead": "696e3ab6aecf59c33fd4495bd3707d1f30cb2252",
+  "testedCheckoutHead": "2fb3ef4bd468ef15185e15f9335b889c4a9de65a",
   "sourceFiles": [
     {
       "path": "supabase/migration-checksums.json",
@@ -111,8 +111,8 @@
     },
     {
       "path": "tests/integration/quote-amendment-acceptance-product-browser.test.mjs",
-      "bytes": 29261,
-      "sha256": "c534d487a3d60bd1a66074f2cdf6d5e9f1f5b18ed2016367c96bac5fc78340b5"
+      "bytes": 29290,
+      "sha256": "fa08c5359364e12407fb86c5642eb36f5a8cafda2bb2693085bb47b394e37fdc"
     },
     {
       "path": "tests/integration/quote-amendment-reopening-auth.test.mjs",
@@ -221,13 +221,13 @@
     },
     {
       "path": "tests/integration/quote-browser-response.test.mjs",
-      "bytes": 6750,
-      "sha256": "c9f872a1afdc955bb6e33a38d71a928de2d03f863709665ee63e5d0eeab1e5f0"
+      "bytes": 7221,
+      "sha256": "2427114dfd6ed6900a4b85394ab64a5b22095798b2e2860231b8083a7f34248b"
     },
     {
       "path": "tests/support/quote-browser-response.mjs",
-      "bytes": 1892,
-      "sha256": "359349b4193cfab58b1818e0f3e368b6f06428dcff1360f9382db3e858675dbb"
+      "bytes": 2465,
+      "sha256": "e9c82c73f5e8fd8cc9fd5afb1dae02326e698363965f604155817705974c5baf"
     }
   ],
   "repositorySchema": 53,
@@ -843,6 +843,79 @@
       "mutationRetryAdded": false,
       "raisedLimits": false,
       "currentFullBrowserCasesExpected": 304,
+      "currentLinuxPassed": false,
+      "currentFullReleasePassed": false
+    },
+    "preflightObserver418": {
+      "previousPublic": "a95b630523d50c708afc7fb04cee1755730ef490",
+      "previousTree": "b90252e52bc90092b1e4254c6f83df7562ed76f8",
+      "full": 41961490892,
+      "focused": 41961490873,
+      "focusedAmendment": {
+        "job": 127028640063,
+        "passed": 3,
+        "failed": 2,
+        "skipped": 0,
+        "reason": "Capture intercepted the deliberate pre-save recheck; read-after-command guard aborted that precheck, so save was never dispatched and deadline correctly failed."
+      },
+      "correction": "Restore original distinction between pre-save and post-save reads. Explicit request predicate lets the preflight fall through to the unchanged paced route without consuming capture; only the intended post-command read is buffered once. Handler is removed after fulfillment, not while route remains active.",
+      "realHTTPRegression": {
+        "checkedAt": "2026-11-05T03:33:49.474Z",
+        "before": "2fb3ef4bd468ef15185e15f9335b889c4a9de65a",
+        "scope": "Actual Chromium/WebKit HTTP observer regression, not genuine Auth/business database proof",
+        "rows": [
+          {
+            "name": "before",
+            "exitCode": 1,
+            "engineCases": 2
+          },
+          {
+            "name": "after",
+            "exitCode": 0,
+            "engineCases": 2
+          }
+        ],
+        "oldHelperConsumesPreflightAndFailsBothEngines": true,
+        "newHelperPreservesPreflightAndCapturesFollowingRead": true,
+        "exactRequests": [
+          "pre-save read",
+          "one command",
+          "following saved read"
+        ],
+        "writeCount": 1,
+        "retryCount": 0,
+        "bodiesReturnedUnchanged": true,
+        "originalPacingCallbacks": 3,
+        "limitsRaised": false
+      },
+      "localGenuineProduct": {
+        "report": ".local/registered53-browser-preflight418-v1/result.json",
+        "scope": "registered53_genuine_two_engine_product_preflight_aware_capture_four_widths",
+        "startedAt": "2026-11-05T03:36:08.549Z",
+        "finishedAt": "2026-11-05T03:43:11.761Z",
+        "parentCommit": "2fb3ef4bd468ef15185e15f9335b889c4a9de65a",
+        "workingPatchSha256": "619bbd9407775665ba45071b8e1ed24db438179e236b69b318a64a87d87071be",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "engines": [
+          "chromium",
+          "webkit"
+        ],
+        "sourceUnchangedDuringExecution": true,
+        "ownedClusterCleaned": true,
+        "executableTestHashesMatchCurrentSource": true,
+        "documentationUpdatedAfterRun": true,
+        "realDeviceTest": false
+      },
+      "focusedHTTPCases": 4,
+      "focusedCommandCases": 3,
+      "affectedLintPassed": true,
+      "appOrSQLChanged": false,
+      "oneWriteWithPreflightAndFollowingRead": true,
+      "original650msPacingPreserved": true,
+      "mutationRetriesAdded": false,
+      "raisedLimits": false,
       "currentLinuxPassed": false,
       "currentFullReleasePassed": false
     }
