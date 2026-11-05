@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
-  "observedAt": "2026-11-05T02:42:00.395Z",
+  "observedAt": "2026-11-05T03:02:35.475Z",
   "scope": "Registered53 synthetic acceptance, current booking/cancellation, private included-source records and reopened Draft integration preparation",
-  "testedCheckoutHead": "4d4096b3d30f249360ba84c7d7f4a2f9bc79ebd2",
+  "testedCheckoutHead": "0463c2169d9c25a33a3a9ae19b6f5b98fd2e4365",
   "sourceFiles": [
     {
       "path": "supabase/migration-checksums.json",
@@ -111,8 +111,8 @@
     },
     {
       "path": "tests/integration/quote-amendment-acceptance-product-browser.test.mjs",
-      "bytes": 26798,
-      "sha256": "09a0b66c2c2b7f11e8c2e53036d883ce2fd627de89193ea89b4319a087ffc152"
+      "bytes": 28198,
+      "sha256": "94db1df811180bae7ced7d8cafecf1b1d1c246de0228d918d4f0656f0eafe8cb"
     },
     {
       "path": "tests/integration/quote-amendment-reopening-auth.test.mjs",
@@ -722,6 +722,59 @@
       "sourceFilesUnchanged": "All29 existing browser files and their original full package command remain byte-exact; no app/SQL, dependency, access policy, native prerequisite or existing time limit changed.",
       "currentLinuxMatrixPassed": false,
       "currentFullReleasePassed": false
+    },
+    "readObserver416": {
+      "previousPublic": "4d703b81df71a87f90982e12a3a0fd29a0a9a131",
+      "previousTree": "4ef864ff5cbe63932f34960cb03d183710625e63",
+      "previousFullRun": 41957103838,
+      "previousFocusedRun": 41957103796,
+      "originalFiveBrowserGroupsPassed": true,
+      "originalFiveGroupsCases": 295,
+      "fullAmendmentGroup": {
+        "job": 127014529049,
+        "passed": 5,
+        "failed": 1,
+        "cancelled": 0,
+        "webkitWholeJourneyPassed": true,
+        "chromiumFailure": "SYNTHETIC_BROWSER_STEP_TIMEOUT_saved_job_history_body after successful booking/history headers"
+      },
+      "focusedAmendment": {
+        "job": 127014528380,
+        "passed": 2,
+        "failed": 1,
+        "cancelled": 1,
+        "chromiumFailure": "Whole600-second test deadline after initial selection; subsequent engine refused uncleared fixture roles"
+      },
+      "correction": "Consume actual read JSON immediately on response resolution, as already required for command receipts. Remove late finished() observers; preserve status/UI/SQL/original receipt assertions and transport pacing. Observe unused promise rejections without turning failures into success.",
+      "regression": {
+        "checkedAt": "2026-11-05T03:00:46.069Z",
+        "before": "0463c2169d9c25a33a3a9ae19b6f5b98fd2e4365",
+        "scope": "Actual browser test helper sequencing; not genuine application/Auth/database proof",
+        "results": [
+          {
+            "name": "before",
+            "exitCode": 1,
+            "oldObserverFailureReproduced": true
+          },
+          {
+            "name": "after",
+            "exitCode": 0,
+            "oldObserverFailureReproduced": false
+          }
+        ],
+        "oldLateCompletionObserverReproduced": true,
+        "newEagerReadPasses": true,
+        "mutationRetryAdded": false,
+        "appOrSQLChanged": false
+      },
+      "focusedHelpersPassed": 3,
+      "focusedHelpersFailed": 0,
+      "affectedLintPassed": true,
+      "appOrSQLChanged": false,
+      "mutationRetriesAdded": false,
+      "raisedLimits": false,
+      "genuineCurrentLinuxPassed": false,
+      "fullReleasePassed": false
     }
   },
   "delivery": {

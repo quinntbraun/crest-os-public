@@ -1,6 +1,6 @@
 # Usable release milestones and execution reporting
 
-Current construction: registered53 is implemented locally, with frozen52/current53 independent recovery and corrected accepted-work UI/planner. Owner delivery stays accepted52. Final source passes8165 units/types/lint/build; serial genuine20 remains18/20, isolated failed-story repro2/2, final post-fix whole-browser and exact-source Linux/full CI pending. This is not delivered acceptance or real-use approval. [Current checkpoint](WORKING_STATE.md) and [source proof](proposals/quote-amendment53-registration-verification.json) control current status.
+Current construction: registered53 is implemented and owner delivery stays accepted52. Current415 retained five browser groups pass295 cases and WebKit completes the amendment journey; Chromium read-completion observation fails. The eager-read correction passes3 helper regressions/affected lint, but fresh exact-source genuine browser/full release acceptance remains mandatory. Application/SQL unchanged. WORKING_STATE.md and the source proof control current status.
 
 ## Current delivery — 2026-11-04
 
@@ -8,7 +8,7 @@ Accepted immutable52/public07311f85/full405 is delivered in the genuine laptop/p
 
 Users can prepare/edit/compare/review/approve and record actual sharing of a separate amendment, inspect complete history/private CSV+JSON and review existing assigned/unassigned work. Amendment acceptance controls are not delivered. The owner selector is genuinely empty until an initial fictional quote is accepted; populated workflows passed in disposable fixtures. Current CI omitted amendment PNGs from its screenshot artifact; local exact-product-source populated and deployed captures were reviewed, and the retention glob is saved for the next coherent feature. Physical iPhone acceptance remains owner-deferred.
 
-Next usable milestone: deliver ordinary/commercial-cancellation acceptance, remaining allocations, revised visits and reopened work after complete genuine20/browser/full release acceptance. Exact dependencies and unresolved local service/browser diagnostics are in WORKING_STATE.md. Existing construction proofs remain source-bound historical evidence; they do not override current unverified gates. No owner setup or purchase blocks independent work.
+Next usable milestone: deliver ordinary/commercial-cancellation acceptance, remaining allocations, revised visits and reopened work after complete current genuine browser/full release acceptance. Exact source-bound dependencies and browser-observer diagnostics are in WORKING_STATE.md. Existing construction proofs remain source-bound historical evidence; they do not override current unverified gates. No owner setup or purchase blocks independent work.
 
 Full V1 remains ~40% coded; remaining200–350 active hours, very low confidence. No reliable cumulative ledger; waits excluded. Real Crest use NOT ready; current spend$0. One worker. Full approved scope and gates remain in the tables below.
 
