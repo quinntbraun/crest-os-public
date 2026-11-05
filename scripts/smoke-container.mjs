@@ -10,7 +10,8 @@ while (Date.now() < deadline) {
 if (!ready) throw new Error("Container failed liveness smoke within 30 seconds");
 const response = await fetch("http://127.0.0.1:3100/");
 const html=await response.text(),policy=response.headers.get('content-security-policy'),nonce=/'nonce-([A-Za-z0-9+/]{43}=)'/.exec(policy??'')?.[1];
-if (!response.ok || !html.includes("Setup in progress") || !nonce || !html.includes(`nonce="${nonce}"`)
+if (!response.ok || !/<h1(?:\s[^>]*)?>Today<\/h1>/.test(html) || !html.includes('Checking workspace access')
+  || !html.includes('Use fictional records only') || !nonce || !html.includes(`nonce="${nonce}"`)
   || !response.headers.get('cache-control')?.includes('no-store') || response.headers.get('cdn-cache-control')!=='no-store') throw new Error("Container shell/policy smoke failed");
 const next=await fetch("http://127.0.0.1:3100/");
 if(!next.ok||next.headers.get('content-security-policy')===policy)throw new Error('Container must generate a fresh document nonce');

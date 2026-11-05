@@ -1,0 +1,105 @@
+{
+  "formatVersion": 1,
+  "scope": "synthetic_schedule_release_and_explicit_link_recovery",
+  "verifiedAt": "2026-11-03T02:06:45.887Z",
+  "source": {
+    "localBase": "c1a9c22bafcda112bcff24ee3b6cb400a7cf8fd3",
+    "files": [
+      {
+        "path": "src/app/schedule/screen.tsx",
+        "sha256": "c1c9f69ced99be4889eec5d56680dace747a4bd91a1ec8c1c7718e27feaf83a3"
+      },
+      {
+        "path": "tests/integration/appointment-holds-browser.test.mjs",
+        "sha256": "da6ce0262784576dcb472e627c5e534ea0f97fd940d9330a6b98eb833322b50c"
+      },
+      {
+        "path": "tests/integration/combined-booking-product-browser.test.mjs",
+        "sha256": "a6f33227e6b73843b0f58ee73e1ca4639fa098236b5a39ac50b1cba4b324f458"
+      },
+      {
+        "path": "tests/integration/confirmed-bookings-product-browser.test.mjs",
+        "sha256": "fdca749a35afc69857b20f9a22a32218018bd7e6c46bc1d83d6bb04d8fa0997f"
+      },
+      {
+        "path": "tests/integration/job-change-product-browser.test.mjs",
+        "sha256": "635c3cb5177fba2fa225a5cda95ed281023b646f2827c62fd78d8128abf66a18"
+      },
+      {
+        "path": "tests/support/real-auth-service.mjs",
+        "sha256": "3959f65daa4c11f1670f485dccc9965bb9545988eaae5f9f90dabd28ca46c0ae"
+      }
+    ]
+  },
+  "ciEvidence": {
+    "priorConflict": {
+      "run": 41548951379,
+      "status": "failure",
+      "browserPassed": 288,
+      "browserFailed": 5
+    },
+    "priorCombined": {
+      "source": "8194f1125270cb22a4b0d9e9e433ca87d10fb037",
+      "run": 41554994143,
+      "status": "failure",
+      "browserPassed": 289,
+      "browserFailed": 6,
+      "linuxChromiumAndWebkitCombinedJourneyPassed": true,
+      "databaseGenuineAuthProviderGroupsPassed": true,
+      "focusedCommercialAndExpensesPassed": true
+    }
+  },
+  "fixes": [
+    {
+      "requirement": "Existing saved-job acceptance must verify the registered schema actually installed.",
+      "change": "The retained browser test now requires51, matching its actual registered fixture; frozen50 adoption/recovery tests remain intact."
+    },
+    {
+      "requirement": "Interrupted proposal verification must wait for the actual committed/intercepted request before checking once-only save and tearing down.",
+      "change": "An awaited, bounded interceptor completes before status/count assertions. Redirect/retry disabled, exact200 and four saved versions still required. A40second application-aligned interceptor bound and unchanged180second overall test deadline prevent indefinite fixture waits. Raw route errors/credentials are not emitted."
+    },
+    {
+      "requirement": "The rapid multi-change test must honor the existing ordinary-session request budget.",
+      "evidence": "The native accelerated diagnostic observed112 recent admissions before the last refresh; Linux failed after saves/history completed. The final test reads only its own generated synthetic session budget and waits for16 available requests. No admission records are changed, clock faked or120/minute cap raised. This explanation remains subject to new Linux confirmation."
+    },
+    {
+      "requirement": "An explicit retry of a failed job link should return to the requested saved job.",
+      "change": "Check schedule access verifies fresh access, opens the same opaque job ID and focuses its review. A deliberate new date filter still shows the chosen list. No save or automatic retry is added."
+    },
+    {
+      "requirement": "A future owned Auth fixture startup failure must identify its safe stage without printing keys.",
+      "change": "Fixed stage labels distinguish signing, container creation/start, health and admin initialization. No startup retry, health-bound extension or permissions change."
+    }
+  ],
+  "executed": {
+    "fullUnits": 7497,
+    "failedUnits": 0,
+    "lint": true,
+    "productionBuildAndTypes": true,
+    "canonical": true,
+    "migrations51": true,
+    "publicBoundary": true,
+    "genuineChromium": {
+      "mainJourneys": 4,
+      "finalBoundedInterceptorFollowup": 1,
+      "allPassed": true,
+      "realMfa": true,
+      "realPostgres": true,
+      "sourceStable": true,
+      "ownedClustersCleaned": true,
+      "explicitJobLinkFailureRetryAndFocus": true,
+      "noAdditionalBookingSave": true
+    },
+    "fourWidthVisualAccessibilityRetained": true
+  },
+  "release": {
+    "currentSourceLinuxFullPassed": false,
+    "ownerPreviewUpdated": false,
+    "schemaMigrationExecuted": false,
+    "realCrestUseReady": false,
+    "completeBusinessBackup": false,
+    "syntheticOnly": true,
+    "spend": 0
+  },
+  "next": "Consolidated PR111 based on accepted Home50/PR109; fresh current-source full/focused Linux acceptance, then independently restored owner50 point and preserved-data51 upgrade."
+}

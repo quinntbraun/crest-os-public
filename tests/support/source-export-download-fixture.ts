@@ -1,0 +1,8 @@
+import {randomUUID} from 'node:crypto';
+export function sourceExportDownloadFixture(businessId=String(randomUUID()),actorId=String(randomUUID()),jobId=String(randomUUID())){
+ const generationId=String(randomUUID()),epoch=String(randomUUID()),micro=(n:number)=>new Date(n).toISOString().replace(/\.(\d{3})Z$/,(_m,g:string)=>'.'+g+'000Z'),time=Date.now()-60000;
+ const files=Array.from({length:7},(_,i)=>({ordinal:i+1,partId:String(randomUUID()),fileName:i===6?'source_manifest.json':'source_data_'+i+'.txt',contentType:i===6?'application/json':'text/plain; charset=utf-8',bytes:32,sha256:String(i+1).repeat(64)}));
+ const header={schemaVersion:1,businessId,exportJobId:jobId,generationId,profile:'crest.business-source-journal-bundle.v1',appReleaseId:'a'.repeat(40),sourceSchemaVersion:43,completedAt:micro(time),expiresAt:micro(time+604800000),fileCount:7,totalBytes:224,manifestSha256:files[6]!.sha256};
+ const pageRequest={exportJobId:jobId,generationId:null,afterOrdinal:0},partRequest={exportJobId:jobId,generationId,partId:files[0]!.partId},intent={formatVersion:1,objectKey:'exports/'+businessId+'/'+jobId+'/'+generationId+'/'+partRequest.partId+'.jwe',keyId:'synthetic_key',plaintextBytes:32,plaintextSha256:files[0]!.sha256,ciphertextBytes:1024,ciphertextSha256:'c'.repeat(64)},authority={currentActorId:actorId,originalActorId:actorId,recoveryEpoch:epoch,planSha256:'b'.repeat(64)};
+ return{businessId,actorId,jobId,generationId,epoch,header,files,pageRequest,partRequest,intent,authority,first:{...header,files:files.slice(0,5),nextOrdinal:5},second:{...header,files:files.slice(5),nextOrdinal:null},permit:{header,authority,file:files[0]!,intent}};
+}

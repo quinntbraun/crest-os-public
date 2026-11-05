@@ -61,7 +61,7 @@ after(async()=>{try{await app?.close();}finally{try{await service?.close();}fina
 
 async function fill(page,{trusted=false,password=fixture.password}={}){
   await page.getByLabel('Email',{exact:true}).fill(fixture.email);await page.getByLabel('Password',{exact:true}).fill(password);
-  await page.getByLabel('Authenticator code',{exact:true}).fill(fixture.totp.generate());await page.getByLabel('Trust this personal device').setChecked(trusted);
+  await page.getByLabel('Authenticator code',{exact:true}).fill(fixture.totp.generate());if(trusted)await page.getByText('Personal device options',{exact:true}).click();await page.getByLabel('Trust this personal device').setChecked(trusted);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
 }
 async function send(page,route,body={},proof=null){

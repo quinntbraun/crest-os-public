@@ -72,3 +72,13 @@ it.each([{business_id:'22222222-2222-4222-8222-222222222222'},{id:''},{lead_id:n
 it('requires every source column and records no substitute for missing evidence',()=>{
  for(const key of leadEventColumns){const row:Record<string,unknown>=event();delete row[key];expect(()=>parseLeadEvent(row,uuid)).toThrow(CustomerDataError);}
 });
+
+it('reads actual quote-derived events with exact source IDs while manual targets stay closed',()=>{
+ const sent={...event(),to_state:'quote_sent',reason:'Confirmed manual quote sharing',quote_send_id:uuid,effective_at:'2026-10-25T11:59:59.123456Z'},won={...event(),from_state:'quote_sent',to_state:'won',reason:'Recorded external customer acceptance',acceptance_id:uuid,effective_at:'2026-10-25T11:00:00.123456Z'};
+ expect(parseLeadEvent(sent,uuid)).toEqual(sent);expect(parseLeadEvent(won,uuid)).toEqual(won);expect(Object.isFrozen(parseLeadEvent(sent,uuid))).toBe(true);
+ for(const value of [sent,won])expect(()=>parseLeadStateDraft({fromState:value.from_state,toState:value.to_state,reason:value.reason})).toThrow(CustomerDataError);
+});
+it('refuses substituted quote source kind, missing sources and impossible event chronology',()=>{
+ const sent={...event(),to_state:'quote_sent',reason:'Confirmed manual quote sharing',quote_send_id:uuid};
+ for(const patch of [{quote_send_id:null},{quote_send_id:'not-a-source'},{acceptance_id:uuid},{to_state:'won'},{reason:'Manual override'},{from_state:'unsupported'},{effective_at:'2026-10-25T12:00:00.123457Z'}])expect(()=>parseLeadEvent({...sent,...patch},uuid)).toThrow(CustomerDataError);
+});

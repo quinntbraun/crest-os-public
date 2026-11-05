@@ -1,6 +1,8 @@
 # Crest OS V1 - Technical Architecture
 
-Version: 1.7 | 2026-10-25 | ADR42 explicit unresolved nonfinancial-operation retirement; production gated
+Version: 1.12 | 2026-10-28 | ADR48 manual sharing and initial acceptance; activation gated
+
+Schema43 construction amendment,2026-10-27: ADR43 explicitly registers the reviewed bounded source-export journal and its39-table/613-column inventory while preserving all42 earlier migrations and closed legacy42 profiles. Fresh owner/lease/recovery authority, exact-original audit, independent reconstruction and version-specific encrypted restore remain mandatory. This source construction does not enable product routes, certify full backups or authorize production application/use. See DATABASE8, EXPORTS_AND_BACKUPS2 and planning/PHASE_4_SOURCE_EXPORT_ADOPTION.md.
 
 Calendar scope amendment, 2026-10-22: the owner requested Google Calendar connection support in V1. P20/BR21/ADR35 now require the capability with optional owner activation, outbound-only projection and unchanged integrity/security/recovery gates. This supersedes older optional/excluded Calendar wording only. Current versions and immutable-baseline amendment evidence are in CANONICAL_MAINTENANCE.md; implementation/research and unexecuted provider gates are in [the Calendar contract](../planning/GOOGLE_CALENDAR_V1.md). No live integration or production approval is implied.
 
@@ -232,3 +234,21 @@ Checked 2026-10-20; pricing and availability must be rechecked at provisioning. 
 Use the existing Node/PostgreSQL monolith and bounded worker, a transactional scheduling outbox and narrow Google Calendar adapter. No separate automation platform, Redis or proprietary calendar server. Dedicated app-created user-owned secondary calendar and least scopes isolate unrelated calendars. Integration credentials are encrypted server-side with separate purpose/key context; OAuth consent does not become Crest authentication. Typed mappings retain original external identity, source version, destination, connection generation and recovery/lease fences. Google calls cannot be atomic with PostgreSQL; uncertain results are reconciled and never described as globally exactly-once delivery.
 
 Use conditional provider updates, retain unresolved attempts, bound retries and shared budgets, surface divergence, and prohibit inbound Google changes to authoritative jobs. Fence/drain old workers and compare actual remote state before any post-restore dispatch. The researched design, alternatives, official evidence and GC01-GC18 gates are in planning/GOOGLE_CALENDAR_V1.md. Implementation follows Phase2/3 and authoritative Phase6 scheduling; current runtime remains default-closed. Free API feasibility is not proof of free always-on hosting or production recovery.
+
+
+## 2026-10-28 — Registered44 catalog construction
+
+ADR44 appends catalog storage/commands/source readers/original-save resolution as schema44 construction. Existing43/42 profiles remain explicit and unchanged. Catalog runtime/registered44 worker/editor integration and real-data release gates remain incomplete; see planning/CATALOG_SCHEMA44_ADOPTION.json.
+
+
+The registered45 Draft quote construction follows ADR45. Exact reviewed pricing, storage, trusted commands, domain source readers and original-reference validation are one atomic migration. Historical42/43/44 export/recovery profiles remain distinct; the43 worker is not relabeled. Genuine bounded synthetic UI activation requires registered authorization, domain retrieval, independent45 recovery and browser acceptance; full45 portability/worker/admission and production gates remain required.
+
+
+### Registered46 review construction
+
+ADR46 preserves the registered45 foundation and adds exact owner quote review/approval as append-only migration46. V2 content seals supplied category and immutable condition-assessment provenance; existing v1 bytes, hashes, receipts and history remain readable without inferred facts. Owner crm.manage remains the nonfinancial capability. Require actual45-to46 upgrade, current inventory, genuine Auth/HTTP, domain profile2 plus paired history, independent encrypted46 restore and browser acceptance before bounded synthetic exposure. Full V1, complete46 portability/admission and all production gates remain unchanged.
+
+
+### Registered48 initial commercial acceptance
+
+ADR48 registers exact owner-confirmed manual sharing and external customer acceptance as one append-only migration48, preserving all47 prior SQL bodies and profile identities. A normalized one-to-one commercial control row carries same-family offer/acceptance/agreement pointers under the existing family lock, preserving legacy13-field family snapshots and receipts. This is nonfinancial owner crm.manage work; original operation review, source retrieval, independent recovery and exact-source browser gates remain mandatory.

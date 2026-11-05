@@ -1,0 +1,12 @@
+import {describe,it,expect} from 'vitest';
+import {parseScheduleTime,scheduleInstantMicroseconds} from '../../src/operations/schedule-time.ts';
+const visit=()=>({start_at:'2026-10-29T14:00:00.123456Z',end_at:'2026-10-29T15:30:00.654321Z',timezone:'America/Indiana/Indianapolis',local_start:'2026-10-29T10:00:00.123456',local_end:'2026-10-29T11:30:00.654321',start_offset_minutes:-240,end_offset_minutes:-240});
+describe('shared confirmed/proposed schedule time boundary',()=>{
+ it('preserves original microseconds, reviewed offsets and a sealed time snapshot',()=>{const input=visit(),saved=parseScheduleTime(input);input.local_start='Changed';expect(saved.start_at).toBe('2026-10-29T14:00:00.123456Z');expect(Object.isFrozen(saved)).toBe(true);expect(scheduleInstantMicroseconds(saved.end_at)-scheduleInstantMicroseconds(saved.start_at)).toBe(5400530865n);});
+ it('keeps a DST fold unambiguous through distinct actual instants and offsets',()=>{expect(parseScheduleTime({...visit(),timezone:'America/New_York',start_at:'2026-11-01T05:30:00.000000Z',end_at:'2026-11-01T06:30:00.000000Z',local_start:'2026-11-01T01:30:00.000000',local_end:'2026-11-01T01:30:00.000000',start_offset_minutes:-240,end_offset_minutes:-300})).toHaveProperty('end_offset_minutes',-300);});
+ for(const [name,patch] of [
+  ['nonexistent local DST time',{timezone:'America/New_York',start_at:'2026-03-08T07:30:00.000000Z',local_start:'2026-03-08T02:30:00.000000',start_offset_minutes:-300}],
+  ['wrong offset',{start_offset_minutes:-300}],['changed microsecond',{local_start:'2026-10-29T10:00:00.123457'}],['unknown timezone',{timezone:'Unknown/Zone'}],['impossible date',{start_at:'2026-02-30T14:00:00.123456Z'}],['extra authority flag',{confirmed:true}],['noninteger offset',{start_offset_minutes:-240.5}],['offset coercion',{start_offset_minutes:'-240'}],['nonpositive interval',{end_at:'2026-10-29T14:00:00.123456Z',local_end:'2026-10-29T10:00:00.123456'}]
+ ] as const)it('rejects '+name,()=>{expect(()=>parseScheduleTime({...visit(),...patch})).toThrow('SCHEDULE_TIME_REVIEW_REQUIRED');});
+ it('compares exact microseconds before and after the Unix epoch without millisecond rounding',()=>{expect(scheduleInstantMicroseconds('1969-12-31T23:59:59.999999Z')).toBe(-1n);expect(scheduleInstantMicroseconds('1970-01-01T00:00:00.000001Z')).toBe(1n);expect(()=>scheduleInstantMicroseconds('2026-10-30T00:00:00Z')).toThrow();});
+});

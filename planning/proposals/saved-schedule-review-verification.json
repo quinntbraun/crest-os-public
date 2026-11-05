@@ -1,0 +1,166 @@
+{
+  "formatVersion": 1,
+  "scope": "genuine_authenticated_saved_job_review_only",
+  "baseCommit": "e1d70e07e397e872a6c20c523d2a63abbb74b86f",
+  "registeredSchemaVersion": 50,
+  "ownerPreviewSchemaVersion": 49,
+  "runtimeDefaultEnabled": false,
+  "productionReady": false,
+  "ownerDatabaseUpgraded": false,
+  "startedAt": "2026-10-30T20:02:34.125Z",
+  "finishedAt": "2026-10-30T20:04:38.447Z",
+  "executed": {
+    "genuineChromiumJourneys": 1,
+    "genuineWebkitJourneys": 1,
+    "browserFailed": 0,
+    "focusedExistingAndNewUnitCases": 109,
+    "focusedUnitFiles": 4,
+    "lint": true,
+    "typecheck": true,
+    "productionNextAndServerBuild": true,
+    "sourceStableDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "receiptSha256": "5fe89ca3055007a586020ccbba6912fb3ee24270515af633db8d0bb573aba576",
+  "logSha256": "ddc44ef73f840ee11fbca8a222dd33ecd6e0adb4e9e01e1a3fcb49a36ecefd9a",
+  "sourceReceiptSha256": "4fe3fafb9162a7fab1dfbfb65c2869f593ec3489a5a8a092b99cc4efb915487b",
+  "buildLogSha256": "97ed597417042141cf75863fc494d61c825e79587212008c83a903f55c6b3c70",
+  "verified": [
+    "Genuine password/TOTP, browser session and current registered50 database; explicit test-only Node route composition.",
+    "Accepted parent scope seeded using actual retained CRM/quote/review/share/accept commands. A genuine browser session books through the protected API; no fake logged-in screen or authentication bypass.",
+    "Saved job lookup, retained customer/vehicle/location/work allocation review, saved history, actual CSV/JSON ZIP download, refresh persistence, denied access, failed-resource privacy/reload and back navigation.",
+    "Manual screenshot inspection at360/390/768/1440 in both engines; per-width Axe/overflow assertions, keyboard-triggered history retrieval and explicit focus on selected job details.",
+    "Six reader regressions cover DST25-hour date boundaries, invalid dates, global pending queue independent of dates, renewed sign-in denial, late hidden-page response and changed session binding.",
+    "Existing Node transport tests plus new explicit test-only configuration, encoded namespace reservation and bounded4MiB delivery checks pass."
+  ],
+  "limitations": [
+    "Booking, rescheduling/cancellation and confirmation/override forms remain unfinished. API-created test jobs are not evidence that those forms work.",
+    "Proposed-change queue has native/client coverage; this browser slice exercises its empty state, not a populated proposal or change submission.",
+    "Full exact-source public CI, owner preview upgrade and physical iPhone acceptance remain required. Viewport emulation is not real-device testing.",
+    "No real data, accounting activation, complete export/backup, Calendar implementation or reduced release protection."
+  ],
+  "screenshots": [
+    {
+      "engine": "chromium",
+      "width": 360,
+      "sha256": "397ec9f8c2b638b06a1bf33ca4cdf17b187cc7171e85ba82cf11e4e5910122c3",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "chromium",
+      "width": 390,
+      "sha256": "b2cc2a58d3469f03c145a17fec630fc3e1796237f0beaac1b8e72d659b75286a",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "chromium",
+      "width": 768,
+      "sha256": "fe0a6347eaa73b10cbeb7773f5c358f89f247692828c14197b25898ad134b030",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "chromium",
+      "width": 1440,
+      "sha256": "6dbee16154aeaf6a72414ba31fd5f0f4630504df68e4e1be8986977996ed634b",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "webkit",
+      "width": 360,
+      "sha256": "df17be479edbfff04216da9c02bef95c8513a453c0b9e1301597a6d25a2bac9b",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "webkit",
+      "width": 390,
+      "sha256": "e6aaf939a65ba14b64839da4451ed73c47bc4926983298a67ed22cc87c79758d",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "webkit",
+      "width": 768,
+      "sha256": "bf79a436d8f56c7e382bfd9cd43594a7fc7a64fc6b23c6c8b81b4bc4a8b454ae",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    },
+    {
+      "engine": "webkit",
+      "width": 1440,
+      "sha256": "310fa542957c1da123f4e2df6fa13d85e62500e80b56d50d450a37d39b723bbc",
+      "viewportEmulation": true,
+      "physicalDevice": false
+    }
+  ],
+  "files": [
+    {
+      "path": "package.json",
+      "sha256": "e89e3c05852ee2e14750a6834b51224bec2be72c9762c2b8640c1fcfcbc97682"
+    },
+    {
+      "path": "src/app/globals.css",
+      "sha256": "0a0688d8278d8ca38cd7e7227951cc713ad2da688c8d97c957fc8698bc27daa0"
+    },
+    {
+      "path": "src/app/workspace-frame.tsx",
+      "sha256": "00b45eb62c0991d8662f3d1d4219451820837d9face5d34703d036f50f1a357f"
+    },
+    {
+      "path": "src/app/workspace-home.tsx",
+      "sha256": "4deb4196bfd02413cce1f689b66b488a96eaa48f1826dba25d11f41f9e753139"
+    },
+    {
+      "path": "src/app/schedule/page.tsx",
+      "sha256": "40a17f1b0d6b1922395875203845f9d3f1f238e69c8436e73d1c3aa3c07ad46c"
+    },
+    {
+      "path": "src/app/schedule/screen.tsx",
+      "sha256": "de198e1d0f848762b44efbbd1ff4747fbdb2ef8850dab87b62a64bb2c418bc65"
+    },
+    {
+      "path": "src/app/schedule/job-details.tsx",
+      "sha256": "608605854aaf36f2ddb83dfe1d00d21d5878c3fe43c363dc9c14ed3b2a164375"
+    },
+    {
+      "path": "src/client/schedule-reader.ts",
+      "sha256": "7b4c2063a43169f4044e6014fdc5873aec47a165a2addf4268b331a62da15401"
+    },
+    {
+      "path": "src/server/node-server.ts",
+      "sha256": "0053741969c642b4cd2c785c5b33fffefbcc21738e5fa52abcba08c511604fe7"
+    },
+    {
+      "path": "src/operations/scheduling-http.ts",
+      "sha256": "717126af47f65b5525863d440b24c020754ee355e204f7caff286360381e078d"
+    },
+    {
+      "path": "tests/support/browser-test-tls.mjs",
+      "sha256": "164fa8ae008f32a132c634af67b19a1e7a1c3836ae3dc5e8556c235476e2c44b"
+    },
+    {
+      "path": "tests/support/private-recovery-permissions.mjs",
+      "sha256": "f43acd645fd63eff9f9f4a91997f9b93a12e54b3a3d20d51696285d92b37d207"
+    },
+    {
+      "path": "tests/support/source-export-browser-fixture.mjs",
+      "sha256": "9b4421ccfaf45d775e652c1844b28a00687790b802ff9a0808c977b7fd284517"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-product-browser.test.mjs",
+      "sha256": "99c567e76222c422c320799c3608df67efac23fef94e492e645f51e6587d79a4"
+    },
+    {
+      "path": "tests/unit/schedule-reader.test.ts",
+      "sha256": "32ab608053f16c6e97ef8f6c1f3534a836a0e727413803d70391eab595baef78"
+    },
+    {
+      "path": "tests/unit/node-server.test.ts",
+      "sha256": "bb7b80e824c3a4c268a36f77b9b46206b8f86d4b031d21811627ee86cff325c0"
+    }
+  ]
+}

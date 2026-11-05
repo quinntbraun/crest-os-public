@@ -1,0 +1,104 @@
+{
+  "formatVersion": 1,
+  "scope": "booking_conflict_review_dependency_construction",
+  "recordedAt": "2026-11-02T21:52:30.086Z",
+  "parentLocalSource": "32762d843a771b55966bf888c4cf85b32d6d8c72",
+  "sourceFiles": {
+    "planning/proposals/booking-conflict-review.sql": "fd772ae0aa60515b1b7b4d0fe18ebe0072be4bcfaf7933646f0d791bbad93d84",
+    "src/operations/booking-conflict-review-contract.ts": "28e9037c5485dfb7c23bb93675caf179392f8c3633621e93d4174bf92629026e",
+    "src/operations/confirmed-booking-directory.ts": "11c41ebc02e1260249bd1e3dc4198a61ab306cc0ee56af5ad8639f67299ddde9",
+    "src/operations/scheduling-http.ts": "adc928117af4d74ec762580f79e4acff53c2fb86622236446a75676da76e5da9",
+    "src/client/scheduling.ts": "a5be1c04caeec1e93c43ae03bd07aacf7dec89fed959812bad056d692af7eb1e",
+    "src/client/scheduling-transport.ts": "453a5579d022c5ee337f3fd7ab6afe9bfb49902241e7e044e32b9a765197103a",
+    "tests/integration/booking-conflict-review.test.mjs": "bdc7a20504e43948de7c845fb166c058ecc67e9415bbf492b1f40e1173814af9",
+    "tests/integration/booking-conflict-review-product-browser.test.mjs": "70b464dd44cb7d8f7bfd7741b7c8bac59dfa4b680e6845f12e3bda5753c4e521",
+    "tests/unit/booking-conflict-review-contract.test.ts": "a277978f9b766a89be1584f6d78659f0c26ee2cf7f15e4b059b8776573836cf5",
+    "tests/unit/scheduling-slot-review-client.test.ts": "a08d1d082ef93906f1bd9788ece0a31192c380acb36ffd3250aebf5a8fa531ea",
+    "tests/support/source-export-browser-fixture.mjs": "fdca872db463ab2f33dd5d1b0363bb4fe1028b32f3c0199d857ad9414cead8b8"
+  },
+  "registeredSchema": 50,
+  "proposedNextSchema": 51,
+  "registeredMigrationAdded": false,
+  "ownerDatabaseChanged": false,
+  "previewExposesCandidate": false,
+  "sourceRules": "BR06 existing current reservations plus known buffers, directional nearest-neighbour unknown travel, explicit override at command time",
+  "decisions": [
+    "reuse existing authorization and reservation calculation; keep every save-time recheck",
+    "stable appointment UUID tie-break at equal buffered endpoints; no existing row or original evidence rewritten",
+    "one statement captures neighbour evidence; a shared lock in the existing fulfillment-mode namespace keeps preview helper/detail reads consistent with every registered50 reservation writer",
+    "private POST/origin/CSRF/live provider/tenant checks and existing ordinary admission; business ID comes from trusted server configuration",
+    "bounded complete response:1000 overlaps plus at most two adjacent reservations and1MiB; no silently truncated or partial success",
+    "only request-context/current interval facts returned; no draft storage, mutation identity, automatic retry or automatic override"
+  ],
+  "native": {
+    "cases": 11,
+    "passed": 11,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "result": ".local/booking-conflict-review-native-v3/result.json",
+    "coverage": [
+      "frozen50 originals/history/amounts unchanged by candidate installation",
+      "source drift/default grants/widened function ACL refusal",
+      "deterministic tied adjacent visits under different query plans",
+      "exact one-microsecond overlap/half-open touching endpoints",
+      "same-business reschedule exclusion only",
+      "known travel buffers and explicit unknown candidate travel",
+      "global neighbours beyond93-day calendar range, closer known visit and cancellation",
+      "foreign/spoofed authority/direct private read denial",
+      "invalid finite intervals/travel cannot write operations",
+      "stale isolation rejection",
+      "shared lock blocks reservation writers; preview waits for existing writer"
+    ]
+  },
+  "genuineBrowserDependency": {
+    "engine": "chromium",
+    "cases": 1,
+    "passed": 1,
+    "realMfa": true,
+    "actualNextAndPrivateHttps": true,
+    "realPostgreSql": true,
+    "profile": "registered50 plus explicit candidate SQL",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "result": ".local/booking-conflict-review-browser-native-v2/result.json",
+    "coverage": [
+      "anonymous read denied",
+      "empty read creates no mode/job/operation",
+      "actual authenticated booking then complete conflict/travel read",
+      "explicit same-job exclusion",
+      "CSRF/extra business override/read-override and malformed travel refused",
+      "unrelated operator absent",
+      "preview operation count unchanged",
+      "old eight-proof sign-out state requires explicit Check session before a fresh logout; no automatic retry",
+      "signed-out read denied"
+    ]
+  },
+  "units": {
+    "passed": 7444,
+    "failed": 0,
+    "files": 274,
+    "newCases": 13,
+    "report": ".local/booking-conflict-review-unit.json"
+  },
+  "build": {
+    "production": true,
+    "log": ".local/booking-conflict-review-build.log"
+  },
+  "failedReceipts": [
+    "first native wrapper timed out/TAP-only, not a pass; setup diagnostics and guaranteed rollback/teardown added",
+    "native v2 exposed reserved CTE name overlaps; renamed local identifiers, v3 all11 pass",
+    "first browser completed dependency assertions but used a deliberately retired old sign-out proof; retained8-proof policy and test explicit Check session recovery, v2 pass"
+  ],
+  "unverified": [
+    "schema51 coordinator upgrade/adoption/frozen50 compatibility and independent recovery",
+    "new-source Linux WebKit/full release CI",
+    "integrated conflict-review/override forms and actual phone journey"
+  ],
+  "remainingApprovedBookingScope": [
+    "complete UI conflict/override review",
+    "combined accepted agreements",
+    "additional existing vehicle selection"
+  ],
+  "financialOrRealDataActivation": false,
+  "spend": 0
+}

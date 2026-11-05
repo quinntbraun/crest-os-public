@@ -1,0 +1,121 @@
+{
+  "formatVersion": 1,
+  "scope": "synthetic_saved_work_calendar_navigation",
+  "verifiedAt": "2026-11-03T02:53:17.647Z",
+  "source": {
+    "localBase": "864a916332e1ea6c38728fca3a4343e5825e2bc0",
+    "diffSha256": "e27545144dd288c1beabb6746039a3fbc24b8213aa52e6cfcd41255a63c67f58",
+    "files": [
+      {
+        "path": "src/client/schedule-calendar.ts",
+        "sha256": "76bc581cbb22283573ca0ab6cfc128ae54d4ffa872f2e80b6031389824c0a2c0"
+      },
+      {
+        "path": "src/app/schedule/calendar-navigation.tsx",
+        "sha256": "128f65feec30b41559db0fa9b2367c0c3fe4f5000970f71de220c016ebcb39da"
+      },
+      {
+        "path": "src/app/schedule/screen.tsx",
+        "sha256": "9c92335c789fef27bf894fb6469dfec6044ef44cbb20f401e8aa58a09868af8e"
+      },
+      {
+        "path": "src/app/globals.css",
+        "sha256": "24506b54f29d32b7a00fd855460838e940616f55953eead5b26523b48e2daa5a"
+      },
+      {
+        "path": "tests/unit/schedule-calendar.test.ts",
+        "sha256": "6f8aa7f5acf0313d01ba21a1b050ee8febbcb0d167c03e30b14c67390ce5ed02"
+      },
+      {
+        "path": "tests/integration/confirmed-bookings-product-browser.test.mjs",
+        "sha256": "35c14fd9a1f35776afc8581c8d4f1a41c1f3ec0947a7cf98c1d7e37dd9d856e6"
+      }
+    ]
+  },
+  "requirement": "P06/internal app calendar and the owner mobile-first Crest brief; reuse current saved-job authorization, read paths, history and retrieval.",
+  "completionCriterion": "Genuine sign-in, load the saved month, choose the actual visit date, move to empty/previous populated days, review the saved job, reload and download its history; clear calendar records on a failed read and recover only through explicit fresh access.",
+  "implementation": {
+    "modes": [
+      "day",
+      "next_seven_days",
+      "month",
+      "custom_range"
+    ],
+    "todayAndPreviousNext": true,
+    "businessTimezone": true,
+    "loadedCountsOnly": true,
+    "incompletePagingExplicit": true,
+    "cancelledCountsExplicit": true,
+    "exactMicrosecondMidnightEnd": true,
+    "noWorkingDayAssumptions": true,
+    "noMutationOrAutoRetry": true,
+    "noUrlOrPersistentPrivateCache": true,
+    "noNewPackageProviderOrMigration": true,
+    "googleCalendarConnectionImplemented": false
+  },
+  "executed": {
+    "focusedUnits": 14,
+    "newCalendarUnits": 8,
+    "fullUnits": 7505,
+    "failedUnits": 0,
+    "lint": true,
+    "productionBuildAndTypes": true,
+    "canonical": true,
+    "migrationRegistry": 51,
+    "publicBoundary": true,
+    "genuineChromium": {
+      "passed": 1,
+      "failed": 0,
+      "realMfa": true,
+      "realPostgres": true,
+      "monthDayEmptyAndPopulatedNavigation": true,
+      "savedJobAndFocus": true,
+      "refreshAndBack": true,
+      "actualCsvJsonHistoryDownload": true,
+      "networkFailureClearsCalendar": true,
+      "sourceStable": true,
+      "ownedClusterCleaned": true
+    },
+    "visual": {
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "views": [
+        "month",
+        "day"
+      ],
+      "fullPageAndActualViewportScreenshots": true,
+      "renderedScreenshotsInspected": true,
+      "axeViolations": 0,
+      "horizontalOverflow": false,
+      "calendarTouchTargetsAtLeast44px": true,
+      "actualChromiumFonts": [
+        {
+          "family": "IBM Plex Sans SmBld",
+          "postScriptName": "IBMPlexSans-SmBld",
+          "customFont": true
+        }
+      ],
+      "phoneInstructionsShortenedAfterRenderedReview": true
+    }
+  },
+  "retainedConstructionCorrections": [
+    "Derived counters initially inferred readonly and raw fixture states widened; the helper now accepts only required typed fields and retains mutable internal derived counters.",
+    "The existing React compiler could not preserve the proposed manual memoization. Removed manual memoization without disabling a lint rule; final lint/build pass."
+  ],
+  "release": {
+    "publishedAtVerification": false,
+    "currentSourceLinuxFullPassed": false,
+    "currentSourceWebkitPassed": false,
+    "physicalIphoneAcceptance": "owner_deferred",
+    "ownerPreviewUpdated": false,
+    "productionReady": false,
+    "completeExportOrBackup": false,
+    "syntheticOnly": true,
+    "spend": 0
+  },
+  "dependencies": "PR111/d084/full399 stays immutable and running. Publish this coherent calendar feature separately without cancelling healthy399. Full exact-source release gates and fresh preserved-data51 delivery remain; Google Calendar and the full remaining V1 scope stay open."
+}

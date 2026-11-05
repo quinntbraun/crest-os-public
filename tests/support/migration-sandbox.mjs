@@ -9,12 +9,13 @@ import pg from "pg";
 import { applyTestMigrations } from "../../src/tooling/migration-coordinator.ts";
 import { testDatabaseConnection } from "../../src/tooling/test-database.ts";
 
-export async function migrationSandbox() {
+export async function migrationSandbox(testConnection=process.env.CREST_TEST_DATABASE_URL) {
   const root = fileURLToPath(new URL("../../",import.meta.url));
-  const base = testDatabaseConnection(process.env.CREST_ENV,process.env.CREST_TEST_DATABASE_URL);
+  const base = testDatabaseConnection(process.env.CREST_ENV,testConnection);
   const admin = new pg.Client({ connectionString:base,connectionTimeoutMillis:5000,statement_timeout:5000 });
   await admin.connect();
   const roles = ["crest_schema_owner","crest_command_owner","crest_web","crest_worker","crest_recovery","crest_auth_reader","crest_session_owner","crest_login_owner","crest_integrity_owner","crest_inventory_owner","crest_inventory","crest_cleanup_owner","crest_cleanup","crest_export_owner","crest_export","crest_identity_export_owner","crest_session_export_owner","crest_customer_owner","crest_customer_integrity_owner","crest_address_owner","crest_address_integrity_owner","crest_vehicle_owner","crest_vehicle_integrity_owner","crest_lead_source_owner","crest_lead_source_integrity_owner","crest_lead_owner","crest_lead_integrity_owner"];
+  roles.push("crest_catalog_integrity_owner","crest_catalog_owner","crest_quote_integrity_owner","crest_quote_owner","crest_hold_integrity_owner","crest_hold_owner","crest_expense_owner","crest_mode_integrity_owner","crest_mode_owner","crest_booking_integrity_owner","crest_booking_owner");
   try { assert.equal((await admin.query("SELECT count(*)::int AS n FROM pg_roles WHERE rolname=ANY($1::text[])",[roles])).rows[0].n,0,"refuse to adopt/drop other operators' roles"); }
   catch (error) { await admin.end(); throw error; }
   const databases = new Set(); const ownedRoles = new Set(); const connections = new Set();
@@ -49,10 +50,18 @@ export async function migrationSandbox() {
       finally { for(const r of (await admin.query("SELECT rolname FROM pg_roles WHERE rolname=ANY($1::text[])",[roles])).rows) ownedRoles.add(r.rolname); }
     },
     async close() {
-      for(const client of connections) await client.end();
-      for(const name of databases) { assert.match(name,/^crest_migrate_[a-f0-9]{16}$/); await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`); }
-      for(const role of ownedRoles) { assert(roles.includes(role)); await admin.query(`DROP ROLE "${role}"`); }
-      await admin.end();
+      try {
+        for(const client of connections) await client.end();
+        // DROP DATABASE checkpoints can exceed the query-test budget on local
+        // Docker disks. Only owned cleanup gets this bounded maintenance budget.
+        await admin.query("SET statement_timeout = '30s'");
+        for(const name of databases) { assert.match(name,/^crest_migrate_[a-f0-9]{16}$/); await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`); }
+        for(const role of ownedRoles) { assert(roles.includes(role)); await admin.query(`DROP ROLE "${role}"`); }
+      } finally {
+        // A failed cleanup must still release the connection and fail the test,
+        // rather than leaving Node alive until its outer watchdog expires.
+        await admin.end();
+      }
     }
   };
 }

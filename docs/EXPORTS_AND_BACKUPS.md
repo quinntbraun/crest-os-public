@@ -1,6 +1,8 @@
 # Crest OS V1 - Portability and Recovery
 
-Version: 1.5 | 2026-10-22 | Owner-requested V1 Calendar contract; implementation and production gated
+Version: 1.11 | 2026-10-28 | ADR48 manual sharing and initial acceptance; activation gated
+
+Schema43 bounded partial-source protocol,2026-10-27 (ADR43): the explicit joint profile preserves25 source/journal projections and original evidence using fixed logical pieces and the existing independent verifier/neutral importer. Separate43 journal capture/recovery can handle32MiB logical files/64MiB aggregate inventory and1,024 pieces; physical logical pieces remain4MiB, private plaintext parts8MiB/encrypted parts16MiB, and owned capture30 seconds. This does not widen ordinary JSON, older42 collectors or the legacy8MiB recovery profile. Registered43 backups bind their own full registry identity; historical42 backups retain their original registry/profile. Original journal text/object-key/key-ID references remain required metadata, while only the ten explicitly reviewed credentials are excluded. Owner delivery freshly authorizes each part and audits authorized handoff before bytes; the browser prepares/saves/compares actual selected bytes with cancellation and private-copy expiry. None of this establishes complete portable export, full database/object/vault/key/image recovery, durable OS persistence or production readiness: completeness flags remain false and all applicable release/real-use gates remain.
 
 Calendar scope amendment, 2026-10-22: the owner requested Google Calendar connection support in V1. P20/BR21/ADR35 now require the capability with optional owner activation, outbound-only projection and unchanged integrity/security/recovery gates. This supersedes older optional/excluded Calendar wording only. Current versions and immutable-baseline amendment evidence are in CANONICAL_MAINTENANCE.md; implementation/research and unexecuted provider gates are in [the Calendar contract](../planning/GOOGLE_CALENDAR_V1.md). No live integration or production approval is implied.
 
@@ -122,3 +124,27 @@ Complete CSV, backup and neutral reconstruction include opening_adjustments, sup
 Export secret-free connection/consent/destination metadata, original job/event mappings, source/projection versions, sync state and redacted attempt/reconciliation history in the common open schema/CSV and useful XLSX views. Do not export Google tokens, OAuth codes/state, client secrets or private keys. Backups retain logical integration history; encrypted secret recovery follows restricted key procedures or deliberate reauthorization. Google copies, imports/ICS and screenshots are not backups.
 
 Database restore does not restore Google. Freeze dispatch, fence/drain former workers and review actual dedicated-calendar state against retained evidence before requeue. Preserve original mapped identities and reconstruction provenance; remote-only/missing/changed events or lost mappings require reviewed resolution, never bulk creation/deletion or old-epoch replay. Source jobs, confirmation/custody and financial history remain authoritative regardless of Google state. Disconnect does not erase Google copies or Crest audit; mapped-event cleanup is a separate explicit previewed action. GC13/GC16 and existing recovery/export gates must run before activation.
+
+
+## 2026-10-28 — Registered44 catalog construction
+
+ADR44 preserves explicit42/43 registry/coverage/recovery identities and historical Ready artifacts. Catalog adds two required source tables/29 columns; no credential exclusion is added. The consistent catalog construction package remains distinct from an adopted44 worker/profile. A synthetic catalog slice requires per-domain open-format retrieval and independent encrypted44 recovery, along with the authorization/history/browser gates in ADR44. Complete current business-export/admission/compatibility remains required before its own exposure and real-data/release claims, rather than an extra construction dependency for the early bounded synthetic editor. Registration and CSV checks do not assert complete Crest export/backup.
+
+
+ADR45 adds61 required quote source fields, including inactive items and full copied/private review content, to the registered45 inventory (44tables/703columns;693required and the same10 explicit credential exclusions). Per-domain JSON/CSV retrieval and isolated encrypted45 restore are separate from complete business-export/Excel/worker/admission delivery. Preserve explicit42/43/44 identities and reject mismatched restore profiles before restored SQL; do not label partial retrieval, a schema inventory or a historical43 artifact a complete45 export or backup.
+
+
+### Registered46 review construction
+
+ADR46 adds38 required source fields and retains exact45/44/43/42 restore identities. Current inventory is46 tables/741 columns,731 required and unchanged10 credential exclusions. New review profile2 retrieves all category/assessment/approval/normalized-item facts, including exact retained public presentation and private source notes; paired existing business-history CSV from the same RO/RR snapshot preserves original operations and audit/history images. Profile1 and historical workers are not relabeled. Registered encrypted46 independent database restore, complete46 portable exports/Excel/worker/admission, independent custody and real-data gates remain separate mandatory acceptance. Partial domain retrieval is not a complete Crest export or backup.
+
+
+
+## ADR47 appointment proposal source coverage
+
+Registered47 coverage declares every22-column appointment_hold_versions source field with no credential exclusion. Export-role appointment_hold_snapshot_context/versions require one read-only repeatable-read transaction, exact business/token and bounded ID-keyset paging with exact counts. Collection is bounded to10000 versions and1MiB pages; overflow refuses the entire capture. Pair source bytes with existing same-snapshot operation/audit history and typed customer/lead references before claiming closure. One proposal's saved-history CSV/original JSON ZIP is explicitly partial, excludes unsaved drafts and is neither a complete Crest export nor a backup. Frozen46 export/recovery identity remains separately readable; current47 encrypted independent restore must preserve immutable proposal/history bytes and reject46 schema identity before executing SQL. All original recovery-key custody, real-data and full release gates remain.
+
+
+### Registered48 initial commercial acceptance
+
+ADR48 expands actual inventory by7 commercial tables/130 fields to54 tables/893 columns (883 required, unchanged10 credential exclusions). The private commercial profile retrieves every included control/send/acceptance/agreement/entitlement/version/initial-partition column and pairs exact quote profile2, actual lead/conversion/event source references and operation/audit history in the same read-only repeatable-read snapshot. Retain original numeric strings, microseconds, Unicode, source JSON and presentation bytes. Independent encrypted registered48 database restore and mismatched legacy47 refusal are separate acceptance; every42-47 profile retains its exact identity. Complete current-schema exports/Excel, worker/admission, independent custody and production recovery gates remain required.

@@ -1,0 +1,74 @@
+{
+  "formatVersion": 1,
+  "scope": "closed_booking_schema_and_private_history_construction",
+  "recordedAt": "2026-10-30T08:41:30.870Z",
+  "existingMigrationCount": 49,
+  "registered": false,
+  "runtimeEnabled": false,
+  "writesClosed": true,
+  "trustedBookingCommandsImplemented": false,
+  "aggregateBookingInvariantsImplemented": false,
+  "rowAuditBusinessExecutionProven": false,
+  "completeCrestAcceptance": false,
+  "productionActivation": false,
+  "native": {
+    "sourceCommit": "32b79ed43f3a8ebb114bf13810552a57348e8864",
+    "finishedAt": "2026-10-30T08:35:02.772Z",
+    "passed": 9,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "coverage": "Actual PostgreSQL catalogue/FKs/forced RLS and no ordinary table/private-function access; statement write closure; typed bigint/microsecond/UTC projections; SQL-null confirmation regression; real existing CRM and approved/shared/accepted quote parent creation; independent encrypted exact-schema/row/grant restoration. No valid job write is claimed."
+  },
+  "tables": [
+    "jobs",
+    "job_vehicles",
+    "job_encounters",
+    "appointments",
+    "operator_controls",
+    "schedule_reservations",
+    "schedule_overrides",
+    "schedule_override_conflicts",
+    "allocation_plan_versions",
+    "allocation_plan_parts",
+    "job_events"
+  ],
+  "decisions": {
+    "commercialSources": "All original49 scope_allocations remain immutable. New complete partition-set versions/parts refer to the original source; a current projection and atomic aggregate checks remain to implement.",
+    "acceptedCustomer": "Add only a composite unique target on agreements, then bind encounters to the exact same customer as both job and accepted agreement. No old SQL body, source row or business amount is rewritten.",
+    "appointment": "Deferred same-job current appointment pointer; append versions. Confirmed evidence must be a JSON object, with SQL NULL and JSON null both rejected. Reasoned overlaps remain possible, so no unconditional reservation exclusion constraint.",
+    "history": "Private typed projections; closed NOLOGIN integrity role; server stamps and exact deferred row-audit definitions; pending operation required at write time. Statement gate stays closed until full aggregate guards and trusted commands exist. This execution does not prove those unexercised row-audit write paths."
+  },
+  "files": [
+    {
+      "path": "planning/proposals/confirmed-bookings-storage.sql",
+      "bytes": 21222,
+      "sha256": "f98eebcca53f4400635bebe16487daa45ab6dda7284402f656bf306e56c31123"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-history.sql",
+      "bytes": 26565,
+      "sha256": "272a75639a8839e9a66f5c0dcae98593dfb09e1d817fff56ba1c25835f25d4d7"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-storage.test.mjs",
+      "bytes": 12317,
+      "sha256": "7a023788c38b162b9cc61da9fbb8424ae9853fd7b2a867708533511a7ceac67c"
+    },
+    {
+      "path": "tests/support/confirmed-booking-fixture.mjs",
+      "bytes": 9181,
+      "sha256": "17ce74a005ea6d311ec97bfd362266a577054a7c6d8b77e711c256688ab3373d"
+    },
+    {
+      "path": "tests/support/migration-sandbox.mjs",
+      "bytes": 4599,
+      "sha256": "1b81cd981f7de9423106472f38bec06de7c9218c53c25fbb43f834b3ffb19478"
+    }
+  ],
+  "remaining": [
+    "Complete accepted-source/current-plan and per-job aggregate invariants, shared family/operator/mode locking, actual conflict/unknown-travel review and immutable transition/event closure.",
+    "Implement trusted book/reschedule/cancel plus original lookup and uncertain-save recovery. Only then replace the construction gate with complete guards in the actual installation source; never bypass it in tests.",
+    "Exercise valid/invalid writes, real MFA, concurrency, full source CSV/history, recovery/compatibility and actual UI before schema adoption and preview update.",
+    "Complete full field/custody/photo/completion, double-entry/financial, portability/recovery and Google Calendar V1 scope."
+  ]
+}

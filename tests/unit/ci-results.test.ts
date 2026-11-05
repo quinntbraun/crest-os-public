@@ -4,16 +4,18 @@ import { verifyCiResults } from "../../src/tooling/ci-results.ts";
 const successful = () => ({
   database_foundation: { result: "success", outputs: {} },
   database_provider: { result: "success", outputs: {} },
-  authentication: { result: "success", outputs: {} }
+  authentication: { result: "success", outputs: {} },
+  browser_workflows: { result: "success", outputs: {} }
 });
 
 describe("required CI prerequisite gate", () => {
-  it("accepts all three completed groups, independent of property order", () => {
+  it("accepts all four completed groups, independent of property order", () => {
     const needs = successful();
     expect(() => verifyCiResults(JSON.stringify({
       authentication: needs.authentication,
       database_provider: needs.database_provider,
-      database_foundation: needs.database_foundation
+      database_foundation: needs.database_foundation,
+      browser_workflows: needs.browser_workflows
     }))).not.toThrow();
   });
 

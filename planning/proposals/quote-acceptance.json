@@ -1,0 +1,160 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "existingMigrationCount": 47,
+  "proposedMigration": null,
+  "runtimeEnabled": false,
+  "nativeExecuted": true,
+  "existingFunctionBodies": [
+    {
+      "signature": "crest_private.quote_family_projection(crest.quote_families)",
+      "bodySha256": "e52360a7f1d1f2db24ddd11122876563d436cf1ad722d038aa9be0eeb0bc7e01",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "configuration": "search_path=pg_catalog, pg_temp"
+    },
+    {
+      "signature": "crest_private.quote_revision_projection(crest.quote_revisions)",
+      "bodySha256": "403998e14bcb7f79eaf6e4869bf0787711ce84855a89af58f465036866166895",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "configuration": "search_path=pg_catalog, pg_temp"
+    },
+    {
+      "signature": "crest_private.validate_quote_revision_change()",
+      "bodySha256": "8b23066bb391628dd766d74946b048ce004c0099d41aa1fe254d6112ffde2a85",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "configuration": "search_path=pg_catalog, pg_temp"
+    },
+    {
+      "signature": "crest_private.check_quote_audit()",
+      "bodySha256": "54e0e82a9c332c3d178986c0932b433c0f6c535fa1eee45c9c55cbf75876aef1",
+      "owner": "crest_quote_integrity_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "configuration": "search_path=pg_catalog, pg_temp,row_security=on"
+    },
+    {
+      "signature": "crest_private.check_lead_state_event()",
+      "bodySha256": "bb0996e537224d914489a0fe59777e4e8702b0f24d42fcc315230973966bca1f",
+      "owner": "crest_lead_integrity_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "configuration": "search_path=pg_catalog, pg_temp,row_security=on"
+    },
+    {
+      "signature": "crest_private.prepare_lead_event()",
+      "bodySha256": "cad8c34fe478798693814499492f374eea925c24887c2ced806d7a4e68e76e9b",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "v",
+      "configuration": "search_path=pg_catalog, pg_temp"
+    },
+    {
+      "signature": "crest_private.original_operation_reference_valid(jsonb)",
+      "bodySha256": "b0908e26f4822559b8b0c937596ee0e77479187c17b06552a4f6bc698d88eaf1",
+      "owner": "crest_schema_owner",
+      "securityDefiner": false,
+      "volatility": "i",
+      "configuration": "search_path=pg_catalog, pg_temp"
+    },
+    {
+      "signature": "crest_private.quote_operation_result(uuid,uuid,uuid)",
+      "bodySha256": "6d897162ab21d25f239a97a003bdf54c0aec2b4afdfa52ce88ed0f15146890dd",
+      "owner": "crest_quote_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "configuration": "search_path=pg_catalog, pg_temp,row_security=on"
+    },
+    {
+      "signature": "crest_private.check_quote_review_history()",
+      "bodySha256": "4bd52ceeda014abe5ad1fc313bcf4774bc4c8cf15b7ce041167d9543e80f28e8",
+      "owner": "crest_quote_integrity_owner",
+      "securityDefiner": true,
+      "volatility": "v",
+      "configuration": "search_path=pg_catalog, pg_temp,row_security=on"
+    }
+  ],
+  "physicalModelDecision": "Same-family commercial pointers live in a normalized one-to-one quote_family_commercial_state row, under the identical quote_families row lock. Preserve legacy13-field family projection/immutable receipts; a separate explicitly versioned commercial read returns every pointer. Canonical amendment required at adoption; current base family table is not misrepresented as already containing these columns.",
+  "leadCustomerDecision": "Keep original family.customer_id/internal customerId and exact Sent hash unchanged. Lead-only acceptance requires a proven retained genuine lead_conversion with typed business/lead/customer binding. No silent conversion, cloning or retargeting.",
+  "timeDecision": "Send confirmed_at is server recording of owner-confirmed actual sharing, not inferred delivery time. Customer confirmationEffectiveAt is factual, separate from server recorded_at, bounded by exact approval time and current server time; expiry uses current server time.",
+  "unfinishedScope": [
+    "Decline/cancel remain explicit closed V1 follow-on; no command policy or API is granted",
+    "Accepted amendments remain full V1 scope, closed until full agreement chain and job/financial dependencies are proven",
+    "No portal/e-sign/automatic sending/payment/invoice/journal or confirmedjob"
+  ],
+  "tables": [
+    "crest.quote_family_commercial_state",
+    "crest.quote_sends",
+    "crest.quote_acceptances",
+    "crest.agreements",
+    "crest.scope_entitlements",
+    "crest.entitlement_versions",
+    "crest.scope_allocations"
+  ],
+  "sqlBytes": 157464,
+  "sqlSha256": "b7136905ac115ce9d849d92afdd21a15fa647acb270f3c60254fbac0e5687148",
+  "integrationDependencies": [
+    "Exact registered48 genuine Auth/TOTP/HTTP/browser/build/artifact acceptance and typed application original recovery remain required before bounded synthetic activation; full business export/backup admission stays independently closed",
+    "Exact registered48 genuine Auth/TOTP/HTTP/browser/build/artifact acceptance and typed application original recovery remain required before bounded synthetic activation; full business export/backup admission stays independently closed",
+    "Genuine Auth/TOTP/HTTP and browser integration on exact registered48 source with acknowledged COMMIT and strict read/hash binding",
+    "Typed opaque original-reference/client storage/review for quote.manual.send,quote.confirmation.accept,quote.replacement.create; SQL retirement proved, no automatic retry or absent-result clearing",
+    "Initial scope partitions are unassigned only; job_id/replaces_id remainNULL and one initial partition per entitlement version. Assignment/splitting/current projection requires separate full conservation proof before confirmed jobs",
+    "Explicit closed fullV1 follow-on: decline/cancel, accepted amendments and job/financial effects"
+  ],
+  "previousNativeExecution": {
+    "scope": "Owned disposable PostgreSQL construction proof over registered46; not registered48/genuineAuthHTTP/export/restore/browser/release acceptance",
+    "testFile": "tests/integration/quote-acceptance.test.mjs",
+    "testSha256": "1bc52fbd6ab6a7859d61d1dbccc18f7d4ea5d3b4199536d28f361be99730b81a",
+    "tests": 15,
+    "passed": 15,
+    "failed": 0,
+    "skipped": 0,
+    "sqlSha256": "a7af152bd31a74624b03b92f620c4d8fbc0a3d71f5a4f29d0ac3ae7b9bd0c653",
+    "sqlBytes": 155783,
+    "logSha256": "7671b12e0bdfe584eb8589dbe687aed8b3dd2de84ee2772ffea4a4d1c576e3e7"
+  },
+  "requiredRegistered47Migration": "20261028040000_appointment_proposals.sql",
+  "requiredRegistered47MigrationSha256": "5f21dce7af0944388e39c456c2a06614f63c111557958acf9528f311f25bf4fc",
+  "previousBase46Migration": {
+    "file": "20261028030000_quote_review.sql",
+    "sha256": "4b802d624d8db4dd0ebd79280df669ee3d5fe82852765c3034717ae83ce8d6c0"
+  },
+  "previousReadProjectionNativeExecution": {
+    "scope": "Owned disposable registered47 plus exact acceptance candidate; SQL authority, not genuine provider/Auth/HTTP/browser/release acceptance",
+    "testFile": "tests/integration/quote-acceptance.test.mjs",
+    "testSha256": "edf47dd460cb0dbe93a312f745ee38c45f8d5ee520962cac50a52aa2bbebfeaf",
+    "tests": 16,
+    "passed": 16,
+    "failed": 0,
+    "skipped": 0,
+    "logSha256": "4bb02b4ffad308bad9a0215f00c66119d2eda858f66c9f140fc4c1a9a12e0eac",
+    "startedAt": "2026-10-29T01:36:01.712Z",
+    "finishedAt": "2026-10-29T01:36:15.966Z",
+    "sourceUnchangedDuringExecution": true,
+    "ownedPrimaryClusterCleaned": true,
+    "sqlSha256": "a58ab105c69f447e0fea8a846f892a401c85932c5b812aaee805b642920dfe1c",
+    "sqlBytes": 157021
+  },
+  "nativeExecution": {
+    "scope": "Owned disposable registered47 plus exact acceptance candidate; SQL authority, not genuine provider/Auth/HTTP/browser/release acceptance",
+    "testFile": "tests/integration/quote-acceptance.test.mjs",
+    "testSha256": "64941b620dece35f36dada45222505ac8e3743aa8d54bc20a435b1eb044162da",
+    "tests": 17,
+    "passed": 17,
+    "failed": 0,
+    "skipped": 0,
+    "logSha256": "32d32d9eb187c380e6ee61276ab6ec25bf1d9165bbeb49fbfd10f8c5e8849445",
+    "startedAt": "2026-10-29T02:28:32.712Z",
+    "finishedAt": "2026-10-29T02:29:39.844Z",
+    "sourceUnchangedDuringExecution": false,
+    "fixtureSourceUnchanged": true,
+    "ownedPrimaryClusterCleaned": true,
+    "sqlSha256": "b7136905ac115ce9d849d92afdd21a15fa647acb270f3c60254fbac0e5687148",
+    "sqlBytes": 157464
+  }
+}

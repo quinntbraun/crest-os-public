@@ -1,0 +1,11 @@
+import {randomUUID} from 'node:crypto';
+import type {BookJobSave} from '../../src/operations/confirmed-booking-contract.ts';
+type Parent={business:string;epoch:string;customer:string;vehicle:string;actor:string;sources:readonly {id:string;stable_partition_id:string;gross_inclusive_cents:string;discount_inclusive_cents:string;amount_cents:string;scope_description:string}[]};
+export function confirmedBookingRequest(f:Parent):BookJobSave{
+ const jobId=randomUUID();return {schemaVersion:1,businessId:f.business,recoveryEpoch:f.epoch,operationId:randomUUID(),jobId,expectedModeSequence:'0',payload:{
+  customerId:f.customer,expectedCustomerVersion:'1',operatorId:f.actor,fulfillmentMode:'mobile',workLocation:{schemaVersion:1,kind:'manual',locationText:'Synthetic workshop, 123 Example Lane, Indianapolis',instructions:null},vehicles:[{vehicleId:f.vehicle,expectedVersion:'1',customerVehicleId:null,pickupLocation:null,returnLocation:null}],
+  appointment:{start_at:'2026-11-03T10:00:00.123456Z',end_at:'2026-11-03T11:00:00.123456Z',timezone:'UTC',local_start:'2026-11-03T10:00:00.123456',local_end:'2026-11-03T11:00:00.123456',start_offset_minutes:0,end_offset_minutes:0,travel_before_seconds:0,travel_after_seconds:0,customer_confirmation:{channel:'in_person',effectiveAt:new Date(Date.now()-1000).toISOString().replace(/\.(\d{3})Z$/,'.$1000Z'),evidenceNote:'Customer confirmed this specific synthetic visit, scope and location'},contact_snapshot:{kind:'no_contact',reason:'Synthetic visit arranged in person'},unknown_travel_reviewed:false},
+  allocationPlans:f.sources.map(s=>({sourceAllocationId:s.id,expectedSequence:'0',reason:null,parts:[{partitionId:s.stable_partition_id,jobId,state:'assigned',grossInclusiveCents:s.gross_inclusive_cents,discountInclusiveCents:s.discount_inclusive_cents,amountCents:s.amount_cents,scopeDescription:s.scope_description}]})),conflictReview:{expectedAppointmentIds:[],expectedUnknownTravel:false,overrideReason:null}
+ }};
+}
+export function syntheticBookingRequest(){return confirmedBookingRequest({business:randomUUID(),epoch:randomUUID(),customer:randomUUID(),vehicle:randomUUID(),actor:randomUUID(),sources:[{id:randomUUID(),stable_partition_id:randomUUID(),gross_inclusive_cents:'25000',discount_inclusive_cents:'0',amount_cents:'25000',scope_description:'Synthetic retained service scope'}]});}

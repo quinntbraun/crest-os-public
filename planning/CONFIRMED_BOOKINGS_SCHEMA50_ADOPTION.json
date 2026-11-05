@@ -1,0 +1,178 @@
+{
+  "formatVersion": 1,
+  "repositoryRegistration": 50,
+  "executionStatus": "registered_source_native_verified_pending_runtime_browser_and_release_acceptance",
+  "ownerDatabaseApplied": false,
+  "productionDatabaseApplied": false,
+  "disposableCandidateDatabaseTestsApplied": true,
+  "productionActivation": "blocked",
+  "migration": {
+    "file": "20261030160000_confirmed_bookings.sql",
+    "sha256": "4691321409ddf4705f17c068dc105d360c593662198bdab0f78260f9435ba8bd",
+    "bytes": 326489
+  },
+  "previousRegistry": {
+    "sha256": "68ced1706217b33cf5ed6a8b87ccdaf4324b714e7e01fb26e283412c05de5871",
+    "frozenFixture": "tests/support/registered49-migration-checksums.json",
+    "migrationCount": 49
+  },
+  "previousCoverage": {
+    "sha256": "6ac17c36bc86390af1605260a0e99a7e08f67610e2ffb6e68300b07139452828",
+    "frozenFixture": "tests/support/registered49-export-coverage.json"
+  },
+  "previousCompatibility": {
+    "sha256": "1aae2fedb345424d07b947b42d5f4599017e142001dd57c146ec247bfcbb505e",
+    "frozenFixture": "tests/support/registered49-compatibility.json"
+  },
+  "previousSourceCommit": "a00c9ab212a10b7a2aa09470a3b4b8dcd42f9252",
+  "proposalBodies": [
+    {
+      "path": "planning/proposals/fulfillment-mode-storage.sql",
+      "offset": 776,
+      "bytes": 10143,
+      "sha256": "981e0b94c99df0d521bef32d14b12957d792ea766f13c5b1397efa8a8b9a2e5e"
+    },
+    {
+      "path": "planning/proposals/fulfillment-mode-commands.sql",
+      "offset": 11038,
+      "bytes": 20917,
+      "sha256": "4bd4c2d4bd44f2817e160d72b815a34b526ac57b5ebc0713cfc8c15cbe087736"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-storage.sql",
+      "offset": 32076,
+      "bytes": 21936,
+      "sha256": "e034d7307f88994ca88f3123ccd1049d2cdab97954cf157e17b7c6b27c29d2ed"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-history.sql",
+      "offset": 54134,
+      "bytes": 26907,
+      "sha256": "dc13a14fc59b7be3988060d5eaf08ab5039bdf376b18ea14c824d4d0a74b691c"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-invariants.sql",
+      "offset": 81166,
+      "bytes": 16739,
+      "sha256": "a52d5bd6cd715a6b316068fdf13d1723ee9277b901833c0ceb945f363a6209ed"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-job-invariants.sql",
+      "offset": 98037,
+      "bytes": 28716,
+      "sha256": "39cb681b634aafdded8bc9bcf1d5f6cf82f848e64e82b23d4efa17fe6439a26a"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-commands.sql",
+      "offset": 126883,
+      "bytes": 44658,
+      "sha256": "74ca7f070313d5463fbe6e3a6ae84486915d0e47bf3f4af7eb273b2b4db8968c"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-reads.sql",
+      "offset": 171662,
+      "bytes": 8002,
+      "sha256": "08f8008da6f8282515649f3be95417d5a63781458189fa1f0623d74bd389540b"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-enable.sql",
+      "offset": 179783,
+      "bytes": 5792,
+      "sha256": "b4d45ba8147d026f8f2d1d5ec45a0ebbf6f5fbe02bffd999a0a86f8808cfbfa3"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-cancel.sql",
+      "offset": 185695,
+      "bytes": 24885,
+      "sha256": "b62e5f6518da098880a6cdc5da276eed3209eb69372f594c7dcac435f0c5f5de"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-reschedule.sql",
+      "offset": 210704,
+      "bytes": 12032,
+      "sha256": "e003e6bf2e24ae2b433e185fcba95922ac6255a26ac6009a6c62c1ec97b59784"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-reschedule-commands.sql",
+      "offset": 222873,
+      "bytes": 30906,
+      "sha256": "4911d2d251d1f98ccea50e373ef17c755065a85d19d41a73c1e896745bc83e50"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-history-reads.sql",
+      "offset": 253919,
+      "bytes": 4885,
+      "sha256": "bc0cb0578bf1be267e83cbcddc0d70ffaaace1775ec20f246847bc96d090ba3c"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-source.sql",
+      "offset": 258931,
+      "bytes": 38254,
+      "sha256": "e4034c2b0b7d4baff265c63e7ee175df2b7f190f96c51135259f8eef3b49d748"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-resolution.sql",
+      "offset": 297309,
+      "bytes": 7195,
+      "sha256": "5e94d68fe776e8fa42d7a15750cfedbbd3c75297998e1d07a61b0f5f194ce0ad"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-original.sql",
+      "offset": 304630,
+      "bytes": 5575,
+      "sha256": "9a754b0a324000979736c8ffbb7a693ebdb46e62049786f34dfe147df518bba4"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-context.sql",
+      "offset": 310328,
+      "bytes": 16101,
+      "sha256": "8ff2773ed5dc888482d6b5dfdfa42ced06bf57a201555afdc9c029bfc99241e8"
+    }
+  ],
+  "resetCallerRoleBetweenBodies": true,
+  "sourceTables": [
+    "crest.fulfillment_mode_versions",
+    "crest.jobs",
+    "crest.job_vehicles",
+    "crest.job_encounters",
+    "crest.appointments",
+    "crest.operator_controls",
+    "crest.schedule_reservations",
+    "crest.schedule_overrides",
+    "crest.schedule_override_conflicts",
+    "crest.allocation_plan_versions",
+    "crest.allocation_plan_parts",
+    "crest.job_events"
+  ],
+  "sourceColumns": 154,
+  "coverage": {
+    "tables": 68,
+    "requiredColumns": 1054,
+    "excludedColumns": 10,
+    "physicalColumns": 1064,
+    "partialEvidenceTables": 9
+  },
+  "candidateVerification": "planning/proposals/confirmed-bookings-candidate-verification.json",
+  "runtimeSchedulingEnabled": false,
+  "runtimeFinancePostingEnabled": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "provenance": "Compiled candidate comments and all17 SQL body bytes are retained exactly as tested. Repository registration is not owner upgrade, runtime activation or full V1 acceptance.",
+  "requiredAcceptance": [
+    "Current registered50 coordinator, source/grant, genuine MFA/HTTP, original-operation race and independent encrypted recovery checks; preserve all historical49 tests and22 reference shapes.",
+    "All affected unit, lint, type, integration, security and production-build gates; full exact-source public release CI.",
+    "Explicit synthetic50-only server route composition with existing authorization and original-save review; no ordinary production activation.",
+    "Complete accepted-quote booking/calendar/job and pending-change screens with actual save/reload/conflict/uncertain-save/history/download workflows.",
+    "Rendered Chromium/WebKit browser keyboard/accessibility/error/privacy review at360/390/768/1440 and actual supported phone/laptop acceptance before preview/use claims.",
+    "Fresh tested49 recovery point and verified owner data preservation before any later synthetic owner upgrade. No real Crest data or financial posting."
+  ],
+  "remainingV1": [
+    "accepted amendments and remaining commercial lifecycle",
+    "field/time/custody/photos/completion/follow-up",
+    "invoices/payments/full double-entry/reconciliation/reporting/mileage",
+    "complete owner portability/recovery",
+    "approved Google Calendar capability",
+    "approved imports/opening cutover and production pilot gates"
+  ],
+  "registeredProfileVerification": "planning/proposals/confirmed-bookings-registered-verification.json"
+}

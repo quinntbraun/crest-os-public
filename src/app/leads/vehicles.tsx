@@ -13,9 +13,9 @@ import type {LeadVehicleDraft,ReportedLeadVehicle} from '../../customer/lead-res
 import {NullableText} from '../customers/nullable-text';
 import {ReferencePicker} from './reference-picker';
 import {vehicleYearInput} from '../vehicles/year-input';
-function YearInput({value,change}:{value:number;change:(value:number)=>void}){
+function YearInput({value,change}:{value:number|null;change:(value:number|null)=>void}){
  const [text,setText]=useState(Number.isFinite(value)?String(value):'');
- return <><label htmlFor="lead-vehicle-year">Reported year value</label><input id="lead-vehicle-year" type="text" autoComplete="off" maxLength={16} pattern="-?[0-9]+" value={text} required onChange={event=>{setText(event.target.value);change(vehicleYearInput(event.target.value));}}/><p className="field-help">Enter a whole year. Unusual reported years are retained.</p></>;
+ return <><label htmlFor="lead-vehicle-year">Reported year</label><input id="lead-vehicle-year" type="text" inputMode="numeric" autoComplete="off" maxLength={16} pattern="-?[0-9]+" value={text} onChange={event=>{setText(event.target.value);change(event.target.value.length?vehicleYearInput(event.target.value):null);}}/><p className="field-help">Optional. Enter a whole year, or leave blank. Unusual reported years are retained.</p></>;
 }
 function ReportDetails({row}:{row:LeadVehicle}){
  const text=(value:string|number|null)=>value===null?'Not recorded':value===''?'Recorded as empty':String(value),r=row.reported_vehicle;
@@ -54,7 +54,7 @@ export function LeadVehiclePanel({businessId,leadId,disabled,onLock}:{businessId
     <ReferencePicker key={key+':vehicle'} businessId={businessId} kind="vehicle" value={view.draft.vehicleId} disabled={writeDisabled} change={value=>edit('vehicleId',value)}/>
     <form onSubmit={submit} aria-label="Lead vehicle editor"><fieldset disabled={writeDisabled}><legend>Original reported details</legend>
      <label htmlFor="lead-vehicle-label">Reported vehicle label</label><input id="lead-vehicle-label" autoComplete="off" maxLength={400} required value={view.draft.reportedVehicle.label} onChange={event=>report('label',event.target.value)}/><p className="field-help">{[...view.draft.reportedVehicle.label].length}/200 characters.</p>
-     <label className="trust"><input type="checkbox" checked={view.draft.reportedVehicle.year!==null} onChange={event=>report('year',event.target.checked?NaN:null)}/>Record reported year</label>{view.draft.reportedVehicle.year!==null&&<YearInput key={key+':year'} value={view.draft.reportedVehicle.year} change={value=>report('year',value)}/>}
+     <YearInput key={key+':year'} value={view.draft.reportedVehicle.year} change={value=>report('year',value)}/>
      {(['make','model','color','vin','plate','notes'] as const).map(field=><NullableText key={field} name={'lead-vehicle-'+field} label={'Reported '+(field==='vin'?'VIN':field)} limit={field==='notes'?2000:field==='make'||field==='model'?200:128} multiline={field==='notes'} value={view.draft!.reportedVehicle[field]} disabled={writeDisabled} change={value=>report(field,value)}/>)}
      <NullableText name="lead-vehicle-request" label="Requested work" limit={4000} multiline value={view.draft.requestedServices.text} disabled={writeDisabled} change={value=>edit('requestedServices',{schemaVersion:1,text:value})}/>
      <NullableText name="lead-vehicle-condition" label="Reported condition" limit={4000} multiline value={view.draft.conditionNotes} disabled={writeDisabled} change={value=>edit('conditionNotes',value)}/>

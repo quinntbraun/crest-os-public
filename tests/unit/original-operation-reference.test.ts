@@ -5,6 +5,15 @@ import type {OriginalOperationKind} from '../../src/security/original-operation-
 
 const businessId=randomUUID(),operationId=randomUUID(),originalEpoch=randomUUID(),authorityEpoch=randomUUID();
 const targets:Record<OriginalOperationKind,Record<string,unknown>>={
+ 'operations.fulfillment_modes.initialize':{expectedSequence:'0'},
+ 'operations.fulfillment_modes.save':{expectedSequence:'1'},
+ 'operations.job.book':{jobId:randomUUID(),expectedModeSequence:'0'},
+ 'operations.job.cancel':{jobId:randomUUID(),expectedJobVersion:'1'},
+ 'operations.job.reschedule':{jobId:randomUUID(),expectedJobVersion:'1',action:'propose',latestAppointmentId:randomUUID()},
+ 'bookkeeping.expense.save':{expenseId:randomUUID(),expectedRevision:'0'},
+ 'bookkeeping.receipt.reserve':{receiptId:randomUUID(),expenseId:randomUUID(),expenseRevision:'1',expectedRevision:'0'},
+ 'bookkeeping.receipt.publish':{receiptId:randomUUID(),expenseId:randomUUID(),expenseRevision:'1',expectedRevision:'1'},
+ 'operations.appointment_hold.save':{holdId:randomUUID(),expectedSequence:'0'},
  'business.rename':{expectedVersion:'1'},
  'crm.customer.save':{customerId:randomUUID(),expectedVersion:'0'},
  'crm.address.save':{customerId:randomUUID(),addressId:randomUUID(),expectedVersion:'0'},
@@ -15,7 +24,17 @@ const targets:Record<OriginalOperationKind,Record<string,unknown>>={
  'crm.lead.state':{leadId:randomUUID(),expectedVersion:'1'},
  'crm.lead.vehicle.save':{leadId:randomUUID(),leadVehicleId:randomUUID(),expectedVersion:'0'},
  'crm.lead.address.save':{leadId:randomUUID(),leadAddressId:randomUUID(),expectedVersion:'0'},
- 'crm.lead.convert':{conversionId:randomUUID(),leadId:randomUUID(),expectedLeadVersion:'1',customerId:randomUUID()}
+ 'crm.lead.convert':{conversionId:randomUUID(),leadId:randomUUID(),expectedLeadVersion:'1',customerId:randomUUID()},
+ 'catalog.service.save':{serviceId:randomUUID(),expectedRevision:'0'},
+ 'quote.draft.save':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'0',expectedRevisionVersion:'0'},
+ 'quote.amendment.create':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'7',expectedRevisionVersion:'0',expectedParentAgreementId:randomUUID(),expectedParentAgreementVersion:'1'},
+ 'quote.amendment.accept':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'11',expectedRevisionVersion:'4',expectedContentVersion:'1',acceptanceId:randomUUID(),agreementId:randomUUID(),sendId:randomUUID(),customerId:randomUUID(),expectedParentAgreementId:randomUUID(),expectedParentAgreementVersion:'1'},
+ 'quote.amendment.send':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'10',expectedRevisionVersion:'3',expectedContentVersion:'1',sendId:randomUUID(),approvalId:randomUUID(),expectedParentAgreementId:randomUUID(),expectedParentAgreementVersion:'1',replacesRevisionId:null},
+ 'quote.replacement.create':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'4',expectedRevisionVersion:'0'},
+ 'quote.manual.send':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'4',expectedRevisionVersion:'4',expectedContentVersion:'1',sendId:randomUUID(),approvalId:randomUUID()},
+ 'quote.confirmation.accept':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'5',expectedRevisionVersion:'5',expectedContentVersion:'1',acceptanceId:randomUUID(),agreementId:randomUUID()},
+ 'quote.review.submit':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'2',expectedRevisionVersion:'2',expectedContentVersion:'1'},
+ 'quote.review.approve':{familyId:randomUUID(),revisionId:randomUUID(),expectedFamilyVersion:'3',expectedRevisionVersion:'3',expectedContentVersion:'1',approvalId:randomUUID()}
 };
 function sample(kind:OriginalOperationKind='crm.customer.save'){
  return {schemaVersion:1,businessId,commandType:kind,reference:{operationId,recoveryEpoch:originalEpoch,...targets[kind]} as Record<string,unknown>};
@@ -25,7 +44,7 @@ const intent=()=>({schemaVersion:1,recoveryEpoch:authorityEpoch,original:origina
 const retired=()=>({schemaVersion:1,state:'retired',original:original(),retirement:{operationRowId:randomUUID(),auditEventId:randomUUID(),recoveryEpoch:authorityEpoch,reason:intent().reason,recordedAt:'2026-10-25T01:02:03.123456Z'}});
 const rejects=(work:()=>unknown)=>expect(work).toThrow(OriginalOperationReferenceError);
 
-describe('original nonfinancial operation identity',()=>{
+describe('typed original operation identity',()=>{
  it.each(originalOperationKinds)('preserves complete %s reference without inventing an identity or retaining a mutable input',kind=>{
   const raw=sample(kind),pinned=parseOriginalOperationReference(raw);expect(pinned).toEqual(raw);raw.reference.operationId=randomUUID();expect(pinned.reference.operationId).toBe(operationId);expect(Object.isFrozen(pinned)).toBe(true);expect(Object.isFrozen(pinned.reference)).toBe(true);
  });

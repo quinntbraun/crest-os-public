@@ -1,0 +1,90 @@
+{
+  "formatVersion": 1,
+  "scope": "owned_synthetic51_saved_work_calendar_delivery",
+  "verifiedAt": "2026-11-03T04:14:58.978Z",
+  "localSource": "a47b48252abdbfbd80b1effa7321c275bcecee32",
+  "publicSource": "3db75821863a1d0c6f2c92ac30f9b9b041ea04b8",
+  "tree": "235ab578b2c504339fb6161f70d55f917820d575",
+  "testedMerge": "539d5cdf78b2c8b66ff96404c4c4bac4f9d0b8f9",
+  "testedMergeTreeVerified": true,
+  "fullRun": 41569607737,
+  "fullRunNumber": 400,
+  "expenseRun": 41569607704,
+  "allRequiredReleaseGroupsPassed": true,
+  "focusedExpensePassed": true,
+  "focusedCommercialNotTriggeredUnchangedPaths": true,
+  "baseAcceptedCommercialRun": 41564722527,
+  "actualLinuxChromiumAndWebkitCalendarJourneysPassed": true,
+  "unitCasesAtAcceptedSource": 7505,
+  "browserCases": 295,
+  "browserFailures": 0,
+  "browserSkipped": 0,
+  "artifacts": [
+    {
+      "id": 13202749857,
+      "name": "phase-1-candidate-539d5cdf78b2c8b66ff96404c4c4bac4f9d0b8f9-attempt-1",
+      "digest": "sha256:7fb201972e0dcb51c39806bfbaf129864d4c4bbbdc7ec466c9f4be9caa2c8d53",
+      "expiresAt": "2026-11-06T04:09:56Z"
+    },
+    {
+      "id": 13202589114,
+      "name": "settings-review-539d5cdf78b2c8b66ff96404c4c4bac4f9d0b8f9-attempt-1",
+      "digest": "sha256:62e5165cc41f907f25b6caacaecca4e205483cb8304bbf1dc61d9efdbee5c364",
+      "expiresAt": "2026-11-06T04:03:13Z"
+    },
+    {
+      "id": 13201682091,
+      "name": "service-review-539d5cdf78b2c8b66ff96404c4c4bac4f9d0b8f9-attempt-1",
+      "digest": "sha256:7f57cbe9fd645d982a8a5e20ca405fcb3153ef57e027e53f7a1ebcf48204cdfd",
+      "expiresAt": "2026-11-06T03:25:36Z"
+    }
+  ],
+  "immutableSourceFilesVerified": 1313,
+  "schemaVersion": 51,
+  "databaseMigrationExecuted": false,
+  "originalBusinessSourceTablesPreserved": 52,
+  "exactOriginalPgRowTextPreservedBeforeAndAfterStartupAndReadOnlyWalkthrough": true,
+  "originalOwner51MigrationReceiptPreserved": true,
+  "existingCredentialsMfaCertificatesAndNetworkPolicyPreserved": true,
+  "pinnedTlsVerified": true,
+  "genuineMfa": true,
+  "deployedDayWeekMonthTodayPreviousControls": true,
+  "savedWorkRead": true,
+  "refreshBackAndKeyboard": true,
+  "scheduleReloadAndExplicitReadFailureRecovery": true,
+  "existingCustomerNavigation": true,
+  "businessMutationsPerformed": false,
+  "diagnosticSessionClosed": true,
+  "laptopAndPrivatePhoneResponding": true,
+  "ownerWillTestPhoneLater": true,
+  "actualPhoneAcceptance": false,
+  "widths": [
+    360,
+    390,
+    768,
+    1440
+  ],
+  "axeAndOverflowPassed": true,
+  "screenshotsManuallyInspected": true,
+  "screenshots": [
+    ".local/review/delivered-calendar51-360.png",
+    ".local/review/delivered-calendar51-390.png",
+    ".local/review/delivered-calendar51-768.png",
+    ".local/review/delivered-calendar51-1440.png",
+    ".local/review/delivered-calendar51-schedule-360.png",
+    ".local/review/delivered-calendar51-schedule-390.png",
+    ".local/review/delivered-calendar51-schedule-768.png",
+    ".local/review/delivered-calendar51-schedule-1440.png"
+  ],
+  "currentOwnerState": "No saved jobs in the current range/month; existing fictional lead follow-up and unconfirmed proposal retained. Both-engine populated saved-job/history/calendar journeys passed CI; no invented owner bookings.",
+  "googleCalendarImplemented": false,
+  "realCrestUseReady": false,
+  "completeBackup": false,
+  "currentSpend": 0,
+  "limitations": [
+    "Physical iPhone acceptance remains owner-deferred.",
+    "One stale Home capability sentence still lists combined booking as unfinished; correction remains in evolving source for the next coherent release.",
+    "Accepted amendment document is separately verified construction, without app persistence/approval/acceptance integration.",
+    "Full approved V1/real-data/production/finance/portability/recovery and Google Calendar gates remain."
+  ]
+}

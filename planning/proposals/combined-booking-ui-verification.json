@@ -1,0 +1,87 @@
+{
+  "formatVersion": 1,
+  "scope": "synthetic_combined_accepted_agreements_and_saved_vehicles",
+  "verifiedAt": "2026-11-03T00:41:09.165Z",
+  "source": {
+    "localBase": "99a436d90713efe5ef1debe24d0e34d250be804f",
+    "diffSha256": "10a66faa98b7edf6fa8c6b4cfdd7968b53608d4e4f4f141272acb290a7ad9ceb",
+    "files": {
+      "src/client/booking-work.ts": "e6f4a0067f0c56e9a23a25fd97fddeaa56843c8d1b05e046b188fc1e8614f7de",
+      "src/client/book-job-controller.ts": "9b643abd44b11cc23a81ccbc2861a28441ab95f374f0da4c6f2aab0bad60e382",
+      "src/client/booking-form.ts": "1e7c734a4a9c3aea6d8d4c899806596869dfe10104149f49db53269285b0b57e",
+      "src/app/schedule/new/booking.tsx": "ee2d0e5cd636f9be1a5fae6008a731989883d4524ae8278ef2a6de4f55904d41",
+      "tests/unit/booking-work.test.ts": "a659de774abc9acba0ffed1a051b8b85b3f2957865b89346e36cb70046878d34",
+      "tests/unit/book-job-controller.test.ts": "1c5ee958c94a4c2b2fb7ea4be9202725cf74b42393ea8a6e08156601f1332fd9",
+      "tests/support/confirmed-booking-fixture.mjs": "6218d1192314dcac0fee33f65420627bacf740b1505383ac87fbe8a2540a5b6d",
+      "tests/support/source-export-browser-fixture.mjs": "87f516590f183a1e1fe4a5c4211d0818af59238043ed37f82e7abfeeca9b0772",
+      "tests/integration/combined-booking-product-browser.test.mjs": "28ac9c4a414dfa673e93d9bc36e973a29af8420cbe7f718b8c048a72c3063236",
+      "package.json": "21f52266b33eb23233b595d717131c2dc0ada5d3c01ed1f87161b903197a509c"
+    }
+  },
+  "databaseMigrationRequired": false,
+  "behavior": [
+    "Only the same current customer and version may combine accepted agreements; a newer unaccepted quote draft does not hide the active agreement.",
+    "Each source retains its agreement, entitlement, partition, agreed amount and description. Existing private exclusions, explicit divisions, location, times and contact survive additions.",
+    "Saved vehicles may be added without changing ownership or inventing additional paid work. Pickup/return requires actual per-vehicle locations.",
+    "Search outages preserve the private visit draft; changed authority/recovery clears all private selections and results.",
+    "Uncertain saves retain the unchanged original request and opaque pending reference; no automatic retry."
+  ],
+  "executed": {
+    "focusedUnits": 58,
+    "fullUnits": 7497,
+    "failedUnits": 0,
+    "lint": true,
+    "types": true,
+    "productionBuild": true,
+    "canonical": true,
+    "migrations": true,
+    "nativeChromium": {
+      "passed": 1,
+      "failed": 0,
+      "genuineMfa": true,
+      "realPostgres": true,
+      "registeredSchema": 51,
+      "agreements": 2,
+      "vehicles": 2,
+      "sourceAmountsCents": [
+        "0",
+        "0",
+        "25000",
+        "25000"
+      ],
+      "acceptedSourcesUnchanged": true,
+      "searchNetworkErrorRecovery": true,
+      "keyboard": true,
+      "reload": true,
+      "historyCsvAndJson": true,
+      "sourceStable": true,
+      "ownedClusterCleaned": true
+    },
+    "visual": {
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "axeViolations": 0,
+      "horizontalOverflow": false,
+      "renderedScreenshotsInspected": true
+    }
+  },
+  "retainedFailures": [
+    "Attempt1 opened the previous compiled product; rebuilt before actual-source verification.",
+    "Attempt2 used the nonexistent test assertion table job_scope_parts; corrected to the existing allocation_plan_parts.",
+    "Attempt3 refresh assertion failed once; diagnostic attempt4 and final attempt5 refreshed successfully. No product root cause is claimed and no timeout/gate was relaxed. Both-engine release regression remains required.",
+    "Attempt4 completed save/reload/download but the test accessed a dotted archive filename as object properties; corrected to bracket lookup."
+  ],
+  "release": {
+    "publishedAtVerification": false,
+    "currentSourceLinuxChromiumAndWebkit": false,
+    "completeCrestAcceptance": false,
+    "ownerPreviewUpdated": false,
+    "realCrestUseReady": false,
+    "fullBusinessExportOrBackup": false
+  },
+  "nextGate": "Current-source Linux full/focused release checks, accepted immutable build and fresh independently restored owner50 point before any51 migration/deployment. Actual iPhone acceptance remains owner-deferred."
+}

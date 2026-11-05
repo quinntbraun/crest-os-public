@@ -1,14 +1,14 @@
 'use client';
-import Link from 'next/link';
 import {useEffect,useRef,useState} from 'react';
 import {createOriginalOperationReviewController,initialOriginalOperationReviewView} from '../../client/original-operation-review-controller';
 import type {OriginalOperationKind} from '../../security/original-operation-reference';
 
 const choices:ReadonlyArray<readonly [OriginalOperationKind,string]>=[
+ ['bookkeeping.expense.save','Expense'],['bookkeeping.receipt.reserve','Receipt upload reservation'],['bookkeeping.receipt.publish','Receipt publication'],
  ['business.rename','Business name'],['crm.customer.save','Customer'],['crm.address.save','Customer address'],
  ['crm.vehicle.save','Vehicle'],['crm.vehicle.association','Vehicle customer link'],
  ['crm.lead.source.save','Lead source'],['crm.lead.save','Lead'],['crm.lead.state','Lead status'],
- ['crm.lead.vehicle.save','Reported lead vehicle'],['crm.lead.address.save','Lead address'],['crm.lead.convert','Lead conversion']
+ ['crm.lead.vehicle.save','Reported lead vehicle'],['crm.lead.address.save','Lead address'],['crm.lead.convert','Lead conversion'],['catalog.service.save','Service catalog'],['quote.draft.save','Quote draft'],['quote.review.submit','Quote review submission'],['quote.review.approve','Quote approval'],['quote.replacement.create','Replacement quote draft'],['quote.amendment.create','Amendment draft'],['quote.amendment.send','Amendment sharing confirmation'],['quote.manual.send','Quote sharing confirmation'],['quote.confirmation.accept','Customer quote acceptance'],['operations.appointment_hold.save','Appointment proposal']
 ];
 function Review({kind}:{kind:OriginalOperationKind}){
  const [view,setView]=useState(initialOriginalOperationReviewView),current=useRef<ReturnType<typeof createOriginalOperationReviewController>|null>(null),status=useRef<HTMLParagraphElement>(null);
@@ -44,14 +44,14 @@ function Review({kind}:{kind:OriginalOperationKind}){
   <p className="field-help">Each check is explicit. A missing result leaves the original reference in place. Hiding or leaving this page clears private review details.</p>
  </section>;
 }
-export function SaveReviewScreen(){
- const [kind,setKind]=useState<OriginalOperationKind>('crm.customer.save');
+export function SaveReviewScreen({initialKind='crm.customer.save'}:{initialKind?:OriginalOperationKind}={}){
+ const [kind,setKind]=useState<OriginalOperationKind>(initialKind);
  return <>
-  <p>Resolve a retained nonfinancial save from this browser tab. Keep this tab open until its outcome is verified. Retirement requires a recently authenticated business owner.</p>
+  <p>Resolve a retained save from this browser tab. Keep this tab open until its outcome is verified. Retirement requires a recently authenticated business owner. Expense and receipt retirement also requires financial authority.</p>
   <label htmlFor="save-review-kind">Interrupted save type</label>
   <select id="save-review-kind" value={kind} onChange={event=>{const selected=choices.find(([kind])=>kind===event.target.value);if(selected)setKind(selected[0]);}}>{choices.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
   <Review key={kind} kind={kind}/>
-  <nav aria-label="Save review navigation"><Link href="/customers">Load current customers</Link><Link href="/vehicles">Load current vehicles</Link><Link href="/leads">Load current leads</Link><Link href="/lead-sources">Load current lead sources</Link><Link href="/addresses">Load customer addresses</Link><Link href="/settings">Load business settings</Link><Link href="/sign-in">Device sign-in and sign-out</Link></nav>
+  <nav aria-label="Save review navigation"><a href="/customers">Load current customers</a><a href="/vehicles">Load current vehicles</a><a href="/leads">Load current leads</a><a href="/lead-sources">Load current lead sources</a><a href="/addresses">Load customer addresses</a><a href="/settings">Load business settings</a><a href="/sign-in">Device sign-in and sign-out</a></nav>
   <p className="field-help">Synthetic testing is still in progress. This screen does not approve production use or real business records.</p>
  </>;
 }

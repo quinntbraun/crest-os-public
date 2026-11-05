@@ -1,0 +1,260 @@
+{
+  "formatVersion": 1,
+  "status": "registered52_normal_synthetic_application_preparation_verified_pending_linux_release_and_owner_delivery",
+  "sourceHeadBefore": "0f6c7f1c90ebc8274878f8df491f89b117297e1f",
+  "files": [
+    {
+      "path": "src/server/node-server.ts",
+      "bytes": 24863,
+      "sha256": "0f48d32895e6fdd940aaec307fc3e2eb012f6fcfb59540843a0866848c9fc333"
+    },
+    {
+      "path": "src/commercial/quote-amendment-http.ts",
+      "bytes": 6358,
+      "sha256": "512374f4938e3c6d2aa7ebfaf963625fc68de544d77ad199011e44ad03a06636"
+    },
+    {
+      "path": "scripts/synthetic-workspace.mjs",
+      "bytes": 15880,
+      "sha256": "9a908f47b19d8afc68ba3a8ac2a50269db76f223d65b2fd3807977bcdb5c95a8"
+    },
+    {
+      "path": "scripts/synthetic-phone-preview.mjs",
+      "bytes": 3290,
+      "sha256": "92fcee814578c98dbceb357e61e549edec15b1be791e5347362c46d67c3e0012"
+    },
+    {
+      "path": "supabase/migrations/20261103180000_quote_amendment_preparation.sql",
+      "bytes": 169798,
+      "sha256": "1bcfd0e0772f9710829d1832aa3616864a91e3a9c52734b1cfe884d5af09e84a"
+    },
+    {
+      "path": "supabase/migration-checksums.json",
+      "bytes": 9876,
+      "sha256": "2b69990d3bdc8d957207d80055799dfeed8ef3ca6dd871182f6859464888d78f"
+    },
+    {
+      "path": "release/compatibility.json",
+      "bytes": 200,
+      "sha256": "2e6e962ece0ba28c3026783f2390f7e29412b33008c33293b1267a750098baf6"
+    },
+    {
+      "path": "planning/SECURITY_EXPORT_COVERAGE.json",
+      "bytes": 36839,
+      "sha256": "d3c6bb2549a93daad8a1023866626de4398dbdeaabef58f330ad5b9cedd169a6"
+    },
+    {
+      "path": "planning/QUOTE_AMENDMENT_SCHEMA52_ADOPTION.json",
+      "bytes": 4832,
+      "sha256": "29dec9b2529ede648f1e777470e415a66203e83c83275f9723d6f54a232f915a"
+    },
+    {
+      "path": "tests/support/registered51-migration-checksums.json",
+      "bytes": 9681,
+      "sha256": "6460d57d51c41f89c7dffffc456610c730566fde414dd13352e9a1844fc1a4a4"
+    },
+    {
+      "path": "tests/support/registered51-export-coverage.json",
+      "bytes": 36808,
+      "sha256": "b9d0b727b2e40cd7e75d973ca4717d91f1bae6075047f4ae7a0393c599b423cf"
+    },
+    {
+      "path": "tests/support/registered51-compatibility.json",
+      "bytes": 200,
+      "sha256": "d393ab62b32ef9c15edfd50b6a6cd3e12ac4a44eb60879fc0108907516034218"
+    },
+    {
+      "path": "tests/support/recovery-drill.mjs",
+      "bytes": 24437,
+      "sha256": "283c4db0b4b63de3d90f87e210bce1b42b6fd8002f7aacbd95fc77a2d0b4fe88"
+    },
+    {
+      "path": "tests/support/quote-amendment52-candidate.mjs",
+      "bytes": 2039,
+      "sha256": "1ceafbc06438600f816e9d1356c2c7db1dbfd8db96fc34d0ad2be54cdb93d99a"
+    },
+    {
+      "path": "tests/support/source-export-browser-fixture.mjs",
+      "bytes": 18232,
+      "sha256": "3fb8e1a5226505c10d08ae197ff58a8adb7f2ff1fc2cf175104048541d092d1d"
+    },
+    {
+      "path": "tests/integration/quote-amendment52-candidate.test.mjs",
+      "bytes": 14490,
+      "sha256": "2366ce1cd85313bf78a1b5ed51223e12137cdbe8d3c5c994b0ed17bbf4cd14b6"
+    },
+    {
+      "path": "tests/integration/quote-amendment-source.test.mjs",
+      "bytes": 24108,
+      "sha256": "0994692d0c941ae8b8f321ef390a24718f26d316c17ff29d37e040d2e2056e04"
+    },
+    {
+      "path": "tests/unit/quote-amendment52-adoption.test.ts",
+      "bytes": 4077,
+      "sha256": "526feb43a0e5c33cab3e1bb0bbe8a71ca3e4a7b85e9ce09966435cd591d4bedd"
+    },
+    {
+      "path": "tests/unit/node-server.test.ts",
+      "bytes": 43474,
+      "sha256": "ffa950d4f29f13c7476eb6e84a65e39b3612e8d530476cff132b39642525e0e8"
+    },
+    {
+      "path": "tests/unit/booking-conflict51-adoption.test.ts",
+      "bytes": 3636,
+      "sha256": "611c85d1aea42a6f829f76a36c3d722fba0a898ac358cd2b04f22354d6e17b45"
+    },
+    {
+      "path": "tests/unit/owner-expenses-adoption.test.ts",
+      "bytes": 4508,
+      "sha256": "414f7cfd2c108d857f999a0adbe5712767eef90dbdc623ae949f855cb4964c90"
+    },
+    {
+      "path": "tests/integration/quote-amendment-workspace-browser.test.mjs",
+      "bytes": 26637,
+      "sha256": "18ed65515bce74456fb1d45186ade68a02e112002fb5c919784110d0c5cc0d68"
+    }
+  ],
+  "verification": {
+    "native": {
+      "path": ".local/amendment52-native-v1/result.json",
+      "sha256": "e82582b2a39a01f5700322e05b4a54393927def609c3b74c9416904372b9d7fb",
+      "tests": 23,
+      "passed": 23,
+      "failed": 0,
+      "sourceUnchanged": true,
+      "ownedClusterCleaned": true,
+      "scope": "registered52_coordinator_and_current_recovery_plus_frozen51_complete_source_compatibility"
+    },
+    "browser": {
+      "path": ".local/amendment52-browser-native-v1/result.json",
+      "sha256": "48e4a976febd9572744e88e5f1c9b91c317ada91479899ee67dc2a1e45e158e9",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "engine": "Windows Chromium",
+      "genuinePasswordTotp": true,
+      "normalApplicationServer": true,
+      "registeredSchemaVersion": 52,
+      "apiTestMount": false,
+      "sourceUnchanged": true,
+      "ownedClusterCleaned": true,
+      "testedBrowserTestSha256": "888aa5e1f57a54fed552a94116e90ca5e46a5b7a84ba3989710b2b5d8e62d1db",
+      "diagnosticOnlyCorrectionAfterRun": "The test still printed amendmentApiTestMountOnly:true from its earlier fixture. The actual source used registered52 and normal application routing, verified by source and actual schema assertion. Only the diagnostic is now false with explicit schema/routing fields; no executable journey/assertion/application change. Affected lint passes; exact final test will run in mandatory current-source Linux Chromium/WebKit release."
+    },
+    "unit": {
+      "passed": 7805,
+      "failed": 0,
+      "skipped": 0
+    },
+    "typecheck": "passed",
+    "fullLint": "passed",
+    "finalAffectedLint": "passed",
+    "productionBuild": "passed",
+    "canonical": "baseline_and_12_explicit_amendments_verified",
+    "migrationRegistry": 52,
+    "dependencies": "298_exact_locked_packages_and_licenses_verified",
+    "hostedCurrentSourceAcceptance": false
+  },
+  "screenshots": [
+    {
+      "path": ".local/review/amendment52-normal-server-verified-v1/amendment-record-download-chromium-1440.png",
+      "bytes": 16802,
+      "sha256": "aa78e4a7839765bd6985d48cba2116001183b3e0503f7b2daf24ed932a81ef7e",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-normal-server-verified-v1/amendment-record-download-chromium-390.png",
+      "bytes": 17884,
+      "sha256": "8f1996893ebe359c77f7f149db0b25a702cf33dd0a518b4bb0b75e7c1c8d7b12",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-normal-server-verified-v1/amendment-record-sharing-chromium-1440.png",
+      "bytes": 27080,
+      "sha256": "17472386295e6be050b17a2ec977a22a78bed5d0a647b9e03893336cf6f9b7dc",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-normal-server-verified-v1/amendment-record-sharing-chromium-390.png",
+      "bytes": 26741,
+      "sha256": "6a38d5414fdfbc5e286550729c263b176c3f710601ab438362012a48869895a5",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-normal-server-verified-v1/amendment-record-workspace-chromium-1440-viewport.png",
+      "bytes": 51778,
+      "sha256": "23965ba4d841a6d73afc53563c2cd2dff599d1f82a97817a261349ee6e3e60b4",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-normal-server-verified-v1/amendment-record-workspace-chromium-1440.png",
+      "bytes": 191950,
+      "sha256": "19e0bb331ef535f67b3bd3d5e2f7d6c3e573682712e631c30132a7a2ceda8dba",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-normal-server-verified-v1/amendment-record-workspace-chromium-360-viewport.png",
+      "bytes": 34516,
+      "sha256": "324bef62cb3182410e9f5a9db29413a61b25e8f6c5fba4e5c50b18998ba7ce06",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-normal-server-verified-v1/amendment-record-workspace-chromium-360.png",
+      "bytes": 167175,
+      "sha256": "34e449fac01007f9dc4ca1da07ccc50e70a9f808787ba39594c7345dc24e307d",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-normal-server-verified-v1/amendment-record-workspace-chromium-390-viewport.png",
+      "bytes": 35054,
+      "sha256": "630fb56b880b7d135783fcbf609c3661f95d014b9e75a4415ac1de4953b4741e",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-normal-server-verified-v1/amendment-record-workspace-chromium-390.png",
+      "bytes": 168240,
+      "sha256": "46b69b3059c0a8296215488440289e68861e90e3c9b9b690bbc16688fa027900",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-normal-server-verified-v1/amendment-record-workspace-chromium-768-viewport.png",
+      "bytes": 46092,
+      "sha256": "95ac4a153f182365b637d2866dc3c13def670d6cee84ea1438171ff7e76a1029",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/amendment52-normal-server-verified-v1/amendment-record-workspace-chromium-768.png",
+      "bytes": 178139,
+      "sha256": "7d2bfec4357466aceeb666c02bd5df708a689f07ea5254896b3d5f2c8f2065fb",
+      "manuallyInspected": true
+    }
+  ],
+  "verified": [
+    "Exact eight-body append-only migration52, frozen51 registry/coverage/compatibility and1055 required physical columns; ten credential exclusions unchanged.",
+    "Normal authenticated server dispatch with its own synthetic-only opt-in, existing response/admission/auth/CSRF/original-recovery boundaries; default closed and production refused. The test-only browser API listener is removed.",
+    "Genuine registered52 Next/TLS/MFA journey: select accepted work, create/edit/reload, separate review/approval/actual sharing, approved edit needs fresh review, complete retained eight-event history and exact private CSV/JSON/checksummed record download.",
+    "Actual lost create/edit/share acknowledgments reconcile through typed originals without retry. A failed later history page yields no partial file. Accepted source remains exact.",
+    "One held RR READ ONLY source capture, inactive rows/all approvals/superseded offers, independent12-table neutral reconstruction and20 actual internal FKs remain verified in frozen51 compatibility over the same exact registered52 SQL bodies. Current52 source capture/strict formatting passes after coordinator upgrade and independent encrypted restore.",
+    "Independent frozen51 and registered/current52 encrypted restoration retains rows/exact normalized schema/roles/grants/constraints. The default current backup now refuses old51 before writing files.",
+    "Four widths360/390/768/1440 manually inspected;12 immutable captures, Axe0, no overflow, visible44px controls, keyboard/back/refresh/read-error recovery; physical phone not claimed."
+  ],
+  "retainedDiagnostics": [
+    "Initial full units7804/7805: historical expense49 coverage expected an unchanged quote table. Its regression now explicitly permits only the registered52 parent column; all historical fields/exclusions remain exact, and dedicated52 coverage compares the full current inventory. Final7805/7805.",
+    "Local edit helper stopped at an already-frozen auth fixture before any edit there; remaining independent changes resumed from the exact boundary. No source reset, constraint weakening or authentication change.",
+    "Stale browser diagnostic corrected as disclosed above; raw tested file/log/result and original source hashes retained."
+  ],
+  "limits": [
+    "No full current-source hosted Linux/WebKit/release acceptance, owner migration, owner preview update or real-device acceptance yet.",
+    "No customer acceptance of amendments, resulting agreement chains, remaining allocation/financial limits or full cancellation. These remain mandatory V1.",
+    "Complete included source profiles and synthetic database recovery remain distinct from full Crest portable export, object/image/vault/production recovery and real-use readiness. Completeness flags remain false.",
+    "Earlier proofs and immutable captures remain historical with their original source hashes, not relabeled as current52 acceptance."
+  ],
+  "ownerPreview": {
+    "laptop": "https://127.0.0.1:4319/",
+    "phone": "https://100.78.42.185:4319/",
+    "status": "accepted_calendar51_both_already_responding_unchanged",
+    "phoneTest": "owner_deferred",
+    "realUseReady": false
+  },
+  "spend": 0
+}

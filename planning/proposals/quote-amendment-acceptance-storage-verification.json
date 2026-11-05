@@ -1,0 +1,47 @@
+{
+  "formatVersion": 1,
+  "scope": "Unregistered amendment allocation binding and physical current-profile recovery guard",
+  "sourceFiles": {
+    "planning/proposals/quote-amendment-acceptance-storage.sql": "ded82842031ec1ae7df604611daa63f073efb1daf10715f2cd500ac628819a64",
+    "tests/integration/quote-amendment-acceptance-storage.test.mjs": "9361f23a2a394a93d68a56ba50286a89604aada405d56447710494d3ac9acf49",
+    "tests/support/recovery-drill.mjs": "5201ed0d1914304a9cc18d96161bfb5a36864b753f3d49d2b066481b4653b3dd"
+  },
+  "verification": {
+    "storage": {
+      "path": ".local/amendment-acceptance-storage-native-v3/result.json",
+      "tests": 14,
+      "passed": 14,
+      "failed": 0,
+      "sourceStable": true,
+      "ownedClusterCleaned": true
+    },
+    "generalRecoverySubset": {
+      "path": ".local/amendment-acceptance-storage-native-v1/result.json",
+      "passed": 37,
+      "failed": 0,
+      "wholeRunPassed": false,
+      "wholeRunPassedCases": 47,
+      "wholeRunFailedCases": 4,
+      "recoveryHelperHashUnchanged": true
+    },
+    "retainedFailures": {
+      "v1": "Four new storage assertions hit the earlier existing statement guard before their intended constraints. No guard was disabled; corrected tests inject faults through the actual closed booking command.",
+      "v2": "13/14. New trigger SELECT-star exceeded existing column-scoped operation grants. Corrected query selects only three already permitted fields; no grants widened."
+    }
+  },
+  "limits": {
+    "registeredSchema": 52,
+    "proposalRegistered": false,
+    "ownerDatabaseChanged": false,
+    "acceptanceCommandImplemented": false,
+    "genuineBrowserAcceptanceVerified": false,
+    "resultingAgreementChainImplemented": false,
+    "remainingAllocationRolloverImplemented": false,
+    "fullCancellationImplemented": false,
+    "financialPostingActivated": false,
+    "completeExport": false,
+    "completeBackup": false,
+    "realUseReady": false
+  },
+  "recordedAt": "2026-11-04T01:22:26.864Z"
+}

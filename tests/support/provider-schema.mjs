@@ -17,13 +17,14 @@ export async function installProviderSchema(client,target) {
   await client.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
   // SET ROLE does not apply login-role defaults. Match the provider's normal
   // auth-first search path so its unqualified migration ledger stays in auth.
+  if(process.platform==='win32')url.hostname='host.docker.internal';
   url.searchParams.set('options','-c role=supabase_auth_admin -c search_path=auth,public');
   const env={...process.env,GOTRUE_DB_DATABASE_URL:url.toString(),GOTRUE_DB_DRIVER:'postgres',GOTRUE_DB_NAMESPACE:'auth',
     GOTRUE_SITE_URL:'http://127.0.0.1:3000',API_EXTERNAL_URL:'http://127.0.0.1:9999',
     GOTRUE_JWT_SECRET:randomBytes(48).toString('base64url'),GOTRUE_LOG_LEVEL:'error'};
   const names=['GOTRUE_DB_DATABASE_URL','GOTRUE_DB_DRIVER','GOTRUE_DB_NAMESPACE','GOTRUE_SITE_URL','API_EXTERNAL_URL','GOTRUE_JWT_SECRET','GOTRUE_LOG_LEVEL'];
   try {
-    execFileSync('docker',['run','--rm','--network','host',...names.flatMap(name=>['--env',name]),testAuthImage,'auth','migrate'],
+    execFileSync('docker',['run','--rm',...(process.platform==='win32'?[]:['--network','host']),...names.flatMap(name=>['--env',name]),testAuthImage,'auth','migrate'],
       {env,stdio:['ignore','pipe','pipe'],timeout:120000,maxBuffer:2*1024*1024});
   } catch (error) {
     // Classify known setup errors only; never echo provider output/configuration.

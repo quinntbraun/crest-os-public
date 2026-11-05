@@ -1,0 +1,120 @@
+{
+  "formatVersion": 1,
+  "scope": "Explicit full-withdrawal proposal content and customer-safe comparison only; no database cancellation command or owner activation",
+  "testedCheckoutHead": "0021db27d5888c5d7f87798184747d93cc101d64",
+  "uncommittedAtVerification": true,
+  "sourceFiles": [
+    {
+      "path": "src/commercial/quote-content.ts",
+      "sha256": "801b930c724a76468dc49eb925f443c57d650b957a3ddba8f87cd9cadbfc5aec"
+    },
+    {
+      "path": "src/commercial/quote-cancellation-content.ts",
+      "sha256": "04ba5b0972fde1a4575b68584fcb367e63b15ffbf1a5cf775f1bb4883d7276fa"
+    },
+    {
+      "path": "tests/unit/quote-cancellation-content.test.ts",
+      "sha256": "5de6a91b64b9d72900aa1bd18d6b4f50f66d63fa17cf9374287aa76e33f7a64f"
+    },
+    {
+      "path": "src/commercial/quote-review-content.ts",
+      "sha256": "3477c6bdb0c45eb54376941dbba8fb46ee504ef31fc9082205f72b84ec1b4bea"
+    },
+    {
+      "path": "src/commercial/quote-storage-contract.ts",
+      "sha256": "e514334431ff171177c68d73484a34192ceaf9d656f0876e8a76b305261ba6a4"
+    },
+    {
+      "path": "src/commercial/quote-amendment-comparison.ts",
+      "sha256": "fe70fa64c52e342dbc5594ea4237ecf376b21350b3b5a0d099bc25178f573094"
+    }
+  ],
+  "format": {
+    "contentSchemaVersion": 3,
+    "purpose": "cancel_all_remaining_scope",
+    "comparisonSchemaVersion": 2,
+    "reasonRequired": true,
+    "reasonMaxUnicodeScalars": 2000,
+    "lines": 0,
+    "documentDiscount": null,
+    "proposedSchedule": null,
+    "totalCents": "0",
+    "ordinaryQuoteDispatchersUnchanged": true
+  },
+  "verification": {
+    "focused": {
+      "path": ".local/quote-cancellation-content-units-v2.json",
+      "passed": 60
+    },
+    "fullUnits": {
+      "path": ".local/quote-cancellation-content-all-units-v2.json",
+      "passed": 8021,
+      "failed": 0,
+      "skipped": 0
+    },
+    "nativeRegression": {
+      "path": ".local/quote-cancellation-content-native-v2/result.json",
+      "passed": 83,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "retainedSourceFiles": 186,
+      "coverage": "Existing83 phased actual database acceptance/booking/current-read regressions after shared metadata extraction. This runner snapshots cancellation code but does not execute a cancellation database command."
+    },
+    "types": {
+      "path": ".local/quote-cancellation-content-types-v3.log",
+      "passed": true
+    },
+    "affectedLint": {
+      "path": ".local/quote-cancellation-content-lint-v3.log",
+      "passed": true
+    },
+    "build": {
+      "path": ".local/quote-cancellation-content-build-v2.log",
+      "passed": true
+    }
+  },
+  "completed": [
+    "New explicit empty-scope proposal preserves customer-visible reason and exact metadata without a complimentary placeholder",
+    "Shared immutable header validation retains existing ordinary quote nonempty-scope pricing and serialization behavior",
+    "Comparison binds exact accepted parent/hash/customer and original converted-lead provenance, removes positive and zero identities with exact BigInt cent conservation",
+    "Proposal and customer comparison omit internal notes and source/binding IDs, freeze copies and seal all content before asynchronous hashing",
+    "Malformed purpose/schema/reason/scope/discount/schedule/header/customer/parent binding refuses; maximum Unicode reason remains exact",
+    "Existing ordinary create/review/versioned dispatchers continue rejecting cancellation3 and empty normal quotes"
+  ],
+  "limitations": [
+    "Construction only; v3 is not registered or accepted by normal persistence dispatchers",
+    "No saved cancellation Draft/edit/review/approval/presentation/manual-sharing/acceptance/original/history path yet",
+    "This pure comparison does not validate live assigned/completed/billed/credited/refunded or custody bounds; a later trusted transaction must refuse unresolved consumption",
+    "No visit cancellation, charge reduction, refund, fee, posting or actual customer communication is inferred",
+    "Historical v3 parent reopening/repeated chains, full source/export/independent recovery/registration and genuine UI/browser/full release remain required",
+    "Owner preview remains immutable52; no new rendered screen or physical iPhone test"
+  ],
+  "diagnostics": [
+    {
+      "path": ".local/quote-cancellation-content-native-v1/result.json",
+      "passed": 83,
+      "failed": 0,
+      "cause": "The initial passing sources used CRLF in two new files. The index verification correctly caught Git LF normalization. Finalv2 reruns the LF byte-identical candidate; no logic, gate or scanner rule changed."
+    },
+    {
+      "path": ".local/quote-cancellation-content-units-v1.json",
+      "passed": 59,
+      "failed": 1,
+      "cause": "The initial byte-overflow test incorrectly assumed JSON tabs encode as six bytes; they encode as two. Replaced the invalid assertion with actual maximum2000-scalar/8000-byte Unicode reason preservation and2001-scalar refusal."
+    },
+    {
+      "path": ".local/quote-cancellation-content-types-v1.log",
+      "cause": "A mutation-after-preparation fixture inherited a readonly recipient type. The fixture now creates its own mutable recipient copy; no product type or validation weakened."
+    }
+  ],
+  "ownerPreview": {
+    "source": "94acb9304602dfcff3466a641e94c125004582d3",
+    "publicHead": "07311f85fe8df407f2396019e1237e67c7b33581",
+    "schema": 52,
+    "ownerApplied": false,
+    "cancellationEnabled": false,
+    "realDataReady": false,
+    "physicalPhoneCheck": "owner-deferred"
+  },
+  "newServiceSpend": 0
+}

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "registered": false,
+  "runtimeEnabled": false,
+  "existingMigrationCount": 45,
+  "sourceCommit": "c15512cff9ae45f16372461e0f02ea70b332bf10",
+  "sqlBytes": 17546,
+  "sqlSha256": "aa8c72c489399404f82a29e8353b0e391972253d1a8a6aaff58ea4bcb831ba10",
+  "commandType": "bookkeeping.expense.save",
+  "table": "crest.expense_revisions",
+  "completeSourceExportProven": false,
+  "independentRestoreProven": false,
+  "receiptSupportComplete": false,
+  "genuineIntegratedBrowserProven": false
+}

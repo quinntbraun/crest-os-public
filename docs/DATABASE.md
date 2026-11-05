@@ -1,6 +1,8 @@
 # Crest OS V1 - Database Contract
 
-Version: 1.5 | 2026-10-22 | Owner-requested V1 Calendar contract; implementation and production gated
+Version: 1.11 | 2026-10-28 | ADR48 manual sharing and initial acceptance; activation gated
+
+Schema43 implementation record,2026-10-27 (ADR43): the append-only export journal is represented by six forced-RLS private tables: export_jobs, export_job_attempts, export_job_snapshots, export_part_intents, export_part_verifications and export_job_completions. Their114 required fields preserve original requests/leases, exact snapshot/Ready text/hashes, ciphertext intents/verification and immutable completion/expiry evidence. planning/SOURCE_EXPORT_SCHEMA43_ADOPTION.json binds the registered migration to all seven exact reviewed proposal bodies. Global coverage becomes39 tables/613 columns (603 required, the same10 explicit credential exclusions). Actual registered43 catalogue/upgrade/Auth/recovery tests remain required. Original42 SQL, nonfinancial retirement semantics and every posted-history rule remain unchanged; source registration grants no production or product-route activation.
 
 Calendar scope amendment, 2026-10-22: the owner requested Google Calendar connection support in V1. P20/BR21/ADR35 now require the capability with optional owner activation, outbound-only projection and unchanged integrity/security/recovery gates. This supersedes older optional/excluded Calendar wording only. Current versions and immutable-baseline amendment evidence are in CANONICAL_MAINTENANCE.md; implementation/research and unexecuted provider gates are in [the Calendar contract](../planning/GOOGLE_CALENDAR_V1.md). No live integration or production approval is implied.
 
@@ -269,3 +271,27 @@ Every schema release runs introspection checks over these invariants, restores t
 Later versioned migrations add tenant-scoped connection/consent metadata, job/destination event mappings, typed scheduling outbox work and retained redacted attempts. Secret columns remain in a separate restricted encrypted credential boundary, never ordinary export/projection. Composite tenant FKs, uniqueness per job/destination and remote ID/destination, source versions, generation/lease/recovery fences and indexed bounded work claims are required. State-machine transitions retain unresolved attempts and cannot delete source history. Credential revocation state is distinct from confirmed event cleanup.
 
 The scheduling transaction writes its appointment/history/outbox atomically; provider network I/O occurs after commit. Record one opaque Google-compatible event identity before dispatch, stable through retries/confirmed reschedules, plus projection/consent version and observed etag. Neither title matching nor409/404 alone proves ownership or completion. Restore cannot replay old queues or self-upgrade epochs; reviewed provider reconciliation precedes new dispatch. Exact columns/functions/grants require the implementation migration review and GC01-GC18. No Calendar tables or grants exist merely because this logical contract was added.
+
+
+## 2026-10-28 — Registered44 catalog construction
+
+ADR44 appends one atomic catalogue migration with the four exact reviewed catalog bodies. The first43 SQL files/checksum entries remain immutable. Registered inventory becomes41 tables/642 columns (632 required source fields and the same10 explicit credential exclusions). Migration registration does not enable the catalog runtime or production data.
+
+
+ADR45 appends registered migration45 for quote_families, quote_revisions and quote_items (61 fully inventoried fields). Draft preparation retains original linked party identities, exact immutable audit images, copied customer/internal content, typed source references, inactive removed lines, independent exact pricing and concurrency/recovery fences. No approval, sending, acceptance, amendments, tax posting or billing transition is activated by registration. Prior44 migration bytes and legacy recovery identities remain immutable.
+
+
+### Registered46 review construction
+
+ADR46 appends migration46 with condition_assessments (15 fields), quote_approvals (21 fields) and quote_items.assessment_id/category_override_note, adding38 required fields. Forced scoped RLS, closed existing roles, append-only assessment/approval history and same-business typed vehicle/revision/operation FKs remain enforced. Exact content/row versions are separate: submit/approve preserve canonical content version/hash while advancing audited row versions; edits invalidate current approval and preserve its retained presentation. Registered45 SQL and v1 receipt/history bytes remain immutable. Approval does not create financial, acceptance or agreement effects.
+
+
+
+## ADR47 forward source: unconfirmed appointment proposals
+
+Registered47 adds crest.appointment_hold_versions with22 declared columns. Exactly one typed customer or lead parent, tenant-scoped predecessor/sequence uniqueness, finite reviewed UTC/local/IANA/offset endpoints and reasoned append-only revisions/withdrawals are database-enforced. The table is forced-RLS, schema-owned; ordinary runtime table access remains closed. Exact deferred operation/audit linkage and retained immutable originals apply. No confirmed appointment/job is inferred. Registration46 identities and quote review/assessment/approval history are unchanged. See ADR47 and planning/APPOINTMENT_SCHEMA47_ADOPTION.json for exact source bytes and acceptance status.
+
+
+### Registered48 initial commercial acceptance
+
+ADR48 adds quote_family_commercial_state, quote_sends, quote_acceptances, agreements, scope_entitlements, entitlement_versions and scope_allocations (130 required fields). Commercial pointers are physically normalized in a one-to-one row, preserving the base family13-field projection and immutable prior snapshots/receipts; same-family FKs and the existing family lock enforce their semantics. Sent content freezes, initial acceptance is family-unique, agreements/entitlements/initial unassigned partitions append immutable evidence, and source/audit/amount closure is independently checked. Lead events now bind genuine same-lead send/acceptance sources; explicit retained conversion binds a lead-only accepted customer without rewriting quoted history. Initial partition assignment/splitting, decline/cancel and accepted amendments remain closed before their full dependency proofs.

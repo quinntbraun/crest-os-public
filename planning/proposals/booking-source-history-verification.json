@@ -1,0 +1,62 @@
+{
+  "formatVersion": 1,
+  "scope": "unregistered_booking_physical_history_commercial_and_historical_crm_reference_composition_over49",
+  "baseCommit": "2088058e38c7852ea545f824f89be4c1971c1f9d",
+  "registeredSchemaVersion": 49,
+  "registeredLaterMigration": false,
+  "runtimeActivated": false,
+  "productionReady": false,
+  "executed": {
+    "nativePassed": 17,
+    "nativeFailed": 0,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "allUnitCases": 7346,
+    "allUnitFiles": 264,
+    "allUnitsPassed": true,
+    "fullLintTypeAndProductionBuildPassed": true,
+    "finalFocusedLintTypeAndNativePassed": true
+  },
+  "startedAt": "2026-10-30T18:04:06.531Z",
+  "finishedAt": "2026-10-30T18:04:30.890Z",
+  "receiptSha256": "bbc80880f985ab05ea857d1892fa99b0c44a24639c100a0caeb0aa759ff1ad22",
+  "logSha256": "d798dd6558aa7599abbb864bbd63e1e7758353de510acbd51838a55defe32722",
+  "checks": {
+    "fullChecksStartedAt": "2026-10-30T17:53:58.2686937Z",
+    "fullChecksFinishedAt": "2026-10-30T17:55:00.5613234Z",
+    "checksReceiptSha256": "9be12e960a32b325d64fd58995bf0f734199f72f15ffb7ff245e2c3425de4366",
+    "unitReportSha256": "4d264cdc7259fa4d0a0551cc8e40514f568eeeb3544c53b89dcc81bb429aed1c",
+    "timing": "Full units/lint/types/build passed before the final formatter-only flat-filename refinement. The new formatter is not imported by the app or any unit suite. Final flat formatting and every paired manifest link passed fresh lint/types and the17 native cases. Current-source full release/browser gates remain required before integration."
+  },
+  "behavior": [
+    "All154 source columns across12 tables remain in open CSV with dictionaries, escape maps, original SQL JSONB text and retained operation/audit hash inputs. The composed package uses the existing flat private filename namespace; shared history coalesces only for identical bytes. Every original submanifest part name, byte length and SHA256 resolves.",
+    "Every physical image is bound to its exact retained audit; job/mode revisions chain contiguously. Released reservations are represented by retained create/release images and must not be invented as current physical rows. Typed original receipts point to the matching job version, appointment, source audit set and retained request epoch.",
+    "Existing verified foundation evidence supplies actor profiles and operation/audit rows. Existing commercial/quote source verification is reused and bound to the same history and commercial tokens. Plan parts reconcile exact gross/discount/net and complimentary identity to their original agreement allocations, customers and vehicles.",
+    "Retained CRM snapshots bind to their historical audit versions. A genuine authorized fixture enables pickup/return, books customer-address/pickup/return/vehicle relationship snapshots, then edits customer/vehicle/address normally; the original job snapshots remain valid and verifiable.",
+    "Recounted plausible history omissions, an otherwise valid empty commercial package, erased12-table sources, rehashed altered receipts and arithmetic-preserving cent shifts pass the older separate packages but fail the new cross-source closure. No additional database authority or financial mutation is introduced."
+  ],
+  "corrections": [
+    "The initial full unit run lacked loopback socket permissions and failed68 HTTP-dependent cases with EACCES/fetch errors. It was retained separately; the unchanged7346-case suite passed with required local socket access. Assertions and time limits were unchanged.",
+    "Investigated a suspected global partition-identity mismatch; the actual SQL invariant intentionally prohibits cross-source reuse. Existing database/export rules were preserved.",
+    "Refined initial nested package paths into the established flat private namespace rather than changing the existing delivery protocol."
+  ],
+  "limitations": [
+    "Supplied-source consistency is not capture authority. Consistent-capture, whole-business reference closure, complete portable export and complete backup flags remain false.",
+    "No registered50 migration, runtime collector/admission delivery, new booking screens, exact-source public CI, rendered browser/device acceptance or preview upgrade is claimed.",
+    "Full V1 field/custody/photos/completion, accepted amendments, remaining finance, complete portability/recovery and Google Calendar remain unfinished."
+  ],
+  "files": [
+    {
+      "path": "src/operations/confirmed-booking-source-history.ts",
+      "sha256": "d883e1e3e9fa594e36a86251ccc7e52483bd2f7ae2d0f063a4e6d2925000c5d6"
+    },
+    {
+      "path": "tests/support/booking-source-evidence.mjs",
+      "sha256": "001bad5bfd74b78cb982ffe4e5dc900c6e4e32bb422b74d3f65dc656aed4571a"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-source.test.mjs",
+      "sha256": "0f515b4b1abb7f0565c5fd3fa52061922920f7f4793d70214bd53d8bc946c298"
+    }
+  ]
+}

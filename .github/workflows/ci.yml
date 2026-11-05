@@ -53,6 +53,55 @@ jobs:
           npm ci --ignore-scripts --no-fund
       - name: Install verified database tooling
         run: node scripts/install-tools.mjs
+      - name: Prove proposed immutable catalog storage and audit integrity
+        run: npm run test:catalog-storage-proposal
+      - name: Prove proposed trusted catalog saves, retries and scoped history
+        run: npm run test:catalog-commands-proposal
+      - name: Prove exact proposed quote pricing against the independent application calculator
+        run: npm run test:quote-pricing-proposal
+      - name: Prove proposed typed Draft storage, exact audits and independent aggregate checks
+        run: npm run test:quote-storage-proposal
+      - name: Prove trusted owner Draft saves, replay, concurrency and scoped history
+        run: npm run test:quote-commands-proposal
+      - name: Prove typed quote original-save review without weakening historical kinds
+        run: npm run test:quote-resolution-proposal
+      - name: Install pinned recovery tooling
+        if: ${{ !cancelled() }}
+        run: node scripts/install-recovery-tools.mjs
+      - name: Prove proposed catalog source CSV and independent encrypted recovery
+        run: npm run test:catalog-source-proposal
+      # Independent disposable source fixture still reports its result when
+      # a separate quote validator fails. The failed prerequisite keeps the
+      # job/release blocked; this gathers evidence instead of hiding failures.
+      - name: Prove quote domain source CSV and candidate encrypted recovery
+        if: ${{ !cancelled() }}
+        run: npm run test:quote-source-proposal
+      - name: Prove actual registered45 Draft upgrade, workflow and independent recovery
+        if: ${{ !cancelled() }}
+        run: npm run test:quote-registered
+      - name: Prove exact owner review, approval, immutable history and interrupted-action retirement
+        if: ${{ !cancelled() }}
+        run: npm run test:quote-review-proposal
+      - name: Prove review source CSV and independent encrypted recovery
+        if: ${{ !cancelled() }}
+        run: npm run test:quote-review-source
+      - name: Prove registered46 upgrade, source, refusal and independent recovery
+        if: ${{ !cancelled() }}
+        run: npm run test:quote-review-registered
+      - name: Prove actual sharing, exact whole-quote acceptance and immutable agreements
+        if: ${{ !cancelled() }}
+        run: npm run test:quote-commercial-proposal
+      - name: Prove commercial source retrieval, exact CSV reimport and independent restore
+        if: ${{ !cancelled() }}
+        run: npm run test:quote-commercial-source
+      - name: Prove registered48 upgrade, refusal, source and independent recovery
+        if: ${{ !cancelled() }}
+        run: npm run test:quote-commercial-registered
+      - name: Prove registered49 expense upgrade, source history and independent receipt recovery
+        if: ${{ !cancelled() }}
+        run: npm run test:expenses-registered
+      - name: Prove registered44 catalog upgrade, retained workflow and independent recovery
+        run: npm run test:catalog-registered
       - name: Run isolated regression group
         run: |
           npm run test:db
@@ -77,14 +126,18 @@ jobs:
           npm run test:lead-state-db
           npm run test:lead-vehicles-db
           npm run test:lead-addresses-db
-      - name: Install pinned recovery tooling
-        run: node scripts/install-recovery-tools.mjs
       - name: Prove registered original-operation retirement, complete source and independent encrypted recovery
         run: npm run test:operation-resolution-db
       - name: Prove registered atomic conversion, source export and encrypted recovery
         run: node --conditions=react-server --test --test-concurrency=1 tests/integration/lead-conversion.test.mjs
       - name: Encrypted isolated database recovery drill
         run: npm run test:recovery-db
+      - name: Prove proposed durable export requests and fenced lease attempts
+        run: node --conditions=react-server --test --test-concurrency=1 tests/integration/source-export-jobs.test.mjs
+      - name: Prove registered43 journal upgrade, full workflow matrix and independent encrypted recovery
+        run: node --conditions=react-server --test --test-concurrency=1 tests/integration/source-export-registered.test.mjs
+      - name: Prove proposed atomic execution admission and mixed request concurrency
+        run: node --conditions=react-server --test --test-concurrency=1 tests/integration/source-export-execution-admission.test.mjs
 
   database_provider:
     name: Provider and evidence
@@ -173,18 +226,100 @@ jobs:
           npm ci --ignore-scripts --no-fund
       - name: Install verified database tooling
         run: node scripts/install-tools.mjs
+      - name: Install pinned recovery tools for registered49 receipt acceptance
+        run: node scripts/install-recovery-tools.mjs
       - name: Run isolated regression group
         run: |
           npm run test:real-auth
 
+  # These are the same complete29 retained browser files, partitioned with an
+  # exact union check. Each matrix entry owns its cluster and stays serial.
+  browser_workflows:
+    name: Browser workflows (${{ matrix.suite }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [crm, intake, commercial, amendments, schedule, records]
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      CREST_ENV: test
+      CREST_TEST_DATABASE_URL: postgresql://supabase_admin:crest_local_test_only@127.0.0.1:54322/crest_test
+    services:
+      postgres:
+        image: supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2
+        env:
+          POSTGRES_USER: supabase_admin
+          POSTGRES_PASSWORD: crest_local_test_only
+          POSTGRES_DB: crest_test
+        ports:
+          - 127.0.0.1:54322:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d crest_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Verify runtime and install exact lockfile
+        run: |
+          test "$(node --version)" = "v24.22.0"
+          test "$(npm --version)" = "11.19.1"
+          npm ci --ignore-scripts --no-fund
+      - name: Verify complete browser partition
+        run: node scripts/run-browser-group.mjs --list
+      - name: Install verified database and recovery tooling
+        run: |
+          node scripts/install-tools.mjs
+          node scripts/install-recovery-tools.mjs
+      - name: Install browser dependencies with bounded Ubuntu downloads
+        timeout-minutes: 6
+        run: |
+          test -f /etc/apt/apt-mirrors.txt
+          grep -qF 'mirror+file:/etc/apt/apt-mirrors.txt' /etc/apt/sources.list.d/ubuntu.sources
+          printf '%s\tpriority:1\n%s\tpriority:2\n' 'https://archive.ubuntu.com/ubuntu/' 'https://security.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/99crest-ci-downloads > /dev/null
+          npx --no-install playwright install --with-deps chromium webkit
+      - name: Build actual product source
+        run: npm run build
+      - name: Run required browser group
+        env:
+          CREST_BROWSER_JOB_TOTAL: ${{ strategy.job-total }}
+        run: node scripts/run-browser-group.mjs ${{ matrix.suite }}
+      - name: Preserve synthetic screenshots and exact group result
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: settings-review-${{ matrix.suite }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            .local/ci-browser/${{ matrix.suite }}.json
+            .local/review/settings-*.png
+            .local/review/workspace-*.png
+            .local/review/home-*.png
+            .local/review/quote-*.png
+            .local/review/amendment-*.png
+            .local/review/appointment-*.png
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: error
+
   foundation:
     name: Foundation checks
-    needs: [database_foundation, database_provider, authentication]
-    # Run even when a prerequisite fails/skips so branch protection cannot see
-    # a skipped required job as success. The guard rejects incomplete results.
-    if: ${{ always() }}
+    needs: [database_foundation, database_provider, authentication, browser_workflows]
+    # Fail the required guard on unsuccessful/skipped prerequisites, but let
+    # obsolete runs cancel so they cannot block the newest source indefinitely.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    # Keep the existing75-minute deadline. The unchanged complete browser
+    # command runs in required isolated groups, not in this serial lifetime.
+    timeout-minutes: 75
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"
@@ -255,20 +390,69 @@ jobs:
           npm run lint
           npm run typecheck
           npm test
+          node --test tests/integration/synthetic-workspace-tls.test.mjs
           npm run test:private-files
           npm run test:image-validation
           npm run test:pdf-validation
           npm run test:heic-validation
+      - name: Install pinned recovery tools before appointment restore proof
+        run: node scripts/install-recovery-tools.mjs
+      - name: Prove registered47 appointment proposals and independent restore
+        run: npm run test:appointment-registered
+      - name: Preserve historical appointment storage and command acceptance
+        run: npm run test:appointment-storage
+      - name: Verify fulfillment settings, conflicts and independent restore
+        run: npm run test:fulfillment-modes
+      - name: Verify proposed private conflict review, stable neighbours and locking
+        run: npm run test:booking-conflict-review-proposal
+      - name: Verify registered51 upgrade and independent frozen50 and current51 recovery
+        run: npm run test:booking-conflict-registered
+      - name: Verify amendment storage and preserve initial quote workflows
+        run: node --test --test-concurrency=1 tests/integration/quote-amendment-storage.test.mjs
+      - name: Verify parent-bound amendment Draft commands and exact original results
+        run: node --test --test-concurrency=1 tests/integration/quote-amendment-draft-commands.test.mjs
+      - name: Verify amendment sharing, saved history and exact original recovery
+        run: node --test --test-concurrency=1 tests/integration/quote-amendment-sharing.test.mjs
+      - name: Verify complete amendment sources and independent neutral reconstruction
+        run: npm run test:quote-amendment-source
+      - name: Verify preserved-data amendment upgrade and frozen/current independent recovery
+        run: npm run test:quote-amendment-candidate
+      - name: Verify retained52 amendment acceptance, cancellation and complete source history
+        run: npm run test:amendment-acceptance-storage
+      - name: Verify registered53 upgrade and independent frozen52/current53 recovery
+        run: npm run test:amendment-upgrade-registered
+      - name: Compare booking times, travel intervals and partitions with PostgreSQL
+        run: npm run test:booking-calculations
+      - name: Preserve booking schema closure, private history and independent restore
+        run: npm run test:confirmed-booking-storage
+      - name: Verify confirmed booking transactions, genuine authentication and recovery
+        run: npm run test:confirmed-bookings
+      - name: Confirmed booking original source retrieval
+        run: npm run test:confirmed-booking-source
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 6
         run: |
           npx --no-install playwright install --with-deps chromium webkit
-      - name: Production build and browser accessibility smoke
+      - name: Production build and focused service workflow
         run: |
           npm run build
+          npm run test:service-editor-browser
+      - name: Preserve synthetic service screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: service-review-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: .local/review/service-*.png
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: error
+      - name: Browser accessibility and retained workflows
+        run: |
           npm run test:e2e
-          npm run test:sign-in-browser
+          npm run review:test
+          npm run review:test-browser
       - name: Build and smoke-test portable container
+        timeout-minutes: 15
         run: |
           docker build --tag crest-os:ci .
           docker run --detach --name crest-os-smoke --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges --publish 127.0.0.1:3100:3000 crest-os:ci
@@ -295,15 +479,6 @@ jobs:
         with:
           name: phase-1-candidate-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: .local/release/
-          include-hidden-files: true
-          retention-days: 3
-          if-no-files-found: error
-      - name: Preserve synthetic settings screenshots
-        # Successful synthetic UI screenshots contain no credentials or real data.
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: settings-review-${{ github.sha }}-attempt-${{ github.run_attempt }}
-          path: .local/review/settings-*.png
           include-hidden-files: true
           retention-days: 3
           if-no-files-found: error

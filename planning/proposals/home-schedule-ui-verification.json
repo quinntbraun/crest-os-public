@@ -1,0 +1,91 @@
+{
+  "formatVersion": 1,
+  "scope": "home_saved_schedule_ui_construction",
+  "parentLocalSource": "32762d843a771b55966bf888c4cf85b32d6d8c72",
+  "registeredSchema": 50,
+  "databaseMigrationRequired": false,
+  "ownerPreviewUpdated": false,
+  "sourceFiles": {
+    "src/client/home-schedule.ts": "be790e73f8b8891f4b676bff090050d07ff821e97bfeb118044fa3709fb66953",
+    "src/app/workspace-home.tsx": "9c6c1096903c323e7033432fe88d4c46bac07e2452c14b780b632a5b53c26d38",
+    "src/app/globals.css": "63ee8a194302016b601c4439cf83318e0ab543f4b7d6896ee648ebb704cefc77",
+    "tests/unit/home-schedule.test.ts": "7a5179eaf4dfc664b0bc73533f91e3042cc60b4916144fa3a50bdbc08eb30b90",
+    "tests/integration/book-job-product-browser.test.mjs": "f83defeda1dc415e265430fa73f014efea6a5a9b801a8fa4a014c078d699db00",
+    "tests/integration/job-change-product-browser.test.mjs": "ec1d6f54ce443a9ff9b381511d947d467a693091f837fd2ba0a6169b98b0f013"
+  },
+  "requirement": "Home must expose real upcoming saved work and unresolved appointment changes instead of setup cards and stale capability text.",
+  "completionCriterion": "Actual booking and proposed change survive reload, appear on Home with accurate confirmed/proposed times, and open the saved job; independent read failures remain unavailable, not empty.",
+  "units": {
+    "passed": 7455,
+    "failed": 0,
+    "files": 275,
+    "newHomeCases": 11
+  },
+  "typecheck": "passed",
+  "lint": "passed",
+  "productionBuild": "passed",
+  "genuineBrowser": {
+    "engine": "chromium",
+    "exitCode": 0,
+    "tests": 2,
+    "passed": 2,
+    "failed": 0,
+    "logPath": ".local/home-schedule-browser-native-v2/run.log",
+    "realMfa": true,
+    "realPostgreSql": true,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "result": ".local/home-schedule-browser-native-v2/result.json",
+    "coverage": [
+      "actual quote-to-booking lost-reply/reload, exactly one saved job, Home upcoming visit and keyboard link to saved job",
+      "real proposed time change remains separate from confirmed slot on Home; global proposal beyond seven-day window; confirm/withdraw/cancel lifecycle",
+      "independent upcoming-list and proposed-change failures, explicit refresh recovery",
+      "seven business dates with DST-aware boundaries, no automatic retries or sensitive draft persistence",
+      "four-width Axe and overflow checks, full-page screenshots manually inspected"
+    ]
+  },
+  "visuals": {
+    "widths": [
+      360,
+      390,
+      768,
+      1440
+    ],
+    "states": [
+      "home-upcoming",
+      "home-pending"
+    ],
+    "engine": "chromium",
+    "manuallyInspected": true,
+    "actualDevice": false,
+    "paths": [
+      ".local/review/home-upcoming-chromium-360.png",
+      ".local/review/home-upcoming-chromium-390.png",
+      ".local/review/home-upcoming-chromium-768.png",
+      ".local/review/home-upcoming-chromium-1440.png",
+      ".local/review/home-pending-chromium-360.png",
+      ".local/review/home-pending-chromium-390.png",
+      ".local/review/home-pending-chromium-768.png",
+      ".local/review/home-pending-chromium-1440.png"
+    ]
+  },
+  "ciBudget": {
+    "previousAcceptedSource": "e14c7c291363b968e803b1a795e42450ba140fcc",
+    "run": 41515638647,
+    "foundationJob": 125524981685,
+    "startedAt": "2026-11-02T20:15:45Z",
+    "completedAt": "2026-11-02T21:13:32Z",
+    "previousSeconds": 3467,
+    "jobMinutesBefore": 60,
+    "jobMinutesAfter": 75,
+    "reason": "Mandatory Home browser and conflict native/browser coverage adds runtime to a previously measured57m47s job; preserve every test and existing per-step/network/transaction bounds.",
+    "containerStepMinutes": 15
+  },
+  "limitations": [
+    "New-source Linux Chromium/WebKit and full release gates not yet executed.",
+    "Physical iPhone acceptance is deferred by owner.",
+    "Home uses existing registered50 API; unregistered51 conflict dependency is separate construction, with no form exposed or owner database application.",
+    "No real Crest use, finance posting, complete export or backup certification."
+  ],
+  "harnessFailureRetained": "First local wrapper targeted the old dependency browser test; it is not Home evidence. Corrected v2 verifies both actual Home journey filenames and passed2/2."
+}

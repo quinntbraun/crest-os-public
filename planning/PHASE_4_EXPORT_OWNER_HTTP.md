@@ -1,0 +1,21 @@
+# Owner export transport
+
+2026-10-27. This extends the tested owner access and per-tab pending-reference components. It is private composition for the unregistered schema43 proposal, disabled by default. There is no product server registration, runtime flag, worker scheduler, owner screen, download endpoint or schema adoption in this change.
+
+## Request and response boundaries
+
+`createSourceExportHttp` fixes the business at server composition. Five POST actions under `/api/business/exports/` have separate meanings: `request`, `status`, `original`, `retire` and `resolution`. Trusted socket/host evidence, exact origin/fetch-site, bounded flat UTF-8 JSON, cookie-bound CSRF and committed ordinary session admission precede owner access. The underlying adapter reacquires genuine provider/local owner authority for every operation and acknowledges mutations only after database commit. Responses use the existing private/no-store/CDN protections. Unexpected mutation or delivery failure is uncertain, never an invitation to generate replacement IDs or retry automatically.
+
+Reference actions carry the complete typed original as `originalJson`. Duplicate or escaped duplicate fields at either level, extra actor/business selection, worker commands, legacy profiles and malformed inputs are rejected. Status accepts only an opaque job ID. Retirement keeps the current decision epoch/reason separate from the entire original reference, including its older epoch and release. Request body maximum remains16KiB; original reference maximum2KiB.
+
+`createSourceExportClient` fixes the expected current verified business and actor, accepts a fresh explicit proof per call and uses same-origin cookies, no-store, no redirects and no referrer. The server derives authority from its cookie and provider checks; client IDs confer none. Response parsing requires JSON/no-store, bounded16KiB/fatal UTF-8/128 nodes and duplicate-free fields. Abort and copied proof expiry are checked after body delivery. Committed request receipts bind all original fields and the expected actor; current status binds the requested job/business. Retirement acknowledgements additionally bind the exact current decision. Historical resolution lookup preserves the original recorded decision epoch.
+
+The transport creates no IDs and stores/clears no references. A future controller must first confirm the pending store, pass the copied original, abort on principal/context changes, and explicitly release only a matching original committed receipt or retired decision. Absence, original-recorded, conflicts, current status and uncertain delivery cannot clear pending. Original Queued receipt evidence is distinct from a currently Running job. No receipt provides current lease or file-download authority.
+
+## Validation and next work
+
+All5,552 local unit cases across161 files pass, including88 new wire/server/client cases. Type checking, focused lint and native test syntax pass. The existing42 migrations,12 canonical amendments and297-package dependency registry remain verified. Registered SQL, proposal SQL, worker/storage/collector/verifier implementations and test runner configuration are unchanged.
+
+Three new genuine Auth/PostgreSQL tests compose the actual handler over real loopback sockets with real session-bound CSRF and admission: separate original/status/all-five-action behavior; absent old-original retirement/current decision/pause; invalid proof/foreign principal/provider-session loss without private writes. These are written and syntax checked, **not yet executed locally** because the required native services are unavailable. Expected new native total is1,222 (674 foundation +423 provider +125 genuine Auth), retaining231 proposal cases and all prior recovery checks. Earlier source3694acf6 has independently accepted1,219 native cases; that proof does not accept these new sources.
+
+Preserve the current complete release run before publishing the pending-store and HTTP checkpoints together. Fresh exact-source native/full release acceptance, explicit canonical schema43 adoption, owner controller/screens and verified download remain required. This is not real-data readiness or a complete portable export/backup claim.

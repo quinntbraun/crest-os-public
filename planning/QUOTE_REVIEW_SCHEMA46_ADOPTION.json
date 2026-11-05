@@ -1,0 +1,67 @@
+{
+  "formatVersion": 1,
+  "repositoryRegistration": 46,
+  "executionStatus": "constructed_pending_acceptance",
+  "databaseApplied": false,
+  "productionActivation": "blocked",
+  "migration": {
+    "file": "20261028030000_quote_review.sql",
+    "sha256": "4b802d624d8db4dd0ebd79280df669ee3d5fe82852765c3034717ae83ce8d6c0",
+    "bytes": 125278
+  },
+  "previousRegistry": {
+    "sha256": "24282dd13212ce4902cdb36d04eb4620339e8a070ed32582663be323472cf97f",
+    "frozenFixture": "tests/support/registered45-migration-checksums.json",
+    "migrationCount": 45
+  },
+  "previousCoverage": {
+    "sha256": "7a9467c6cfb4a40edcd21ebb10fcb75a1f64024d13e0db6032422bd69ae90859",
+    "frozenFixture": "tests/support/registered45-export-coverage.json"
+  },
+  "previousCompatibility": {
+    "sha256": "5e4c62db0c2cdedf5e122884418cc44cf279186595042a7a0facded7b79c22ce",
+    "frozenFixture": "tests/support/registered45-compatibility.json"
+  },
+  "proposalBodies": [
+    {
+      "order": 1,
+      "path": "planning/proposals/quote-lifecycle.sql",
+      "sha256": "aed67ab9c81e6a24234f3b794f22675e64e0f6a499d88826861179cceb311d35",
+      "bytes": 124914,
+      "offset": 319
+    }
+  ],
+  "quoteTables": [
+    "crest.condition_assessments",
+    "crest.quote_approvals"
+  ],
+  "extendedQuoteTable": "crest.quote_items",
+  "requiredAddedColumns": 38,
+  "sourceCoverage": {
+    "tables": 46,
+    "actualColumns": 741,
+    "requiredColumns": 731,
+    "excludedCredentialColumns": 10,
+    "actualRegistered46QuoteReviewVerified": false
+  },
+  "legacyProfiles": [
+    42,
+    43,
+    44,
+    45
+  ],
+  "runtimeQuoteReviewEnabled": false,
+  "registeredQuoteReviewWorkerEnabled": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "requiredAcceptance": [
+    "Actual registered45-to46 atomic upgrade, exact-source refusal and idempotency",
+    "Registered46 actual inventory, closed grants, trusted review/approval/edit invalidation and immutable original results",
+    "Genuine Auth/HTTP review workflow on actual registered46",
+    "Per-domain profile2 CSV with paired same-snapshot business history and independent registered46 encrypted restore",
+    "Preserved explicit42/43/44/45 schema/profile/recovery fixtures",
+    "Exact-source browser/build/container/artifact acceptance before bounded synthetic activation; full46 portability/worker/admission and all real-data gates remain required"
+  ],
+  "canonicalDecision": "ADR46",
+  "resetCallerRoleBetweenBodies": true
+}

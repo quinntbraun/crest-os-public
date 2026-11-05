@@ -1,5 +1,5 @@
 // Separate synthetic process: independently held key plus registered checkout.
-import {restoreDatabase} from './recovery-drill.mjs';
+import {restoreLegacy42Database as restoreDatabase} from './recovery-drill.mjs';
 try{
  if(process.argv.length!==4||!process.env.CREST_RECOVERY_DRILL_TARGET)throw new Error();
  await restoreDatabase(process.argv[2],process.argv[3],process.env.CREST_RECOVERY_DRILL_TARGET);

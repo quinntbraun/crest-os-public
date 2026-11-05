@@ -1,6 +1,6 @@
 # Public canonical maintenance
 
-Version: 1.3 | 2026-10-25 | ADR42 explicit original-operation retirement
+Version: 1.4 | 2026-10-27 | ADR43 source-export journal registration
 
 PUBLICATION.md records the explicitly authorized fresh public baseline, privacy changes, version register and retained private provenance. The original private manifest is unchanged and is never represented as verifying these redacted bytes.
 
@@ -75,3 +75,78 @@ ARCHITECTURE.md: prior amended SHA256 3b404f7d81b2c02ece6761881989a275909c82db29
 ARCHITECTURE_DECISIONS.md: prior amended SHA256 cb82df85e1503bbe44193c1fb6d5bdf5f51d4c8f09609b1e6e3434dd04ef65f6, 44926 bytes at accepted-main integration6e3604d5384c03d50315adf7586b82700edcd710; now version1.13, SHA256 067b07cccee091ef3c4018e3a42d76bfdcf467664b8100ca68bdfce25861c68b, 49984 bytes. Original baseline hash/length retained.
 
 PUBLICATION.md: prior amended SHA256 c9d6f8ae426b680ba03b686b559860e685834b551866f1423ea6b2131e2d8bd9, 5855 bytes at accepted-main integration6e3604d5384c03d50315adf7586b82700edcd710; now version1.8, SHA256 14dcd0b082ee74abd1d6c760bee09e9111b32d9e199963e06a37577880808e85, 5868 bytes. Original baseline hash/length retained.
+
+## 2026-10-27 - Registered source-export journal and explicit recovery profiles
+
+The owner-authorized export/recovery implementation now constructs ADR43/migration43 from seven retained proven SQL bodies. Keep all42 prior SQL and the immutable baseline/manifest/original amendment identities unchanged. The same12 distinct amended documents remain; only the five listed current versions/hashes advance. Registration is a technical construction decision, not route activation, production permission, complete-backup certification or a business/financial/Calendar scope change. Genuine registered43 catalogue/upgrade/Auth/independent restore and complete source-specific browser/build/container/artifact acceptance remain mandatory. planning/SOURCE_EXPORT_SCHEMA43_ADOPTION.json records exact migration/body provenance; see planning/PHASE_4_SOURCE_EXPORT_ADOPTION.md for execution gaps.
+
+ARCHITECTURE.md: prior amended version1.7, SHA256 a6322ebe8d030ee1875bdae1e976a2372af8a12da06f6253eb973d005613dbd1, 38680 bytes at source00f21d77851e7603d99b8912bd6c1eeeda2e877b; now version1.8, SHA256 12890f037e599232634e39823eeb978c8674585643bb54f66ad9ba06212d37ca, 39230 bytes. Original baseline hash/length retained.
+
+ARCHITECTURE_DECISIONS.md: prior amended version1.13, SHA256 067b07cccee091ef3c4018e3a42d76bfdcf467664b8100ca68bdfce25861c68b, 49984 bytes at source00f21d77851e7603d99b8912bd6c1eeeda2e877b; now version1.14, SHA256 795c07717f9e6b6f3a0bc2875ef2c544bce70281d1cc125e74e6beef8bf10ef8, 54550 bytes. Original baseline hash/length retained.
+
+DATABASE.md: prior amended version1.5, SHA256 7b51a2362d6b9bfe302a1a012bc38d97fe66d6db5558f56048af0009d2b6cd93, 54943 bytes at source00f21d77851e7603d99b8912bd6c1eeeda2e877b; now version1.6, SHA256 044a64693667be29ceee6ebbf58fd136b9cdf799d18138e7c4911d1ada001113, 55826 bytes. Original baseline hash/length retained.
+
+EXPORTS_AND_BACKUPS.md: prior amended version1.5, SHA256 162b73eb711eee6562f04518d156744954d1f45c6831372086e92ac5f50ae27c, 28282 bytes at source00f21d77851e7603d99b8912bd6c1eeeda2e877b; now version1.6, SHA256 cb419895a528c8b5d9196326f63341d1df581846c8c5cf47390f8917948dd468, 29492 bytes. Original baseline hash/length retained.
+
+PUBLICATION.md: prior amended version1.8, SHA256 14dcd0b082ee74abd1d6c760bee09e9111b32d9e199963e06a37577880808e85, 5868 bytes at source00f21d77851e7603d99b8912bd6c1eeeda2e877b; now version1.9, SHA256 fb23f2c00ec0b81d4d46013081d768e71d35a5cdb8635d9c267537e6a33a41dd, 6258 bytes. Original baseline hash/length retained.
+
+
+## 2026-10-28 — ADR44 catalog construction registration
+
+Reason: advance the approved catalog→quote workflow by registering its accepted storage/command/source/recovery layers with append-only provenance. Registration is construction; runtime44 export/admission/editor and every production/real-data gate remain required. No original manifest/baseline/previous migration/proposal body or exclusion changes. See planning/CATALOG_SCHEMA44_ADOPTION.json.
+
+| Document | Prior version | Prior SHA256 | Prior bytes | New version | New SHA256 | New bytes |
+|---|---|---|---|---|---|---|
+| ARCHITECTURE.md | 1.8 | 12890f037e599232634e39823eeb978c8674585643bb54f66ad9ba06212d37ca | 39230 | 1.9 | a30e17f994e3ef0a131fe263e12beac23e1743dfeb4262538fc105e6153fba15 | 39590 |
+| DATABASE.md | 1.6 | 044a64693667be29ceee6ebbf58fd136b9cdf799d18138e7c4911d1ada001113 | 55826 | 1.7 | 5f327467ce74fbbbda987c09c29b6853ebdcd2bc45f344e493abae4500fc934c | 56232 |
+| EXPORTS_AND_BACKUPS.md | 1.6 | cb419895a528c8b5d9196326f63341d1df581846c8c5cf47390f8917948dd468 | 29492 | 1.7 | 37017d2c1a3f4523737d5aad9843aa6502a75baf1f4031c77d413df3dc93db10 | 30279 |
+| PUBLICATION.md | 1.9 | fb23f2c00ec0b81d4d46013081d768e71d35a5cdb8635d9c267537e6a33a41dd | 6258 | 1.10 | 0d21cdb14601c80292add46dd97134dfa36df975d0ba3da6939197751b788ead | 6656 |
+| ARCHITECTURE_DECISIONS.md | 1.14 | 795c07717f9e6b6f3a0bc2875ef2c544bce70281d1cc125e74e6beef8bf10ef8 | 54550 | 1.15 | 72f4009a4e31bfcf680db11325923195763179c2ff98bff1bd9a333cf592e6f2 | 56726 |
+
+ADR44 sequencing clarification: the bounded genuine synthetic catalog editor depends on actual44 domain authorization/history/concurrency, common-format retrieval, isolated recovery and browser acceptance. Complete business portability remains phase11 and a real-data/release gate; no requirement is waived or scope omitted. This corrects an over-broad construction dependency, following the owner's early usable-build instruction and existing ROADMAP/ADR41.
+
+
+## 2026-10-28 — ADR45 retained Draft quote registration
+
+Authority: owner-approved V1 implementation in the existing proven architecture. Finite requirement: adopt the reviewed Draft quote save/read/source/original-reference dependency atomically, prove actual current-schema upgrade and isolated recovery, then expose the genuine synthetic editor for browser acceptance. Full current business exports/Excel/worker/admission and all later quote/operational/financial/Calendar scope remain required; no production or real-data gate is weakened. Changed versions: ARCHITECTURE1.10, ARCHITECTURE_DECISIONS1.16, DATABASE1.8, EXPORTS_AND_BACKUPS1.8, PUBLICATION1.11. Original baseline manifest and all44 existing migration bytes remain unchanged. Prior amendment bytes retained here:
+
+- ARCHITECTURE.md v1.9 — a30e17f994e3ef0a131fe263e12beac23e1743dfeb4262538fc105e6153fba15 (39590 bytes)
+- DATABASE.md v1.7 — 5f327467ce74fbbbda987c09c29b6853ebdcd2bc45f344e493abae4500fc934c (56232 bytes)
+- EXPORTS_AND_BACKUPS.md v1.7 — 37017d2c1a3f4523737d5aad9843aa6502a75baf1f4031c77d413df3dc93db10 (30279 bytes)
+- ARCHITECTURE_DECISIONS.md v1.15 — 72f4009a4e31bfcf680db11325923195763179c2ff98bff1bd9a333cf592e6f2 (56726 bytes)
+- PUBLICATION.md v1.10 — 0d21cdb14601c80292add46dd97134dfa36df975d0ba3da6939197751b788ead (6656 bytes)
+
+
+## 2026-10-28 — ADR46 exact owner quote review registration
+
+Authority: continuing owner-approved V1 implementation. Finite requirement: register verified v2 assessment-backed Draft review/approval, preserve exact v1 original results, prove current upgrade/retrieval/independent recovery, then allow bounded genuine synthetic browser acceptance. Send/acceptance/agreement/replacement/amendments and every remaining approved V1 requirement remain visible; no tax/finance/real-data/production gate is relaxed. Original baseline and all45 existing migrations remain unchanged. Prior amendment bytes:
+
+- ARCHITECTURE.md v1.10 — f8a64dec11cb17ac2d34b4fbe7ab9646fdb91a12577830189c4599ff32fe00da (40081 bytes)
+- ARCHITECTURE_DECISIONS.md v1.16 — 03373d6be2d5cb054cf36cff5e3a8c51a87dbe8146df4293ce6746f4b1629109 (58655 bytes)
+- DATABASE.md v1.8 — 466c0440ac290f20d92f4239c39637f99f4e5efe708f64fec707bfa02111be35 (56761 bytes)
+- EXPORTS_AND_BACKUPS.md v1.8 — 9cae0f502ec47327523c54f11632d7299c1f6bc252e6b9d30825edaeba039790 (30837 bytes)
+- PUBLICATION.md v1.11 — ea78c0ce35a80996e6110ea637e7885017f3ec297cd8387204b10507c9a53511 (7057 bytes)
+
+
+## 2026-10-29 — ADR47 retained unconfirmed appointment proposals
+
+Owner-authorized continuation integrates the exact publicly reviewed appointment source as a forward47 migration over46. No original manifest/hash,46 SQL, financial rule, confirmed booking/acceptance or production gate is changed. Twelve distinct amended documents remain; only four current amendments advance.
+
+ARCHITECTURE_DECISIONS.md: prior SHA256 cf2dae92debdd5d88b42dc80c741ba79efdc52b71f9a4e5c3f06fd97f8363221, 61059 bytes; now version 1.18, SHA256 2a7a79d5ae3fe0c1ca2c1fdb2f46c4e6d6cfa2d62133553dfa7dc006cf050953, 63245 bytes.
+
+DATABASE.md: prior SHA256 bd771b0870aaa2b4c02f63ab6bb51edc20671f6a343df6402d61b0f1abe4fb25, 57471 bytes; now version 1.10, SHA256 87c9f594231f27d96dba68fb067182203ba217fcdd00ae7f5ec865357a989017, 58214 bytes.
+
+EXPORTS_AND_BACKUPS.md: prior SHA256 fde08fbf440df8852f4e1c1e6189c896008fbeb1bfd8d8ee700ea0278a718f90, 31637 bytes; now version 1.10, SHA256 4829d201eee975423191d0ca535cfd196bc1253f7d02ca96edd6aa123f1af221, 32627 bytes.
+
+PUBLICATION.md: prior SHA256 fd772eb250879cab7b769497ed21311e9d94cee77b793dddd6630dd9a5e834a4, 7477 bytes; now version 1.13, SHA256 0f0048eb6e4179ab0f62ceacbe1fc0fcfd49de61e69563ca3482e37485086081, 7830 bytes.
+
+
+## 2026-10-28 — ADR48 owner-confirmed sharing and immutable initial acceptance
+
+Authority: continuing owner-approved V1 implementation. Finite requirement: integrate exact approved sharing, recorded confirmation, stable initial accepted scope, replacement serialization, linked-lead source lineage and original-save recovery with actual upgrade/retrieval/independent restore proof. Normalized typed commercial control preserves the physical family13-field history; assignment/splitting, decline/cancel and accepted amendments remain explicit unfinished V1 work. No original baseline,47 prior SQL body, privacy/accounting/recovery requirement or production gate is changed. Prior amendment bytes:
+
+- ARCHITECTURE.md v1.11 — 8c7049e331d348919a0e1405ab04c5adecf9484045cc6b15a2908c36e1650f79 (40742 bytes)
+- ARCHITECTURE_DECISIONS.md v1.18 — 2a7a79d5ae3fe0c1ca2c1fdb2f46c4e6d6cfa2d62133553dfa7dc006cf050953 (63245 bytes)
+- DATABASE.md v1.10 — 87c9f594231f27d96dba68fb067182203ba217fcdd00ae7f5ec865357a989017 (58214 bytes)
+- EXPORTS_AND_BACKUPS.md v1.10 — 4829d201eee975423191d0ca535cfd196bc1253f7d02ca96edd6aa123f1af221 (32627 bytes)
+- PUBLICATION.md v1.13 — 0f0048eb6e4179ab0f62ceacbe1fc0fcfd49de61e69563ca3482e37485086081 (7830 bytes)

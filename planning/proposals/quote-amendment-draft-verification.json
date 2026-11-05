@@ -1,0 +1,105 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "runtimeEnabled": false,
+  "existingMigrationCount": 51,
+  "status": "actual_postgres_draft_and_typed_consumer_verified_not_app_integrated",
+  "files": [
+    {
+      "path": "planning/proposals/quote-amendment-storage.sql",
+      "bytes": 9387,
+      "sha256": "a0b2772afee14b45479824c23f8dfcf10992d27545d7bf533c700057d3cb2fc0"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-draft-commands.sql",
+      "bytes": 72590,
+      "sha256": "9c3c2cb7decbc8871e6a4f5fd5dd3f2900b1f320b4cbe3c680dd928f4b663861"
+    },
+    {
+      "path": "tests/integration/quote-amendment-storage.test.mjs",
+      "bytes": 11750,
+      "sha256": "1ca9c8fac25eb1a8082bccdb1cca2ac38d39e58c0eead80d25f67587ef92065d"
+    },
+    {
+      "path": "tests/integration/quote-amendment-draft-commands.test.mjs",
+      "bytes": 15979,
+      "sha256": "862a50b7a41c0efae03262504f8891764c761f6b219b7a6c7d99362d3885e6fb"
+    },
+    {
+      "path": "src/commercial/quote-amendment-contract.ts",
+      "bytes": 7065,
+      "sha256": "8939c1eecece39f957cb3dfda7a932640e301f30a3ce00a8b45ffe1396f0938a"
+    },
+    {
+      "path": "tests/unit/quote-amendment-contract.test.ts",
+      "bytes": 6668,
+      "sha256": "565716cd4623d4ed384d88a48c913450751412072cc03180e6f3c4f8a0efe64e"
+    },
+    {
+      "path": "tests/support/confirmed-booking-fixture.mjs",
+      "bytes": 9546,
+      "sha256": "6218d1192314dcac0fee33f65420627bacf740b1505383ac87fbe8a2540a5b6d"
+    },
+    {
+      "path": "supabase/migration-checksums.json",
+      "bytes": 9681,
+      "sha256": "6460d57d51c41f89c7dffffc456610c730566fde414dd13352e9a1844fc1a4a4"
+    }
+  ],
+  "verification": {
+    "actualPostgresCases": 40,
+    "storageCases": 23,
+    "draftCommandCases": 17,
+    "passed": 40,
+    "failed": 0,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true,
+    "focusedContractAndCustomerDocumentUnits": 38,
+    "typesPassed": true,
+    "focusedLintPassed": true,
+    "productionBuildPassed": true,
+    "canonicalAnd51RegistryPassed": true,
+    "publicBoundaryPassed": true,
+    "mandatoryCiStepsConfigured": true,
+    "currentSourceHostedReleaseRun": null,
+    "genuineMfaClaimed": false,
+    "completeAppWorkflowClaimed": false
+  },
+  "decisions": [
+    "The new quote.amendment.create operation/receipt uses schema3 to bind immutable parent agreement ID, version and accepted content hash. Existing schema1/2 operation preimages and quote-content v1/v2 remain unchanged.",
+    "Recovery references contain only original IDs and versions. Accepted/proposed hashes/content, prices, contacts, observations and credentials are not persisted by this new reference boundary. A live request also pins its parent hash; recovery relies on the independently verified immutable SQL result.",
+    "The existing closed quote command role gains INSERT only on kind/parent columns, never browser/worker access or parent UPDATE. Draft editing and owner review reuse existing commands under family lock/current-parent checks.",
+    "An enabled deferred guard verifies the schema3 original result against exact audited rows; no caller can substitute a fabricated committed receipt.",
+    "Unaccepted Draft/edit/review/owner approval changes no accepted agreement, entitlement, allocation or financial effect. Customer acceptance is separate and unfinished."
+  ],
+  "verified": [
+    "Actual initial lifecycle and original accepted projection/obligations remain intact.",
+    "Parent-bound creation, original lookup and exact replay, including replay after later editing.",
+    "Changed-body/parent replay refusal, stale parent/version/hash/family refusal with rolled-back operation claims.",
+    "Draft edits, distinct submit/approval and exact typed app receipt consumer.",
+    "Competing creates serialize on existing family locks with one commit and one version conflict.",
+    "A saved line cannot silently move vehicles in create or edit; explicit new identity is allowed while accepted scope stays unchanged.",
+    "Foreign authenticated principal denied; private helpers and parent updates stay closed to browser/worker.",
+    "Unexpected default function grants refuse installation before new surface creation.",
+    "Deferred fabricated-receipt attempt fails; owned test rows/clusters cleaned without disabling RLS/triggers."
+  ],
+  "retainedFailures": [
+    "First draft run29/36: explicit kind/parent INSERT needed on the existing column-restricted closed quote role. Added only those two columns; dependent cases then pass.",
+    "Second36/37: the SET CONSTRAINTS test omitted the private schema qualification. Corrected the fixture, retaining the actual deferred guard/assertion.",
+    "Third39/39 passed. Fourth consumer run23/24: plain Node caught extensionless TypeScript imports accepted by the unit bundler. Added explicit .ts imports.",
+    "Final40/40 includes real typed receipt consumption and default-grant refusal. Initial script source replacement treated a SQL regex dollar quote as a JS replacement token; preparation assertion caught it before output/execution and literal replacement fixed it."
+  ],
+  "remaining": [
+    "Manual sharing, separate customer acceptance, coherent full resulting agreement and entitlement/remaining-allocation versions, atomic completed/billed/credited/refunded limits.",
+    "Current version2+ agreement transitions, converted-lead parents and full cancellation/empty resulting-scope semantics must be verified before adoption; do not invent a complimentary placeholder.",
+    "Versioned amendment-aware saved readers/history/UI/controller and interrupted-original retirement/reference integration.",
+    "Common-format source coverage and frozen51/current-profile restore before registered52 adoption and actual MFA/browser/full current-source Linux release."
+  ],
+  "ownerDatabaseApplied": false,
+  "ownerPreviewModified": false,
+  "productionDatabaseApplied": false,
+  "financialPostingEnabled": false,
+  "completeBackup": false,
+  "realCrestUseReady": false,
+  "currentSpend": 0
+}

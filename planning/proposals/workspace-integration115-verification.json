@@ -1,0 +1,105 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-11-05T07:33:35.320Z",
+  "scope": "Protected-main integration115 correction and independent held field construction; not full current release acceptance",
+  "failedSource": {
+    "public": "d0d044f613bd1fa111983b81b41040ecc48965e4",
+    "tree": "4ae29efef733c68b31079efc163988f4e682e21e",
+    "testedMerge": "72d8191d65a00d2314de8678c910b6dd0d099e07",
+    "fullRun": 41980583888,
+    "focusedRun": 41980583869,
+    "expenseRun": 41980583860,
+    "fullRunNumber": 420,
+    "failures": [
+      {
+        "job": 127089510092,
+        "gate": "Database foundation",
+        "cause": "Ordinary encrypted recovery exact schema comparison mismatch; nearest last CREATE TABLE was session_request_admissions, actual differing SQL object remains unproven."
+      },
+      {
+        "job": 127089510401,
+        "gate": "Browser workflows (amendments)",
+        "cause": "Chromium selected-read Response.json body retired after screen refresh."
+      },
+      {
+        "job": 127089510240,
+        "gate": "Focused amendment browser",
+        "cause": "Same Chromium selected-read body failure."
+      },
+      {
+        "job": 127095786895,
+        "gate": "Foundation checks",
+        "cause": "Required prerequisite rejection; intentional release protection, not an independent product defect."
+      }
+    ]
+  },
+  "correction": {
+    "browser": "Selected reads use the existing exact-one-request observer to capture genuine bytes before forwarding. Original pacing/status/JSON/loaded-state assertions retained. No retry, extra request, timeout increase or application/SQL/Auth-policy change.",
+    "recovery": "Diagnostic adds only the nearest allowed fixed pg_dump metadata header and line hashes. SQL bodies/records/credentials remain withheld. Exact schema/grant bytes and nonce-only normalization are unchanged.",
+    "recoveryRootCauseResolved": false
+  },
+  "localEvidence": {
+    "wholeGenuineBrowserJourneys": 2,
+    "engines": [
+      "chromium",
+      "webkit"
+    ],
+    "browserSourceStableAndOwnedClean": true,
+    "currentApplicationFilesMatchingBrowserProof": 492,
+    "actualHttpObserverCases": 4,
+    "actualEncryptedRecoveryCases": 37,
+    "recoverySourceStableAndOwnedClean": true,
+    "recoveryDiagnosticRefinementAfterSuccessfulRun": true,
+    "typesPassed": true,
+    "affectedLintPassed": true,
+    "fullCurrentLinuxAcceptance": false
+  },
+  "heldFieldConstruction": {
+    "files": [
+      {
+        "path": "planning/proposals/field-time-storage.sql",
+        "bytes": 23894,
+        "sha256": "37e1488caa2f4751ae2ddc4e739f0ec9bf5a3d45094914fce8e9152821e13756"
+      },
+      {
+        "path": "planning/PHASE_6_FIELD_WORK.md",
+        "bytes": 2698,
+        "sha256": "fef45659f34af2cab2660408086b7442d429d963d9588bbb9489a891a06e8175"
+      },
+      {
+        "path": "tests/integration/field-time-storage.test.mjs",
+        "bytes": 20916,
+        "sha256": "e54a5e09444b34b9c1bbc43f466bb3c847a89fda599996440983fb55960af916"
+      }
+    ],
+    "actualPostgresCases": 30,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "sourceStableAndOwnedClean": true,
+    "includesActualTwoConnectionWaitAndRefusal": true,
+    "includesExactMissingAndForgedAuditRefusal": true,
+    "newRelations": [
+      "work_intervals",
+      "travel_legs",
+      "operator_occupancy"
+    ],
+    "ordinaryRolesRemainClosed": true,
+    "registeredMigrations": 53,
+    "registered54": false,
+    "appCommandsOrTimerUiDelivered": false,
+    "fullSourceFingerprintAndBusinessAggregateAdoptionStillRequired": true,
+    "notIncludedInIntegrationPr": true
+  },
+  "deliveredPreview": {
+    "local": "3e252b1c7dbd6da1bbb09c3684cdfe622c2b8f96",
+    "public": "47858247d101fd8b25856b1dd3dace8ffa056aea",
+    "acceptedFullRun": 41973467699,
+    "schema": 53,
+    "unchanged": true
+  },
+  "next": "Publish the reviewed integration-test correction for fresh exact-source main-based full CI. Investigate any recovery schema mismatch using the more precise safe metadata; never weaken the comparator or merge failed420. Continue the full field workflow separately.",
+  "realCrestUseReady": false,
+  "completeV1": false,
+  "spend": 0
+}

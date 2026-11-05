@@ -1,7 +1,23 @@
 import {customerUuid as uuid,customerVersion as version,customerInstant as instant} from '../customer/customer-contract.ts';
 
+import {parseQuoteAmendmentDraftReference} from '../commercial/quote-amendment-contract.ts';
+import type {QuoteAmendmentDraftReference} from '../commercial/quote-amendment-contract.ts';
+import {parseQuoteAmendmentSendReference} from '../commercial/quote-amendment-sharing-contract.ts';
+import type {QuoteAmendmentSendReference} from '../commercial/quote-amendment-sharing-contract.ts';
+import {parseQuoteAmendmentAcceptReference} from '../commercial/quote-amendment-acceptance-contract.ts';
+import type {QuoteAmendmentAcceptReference} from '../commercial/quote-amendment-acceptance-contract.ts';
+
 type Common=Readonly<{operationId:string;recoveryEpoch:string}>;
 type Targets={
+ 'operations.fulfillment_modes.initialize':Readonly<{expectedSequence:'0'}>;
+ 'operations.fulfillment_modes.save':Readonly<{expectedSequence:string}>;
+ 'operations.job.book':Readonly<{jobId:string;expectedModeSequence:string}>;
+ 'operations.job.cancel':Readonly<{jobId:string;expectedJobVersion:string}>;
+ 'operations.job.reschedule':Readonly<{jobId:string;expectedJobVersion:string;action:'propose'|'confirm'|'withdraw';latestAppointmentId:string}>;
+ 'bookkeeping.expense.save':Readonly<{expenseId:string;expectedRevision:string}>;
+ 'bookkeeping.receipt.reserve':Readonly<{receiptId:string;expenseId:string;expenseRevision:string;expectedRevision:'0'}>;
+ 'bookkeeping.receipt.publish':Readonly<{receiptId:string;expenseId:string;expenseRevision:string;expectedRevision:'1'}>;
+ 'operations.appointment_hold.save':Readonly<{holdId:string;expectedSequence:string}>;
  'business.rename':Readonly<{expectedVersion:string}>;
  'crm.customer.save':Readonly<{customerId:string;expectedVersion:string}>;
  'crm.address.save':Readonly<{customerId:string;addressId:string;expectedVersion:string}>;
@@ -13,6 +29,16 @@ type Targets={
  'crm.lead.vehicle.save':Readonly<{leadId:string;leadVehicleId:string;expectedVersion:string}>;
  'crm.lead.address.save':Readonly<{leadId:string;leadAddressId:string;expectedVersion:string}>;
  'crm.lead.convert':Readonly<{conversionId:string;leadId:string;expectedLeadVersion:string;customerId:string}>;
+ 'catalog.service.save':Readonly<{serviceId:string;expectedRevision:string}>;
+ 'quote.amendment.create':Omit<QuoteAmendmentDraftReference,keyof Common>;
+ 'quote.amendment.send':Omit<QuoteAmendmentSendReference,keyof Common>;
+ 'quote.amendment.accept':Omit<QuoteAmendmentAcceptReference,keyof Common>;
+ 'quote.draft.save':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string}>;
+ 'quote.replacement.create':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:'0'}>;
+ 'quote.manual.send':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string;expectedContentVersion:string;sendId:string;approvalId:string}>;
+ 'quote.confirmation.accept':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string;expectedContentVersion:string;acceptanceId:string;agreementId:string}>;
+ 'quote.review.submit':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string;expectedContentVersion:string}>;
+ 'quote.review.approve':Readonly<{familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:string;expectedContentVersion:string;approvalId:string}>;
 };
 export type OriginalOperationKind=keyof Targets;
 export type OriginalOperationReference={
@@ -33,6 +59,15 @@ function object(value:unknown,keys:readonly string[]):Record<string,unknown>{
  return Object.fromEntries(keys.map(key=>[key,descriptors[key]!.value]));
 }
 const fields={
+ 'operations.fulfillment_modes.initialize':['expectedSequence'],
+ 'operations.fulfillment_modes.save':['expectedSequence'],
+ 'operations.job.book':['jobId','expectedModeSequence'],
+ 'operations.job.cancel':['jobId','expectedJobVersion'],
+ 'operations.job.reschedule':['jobId','expectedJobVersion','action','latestAppointmentId'],
+ 'bookkeeping.expense.save':['expenseId','expectedRevision'],
+ 'bookkeeping.receipt.reserve':['receiptId','expenseId','expenseRevision','expectedRevision'],
+ 'bookkeeping.receipt.publish':['receiptId','expenseId','expenseRevision','expectedRevision'],
+ 'operations.appointment_hold.save':['holdId','expectedSequence'],
  'business.rename':['expectedVersion'],
  'crm.customer.save':['customerId','expectedVersion'],
  'crm.address.save':['customerId','addressId','expectedVersion'],
@@ -43,7 +78,17 @@ const fields={
  'crm.lead.state':['leadId','expectedVersion'],
  'crm.lead.vehicle.save':['leadId','leadVehicleId','expectedVersion'],
  'crm.lead.address.save':['leadId','leadAddressId','expectedVersion'],
- 'crm.lead.convert':['conversionId','leadId','expectedLeadVersion','customerId']
+ 'crm.lead.convert':['conversionId','leadId','expectedLeadVersion','customerId'],
+ 'catalog.service.save':['serviceId','expectedRevision'],
+ 'quote.amendment.create':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedParentAgreementId','expectedParentAgreementVersion'],
+ 'quote.amendment.send':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','sendId','approvalId','expectedParentAgreementId','expectedParentAgreementVersion','replacesRevisionId'],
+ 'quote.amendment.accept':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','acceptanceId','agreementId','sendId','customerId','expectedParentAgreementId','expectedParentAgreementVersion'],
+ 'quote.draft.save':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion'],
+ 'quote.replacement.create':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion'],
+ 'quote.manual.send':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','sendId','approvalId'],
+ 'quote.confirmation.accept':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','acceptanceId','agreementId'],
+ 'quote.review.submit':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion'],
+ 'quote.review.approve':['familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','approvalId']
 } as const satisfies Record<OriginalOperationKind,readonly string[]>;
 export const originalOperationKinds=Object.freeze(Object.keys(fields) as OriginalOperationKind[]);
 function reason(value:unknown):asserts value is string{
@@ -52,7 +97,7 @@ function reason(value:unknown):asserts value is string{
 }
 
 // Original IDs/versions only. No draft reconstruction, credentials, permission,
-// sign-in binding, caller-supplied actor, financial command or replacement ID.
+// sign-in binding, caller-supplied actor, financial payload or replacement command.
 // This is a pure contract: no storage, database, network or retirement action.
 export function parseOriginalOperationReference(value:unknown):OriginalOperationReference{
  try{
@@ -60,12 +105,26 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
   require(row.schemaVersion===1&&uuid(row.businessId)&&typeof row.commandType==='string'&&Object.hasOwn(fields,row.commandType));
   const kind=row.commandType as OriginalOperationKind,keys=['operationId','recoveryEpoch',...fields[kind]],ref=object(row.reference,keys);
   require(uuid(ref.operationId)&&uuid(ref.recoveryEpoch));
+  if(kind==='quote.amendment.create')return Object.freeze({schemaVersion:1,businessId:row.businessId,commandType:kind,reference:parseQuoteAmendmentDraftReference(ref)});
+  if(kind==='quote.amendment.send')return Object.freeze({schemaVersion:1,businessId:row.businessId,commandType:kind,reference:parseQuoteAmendmentSendReference(ref)});
+  if(kind==='quote.amendment.accept')return Object.freeze({schemaVersion:1,businessId:row.businessId,commandType:kind,reference:parseQuoteAmendmentAcceptReference(ref)});
   for(const key of fields[kind]){
-   if(key==='expectedVersion')require(version(ref[key],kind!=='business.rename'&&kind!=='crm.lead.state'));
+   if(key==='expectedSequence'||key==='expectedVersion'||key==='expectedRevision'||key==='expectedFamilyVersion'||key==='expectedRevisionVersion')require(version(ref[key],!['business.rename','crm.lead.state','quote.review.submit','quote.review.approve','quote.manual.send','quote.confirmation.accept'].includes(kind)));
+   else if(key==='expectedModeSequence')require(version(ref[key],true));
+   else if(key==='expectedJobVersion'||key==='expectedContentVersion')require(version(ref[key]));
+   else if(key==='expenseRevision')require(version(ref[key]));
    else if(key==='expectedLeadVersion')require(version(ref[key]));
    else if(key!=='action'&&key!=='nextAssociationId')require(uuid(ref[key]));
   }
+  if(kind==='operations.fulfillment_modes.initialize')require(ref.expectedSequence==='0');
+  if(kind==='operations.fulfillment_modes.save')require(version(ref.expectedSequence));
+  if(kind==='operations.job.reschedule')require(['propose','confirm','withdraw'].includes(ref.action as string));
+  if(kind==='bookkeeping.receipt.reserve')require(ref.expectedRevision==='0');
+  if(kind==='bookkeeping.receipt.publish')require(ref.expectedRevision==='1');
   if(kind==='crm.vehicle.association')require(['open','close','transfer'].includes(ref.action as string)&&ref.expectedVersion===(ref.action==='open'?'0':'1')&&(ref.action==='transfer'?uuid(ref.nextAssociationId)&&ref.nextAssociationId!==ref.associationId:ref.nextAssociationId===null));
+  if(kind==='quote.replacement.create')require(version(ref.expectedFamilyVersion)&&ref.expectedRevisionVersion==='0');
+  if(kind==='quote.draft.save')require((ref.expectedFamilyVersion==='0')===(ref.expectedRevisionVersion==='0'));
+  if(kind==='quote.review.submit'||kind==='quote.review.approve'||kind==='quote.manual.send'||kind==='quote.confirmation.accept')require(BigInt(ref.expectedContentVersion as string)<=BigInt(ref.expectedRevisionVersion as string));
   return Object.freeze({schemaVersion:1,businessId:row.businessId,commandType:kind,reference:Object.freeze(ref)}) as OriginalOperationReference;
  }catch{throw new OriginalOperationReferenceError();}
 }

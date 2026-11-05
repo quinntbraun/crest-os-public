@@ -10,6 +10,15 @@ for (const kind of ["dependencies", "devDependencies"]) {
     assert.match(version, /^\d+\.\d+\.\d+$/, `Exact stable pin required: ${name}`);
   }
 }
+// A security override must be an exact reviewed version in every locked copy,
+// never an audit exception or an unbounded transitive upgrade.
+for (const [name, version] of Object.entries(pkg.overrides ?? {})) {
+  assert.match(name, /^(?:@[a-z0-9._-]+\/)?[a-z0-9._-]+$/);
+  assert.match(version, /^\d+\.\d+\.\d+$/);
+  const copies = Object.entries(lock.packages).filter(([path]) => path === `node_modules/${name}` || path.endsWith(`/node_modules/${name}`));
+  assert(copies.length > 0, `Unused dependency override: ${name}`);
+  for (const [path, entry] of copies) assert.equal(entry.version, version, `Override differs from locked artifact: ${path}`);
+}
 const licenses = new Set(["MIT", "ISC", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "0BSD", "CC0-1.0", "CC-BY-4.0", "Python-2.0", "BlueOak-1.0.0", "MPL-2.0", "(MIT OR CC0-1.0)", "(MIT OR Apache-2.0)", "(MIT AND Zlib)"]);
 for (const [path, entry] of Object.entries(lock.packages)) {
   if (!path) continue;

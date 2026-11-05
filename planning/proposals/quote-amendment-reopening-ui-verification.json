@@ -1,0 +1,219 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-11-04T12:58:39.246Z",
+  "scope": "Explicit in-memory new-work preparation after an accepted cancellation, reusing the existing amendment editor, genuine saved choices, create/read/review/share/accept and current-version booking paths",
+  "testedCheckoutHead": "e49d1a1fd809b4e3e6885fd742c1caf2f9bc25fe",
+  "sourceFiles": [
+    {
+      "path": "src/app/quotes/amendments/draft-editor.tsx",
+      "bytes": 11899,
+      "sha256": "2d0ba8f21d2a79dd1f558f50af2025f84dd23352bc89610d3c5608444f8d7985"
+    },
+    {
+      "path": "src/app/quotes/amendments/workspace.tsx",
+      "bytes": 8696,
+      "sha256": "09c1559ca84001e800562c9d3a84504e50907f978b15983069c881044a0e2c06"
+    },
+    {
+      "path": "src/client/quote-amendment-workspace.ts",
+      "bytes": 55057,
+      "sha256": "a8518e368f97239f0bfd6ed28fa334c60e0b329293ff3a3a1823eb784ef96778"
+    },
+    {
+      "path": "tests/integration/quote-amendment-auth.test.mjs",
+      "bytes": 103572,
+      "sha256": "7e1aab61fbf2a5e566c1cf25196d4c7d5bbdb4bf7c88d7973d3dade807f6c912"
+    },
+    {
+      "path": "tests/unit/quote-amendment-reopening.test.ts",
+      "bytes": 2321,
+      "sha256": "8ddb5410f9b8b750009d86594373d5034ae24be5b2bcc30d852ae45110903f48"
+    }
+  ],
+  "ownerApplied": false,
+  "registeredReleaseClaim": false,
+  "completeV1": false,
+  "verification": {
+    "genuineAuth": {
+      "path": ".local/amendment-reopening-auth-v2/result.json",
+      "cases": 6,
+      "passed": 6,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "scope": "Actual password/TOTP, normal Node app routes, private HTTP, restricted PostgreSQL and outer COMMIT. Includes accepted cancellation, actual saved vehicle lookup, explicit paid+complimentary reopened work, saved Draft/history/private record, review/approval/sharing, resulting agreement3 and real booked visit; lost-ack fresh-sign-in original verification plus explicit reload; actual deferred COMMIT failure; paused recovery; unchanged20-context admission bound. Not browser/TLS/device/full release."
+    },
+    "units": {
+      "path": ".local/amendment-reopening-all-units-v1.json",
+      "cases": 8142,
+      "applicationAndUnitSourceUnchangedAfterRun": true
+    },
+    "typecheck": {
+      "passed": true,
+      "path": ".local/amendment-reopening-types-v4.log"
+    },
+    "lint": {
+      "passed": true,
+      "fullPath": ".local/amendment-reopening-lint-final.log",
+      "finalNativeFixturePath": ".local/amendment-reopening-lint-native-final.log"
+    },
+    "productionBuild": {
+      "passed": true,
+      "path": ".local/amendment-reopening-build-v1.log",
+      "applicationSourceUnchangedAfterRun": true
+    },
+    "componentBrowser": {
+      "scope": "Actual editor/controller with safe genuine synthetic SQL projection, authority/API doubles and Chromium. Four widths; no whole-app/genuine-browser-auth/WebKit/device claim.",
+      "screens": [
+        {
+          "width": 360,
+          "form": ".local/amendment-reopening-browser/form-360.png",
+          "pending": ".local/amendment-reopening-browser/pending-360.png",
+          "axeViolations": 0,
+          "overflow": false,
+          "minimumControlHeight": 44,
+          "inputText": 16,
+          "keyboard": true,
+          "explicitScopeAndPrice": true,
+          "noInventedLine": true,
+          "refreshClearsUnsaved": true,
+          "uncertainClearsPrivate": true,
+          "opaqueReferenceFields": 8,
+          "referenceSurvivesReload": true
+        },
+        {
+          "width": 390,
+          "form": ".local/amendment-reopening-browser/form-390.png",
+          "pending": ".local/amendment-reopening-browser/pending-390.png",
+          "axeViolations": 0,
+          "overflow": false,
+          "minimumControlHeight": 44,
+          "inputText": 16,
+          "keyboard": true,
+          "explicitScopeAndPrice": true,
+          "noInventedLine": true,
+          "refreshClearsUnsaved": true,
+          "uncertainClearsPrivate": true,
+          "opaqueReferenceFields": 8,
+          "referenceSurvivesReload": true
+        },
+        {
+          "width": 768,
+          "form": ".local/amendment-reopening-browser/form-768.png",
+          "pending": ".local/amendment-reopening-browser/pending-768.png",
+          "axeViolations": 0,
+          "overflow": false,
+          "minimumControlHeight": 44,
+          "inputText": 16,
+          "keyboard": true,
+          "explicitScopeAndPrice": true,
+          "noInventedLine": true,
+          "refreshClearsUnsaved": true,
+          "uncertainClearsPrivate": true,
+          "opaqueReferenceFields": 8,
+          "referenceSurvivesReload": true
+        },
+        {
+          "width": 1440,
+          "form": ".local/amendment-reopening-browser/form-1440.png",
+          "pending": ".local/amendment-reopening-browser/pending-1440.png",
+          "axeViolations": 0,
+          "overflow": false,
+          "minimumControlHeight": 44,
+          "inputText": 16,
+          "keyboard": true,
+          "explicitScopeAndPrice": true,
+          "noInventedLine": true,
+          "refreshClearsUnsaved": true,
+          "uncertainClearsPrivate": true,
+          "opaqueReferenceFields": 8,
+          "referenceSurvivesReload": true
+        }
+      ],
+      "passed": true,
+      "browserVersion": "156.0.8078.4",
+      "captures": [
+        {
+          "path": ".local/amendment-reopening-browser/form-360.png",
+          "width": 360,
+          "bytes": 91094,
+          "sha256": "bbb29d3f4429d03a503b6d2ffb5887c334cf80371bfda7eab930b28a41762759"
+        },
+        {
+          "path": ".local/amendment-reopening-browser/pending-360.png",
+          "width": 360,
+          "bytes": 17651,
+          "sha256": "39f1ca67dab280a053a5a62826930ce027eccaca59548b786f3a8990cbba6a05"
+        },
+        {
+          "path": ".local/amendment-reopening-browser/form-390.png",
+          "width": 390,
+          "bytes": 90033,
+          "sha256": "4fb964fbdd2a858ef47f1f602644cd73633d388c9e0d95ab1f61fa69600181ed"
+        },
+        {
+          "path": ".local/amendment-reopening-browser/pending-390.png",
+          "width": 390,
+          "bytes": 17673,
+          "sha256": "bf016ce51b2b78017f5f7f66f0ba7cad685c9dd8ca03d2d9d20f2c95ddbac7b8"
+        },
+        {
+          "path": ".local/amendment-reopening-browser/form-768.png",
+          "width": 768,
+          "bytes": 102981,
+          "sha256": "1d9e630f228d096cb0fe8cc9f7bd048b70cb0ea5e43882b855cf83c469015488"
+        },
+        {
+          "path": ".local/amendment-reopening-browser/pending-768.png",
+          "width": 768,
+          "bytes": 19403,
+          "sha256": "d0b485f9f6b89ee67cca1fa97ed3adf4b3c9a280f23627adb23cd49dad202682"
+        },
+        {
+          "path": ".local/amendment-reopening-browser/form-1440.png",
+          "width": 1440,
+          "bytes": 92305,
+          "sha256": "cb0c503fecd828a5cbab72357b63b76b7aa7289995287fc4281a79f439f2c144"
+        },
+        {
+          "path": ".local/amendment-reopening-browser/pending-1440.png",
+          "width": 1440,
+          "bytes": 20393,
+          "sha256": "f93b6152785914e8dda174ca5731ee782ca7d718ff9229747cecef82c7d967e3"
+        }
+      ],
+      "screenCount": 8,
+      "manualVisualReview": true
+    }
+  },
+  "behavior": [
+    "No new package, role, migration, SQL, operation kind or service. Existing command and original receipt remain authoritative",
+    "Accepted cancellation only exposes new-work preparation under the separate test-only acceptance capability. Existing parent2 creation and cancellation preparation stay supported",
+    "The new draft starts with no work lines, amount, discount, expiry or appointment. Validated customer/contact/location/terms metadata stays linked; cancellation wording is not a new service",
+    "Owner explicitly adds genuine vehicle or job-wide scope, offered amount, needed observations and optional complimentary reason; saved service copies never invent pricing",
+    "The same editor validates scope, prices, request size, optional blanks and private unsaved preview. Discard/hide/navigation clear private preparation under existing workspace mechanisms",
+    "New creation captures the intended terms before authority/current-parent rechecks; stale/paused recovery stops dispatch. Only existing8-field opaque original identity may persist; no automatic resend or fake saved state",
+    "A reopened proposal changes no accepted agreement or existing scope until separately reviewed/approved/shared/customer-confirmed acceptance. Resulting agreement3 and booked paid/complimentary work are actually verified"
+  ],
+  "retainedDiagnostics": [
+    {
+      "path": ".local/amendment-reopening-focused-v1.json",
+      "passed": 27,
+      "failed": 1,
+      "cause": "Unit mutation fixture attempted to edit an already frozen source. It now clones the source first, preserving the isolation assertion; no application rule changed."
+    },
+    {
+      "path": ".local/amendment-reopening-auth-v1/result.json",
+      "passed": 4,
+      "failed": 2,
+      "cause": "Long robotic full journey exceeded actual120-per-minute rolling admission; only this test now paces requests600ms without changing requests, clocks, limits or retries. Original-reconciliation fixture incorrectly expected ready instead of the existing confirmed-review state followed by explicit reload. Application and SQL unchanged; final6 pass."
+    }
+  ],
+  "unverifiedOrRemaining": [
+    "Owner preview stays accepted immutable52/public07311f85/full405; reopening is not delivered there",
+    "Complete amended source/export reconstruction, append-only registration53 and frozen52/current independent recovery",
+    "Clean full combined18-case profile and genuine whole-app Linux Chromium/WebKit/all applicable integration/release gates",
+    "Future field/finance/custody live consumption bounds;715-column physical source fingerprint is not financial validation",
+    "Physical iPhone acceptance remains owner-deferred",
+    "Full approved V1 field/time/custody/photos/completion/follow-up, finance/reporting/mileage/receipts, complete portability/import/cutover and Google Calendar"
+  ]
+}

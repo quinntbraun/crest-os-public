@@ -210,6 +210,61 @@
       "version": "20261026010000",
       "file": "20261026010000_original_operation_resolution.sql",
       "sha256": "9dd564dd3c4bf54e0fc2a08347e51a8a0f51250a448fd75a8950395075ceb281"
+    },
+    {
+      "version": "20261027010000",
+      "file": "20261027010000_source_export_journal.sql",
+      "sha256": "d020f734b28dd3090e17c9092548a204f45c3e24c3e886a8557a92eef0540447"
+    },
+    {
+      "version": "20261028010000",
+      "file": "20261028010000_service_catalog.sql",
+      "sha256": "09a8ff9eeb415f879e56cdf5a43d74b0178e4b9d45c3efad806a16c621796729"
+    },
+    {
+      "version": "20261028020000",
+      "file": "20261028020000_quote_drafts.sql",
+      "sha256": "896aa5031e92b7eb4c3d264b8ee7fa024e82e550da650c4c7eb5f06ab4e900fc"
+    },
+    {
+      "version": "20261028030000",
+      "file": "20261028030000_quote_review.sql",
+      "sha256": "4b802d624d8db4dd0ebd79280df669ee3d5fe82852765c3034717ae83ce8d6c0"
+    },
+    {
+      "version": "20261028040000",
+      "file": "20261028040000_appointment_proposals.sql",
+      "sha256": "5f21dce7af0944388e39c456c2a06614f63c111557958acf9528f311f25bf4fc"
+    },
+    {
+      "version": "20261028050000",
+      "file": "20261028050000_quote_acceptance.sql",
+      "sha256": "1010212bc3fe6b734a511f05968103a4f88de37452a3340b1d70da5f243819c7"
+    },
+    {
+      "version": "20261029050000",
+      "file": "20261029050000_owner_expenses.sql",
+      "sha256": "8bf39dc6502ef1bba4e45cb04efe0afdbc2c6efe0d8b3a0d25948dcf37ffee18"
+    },
+    {
+      "version": "20261030160000",
+      "file": "20261030160000_confirmed_bookings.sql",
+      "sha256": "4691321409ddf4705f17c068dc105d360c593662198bdab0f78260f9435ba8bd"
+    },
+    {
+      "version": "20261102180000",
+      "file": "20261102180000_booking_conflict_review.sql",
+      "sha256": "f3aa951660979be7d9974933640675c24570dda879aac800713592280c2ca831"
+    },
+    {
+      "version": "20261103180000",
+      "file": "20261103180000_quote_amendment_preparation.sql",
+      "sha256": "1bcfd0e0772f9710829d1832aa3616864a91e3a9c52734b1cfe884d5af09e84a"
+    },
+    {
+      "version": "20261104180000",
+      "file": "20261104180000_quote_amendment_acceptance.sql",
+      "sha256": "5ecdf7ecab6563d908ae87fd69d59308241596efca7ffabfd289f01d10f39a1c"
     }
   ]
 }

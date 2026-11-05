@@ -1,0 +1,19 @@
+# Genuine synthetic service editor
+
+2026-10-28. Implements ADR44's bounded synthetic catalog journey; complete V1 and real-use gates remain unchanged.
+
+The actual `/services` page uses the existing genuine authentication, private HTTP adapter and registered44 service commands. `NodeConfiguration.syntheticCatalog: true` is accepted only for the trusted test environment with authentication and a configured business. It is not a browser flag, environment-variable activation, fake login or production switch. The default executable remains unconfigured. Production rejects the catalog opt-in. Existing registered43 export workers remain43; this editor does not expose them as44.
+
+The screen supports paged literal search, inactive inclusion, create/edit/deactivate/reopen, immutable code, retained content and audit history, exact decimal guidance and minute/second timing. Guidance never supplies a quote amount. Unknown values stay unknown. No financial behavior or pricing rule is introduced.
+
+The editor pairs the current directory definition with a newly authorized history read and refuses a changed revision. It never substitutes the last entry of a truncated history page for the current definition. History paging also refuses a changed root. Drafts and private content stay in memory and clear on hiding, page exit, bfcache restoration and unmount; native discard prompts protect ordinary navigation. Only the existing opaque original reference is stored per tab.
+
+First saves recheck session, business, binding, write readiness and recovery epoch before creating an identity or securing its reference. Unknown results retain the exact original. An explicit absent lookup permits an unchanged retry only while its original draft and authority binding remain in memory. Formatting-only amount/time edits do not submit a receipt-free no-op. An unexpected unchanged acknowledgment conservatively retains the reference for review. Generic recorded observations never clear it. The existing interrupted-save screen now includes the typed catalog adapter.
+
+Explicit JSON retrieval rechecks current authorized history and root/content revision before requesting a file. It includes the saved definition and first20 history entries, marks further history, excludes unsaved drafts and states `completeCrestExport:false` and `completeBackup:false`. A changed revision requires reload. Existing independently decoded catalog CSV and encrypted44 recovery remain separate acceptance evidence. Complete44 business exports, Excel, worker admission and production recovery activation remain approved unfinished V1 scope.
+
+## Acceptance evidence and current limits
+
+Public18d34bcb / run40727991545 passed the complete required pipeline, including1713 native cases,6382 units and both genuine browser engines with retained workflow/accessibility/recovery checks. Owner-delivered local4319 also passed genuine browser MFA, service/customer/vehicle/link save/reload/history/JSON and a full owned-service restart. The previously failed textarea lookup and proxy fixture are fixed and accepted. Main protections are saved and verified. Current follow-up source, exact run and remaining gates belong in WORKING_STATE.md; do not repeat superseded pending approvals or failures.
+
+The latest owner requests include original Crest logo sign-in, blank optional inputs without presence checkboxes and private iPhone access. Current rendered/local checks and phone setup are recorded in that checkpoint. Physical iPhone testing and a new full run for these changes are separate from this preceding accepted source. Full44 business exports/Excel/worker/admission, retained quotes and remaining V1/recovery/real-use gates remain required. No production, real records, finance activation, paid services or main merge is implied.

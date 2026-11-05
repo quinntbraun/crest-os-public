@@ -1,0 +1,100 @@
+name: Owner expense acceptance
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/owner-expenses.yml'
+      - 'src/bookkeeping/expenses/**'
+      - 'src/server/node-server.ts'
+      - 'src/client/expenses.ts'
+      - 'src/client/pending-original-operation.ts'
+      - 'src/security/original-operation-reference.ts'
+      - 'src/app/save-review/**'
+      - 'src/client/pending-expense.ts'
+      - 'src/client/pending-receipt.ts'
+      - 'src/client/expense-receipts.ts'
+      - 'src/app/expenses/**'
+      - 'src/app/workspace-frame.tsx'
+      - 'supabase/migration-checksums.json'
+      - 'supabase/migrations/20261029050000_owner_expenses.sql'
+      - 'planning/OWNER_EXPENSES_SCHEMA49_ADOPTION.json'
+      - 'planning/SECURITY_EXPORT_COVERAGE.json'
+      - 'release/compatibility.json'
+      - 'tests/support/registered48-*.json'
+      - 'tests/support/owner-expense49-candidate.mjs'
+      - 'tests/support/source-export-browser-fixture.mjs'
+      - 'tests/unit/owner-expenses-adoption.test.ts'
+      - 'tests/unit/quote-commercial-adoption.test.ts'
+      - 'tests/unit/node-server.test.ts'
+      - 'package.json'
+      - 'src/app/globals.css'
+      - 'public/fonts/**'
+      - 'planning/proposals/owner-expenses*'
+      - 'planning/proposals/owner-expense-receipts*'
+      - 'tests/integration/owner-expenses*'
+      - 'tests/unit/expense-contract.test.ts'
+      - 'tests/unit/expense-client.test.ts'
+      - 'tests/unit/pending-expense.test.ts'
+      - 'tests/unit/pending-receipt.test.ts'
+      - 'tests/unit/expense-receipts.test.ts'
+      - 'tests/fixtures/owner-expenses-editor.tsx'
+      - 'tests/fixtures/owner-expenses-lifecycle.tsx'
+      - 'tests/fixtures/owner-expenses-save-review.tsx'
+      - 'tests/fixtures/owner-expenses-access.tsx'
+      - 'tests/fixtures/owner-expenses-original-clients.ts'
+      - 'tests/unit/pending-original-operation.test.ts'
+      - 'tests/unit/original-operation*.test.ts'
+permissions:
+  contents: read
+concurrency:
+  group: owner-expenses-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  expense_acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+      CREST_ENV: test
+      CREST_TEST_DATABASE_URL: postgresql://supabase_admin:crest_local_test_only@127.0.0.1:54322/crest_test
+    services:
+      postgres:
+        image: supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2
+        env:
+          POSTGRES_USER: supabase_admin
+          POSTGRES_PASSWORD: crest_local_test_only
+          POSTGRES_DB: crest_test
+        ports:
+          - 127.0.0.1:54322:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d crest_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci --ignore-scripts --no-fund
+      - run: node scripts/install-tools.mjs
+      - run: node scripts/install-recovery-tools.mjs
+      - run: node --conditions=react-server --test --test-concurrency=1 tests/integration/owner-expenses.test.mjs tests/integration/owner-expenses-http.test.mjs tests/integration/owner-expenses-receipts.test.mjs tests/integration/owner-expenses-receipt-auth.test.mjs tests/integration/owner-expenses-receipt-http.test.mjs tests/integration/owner-expenses-receipt-objects.test.mjs tests/integration/owner-expenses-receipt-recovery.test.mjs tests/integration/owner-expenses-combined-recovery.test.mjs tests/integration/owner-expenses-production-gates.test.mjs tests/integration/owner-expenses-receipt-delivery.test.mjs tests/integration/owner-expenses-history-delivery.test.mjs tests/integration/owner-expenses-activity.test.mjs tests/integration/owner-expenses-original.test.mjs tests/integration/owner-expenses-original-http.test.mjs tests/integration/owner-expenses-receipt-original.test.mjs tests/integration/owner-expenses-resolution.test.mjs tests/integration/owner-expenses-source.test.mjs tests/integration/owner-expenses-registered.test.mjs tests/integration/owner-expenses-registered-source.test.mjs tests/integration/owner-expenses-registered-auth.test.mjs
+      - run: npm exec vitest run tests/unit/expense-contract.test.ts tests/unit/expense-receipts.test.ts tests/unit/expense-client.test.ts tests/unit/pending-expense.test.ts tests/unit/pending-receipt.test.ts tests/unit/pending-original-operation.test.ts tests/unit/original-operation-reference.test.ts tests/unit/original-operation-http-contract.test.ts tests/unit/original-operation-review-controller.test.ts tests/unit/owner-expenses-adoption.test.ts tests/unit/quote-commercial-adoption.test.ts tests/unit/node-server.test.ts
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node --test tests/integration/owner-expenses-layout.test.mjs tests/integration/owner-expenses-lifecycle.test.mjs tests/integration/owner-expenses-save-review.test.mjs tests/integration/owner-expenses-access.test.mjs
+      - name: Build the genuine expense app
+        run: npm run build
+      - name: Verify genuine expense phone and desktop journeys
+        run: npm run test:expenses-browser
+      - name: Preserve fictional expense app screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: expense-app-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: .local/review/workspace-expenses-*.png
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: warn

@@ -1,0 +1,211 @@
+{
+  "formatVersion": 1,
+  "scope": "complete_scheduling_construction_atomic_candidate50_and_preserved49",
+  "baseCommit": "95da851b637fdf0aa88e31a0a755822177c8ef2c",
+  "registeredSchemaVersion": 49,
+  "candidateSchemaVersion": 50,
+  "registeredLaterMigration": false,
+  "runtimeActivated": false,
+  "ownerDatabaseUpgraded": false,
+  "productionReady": false,
+  "candidate": {
+    "file": "20261030160000_confirmed_bookings.sql",
+    "bytes": 326489,
+    "sha256": "4691321409ddf4705f17c068dc105d360c593662198bdab0f78260f9435ba8bd",
+    "registrySha256": "15f9e5245112299565911c3efa8dc198e34861976d0e4df1a3f0e38b06351b2e",
+    "previousRegistrySha256": "68ced1706217b33cf5ed6a8b87ccdaf4324b714e7e01fb26e283412c05de5871",
+    "executedArtifactCopiesVerified": 5,
+    "bodies": [
+      {
+        "path": "planning/proposals/fulfillment-mode-storage.sql",
+        "offset": 776,
+        "bytes": 10143,
+        "sha256": "981e0b94c99df0d521bef32d14b12957d792ea766f13c5b1397efa8a8b9a2e5e"
+      },
+      {
+        "path": "planning/proposals/fulfillment-mode-commands.sql",
+        "offset": 11038,
+        "bytes": 20917,
+        "sha256": "4bd4c2d4bd44f2817e160d72b815a34b526ac57b5ebc0713cfc8c15cbe087736"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-storage.sql",
+        "offset": 32076,
+        "bytes": 21936,
+        "sha256": "e034d7307f88994ca88f3123ccd1049d2cdab97954cf157e17b7c6b27c29d2ed"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-history.sql",
+        "offset": 54134,
+        "bytes": 26907,
+        "sha256": "dc13a14fc59b7be3988060d5eaf08ab5039bdf376b18ea14c824d4d0a74b691c"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-invariants.sql",
+        "offset": 81166,
+        "bytes": 16739,
+        "sha256": "a52d5bd6cd715a6b316068fdf13d1723ee9277b901833c0ceb945f363a6209ed"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-job-invariants.sql",
+        "offset": 98037,
+        "bytes": 28716,
+        "sha256": "39cb681b634aafdded8bc9bcf1d5f6cf82f848e64e82b23d4efa17fe6439a26a"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-commands.sql",
+        "offset": 126883,
+        "bytes": 44658,
+        "sha256": "74ca7f070313d5463fbe6e3a6ae84486915d0e47bf3f4af7eb273b2b4db8968c"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-reads.sql",
+        "offset": 171662,
+        "bytes": 8002,
+        "sha256": "08f8008da6f8282515649f3be95417d5a63781458189fa1f0623d74bd389540b"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-enable.sql",
+        "offset": 179783,
+        "bytes": 5792,
+        "sha256": "b4d45ba8147d026f8f2d1d5ec45a0ebbf6f5fbe02bffd999a0a86f8808cfbfa3"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-cancel.sql",
+        "offset": 185695,
+        "bytes": 24885,
+        "sha256": "b62e5f6518da098880a6cdc5da276eed3209eb69372f594c7dcac435f0c5f5de"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-reschedule.sql",
+        "offset": 210704,
+        "bytes": 12032,
+        "sha256": "e003e6bf2e24ae2b433e185fcba95922ac6255a26ac6009a6c62c1ec97b59784"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-reschedule-commands.sql",
+        "offset": 222873,
+        "bytes": 30906,
+        "sha256": "4911d2d251d1f98ccea50e373ef17c755065a85d19d41a73c1e896745bc83e50"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-history-reads.sql",
+        "offset": 253919,
+        "bytes": 4885,
+        "sha256": "bc0cb0578bf1be267e83cbcddc0d70ffaaace1775ec20f246847bc96d090ba3c"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-source.sql",
+        "offset": 258931,
+        "bytes": 38254,
+        "sha256": "e4034c2b0b7d4baff265c63e7ee175df2b7f190f96c51135259f8eef3b49d748"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-resolution.sql",
+        "offset": 297309,
+        "bytes": 7195,
+        "sha256": "5e94d68fe776e8fa42d7a15750cfedbbd3c75297998e1d07a61b0f5f194ce0ad"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-original.sql",
+        "offset": 304630,
+        "bytes": 5575,
+        "sha256": "9a754b0a324000979736c8ffbb7a693ebdb46e62049786f34dfe147df518bba4"
+      },
+      {
+        "path": "planning/proposals/confirmed-bookings-context.sql",
+        "offset": 310328,
+        "bytes": 16101,
+        "sha256": "8ff2773ed5dc888482d6b5dfdfa42ced06bf57a201555afdc9c029bfc99241e8"
+      }
+    ]
+  },
+  "executed": {
+    "commandHistoryAndOriginalCases": 50,
+    "genuinePasswordTotpAndPrivateHttpCases": 14,
+    "observedOriginalRetirementInterleavings": 10,
+    "currentContextAndPendingQueueCases": 8,
+    "sourceAndCrossReferenceCases": 17,
+    "atomicCandidateUpgradeCaptureAndRecoveryCases": 9,
+    "frozen49FinancialRecoveryCases": 18,
+    "totalNativePassed": 126,
+    "nativeFailed": 0,
+    "allUnitCases": 7346,
+    "allUnitFiles": 264,
+    "allUnitsPassed": true,
+    "unitWorkers": 2,
+    "fullLint": true,
+    "typecheck": true,
+    "productionNextAndServerBuild": true,
+    "sourceStable": true,
+    "ownedClustersCleaned": true
+  },
+  "coverage": {
+    "sha256": "fb780633e92ffff940849b6fc72c57eca60f7aa73d89dbc7c583ba65f8c90561",
+    "tables": 68,
+    "requiredColumns": 1054,
+    "excludedColumns": 10,
+    "totalPhysicalColumns": 1064,
+    "partialEvidenceTables": 9,
+    "previous49Unchanged": true,
+    "assurance": "schema_inventory_only"
+  },
+  "startedAt": "2026-10-30T18:32:02.292Z",
+  "finishedAt": "2026-10-30T18:37:47.121Z",
+  "receiptSha256": "b320a51c4dfb82c8c8fe1561ef1fa2d897055f09cdd65f9c6b9077e6d093ad5b",
+  "logSha256": "a840e7f595eac58f5bea86cf0398401d3dbe0c5d99548146882a80cbb8fa1049",
+  "unitReportSha256": "b68ecef2446fbe667756cea6598fd9adc080fd29a5ea47befd020065fa075bd3",
+  "checksReceiptSha256": "309b8ca44f2a5c896c7beeadbc2102e93c4282d27d120b264eca0799a25f0655",
+  "checksStartedAt": "2026-10-30T18:32:30.2437546Z",
+  "checksFinishedAt": "2026-10-30T18:33:55.3892581Z",
+  "behavior": [
+    "All17 proposed SQL bodies are embedded byte-for-byte with an explicit role reset at each boundary. The coordinator appends only50, replays idempotently and preserves every prior table and49 migration row, including accepted commercial scope and a retained1299-cent expense.",
+    "Unsafe role configuration refuses before definitions change. A deliberately late export-function namespace collision rolls back all earlier tables/functions/grants/new roles and retains49 exactly.",
+    "A pre-upgrade accepted quote books through the actual restricted command after upgrade. The separate export credential captures physical sources, foundation history and commercial evidence on one held read-only snapshot and successfully composes the booking source/history package. Raw web/export table reads remain denied; interactive export reads require repeatable-read.",
+    "Schema50 backup requires its exact candidate registry/file hash and actual applied version list. Frozen49 has an explicit immutable profile whose registry bytes match original49. Cross-profile restores reject at the encrypted manifest before executing SQL, leaving empty destinations. Independent correct-profile restores verify exact original rows, schema and grants for both50 and the prior49 expense/agreement. No complete-backup or production-recovery claim is made.",
+    "Existing genuine authentication/private transport, actual original/retirement interleavings, typed current assignments/resources/pending pages, physical neutral reimport and cross-source omission/tampering regressions all pass in the same current integration run. All18 historical49 financial-original cases remain unchanged and pass."
+  ],
+  "corrections": [
+    "The first candidate packaging test counted legitimate RESET ROLE statements inside reviewed SQL bodies. It now requires one explicit BEGIN and END boundary reset per body while retaining the exact body-byte checks; no SQL change or weakened gate. Earlier failed and intermediate successful receipts remain local.",
+    "A full parallel unit run timed out one unchanged filesystem-copy case during concurrent build/database work. That case passed alone in about625ms; the complete7346-case suite then passed with two workers. The original five-second limit and every assertion were retained, and both failed/full and focused receipts remain local."
+  ],
+  "limitations": [
+    "Repository migration registry and compatibility remain49. The tested50 is a disposable candidate, not a registered upgrade or a change to the owner preview.",
+    "Coordinate frozen49 fixture/recovery bindings, current50 adoption/coverage/compatibility and actual runtime collector boundaries before registration/integration. Ordinary booking APIs remain closed.",
+    "No new booking/calendar UI, actual browser/device visual acceptance, current-source public full CI, owner preview upgrade, full source delivery/backup, real data or financial posting is claimed. Full approved V1 remains unfinished."
+  ],
+  "files": [
+    {
+      "path": "package.json",
+      "sha256": "4efec4a88e99b35261973061fcc35160894fab694d0e1d3ee2f44c53f4030042"
+    },
+    {
+      "path": "tests/support/confirmed-booking50-candidate.mjs",
+      "sha256": "eea7d60bf8709fd071cc03a49378da04e4544b636b95994db4488dcdce1128c1"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-candidate.test.mjs",
+      "sha256": "e9121c4f7ca7293c4e32d5b84066a976a04d830c59596df1aa416e630ed6c06b"
+    },
+    {
+      "path": "tests/support/recovery-drill.mjs",
+      "sha256": "df994802152c90db8f2b7a61e95fbd619c4763807461bb4e03b46b7ea5cb1f07"
+    },
+    {
+      "path": "tests/support/booking-source-evidence.mjs",
+      "sha256": "629673a94d1efd5d522c9622aaf1947c4870ab476bb3fb432cfd35e182231fa5"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-coverage.json",
+      "sha256": "fb780633e92ffff940849b6fc72c57eca60f7aa73d89dbc7c583ba65f8c90561"
+    },
+    {
+      "path": "src/operations/confirmed-booking-source-history.ts",
+      "sha256": "d883e1e3e9fa594e36a86251ccc7e52483bd2f7ae2d0f063a4e6d2925000c5d6"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-source.test.mjs",
+      "sha256": "0f515b4b1abb7f0565c5fd3fa52061922920f7f4793d70214bd53d8bc946c298"
+    }
+  ]
+}

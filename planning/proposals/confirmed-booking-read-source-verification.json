@@ -1,0 +1,136 @@
+{
+  "formatVersion": 1,
+  "scope": "unregistered_confirmed_job_typed_calendar_detail_history_and_physical_source_over49",
+  "baseCommit": "333c6c948adb3f466b593d98aa32188a54c33578",
+  "registeredSchemaVersion": 49,
+  "registeredLaterMigration": false,
+  "runtimeActivated": false,
+  "productionReady": false,
+  "completeBusinessSourceClosure": false,
+  "executed": {
+    "commandAndHistoryPostgresCases": 40,
+    "genuinePasswordTotpPrivateAdapterCases": 12,
+    "physicalSourceAndCsvPostgresCases": 7,
+    "passed": 59,
+    "failed": 0,
+    "sourceStableDuringEachRun": true,
+    "ownedClustersCleaned": true,
+    "independentEncryptedExactSchemaRowsAndGrantsRestore": true,
+    "sourceColumnInventory": 154,
+    "sourceTableInventory": 12
+  },
+  "nativeRuns": [
+    {
+      "kind": "commands_history_genuine_adapter_and_saved_history_archive",
+      "startedAt": "2026-10-30T12:41:19.941Z",
+      "finishedAt": "2026-10-30T12:43:11.925Z",
+      "tests": 52,
+      "receiptSha256": "f2dcbcaa673a6c9d708aba1c3a2ce7ba357c57de32e65c05d5fbc3c568a11f6f",
+      "logSha256": "16069e87124f435c0f343e4e9280a88cad306a79b6ad3f849bb47c52ba9d0bd4"
+    },
+    {
+      "kind": "original_sql_source_and_csv",
+      "startedAt": "2026-10-30T12:37:02.610Z",
+      "finishedAt": "2026-10-30T12:37:27.893Z",
+      "tests": 7,
+      "receiptSha256": "58e42acc2c6e7a3b4f98c2b9908939518c7884a6e3d784574698a317d2ad66d5",
+      "logSha256": "d2a977ace121d50d143ef8cd359632a2aebf38557a2b52fba802dff8fa320eee",
+      "unusedArchiveFilesNotReexecuted": [
+        "src/operations/confirmed-job-archive.ts",
+        "tests/unit/confirmed-job-archive.test.ts"
+      ]
+    }
+  ],
+  "behavior": [
+    "Fresh genuine authentication reads a bounded chronological calendar, scoped saved job/current and latest appointments, and consecutive immutable history prefixes. Foreign-business reads and signed-out reads fail; raw web table access remains denied.",
+    "Proposed times remain separate from confirmed reservations. Prepared messages remain prepared; cancellation communication is an owner-recorded fact. A previously selected history prefix remains stable when a later change is retained.",
+    "A saved-job ZIP contains CSV, normalized JSON, escape maps, a dictionary and independently verifiable part hashes. It rejects missing/mixed/substituted histories and does not claim original hash inputs, complete reference closure, a business export or backup.",
+    "All twelve new physical tables expose every one of154 independently checked database columns through the export credential on READ ONLY REPEATABLE READ. Scoped page cursors and held-snapshot tokens are verified. Web/raw access and unsafe grants are denied.",
+    "Physical source CSV preserves original PostgreSQL JSONB text including nested numeric scale1.000, integer cents, microsecond timestamps, null versus literal backslashes, formula-leading text and Unicode. Neutral CSV reimport and PostgreSQL JSONB comparison pass."
+  ],
+  "regression": {
+    "cause": "Archive incorrectly equated event recordedAt with the job update timestamp although the event is inserted afterward.",
+    "fix": "Bind the final job state/actor/operation and command effective timestamp; preserve the later event recorded timestamp independently.",
+    "unitCoverage": "Distinct effective/recorded timestamps are retained and genuine multi-version cancelled-job ZIP retrieval passes."
+  },
+  "limitations": [
+    "No booking HTTP/UI activation, registered50 adoption or new preview deployment.",
+    "Complete actor/operation/audit/commercial source closure, original-save retirement and legacy49 recovery helpers remain required before adoption.",
+    "A global pending-change queue outside the current confirmed calendar window still requires integration.",
+    "No full current-source public CI or new browser/physical-device acceptance. Field/custody/photos, finance posting/reporting, complete portability/recovery and Google Calendar remain approved unfinished V1 scope."
+  ],
+  "files": [
+    {
+      "path": "planning/proposals/confirmed-bookings-history-reads.sql",
+      "sha256": "bc0cb0578bf1be267e83cbcddc0d70ffaaace1775ec20f246847bc96d090ba3c"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-reads.sql",
+      "sha256": "08f8008da6f8282515649f3be95417d5a63781458189fa1f0623d74bd389540b"
+    },
+    {
+      "path": "planning/proposals/confirmed-bookings-source.sql",
+      "sha256": "e4034c2b0b7d4baff265c63e7ee175df2b7f190f96c51135259f8eef3b49d748"
+    },
+    {
+      "path": "src/operations/confirmed-job-read-contract.ts",
+      "sha256": "c9a39020a91519de043cad72fcfd5d545aeafd74b6c8e29ca10feea60d4879ae"
+    },
+    {
+      "path": "src/operations/confirmed-job-archive.ts",
+      "sha256": "3e3ec73091b1e6d67e9f6e7a9fc0fcf280f251b87a46f4d31958d18ec2831ae1"
+    },
+    {
+      "path": "src/operations/confirmed-booking-record-schema.ts",
+      "sha256": "48a4de2b772274f3e616eb22bfca892fa18cadef47cf404b6ae6c0b33860d96f"
+    },
+    {
+      "path": "src/operations/confirmed-booking-records.ts",
+      "sha256": "2c9665b3f798feda299bd1d6c24fa820826832473e8b3714156c8ecc5730f304"
+    },
+    {
+      "path": "src/operations/confirmed-booking-source-csv.ts",
+      "sha256": "d5e07d03369c5f1a3d4dd3164c18dccb17372a9e271826e764dc93f77c3c76fb"
+    },
+    {
+      "path": "src/operations/confirmed-booking-contract.ts",
+      "sha256": "98b24939d45252c461bafc43d11a62ce172dc54e86f5776c309512aa4b9791d3"
+    },
+    {
+      "path": "src/operations/confirmed-booking-directory.ts",
+      "sha256": "1499cbe71d25e5ded34a7b3a3537e0090e9709cc240aaad30cdc7c07363fabf5"
+    },
+    {
+      "path": "tests/fixtures/confirmed-job-records.ts",
+      "sha256": "456e21f6301b6e9f693413ef35844735afd9098f3d127c7fe2600435ced1e930"
+    },
+    {
+      "path": "tests/unit/confirmed-job-read-contract.test.ts",
+      "sha256": "230a70ae0d6b73ffb77bd9d2949d150a789c130ba700776b094441ae3114ff37"
+    },
+    {
+      "path": "tests/unit/confirmed-job-archive.test.ts",
+      "sha256": "146e52f50ef3d401da8efb013df72886f653d6c0812787abe3ce3166f2465ee5"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-commands.test.mjs",
+      "sha256": "578f20211fd8683ca8e7ce2032866937e5c42817f1df0a07677cf8091fa655f6"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-auth.test.mjs",
+      "sha256": "37dc4a15331a4f245fadb360a2217c6260b34c81788828dbc792baa7e791f578"
+    },
+    {
+      "path": "tests/integration/confirmed-bookings-source.test.mjs",
+      "sha256": "067f708da8290fbd0fb2385554dd1bb7ccb5a35c12ec11174cc1e7b0478db552"
+    },
+    {
+      "path": "package.json",
+      "sha256": "56eda62e28efcab1f07aceeff6ba70f1b27688a3baf456b5d39ae22a0096d98b"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "795e65cbf2983486a033ac6dcf5b9ffe3798bcd71bc12ce70a532ca55fd3dfa6"
+    }
+  ]
+}

@@ -1,7 +1,9 @@
 import {request as httpRequest} from 'node:http';
 import {describe,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn()}));
+vi.mock('../../src/commercial/quote-amendment-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/quote-amendment-http.ts')>(),createQuoteAmendmentHttp:()=>flow.quoteAmendments}));
+vi.mock('../../src/operations/scheduling-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/operations/scheduling-http.ts')>(),createSchedulingHttp:()=>flow.scheduling}));
+const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn(),quotes:vi.fn(),quoteReview:vi.fn(),quoteCommercial:vi.fn(),quoteAmendments:vi.fn(),holds:vi.fn(),expenses:vi.fn(),scheduling:vi.fn()}));
 vi.mock('../../src/security/browser-session-flow.ts',()=>({createBrowserSessionFlow:()=>flow}));
 vi.mock('../../src/security/business-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/business-http.ts')>(),createBusinessHttp:()=>flow.business}));
 vi.mock('../../src/customer/customer-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-http.ts')>(),createCustomerHttp:()=>flow.customers}));
@@ -11,10 +13,65 @@ vi.mock('../../src/customer/association-http.ts',async importOriginal=>({...awai
 vi.mock('../../src/customer/lead-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/lead-http.ts')>(),createLeadHttp:()=>flow.leads}));
 vi.mock('../../src/customer/lead-source-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/lead-source-http.ts')>(),createLeadSourceHttp:()=>flow.leadSources}));
 vi.mock('../../src/security/original-operation-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/original-operation-http.ts')>(),createOriginalOperationHttp:()=>flow.originalOperations}));
+vi.mock('../../src/commercial/service-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/service-http.ts')>(),createServiceHttp:()=>flow.services}));
+vi.mock('../../src/commercial/quote-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/quote-http.ts')>(),createQuoteHttp:()=>flow.quotes}));
+vi.mock('../../src/commercial/quote-review-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/quote-review-http.ts')>(),createQuoteReviewHttp:()=>flow.quoteReview}));
+vi.mock('../../src/bookkeeping/expenses/expense-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/bookkeeping/expenses/expense-http.ts')>(),createExpenseHttp:()=>flow.expenses}));
+vi.mock('../../src/operations/appointment-hold-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/operations/appointment-hold-http.ts')>(),createHoldHttp:()=>flow.holds}));
+vi.mock('../../src/commercial/quote-commercial-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/quote-commercial-http.ts')>(),createQuoteCommercialHttp:()=>flow.quoteCommercial}));
 import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../../src/server/node-server.ts';
 import type {NodeConfiguration} from '../../src/server/node-server.ts';
 
 const origin='https://crest.example.com';
+it('amendment preparation requires explicit synthetic CRM/commercial/original recovery composition',()=>{
+ const base={origin,environment:'test',syntheticQuoteAmendments:true,customers:true,vehicles:true,operationResolution:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticQuoteCommercial:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}},provider:{},tokens:{}}};
+ for(const patch of [{environment:'production'},{syntheticQuoteAmendments:'yes'},{authentication:undefined},{business:undefined},{customers:false},{vehicles:false},{operationResolution:false},{syntheticQuotes:false},{syntheticQuoteReview:false},{syntheticQuoteCommercial:false}]){const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,{...base,...patch} as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();}
+});
+it.each([undefined,false,true])('normal amendment namespace has a separate opt-in and the existing private quote response boundary: %s',async enabled=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn(),payload={retainedHistory:'x'.repeat(20000)};
+ for(const mock of [flow.quoteAmendments,flow.quotes,flow.quoteReview,flow.quoteCommercial])mock.mockReset();flow.quoteAmendments.mockImplementation(async()=>new Response(JSON.stringify(payload),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',...enabled===undefined?{}:{syntheticQuoteAmendments:enabled},customers:true,vehicles:true,operationResolution:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticQuoteCommercial:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{for(const path of ['/api/business/quotes/amendments/read','/api/business/%71uotes/amendments/create','/api/business/quotes/%61mendments/send']){const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(enabled?200:404);expect(response.headers.get('cache-control')).toContain('no-store');if(enabled)expect(await response.json()).toEqual(payload);else await response.text();}expect(flow.quoteAmendments).toHaveBeenCalledTimes(enabled?3:0);for(const other of [flow.quotes,flow.quoteReview,flow.quoteCommercial,pages])expect(other).not.toHaveBeenCalled();}finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+it('review construction requires its own explicit synthetic quote/auth/business configuration',()=>{
+ for(const config of [{origin,environment:'test',syntheticQuoteReview:true},{origin,environment:'test',syntheticQuoteReview:'yes'},{origin,environment:'production',syntheticQuotes:true,syntheticQuoteReview:true},{origin,environment:'test',syntheticQuotes:false,syntheticQuoteReview:true,business:{businessId:'synthetic'},authentication:{}}]){
+  const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,config as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();
+ }
+});
+it.each([undefined,false,true])('review routes remain separate from draft activation: %s',async enabled=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();
+ const local=`http://127.0.0.1:${address.port}`,pages=vi.fn();flow.quotes.mockReset();flow.quoteReview.mockReset();
+ flow.quotes.mockImplementation(async()=>new Response('{}',{headers:{'cache-control':'private, no-store'}}));flow.quoteReview.mockImplementation(async()=>new Response('{}',{headers:{'cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',syntheticQuotes:true,...enabled===undefined?{}:{syntheticQuoteReview:enabled},business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{const draft=await fetch(local+'/api/business/quotes/list',{method:'POST',body:'{}'});expect(draft.status).toBe(200);await draft.text();const review=await fetch(local+'/api/business/quotes/review/read',{method:'POST',body:'{}'});expect(review.status).toBe(enabled?200:404);expect(review.headers.get('cache-control')).toContain('no-store');await review.text();expect(flow.quotes).toHaveBeenCalledTimes(1);expect(flow.quoteReview).toHaveBeenCalledTimes(enabled?1:0);expect(pages).not.toHaveBeenCalled();}
+ finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+it('catalog construction cannot be enabled in production or without genuine authentication and business configuration',()=>{
+  for(const config of [{origin,environment:'production',syntheticCatalog:true},{origin,environment:'test',syntheticCatalog:true},{origin,environment:'test',syntheticCatalog:'yes'},{origin,environment:'test',syntheticCatalog:true,business:{businessId:'synthetic'}}]){
+    const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,config as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();
+  }
+});
+it.each([false,true])('reserves catalog and encoded aliases with explicit synthetic enablement=%s',async enabled=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local=`http://127.0.0.1:${address.port}`,pages=vi.fn(),handler=vi.fn(async()=>new Response(JSON.stringify({synthetic:'protected service response'}),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));flow.services.mockImplementation(handler);
+ bindApplicationHandler(server,{origin:local,environment:'test',syntheticCatalog:enabled,business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{for(const path of ['/api/business/services/list','/api/business/%73ervices/history']){const r=await fetch(local+path,{method:'POST',body:'{}'});expect(r.status).toBe(enabled?200:503);expect(r.headers.get('cache-control')).toContain('no-store');}expect(pages).not.toHaveBeenCalled();expect(handler).toHaveBeenCalledTimes(enabled?2:0);}
+ finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+it('quote construction requires explicit test-only authentication and business composition',()=>{
+ for(const config of [{origin,environment:'production',syntheticQuotes:true},{origin,environment:'test',syntheticQuotes:true},{origin,environment:'test',syntheticQuotes:'yes'},{origin,environment:'test',syntheticQuotes:true,business:{businessId:'synthetic'}}]){
+  const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,config as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();
+ }
+});
+it.each([false,true])('reserves quote aliases and keeps its4MiB response limit independent: %s',async enabled=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();
+ const local=`http://127.0.0.1:${address.port}`,pages=vi.fn();flow.quotes.mockReset();flow.quotes.mockImplementation(async request=>new Response(request.url.endsWith('/oversize')?'x'.repeat(4194305):request.url.endsWith('/large')?'x'.repeat(4194304):JSON.stringify({synthetic:'private quote boundary'}),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',syntheticQuotes:enabled,business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{
+  for(const path of ['/api/business/quotes/list','/api/business/%71uotes/history']){const r=await fetch(local+path,{method:'POST',body:'{}'});expect(r.status).toBe(enabled?200:503);expect(r.headers.get('cache-control')).toContain('no-store');await r.text();}
+  if(enabled){const large=await fetch(local+'/api/business/quotes/large',{method:'POST',body:'{}'});expect((await large.text()).length).toBe(4194304);await expect(fetch(local+'/api/business/quotes/oversize',{method:'POST',body:'{}'})).rejects.toThrow();}
+  expect(pages).not.toHaveBeenCalled();expect(flow.quotes).toHaveBeenCalledTimes(enabled?4:0);
+ }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
 async function withVehicleServer(enabled:boolean,work:(local:string,pages:ReturnType<typeof vi.fn>)=>Promise<void>){
   const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
   const address=server.address();if(!address||typeof address==='string')throw new Error();
@@ -161,3 +218,58 @@ describe('Node hosting boundary',()=>{
     }finally{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
   });
 });
+
+it('appointment history uses the private1MiB directory boundary rather than the8KiB authentication limit',async()=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn(),payload={schemaVersion:1,retainedHistory:'x'.repeat(20000)};
+ flow.holds.mockImplementation(async()=>new Response(JSON.stringify(payload),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',customers:true,operationResolution:true,syntheticAppointmentHolds:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{const response=await fetch(local+'/api/business/appointment-holds/history',{method:'POST',body:'{}'});expect(response.status).toBe(200);expect(await response.json()).toEqual(payload);expect(pages).not.toHaveBeenCalled();}finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+
+it('commercial construction requires test-only review, draft and original-recovery dependencies',()=>{
+ const base={origin,environment:'test',syntheticQuoteCommercial:true,syntheticQuotes:true,syntheticQuoteReview:true,operationResolution:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}},provider:{},tokens:{}}};
+ for(const patch of [{environment:'production'},{syntheticQuotes:false},{syntheticQuoteReview:false},{operationResolution:false},{authentication:undefined},{business:undefined},{syntheticQuoteCommercial:'yes'}]){
+  const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,{...base,...patch} as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();
+ }
+});
+it.each([false,true])('commercial routes have their own opt-in and never fall through to draft writes: %s',async enabled=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();
+ const local='http://127.0.0.1:'+address.port,pages=vi.fn();flow.quoteCommercial.mockReset();flow.quotes.mockReset();flow.quoteReview.mockReset();flow.quoteCommercial.mockImplementation(async()=>new Response('{"synthetic":"commercial"}',{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',syntheticQuotes:true,syntheticQuoteReview:true,syntheticQuoteCommercial:enabled,operationResolution:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{for(const route of ['/api/business/quotes/commercial/read','/api/business/%71uotes/commercial/accept']){const response=await fetch(local+route,{method:'POST',body:'{}'});expect(response.status).toBe(enabled?200:404);expect(response.headers.get('cache-control')).toContain('no-store');await response.text();}expect(flow.quoteCommercial).toHaveBeenCalledTimes(enabled?2:0);expect(flow.quotes).not.toHaveBeenCalled();expect(flow.quoteReview).not.toHaveBeenCalled();expect(pages).not.toHaveBeenCalled();}
+ finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+
+it('expense activation requires genuine synthetic workspace dependencies and stays forbidden in production',()=>{
+ const base={origin,environment:'test',syntheticExpenses:true,customers:true,operationResolution:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}},provider:{},tokens:{}}};
+ for(const patch of [{environment:'production'},{authentication:undefined},{business:undefined},{customers:false},{operationResolution:false},{syntheticExpenses:'yes'}]){const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,{...base,...patch} as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();}
+});
+it.each([undefined,false,true])('expense namespace and encoded aliases stay reserved with explicit activation=%s',async enabled=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn();flow.expenses.mockReset();flow.expenses.mockImplementation(async()=>new Response('{}',{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',customers:true,operationResolution:true,...enabled===undefined?{}:{syntheticExpenses:enabled},business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{for(const path of ['/api/business/expenses/context','/api/business/%65xpenses/context','/api/business/expenses%2Fcontext']){const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(enabled?200:503);expect(response.headers.get('cache-control')).toContain('no-store');await response.text();}expect(flow.expenses).toHaveBeenCalledTimes(enabled?3:0);expect(pages).not.toHaveBeenCalled();}finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+it('expense history uses its8MiB response boundary independently of customer and quote limits',async()=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn(),payload={syntheticProtocolFixture:'x'.repeat(1048576+17)};flow.expenses.mockImplementation(async()=>new Response(JSON.stringify(payload),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',customers:true,operationResolution:true,syntheticExpenses:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{const response=await fetch(local+'/api/business/expenses/history',{method:'POST',body:'{}'});expect(response.status).toBe(200);expect(await response.json()).toEqual(payload);expect(pages).not.toHaveBeenCalled();}finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+
+it('requires the complete explicit test-only scheduling composition',()=>{
+ const base={origin,environment:'test',syntheticScheduling:true,customers:true,vehicles:true,associations:true,operationResolution:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticQuoteCommercial:true,business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}},provider:{},tokens:{}}};
+ for(const patch of [{environment:'production'},{syntheticScheduling:'yes'},{business:undefined},{authentication:undefined},{customers:false},{vehicles:false},{associations:false},{operationResolution:false},{syntheticQuoteCommercial:false}]){
+  const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,{...base,...patch} as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();
+ }
+});
+it.each([false,true])('reserves scheduling and encoded aliases with a separate bounded response: %s',async enabled=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn();
+ flow.scheduling.mockReset();flow.scheduling.mockImplementation(async request=>new Response(request.url.endsWith('/large')?'x'.repeat(4194304):request.url.endsWith('/oversize')?'x'.repeat(4194305):JSON.stringify({synthetic:'private scheduling boundary'}),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));
+ bindApplicationHandler(server,{origin:local,environment:'test',syntheticScheduling:enabled,customers:true,vehicles:true,associations:true,operationResolution:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticQuoteCommercial:true,business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
+ try{
+  for(const path of ['/api/business/scheduling/resources','/api/business/%73cheduling/history','/api%2fbusiness/scheduling/read']){const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(enabled?200:503);expect(response.headers.get('cache-control')).toContain('no-store');await response.text();}
+  expect(pages).not.toHaveBeenCalled();expect(flow.scheduling).toHaveBeenCalledTimes(enabled?3:0);
+  if(enabled){expect((await(await fetch(local+'/api/business/scheduling/large',{method:'POST',body:'{}'})).text()).length).toBe(4194304);await expect(fetch(local+'/api/business/scheduling/oversize',{method:'POST',body:'{}'})).rejects.toThrow();}
+ }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));flow.scheduling.mockReset();}
+});
+
+it('keeps amendment acceptance separately default-off and rejects missing construction dependencies or production activation',()=>{for(const config of [{origin,environment:'test',syntheticQuoteAmendmentAcceptance:'yes'},{origin,environment:'test',syntheticQuoteAmendmentAcceptance:true},{origin,environment:'test',syntheticQuoteAmendmentAcceptance:true,syntheticQuoteAmendments:true,syntheticScheduling:false},{origin,environment:'production',syntheticQuoteAmendmentAcceptance:true,syntheticQuoteAmendments:true,syntheticScheduling:true}]){const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,config as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();}});

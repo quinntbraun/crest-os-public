@@ -1,0 +1,16 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "existingMigrationCount": 44,
+  "runtimeEnabled": false,
+  "nativeExecuted": false,
+  "sqlBytes": 7621,
+  "sqlSha256": "033ff0397702b783ac32578a3e8f010e8930efb8a7e197cca27865ee2bb5d2dc",
+  "functions": [
+    "crest_private.quote_discount_cents(jsonb,numeric)",
+    "crest_private.calculate_quote_pricing(jsonb,jsonb)"
+  ],
+  "tables": [],
+  "reason": "BR04 exact independent database calculation before trusted quote storage; no new runtime permissions or migration adoption."
+}

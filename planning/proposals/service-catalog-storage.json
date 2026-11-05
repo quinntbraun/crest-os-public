@@ -1,0 +1,48 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "proposedMigration": null,
+  "existingMigrationCount": 43,
+  "sourceProjectionVersion": 43,
+  "runtimeEnabled": false,
+  "nativeExecuted": false,
+  "nativeCasesWritten": 30,
+  "sqlBytes": 19492,
+  "sqlSha256": "a801ba8995d64653dbcd4fc0551dd24e143033366cfc978dac03e7987d2d359c",
+  "tables": {
+    "crest.services": 13,
+    "crest.service_versions": 16
+  },
+  "functions": [
+    "crest_private.service_projection(crest.services)",
+    "crest_private.service_definition(crest.service_versions)",
+    "crest_private.service_version_projection(crest.service_versions)",
+    "crest_private.reject_catalog_history_change()",
+    "crest_private.validate_service_change()",
+    "crest_private.validate_service_version_append()",
+    "crest_private.check_service_audit()",
+    "crest_private.check_service_version_audit()"
+  ],
+  "ordinaryTableGrants": false,
+  "trustedCommandsImplemented": false,
+  "sourceExportCoverageImplemented": false,
+  "recoveryAcceptanceExecuted": false,
+  "productionActivation": "blocked",
+  "priorUnacceptedSqlSha256": "4a00e9f9dcddd1dfa021081106f853b08d1ee9a0194dd4fd3ae49279ce9e98c6",
+  "sourceCorrection": "Allow an entirely omitted starting range explicitly; still reject upper-only, negative or inverted supplied guidance.",
+  "priorNativeRun": 40592213936,
+  "priorNativePassed": 28,
+  "priorNativeFailed": 1,
+  "currentSourceNativeAccepted": false,
+  "amendments": [
+    {
+      "date": "2026-10-28",
+      "priorSqlBytes": 19437,
+      "priorSqlSha256": "463062296675b7f154552b9b227c537201d17c89d973d11b874e54aea2b68f70",
+      "reason": "PG17 dump/restore flattens parser-expanded BETWEEN conjunctions. Use the equivalent explicit lower/upper comparisons in the three service content length CHECKs so the original schema has the same stable expression tree. No limit or null behavior changes; strict recovery comparison retained.",
+      "evidenceSource": "3c3141237d96038dacc8fe3d0d7f1f5ec9aee14c",
+      "evidenceRun": 40655494499,
+      "registeredMigrationsChanged": false
+    }
+  ]
+}

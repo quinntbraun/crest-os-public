@@ -1,0 +1,84 @@
+{
+  "formatVersion": 1,
+  "repositoryRegistration": 44,
+  "executionStatus": "constructed_pending_acceptance",
+  "databaseApplied": false,
+  "productionActivation": "blocked",
+  "migration": {
+    "file": "20261028010000_service_catalog.sql",
+    "sha256": "09a8ff9eeb415f879e56cdf5a43d74b0178e4b9d45c3efad806a16c621796729",
+    "bytes": 75816
+  },
+  "previousRegistry": {
+    "migrationCount": 43,
+    "sha256": "03d5e7b183e447f85cb4add33548c45d8473f90349b579a96635dc9eec9fb7bc",
+    "frozenFixture": "tests/support/registered43-migration-checksums.json"
+  },
+  "previousCoverage": {
+    "sha256": "b886b7b7e0f052b96e28ec54ebf5813aa551a6267ebeefc6c1392325bc90ae95",
+    "frozenFixture": "tests/support/registered43-export-coverage.json"
+  },
+  "previousCompatibility": {
+    "sha256": "c8b97b859d0945243d62e01d3395597d722db2d926961a57e7a490a758d42882",
+    "frozenFixture": "tests/support/registered43-compatibility.json"
+  },
+  "proposalBodies": [
+    {
+      "order": 1,
+      "path": "planning/proposals/service-catalog-storage.sql",
+      "sha256": "a801ba8995d64653dbcd4fc0551dd24e143033366cfc978dac03e7987d2d359c",
+      "bytes": 19492,
+      "offset": 415
+    },
+    {
+      "order": 2,
+      "path": "planning/proposals/service-catalog-commands.sql",
+      "sha256": "d0c97c0bb15d4f4ab6ee2ce6a10dff9e04f6b5f22387aa4e0c9aa30e5307cdc0",
+      "bytes": 43342,
+      "offset": 19980
+    },
+    {
+      "order": 3,
+      "path": "planning/proposals/service-catalog-source.sql",
+      "sha256": "c5d94543d7fbe4dbb25ccf3c1a3f26351d322538ee848df0a5c3a7f82e313fd9",
+      "bytes": 7901,
+      "offset": 63394
+    },
+    {
+      "order": 4,
+      "path": "planning/proposals/service-catalog-resolution.sql",
+      "sha256": "38b51a427aed56b9a05cc4ee2c9da5ff8b13fcad8b64b9108e6c0f7e2b7d5699",
+      "bytes": 4409,
+      "offset": 71369
+    }
+  ],
+  "catalogTables": [
+    "crest.services",
+    "crest.service_versions"
+  ],
+  "requiredCatalogColumns": 29,
+  "sourceCoverage": {
+    "tables": 41,
+    "requiredColumns": 632,
+    "excludedCredentialColumns": 10,
+    "actualRegistered44CatalogVerified": false
+  },
+  "legacyProfiles": [
+    42,
+    43
+  ],
+  "runtimeCatalogEnabled": false,
+  "registeredCatalogWorkerEnabled": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "requiredAcceptance": [
+    "Actual registered43-to44 atomic upgrade and source/role drift refusal",
+    "Registered44 catalogue/grants and trusted saves/original-operation recovery",
+    "Genuine Auth/HTTP catalog journey on actual registered44",
+    "Independent encrypted registered44 restoration with revoked/rotated paused authority",
+    "Preserved explicit42/43 schema/profile/recovery fixtures",
+    "Genuine test-only editor requires per-domain retrieval/recovery and browser acceptance; complete44 business-export/worker/admission remains required before its exposure and real-data/release claims",
+    "Complete exact-source browser/build/container/artifact release"
+  ],
+  "canonicalDecision": "ADR44"
+}

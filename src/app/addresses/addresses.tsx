@@ -1,7 +1,6 @@
 'use client';
-import Link from 'next/link';
 import {useEffect,useRef,useState} from 'react';
-import type {FormEvent} from 'react';
+import type {FormEvent,ComponentType} from 'react';
 import {createAddressEditorController,initialAddressEditorView} from '../../client/address-editor-controller';
 import {createPendingAddressStore} from '../../client/pending-address-edit';
 import {NullableText} from '../customers/nullable-text';
@@ -19,7 +18,7 @@ function AddressDetails({row}:{row:CustomerAddress}){
  const fields=[['Street / address line 1',row.line1],['Address line 2',row.line2],['City',row.city],['State / region',row.region],['Postal code',row.postal_code],['Country',row.country],['Exact location',row.exact_location_text],['Location instructions',row.instructions],['Latitude',row.latitude],['Longitude',row.longitude],['Geocode source',row.geocode_source],['Geocode accuracy',row.geocode_accuracy],['Verified at UTC',row.verified_at],['Archived at UTC',row.archived_at],['Archive reason',row.archived_reason]] as const;
  return <dl className="customer-values">{fields.map(([name,value])=><div key={name}><dt>{name}</dt><dd>{unknown(value)}</dd></div>)}</dl>;
 }
-export function AddressScreen({customerId}:{customerId:string|null}){
+export function AddressScreen({customerId,assist:Assist}:{customerId:string|null;assist?:ComponentType<{draft:AddressDraft;change:(draft:AddressDraft)=>void}>}){
  const [view,setView]=useState(initialAddressEditorView),current=useRef<ReturnType<typeof createAddressEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null);
  useEffect(()=>{
   const c=createAddressEditorController({customerId,store:createPendingAddressStore({getItem:k=>sessionStorage.getItem(k),setItem:(k,v)=>sessionStorage.setItem(k,v),removeItem:k=>sessionStorage.removeItem(k)}),change:setView});current.current=c;void c.load();
@@ -44,16 +43,14 @@ export function AddressScreen({customerId}:{customerId:string|null}){
    {view.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void current.current?.query(view.search,view.includeArchived,true)}>Next address page</button>}
    <button type="button" disabled={view.busy||view.writesPaused} onClick={()=>current.current?.create()}>Add address</button>
    {view.draft&&<form onSubmit={save} aria-label="Address editor"><h2>{view.selected?'Edit address':'New address'}</h2>
-    <p className="field-help">Record what you know; unknown and explicitly empty values remain distinct. This record does not confirm a job location. Leaving or hiding the page clears private drafts; closing the tab may also lose its save reference.</p>
+    <p className="field-help">Record what you know; leave optional fields blank. This record does not confirm a job location. Leaving or hiding the page clears private drafts; closing the tab may also lose its save reference.</p>
     <fieldset disabled={view.busy||view.writesPaused}><legend>Location details</legend>
+     {Assist&&<Assist draft={view.draft} change={next=>current.current?.edit(next)}/>}
      {optionalFields.map(([name,title,limit,multiline])=><NullableText key={name} name={'address-'+name} label={title} limit={limit} multiline={multiline} value={view.draft![name]} disabled={view.busy} change={v=>edit(name,v)}/>)}
      <details><summary>Coordinates and verification</summary>
-      <label className="trust"><input type="checkbox" checked={view.draft.latitude!==null||view.draft.longitude!==null} onChange={e=>current.current?.edit({...view.draft!,latitude:e.target.checked?'':null,longitude:e.target.checked?'':null})}/>Record coordinates</label>
-      {(view.draft.latitude!==null||view.draft.longitude!==null)&&<>
-       <label htmlFor="address-latitude">Latitude</label><input id="address-latitude" name="latitude" type="text" inputMode="text" autoComplete="off" maxLength={128} value={view.draft.latitude??''} onChange={e=>edit('latitude',e.target.value)}/>
-       <label htmlFor="address-longitude">Longitude</label><input id="address-longitude" name="longitude" type="text" inputMode="text" autoComplete="off" maxLength={128} value={view.draft.longitude??''} onChange={e=>edit('longitude',e.target.value)}/>
+       <label htmlFor="address-latitude">Latitude</label><input id="address-latitude" name="latitude" type="text" inputMode="text" autoComplete="off" maxLength={128} value={view.draft.latitude??''} onChange={e=>edit('latitude',e.target.value||null)}/>
+       <label htmlFor="address-longitude">Longitude</label><input id="address-longitude" name="longitude" type="text" inputMode="text" autoComplete="off" maxLength={128} value={view.draft.longitude??''} onChange={e=>edit('longitude',e.target.value||null)}/>
        <p className="field-help">Both values are required when recorded. Latitude: −90 to 90; longitude: −180 to 180. Decimal text is retained without rounding.</p>
-      </>}
       <NullableText name="address-geocode-source" label="Geocode source" limit={200} value={view.draft.geocodeSource} disabled={view.busy} change={v=>edit('geocodeSource',v)}/>
       <NullableText name="address-geocode-accuracy" label="Geocode accuracy" limit={200} value={view.draft.geocodeAccuracy} disabled={view.busy} change={v=>edit('geocodeAccuracy',v)}/>
       {view.draft.verifiedAt===null&&<button className="secondary" type="button" onClick={()=>edit('verifiedAt',new Date().toISOString().slice(0,-1)+'000Z')}>Mark location verified now</button>}
@@ -68,7 +65,7 @@ export function AddressScreen({customerId}:{customerId:string|null}){
   </>}
   {view.phase==='pending'&&<><p className="field-help">An earlier address save is awaiting review. Its original customer is used even if you opened a different customer link. No retry runs automatically.</p>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check address save status</button>{view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('retry')}>Retry original address change</button>}</>}
   {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current addresses</button>}
-<nav aria-label="Address navigation"><Link href="/save-review">Review interrupted save</Link><Link href="/customers">Customer directory</Link><Link href="/sign-in">Device sign-in and sign-out</Link><Link href="/">Crest OS home</Link></nav>
+<nav aria-label="Address navigation"><a href="/save-review">Review interrupted save</a><a href="/customers">Customer directory</a><a href="/sign-in">Device sign-in and sign-out</a><a href="/">Crest OS home</a></nav>
   <p className="field-help">Setup and synthetic testing are still in progress. This screen does not approve real records or production use.</p>
  </section>;
 }

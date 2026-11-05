@@ -1,0 +1,69 @@
+{
+  "formatVersion": 1,
+  "scope": "Unregistered typed initial/amendment acceptance ledger and retained original-receipt compatibility",
+  "testedCheckoutHead": "20933af4f6c85aabcebf94535b4057c63dcd3dc9",
+  "sourceFiles": {
+    "planning/proposals/quote-amendment-acceptance-ledger.sql": "e8f1209e616efe29804260c1b12316580bdd5c508dd465cc3855822401a42427",
+    "planning/proposals/quote-amendment-acceptance-storage.sql": "3b4580242ffa6170e87cc4b895afe7fc0fc39359eff13744d56caa104f4fba9e",
+    "planning/proposals/quote-amendment-acceptance-input.sql": "f0c60495a18f1481a070f1e94ab44dda0035ce293e21c5abaa877051f277982d",
+    "tests/integration/quote-amendment-acceptance-storage.test.mjs": "92cddc12cc6995c2223670eb12d6d6113c57f26eb07b087383f88f6a3c8e6a97",
+    "tests/support/recovery-drill.mjs": "5201ed0d1914304a9cc18d96161bfb5a36864b753f3d49d2b066481b4653b3dd",
+    "src/commercial/quote-amendment-scope-plan.ts": "fb562f3aa363b20dc56cd303f2d07d5e8bf4c1bc69af90e0e646ff33d12e08cd",
+    "src/commercial/quote-amendment-acceptance-contract.ts": "fb3e35a7a5a42db37e68b89befcfca41cdd58f5044c4adef01f06303eca470d5",
+    "tests/unit/quote-amendment-scope-plan.test.ts": "f073395e743f216d8ff74a9701918c2965054f19e8d149e3571ff3d2101fccf0",
+    "tests/unit/quote-amendment-acceptance-contract.test.ts": "0ef75af7621faca65168253bcbf81f50c5ccad25e5b9875bd146447842e75be3"
+  },
+  "native": {
+    "path": ".local/amendment-acceptance-storage-native-v9/result.json",
+    "tests": 26,
+    "passed": 26,
+    "failed": 0,
+    "skipped": 0,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "logSha256": "f69d0fdfc6d2bbd7d21ddf89ca4bb271731e90773d3c8681d907d3351cd3c6a7"
+  },
+  "affectedLint": {
+    "path": ".local/amendment-acceptance-ledger-lint-v3.log",
+    "passed": true
+  },
+  "coverage": [
+    "Preflight refuses changed projection, original family-uniqueness drift, unsafe role/default changes and reinstall before modifying the ledger",
+    "One unique initial acceptance per family; original per-revision uniqueness retained; required initial/amendment discriminator",
+    "All previous original source fields and initial acceptance/plan projections remain byte-exact",
+    "Actual restricted initial acceptance, authorized original-receipt retrieval, booking and converted-lead acceptance/Won history still work",
+    "Real initial-command mislabelling is refused by the deferred provenance guard; unknown/null kinds hit their exact database constraint; no partial acceptance/agreement/pending operation remains",
+    "Pure provenance checks require exact business/family/revision/operation/actor/content/Accepted-state and committed command/result-schema binding; this is not a real amendment acceptance",
+    "Web/worker grants remain closed, integrity owner retains only existing narrow operation-column access, immutable prior rows cannot be relabelled",
+    "Current52 backup refuses all unknown physical columns before publishing files; the prior encrypted52 point independently restores its original schema/rows",
+    "All20 earlier allocation/input/fingerprint/legacy/recovery cases retained"
+  ],
+  "retainedDiagnostics": {
+    "failedRun": ".local/amendment-acceptance-storage-native-v7/result.json",
+    "passed": 17,
+    "failed": 9,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "causes": [
+      "New trigger SELECT * exceeded the integrity role existing operation-column privileges; use the existing seven permitted fields, with no grant expansion.",
+      "New original-result test called a private scoped result without setting authorized context; use the actual restricted lookup command."
+    ],
+    "intermediatePassedRun": ".local/amendment-acceptance-storage-native-v8/result.json",
+    "intermediatePassed": 26,
+    "finalDifference": "Fault regressions now require exact guard/check/not-null refusal reasons, not any constraint error."
+  },
+  "notYetImplemented": [
+    "Actual amendment acceptance command and exact original reconstruction",
+    "Retained/new/withdrawn entitlement versions and explicit remaining allocations under canonical locks",
+    "Live completed/billed/credited/refunded bounds and job graph/confirmation resolution",
+    "Initial original-result validation must count its original operation entitlements rather than all future family entitlements when actual amendment additions are implemented",
+    "Full cancellation empty resulting scope, amendment acceptance UI/read/history/source/registered migration/frozen52-current recovery and full release"
+  ],
+  "registeredMigration": false,
+  "ownerDatabaseModified": false,
+  "newCommandOrRouteEnabled": false,
+  "actualAmendmentAcceptanceCommitted": false,
+  "financeActivated": false,
+  "productionReady": false,
+  "recordedAt": "2026-11-04T03:27:42.635Z"
+}

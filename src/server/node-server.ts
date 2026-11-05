@@ -1,4 +1,6 @@
+import {createHoldHttp,holdFailureResponse} from '../operations/appointment-hold-http.ts';
 import 'server-only';
+import {createSchedulingHttp,schedulingFailureResponse} from '../operations/scheduling-http.ts';
 import {createServer} from 'node:http';
 import type {IncomingMessage,ServerResponse,Server} from 'node:http';
 import {createServer as createTlsServer} from 'node:https';
@@ -8,6 +10,13 @@ import {browserFailureResponse} from '../security/browser-http.ts';
 import {createAuthenticationHttp,settleAuthenticationResponse} from '../security/authentication-http.ts';
 import {transportFromIncomingMessage} from '../security/trusted-transport.ts';
 import {createBusinessHttp,businessFailureResponse} from '../security/business-http.ts';
+import {createServiceHttp,serviceFailureResponse} from '../commercial/service-http.ts';
+import {createQuoteHttp,quoteFailureResponse} from '../commercial/quote-http.ts';
+import {createQuoteReviewHttp} from '../commercial/quote-review-http.ts';
+import {createQuoteCommercialHttp} from '../commercial/quote-commercial-http.ts';
+import {createQuoteAmendmentHttp,quoteAmendmentFailureResponse} from '../commercial/quote-amendment-http.ts';
+import {createExpenseHttp,expenseFailureResponse} from '../bookkeeping/expenses/expense-http.ts';
+import {quoteResponseLimit} from '../commercial/quote-storage-contract.ts';
 import {createCustomerHttp,customerFailureResponse} from '../customer/customer-http.ts';
 import {createCustomerAddressHttp,addressFailureResponse} from '../customer/customer-address-http.ts';
 
@@ -16,12 +25,16 @@ import {createAssociationHttp,associationFailureResponse} from '../customer/asso
 import {createLeadHttp,leadFailureResponse} from '../customer/lead-http.ts';
 import {createLeadSourceHttp,leadSourceFailureResponse} from '../customer/lead-source-http.ts';
 import {createOriginalOperationHttp,originalOperationFailureResponse} from '../security/original-operation-http.ts';
+import {createSourceExportHttp,sourceExportFailureResponse} from '../security/source-export-http.ts';
+import {createSourceExportDownloadHttp,sourceExportDownloadFailureResponse} from '../security/source-export-download-http.ts';
+import {isSourceExportDownloadResponse,writeSourceExportDownloadResponse,discardSourceExportDownloadResponse} from './source-export-download-response.ts';
 
 export type AuthenticationConfiguration=Readonly<{
   configuration:Omit<Parameters<typeof createAuthenticationHttp>[0],'origin'|'environment'>;
   provider:Parameters<typeof createAuthenticationHttp>[1];tokens:Parameters<typeof createAuthenticationHttp>[2];
 }>;
-export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>;customers?:boolean;vehicles?:boolean;associations?:boolean;leads?:boolean;leadConversions?:boolean;operationResolution?:boolean}>;
+export type SourceExportConfiguration=Readonly<{appReleaseId:string;store:NonNullable<Parameters<typeof createSourceExportDownloadHttp>[3]>}>;
+export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>;customers?:boolean;vehicles?:boolean;associations?:boolean;leads?:boolean;leadConversions?:boolean;operationResolution?:boolean;syntheticCatalog?:boolean;syntheticQuotes?:boolean;syntheticQuoteReview?:boolean;syntheticQuoteCommercial?:boolean;syntheticQuoteAmendments?:boolean;syntheticQuoteAmendmentAcceptance?:boolean;syntheticAppointmentHolds?:boolean;syntheticExpenses?:boolean;syntheticScheduling?:boolean;sourceExports?:SourceExportConfiguration}>;
 export type PageHandler=(request:IncomingMessage,response:ServerResponse)=>Promise<void>;
 
 export function createBoundedNodeServer(tls?:NodeConfiguration['tls']):Server{
@@ -56,8 +69,28 @@ export async function writeAuthenticationResponse(outgoing:ServerResponse,respon
 export async function writeCustomerResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
   return writePrivateResponse(outgoing,response,signal,1048576);
 }
+export async function writeQuoteResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
+  return writePrivateResponse(outgoing,response,signal,quoteResponseLimit);
+}
+// Expense history admits6MiB of retained JSON; its existing client accepts8MiB
+// including the response envelope. Customer/quote limits remain independent.
+export async function writeExpenseResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
+  return writePrivateResponse(outgoing,response,signal,8388608);
+}
+export async function writeSchedulingResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
+  return writePrivateResponse(outgoing,response,signal,4194304);
+}
 export async function writeOriginalOperationResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal):Promise<void>{
   return writePrivateResponse(outgoing,response,signal,16384);
+}
+// Metadata keeps the16KiB private cap. Only a genuine one-use file handoff
+// uses the separately verified8MiB binary writer and its settlement/wipe path.
+export async function writeSourceExportResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal,fileEndpoint=false):Promise<void>{
+ if(isSourceExportDownloadResponse(response)){
+  if(!fileEndpoint){discardSourceExportDownloadResponse(response);outgoing.destroy();throw Error('SOURCE_EXPORT_DELIVERY_FAILED');}
+  return writeSourceExportDownloadResponse(outgoing,response,signal);
+ }
+ return writePrivateResponse(outgoing,response,signal,16384);
 }
 async function writePrivateResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal,limit:number):Promise<void>{
   let finished=false;
@@ -97,13 +130,32 @@ async function writePrivateResponse(outgoing:ServerResponse,response:Response,si
 }
 
 export function bindApplicationHandler(server:Server,config:NodeConfiguration,pages:PageHandler):void{
-  const {origin,environment,authentication,business,customers,vehicles,associations,leads,leadConversions,operationResolution}=config;
+  const {origin,environment,authentication,business,customers,vehicles,associations,leads,leadConversions,operationResolution,sourceExports,syntheticCatalog,syntheticQuotes,syntheticQuoteReview,syntheticQuoteCommercial,syntheticQuoteAmendments,syntheticQuoteAmendmentAcceptance,syntheticAppointmentHolds,syntheticExpenses,syntheticScheduling}=config;
   const url=new URL(origin);
+  if(syntheticQuoteAmendmentAcceptance!==undefined&&(typeof syntheticQuoteAmendmentAcceptance!=='boolean'||syntheticQuoteAmendmentAcceptance&&(environment!=='test'||syntheticQuoteAmendments!==true||syntheticScheduling!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  if(syntheticQuoteAmendments!==undefined&&(typeof syntheticQuoteAmendments!=='boolean'||syntheticQuoteAmendments&&(environment!=='test'||!authentication||!business||customers!==true||vehicles!==true||operationResolution!==true||syntheticQuoteCommercial!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  if(syntheticScheduling!==undefined&&(typeof syntheticScheduling!=='boolean'||syntheticScheduling&&(environment!=='test'||!authentication||!business||customers!==true||vehicles!==true||associations!==true||operationResolution!==true||syntheticQuoteCommercial!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  if(syntheticExpenses!==undefined&&(typeof syntheticExpenses!=='boolean'||syntheticExpenses&&(environment!=='test'||!authentication||!business||customers!==true||operationResolution!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  if(syntheticAppointmentHolds!==undefined&&(typeof syntheticAppointmentHolds!=='boolean'||syntheticAppointmentHolds&&(environment!=='test'||!authentication||!business||customers!==true||operationResolution!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  if(syntheticCatalog!==undefined&&(typeof syntheticCatalog!=='boolean'||syntheticCatalog&&(environment!=='test'||!authentication||!business)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  if(syntheticQuotes!==undefined&&(typeof syntheticQuotes!=='boolean'||syntheticQuotes&&(environment!=='test'||!authentication||!business)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  if(syntheticQuoteReview!==undefined&&(typeof syntheticQuoteReview!=='boolean'||syntheticQuoteReview&&(environment!=='test'||!authentication||!business||syntheticQuotes!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  if(syntheticQuoteCommercial!==undefined&&(typeof syntheticQuoteCommercial!=='boolean'||syntheticQuoteCommercial&&(environment!=='test'||!authentication||!business||syntheticQuotes!==true||syntheticQuoteReview!==true||operationResolution!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  if(sourceExports!==undefined&&(!sourceExports||typeof sourceExports!=='object'||Array.isArray(sourceExports)||!business||!authentication||typeof sourceExports.appReleaseId!=='string'||!/^([a-f0-9]{40})$/.test(sourceExports.appReleaseId)||typeof sourceExports.store?.readVerified!=='function'))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(operationResolution!==undefined&&typeof operationResolution!=='boolean'||operationResolution&&(!business||!authentication))throw new Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(url.origin!==origin||url.username||url.password||!['http:','https:'].includes(url.protocol)||!['production','test'].includes(environment)
     ||business&&!authentication||customers!==undefined&&typeof customers!=='boolean'||customers&&(!business||!authentication)||vehicles!==undefined&&typeof vehicles!=='boolean'||vehicles&&(!business||!authentication)||associations!==undefined&&typeof associations!=='boolean'||associations&&(!business||!authentication)||leadConversions!==undefined&&typeof leadConversions!=='boolean'||leadConversions&&!leads||leads!==undefined&&typeof leads!=='boolean'||leads&&(!business||!authentication)||authentication&&environment==='production'&&!config.tls||server.listenerCount('request'))throw new Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   const dispatch=authentication?createAuthenticationHttp({...authentication.configuration,origin,environment},authentication.provider,authentication.tokens):undefined;
   const dispatchBusiness=business&&authentication?createBusinessHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
+  const dispatchScheduling=syntheticScheduling===true&&business&&authentication?createSchedulingHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true,syntheticQuoteAmendmentAcceptance===true):undefined;
+  const dispatchExpenses=syntheticExpenses===true&&business&&authentication?createExpenseHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
+  const dispatchHolds=syntheticAppointmentHolds===true&&business&&authentication?createHoldHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
+  const dispatchServices=syntheticCatalog===true&&business&&authentication?createServiceHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
+  const dispatchDraftQuotes=syntheticQuotes===true&&business&&authentication?createQuoteHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true,syntheticQuoteReview===true,syntheticQuoteCommercial===true,syntheticQuoteAmendmentAcceptance===true):undefined;
+  const dispatchQuoteReview=syntheticQuoteReview===true&&business&&authentication?createQuoteReviewHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
+  const dispatchQuoteCommercial=syntheticQuoteCommercial===true&&business&&authentication?createQuoteCommercialHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
+  const dispatchQuoteAmendments=syntheticQuoteAmendments===true&&business&&authentication?createQuoteAmendmentHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true,syntheticQuoteAmendmentAcceptance===true):undefined;
+  const dispatchQuotes=dispatchDraftQuotes?(request:Request,peer:Parameters<NonNullable<typeof dispatchDraftQuotes>>[1])=>{const path=decodeURIComponent(new URL(request.url).pathname);if(path.startsWith('/api/business/quotes/amendments/'))return dispatchQuoteAmendments?dispatchQuoteAmendments(request,peer):Promise.resolve(quoteAmendmentFailureResponse(404));if(path.startsWith('/api/business/quotes/commercial/'))return dispatchQuoteCommercial?dispatchQuoteCommercial(request,peer):Promise.resolve(quoteFailureResponse(404));if(path.startsWith('/api/business/quotes/review/'))return dispatchQuoteReview?dispatchQuoteReview(request,peer):Promise.resolve(quoteFailureResponse(404));return dispatchDraftQuotes(request,peer);}:undefined;
   const dispatchCustomers=customers&&business&&authentication?createCustomerHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
   const dispatchAddresses=customers&&business&&authentication?createCustomerAddressHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
   const dispatchVehicles=vehicles&&business&&authentication?createVehicleHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
@@ -111,25 +163,35 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
   const dispatchLeads=leads&&business&&authentication?createLeadHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,leadConversions===true):undefined;
   const dispatchLeadSources=leads&&business&&authentication?createLeadSourceHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
   const dispatchOriginalOperations=operationResolution===true&&business&&authentication?createOriginalOperationHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
+  const dispatchExports=sourceExports&&business&&authentication?createSourceExportHttp({...authentication.configuration,origin,environment,businessId:business.businessId,appReleaseId:sourceExports.appReleaseId},authentication.provider,authentication.tokens,true):undefined;
+  const dispatchExportDownloads=sourceExports&&business&&authentication?createSourceExportDownloadHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,sourceExports.store,true):undefined;
   let activeProtected=0;
   server.on('request',(incoming,outgoing)=>{void (async()=>{
     const controller=new AbortController();
     const abort=()=>controller.abort();incoming.once('aborted',abort);
     outgoing.once('close',()=>{if(!outgoing.writableFinished)abort();});
-    let reserved=false,businessRequest=false,customerRequest=false,addressRequest=false,vehicleRequest=false,associationRequest=false,leadRequest=false,leadSourceRequest=false,originalOperationRequest=false;
+    let reserved=false,businessRequest=false,serviceRequest=false,quoteRequest=false,holdRequest=false,expenseRequest=false,schedulingRequest=false,customerRequest=false,addressRequest=false,vehicleRequest=false,associationRequest=false,leadRequest=false,leadSourceRequest=false,originalOperationRequest=false,exportRequest=false,exportDownloadRequest=false;
     try{
       if(incoming.rawHeaders.length>256)throw new Error();
       const target=requestTarget(incoming.url,origin);
       businessRequest=target.business;
       const decoded=decodeURIComponent(target.url.pathname);customerRequest=target.business&&(decoded==='/api/business/customers'||decoded.startsWith('/api/business/customers/'));
+      serviceRequest=target.business&&(decoded==='/api/business/services'||decoded.startsWith('/api/business/services/'));
+      schedulingRequest=target.business&&(decoded==='/api/business/scheduling'||decoded.startsWith('/api/business/scheduling/'));
+      expenseRequest=target.business&&(decoded==='/api/business/expenses'||decoded.startsWith('/api/business/expenses/'));
+      holdRequest=target.business&&(decoded==='/api/business/appointment-holds'||decoded.startsWith('/api/business/appointment-holds/'));
+      quoteRequest=target.business&&(decoded==='/api/business/quotes'||decoded.startsWith('/api/business/quotes/'));
       addressRequest=customerRequest&&(decoded==='/api/business/customers/addresses'||decoded.startsWith('/api/business/customers/addresses/'));
       vehicleRequest=target.business&&(decoded==='/api/business/vehicles'||decoded.startsWith('/api/business/vehicles/'));
       associationRequest=target.business&&(decoded==='/api/business/vehicle-associations'||decoded.startsWith('/api/business/vehicle-associations/'));
       leadRequest=target.business&&(decoded==='/api/business/leads'||decoded.startsWith('/api/business/leads/'));
       leadSourceRequest=target.business&&(decoded==='/api/business/lead-sources'||decoded.startsWith('/api/business/lead-sources/'));
       originalOperationRequest=target.business&&(decoded==='/api/business/original-operations'||decoded.startsWith('/api/business/original-operations/'));
+      exportRequest=target.business&&(decoded==='/api/business/exports'||decoded.startsWith('/api/business/exports/'));
+      exportDownloadRequest=exportRequest&&(decoded==='/api/business/exports/downloads'||decoded.startsWith('/api/business/exports/downloads/')||decoded==='/api/business/exports/file'||decoded.startsWith('/api/business/exports/file/'));
+      const exportFileRequest=decoded==='/api/business/exports/file';
       if(!target.authentication&&!target.business){await pages(incoming,outgoing);return;}
-      const handler=originalOperationRequest?dispatchOriginalOperations:leadSourceRequest?dispatchLeadSources:leadRequest?dispatchLeads:associationRequest?dispatchAssociations:vehicleRequest?dispatchVehicles:addressRequest?dispatchAddresses:customerRequest?dispatchCustomers:target.business?dispatchBusiness:dispatch,failure=originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:target.business?businessFailureResponse:browserFailureResponse;
+      const handler=schedulingRequest?dispatchScheduling:expenseRequest?dispatchExpenses:holdRequest?dispatchHolds:quoteRequest?dispatchQuotes:serviceRequest?dispatchServices:exportRequest?(exportDownloadRequest?dispatchExportDownloads:dispatchExports):originalOperationRequest?dispatchOriginalOperations:leadSourceRequest?dispatchLeadSources:leadRequest?dispatchLeads:associationRequest?dispatchAssociations:vehicleRequest?dispatchVehicles:addressRequest?dispatchAddresses:customerRequest?dispatchCustomers:target.business?dispatchBusiness:dispatch,failure=schedulingRequest?schedulingFailureResponse:expenseRequest?expenseFailureResponse:holdRequest?holdFailureResponse:quoteRequest?quoteFailureResponse:serviceRequest?serviceFailureResponse:exportRequest?(exportDownloadRequest?sourceExportDownloadFailureResponse:sourceExportFailureResponse):originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:target.business?businessFailureResponse:browserFailureResponse;
       if(!handler||activeProtected>=32){await writeAuthenticationResponse(outgoing,failure(503),controller.signal);return;}
       activeProtected++;reserved=true;
       const peer=transportFromIncomingMessage(incoming),headers=new Headers();
@@ -137,9 +199,10 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
       const request=new Request(target.url,{method:incoming.method,headers,signal:controller.signal,
         ...(!['GET','HEAD'].includes(incoming.method??'')?{body:Readable.toWeb(incoming),duplex:'half'}:{})} as RequestInit);
       const response=await handler(request,peer);
-      await (originalOperationRequest?writeOriginalOperationResponse:customerRequest||vehicleRequest||associationRequest||leadRequest||leadSourceRequest?writeCustomerResponse:writeAuthenticationResponse)(outgoing,response,controller.signal);
+      if(exportRequest)await writeSourceExportResponse(outgoing,response,controller.signal,exportFileRequest);
+      else await (schedulingRequest?writeSchedulingResponse:expenseRequest?writeExpenseResponse:holdRequest?writeCustomerResponse:quoteRequest?writeQuoteResponse:originalOperationRequest?writeOriginalOperationResponse:serviceRequest||customerRequest||vehicleRequest||associationRequest||leadRequest||leadSourceRequest?writeCustomerResponse:writeAuthenticationResponse)(outgoing,response,controller.signal);
     }catch{
-      if(!outgoing.destroyed&&!outgoing.headersSent)try{await writeAuthenticationResponse(outgoing,(originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:businessRequest?businessFailureResponse:browserFailureResponse)(),controller.signal);}catch{outgoing.destroy();}
+      if(!outgoing.destroyed&&!outgoing.headersSent)try{await writeAuthenticationResponse(outgoing,(schedulingRequest?schedulingFailureResponse:expenseRequest?expenseFailureResponse:holdRequest?holdFailureResponse:quoteRequest?quoteFailureResponse:serviceRequest?serviceFailureResponse:exportRequest?(exportDownloadRequest?sourceExportDownloadFailureResponse:sourceExportFailureResponse):originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:businessRequest?businessFailureResponse:browserFailureResponse)(),controller.signal);}catch{outgoing.destroy();}
       else outgoing.destroy();
     }finally{if(reserved)activeProtected--;incoming.off('aborted',abort);}
   })();});

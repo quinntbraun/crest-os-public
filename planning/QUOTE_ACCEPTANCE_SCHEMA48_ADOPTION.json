@@ -1,0 +1,149 @@
+{
+  "formatVersion": 1,
+  "repositoryRegistration": 48,
+  "executionStatus": "scoped_native_pass_pending_application_acceptance",
+  "databaseApplied": false,
+  "productionActivation": "blocked",
+  "migration": {
+    "file": "20261028050000_quote_acceptance.sql",
+    "sha256": "1010212bc3fe6b734a511f05968103a4f88de37452a3340b1d70da5f243819c7",
+    "bytes": 177885
+  },
+  "previousRegistry": {
+    "sha256": "0d01b1b399da06a9b0b46ba95d9018ead6ddadbd34a09a98149851b5f3db5567",
+    "frozenFixture": "tests/support/registered47-migration-checksums.json",
+    "migrationCount": 47
+  },
+  "previousCoverage": {
+    "sha256": "5090fa76bde567d6350a45e26d39333d2e323c4d3eb0b834d4648438c108aaf5",
+    "frozenFixture": "tests/support/registered47-export-coverage.json"
+  },
+  "previousCompatibility": {
+    "sha256": "5528a7fa7988893cd5a152a68ef0925156e93e731c607ee923b01d479915a92d",
+    "frozenFixture": "tests/support/registered47-compatibility.json"
+  },
+  "previousSourceCommit": "2e89e7113c5c547204858214923608f9ed108545",
+  "proposalBodies": [
+    {
+      "order": 1,
+      "path": "planning/proposals/quote-acceptance.sql",
+      "sha256": "b7136905ac115ce9d849d92afdd21a15fa647acb270f3c60254fbac0e5687148",
+      "bytes": 157464,
+      "offset": 289
+    },
+    {
+      "order": 2,
+      "path": "planning/proposals/quote-commercial-source.sql",
+      "sha256": "e11f9476cb138b57ea123ef4fc356708348d0df7b97288dbb487dbf748b5b9c5",
+      "bytes": 19992,
+      "offset": 157851
+    }
+  ],
+  "commercialTables": [
+    "crest.quote_family_commercial_state",
+    "crest.quote_sends",
+    "crest.quote_acceptances",
+    "crest.agreements",
+    "crest.scope_entitlements",
+    "crest.entitlement_versions",
+    "crest.scope_allocations"
+  ],
+  "requiredAddedColumns": 130,
+  "sourceCoverage": {
+    "tables": 54,
+    "actualColumns": 893,
+    "requiredColumns": 883,
+    "excludedCredentialColumns": 10,
+    "actualRegistered48CommercialVerified": true
+  },
+  "legacyProfiles": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47
+  ],
+  "physicalModelDecision": "Normalized one-to-one quote_family_commercial_state carries typed same-family active-offer/initial-acceptance/current-agreement pointers under the same family row lock. Legacy13-field family projections, immutable snapshots and prior receipts remain exact; the base family table is not mislabeled as having new columns.",
+  "scopeDecision": "Initial immutable agreement creates stable line entitlements and one whole unassigned amount/scope partition per entitlement version, including zero-value scope. Job assignment/splitting/current partition projection remains closed until full conservation proof. No confirmed job, invoice, journal or payment is inferred.",
+  "leadDecision": "Lead-only original family customerId and Sent hash stay unchanged. Exact retained explicit conversion/customer binding is required before acceptance; typed actual send/acceptance FKs derive QuoteSent/Won while manual targets remain closed.",
+  "deliveryDecision": "latestSend and acceptanceSend are separate truthful retained records when acceptance references an earlier actual delivery of the exact same revision. No automatic sending or invented delivery timestamp.",
+  "runtimeCommercialEnabled": false,
+  "registeredCommercialWorkerEnabled": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "unfinishedV1": [
+    "Decline/cancel quote commands",
+    "Accepted amendments and financial/job dependency proof",
+    "Confirmed scheduling/jobs, full assignment/partition conservation",
+    "Complete current-schema portable exports/Excel/worker/admission and all remaining approvedV1scope"
+  ],
+  "requiredAcceptance": [
+    "Actual registered47-to48 atomic upgrade/idempotency and early/late rollback refusal",
+    "Actual54-table893-column inventory, exactclosedgrants and preserved47bytes/profileidentities",
+    "Trusted send/accept/replacement/original-review and leadconversion/source closure",
+    "Genuine Auth/TOTP/HTTP on exact registered48 source",
+    "Common-format commercial/quote/lead/history reconstruction plus independent encrypted registered48 restore and legacy47 refusal",
+    "Exact-source browser/build/container/artifact acceptance before bounded synthetic activation; production/fullportableexport/backups remain separately gated"
+  ],
+  "canonicalDecision": "ADR48",
+  "resetCallerRoleBetweenBodies": true,
+  "previousReadProjectionNativeAcceptance": {
+    "scope": "Actual registered47-to48 coordinator plus independent encrypted registered48 restore/profile refusal; owned disposables only, not genuine Auth/HTTP/browser or real Crest activation",
+    "testFile": "tests/integration/quote-commercial-registered.test.mjs",
+    "testSha256": "35fc7fe54f68a51e0c918a8f4a03bfc0248bfb55417d29bb383e64feae19cdaa",
+    "tests": 8,
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "logSha256": "1eeed11ff42cb4c3e9b5d3e5379ce04b71fb5b8ac1f11fff11bb4e3f6333e46d",
+    "startedAt": "2026-10-29T02:00:27.066Z",
+    "finishedAt": "2026-10-29T02:01:02.225Z",
+    "sourceUnchangedDuringExecution": true,
+    "ownedPrimaryClusterCleaned": true,
+    "migrationSha256": "5c0f4897f26b7b62709259ed582db177820252d67afa95c59722be1e336e69f6",
+    "realCrestDatabaseApplied": false,
+    "genuineAuthHttpVerified": false,
+    "browserVerified": false
+  },
+  "acceptedRevisionReadDecision": "control.acceptedRevisionId derives only from the exact same-business/family initial_acceptance_id FK in the trusted read; base family current_revision_id remains the replacement Draft when a prior active offer is accepted.",
+  "previousPackagingNativeAcceptance": {
+    "scope": "Actual registered47-to48 coordinator plus independent encrypted registered48 restore/profile refusal; owned disposables only, not genuine Auth/HTTP/browser or real Crest activation",
+    "testFile": "tests/integration/quote-commercial-registered.test.mjs",
+    "testSha256": "35fc7fe54f68a51e0c918a8f4a03bfc0248bfb55417d29bb383e64feae19cdaa",
+    "tests": 8,
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "logSha256": "21b4b1b68651bd06e14223e24502d7fd1411597a311ca27007090c3e17ef9834",
+    "startedAt": "2026-10-29T02:28:32.712Z",
+    "finishedAt": "2026-10-29T02:29:39.844Z",
+    "sourceUnchangedDuringExecution": false,
+    "fixtureSourceUnchanged": true,
+    "ownedPrimaryClusterCleaned": true,
+    "migrationSha256": "2dba4d8d0acc701b89f0f55fbd606daf68dd877cae1db6bf1dfc14f5c1438f6b",
+    "realCrestDatabaseApplied": false,
+    "genuineAuthHttpVerified": false,
+    "browserVerified": false
+  },
+  "nativeAcceptance": {
+    "name": "commercial-registered",
+    "tests": 8,
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "logSha256": "11f43fdaa23cbbeffba5eedd583b29ce59add02dde27e73c02ed802dc9a10c5b",
+    "testFile": "tests/integration/quote-commercial-registered.test.mjs",
+    "scope": "Actual registered47-to48 atomic coordinator and independent encrypted restore on owned disposable clusters; no owner database/production/browser activation",
+    "testSha256": "35fc7fe54f68a51e0c918a8f4a03bfc0248bfb55417d29bb383e64feae19cdaa",
+    "startedAt": "2026-10-29T03:04:47.535Z",
+    "finishedAt": "2026-10-29T03:05:52.089Z",
+    "sourceUnchangedDuringExecution": true,
+    "fixtureSourceUnchanged": true,
+    "ownedPrimaryClusterCleaned": true,
+    "migrationSha256": "1010212bc3fe6b734a511f05968103a4f88de37452a3340b1d70da5f243819c7",
+    "realCrestDatabaseApplied": false,
+    "genuineAuthHttpVerified": false,
+    "browserVerified": false
+  }
+}

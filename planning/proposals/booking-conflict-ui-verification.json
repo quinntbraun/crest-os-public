@@ -1,0 +1,131 @@
+{
+  "formatVersion": 1,
+  "scope": "integrated_schedule_conflict_review51_synthetic_construction",
+  "parentLocalSource": "082793c234602994b118da5f01cdce0e5349f983",
+  "registeredSchema": 51,
+  "public51Published": false,
+  "ownerDatabaseApplied": false,
+  "ownerPreviewUpdated": false,
+  "realCrestUseReady": false,
+  "sourceFiles": {
+    "supabase/migrations/20261102180000_booking_conflict_review.sql": "f3aa951660979be7d9974933640675c24570dda879aac800713592280c2ca831",
+    "planning/proposals/booking-conflict-review.sql": "fd772ae0aa60515b1b7b4d0fe18ebe0072be4bcfaf7933646f0d791bbad93d84",
+    "planning/proposals/booking-conflict-history.sql": "aab961591b23dd5a8104b050d0672ba9ad506db005f4f4fd1062507818188fbd",
+    "src/client/booking-slot-review.ts": "6b504773fe531b93e02d47e1f3e87eb850f9448e1e55009b54627fd56d91329b",
+    "src/app/schedule/slot-review.tsx": "d8a49d3cd5b19ed7bbacad6cab381a529b16dd623128172e8dcef935f4d97ee1",
+    "src/app/schedule/new/booking.tsx": "7b6c0eaaf6a5f0ded0510f922b4813918f9ec64442c43373875e3f507c736fe1",
+    "src/app/schedule/change/change.tsx": "f512149504611976dddc94cc159df8b9470267b967c18a118821d8eee8a8fafe",
+    "src/app/schedule/job-details.tsx": "2e7d0e2b673bf83ab54182e4498a7e6aa6fa332d6e100a0a97174eb542959233",
+    "src/operations/confirmed-job-read-contract.ts": "017866b6be66d88d50e8e92253bf094f148c85b4315949f0164a54617fd31130",
+    "src/operations/confirmed-job-archive.ts": "db2866e7d5974521a83ddcf92c430447f8e90dc27393bb35463344c76d0e1b28",
+    "src/app/globals.css": "b19695374761983c9f38add7c1002bf7c35ef1d5df8c340b9b9cb749ef0685eb",
+    "src/app/workspace-home.tsx": "6321818b1f18d0f7888cab0c1cd18ba02b4e0dff94b974e978a6764a28935e66",
+    "tests/support/source-export-browser-fixture.mjs": "b9a83f032eec85908c9242872511263f5e91d19cd274c98984be9ce7ce3840f5",
+    "tests/support/booking-conflict51-candidate.mjs": "1707eb3ca1a220fe23c733cfc157253b7902d61a2b64fdb0919d708d253056f9",
+    "tests/integration/booking-conflict51-candidate.test.mjs": "64ea49df2e6eb724243b02d2fdcb76bd6c1659b1dfa71d1554cf35ef02b4e763",
+    "tests/integration/book-job-product-browser.test.mjs": "2d1fce1c0858f0d54f0af3b9b4c3bea30a59a296cadd125a5f3bdd20fa14fc5a",
+    "tests/integration/booking-divisions-product-browser.test.mjs": "3706c55b6686c80d91731642369144252fd4e3627692544d825b45f772a1dc42",
+    "tests/integration/job-change-product-browser.test.mjs": "7168eb506b6a29a48b71ff4274ce3e93be7782add78bbde9564b5544f9fabdbc",
+    "tests/unit/booking-slot-review.test.ts": "7043e9fe892d3857a2150a937cfb611423111240480647528f732680d387cbca",
+    "tests/unit/job-history-schedule-review.test.ts": "ecb5e2c2a2b9fee05464d9330f2a1002fd6ae14ebbd0ffb432c356f1e9e510f9",
+    "tests/unit/booking-conflict51-adoption.test.ts": "87d3adf5274088c3c116aa08df18a6d0598e6caf5843faa8d50419f71a572306"
+  },
+  "workflow": "Accepted work → current reservation/travel review → explicit unknown-travel acknowledgment/overlap reason → real booking or saved-proposal confirmation → reload → scoped history and CSV/JSON retrieval.",
+  "native": {
+    "exitCode": 0,
+    "tests": 54,
+    "passed": 54,
+    "failed": 0,
+    "logPath": ".local/booking-conflict51-registered-native-v2/run.log",
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "result": ".local/booking-conflict51-registered-native-v2/result.json",
+    "coverage": [
+      "registered51 exact SQL/coordinator upgrade/replay/preserved rows and current read/booking composition",
+      "retained frozen50 original17-body adoption, source and independent50/49 restores",
+      "current51 independent encrypted recovery, source/schema/grants and complete current physical inventory",
+      "no owner data/credential, production or finance activation"
+    ]
+  },
+  "genuineBrowser": {
+    "engine": "chromium",
+    "functionalCases": 4,
+    "finalOverlappingConfirmationCases": 1,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "results": [
+      ".local/booking-conflict51-browser-native-v2/result.json",
+      ".local/booking-conflict51-confirm-browser-native-v4/result.json"
+    ],
+    "coverage": [
+      "actual booking with lost successful reply and original-request reload recovery; edited and reverted times cannot resurrect stale review",
+      "different-day scope division retained; second scenario explicitly overrides an overlap with neighbouring unknown travel despite own travel0",
+      "missing reason and missing travel acknowledgment send no booking; original financial/commercial facts unchanged",
+      "actual overlapping saved-proposal confirmation excludes current job, requires acknowledgment, saves exact reason and retrieves it in history/download",
+      "proposal/confirm/withdraw/cancel lifecycle with lost replies, refresh/back, original-save references and retained normalized source",
+      "four widths, keyboard navigation, Axe/overflow, rendered full-page/region/viewport inspection"
+    ]
+  },
+  "units": {
+    "passed": 7485,
+    "failed": 0,
+    "files": 278,
+    "newCases": 30
+  },
+  "lint": "passed",
+  "typecheck": "passed",
+  "productionBuild": "passed",
+  "buildLog": ".local/conflict51-final-build.log",
+  "visual": {
+    "widths": [
+      360,
+      390,
+      768,
+      1440
+    ],
+    "engine": "chromium",
+    "actualDevice": false,
+    "manuallyInspected": true,
+    "paths": [
+      ".local/review/booking-conflict-chromium-360.png",
+      ".local/review/booking-conflict-chromium-390.png",
+      ".local/review/booking-conflict-chromium-768.png",
+      ".local/review/booking-conflict-chromium-1440.png",
+      ".local/review/booking-conflict-panel-chromium-360.png",
+      ".local/review/booking-conflict-panel-chromium-390.png",
+      ".local/review/booking-conflict-panel-chromium-768.png",
+      ".local/review/booking-conflict-panel-chromium-1440.png",
+      ".local/review/job-confirm-conflict-chromium-360.png",
+      ".local/review/job-confirm-conflict-chromium-390.png",
+      ".local/review/job-confirm-conflict-chromium-768.png",
+      ".local/review/job-confirm-conflict-chromium-1440.png",
+      ".local/review/job-confirm-conflict-panel-chromium-360.png",
+      ".local/review/job-confirm-conflict-panel-chromium-390.png",
+      ".local/review/job-confirm-conflict-panel-chromium-768.png",
+      ".local/review/job-confirm-conflict-panel-chromium-1440.png",
+      ".local/review/job-confirm-conflict-viewport-chromium-360.png",
+      ".local/review/job-confirm-conflict-viewport-chromium-390.png",
+      ".local/review/job-confirm-conflict-viewport-chromium-768.png",
+      ".local/review/job-confirm-conflict-viewport-chromium-1440.png"
+    ]
+  },
+  "historyProtocol": "Private normalized display facts; exact reason, referenced appointment IDs and unknown-travel acknowledgment. CSV/JSON dictionary updated. Historical50 absence remains explicitly unavailable, never clear. Original event/audit/operation bytes untouched; full portable export and complete backup remain false.",
+  "finiteReviewRules": [
+    "exact current context/time/travel key; changed or reverted interval clears review",
+    "before/after genuine context checks, no automatic preview retry, save still rechecks reservations",
+    "global directional neighbours and deterministic ties use existing lock/writer rule",
+    "optional empty override omitted when there is no overlap; meaningful consent acknowledgment retained",
+    "privacy suspend/abort and opaque original-save recovery remain"
+  ],
+  "failuresRetained": [
+    "First integrated browser run3/4: override label included its help text. Explicit label/id/describedby fixed; complete v2 passes4/4.",
+    "A new archive test initially had different appointment flags in head and event. Existing consistency guard correctly rejected it; fixed representative fixture, all7485 units pass.",
+    "Focused confirmation visual capture initially retained audit focus in a clipped screenshot. Finalv4 blurs neutral focus, asserts skip link remains outside viewport and adds actual viewport images. No accessibility link hidden or security policy changed."
+  ],
+  "acceptancePending": [
+    "New-source full Linux release and Chromium/WebKit after coherent publication; local Windows WebKit remains blocked by host policy.",
+    "Finish current396/Home50 release first; preserve its healthy run, then source-only51 publication from localBase687/publicParent9cb.",
+    "Fresh independently restored owner50 point and preserved-data coordinator upgrade before any private preview51 update.",
+    "Owner physical-iPhone acceptance deferred; fullV1/pilot/production/accounting/recovery/Calendar gates remain."
+  ]
+}

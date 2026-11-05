@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync,spawn } from 'node:child_process';
+import {classifyAuthServiceError,classifyAuthBridgeError} from './real-auth-diagnostics.mjs';
 import { randomBytes,randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -22,9 +23,9 @@ const docker=(args,env=process.env)=>execFileSync('docker',args,{env,stdio:['ign
 
 // Test-only path bridge, not Supabase's managed API gateway. It never signs,
 // synthesizes or rewrites provider responses, JWTs, users or MFA results.
-export async function startRealAuthService(target,{jwtExpiry=3600}={}) {
+export async function startRealAuthService(target,{jwtExpiry=3600,diagnostic=false}={}) {
   // SDK MFA session reads proactively refresh within90s even with autoRefresh off.
-  assert(Number.isSafeInteger(jwtExpiry)&&jwtExpiry>=120&&jwtExpiry<=3600,'bounded synthetic JWT lifetime above SDK refresh margin required');
+  assert(Number.isSafeInteger(jwtExpiry)&&jwtExpiry>=120&&jwtExpiry<=3600,'bounded synthetic JWT lifetime above SDK refresh margin required');assert.equal(typeof diagnostic,'boolean');
   const db=new URL(target);assert.equal(process.env.CREST_ENV,'test');
   assert(['127.0.0.1','[::1]'].includes(db.hostname));assert.match(db.pathname,/^\/crest_migrate_[a-f0-9]{16}$/);assert(!db.search&&!db.hash);
   const {testAuthImage}=JSON.parse(await readFile(new URL('../../release/toolchain.json',import.meta.url),'utf8'));
@@ -45,9 +46,11 @@ export async function startRealAuthService(target,{jwtExpiry=3600}={}) {
     // the production boundary excludes enrollment and keeps its128KiB limit.
     const data=Buffer.from(await result.arrayBuffer());if(data.length>1024*1024)throw new Error();
     response.writeHead(result.status,{'content-type':result.headers.get('content-type')??'application/json'});response.end(data);
-  })().catch(()=>{if(!response.headersSent)response.writeHead(503);response.end();});});
+  })().catch(error=>{if(diagnostic)retain(classifyAuthBridgeError(error));if(!response.headersSent)response.writeHead(503);response.end();});});
   const bridgePort=await listen(bridge);const issuer=`http://127.0.0.1:${bridgePort}/auth/v1`;
-  let container;const clients=new Set();
+  let container,monitor,startStage='signing_keys';const clients=new Set(),diagnostics=[];
+  const retain=event=>{if(event&&diagnostics.length<64&&!diagnostics.some(prior=>JSON.stringify(prior)===JSON.stringify(event)))diagnostics.push(event);};
+  function observe(stream){let pending='';stream.on('data',bytes=>{pending+=bytes.toString('utf8');if(pending.length>65536){pending='';return;}let at;while((at=pending.indexOf('\n'))>=0){const line=pending.slice(0,at);pending=pending.slice(at+1);retain(classifyAuthServiceError(line));}});}
   const makeSdk=(authorization)=>{
     const client=new AuthClient({url:issuer,headers:{apikey:publicKey,...authorization?{Authorization:`Bearer ${authorization}`}:{}} ,
       autoRefreshToken:false,persistSession:false,detectSessionInUrl:false,debug:false});
@@ -67,15 +70,16 @@ export async function startRealAuthService(target,{jwtExpiry=3600}={}) {
     let failed=false;
     for(const client of clients){try{await client.dispose();}catch{failed=true;}}
     if(container){try{docker(['rm','--force',container]);}catch{failed=true;}}
-    await close(bridge);
+    monitor?.kill('SIGTERM');await close(bridge);
     if(failed)throw new Error('SYNTHETIC_AUTH_CLEANUP_FAILED');
   };
   try {
     const {privateKey}=await generateKeyPair('ES256',{extractable:true});const kid=randomUUID();
     const key={...await exportJWK(privateKey),kid,alg:'ES256',use:'sig',key_ops:['sign','verify']};
+    if(process.platform==='win32')db.hostname='host.docker.internal';
     db.searchParams.set('options','-c role=supabase_auth_admin -c search_path=auth,public');
     const env={...process.env,GOTRUE_DB_DATABASE_URL:db.toString(),GOTRUE_DB_DRIVER:'postgres',GOTRUE_DB_NAMESPACE:'auth',
-      GOTRUE_SITE_URL:'http://127.0.0.1:3000',API_EXTERNAL_URL:issuer,GOTRUE_API_HOST:'127.0.0.1',GOTRUE_API_PORT:String(port),
+      GOTRUE_SITE_URL:'http://127.0.0.1:3000',API_EXTERNAL_URL:issuer,GOTRUE_API_HOST:process.platform==='win32'?'0.0.0.0':'127.0.0.1',GOTRUE_API_PORT:String(port),
       GOTRUE_JWT_SECRET:randomBytes(48).toString('base64url'),GOTRUE_JWT_KEYS:JSON.stringify([key]),GOTRUE_JWT_ISSUER:issuer,
       GOTRUE_JWT_AUD:'authenticated',GOTRUE_JWT_DEFAULT_GROUP_NAME:'authenticated',GOTRUE_JWT_EXP:String(jwtExpiry),
       GOTRUE_DISABLE_SIGNUP:'true',GOTRUE_EXTERNAL_EMAIL_ENABLED:'true',GOTRUE_MAILER_AUTOCONFIRM:'false',
@@ -85,17 +89,18 @@ export async function startRealAuthService(target,{jwtExpiry=3600}={}) {
     const allowed=['DB_DATABASE_URL','DB_DRIVER','DB_NAMESPACE','SITE_URL','API_HOST','API_PORT','JWT_SECRET','JWT_KEYS','JWT_ISSUER','JWT_AUD','JWT_DEFAULT_GROUP_NAME','JWT_EXP',
       'DISABLE_SIGNUP','EXTERNAL_EMAIL_ENABLED','MAILER_AUTOCONFIRM','MFA_TOTP_ENROLL_ENABLED','MFA_TOTP_VERIFY_ENABLED','SESSIONS_SINGLE_PER_USER',
       'MFA_RATE_LIMIT_CHALLENGE_AND_VERIFY','RATE_LIMIT_TOKEN_REFRESH','RATE_LIMIT_SIGN_IN_SIGN_UP','LOG_LEVEL'].map(k=>`GOTRUE_${k}`);
-    const created=docker(['create','--network','host','--read-only','--tmpfs','/tmp','--cap-drop','ALL','--security-opt','no-new-privileges','--log-driver','none',
+    startStage='container_create';const created=docker(['create',...(process.platform==='win32'?['--publish',`127.0.0.1:${port}:${port}`]:['--network','host']),'--read-only','--tmpfs','/tmp','--cap-drop','ALL','--security-opt','no-new-privileges','--log-driver','none',
       '--label',`crest.synthetic-auth=${randomUUID()}`,...[...allowed,'API_EXTERNAL_URL'].flatMap(k=>['--env',k]),testAuthImage,'auth','serve'],env);
-    assert.match(created,/^[a-f0-9]{64}$/);container=created;docker(['start',container]);
+    assert.match(created,/^[a-f0-9]{64}$/);container=created;startStage='container_start';docker(['start',container]);startStage='health';
+    if(diagnostic){monitor=spawn('docker',['attach','--no-stdin','--sig-proxy=false',container],{stdio:['ignore','pipe','pipe'],windowsHide:true});monitor.on('error',()=>retain(Object.freeze({category:'capture_unavailable',sqlState:null})));observe(monitor.stdout);observe(monitor.stderr);}
     await waitHealthy();
-    const adminJwt=await new SignJWT({role:'service_role',aud:'authenticated',iss:issuer}).setProtectedHeader({alg:'ES256',kid,typ:'JWT'}).setIssuedAt().setExpirationTime('1h').sign(privateKey);
+    startStage='admin_client';const adminJwt=await new SignJWT({role:'service_role',aud:'authenticated',iss:issuer}).setProtectedHeader({alg:'ES256',kid,typ:'JWT'}).setIssuedAt().setExpirationTime('1h').sign(privateKey);
     const admin=makeSdk(adminJwt);await admin.initialize();
-    return {issuer,publicKey,admin,sdk:makeSdk,close:cleanup,
+    return {issuer,publicKey,admin,sdk:makeSdk,close:cleanup,diagnostics:()=>Object.freeze([...diagnostics]),
       async stop(){docker(['stop','--time','5',container]);},async restart(){docker(['start',container]);await waitHealthy();}};
   } catch {
     await cleanup();
     // Container/SDK causes can contain synthetic private keys and credentials.
-    throw new Error('SYNTHETIC_AUTH_SERVICE_START_FAILED');
+    throw new Error('SYNTHETIC_AUTH_SERVICE_START_FAILED:'+startStage);
   }
 }

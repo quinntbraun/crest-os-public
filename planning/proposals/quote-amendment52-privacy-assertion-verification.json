@@ -1,0 +1,59 @@
+{
+  "formatVersion": 1,
+  "scope": "Deterministic exact privacy assertions for saved amendment edit recovery metadata",
+  "testedBaseCommit": "9da8fe9a40fd31b15f4678c7f4f6359b506add57",
+  "sourceFiles": {
+    "tests/unit/quote-amendment-workspace.test.ts": "dfd7745832170ba338fcda81cc497bfdc140189f38600a1d4f878612837448d2"
+  },
+  "failure": {
+    "publicSource": "06e9af570599bf6e510653d49aff9c6deab3ada2",
+    "tree": "3bf80fff5c13ce5984308ca0f0768f3fe2c780ca",
+    "testedMerge": "e19177005f73383fc735d9649d2cc4e91e92e1c9",
+    "run": 41746947602,
+    "runNumber": 404,
+    "job": 126308568590,
+    "step": "Lint, types and regression tests",
+    "passed": 7817,
+    "failed": 1,
+    "expectedTests": 7818,
+    "reason": "A valid opaque operation UUID contained275. The privacy test incorrectly searched every serialized value for the edited price digits, despite the saved record containing only permitted identifiers and versions. Other missing-artifact errors followed the early unit stop."
+  },
+  "change": {
+    "applicationCodeChanged": false,
+    "privacyProtocolChanged": false,
+    "securityPolicyChanged": false,
+    "testTimeoutChanged": false,
+    "testsRemovedOrSkipped": false,
+    "referenceAssertion": "Exact schema/business/binding envelope and six identifier/version reference fields, with exact values from the original command.",
+    "deterministicRegression": "Distinct legitimate UUIDs ending275 force the old assertion to fail; random IDs remain covered too.",
+    "privateContentRule": "No extra body, content, contact, price, evidence or hash fields may enter the stored record."
+  },
+  "verification": {
+    "focused": {
+      "path": ".local/amendment-privacy-regression-focused-v1.json",
+      "passed": 104,
+      "failed": 0,
+      "skipped": 0
+    },
+    "localWorktreeUnits": {
+      "path": ".local/amendment-privacy-all-units-v1.json",
+      "passed": 7831,
+      "failed": 0,
+      "skipped": 0,
+      "includes12UnpublishedNextAcceptanceContractCases": true
+    },
+    "publicCandidateExpectedUnitCount": 7819,
+    "publicCandidateActualCountRequiresFreshCI": true,
+    "types": ".local/amendment-privacy-types-v1.log",
+    "affectedLint": ".local/amendment-privacy-lint-v1.log"
+  },
+  "release": {
+    "currentSourceFullLinuxReleaseRequired": true,
+    "ownerPreviewUpdated": false,
+    "ownerDatabaseChanged": false,
+    "productionReady": false,
+    "completeCrestExport": false,
+    "completeBackup": false
+  },
+  "recordedAt": "2026-11-04T01:13:06.205Z"
+}

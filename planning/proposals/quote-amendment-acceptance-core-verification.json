@@ -1,0 +1,64 @@
+{
+  "formatVersion": 1,
+  "scope": "Unregistered complete database acceptance command and independently reconstructed original result",
+  "testedCheckoutHead": "6cfa59792e1ff8c4f6e52eaf9fd918cd8701e7cd",
+  "uncommittedConstruction": true,
+  "sourceFiles": {
+    "planning/proposals/quote-amendment-acceptance-core.sql": "5f81e4fd71421ccd100a75d1f24f8214495d20eb00cad193828f7a3014573732",
+    "planning/proposals/quote-amendment-acceptance-result.sql": "a672c78d09438650103769572aa406b6e093692aae3d7e8a631b1194fdf7904b",
+    "planning/proposals/quote-amendment-acceptance-closure.sql": "000969fdd8b6db7bed3a8a39996c00f27806954c878fdc6ede2dde3fcd1be33a",
+    "planning/proposals/quote-amendment-acceptance-ledger.sql": "e8f1209e616efe29804260c1b12316580bdd5c508dd465cc3855822401a42427",
+    "planning/proposals/quote-amendment-acceptance-storage.sql": "3b4580242ffa6170e87cc4b895afe7fc0fc39359eff13744d56caa104f4fba9e",
+    "planning/proposals/quote-amendment-acceptance-input.sql": "f0c60495a18f1481a070f1e94ab44dda0035ce293e21c5abaa877051f277982d",
+    "tests/integration/quote-amendment-acceptance-storage.test.mjs": "d7a8002f9159bfc0d80bb9f10c6172bd6d3eeffd3680861874649aedbe38dbac",
+    "tests/support/recovery-drill.mjs": "5201ed0d1914304a9cc18d96161bfb5a36864b753f3d49d2b066481b4653b3dd",
+    "src/commercial/quote-amendment-acceptance-contract.ts": "fb3e35a7a5a42db37e68b89befcfca41cdd58f5044c4adef01f06303eca470d5",
+    "src/commercial/quote-amendment-scope-plan.ts": "fb562f3aa363b20dc56cd303f2d07d5e8bf4c1bc69af90e0e646ff33d12e08cd"
+  },
+  "native": {
+    "path": ".local/amendment-acceptance-storage-native-v12/result.json",
+    "tests": 35,
+    "passed": 35,
+    "failed": 0,
+    "skipped": 0,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "logSha256": "ff37107cdcdcf4df661f61172b2816ae8805db3b34fb1796e8f7cc14a7cb45b6"
+  },
+  "affectedLint": {
+    "path": ".local/amendment-acceptance-core-lint-v2.log",
+    "passed": true
+  },
+  "positiveCoverage": [
+    "Actual restricted SQL owner command creates separately confirmed amendment acceptance and agreement version2, total30000/delta5000, keeping the original initial acceptance pointer",
+    "Retained original agreements/acceptances/items/approvals/sends/entitlements/versions/allocations/plans and job/slot/history rows remain exact",
+    "Three new entitlement versions and explicit plans retain existing booked/complimentary scope, add one new entitlement/source and expose5000 unassigned remaining cents",
+    "Independent exact source/audit/request-fingerprint original reconstruction, same-operation replay and original initial receipt lookup after the new family entitlement",
+    "Exact predecessor function pins, unsafe role/default refusal, internal-only source/result ACLs, unchanged-policy prefix tests, unknown business-schema fence and all retained26 ledger/allocation/recovery cases"
+  ],
+  "diagnostics": {
+    "failedRun": ".local/amendment-acceptance-storage-native-v10/result.json",
+    "passed": 27,
+    "failed": 4,
+    "cause": "Catalog alias a collided with the typed acceptance record a; explicit catalog aliases fixed it.",
+    "privateCoreFollowup": ".local/amendment-acceptance-storage-native-v11/result.json",
+    "passedCoreCases": 31,
+    "closureInventory": ".local/acceptance-closure-inventory/registered52.json",
+    "closureInventoryIsNotATestSuite": true,
+    "originalBookingGraphFunctionChanged": false,
+    "reviewedClosurePreparation": ".local/acceptance-closure-inventory/preparation-review-v2.json"
+  },
+  "remaining": [
+    "Negative eligibility/expiry/identity/consumption, commit-failure and concurrency matrix",
+    "Repeated accepted amendment chains, removals/withdrawal and empty resulting-scope cancellation contract",
+    "Subsequent bound-version booking/cancellation commands",
+    "Field/completed-job and full live financial-consumption integration",
+    "Typed original/pending recovery, saved reads/history/source/neutral reconstruction, registered53/frozen52-current recovery, genuine Auth/HTTP/UI/browser and full release"
+  ],
+  "ownerDatabaseApplied": false,
+  "registeredMigration": false,
+  "applicationHttpRouteEnabled": false,
+  "genuineMfaOrBrowserProofForAcceptance": false,
+  "productionReady": false,
+  "recordedAt": "2026-11-04T04:07:48.092Z"
+}

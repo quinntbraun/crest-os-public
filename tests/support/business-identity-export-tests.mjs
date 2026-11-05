@@ -41,7 +41,7 @@ export function businessIdentityExportTests(get){
   business=await root('Synthetic identity scope');other=await root('FOREIGN BUSINESS PRIVATE SENTINEL');unrelated=await actor('UNRELATED ACTOR PRIVATE SENTINEL');await member(unrelated,other);
   for(const id of [bootstrap,owner,ancestor,oldOperator,olderAncestor])actorIds.add(id);
   for(let i=0;i<22;i++){const id=await actor('Synthetic inactive historical identity '+i,owner);await member(id);actorIds.add(id);if(i===0)await client.query('UPDATE crest_private.actors SET disabled_at=clock_timestamp(),version=version+1 WHERE id=$1',[id]);}
-  manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));reader=await sandbox.connect(get().target);await reader.query('SET ROLE crest_export');
+  manifest=JSON.parse(await readFile(new URL('./registered43-export-coverage.json',import.meta.url),'utf8'));reader=await sandbox.connect(get().target);await reader.query('SET ROLE crest_export');
  };
  test('identity context reports exact bounded actor ancestry catalog and original event counts',async()=>snapshot(async ctx=>{
   assert.deepEqual(Object.keys(ctx).sort(),['schemaVersion','scope','businessId','snapshotToken','observedAt','recordCounts'].sort());assert.equal(ctx.schemaVersion,1);assert.equal(ctx.scope,'business_identity');assert.equal(ctx.businessId,business);assert.equal(ctx.recordCounts.actor,String(actorIds.size));assert.equal(ctx.recordCounts.role_capability,'5');assert.match(ctx.snapshotToken,/^[a-f0-9]{64}$/);assert.match(ctx.observedAt,/\+00:00$/);

@@ -1,0 +1,57 @@
+{
+  "formatVersion": 1,
+  "registered": false,
+  "runtimeEnabled": false,
+  "existingMigrationCount": 51,
+  "scope": "actual_disposable_registered51_plus_unregistered_parent_and_successor_storage",
+  "files": [
+    {
+      "path": "planning/proposals/quote-amendment-storage.sql",
+      "bytes": 9387,
+      "sha256": "a0b2772afee14b45479824c23f8dfcf10992d27545d7bf533c700057d3cb2fc0"
+    },
+    {
+      "path": "tests/integration/quote-amendment-storage.test.mjs",
+      "bytes": 11750,
+      "sha256": "1ca9c8fac25eb1a8082bccdb1cca2ac38d39e58c0eead80d25f67587ef92065d"
+    },
+    {
+      "path": "tests/support/confirmed-booking-fixture.mjs",
+      "bytes": 9546,
+      "sha256": "6218d1192314dcac0fee33f65420627bacf740b1505383ac87fbe8a2540a5b6d"
+    },
+    {
+      "path": "supabase/migration-checksums.json",
+      "bytes": 9681,
+      "sha256": "6460d57d51c41f89c7dffffc456610c730566fde414dd13352e9a1844fc1a4a4"
+    }
+  ],
+  "actualPostgresCases": 23,
+  "passed": 23,
+  "failed": 0,
+  "sourceUnchangedDuringExecution": true,
+  "ownedClusterCleaned": true,
+  "ownerDatabaseApplied": false,
+  "productionDatabaseApplied": false,
+  "genuineMfaClaimed": false,
+  "applicationWorkflowClaimed": false,
+  "verified": [
+    "Existing initial Draft/review/approval/manual share/customer acceptance still commits through retained restricted commands.",
+    "Prior commercial source fields, accepted content projection, operations and exact audit images remain unchanged; added parent column is null on initial rows and omitted from their historical projection.",
+    "Forced RLS, closed roles, no new browser/worker/recovery function execution or schema-create privileges.",
+    "Enabled deferred same-business/family/customer successor guard and validated parent/one-successor constraints.",
+    "Positive/negative/zero/max-bigint cent deltas, strict version increment, wrong parent/business/family/customer, absent/null/self parents and overflow refusal.",
+    "Actual uncommitted parent-bound Draft shape/projection, real second-open-Draft unique refusal and missing/cross-shape parent checks; all provisional rows rolled back without disabling any guard.",
+    "Revision parent/kind remains immutable; duplicate proposal installation refuses before source rewrite."
+  ],
+  "retainedFailure": "First native run22/23: unknown kind correctly failed the alphabetically earlier parent-shape CHECK; test named the later kind CHECK. Corrected exact expectation and separately asserted the actual retained kind constraint. Product SQL unchanged; all23 pass in a fresh cluster.",
+  "remaining": [
+    "Restricted creation/edit/review/share/acceptance and original-operation recovery commands.",
+    "Current-parent concurrency and exact immutable result/audit binding.",
+    "Full resulting agreement/entitlement/remaining-allocation revisions and financial-limit checks.",
+    "Source/recovery coverage, migration adoption, actual MFA/UI/browser and full release before owner use."
+  ],
+  "completeBackup": false,
+  "realCrestUseReady": false,
+  "currentSpend": 0
+}
