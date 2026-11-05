@@ -1,0 +1,136 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-11-04T12:34:46.930Z",
+  "scope": "Default-off synthetic current-version booking/cancellation HTTP, clients and controllers, retained immutable agreement history and authenticated Save review",
+  "testedCheckoutHead": "412dbdeb17c586b4ce472395c6035a338e2371f5",
+  "sourceFiles": [
+    {
+      "path": "src/client/book-job-controller.ts",
+      "bytes": 22088,
+      "sha256": "2a23fec02774864fe2e35aaa502a9394718e02c4fb50ba1739f34720452b4684"
+    },
+    {
+      "path": "src/client/job-change-controller.ts",
+      "bytes": 14698,
+      "sha256": "69a6754444437a6cf5eca4dbf3e72ec1975b23eba5c4c31c100ea595c4a8b1db"
+    },
+    {
+      "path": "src/client/scheduling-transport.ts",
+      "bytes": 4157,
+      "sha256": "4944062349d8a18c40b6728431c1abcabaa1a11adb80429cee8381be93dc6b3f"
+    },
+    {
+      "path": "src/client/scheduling.ts",
+      "bytes": 8961,
+      "sha256": "f15f4c192180d6064aa7364a8fa4880c5740f2bdc279a1d2f7b83d179e0cb856"
+    },
+    {
+      "path": "src/operations/amended-booking-contract.ts",
+      "bytes": 7293,
+      "sha256": "8b0a5d75fe972fe29cbeb684235efc670cf45df807b34186f1fcb58d8422db6e"
+    },
+    {
+      "path": "src/operations/confirmed-booking-directory.ts",
+      "bytes": 17011,
+      "sha256": "7be6158393df794960ba4b894244e5e30f77a05b592cb8eff87bafab58f85267"
+    },
+    {
+      "path": "src/operations/scheduling-http.ts",
+      "bytes": 9379,
+      "sha256": "cda567be595343cb9908780f7e475314daad7a9e5e39145bf59328d10a633c40"
+    },
+    {
+      "path": "src/server/node-server.ts",
+      "bytes": 25348,
+      "sha256": "dac182b5e5ea1deeda6bdf4bbe2a9aa448d49d7ad9fec4bc85a045ae023e2a49"
+    },
+    {
+      "path": "tests/fixtures/job-change.ts",
+      "bytes": 4086,
+      "sha256": "09451c0354e22b82352abccaff28f581632184c1dc2e8a1db87a642ada99054a"
+    },
+    {
+      "path": "tests/integration/quote-amendment-auth.test.mjs",
+      "bytes": 93949,
+      "sha256": "42c53cc90c46922c0601286ae74104370e1835174a6be1b0bc3b0996205cf3ea"
+    },
+    {
+      "path": "tests/unit/amended-scheduling-client.test.ts",
+      "bytes": 4382,
+      "sha256": "5642252c1824818a820e7e02698a3540dd74a78bf1ca6c658164f5fe3fa268b7"
+    }
+  ],
+  "registeredReleaseClaim": false,
+  "ownerApplied": false,
+  "completeV1": false,
+  "verification": {
+    "genuineAuth": {
+      "diagnosticFullProfile": {
+        "path": ".local/amended-scheduling-auth-v1/result.json",
+        "total": 14,
+        "passed": 12,
+        "failed": 2,
+        "sourceStable": true,
+        "ownedClusterCleaned": true,
+        "reason": "Both new recovery fixtures incorrectly expected a booking/change controller to reuse its old session binding after fresh sign-in. Actual booking and cancellation committed correctly. Existing UI intentionally directs the owner to authenticated Save review. No app/session/binding/authorization guard was changed."
+      },
+      "correctedFocused": {
+        "path": ".local/amended-scheduling-auth-v3/result.json",
+        "cases": 5,
+        "passed": 5,
+        "failed": 0,
+        "sourceStable": true,
+        "ownedClusterCleaned": true,
+        "scope": "Exact proposal install; actual normal-app password/TOTP, current-version booking and cancellation, lost acknowledgments followed by genuine fresh sign-in and Save review original receipt reconciliation without resend; real deferred booking COMMIT failure; unchanged20-context limit"
+      },
+      "intermediateFocusedDiagnostic": {
+        "path": ".local/amended-scheduling-auth-v2/result.json",
+        "passed": 4,
+        "failed": 1,
+        "reason": "Final cancellation assertion incorrectly expected unassigned states. Canonical SQL retains cancelled partition identities, descriptions and gross/discount/net values; final fixture compares them exactly. App and SQL unchanged."
+      },
+      "applicationAndUnitSourceIdenticalBetweenRuns": true,
+      "retainedEarlierCases": "All10 prior acceptance/install cases plus unchanged admission and new failed-COMMIT case passed in the diagnostic14 run. The corrected5-case run independently verifies the new scheduling/recovery cases. No single all14 clean full-profile result is claimed; mandatory full profile remains for integration/release.",
+      "browserOrDeviceAcceptance": false
+    },
+    "units": {
+      "path": ".local/amended-scheduling-all-units-v1.json",
+      "cases": 8138,
+      "applicationAndUnitSourceUnchangedAfterRun": true
+    },
+    "typecheck": {
+      "passed": true,
+      "path": ".local/amended-scheduling-types-final-v2.log"
+    },
+    "lint": {
+      "passed": true,
+      "fullPath": ".local/amended-scheduling-lint-final.log",
+      "changedNativeFixturePath": ".local/amended-scheduling-lint-final-v3.log"
+    },
+    "productionBuild": {
+      "passed": true,
+      "path": ".local/amended-scheduling-build-final.log",
+      "applicationSourceUnchangedAfterRun": true
+    },
+    "browser": {
+      "executedForThisSchedulingIncrement": false,
+      "reason": "No DOM/style changes. Actual four-width form/controller proof belongs to the preceding acceptance increment. Genuine whole-app Chromium/WebKit and physical phone acceptance remain release gates."
+    }
+  },
+  "behavior": [
+    "Existing legacy1 commands/receipts remain strict; explicit version2 dispatch never strips current entitlement/plan observations or accepts a mismatched receipt profile",
+    "The existing separate test-only acceptance capability also gates revised scheduling; current owner startup is unchanged. An authenticated workspace header exposes this capability and changing it invalidates a prepared save",
+    "Booking captures each selected current entitlement version before async access recheck, preserving explicit portions and gross/discount/net amounts. Combined agreements reuse their genuine observed roots",
+    "Scheduled cancellation captures each actual assigned source current entitlement/version and plan identity/sequence once; mixed same-source observations are refused. Existing visits and accepted agreement originals remain immutable",
+    "Opaque pending scheduling format is unchanged: no scope, amounts, contact, location, evidence or retry body enters storage. Fresh sign-in retains its old edit binding and uses existing authenticated Save review to verify/release the exact original",
+    "No SQL/migration/role/operation kind/package, account/MFA/network/owner schema, production activation or service purchase changed"
+  ],
+  "unverifiedOrRemaining": [
+    "Full14 clean current-profile verification at integration/release; all existing required gates remain mandatory",
+    "Ordinary work creation UI from an accepted cancelled parent",
+    "Live future field/finance/custody consumption bounds;715-column physical source fence is not financial validation",
+    "Complete amended source/export reconstruction, registered53 and frozen52/current independently tested recovery",
+    "Genuine whole-app Chromium/WebKit/full release before owner preview delivery; physical iPhone acceptance owner-deferred",
+    "Full remaining approved V1: field/time/photos/completion/follow-up, finance/reporting/mileage/receipts, portability/import/cutover and Google Calendar"
+  ]
+}

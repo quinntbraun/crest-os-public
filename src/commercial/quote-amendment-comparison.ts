@@ -4,7 +4,7 @@
 import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {quoteId,quoteVersion,quoteResponseLimit} from './quote-storage-contract.ts';
 import {quoteReviewHash} from './quote-review-contract.ts';
-import {prepareVersionedQuoteContent} from './quote-review-content.ts';
+import {prepareVersionedQuoteContent,prepareQuoteAmendmentContent} from './quote-review-content.ts';
 
 type Prepared=ReturnType<typeof prepareVersionedQuoteContent>;
 type Line=Prepared['customer']['lines'][number];
@@ -29,7 +29,10 @@ export async function prepareQuoteAmendmentComparison(value:unknown){
  // rebind this comparison to another parent, customer or business.
  const parent=Object.freeze({...value.parent}),businessId=value.businessId,familyId=value.familyId;
  if(!quoteId(parent.agreementId)||!quoteVersion(parent.versionNo)||!quoteVersion((BigInt(parent.versionNo)+1n).toString())||!quoteId(parent.revisionId)||!quoteId(parent.customerId)||!quoteReviewHash(parent.contentHash)||parent.sourceLeadId!==null&&!quoteId(parent.sourceLeadId))return fail('parent');
- const before=prepared(parent.content),after=prepared(value.proposedContent);
+ const cancellationParent=parent.content&&typeof parent.content==='object'&&'schemaVersion'in parent.content&&parent.content.schemaVersion===3;
+ let before:ReturnType<typeof prepareVersionedQuoteContent>|ReturnType<typeof prepareQuoteAmendmentContent>;try{before=cancellationParent?prepareQuoteAmendmentContent(parent.content):prepared(parent.content);}catch(error){if(error instanceof QuoteAmendmentComparisonError)throw error;return fail('input');}
+ if(new TextEncoder().encode(before.canonical).length>quoteResponseLimit)return fail('budget');
+ const after=prepared(value.proposedContent);
  if(await fingerprint(before.canonical)!==parent.contentHash)return fail('parent');
  if(before.internal.leadId!==parent.sourceLeadId||(before.internal.customerId!==null?before.internal.customerId!==parent.customerId:before.internal.leadId===null))return fail('customer');
  if(after.internal.customerId!==parent.customerId||after.internal.leadId!==null&&after.internal.leadId!==parent.sourceLeadId)return fail('customer');
@@ -48,7 +51,8 @@ export async function prepareQuoteAmendmentComparison(value:unknown){
  }
  const signedDeltaCents=(BigInt(after.customer.totalCents)-BigInt(before.customer.totalCents)).toString();
  if(sourceChanges.reduce((sum,line)=>sum+BigInt(line.signedDeltaCents),0n)!==BigInt(signedDeltaCents))return fail('reconciliation');
- const headerChanges=headerFields.filter(field=>JSON.stringify(before.customer[field])!==JSON.stringify(after.customer[field])).map(field=>Object.freeze({field,before:before.customer[field],after:after.customer[field]}));
+ const headerChanges:({readonly field:typeof headerFields[number];readonly before:unknown;readonly after:unknown}|{readonly field:'cancellationReason';readonly before:string;readonly after:null})[]=headerFields.filter(field=>JSON.stringify(before.customer[field])!==JSON.stringify(after.customer[field])).map(field=>Object.freeze({field,before:before.customer[field],after:after.customer[field]}));
+ if(before.customer.schemaVersion===3)headerChanges.push(Object.freeze({field:'cancellationReason' as const,before:before.customer.cancellationReason,after:null}));
  const customer=Object.freeze({schemaVersion:1 as const,currency:'USD' as const,previousAgreementVersion:parent.versionNo,proposedAgreementVersion:(BigInt(parent.versionNo)+1n).toString(),previousTotalCents:before.customer.totalCents,revisedTotalCents:after.customer.totalCents,signedDeltaCents,headerChanges:Object.freeze(headerChanges),lineChanges:Object.freeze(customerChanges)});
  const internal=Object.freeze({businessId,familyId,parentAgreementId:parent.agreementId,parentAgreementVersion:parent.versionNo,parentRevisionId:parent.revisionId,expectedAcceptedHash:parent.contentHash,customerId:parent.customerId,proposedContentHash:await fingerprint(after.canonical),lineChanges:Object.freeze(sourceChanges)});
  // Customer rendering must choose this explicit safe projection, as with the

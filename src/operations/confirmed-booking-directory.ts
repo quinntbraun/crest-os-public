@@ -6,8 +6,9 @@ import type {SessionDatabaseConfiguration} from '../security/session-database.ts
 import type {createProviderBoundary} from '../security/provider-auth.ts';
 import type {createProviderTokenStore} from '../security/provider-token-store.ts';
 import {customerUuid,exactCustomerObject as exact} from '../customer/customer-contract.ts';
-import {requireBooking,parseBookJobSave,parseBookedJobCommitted,bookingConflictReasons,parseCancelScheduledJobSave,parseCancelledJobCommitted} from './confirmed-booking-contract.ts';
-import type {BookJobSave,CancelScheduledJobSave} from './confirmed-booking-contract.ts';
+import {requireBooking,parseBookedJobCommitted,bookingConflictReasons,parseCancelledJobCommitted} from './confirmed-booking-contract.ts';
+import {parseBookJobCommand,parseCancelJobCommand,bindBookingCommandReceipt} from './amended-booking-contract.ts';
+import type {BookJobCommand,CancelJobCommand} from './amended-booking-contract.ts';
 import {parseChangeJobScheduleSave,parseRescheduledJobCommitted} from './confirmed-reschedule-contract.ts';
 import type {ChangeJobScheduleSave} from './confirmed-reschedule-contract.ts';
 import {parseJobListRequest,parseJobListPage,parseJobDetail,parseJobHistoryRequest,parseJobHistoryPage} from './confirmed-job-read-contract.ts';
@@ -19,7 +20,8 @@ import {parseBookingConflictRequest,parseBookingConflictReview} from './booking-
 import type {BookingConflictRequest} from './booking-conflict-review-contract.ts';
 export class BookingDirectoryError extends Error{constructor(code:string){super(code);this.name='BookingDirectoryError';}}
 class PrivateValue<T>{#value:T;constructor(value:T){this.#value=value;}forServer(){return this.#value;}toJSON():never{throw new BookingDirectoryError('BOOKING_VALUE_PRIVATE');}}
-export function createBookingDirectory(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>){
+export function createBookingDirectory(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>,amendedEnabled=false){
+ if(typeof amendedEnabled!=='boolean'||amendedEnabled&&config.environment!=='test')throw new BookingDirectoryError('BOOKING_CONFIGURATION_REQUIRED');
  const database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
  async function authorized<T>(credential:string,businessId:string,signal:AbortSignal,work:(args:unknown[],bounded:AbortSignal)=>Promise<T>){
   requireBooking(customerUuid(businessId));const bounded=AbortSignal.any([signal,AbortSignal.timeout(35000)]);if(bounded.aborted)throw Error();let hash:Buffer|undefined;
@@ -57,18 +59,18 @@ export function createBookingDirectory(config:SessionDatabaseConfiguration,provi
   async history(credential:string,input:JobHistoryRequest,signal:AbortSignal){
    try{const request=parseJobHistoryRequest(input);return await authorized(credential,request.businessId,signal,async(args,bounded)=>{const value=await database('SELECT crest_commands.read_confirmed_job_history($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::bigint,$11::bigint,$12::integer) AS result',[...args,request.jobId,request.throughVersion,request.afterVersion,request.pageSize],bounded);requireBooking(!bounded.aborted);return new PrivateValue(parseJobHistoryPage(value,request));});}catch{throw new BookingDirectoryError('BOOKING_REQUEST_FAILED');}
   },
-  async book(credential:string,input:BookJobSave,signal:AbortSignal){let submitted=false;
-   try{const request=parseBookJobSave(input);return await authorized(credential,request.businessId,signal,(args,bounded)=>database.commandTransaction(async(query,current)=>{
-    if(current.aborted)throw Error();submitted=true;const value=await query('SELECT crest_commands.book_job($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,1,$11::uuid,$12::bigint,$13::jsonb) AS result',[...args,request.recoveryEpoch,request.operationId,request.jobId,request.expectedModeSequence,request.payload]);if(current.aborted)throw Error();
+  async book(credential:string,input:BookJobCommand,signal:AbortSignal){let submitted=false;
+   try{const request=parseBookJobCommand(input);requireBooking(request.schemaVersion===1||amendedEnabled);return await authorized(credential,request.businessId,signal,(args,bounded)=>database.commandTransaction(async(query,current)=>{
+    if(current.aborted)throw Error();submitted=true;const value=await query('SELECT crest_commands.book_job($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::integer,$12::uuid,$13::bigint,$14::jsonb) AS result',[...args,request.recoveryEpoch,request.operationId,request.schemaVersion,request.jobId,request.expectedModeSequence,request.payload]);if(current.aborted)throw Error();
     if(exact(value,['state','reason'])&&value.state==='conflict'&&bookingConflictReasons.includes(value.reason as typeof bookingConflictReasons[number]))return new PrivateValue(Object.freeze({state:'conflict' as const,reason:value.reason as typeof bookingConflictReasons[number]}));
-    const result=parseBookedJobCommitted(value,request.businessId,request.operationId);requireBooking(result.recoveryEpoch===request.recoveryEpoch&&result.receipt.jobId===request.jobId);return new PrivateValue(result);
+    const result=bindBookingCommandReceipt(value,'book',request);return new PrivateValue(result);
    },bounded));}catch(error){if(error instanceof Error&&error.message==='RECOVERY_REVIEW_REQUIRED')throw new BookingDirectoryError('RECOVERY_REVIEW_REQUIRED');throw new BookingDirectoryError(submitted?'BOOKING_SAVE_OUTCOME_UNKNOWN':'BOOKING_SAVE_NOT_SUBMITTED');}
   },
-  async cancel(credential:string,input:CancelScheduledJobSave,signal:AbortSignal){let submitted=false;
-   try{const request=parseCancelScheduledJobSave(input);return await authorized(credential,request.businessId,signal,(args,bounded)=>database.commandTransaction(async(query,current)=>{
-    if(current.aborted)throw Error();submitted=true;const value=await query('SELECT crest_commands.cancel_scheduled_job($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,1,$11::uuid,$12::bigint,$13::jsonb) AS result',[...args,request.recoveryEpoch,request.operationId,request.jobId,request.expectedJobVersion,request.payload]);if(current.aborted)throw Error();
+  async cancel(credential:string,input:CancelJobCommand,signal:AbortSignal){let submitted=false;
+   try{const request=parseCancelJobCommand(input);requireBooking(request.schemaVersion===1||amendedEnabled);return await authorized(credential,request.businessId,signal,(args,bounded)=>database.commandTransaction(async(query,current)=>{
+    if(current.aborted)throw Error();submitted=true;const value=await query('SELECT crest_commands.cancel_scheduled_job($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::integer,$12::uuid,$13::bigint,$14::jsonb) AS result',[...args,request.recoveryEpoch,request.operationId,request.schemaVersion,request.jobId,request.expectedJobVersion,request.payload]);if(current.aborted)throw Error();
     if(exact(value,['state','reason'])&&value.state==='conflict'&&['operation','version','state','job'].includes(value.reason as string))return new PrivateValue(Object.freeze({state:'conflict' as const,reason:value.reason as 'operation'|'version'|'state'|'job'}));
-    const result=parseCancelledJobCommitted(value,request.businessId,request.operationId);requireBooking(result.recoveryEpoch===request.recoveryEpoch&&result.receipt.jobId===request.jobId&&BigInt(result.receipt.version)===BigInt(request.expectedJobVersion)+1n);return new PrivateValue(result);
+    const result=bindBookingCommandReceipt(value,'cancel',request);return new PrivateValue(result);
    },bounded));}catch(error){if(error instanceof Error&&error.message==='RECOVERY_REVIEW_REQUIRED')throw new BookingDirectoryError('RECOVERY_REVIEW_REQUIRED');throw new BookingDirectoryError(submitted?'BOOKING_CANCEL_SAVE_OUTCOME_UNKNOWN':'BOOKING_CANCEL_SAVE_NOT_SUBMITTED');}
   },
   async lookupCancelled(credential:string,input:{businessId:string;operationId:string},signal:AbortSignal){

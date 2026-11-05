@@ -4,7 +4,7 @@ import {createPendingQuoteAmendmentStore,pendingQuoteAmendment,pendingQuoteAmend
 import type {PendingQuoteAmendment,QuoteAmendmentPendingKind} from '../../src/client/pending-quote-amendment';
 import {originalOperationFixture} from '../support/original-operation-fixture';
 
-const kinds=['quote.amendment.create','quote.amendment.send'] as const;
+const kinds=['quote.amendment.create','quote.amendment.send','quote.amendment.accept'] as const;
 function fixture<K extends QuoteAmendmentPendingKind>(kind:K){
  const original=originalOperationFixture(kind),value=pendingQuoteAmendment(kind,{schemaVersion:1,businessId:original.businessId,binding:randomBytes(32).toString('base64url'),reference:original.reference});
  const memory=new Map<string,string>(),storage={getItem:vi.fn((key:string)=>memory.get(key)??null),setItem:vi.fn((key:string,value:string)=>{memory.set(key,value);}),removeItem:vi.fn((key:string)=>{memory.delete(key);})};
@@ -15,9 +15,9 @@ describe.each(kinds)('%s pending identity',kind=>{
   const f=fixture(kind);expect(f.store.read()).toBeNull();f.store.write(f.value);
   const reopened=createPendingQuoteAmendmentStore(f.storage,kind);expect(reopened.read()).toEqual(f.value);reopened.require(f.value);
   expect(Object.isFrozen(reopened.read())).toBe(true);expect(Object.isFrozen(reopened.read()!.reference)).toBe(true);
-  expect(Object.keys(f.value.reference).length).toBe(kind==='quote.amendment.create'?8:12);expect(f.memory.get(f.key)!.length).toBeLessThan(2048);
+  expect(Object.keys(f.value.reference).length).toBe(kind==='quote.amendment.create'?8:kind==='quote.amendment.send'?12:13);expect(f.memory.get(f.key)!.length).toBeLessThan(2048);
   expect(Object.keys(f.value)).toEqual(['schemaVersion','businessId','binding','reference']);
-  expect(createPendingQuoteAmendmentStore(f.storage,kind==='quote.amendment.create'?'quote.amendment.send':'quote.amendment.create').read()).toBeNull();
+  for(const other of kinds.filter(other=>other!==kind))expect(createPendingQuoteAmendmentStore(f.storage,other).read()).toBeNull();
  });
  it('refuses overwrite even with the same reference and clears only that pinned record',()=>{
   const f=fixture(kind);f.store.write(f.value);expect(()=>f.store.write(f.value)).toThrow(PendingQuoteAmendmentError);expect(f.storage.setItem).toHaveBeenCalledTimes(1);

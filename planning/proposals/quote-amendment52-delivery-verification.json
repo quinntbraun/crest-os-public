@@ -1,0 +1,145 @@
+{
+  "formatVersion": 1,
+  "scope": "owned_synthetic52_amendment_preparation_delivery",
+  "verifiedAt": "2026-11-04T03:10:34.939Z",
+  "localSource": "94acb9304602dfcff3466a641e94c125004582d3",
+  "publicSource": "07311f85fe8df407f2396019e1237e67c7b33581",
+  "tree": "4ce7ee01c9983161019452313fb80801a69796ac",
+  "testedMerge": "a1524a884cd12e9010ace59dbb50d372405c7047",
+  "testedMergeTreeVerified": true,
+  "fullRun": 41753012689,
+  "fullRunNumber": 405,
+  "allRequiredReleaseGroupsPassed": true,
+  "focusedExpenseRun": 41753012686,
+  "focusedCommercialRun": 41753012720,
+  "unitCases": 7819,
+  "browserCases": 297,
+  "linuxChromiumAndWebkitPassed": true,
+  "artifacts": [
+    {
+      "id": 13289842536,
+      "name": "settings-review-a1524a884cd12e9010ace59dbb50d372405c7047-attempt-1",
+      "digest": "sha256:552ec6d67d45e65e62adc8686c08c3462d65ccb11bbe10ea617126136940ff0e",
+      "expiresAt": "2026-11-07T02:18:16Z"
+    },
+    {
+      "id": 13289094064,
+      "name": "phase-1-candidate-a1524a884cd12e9010ace59dbb50d372405c7047-attempt-1",
+      "digest": "sha256:cd90b0fc6441958de4032cc8b7c3f23e24b2e3a201bf488b32298cef135291c6",
+      "expiresAt": "2026-11-07T02:23:30Z"
+    },
+    {
+      "id": 13288091283,
+      "name": "service-review-a1524a884cd12e9010ace59dbb50d372405c7047-attempt-1",
+      "digest": "sha256:8c9363ebf2d3a6357e6b66c38bd05461943d87707a4c36d6ee7ef73f0ca82198",
+      "expiresAt": "2026-11-07T01:42:45Z"
+    }
+  ],
+  "immutableSourceFilesVerified": 1398,
+  "schemaVersion": 52,
+  "databaseMigrationExecuted": true,
+  "freshEncrypted51PointIndependentlyRestored": true,
+  "coveredRecoveryTables": 96,
+  "pre52BackupReceiptSha256": "b6978fdd64212807b81a7203b2b46e32197abe5ccf15a9751aceef0db9d1f50e",
+  "migrationReceiptSha256": "1b3247b20f194acd465a214ff6351b0c9b19b2f85cc81269aa443e08ce0ecb7f",
+  "coordinatorRegistrySha256": "657821d487d91382ec1a7d3c53093b948877c257a5867933377d26b453a22739",
+  "originalBusinessSourceTablesPreserved": 52,
+  "originalColumnRowTextExactAfterMigrationAndBothDeployedWalkthroughs": true,
+  "pinnedTlsVerified": true,
+  "genuineMfa": true,
+  "deployedNormalAmendmentRouteSearchReloadAndReadRecovery": true,
+  "deployedHomeScheduleKeyboardBackAndCustomerNavigation": true,
+  "businessMutationsPerformedByWalkthroughs": false,
+  "diagnosticSessionsClosed": true,
+  "ownerDatasetHasAcceptedWork": false,
+  "populatedAmendmentWorkflowEvidence": "Exact-source disposable synthetic fixtures in actual Linux Chromium/WebKit; no sample agreement inserted into the owner database.",
+  "widths": [
+    360,
+    390,
+    768,
+    1440
+  ],
+  "axeAndOverflowPassed": true,
+  "screenshotsManuallyInspected": 12,
+  "screenshots": [
+    {
+      "path": ".local/review/delivered-amendment52-405-v1-360.png",
+      "sha256": "0b077ca957e919eb631966070036f668061792a06192311f6b4221ce36cb08b4",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/delivered-amendment52-405-v1-390.png",
+      "sha256": "83e176801b7f92a9407b75f0b17c40d8787b96ea29fa7564fcb018f312ab04e3",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/delivered-amendment52-405-v1-768.png",
+      "sha256": "0d0d06637c0f45dbcac40168875a0eebba4eba7bade165ca8b55d1069513aa55",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/delivered-amendment52-405-v1-1440.png",
+      "sha256": "d76e046b8aa8f712bb742345665be83368014ea97df2ff058f7292148709d33a",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/delivered-amendment52-405-v1-schedule-360.png",
+      "sha256": "35c058296511ebfcb505efab57c8709b8b2775104ee9779c4663d9353c2ef786",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/delivered-amendment52-405-v1-schedule-390.png",
+      "sha256": "209deba509bd6023e824bc3ab26db300113dafe6a5f5cb167cb2001a8ed6c8fd",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/delivered-amendment52-405-v1-schedule-768.png",
+      "sha256": "ad88eb38dcab5a558174cb8159fb70587282b7fda5772a046202cc59492a868d",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/delivered-amendment52-405-v1-schedule-1440.png",
+      "sha256": "aaf4384e8cd98673c9cad85b27d413a2361afd99333d35faf64298113790b849",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/delivered-amendment52-405-v1-selector-360.png",
+      "sha256": "8a575a8a78935effe7fbde4392bc16a8a4457ff386b70e2c64fdb765faf0fcb9",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/delivered-amendment52-405-v1-selector-390.png",
+      "sha256": "f4be70ab0c522f2a125b02ce14bbd5648497df54015c5ff33c5013dda0e59147",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/delivered-amendment52-405-v1-selector-768.png",
+      "sha256": "30dd332c82f6697419fb74a42bf4ae2ab18cb823ac9c0e22e5671bc8b8001ff2",
+      "manuallyInspected": true
+    },
+    {
+      "path": ".local/review/delivered-amendment52-405-v1-selector-1440.png",
+      "sha256": "8fccce1cbfc90b73ff653817513c996c638279b8fad0753a8bd31a3409230574",
+      "manuallyInspected": true
+    }
+  ],
+  "backgroundStarterVerified": true,
+  "credentialsMfaTlsNetworkPolicyUnchanged": true,
+  "laptopAndPrivatePhoneResponding": true,
+  "physicalIphoneAcceptance": false,
+  "ownerDeferredIphoneTest": true,
+  "ciAmendmentScreenshotsRetained": 0,
+  "ciRetentionLimit": "Current CI upload omitted amendment-*.png. Both engines passed functional/four-width/Axe checks. Sixteen populated exact-product-source native captures were separately inspected; the12 listed deployed captures cover Home, Schedule and the actual empty selector. The retention glob is saved locally for the next coherent feature.",
+  "retainedDiagnostics": [
+    "First operator preservation checker rejected valid identifier digits before changing the database; fixed checker retained all original columns.",
+    "Initial detached startup stopped at Docker preflight; narrow detached ownership probes and controlled restart now pass, original cause unconfirmed.",
+    "First post-restart browser invocation stopped before opening a page because its pinned-browser directory was not selected. With the existing directory explicitly selected, genuine read-only walkthrough passes."
+  ],
+  "amendmentCustomerAcceptanceImplemented": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "financeActivated": false,
+  "realDataApproved": false,
+  "productionReady": false,
+  "currentSpend": 0
+}

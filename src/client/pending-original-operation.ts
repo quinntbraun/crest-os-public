@@ -111,6 +111,7 @@ export function openPendingOriginalOperation(kind:OriginalOperationKind,storage:
   case 'quote.draft.save':return target(createPendingQuoteStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>quotes.lookup(p.businessId,p.reference,proof,signal));
   case 'quote.amendment.create':return target(createPendingQuoteAmendmentStore(storage,kind),kind,businessId,p=>p.reference,(p,proof,signal)=>quoteAmendments.lookupDraft(p.businessId,p.reference,proof,signal));
   case 'quote.amendment.send':return target(createPendingQuoteAmendmentStore(storage,kind),kind,businessId,p=>p.reference,(p,proof,signal)=>quoteAmendments.lookupSend(p.businessId,p.reference,proof,signal));
+  case 'quote.amendment.accept':return target(createPendingQuoteAmendmentStore(storage,kind),kind,businessId,p=>p.reference,(p,proof,signal)=>quoteAmendments.lookupAccept(p.businessId,p.reference,proof,signal));
   case 'quote.replacement.create':return target(createPendingQuoteReplacementStore(storage),kind,businessId,p=>p.reference,(p,proof,signal)=>quoteReplacement.lookup(p.businessId,p.reference,proof,signal));
   case 'quote.manual.send':case 'quote.confirmation.accept':{
    try{const store=createPendingQuoteCommercialStore(storage),pending=store.read();if(pending===null||kind!==(pending.reference.action==='send'?'quote.manual.send':'quote.confirmation.accept'))return null;

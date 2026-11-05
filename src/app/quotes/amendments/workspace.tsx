@@ -5,9 +5,12 @@ import {QuoteDocument} from '../quote-document';
 import {QuoteAmendmentDocument} from '../quote-amendment-document';
 import {quoteMoney} from '../../../commercial/quote-pricing';
 import {AmendmentDraftEditor} from './draft-editor';
+import {AmendmentAcceptance} from './acceptance';
 import {AmendmentReviewAndSharing} from './review-and-sharing';
 import {SavedAmendmentDownload} from './saved-record-download';
 import {AmendmentAllocationReview} from './allocation-review';
+import {AmendmentCancellationCreator} from './cancellation-creator';
+import {AmendmentCancellationEditor} from './cancellation-editor';
 
 /** Construction view. Amendment APIs remain closed by default; the complete
  * amendment feature, source/recovery adoption and release gates are pending. */
@@ -42,16 +45,17 @@ export function QuoteAmendmentWorkspace(){
    <AmendmentAllocationReview key={JSON.stringify(['allocations',selected.family.business_id,selected.family.id,selected.family.version,selected.parent.agreementId,selected.parent.versionNo,selected.parent.customerId,selected.parent.revision.total_cents])} target={selected}/>
    {amendment&&<>
     <h3>Current amendment · {amendment.revision.state}</h3>
-    {!amendment.parentIsCurrent&&<p className="notice">This amendment refers to an earlier accepted agreement. Review the current accepted terms before preparing further changes.</p>}
-    <AmendmentDraftEditor view={view} controller={controller}/>
-    {view.dirty&&<p className="notice">The comparison below shows the saved amendment. Save your edits to update it.</p>}
-    <QuoteAmendmentDocument comparison={amendment.comparison.customer}/>
-    <AmendmentReviewAndSharing key={amendment.revision.id+':'+amendment.revision.version} view={view} controller={controller}/>
-    <details><summary>Saved amendment history</summary><p className="field-help">{amendment.history.length?'Showing retained versions '+amendment.history[0]!.revision+'–'+amendment.history.at(-1)!.revision+' of '+amendment.revision.version+'.':'No later history events.'} These are saved events; unsaved edits are excluded.</p><ol className="customer-history">{amendment.history.map(event=><li key={event.eventId}><strong>{event.action} · Version {event.revision}</strong> · <time dateTime={event.at}>{event.at}</time><details><summary>Customer content at version {event.revision}</summary><QuoteDocument quote={event.after.customer_safe_snapshot} stage={event.action==='approve'?'approved':event.after.state==='Sent'?'sent':event.after.state==='Superseded'?'superseded':event.after.state==='Ready for Review'?'review':'draft'}/></details></li>)}</ol><div className="amendment-actions"><button type="button" className="secondary" disabled={!view.canReadHistory} onClick={()=>void controller.current?.historyPage(true)}>First amendment history page</button>{amendment.hasMore&&<button type="button" className="secondary" disabled={!view.canReadHistory} onClick={()=>void controller.current?.historyPage()}>Next amendment history page</button>}</div>{view.dirty&&<p className="field-help">Save your edits before loading another history page or downloading the saved record.</p>}</details>
+    {!amendment.parentIsCurrent&&!(amendment.schemaVersion===2&&amendment.acceptance.request.agreementId===selected.parent.agreementId)&&<p className="notice">This amendment refers to an earlier accepted agreement. Review the current accepted terms before preparing further changes.</p>}
+    {!view.preparingReopening&&amendment.revision.customer_safe_snapshot.schemaVersion===3?<AmendmentCancellationEditor view={view} controller={controller}/>:<AmendmentDraftEditor view={view} controller={controller}/>}
+    {view.dirty&&!view.acceptance&&<p className="notice">{view.preparingReopening?'The comparison shows the accepted cancellation. Save the new Draft to compare your proposed work.':'The comparison below shows the saved amendment. Save your edits to update it.'}</p>}
+    <details className="service-definition-panel" open={['Draft','Ready for Review'].includes(amendment.revision.state)}><summary>{amendment.schemaVersion===2?'Review accepted changes':'Review proposed changes'}</summary><QuoteAmendmentDocument comparison={amendment.comparison.customer} accepted={amendment.schemaVersion===2}/></details>
+    <AmendmentReviewAndSharing key={amendment.revision.id+':'+amendment.revision.version} view={view} controller={controller}/><AmendmentAcceptance key={'accept:'+amendment.revision.id+':'+amendment.revision.version} view={view} controller={controller}/>
+    <details><summary>Saved amendment history</summary><p className="field-help">{amendment.history.length?'Showing retained versions '+amendment.history[0]!.revision+'–'+amendment.history.at(-1)!.revision+' of '+amendment.revision.version+'.':'No later history events.'} These are saved events; unsaved edits are excluded.</p><ol className="customer-history">{amendment.history.map(event=><li key={event.eventId}><strong>{event.action} · Version {event.revision}</strong> · <time dateTime={event.at}>{event.at}</time><details><summary>Customer content at version {event.revision}</summary><QuoteDocument quote={event.after.customer_safe_snapshot} stage={event.after.state==='Accepted'?'accepted':event.action==='approve'?'approved':event.after.state==='Sent'?'sent':event.after.state==='Superseded'?'superseded':event.after.state==='Ready for Review'?'review':'draft'}/></details></li>)}</ol><div className="amendment-actions"><button type="button" className="secondary" disabled={!view.canReadHistory} onClick={()=>void controller.current?.historyPage(true)}>First amendment history page</button>{amendment.hasMore&&<button type="button" className="secondary" disabled={!view.canReadHistory} onClick={()=>void controller.current?.historyPage()}>Next amendment history page</button>}</div>{view.dirty&&<p className="field-help">{view.acceptance?'Finish or discard the acceptance review before loading another history page or downloading the saved record.':view.preparingReopening?'Save or discard the new Draft before loading another history page or downloading the saved record.':'Save your edits before loading another history page or downloading the saved record.'}</p>}</details>
     <SavedAmendmentDownload key={'record:'+amendment.revision.id+':'+amendment.revision.version} disabled={!view.canReadHistory} archive={()=>controller.current?.archive()??Promise.resolve(undefined)}/>
    </>}
-   {view.canCreate&&<button type="button" disabled={view.busy} onClick={()=>void controller.current?.create()}>Prepare amendment Draft from accepted terms</button>}
-   <p className="field-help">The selected-record copy does not replace complete source export and recovery. Customer acceptance of amendments remains unfinished.</p>
+   {view.canCreate&&<button type="button" disabled={view.busy} onClick={()=>void controller.current?.create()}>{selected.parent.revision.customer_safe_snapshot.schemaVersion===3?'Propose new work after cancellation':'Prepare amendment Draft from accepted terms'}</button>}
+   <AmendmentCancellationCreator view={view} controller={controller}/>
+   <p className="field-help">The selected-record copy does not replace complete source export and recovery. Customer acceptance and subsequent work use separate confirmations; unavailable controls remain disabled.</p>
   </section>}
  </>;
 }

@@ -1,4 +1,4 @@
-const requiredJobs = ["database_foundation", "database_provider", "authentication"] as const;
+const requiredJobs = ["database_foundation", "database_provider", "authentication", "browser_workflows"] as const;
 
 // GitHub skips dependent jobs by default, which can appear successful to branch
 // protection. Unless the run is canceled, the required job runs even after

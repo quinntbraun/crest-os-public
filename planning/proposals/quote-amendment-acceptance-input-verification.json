@@ -1,0 +1,52 @@
+{
+  "formatVersion": 1,
+  "scope": "Unregistered private amendment acceptance input and complete request fingerprint",
+  "testedCheckoutHead": "2fe2f2b625cf7e5c1524c3ac7128f9ef44fcbe39",
+  "uncommittedConstruction": true,
+  "sourceFiles": {
+    "planning/proposals/quote-amendment-acceptance-input.sql": "f0c60495a18f1481a070f1e94ab44dda0035ce293e21c5abaa877051f277982d",
+    "planning/proposals/quote-amendment-acceptance-storage.sql": "3b4580242ffa6170e87cc4b895afe7fc0fc39359eff13744d56caa104f4fba9e",
+    "tests/integration/quote-amendment-acceptance-storage.test.mjs": "f09d84eab5958928b11f999bf7c7a5fac43e715d94b8fb8cb106b2599f18540e",
+    "tests/support/recovery-drill.mjs": "5201ed0d1914304a9cc18d96161bfb5a36864b753f3d49d2b066481b4653b3dd",
+    "src/commercial/quote-amendment-scope-plan.ts": "fb562f3aa363b20dc56cd303f2d07d5e8bf4c1bc69af90e0e646ff33d12e08cd",
+    "src/commercial/quote-amendment-acceptance-contract.ts": "fb3e35a7a5a42db37e68b89befcfca41cdd58f5044c4adef01f06303eca470d5",
+    "tests/unit/quote-amendment-scope-plan.test.ts": "f073395e743f216d8ff74a9701918c2965054f19e8d149e3571ff3d2101fccf0",
+    "tests/unit/quote-amendment-acceptance-contract.test.ts": "0ef75af7621faca65168253bcbf81f50c5ccad25e5b9875bd146447842e75be3"
+  },
+  "verification": {
+    "native": {
+      "path": ".local/amendment-acceptance-storage-native-v6/result.json",
+      "tests": 20,
+      "passed": 20,
+      "failed": 0,
+      "sourceStable": true,
+      "ownedClusterCleaned": true
+    },
+    "affectedLint": {
+      "path": ".local/amendment-accept-input-lint-v2.log",
+      "passed": true
+    },
+    "priorFocusedUnits": {
+      "path": ".local/amendment-scope-plan-focused-v4.json",
+      "passed": 46,
+      "productTypescriptUnchangedSinceRun": true
+    }
+  },
+  "coverage": [
+    "Actual PostgreSQL/application structural and integer-money parity, active complimentary scope and explicit withdrawal, stable/prior/new identities and duplicate references",
+    "Unicode whitespace and near128KiB wire inputs; PostgreSQL normalized JSON separator allowance does not increase the incoming command limit",
+    "Fingerprint binds every13 plan-field mutation, parent/confirmation and business/actor/epoch; object-key ordering stable, strict NULL refusal",
+    "Private immutable function ACLs and closed-role/reinstall refusal; no app/worker execution grants",
+    "All17 previous legacy booking, audit, invalid binding, rollback and recovery cases retained"
+  ],
+  "notImplemented": [
+    "Atomic acceptance eligibility and original result",
+    "Live completed/billed/credited/refunded and job graph limits",
+    "Resulting agreement/source/recovery/registration and genuine UI",
+    "Full cancellation empty-scope contract"
+  ],
+  "registeredMigration": false,
+  "ownerDatabaseModified": false,
+  "customerAcceptanceAvailable": false,
+  "productionReady": false
+}

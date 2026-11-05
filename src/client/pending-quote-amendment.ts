@@ -1,10 +1,11 @@
 import {parseOriginalOperationReference} from '../security/original-operation-reference.ts';
 import type {OriginalOperationReference} from '../security/original-operation-reference.ts';
 
-export type QuoteAmendmentPendingKind='quote.amendment.create'|'quote.amendment.send';
+export type QuoteAmendmentPendingKind='quote.amendment.create'|'quote.amendment.send'|'quote.amendment.accept';
 export const pendingQuoteAmendmentKeys=Object.freeze({
  'quote.amendment.create':'crest.quote-amendment-draft.pending-reference.v1',
- 'quote.amendment.send':'crest.quote-amendment-send.pending-reference.v1'
+ 'quote.amendment.send':'crest.quote-amendment-send.pending-reference.v1',
+ 'quote.amendment.accept':'crest.quote-amendment-accept.pending-reference.v1'
 });
 export type PendingQuoteAmendment<K extends QuoteAmendmentPendingKind>=Readonly<{
  schemaVersion:1;businessId:string;binding:string;

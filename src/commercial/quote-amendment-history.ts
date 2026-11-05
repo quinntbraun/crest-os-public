@@ -1,5 +1,5 @@
 // Saved, version-pinned record retrieval. Not a snapshot/export authority.
-import {parseQuoteAmendmentRead,quoteAmendmentReadToWire} from './quote-amendment-read';
+import {parseQuoteAmendmentRead,quoteAmendmentReadToWire} from './quote-amendment-read.ts';
 import type {QuoteAmendmentRead,QuoteAmendmentReadRequest} from './quote-amendment-read';
 export type SavedQuoteAmendment=Exclude<QuoteAmendmentRead,{state:'absent'}>;
 export class QuoteAmendmentHistoryError extends Error{constructor(){super('QUOTE_AMENDMENT_HISTORY_REVIEW_REQUIRED');this.name='QuoteAmendmentHistoryError';}}

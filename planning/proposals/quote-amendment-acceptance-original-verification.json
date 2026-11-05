@@ -1,0 +1,148 @@
+{
+  "formatVersion": 1,
+  "scope": "Unregistered amendment acceptance interrupted-save identity, typed original reconciliation and explicit immutable retirement; no acceptance HTTP route or owner activation",
+  "testedCheckoutHead": "3619d5c8c27643b36a737394d3b0550f378b6b13",
+  "uncommittedAtVerification": true,
+  "sourceFiles": {
+    "src/commercial/quote-amendment-acceptance-receipt.ts": "2260389dee95a5582b3acf96454e81ec378f5742cd1e4a845ccf070b3d2687a6",
+    "src/commercial/quote-amendment-directory.ts": "4e4889d80a47c0c64567ff7e3d56334937e8e5661aa1db90321d2e8dedc0c900",
+    "src/commercial/quote-amendment-acceptance-contract.ts": "fb3e35a7a5a42db37e68b89befcfca41cdd58f5044c4adef01f06303eca470d5",
+    "src/commercial/quote-amendment-scope-plan.ts": "fb562f3aa363b20dc56cd303f2d07d5e8bf4c1bc69af90e0e646ff33d12e08cd",
+    "tests/unit/quote-amendment-acceptance-receipt-fixture.ts": "e75f15f9d9884fd6f933cb6ea992ef22a77ab432d5de3cb8562cb100e5583785",
+    "tests/unit/quote-amendment-acceptance-receipt.test.ts": "d0014409ff8bbf967bd195a204807610185748051afbbc06521686d1c993bd1f",
+    "tests/unit/quote-amendment-directory.test.ts": "3680793308bbde093783aab011cc9e9f5ac6af11840e80adf8965944150b5de1",
+    "tests/integration/quote-amendment-acceptance-storage.test.mjs": "fa9e1b722bc07768ed09c25dc54b3ed0f30b533b078595c27941285b2df09a73",
+    "planning/proposals/quote-amendment-acceptance-storage.sql": "3b4580242ffa6170e87cc4b895afe7fc0fc39359eff13744d56caa104f4fba9e",
+    "planning/proposals/quote-amendment-acceptance-input.sql": "f0c60495a18f1481a070f1e94ab44dda0035ce293e21c5abaa877051f277982d",
+    "planning/proposals/quote-amendment-acceptance-ledger.sql": "e8f1209e616efe29804260c1b12316580bdd5c508dd465cc3855822401a42427",
+    "planning/proposals/quote-amendment-acceptance-core.sql": "eee4575bab30a1cf82f3ed0945fcfb07607d65ce37610c44146fd8947c7c4232",
+    "planning/proposals/quote-amendment-acceptance-result.sql": "a672c78d09438650103769572aa406b6e093692aae3d7e8a631b1194fdf7904b",
+    "planning/proposals/quote-amendment-acceptance-closure.sql": "000969fdd8b6db7bed3a8a39996c00f27806954c878fdc6ede2dde3fcd1be33a",
+    "src/client/quote-amendment-workspace.ts": "ebaa99c2d15f35041862a8ba19d8bc59ee2f7eeccd9bfdd92434bd7b874015b4",
+    "tests/unit/quote-amendment-workspace.test.ts": "db21a870f636d4b14e7c76ec2aea631613e0857d079da9791d602ff30f2bdb47",
+    "src/security/original-operation-reference.ts": "1cab12bd01de765f8182700710746011748f336f40ad90801981bcc7d2856058",
+    "src/client/pending-original-operation.ts": "750f1150c9bc83868ee7544ae4b2453093d022fa940d927ae0e594a6754c8b5a",
+    "src/client/pending-quote-amendment.ts": "5c9d9573a4b3b0349418d56a9ed509fe863ca7185ea69daefd5688ee33b558b3",
+    "src/client/quote-amendments.ts": "3b9c7c7e2b12489b1d8731383a359e4216e1f2c4da90095d3a9dee329981a23c",
+    "tests/support/original-operation-fixture.ts": "c5b0c126b66d1dd7d30232aad0e30de3f12cefed6802e772449d9f521fab7efb",
+    "tests/unit/original-operation-reference.test.ts": "a9cbb276c964a52700ec54360aceb784432d695a9122a5ce6a221dc26907386d",
+    "tests/unit/pending-original-operation.test.ts": "def2caf4709b0217bf0dd5c6b47611c5f6454fea8be092978f28461306c17b1a",
+    "tests/unit/pending-quote-amendment.test.ts": "b2319c82c58ca64546329f0224baae65aa6349685a1232bff7354f52d7fee155",
+    "tests/unit/pending-quote-amendment-recovery.test.ts": "caf2eb60992bcf829a4619e80ff1321e8cc5f156239a740f2d5fe39388ba2573",
+    "tests/unit/quote-amendments-client.test.ts": "1393db6c0c44e04ffa43befeba3e5445178b95d6ccb0f15b6b5ce076629e668d",
+    "planning/proposals/quote-amendment-acceptance-originals.sql": "137af2e310af50739a4a3fa8e20f8c76034a3fc26cfd01e2f1afaa87dc6f1303"
+  },
+  "native": {
+    "path": ".local/amendment-acceptance-storage-native-v18/result.json",
+    "tests": 58,
+    "passed": 58,
+    "failed": 0,
+    "skipped": 0,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "retainedPublicSourceSnapshot": {
+      "directory": ".local\\amendment-acceptance-storage-native-v18\\source-before",
+      "files": 172,
+      "includesPrivateRuntime": false
+    },
+    "logSha256": "2ef112c7b21de8e70718808914666a46fcb3d034873dd6b2d238473da0b4acb5"
+  },
+  "focusedUnits": {
+    "path": ".local/amendment-acceptance-original-units-v3.json",
+    "files": 9,
+    "passed": 677,
+    "failed": 0,
+    "pending": 0,
+    "assurance": "Pure input/receipt/original/storage/client and controller behavior with mocked fetch/provider; not genuine MFA"
+  },
+  "checks": {
+    "typecheck": {
+      "path": ".local/amendment-acceptance-original-types-v2.log",
+      "passed": true
+    },
+    "affectedLint": {
+      "path": ".local/amendment-acceptance-original-lint-v3.log",
+      "passed": true
+    },
+    "productionBuild": {
+      "path": ".local/amendment-acceptance-original-build-v3.log",
+      "passed": true
+    },
+    "canonicalAmendments": 12,
+    "orderedImmutableMigrations": 52,
+    "lockedPackagesAndLicenses": 298
+  },
+  "coverage": [
+    "All51 prior real-PG acceptance, original reconstruction, legacy retention, withdrawal, rollback and concurrency cases remain mandatory",
+    "Exact13-key opaque acceptance identity matches SQL/application validation; private content, missing keys, malformed/max/excess versions and reused parent agreement refuse; previous original kinds still validate",
+    "Exact predecessor hashes and closed roles are required before adding the new branch; prior validator branches, ACL and retirement-result function remain unchanged",
+    "Generic original_recorded is observation only; independent typed lookup must bind the historical actual saved receipt even after later amendments",
+    "An absent lookup retains its per-tab opaque reference; explicit retirement reserves the same unique operation key, replays exactly once and refuses a late original save without business effects",
+    "Changed retirement reason or historical epoch cannot replace the original; a deferred retirement COMMIT failure leaves no claim or partial source and a later genuine original can commit",
+    "Two real PG sessions race acceptance against retirement and leave exactly one coherent saved or retired outcome; foreign-business access refuses",
+    "Existing shared pending stores/review logic retain intent on absence, insufficient/substituted/late responses, storage failures, abort or network failure; no automatic retry/retirement",
+    "The amendment workspace recognizes a pending acceptance, clears private working content and blocks preparation/edit/save/target loading across reload until the original is resolved"
+  ],
+  "sourcePreparation": {
+    "path": ".local/acceptance-original-functions-registered52.json",
+    "assurance": "Public registered52 function inventory only, not an additional workflow verification suite",
+    "containsAccountData": false,
+    "predecessors": [
+      {
+        "name": "original_operation_reference_valid",
+        "sha256": "c764d24c6092b365402c14f474bf67f5c32a3ab946abe43e7d3232412cdb0fc3"
+      },
+      {
+        "name": "operation_retirement_result",
+        "sha256": "4ad7fd691b4657eb2d554633a4c71758a5dbda76195897b1e13fe508c8237866"
+      }
+    ]
+  },
+  "limitations": [
+    "No acceptance HTTP route, genuine MFA acceptance browser journey, end-user acceptance form or owner upgrade",
+    "Current acceptance transport is a stateless lookup construction; its server route remains closed until coherent adoption",
+    "Full empty resulting-scope cancellation, subsequent bound-version booking/cancellation/current readers and both controlled acceptance-booking race orderings remain unfinished",
+    "Complete amended source reconstruction/export, registered53/frozen52-current independent recovery and full hosted release/visual/browser gates remain required",
+    "Field/completed/billed/credited/refunded consumption behavior is not established by this pre-field/pre-finance construction"
+  ],
+  "ownerPreview": {
+    "source": "94acb9304602dfcff3466a641e94c125004582d3",
+    "publicHead": "07311f85fe8df407f2396019e1237e67c7b33581",
+    "schema": 52,
+    "acceptanceEnabled": false,
+    "ownerApplied": false,
+    "realDataReady": false,
+    "physicalPhoneCheck": "owner-deferred"
+  },
+  "newServiceSpend": 0,
+  "fullUnits": {
+    "path": ".local/amendment-acceptance-original-all-units-v2.json",
+    "passed": 7960,
+    "failed": 0,
+    "pending": 0,
+    "sha256": "a344662212e9476869b1f2a88acd43cdc84a3a263b52345256593c79e2833f87",
+    "assurance": "Full local unit runner including local HTTP/provider SDK fixtures; not genuine acceptance MFA/browser or full release"
+  },
+  "diagnostics": [
+    {
+      "path": ".local/amendment-acceptance-original-all-units-v1.json",
+      "passed": 7886,
+      "failed": 73,
+      "result": "Restricted execution denied local HTTP/provider fixture networking and temporary symlink creation; retained failure report, no product assertion or permission changed"
+    },
+    {
+      "path": ".local/amendment-acceptance-original-all-units-v2.json",
+      "passed": 7960,
+      "failed": 0,
+      "result": "Ordinary local test access resolves the environment failures and verifies the additional workspace pending regression"
+    },
+    {
+      "path": ".local/amendment-acceptance-original-build-v2.log",
+      "result": "Restricted execution could not create a generated Next output directory (EPERM); no source build error was established"
+    },
+    {
+      "path": ".local/amendment-acceptance-original-build-v3.log",
+      "result": "Final production build passed with ordinary workspace filesystem access; no ACL or runtime changes"
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "formatVersion": 1,
+  "scope": "Unregistered pre-field/pre-finance SQL amendment acceptance, remaining allocations and independently reconstructed original results",
+  "testedCheckoutHead": "6cfa59792e1ff8c4f6e52eaf9fd918cd8701e7cd",
+  "uncommittedAtVerification": true,
+  "sourceFiles": {
+    "planning/proposals/quote-amendment-acceptance-core.sql": "eee4575bab30a1cf82f3ed0945fcfb07607d65ce37610c44146fd8947c7c4232",
+    "planning/proposals/quote-amendment-acceptance-result.sql": "a672c78d09438650103769572aa406b6e093692aae3d7e8a631b1194fdf7904b",
+    "planning/proposals/quote-amendment-acceptance-closure.sql": "000969fdd8b6db7bed3a8a39996c00f27806954c878fdc6ede2dde3fcd1be33a",
+    "planning/proposals/quote-amendment-acceptance-ledger.sql": "e8f1209e616efe29804260c1b12316580bdd5c508dd465cc3855822401a42427",
+    "planning/proposals/quote-amendment-acceptance-storage.sql": "3b4580242ffa6170e87cc4b895afe7fc0fc39359eff13744d56caa104f4fba9e",
+    "planning/proposals/quote-amendment-acceptance-input.sql": "f0c60495a18f1481a070f1e94ab44dda0035ce293e21c5abaa877051f277982d",
+    "tests/integration/quote-amendment-acceptance-storage.test.mjs": "eb041e5267be09c99caf14d623bd315f6581eae8d21aee56939690b9818f29ab",
+    "tests/support/recovery-drill.mjs": "5201ed0d1914304a9cc18d96161bfb5a36864b753f3d49d2b066481b4653b3dd",
+    "src/commercial/quote-amendment-acceptance-contract.ts": "fb3e35a7a5a42db37e68b89befcfca41cdd58f5044c4adef01f06303eca470d5",
+    "src/commercial/quote-amendment-scope-plan.ts": "fb562f3aa363b20dc56cd303f2d07d5e8bf4c1bc69af90e0e646ff33d12e08cd"
+  },
+  "native": {
+    "path": ".local/amendment-acceptance-storage-native-v14/result.json",
+    "tests": 50,
+    "passed": 50,
+    "failed": 0,
+    "skipped": 0,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "retainedPublicSourceSnapshot": {
+      "directory": ".local\\amendment-acceptance-storage-native-v14\\source-before",
+      "files": 168,
+      "includesPrivateRuntime": false
+    },
+    "logSha256": "6796cbe7db040241b80db6563e66e15bd85394e174c2983fc603f5aed8b56875"
+  },
+  "affectedLint": {
+    "path": ".local/amendment-acceptance-core-lint-v4.log",
+    "passed": true
+  },
+  "coverage": [
+    "Actual restricted SQL command records exact separate customer confirmation, approved/live offer/parent/expiry and resulting agreement version2 with retained/additional scope",
+    "Version3 appends a later accepted amendment while both earlier acceptance originals and the initial receipt remain retrievable",
+    "Old commercial/job/slot/history rows and zero-dollar identities remain exact; accepted unbooked withdrawal removes remaining authorization without deleting original scope",
+    "Explicit pre-field/pre-finance negative amendment records resulting3000/delta-22000 without rewriting the original25000 agreement or inferring a credit/refund",
+    "Booked complimentary work cannot disappear or silently cancel a visit; stale observations, modified booked partitions, wrong parent/customer/send/scope and invalid timing refuse without durable claims",
+    "Existing and foreign-business identity collisions return only definite opaque identity conflicts, with all partial agreement/receipt/plan/audit writes rolled back",
+    "Actual deferred COMMIT refusal rolls back every business write and operation claim; lookup reports original absence",
+    "Two real PG sessions accepting one parent produce one coherent successor; acceptance versus legacy booking serializes without a partial job/agreement. This does not prove subsequent bound-version booking support or both controlled race orderings",
+    "Editing current CRM after actual sharing preserves the accepted snapshot and retained job rows rather than rebooking against changed live names",
+    "Exact request/audit/child-source/digest reconstruction and original replay; changed same-operation payload refuses without rewriting the original",
+    "All retained ledger/allocation/input, role/default/source-pin/closed-policy/schema-fence and independently restored original52 recovery cases"
+  ],
+  "sourceGuardPredecessors": [
+    {
+      "name": "authorize_booking_statement",
+      "predecessor": "bdc564576bec43654ab70b462af58221465c8b3dabcfd4385773304850ef0152",
+      "modifiedDefinitionSha256": "4bc28b0224d3ecf7671e9f34a0e2ecc894deafa03a49bbaf7ce6f63d6bf26028"
+    },
+    {
+      "name": "stamp_booking_row",
+      "predecessor": "1c532f712523e82d9210bd4e2e3d12a6fafebaabd7c2e24ca1bb6c74bdbfe4d3",
+      "modifiedDefinitionSha256": "e6a901bb89cd46d0b2ce832288c34ebdf0c5ef76abdf9e29f6ea6c30748f07cb"
+    },
+    {
+      "name": "check_booking_row_audit",
+      "predecessor": "2ef479c8f6f183d9e287071515e5416f56e5e314cf9973f0141cdaab8c324cfe",
+      "modifiedDefinitionSha256": "73165396c5497008eab3d3ba8237dcb3665bf6988f391a5faf47c24c742d4307"
+    },
+    {
+      "name": "check_booking_plan",
+      "predecessor": "7878215d65c79004d51044a16b977e37320cab0514a99419cd1e4fa63ff01b8a",
+      "modifiedDefinitionSha256": "ba15dc5cccba69d9ce701fe02f3c35484ad5fb386e2a2c60144c818a0b5a4216"
+    },
+    {
+      "name": "stamp_quote_commercial",
+      "predecessor": "3d76d9b2e40fba6248d73a83e10498e8fd9bf978464d7528601553d1779cc28e",
+      "modifiedDefinitionSha256": "970aa7685ebf22696b35a29bf92de3c7ccfcdd2b3bef485d4a71929135292b63"
+    },
+    {
+      "name": "validate_quote_revision_change",
+      "predecessor": "351637586c8ea8445e6d4d6e8bf7b91c74fce6a0b219296c5581ef8029d2eda4",
+      "modifiedDefinitionSha256": "b741e8ced6fe4d4ddb6d406a9d31b18ec0697f24e736af80b3a66d5c14138536"
+    },
+    {
+      "name": "check_quote_audit",
+      "predecessor": "a240b109f88748f73abeae3493b51e8271ee6e16d58d6b8db20a80b22970dcb9",
+      "modifiedDefinitionSha256": "adf3c16782d884b7ffc17b832e1b7ff742d9e47c6c55a4bd9bc9cb14f3eaa55d"
+    },
+    {
+      "name": "check_quote_commercial_row",
+      "predecessor": "7d71eb2a059269890c0a0fae3b2d11c18ae8c56556cf9a9991e945db6e347512",
+      "modifiedDefinitionSha256": "375e453efd49a88ad963b62b6186184f6278c0b907f76eae6cdd17ea29525d8b"
+    },
+    {
+      "name": "quote_commercial_operation_result",
+      "predecessor": "d253e4d7e962cd6d97c3e6162559772d66bdd6a6ed96a1b19acd04d4e0b61ce7",
+      "modifiedDefinitionSha256": "7822cc9af949a4bb859d05cee6faac312a30aca212bddc1623688666325e1598"
+    }
+  ],
+  "originalBookingGraphFunctionChanged": false,
+  "diagnostics": {
+    "original35CaseProof": "planning/proposals/quote-amendment-acceptance-core-verification.json",
+    "original35CaseSources": ".local/amendment-acceptance-core35-source",
+    "allOriginal35CaseSourceHashesRetained": true,
+    "failedExpansion": ".local/amendment-acceptance-storage-native-v13/result.json",
+    "failedExpansionPassed": 45,
+    "failedExpansionFailed": 3,
+    "failedExpansionSourceStable": true,
+    "failedExpansionOwnedClusterCleaned": true,
+    "failedExpansionSources": ".local/amendment-acceptance-storage-native-v13/source-before",
+    "corrections": [
+      "Parenthesize timestamp arithmetic before AT TIME ZONE in three test-fixture expressions.",
+      "Filter the unassigned-value test by the specific resulting agreement; a second legitimate family in the same business contributed another25000."
+    ],
+    "productSqlUnchangedBetweenV13AndV14": true,
+    "earlierCatalogAliasFailure": ".local/amendment-acceptance-storage-native-v10/result.json"
+  },
+  "remaining": [
+    "Explicit empty resulting-scope/full cancellation offer grammar and lifecycle",
+    "Subsequent bound-entitlement-version booking/cancellation and amendment-aware saved readers",
+    "Controlled coverage of both acceptance-versus-booking orderings and additional cancellation/expiry boundary cases",
+    "Typed receipt/original/pending resolution, genuine Auth/HTTP and application UI",
+    "Complete amended source reconstruction/export, registered53/frozen52-current independent recovery, full browser/visual/release gates",
+    "Field/completed-work and live billed/credited/refunded consumption limits before those capabilities are activated"
+  ],
+  "ownerApplied": false,
+  "registeredMigration": false,
+  "applicationHttpRouteEnabled": false,
+  "genuineMfaOrBrowserProofForAcceptance": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "financeActivated": false,
+  "productionReady": false,
+  "currentSpend": 0,
+  "recordedAt": "2026-11-04T04:36:35.195Z"
+}

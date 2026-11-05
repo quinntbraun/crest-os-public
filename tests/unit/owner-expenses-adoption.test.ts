@@ -5,7 +5,7 @@ import type {MigrationRegistry} from '../../src/tooling/migrations';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage';
 import {expenseSourceTables} from '../../src/bookkeeping/expenses/expense-source-csv';
 import currentRegistry from '../../supabase/migration-checksums.json';
-import currentCoverage from '../../planning/SECURITY_EXPORT_COVERAGE.json';
+import currentCoverage from '../support/registered52-export-coverage.json';
 import registry from '../support/registered49-migration-checksums.json';
 import coverage from '../support/registered49-export-coverage.json';
 import compatibility from '../support/registered49-compatibility.json';
@@ -14,7 +14,7 @@ import priorCoverage from '../support/registered48-export-coverage.json';
 import priorCompatibility from '../support/registered48-compatibility.json';
 import adoption from '../../planning/OWNER_EXPENSES_SCHEMA49_ADOPTION.json';
 const bytes=(path:string)=>readFileSync(new URL('../../'+path,import.meta.url));
-it('preserves historical49 coverage with only the explicitly registered52 accepted-parent extension',()=>{
+it('preserves historical49 coverage within frozen52 with only the accepted-parent extension',()=>{
  expect(currentRegistry.migrations.slice(0,49)).toEqual(registry.migrations);const expected=structuredClone(coverage.tables);expected.find(table=>table.table==='crest.quote_revisions')!.required.push('parent_agreement_id');expect(currentCoverage.tables.slice(0,coverage.tables.length)).toEqual(expected);
 });
 it('appends49 with exact frozen48 provenance and all seven reviewed bodies',()=>{

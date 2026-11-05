@@ -33,6 +33,7 @@ const keys:Record<OriginalOperationKind,string>={
  'quote.draft.save':'crest.quote.pending-reference.v1',
  'quote.amendment.create':'crest.quote-amendment-draft.pending-reference.v1',
  'quote.amendment.send':'crest.quote-amendment-send.pending-reference.v1',
+ 'quote.amendment.accept':'crest.quote-amendment-accept.pending-reference.v1',
  'quote.replacement.create':'crest.quote-replacement.pending-reference.v1',
  'quote.manual.send':'crest.quote-commercial.pending-reference.v1',
  'quote.confirmation.accept':'crest.quote-commercial.pending-reference.v1',

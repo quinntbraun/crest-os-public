@@ -1,0 +1,211 @@
+{
+  "formatVersion": 1,
+  "scope": "Unregistered pre-field/pre-finance amended-scope version2 booking/cancellation, exact original recovery and concurrency; no application workflow or owner activation",
+  "testedCheckoutHead": "d36b254ad75ec3ad03f039f166d174702a3c708f",
+  "uncommittedAtVerification": true,
+  "sourceFiles": {
+    "src/commercial/quote-amendment-acceptance-receipt.ts": "2260389dee95a5582b3acf96454e81ec378f5742cd1e4a845ccf070b3d2687a6",
+    "src/commercial/quote-amendment-directory.ts": "4e4889d80a47c0c64567ff7e3d56334937e8e5661aa1db90321d2e8dedc0c900",
+    "src/commercial/quote-amendment-acceptance-contract.ts": "fb3e35a7a5a42db37e68b89befcfca41cdd58f5044c4adef01f06303eca470d5",
+    "src/commercial/quote-amendment-scope-plan.ts": "fb562f3aa363b20dc56cd303f2d07d5e8bf4c1bc69af90e0e646ff33d12e08cd",
+    "tests/unit/quote-amendment-acceptance-receipt-fixture.ts": "e75f15f9d9884fd6f933cb6ea992ef22a77ab432d5de3cb8562cb100e5583785",
+    "tests/unit/quote-amendment-acceptance-receipt.test.ts": "d0014409ff8bbf967bd195a204807610185748051afbbc06521686d1c993bd1f",
+    "tests/unit/quote-amendment-directory.test.ts": "3680793308bbde093783aab011cc9e9f5ac6af11840e80adf8965944150b5de1",
+    "tests/integration/quote-amendment-acceptance-storage.test.mjs": "58df0fd6cbfd3451322ad83a4e98651e30f48fbdf2a601cfb2f84c7599753aa7",
+    "planning/proposals/quote-amendment-acceptance-storage.sql": "3b4580242ffa6170e87cc4b895afe7fc0fc39359eff13744d56caa104f4fba9e",
+    "planning/proposals/quote-amendment-acceptance-input.sql": "f0c60495a18f1481a070f1e94ab44dda0035ce293e21c5abaa877051f277982d",
+    "planning/proposals/quote-amendment-acceptance-ledger.sql": "e8f1209e616efe29804260c1b12316580bdd5c508dd465cc3855822401a42427",
+    "planning/proposals/quote-amendment-acceptance-core.sql": "eee4575bab30a1cf82f3ed0945fcfb07607d65ce37610c44146fd8947c7c4232",
+    "planning/proposals/quote-amendment-acceptance-result.sql": "a672c78d09438650103769572aa406b6e093692aae3d7e8a631b1194fdf7904b",
+    "planning/proposals/quote-amendment-acceptance-closure.sql": "000969fdd8b6db7bed3a8a39996c00f27806954c878fdc6ede2dde3fcd1be33a",
+    "src/client/quote-amendment-workspace.ts": "ebaa99c2d15f35041862a8ba19d8bc59ee2f7eeccd9bfdd92434bd7b874015b4",
+    "tests/unit/quote-amendment-workspace.test.ts": "db21a870f636d4b14e7c76ec2aea631613e0857d079da9791d602ff30f2bdb47",
+    "src/security/original-operation-reference.ts": "1cab12bd01de765f8182700710746011748f336f40ad90801981bcc7d2856058",
+    "src/client/pending-original-operation.ts": "750f1150c9bc83868ee7544ae4b2453093d022fa940d927ae0e594a6754c8b5a",
+    "src/client/pending-quote-amendment.ts": "5c9d9573a4b3b0349418d56a9ed509fe863ca7185ea69daefd5688ee33b558b3",
+    "src/client/quote-amendments.ts": "3b9c7c7e2b12489b1d8731383a359e4216e1f2c4da90095d3a9dee329981a23c",
+    "tests/support/original-operation-fixture.ts": "c5b0c126b66d1dd7d30232aad0e30de3f12cefed6802e772449d9f521fab7efb",
+    "tests/unit/original-operation-reference.test.ts": "a9cbb276c964a52700ec54360aceb784432d695a9122a5ce6a221dc26907386d",
+    "tests/unit/pending-original-operation.test.ts": "def2caf4709b0217bf0dd5c6b47611c5f6454fea8be092978f28461306c17b1a",
+    "tests/unit/pending-quote-amendment.test.ts": "b2319c82c58ca64546329f0224baae65aa6349685a1232bff7354f52d7fee155",
+    "tests/unit/pending-quote-amendment-recovery.test.ts": "caf2eb60992bcf829a4619e80ff1321e8cc5f156239a740f2d5fe39388ba2573",
+    "tests/unit/quote-amendments-client.test.ts": "1393db6c0c44e04ffa43befeba3e5445178b95d6ccb0f15b6b5ce076629e668d",
+    "planning/proposals/quote-amendment-acceptance-originals.sql": "137af2e310af50739a4a3fa8e20f8c76034a3fc26cfd01e2f1afaa87dc6f1303",
+    "src/operations/amended-booking-contract.ts": "cc7d03acb6aeca8117c25ab07d8972804be8cd499cee3750c46df465f78a5a37",
+    "src/operations/scheduling-original-contract.ts": "0ee7b2e2c1587f03dcdf47b8e58b247a235b1aba1b1058e4cabf7ab940d86ae8",
+    "tests/unit/amended-booking-contract.test.ts": "14efc76a2f9dddb02e60dd40a951588349d998d11716aa2f573029c20e42b954",
+    "planning/proposals/quote-amendment-booking-commands.sql": "e4e72a6c3fba18d99b114e42dd8d626542a38372a0714865fca204a20aba6274"
+  },
+  "native": {
+    "path": ".local/amended-booking-native-v5/result.json",
+    "tests": 75,
+    "passed": 75,
+    "failed": 0,
+    "skipped": 0,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "retainedPublicSourceSnapshot": {
+      "directory": ".local\\amended-booking-native-v5\\source-before",
+      "files": 177,
+      "includesPrivateRuntime": false
+    },
+    "logSha256": "7dff8403b3e27bd062c05ef96ced2d3c397e37f5a95f520eee23d48ee09d3763",
+    "phaseScope": "Real registered52 and closed allocation/input/ledger/acceptance installation; prior58-case acceptance prefix; exact pinned booking upgrade followed by17 booking/cancellation/money/rollback/race cases. This is not all prior cases rerun after the final upgrade or whole application release."
+  },
+  "fullUnits": {
+    "path": ".local/amended-booking-all-units-v1.json",
+    "passed": 7978,
+    "failed": 0,
+    "pending": 0,
+    "sha256": "10b3d38c51dfecc4150124abe85f13205a58321a99af0f5f72e95f75664316fc",
+    "sourceBinding": "TypeScript application/unit sources match native-v2 snapshot at execution and final native-v5; subsequent edits were SQL/integration-test only"
+  },
+  "focusedUnits": {
+    "path": ".local/amended-booking-contract-units-v2.json",
+    "files": 3,
+    "passed": 38,
+    "failed": 0,
+    "assurance": "Pure version2/legacy booking contracts and existing mocked-fetch scheduling original recovery; actual schema2 generic originals are additionally exercised in PG"
+  },
+  "checks": {
+    "typecheck": {
+      "path": ".local/amended-booking-types-v3.log",
+      "passed": true
+    },
+    "affectedLint": {
+      "path": ".local/amended-booking-lint-v5.log",
+      "passed": true
+    },
+    "productionBuild": {
+      "path": ".local/amended-booking-build-v1.log",
+      "passed": true,
+      "sourceBinding": "Current TypeScript hashes equal native-v2 snapshot; no TypeScript changes during or after build"
+    },
+    "canonicalAmendments": 12,
+    "orderedImmutableMigrations": 52,
+    "lockedPackagesAndLicenses": 298
+  },
+  "sourceGuardPredecessors": [
+    {
+      "signature": "crest_private.validate_booking_reservation()",
+      "owner": "crest_booking_integrity_owner",
+      "predecessor": "d45d9d3a640240d01da9f3beb749bed7c86a1e664376e36379af82764d6b38d5"
+    },
+    {
+      "signature": "crest_private.check_fulfillment_mode_audit()",
+      "owner": "crest_mode_integrity_owner",
+      "predecessor": "9b274eafa3f1550b11bd725a110a345b11c38d7ab4ea6dc33fbc6aba53667ba3"
+    },
+    {
+      "signature": "crest_commands.book_job(bytea,uuid,uuid,text,uuid,uuid,timestamp with time zone,uuid,uuid,uuid,integer,uuid,bigint,jsonb)",
+      "owner": "crest_booking_owner",
+      "predecessor": "3e0dfb68312aa691b1b56a32233c9c0ae6ae83860af169a89c6e07aba50d8ef5"
+    },
+    {
+      "signature": "crest_commands.cancel_scheduled_job(bytea,uuid,uuid,text,uuid,uuid,timestamp with time zone,uuid,uuid,uuid,integer,uuid,bigint,jsonb)",
+      "owner": "crest_booking_owner",
+      "predecessor": "f5adbe387750c19c45731027f626be05c0e1e7dbb82ac273183e24ca25e5c707"
+    },
+    {
+      "signature": "crest_private.authorize_booking_statement()",
+      "owner": "crest_schema_owner",
+      "predecessor": "4bc28b0224d3ecf7671e9f34a0e2ecc894deafa03a49bbaf7ce6f63d6bf26028"
+    },
+    {
+      "signature": "crest_private.stamp_booking_row()",
+      "owner": "crest_booking_integrity_owner",
+      "predecessor": "e6a901bb89cd46d0b2ce832288c34ebdf0c5ef76abdf9e29f6ea6c30748f07cb"
+    },
+    {
+      "signature": "crest_private.check_booking_row_audit()",
+      "owner": "crest_booking_integrity_owner",
+      "predecessor": "73165396c5497008eab3d3ba8237dcb3665bf6988f391a5faf47c24c742d4307"
+    },
+    {
+      "signature": "crest_private.check_booking_plan()",
+      "owner": "crest_booking_integrity_owner",
+      "predecessor": "ba15dc5cccba69d9ce701fe02f3c35484ad5fb386e2a2c60144c818a0b5a4216"
+    },
+    {
+      "signature": "crest_private.booked_job_operation_result(uuid,uuid,uuid)",
+      "owner": "crest_booking_owner",
+      "predecessor": "9837f614ac8d0c0ec49a5d2a54d4823749af1ff98b6d469ea5ed6a7f3461dd28"
+    },
+    {
+      "signature": "crest_private.cancelled_job_operation_result(uuid,uuid,uuid)",
+      "owner": "crest_booking_owner",
+      "predecessor": "5c14d9ce8713f25aaf35055ec8264c87cc79f4adf93790cac8346d48f3581aa6"
+    },
+    {
+      "signature": "crest_private.operation_retirement_result(uuid,uuid,jsonb)",
+      "owner": "crest_schema_owner",
+      "predecessor": "4ad7fd691b4657eb2d554633a4c71758a5dbda76195897b1e13fe508c8237866"
+    }
+  ],
+  "coverage": [
+    "Version2 booking observes the current accepted entitlement for each source, appends bound active allocation plans and uses the resulting agreement for a new encounter; legacy1 originals/formats remain supported",
+    "Actual remaining5000 is booked after an accepted30000 agreement while preserving the earlier25000 visit, appointments and immutable source history",
+    "Cancellation observes the complete source/entitlement/plan/sequence set, preserves every gross/discount/net amount and zero partition, releases only its reservation and changes only its visit state",
+    "Legacy writes refuse already bound scope rather than discarding its entitlement link; stale/foreign version and stale/incomplete plan observations refuse without partial work",
+    "Independent originals correlate source bindings/sequence and actual booking parts to the immutable original request; a consistently audited but changed scope description refuses",
+    "Active complimentary scope survives first version2 booking and cancellation; first-booking fulfillment defaults remain independently audited",
+    "A later accepted version3 retains version2 booking originals through real SQL generic lookup and typed opaque recovery; an older visit can be cancelled without changing the newer one",
+    "Two explicitly overlapped real sessions verify both booking-first and acceptance-first serialization, observed actual lock waits, exactly one eligible writer and no partial jobs/agreements/pending claims",
+    "Actual deferred COMMIT failures roll back complete version2 booking/cancellation packets, all business/audit/slot effects and operation claims; lookup remains absent, and a subsequent genuine cancellation can commit",
+    "Synthetic line and document discounts conserve gross30000, combined discount3000 and net27000 exactly through booking/cancellation; no real pricing rule, fee/refund/credit is inferred",
+    "The fixed715-column public-catalog profile refuses an unreviewed physical source before version2 claims, with no migration-ledger SELECT grant"
+  ],
+  "limitations": [
+    "No acceptance or version2 scheduling HTTP/UI delivery, current-source hosted CI, genuine acceptance browser journey or new visual acceptance claim",
+    "Amendment-aware saved agreement/booking/job readers and full empty resulting-scope cancellation remain unfinished",
+    "Complete amended source capture/CSV/neutral reconstruction, frozen52/current independent restore, registered53 adoption and full release/browser/visual gates remain required",
+    "The fixed source profile is a construction fence; actual field/completed/billed/credited/refunded consumption/lifecycle bounds remain required before those capabilities activate",
+    "Owner synthetic preview stays on accepted schema52 preparation/public073; no owner upgrade, real data, finance activation or complete backup/export claim"
+  ],
+  "diagnostics": [
+    {
+      "path": ".local/amended-booking-native-v1/result.json",
+      "passed": 59,
+      "failed": 8,
+      "sourceStable": true,
+      "cleaned": true,
+      "cause": "New conservation guard referenced nonexistent gross/discount entitlement columns; corrected to the existing immutable scope snapshot. Dependent fixture cases also failed."
+    },
+    {
+      "path": ".local/amended-booking-native-v2/result.json",
+      "passed": 66,
+      "failed": 4,
+      "sourceStable": true,
+      "cleaned": true,
+      "cause": "New cancellation alias collided with its PL/pgSQL row variable; first schema2 booking also required the unchanged fulfillment audit to recognize schema2. Both were corrected narrowly."
+    },
+    {
+      "path": ".local/amended-booking-native-v3/result.json",
+      "passed": 70,
+      "failed": 4,
+      "sourceStable": true,
+      "cleaned": true,
+      "cause": "Reservation-release guard still required schema1. Audited every inventoried operation-version predicate, then extended only pending schema2 cancellation; no reschedule2 or generic bypass."
+    },
+    {
+      "path": ".local/amended-booking-native-v4/result.json",
+      "passed": 74,
+      "failed": 0,
+      "sourceStable": true,
+      "cleaned": true,
+      "cause": "Complete corrected candidate passed; finalv5 adds the explicit line/document discount regression with unchanged product SQL."
+    }
+  ],
+  "ownerPreview": {
+    "source": "94acb9304602dfcff3466a641e94c125004582d3",
+    "publicHead": "07311f85fe8df407f2396019e1237e67c7b33581",
+    "schema": 52,
+    "ownerApplied": false,
+    "acceptanceEnabled": false,
+    "version2BookingEnabled": false,
+    "health": "Both endpoints already responding at final check",
+    "realDataReady": false,
+    "physicalPhoneCheck": "owner-deferred"
+  },
+  "newServiceSpend": 0
+}

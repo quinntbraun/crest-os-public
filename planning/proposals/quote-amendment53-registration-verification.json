@@ -1,0 +1,1020 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-11-05T05:18:13.894Z",
+  "scope": "Registered53 synthetic acceptance, current booking/cancellation, private included-source records and reopened Draft integration preparation",
+  "testedCheckoutHead": "48861e4ffbc3f56dcdec20feeb4ebf19e441225b",
+  "sourceFiles": [
+    {
+      "path": "supabase/migration-checksums.json",
+      "bytes": 10070,
+      "sha256": "033199a5f2e528f629799cdba48901bf2a4687df1eea3166b0cf7bfcf5ec3c67"
+    },
+    {
+      "path": "supabase/migrations/20261104180000_quote_amendment_acceptance.sql",
+      "bytes": 424683,
+      "sha256": "5ecdf7ecab6563d908ae87fd69d59308241596efca7ffabfd289f01d10f39a1c"
+    },
+    {
+      "path": "planning/SECURITY_EXPORT_COVERAGE.json",
+      "bytes": 36920,
+      "sha256": "6a53ee21d999cc3761fc04dfce57e747c56cdb38b0111290b23888a091791d9e"
+    },
+    {
+      "path": "planning/QUOTE_AMENDMENT53_REGISTRATION.json",
+      "bytes": 3935,
+      "sha256": "6651bdc9c7774937807dd45697daa322d28c485a7a8a52a9f2e35dc8b8067460"
+    },
+    {
+      "path": "tests/integration/quote-amendment-auth.test.mjs",
+      "bytes": 106429,
+      "sha256": "ba3150803a5154453eda9a2c91b9091f8c2462df39e2cb389ab958dc868bda28"
+    },
+    {
+      "path": "tests/integration/quote-amendment-acceptance-auth.test.mjs",
+      "bytes": 208,
+      "sha256": "b30c43a035b11db0939e33062f45978c9575f89be8501952b6be8b07ffc759e6"
+    },
+    {
+      "path": "tests/integration/quote-amendment-acceptance-storage.test.mjs",
+      "bytes": 188242,
+      "sha256": "515a728ed27912ec55ef0d4812db2b319c3ad2a7466f453b1a9d88ce344a66db"
+    },
+    {
+      "path": "tests/integration/quote-amendment52-candidate.test.mjs",
+      "bytes": 14587,
+      "sha256": "40346bce9b264b01d44704fce65daef38a152dc83ebd1dd3e55e3e5b88bb5c29"
+    },
+    {
+      "path": "tests/integration/quote-amendment53-candidate.test.mjs",
+      "bytes": 15149,
+      "sha256": "102a8310fbbc7802797fcc4c6ac647a14c29b2929a00d16dbbf9b9a3702e7073"
+    },
+    {
+      "path": "tests/support/recovery-drill.mjs",
+      "bytes": 29408,
+      "sha256": "38c9be255a7216bf841680bffa9dbfd2e1d4212ec12e453c4b47b1066bf942a1"
+    },
+    {
+      "path": "package.json",
+      "bytes": 15976,
+      "sha256": "560b6c2f28c2c2be0a07d743111391ab29abcf0f9a650169d69dd7c5e0c176d0"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 23316,
+      "sha256": "b6f4d7749baa4f5c0d09e226c0e89a6be04bd9062c740de7f01b92f85588cd5c"
+    },
+    {
+      "path": "release/compatibility.json",
+      "bytes": 200,
+      "sha256": "a4204dfcee69d6a12b888c797455609bf6aaaa1bb421bc2ab61b462fe27aced2"
+    },
+    {
+      "path": "tests/support/registered52-compatibility.json",
+      "bytes": 200,
+      "sha256": "2e6e962ece0ba28c3026783f2390f7e29412b33008c33293b1267a750098baf6"
+    },
+    {
+      "path": "tests/unit/quote-amendment53-adoption.test.ts",
+      "bytes": 3613,
+      "sha256": "bb32f9ef42f0139eeb7703dca5e818b6ceadce532a9e0b9621452946e8ea945d"
+    },
+    {
+      "path": "tests/unit/quote-amendment52-adoption.test.ts",
+      "bytes": 4261,
+      "sha256": "cf020c2ca9f4fd29563ca235f7fc9eae4e6c704454b8c11867d6eed4c79214d3"
+    },
+    {
+      "path": "tests/unit/owner-expenses-adoption.test.ts",
+      "bytes": 4500,
+      "sha256": "a56494a429adcef3fe634d6524881001b8371aa589a19817cac165c020ee1c27"
+    },
+    {
+      "path": "scripts/synthetic-workspace.mjs",
+      "bytes": 15919,
+      "sha256": "466fbe439d4aa55b1ddbc7d16d2146bcc12b5b04bab25976d587ceda35f6bf19"
+    },
+    {
+      "path": "scripts/synthetic-phone-preview.mjs",
+      "bytes": 3329,
+      "sha256": "9c9ab40dcb36c4bac28cd78865bcc3db85886f6ada15024438a8d1580677b0f4"
+    },
+    {
+      "path": "tests/support/source-export-browser-fixture.mjs",
+      "bytes": 18774,
+      "sha256": "a5cb509e51463621a87be1d44f3054c2dc35bb33c44d3f783d6ba52e74408b44"
+    },
+    {
+      "path": "src/app/quotes/amendments/review-and-sharing.tsx",
+      "bytes": 5427,
+      "sha256": "bc3bab2b19f4d16c494db3a9a42e6ed171615772e44d743938baf28ca9ce109f"
+    },
+    {
+      "path": "tests/integration/quote-amendment-acceptance-product-browser.test.mjs",
+      "bytes": 29290,
+      "sha256": "fa08c5359364e12407fb86c5642eb36f5a8cafda2bb2693085bb47b394e37fdc"
+    },
+    {
+      "path": "tests/integration/quote-amendment-reopening-auth.test.mjs",
+      "bytes": 225,
+      "sha256": "188d2b4d25d020f20d748eb5fa10564ecf1d34a20c0cd66afe058e78ae68e5b3"
+    },
+    {
+      "path": "src/app/quotes/amendments/workspace.tsx",
+      "bytes": 9468,
+      "sha256": "a8687b07893487f0027483247a4a9cc62c13046e233d5fb3243ca9dd90f7b11a"
+    },
+    {
+      "path": "src/app/quotes/quote-amendment-document.tsx",
+      "bytes": 12409,
+      "sha256": "21638583b8e13a5106ca974e8f85c8218686635baeea406d9e3193346a2d081e"
+    },
+    {
+      "path": "tests/unit/quote-amendment-document.test.ts",
+      "bytes": 8362,
+      "sha256": "b71c921ecbcdb45c368d0ceab9f562bbd4877e8f1ed63bf6ffcd1304ae186a2b"
+    },
+    {
+      "path": "tests/unit/quote-cancellation-presentation.test.ts",
+      "bytes": 4266,
+      "sha256": "808d3af8047deac17f6cb927caefb2668f85cda4b5f9acc915c0d6be731bcf3c"
+    },
+    {
+      "path": "src/app/schedule/new/booking.tsx",
+      "bytes": 25042,
+      "sha256": "6e6b8db2bd394beed9d68d4ee7c268da7df5c187608e66718bd59bab2c80d543"
+    },
+    {
+      "path": "tests/support/real-auth-service.mjs",
+      "bytes": 9182,
+      "sha256": "ecfc1f132c5db4ae9f0c7d48498217d9446b9350c0d96d64044bc51ecb9d3b75"
+    },
+    {
+      "path": "tests/support/real-auth-diagnostics.mjs",
+      "bytes": 1825,
+      "sha256": "2ff74636f9fde2ba42a734b5b40691d3d4078b19bb26116379f6f8905b039a1e"
+    },
+    {
+      "path": "tests/unit/real-auth-diagnostics.test.ts",
+      "bytes": 2095,
+      "sha256": "08f17f43abbeee84baa659bfac0bd23929bcc28c08d275c97ff71a63b7298980"
+    },
+    {
+      "path": "src/client/amendment-acceptance-planning.ts",
+      "bytes": 10033,
+      "sha256": "7120eafc278d08fb01222a5eb62db4fb78e3c9f37fd32958fed04e71522e77cf"
+    },
+    {
+      "path": "tests/unit/amendment-acceptance-planning.test.ts",
+      "bytes": 8067,
+      "sha256": "5b2c53591356c4ced2c3c2c9d5553d2e733d1f4718b2f6dddb0cec6fc0d71cf5"
+    },
+    {
+      "path": "tests/unit/amendment-acceptance-fixture.ts",
+      "bytes": 4573,
+      "sha256": "8f42022761c450f587cae87e2949ac7ca7a474a2e82c5f27e30f280f647ab821"
+    },
+    {
+      "path": "tests/integration/recovery-drill.test.mjs",
+      "bytes": 62127,
+      "sha256": "f2d1cbf0c0f3019ab7ece48a920c6f12ed675a9572614600dcea9a192422431f"
+    },
+    {
+      "path": "src/app/workspace-home.tsx",
+      "bytes": 10209,
+      "sha256": "272e5c16a6ac317eebed569bd5de01d753de11db1b2437c5bb3fd934da7a3b02"
+    },
+    {
+      "path": ".github/workflows/quote-commercial-browser.yml",
+      "bytes": 4448,
+      "sha256": "81806faf87cb57cbe9b5976c770a97608c169f4ca7f08c252c2df841a8af5600"
+    },
+    {
+      "path": "scripts/run-browser-group.mjs",
+      "bytes": 2178,
+      "sha256": "a3a4c91036658e58e334c465248eaa91de67b918925624c05e88a4836928a079"
+    },
+    {
+      "path": "scripts/verify-ci-results.mjs",
+      "bytes": 194,
+      "sha256": "5a0ec9445cb69da1f83b4d14cebe3eee1e8ab4e39d7c317092cde670179f1958"
+    },
+    {
+      "path": "src/tooling/browser-groups.ts",
+      "bytes": 2164,
+      "sha256": "d7532c37858e2edde2d315a436c276f8ea080a158e73f536784e66656dbe8c17"
+    },
+    {
+      "path": "src/tooling/ci-results.ts",
+      "bytes": 1103,
+      "sha256": "cbedc4cd724b4bd4cf0a18b046842f2f72a99905d2f8509c923ed633cc4f9e84"
+    },
+    {
+      "path": "tests/unit/browser-groups.test.ts",
+      "bytes": 2675,
+      "sha256": "4e2229f4c71ea0d8904aacf276073ef55ed88cfed0d4c58414d635dd1aa39d76"
+    },
+    {
+      "path": "tests/unit/ci-results.test.ts",
+      "bytes": 2122,
+      "sha256": "96a92ea5b703562d6285a69e0626293ff76dfccc157864d2f1a3b844e4cdf0de"
+    },
+    {
+      "path": "tests/integration/quote-browser-response.test.mjs",
+      "bytes": 7221,
+      "sha256": "2427114dfd6ed6900a4b85394ab64a5b22095798b2e2860231b8083a7f34248b"
+    },
+    {
+      "path": "tests/support/quote-browser-response.mjs",
+      "bytes": 2661,
+      "sha256": "7edaaf7bb38174f15ae8c858e51dcab13b2fc6119e7be4cf6d238ca85e37eeb2"
+    },
+    {
+      "path": "tests/integration/quote-commercial-browser.test.mjs",
+      "bytes": 36147,
+      "sha256": "c142b563da888013b8b416867d2c19be71e1b79ecbf770a841fe8a5df784ae99"
+    },
+    {
+      "path": "src/app/quotes/quotes.tsx",
+      "bytes": 28419,
+      "sha256": "6e51c5c2086a3332a7f6371f1a4c7a82a4bded2afb1ad14f20c8a218c85f3c06"
+    }
+  ],
+  "repositorySchema": 53,
+  "ownerSchema": 52,
+  "ownerApplied": false,
+  "fullReleasePassed": false,
+  "currentSourceHostedCIPassed": false,
+  "realCrestUseReady": false,
+  "completeV1": false,
+  "completeCrestExport": false,
+  "completeBackup": false,
+  "implementation": [
+    "Exact append-only12-body migration; frozen52 compatibility remains explicit",
+    "Ordinary/cancellation acceptance and original recovery in the genuine test app; current-version visits and reopened paid/complimentary Draft",
+    "Accepted document wording, stale-parent notice and booking label association corrected",
+    "Cancelled allocation planner now retains assigned/completed portions only; old cancelled plans/history remain unchanged; explicit reallocation required for active new work",
+    "Home no longer lists accepted quote amendments as unfinished; other unfinished V1 capabilities remain explicit."
+  ],
+  "verification": {
+    "sourceGates": {
+      "startedAt": "2026-11-04T22:04:18.808Z",
+      "ownerPreviewUnchanged": true,
+      "steps": [
+        {
+          "name": "units",
+          "status": "passed",
+          "log": ".local/registered53-units-v7.log",
+          "startedAt": "2026-11-04T22:04:18.810Z",
+          "exitCode": 0,
+          "finishedAt": "2026-11-04T22:04:45.810Z"
+        },
+        {
+          "name": "types",
+          "status": "passed",
+          "log": ".local/registered53-types-v7.log",
+          "startedAt": "2026-11-04T22:04:45.811Z",
+          "exitCode": 0,
+          "finishedAt": "2026-11-04T22:04:52.198Z"
+        },
+        {
+          "name": "lint",
+          "status": "passed",
+          "log": ".local/registered53-lint-v7.log",
+          "startedAt": "2026-11-04T22:04:52.199Z",
+          "exitCode": 0,
+          "finishedAt": "2026-11-04T22:05:25.571Z"
+        },
+        {
+          "name": "build",
+          "status": "passed",
+          "log": ".local/registered53-build-v7.log",
+          "startedAt": "2026-11-04T22:05:25.572Z",
+          "exitCode": 0,
+          "finishedAt": "2026-11-04T22:05:57.186Z"
+        },
+        {
+          "name": "server",
+          "status": "passed",
+          "log": ".local/registered53-server-v7.log",
+          "startedAt": "2026-11-04T22:05:57.187Z",
+          "exitCode": 0,
+          "finishedAt": "2026-11-04T22:05:57.453Z"
+        }
+      ],
+      "unitTests": 8165,
+      "unitFailures": 0,
+      "passed": true,
+      "finishedAt": "2026-11-04T22:05:57.478Z"
+    },
+    "registeredUpgrade": {
+      "report": ".local/registered53-upgrade-v1/result.json",
+      "passed": 7,
+      "scope": "Exact unchanged registered SQL/registry; independent encrypted52/current53 restore of96 covered tables and24 included-domain source tables. Does not verify later UI/planner changes."
+    },
+    "serialGenuine": {
+      "report": ".local/registered53-auth-v6/result.json",
+      "passed": 18,
+      "total": 20,
+      "failed": 2,
+      "sourceStable": true,
+      "ownedCleaned": true,
+      "failures": [
+        "Test-user setup bridge503",
+        "Existing session400 during revised visit fixture setup"
+      ],
+      "resolved": false
+    },
+    "focusedReproduction": {
+      "report": ".local/registered53-auth-focus-v1/result.json",
+      "passed": 2,
+      "total": 2,
+      "sourceStable": true,
+      "ownedCleaned": true,
+      "serviceEvents": [],
+      "scope": "Previously failing stories passed in isolation before final planner fix; does not override full20 failure"
+    },
+    "browser": {
+      "chromium": ".local/registered53-browser-v10/result.json",
+      "webkit": ".local/registered53-webkit-v6/result.json",
+      "passed": false,
+      "chromiumObserved": "Genuine sign-in, accepted amendment/save/reload, private ZIP and actual revised booking/separate visit cancellation passed before exposing cancelled-allocation planner defect.",
+      "webkitObserved": "Genuine accepted amendment/read and four-width captures; latest run interrupted after Home wait. Priorv5 downloaded private ZIP and booked current scope.",
+      "postPlannerFixWholeJourneyVerified": false,
+      "actualPhysicalPhone": false,
+      "ownerPhoneCheckDeferred": true,
+      "diagnostics": "Finite test step bounds, actual response/history waits and two animation-frame capture settling; no mutation retries or increased app limits."
+    },
+    "regression": {
+      "focusedPlannerAndPrivacy": 19,
+      "plannerNewCases": 4,
+      "fullUnits": 8165,
+      "failed": 0,
+      "skipped": 0
+    },
+    "retainedAuthCleanup": ".local/registered53-webkit-v6-auth-cleanup.json",
+    "ci406Diagnostic": {
+      "publicSource": "6f91b5338cd8eb9a06b8615df2a6799f760bb277",
+      "fullRun": 41918388720,
+      "expenseRun": 41918388717,
+      "expensePassed": 117,
+      "expenseTotal": 118,
+      "failure": "Pending-receipt capture correctly refused, but successful coverage phase remained the failure label instead of snapshot.",
+      "correction": "Reset stage to snapshot after coverage succeeds. Actual coverage checks, pending-receipt refusal, empty output directory and independent database/object restore assertions unchanged.",
+      "nativeReport": ".local/registered53-expense-recovery-v1/result.json",
+      "nativePassed": 1,
+      "sourceStable": true,
+      "ownedCleaned": true,
+      "affectedLintPassed": true,
+      "newFullCIPassed": false,
+      "sourceGateScope": "8165 units/types/full lint/build were on73a01d4 before this test-support-only correction. This helper has final affected lint and actual combined recovery proof; fresh full CI remains required."
+    },
+    "currentSchemaRecovery": {
+      "report": ".local/registered53-current-recovery-v1/result.json",
+      "passed": 37,
+      "total": 37,
+      "failed": 0,
+      "skipped": 0,
+      "sourceStable": true,
+      "ownedCleaned": true,
+      "registeredSchema": 53,
+      "sourceTables": 68,
+      "requiredColumns": 1058,
+      "excludedColumns": 10,
+      "physicalColumns": 1068,
+      "allThreeNewColumnsIndividuallyOmissionTested": true,
+      "wrong52LabelRejected": true,
+      "scope": "Actual encrypted source-loss recovery in fresh process and separate cluster, exact schema/grants/table inventory and retained operational/customer/history/object facts. Frozen52 profile/candidate checks unchanged. Not complete production recovery or real-use acceptance."
+    },
+    "ci407Diagnostic": {
+      "publicSource": "cebe54ed7e13a7ac835ffd2de6af791e4b4d0e9f",
+      "run": 41919671988,
+      "expense": 41919671954,
+      "expensePassed": true,
+      "providerEvidencePassed": true,
+      "failure": "General current-schema recovery still expected52 and1065 columns although actual recovery correctly restored53.",
+      "correction": "Explicit53/1068-column current expectations, all three new-column omission checks and wrong52-label refusal. No restore/coverage verifier or frozen52 assertion weakened.",
+      "currentNativePassed": 37,
+      "newFullCIPassed": false
+    },
+    "focusedBrowserWorkflow": {
+      "checkedAt": "2026-11-04T22:11:16.947Z",
+      "parser": "existing local yaml2.8.1",
+      "addedDependencies": 0,
+      "permissionsUnchanged": true,
+      "databaseAndEnvironmentUnchanged": true,
+      "fullReleaseWorkflowUnchanged": true,
+      "originalThreeCommercialSuitesRetained": true,
+      "newGenuineAmendmentJourneyInBothEngines": true,
+      "matrixJobInstances": 2,
+      "jobDeadlineMinutes": 15,
+      "failFast": false,
+      "artifactNamesDoNotCollide": true,
+      "successScreenshotGlobsOnly": true,
+      "scope": "Early actual commercial/amendment feedback on separate owned Linux jobs; does not replace any full CI, authorization, accounting, recovery or release gate.",
+      "actualExecutionPassed": false
+    },
+    "focused408": {
+      "source": "df27ba6f99ec665617118c6a26169002120dcd96",
+      "run": 41923323514,
+      "amendmentJob": 126901152095,
+      "commercialPassed": true,
+      "enginesReachedAcceptedCancellationAndLostReplyRecovery": [
+        "chromium",
+        "webkit"
+      ],
+      "journeysPassed": 0,
+      "total": 2,
+      "failure": "Final reopened Draft test locator matched both lines complimentary-reason controls.",
+      "correction": "Scope the input to Proposed line2, retain blank paid-line reason assertion and assert the exact saved complimentary reason after reload. No application or existing journey check removed.",
+      "fullReleasePassed": false
+    },
+    "focused409": {
+      "source": "2e9c2c149dd0dc2b50bc792cbc4fa3235cea07ff",
+      "run": 41925331796,
+      "amendmentJob": 126908115249,
+      "journeysPassed": 0,
+      "total": 2,
+      "enginesReachedAcceptedCancellationAndLostReplyRecovery": [
+        "chromium",
+        "webkit"
+      ],
+      "failure": "Test expected an empty reason control on a paid line after progressive validation deliberately removed that unused control.",
+      "correction": "Assert paid-line reason is absent in UI and NULL in actual committed items; retain exact complimentary reason UI reload and durable-row assertions for the zero-price line. Product behavior and validation unchanged.",
+      "fullReleasePassed": false
+    },
+    "focused410": {
+      "source": "7d28b0e43e0d33c6b4901e8650088b2ab1fd52f9",
+      "run": 41927198861,
+      "amendmentJob": 126914572236,
+      "commercialPassed": true,
+      "expensePassed": true,
+      "journeysPassed": 0,
+      "total": 2,
+      "primaryFailureResolved": false,
+      "failure": "Unused response waiters rejected after the browser closed, masking the initial Chromium command failure and interrupting fixture cleanup. The next engine correctly refused leftover roles.",
+      "correction": "Observe both waiter rejections immediately while retaining their normal failing awaits. Actual Node regression fails on the old helper and passes on the corrected helper for HTTP503 and primary click failure. Fixed-category status diagnostics retain at most eight failures, with no paths, bodies, IDs or credentials. The original primary command cause still requires the next genuine run.",
+      "regression": {
+        "checkedAt": "2026-11-04T22:49:05.636Z",
+        "scope": "Test-only command waiter failure/cleanup regression, not product authentication or database proof",
+        "beforeSourceCommit": "202bbdf411f0c6b59b7318dacb3ddf47c04d6554",
+        "beforeFailedOnActualUnhandledRejection": true,
+        "afterPassedOneRegressionCase": true,
+        "faultModes": [
+          "HTTP503 preserves its AssertionError",
+          "Primary click rejection remains the identical error"
+        ],
+        "sourceSha256": "2a8249ccb13829cff07a44646f6ceae54665e6ba051467d83103717cf57e2dcb",
+        "appBehaviorChanged": false,
+        "rolesOrLimitsChanged": false,
+        "mutationRetriesAdded": false,
+        "finalSourceCheckedAt": "2026-11-04T22:54:31.913Z",
+        "affectedLintPassed": true
+      },
+      "rolesOrLimitsChanged": false,
+      "mutationRetriesAdded": false,
+      "fullReleasePassed": false
+    },
+    "focused411": {
+      "source": "11ee0ddf35df02b39d6b2c006941c815be588093",
+      "run": 41929470826,
+      "amendmentJob": 126922384994,
+      "regressionPassed": 1,
+      "journeysPassed": 0,
+      "total": 2,
+      "enginesReachedReopenedDraftDurableRows": [
+        "chromium",
+        "webkit"
+      ],
+      "paidAndComplimentaryRowsExact": true,
+      "fixtureCleanupCompleted": true,
+      "prior410PrimaryFailureReproduced": false,
+      "failure": "Last UI assertion searched for Proposed line2 inside the intentionally collapsed saved work-line disclosure. Both engines had already verified exact committed paid and complimentary rows.",
+      "correction": "Explicitly open the saved Line2 summary before asserting its accessible complimentary-reason value. Retain all real-MFA/API/database, history, private export, revised booking, cancellation, lost-reply recovery and read/reload assertions. Product behavior unchanged.",
+      "affectedLintPassed": true,
+      "waiterRegressionPassed": 1,
+      "newFullReleasePassed": false
+    },
+    "current412": {
+      "source": "a79658246773ad259326b53f1512ef2b9b33200d",
+      "fullRun": 41930964701,
+      "foundationJob": 126937416499,
+      "databasePassed": true,
+      "providerPassed": true,
+      "genuineAuth": {
+        "passed": 277,
+        "failed": 0,
+        "skipped": 0
+      },
+      "completeBrowserJourneys": {
+        "passed": 2,
+        "total": 2,
+        "engines": [
+          "chromium",
+          "webkit"
+        ],
+        "regressionPassed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "commercialAndExpenseFocusedPassed": true,
+      "fullReleasePassed": false,
+      "storageCases": {
+        "passed": 125,
+        "total": 126
+      },
+      "failure": "Retained construction fixture has ledger52 plus proposed added columns. It invoked default backupDatabase, which now expects registered53 and correctly refused the ledger before the intended legacy52 coverage check.",
+      "correction": "Use explicit backupLegacy52Database for this frozen52 wrong-physical-schema test. Coverage refusal and empty output directory assertions, recovery implementation, current53 checks, migrations and all product behavior unchanged.",
+      "focusedNative": {
+        "report": ".local/registered53-frozen52-refusal-v2/result.json",
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "sourceStable": true,
+        "ownedCleaned": true,
+        "scope": "Real52 construction install, added-column refusal with empty directory, and independent original encrypted52 restore. Does not establish complete126 pass."
+      },
+      "interruptedNative": {
+        "report": ".local/registered53-frozen52-refusal-v1/result.json",
+        "completedPassingSubtests": 68,
+        "completeReport": false,
+        "complete126Passed": false,
+        "sourceStable": true,
+        "ownedParentCleaned": true,
+        "orphanCleanup": ".local/registered53-frozen52-refusal-v1/orphan-cleanup.json"
+      },
+      "earlyIntegrityWorkflow": {
+        "checkedAt": "2026-11-05T00:25:07.971Z",
+        "sourceSha256": "81806faf87cb57cbe9b5976c770a97608c169f4ca7f08c252c2df841a8af5600",
+        "existingParser": "yaml2.8.1",
+        "addedDependencies": 0,
+        "matrixSuites": 3,
+        "originalCommandsRetained": true,
+        "permissionsServiceEnvironmentRunnerConcurrencyUnchanged": true,
+        "jobDeadlineMinutes": 15,
+        "fullReleaseWorkflowUnchanged": true,
+        "nativeSuiteRunsAllThreeFilesWithoutFilter": true,
+        "browserSuitesBothRetained": true,
+        "screenshotUploadsBrowserSuitesOnly": true,
+        "actualNewCIExecutionPassed": false,
+        "requirement": "Current412 full release discovered a stale frozen52 test profile after early browser checks passed; expose existing acceptance-storage/current-upgrade/recovery assertions in early feedback.",
+        "completionCriterion": "All170 existing native cases and both browser suites succeed in independent focused jobs, followed by all unchanged full release gates."
+      },
+      "newSourceFullCIPassed": false
+    },
+    "current413": {
+      "source": "a87b2dfb04777e1d5e71c71ee721ece8caab4da0",
+      "focusedRun": 41941384827,
+      "integrityJob": 126962777608,
+      "integrityPassed": 170,
+      "integrityFailed": 0,
+      "integritySkipped": 0,
+      "amendmentJob": 126962777959,
+      "amendmentCasesPassed": 2,
+      "amendmentCasesTotal": 3,
+      "webkitCompleteJourneyPassed": true,
+      "chromiumCompleteJourneyPassed": false,
+      "failure": "Chromium response.json Network.getResponseBody reported no data for a response resource, at review submit; the helper waited for click completion before reading the already received command response.",
+      "correction": "Consume and validate the command response as soon as its waiter resolves, while the action is still completing. Await the same receipt normally; retain status/state/fresh-read/UI assertions, early rejection observation and cleanup. No mutation retry or app/policy change.",
+      "regression": {
+        "checkedAt": "2026-11-05T00:41:28.585Z",
+        "scope": "Actual test helper sequencing regression, not a substitute for genuine browser/Auth/DB execution",
+        "beforeSourceCommit": "4df42e89bad3673af8ec1d65494c80e5fd428904",
+        "beforeFailedOnLateBodyRead": true,
+        "afterFocusedRegressionsPassed": 2,
+        "afterFailed": 0,
+        "afterSkipped": 0,
+        "sourceSha256": "09a0b66c2c2b7f11e8c2e53036d883ce2fd627de89193ea89b4319a087ffc152",
+        "mutationRetriesAdded": false,
+        "appOrSecurityPolicyChanged": false,
+        "normalStatusStateAndReadAssertionsRetained": true
+      },
+      "newCurrentSourceBrowserOrFullReleasePassed": false
+    },
+    "current414Release": {
+      "source": "c0daed37fcc46c58e75fd665b6e6dcd0a75ade95",
+      "run": 41943366813,
+      "foundationJob": 126976950113,
+      "conclusion": "cancelled",
+      "verifiedAnnotation": "The job has exceeded the maximum execution time of 1h15m0s",
+      "databaseProviderAuthPassed": true,
+      "genuineAuthCases": 277,
+      "allEarlyFocusedJobsPassed": true,
+      "earlyIntegrityCases": 170,
+      "completeGenuineBrowserJourneys": 2,
+      "browserHelperRegressions": 2,
+      "fullRetainedBrowserCases": 301,
+      "browserFailed": 0,
+      "browserSkipped": 0,
+      "containerStepIncomplete": true,
+      "releaseArtifactNotProduced": true,
+      "fullReleasePassed": false,
+      "ownerUpgraded": false
+    },
+    "requiredBrowserPartition": {
+      "verification": {
+        "checkedAt": "2026-11-05T02:31:37.370Z",
+        "workflowSha256": "b6f4d7749baa4f5c0d09e226c0e89a6be04bd9062c740de7f01b92f85588cd5c",
+        "sourceBefore": "38f1a3cf4c1348901fe9a67ce64e43d048849b01",
+        "reason": "Full414 source had all301 retained browser checks pass, then exceeded the verified75-minute job deadline during container checks. Retrying the same serial lifetime would retain this measured bottleneck.",
+        "browserFiles": 29,
+        "groups": {
+          "crm": {
+            "files": 5
+          },
+          "intake": {
+            "files": 5
+          },
+          "commercial": {
+            "files": 4
+          },
+          "amendments": {
+            "files": 2
+          },
+          "schedule": {
+            "files": 9
+          },
+          "records": {
+            "files": 4
+          }
+        },
+        "sameFullPackageCommandRetained": true,
+        "allNativeJobsUnchanged": true,
+        "allOtherFoundationStepsUnchanged": true,
+        "threeFoundationBrowserReviewCommandsRetained": true,
+        "oldScreenshotPatternsAllRetainedAcrossGroups": true,
+        "requiredAggregateFailsOnMissingFailedSkippedCancelledBrowserMatrix": true,
+        "mainDeadlineMinutes": 75,
+        "newBrowserGroupDeadlineMinutes": 25,
+        "browserDependencyStepDeadlineMinutes": 6,
+        "containerStepDeadlineMinutes": 15,
+        "permissionsActionsDependenciesUnchanged": true,
+        "parser": "existing yaml2.8.1",
+        "addedPackages": 0,
+        "actualNewLinuxExecutionPassed": false
+      },
+      "measurement": {
+        "source": "c0daed37fcc46c58e75fd665b6e6dcd0a75ade95",
+        "run": 41943366813,
+        "job": 126976950113,
+        "browserCases": 301,
+        "browserFailures": 0,
+        "browserSkipped": 0,
+        "serialBrowserStartedAt": "2026-11-05T01:19:51.8757407Z",
+        "serialBrowserFinishedAt": "2026-11-05T02:11:59.8140433Z",
+        "serialBrowserSeconds": 3127.938,
+        "verifiedTimeoutMinutes": 75,
+        "jobStartedAt": "2026-11-05T01:01:40Z",
+        "jobCompletedAt": "2026-11-05T02:17:29Z",
+        "annotation": "The job has exceeded the maximum execution time of 1h15m0s",
+        "groupCaseTime": [
+          {
+            "group": "crm",
+            "files": 5,
+            "measuredCaseSeconds": 430
+          },
+          {
+            "group": "intake",
+            "files": 5,
+            "measuredCaseSeconds": 580
+          },
+          {
+            "group": "commercial",
+            "files": 4,
+            "measuredCaseSeconds": 500
+          },
+          {
+            "group": "amendments",
+            "files": 2,
+            "measuredCaseSeconds": 659
+          },
+          {
+            "group": "schedule",
+            "files": 9,
+            "measuredCaseSeconds": 756
+          },
+          {
+            "group": "records",
+            "files": 4,
+            "measuredCaseSeconds": 182
+          }
+        ],
+        "basis": "Actual top-level test/suite durations mapped to unchanged files; all titles matched uniquely. Group figures exclude fixture/inter-file/install/build overhead and do not promise new CI runtime."
+      },
+      "localGates": {
+        "startedAt": "2026-11-05T02:33:32.595Z",
+        "sourceScope": "CI partition/required aggregate and unit regressions; application/SQL unchanged",
+        "steps": [
+          {
+            "name": "units",
+            "log": ".local/partition415-units.log",
+            "exitCode": 0
+          },
+          {
+            "name": "types",
+            "log": ".local/partition415-types.log",
+            "exitCode": 0
+          },
+          {
+            "name": "lint",
+            "log": ".local/partition415-lint.log",
+            "exitCode": 0
+          },
+          {
+            "name": "build",
+            "log": ".local/partition415-build.log",
+            "exitCode": 0
+          },
+          {
+            "name": "server",
+            "log": ".local/partition415-server.log",
+            "exitCode": 0
+          }
+        ],
+        "passed": true,
+        "ownerPreviewUnchanged": true,
+        "unitCases": 8198,
+        "unitFailed": 0,
+        "finishedAt": "2026-11-05T02:35:24.259Z"
+      },
+      "focusedUnitCases": 75,
+      "focusedUnitFailed": 0,
+      "sourceFilesUnchanged": "All29 existing browser files and their original full package command remain byte-exact; no app/SQL, dependency, access policy, native prerequisite or existing time limit changed.",
+      "currentLinuxMatrixPassed": false,
+      "currentFullReleasePassed": false
+    },
+    "readObserver416": {
+      "previousPublic": "4d703b81df71a87f90982e12a3a0fd29a0a9a131",
+      "previousTree": "4ef864ff5cbe63932f34960cb03d183710625e63",
+      "previousFullRun": 41957103838,
+      "previousFocusedRun": 41957103796,
+      "originalFiveBrowserGroupsPassed": true,
+      "originalFiveGroupsCases": 295,
+      "fullAmendmentGroup": {
+        "job": 127014529049,
+        "passed": 5,
+        "failed": 1,
+        "cancelled": 0,
+        "webkitWholeJourneyPassed": true,
+        "chromiumFailure": "SYNTHETIC_BROWSER_STEP_TIMEOUT_saved_job_history_body after successful booking/history headers"
+      },
+      "focusedAmendment": {
+        "job": 127014528380,
+        "passed": 2,
+        "failed": 1,
+        "cancelled": 1,
+        "chromiumFailure": "Whole600-second test deadline after initial selection; subsequent engine refused uncleared fixture roles"
+      },
+      "correction": "Consume actual read JSON immediately on response resolution, as already required for command receipts. Remove late finished() observers; preserve status/UI/SQL/original receipt assertions and transport pacing. Observe unused promise rejections without turning failures into success.",
+      "regression": {
+        "checkedAt": "2026-11-05T03:00:46.069Z",
+        "before": "0463c2169d9c25a33a3a9ae19b6f5b98fd2e4365",
+        "scope": "Actual browser test helper sequencing; not genuine application/Auth/database proof",
+        "results": [
+          {
+            "name": "before",
+            "exitCode": 1,
+            "oldObserverFailureReproduced": true
+          },
+          {
+            "name": "after",
+            "exitCode": 0,
+            "oldObserverFailureReproduced": false
+          }
+        ],
+        "oldLateCompletionObserverReproduced": true,
+        "newEagerReadPasses": true,
+        "mutationRetryAdded": false,
+        "appOrSQLChanged": false
+      },
+      "focusedHelpersPassed": 3,
+      "focusedHelpersFailed": 0,
+      "affectedLintPassed": true,
+      "appOrSQLChanged": false,
+      "mutationRetriesAdded": false,
+      "raisedLimits": false,
+      "genuineCurrentLinuxPassed": false,
+      "fullReleasePassed": false
+    },
+    "captureObserver417": {
+      "previousPublic": "0857f7991689eb9e8ed4f4f17ebcb84434de09d4",
+      "previousTree": "fc9f6b3d8676ca38f9b8576272dd2a197e23a1ce",
+      "full": 41959236580,
+      "focused": 41959236665,
+      "focusedAmendment": {
+        "job": 127021368044,
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "bothGenuineEnginesComplete": true
+      },
+      "fullAmendment": {
+        "job": 127021368017,
+        "passed": 6,
+        "failed": 1,
+        "skipped": 0,
+        "webkitWholeJourneyComplete": true,
+        "chromiumFailure": "Eager following-read response.json still loses Network.getResponseBody resource during cancellation preparation; immediate body reading alone is insufficient."
+      },
+      "otherFiveBrowserGroupsPassed": true,
+      "nativeIntegrity": 170,
+      "commercialAndExpenseFocusedPassed": true,
+      "correction": "Reuse existing captureQuoteResponse for both the genuine command and following read, buffering each actual server body before returning identical bytes to the browser. Preserve read-after-response check, original650ms pacing, status/receipt/UI/SQL assertions and one write. Cancel unused test observers/routes after primary failure without another request.",
+      "regression": {
+        "checkedAt": "2026-11-05T03:22:43.441Z",
+        "before": "696e3ab6aecf59c33fd4495bd3707d1f30cb2252",
+        "scope": "Actual command observer sequencing with retired page Response bodies; genuine Auth/database journeys remain required",
+        "results": [
+          {
+            "name": "before",
+            "exitCode": 1
+          },
+          {
+            "name": "after",
+            "exitCode": 0
+          }
+        ],
+        "beforeRetiredBodyFailureReproduced": true,
+        "afterSameRequestCapturePasses": true,
+        "localRealHTTPChromiumAndWebkitCases": 4,
+        "allCommandHelperRegressions": 3,
+        "failed": 0,
+        "original650msPacingPreserved": true,
+        "forwardedRequestsPerCommandAndFollowingRead": 2,
+        "writeRequestsPerCommand": 1,
+        "mutationRetryAdded": false,
+        "productionCodeChanged": false
+      },
+      "realHTTPChromiumAndWebkitCases": 4,
+      "commandHelperCases": 3,
+      "affectedLintPassed": true,
+      "appOrSQLChanged": false,
+      "newDependency": false,
+      "mutationRetryAdded": false,
+      "raisedLimits": false,
+      "currentFullBrowserCasesExpected": 304,
+      "currentLinuxPassed": false,
+      "currentFullReleasePassed": false
+    },
+    "preflightObserver418": {
+      "previousPublic": "a95b630523d50c708afc7fb04cee1755730ef490",
+      "previousTree": "b90252e52bc90092b1e4254c6f83df7562ed76f8",
+      "full": 41961490892,
+      "focused": 41961490873,
+      "focusedAmendment": {
+        "job": 127028640063,
+        "passed": 3,
+        "failed": 2,
+        "skipped": 0,
+        "reason": "Capture intercepted the deliberate pre-save recheck; read-after-command guard aborted that precheck, so save was never dispatched and deadline correctly failed."
+      },
+      "correction": "Restore original distinction between pre-save and post-save reads. Explicit request predicate lets the preflight fall through to the unchanged paced route without consuming capture; only the intended post-command read is buffered once. Handler is removed after fulfillment, not while route remains active.",
+      "realHTTPRegression": {
+        "checkedAt": "2026-11-05T03:33:49.474Z",
+        "before": "2fb3ef4bd468ef15185e15f9335b889c4a9de65a",
+        "scope": "Actual Chromium/WebKit HTTP observer regression, not genuine Auth/business database proof",
+        "rows": [
+          {
+            "name": "before",
+            "exitCode": 1,
+            "engineCases": 2
+          },
+          {
+            "name": "after",
+            "exitCode": 0,
+            "engineCases": 2
+          }
+        ],
+        "oldHelperConsumesPreflightAndFailsBothEngines": true,
+        "newHelperPreservesPreflightAndCapturesFollowingRead": true,
+        "exactRequests": [
+          "pre-save read",
+          "one command",
+          "following saved read"
+        ],
+        "writeCount": 1,
+        "retryCount": 0,
+        "bodiesReturnedUnchanged": true,
+        "originalPacingCallbacks": 3,
+        "limitsRaised": false
+      },
+      "localGenuineProduct": {
+        "report": ".local/registered53-browser-preflight418-v1/result.json",
+        "scope": "registered53_genuine_two_engine_product_preflight_aware_capture_four_widths",
+        "startedAt": "2026-11-05T03:36:08.549Z",
+        "finishedAt": "2026-11-05T03:43:11.761Z",
+        "parentCommit": "2fb3ef4bd468ef15185e15f9335b889c4a9de65a",
+        "workingPatchSha256": "619bbd9407775665ba45071b8e1ed24db438179e236b69b318a64a87d87071be",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "engines": [
+          "chromium",
+          "webkit"
+        ],
+        "sourceUnchangedDuringExecution": true,
+        "ownedClusterCleaned": true,
+        "executableTestHashesMatchCurrentSource": true,
+        "documentationUpdatedAfterRun": true,
+        "realDeviceTest": false
+      },
+      "focusedHTTPCases": 4,
+      "focusedCommandCases": 3,
+      "affectedLintPassed": true,
+      "appOrSQLChanged": false,
+      "oneWriteWithPreflightAndFollowingRead": true,
+      "original650msPacingPreserved": true,
+      "mutationRetriesAdded": false,
+      "raisedLimits": false,
+      "currentLinuxPassed": false,
+      "currentFullReleasePassed": false
+    },
+    "retainedCommercial419": {
+      "previousPublic": "59202321dc454b6f03ae28285fdf77c41fa98047",
+      "previousFull": 41963813468,
+      "fullAmendmentPassed": 7,
+      "focusedAmendmentPassed": 5,
+      "genuineAuthPassed": 277,
+      "integrityPassed": 170,
+      "expenseAndFocusedCommercialPassed": true,
+      "fullCommercial": {
+        "job": 127036058103,
+        "passed": 52,
+        "failed": 2,
+        "reason": "WebKit replacement renewal did not show Session verified; form remained signed out. Old test did not directly prove login dispatch."
+      },
+      "localDiagnostics": {
+        "first": ".local/registered53-commercial-renew419-v1/result.json",
+        "firstPassed": 4,
+        "firstFailed": 2,
+        "second": ".local/registered53-commercial-renew419-v2/result.json",
+        "secondFinalSummary": false,
+        "secondSourceStableAndOwnedClean": true,
+        "secondCompletedChromiumOnly": true,
+        "isolatedWebkitBefore": ".local/registered53-commercial-renew419-webkit-v1/result.json",
+        "isolatedPassed": 1,
+        "isolatedFailed": 2,
+        "approvalState": "Review action committed and quote reloaded; approval disabled at assertion and enabled in subsequent screenshot. No operator action or credential fault inferred."
+      },
+      "correction": "Keep original one-shot capture lifecycle for existing consumers; filtered readers alone survive prechecks. Review actions await both actual review/commercial reads and bind family/revision IDs and versions to the committed receipt before the next-action assertion. Renewal awaits completed focused sign-out, validates the actual form, observes one genuine login200 and verifies its HttpOnly/Secure cookie. No retry, application/Auth policy change or raised test limit.",
+      "localGenuine": [
+        {
+          "engine": "webkit",
+          "path": ".local/registered53-commercial-renew419-webkit-v3/result.json",
+          "tests": 3,
+          "passed": 3,
+          "failed": 0,
+          "parentCommit": "48861e4ffbc3f56dcdec20feeb4ebf19e441225b",
+          "workingPatchSha256": "f6b773dad1057751182191673107eb0b03aaf8ff645983aeab8a9be3d1b462c1",
+          "sourceStable": true,
+          "ownedClusterCleaned": true,
+          "startedAt": "2026-11-05T05:02:43.248Z",
+          "finishedAt": "2026-11-05T05:06:35.611Z"
+        },
+        {
+          "engine": "chromium",
+          "path": ".local/registered53-commercial-renew419-chromium-v3/result.json",
+          "tests": 3,
+          "passed": 3,
+          "failed": 0,
+          "parentCommit": "48861e4ffbc3f56dcdec20feeb4ebf19e441225b",
+          "workingPatchSha256": "f6b773dad1057751182191673107eb0b03aaf8ff645983aeab8a9be3d1b462c1",
+          "sourceStable": true,
+          "ownedClusterCleaned": true,
+          "startedAt": "2026-11-05T05:08:02.115Z",
+          "finishedAt": "2026-11-05T05:11:38.775Z"
+        }
+      ],
+      "bothEnginesSameSource": true,
+      "totalActualReplacementCases": 6,
+      "focusedHTTPCases": 4,
+      "focusedCommandCases": 3,
+      "affectedLintPassed": true,
+      "sourceScreenshots": ".local/amendment418-render-review/visual-review.json",
+      "currentFullReleasePassed": false,
+      "businessLogicOrSQLChanged": false,
+      "appCopyChanged": true,
+      "copyCorrection": {
+        "path": "src/app/quotes/quotes.tsx",
+        "reason": "Rendered review exposed a stale quote footer calling delivered confirmed booking unfinished. Point to Schedule and retain the accurate unfinished invoice/payment notice.",
+        "changedAfterNativeRuns": true,
+        "nativeExecutableBehaviorUnchanged": true
+      }
+    }
+  },
+  "delivery": {
+    "acceptedLocal": "94acb9304602dfcff3466a641e94c125004582d3",
+    "public": "07311f85fe8df407f2396019e1237e67c7b33581",
+    "pr": 113,
+    "fullRun": 41753012689,
+    "unchanged": true,
+    "health": ".local/registered53-owner-preview-health.json"
+  },
+  "next": [
+    "Exact-source Linux full CI, both browser journeys and all genuine cases after the planner fix; investigate failures without waiving gates",
+    "Fresh independent prior-schema recovery and immutable accepted source before any owner53 upgrade",
+    "Full V1 field/time/custody/photos/completion/follow-up; finance/reporting/mileage/receipts; complete portability/recovery/import/cutover; Google Calendar"
+  ],
+  "spend": 0,
+  "testedWorkingTree": true
+}

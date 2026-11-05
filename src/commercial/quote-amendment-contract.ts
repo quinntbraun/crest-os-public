@@ -1,15 +1,15 @@
 // Data boundary only. Current parent, scope, membership and epoch are checked
 // again by the trusted transaction; parsing grants no authority or acceptance.
 import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
-import {quoteId,quoteVersion,quoteInputFromSnapshots,parseQuoteCommitted} from './quote-storage-contract.ts';
+import {quoteId,quoteVersion,quoteAmendmentInputFromSnapshots,parseQuoteCommitted} from './quote-storage-contract.ts';
 import type {QuoteCommitted,QuoteReceipt} from './quote-storage-contract.ts';
-import {prepareQuoteReviewContent} from './quote-review-content.ts';
-import type {QuoteReviewContentInput} from './quote-review-content.ts';
+import {prepareQuoteAmendmentContent} from './quote-review-content.ts';
+import type {QuoteAmendmentContentInput} from './quote-review-content.ts';
 import {quoteReviewHash} from './quote-review-contract.ts';
 
 export class QuoteAmendmentContractError extends Error{constructor(){super('QUOTE_AMENDMENT_DATA_INVALID');this.name='QuoteAmendmentContractError';}}
 function check(value:unknown):asserts value{if(!value)throw new QuoteAmendmentContractError();}
-export type QuoteAmendmentDraft=Readonly<{schemaVersion:1;businessId:string;operationId:string;recoveryEpoch:string;familyId:string;revisionId:string;expectedFamilyVersion:string;expectedParentAgreementId:string;expectedParentAgreementVersion:string;expectedParentAcceptedHash:string;content:QuoteReviewContentInput}>;
+export type QuoteAmendmentDraft=Readonly<{schemaVersion:1;businessId:string;operationId:string;recoveryEpoch:string;familyId:string;revisionId:string;expectedFamilyVersion:string;expectedParentAgreementId:string;expectedParentAgreementVersion:string;expectedParentAcceptedHash:string;content:QuoteAmendmentContentInput}>;
 // Opaque recovery identities only. No accepted/proposed content, contact data,
 // hashes, amount, review observation or authentication credential is persisted.
 export type QuoteAmendmentDraftReference=Readonly<{operationId:string;recoveryEpoch:string;familyId:string;revisionId:string;expectedFamilyVersion:string;expectedRevisionVersion:'0';expectedParentAgreementId:string;expectedParentAgreementVersion:string}>;
@@ -26,7 +26,7 @@ export function parseQuoteAmendmentDraft(value:unknown):QuoteAmendmentDraft{
  try{
   check(exact(value,requestKeys)&&value.schemaVersion===1&&quoteId(value.businessId)&&quoteReviewHash(value.expectedParentAcceptedHash));
   reference({operationId:value.operationId,recoveryEpoch:value.recoveryEpoch,familyId:value.familyId,revisionId:value.revisionId,expectedFamilyVersion:value.expectedFamilyVersion,expectedRevisionVersion:'0',expectedParentAgreementId:value.expectedParentAgreementId,expectedParentAgreementVersion:value.expectedParentAgreementVersion});
-  const prepared=prepareQuoteReviewContent(value.content),content=quoteInputFromSnapshots(prepared.customer,prepared.internal);check(content.schemaVersion===2);return Object.freeze({...value,content}) as QuoteAmendmentDraft;
+  const prepared=prepareQuoteAmendmentContent(value.content),content=quoteAmendmentInputFromSnapshots(prepared.customer,prepared.internal);return Object.freeze({...value,content}) as QuoteAmendmentDraft;
  }catch{throw new QuoteAmendmentContractError();}
 }
 export function parseQuoteAmendmentDraftReference(value:unknown):QuoteAmendmentDraftReference{return reference(value);}
@@ -40,9 +40,9 @@ export function quoteAmendmentDraftReference(value:QuoteAmendmentDraft):QuoteAme
 export function bindQuoteAmendmentDraftReceipt(value:unknown,businessId:string,pending:QuoteAmendmentDraftReference,expectedParentAcceptedHash?:string):QuoteAmendmentDraftCommitted{
  try{
   const ref=reference(pending);check(exact(value,['state','operationId','recoveryEpoch','receipt'])&&exact(value.receipt,receiptKeys)&&value.receipt.schemaVersion===3&&quoteReviewHash(value.receipt.parentAcceptedHash));
-  const {parentAgreementId,parentAgreementVersion,parentAcceptedHash,...receipt}=value.receipt;
-  const base=parseQuoteCommitted({...value,receipt:{...receipt,schemaVersion:2}},businessId,ref.operationId);
-  check(base.receipt.schemaVersion===2&&base.recoveryEpoch===ref.recoveryEpoch&&base.receipt.familyId===ref.familyId&&base.receipt.revisionId===ref.revisionId&&base.receipt.familyVersion===(BigInt(ref.expectedFamilyVersion)+1n).toString()&&base.receipt.revisionVersion==='1'&&base.receipt.contentVersion==='1'&&parentAgreementId===ref.expectedParentAgreementId&&parentAgreementVersion===ref.expectedParentAgreementVersion);
+  const {parentAgreementId,parentAgreementVersion,parentAcceptedHash}=value.receipt;
+  const base=parseQuoteCommitted(value,businessId,ref.operationId,'amendment_creation');
+  check(base.recoveryEpoch===ref.recoveryEpoch&&base.receipt.familyId===ref.familyId&&base.receipt.revisionId===ref.revisionId&&base.receipt.familyVersion===(BigInt(ref.expectedFamilyVersion)+1n).toString()&&base.receipt.revisionVersion==='1'&&base.receipt.contentVersion==='1'&&parentAgreementId===ref.expectedParentAgreementId&&parentAgreementVersion===ref.expectedParentAgreementVersion);
   if(expectedParentAcceptedHash!==undefined)check(quoteReviewHash(expectedParentAcceptedHash)&&parentAcceptedHash===expectedParentAcceptedHash);
   return Object.freeze({...base,receipt:Object.freeze({...base.receipt,schemaVersion:3 as const,parentAgreementId,parentAgreementVersion,parentAcceptedHash})}) as QuoteAmendmentDraftCommitted;
  }catch{throw new QuoteAmendmentContractError();}

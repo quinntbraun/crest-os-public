@@ -1,0 +1,129 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-11-04T15:44:31.923Z",
+  "scope": "Disposable coordinator53 package, exact frozen52 compatibility and independently encrypted database/schema/source reconstruction",
+  "testedCheckoutHead": "0095a8afa364b804d067d01d78376038b3cee702",
+  "sourceFiles": [
+    {
+      "path": "tests/support/registered52-migration-checksums.json",
+      "bytes": 9876,
+      "sha256": "2b69990d3bdc8d957207d80055799dfeed8ef3ca6dd871182f6859464888d78f"
+    },
+    {
+      "path": "tests/support/registered52-export-coverage.json",
+      "bytes": 36839,
+      "sha256": "d3c6bb2549a93daad8a1023866626de4398dbdeaabef58f330ad5b9cedd169a6"
+    },
+    {
+      "path": "tests/support/amendment53-export-coverage.json",
+      "bytes": 36920,
+      "sha256": "6a53ee21d999cc3761fc04dfce57e747c56cdb38b0111290b23888a091791d9e"
+    },
+    {
+      "path": "tests/support/quote-amendment53-candidate.mjs",
+      "bytes": 2336,
+      "sha256": "4e72c2a1d94163e88c060e9abcb499d3517f52f62c240c9daedafbc6b03ed5c9"
+    },
+    {
+      "path": "tests/support/recovery-drill.mjs",
+      "bytes": 29237,
+      "sha256": "85a86606a08b812c2553a9a6d5f2c60d707997796dcb91eb67690c0cee694ff8"
+    },
+    {
+      "path": "tests/support/accepted-amendment-fixture.mjs",
+      "bytes": 8653,
+      "sha256": "e10a791c2130595e8002912ca0531ba26b8b86a0e50067268509441dd789ccd5"
+    },
+    {
+      "path": "tests/integration/quote-amendment53-candidate.test.mjs",
+      "bytes": 14785,
+      "sha256": "5194f1592aa7e29a12454ee711e66b79d8c10a703d55ab984f2a73c9bdb9d57b"
+    }
+  ],
+  "ownerApplied": false,
+  "repositoryRegistered": false,
+  "registeredSchema": 52,
+  "candidateSchema": 53,
+  "completeCrestExport": false,
+  "completeBackup": false,
+  "completeV1": false,
+  "package": {
+    "frozenTables": 96,
+    "currentTables": 96,
+    "sourceExactAfterRestore": true,
+    "sourceTables": 24,
+    "agreementVersions": 2,
+    "parts": 12,
+    "candidateSha256": "5ecdf7ecab6563d908ae87fd69d59308241596efca7ffabfd289f01d10f39a1c",
+    "candidateRegistrySha256": "033199a5f2e528f629799cdba48901bf2a4687df1eea3166b0cf7bfcf5ec3c67",
+    "previousRegistrySha256": "2b69990d3bdc8d957207d80055799dfeed8ef3ca6dd871182f6859464888d78f"
+  },
+  "verification": {
+    "candidate": {
+      "path": ".local/amendment53-candidate-native-v9/result.json",
+      "cases": 7,
+      "passed": 7,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "scope": "Byte-exact12 SQL bodies and frozen52 registry; encrypted before-upgrade point; final-stage failure atomic rollback and retained pending-review lock on separately owned cluster; real clean-target coordinator upgrade/replay with existing records; restricted converted-lead paid+complimentary amendment agreement2 and exact original;1058 required source columns; independent52/53 restore with all96 covered tables and full normalized schema/grants exact; restored24-domain source/history records exact with fresh capture metadata excluded. No genuine MFA/browser/device/full release claim."
+    },
+    "affectedCompatibility": {
+      "path": ".local/accepted-source-recovery53-compat-v1/result.json",
+      "cases": 126,
+      "passed": 126,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "scope": "Existing restricted cancellation/reopening/booking/source suite against final recovery helper; held snapshots,49 fictional businesses,24-table logical reimport and retained old profile refusals"
+    },
+    "applicationGates": {
+      "unchangedSince": "0095a8afa364b804d067d01d78376038b3cee702",
+      "priorUnits": 8152,
+      "priorTypes": true,
+      "priorBuild": true,
+      "currentFullLint": true,
+      "finalAffectedLint": true,
+      "scope": "No src/scripts/package/registered migration change; prior application units/types/build retained separately. Full registered53 integration/release has not run."
+    }
+  },
+  "rootCauseAndCorrection": {
+    "defect": "Multi-role RLS policy deparse changed role-list order after alphabetical role recreation; all data restored but exact schema checksum correctly refused",
+    "correction": "Explicit candidate53 encrypted manifest retains closed-role relative creation order; restore validates exact unique role-name permutation before using it. Exact normalized schema verifier is unchanged; frozen52 format unchanged.",
+    "regression": "The independent53 restore reproduces quote-integrity before booking-integrity roles and exact full schema checksum; independent52 restore remains exact."
+  },
+  "diagnostics": [
+    {
+      "runs": "v1-v3",
+      "result": "Fixture isolation corrected: deliberate failed migration retains its required pending-review marker; frozen-prefix directory and global schema roles require independent target/cluster. No coordinator protection changed."
+    },
+    {
+      "runs": "v4-v5",
+      "result": "Retained converted-lead fixture now binds accepted customer and preserves original lead; original lookup uses the dedicated amendment facade. Subsequent failures were dependent on those fixture mistakes; real schema mismatch remained."
+    },
+    {
+      "run": "v6",
+      "result": "Interrupted/timed-out; not accepted. Source stable and main cluster cleaned; separately identified leftover test container cleanup recorded in .local/amendment53-interruption-cleanup.json."
+    },
+    {
+      "run": "v7",
+      "cases": 7,
+      "passed": 6,
+      "failed": 1,
+      "result": "Actual exact schema failure isolated to role-set ordering; retained local schema-only diff."
+    },
+    {
+      "run": "v8",
+      "cases": 7,
+      "passed": 6,
+      "failed": 1,
+      "result": "Schema/rows/grants now exact. Comparison fixture still included newly generated source-capture ID/time/token; final comparison excludes only these envelope values, preserving all saved rows, canonical evidence, record hashes and counts."
+    }
+  ],
+  "remaining": [
+    "Append-only repository53 registration, frozen/current export/history/configuration composition and migration compatibility across all affected profiles",
+    "Clean combined18 genuine normal-app cases; genuine whole-app Linux Chromium/WebKit; full source/security/accounting/recovery/build/container/artifact release gates",
+    "Owner preview remains immutable accepted52/public07311f85/full405. No owner schema/runtime/account/network/MFA change",
+    "Independent production configuration/vault/image/key/session recovery and full business portability are separate incomplete V1 requirements",
+    "Future field/finance/custody live consumption integration;715-column fingerprint alone is not that proof",
+    "Full approved V1 field/time/custody/photos/completion/follow-up, invoices/payments/accounting/reporting/mileage/receipts, full portability/import/cutover and Google Calendar"
+  ]
+}

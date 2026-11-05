@@ -1,0 +1,130 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-11-04T13:52:55.202Z",
+  "scope": "Versioned accepted-amendment commercial/review/booking source capture and closed included-domain graph verification; synthetic logical CSV reconstruction",
+  "testedCheckoutHead": "75a07d1150c4769ab84a820d9b3d6be2d25b9355",
+  "sourceFiles": [
+    {
+      "path": "src/commercial/quote-amendment-review-csv.ts",
+      "bytes": 23216,
+      "sha256": "ccff67c10cb25b887fcd5f0b97912c34c43ca37e48127fd41307ada96b4d4d12"
+    },
+    {
+      "path": "src/commercial/quote-amendment-source-csv.ts",
+      "bytes": 26314,
+      "sha256": "9b6193490efcc7d296913a9bdb6a28746458c50645185226114db4e897e483a6"
+    },
+    {
+      "path": "src/operations/confirmed-booking-source-csv.ts",
+      "bytes": 15703,
+      "sha256": "71d48358ce27ff35d6fb7e061037404fa77f4a65f4822b87c971a5d54d5e5578"
+    },
+    {
+      "path": "tests/integration/quote-amendment-acceptance-storage.test.mjs",
+      "bytes": 188177,
+      "sha256": "85dd628a92b5e4e75d9fe765f83eeb850a1776d5d76550c8bd7943d988c5368f"
+    },
+    {
+      "path": "tests/unit/quote-amendment-source-csv.test.ts",
+      "bytes": 10678,
+      "sha256": "af9b0604b6a70add079688377de4211ecb6d7f71f1a8d146185192c9128d5a3a"
+    },
+    {
+      "path": "planning/proposals/quote-amendment-accepted-source.sql",
+      "bytes": 9404,
+      "sha256": "74d4dc8a8a6c95c376bb21afefe2230671d19e09d313918fd7599537e30bd1dd"
+    },
+    {
+      "path": "src/commercial/quote-amendment-accepted-source.ts",
+      "bytes": 15189,
+      "sha256": "afc4a9a99e1523cb6dcd93b6e92f38d8b0da8085213667de3d6e9710a31bdefd"
+    },
+    {
+      "path": "tests/support/accepted-amendment-source-csv.mjs",
+      "bytes": 7726,
+      "sha256": "add2ac1b831965fb6ec0810888854ebdbd16e2015b05c376ff4fba99bb9cd5f9"
+    },
+    {
+      "path": "tests/support/accepted-amendment-source-fixture.mjs",
+      "bytes": 2766,
+      "sha256": "9a7850eeffcf04eea376f3ae60f63a96c57b1e481be1c5fd859736b6d10f9a52"
+    },
+    {
+      "path": "tests/unit/amended-booking-source.test.ts",
+      "bytes": 3295,
+      "sha256": "faddda3ab86ec27a41af4f57a076ce3967e875a9ddd19c281fa5c592c799e9cf"
+    }
+  ],
+  "ownerApplied": false,
+  "registeredReleaseClaim": false,
+  "completeV1": false,
+  "verification": {
+    "native": {
+      "path": ".local/accepted-source-native-v2/result.json",
+      "cases": 126,
+      "passed": 126,
+      "failed": 0,
+      "sourceStable": true,
+      "ownedClusterCleaned": true,
+      "scope": "112 retained restricted PostgreSQL construction cases plus14 accepted-source cases: export-role-only ACL and RR READ ONLY readers; actual captures from49 synthetic businesses; hashes/counts/history/parent/root/plan/confirmation checks; negative/zero amounts; five-agreement chain; held snapshot and stale-token refusal; runtime unexpected-column refusal; adversarial orphan versions/acceptances and invalid active offer. Not126 distinct app journeys or genuine-MFA cases."
+    },
+    "sourceReconstruction": {
+      "businesses": 49,
+      "tables": 24,
+      "minimumInternalForeignKeys": 40,
+      "maxAgreementChain": 5,
+      "exactValues": true,
+      "sourceUnchanged": true,
+      "independentPostgresqlDatabase": true,
+      "scope": "Logical included commercial/review/booking source tables, reversible CSV and internal links; external customer/actor/catalog closure and full physical/business backup are not claimed"
+    },
+    "units": {
+      "path": ".local/accepted-source-all-units-v2.json",
+      "cases": 8152,
+      "passed": 8152
+    },
+    "typecheck": {
+      "passed": true,
+      "path": ".local/accepted-source-types-final-v3.log"
+    },
+    "lint": {
+      "passed": true,
+      "path": ".local/accepted-source-lint-final-v2.log"
+    },
+    "productionBuild": {
+      "passed": true,
+      "path": ".local/accepted-source-build-final.log"
+    },
+    "browser": {
+      "newRun": false,
+      "reason": "Backend/export-only change; prior reopening component/HTTP evidence remains separate. Whole-app registered53 browser acceptance remains required."
+    }
+  },
+  "design": {
+    "legacyFormatsUnchanged": true,
+    "newProfiles": [
+      "crest.quote-amendment-review.sources.v2",
+      "crest.quote-amendment.sources.v2",
+      "crest.confirmed-booking.sources.v2"
+    ],
+    "acceptanceKindExplicit": true,
+    "planBindingsExplicit": true,
+    "zeroCancellationItemsInvented": false,
+    "negativeDeltasExact": true,
+    "completeCrestExport": false,
+    "completeBackup": false,
+    "newSqlReaders": 3,
+    "newMutationPermissions": false,
+    "newRoles": false,
+    "newPackages": false,
+    "registryMigrations": 52
+  },
+  "remaining": [
+    "Append-only registration53 and complete affected source/history/configuration integration",
+    "Frozen52/current independent encrypted recovery and source reconstruction after restore",
+    "Clean combined18 genuine normal-app cases and whole-app Linux Chromium/WebKit plus all applicable release gates",
+    "Current715-column physical fingerprint is a construction fence, not future finance/custody consumption proof",
+    "Owner preview remains immutable accepted52; physical iPhone check owner-deferred",
+    "Full approved V1 field/time/custody/photos/completion/follow-up, finance/reporting/mileage/receipts, full portability/import/cutover and Google Calendar"
+  ]
+}

@@ -25,6 +25,6 @@ export async function postScheduling(route:SchedulingRoute,body:object,proof:Pro
    if(mutation&&value.error==='RECOVERY_REVIEW_REQUIRED'&&response.status===409)throw new SchedulingClientError('recovery');
    if(mutation&&value.error==='SCHEDULING_SAVE_OUTCOME_UNKNOWN'&&response.status===503)throw new SchedulingClientError('unknown');throw Error();
   }
-  return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding')};
+  return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding'),...route==='workspace'&&response.headers.get('x-crest-amended-scheduling')==='1'?{amendedSchedulingAvailable:true as const}:{}};
  }catch(error){throw error instanceof SchedulingClientError?error:new SchedulingClientError(mutation?(sent?'unknown':'not_submitted'):'unavailable');}
 }

@@ -1,0 +1,94 @@
+{
+  "formatVersion": 1,
+  "scope": "Unregistered amendment acceptance application receipt binding and private authorized command/original lookup; no HTTP route or owner activation",
+  "testedCheckoutHead": "a0036e8520c6c69f69a4ec3440e7b5470dabed42",
+  "uncommittedAtVerification": true,
+  "sourceFiles": {
+    "src/commercial/quote-amendment-acceptance-receipt.ts": "2260389dee95a5582b3acf96454e81ec378f5742cd1e4a845ccf070b3d2687a6",
+    "src/commercial/quote-amendment-directory.ts": "4e4889d80a47c0c64567ff7e3d56334937e8e5661aa1db90321d2e8dedc0c900",
+    "src/commercial/quote-amendment-acceptance-contract.ts": "fb3e35a7a5a42db37e68b89befcfca41cdd58f5044c4adef01f06303eca470d5",
+    "src/commercial/quote-amendment-scope-plan.ts": "fb562f3aa363b20dc56cd303f2d07d5e8bf4c1bc69af90e0e646ff33d12e08cd",
+    "tests/unit/quote-amendment-acceptance-receipt-fixture.ts": "e75f15f9d9884fd6f933cb6ea992ef22a77ab432d5de3cb8562cb100e5583785",
+    "tests/unit/quote-amendment-acceptance-receipt.test.ts": "d0014409ff8bbf967bd195a204807610185748051afbbc06521686d1c993bd1f",
+    "tests/unit/quote-amendment-directory.test.ts": "3680793308bbde093783aab011cc9e9f5ac6af11840e80adf8965944150b5de1",
+    "tests/integration/quote-amendment-acceptance-storage.test.mjs": "ef9417fffb27e97169959444b796fb3e653df576c13d6283c043730e5bdb782d",
+    "planning/proposals/quote-amendment-acceptance-storage.sql": "3b4580242ffa6170e87cc4b895afe7fc0fc39359eff13744d56caa104f4fba9e",
+    "planning/proposals/quote-amendment-acceptance-input.sql": "f0c60495a18f1481a070f1e94ab44dda0035ce293e21c5abaa877051f277982d",
+    "planning/proposals/quote-amendment-acceptance-ledger.sql": "e8f1209e616efe29804260c1b12316580bdd5c508dd465cc3855822401a42427",
+    "planning/proposals/quote-amendment-acceptance-core.sql": "eee4575bab30a1cf82f3ed0945fcfb07607d65ce37610c44146fd8947c7c4232",
+    "planning/proposals/quote-amendment-acceptance-result.sql": "a672c78d09438650103769572aa406b6e093692aae3d7e8a631b1194fdf7904b",
+    "planning/proposals/quote-amendment-acceptance-closure.sql": "000969fdd8b6db7bed3a8a39996c00f27806954c878fdc6ede2dde3fcd1be33a"
+  },
+  "native": {
+    "path": ".local/amendment-acceptance-storage-native-v16/result.json",
+    "tests": 51,
+    "passed": 51,
+    "failed": 0,
+    "skipped": 0,
+    "sourceStable": true,
+    "ownedClusterCleaned": true,
+    "retainedPublicSourceSnapshot": {
+      "directory": ".local\\amendment-acceptance-storage-native-v16\\source-before",
+      "files": 171,
+      "includesPrivateRuntime": false
+    },
+    "logSha256": "c594afd8bd1968efc493f4f84e74993ad89c32f40294978c73d64be62f4e30a4"
+  },
+  "focusedUnits": {
+    "path": ".local/amendment-acceptance-receipt-focused-v2.json",
+    "passed": 122,
+    "failed": 0,
+    "pending": 0,
+    "assurance": "Input/receipt logic and provider/database boundary doubles; not genuine MFA"
+  },
+  "checks": {
+    "typecheck": {
+      "path": ".local/amendment-acceptance-receipt-types-v2.log",
+      "passed": true
+    },
+    "affectedLint": {
+      "path": ".local/amendment-acceptance-receipt-lint-v2.log",
+      "passed": true
+    },
+    "productionBuild": {
+      "path": ".local/amendment-acceptance-receipt-build-v1.log",
+      "passed": true
+    },
+    "canonicalAmendments": 12,
+    "orderedImmutableMigrations": 52,
+    "lockedPackagesAndLicenses": 298
+  },
+  "coverage": [
+    "Every actual positive SQL acceptance now passes the typed application receipt parser, then awaits outer COMMIT; the real deferred-failure case still rolls back after a valid packet",
+    "Original version2 receipt binds after version3 from opaque identity with and without the original request; mismatched recovery epoch refuses",
+    "Exact receipt keys, parent/request identities and versions, retained/new source collections, independent audit counts, dense unique identifiers and immutable returned copies",
+    "Private directory verifies current session access, seals request before provider I/O, uses fixed11-argument command, waits for COMMIT, never retries uncertain outcome and preserves definite conflicts/denial/recovery fence",
+    "Private original lookup uses fixed9-argument read and opaque reference; absence does not release pending identity or authorize a replacement"
+  ],
+  "limitations": [
+    "No acceptance HTTP route or UI, genuine MFA acceptance journey, pending/retirement registry or owner schema/runtime change",
+    "Full cancellation/empty resulting scope, bound-version booking/cancellation and amendment-aware current readers remain unfinished",
+    "Complete amended source reconstruction/export, frozen52/current independent recovery, registered migration and full hosted browser/visual/release gates remain required",
+    "Future field/completed/billed/credited/refunded consumption bounds are not claimed; construction catalog fence is not financial validation"
+  ],
+  "diagnostics": [
+    {
+      "path": ".local/amendment-acceptance-storage-native-v15/result.json",
+      "result": "Stopped before owned cluster creation because Docker pipe access was denied by execution boundary; retained171 public sources; no test result claimed"
+    },
+    {
+      "path": ".local/amendment-acceptance-storage-native-v16/result.json",
+      "result": "Existing specific authorization permitted the same synthetic runner through normal approval; no Docker permission/configuration or test gate change"
+    }
+  ],
+  "ownerPreview": {
+    "source": "94acb9304602dfcff3466a641e94c125004582d3",
+    "publicHead": "07311f85fe8df407f2396019e1237e67c7b33581",
+    "schema": 52,
+    "acceptanceEnabled": false,
+    "ownerApplied": false,
+    "realDataReady": false,
+    "physicalPhoneCheck": "owner-deferred"
+  },
+  "newServiceSpend": 0
+}

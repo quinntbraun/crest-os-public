@@ -7,6 +7,9 @@ import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {prepareVersionedQuoteContent as prepareQuoteContent} from './quote-review-content.ts';
 import {quoteId,quoteVersion,quoteHistoryPageLimit,requireQuoteStorage as check,parseQuoteSave,parseQuoteCommitted,parseQuoteWorkspaceDirectoryPage,parseQuoteHistoryPage} from './quote-storage-contract.ts';
 import type {QuoteSave} from './quote-storage-contract.ts';
+import {parseQuoteCancellationEdit,bindQuoteCancellationEditReceipt,parseQuoteDraftOperationResult} from './quote-cancellation-edit-contract.ts';
+import {prepareQuoteCancellationContent} from './quote-cancellation-content.ts';
+import type {QuoteCancellationEdit} from './quote-cancellation-edit-contract.ts';
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
 import type {createProviderBoundary} from '../security/provider-auth.ts';
 import type {createProviderTokenStore} from '../security/provider-token-store.ts';
@@ -44,9 +47,27 @@ export function createQuoteDirectory(config:SessionDatabaseConfiguration,provide
     if(outcome===null)throw new QuoteDirectoryError('QUOTE_SAVE_DENIED');return outcome;
    }catch(error){if(error instanceof QuoteDirectoryError)throw error;if(error instanceof Error&&error.message==='RECOVERY_REVIEW_REQUIRED')throw new QuoteDirectoryError('RECOVERY_REVIEW_REQUIRED');throw new QuoteDirectoryError(submitted?'QUOTE_SAVE_OUTCOME_UNKNOWN':'QUOTE_SAVE_NOT_SUBMITTED');}
   },
+  async saveCancellation(credential:string,input:QuoteCancellationEdit,signal:AbortSignal){
+   let submitted=false;
+   try{
+    const request=parseQuoteCancellationEdit(input),payload=prepareQuoteCancellationContent(request.content),contentHash=createHash('sha256').update(payload.canonical).digest('hex');
+    const outcome=await authorized(credential,request.businessId,signal,(args,bounded)=>database.commandTransaction(async(query,currentSignal)=>{
+     if(currentSignal.aborted)throw Error();submitted=true;
+     const value=await query('SELECT crest_commands.save_quote_draft($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::integer,$12::uuid,$13::uuid,$14::bigint,$15::bigint,$16::jsonb) AS result',[...args,request.recoveryEpoch,request.operationId,4,request.familyId,request.revisionId,request.expectedFamilyVersion,request.expectedRevisionVersion,{customer:payload.customer,internal:payload.internal,canonical:payload.canonical}]);
+     if(currentSignal.aborted)throw Error();if(exact(value,['state'])&&value.state==='denied')return null;
+     if(exact(value,['state','reason'])&&value.state==='conflict'&&['operation','family','revision','state'].includes(value.reason as string))return new PrivateQuoteValue(Object.freeze({state:'conflict' as const,reason:value.reason as 'operation'|'family'|'revision'|'state'}));
+     if(exact(value,['state','reason','currentFamilyVersion','currentRevisionVersion'])&&value.state==='conflict'&&value.reason==='version'&&quoteVersion(value.currentFamilyVersion,true)&&quoteVersion(value.currentRevisionVersion,true))return new PrivateQuoteValue(Object.freeze({state:'conflict' as const,reason:'version' as const,currentFamilyVersion:value.currentFamilyVersion,currentRevisionVersion:value.currentRevisionVersion}));
+     if(exact(value,['state','familyId','familyVersion','revisionId','revisionVersion','contentHash'])&&value.state==='unchanged'){
+      check(value.familyId===request.familyId&&value.revisionId===request.revisionId&&value.familyVersion===request.expectedFamilyVersion&&value.revisionVersion===request.expectedRevisionVersion&&value.contentHash===contentHash);return new PrivateQuoteValue(Object.freeze({state:'unchanged' as const,familyId:request.familyId,familyVersion:request.expectedFamilyVersion,revisionId:request.revisionId,revisionVersion:request.expectedRevisionVersion,contentHash}));
+     }
+     return new PrivateQuoteValue(bindQuoteCancellationEditReceipt(value,request.businessId,request,contentHash));
+    },bounded));
+    if(outcome===null)throw new QuoteDirectoryError('QUOTE_SAVE_DENIED');return outcome;
+   }catch(error){if(error instanceof QuoteDirectoryError)throw error;if(error instanceof Error&&error.message==='RECOVERY_REVIEW_REQUIRED')throw new QuoteDirectoryError('RECOVERY_REVIEW_REQUIRED');throw new QuoteDirectoryError(submitted?'QUOTE_SAVE_OUTCOME_UNKNOWN':'QUOTE_SAVE_NOT_SUBMITTED');}
+  },
   async lookup(credential:string,input:{businessId:string;operationId:string},signal:AbortSignal){
    try{check(exact(input,['businessId','operationId'])&&quoteId(input.businessId)&&quoteId(input.operationId));const request=Object.freeze({...input});return await authorized(credential,request.businessId,signal,async(args,bounded)=>{
-    const value=await database('SELECT crest_commands.lookup_quote_draft_operation($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid) AS result',[...args,request.operationId],bounded);if(bounded.aborted)throw new Error();return new PrivateQuoteValue(exact(value,['state'])&&value.state==='absent'?Object.freeze({state:'absent' as const}):parseQuoteCommitted(value,request.businessId,request.operationId));
+    const value=await database('SELECT crest_commands.lookup_quote_draft_operation($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid) AS result',[...args,request.operationId],bounded);if(bounded.aborted)throw new Error();return new PrivateQuoteValue(exact(value,['state'])&&value.state==='absent'?Object.freeze({state:'absent' as const}):parseQuoteDraftOperationResult(value,request.businessId,request.operationId));
    });}catch{throw new QuoteDirectoryError('QUOTE_REQUEST_FAILED');}
   },
   async list(credential:string,input:{businessId:string;search:string;afterId:string|null;pageSize:number},signal:AbortSignal){

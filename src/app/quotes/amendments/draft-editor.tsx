@@ -12,13 +12,13 @@ import {QuoteDocument} from '../quote-document';
 
 type Controller=ReturnType<typeof createQuoteAmendmentWorkspace>;
 export function AmendmentDraftEditor({view,controller}:{view:QuoteAmendmentWorkspaceView;controller:RefObject<Controller|null>}){
- const draft=view.draft,amendment=view.amendment;if(!draft||!amendment||!['Draft','Ready for Review'].includes(amendment.revision.state))return null;
+ const draft=view.draft,amendment=view.amendment;if(!draft||!amendment||!view.preparingReopening&&!['Draft','Ready for Review'].includes(amendment.revision.state))return null;
  const edit=(patch:Partial<QuoteDraft>)=>controller.current?.edit({...draft,...patch}),editLine=(id:string,patch:Partial<QuoteLineDraft>)=>edit({lines:draft.lines.map(line=>line.id===id?{...line,...patch}:line)});
  let preview:ReturnType<typeof prepareQuoteReviewContent>['customer']|null=null;try{preview=prepareQuoteReviewContent(parseQuoteDraft(draft)).customer;}catch{/* The named field validation below explains an incomplete draft. */}
- const acceptedSources=new Set(amendment.parent.revision.internal_snapshot.sources.map(source=>source.stableLineKey));
- return <details className="service-definition-panel"><summary>Edit proposed work and pricing</summary>
-  <p className="field-help">{view.dirty?'Unsaved changes stay only on this page.':'Showing the saved amendment.'} Hiding or leaving clears private draft details. Saving returns the amendment to Draft and requires fresh review and approval.</p>
-  <form aria-label="Amendment draft" onSubmit={event=>{event.preventDefault();void controller.current?.save();}}><fieldset disabled={!view.canEdit}>
+ const parent=view.preparingReopening?view.selected!.parent:amendment.parent,acceptedSources=new Set(parent.revision.internal_snapshot.sources.map(source=>source.stableLineKey));
+ return <details className="service-definition-panel" open={view.preparingReopening?true:undefined}><summary>{view.preparingReopening?'Propose new work after cancellation':'Edit proposed work and pricing'}</summary>
+  <p className="field-help">{view.dirty?'Unsaved changes stay only on this page.':'Showing the saved amendment.'} Hiding or leaving clears private draft details. {view.preparingReopening?'Saving creates a separate amendment Draft and requires fresh review, approval and customer acceptance.':'Saving returns the amendment to Draft and requires fresh review and approval.'}</p>
+  <form aria-label="Amendment draft" onSubmit={event=>{event.preventDefault();void (view.preparingReopening?controller.current?.create():controller.current?.save());}}><fieldset disabled={!view.canEdit}>
    <label>Amendment title<input value={draft.title} maxLength={200} required onChange={event=>edit({title:event.target.value})}/></label>
    <label>Recipient name<input value={draft.recipientName} maxLength={200} required onChange={event=>edit({recipientName:event.target.value})}/></label>
    <p className="field-help">The accepted customer and source lead stay linked. Contact edits apply to this proposal only.</p>
@@ -45,7 +45,7 @@ export function AmendmentDraftEditor({view,controller}:{view:QuoteAmendmentWorks
    <details><summary>Terms, proposed timing and expiry (optional)</summary><label>Terms<textarea value={draft.terms} rows={3} maxLength={8000} onChange={event=>edit({terms:event.target.value})}/></label><label>Proposed timing<textarea value={draft.proposedSchedule} rows={2} maxLength={2000} onChange={event=>edit({proposedSchedule:event.target.value})}/></label><p className="field-help">A proposal does not change booked appointments.</p><label>Quote time zone<input value={draft.timezone} maxLength={100} onChange={event=>edit({timezone:event.target.value})}/></label><QuoteExpiry key={amendment.revision.id+':'+amendment.revision.version+':'+draft.timezone} value={draft.expiryAt} zone={draft.timezone} change={expiryAt=>edit({expiryAt})}/></details>
    <details><summary>Internal notes (never in the customer preview)</summary><label>Internal notes<textarea value={draft.internalNotes} rows={3} maxLength={8000} onChange={event=>edit({internalNotes:event.target.value})}/></label></details>
    {view.draftIssue&&<p role="alert">{view.draftIssue}</p>}{preview&&<p><strong>{view.dirty?'Unsaved proposed total':'Saved proposed total'} · {quoteMoney(preview.totalCents)}</strong></p>}
-   <button type="submit" disabled={!view.canSave}>Save amendment changes</button>
+   <button type="submit" disabled={view.preparingReopening?!view.canSaveReopening:!view.canSave}>{view.preparingReopening?'Save new amendment Draft':'Save amendment changes'}</button>{view.preparingReopening&&<button type="button" className="secondary" onClick={()=>controller.current?.discardReopening()}>Discard new proposal</button>}
   </fieldset></form>
   {preview&&<details><summary>{view.dirty?'Unsaved customer preview':'Saved customer preview'}</summary><QuoteDocument quote={preview} stage="draft"/></details>}
  </details>;

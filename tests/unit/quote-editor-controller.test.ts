@@ -20,6 +20,7 @@ import {prepareQuoteContent} from '../../src/commercial/quote-content';
 import {prepareQuoteReviewContent} from '../../src/commercial/quote-review-content';
 import type {QuoteReviewCommitted} from '../../src/commercial/quote-review-contract';
 import {quoteDraftAuditBytes,quoteDraftAuditLimit} from '../../src/commercial/quote-draft-budget';
+import {parseQuoteCancellationEditCommitted} from '../../src/commercial/quote-cancellation-edit-contract';
 const api={context:vi.fn<typeof quotes.context>(),list:vi.fn<typeof quotes.list>(),history:vi.fn<typeof quotes.history>(),save:vi.fn<typeof quotes.save>(),lookup:vi.fn<typeof quotes.lookup>()},session=vi.fn(),id=vi.fn();
 let f:ReturnType<typeof quoteFixture>,memory:Map<string,string>,store:ReturnType<typeof createPendingQuoteStore>;
 const binding=randomBytes(32).toString('base64url');
@@ -27,6 +28,9 @@ const context=()=>({context:{schemaVersion:1 as const,businessId:f.business,writ
 const reference=()=>pendingQuote({schemaVersion:1,businessId:f.business,binding,reference:{operationId:f.operation,recoveryEpoch:f.recovery,familyId:f.family.id,revisionId:f.revision.id,expectedFamilyVersion:'0',expectedRevisionVersion:'0'}});
 const history=()=>({schemaVersion:1,businessId:f.business,family:f.family,revision:f.revision,items:f.items,history:[{eventId:f.committed.receipt.revisionAuditEventId,revision:'1',action:'create',at:f.revision.updated_at,actorId:f.actor,operationId:f.operation,before:null,after:f.revision}],hasMore:false});
 const controller=()=>createQuoteEditorController({store,change:vi.fn(),api,session,id,timezone:()=>f.input.timezone});
+it('keeps a cancellation edit original for Save review instead of treating receipt4 as an initial quote save',async()=>{
+ const pinned=pendingQuote({...reference(),reference:{...reference().reference,expectedFamilyVersion:'1',expectedRevisionVersion:'1'}});store.write(pinned);api.lookup.mockResolvedValue(parseQuoteCancellationEditCommitted({...f.committed,receipt:{...f.committed.receipt,schemaVersion:4,familyVersion:'2',revisionVersion:'2',contentVersion:'2',itemAuditEventIds:[],assessmentAuditEventIds:[]}},f.business,f.operation));const c=controller();await c.load();await c.check();expect(store.read()).toEqual(pinned);expect(c.view()).toMatchObject({phase:'pending',canRetry:false});expect(c.view().message).toContain('cancellation edit');expect(api.save).not.toHaveBeenCalled();
+});
 it('reopens an acknowledged review against its receipt instead of the stale directory, including original reconciliation after reload',async()=>{
  const prepared=prepareQuoteReviewContent({...f.input,schemaVersion:2,lines:f.input.lines.map(line=>({...line,category:null,assessment:null,categoryOverrideNote:null}))}),hash=createHash('sha256').update(prepared.canonical).digest('hex'),operation=randomUUID();
  const first={...f.revision,customer_safe_snapshot:prepared.customer,internal_snapshot:prepared.internal,canonical_content:prepared.canonical,content_hash:hash},second={...first,state:'Ready for Review' as const,version:'2',operation_id:operation},family={...f.family,version:'2',operation_id:operation};

@@ -260,6 +260,11 @@
       "version": "20261103180000",
       "file": "20261103180000_quote_amendment_preparation.sql",
       "sha256": "1bcfd0e0772f9710829d1832aa3616864a91e3a9c52734b1cfe884d5af09e84a"
+    },
+    {
+      "version": "20261104180000",
+      "file": "20261104180000_quote_amendment_acceptance.sql",
+      "sha256": "5ecdf7ecab6563d908ae87fd69d59308241596efca7ffabfd289f01d10f39a1c"
     }
   ]
 }

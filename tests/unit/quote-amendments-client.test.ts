@@ -3,8 +3,15 @@ import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 import {quoteAmendments} from '../../src/client/quote-amendments';
 import {amendmentTransportFixture} from './quote-amendment-fixture';
 import {amendmentTargetFixture} from './quote-amendment-target-fixture';
+import {amendmentAcceptanceReceiptFixture} from './quote-amendment-acceptance-receipt-fixture';
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'private, no-store'},signal=()=>new AbortController().signal,proof=()=>({csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000}),response=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers});
 const fetchMock=vi.fn();beforeEach(()=>{fetchMock.mockReset();vi.stubGlobal('fetch',fetchMock);});afterEach(()=>vi.unstubAllGlobals());
+it('retrieves an exact acceptance original through one opaque private request without reconstructing confirmation or current scope',async()=>{
+ const f=amendmentAcceptanceReceiptFixture();fetchMock.mockResolvedValue(response(f.packet));expect(await quoteAmendments.lookupAccept(f.request.businessId,f.reference,proof(),signal())).toEqual(f.packet);expect(fetchMock).toHaveBeenCalledOnce();const [url,options]=fetchMock.mock.calls[0]!;expect(url).toBe('/api/business/quotes/amendments/accept-operation');expect(options).toMatchObject({method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer'});expect(JSON.parse(options.body)).toEqual({reference:f.reference});expect(options.body).not.toMatch(/Hash|scopePlans|evidence|counterparty|amountCents/);
+});
+it('keeps unknown, cross-epoch, malformed and rate-limited acceptance lookup outcomes unavailable without a retry',async()=>{
+ const f=amendmentAcceptanceReceiptFixture();for(const value of [{schemaVersion:1,state:'original_recorded',original:{}},{...f.packet,recoveryEpoch:randomUUID()},{...f.packet,receipt:{...f.packet.receipt,allocationPlanIds:[]}}]){fetchMock.mockResolvedValueOnce(response(value));await expect(quoteAmendments.lookupAccept(f.request.businessId,f.reference,proof(),signal())).rejects.toMatchObject({kind:'unavailable'});}fetchMock.mockResolvedValueOnce(response({error:'QUOTE_AMENDMENT_REQUEST_LIMITED'},429));await expect(quoteAmendments.lookupAccept(f.request.businessId,f.reference,proof(),signal())).rejects.toMatchObject({kind:'limited'});expect(fetchMock).toHaveBeenCalledTimes(4);
+});
 it('selects accepted work through genuine private transport with a bounded exact filter and no business override',async()=>{
  const f=amendmentTargetFixture(true);fetchMock.mockResolvedValue(response(f.packet));const result=await quoteAmendments.targets(f.request,proof(),signal());expect(result.targets[0]!.revision.kind).toBe('amendment');expect(fetchMock).toHaveBeenCalledOnce();expect(fetchMock.mock.calls[0]![0]).toBe('/api/business/quotes/amendments/targets');expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({familyId:null,search:'',afterId:null,pageSize:10});expect(fetchMock.mock.calls[0]![1]).toMatchObject({credentials:'same-origin',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer'});
 });
