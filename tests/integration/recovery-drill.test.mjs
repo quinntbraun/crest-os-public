@@ -150,7 +150,11 @@ before(async()=>{
     // makes no later customer DDL changes. Its table definition has no secrets
     // or source records; preserve literal control characters for exact diagnosis.
     const table=lines=>object(lines)==='CREATE TABLE crest.customers ('?lines.slice(Math.max(0,at-1),at+8):[];
-    throw new Error('SYNTHETIC_SCHEMA_REVIEW_REQUIRED:'+JSON.stringify({line:at+1,expectedObject:object(left),actualObject:object(right),expected:left.slice(Math.max(0,at-1),at+8).map(safe),actual:right.slice(Math.max(0,at-1),at+8).map(safe),expectedCustomerDdl:table(left),actualCustomerDdl:table(right)}),{cause:error});
+    // The last CREATE TABLE can be far above a later policy/ACL mismatch.
+    // Fixed pg_dump object metadata identifies that case without emitting its
+    // SQL body, source records, credentials or arbitrary comments.
+    const header=lines=>{for(let i=at;i>=0;i--){if(!lines[i].startsWith('-- Name: '))continue;const m=lines[i].match(/^-- Name: ([A-Za-z0-9_ .(),\u005B\u005D-]{1,300}); Type: (ACL|DEFAULT ACL|POLICY|CONSTRAINT|FK CONSTRAINT|TABLE|FUNCTION|TRIGGER|INDEX|ROW SECURITY); Schema: (crest|crest_private|crest_commands); Owner: (crest_[a-z_]+)$/);return m?{name:m[1],type:m[2],schema:m[3],owner:m[4]}:null;}return null;};
+    throw new Error('SYNTHETIC_SCHEMA_REVIEW_REQUIRED:'+JSON.stringify({line:at+1,expectedObject:object(left),actualObject:object(right),expectedHeader:header(left),actualHeader:header(right),expectedLineSha256:hash(Buffer.from(left[at]??'')),actualLineSha256:hash(Buffer.from(right[at]??'')),expected:left.slice(Math.max(0,at-1),at+8).map(safe),actual:right.slice(Math.max(0,at-1),at+8).map(safe),expectedCustomerDdl:table(left),actualCustomerDdl:table(right)}),{cause:error});
   }
   assert.match(output.toString(),/^Synthetic isolated database restore and verification completed\s*$/);
   restored=await connect(restoredUrl);

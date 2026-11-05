@@ -119,7 +119,10 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   async function selectCurrent(){
    const loaded=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/business/quotes/amendments/targets'&&r.request().method()==='POST');await page.goto(f.origin+'/quotes/amendments');assert.equal((await loaded).status(),200);await expect(status()).toHaveText('Saved accepted quotes loaded.');
    const button=page.getByRole('button',{name:/Accepted agreement|Amendment Accepted|Amendment Draft/}).first(),amended=/Amendment (?:Accepted|Draft)/.test(await button.innerText());
-   const selected=page.waitForResponse(r=>new URL(r.url()).pathname===(amended?'/api/business/quotes/amendments/read':'/api/business/quotes/amendments/targets')&&r.request().method()==='POST').then(async current=>{assert.equal(current.status(),200);await current.json();});void selected.catch(()=>undefined);await button.click();await bounded('selected_read_body',()=>selected);await expect(status()).toContainText('Saved accepted work loaded.');
+   // Capture the actual selected-read bytes before the controller's navigation
+   // can retire Chromium's Response body. Preserve the original request pace.
+   const selected=await captureQuoteResponse(page,amended?'/api/business/quotes/amendments/read':'/api/business/quotes/amendments/targets',{beforeForward:pace});
+   try{await button.click();const current=await bounded('selected_read_body',()=>selected.outcome);assert.equal(current.status,200);assert(current.body&&typeof current.body==='object');await expect(status()).toContainText('Saved accepted work loaded.');}finally{await selected.cancel();}
   }
   async function capture(stage,focus){
    await mkdir('.local/review',{recursive:true});
