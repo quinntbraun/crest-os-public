@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "observedAt": "2026-11-05T00:26:01.857Z",
+  "observedAt": "2026-11-05T00:42:03.735Z",
   "scope": "Registered53 synthetic acceptance, current booking/cancellation, private included-source records and reopened Draft integration preparation",
   "testedCheckoutHead": "4d4096b3d30f249360ba84c7d7f4a2f9bc79ebd2",
   "sourceFiles": [
@@ -111,8 +111,8 @@
     },
     {
       "path": "tests/integration/quote-amendment-acceptance-product-browser.test.mjs",
-      "bytes": 25827,
-      "sha256": "1b55a05a8423eb970c93287ed4d6f643b7a78e5c94dffee6180bcb6c749bb9ff"
+      "bytes": 26798,
+      "sha256": "09a0b66c2c2b7f11e8c2e53036d883ce2fd627de89193ea89b4319a087ffc152"
     },
     {
       "path": "tests/integration/quote-amendment-reopening-auth.test.mjs",
@@ -511,6 +511,35 @@
         "completionCriterion": "All170 existing native cases and both browser suites succeed in independent focused jobs, followed by all unchanged full release gates."
       },
       "newSourceFullCIPassed": false
+    },
+    "current413": {
+      "source": "a87b2dfb04777e1d5e71c71ee721ece8caab4da0",
+      "focusedRun": 41941384827,
+      "integrityJob": 126962777608,
+      "integrityPassed": 170,
+      "integrityFailed": 0,
+      "integritySkipped": 0,
+      "amendmentJob": 126962777959,
+      "amendmentCasesPassed": 2,
+      "amendmentCasesTotal": 3,
+      "webkitCompleteJourneyPassed": true,
+      "chromiumCompleteJourneyPassed": false,
+      "failure": "Chromium response.json Network.getResponseBody reported no data for a response resource, at review submit; the helper waited for click completion before reading the already received command response.",
+      "correction": "Consume and validate the command response as soon as its waiter resolves, while the action is still completing. Await the same receipt normally; retain status/state/fresh-read/UI assertions, early rejection observation and cleanup. No mutation retry or app/policy change.",
+      "regression": {
+        "checkedAt": "2026-11-05T00:41:28.585Z",
+        "scope": "Actual test helper sequencing regression, not a substitute for genuine browser/Auth/DB execution",
+        "beforeSourceCommit": "4df42e89bad3673af8ec1d65494c80e5fd428904",
+        "beforeFailedOnLateBodyRead": true,
+        "afterFocusedRegressionsPassed": 2,
+        "afterFailed": 0,
+        "afterSkipped": 0,
+        "sourceSha256": "09a0b66c2c2b7f11e8c2e53036d883ce2fd627de89193ea89b4319a087ffc152",
+        "mutationRetriesAdded": false,
+        "appOrSecurityPolicyChanged": false,
+        "normalStatusStateAndReadAssertionsRetained": true
+      },
+      "newCurrentSourceBrowserOrFullReleasePassed": false
     }
   },
   "delivery": {

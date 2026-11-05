@@ -10,17 +10,21 @@ import {pendingQuoteAmendmentKeys} from '../../src/client/pending-quote-amendmen
 
 async function command(page,label,path,message){
  let committed=false;
- const response=page.waitForResponse(r=>{if(new URL(r.url()).pathname===path&&r.request().method()==='POST'){committed=true;return true;}return false;});
+ const response=page.waitForResponse(r=>{if(new URL(r.url()).pathname===path&&r.request().method()==='POST'){committed=true;return true;}return false;}).then(async saved=>{
+  // Read while the response is available, before click completion or later
+  // browser activity can discard Chromium's response-body resource.
+  assert.equal(saved.status(),200);const result=await saved.json();assert.equal(result.state,'committed');return result.receipt;
+ });
  const read=page.waitForResponse(r=>committed&&new URL(r.url()).pathname==='/api/business/quotes/amendments/read'&&r.request().method()==='POST');
  // Observe both immediately: a primary click/assertion failure closes the
  // browser and rejects unused waiters. Their rejection must not interrupt
  // fixture cleanup or replace that primary failure. Normal awaits still fail.
  void response.catch(()=>undefined);void read.catch(()=>undefined);
  await page.getByRole('button',{name:label,exact:true}).click();
- const saved=await response;assert.equal(saved.status(),200);const result=await saved.json();assert.equal(result.state,'committed');
+ const receipt=await response;
  const current=await read;assert.equal(current.status(),200);await current.finished();
  if(message)await expect(page.getByRole('status')).toContainText(message);
- return result.receipt;
+ return receipt;
 }
 test('browser command waiters preserve primary failures through cleanup',async()=>{
  for(const fault of ['http','click']){
@@ -31,6 +35,16 @@ test('browser command waiters preserve primary failures through cleanup',async()
   // Node's test runner fails on any unhandled rejection from these waiters.
   await new Promise(resolve=>setImmediate(resolve));
  }
+});
+test('browser command consumes its response before action completion discards the body',async()=>{
+ const pending=[];let available=true,reads=0;
+ const receipt={synthetic:'captured once without another command'};
+ const page={waitForResponse(){return new Promise(resolve=>pending.push(resolve));},getByRole(){return {async click(){
+  pending[0]({status:()=>200,async json(){assert(available,'SYNTHETIC_RESPONSE_BODY_DISCARDED_AFTER_ACTION');reads++;return {state:'committed',receipt};}});
+  pending[1]({status:()=>200,async finished(){}});
+  await new Promise(resolve=>setImmediate(resolve));available=false;
+ }};}};
+ assert.deepEqual(await command(page,'Synthetic action','/api/business/quotes/amendments/create'),receipt);assert.equal(reads,1);assert.equal(pending.length,2);
 });
 async function reviewAndShare(page){
  await command(page,'Request review of saved amendment','/api/business/quotes/review/submit','Amendment review requested and reloaded.');
