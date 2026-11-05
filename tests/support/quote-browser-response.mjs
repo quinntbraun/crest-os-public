@@ -25,10 +25,12 @@ export async function captureQuoteResponse(page,path,{timeoutMs=30000,beforeForw
    const requestBody=request.postDataJSON(),response=await route.fetch({maxRetries:0,maxRedirects:0}),bytes=await response.body();
    const body=JSON.parse(bytes.toString('utf8')),status=response.status();
    await route.fulfill({response,body:bytes});
-   await page.unroute(pattern,handler);
+   if(matchesRequest)await page.unroute(pattern,handler);
    resolve(Object.freeze({status,body,requestBody}));
   }catch(error){reject(error);await route.abort('failed').catch(()=>{});}
  };
- await page.route(pattern,handler);
+ // Preserve the original one-shot lifecycle for existing commercial callers.
+ // Only a filtered reader must survive an unrelated preflight request.
+ await page.route(pattern,handler,matchesRequest?{}:{times:1});
  return Object.freeze({outcome,async cancel(){clearTimeout(deadline);reject(Error('QUOTE_CAPTURE_CANCELLED'));await page.unroute(pattern,handler);}});
 }

@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
-  "observedAt": "2026-11-05T03:45:06.227Z",
+  "observedAt": "2026-11-05T05:18:13.894Z",
   "scope": "Registered53 synthetic acceptance, current booking/cancellation, private included-source records and reopened Draft integration preparation",
-  "testedCheckoutHead": "2fb3ef4bd468ef15185e15f9335b889c4a9de65a",
+  "testedCheckoutHead": "48861e4ffbc3f56dcdec20feeb4ebf19e441225b",
   "sourceFiles": [
     {
       "path": "supabase/migration-checksums.json",
@@ -226,8 +226,18 @@
     },
     {
       "path": "tests/support/quote-browser-response.mjs",
-      "bytes": 2465,
-      "sha256": "e9c82c73f5e8fd8cc9fd5afb1dae02326e698363965f604155817705974c5baf"
+      "bytes": 2661,
+      "sha256": "7edaaf7bb38174f15ae8c858e51dcab13b2fc6119e7be4cf6d238ca85e37eeb2"
+    },
+    {
+      "path": "tests/integration/quote-commercial-browser.test.mjs",
+      "bytes": 36147,
+      "sha256": "c142b563da888013b8b416867d2c19be71e1b79ecbf770a841fe8a5df784ae99"
+    },
+    {
+      "path": "src/app/quotes/quotes.tsx",
+      "bytes": 28419,
+      "sha256": "6e51c5c2086a3332a7f6371f1a4c7a82a4bded2afb1ad14f20c8a218c85f3c06"
     }
   ],
   "repositorySchema": 53,
@@ -918,6 +928,78 @@
       "raisedLimits": false,
       "currentLinuxPassed": false,
       "currentFullReleasePassed": false
+    },
+    "retainedCommercial419": {
+      "previousPublic": "59202321dc454b6f03ae28285fdf77c41fa98047",
+      "previousFull": 41963813468,
+      "fullAmendmentPassed": 7,
+      "focusedAmendmentPassed": 5,
+      "genuineAuthPassed": 277,
+      "integrityPassed": 170,
+      "expenseAndFocusedCommercialPassed": true,
+      "fullCommercial": {
+        "job": 127036058103,
+        "passed": 52,
+        "failed": 2,
+        "reason": "WebKit replacement renewal did not show Session verified; form remained signed out. Old test did not directly prove login dispatch."
+      },
+      "localDiagnostics": {
+        "first": ".local/registered53-commercial-renew419-v1/result.json",
+        "firstPassed": 4,
+        "firstFailed": 2,
+        "second": ".local/registered53-commercial-renew419-v2/result.json",
+        "secondFinalSummary": false,
+        "secondSourceStableAndOwnedClean": true,
+        "secondCompletedChromiumOnly": true,
+        "isolatedWebkitBefore": ".local/registered53-commercial-renew419-webkit-v1/result.json",
+        "isolatedPassed": 1,
+        "isolatedFailed": 2,
+        "approvalState": "Review action committed and quote reloaded; approval disabled at assertion and enabled in subsequent screenshot. No operator action or credential fault inferred."
+      },
+      "correction": "Keep original one-shot capture lifecycle for existing consumers; filtered readers alone survive prechecks. Review actions await both actual review/commercial reads and bind family/revision IDs and versions to the committed receipt before the next-action assertion. Renewal awaits completed focused sign-out, validates the actual form, observes one genuine login200 and verifies its HttpOnly/Secure cookie. No retry, application/Auth policy change or raised test limit.",
+      "localGenuine": [
+        {
+          "engine": "webkit",
+          "path": ".local/registered53-commercial-renew419-webkit-v3/result.json",
+          "tests": 3,
+          "passed": 3,
+          "failed": 0,
+          "parentCommit": "48861e4ffbc3f56dcdec20feeb4ebf19e441225b",
+          "workingPatchSha256": "f6b773dad1057751182191673107eb0b03aaf8ff645983aeab8a9be3d1b462c1",
+          "sourceStable": true,
+          "ownedClusterCleaned": true,
+          "startedAt": "2026-11-05T05:02:43.248Z",
+          "finishedAt": "2026-11-05T05:06:35.611Z"
+        },
+        {
+          "engine": "chromium",
+          "path": ".local/registered53-commercial-renew419-chromium-v3/result.json",
+          "tests": 3,
+          "passed": 3,
+          "failed": 0,
+          "parentCommit": "48861e4ffbc3f56dcdec20feeb4ebf19e441225b",
+          "workingPatchSha256": "f6b773dad1057751182191673107eb0b03aaf8ff645983aeab8a9be3d1b462c1",
+          "sourceStable": true,
+          "ownedClusterCleaned": true,
+          "startedAt": "2026-11-05T05:08:02.115Z",
+          "finishedAt": "2026-11-05T05:11:38.775Z"
+        }
+      ],
+      "bothEnginesSameSource": true,
+      "totalActualReplacementCases": 6,
+      "focusedHTTPCases": 4,
+      "focusedCommandCases": 3,
+      "affectedLintPassed": true,
+      "sourceScreenshots": ".local/amendment418-render-review/visual-review.json",
+      "currentFullReleasePassed": false,
+      "businessLogicOrSQLChanged": false,
+      "appCopyChanged": true,
+      "copyCorrection": {
+        "path": "src/app/quotes/quotes.tsx",
+        "reason": "Rendered review exposed a stale quote footer calling delivered confirmed booking unfinished. Point to Schedule and retain the accurate unfinished invoice/payment notice.",
+        "changedAfterNativeRuns": true,
+        "nativeExecutableBehaviorUnchanged": true
+      }
     }
   },
   "delivery": {

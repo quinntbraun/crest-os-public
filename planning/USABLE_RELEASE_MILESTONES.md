@@ -1,6 +1,6 @@
 # Usable release milestones and execution reporting
 
-Current construction: registered53 is implemented and owner delivery stays accepted52. The preflight-aware observer correction passes both COMPLETE genuine local Chromium/WebKit amendment/booking/cancellation/recovery/reopening journeys2/2 with stable source and owned cleanup, plus4 real HTTP observer cases/3 command regressions/lint. Fresh exact-source Linux/full release remains mandatory. Application/SQL unchanged; no owner upgrade or current full acceptance. WORKING_STATE.md and source proof control current status.
+Current construction: registered53 implementation stays undelivered; owner remains accepted52. Public418 amendment7/7/focused5, Auth277/native170 and other prerequisites pass, but retained commercial52/54 fails. Current saved-state/renewal assertions and original one-shot compatibility pass complete same-source local Chromium/WebKit replacement3/3 each (6 actual cases), stable/clean. Prior genuine amendment2/2 and current4 HTTP/3 command scopes remain distinct. No business-logic/SQL/Auth-policy change or raised limit. Stale quote-footer capability copy is corrected; fresh full Linux acceptance remains required. WORKING_STATE.md and source proof control status.
 
 ## Current delivery — 2026-11-04
 
