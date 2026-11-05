@@ -1,0 +1,200 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-11-05T06:18:15.267Z",
+  "scope": "Accepted immutable53 genuine synthetic laptop and private-address delivery; not real Crest activation",
+  "localSource": "3e252b1c7dbd6da1bbb09c3684cdfe622c2b8f96",
+  "publicSource": "47858247d101fd8b25856b1dd3dace8ffa056aea",
+  "tree": "05a03235e68d8b4d45c4462b22c9d0b43fb8d091",
+  "testedMerge": "d772889ec4e9f15e51db5c31f358154f49100138",
+  "pr": {
+    "number": 114,
+    "draft": true,
+    "merged": false,
+    "base": "feature/quote-amendment-preparation"
+  },
+  "fullRun": 41973467699,
+  "fullRunNumber": 419,
+  "allTenRequiredJobsPassed": true,
+  "unitCases": 8198,
+  "browserCases": 304,
+  "genuineAuthCases": 277,
+  "focused": {
+    "run": 41973467537,
+    "amendmentCases": 5,
+    "integrityCases": 170,
+    "commercialCases": 36,
+    "expenseRun": 41973467497,
+    "allPassed": true
+  },
+  "allFailures": 0,
+  "skippedCases": 0,
+  "artifacts": [
+    {
+      "id": 13392655366,
+      "name": "service-review-d772889ec4e9f15e51db5c31f358154f49100138-attempt-1",
+      "digest": "sha256:104b9a2bd5e93fcc8ae7d06f33fd1d303a636fac75f70d14e9d3239579de1361",
+      "expiresAt": "2026-11-08T05:58:30Z"
+    },
+    {
+      "id": 13392547128,
+      "name": "phase-1-candidate-d772889ec4e9f15e51db5c31f358154f49100138-attempt-1",
+      "digest": "sha256:d4bbe049060d789f33f673e9398838a48e2b3b348b10c6573bb92221199a8cb3",
+      "expiresAt": "2026-11-08T06:04:23Z"
+    },
+    {
+      "id": 13391405674,
+      "name": "settings-review-commercial-d772889ec4e9f15e51db5c31f358154f49100138-attempt-1",
+      "digest": "sha256:da018fa4f5f890ef794ae1229e62f89c0b03034c525cf8ec625a36cfa7661555",
+      "expiresAt": "2026-11-08T05:31:31Z"
+    },
+    {
+      "id": 13391400521,
+      "name": "settings-review-intake-d772889ec4e9f15e51db5c31f358154f49100138-attempt-1",
+      "digest": "sha256:8272f72ec81191cd361a083754f028f5eb9334ae15ffbd690228febce495b6d9",
+      "expiresAt": "2026-11-08T05:33:22Z"
+    },
+    {
+      "id": 13391172192,
+      "name": "settings-review-amendments-d772889ec4e9f15e51db5c31f358154f49100138-attempt-1",
+      "digest": "sha256:6c4e207ac00baaf6c05e9d844cfdf1e1bf3131665f32e5b2f38a413308201336",
+      "expiresAt": "2026-11-08T05:34:05Z"
+    },
+    {
+      "id": 13390924452,
+      "name": "settings-review-schedule-d772889ec4e9f15e51db5c31f358154f49100138-attempt-1",
+      "digest": "sha256:7b559d5a54d036eced5ecf412f08b0adae75baafd2584c6f9469c651a9cb3a69",
+      "expiresAt": "2026-11-08T05:35:09Z"
+    },
+    {
+      "id": 13390868867,
+      "name": "settings-review-crm-d772889ec4e9f15e51db5c31f358154f49100138-attempt-1",
+      "digest": "sha256:ddf3be3ff1fd6344735b34cb38cc65597947a0684490ed7800bcba2dd82beb21",
+      "expiresAt": "2026-11-08T05:30:56Z"
+    },
+    {
+      "id": 13390717829,
+      "name": "settings-review-records-d772889ec4e9f15e51db5c31f358154f49100138-attempt-1",
+      "digest": "sha256:bc3e5776cbfa91cac15ae1225099f113766f8b1856b86994e43c6c8ae4fae488",
+      "expiresAt": "2026-11-08T05:26:12Z"
+    }
+  ],
+  "immutableSourceFilesVerified": 1494,
+  "buildAndContainerPassed": true,
+  "sourceAndImageArtifactVerified": true,
+  "browserGroupReceiptsVerified": 6,
+  "recovery": {
+    "sourceSchema": 52,
+    "targetSchema": 53,
+    "encrypted": true,
+    "independentlyRestored": true,
+    "coveredSourceTables": 96,
+    "ownedRestoreClusterCleaned": true,
+    "sourceCredentialsProvidedToRestore": false,
+    "receiptSha256": "5efaee04d3b920fded735aa8959a92fd7832867cbd091dfe569b8e91f396b90e",
+    "completeBackup": false,
+    "productionBackup": false
+  },
+  "migration": {
+    "coordinatorReceiptSha256": "9014dd20723ef969c16316113314c798576836bbdaf45aa38bb953aa5ce2b459",
+    "sourceRegistrySha256": "033199a5f2e528f629799cdba48901bf2a4687df1eea3166b0cf7bfcf5ec3c67",
+    "coordinatorRegistrySha256": "f2215ed1a6199594d4d6dd57533edd7b1aaf72d95359891ad646e3b9b7538a53",
+    "registrySemanticallyEqual": true,
+    "existingBusinessTablesPreserved": 52,
+    "exactOriginalColumnRowTextUnchanged": true,
+    "onlyExpectedDefaultColumnsAdded": true,
+    "existingDataReset": false,
+    "privateRuntimeCopied": false
+  },
+  "deployed": {
+    "laptop": "https://127.0.0.1:4319/",
+    "privatePhoneAddress": "https://100.78.42.185:4319/",
+    "starter": "Project-root Start Crest OS.cmd selects accepted53/419",
+    "starterSha256": "fe7fdaabf379c7858e6b86cfc9df36624a3aa1a646e987866a7fea1a7556fc96",
+    "genuineMfaBothOrigins": true,
+    "diagnosticSessionsClosed": true,
+    "businessMutationsPerformed": false,
+    "homeScheduleAmendmentLookupAndReloadPassed": true,
+    "independentReadFailureRecoveryPassed": true,
+    "keyboardAndBackPassed": true,
+    "widths": [
+      360,
+      390,
+      768,
+      1440
+    ],
+    "axeViolations": 0,
+    "horizontalOverflowDetected": false,
+    "renderedCaptures": 24,
+    "imagesActuallyInspected": [
+      {
+        "path": ".local/review/delivered-amendment53-419-390.png",
+        "sha256": "8942d83c5f8c3684900eb846b51170308c4caa94151afa395e26c08d2bf4418a"
+      },
+      {
+        "path": ".local/review/delivered-amendment53-419-schedule-1440.png",
+        "sha256": "8c9c9118735c9f25562a57550e530c591209d8a51b4e5695e77f259688d0e6d0"
+      },
+      {
+        "path": ".local/review/delivered-amendment53-419-selector-360.png",
+        "sha256": "8a575a8a78935effe7fbde4392bc16a8a4457ff386b70e2c64fdb765faf0fcb9"
+      },
+      {
+        "path": ".local/review/delivered-amendment53-419-schedule-768.png",
+        "sha256": "1a9d42142873bccedd130595ef64295265adcfb2c7d0a42ea8eda575e0ce9ec5"
+      },
+      {
+        "path": ".local/review/delivered-amendment53-419-private-address-390.png",
+        "sha256": "d5994aa824dedcf0d07d3fb41a8b65e5f1fa4912c98e901cf0c9211a9c92c1dd"
+      },
+      {
+        "path": ".local/review/delivered-amendment53-419-private-address-schedule-360.png",
+        "sha256": "d1d8d66132d17c57bddd7bbb63a14d42162c67c9f5eff652f4849001120cf2b9"
+      }
+    ],
+    "physicalIphoneTest": "Owner-deferred; private-address desktop browser checks are not physical-device testing",
+    "existingWorkReviewUnavailableReason": "No saved accepted work in owner dataset; no fictional visit or agreement created."
+  },
+  "availableIncrement": [
+    "Separately confirm a sent quote amendment without rewriting the original agreement.",
+    "Review remaining allocations, bind revised visits to the current accepted version, separately cancel visits and commercial scope.",
+    "Recover original uncertain commands without issuing a duplicate write; retain history/private included-source CSV and JSON.",
+    "Prepare blank reopened paid or complimentary Drafts while retaining assigned/completed work and financial history."
+  ],
+  "fullV1StillMissing": [
+    "Field sessions/time/travel/custody/photos/completion/follow-up",
+    "Invoices/payments/double-entry/refunds/reconciliation/reporting/mileage/receipts",
+    "Complete portability/recovery/import/cutover",
+    "Google Calendar P20/BR21/ADR35 and real-use acceptance"
+  ],
+  "protectedMain": {
+    "source": "8d2ef72c09b178fe5ce8b552f37e5f2a0d72fd6e",
+    "lastMergedPr": 89,
+    "featureStackNotIntegrated": true
+  },
+  "estimate": {
+    "codingPercent": 41,
+    "remainingActiveHours": [
+      200,
+      350
+    ],
+    "confidence": "very low",
+    "assumptions": "One worker/full approved V1; no reliable cumulative active-hour ledger; CI and owner waits excluded. Increment reflects delivered amendment workflows, not test/commit totals."
+  },
+  "syntheticOnly": true,
+  "realCrestUseReady": false,
+  "financePostingActivated": false,
+  "credentialMfaNetworkChanges": false,
+  "ownerActionNeeded": false,
+  "spend": 0,
+  "context": "Current source/CI/receipts sufficient; no chat move required solely for length.",
+  "automatedSummaryScope": {
+    "providerNodeGroups": 10,
+    "databaseNodeGroups": 44,
+    "foundationNodeGroups": 29,
+    "genuineAuthNodeGroups": 1,
+    "browserNodeGroups": 6,
+    "vitestUnitFiles": 318,
+    "allReviewed": true,
+    "physicalDeviceOrProductionAcceptance": false
+  }
+}
