@@ -1,0 +1,212 @@
+{
+  "formatVersion": 1,
+  "verifiedAt": "2026-11-05T12:35:37.842Z",
+  "scope": "Restricted real-trip manual mileage, immutable corrections/attribution/history and page CSV/JSON, jointly verified with field completion/amendments; unregistered construction, not owner delivery",
+  "trackedParent": "898b1ddccabeba3295bc0ac2d6c8d1ce6b2eaf4a",
+  "nativeProof": {
+    "path": ".local/mileage-joint-native-v6/result.json",
+    "sha256": "70060b6cf3d98643f53882bdf92be4e9f42e226ba6c570c018e0d677aa97f2b4",
+    "passed": 124,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "storageCases": 34,
+    "mobileSessionCases": 27,
+    "plannerCases": 16,
+    "completionAndAmendmentCases": 25,
+    "mileageCases": 22,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "exactSourceFiles": [
+    {
+      "path": "planning/proposals/field-time-storage.sql",
+      "bytes": 25481,
+      "sha256": "b372fafad1706241dcbabe66544be7eaa45bd98d34a0e0d702c64168b61d05b4"
+    },
+    {
+      "path": "planning/proposals/field-session-commands.sql",
+      "bytes": 44446,
+      "sha256": "968cbaaed4191f27e4697ba6533d0d41bfece7bf8e99c2fdd7f82ecfdeaa2c5d"
+    },
+    {
+      "path": "planning/proposals/work-completion-plan.sql",
+      "bytes": 13940,
+      "sha256": "ba8dba0e67bae9e8b24c0fd2141b883659ec86fd45cd62210c2a818696c69348"
+    },
+    {
+      "path": "planning/proposals/work-completion-commands.sql",
+      "bytes": 70512,
+      "sha256": "56da6f51ed8eae973bca1674ab1cb1d5f7f25e0f1d00d32c8d5130e3bd8c31e6"
+    },
+    {
+      "path": "planning/proposals/field-scope-floor.sql",
+      "bytes": 14964,
+      "sha256": "ebdc82993fa761dff73a298fab9a6aebae27d74c2a2efff6cec066541d2c2d11"
+    },
+    {
+      "path": "planning/proposals/mileage-evidence.sql",
+      "bytes": 41212,
+      "sha256": "c6f1dad9226eb767e83992fb10b570354e649df4800392b8869628cbeaad1bdd"
+    },
+    {
+      "path": "planning/proposals/mileage-field-profile.sql",
+      "bytes": 3700,
+      "sha256": "88e77205648ace4058946647bacec1acbf9570ae3d2911ebb8c436591196bd04"
+    },
+    {
+      "path": "src/operations/mileage.ts",
+      "bytes": 4678,
+      "sha256": "3cbba274179ff8c6dc47e639c5b7aee127ad47301dace5ad69a2b524a1f80314"
+    },
+    {
+      "path": "src/operations/mileage-history.ts",
+      "bytes": 7730,
+      "sha256": "5e048d1c6ae9978984b802f0c11ac80ab8cfa080c43f8b46c0309535b88cabbc"
+    },
+    {
+      "path": "src/operations/mileage-csv.ts",
+      "bytes": 3621,
+      "sha256": "e4e739a6a8778d6d85c3feeef2243f7de7ba194bc874759ea25d4a3b16ae7136"
+    },
+    {
+      "path": "tests/unit/mileage.test.ts",
+      "bytes": 4279,
+      "sha256": "d1c8ca770e54182dc2cdd55fa2a209ad6bc8e7eb1161386ac4fcc706e9a14d21"
+    },
+    {
+      "path": "tests/integration/field-time-storage.test.mjs",
+      "bytes": 24942,
+      "sha256": "122436eafdcde1a4504d39b18cc2fed6b5e763c75e2f237290e29852e2f30f8c"
+    },
+    {
+      "path": "tests/integration/field-session-commands.test.mjs",
+      "bytes": 28194,
+      "sha256": "d24039f39dda8dc6804405b9eb1b28ba3434a454e570575667d2a791c8e40a2d"
+    },
+    {
+      "path": "tests/integration/work-completion-plan.test.mjs",
+      "bytes": 13868,
+      "sha256": "625a0144d4367e6221acbc95b50ddb7ee9f52d9049da971401702f88ff74c869"
+    },
+    {
+      "path": "tests/integration/work-completion-commands.test.mjs",
+      "bytes": 35036,
+      "sha256": "f5a7f208a78a19c84a4d63b47f6afa08bd2c44a08d38bb5850cb5cb13bcdf5f1"
+    },
+    {
+      "path": "tests/integration/mileage-evidence.test.mjs",
+      "bytes": 24290,
+      "sha256": "15f5694fb79388e8a10db6358d6987c3fe1ecc52df8a6974da0c6bfe2c981517"
+    },
+    {
+      "path": "tests/support/confirmed-booking-fixture.mjs",
+      "bytes": 11207,
+      "sha256": "479f22896ea5e0715cf8c6e85ef3e89756dcbbe0e9aa3c3109a5e181f8d5dc67"
+    }
+  ],
+  "pureTests": {
+    "mileage": 12,
+    "completion": 18,
+    "total": 30
+  },
+  "typesPassed": true,
+  "focusedLintPassed": true,
+  "canonicalAmendmentsVerified": 12,
+  "registeredMigrations": 53,
+  "reviewedJointFieldProfile": {
+    "columns": 891,
+    "sha256": "6040b02b93bd928108261376362a910f3e0c60dc463eae0a05b3ca2282d6ddc3",
+    "measurement": ".local/mileage-profile-predecessor-native/result.json",
+    "source": "Fresh coordinator53 plus five named reviewed field/completion/floor proposals and the mileage proposal; no owner runtime",
+    "predecessors": [
+      {
+        "signature": "crest_private.apply_quote_amendment_acceptance(bytea,uuid,uuid,text,uuid,uuid,timestamp with time zone,uuid,uuid,uuid,jsonb)",
+        "owner": "crest_quote_owner",
+        "security_definer": false,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "b23cc705afeb9ffc71c0be57c9786343d1be1b0b24f313ba6b7f550b946ad679"
+      },
+      {
+        "signature": "crest_commands.book_job(bytea,uuid,uuid,text,uuid,uuid,timestamp with time zone,uuid,uuid,uuid,integer,uuid,bigint,jsonb)",
+        "owner": "crest_booking_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "5b60aeda274eb5863718dba61e3a062298641c256784d407db36255d8d7d43a8"
+      },
+      {
+        "signature": "crest_commands.cancel_scheduled_job(bytea,uuid,uuid,text,uuid,uuid,timestamp with time zone,uuid,uuid,uuid,integer,uuid,bigint,jsonb)",
+        "owner": "crest_booking_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "ac9fceaf4c3ff38f6e921705dfc516646e856ee1f031a586e2866213b951a906"
+      }
+    ]
+  },
+  "implemented": [
+    "Exact numeric(14,4) actual/estimate/odometer miles and numeric(12,8) explicit job attribution, without floating point or automatic tax/financial posting",
+    "Actual confirmation only against a closed/cancelled real trip; estimates may remain on an open leg",
+    "Immutable reasoned corrections with fresh authority, epoch/hash/version/leg-version checks and canonical mode/family/operator locks",
+    "Separate business-rig/customer-vehicle/personal/unclassified movement; missing attribution stays unallocated and never duplicates physical mileage",
+    "Authoritative current evidence marks changed physical-trip versions needs_review rather than silently confirming old miles",
+    "Original operation lookup remains exact after later evidence and physical arrival changes",
+    "Scoped authorized history pages with an explicit immutable mileage sequence upper bound and bounded payload/page sizes",
+    "Reversible formula-safe CSV, original page JSON, dictionary/escape map and checksummed manifest; exact neutral reimport of both source tables",
+    "Deferred audit/source/result reconstruction refuses forged stored fractions, invalid data, foreign parents, invalid authority, stale/racing devices and forced late COMMIT failure",
+    "Completion and later accepted amendments coexist with the exact891-column profile; unknown future finance schema remains closed"
+  ],
+  "retainedFailures": [
+    {
+      "path": ".local/mileage-native-v1/result.json",
+      "passed": 1,
+      "failed": 16,
+      "cause": "Installation stopped because the closed schema owner lacked trigger-function execution after ownership transfer; dependent cases could not run."
+    },
+    {
+      "path": ".local/mileage-install-v2/result.json",
+      "passed": 1,
+      "failed": 1,
+      "cause": "Focused installation diagnostics confirmed permission denied for stamp_mileage_source. Trigger-only execution granted to the existing closed schema owner, without ordinary-role widening."
+    },
+    {
+      "path": ".local/mileage-native-v3/result.json",
+      "passed": 5,
+      "failed": 12,
+      "cause": "FOR UPDATE requested update permission on immutable SELECT-only trip/evidence sources. Removed those row-lock reads; retained the existing canonical operator lock and version checks. No update grant added."
+    }
+  ],
+  "intermediateProofs": [
+    {
+      "path": ".local/mileage-native-v4/result.json",
+      "passed": 17,
+      "note": "Restricted saves/corrections/concurrency/rollback before history additions."
+    },
+    {
+      "path": ".local/mileage-native-v5/result.json",
+      "passed": 22,
+      "note": "History/CSV/neutral reimport before the final joint profile; current124 proof supersedes this source identity."
+    }
+  ],
+  "retrievalBoundary": "A declared mileage history page and its source/attribution/audit rows only. Related trips/jobs/identity and other pages remain external dependencies; observedLegVersionId is explicitly the current observation. Not full Crest portability, accounting report, independent encrypted recovery or backup.",
+  "remaining": [
+    "Trip interruption/reschedule/cancellation, manual trip/time corrections and explicit open-supply-trip resolution",
+    "Message template/outcome/resume commands and maintenance follow-ups",
+    "Typed original retirement and complete field source/export/independent encrypted recovery/neutral round-trip; separate global source/export profiles remain closed",
+    "Registered54 adoption, genuine HTTP/MFA and connected phone/desktop controls, rendered browser/device and complete current-source release gates",
+    "Phase7 custody/photos, full finance/double-entry/reporting/receipts, complete portability/recovery/import/cutover, Calendar and real-use gates"
+  ],
+  "ownerRuntimeChanged": false,
+  "inPr115": false,
+  "completeCrestAcceptance": false,
+  "registeredReleaseClaim": false,
+  "spend": 0
+}

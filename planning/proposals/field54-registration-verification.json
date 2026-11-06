@@ -1,0 +1,182 @@
+{
+  "formatVersion": 1,
+  "verifiedAt": "2026-11-06T00:38:26.605Z",
+  "scope": "Registered54 exact13-body field package, frozen53 compatibility and current-root full database recovery; no owner application",
+  "trackedParent": "972e84a4c2ef6b80ca9d6686af6693211a0c4eb4",
+  "sourceFiles": [
+    {
+      "path": "supabase/migration-checksums.json",
+      "sha256": "4834f520561796ce811f3b5a1d9391c3490b472a4f72a6fa9af5f232d3751dac"
+    },
+    {
+      "path": "supabase/migrations/20261105180000_field_workspace.sql",
+      "sha256": "ebc88d2029dbac5815415a92f708e1213eaf3edbdcb342d583b925a4f3ff6524"
+    },
+    {
+      "path": "planning/SECURITY_EXPORT_COVERAGE.json",
+      "sha256": "7760215b8c4ab71ec34f144deb955a184002b9c72261af0acd079f5b6042b543"
+    },
+    {
+      "path": "release/compatibility.json",
+      "sha256": "b5209cca78b175b54c3356a6ecff054c2c412b38b38655800c2e602bb54b1061"
+    },
+    {
+      "path": "tests/support/recovery-drill.mjs",
+      "sha256": "62f6979803a762e95d2e16d570b0c617444488228953d8b7a81c39fec4479571"
+    },
+    {
+      "path": "tests/support/registered53-migration-checksums.json",
+      "sha256": "033199a5f2e528f629799cdba48901bf2a4687df1eea3166b0cf7bfcf5ec3c67"
+    },
+    {
+      "path": "tests/support/registered53-export-coverage.json",
+      "sha256": "6a53ee21d999cc3761fc04dfce57e747c56cdb38b0111290b23888a091791d9e"
+    },
+    {
+      "path": "tests/support/registered53-compatibility.json",
+      "sha256": "a4204dfcee69d6a12b888c797455609bf6aaaa1bb421bc2ab61b462fe27aced2"
+    },
+    {
+      "path": "tests/unit/field54-adoption.test.ts",
+      "sha256": "b0e19cb7366a2ae6f6d9228dc61c78875574856acf68b38bdfe191a86f63ec14"
+    },
+    {
+      "path": "tests/unit/quote-amendment53-adoption.test.ts",
+      "sha256": "6c9f931bbfa443797e79428de2b69e04a73325154fc0f765e5e54c3b9218b5b4"
+    },
+    {
+      "path": "tests/integration/field54-candidate.test.mjs",
+      "sha256": "e92238325656587b9e9429396eaedeff5c9654eafc24993f8f3764e71e1d541b"
+    },
+    {
+      "path": "tests/integration/quote-amendment53-candidate.test.mjs",
+      "sha256": "a361bcbba59c860f1dc87e71798659bb151770223452845d7ce57b9cfc3615a8"
+    },
+    {
+      "path": "tests/integration/recovery-drill.test.mjs",
+      "sha256": "03dafb2efe8992dc93f1346291df7b6a43165ba05e258a6bfca28675ce2c05ae"
+    },
+    {
+      "path": "tests/integration/field-session-auth.test.mjs",
+      "sha256": "d5c1892066804778bba58fb188dbfa5727c0beb189165a44d0a03e5d817640c2"
+    },
+    {
+      "path": "tests/support/source-export-browser-fixture.mjs",
+      "sha256": "b7a8aa3fa34d625704a698ee6a874f3c48fca9c05b1b1f7a2d137687fa0bb20b"
+    },
+    {
+      "path": "package.json",
+      "sha256": "028b0f0d1876b10ba7bf73697c8e95d5ad78a54a0a6c77d0b9088b8d289675fa"
+    }
+  ],
+  "migration": {
+    "version": "20261105180000",
+    "file": "20261105180000_field_workspace.sql",
+    "sha256": "ebc88d2029dbac5815415a92f708e1213eaf3edbdcb342d583b925a4f3ff6524"
+  },
+  "registrySha256": "4834f520561796ce811f3b5a1d9391c3490b472a4f72a6fa9af5f232d3751dac",
+  "previousRegistrySha256": "033199a5f2e528f629799cdba48901bf2a4687df1eea3166b0cf7bfcf5ec3c67",
+  "registeredRoot": true,
+  "ownerApplied": false,
+  "firstCompositeRun": {
+    "path": ".local/field54-registered-native-v1/result.json",
+    "sha256": "09d5c2becf76dea7c208531f4cb65ef54b96fd85dfe319d356090d2627896b67",
+    "tests": 272,
+    "passed": 271,
+    "failed": 1,
+    "skipped": 0,
+    "cancelled": 0,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "compatibilityRun": {
+    "path": ".local/field54-compatibility-native-v1/result.json",
+    "sha256": "2cce0851379d0275911febb371368eff017c01fb1079c27b7624ec17c62bbbf0",
+    "tests": 68,
+    "passed": 65,
+    "failed": 3,
+    "skipped": 0,
+    "cancelled": 0,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "finalCurrentRootRecoveryRun": {
+    "path": ".local/field54-root-recovery-native-v1/result.json",
+    "sha256": "f9b935e2cbc31e830a6556cce35038f22117eaaa2d0968e9093ba12727f8d233",
+    "tests": 37,
+    "passed": 37,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "distinctPassedCoverage": {
+    "fieldDatabaseSourceAndRecovery": 265,
+    "frozen53UpgradeRecovery": 7,
+    "currentRootRecoveryAndIncident": 37,
+    "leadConversion": 23,
+    "combinedExpenseReceiptRecovery": 1,
+    "total": 333,
+    "composition": "These are distinct cases across retained source-stable runs, not a claimed single333-case run. First272 run failed one obsolete root53 assertion. Final68 compatibility run passed all7 historical53,23 conversion and1 receipt cases but failed3 current recovery inventory assertions. Updated current54/80-table assertions and each new table closure/omission refusal pass final37. Runtime SQL and strict restore comparator unchanged."
+  },
+  "fullUnitProof": {
+    "path": ".local/field54-registered-full-unit-v1.json",
+    "sha256": "c38fb1bca08e93ebe72a0a4b34beb327e15c4a58efec8ae32601589442b1d688",
+    "passed": 8471,
+    "failed": 0,
+    "pending": 0,
+    "execution": "all cases, one worker, file parallelism disabled; original deadlines/assertions unchanged"
+  },
+  "checks": {
+    "path": ".local/registered54-checks-v1.json",
+    "sha256": "78bd539f9b9db962ca0da4033bd8f420f6726821555182e5fcad04bf210a0e8a",
+    "types": true,
+    "affectedLint": true,
+    "canonicalAmendments": 12,
+    "migrations": 54,
+    "productionNextBuild": true,
+    "productionServerBuild": true
+  },
+  "sourceInventory": {
+    "tables": 80,
+    "requiredColumns": 1234,
+    "excludedCredentialColumns": 10,
+    "allObservedColumns": 1244,
+    "previousTables": 68,
+    "previousRequiredColumns": 1058,
+    "frozen53PoliciesPreserved": true,
+    "actualIndependentFieldRestoreTables": 108,
+    "frozen53RestoreTables": 96
+  },
+  "verified": [
+    "Exact ebc88d20 candidate SQL and4834f520 registry identity; all13 constituent bodies remain unchanged",
+    "Current root coordinator upgrades populated53, preserves every prior Crest source table, and idempotently rechecks54",
+    "Current-root encrypted snapshot excludes an actual concurrent mileage correction; independent complete rows/roles/schema/grants/function/policy/constraint comparator unchanged",
+    "Current-root37 restores CRM, raw reports, contacts, objects/receipts, exact decimals/bigints/microseconds and original command receipts, then exercises incident/revocation/new-epoch refusal",
+    "All12 new source/projection tables have closed direct web access, forced RLS and expected owner, plus explicit missing-column refusal",
+    "Frozen53 coverage/compatibility/registry remain exact; original52→53 upgrade/recovery still passes under its own historical identity",
+    "Required CI includes full field/database/source/recovery suite; existing browser30-file union, genuine field Auth14 and root54 browser fixtures remain mandatory"
+  ],
+  "diagnostics": [
+    "Initial adoption unit47/48 used incorrect guessed field table names. Corrected to the preexisting independently observed twelve-table field dictionary; full8471 passes. No SQL or source policy changed.",
+    "First272 native: one historical53 test incorrectly treated53 as current. It now binds the frozen53 bytes and verifies the current root retains that prefix; all7 historical cases pass in68 compatibility run.",
+    "Compatibility68: three general recovery assertions still expected53,68 source tables and1068 observed columns. They now require54,80 and1244, retain all prior omission guards, and additionally test every new table closure/omission. All37 current-root cases pass. No restore comparator, timeout, SQL body or release gate weakened."
+  ],
+  "nonExecutableChangesAfterNative": [
+    "Registered acceptance annotation in planning/FIELD54_REGISTRATION.json",
+    "CI historical53 step label and execution checkpoint metadata"
+  ],
+  "renderedProofRetained": "planning/proposals/field-work-ui-verification.json",
+  "currentSourceRenderedAndGenuineAuthReexecution": "Pending hosted current-source CI; fixtures now apply root54 and verify exact candidate identity. Previous local genuine API14/browser4 evidence remains separately source-bound.",
+  "completePortableExport": false,
+  "completeBackup": false,
+  "productionActivation": false,
+  "runtimeFinancePostingEnabled": false,
+  "ownerPreviewChanged": false,
+  "remaining": [
+    "Review/secret-scan and publish coherent source-only field PR on canonical public main without private ancestry",
+    "Required current-source CI, release artifacts/independent image/source verification and registered54 genuine app acceptance before safe owner preview upgrade",
+    "All remaining approved field/custody/photos/finance/reporting/complete portability/recovery/import/cutover/Calendar/full-V1 and physical-device gates"
+  ]
+}

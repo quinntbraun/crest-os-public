@@ -23,10 +23,10 @@ function WorkLocation({value}:{value:BookingLocation}){
 }
 type Props=Readonly<{
  resources:SavedJobResources;history:readonly JobHistoryEvent[];historyComplete:boolean;busy:boolean;canChange:boolean;
- onChangeAppointment?:()=>void;onCancel?:()=>void;onDownload?:()=>void;onMoreHistory?:()=>void;
+ onWorkStatus?:(()=>void)|undefined;onChangeAppointment?:()=>void;onCancel?:()=>void;onDownload?:()=>void;onMoreHistory?:()=>void;
 }>;
 export function SavedJobDetails(props:Props){return <SavedJobDetailsContent key={props.resources.head.job.id+':'+props.resources.head.job.version} {...props}/>;}
-function SavedJobDetailsContent({resources,history,historyComplete,busy,canChange,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
+function SavedJobDetailsContent({resources,history,historyComplete,busy,canChange,onWorkStatus,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
  const {head}=resources,{job,appointment,latestAppointment}=head;
  const customer=parseCustomer(resources.vehicles[0]!.customer_snapshot,resources.businessId);
  const location=parseBookingLocation(job.work_location_snapshot,resources.businessId,job.customer_id),contact=parseBookingContact(appointment.contact_snapshot);
@@ -56,6 +56,7 @@ function SavedJobDetailsContent({resources,history,historyComplete,busy,canChang
   })}</section>
   <section aria-label="Retained work allocation"><h3>Work for this visit</h3><ul>{resources.scopeParts.map(part=><li key={part.sourceAllocationId+'/'+part.partitionId}><p>{part.scopeDescription}</p><p className="field-help">{quoteMoney(part.amountCents)} allocated · {part.state==='cancelled'?'Cancelled allocation':part.state==='completed'?'Completed scope':'Assigned scope'}</p></li>)}</ul></section>
   {head.confirmationDraft&&<details><summary>Prepared confirmation message</summary><p className="field-help">Prepared only. No message delivery is recorded here.</p><textarea aria-label="Prepared confirmation text" readOnly value={head.confirmationDraft.bodyText} rows={6}/><button type="button" className="secondary" disabled={busy} onClick={()=>void copyMessage()}>Copy message</button><p role="status" aria-live="polite">{copyState}</p></details>}
+  {onWorkStatus&&job.fulfillment_mode==='mobile'&&['scheduled','en_route','in_progress','paused'].includes(job.state)&&<section aria-label="Field work actions"><button type="button" disabled={busy||!canChange} onClick={onWorkStatus}>Record work status…</button></section>}
   {(onChangeAppointment||onCancel)&&job.state==='scheduled'&&<section aria-label="Job actions">{onChangeAppointment&&<button type="button" disabled={!changeable} onClick={onChangeAppointment}>Change appointment…</button>}{onCancel&&<button type="button" className="secondary" disabled={!changeable} onClick={onCancel}>Cancel this job…</button>}</section>}
   <details>
    <summary>Saved history · version {job.version}</summary>

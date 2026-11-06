@@ -17,6 +17,11 @@ const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8')
 const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8'));
 const currentCoverage=JSON.parse(await readFile(join(root,'planning/SECURITY_EXPORT_COVERAGE.json'),'utf8'));
 const registryHash=hash(await readFile(join(root,'supabase/migration-checksums.json')));
+const legacy53Bytes=await readFile(join(root,'tests/support/registered53-migration-checksums.json')),legacy53=JSON.parse(legacy53Bytes);
+assert.equal(legacy53.migrations.length,53);assert.deepEqual(registry.migrations.slice(0,53),legacy53.migrations);
+const legacy53Coverage=JSON.parse(await readFile(join(root,'tests/support/registered53-export-coverage.json'),'utf8'));
+const legacy53Profile=Object.freeze({schemaVersion:53,registrySha256:hash(legacy53Bytes)}),field54Coverage=JSON.parse(await readFile(join(root,'tests/support/field54-export-coverage.json'),'utf8'));
+const field54Versions=[...legacy53.migrations.map(row=>row.version),'20261105180000'];
 const legacy52Bytes=await readFile(join(root,'tests/support/registered52-migration-checksums.json')),legacy52=JSON.parse(legacy52Bytes);
 assert.equal(legacy52.migrations.length,52);assert.deepEqual(registry.migrations.slice(0,52),legacy52.migrations);
 const legacy52Profile=Object.freeze({schemaVersion:52,registrySha256:hash(legacy52Bytes)}),legacy52Coverage=JSON.parse(await readFile(join(root,'tests/support/registered52-export-coverage.json'),'utf8')),amendment53Coverage=JSON.parse(await readFile(join(root,'tests/support/amendment53-export-coverage.json'),'utf8'));
@@ -208,17 +213,35 @@ export async function backupAmendment53CandidateDatabase(candidate,client,...arg
   return backupWithProfile(checked.profile,client,...args);
 }
 export async function restoreAmendment53CandidateDatabase(candidate,...args){return restoreWithProfile((await amendment53CandidateProfile(candidate)).profile,...args);}
+export async function backupLegacy53Database(client,...args){
+ assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(row=>row.version),legacy53.migrations.map(row=>row.version));
+ return backupWithProfile(legacy53Profile,client,...args);
+}
+export async function restoreLegacy53Database(...args){return restoreWithProfile(legacy53Profile,...args);}
+async function field54CandidateProfile(candidate){
+ assert.equal(candidate.file,'20261105180000_field_workspace.sql');
+ const bytes=await readFile(join(candidate.directory,'supabase/migration-checksums.json')),value=JSON.parse(bytes);
+ assert.equal(value.migrations.length,54);assert.deepEqual(value.migrations.slice(0,53),legacy53.migrations);assert.deepEqual(value.migrations.map(row=>row.version),field54Versions);
+ assert.equal(hash(bytes),candidate.registrySha256);assert.equal(candidate.previousRegistrySha256,hash(legacy53Bytes));assert.equal(value.migrations.at(-1).file,candidate.file);assert.equal(value.migrations.at(-1).sha256,candidate.sha256);
+ assert.equal(hash(await readFile(join(candidate.directory,'supabase/migrations',candidate.file))),candidate.sha256);
+ return {profile:Object.freeze({schemaVersion:54,registrySha256:candidate.registrySha256}),versions:field54Versions};
+}
+export async function backupField54CandidateDatabase(candidate,client,...args){
+ const checked=await field54CandidateProfile(candidate);assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(row=>row.version),checked.versions);
+ return backupWithProfile(checked.profile,client,...args);
+}
+export async function restoreField54CandidateDatabase(candidate,...args){return restoreWithProfile((await field54CandidateProfile(candidate)).profile,...args);}
 async function backupWithProfile(profile,client,url,directory,recipient,duringSnapshot=async()=>{},objectCapture){
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   try{
     const snapshot=(await client.query('SELECT pg_export_snapshot() AS value')).rows[0].value;
-    if(profile===currentProfile||profile===legacy52Profile||profile.schemaVersion===53){
+    if(profile===currentProfile||profile===legacy52Profile||profile.schemaVersion===53||profile.schemaVersion===54){
       // A matching migration ordinal alone cannot label a construction schema
       // with an additional source column as the registered current profile.
       // Check the actual columns in the same held snapshot used by the dump.
-      stage='coverage';assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(row=>row.version),profile.schemaVersion===53?[...legacy52.migrations.map(row=>row.version),'20261104180000']:(profile===legacy52Profile?legacy52:registry).migrations.map(row=>row.version));
+      stage='coverage';assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(row=>row.version),profile===currentProfile?registry.migrations.map(row=>row.version):profile.schemaVersion===54?field54Versions:profile.schemaVersion===53?legacy53.migrations.map(row=>row.version):(profile===legacy52Profile?legacy52:registry).migrations.map(row=>row.version));
       const columns=(await client.query("SELECT n.nspname||'.'||c.relname AS \"table\",a.attname AS \"column\" FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN('crest','crest_private') AND c.relkind IN('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2")).rows;
-      verifyExportCoverage(profile===legacy52Profile?legacy52Coverage:profile.schemaVersion===53?amendment53Coverage:currentCoverage,columns,profile.schemaVersion);
+      verifyExportCoverage(profile===currentProfile?currentCoverage:profile===legacy53Profile?legacy53Coverage:profile.schemaVersion===54?field54Coverage:profile===legacy52Profile?legacy52Coverage:profile.schemaVersion===53?amendment53Coverage:currentCoverage,columns,profile.schemaVersion);
     }
     // Coverage has passed. Pending-object/source refusal belongs to snapshot
     // capture, rather than being misreported as a schema-coverage failure.
@@ -227,7 +250,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
     // creation order for53 so a multi-role policy deparses byte-exact after
     // restore; do not normalize away policy or permission differences.
     let roleCreationOrder;
-    if(profile.schemaVersion===53){
+    if(profile.schemaVersion===53||profile.schemaVersion===54){
       roleCreationOrder=(await client.query("SELECT rolname FROM pg_roles WHERE rolname ~ '^crest_[a-z_]+$' ORDER BY oid")).rows.map(r=>r.rolname);
       assert.deepEqual([...roleCreationOrder].sort(),roles.map(r=>r.rolname));
     }
@@ -275,7 +298,7 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     // Fully decrypt/authenticate/check BEFORE executing SQL. The bounded fixture
     // stays in memory; no partial plaintext dump is written to disk or published.
     stage='closed_roles';let orderedRoles=manifest.roles;
-    if(profile.schemaVersion===53){
+    if(profile.schemaVersion===53||profile.schemaVersion===54){
       assert(Array.isArray(manifest.roleCreationOrder));
       assert(manifest.roleCreationOrder.every(name=>typeof name==='string'&&/^crest_[a-z_]+$/.test(name)));
       assert.deepEqual([...manifest.roleCreationOrder].sort(),manifest.roles.map(r=>r.rolname));

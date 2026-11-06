@@ -14,6 +14,8 @@ import type {FulfillmentModeSave} from '../operations/fulfillment-mode-contract.
 import {parseBookingConflictRequest,parseBookingConflictReview} from '../operations/booking-conflict-review-contract.ts';
 import type {BookingConflictRequest} from '../operations/booking-conflict-review-contract.ts';
 import {postScheduling,SchedulingClientError} from './scheduling-transport.ts';
+import {parseFieldSessionSave,parseFieldSessionCommitted,fieldSessionConflicts} from '../operations/field-session-contract.ts';
+import type {FieldSessionSave} from '../operations/field-session-contract.ts';
 export {SchedulingClientError};
 function failure(error:unknown,kind:'input'|'unknown'|'unavailable'):never{throw error instanceof SchedulingClientError?error:new SchedulingClientError(kind);}
 function conflict(v:unknown,status:number,reasons:readonly string[]){if(status===409&&exact(v,['state','reason'])&&v.state==='conflict'&&typeof v.reason==='string'&&reasons.includes(v.reason))return Object.freeze({state:'conflict' as const,reason:v.reason});return null;}
@@ -21,7 +23,7 @@ export const scheduling=Object.freeze({
  async workspace(proof:Proof,signal:AbortSignal){try{
   const r=await postScheduling('workspace',{},proof,signal),v=r.value;check(r.status===200&&exact(v,['schemaVersion','businessId','operatorId','timezone','modeVersion','writeState','recoveryEpoch'])&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding));
   const workspace=parseBookingWorkspace({schemaVersion:v.schemaVersion,businessId:v.businessId,operatorId:v.operatorId,timezone:v.timezone,modeVersion:v.modeVersion},v.businessId as string);check(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null);
-  return Object.freeze({...r.amendedSchedulingAvailable===true?{amendedSchedulingAvailable:true as const}:{},context:Object.freeze({...workspace,...v.writeState==='ready'?{writeState:'ready' as const,recoveryEpoch:v.recoveryEpoch as string}:{writeState:'paused' as const,recoveryEpoch:null}}),binding:r.binding});
+  return Object.freeze({...r.amendedSchedulingAvailable===true?{amendedSchedulingAvailable:true as const}:{},...r.fieldSessionAvailable===true?{fieldSessionAvailable:true as const}:{},context:Object.freeze({...workspace,...v.writeState==='ready'?{writeState:'ready' as const,recoveryEpoch:v.recoveryEpoch as string}:{writeState:'paused' as const,recoveryEpoch:null}}),binding:r.binding});
  }catch(e){failure(e,'unavailable');}},
  async reviewSlot(input:BookingConflictRequest,proof:Proof,signal:AbortSignal){let request:BookingConflictRequest;try{request=parseBookingConflictRequest(input);}catch{throw new SchedulingClientError('input');}try{const {businessId,...body}=request,r=await postScheduling('slot-review',body,proof,signal);check(r.status===200&&businessId===request.businessId);return parseBookingConflictReview(r.value,request);}catch(e){failure(e,'unavailable');}},
  async agreement(businessId:string,familyId:string,proof:Proof,signal:AbortSignal){try{check(uuid(businessId)&&uuid(familyId));const r=await postScheduling('agreement',{familyId},proof,signal);check(r.status===200);return parseBookingAgreement(r.value,businessId,familyId);}catch(e){failure(e,'unavailable');}},
@@ -39,6 +41,9 @@ export const scheduling=Object.freeze({
  }catch(e){failure(e,'unknown');}},
  async reschedule(input:ChangeJobScheduleSave,proof:Proof,signal:AbortSignal){let request:ChangeJobScheduleSave;try{request=parseChangeJobScheduleSave(input);}catch{throw new SchedulingClientError('input');}try{
   const {businessId,...body}=request,r=await postScheduling('reschedule',body,proof,signal),clash=conflict(r.value,r.status,['operation','job','customer','mode','version','state','appointment','proposal','review']);if(clash)return clash;check(r.status===200);const result=parseRescheduledJobCommitted(r.value,businessId,request.operationId);check(result.recoveryEpoch===request.recoveryEpoch&&result.receipt.jobId===request.jobId&&BigInt(result.receipt.version)===BigInt(request.expectedJobVersion)+1n&&result.receipt.action===request.payload.action);return result;
+ }catch(e){failure(e,'unknown');}},
+ async saveFieldSession(input:FieldSessionSave,proof:Proof,signal:AbortSignal){let request:FieldSessionSave;try{request=parseFieldSessionSave(input);}catch{throw new SchedulingClientError('input');}try{
+  const body=Object.fromEntries(Object.entries(request).filter(([key])=>key!=='businessId')),r=await postScheduling('field-save',body,proof,signal),clash=conflict(r.value,r.status,fieldSessionConflicts);if(clash)return clash;check(r.status===200);return parseFieldSessionCommitted(r.value,request);
  }catch(e){failure(e,'unknown');}},
  async saveModes(input:FulfillmentModeSave,proof:Proof,signal:AbortSignal){let request:FulfillmentModeSave;try{request=parseFulfillmentModeSave(input);}catch{throw new SchedulingClientError('input');}try{
   const {businessId,...body}=request,r=await postScheduling('mode-save',body,proof,signal),clash=conflict(r.value,r.status,['operation','review']);if(clash)return clash;
