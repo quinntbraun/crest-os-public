@@ -265,6 +265,11 @@
       "version": "20261104180000",
       "file": "20261104180000_quote_amendment_acceptance.sql",
       "sha256": "5ecdf7ecab6563d908ae87fd69d59308241596efca7ffabfd289f01d10f39a1c"
+    },
+    {
+      "version": "20261105180000",
+      "file": "20261105180000_field_workspace.sql",
+      "sha256": "ebc88d2029dbac5815415a92f708e1213eaf3edbdcb342d583b925a4f3ff6524"
     }
   ]
 }

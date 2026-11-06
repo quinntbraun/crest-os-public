@@ -5,6 +5,14 @@ import type {OriginalOperationKind} from '../../src/security/original-operation-
 
 const businessId=randomUUID(),operationId=randomUUID(),originalEpoch=randomUUID(),authorityEpoch=randomUUID();
 const targets:Record<OriginalOperationKind,Record<string,unknown>>={
+ 'operations.job.field':{jobId:randomUUID(),expectedJobVersion:'1',action:'direct_arrive'},
+ 'operations.job.complete':{jobId:randomUUID(),expectedJobVersion:'2'},
+ 'operations.job.interrupt':{jobId:randomUUID(),expectedJobVersion:'2',action:'cancel'},
+ 'operations.job.cancel_unfulfilled':{jobId:randomUUID(),expectedJobVersion:'2'},
+ 'operations.mileage.record':{legId:randomUUID(),expectedLegVersionId:randomUUID(),expectedEvidenceVersion:'0'},
+ 'operations.support_trip.record':{legId:randomUUID(),expectedLegVersionId:null,action:'depart'},
+ 'operations.support_trip.correct':{legId:randomUUID(),expectedLegVersionId:randomUUID(),action:'correct'},
+
  'operations.fulfillment_modes.initialize':{expectedSequence:'0'},
  'operations.fulfillment_modes.save':{expectedSequence:'1'},
  'operations.job.book':{jobId:randomUUID(),expectedModeSequence:'0'},

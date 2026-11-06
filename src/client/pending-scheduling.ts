@@ -2,6 +2,13 @@ import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {parseSchedulingOriginal} from '../operations/scheduling-original-contract.ts';
 import type {SchedulingOriginalKind,SchedulingOriginal} from '../operations/scheduling-original-contract.ts';
 export const pendingSchedulingKeys=Object.freeze({
+ 'operations.job.field':'crest.field-session.pending-reference.v1',
+ 'operations.job.complete':'crest.field-completion.pending-reference.v1',
+ 'operations.job.interrupt':'crest.trip-interruption.pending-reference.v1',
+ 'operations.job.cancel_unfulfilled':'crest.unfulfilled-cancellation.pending-reference.v1',
+ 'operations.mileage.record':'crest.mileage.pending-reference.v1',
+ 'operations.support_trip.record':'crest.support-trip.pending-reference.v1',
+ 'operations.support_trip.correct':'crest.support-trip-correction.pending-reference.v1',
  'operations.fulfillment_modes.initialize':'crest.fulfillment-mode-initialize.pending-reference.v1',
  'operations.fulfillment_modes.save':'crest.fulfillment-mode.pending-reference.v1',
  'operations.job.book':'crest.book-job.pending-reference.v1',

@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "observedAt": "2026-11-05T07:33:35.320Z",
+  "observedAt": "2026-11-05T10:21:29.920Z",
   "scope": "Protected-main integration115 correction and independent held field construction; not full current release acceptance",
   "failedSource": {
     "public": "d0d044f613bd1fa111983b81b41040ecc48965e4",
@@ -52,9 +52,20 @@
     "recoveryDiagnosticRefinementAfterSuccessfulRun": true,
     "typesPassed": true,
     "affectedLintPassed": true,
-    "fullCurrentLinuxAcceptance": false
+    "fullCurrentLinuxAcceptance": true
   },
-  "heldFieldConstruction": {
+  "deliveredPreview": {
+    "local": "3e252b1c7dbd6da1bbb09c3684cdfe622c2b8f96",
+    "public": "47858247d101fd8b25856b1dd3dace8ffa056aea",
+    "acceptedFullRun": 41973467699,
+    "schema": 53,
+    "unchanged": true
+  },
+  "next": "The verified PR115 exact main merge still awaits specific owner approval after automatic review rejection. Continue the complete Phase6 Mobile lifecycle, completion/outcomes/tasks, source/history/recovery/retirement and genuine connected controls. Phase7 custody follows; keep its work-start controls closed. Preserve the delivered419 preview and every approved V1 requirement.",
+  "realCrestUseReady": false,
+  "completeV1": false,
+  "spend": 0,
+  "heldFieldConstructionAtCorrection": {
     "files": [
       {
         "path": "planning/proposals/field-time-storage.sql",
@@ -91,15 +102,99 @@
     "fullSourceFingerprintAndBusinessAggregateAdoptionStillRequired": true,
     "notIncludedInIntegrationPr": true
   },
-  "deliveredPreview": {
-    "local": "3e252b1c7dbd6da1bbb09c3684cdfe622c2b8f96",
-    "public": "47858247d101fd8b25856b1dd3dace8ffa056aea",
-    "acceptedFullRun": 41973467699,
-    "schema": 53,
-    "unchanged": true
+  "currentIntegration": {
+    "publicSource": "e7244f58c2979e7f8ab2ddd4d560944b608390f9",
+    "tree": "bb134a0d2849df24c8fe2aa3c612f05126f1ceb5",
+    "testedMerge": "4c635a0ec287bead0d9c03092a9ec28694136764",
+    "fullRun": 41988528753,
+    "allCurrentSourceGatesPassed": true,
+    "unitCases": 8198,
+    "browserCases": 304,
+    "genuineAuthCases": 277,
+    "focusedRun": 41988528724,
+    "expenseRun": 41988528734,
+    "requiredArtifacts": [
+      {
+        "id": 13399601539,
+        "name": "phase-1-candidate-4c635a0ec287bead0d9c03092a9ec28694136764-attempt-1",
+        "digest": "sha256:6bb26bfef8046a0ebe930f8f3d13455e670bf3aba4027dd620330f2da6eed7b3",
+        "expiresAt": "2026-11-08T08:23:31Z"
+      },
+      {
+        "id": 13398906795,
+        "name": "service-review-4c635a0ec287bead0d9c03092a9ec28694136764-attempt-1",
+        "digest": "sha256:edef3f79a6042e9493947f9730405eb061d6f8ee92dfc5598c2ad53af156dcb1",
+        "expiresAt": "2026-11-08T08:15:32Z"
+      },
+      {
+        "id": 13398210040,
+        "name": "settings-review-intake-4c635a0ec287bead0d9c03092a9ec28694136764-attempt-1",
+        "digest": "sha256:c56ac49ed5587ed254c1ab2b86ee1b20cce8dd4677c38c448808739403543a1e",
+        "expiresAt": "2026-11-08T07:49:15Z"
+      },
+      {
+        "id": 13398155335,
+        "name": "settings-review-amendments-4c635a0ec287bead0d9c03092a9ec28694136764-attempt-1",
+        "digest": "sha256:31edffbb4a06543ca8e3f07252805410c78bd9cba1db2e9ce24ea9b2c4237eaa",
+        "expiresAt": "2026-11-08T07:51:11Z"
+      },
+      {
+        "id": 13397766102,
+        "name": "settings-review-schedule-4c635a0ec287bead0d9c03092a9ec28694136764-attempt-1",
+        "digest": "sha256:324b6008424d0e38c002010d98fdacbd866fbb36f8bec2e3046d1978d228c529",
+        "expiresAt": "2026-11-08T07:52:23Z"
+      },
+      {
+        "id": 13396929638,
+        "name": "settings-review-crm-4c635a0ec287bead0d9c03092a9ec28694136764-attempt-1",
+        "digest": "sha256:85f35bf5408a5dcc5284e78eafd0dfcb3a84e638f912771f7bc263a72910d45f",
+        "expiresAt": "2026-11-08T07:45:41Z"
+      },
+      {
+        "id": 13396819106,
+        "name": "settings-review-commercial-4c635a0ec287bead0d9c03092a9ec28694136764-attempt-1",
+        "digest": "sha256:1d6693656aeaf1a3ef76f8848c4df76ccce212cadac2548b3d24674d9d3fd8cc",
+        "expiresAt": "2026-11-08T07:47:30Z"
+      },
+      {
+        "id": 13396664489,
+        "name": "settings-review-records-4c635a0ec287bead0d9c03092a9ec28694136764-attempt-1",
+        "digest": "sha256:7fe955ae446794133beae392b3d0ac40b68308d56226d7f15fbdf6558ebefe1a",
+        "expiresAt": "2026-11-08T07:42:38Z"
+      }
+    ],
+    "allEightArtifactsVerified": true,
+    "independentNativeCandidateDecompressionAndImageChecksum": true,
+    "fourWidthsActuallyInspected": [
+      360,
+      390,
+      768,
+      1440
+    ],
+    "localAcceptanceReceipt": ".local/integration115-correction-publication/accepted421-ci.json",
+    "localAcceptanceReceiptSha256": "a9d67108b35a46aa0cc3db19336aba3d191a192feb2801e5b62ac47c744f8e03",
+    "pr": 115,
+    "readyForReview": true,
+    "merged": false,
+    "main": "8d2ef72c09b178fe5ce8b552f37e5f2a0d72fd6e",
+    "exactMainMerge": "Automatic approval review rejected for lack of specific owner authorization; owner approval requested and pending. Do not use a workaround.",
+    "prior420SchemaMismatchRootCauseResolved": false,
+    "current421OrdinaryAndRequiredRecoveryGatesPassed": true
   },
-  "next": "Publish the reviewed integration-test correction for fresh exact-source main-based full CI. Investigate any recovery schema mismatch using the more precise safe metadata; never weaken the comparator or merge failed420. Continue the full field workflow separately.",
-  "realCrestUseReady": false,
-  "completeV1": false,
-  "spend": 0
+  "heldFieldConstruction": {
+    "proof": "planning/proposals/field-session-verification.json",
+    "proofSha256": "8e2ddb47ac73dc099f0b05a045f2e79f614670d0874a03944ca4a1f4b76aaf1f",
+    "actualPostgresCases": 61,
+    "storageCases": 34,
+    "restrictedSessionCommandCases": 27,
+    "sourceStableAndOwnedClean": true,
+    "registered54": false,
+    "appCommandsOrTimerUiDelivered": false,
+    "completeFieldSourceRecoveryAndLifecycleStillRequired": true,
+    "notIncludedInIntegrationPr": true,
+    "combinedNativeCases": 77,
+    "privateCompletionPlannerCases": 16,
+    "completionProof": "planning/proposals/work-completion-verification.json",
+    "completionProofSha256": "2f1769fdd2ed7316d2d2d7598db0541de358e92b1d9d6a5555342391eb0c72b6"
+  }
 }
