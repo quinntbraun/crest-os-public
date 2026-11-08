@@ -33,7 +33,18 @@ const reopeningProfile=new URL(import.meta.url).searchParams.get('profile')==='r
 const schemaVersion=registeredAcceptanceProfile?53:cancellationProfile||acceptanceProfile?52:51;
 const frozen53Registry=registeredAcceptanceProfile?await readFile(new URL('../support/registered53-migration-checksums.json',import.meta.url)):null;
 const originalTestQuery=pg.Client.prototype.query;if(registeredAcceptanceProfile)pg.Client.prototype.query=function(...args){const at=Date.now(),report=error=>console.log('SYNTHETIC_AMENDMENT_DATABASE_DIAGNOSTIC '+JSON.stringify({...classifyTestDatabaseError(error),durationMs:Math.max(0,Date.now()-at)})),last=args.length-1,callback=args[last];if(typeof callback==='function')args[last]=function(...values){if(values[0])report(values[0]);return callback.apply(this,values);};let result;try{result=originalTestQuery.apply(this,args);}catch(error){report(error);throw error;}return result&&typeof result.catch==='function'?result.catch(error=>{report(error);throw error;}):result;};
-const sha=value=>createHash('sha256').update(value).digest('hex'),signal=()=>new AbortController().signal,registryUrl=new URL('../../supabase/migration-checksums.json',import.meta.url),registry=JSON.parse(await readFile(registryUrl));assert(registry.migrations.length>=schemaVersion,'Actual registered schema is required; no proposal installation fallback');const entry51=registry.migrations[schemaVersion-1],sqlUrl=new URL('../../supabase/migrations/'+entry51.file,import.meta.url),sql=await readFile(sqlUrl),source={schemaVersion,migrationFile:entry51.file,sqlSha256:sha(sql),sqlBytes:sql.length},loginKey=randomBytes(32);assert.equal(source.sqlSha256,entry51.sha256);
+const sha=value=>createHash('sha256').update(value).digest('hex'),signal=()=>new AbortController().signal;
+const registryUrl=new URL('../../supabase/migration-checksums.json',import.meta.url);
+const rootRegistryBytes=await readFile(registryUrl);
+const rootRegistrySha256=sha(rootRegistryBytes);
+const registry=JSON.parse(rootRegistryBytes);
+assert(registry.migrations.length>=schemaVersion,'Actual registered schema is required; no proposal installation fallback');
+const migration=registry.migrations[schemaVersion-1];
+const sqlUrl=new URL('../../supabase/migrations/'+migration.file,import.meta.url);
+const sql=await readFile(sqlUrl);
+const source={schemaVersion,migrationFile:migration.file,sqlSha256:sha(sql),sqlBytes:sql.length};
+const loginKey=randomBytes(32);
+assert.equal(source.sqlSha256,migration.sha256);
 const proposals=[];if(!cancellationProfile&&!acceptanceProfile)for(const name of ['storage','draft-commands','sharing-core','sharing-guards','originals','read','targets']){const path='planning/proposals/quote-amendment-'+name+'.sql',body=await readFile(new URL('../../'+path,import.meta.url),'utf8');proposals.push({path,body,sha256:sha(body)});}
 let sandbox,target,client,service,login,config,provider,tokens,bootstrap,prior,installedRegistrySha256;
 async function transaction(work){await client.query('BEGIN');try{const result=await work();await client.query('COMMIT');return result;}catch(error){await client.query('ROLLBACK');throw error;}}
@@ -54,7 +65,7 @@ before(async()=>{
  await transaction(async()=>{for(const p of proposals)await client.query(p.body);});
  login='crest_commercial_http_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=password;config={connectionString:url.toString(),environment:'test'};
  service=await startRealAuthService(target,{diagnostic:registeredAcceptanceProfile});provider=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},createLiveProviderSessionLookup(config));tokens=await createProviderTokenStore('synthetic-commercial-http',[{id:'synthetic-commercial-http',key:randomBytes(32)}]);bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
- console.log('SYNTHETIC_QUOTE_AMENDMENT_SOURCE '+JSON.stringify({...source,registrySha256:installedRegistrySha256}));
+ console.log('SYNTHETIC_QUOTE_AMENDMENT_SOURCE '+JSON.stringify({...source,rootRegistrySha256,installedRegistrySha256}));
 },{timeout:240000});
 after(async()=>{try{if(registeredAcceptanceProfile)console.log('SYNTHETIC_AMENDMENT_SERVICE_DIAGNOSTIC '+JSON.stringify({events:service?.diagnostics()??[]}));await service?.close();if(login)await sandbox.admin.query('DROP ROLE '+login);}finally{await sandbox?.close();const current={sqlSha256:sha(await readFile(sqlUrl))};console.log('SYNTHETIC_QUOTE_AMENDMENT_SOURCE_AFTER '+JSON.stringify({...current,sourceUnchanged:current.sqlSha256===source.sqlSha256,registeredReleaseClaim:false}));}});
 async function fixture(){
@@ -143,7 +154,13 @@ test('actual deferred COMMIT refusal exposes unknown, not a tentative sharing or
 test('default-closed factory, method and query boundaries stay separate from the normal app',async()=>{const f=await fixture();await withHttp(f,async http=>{assert.equal((await http.raw('business/quotes/amendments/create',{})).status,404);assert.throws(()=>createQuoteAmendmentHttp({...http.configuration,environment:'production'},provider,tokens,true),/QUOTE_AMENDMENT_HTTP_CONFIGURATION_REQUIRED/);;assert(!http.requests.some(path=>path.startsWith("/api/auth/")));},{amendmentsEnabled:false,authenticate:false});await withHttp(f,async http=>{assert.equal((await http.raw('business/quotes/amendments/unknown',{})).status,404);assert.equal((await http.raw('business/quotes/amendments/read?private=forbidden',{})).status,404);const r=await fetch('/api/business/quotes/amendments/read',{method:'GET',headers:{origin:http.configuration.origin}});assert.equal(r.status,405);assert.equal(r.headers.get('allow'),'POST');assert(!http.requests.some(path=>path.startsWith("/api/auth/")));},{authenticate:false});});
 test('private read wire excludes derived comparison and browser recomputes the exact customer-safe projection',async()=>{const f=await fixture();await withHttp(f,async http=>{const state=await amendmentDraft(f,http),r=await http.raw('business/quotes/amendments/read',{familyId:state.request.familyId,revisionId:state.request.revisionId,afterVersion:'0',pageSize:5});assert.equal(r.status,200);assert(Buffer.byteLength(JSON.stringify(r.value),'utf8')>8192,'retained quote history exceeds the separate authentication writer limit');assert(!Object.hasOwn(r.value,'comparison'));assert(!Object.hasOwn(r.value,'parentIsCurrent'));assert.equal(r.value.parent.acceptanceId,state.parent.accepted.receipt.acceptanceId);assert.match(r.headers.get('content-security-policy'),/default-src 'none'/);assert.match(r.headers.get('vary'),/Cookie/);const parsed=await amendmentRead(state.request,http);assert(!('state'in parsed));assert.equal(parsed.comparison.customer.signedDeltaCents,'3000');});});
 test('a refused construction configuration closes its owned listener instead of hanging the test process',async()=>{const f=await fixture();let called=false;await assert.rejects(withHttp(f,async()=>{called=true;},{businessId:'bad'}),/CONFIGURATION_REQUIRED/);assert.equal(called,false);assert.equal(activeHttpServers.size,0);});
-test('retains all51 registered migration records and explicit unregistered construction status',async()=>{assert.equal(activeHttpServers.size,0);assert.equal(prior.length,51);assert.equal((await client.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,51);assert.equal(sha(await readFile(sqlUrl)),source.sqlSha256);assert.equal(sha(await readFile(registryUrl)),source.registrySha256);});
+test('retains all51 registered migration records and explicit unregistered construction status',async()=>{
+ assert.equal(activeHttpServers.size,0);
+ assert.equal(prior.length,51);
+ assert.equal((await client.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,51);
+ assert.equal(sha(await readFile(sqlUrl)),source.sqlSha256);
+ assert.equal(sha(await readFile(registryUrl)),rootRegistrySha256);
+});
 
 function retainedOriginal(f,kind,request,storage){
  const reference=kind==='quote.amendment.create'?quoteAmendmentDraftReference(request):quoteAmendmentSendReference(request),store=createPendingQuoteAmendmentStore(storage,kind);

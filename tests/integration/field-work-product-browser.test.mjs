@@ -19,7 +19,32 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await page.getByLabel('Where are you leaving from?',{exact:true}).fill('Synthetic private draft that must clear');await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));await expect(page.getByLabel('Where are you leaving from?',{exact:true})).toHaveCount(0);await expect(status).toContainText('Private form cleared.');await page.getByRole('button',{name:'Reload saved work',exact:true}).click();await expect(page.getByLabel('Where are you leaving from?',{exact:true})).toHaveValue('');
   await page.getByLabel('Vehicle you are driving',{exact:true}).selectOption(f.fieldVehicleId);await page.getByLabel('Where are you leaving from?',{exact:true}).fill('Synthetic equipment base, '+('a long fictional street and arrival description '.repeat(20)));
   await page.getByText('Trip notes and arrival estimate (optional)',{exact:true}).click();await expect(page.getByLabel('Estimated arrival (optional)',{exact:true})).not.toHaveAttribute('required');
-  async function capture(prefix){await mkdir('.local/review',{recursive:true});for(const width of [360,390,768,1440]){await page.setViewportSize({width,height:900});await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(v=>v.id),[]);for(const control of await page.locator('.field-work-form input,.field-work-form select,.field-work-form button').all()){if(!await control.isVisible())continue;const box=await control.boundingBox();assert(box&&box.height>=44,'field controls need44px touch targets');assert(Number.parseFloat(await control.evaluate(el=>getComputedStyle(el).fontSize))>=16,'field controls use16px text');}await page.screenshot({path:'.local/review/'+prefix+'-'+name+'-'+width+'.png',fullPage:true});}}
+  async function capture(prefix){
+   await mkdir('.local/review',{recursive:true});
+   for(const width of [360,390,768,1440]){
+    await page.setViewportSize({width,height:900});
+    await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(v=>v.id),[]);
+    for(const control of await page.locator('.field-work-form input,.field-work-form select,.field-work-form button').all()){
+     if(!await control.isVisible())continue;
+     const box=await control.boundingBox();
+     assert(box&&box.height>=44,'field controls need44px touch targets');
+     assert(Number.parseFloat(await control.evaluate(el=>getComputedStyle(el).fontSize))>=16,'field controls use16px text');
+    }
+    const labelClearsFocusOutline=await page.evaluate(()=>{
+     const control=document.activeElement;
+     if(!(control instanceof HTMLInputElement||control instanceof HTMLTextAreaElement))return true;
+     const label=control.labels?.[0];
+     if(!label||label.contains(control))return true;
+     const style=getComputedStyle(control);
+     const outline=parseFloat(style.outlineWidth)+parseFloat(style.outlineOffset);
+     return control.getBoundingClientRect().top-label.getBoundingClientRect().bottom>=outline;
+    });
+    assert(labelClearsFocusOutline,'field labels must clear the focused input outline');
+    await page.screenshot({path:'.local/review/'+prefix+'-'+name+'-'+width+'.png',fullPage:true});
+   }
+  }
   // An entered invalid optional time cannot silently become an omitted ETA.
   await page.getByLabel('Estimated arrival (optional)',{exact:true}).fill('2027-03-14T02:30');await expect(page.locator('.field-work-form [role="alert"]')).toContainText('daylight-saving gap');assert.equal(await page.getByLabel('Estimated arrival (optional)',{exact:true}).evaluate(el=>el.checkValidity()),false);await page.getByLabel('Estimated arrival (optional)',{exact:true}).fill('');
   await capture('field-departure');await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Record departure',exact:true}).focus();await page.keyboard.press('Enter');await expect(status).toHaveText('Work status saved. Open the job to reload its current status and history.');await expect(page.getByText('Confirmed saved version 2.',{exact:true})).toBeVisible();

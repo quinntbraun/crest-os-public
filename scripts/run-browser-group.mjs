@@ -13,8 +13,22 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  console.log('REQUIRED_BROWSER_GROUP '+JSON.stringify({group:selected,files}));
  const child=spawn(process.execPath,args,{stdio:'inherit',windowsHide:true});
  const result=await new Promise(resolve=>{child.once('error',()=>resolve({code:1,signal:null}));child.once('close',(code,signal)=>resolve({code,signal}));});
- let screenshots=[];try{screenshots=(await readdir('.local/review')).filter(name=>/^(settings|workspace|home|quote|amendment|appointment)-.*\.png$/.test(name)).sort();}catch(error){if(error.code!=='ENOENT')throw error;}
- const needsScreenshots=['commercial','amendments','schedule','records'].includes(selected),passed=result.code===0&&result.signal===null&&(!needsScreenshots||screenshots.length>0);
+ let screenshots=[];
+ try {
+  screenshots=(await readdir('.local/review')).filter(name=>/^(settings|workspace|home|quote|amendment|appointment|field)-.*\.png$/.test(name)).sort();
+ } catch(error) {
+  if(error.code!=='ENOENT')throw error;
+ }
+ const needsScreenshots=['commercial','amendments','schedule','records'].includes(selected);
+ const fieldScreenshots=selected==='schedule'
+  ? ['departure','pause'].flatMap(view=>['chromium','webkit'].flatMap(engine=>
+    [360,390,768,1440].map(width=>`field-${view}-${engine}-${width}.png`)))
+  : [];
+ const missingFieldScreenshots=fieldScreenshots.filter(name=>!screenshots.includes(name));
+ const passed=result.code===0&&result.signal===null&&(!needsScreenshots||screenshots.length>0)&&missingFieldScreenshots.length===0;
  await mkdir('.local/ci-browser',{recursive:true});await writeFile('.local/ci-browser/'+selected+'.json',JSON.stringify({schemaVersion:1,sourceCommit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),group:selected,files,args,childExitCode:result.code,childSignal:result.signal,screenshots,screenshotsRequired:needsScreenshots,passed},null,2)+'\n',{flag:'wx'});
- if(!passed){console.error('REQUIRED_BROWSER_GROUP_FAILED');process.exitCode=typeof result.code==='number'&&result.code!==0?result.code:1;}
+ if(!passed){
+  if(missingFieldScreenshots.length)console.error('MISSING_FIELD_SCREENSHOTS '+JSON.stringify(missingFieldScreenshots));
+  console.error('REQUIRED_BROWSER_GROUP_FAILED');process.exitCode=typeof result.code==='number'&&result.code!==0?result.code:1;
+ }
 }
