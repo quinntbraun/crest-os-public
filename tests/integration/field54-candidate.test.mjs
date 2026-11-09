@@ -14,8 +14,8 @@ import {captureFieldWorkspaceFixture,fieldWorkspaceContent} from '../support/fie
 import {verifyNeutralFieldOccupancyRebuild} from '../support/field-occupancy-rebuild.mjs';
 import {formatFieldWorkspaceSources} from '../../src/operations/field-workspace-source.ts';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
-import {requireSyntheticJobCompletion} from '../../scripts/synthetic-migrations.mjs';
-import {inventory,privateWorkspace,keyPair,restoreDatabase,backupLegacy53Database,restoreLegacy53Database,backupField54CandidateDatabase,restoreField54CandidateDatabase,recoveryCluster,connect} from '../support/recovery-drill.mjs';
+import {requireSyntheticJobCompletion,requireSyntheticJobMileage} from '../../scripts/synthetic-migrations.mjs';
+import {inventory,privateWorkspace,keyPair,restoreDatabase,backupLegacy53Database,restoreLegacy53Database,backupField54CandidateDatabase,restoreField54CandidateDatabase,backupLegacy55Database,restoreLegacy55Database,recoveryCluster,connect} from '../support/recovery-drill.mjs';
 const sha=v=>createHash('sha256').update(v).digest('hex'),value=async(c,q,a=[])=>(await c.query(q,a)).rows[0].value;
 const coverage=JSON.parse(await readFile(new URL('../support/field54-export-coverage.json',import.meta.url)));
 let restored54Target;
@@ -124,13 +124,42 @@ test('registered End Job upgrade requires the original ledger and preserves exis
  const before=await businessRows();
  assert.equal(await value(client,'SELECT to_regprocedure($1)::text value',[signature]),null);
  await assert.rejects(requireSyntheticJobCompletion(target),error=>error.message==='SYNTHETIC_JOB_COMPLETION_MIGRATION_REQUIRED');
- const upgraded=await sandbox.apply(target);
+ const source55=await sandbox.prefix(55);
+ const upgraded=await sandbox.apply(target,source55);
  assert.equal(upgraded.history.length,55);
  assert.equal(upgraded.history.at(-1).version,'20261109180000');
- assert.deepEqual((await sandbox.apply(target)).history,upgraded.history);
+ assert.deepEqual((await sandbox.apply(target,source55)).history,upgraded.history);
  assert.deepEqual(await businessRows(),before);
  await requireSyntheticJobCompletion(target);
  assert.equal(await value(client,"SELECT has_function_privilege('crest_web',$1,'EXECUTE') AND NOT has_function_privilege('anon',$1,'EXECUTE') AND NOT has_function_privilege('crest_export',$1,'EXECUTE') value",[signature]),true);
+},{timeout:180000});
+test('independently restore populated schema55 and register only the scoped mileage reader on upgrade',async()=>{
+ const signature='crest_commands.read_job_mileage_trips(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,timestamptz,uuid,integer)';
+ const point=join(folder,'registered55');await mkdir(point,{mode:0o700});
+ const baseline=await inventory(client);
+ const {manifest}=await backupLegacy55Database(client,target,point,keys.recipient);
+ assert.equal(manifest.schemaVersion,55);
+ assert.deepEqual(manifest.rows,baseline);
+ await assert.rejects(requireSyntheticJobMileage(target),error=>error.message==='SYNTHETIC_JOB_MILEAGE_MIGRATION_REQUIRED');
+ const cluster=await recoveryCluster();
+ try{
+  const destination=await cluster.database();
+  await assert.rejects(restoreDatabase(point,keys.path,destination),error=>error.message==='SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest');
+  assert.deepEqual((await restoreLegacy55Database(point,keys.path,destination)).rows,baseline);
+  const restored=await connect(destination);
+  try{
+   assert.deepEqual(await inventory(restored),baseline);
+   assert.equal(await value(restored,'SELECT to_regprocedure($1)::text value',[signature]),null);
+  }finally{await restored.end();}
+ }finally{await cluster.close();}
+ const upgraded=await sandbox.apply(target);
+ assert.equal(upgraded.history.length,56);
+ assert.equal(upgraded.history.at(-1).version,'20261110180000');
+ assert.deepEqual((await sandbox.apply(target)).history,upgraded.history);
+ assert.deepEqual((await inventory(client)).filter(row=>row.schema!=='supabase_migrations'),
+  baseline.filter(row=>row.schema!=='supabase_migrations'));
+ await requireSyntheticJobMileage(target);
+ assert.equal(await value(client,"SELECT has_function_privilege('crest_web',$1,'EXECUTE') AND NOT has_function_privilege('anon',$1,'EXECUTE') AND NOT has_function_privilege('crest_export',$1,'EXECUTE') AND NOT has_function_privilege('crest_worker',$1,'EXECUTE') value",[signature]),true);
 },{timeout:180000});
 test('frozen53 recovery still independently restores the original point without any field source or new functions',async()=>{
  cluster53=await recoveryCluster();const destination=await cluster53.database();await assert.rejects(restoreDatabase(point53,keys.path,destination),e=>e.message==='SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest');const restored=await restoreLegacy53Database(point53,keys.path,destination);restored53=await connect(destination);assert.deepEqual(restored.rows,manifest53.rows);assert.deepEqual(await inventory(restored53),prior53);

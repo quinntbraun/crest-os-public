@@ -18,6 +18,10 @@ import {parseFieldSessionSave,parseFieldSessionCommitted,fieldSessionConflicts} 
 import type {FieldSessionSave} from '../operations/field-session-contract.ts';
 import {completionConflicts,parseCompletionCommitted,parseCompletionContext,parseCompletionSave} from '../operations/work-completion-contract.ts';
 import type {CompletionSave} from '../operations/work-completion-contract.ts';
+import {mileageSaveConflicts,parseMileageCommitted,parseMileageSave,parseMileageTripPage,parseMileageTripQuery} from '../operations/mileage.ts';
+import type {MileageSave,MileageTripQuery} from '../operations/mileage.ts';
+import {parseMileageHistoryPage,parseMileageHistoryQuery} from '../operations/mileage-history.ts';
+import type {MileageHistoryQuery} from '../operations/mileage-history.ts';
 export {SchedulingClientError};
 function failure(error:unknown,kind:'input'|'unknown'|'unavailable'):never{throw error instanceof SchedulingClientError?error:new SchedulingClientError(kind);}
 function conflict(v:unknown,status:number,reasons:readonly string[]){if(status===409&&exact(v,['state','reason'])&&v.state==='conflict'&&typeof v.reason==='string'&&reasons.includes(v.reason))return Object.freeze({state:'conflict' as const,reason:v.reason});return null;}
@@ -25,7 +29,7 @@ export const scheduling=Object.freeze({
  async workspace(proof:Proof,signal:AbortSignal){try{
   const r=await postScheduling('workspace',{},proof,signal),v=r.value;check(r.status===200&&exact(v,['schemaVersion','businessId','operatorId','timezone','modeVersion','writeState','recoveryEpoch'])&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding));
   const workspace=parseBookingWorkspace({schemaVersion:v.schemaVersion,businessId:v.businessId,operatorId:v.operatorId,timezone:v.timezone,modeVersion:v.modeVersion},v.businessId as string);check(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null);
-  return Object.freeze({...r.amendedSchedulingAvailable===true?{amendedSchedulingAvailable:true as const}:{},...r.fieldSessionAvailable===true?{fieldSessionAvailable:true as const}:{},...r.jobCompletionAvailable===true?{jobCompletionAvailable:true as const}:{},context:Object.freeze({...workspace,...v.writeState==='ready'?{writeState:'ready' as const,recoveryEpoch:v.recoveryEpoch as string}:{writeState:'paused' as const,recoveryEpoch:null}}),binding:r.binding});
+  return Object.freeze({...r.amendedSchedulingAvailable===true?{amendedSchedulingAvailable:true as const}:{},...r.fieldSessionAvailable===true?{fieldSessionAvailable:true as const}:{},...r.jobCompletionAvailable===true?{jobCompletionAvailable:true as const}:{},...r.jobMileageAvailable===true?{jobMileageAvailable:true as const}:{},context:Object.freeze({...workspace,...v.writeState==='ready'?{writeState:'ready' as const,recoveryEpoch:v.recoveryEpoch as string}:{writeState:'paused' as const,recoveryEpoch:null}}),binding:r.binding});
  }catch(e){failure(e,'unavailable');}},
  async reviewSlot(input:BookingConflictRequest,proof:Proof,signal:AbortSignal){let request:BookingConflictRequest;try{request=parseBookingConflictRequest(input);}catch{throw new SchedulingClientError('input');}try{const {businessId,...body}=request,r=await postScheduling('slot-review',body,proof,signal);check(r.status===200&&businessId===request.businessId);return parseBookingConflictReview(r.value,request);}catch(e){failure(e,'unavailable');}},
  async agreement(businessId:string,familyId:string,proof:Proof,signal:AbortSignal){try{check(uuid(businessId)&&uuid(familyId));const r=await postScheduling('agreement',{familyId},proof,signal);check(r.status===200);return parseBookingAgreement(r.value,businessId,familyId);}catch(e){failure(e,'unavailable');}},
@@ -66,6 +70,37 @@ export const scheduling=Object.freeze({
    check(response.status===200&&businessId===request.businessId);
    return parseCompletionCommitted(response.value,request);
   } catch(error) {failure(error,'unknown');}
+ },
+ async mileageTrips(input:MileageTripQuery,proof:Proof,signal:AbortSignal){
+  try{
+   const query=parseMileageTripQuery(input);
+   const response=await postScheduling('mileage-trips',{jobId:query.jobId,pageSize:query.pageSize,
+    afterDepartedAt:query.after?.departedAt??null,afterLegId:query.after?.legId??null},proof,signal);
+   check(response.status===200);
+   if(exact(response.value,['state'])&&response.value.state==='not_found')return Object.freeze({state:'not_found' as const});
+   return parseMileageTripPage(response.value,query);
+  }catch(error){failure(error,'unavailable');}
+ },
+ async mileageHistory(input:MileageHistoryQuery,proof:Proof,signal:AbortSignal){
+  try{
+   const query=parseMileageHistoryQuery(input),{legId,afterVersion,throughVersion,pageSize}=query;
+   const response=await postScheduling('mileage-history',{legId,afterVersion,throughVersion,pageSize},proof,signal);
+   const clash=conflict(response.value,response.status,['history_boundary']);if(clash)return clash;
+   check(response.status===200);
+   if(exact(response.value,['state'])&&response.value.state==='not_found')return Object.freeze({state:'not_found' as const});
+   return parseMileageHistoryPage(response.value,query);
+  }catch(error){failure(error,'unavailable');}
+ },
+ async saveMileage(input:MileageSave,proof:Proof,signal:AbortSignal){
+  let request:MileageSave;
+  try{request=parseMileageSave(input);}catch{throw new SchedulingClientError('input');}
+  try{
+   const {schemaVersion,operationId,recoveryEpoch,legId,expectedLegVersionId,expectedEvidenceVersion,body}=request;
+   const response=await postScheduling('mileage-save',{schemaVersion,operationId,recoveryEpoch,legId,expectedLegVersionId,expectedEvidenceVersion,body},proof,signal);
+   const clash=conflict(response.value,response.status,mileageSaveConflicts);if(clash)return clash;
+   check(response.status===200);
+   return parseMileageCommitted(response.value,request);
+  }catch(error){failure(error,'unknown');}
  },
  async saveModes(input:FulfillmentModeSave,proof:Proof,signal:AbortSignal){let request:FulfillmentModeSave;try{request=parseFulfillmentModeSave(input);}catch{throw new SchedulingClientError('input');}try{
   const {businessId,...body}=request,r=await postScheduling('mode-save',body,proof,signal),clash=conflict(r.value,r.status,['operation','review']);if(clash)return clash;

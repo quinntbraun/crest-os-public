@@ -275,6 +275,11 @@
       "version": "20261109180000",
       "file": "20261109180000_work_completion_context.sql",
       "sha256": "479f6ac8aabbd745e8d68d41824625ee9c24e4d1d6606619d64ca9c09d615f6c"
+    },
+    {
+      "version": "20261110180000",
+      "file": "20261110180000_job_mileage_trips.sql",
+      "sha256": "9f6b4737dd44c1db5f8864f7aec896c642193b024cc6705855f844ae642c6644"
     }
   ]
 }

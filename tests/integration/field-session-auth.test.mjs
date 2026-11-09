@@ -1,4 +1,4 @@
-// Genuine password/TOTP, restricted field commands and private HTTP on registered55.
+// Genuine password/TOTP, restricted field commands and private HTTP on registered56.
 // Not physical-device or owner delivery acceptance.
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
@@ -20,6 +20,9 @@ import {fieldSessionOriginal} from '../../src/operations/field-session-contract.
 import {completionOriginal} from '../../src/operations/work-completion-contract.ts';
 import {buildConfirmedJobArchive} from '../../src/operations/confirmed-job-archive.ts';
 import {createOriginalOperationDirectory} from '../../src/security/original-operation-directory.ts';
+import {createMileageDirectory} from '../../src/operations/mileage-directory.ts';
+import {formatMileageHistoryCsv} from '../../src/operations/mileage-csv.ts';
+import {mileageOriginal} from '../../src/operations/mileage.ts';
 import {createSchedulingHttp} from '../../src/operations/scheduling-http.ts';
 import {createBrowserSessionFlow} from '../../src/security/browser-session-flow.ts';
 import {transportFromIncomingMessage} from '../../src/security/trusted-transport.ts';
@@ -54,23 +57,23 @@ async function fixture(){
 }
 before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target,await sandbox.prefix(53));
- assert.equal((await sandbox.apply(target)).history.length,55);
+ assert.equal((await sandbox.apply(target)).history.length,56);
  login='crest_field_auth_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=password;config={connectionString:url.toString(),environment:'test'};web=await sandbox.connect(url.toString());await web.query('SET ROLE crest_web');
  service=await startRealAuthService(target,{diagnostic:true});const actualBoundary=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},createLiveProviderSessionLookup(config));
  const observed=method=>async(...args)=>{const at=Date.now();try{return await actualBoundary[method](...args);}catch(error){if(providerFailures.length<32)providerFailures.push({stage:method,elapsedMs:Date.now()-at,kind:['denied','unavailable','uncertain'].includes(error?.kind)?error.kind:'other'});throw error;}};
  boundary=Object.freeze({...actualBoundary,authenticatePasswordTotp:observed('authenticatePasswordTotp'),verifyAccess:observed('verifyAccess')});tokens=await createProviderTokenStore('synthetic-booking',[{id:'synthetic-booking',key:randomBytes(32)}]);lifecycle=createSessionLifecycle(config,boundary,tokens);bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;owner=await fixture();other=await fixture();
 },{timeout:240000});
 after(async()=>{await service?.close();await web?.end();if(login)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
-async function withSchedulingHttp(f,run,{enabled=true,fieldEnabled=true,completionEnabled=false,businessId=f.business,dropOperation=null,dropCompletion=false}={}){
+async function withSchedulingHttp(f,run,{enabled=true,fieldEnabled=true,completionEnabled=false,mileageEnabled=false,businessId=f.business,dropOperation=null,dropCompletion=false,dropMileage=false}={}){
  let origin,handler,providerCalls=0;const counted=Object.freeze({...boundary,verifyAccess:async(...args)=>{providerCalls++;return boundary.verifyAccess(...args);}});
- const server=createServer(async(req,res)=>{try{const incoming=new Request(origin+req.url,{method:req.method,headers:req.headers,...(req.method==='POST'?{body:req,duplex:'half'}:{})}),response=await handler(incoming,transportFromIncomingMessage(req));if((dropOperation&&req.url==='/api/business/scheduling/field-save')||(dropCompletion&&req.url==='/api/business/scheduling/complete')){res.destroy();return;}res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));}catch{res.writeHead(500);res.end();}});
+ const server=createServer(async(req,res)=>{try{const incoming=new Request(origin+req.url,{method:req.method,headers:req.headers,...(req.method==='POST'?{body:req,duplex:'half'}:{})}),response=await handler(incoming,transportFromIncomingMessage(req));if((dropOperation&&req.url==='/api/business/scheduling/field-save')||(dropCompletion&&req.url==='/api/business/scheduling/complete')||(dropMileage&&req.url==='/api/business/scheduling/mileage-save')){res.destroy();return;}res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));}catch{res.writeHead(500);res.end();}});
  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
  try{
-  origin='http://127.0.0.1:'+server.address().port;const httpConfig={...config,origin,businessId,ingress:{kind:'direct'}};handler=createSchedulingHttp(httpConfig,counted,tokens,enabled,enabled,fieldEnabled,completionEnabled);
+  origin='http://127.0.0.1:'+server.address().port;const httpConfig={...config,origin,businessId,ingress:{kind:'direct'}};handler=createSchedulingHttp(httpConfig,counted,tokens,enabled,enabled,fieldEnabled,completionEnabled,mileageEnabled);
   const flow=createBrowserSessionFlow({...httpConfig,loginKey:randomBytes(32),owner:{subject:f.subject,factorId:f.factorId}},counted,tokens),session=await flow.session({method:'POST',headers:new Headers({origin,'content-type':'application/json'})},f.credential,signal());
   const post=async(body,headers={},path='/api/business/scheduling/original',method='POST')=>{
    const response=await fetch(origin+path,{method,redirect:'error',headers:{origin,'content-type':'application/json',cookie:'__Host-crest_session='+f.credential,'x-crest-csrf':session.csrfTokenForResponse(),...headers},...(!['GET','HEAD'].includes(method)?{body:typeof body==='string'?body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(40000)});
-   assert.match(response.headers.get('cache-control')??'',/no-store/);assert.equal(response.headers.get('referrer-policy'),'no-referrer');return {status:response.status,value:await response.json(),allow:response.headers.get('allow'),fieldSession:response.headers.get('x-crest-field-session'),jobCompletion:response.headers.get('x-crest-job-completion')};
+   assert.match(response.headers.get('cache-control')??'',/no-store/);assert.equal(response.headers.get('referrer-policy'),'no-referrer');return {status:response.status,value:await response.json(),allow:response.headers.get('allow'),fieldSession:response.headers.get('x-crest-field-session'),jobCompletion:response.headers.get('x-crest-job-completion'),jobMileage:response.headers.get('x-crest-job-mileage')};
   };assert(providerCalls>0);await run(post,()=>providerCalls,{origin,proof:{csrfToken:session.csrfTokenForResponse(),expiresAt:session.evidence.expiresAt}});
  }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 }
@@ -91,6 +94,103 @@ test('a fresh authenticated job read reloads en-route state and state-change his
 test('genuine arrival closes travel and starts work; replay adds no source or audit rows',async()=>{
  arrived=request(owner,'arrive','2');const r=(await save(owner,arrived)).forServer();assert.equal(r.result.receipt.sourceVersion,'3');const before=await facts();assert.deepEqual((await save(owner,arrived)).forServer(),r);assert.deepEqual(await facts(),before);
  assert.equal((await owner.api.read(owner.credential,{businessId:owner.business,jobId:owner.job},signal())).forServer().job.state,'in_progress');
+});
+test('genuine mileage save and correction retain exact history and refuse foreign or stale observations',async()=>{
+ const f=await fixture(),mileage=createMileageDirectory(config,boundary,tokens);
+ const trips={businessId:f.business,jobId:f.job,after:null,pageSize:1};
+ assert.deepEqual((await mileage.trips(f.credential,trips,signal())).forServer().trips,[]);
+ await assert.rejects(mileage.trips(other.credential,trips,signal()),/MILEAGE_TRIPS_UNAVAILABLE/);
+ assert.deepEqual((await mileage.trips(other.credential,{...trips,businessId:other.business},signal())).forServer(),{state:'not_found'});
+ await save(f,request(f,'depart','1'));
+ const leg=(await mileage.trips(f.credential,trips,signal())).forServer().trips[0];
+ assert.equal(leg.state,'open');
+ assert.equal(leg.distanceStatus,'unresolved');
+ const draft={schemaVersion:1,businessId:f.business,operationId:randomUUID(),recoveryEpoch:f.epoch,
+  legId:leg.legId,expectedLegVersionId:leg.legVersionId,expectedEvidenceVersion:leg.evidenceVersion,
+  body:{source:'manual_actual',movementKind:'business_rig',actualMiles:'12.3456',estimateMiles:null,
+   estimateSource:null,odometerStart:null,odometerEnd:null,notes:null,reason:null,allocationState:'unallocated',allocations:[]}};
+ assert.deepEqual((await mileage.save(f.credential,draft,signal())).forServer(),{state:'conflict',reason:'open_leg'});
+ await save(f,request(f,'arrive','2'));
+ assert.deepEqual((await mileage.save(f.credential,draft,signal())).forServer(),{state:'conflict',reason:'leg_version'});
+ const closed=(await mileage.trips(f.credential,trips,signal())).forServer().trips[0];
+ assert.equal(closed.state,'closed');
+ assert.equal(closed.legId,leg.legId);
+ draft.expectedLegVersionId=closed.legVersionId;
+ const query={businessId:f.business,legId:draft.legId,afterVersion:'0',throughVersion:null,pageSize:25};
+ await assert.rejects(mileage.history(other.credential,query,signal()),/MILEAGE_HISTORY_UNAVAILABLE/);
+ assert.deepEqual((await mileage.history(other.credential,{...query,businessId:other.business},signal())).forServer(),{state:'not_found'});
+ const first=await mileage.save(f.credential,draft,signal()),saved=first.forServer();
+ assert.throws(()=>JSON.stringify(first),/MILEAGE_VALUE_PRIVATE/);
+ assert.equal(saved.result.receipt.sourceVersion,'1');
+ assert.deepEqual((await mileage.save(f.credential,draft,signal())).forServer(),saved);
+ const correction={...draft,operationId:randomUUID(),expectedEvidenceVersion:'1',body:{...draft.body,actualMiles:'13',reason:null}};
+ await assert.rejects(mileage.save(f.credential,correction,signal()),/MILEAGE_SAVE_NOT_SUBMITTED/);
+ correction.body.reason='Synthetic correction to trip distance';
+ assert.equal((await mileage.save(f.credential,correction,signal())).forServer().result.receipt.sourceVersion,'2');
+ assert.deepEqual((await mileage.save(f.credential,{...draft,operationId:randomUUID()},signal())).forServer(),{state:'conflict',reason:'version'});
+ const history=(await mileage.history(f.credential,query,signal())).forServer();
+ assert.deepEqual(history.evidence.map(row=>row.actual_miles),['12.3456','13.0000']);
+ assert.deepEqual(history.evidence.map(row=>row.id)[0],saved.result.receipt.sourceRecordId);
+ assert.equal(history.audits.length,2);
+ const latest=(await mileage.trips(f.credential,trips,signal())).forServer().trips[0];
+ assert.equal(latest.evidenceVersion,'2');
+ assert.equal(latest.distanceStatus,'confirmed_actual');
+ const after={departedAt:latest.departedAt,legId:latest.legId};
+ assert.deepEqual((await mileage.trips(f.credential,{...trips,after},signal())).forServer().trips,[]);
+ const exported=formatMileageHistoryCsv(history,query);
+ assert.match(exported.files['mileage_evidence.csv'],/12\.3456/);
+});
+test('private mileage client recovers a lost save reply and reloads the original evidence',async()=>{
+ const f=await fixture();
+ const tripsPath='/api/business/scheduling/mileage-trips';
+ const input={jobId:f.job,afterDepartedAt:null,afterLegId:null,pageSize:10};
+ await withSchedulingHttp(f,async post=>{
+  assert.equal((await post({}, {},'/api/business/scheduling/workspace')).jobMileage,null);
+  assert.equal((await post(input,{},tripsPath)).status,503);
+ });
+ await save(f,request(f,'depart','1'));
+ await save(f,request(f,'arrive','2'));
+ await withSchedulingHttp(f,async(post,calls,{origin,proof})=>{
+  const before=calls();
+  assert.equal((await post(input,{'x-crest-csrf':''},tripsPath)).status,400);
+  assert.equal((await post({...input,businessId:other.business},{},tripsPath)).status,400);
+  assert.equal(calls(),before);
+  const actualFetch=globalThis.fetch;
+  let submissions=0;
+  globalThis.fetch=async(url,options)=>{
+   if(typeof url!=='string'||!url.startsWith('/api/business/scheduling/'))return actualFetch(url,options);
+   if(url==='/api/business/scheduling/mileage-save')submissions++;
+   const headers=new Headers(options?.headers);
+   headers.set('origin',origin);
+   headers.set('cookie','__Host-crest_session='+f.credential);
+   return actualFetch(origin+url,{...options,headers});
+  };
+  try{
+   const workspace=await scheduling.workspace(proof,signal());
+   assert.equal(workspace.jobMileageAvailable,true);
+   const trips=await scheduling.mileageTrips({businessId:f.business,jobId:f.job,after:null,pageSize:10},proof,signal());
+   const leg=trips.trips[0];
+   assert.equal(leg.state,'closed');
+   const request={schemaVersion:1,businessId:f.business,operationId:randomUUID(),recoveryEpoch:f.epoch,
+    legId:leg.legId,expectedLegVersionId:leg.legVersionId,expectedEvidenceVersion:leg.evidenceVersion,
+    body:{source:'manual_actual',movementKind:'business_rig',actualMiles:'14.75',estimateMiles:null,estimateSource:null,
+     odometerStart:null,odometerEnd:null,notes:'Synthetic mileage note',reason:null,allocationState:'unallocated',allocations:[]}};
+   const original=mileageOriginal(request),memory=new Map();
+   const store=createPendingSchedulingStore({getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)},'operations.mileage.record');
+   store.write({schemaVersion:1,businessId:f.business,binding:workspace.binding,reference:original.reference});
+   await assert.rejects(scheduling.saveMileage(request,proof,signal()),error=>error.kind==='unknown');
+   assert.equal(submissions,1);
+   const savedReference=store.read();
+   assert(![...memory.values()][0].includes('Synthetic mileage note'));
+   const recovered=await lookupSchedulingOriginal(original,proof,signal());
+   assert.equal(recovered.receipt.sourceVersion,'1');
+   store.clear(savedReference);
+   const history=await scheduling.mileageHistory({businessId:f.business,legId:leg.legId,afterVersion:'0',throughVersion:null,pageSize:5},proof,signal());
+   assert.equal(history.evidence[0].id,recovered.receipt.sourceRecordId);
+   assert.equal(history.evidence[0].actual_miles,'14.7500');
+   assert.equal(submissions,1);
+  }finally{globalThis.fetch=actualFetch;}
+ },{mileageEnabled:true,dropMileage:true});
 });
 test('pause and resume retain exact source originals across fresh adapter reads',async()=>{
  paused=request(owner,'pause','3');assert.equal((await save(owner,paused)).forServer().result.receipt.sourceVersion,'4');resumed=request(owner,'resume','4');const r=(await save(owner,resumed)).forServer();assert.equal(r.result.receipt.sourceVersion,'5');

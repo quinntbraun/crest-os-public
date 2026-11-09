@@ -5,10 +5,18 @@ export const mileageAllocationColumns=['id','business_id','evidence_id','leg_id'
 export const mileageAuditColumns=['id','business_id','operation_id','actor_id','entity_kind','entity_id','entity_version','action','reason','delta','recorded_at','origin'] as const;
 type Row=Readonly<Record<string,unknown>>;
 export type MileageHistoryPage=Readonly<{schemaVersion:1;state:'loaded';businessId:string;legId:string;throughVersion:string;afterVersion:string;observedLegVersionId:string;evidence:readonly Row[];allocations:readonly Row[];audits:readonly Row[];hasMore:boolean;nextAfterVersion:string|null}>;
+export type MileageHistoryQuery=Readonly<{businessId:string;legId:string;afterVersion:string;throughVersion:string|null;pageSize:number}>;
 function check(v:unknown):asserts v{if(!v)throw Error('MILEAGE_HISTORY_REQUIRED');}
 function record(v:unknown,keys:readonly string[]):Record<string,unknown>{check(v!==null&&typeof v==='object'&&(Object.getPrototypeOf(v)===Object.prototype||Object.getPrototypeOf(v)===null));const d=Object.getOwnPropertyDescriptors(v);check(Reflect.ownKeys(d).length===keys.length&&keys.every(k=>d[k]?.enumerable&&Object.hasOwn(d[k]!,'value')));return Object.fromEntries(keys.map(k=>[k,d[k]!.value]));}
 function array(v:unknown,limit:number):unknown[]{check(Array.isArray(v)&&Object.getPrototypeOf(v)===Array.prototype&&v.length<=limit);const d=Object.getOwnPropertyDescriptors(v);check(Reflect.ownKeys(d).length===v.length+1&&Array.from({length:v.length},(_,i)=>d[i]?.enumerable&&Object.hasOwn(d[i]!,'value')).every(Boolean));return Array.from({length:v.length},(_,i)=>d[i]!.value);}
 const equal=(a:Row,b:Row)=>Object.keys(a).length===Object.keys(b).length&&Object.keys(a).every(k=>a[k]===b[k]);
+export function parseMileageHistoryQuery(input:unknown):MileageHistoryQuery{
+ const {businessId,legId,afterVersion,throughVersion,pageSize}=record(input,['businessId','legId','afterVersion','throughVersion','pageSize']);
+ check(customerUuid(businessId)&&customerUuid(legId)&&customerVersion(afterVersion,true)
+  &&(throughVersion===null||customerVersion(throughVersion,true))&&typeof pageSize==='number'
+  &&Number.isInteger(pageSize)&&pageSize>=1&&pageSize<=25);
+ return Object.freeze({businessId,legId,afterVersion,throughVersion,pageSize});
+}
 export function parseMileageHistoryPage(value:unknown,binding:{businessId:string;legId:string;afterVersion:string;throughVersion?:string|null}):MileageHistoryPage{
  check(customerUuid(binding.businessId)&&customerUuid(binding.legId)&&customerVersion(binding.afterVersion,true));
  const p=record(value,['schemaVersion','state','businessId','legId','throughVersion','afterVersion','observedLegVersionId','evidence','allocations','audits','hasMore','nextAfterVersion']);

@@ -1,7 +1,14 @@
-import {describe,it,expect} from 'vitest';import {prepareMileageBody} from '../../src/operations/mileage.ts';
+import {describe,it,expect} from 'vitest';import {mileageShareFraction,mileageSharePercent,prepareMileageBody} from '../../src/operations/mileage.ts';
 const id=(n:number)=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
 const base=()=>({source:'manual_actual',movementKind:'business_rig',actualMiles:'26',estimateMiles:'',estimateSource:'',odometerStart:'',odometerEnd:'',notes:'',reason:'',allocationState:'unallocated',allocations:[] as unknown[]});
 describe('exact mileage evidence',()=>{
+ it('round-trips the smallest positive and other exact job shares without rounding',()=>{
+  for(const [percent,fraction]of [['0.000001','0.00000001'],['33.333333','0.33333333'],['100','1.00000000']]){
+   expect(mileageShareFraction(percent!)).toBe(fraction);
+   expect(mileageSharePercent(fraction!)).toBe(percent);
+  }
+  for(const invalid of ['','0','0.0000001','100.000001','-1','1e-6','12,5'])expect(()=>mileageShareFraction(invalid)).toThrow();
+ });
  it('retains physical actual miles once and blank optional fields as absent',()=>{const r=prepareMileageBody(base());expect(r.actualMiles).toBe('26.0000');expect(r.estimateMiles).toBeNull();expect(r.notes).toBeNull();expect(r.allocations).toEqual([]);expect(Object.isFrozen(r)).toBe(true);expect(Object.keys(r).some(k=>/tax|deduct|expense|post/i.test(k))).toBe(false);});
  it('derives odometer mileage without floating point',()=>expect(prepareMileageBody({...base(),source:'odometer',actualMiles:'',odometerStart:'9999999999.9998',odometerEnd:'9999999999.9999'}).actualMiles).toBe('0.0001'));
  it('keeps zero actual mileage distinct from unresolved distance',()=>expect(prepareMileageBody({...base(),actualMiles:'0'}).actualMiles).toBe('0.0000'));

@@ -237,7 +237,7 @@ jobs:
   browser_workflows:
     name: Browser workflows (${{ matrix.suite }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -280,9 +280,11 @@ jobs:
           node scripts/install-tools.mjs
           node scripts/install-recovery-tools.mjs
       - name: Install browser dependencies with bounded Ubuntu downloads
-        timeout-minutes: 10
+        timeout-minutes: 6
         run: |
-          # Retain the hosted runner's regional mirror selection.
+          test -f /etc/apt/apt-mirrors.txt
+          grep -qF 'mirror+file:/etc/apt/apt-mirrors.txt' /etc/apt/sources.list.d/ubuntu.sources
+          printf '%s\tpriority:1\n%s\tpriority:2\n' 'https://archive.ubuntu.com/ubuntu/' 'https://security.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
           printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/99crest-ci-downloads > /dev/null
           npx --no-install playwright install --with-deps chromium webkit
       - name: Build actual product source
@@ -306,6 +308,7 @@ jobs:
             .local/review/appointment-*.png
             .local/review/field-*.png
             .local/review/completion-*.png
+            .local/review/mileage-*.png
           include-hidden-files: true
           retention-days: 3
           if-no-files-found: error
@@ -432,7 +435,7 @@ jobs:
       - name: Confirmed booking original source retrieval
         run: npm run test:confirmed-booking-source
       - name: Install browser dependencies with bounded Ubuntu downloads
-        timeout-minutes: 10
+        timeout-minutes: 6
         run: |
           npx --no-install playwright install --with-deps chromium webkit
       - name: Production build and focused service workflow
