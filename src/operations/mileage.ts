@@ -3,6 +3,7 @@
 import {customerInstant,customerUuid,customerVersion} from '../customer/customer-contract.ts';
 import {parseFieldOriginal,parseFieldOriginalResult} from './field-original-contract.ts';
 import type {FieldOriginal} from './field-original-contract.ts';
+import {supportTripPurposes} from './support-trip.ts';
 export type MileageBody=Readonly<{
  source:'odometer'|'manual_actual'|'route_estimate';movementKind:'business_rig'|'customer_vehicle'|'personal'|'unclassified';
  actualMiles:string|null;estimateMiles:string|null;estimateSource:string|null;
@@ -110,11 +111,7 @@ export function parseMileageTripQuery(input:unknown):MileageTripQuery{
  return Object.freeze({businessId:query.businessId,jobId:query.jobId,pageSize:query.pageSize,
   after:cursor&&Object.freeze(cursor as MileageTripCursor)});
 }
-export function parseMileageTripPage(input:unknown,query:MileageTripQuery){
- const result=record(input,['schemaVersion','state','businessId','jobId','hasMore','trips']);
- check(result.schemaVersion===1&&result.state==='loaded'&&result.businessId===query.businessId
-  &&result.jobId===query.jobId&&typeof result.hasMore==='boolean');
- const trips=array(result.trips).map(value=>{
+function parseMileageTrip(value:unknown):MileageTrip{
   const row=record(value,['legId','legVersionId','evidenceVersion','departedAt','arrivedAt','state','purpose','distanceStatus']);
   check(customerUuid(row.legId)&&customerUuid(row.legVersionId)&&customerVersion(row.evidenceVersion,true)
    &&customerInstant(row.departedAt)&&tripStates.includes(row.state as MileageTrip['state'])
@@ -123,7 +120,19 @@ export function parseMileageTripPage(input:unknown,query:MileageTripQuery){
   check(row.state==='open'?row.arrivedAt===null:customerInstant(row.arrivedAt)&&row.arrivedAt>=row.departedAt);
   check((row.evidenceVersion==='0')===(row.distanceStatus==='unresolved'));
   return Object.freeze(row) as MileageTrip;
- });
+}
+export function parseSupportTripMileage(input:unknown,businessId:string,legId:string){
+ const result=record(input,['schemaVersion','businessId','trip']);
+ check(customerUuid(businessId)&&result.businessId===businessId&&result.schemaVersion===1&&customerUuid(legId));
+ const trip=parseMileageTrip(result.trip);
+ check(trip.legId===legId&&trip.state!=='open'&&supportTripPurposes.some(purpose=>purpose===trip.purpose));
+ return Object.freeze({schemaVersion:1 as const,businessId,trip});
+}
+export function parseMileageTripPage(input:unknown,query:MileageTripQuery){
+ const result=record(input,['schemaVersion','state','businessId','jobId','hasMore','trips']);
+ check(result.schemaVersion===1&&result.state==='loaded'&&result.businessId===query.businessId
+  &&result.jobId===query.jobId&&typeof result.hasMore==='boolean');
+ const trips=array(result.trips).map(parseMileageTrip);
  check(trips.length<=query.pageSize&&(!result.hasMore||trips.length===query.pageSize));
  check(new Set(trips.map(row=>row.legId)).size===trips.length);
  let previous=query.after;

@@ -18,10 +18,13 @@ import {parseFieldSessionSave,parseFieldSessionCommitted,fieldSessionConflicts} 
 import type {FieldSessionSave} from '../operations/field-session-contract.ts';
 import {completionConflicts,parseCompletionCommitted,parseCompletionContext,parseCompletionSave} from '../operations/work-completion-contract.ts';
 import type {CompletionSave} from '../operations/work-completion-contract.ts';
-import {mileageSaveConflicts,parseMileageCommitted,parseMileageSave,parseMileageTripPage,parseMileageTripQuery} from '../operations/mileage.ts';
+import {mileageSaveConflicts,parseMileageCommitted,parseMileageSave,parseMileageTripPage,parseMileageTripQuery,parseSupportTripMileage} from '../operations/mileage.ts';
 import type {MileageSave,MileageTripQuery} from '../operations/mileage.ts';
 import {parseMileageHistoryPage,parseMileageHistoryQuery} from '../operations/mileage-history.ts';
 import type {MileageHistoryQuery} from '../operations/mileage-history.ts';
+import {parseSupportTripCommitted,parseSupportTripHistory,parseSupportTripHistoryQuery,parseSupportTripList,
+ parseSupportTripListQuery,parseSupportTripSave,supportTripConflicts} from '../operations/support-trip.ts';
+import type {SupportTripHistoryQuery,SupportTripListQuery,SupportTripSave} from '../operations/support-trip.ts';
 export {SchedulingClientError};
 function failure(error:unknown,kind:'input'|'unknown'|'unavailable'):never{throw error instanceof SchedulingClientError?error:new SchedulingClientError(kind);}
 function conflict(v:unknown,status:number,reasons:readonly string[]){if(status===409&&exact(v,['state','reason'])&&v.state==='conflict'&&typeof v.reason==='string'&&reasons.includes(v.reason))return Object.freeze({state:'conflict' as const,reason:v.reason});return null;}
@@ -29,7 +32,7 @@ export const scheduling=Object.freeze({
  async workspace(proof:Proof,signal:AbortSignal){try{
   const r=await postScheduling('workspace',{},proof,signal),v=r.value;check(r.status===200&&exact(v,['schemaVersion','businessId','operatorId','timezone','modeVersion','writeState','recoveryEpoch'])&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding));
   const workspace=parseBookingWorkspace({schemaVersion:v.schemaVersion,businessId:v.businessId,operatorId:v.operatorId,timezone:v.timezone,modeVersion:v.modeVersion},v.businessId as string);check(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null);
-  return Object.freeze({...r.amendedSchedulingAvailable===true?{amendedSchedulingAvailable:true as const}:{},...r.fieldSessionAvailable===true?{fieldSessionAvailable:true as const}:{},...r.jobCompletionAvailable===true?{jobCompletionAvailable:true as const}:{},...r.jobMileageAvailable===true?{jobMileageAvailable:true as const}:{},context:Object.freeze({...workspace,...v.writeState==='ready'?{writeState:'ready' as const,recoveryEpoch:v.recoveryEpoch as string}:{writeState:'paused' as const,recoveryEpoch:null}}),binding:r.binding});
+  return Object.freeze({...r.amendedSchedulingAvailable===true?{amendedSchedulingAvailable:true as const}:{},...r.fieldSessionAvailable===true?{fieldSessionAvailable:true as const}:{},...r.jobCompletionAvailable===true?{jobCompletionAvailable:true as const}:{},...r.jobMileageAvailable===true?{jobMileageAvailable:true as const}:{},...r.supportTripsAvailable===true?{supportTripsAvailable:true as const}:{},context:Object.freeze({...workspace,...v.writeState==='ready'?{writeState:'ready' as const,recoveryEpoch:v.recoveryEpoch as string}:{writeState:'paused' as const,recoveryEpoch:null}}),binding:r.binding});
  }catch(e){failure(e,'unavailable');}},
  async reviewSlot(input:BookingConflictRequest,proof:Proof,signal:AbortSignal){let request:BookingConflictRequest;try{request=parseBookingConflictRequest(input);}catch{throw new SchedulingClientError('input');}try{const {businessId,...body}=request,r=await postScheduling('slot-review',body,proof,signal);check(r.status===200&&businessId===request.businessId);return parseBookingConflictReview(r.value,request);}catch(e){failure(e,'unavailable');}},
  async agreement(businessId:string,familyId:string,proof:Proof,signal:AbortSignal){try{check(uuid(businessId)&&uuid(familyId));const r=await postScheduling('agreement',{familyId},proof,signal);check(r.status===200);return parseBookingAgreement(r.value,businessId,familyId);}catch(e){failure(e,'unavailable');}},
@@ -91,6 +94,15 @@ export const scheduling=Object.freeze({
    return parseMileageHistoryPage(response.value,query);
   }catch(error){failure(error,'unavailable');}
  },
+ async supportTripMileage(businessId:string,legId:string,proof:Proof,signal:AbortSignal){
+  try{
+   check(uuid(businessId)&&uuid(legId));
+   const r=await postScheduling('support-trip-mileage',{legId},proof,signal);
+   check(r.status===200);
+   if(exact(r.value,['state'])&&r.value.state==='not_found')return Object.freeze({state:'not_found' as const});
+   return parseSupportTripMileage(r.value,businessId,legId);
+  }catch(error){failure(error,'unavailable');}
+ },
  async saveMileage(input:MileageSave,proof:Proof,signal:AbortSignal){
   let request:MileageSave;
   try{request=parseMileageSave(input);}catch{throw new SchedulingClientError('input');}
@@ -100,6 +112,35 @@ export const scheduling=Object.freeze({
    const clash=conflict(response.value,response.status,mileageSaveConflicts);if(clash)return clash;
    check(response.status===200);
    return parseMileageCommitted(response.value,request);
+  }catch(error){failure(error,'unknown');}
+ },
+ async supportTrips(input:SupportTripListQuery,proof:Proof,signal:AbortSignal){
+  try{
+   const query=parseSupportTripListQuery(input);
+   const r=await postScheduling('support-trips',{afterDepartedAt:query.after?.departedAt??null,
+    afterLegId:query.after?.legId??null,pageSize:query.pageSize},proof,signal);
+   check(r.status===200);
+   return parseSupportTripList(r.value,query);
+  }catch(error){failure(error,'unavailable');}
+ },
+ async supportTripHistory(input:SupportTripHistoryQuery,proof:Proof,signal:AbortSignal){
+  try{
+   const query=parseSupportTripHistoryQuery(input),{legId,afterVersion,throughVersion,pageSize}=query;
+   const r=await postScheduling('support-trip-history',{legId,afterVersion,throughVersion,pageSize},proof,signal);
+   check(r.status===200);
+   if(exact(r.value,['state'])&&r.value.state==='not_found')return Object.freeze({state:'not_found' as const});
+   return parseSupportTripHistory(r.value,query);
+  }catch(error){failure(error,'unavailable');}
+ },
+ async saveSupportTrip(input:SupportTripSave,proof:Proof,signal:AbortSignal){
+  let request:SupportTripSave;
+  try{request=parseSupportTripSave(input);}catch{throw new SchedulingClientError('input');}
+  try{
+   const {schemaVersion,operationId,recoveryEpoch,legId,expectedLegVersionId,body}=request;
+   const r=await postScheduling('support-trip-save',{schemaVersion,operationId,recoveryEpoch,legId,expectedLegVersionId,body},proof,signal);
+   const clash=conflict(r.value,r.status,supportTripConflicts);if(clash)return clash;
+   check(r.status===200);
+   return parseSupportTripCommitted(r.value,request);
   }catch(error){failure(error,'unknown');}
  },
  async saveModes(input:FulfillmentModeSave,proof:Proof,signal:AbortSignal){let request:FulfillmentModeSave;try{request=parseFulfillmentModeSave(input);}catch{throw new SchedulingClientError('input');}try{

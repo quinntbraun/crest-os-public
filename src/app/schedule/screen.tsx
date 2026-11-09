@@ -39,6 +39,7 @@ export function ScheduleScreen({initialJobId}:{initialJobId?:string}){
   {view.phase==='unavailable'&&<><p>Private schedule records stay hidden until access is checked again.</p><button type="button" disabled={view.busy} onClick={()=>void action('load')}>Check schedule access</button><a href="/sign-in">Check sign-in</a></>}
   {view.phase==='ready'&&<>
    <p className="field-help">Business time zone: {view.timezone}.</p>
+   {view.supportTripsAvailable&&<p><a href="/schedule/travel">Standalone travel</a></p>}
    {view.loaded&&view.dates&&<CalendarNavigation range={view.dates} mode={calendarMode} timezone={view.timezone} jobs={view.rows} incomplete={view.hasMore} busy={view.busy} select={selectCalendar}/>}
    <details className="schedule-custom-range" open={calendarMode==='custom'||!view.loaded}><summary>Custom date range</summary><form aria-label="Schedule date range" onSubmit={event=>{event.preventDefault();selectCalendar({fromDate,throughDate},'custom');}}><div className="schedule-date-fields"><div><label htmlFor="schedule-from">From date</label><input id="schedule-from" type="date" value={fromDate} required disabled={view.busy} onChange={event=>setFrom(event.target.value)}/></div><div><label htmlFor="schedule-through">Through date</label><input id="schedule-through" type="date" value={throughDate} min={fromDate} required disabled={view.busy} onChange={event=>setThrough(event.target.value)}/></div></div><button type="submit" disabled={view.busy}>Load saved schedule</button></form></details>
    {view.loaded&&<div className="schedule-layout"><div>

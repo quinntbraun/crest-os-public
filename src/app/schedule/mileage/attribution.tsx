@@ -39,9 +39,9 @@ export function MileageAttribution({jobId,day,timezone,shares,change,findJobs}:{
   setMessage(page.jobs.length?'Saved jobs loaded.':'No saved jobs were found for this date.');
  }
  return <fieldset className="mileage-split">
-  <legend>Split this trip across jobs</legend>
+  <legend>{jobId?'Split this trip across jobs':'Allocate this trip to saved jobs'}</legend>
   <p>Enter each job’s share as a percentage. The shares must total 100%. Crest counts the physical trip once.</p>
-  {!isChosen(jobId)&&<button type="button" className="secondary" onClick={()=>add(jobId,'This job')}>Add this job</button>}
+  {jobId&&!isChosen(jobId)&&<button type="button" className="secondary" onClick={()=>add(jobId,'This job')}>Add this job</button>}
   <label htmlFor={id+'-date'}>Job date</label>
   <input type="date" id={id+'-date'} value={date} onChange={event=>{
    setDate(event.target.value);setLoadedDate('');setResults(null);setSelected('');setMessage('');
@@ -62,7 +62,7 @@ export function MileageAttribution({jobId,day,timezone,shares,change,findJobs}:{
     }}>Add selected job</button>
    </>}
    {results.next&&<button type="button" className="secondary" onClick={()=>void lookup(results.next)}>Show more jobs for this date</button>}
-   {results.jobs.length>0&&!choices.length&&<p>These jobs are already in the split.</p>}
+   {results.jobs.length>0&&!choices.length&&<p>{jobId?'These jobs are already in the split.':'These jobs are already in the allocation.'}</p>}
   </>}
   {message&&<p role="status">{message}</p>}
   {shares.map(share=><div className="mileage-share" key={share.jobId}>
