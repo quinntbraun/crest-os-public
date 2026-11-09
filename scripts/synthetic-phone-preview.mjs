@@ -5,12 +5,12 @@ import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {join} from 'node:path';
 import {parseSyntheticPhoneBinding,readSyntheticPhoneTls,restrictSyntheticPhoneSockets} from './synthetic-phone-binding.mjs';
-import {requireSyntheticJobCompletion,requireSyntheticJobMileage,requireSyntheticSupportTrips} from './synthetic-migrations.mjs';
+import {requireSyntheticJobCompletion,requireSyntheticJobMileage,requireSyntheticSupportTrips,requireSyntheticUnfulfilledCancellation} from './synthetic-migrations.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url)),directory=join(root,'.local/synthetic-workspace');let app;
 try{
- const options=process.argv.slice(2),jobCompletion=options.includes('--job-completion'),jobMileage=options.includes('--job-mileage'),supportTrips=options.includes('--support-trips');
- assert.equal(process.platform,'win32');assert.equal(options.length,Number(jobCompletion)+Number(jobMileage)+Number(supportTrips));
+ const options=process.argv.slice(2),jobCompletion=options.includes('--job-completion'),jobMileage=options.includes('--job-mileage'),supportTrips=options.includes('--support-trips'),unfulfilledCancellation=options.includes('--unfulfilled-cancellation');
+ assert.equal(process.platform,'win32');assert.equal(options.length,Number(jobCompletion)+Number(jobMileage)+Number(supportTrips)+Number(unfulfilledCancellation));
  const state=JSON.parse(await readFile(join(directory,'state.json'),'utf8'));
  assert(state.schemaVersion===1&&/^[a-f0-9]{16}$/.test(state.id)&&state.databaseName===`crest_migrate_${state.id}`&&state.login===`crest_local_${state.id}`&&state.issuer==='http://127.0.0.1:54328/auth/v1'&&state.origin==='https://127.0.0.1:4319');
  const status=JSON.parse(execFileSync('C:/Program Files/NetBird/netbird.exe',['status','--json'],{stdio:['ignore','pipe','pipe'],timeout:10000,maxBuffer:262144}).toString());
@@ -22,8 +22,9 @@ try{
  if(jobCompletion)await requireSyntheticJobCompletion(connectionString);
  if(jobMileage)await requireSyntheticJobMileage(connectionString);
  if(supportTrips)await requireSyntheticSupportTrips(connectionString);
+ if(unfulfilledCancellation)await requireSyntheticUnfulfilledCancellation(connectionString);
  const runtime=await createAuthenticationRuntime({database:{connectionString,environment:'test'},provider:{issuer:state.issuer,publicKey:state.publicKey,environment:'test'},owner:state.owner,loginKey:Buffer.from(state.loginKey,'base64url'),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:Buffer.from(state.tokenKey,'base64url')}]});
- app=await createCrestApplication({origin:binding.origin,environment:'test',tls,authentication:runtime.forServer(),business:{businessId:state.businessId},customers:true,vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true,syntheticCatalog:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticAppointmentHolds:true,syntheticQuoteCommercial:true,syntheticQuoteAmendments:true,syntheticQuoteAmendmentAcceptance:true,syntheticExpenses:true,syntheticScheduling:true,syntheticFieldSessions:true,syntheticJobCompletion:jobCompletion,syntheticJobMileage:jobMileage,syntheticSupportTrips:supportTrips});
+ app=await createCrestApplication({origin:binding.origin,environment:'test',tls,authentication:runtime.forServer(),business:{businessId:state.businessId},customers:true,vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true,syntheticCatalog:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticAppointmentHolds:true,syntheticQuoteCommercial:true,syntheticQuoteAmendments:true,syntheticQuoteAmendmentAcceptance:true,syntheticExpenses:true,syntheticScheduling:true,syntheticFieldSessions:true,syntheticJobCompletion:jobCompletion,syntheticJobMileage:jobMileage,syntheticSupportTrips:supportTrips,syntheticUnfulfilledCancellation:unfulfilledCancellation});
  restrictSyntheticPhoneSockets(app.server,binding);
  await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(4319,binding.laptopAddress,resolve);});
  console.log('Private synthetic Crest preview: '+binding.origin+' . Only the two configured device addresses are accepted. Genuine sign-in required. Review any local certificate warning yourself. Keep workspace:start running.');

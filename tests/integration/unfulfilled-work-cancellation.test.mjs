@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';import {before,after,test} from 'node:test';import {readFile} from 'node:fs/promises';import {randomUUID,randomBytes} from 'node:crypto';import {setTimeout as delay} from 'node:timers/promises';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';import {installProviderSchema} from '../support/provider-schema.mjs';import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixture.mjs';import {confirmedBookingRequest} from '../fixtures/confirmed-booking.ts';import {createAmendmentAcceptanceFixture} from '../support/amendment-acceptance-fixture.mjs';
+import {parseUnfulfilledCancellationContext} from '../../src/operations/unfulfilled-cancellation-contract.ts';
 const proposals=await Promise.all(['field-time-storage','field-session-commands','work-completion-plan','work-completion-commands','field-scope-floor','mileage-evidence','mileage-field-profile','mobile-trip-interruption','unfulfilled-work-cancellation','support-trip-commands','field-originals','field-source'].map(n=>readFile(new URL('../../planning/proposals/'+n+'.sql',import.meta.url),'utf8')));
 let sandbox,client,web,login,target,accepted,main,first,stale,raceVersion;
 const scalar=async(q,args=[])=>(await client.query(q,args)).rows[0].value;
@@ -42,3 +43,34 @@ test('paused cancellation retains an observed open supply trip and its historica
 test('previously amended authorization and original receipts survive unfulfilled cancellation',async()=>{const p=await fixture({start:false}),amendments=createAmendmentAcceptanceFixture({client,web}),request=await amendments.sentAmendment(p),agreement=await amendments.acceptAmendment(p,request);assert.equal(agreement.state,'committed');await field(p,'direct_arrive');const b=await body(p),r=await cancel(p,b);assert.equal(r.result.state,'committed');const plans=(await client.query('SELECT source_allocation_id,entitlement_version_id,authorization_state FROM crest.allocation_plan_versions WHERE business_id=$1 AND operation_id=$2',[p.business,r.operation])).rows;for(const plan of plans){assert.equal(plan.authorization_state,'active');assert.equal(plan.entitlement_version_id,b.scope.find(s=>s.sourceAllocationId===plan.source_allocation_id).entitlementVersionId);}assert.deepEqual(await amendments.lookupAmendment(p,request.operationId),agreement);});
 test('another fulfilled visit remains exact through later work cancellation and accepted amendment',async()=>{const p=await accepted(null,{paidLineDiscount:{kind:'fixed',cents:'5000'}}),q=confirmedBookingRequest(p);let paid,remainder;for(const plan of q.payload.allocationPlans)if(BigInt(plan.parts[0].amountCents)>0n){paid=plan;const a=plan.parts[0],g=BigInt(a.grossInclusiveCents)/2n,d=BigInt(a.discountInclusiveCents)/2n;remainder=randomUUID();plan.parts=[{...a,grossInclusiveCents:g.toString(),discountInclusiveCents:d.toString(),amountCents:(g-d).toString()},{...a,partitionId:remainder,jobId:null,state:'unassigned',grossInclusiveCents:(BigInt(a.grossInclusiveCents)-g).toString(),discountInclusiveCents:(BigInt(a.discountInclusiveCents)-d).toString(),amountCents:(BigInt(a.amountCents)-g+d).toString()}];}const firstJob=await book(p,q),next=confirmedBookingRequest(p);next.expectedModeSequence='1';for(const k of ['start_at','end_at','local_start','local_end'])next.payload.appointment[k]=next.payload.appointment[k].replace('2026-11-03','2026-11-04');next.payload.allocationPlans=[{...paid,expectedSequence:'1',parts:paid.parts.map(a=>a.partitionId===remainder?{...a,jobId:next.jobId,state:'assigned'}:{...a})}];await book(p,next);p.job=firstJob;p.version='1';await field(p,'direct_arrive');const completed=await complete(p),frozen=(await client.query('SELECT stable_partition_id,allocation_state,gross_inclusive_cents::text,discount_inclusive_cents::text,amount_cents::text,scope_description FROM crest.current_scope_allocation_parts WHERE business_id=$1 AND job_id=$2 ORDER BY stable_partition_id',[p.business,firstJob])).rows;p.job=next.jobId;p.version='1';await field(p,'direct_arrive');const r=await cancel(p,await body(p));assert.equal(r.result.state,'committed');assert.deepEqual((await client.query('SELECT stable_partition_id,allocation_state,gross_inclusive_cents::text,discount_inclusive_cents::text,amount_cents::text,scope_description FROM crest.current_scope_allocation_parts WHERE business_id=$1 AND job_id=$2 ORDER BY stable_partition_id',[p.business,firstJob])).rows,frozen);const amendments=createAmendmentAcceptanceFixture({client,web}),request=await amendments.sentAmendment(p);assert.equal((await amendments.acceptAmendment(p,request)).state,'committed');assert.deepEqual(await lookup(p,r.operation),r.result);assert.deepEqual((await tx(web,()=>web.query('SELECT crest_commands.lookup_completed_job_operation($1,$2,$3,$4,$5,$6,$7,$8,$9) value',[...p.auth(),completed.operation]))).rows[0].value,completed.result);});
 test('unknown finance schema refuses fresh cancellation while prior originals remain readable',async()=>{const b=await body(stale),operation=randomUUID(),before=await snapshot(stale);await client.query('CREATE TABLE crest.synthetic_future_finance(id uuid)');try{await assert.rejects(cancel(stale,b,{operation}),e=>e.code==='42501'&&e.message==='CREST_UNFULFILLED_SCHEMA_REVIEW_REQUIRED');}finally{await client.query('DROP TABLE crest.synthetic_future_finance');}await absent(stale,operation);assert.deepEqual(await snapshot(stale),before);assert.deepEqual(await lookup(main,first.operation),first.result);assert.equal(raceVersion,'3');});
+test('private cancellation context binds actual paused work, open travel and scope and retains communication after save',async()=>{
+ const proposal=await readFile(new URL('../../planning/proposals/unfulfilled-cancellation-context.sql',import.meta.url),'utf8');
+ await tx(client,()=>client.query(proposal));
+ const signature='crest_commands.read_unfulfilled_cancellation_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)';
+ for(const role of ['anon','authenticated','crest_worker','crest_recovery']){
+  assert.equal(await scalar('SELECT has_function_privilege($1,$2,$3) value',[role,signature,'EXECUTE']),false);
+ }
+ const read=async(p,job=p.job,auth=p.auth())=>(await tx(web,()=>web.query(
+  'SELECT crest_commands.read_unfulfilled_cancellation_context($1,$2,$3,$4,$5,$6,$7,$8,$9) value',[...auth,job]))).rows[0].value;
+ const p=await fixture({paused:true}),foreign=await fixture(),leg=await supportTrip(p);
+ const expected=await body(p),before=await snapshot(p),context=parseUnfulfilledCancellationContext(await read(p),p.business,p.job);
+ assert.equal(context.jobVersion,p.version);
+ assert.equal(context.jobState,'paused');
+ assert.equal(context.workIntervalId,expected.expectedWorkIntervalId);
+ assert.deepEqual(context.openTravelLegVersionIds,[leg.id]);
+ assert.deepEqual(context.scope,expected.scope);
+ assert.deepEqual(await read(foreign,p.job),{state:'absent'});
+ const denied=p.auth();denied[0]=randomBytes(32);
+ await assert.rejects(read(p,p.job,denied),e=>e.code==='42501');
+ assert.deepEqual(await snapshot(p),before);
+ const communication={state:'not_sent',channel:null,effectiveAt:null,evidenceNote:'Synthetic record, awaiting reply'};
+ const saved=await cancel(p,{...expected,customerCommunication:communication});
+ assert.equal(saved.result.state,'committed');
+ assert.deepEqual(await read(p),{state:'absent'});
+ assert.equal(await scalar('SELECT state value FROM crest.current_travel_legs WHERE logical_id=$1',[leg.logical_id]),'open');
+ const history=(await tx(web,()=>web.query(
+  'SELECT crest_commands.read_confirmed_job_history($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,0,20) value',
+  [...p.auth(),p.job,saved.result.receipt.jobVersion]))).rows[0].value;
+ assert.deepEqual(history.events.at(-1).customerCommunication,communication);
+ assert.equal(history.events.at(-1).reason,expected.reason);
+});

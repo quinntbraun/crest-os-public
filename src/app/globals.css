@@ -277,6 +277,7 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .field-work-form fieldset > label { display:block; margin-top:.75rem; }
 .field-work-form fieldset > label:first-of-type { margin-top:.25rem; }
 .field-work-form label { margin-bottom:.5rem; }
+.trip-interruption-form label[for] { display:block; }
 .field-work-form details { margin-top:1rem; }
 .field-work-form details summary { padding:.5rem 0; }
 .field-work-form details label { display:block; margin-top:.75rem; }
