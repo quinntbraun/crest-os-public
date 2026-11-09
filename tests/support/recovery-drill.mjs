@@ -103,10 +103,37 @@ export async function inventory(client){
   }
   return result;
 }
-export function normalizedSchema(bytes){
+export function normalizedSchema(bytes,policyRoleSets=[]){
   // PG17's psql restriction nonce is intentionally random; retain every other
-  // schema byte, including constraints, grants, policies, triggers and comments.
-  return bytes.toString().replace(/^\\(?:un)?restrict [A-Za-z0-9]+\r?$/gm,'');
+  // schema byte except the presentation order of verified Crest policy roles.
+  let sql=bytes.toString().replace(/^\\(?:un)?restrict [A-Za-z0-9]+\r?$/gm,'');
+  for(const {schemaName,tableName,policyName,roles} of policyRoleSets){
+    if(!roles.every(role=>/^crest_[a-z_]+$/.test(role)))continue;
+    assert(['crest','crest_private'].includes(schemaName));
+    assert([tableName,policyName].every(name=>/^[a-z_][a-z0-9_]*$/.test(name)));
+    const header=`-- Name: ${tableName} ${policyName}; Type: POLICY; Schema: ${schemaName}; Owner: crest_[a-z_]+`;
+    const statement=`CREATE POLICY ${policyName} ON ${schemaName}\\.${tableName}(?: AS RESTRICTIVE)?(?: FOR (?:SELECT|INSERT|UPDATE|DELETE))? TO `;
+    const line=new RegExp(`^(${header}\\n--\\n\\n${statement})(crest_[a-z_]+(?:, crest_[a-z_]+)+)(?= USING \\(| WITH CHECK \\(|;)`,'gm');
+    let found=0;
+    sql=sql.replace(line,(_match,prefix,listed)=>{
+      assert.deepEqual(listed.split(', ').sort(),roles);
+      found++;
+      return prefix+roles.join(', ');
+    });
+    assert.equal(found,1,'dump must contain the exact policy entry');
+  }
+  return sql;
+}
+async function multiRolePolicySets(client){
+  const {rows}=await client.query(`SELECT n.nspname AS "schemaName", c.relname AS "tableName", p.polname AS "policyName",
+    ARRAY(SELECT CASE WHEN member.oid=0 THEN 'PUBLIC' ELSE r.rolname::text END
+      FROM unnest(p.polroles) AS member(oid) LEFT JOIN pg_roles r ON r.oid=member.oid
+      ORDER BY (CASE WHEN member.oid=0 THEN 'PUBLIC' ELSE r.rolname::text END) COLLATE "C") AS roles
+    FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname IN ('crest','crest_private') AND cardinality(p.polroles)>1
+    ORDER BY n.nspname COLLATE "C", c.relname COLLATE "C", p.polname COLLATE "C"`);
+  for(const row of rows)assert(row.roles.every(role=>typeof role==='string'));
+  return rows;
 }
 export async function roleDefinitions(client){
   const roles=(await client.query("SELECT rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolcanlogin,rolreplication,rolbypassrls,rolconnlimit,rolconfig FROM pg_roles WHERE rolname ~ '^crest_[a-z_]+$' ORDER BY rolname")).rows;
@@ -254,6 +281,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       roleCreationOrder=(await client.query("SELECT rolname FROM pg_roles WHERE rolname ~ '^crest_[a-z_]+$' ORDER BY oid")).rows.map(r=>r.rolname);
       assert.deepEqual([...roleCreationOrder].sort(),roles.map(r=>r.rolname));
     }
+    const schemaPolicyRoles=profile.schemaVersion>=55?await multiRolePolicySets(client):undefined;
     const objects=objectCapture?await objectCapture.inventory(client):undefined;
     stage='schema';const schema=await postgresTool('pg_dump',url,['--schema-only','--snapshot',snapshot]);
     await duringSnapshot();
@@ -261,7 +289,8 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
     assert.equal(dump.subarray(0,5).toString(),'PGDMP');
     stage='objects';const objectArchive=objectCapture?{inventory:objects,receipt:await objectCapture.capture(objects)}:null;
     const manifest={formatVersion:1,scope:'synthetic_database_drill',completeBackup:false,...profile,
-      databaseImage:pins.testDatabaseImage,snapshot,roles,...(roleCreationOrder?{roleCreationOrder}:{}),rows,schemaSha256:hash(normalizedSchema(schema)),
+      databaseImage:pins.testDatabaseImage,snapshot,roles,...(roleCreationOrder?{roleCreationOrder}:{}),rows,
+      ...(schemaPolicyRoles?{schemaPolicyRoles}:{}),schemaSha256:hash(normalizedSchema(schema,schemaPolicyRoles)),
       dump:{bytes:dump.length,sha256:hash(dump)},objectArchive,excluded:['runtime_login_credentials',...(objectArchive?[]:['external_objects']),'application_image','independent_vault','production_configuration','production_recovery_authority']};
     // The backup side receives a public recipient only. No private identity.
     stage='encryption';const receipt={formatVersion:1,dump:await seal(join(directory,'database.age'),dump,recipient),
@@ -315,7 +344,10 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     assert.deepEqual(await roleDefinitions(client),manifest.roles);
     stage='restore';await postgresTool('pg_restore',url,['--exit-on-error','--single-transaction'],dump);
     stage='rows';assert.deepEqual(await inventory(client),manifest.rows,'restored row content differs');
-    stage='schema';assert.equal(hash(normalizedSchema(await postgresTool('pg_dump',url,['--schema-only']))),manifest.schemaSha256,'restored schema/grants differ');
+    stage='schema';
+    const policyRoleSets=profile.schemaVersion>=55?await multiRolePolicySets(client):undefined;
+    if(policyRoleSets)assert.deepEqual(policyRoleSets,manifest.schemaPolicyRoles,'restored policy role sets differ');
+    assert.equal(hash(normalizedSchema(await postgresTool('pg_dump',url,['--schema-only']),policyRoleSets)),manifest.schemaSha256,'restored schema/grants differ');
     return manifest;
   }catch{throw new Error('SYNTHETIC_RECOVERY_RESTORE_FAILED:'+stage);}finally{await client.end();}
 }

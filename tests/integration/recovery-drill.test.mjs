@@ -136,7 +136,8 @@ before(async()=>{
   try{output=await run(process.execPath,['tests/support/restore-recovery-drill.mjs',point,emergencyKey],{env:{...process.env,CREST_TEST_DATABASE_URL:'',CREST_RECOVERY_DRILL_TARGET:restoredUrl,CREST_RECOVERY_DRILL_VAULT:join(directory,'vault-objects'),CREST_RECOVERY_DRILL_OBJECTS:join(directory,'restored-objects')}});}
   catch(error){
     if(error.message!=='SYNTHETIC_RECOVERY_TOOL_FAILED:schema')throw error;
-    const expected=normalizedSchema(await postgresTool('pg_dump',sourceUrl,['--schema-only'])),actual=normalizedSchema(await postgresTool('pg_dump',restoredUrl,['--schema-only']));
+    const policyRoleSets=backup.manifest.schemaPolicyRoles;
+    const expected=normalizedSchema(await postgresTool('pg_dump',sourceUrl,['--schema-only']),policyRoleSets),actual=normalizedSchema(await postgresTool('pg_dump',restoredUrl,['--schema-only']),policyRoleSets);
     assert.equal(hash(expected),backup.manifest.schemaSha256,'source schema changed after capture');
     const left=expected.split('\n'),right=actual.split('\n'),at=left.findIndex((line,i)=>line!==right[i]);
     // Only fixed public Crest DDL headers/grants and exact lines already in the
@@ -166,6 +167,18 @@ after(async()=>{
   await restored?.end();await cluster?.close();await sandbox?.close();
 });
 
+test('schema recovery tolerates only display reordering of the exact policy roles',()=>{
+  const roles=['crest_booking_integrity_owner','crest_quote_integrity_owner'];
+  const roleSets=[{schemaName:'crest_private',tableName:'operations',policyName:'amendment_accept_operation_integrity',roles}];
+  const dump=(listed,predicate='schema_version = 1')=>Buffer.from(
+    '-- Name: operations amendment_accept_operation_integrity; Type: POLICY; Schema: crest_private; Owner: crest_schema_owner\n--\n\n'+
+    'CREATE POLICY amendment_accept_operation_integrity ON crest_private.operations FOR SELECT TO '+listed.join(', ')+' USING ('+predicate+');\n');
+  const ordered=dump(roles),reversed=dump([...roles].reverse());
+  assert.notEqual(normalizedSchema(ordered),normalizedSchema(reversed));
+  assert.equal(normalizedSchema(ordered,roleSets),normalizedSchema(reversed,roleSets));
+  assert.throws(()=>normalizedSchema(dump([roles[0],'crest_web']),roleSets));
+  assert.notEqual(normalizedSchema(ordered,roleSets),normalizedSchema(dump(roles,'schema_version = 2'),roleSets));
+});
 test('actual encrypted database recovery works in a fresh process and separate cluster',async()=>{
   assert.notEqual(new URL(sourceUrl).port,new URL(restoredUrl).port);
   assert.deepEqual(await inventory(restored),backup.manifest.rows);
