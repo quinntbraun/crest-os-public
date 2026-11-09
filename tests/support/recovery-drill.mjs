@@ -17,6 +17,11 @@ const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8')
 const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8'));
 const currentCoverage=JSON.parse(await readFile(join(root,'planning/SECURITY_EXPORT_COVERAGE.json'),'utf8'));
 const registryHash=hash(await readFile(join(root,'supabase/migration-checksums.json')));
+const legacy53Bytes=await readFile(join(root,'tests/support/registered53-migration-checksums.json')),legacy53=JSON.parse(legacy53Bytes);
+assert.equal(legacy53.migrations.length,53);assert.deepEqual(registry.migrations.slice(0,53),legacy53.migrations);
+const legacy53Coverage=JSON.parse(await readFile(join(root,'tests/support/registered53-export-coverage.json'),'utf8'));
+const legacy53Profile=Object.freeze({schemaVersion:53,registrySha256:hash(legacy53Bytes)}),field54Coverage=JSON.parse(await readFile(join(root,'tests/support/field54-export-coverage.json'),'utf8'));
+const field54Versions=[...legacy53.migrations.map(row=>row.version),'20261105180000'];
 const legacy52Bytes=await readFile(join(root,'tests/support/registered52-migration-checksums.json')),legacy52=JSON.parse(legacy52Bytes);
 assert.equal(legacy52.migrations.length,52);assert.deepEqual(registry.migrations.slice(0,52),legacy52.migrations);
 const legacy52Profile=Object.freeze({schemaVersion:52,registrySha256:hash(legacy52Bytes)}),legacy52Coverage=JSON.parse(await readFile(join(root,'tests/support/registered52-export-coverage.json'),'utf8')),amendment53Coverage=JSON.parse(await readFile(join(root,'tests/support/amendment53-export-coverage.json'),'utf8'));
@@ -98,10 +103,37 @@ export async function inventory(client){
   }
   return result;
 }
-export function normalizedSchema(bytes){
+export function normalizedSchema(bytes,policyRoleSets=[]){
   // PG17's psql restriction nonce is intentionally random; retain every other
-  // schema byte, including constraints, grants, policies, triggers and comments.
-  return bytes.toString().replace(/^\\(?:un)?restrict [A-Za-z0-9]+\r?$/gm,'');
+  // schema byte except the presentation order of verified Crest policy roles.
+  let sql=bytes.toString().replace(/^\\(?:un)?restrict [A-Za-z0-9]+\r?$/gm,'');
+  for(const {schemaName,tableName,policyName,roles} of policyRoleSets){
+    if(!roles.every(role=>/^crest_[a-z_]+$/.test(role)))continue;
+    assert(['crest','crest_private'].includes(schemaName));
+    assert([tableName,policyName].every(name=>/^[a-z_][a-z0-9_]*$/.test(name)));
+    const header=`-- Name: ${tableName} ${policyName}; Type: POLICY; Schema: ${schemaName}; Owner: crest_[a-z_]+`;
+    const statement=`CREATE POLICY ${policyName} ON ${schemaName}\\.${tableName}(?: AS RESTRICTIVE)?(?: FOR (?:SELECT|INSERT|UPDATE|DELETE))? TO `;
+    const line=new RegExp(`^(${header}\\n--\\n\\n${statement})(crest_[a-z_]+(?:, crest_[a-z_]+)+)(?= USING \\(| WITH CHECK \\(|;)`,'gm');
+    let found=0;
+    sql=sql.replace(line,(_match,prefix,listed)=>{
+      assert.deepEqual(listed.split(', ').sort(),roles);
+      found++;
+      return prefix+roles.join(', ');
+    });
+    assert.equal(found,1,'dump must contain the exact policy entry');
+  }
+  return sql;
+}
+async function multiRolePolicySets(client){
+  const {rows}=await client.query(`SELECT n.nspname AS "schemaName", c.relname AS "tableName", p.polname AS "policyName",
+    ARRAY(SELECT CASE WHEN member.oid=0 THEN 'PUBLIC' ELSE r.rolname::text END
+      FROM unnest(p.polroles) AS member(oid) LEFT JOIN pg_roles r ON r.oid=member.oid
+      ORDER BY (CASE WHEN member.oid=0 THEN 'PUBLIC' ELSE r.rolname::text END) COLLATE "C") AS roles
+    FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname IN ('crest','crest_private') AND cardinality(p.polroles)>1
+    ORDER BY n.nspname COLLATE "C", c.relname COLLATE "C", p.polname COLLATE "C"`);
+  for(const row of rows)assert(row.roles.every(role=>typeof role==='string'));
+  return rows;
 }
 export async function roleDefinitions(client){
   const roles=(await client.query("SELECT rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolcanlogin,rolreplication,rolbypassrls,rolconnlimit,rolconfig FROM pg_roles WHERE rolname ~ '^crest_[a-z_]+$' ORDER BY rolname")).rows;
@@ -208,29 +240,48 @@ export async function backupAmendment53CandidateDatabase(candidate,client,...arg
   return backupWithProfile(checked.profile,client,...args);
 }
 export async function restoreAmendment53CandidateDatabase(candidate,...args){return restoreWithProfile((await amendment53CandidateProfile(candidate)).profile,...args);}
+export async function backupLegacy53Database(client,...args){
+ assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(row=>row.version),legacy53.migrations.map(row=>row.version));
+ return backupWithProfile(legacy53Profile,client,...args);
+}
+export async function restoreLegacy53Database(...args){return restoreWithProfile(legacy53Profile,...args);}
+async function field54CandidateProfile(candidate){
+ assert.equal(candidate.file,'20261105180000_field_workspace.sql');
+ const bytes=await readFile(join(candidate.directory,'supabase/migration-checksums.json')),value=JSON.parse(bytes);
+ assert.equal(value.migrations.length,54);assert.deepEqual(value.migrations.slice(0,53),legacy53.migrations);assert.deepEqual(value.migrations.map(row=>row.version),field54Versions);
+ assert.equal(hash(bytes),candidate.registrySha256);assert.equal(candidate.previousRegistrySha256,hash(legacy53Bytes));assert.equal(value.migrations.at(-1).file,candidate.file);assert.equal(value.migrations.at(-1).sha256,candidate.sha256);
+ assert.equal(hash(await readFile(join(candidate.directory,'supabase/migrations',candidate.file))),candidate.sha256);
+ return {profile:Object.freeze({schemaVersion:54,registrySha256:candidate.registrySha256}),versions:field54Versions};
+}
+export async function backupField54CandidateDatabase(candidate,client,...args){
+ const checked=await field54CandidateProfile(candidate);assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(row=>row.version),checked.versions);
+ return backupWithProfile(checked.profile,client,...args);
+}
+export async function restoreField54CandidateDatabase(candidate,...args){return restoreWithProfile((await field54CandidateProfile(candidate)).profile,...args);}
 async function backupWithProfile(profile,client,url,directory,recipient,duringSnapshot=async()=>{},objectCapture){
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   try{
     const snapshot=(await client.query('SELECT pg_export_snapshot() AS value')).rows[0].value;
-    if(profile===currentProfile||profile===legacy52Profile||profile.schemaVersion===53){
+    if(profile===currentProfile||profile===legacy52Profile||profile.schemaVersion===53||profile.schemaVersion===54){
       // A matching migration ordinal alone cannot label a construction schema
       // with an additional source column as the registered current profile.
       // Check the actual columns in the same held snapshot used by the dump.
-      stage='coverage';assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(row=>row.version),profile.schemaVersion===53?[...legacy52.migrations.map(row=>row.version),'20261104180000']:(profile===legacy52Profile?legacy52:registry).migrations.map(row=>row.version));
+      stage='coverage';assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(row=>row.version),profile===currentProfile?registry.migrations.map(row=>row.version):profile.schemaVersion===54?field54Versions:profile.schemaVersion===53?legacy53.migrations.map(row=>row.version):(profile===legacy52Profile?legacy52:registry).migrations.map(row=>row.version));
       const columns=(await client.query("SELECT n.nspname||'.'||c.relname AS \"table\",a.attname AS \"column\" FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN('crest','crest_private') AND c.relkind IN('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2")).rows;
-      verifyExportCoverage(profile===legacy52Profile?legacy52Coverage:profile.schemaVersion===53?amendment53Coverage:currentCoverage,columns,profile.schemaVersion);
+      verifyExportCoverage(profile===currentProfile?currentCoverage:profile===legacy53Profile?legacy53Coverage:profile.schemaVersion===54?field54Coverage:profile===legacy52Profile?legacy52Coverage:profile.schemaVersion===53?amendment53Coverage:currentCoverage,columns,profile.schemaVersion);
     }
     // Coverage has passed. Pending-object/source refusal belongs to snapshot
     // capture, rather than being misreported as a schema-coverage failure.
     stage='snapshot';const rows=await inventory(client),roles=await roleDefinitions(client);
     // PG stores a policy's role set in OID order. Preserve the relative role
-    // creation order for53 so a multi-role policy deparses byte-exact after
+    // creation order from schema53 so a multi-role policy deparses byte-exact after
     // restore; do not normalize away policy or permission differences.
     let roleCreationOrder;
-    if(profile.schemaVersion===53){
+    if(profile.schemaVersion>=53){
       roleCreationOrder=(await client.query("SELECT rolname FROM pg_roles WHERE rolname ~ '^crest_[a-z_]+$' ORDER BY oid")).rows.map(r=>r.rolname);
       assert.deepEqual([...roleCreationOrder].sort(),roles.map(r=>r.rolname));
     }
+    const schemaPolicyRoles=profile.schemaVersion>=55?await multiRolePolicySets(client):undefined;
     const objects=objectCapture?await objectCapture.inventory(client):undefined;
     stage='schema';const schema=await postgresTool('pg_dump',url,['--schema-only','--snapshot',snapshot]);
     await duringSnapshot();
@@ -238,7 +289,8 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
     assert.equal(dump.subarray(0,5).toString(),'PGDMP');
     stage='objects';const objectArchive=objectCapture?{inventory:objects,receipt:await objectCapture.capture(objects)}:null;
     const manifest={formatVersion:1,scope:'synthetic_database_drill',completeBackup:false,...profile,
-      databaseImage:pins.testDatabaseImage,snapshot,roles,...(roleCreationOrder?{roleCreationOrder}:{}),rows,schemaSha256:hash(normalizedSchema(schema)),
+      databaseImage:pins.testDatabaseImage,snapshot,roles,...(roleCreationOrder?{roleCreationOrder}:{}),rows,
+      ...(schemaPolicyRoles?{schemaPolicyRoles}:{}),schemaSha256:hash(normalizedSchema(schema,schemaPolicyRoles)),
       dump:{bytes:dump.length,sha256:hash(dump)},objectArchive,excluded:['runtime_login_credentials',...(objectArchive?[]:['external_objects']),'application_image','independent_vault','production_configuration','production_recovery_authority']};
     // The backup side receives a public recipient only. No private identity.
     stage='encryption';const receipt={formatVersion:1,dump:await seal(join(directory,'database.age'),dump,recipient),
@@ -275,7 +327,7 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     // Fully decrypt/authenticate/check BEFORE executing SQL. The bounded fixture
     // stays in memory; no partial plaintext dump is written to disk or published.
     stage='closed_roles';let orderedRoles=manifest.roles;
-    if(profile.schemaVersion===53){
+    if(profile.schemaVersion>=53){
       assert(Array.isArray(manifest.roleCreationOrder));
       assert(manifest.roleCreationOrder.every(name=>typeof name==='string'&&/^crest_[a-z_]+$/.test(name)));
       assert.deepEqual([...manifest.roleCreationOrder].sort(),manifest.roles.map(r=>r.rolname));
@@ -292,7 +344,10 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     assert.deepEqual(await roleDefinitions(client),manifest.roles);
     stage='restore';await postgresTool('pg_restore',url,['--exit-on-error','--single-transaction'],dump);
     stage='rows';assert.deepEqual(await inventory(client),manifest.rows,'restored row content differs');
-    stage='schema';assert.equal(hash(normalizedSchema(await postgresTool('pg_dump',url,['--schema-only']))),manifest.schemaSha256,'restored schema/grants differ');
+    stage='schema';
+    const policyRoleSets=profile.schemaVersion>=55?await multiRolePolicySets(client):undefined;
+    if(policyRoleSets)assert.deepEqual(policyRoleSets,manifest.schemaPolicyRoles,'restored policy role sets differ');
+    assert.equal(hash(normalizedSchema(await postgresTool('pg_dump',url,['--schema-only']),policyRoleSets)),manifest.schemaSha256,'restored schema/grants differ');
     return manifest;
   }catch{throw new Error('SYNTHETIC_RECOVERY_RESTORE_FAILED:'+stage);}finally{await client.end();}
 }

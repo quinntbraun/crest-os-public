@@ -136,7 +136,8 @@ before(async()=>{
   try{output=await run(process.execPath,['tests/support/restore-recovery-drill.mjs',point,emergencyKey],{env:{...process.env,CREST_TEST_DATABASE_URL:'',CREST_RECOVERY_DRILL_TARGET:restoredUrl,CREST_RECOVERY_DRILL_VAULT:join(directory,'vault-objects'),CREST_RECOVERY_DRILL_OBJECTS:join(directory,'restored-objects')}});}
   catch(error){
     if(error.message!=='SYNTHETIC_RECOVERY_TOOL_FAILED:schema')throw error;
-    const expected=normalizedSchema(await postgresTool('pg_dump',sourceUrl,['--schema-only'])),actual=normalizedSchema(await postgresTool('pg_dump',restoredUrl,['--schema-only']));
+    const policyRoleSets=backup.manifest.schemaPolicyRoles;
+    const expected=normalizedSchema(await postgresTool('pg_dump',sourceUrl,['--schema-only']),policyRoleSets),actual=normalizedSchema(await postgresTool('pg_dump',restoredUrl,['--schema-only']),policyRoleSets);
     assert.equal(hash(expected),backup.manifest.schemaSha256,'source schema changed after capture');
     const left=expected.split('\n'),right=actual.split('\n'),at=left.findIndex((line,i)=>line!==right[i]);
     // Only fixed public Crest DDL headers/grants and exact lines already in the
@@ -166,6 +167,18 @@ after(async()=>{
   await restored?.end();await cluster?.close();await sandbox?.close();
 });
 
+test('schema recovery tolerates only display reordering of the exact policy roles',()=>{
+  const roles=['crest_booking_integrity_owner','crest_quote_integrity_owner'];
+  const roleSets=[{schemaName:'crest_private',tableName:'operations',policyName:'amendment_accept_operation_integrity',roles}];
+  const dump=(listed,predicate='schema_version = 1')=>Buffer.from(
+    '-- Name: operations amendment_accept_operation_integrity; Type: POLICY; Schema: crest_private; Owner: crest_schema_owner\n--\n\n'+
+    'CREATE POLICY amendment_accept_operation_integrity ON crest_private.operations FOR SELECT TO '+listed.join(', ')+' USING ('+predicate+');\n');
+  const ordered=dump(roles),reversed=dump([...roles].reverse());
+  assert.notEqual(normalizedSchema(ordered),normalizedSchema(reversed));
+  assert.equal(normalizedSchema(ordered,roleSets),normalizedSchema(reversed,roleSets));
+  assert.throws(()=>normalizedSchema(dump([roles[0],'crest_web']),roleSets));
+  assert.notEqual(normalizedSchema(ordered,roleSets),normalizedSchema(dump(roles,'schema_version = 2'),roleSets));
+});
 test('actual encrypted database recovery works in a fresh process and separate cluster',async()=>{
   assert.notEqual(new URL(sourceUrl).port,new URL(restoredUrl).port);
   assert.deepEqual(await inventory(restored),backup.manifest.rows);
@@ -173,7 +186,9 @@ test('actual encrypted database recovery works in a fresh process and separate c
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,backup.manifest.schemaVersion);
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM auth.schema_migrations')).rows[0].n,(await source.query('SELECT count(*)::int AS n FROM auth.schema_migrations')).rows[0].n);
   assert.equal(backup.manifest.completeBackup,false); // vault/files/config/full release remain unfinished
-  assert.equal(backup.manifest.schemaVersion,53);
+  assert.equal(backup.manifest.schemaVersion,55);
+  const signature='crest_commands.read_job_completion_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)';
+  assert.equal((await restored.query("SELECT has_function_privilege('crest_web',$1,'EXECUTE') AND NOT has_function_privilege('anon',$1,'EXECUTE') AS closed",[signature])).rows[0].closed,true);
 });
 test('one exported snapshot preserves prior operations and excludes concurrent committed changes',async()=>{
   assert.equal((await restored.query('SELECT legal_name FROM crest.businesses WHERE id=$1',[owner.business])).rows[0].legal_name,original.name);
@@ -225,7 +240,7 @@ test('lead source snapshot, exact cents/microseconds, genuine customer and origi
   for(const role of ['crest_lead_owner','crest_lead_integrity_owner','crest_lead_source_owner','crest_lead_source_integrity_owner'])await assert.rejects(w.connection.query('SET ROLE '+role),e=>e.code==='42501');
   for(const table of ['leads','lead_sources'])await assert.rejects(w.connection.query('SELECT * FROM crest.'+table),e=>e.code==='42501');
  }finally{await w.connection.end();await restored.query('DROP ROLE '+w.login);}
- assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,68);
+ assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,80);
  const quoteTables=['condition_assessments','quote_approvals','quote_families','quote_items','quote_revisions'];
  assert.deepEqual((await restored.query("SELECT c.relname AS name,c.relrowsecurity AND c.relforcerowsecurity AND c.relowner='crest_schema_owner'::regrole AND NOT has_table_privilege('crest_web',c.oid,'SELECT') AS closed FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='crest' AND c.relkind='r' AND c.relname=ANY($1::text[]) ORDER BY c.relname",[quoteTables])).rows,quoteTables.map(name=>({name,closed:true})));
  const commercialTables=['agreements','entitlement_versions','quote_acceptances','quote_family_commercial_state','quote_sends','scope_allocations','scope_entitlements'];
@@ -235,17 +250,19 @@ test('lead source snapshot, exact cents/microseconds, genuine customer and origi
 });
 
 test('registered coverage accounts for every actual source column and rejects omissions on the restored schema',async()=>{
- const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,53);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_vehicles').required,[...leadVehicleColumns]);
+ const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,55);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_vehicles').required,[...leadVehicleColumns]);
  for(const spec of Object.values(expenseSourceTables)){const table='crest.'+spec.entity;assert.deepEqual(manifest.tables.find(t=>t.table===table).required,[...spec.columns]);assert.equal((await restored.query("SELECT relrowsecurity AND relforcerowsecurity AND relowner='crest_schema_owner'::regrole AS protected FROM pg_class WHERE oid=$1::regclass",[table])).rows[0].protected,true);}
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_addresses').required,[...leadAddressColumns]);
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_events').required,[...leadEventColumns]);
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_sources').required,[...leadSourceColumns]);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.leads').required,[...leadColumns]);
  const columns=(await restored.query(`SELECT n.nspname||'.'||c.relname AS "table",a.attname AS "column" FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN ('crest','crest_private') AND c.relkind IN ('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2`)).rows;
- assert.equal(columns.length,1068);assert.deepEqual(verifyExportCoverage(manifest,columns,53),{assurance:'schema_inventory_only',tables:68,requiredColumns:1058,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
+ assert.equal(columns.length,1244);assert.deepEqual(verifyExportCoverage(manifest,columns,55),{assurance:'schema_inventory_only',tables:80,requiredColumns:1234,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
  assert.throws(()=>verifyExportCoverage(manifest,columns,52),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
- for(const [table,column]of [['crest.quote_acceptances','kind'],['crest.allocation_plan_versions','entitlement_version_id'],['crest.allocation_plan_versions','authorization_state']]){const row=manifest.tables.find(t=>t.table===table);assert(row.required.includes(column));assert(columns.some(c=>c.table===table&&c.column===column));const missing=structuredClone(manifest);missing.tables.find(t=>t.table===table).required=missing.tables.find(t=>t.table===table).required.filter(c=>c!==column);assert.throws(()=>verifyExportCoverage(missing,columns,53),/EXPORT_COVERAGE_REVIEW_REQUIRED/);}
- const withoutParent=structuredClone(manifest);const revisions=withoutParent.tables.find(t=>t.table==='crest.quote_revisions');assert(revisions.required.includes('parent_agreement_id'));revisions.required=revisions.required.filter(column=>column!=='parent_agreement_id');assert.throws(()=>verifyExportCoverage(withoutParent,columns,53),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
- for(const table of ['crest.expense_revisions','crest.expense_receipt_revisions','crest.leads','crest.agreements','crest.entitlement_versions','crest.quote_acceptances','crest.quote_family_commercial_state','crest.quote_sends','crest.scope_allocations','crest.scope_entitlements','crest.fulfillment_mode_versions','crest.jobs','crest.job_vehicles','crest.job_encounters','crest.appointments','crest.operator_controls','crest.schedule_reservations','crest.schedule_overrides','crest.schedule_override_conflicts','crest.allocation_plan_versions','crest.allocation_plan_parts','crest.job_events']){const missing=structuredClone(manifest);missing.tables.find(t=>t.table===table).required.pop();assert.throws(()=>verifyExportCoverage(missing,columns,53),/EXPORT_COVERAGE_REVIEW_REQUIRED/);}
+ for(const [table,column]of [['crest.quote_acceptances','kind'],['crest.allocation_plan_versions','entitlement_version_id'],['crest.allocation_plan_versions','authorization_state']]){const row=manifest.tables.find(t=>t.table===table);assert(row.required.includes(column));assert(columns.some(c=>c.table===table&&c.column===column));const missing=structuredClone(manifest);missing.tables.find(t=>t.table===table).required=missing.tables.find(t=>t.table===table).required.filter(c=>c!==column);assert.throws(()=>verifyExportCoverage(missing,columns,55),/EXPORT_COVERAGE_REVIEW_REQUIRED/);}
+ const withoutParent=structuredClone(manifest);const revisions=withoutParent.tables.find(t=>t.table==='crest.quote_revisions');assert(revisions.required.includes('parent_agreement_id'));revisions.required=revisions.required.filter(column=>column!=='parent_agreement_id');assert.throws(()=>verifyExportCoverage(withoutParent,columns,55),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
+ for(const table of ['crest.expense_revisions','crest.expense_receipt_revisions','crest.leads','crest.agreements','crest.entitlement_versions','crest.quote_acceptances','crest.quote_family_commercial_state','crest.quote_sends','crest.scope_allocations','crest.scope_entitlements','crest.fulfillment_mode_versions','crest.jobs','crest.job_vehicles','crest.job_encounters','crest.appointments','crest.operator_controls','crest.schedule_reservations','crest.schedule_overrides','crest.schedule_override_conflicts','crest.allocation_plan_versions','crest.allocation_plan_parts','crest.job_events']){const missing=structuredClone(manifest);missing.tables.find(t=>t.table===table).required.pop();assert.throws(()=>verifyExportCoverage(missing,columns,55),/EXPORT_COVERAGE_REVIEW_REQUIRED/);}
+ for(const row of manifest.tables.slice(68)){const table=row.table,column=row.required[0];assert(column);assert(columns.some(c=>c.table===table&&c.column===column));const missing=structuredClone(manifest);missing.tables.find(t=>t.table===table).required=missing.tables.find(t=>t.table===table).required.filter(c=>c!==column);assert.throws(()=>verifyExportCoverage(missing,columns,55),/EXPORT_COVERAGE_REVIEW_REQUIRED/);assert.equal((await restored.query("SELECT relrowsecurity AND relforcerowsecurity AND relowner='crest_schema_owner'::regrole AND NOT has_table_privilege('crest_web',oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') AS protected FROM pg_class WHERE oid=$1::regclass",[table])).rows[0].protected,true);}
+ assert.throws(()=>verifyExportCoverage(manifest,columns,53),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
 });
 
 test('immutable18-column Lost event restores exactly before the later reopen',async()=>{

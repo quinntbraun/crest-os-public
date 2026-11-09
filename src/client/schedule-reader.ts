@@ -7,8 +7,8 @@ type Context=Awaited<ReturnType<typeof scheduling.workspace>>;
 type Resources=Exclude<Awaited<ReturnType<typeof scheduling.resources>>,{state:'absent'}>;
 type Pending=Awaited<ReturnType<typeof scheduling.pending>>['items'];
 type Dates=Readonly<{fromDate:string;throughDate:string}>;
-export type ScheduleReadView=Readonly<{phase:'loading'|'ready'|'signed-out'|'unavailable';busy:boolean;loaded:boolean;writesPaused:boolean;message:string;timezone:string;dates:Dates|null;rows:readonly JobSummary[];hasMore:boolean;pending:Pending;pendingHasMore:boolean;selected:Resources|null;history:readonly JobHistoryEvent[];historyComplete:boolean}>;
-export const initialScheduleReadView:ScheduleReadView=Object.freeze({phase:'loading',busy:true,loaded:false,writesPaused:true,message:'Checking schedule access…',timezone:'',dates:null,rows:[],hasMore:false,pending:[],pendingHasMore:false,selected:null,history:[],historyComplete:false});
+export type ScheduleReadView=Readonly<{phase:'loading'|'ready'|'signed-out'|'unavailable';busy:boolean;loaded:boolean;writesPaused:boolean;fieldSessionAvailable?:boolean;jobCompletionAvailable?:true;message:string;timezone:string;dates:Dates|null;rows:readonly JobSummary[];hasMore:boolean;pending:Pending;pendingHasMore:boolean;selected:Resources|null;history:readonly JobHistoryEvent[];historyComplete:boolean}>;
+export const initialScheduleReadView:ScheduleReadView=Object.freeze({phase:'loading',busy:true,loaded:false,writesPaused:true,fieldSessionAvailable:false,message:'Checking schedule access…',timezone:'',dates:null,rows:[],hasMore:false,pending:[],pendingHasMore:false,selected:null,history:[],historyComplete:false});
 function dayAfter(day:string,offset=1){return new Date(Date.parse(day+'T12:00:00Z')+offset*86400000).toISOString().slice(0,10);}
 export function scheduleDateWindow(dates:Dates,timezone:string){
  const valid=(day:string)=>/^\d{4}-\d{2}-\d{2}$/.test(day)&&Number.isFinite(Date.parse(day+'T12:00:00Z'))&&new Date(day+'T12:00:00Z').toISOString().slice(0,10)===day;
@@ -25,7 +25,7 @@ export function createScheduleReader(deps:{change:(view:ScheduleReadView)=>void;
  const live=(signal:AbortSignal)=>{if(!alive||signal.aborted||active?.signal!==signal)throw Error();};
  async function fresh(signal:AbortSignal){
   const proof=await session(signal);live(signal);const next=await api.workspace(proof,signal);live(signal);
-  if(context&&(context.binding!==next.binding||context.context.businessId!==next.context.businessId||context.context.recoveryEpoch!==next.context.recoveryEpoch||context.context.writeState!==next.context.writeState))throw Error('SCHEDULE_CONTEXT_CHANGED');
+  if(context&&(context.binding!==next.binding||context.context.businessId!==next.context.businessId||context.context.recoveryEpoch!==next.context.recoveryEpoch||context.context.writeState!==next.context.writeState||context.fieldSessionAvailable!==next.fieldSessionAvailable||context.jobCompletionAvailable!==next.jobCompletionAvailable))throw Error('SCHEDULE_CONTEXT_CHANGED');
   context=next;return {proof,businessId:next.context.businessId};
  }
  async function run<T>(work:(signal:AbortSignal)=>Promise<T>){
@@ -39,7 +39,7 @@ export function createScheduleReader(deps:{change:(view:ScheduleReadView)=>void;
   const selectedDates=dates??{fromDate:today,throughDate:dayAfter(today,6)};let window;
   try{window=scheduleDateWindow(selectedDates,timezone);}catch{emit({phase:'ready',timezone,dates:selectedDates,message:'Choose a valid range of at most 92 days. Date boundaries must identify one actual midnight in the business time zone.'});return;}
   const [jobs,pending]=await Promise.all([api.list({businessId,...window,afterStart:null,afterJob:null,pageSize:20},proof,signal),api.pending({businessId,afterCreatedAt:null,afterAppointmentId:null,pageSize:10},proof,signal)]);live(signal);
-  emit({phase:'ready',loaded:true,writesPaused:context!.context.writeState!=="ready",timezone,dates:selectedDates,rows:jobs.jobs,hasMore:jobs.hasMore,pending:pending.items,pendingHasMore:pending.hasMore,message:'Saved schedule loaded. Proposed changes reserve no new time.'});
+  emit({phase:'ready',loaded:true,writesPaused:context!.context.writeState!=="ready",fieldSessionAvailable:context!.fieldSessionAvailable===true,...context!.jobCompletionAvailable?{jobCompletionAvailable:true as const}:{},timezone,dates:selectedDates,rows:jobs.jobs,hasMore:jobs.hasMore,pending:pending.items,pendingHasMore:pending.hasMore,message:'Saved schedule loaded. Proposed changes reserve no new time.'});
  });
  const more=()=>run(async signal=>{
   if(view.phase!=='ready'||!view.hasMore||!view.dates||!view.rows.length)return;

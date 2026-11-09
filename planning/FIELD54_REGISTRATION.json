@@ -1,0 +1,111 @@
+{
+  "formatVersion": 1,
+  "schemaVersion": 54,
+  "migration": {
+    "version": "20261105180000",
+    "file": "20261105180000_field_workspace.sql",
+    "sha256": "ebc88d2029dbac5815415a92f708e1213eaf3edbdcb342d583b925a4f3ff6524"
+  },
+  "bytes": 413995,
+  "registrySha256": "4834f520561796ce811f3b5a1d9391c3490b472a4f72a6fa9af5f232d3751dac",
+  "previousRegistrySha256": "033199a5f2e528f629799cdba48901bf2a4687df1eea3166b0cf7bfcf5ec3c67",
+  "parts": [
+    {
+      "path": "planning/proposals/field-time-storage.sql",
+      "offset": 244,
+      "bytes": 25481,
+      "sha256": "b372fafad1706241dcbabe66544be7eaa45bd98d34a0e0d702c64168b61d05b4"
+    },
+    {
+      "path": "planning/proposals/field-session-commands.sql",
+      "offset": 25873,
+      "bytes": 44446,
+      "sha256": "968cbaaed4191f27e4697ba6533d0d41bfece7bf8e99c2fdd7f82ecfdeaa2c5d"
+    },
+    {
+      "path": "planning/proposals/work-completion-plan.sql",
+      "offset": 70469,
+      "bytes": 13940,
+      "sha256": "ba8dba0e67bae9e8b24c0fd2141b883659ec86fd45cd62210c2a818696c69348"
+    },
+    {
+      "path": "planning/proposals/work-completion-commands.sql",
+      "offset": 84561,
+      "bytes": 70537,
+      "sha256": "abadfe130d6f57bcf4fb04d17f4cd5e5ad5d922d930cc764140855e7b162a347"
+    },
+    {
+      "path": "planning/proposals/field-scope-floor.sql",
+      "offset": 155247,
+      "bytes": 14964,
+      "sha256": "ebdc82993fa761dff73a298fab9a6aebae27d74c2a2efff6cec066541d2c2d11"
+    },
+    {
+      "path": "planning/proposals/mileage-evidence.sql",
+      "offset": 170352,
+      "bytes": 41249,
+      "sha256": "9e333d96f138e3bd8cb7fd0091d80f460876821c3900a12fe022d73023211d5c"
+    },
+    {
+      "path": "planning/proposals/mileage-field-profile.sql",
+      "offset": 211746,
+      "bytes": 3700,
+      "sha256": "88e77205648ace4058946647bacec1acbf9570ae3d2911ebb8c436591196bd04"
+    },
+    {
+      "path": "planning/proposals/mobile-trip-interruption.sql",
+      "offset": 215599,
+      "bytes": 67851,
+      "sha256": "dbe14dea6e55903090e90772b7da9c6786aaa3dba5bababb1adf4eb4d7e8ee13"
+    },
+    {
+      "path": "planning/proposals/unfulfilled-work-cancellation.sql",
+      "offset": 283611,
+      "bytes": 53524,
+      "sha256": "16c9a16fb409a5cc7604c4ebc1c411cec41a9af6624f5a6f178698df666f5b63"
+    },
+    {
+      "path": "planning/proposals/support-trip-commands.sql",
+      "offset": 337293,
+      "bytes": 34010,
+      "sha256": "7c9bac5aba9b972a74cbd0d98d6584db632c0771a9d87846aa8047e1f90f4abf"
+    },
+    {
+      "path": "planning/proposals/field-originals.sql",
+      "offset": 371447,
+      "bytes": 13553,
+      "sha256": "02b082bbd73a87101d312bd4989fdaf5c825df5ff70554b6a60d3ade9ffdd28c"
+    },
+    {
+      "path": "planning/proposals/field-source.sql",
+      "offset": 385135,
+      "bytes": 23036,
+      "sha256": "4edc618d433ee26175ed9b322bcf7e5197773c6a0e429b3d129ac716d2fde0da"
+    },
+    {
+      "path": "planning/proposals/field-parent-source.sql",
+      "offset": 408310,
+      "bytes": 5613,
+      "sha256": "0a1bd9c13d3fa0bc0ebea4f0ef4051b47b7b6c02224f95a86903c4f4b980273c"
+    }
+  ],
+  "sourceProof": "planning/proposals/field54-recovery-verification.json",
+  "renderedProof": "planning/proposals/field-work-ui-verification.json",
+  "candidateHeaderRetainedByteExact": true,
+  "headerMeaning": "The candidate provenance header is retained as part of the exact verified package, as with registered52/53. This registry entry registers those bytes; the header does not control registration.",
+  "previousCoverage": {
+    "frozenFixture": "tests/support/registered53-export-coverage.json",
+    "sha256": "6a53ee21d999cc3761fc04dfce57e747c56cdb38b0111290b23888a091791d9e"
+  },
+  "previousCompatibility": {
+    "frozenFixture": "tests/support/registered53-compatibility.json",
+    "sha256": "a4204dfcee69d6a12b888c797455609bf6aaaa1bb421bc2ab61b462fe27aced2"
+  },
+  "ownerApplied": false,
+  "completeCrestExport": false,
+  "completeBackup": false,
+  "productionActivation": false,
+  "runtimeFinancePostingEnabled": false,
+  "originalRowsAndHistoryRewritten": false,
+  "registeredCoordinatorAcceptance": "Verified current-root upgrade, exact independent54 and frozen53 restoration; see planning/proposals/field54-registration-verification.json. Hosted current-source release acceptance and owner upgrade remain pending."
+}

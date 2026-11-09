@@ -1,12 +1,12 @@
 import type {Proof} from './authentication';
 import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
-const routes=['slot-review','original','workspace','agreement','resources','pending','list','read','history','mode-history','mode-save','book','cancel','reschedule'] as const;
+const routes=['slot-review','original','workspace','agreement','resources','pending','list','read','history','mode-history','mode-save','book','cancel','reschedule','field-save','completion-context','complete'] as const;
 export type SchedulingRoute=typeof routes[number];
 type Kind='input'|'not_submitted'|'recovery'|'limited'|'unknown'|'unavailable';
 export class SchedulingClientError extends Error{readonly kind:Kind;constructor(kind:Kind){super('SCHEDULING_REQUEST_FAILED');this.name='SchedulingClientError';this.kind=kind;}}
 // Domain-only private transport. No retries, storage, auth bypass or external URL.
 export async function postScheduling(route:SchedulingRoute,body:object,proof:Proof,external:AbortSignal){
- const mutation=['book','cancel','reschedule','mode-save'].includes(route);let sent=false;
+ const mutation=['book','cancel','reschedule','mode-save','field-save','complete'].includes(route);let sent=false;
  try{
   if(!routes.includes(route)||typeof proof?.csrfToken!=='string'||!/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(proof.csrfToken)||!Number.isSafeInteger(proof.expiresAt)||proof.expiresAt<=Date.now())throw Error();
   const signal=AbortSignal.any([external,AbortSignal.timeout(40000)]),encoded=JSON.stringify(body);if(signal.aborted||new TextEncoder().encode(encoded).length>(mutation?131072:16384))throw Error();sent=true;
@@ -17,7 +17,10 @@ export async function postScheduling(route:SchedulingRoute,body:object,proof:Pro
   finally{void reader.cancel().catch(()=>{});reader.releaseLock();}
   if(signal.aborted)throw Error();const bytes=new Uint8Array(size);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.length;}
   const text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes),value:unknown=JSON.parse(text),nodes:{value:unknown;depth:number}[]=[{value,depth:0}];let fields=0,visited=0;
-  while(nodes.length){const node=nodes.pop()!;if(++visited>(route==='original'?10000:20000)||node.depth>32)throw Error();if(node.value&&typeof node.value==='object'){if(!Array.isArray(node.value))fields+=Object.keys(node.value).length;nodes.push(...Object.values(node.value).map(v=>({value:v,depth:node.depth+1})));}}
+  // A field recovery receipt can contain 10,000 opaque audit references plus
+  // its binding envelope. Keep the same bounded node budget as other reads;
+  // the 1 MiB original-response limit and strict domain parser remain intact.
+  while(nodes.length){const node=nodes.pop()!;if(++visited>20000||node.depth>32)throw Error();if(node.value&&typeof node.value==='object'){if(!Array.isArray(node.value))fields+=Object.keys(node.value).length;nodes.push(...Object.values(node.value).map(v=>({value:v,depth:node.depth+1})));}}
   if((text.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(t=>t===':').length!==fields)throw Error();
   if(exact(value,['error'])){
    if(value.error==='SCHEDULING_REQUEST_LIMITED'&&response.status===429)throw new SchedulingClientError('limited');
@@ -25,6 +28,6 @@ export async function postScheduling(route:SchedulingRoute,body:object,proof:Pro
    if(mutation&&value.error==='RECOVERY_REVIEW_REQUIRED'&&response.status===409)throw new SchedulingClientError('recovery');
    if(mutation&&value.error==='SCHEDULING_SAVE_OUTCOME_UNKNOWN'&&response.status===503)throw new SchedulingClientError('unknown');throw Error();
   }
-  return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding'),...route==='workspace'&&response.headers.get('x-crest-amended-scheduling')==='1'?{amendedSchedulingAvailable:true as const}:{}};
+  return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding'),...route==='workspace'&&response.headers.get('x-crest-amended-scheduling')==='1'?{amendedSchedulingAvailable:true as const}:{},...route==='workspace'&&response.headers.get('x-crest-field-session')==='1'?{fieldSessionAvailable:true as const}:{},...route==='workspace'&&response.headers.get('x-crest-job-completion')==='1'?{jobCompletionAvailable:true as const}:{}};
  }catch(error){throw error instanceof SchedulingClientError?error:new SchedulingClientError(mutation?(sent?'unknown':'not_submitted'):'unavailable');}
 }

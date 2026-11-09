@@ -1,0 +1,128 @@
+{
+  "formatVersion": 2,
+  "verifiedAt": "2026-11-05T09:28:04.856Z",
+  "scope": "Held registered53 field storage and Mobile departure/arrival/direct-arrival/pause/resume construction; no registered migration or product activation",
+  "trackedParent": "443f7ac00349cbbf3fea8efefd87783592501596",
+  "nativeProof": {
+    "path": ".local/field-mobile-native-v2/result.json",
+    "sha256": "18f327fdb03c19481108920168b22e3ea26d88d9a75b196e9425185e54bd5c21",
+    "tests": 61,
+    "passed": 61,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "storageCases": 34,
+    "restrictedSessionCommandCases": 27,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "exactSourceFiles": [
+    {
+      "path": "planning/proposals/field-time-storage.sql",
+      "bytes": 25481,
+      "sha256": "b372fafad1706241dcbabe66544be7eaa45bd98d34a0e0d702c64168b61d05b4"
+    },
+    {
+      "path": "planning/proposals/field-session-commands.sql",
+      "bytes": 44446,
+      "sha256": "968cbaaed4191f27e4697ba6533d0d41bfece7bf8e99c2fdd7f82ecfdeaa2c5d"
+    },
+    {
+      "path": "src/operations/work-time.ts",
+      "bytes": 3086,
+      "sha256": "e38b47d3612ed91a701a4cae28764391f82675a6ccbd0230615b98eb8222d656"
+    },
+    {
+      "path": "src/operations/work-occupancy.ts",
+      "bytes": 4921,
+      "sha256": "b9fa478418f72aa432d70e08e5cb80f48c69ebc00e4a8c150ef926951e295a70"
+    },
+    {
+      "path": "tests/unit/work-time.test.ts",
+      "bytes": 5782,
+      "sha256": "fd1b98d31ea6fc602531727d01c36ab9456cd09c54852c00e5fb769aa74b0b4b"
+    },
+    {
+      "path": "tests/unit/work-occupancy.test.ts",
+      "bytes": 5618,
+      "sha256": "78083064e2bfb31456c51ae3e1c6e90095daab7a01d55a995eab153920b9c975"
+    },
+    {
+      "path": "tests/integration/field-time-storage.test.mjs",
+      "bytes": 24942,
+      "sha256": "122436eafdcde1a4504d39b18cc2fed6b5e763c75e2f237290e29852e2f30f8c"
+    },
+    {
+      "path": "tests/integration/field-session-commands.test.mjs",
+      "bytes": 28194,
+      "sha256": "d24039f39dda8dc6804405b9eb1b28ba3434a454e570575667d2a791c8e40a2d"
+    }
+  ],
+  "constructionNotes": {
+    "path": "planning/PHASE_6_FIELD_WORK.md",
+    "sha256": "adf641f3083c6bddb272edd859e4d95cc511007f309e1bd84edeb6c98dd348be",
+    "atNativeExecutionSha256": "b7f8e753cbd668d7004084130c20615409039088bc56aac836d77a5dacb927c2",
+    "sequencingClarificationAfterNativeRun": true,
+    "clarification": "ROADMAP Phase6 Mobile precedes Phase7 custody. Correct an overbroad execution-only all-mode activation hold; keep custody-dependent actions closed. Runtime/source code is unchanged after the native run."
+  },
+  "priorVerifiedConstruction": {
+    "localCommit": "443f7ac00349cbbf3fea8efefd87783592501596",
+    "path": "planning/proposals/field-session-verification.json",
+    "sha256": "04df9aab42f2de1c82ebddcb1e7230e77437c54534c65e6fa0c996ef6269a130",
+    "nativeCases": 46,
+    "retainedInGitHistory": true
+  },
+  "proved": [
+    "Append-only work/travel versions, closed ordinary web access, exact audits, current occupancy and microsecond exclusions",
+    "Fixed predecessor/parent forced-RLS refusal without registered source changes",
+    "Actual two-connection source overlap wait/refusal",
+    "Reasoned Mobile direct-arrival omission without a fabricated travel leg",
+    "Atomic server-time start/pause/resume, retained first work instant and original open source versions",
+    "Version/body/foreign-principal refusal; immutable original receipt retrieval and replay after later actions",
+    "One unfinished operator session and independent operator separation",
+    "Actual two-connection command race: one saved start, one stale version; no orphan operation",
+    "Deferred COMMIT refusal rolls back job, intervals, event, operation and audits together",
+    "Initial restricted booking still works after the narrowly pinned extensions",
+    "Actual active business rig, explicit origin, booked destination and server departure; no labor started",
+    "Optional owner-entered approximate ETA or neutral unknown ETA; no routing/GPS dependency",
+    "Immutable recipient-bound prepared message, or explicit skipped/no-body snapshot for no-contact/current opt-out",
+    "Arrived appends a closed trip and opens active labor at the same exact PostgreSQL instant",
+    "No fabricated actual distance, return trip, tax treatment, allocation or Sent claim; mileage explicitly unresolved",
+    "Original departure/arrival receipts and message snapshots survive later pause/resume without duplicate travel",
+    "Foreign/archived driven vehicles and wrong-mode/invalid-state travel refused without orphan sources",
+    "Two genuine connections serialize competing departures to one saved trip and one stale-version conflict",
+    "Deferred departure failure rolls back trip, prepared draft, job, event, operation and audits together"
+  ],
+  "supportingChecks": {
+    "expandedMjsFocusedLintPassed": true,
+    "whitespacePassed": true,
+    "unchangedTsTimingUnitCases": 78,
+    "priorTypesAndTimingEvidenceCommit": "443f7ac00349cbbf3fea8efefd87783592501596",
+    "newTypeScriptImplementationFiles": false
+  },
+  "limits": {
+    "registeredMigrations": 53,
+    "registered54": false,
+    "actualRestrictedStoredSessionAuthority": true,
+    "newGenuineMfaHttpOrBrowserJourney": false,
+    "appControlsDelivered": false,
+    "ownerDataOrRuntimeChanged": false,
+    "completeMileageEvidenceOrInterruptionWorkflow": false,
+    "completeCompletionOutcomesTasksOrCustodyWorkflow": false,
+    "completeMessageOutcomesOrTemplateConfiguration": false,
+    "completeFieldSourceExportRecoveryOrRetirement": false,
+    "financialActivation": false,
+    "productionActivation": false,
+    "notIncludedInPr115": true,
+    "releaseAcceptance": false
+  },
+  "next": [
+    "Complete the Phase6 Mobile lifecycle: interrupted-trip cancellation/reschedule, manual mileage/corrections and owner-confirmed message outcomes/template configuration",
+    "Complete allocated scope/outcomes and atomic review/finalization tasks; no inferred payment or custody release",
+    "Complete original lookup/retirement, field history/private CSV+JSON and independent recovery",
+    "Connect genuine HTTP/MFA and phone/desktop controls; meet all applicable adoption/integration/release gates before activating Mobile field work",
+    "Then complete Phase7 Drop-Off/Pickup custody; Pickup remains disabled until owner enablement. Preserve every finance/photos/follow-up/portability/Calendar V1 requirement"
+  ],
+  "realCrestUseReady": false,
+  "spend": 0
+}

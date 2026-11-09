@@ -6,6 +6,18 @@ import {execFileSync} from 'node:child_process';
 import {cp,mkdir,readFile,writeFile,copyFile} from 'node:fs/promises';
 import {join,dirname} from 'node:path';
 import {createRequire} from 'node:module';
+import pg from 'pg';
+
+export async function requireSyntheticJobCompletion(connectionString){
+ const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
+ try{
+  await client.connect();
+  await client.query('SET ROLE crest_web');
+  const signature='crest_commands.read_job_completion_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)';
+  const {rows}=await client.query("SELECT has_function_privilege(to_regprocedure($1),'EXECUTE') AS available",[signature]);
+  assert(rows[0]?.available===true,'SYNTHETIC_JOB_COMPLETION_MIGRATION_REQUIRED');
+ }finally{await client.end();}
+}
 
 // Resolve the existing installed closure from the checkout's package context.
 // Worktrees may share their ancestor's locked installation. Do not mount that

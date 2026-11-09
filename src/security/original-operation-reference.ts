@@ -9,6 +9,13 @@ import type {QuoteAmendmentAcceptReference} from '../commercial/quote-amendment-
 
 type Common=Readonly<{operationId:string;recoveryEpoch:string}>;
 type Targets={
+ 'operations.job.field':Readonly<{jobId:string;expectedJobVersion:string;action:'depart'|'arrive'|'direct_arrive'|'pause'|'resume'}>;
+ 'operations.job.complete':Readonly<{jobId:string;expectedJobVersion:string}>;
+ 'operations.job.interrupt':Readonly<{jobId:string;expectedJobVersion:string;action:'cancel'|'reschedule'}>;
+ 'operations.job.cancel_unfulfilled':Readonly<{jobId:string;expectedJobVersion:string}>;
+ 'operations.mileage.record':Readonly<{legId:string;expectedLegVersionId:string;expectedEvidenceVersion:string}>;
+ 'operations.support_trip.record':Readonly<{legId:string;expectedLegVersionId:string|null;action:'depart'|'arrive'|'cancel'}>;
+ 'operations.support_trip.correct':Readonly<{legId:string;expectedLegVersionId:string|null;action:'record'|'correct'}>;
  'operations.fulfillment_modes.initialize':Readonly<{expectedSequence:'0'}>;
  'operations.fulfillment_modes.save':Readonly<{expectedSequence:string}>;
  'operations.job.book':Readonly<{jobId:string;expectedModeSequence:string}>;
@@ -59,6 +66,13 @@ function object(value:unknown,keys:readonly string[]):Record<string,unknown>{
  return Object.fromEntries(keys.map(key=>[key,descriptors[key]!.value]));
 }
 const fields={
+ 'operations.job.field':['jobId','expectedJobVersion','action'],
+ 'operations.job.complete':['jobId','expectedJobVersion'],
+ 'operations.job.interrupt':['jobId','expectedJobVersion','action'],
+ 'operations.job.cancel_unfulfilled':['jobId','expectedJobVersion'],
+ 'operations.mileage.record':['legId','expectedLegVersionId','expectedEvidenceVersion'],
+ 'operations.support_trip.record':['legId','expectedLegVersionId','action'],
+ 'operations.support_trip.correct':['legId','expectedLegVersionId','action'],
  'operations.fulfillment_modes.initialize':['expectedSequence'],
  'operations.fulfillment_modes.save':['expectedSequence'],
  'operations.job.book':['jobId','expectedModeSequence'],
@@ -114,8 +128,14 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
    else if(key==='expectedJobVersion'||key==='expectedContentVersion')require(version(ref[key]));
    else if(key==='expenseRevision')require(version(ref[key]));
    else if(key==='expectedLeadVersion')require(version(ref[key]));
+   else if(key==='expectedEvidenceVersion')require(version(ref[key],true)&&BigInt(ref[key] as string)<9223372036854775807n);
+   else if(key==='expectedLegVersionId'&&kind.startsWith('operations.support_trip.'))require(ref[key]===null||uuid(ref[key]));
    else if(key!=='action'&&key!=='nextAssociationId')require(uuid(ref[key]));
   }
+  if(['operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled'].includes(kind))require(BigInt(ref.expectedJobVersion as string)<9223372036854775807n);
+  if(kind==='operations.job.field')require(['depart','arrive','direct_arrive','pause','resume'].includes(ref.action as string));
+  if(kind==='operations.job.interrupt')require(['cancel','reschedule'].includes(ref.action as string));
+  if(kind==='operations.support_trip.record'||kind==='operations.support_trip.correct')require((kind==='operations.support_trip.record'?['depart','arrive','cancel']:['record','correct']).includes(ref.action as string)&&(['depart','record'].includes(ref.action as string)===(ref.expectedLegVersionId===null)));
   if(kind==='operations.fulfillment_modes.initialize')require(ref.expectedSequence==='0');
   if(kind==='operations.fulfillment_modes.save')require(version(ref.expectedSequence));
   if(kind==='operations.job.reschedule')require(['propose','confirm','withdraw'].includes(ref.action as string));

@@ -58,7 +58,7 @@ export function createBookJobController(deps:{store:Store;blockers?:readonly Sto
   const result=await lookup({schemaVersion:1,businessId:pending.businessId,commandType:'operations.job.book',reference:pending.reference},proof,signal);live(signal);
   if(result.state!=='absent'){
    // The command-specific parser and client bind the exact original identity.
-   if(!('jobId'in result.receipt)||result.receipt.version!=='1')throw Error();
+   if(!('jobId'in result.receipt)||!('version'in result.receipt)||result.receipt.version!=='1')throw Error();
    finish(result as Awaited<ReturnType<typeof api.book>>);return;
   }
   canRetry=!!original&&context?.context.writeState==='ready'&&context.context.recoveryEpoch===pending.reference.recoveryEpoch;
@@ -160,7 +160,7 @@ export function createBookJobController(deps:{store:Store;blockers?:readonly Sto
   if(phase!=='pending'||!pending||!original||!canRetry)return;canRetry=false;const request=original,{proof,next}=await fresh(signal);context=next;
   if(!eligible()||next.context.writeState!=='ready'||next.context.recoveryEpoch!==request.recoveryEpoch)throw Error();deps.store.require(pending);
   const found=await lookup({schemaVersion:1,businessId:pending.businessId,commandType:'operations.job.book',reference:pending.reference},proof,signal);live(signal);
-  if(found.state!=='absent'){if(!('jobId'in found.receipt)||found.receipt.version!=='1')throw Error();finish(found as Awaited<ReturnType<typeof api.book>>);return;}
+  if(found.state!=='absent'){if(!('jobId'in found.receipt)||!('version'in found.receipt)||found.receipt.version!=='1')throw Error();finish(found as Awaited<ReturnType<typeof api.book>>);return;}
   const result=await api.book(request,proof,signal);live(signal);finish(result);
  },failedSave);
  function suspend(){active?.abort();active=null;clearPrivate();context=null;phase=pending?'pending':'review';message=pending?'Private booking details cleared. Load and check the original request before continuing.':'Private booking form cleared. Reload current accepted scope before continuing.';emit();}

@@ -232,12 +232,12 @@ jobs:
         run: |
           npm run test:real-auth
 
-  # These are the same complete29 retained browser files, partitioned with an
+  # All required browser files are partitioned with an
   # exact union check. Each matrix entry owns its cluster and stays serial.
   browser_workflows:
     name: Browser workflows (${{ matrix.suite }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -280,11 +280,9 @@ jobs:
           node scripts/install-tools.mjs
           node scripts/install-recovery-tools.mjs
       - name: Install browser dependencies with bounded Ubuntu downloads
-        timeout-minutes: 6
+        timeout-minutes: 10
         run: |
-          test -f /etc/apt/apt-mirrors.txt
-          grep -qF 'mirror+file:/etc/apt/apt-mirrors.txt' /etc/apt/sources.list.d/ubuntu.sources
-          printf '%s\tpriority:1\n%s\tpriority:2\n' 'https://archive.ubuntu.com/ubuntu/' 'https://security.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          # Retain the hosted runner's regional mirror selection.
           printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/99crest-ci-downloads > /dev/null
           npx --no-install playwright install --with-deps chromium webkit
       - name: Build actual product source
@@ -306,6 +304,8 @@ jobs:
             .local/review/quote-*.png
             .local/review/amendment-*.png
             .local/review/appointment-*.png
+            .local/review/field-*.png
+            .local/review/completion-*.png
           include-hidden-files: true
           retention-days: 3
           if-no-files-found: error
@@ -419,8 +419,10 @@ jobs:
         run: npm run test:quote-amendment-candidate
       - name: Verify retained52 amendment acceptance, cancellation and complete source history
         run: npm run test:amendment-acceptance-storage
-      - name: Verify registered53 upgrade and independent frozen52/current53 recovery
+      - name: Verify retained53 upgrade and independent frozen52/frozen53 recovery
         run: npm run test:amendment-upgrade-registered
+      - name: Verify field invariants, frozen recovery and registered End Job upgrade
+        run: npm run test:field-registered
       - name: Compare booking times, travel intervals and partitions with PostgreSQL
         run: npm run test:booking-calculations
       - name: Preserve booking schema closure, private history and independent restore
@@ -430,7 +432,7 @@ jobs:
       - name: Confirmed booking original source retrieval
         run: npm run test:confirmed-booking-source
       - name: Install browser dependencies with bounded Ubuntu downloads
-        timeout-minutes: 6
+        timeout-minutes: 10
         run: |
           npx --no-install playwright install --with-deps chromium webkit
       - name: Production build and focused service workflow

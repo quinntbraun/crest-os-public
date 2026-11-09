@@ -1,0 +1,95 @@
+{
+  "formatVersion": 1,
+  "verifiedAt": "2026-11-05T16:46:08.170Z",
+  "scope": "held field-inclusive accepted commercial and booking source consistency; no activation",
+  "trackedParent": "7d182dbb9f8858883422770b8cbc5a96c5ce2d02",
+  "exactSourceFiles": {
+    "planning/proposals/field-parent-source.sql": "0a1bd9c13d3fa0bc0ebea4f0ef4051b47b7b6c02224f95a86903c4f4b980273c",
+    "src/operations/field-plan-source.ts": "b3cadeec28656d2d3b97fbdc0f042ced5fb9d48996aa3a6c2086851bd1b0bf8f",
+    "src/operations/field-source-collector.ts": "36cd70ed78018e8451ae3d9a76c6fcb12a24f0c90d05058d4f72ef9ecb755ed3",
+    "src/commercial/quote-amendment-accepted-source.ts": "7d6e6f98e8623981666f4c3024f3f161a265e90f608d39efb62be9f98f600c12",
+    "src/commercial/quote-amendment-source-csv.ts": "e1f41f305d594db747bd8b6d1263f100b7f458557c9ee4992fbcc5494784bfe9",
+    "tests/integration/field-parent-source.test.mjs": "45e11807677458ab4a494e81d5ed26bebce982e0857205d06e56dda69da2f46a"
+  },
+  "nativeProof": {
+    "path": ".local/field-parent-joint-native-v1/result.json",
+    "sha256": "833d0c4ac4454ccf3d6417a519c231c5a93cb43dc7e97b3b2a5b6ee2e208a29b",
+    "passed": 247,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true,
+    "retainedFieldAndSourceCases": 233,
+    "fieldParentCases": 14
+  },
+  "finalFocusedProof": {
+    "path": ".local/field-parent-native-v5/result.json",
+    "sha256": "1461784b896b95d99ed0c70e8e2d3a3d04abaa27cfeaf4f5d34a9c12626d0d59",
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true,
+    "changeAfterJoint": "Test failure-only clock diagnostic preserves the caught Error instance for lint; command paths/assertions and all product bytes unchanged. Final14 reruns the exact final test including negative source regressions."
+  },
+  "fullUnitProof": {
+    "path": ".local/field-parent-full-unit-v2.json",
+    "sha256": "7f77bc680d757bfcc192504230985aa82f9f3bfd114b8b455c295cd0e90c167b",
+    "passed": 8400,
+    "failed": 0,
+    "pending": 0
+  },
+  "typesPassed": true,
+  "focusedLintPassed": true,
+  "canonicalAmendmentsVerified": 12,
+  "registeredMigrationsVerified": 53,
+  "productionNextAndServerBuildPassed": true,
+  "implemented": [
+    "Six fixed full PostgreSQL function-definition pins and closed role/default ACL/RLS/source891 guards; only the two accepted-source schema fingerprints advance, with exact definition comparison and temporary CREATE revoked. No new table grant or ordinary reader access.",
+    "Existing restricted accepted-amendment quote/commercial/lead/booking readers and all11 field groups share one held RR READ ONLY export connection and identical retained operation/audit records; included capture never starts or ends the enclosing transaction.",
+    "Explicit field-source formatter profile v3; frozen earlier callers still reject new field allocation-plan operation kinds. Paired field/booking/quote/history manifests and original exact text formats remain bounded; completeness flags remain false.",
+    "Independent typed field-to-job/encounter/assigned-part references and operator binding; completion/cancellation plans bind command/event/receipt versions and exact predecessors, conserve gross/discount/final cents and retain actual outcome identity and completed scope floors.",
+    "Actual restricted command cases for field timing, completion, interrupted travel, no-fulfilled cancellation, mileage, support trip record/correct, partial completion, standalone jobless trip, wrong operator/version/amount/missing outcomes, unknown schema, default ACL/RLS/function drift and nested transaction ownership."
+  ],
+  "retainedFailures": [
+    {
+      "path": ".local/field-parent-native-v1/result.json",
+      "passed": 5,
+      "failed": 7,
+      "reason": "Accepted-source context was updated but the independently guarded plan-page fingerprint was not; both explicitly pinned replacements are now tested. No guard removed."
+    },
+    {
+      "path": ".local/field-parent-native-v2/result.json",
+      "passed": 10,
+      "failed": 2,
+      "reason": "New verifier read expectedJobVersion for completion, whose canonical request uses expectedVersion. A separate operations_check1 failure remains unexplained; subsequent diagnostic14/247/final14 runs pass with the original database constraint unchanged. Preserve and investigate if it recurs; do not infer a clock cause."
+    },
+    {
+      "path": ".local/field-parent-native-v3/result.json",
+      "passed": 11,
+      "failed": 1,
+      "reason": "Direct independent graph diagnostic identified the exact completion request-key mismatch; fixed with explicit command-specific binding and negative version regression."
+    },
+    {
+      "path": ".local/field-parent-full-unit-v1.json",
+      "passed": 8327,
+      "failed": 73,
+      "reason": "Restricted execution failed local fetch/provider tests and temporary symlink permission. Identical assertions pass8400/8400 with required local permissions."
+    }
+  ],
+  "remaining": [
+    "Complete global CRM/actor/configuration/booking history graph composition and full neutral source reconstruction; this paired packet does not claim that whole-business closure.",
+    "Independent encrypted field-inclusive database restore, exact schema/roles/rows, derived operator occupancy rebuild and recovery authority/epoch fences.",
+    "Reviewed registered54 adoption, genuine field HTTP/MFA controls, Save-review labels and phone/desktop/four-width/browser/current-source release gates.",
+    "Atomic manual job/coupled Mobile work-site travel corrections, messages/configuration/outcomes/resume/maintenance follow-ups; Phase7 custody/photos, full finance/reporting/portability/import/cutover, Google Calendar and real-use acceptance."
+  ],
+  "completePortableExport": false,
+  "completeBackup": false,
+  "ownerRuntimeChanged": false,
+  "realDataOrFinanceActivated": false,
+  "registeredReleaseClaim": false,
+  "completeCrestAcceptance": false,
+  "spend": 0
+}
