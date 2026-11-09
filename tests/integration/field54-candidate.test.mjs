@@ -1,5 +1,5 @@
 // Actual coordinator and independent encrypted PostgreSQL restoration.
-// Actual registered54 root and frozen53 recovery; no owner upgrade.
+// Frozen registered54 and 53 recovery, then upgrade the restored 54 point.
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
 import {readFile,writeFile,mkdir,cp} from 'node:fs/promises';
@@ -14,9 +14,11 @@ import {captureFieldWorkspaceFixture,fieldWorkspaceContent} from '../support/fie
 import {verifyNeutralFieldOccupancyRebuild} from '../support/field-occupancy-rebuild.mjs';
 import {formatFieldWorkspaceSources} from '../../src/operations/field-workspace-source.ts';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
-import {inventory,privateWorkspace,keyPair,backupDatabase,restoreDatabase,backupLegacy53Database,restoreLegacy53Database,backupField54CandidateDatabase,restoreField54CandidateDatabase,recoveryCluster,connect} from '../support/recovery-drill.mjs';
+import {requireSyntheticJobCompletion} from '../../scripts/synthetic-migrations.mjs';
+import {inventory,privateWorkspace,keyPair,restoreDatabase,backupLegacy53Database,restoreLegacy53Database,backupField54CandidateDatabase,restoreField54CandidateDatabase,recoveryCluster,connect} from '../support/recovery-drill.mjs';
 const sha=v=>createHash('sha256').update(v).digest('hex'),value=async(c,q,a=[])=>(await c.query(q,a)).rows[0].value;
 const coverage=JSON.parse(await readFile(new URL('../support/field54-export-coverage.json',import.meta.url)));
+let restored54Target;
 let sandbox,target,client,web,exporter,candidate,fixture,p,paused,enroute,prior53,keys,point53,point54,folder,manifest53,manifest54,source54,cluster53,cluster54,restored53,restored54,restoredExport,rebuild;
 const logins=[];
 async function loginAs(admin,url,role){
@@ -40,7 +42,7 @@ after(async()=>{
 });
 test('candidate reproduces registered54 and pins frozen53 plus all thirteen reviewed bodies',async()=>{
  assert.equal(candidate.parts.length,13);assert.equal(candidate.previousRegistrySha256,'033199a5f2e528f629799cdba48901bf2a4687df1eea3166b0cf7bfcf5ec3c67');
- const registered=await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url));assert.equal(JSON.parse(registered).migrations.length,54);assert.equal(sha(registered),candidate.registrySha256);assert.equal(sha(await readFile(new URL('../../supabase/migrations/'+candidate.file,import.meta.url))),candidate.sha256);
+ const registered=await readFile(new URL('../support/registered54-migration-checksums.json',import.meta.url));assert.equal(JSON.parse(registered).migrations.length,54);assert.equal(sha(registered),candidate.registrySha256);assert.equal(sha(await readFile(new URL('../../supabase/migrations/'+candidate.file,import.meta.url))),candidate.sha256);
  for(const part of candidate.parts){const body=await readFile(join(sandbox.root,part.path));assert.equal(sha(body),part.sha256);assert(Buffer.from(candidate.sql).subarray(part.offset,part.offset+part.bytes).equals(body));}
 });
 test('encrypted frozen53 point retains the original populated source',async()=>{
@@ -51,7 +53,7 @@ test('a forced late field-body failure rolls back all DDL and preserves original
  assert.equal(await value(client,"SELECT to_regclass('crest.work_intervals')::text value"),null);assert.deepEqual(await inventory(client),prior53);
 });
 test('actual coordinator upgrade preserves every prior business-source table and verifies all80 source inventories',async()=>{
- const upgraded=await sandbox.apply(target);assert.equal(upgraded.history.length,54);assert.equal(upgraded.registrySha256,candidate.registrySha256);assert.deepEqual((await sandbox.apply(target)).history,upgraded.history);
+ const upgraded=await sandbox.apply(target,candidate.directory);assert.equal(upgraded.history.length,54);assert.equal(upgraded.registrySha256,candidate.registrySha256);assert.deepEqual((await sandbox.apply(target,candidate.directory)).history,upgraded.history);
  const now=await inventory(client);for(const row of prior53.filter(r=>['crest','crest_private'].includes(r.schema)))assert.deepEqual(now.find(r=>r.schema===row.schema&&r.name===row.name),row);
  const columns=(await client.query("SELECT n.nspname||'.'||cl.relname AS \"table\",a.attname AS \"column\" FROM pg_class cl JOIN pg_namespace n ON n.oid=cl.relnamespace JOIN pg_attribute a ON a.attrelid=cl.oid WHERE n.nspname IN('crest','crest_private') AND cl.relkind IN('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2")).rows;
  const checked=verifyExportCoverage(coverage,columns,54);assert.equal(checked.tables,80);assert.equal(checked.requiredColumns,1234);assert.equal(checked.excludedColumns,10);
@@ -87,7 +89,7 @@ test('unknown finance columns cannot enter a54-labelled encrypted point',async()
 });
 test('encrypted54 dump and manifest use one snapshot excluding a genuinely concurrent later mileage correction',async()=>{
  const old=await inventory(client);
- manifest54=(await backupDatabase(client,target,point54,keys.recipient,async()=>assert.equal((await mileage('2.0000','2','Synthetic after-snapshot correction')).state,'committed'))).manifest;
+ manifest54=(await backupField54CandidateDatabase(candidate,client,target,point54,keys.recipient,async()=>assert.equal((await mileage('2.0000','2','Synthetic after-snapshot correction')).state,'committed'))).manifest;
  assert.equal(manifest54.schemaVersion,54);assert.equal(manifest54.registrySha256,candidate.registrySha256);assert.equal(manifest54.rows.length,108);assert.deepEqual(manifest54.rows,old);assert.equal(manifest54.completeBackup,false);
  const later=await captureFieldWorkspaceFixture(exporter,p.business);assert.equal(later.field.rows.mileage_evidence.length,3);assert.notDeepEqual((await inventory(client)).find(r=>r.name==='mileage_evidence'),manifest54.rows.find(r=>r.name==='mileage_evidence'));
 },{timeout:180000});
@@ -104,7 +106,7 @@ test('changed ciphertext with a forged external checksum still cannot decrypt or
  const empty=await connect(destination);try{assert.equal((await inventory(empty)).length,0);}finally{await empty.end();}
 });
 test('independent54 restoration preserves every row role grant function constraint and included source original',async()=>{
- const destination=await cluster54.database(),restored=await restoreDatabase(point54,keys.path,destination);assert.deepEqual(restored.rows,manifest54.rows);restored54=await connect(destination);assert.deepEqual(await inventory(restored54),manifest54.rows);
+ const destination=restored54Target=await cluster54.database(),restored=await restoreField54CandidateDatabase(candidate,point54,keys.path,destination);assert.deepEqual(restored.rows,manifest54.rows);restored54=await connect(destination);assert.deepEqual(await inventory(restored54),manifest54.rows);
  assert.equal(await value(restored54,'SELECT count(*)::int value FROM supabase_migrations.schema_migrations'),54);
  restoredExport=await loginAs(restored54,destination,'crest_export');const actual=await captureFieldWorkspaceFixture(restoredExport,p.business);formatFieldWorkspaceSources(actual);assert.deepEqual(fieldWorkspaceContent(actual),fieldWorkspaceContent(source54));assert.equal(actual.field.rows.mileage_evidence.length,2);
  assert.equal(await value(restored54,'SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=$1) value',[logins.find(r=>r.connection===web).name]),false);
@@ -113,6 +115,23 @@ test('independent54 restoration preserves every row role grant function constrai
 test('independent neutral occupancy rebuild retains open travel paused sessions and both physical exclusions',async()=>{
  const before=await inventory(restored54);rebuild=await verifyNeutralFieldOccupancyRebuild(restored54);assert(rebuild.total>0);assert.equal(rebuild.open_travel,1);assert.equal(rebuild.open_work,1);assert(rebuild.pauses>=1);assert.equal(rebuild.physicalAndWorkSessionExclusions,2);assert.deepEqual(await inventory(restored54),before);
 });
+test('registered End Job upgrade requires the original ledger and preserves existing rows',async()=>{
+ const signature='crest_commands.read_job_completion_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)';
+ await assert.rejects(sandbox.apply(restored54Target),error=>error.message==='EXPLICIT_EMPTY_BOOTSTRAP_REQUIRED');
+ assert.deepEqual(await inventory(restored54),manifest54.rows);
+ assert.equal(await value(restored54,'SELECT to_regprocedure($1)::text value',[signature]),null);
+ const businessRows=async()=>(await inventory(client)).filter(row=>row.schema!=='supabase_migrations');
+ const before=await businessRows();
+ assert.equal(await value(client,'SELECT to_regprocedure($1)::text value',[signature]),null);
+ await assert.rejects(requireSyntheticJobCompletion(target),error=>error.message==='SYNTHETIC_JOB_COMPLETION_MIGRATION_REQUIRED');
+ const upgraded=await sandbox.apply(target);
+ assert.equal(upgraded.history.length,55);
+ assert.equal(upgraded.history.at(-1).version,'20261109180000');
+ assert.deepEqual((await sandbox.apply(target)).history,upgraded.history);
+ assert.deepEqual(await businessRows(),before);
+ await requireSyntheticJobCompletion(target);
+ assert.equal(await value(client,"SELECT has_function_privilege('crest_web',$1,'EXECUTE') AND NOT has_function_privilege('anon',$1,'EXECUTE') AND NOT has_function_privilege('crest_export',$1,'EXECUTE') value",[signature]),true);
+},{timeout:180000});
 test('frozen53 recovery still independently restores the original point without any field source or new functions',async()=>{
  cluster53=await recoveryCluster();const destination=await cluster53.database();await assert.rejects(restoreDatabase(point53,keys.path,destination),e=>e.message==='SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest');const restored=await restoreLegacy53Database(point53,keys.path,destination);restored53=await connect(destination);assert.deepEqual(restored.rows,manifest53.rows);assert.deepEqual(await inventory(restored53),prior53);
  assert.equal(await value(restored53,'SELECT count(*)::int value FROM supabase_migrations.schema_migrations'),53);assert.equal(await value(restored53,"SELECT to_regclass('crest.work_intervals')::text value"),null);

@@ -264,6 +264,8 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .field-work-form details { margin-top:1rem; }
 .field-work-form details summary { padding:.5rem 0; }
 .field-work-form details label { display:block; margin-top:.75rem; }
+.completion-work-form fieldset > fieldset { margin-top:1rem; }
+.completion-text { overflow-wrap:anywhere; white-space:pre-wrap; }
 .slot-review { border-top:1px solid var(--line); margin-top:1.5rem; padding-top:1rem; overflow-wrap:anywhere; }
 .slot-review summary { min-height:44px; padding:.75rem 0; cursor:pointer; }
 .slot-review .follow-up-list { margin-top:.5rem; }

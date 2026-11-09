@@ -1,4 +1,4 @@
-// Genuine password/TOTP, restricted field commands and private HTTP on registered54.
+// Genuine password/TOTP, restricted field commands and private HTTP on registered55.
 // Not physical-device or owner delivery acceptance.
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
@@ -7,7 +7,6 @@ import {createServer} from 'node:http';
 import {URI} from 'otpauth';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
-import {field54Candidate} from '../support/field54-candidate.mjs';
 import {startRealAuthService,authResult} from '../support/real-auth-service.mjs';
 import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixture.mjs';
 import {createProviderBoundary} from '../../src/security/provider-auth.ts';
@@ -18,6 +17,8 @@ import {sessionCredentialHash} from '../../src/security/session-credential.ts';
 import {createBookingDirectory} from '../../src/operations/confirmed-booking-directory.ts';
 import {createFieldDirectory} from '../../src/operations/field-directory.ts';
 import {fieldSessionOriginal} from '../../src/operations/field-session-contract.ts';
+import {completionOriginal} from '../../src/operations/work-completion-contract.ts';
+import {buildConfirmedJobArchive} from '../../src/operations/confirmed-job-archive.ts';
 import {createOriginalOperationDirectory} from '../../src/security/original-operation-directory.ts';
 import {createSchedulingHttp} from '../../src/operations/scheduling-http.ts';
 import {createBrowserSessionFlow} from '../../src/security/browser-session-flow.ts';
@@ -53,23 +54,23 @@ async function fixture(){
 }
 before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target,await sandbox.prefix(53));
- const candidate=await field54Candidate(sandbox);assert.equal((await sandbox.apply(target)).registrySha256,candidate.registrySha256);
+ assert.equal((await sandbox.apply(target)).history.length,55);
  login='crest_field_auth_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=password;config={connectionString:url.toString(),environment:'test'};web=await sandbox.connect(url.toString());await web.query('SET ROLE crest_web');
  service=await startRealAuthService(target,{diagnostic:true});const actualBoundary=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},createLiveProviderSessionLookup(config));
  const observed=method=>async(...args)=>{const at=Date.now();try{return await actualBoundary[method](...args);}catch(error){if(providerFailures.length<32)providerFailures.push({stage:method,elapsedMs:Date.now()-at,kind:['denied','unavailable','uncertain'].includes(error?.kind)?error.kind:'other'});throw error;}};
  boundary=Object.freeze({...actualBoundary,authenticatePasswordTotp:observed('authenticatePasswordTotp'),verifyAccess:observed('verifyAccess')});tokens=await createProviderTokenStore('synthetic-booking',[{id:'synthetic-booking',key:randomBytes(32)}]);lifecycle=createSessionLifecycle(config,boundary,tokens);bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;owner=await fixture();other=await fixture();
 },{timeout:240000});
 after(async()=>{await service?.close();await web?.end();if(login)await sandbox.admin.query('DROP ROLE '+login);await sandbox?.close();});
-async function withSchedulingHttp(f,run,{enabled=true,fieldEnabled=true,businessId=f.business,dropOperation=null}={}){
+async function withSchedulingHttp(f,run,{enabled=true,fieldEnabled=true,completionEnabled=false,businessId=f.business,dropOperation=null,dropCompletion=false}={}){
  let origin,handler,providerCalls=0;const counted=Object.freeze({...boundary,verifyAccess:async(...args)=>{providerCalls++;return boundary.verifyAccess(...args);}});
- const server=createServer(async(req,res)=>{try{const incoming=new Request(origin+req.url,{method:req.method,headers:req.headers,...(req.method==='POST'?{body:req,duplex:'half'}:{})}),response=await handler(incoming,transportFromIncomingMessage(req));if(dropOperation&&req.url==='/api/business/scheduling/field-save'){res.destroy();return;}res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));}catch{res.writeHead(500);res.end();}});
+ const server=createServer(async(req,res)=>{try{const incoming=new Request(origin+req.url,{method:req.method,headers:req.headers,...(req.method==='POST'?{body:req,duplex:'half'}:{})}),response=await handler(incoming,transportFromIncomingMessage(req));if((dropOperation&&req.url==='/api/business/scheduling/field-save')||(dropCompletion&&req.url==='/api/business/scheduling/complete')){res.destroy();return;}res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));}catch{res.writeHead(500);res.end();}});
  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
  try{
-  origin='http://127.0.0.1:'+server.address().port;const httpConfig={...config,origin,businessId,ingress:{kind:'direct'}};handler=createSchedulingHttp(httpConfig,counted,tokens,enabled,enabled,fieldEnabled);
+  origin='http://127.0.0.1:'+server.address().port;const httpConfig={...config,origin,businessId,ingress:{kind:'direct'}};handler=createSchedulingHttp(httpConfig,counted,tokens,enabled,enabled,fieldEnabled,completionEnabled);
   const flow=createBrowserSessionFlow({...httpConfig,loginKey:randomBytes(32),owner:{subject:f.subject,factorId:f.factorId}},counted,tokens),session=await flow.session({method:'POST',headers:new Headers({origin,'content-type':'application/json'})},f.credential,signal());
   const post=async(body,headers={},path='/api/business/scheduling/original',method='POST')=>{
    const response=await fetch(origin+path,{method,redirect:'error',headers:{origin,'content-type':'application/json',cookie:'__Host-crest_session='+f.credential,'x-crest-csrf':session.csrfTokenForResponse(),...headers},...(!['GET','HEAD'].includes(method)?{body:typeof body==='string'?body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(40000)});
-   assert.match(response.headers.get('cache-control')??'',/no-store/);assert.equal(response.headers.get('referrer-policy'),'no-referrer');return {status:response.status,value:await response.json(),allow:response.headers.get('allow'),fieldSession:response.headers.get('x-crest-field-session')};
+   assert.match(response.headers.get('cache-control')??'',/no-store/);assert.equal(response.headers.get('referrer-policy'),'no-referrer');return {status:response.status,value:await response.json(),allow:response.headers.get('allow'),fieldSession:response.headers.get('x-crest-field-session'),jobCompletion:response.headers.get('x-crest-job-completion')};
   };assert(providerCalls>0);await run(post,()=>providerCalls,{origin,proof:{csrfToken:session.csrfTokenForResponse(),expiresAt:session.evidence.expiresAt}});
  }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 }
@@ -141,4 +142,144 @@ test('the actual browser client saves field actions, reloads history and recover
 });
 test('two genuine adapters racing the same observed job commit one start and return one stale conflict',async()=>{
  const f=await fixture(),a=request(f,'direct_arrive','1'),b=request(f,'direct_arrive','1'),results=await Promise.all([save(f,a),save(f,b)]),values=results.map(r=>r.forServer());assert.equal(values.filter(r=>'result'in r&&r.result.state==='committed').length,1);assert.deepEqual(values.find(r=>r.state==='conflict'),{state:'conflict',reason:'version'});assert.equal((await client.query('SELECT count(*)::int AS n FROM crest.work_intervals WHERE business_id=$1',[f.business])).rows[0].n,1);
+});
+
+const completionContextPath='/api/business/scheduling/completion-context';
+const completionSavePath='/api/business/scheduling/complete';
+function completionDraft(f,context){
+ const scope=context.assignments.map(row=>({
+  assignedPartId:row.assignedPartId,expectedPlanId:row.planId,expectedPlanSequence:row.planSequence,
+  pieces:[{partitionId:row.partitionId,outcome:'completed',scopeDescription:row.scopeDescription,
+   grossInclusiveCents:row.grossInclusiveCents,discountInclusiveCents:row.discountInclusiveCents,amountCents:row.amountCents,reason:null}]
+ }));
+ return {schemaVersion:1,businessId:f.business,operationId:randomUUID(),recoveryEpoch:f.epoch,jobId:f.job,
+  expectedJobVersion:context.jobVersion,body:{scope,reason:null,walkthrough:{state:'done',reason:null},
+   review:{reviewUrl:null,skipReason:null,additionalRequestReason:null,expectedDuplicateRequestIds:[],
+    expectedCustomerVersion:context.customerVersion,contactReviewReason:null}}};
+}
+async function readCompletion(post,f){
+ const loaded=await post({jobId:f.job},{},completionContextPath);
+ assert.equal(loaded.status,200);
+ assert.equal(loaded.value.jobId,f.job);
+ return loaded.value;
+}
+
+test('completion context remains closed by default and exposes only live assigned scope to its own authorized business',async()=>{
+ const fn='crest_commands.read_job_completion_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)';
+ const policy=await client.query("SELECT p.prosecdef AS definer,p.proconfig AS settings,has_function_privilege('anon',p.oid,'EXECUTE') AS anonymous,has_function_privilege('crest_web',p.oid,'EXECUTE') AS web FROM pg_proc p WHERE p.oid=to_regprocedure($1)",[fn]);
+ assert.deepEqual(policy.rows[0],{definer:true,settings:['search_path=pg_catalog, pg_temp','row_security=on'],anonymous:false,web:true});
+ const f=await fixture();
+ await withSchedulingHttp(f,async post=>{
+  assert.equal((await post({}, {},'/api/business/scheduling/workspace')).jobCompletion,null);
+  assert.equal((await post({jobId:f.job},{},completionContextPath)).status,503);
+  assert.equal((await post({}, {},completionSavePath)).status,503);
+ });
+ await withSchedulingHttp(f,async(post,calls)=>{
+  assert.equal((await post({}, {},'/api/business/scheduling/workspace')).jobCompletion,'1');
+  assert.deepEqual((await post({jobId:f.job},{},completionContextPath)).value,{state:'absent'});
+  const verified=calls();
+  assert.equal((await post({jobId:f.job},{'x-crest-csrf':''},completionContextPath)).status,400);
+  assert.equal((await post({jobId:f.job},{origin:'https://foreign-synthetic.example'},completionContextPath)).status,400);
+  assert.equal(calls(),verified);
+ },{completionEnabled:true});
+ await save(f,request(f,'direct_arrive','1'));
+ await withSchedulingHttp(f,async post=>{
+  const context=await readCompletion(post,f);
+  assert.equal(context.jobVersion,'2');
+  assert.equal(context.customerVersion,'1');
+  assert.equal(context.jobState,'in_progress');
+  const actual=await client.query('SELECT id FROM crest.allocation_plan_parts WHERE job_id=$1 AND allocation_state=$2 ORDER BY id',[f.job,'assigned']);
+  assert.deepEqual(context.assignments.map(row=>row.assignedPartId).sort(),actual.rows.map(row=>row.id));
+  assert(context.assignments.some(row=>row.amountCents==='0'),'complimentary scope remains visible');
+ },{completionEnabled:true});
+ await withSchedulingHttp(other,async post=>{
+  assert.deepEqual((await post({jobId:f.job},{},completionContextPath)).value,{state:'absent'});
+ },{completionEnabled:true});
+});
+
+test('genuine completion closes paused time, keeps the confirmed job history and exports its saved state',async()=>{
+ const f=await fixture();
+ await save(f,request(f,'direct_arrive','1'));
+ await save(f,request(f,'pause','2'));
+ await withSchedulingHttp(f,async post=>{
+  const context=await readCompletion(post,f);
+  assert.equal(context.jobState,'paused');
+  const draft=completionDraft(f,context),stale=structuredClone(draft);
+  stale.operationId=randomUUID();
+  stale.body.scope[0].expectedPlanId=randomUUID();
+  const refused=await post(wire(stale),{},completionSavePath);
+  assert.equal(refused.status,503);
+  assert.equal(refused.value.error,'SCHEDULING_SAVE_OUTCOME_UNKNOWN');
+  assert.deepEqual((await post({originalJson:JSON.stringify(completionOriginal(stale))})).value,{state:'absent'});
+  const saved=await post(wire(draft),{},completionSavePath);
+  assert.equal(saved.status,200);
+  assert.equal(saved.value.result.receipt.sourceVersion,'4');
+  assert.equal(saved.value.result.receipt.commandType,'operations.job.complete');
+  assert.deepEqual((await post({originalJson:JSON.stringify(completionOriginal(draft))})).value,saved.value);
+  assert.deepEqual((await post(wire({...draft,operationId:randomUUID()}),{},completionSavePath)).value,{state:'conflict',reason:'version'});
+  const head=(await f.api.read(f.credential,{businessId:f.business,jobId:f.job},signal())).forServer();
+  const history=(await f.api.history(f.credential,{businessId:f.business,jobId:f.job,throughVersion:'4',afterVersion:'0',pageSize:20},signal())).forServer();
+  assert.equal(head.job.state,'completed');
+  assert.equal(head.job.completion_outcome,'full');
+  assert.deepEqual(history.events.map(event=>event.toState),['scheduled','in_progress','paused','completed']);
+  assert((await buildConfirmedJobArchive({head,events:history.events})).byteLength>0);
+  const summary=await readCompletion(post,f);
+  assert.equal(summary.jobState,'completed');
+  assert.equal(summary.completionOutcome,'full');
+  assert.deepEqual(summary.walkthrough,{state:'done',reason:null});
+  assert.equal(summary.outcomes.length,context.assignments.length);
+  assert.deepEqual(summary.tasks,[{kind:'invoice_finalization',state:'open'}]);
+  assert.equal(summary.review.suppressionReason,'missing_review_url');
+ },{completionEnabled:true});
+});
+
+test('partial completion preserves the original after a lost HTTP reply and queues commercial review',async()=>{
+ const f=await fixture();
+ await save(f,request(f,'direct_arrive','1'));
+ let original;
+ await withSchedulingHttp(f,async(post,_calls,transport)=>{
+  const actualFetch=globalThis.fetch;
+  let submissions=0;
+  globalThis.fetch=async(input,options)=>{
+   if(typeof input!=='string'||!input.startsWith('/api/business/scheduling/'))return actualFetch(input,options);
+   if(input===completionSavePath)submissions++;
+   const headers=new Headers(options?.headers);
+   headers.set('origin',transport.origin);
+   headers.set('cookie','__Host-crest_session='+f.credential);
+   return actualFetch(transport.origin+input,{...options,headers});
+  };
+  try {
+   const workspace=await scheduling.workspace(transport.proof,signal());
+   assert.equal(workspace.jobCompletionAvailable,true);
+   const context=await scheduling.completionContext(f.business,f.job,transport.proof,signal());
+   const draft=completionDraft(f,context);
+   assert(draft.body.scope.length>1);
+   const incomplete=draft.body.scope.find(row=>row.pieces[0].amountCents!=='0').pieces[0];
+   incomplete.outcome='unfulfilled';
+   incomplete.reason='Synthetic finish deferred after rain';
+   original=completionOriginal(draft);
+   const memory=new Map();
+   const store=createPendingSchedulingStore({getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)},'operations.job.complete');
+   store.write({schemaVersion:1,businessId:f.business,binding:workspace.binding,reference:original.reference});
+   await assert.rejects(scheduling.complete(draft,transport.proof,signal()),error=>error.kind==='unknown');
+   assert.equal(submissions,1);
+   assert.equal(memory.size,1);
+   assert(![...memory.values()][0].includes(incomplete.reason));
+   const pending=store.read();
+   store.require(pending);
+   const recovered=await lookupSchedulingOriginal(original,transport.proof,signal());
+   assert.equal(recovered.receipt.sourceVersion,'3');
+   store.clear(pending);
+   assert.equal(memory.size,0);
+   assert.equal(submissions,1);
+  } finally {
+   globalThis.fetch=actualFetch;
+  }
+ },{completionEnabled:true,dropCompletion:true});
+ const state=await client.query('SELECT state,completion_outcome FROM crest.jobs WHERE id=$1',[f.job]);
+ assert.deepEqual(state.rows,[{state:'completed',completion_outcome:'partial'}]);
+ const tasks=await client.query('SELECT kind FROM crest.job_finalization_tasks WHERE job_id=$1 ORDER BY kind',[f.job]);
+ assert.deepEqual(tasks.rows,[{kind:'commercial_resolution'},{kind:'invoice_finalization'}]);
+ const operation=await client.query('SELECT count(*)::int AS count FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[f.business,original.reference.operationId]);
+ assert.equal(operation.rows[0].count,1);
 });

@@ -274,3 +274,15 @@ it.each([false,true])('reserves scheduling and encoded aliases with a separate b
 
 it('keeps amendment acceptance separately default-off and rejects missing construction dependencies or production activation',()=>{for(const config of [{origin,environment:'test',syntheticQuoteAmendmentAcceptance:'yes'},{origin,environment:'test',syntheticQuoteAmendmentAcceptance:true},{origin,environment:'test',syntheticQuoteAmendmentAcceptance:true,syntheticQuoteAmendments:true,syntheticScheduling:false},{origin,environment:'production',syntheticQuoteAmendmentAcceptance:true,syntheticQuoteAmendments:true,syntheticScheduling:true}]){const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,config as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();}});
 it('keeps held field sessions separately default-off and refuses production or missing accepted-work prerequisites',()=>{for(const config of [{origin,environment:'test',syntheticFieldSessions:'yes'},{origin,environment:'test',syntheticFieldSessions:true},{origin,environment:'test',syntheticFieldSessions:true,syntheticQuoteAmendmentAcceptance:false},{origin,environment:'production',syntheticFieldSessions:true,syntheticQuoteAmendmentAcceptance:true}]){const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,config as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();}});
+it('requires synthetic field controls before enabling job completion',()=>{
+ for(const config of [
+  {origin,environment:'test',syntheticJobCompletion:'yes'},
+  {origin,environment:'test',syntheticJobCompletion:true,syntheticFieldSessions:false},
+  {origin,environment:'production',syntheticJobCompletion:true}
+ ]){
+  const server=createBoundedNodeServer();
+  expect(()=>bindApplicationHandler(server,config as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  expect(server.listenerCount('request')).toBe(0);
+  server.close();
+ }
+});

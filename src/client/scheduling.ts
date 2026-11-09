@@ -16,6 +16,8 @@ import type {BookingConflictRequest} from '../operations/booking-conflict-review
 import {postScheduling,SchedulingClientError} from './scheduling-transport.ts';
 import {parseFieldSessionSave,parseFieldSessionCommitted,fieldSessionConflicts} from '../operations/field-session-contract.ts';
 import type {FieldSessionSave} from '../operations/field-session-contract.ts';
+import {completionConflicts,parseCompletionCommitted,parseCompletionContext,parseCompletionSave} from '../operations/work-completion-contract.ts';
+import type {CompletionSave} from '../operations/work-completion-contract.ts';
 export {SchedulingClientError};
 function failure(error:unknown,kind:'input'|'unknown'|'unavailable'):never{throw error instanceof SchedulingClientError?error:new SchedulingClientError(kind);}
 function conflict(v:unknown,status:number,reasons:readonly string[]){if(status===409&&exact(v,['state','reason'])&&v.state==='conflict'&&typeof v.reason==='string'&&reasons.includes(v.reason))return Object.freeze({state:'conflict' as const,reason:v.reason});return null;}
@@ -23,11 +25,19 @@ export const scheduling=Object.freeze({
  async workspace(proof:Proof,signal:AbortSignal){try{
   const r=await postScheduling('workspace',{},proof,signal),v=r.value;check(r.status===200&&exact(v,['schemaVersion','businessId','operatorId','timezone','modeVersion','writeState','recoveryEpoch'])&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding));
   const workspace=parseBookingWorkspace({schemaVersion:v.schemaVersion,businessId:v.businessId,operatorId:v.operatorId,timezone:v.timezone,modeVersion:v.modeVersion},v.businessId as string);check(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null);
-  return Object.freeze({...r.amendedSchedulingAvailable===true?{amendedSchedulingAvailable:true as const}:{},...r.fieldSessionAvailable===true?{fieldSessionAvailable:true as const}:{},context:Object.freeze({...workspace,...v.writeState==='ready'?{writeState:'ready' as const,recoveryEpoch:v.recoveryEpoch as string}:{writeState:'paused' as const,recoveryEpoch:null}}),binding:r.binding});
+  return Object.freeze({...r.amendedSchedulingAvailable===true?{amendedSchedulingAvailable:true as const}:{},...r.fieldSessionAvailable===true?{fieldSessionAvailable:true as const}:{},...r.jobCompletionAvailable===true?{jobCompletionAvailable:true as const}:{},context:Object.freeze({...workspace,...v.writeState==='ready'?{writeState:'ready' as const,recoveryEpoch:v.recoveryEpoch as string}:{writeState:'paused' as const,recoveryEpoch:null}}),binding:r.binding});
  }catch(e){failure(e,'unavailable');}},
  async reviewSlot(input:BookingConflictRequest,proof:Proof,signal:AbortSignal){let request:BookingConflictRequest;try{request=parseBookingConflictRequest(input);}catch{throw new SchedulingClientError('input');}try{const {businessId,...body}=request,r=await postScheduling('slot-review',body,proof,signal);check(r.status===200&&businessId===request.businessId);return parseBookingConflictReview(r.value,request);}catch(e){failure(e,'unavailable');}},
  async agreement(businessId:string,familyId:string,proof:Proof,signal:AbortSignal){try{check(uuid(businessId)&&uuid(familyId));const r=await postScheduling('agreement',{familyId},proof,signal);check(r.status===200);return parseBookingAgreement(r.value,businessId,familyId);}catch(e){failure(e,'unavailable');}},
  async resources(businessId:string,jobId:string,proof:Proof,signal:AbortSignal){try{check(uuid(businessId)&&uuid(jobId));const r=await postScheduling('resources',{jobId},proof,signal);check(r.status===200);return parseJobResources(r.value,businessId,jobId);}catch(e){failure(e,'unavailable');}},
+ async completionContext(businessId:string,jobId:string,proof:Proof,signal:AbortSignal){
+  try {
+   check(uuid(businessId)&&uuid(jobId));
+   const response=await postScheduling('completion-context',{jobId},proof,signal);
+   check(response.status===200);
+   return parseCompletionContext(response.value,businessId,jobId);
+  } catch(error) {failure(error,'unavailable');}
+ },
  async read(businessId:string,jobId:string,proof:Proof,signal:AbortSignal){try{check(uuid(businessId)&&uuid(jobId));const r=await postScheduling('read',{jobId},proof,signal);check(r.status===200);return parseJobDetail(r.value,businessId,jobId);}catch(e){failure(e,'unavailable');}},
  async pending(input:PendingChangesRequest,proof:Proof,signal:AbortSignal){try{const request=parsePendingChangesRequest(input),{businessId,...body}=request,r=await postScheduling('pending',body,proof,signal);check(r.status===200&&businessId===request.businessId);return parsePendingChangesPage(r.value,request);}catch(e){failure(e,'unavailable');}},
  async list(input:JobListRequest,proof:Proof,signal:AbortSignal){try{const request=parseJobListRequest(input),{businessId,...body}=request,r=await postScheduling('list',body,proof,signal);check(r.status===200&&businessId===request.businessId);return parseJobListPage(r.value,request);}catch(e){failure(e,'unavailable');}},
@@ -45,6 +55,18 @@ export const scheduling=Object.freeze({
  async saveFieldSession(input:FieldSessionSave,proof:Proof,signal:AbortSignal){let request:FieldSessionSave;try{request=parseFieldSessionSave(input);}catch{throw new SchedulingClientError('input');}try{
   const body=Object.fromEntries(Object.entries(request).filter(([key])=>key!=='businessId')),r=await postScheduling('field-save',body,proof,signal),clash=conflict(r.value,r.status,fieldSessionConflicts);if(clash)return clash;check(r.status===200);return parseFieldSessionCommitted(r.value,request);
  }catch(e){failure(e,'unknown');}},
+ async complete(input:CompletionSave,proof:Proof,signal:AbortSignal){
+  let request:CompletionSave;
+  try {request=parseCompletionSave(input);} catch {throw new SchedulingClientError('input');}
+  try {
+   const {businessId,...body}=request;
+   const response=await postScheduling('complete',body,proof,signal);
+   const clash=conflict(response.value,response.status,completionConflicts);
+   if(clash)return clash;
+   check(response.status===200&&businessId===request.businessId);
+   return parseCompletionCommitted(response.value,request);
+  } catch(error) {failure(error,'unknown');}
+ },
  async saveModes(input:FulfillmentModeSave,proof:Proof,signal:AbortSignal){let request:FulfillmentModeSave;try{request=parseFulfillmentModeSave(input);}catch{throw new SchedulingClientError('input');}try{
   const {businessId,...body}=request,r=await postScheduling('mode-save',body,proof,signal),clash=conflict(r.value,r.status,['operation','review']);if(clash)return clash;
   if(r.status===409&&exact(r.value,['state','reason','currentSequence'])&&r.value.state==='conflict'&&r.value.reason==='version'&&version(r.value.currentSequence,true))return Object.freeze({state:'conflict' as const,reason:'version' as const,currentSequence:r.value.currentSequence});

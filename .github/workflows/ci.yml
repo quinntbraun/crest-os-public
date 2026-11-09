@@ -307,6 +307,7 @@ jobs:
             .local/review/amendment-*.png
             .local/review/appointment-*.png
             .local/review/field-*.png
+            .local/review/completion-*.png
           include-hidden-files: true
           retention-days: 3
           if-no-files-found: error
@@ -422,7 +423,7 @@ jobs:
         run: npm run test:amendment-acceptance-storage
       - name: Verify retained53 upgrade and independent frozen52/frozen53 recovery
         run: npm run test:amendment-upgrade-registered
-      - name: Verify registered54 field invariants sources upgrade and independent frozen53/current54 recovery
+      - name: Verify field invariants, frozen recovery and registered End Job upgrade
         run: npm run test:field-registered
       - name: Compare booking times, travel intervals and partitions with PostgreSQL
         run: npm run test:booking-calculations

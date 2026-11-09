@@ -247,10 +247,10 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
     // capture, rather than being misreported as a schema-coverage failure.
     stage='snapshot';const rows=await inventory(client),roles=await roleDefinitions(client);
     // PG stores a policy's role set in OID order. Preserve the relative role
-    // creation order for53 so a multi-role policy deparses byte-exact after
+    // creation order from schema53 so a multi-role policy deparses byte-exact after
     // restore; do not normalize away policy or permission differences.
     let roleCreationOrder;
-    if(profile.schemaVersion===53||profile.schemaVersion===54){
+    if(profile.schemaVersion>=53){
       roleCreationOrder=(await client.query("SELECT rolname FROM pg_roles WHERE rolname ~ '^crest_[a-z_]+$' ORDER BY oid")).rows.map(r=>r.rolname);
       assert.deepEqual([...roleCreationOrder].sort(),roles.map(r=>r.rolname));
     }
@@ -298,7 +298,7 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     // Fully decrypt/authenticate/check BEFORE executing SQL. The bounded fixture
     // stays in memory; no partial plaintext dump is written to disk or published.
     stage='closed_roles';let orderedRoles=manifest.roles;
-    if(profile.schemaVersion===53||profile.schemaVersion===54){
+    if(profile.schemaVersion>=53){
       assert(Array.isArray(manifest.roleCreationOrder));
       assert(manifest.roleCreationOrder.every(name=>typeof name==='string'&&/^crest_[a-z_]+$/.test(name)));
       assert.deepEqual([...manifest.roleCreationOrder].sort(),manifest.roles.map(r=>r.rolname));
