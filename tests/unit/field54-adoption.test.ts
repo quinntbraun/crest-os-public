@@ -4,6 +4,8 @@ import {sha256,validateMigrationSet} from '../../src/tooling/migrations';
 import type {MigrationRegistry} from '../../src/tooling/migrations';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage';
 import currentRegistry from '../../supabase/migration-checksums.json';
+import registered55 from '../support/registered55-migration-checksums.json';
+import coverage55 from '../support/registered55-export-coverage.json';
 import registry from '../support/registered54-migration-checksums.json';
 import previous from '../support/registered53-migration-checksums.json';
 import previousCoverage from '../support/registered53-export-coverage.json';
@@ -25,12 +27,23 @@ it('retains every frozen53 source/credential policy and declares only the12 adde
  const observed=coverage.tables.flatMap(t=>[...t.required,...t.excluded.map(e=>e.column)].map(column=>({table:t.table,column})));expect(verifyExportCoverage(coverage,observed,54)).toMatchObject({tables:80,requiredColumns:1234,excludedColumns:10,completePortableExport:false,completeBackup:false});expect(()=>verifyExportCoverage(coverage,[...observed,{table:'crest.invented_finance',column:'amount'}],54)).toThrow();
 });
 it('appends only the End Job reader with unchanged source coverage and activation gates',()=>{
- expect(currentRegistry.migrations).toHaveLength(55);
- expect(currentRegistry.migrations.slice(0,54)).toEqual(registry.migrations);
- expect(currentRegistry.migrations.at(-1)?.file).toBe('20261109180000_work_completion_context.sql');
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registry as MigrationRegistry)).not.toThrow();
- expect(currentCoverage).toEqual({...coverage,migrationCount:55});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:55});
+ expect(registered55.migrations).toHaveLength(55);
+ expect(registered55.migrations.slice(0,54)).toEqual(registry.migrations);
+ expect(registered55.migrations.at(-1)?.file).toBe('20261109180000_work_completion_context.sql');
+ expect(()=>validateMigrationSet(registered55 as MigrationRegistry,new Map(registered55.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registry as MigrationRegistry)).not.toThrow();
+ expect(coverage55).toEqual({...coverage,migrationCount:55});
+});
+it('registers the exact mileage reader and preserves the frozen55 profiles',()=>{
+ expect(sha256(bytes('tests/support/registered55-migration-checksums.json'))).toBe('abc37ebb0d87dc7349f384d168fa9c36e92747fd2c84e452be49e9dc0a3e16db');
+ expect(sha256(bytes('tests/support/registered55-export-coverage.json'))).toBe('edc6471bc82f14acf8c8967b3d3f464b68b8554ae4536167175ea8e1850549e2');
+ expect(currentRegistry.migrations).toHaveLength(56);
+ expect(currentRegistry.migrations.slice(0,55)).toEqual(registered55.migrations);
+ const mileage=currentRegistry.migrations.at(-1)!;
+ expect(mileage.file).toBe('20261110180000_job_mileage_trips.sql');
+ expect(bytes('supabase/migrations/'+mileage.file)).toEqual(bytes('planning/proposals/job-mileage-context.sql'));
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered55 as MigrationRegistry)).not.toThrow();
+ expect(currentCoverage).toEqual({...coverage55,migrationCount:56});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:56});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

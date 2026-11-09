@@ -9,13 +9,20 @@ import {createRequire} from 'node:module';
 import pg from 'pg';
 
 export async function requireSyntheticJobCompletion(connectionString){
+ await requireSyntheticReader(connectionString,'crest_commands.read_job_completion_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)','SYNTHETIC_JOB_COMPLETION_MIGRATION_REQUIRED');
+}
+
+export async function requireSyntheticJobMileage(connectionString){
+ await requireSyntheticReader(connectionString,'crest_commands.read_job_mileage_trips(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,timestamptz,uuid,integer)','SYNTHETIC_JOB_MILEAGE_MIGRATION_REQUIRED');
+}
+
+async function requireSyntheticReader(connectionString,signature,missing){
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{
   await client.connect();
   await client.query('SET ROLE crest_web');
-  const signature='crest_commands.read_job_completion_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)';
   const {rows}=await client.query("SELECT has_function_privilege(to_regprocedure($1),'EXECUTE') AS available",[signature]);
-  assert(rows[0]?.available===true,'SYNTHETIC_JOB_COMPLETION_MIGRATION_REQUIRED');
+  assert(rows[0]?.available===true,missing);
  }finally{await client.end();}
 }
 

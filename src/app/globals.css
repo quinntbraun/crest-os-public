@@ -255,6 +255,22 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .schedule-detail textarea { font-size:1rem; }
 .booking-time-fields { display:grid; gap:1rem; }
 .field-work-form { gap:.5rem; }
+.mileage-trip-list { display:grid; gap:.75rem; list-style:none; padding:0; }
+.mileage-trip-list button { margin:0; text-align:left; }
+.mileage-trip-list button[aria-pressed='true'] { border-color:var(--gold-ink); }
+.mileage-trip-list p { margin:.35rem 0 0; color:var(--muted); font-size:.875rem; }
+.mileage-history-actions { display:flex; flex-wrap:wrap; gap:.5rem; }
+.mileage-history-actions button { width:auto; margin:0; }
+.field-work-form .mileage-split { margin-top:.75rem; min-width:0; }
+.mileage-share { margin-top:1rem; padding-top:.75rem; border-top:1px solid var(--line); }
+.mileage-share label { display:block; overflow-wrap:anywhere; }
+.mileage-share-controls { display:flex; align-items:center; gap:.5rem; }
+.mileage-share-controls input { min-width:0; width:12rem; }
+.mileage-share-controls button { flex:none; width:auto; min-height:44px; margin:0; }
+.mileage-saved-attribution { margin:.5rem 0 .75rem; }
+.mileage-saved-attribution summary { cursor:pointer; min-height:44px; padding:.6rem 0; }
+.mileage-correction { margin-top:1rem; }
+.mileage-correction > summary { min-height:44px; padding:.65rem 0; cursor:pointer; font-weight:600; }
 .field-work-form > h2 { margin:.25rem 0 .5rem; }
 .field-work-form > p { margin:.5rem 0; }
 .field-work-form > .eyebrow { margin-top:.75rem; }

@@ -15,12 +15,12 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  const result=await new Promise(resolve=>{child.once('error',()=>resolve({code:1,signal:null}));child.once('close',(code,signal)=>resolve({code,signal}));});
  let screenshots=[];
  try {
-  screenshots=(await readdir('.local/review')).filter(name=>/^(settings|workspace|home|quote|amendment|appointment|field|completion)-.*\.png$/.test(name)).sort();
+  screenshots=(await readdir('.local/review')).filter(name=>/^(settings|workspace|home|quote|amendment|appointment|field|completion|mileage)-.*\.png$/.test(name)).sort();
  } catch(error) {
   if(error.code!=='ENOENT')throw error;
  }
  const needsScreenshots=['commercial','amendments','schedule','records'].includes(selected);
- const requiredViews=selected==='schedule'?['field-departure','field-pause','completion-editor','completion-saved']:[];
+ const requiredViews=selected==='schedule'?['field-departure','field-pause','completion-editor','completion-saved','mileage-form','mileage-split','mileage-saved']:[];
  const requiredScreenshots=requiredViews.flatMap(view=>['chromium','webkit'].flatMap(engine=>
   [360,390,768,1440].map(width=>`${view}-${engine}-${width}.png`)));
  const missingScreenshots=requiredScreenshots.filter(name=>!screenshots.includes(name));

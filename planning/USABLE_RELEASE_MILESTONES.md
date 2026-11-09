@@ -1,12 +1,8 @@
 # Usable release milestones and execution reporting
 
-## Current delivery — 2026-11-06 UTC
+## Current delivery
 
-Accepted419 owner preview remains schema53 and supports the workflows listed in [WORKING_STATE](WORKING_STATE.md). New Mobile work-status/recovery/history screens pass genuine Chromium/WebKit construction acceptance but are not delivered there. Field54 is now source-registered with exact original13-body bytes, frozen53 profiles, current-root recovery and8471 unit verification. [Registered54 proof](proposals/field54-registration-verification.json) separates composed native evidence and prior diagnostic failures from current positive checks.
-
-Next usable delivery: source-reviewed coherent field PR, all current-source CI/artifacts/app/restore gates, then preserved-data synthetic53→54 upgrade and field activation. Existing source/recovery/control implementations should be reused. Physical iPhone acceptance remains deferred. No owner setup currently blocks independent work.
-
-All original V1 field/time/custody/photos/follow-up, immutable finance/reporting/receipts/mileage, full business portability/recovery/import/cutover and Google Calendar P20/BR21/ADR35 remain required. Real Crest use NOT ready; spend$0. Rough full-V1 coding40–45%, remaining200–350 active hours, very low confidence; no fabricated active-hour ledger or deadline promise.
+The [current execution checkpoint](WORKING_STATE.md) records what the owner can open today, the exact release evidence, the next delivery gates and the remaining V1 scope.
 
 ## Historical starting baseline
 
