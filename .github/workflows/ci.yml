@@ -309,6 +309,7 @@ jobs:
             .local/review/field-*.png
             .local/review/completion-*.png
             .local/review/mileage-*.png
+            .local/review/travel-*.png
           include-hidden-files: true
           retention-days: 3
           if-no-files-found: error

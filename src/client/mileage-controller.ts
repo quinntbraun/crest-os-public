@@ -26,7 +26,7 @@ export const initialMileageView: MileageView=Object.freeze({
  history:null,canSave:false,timezone:'',reference:''
 });
 
-export function createMileageController(deps:{jobId:string;store:Store;blockers:readonly Store[];change:(view:MileageView)=>void}){
+export function createMileageController(deps:{jobId:string;legId?:string;store:Store;blockers:readonly Store[];change:(view:MileageView)=>void}){
  let alive=true,active:AbortController|null=null,workspace:Workspace|null=null,pending:PendingScheduling|null=null;
  let state:MileageView=initialMileageView;
  const update=(patch:Partial<MileageView>)=>{
@@ -51,14 +51,14 @@ export function createMileageController(deps:{jobId:string;store:Store;blockers:
   workspace=null;
   if(pending){clear('pending','Keep the original mileage reference. Its result could not be verified.');return;}
   if(error instanceof AuthenticationError&&error.kind==='denied'){
-   clear('signed-out','Sign in to view mileage for this job.');return;
+   clear('signed-out',deps.legId?'Sign in to view mileage for this trip.':'Sign in to view mileage for this job.');return;
   }
   clear('unavailable','Saved trips or access could not be verified. Reload to try again.');
  }
  async function fresh(signal:AbortSignal,requireSame=true){
   const proof=await authentication.session(signal);live(signal);
   const next=await scheduling.workspace(proof,signal);live(signal);
-  if(next.jobMileageAvailable!==true)throw Error();
+  if(next.jobMileageAvailable!==true||deps.legId&&next.supportTripsAvailable!==true)throw Error();
   if(requireSame&&workspace&&(workspace.binding!==next.binding
    ||workspace.context.businessId!==next.context.businessId||workspace.context.recoveryEpoch!==next.context.recoveryEpoch
    ||workspace.context.writeState!==next.context.writeState))throw Error();
@@ -66,6 +66,15 @@ export function createMileageController(deps:{jobId:string;store:Store;blockers:
   return {proof,context:next.context};
  }
  async function loadTrips(businessId:string,proof:Proof,signal:AbortSignal,selection?:string){
+  if(deps.legId){
+   const result=await scheduling.supportTripMileage(businessId,deps.legId,proof,signal);
+   live(signal);
+   if('state'in result)throw Error();
+   update({phase:'ready',trips:[result.trip],hasMore:false,selected:null,history:null,
+    timezone:workspace!.context.timezone,canSave:workspace!.context.writeState==='ready'});
+   await readHistory(result.trip,businessId,proof,signal);
+   return;
+  }
   const result=await scheduling.mileageTrips({businessId,jobId:deps.jobId,after:null,pageSize:20},proof,signal);
   live(signal);
   if(result.state!=='loaded')throw Error();
@@ -87,7 +96,7 @@ export function createMileageController(deps:{jobId:string;store:Store;blockers:
   clear('loading','Checking access to saved trips…');
   const {proof,context}=await fresh(signal,false);
   if(pending){clear('pending','Check the original mileage save before recording another.');return;}
-  if(!customerUuid(deps.jobId))throw Error();
+  if(deps.legId?(!customerUuid(deps.legId)||deps.jobId!==''):!customerUuid(deps.jobId))throw Error();
   await loadTrips(context.businessId,proof,signal);
  },unavailable);
  const moreTrips=()=>run(async signal=>{

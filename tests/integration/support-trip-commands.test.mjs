@@ -9,6 +9,8 @@ import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixture.mjs';
 import {confirmedBookingRequest} from '../fixtures/confirmed-booking.ts';
+import {parseSupportTripHistory,parseSupportTripList} from '../../src/operations/support-trip.ts';
+import {parseSupportTripMileage} from '../../src/operations/mileage.ts';
 const proposals=await Promise.all(['field-time-storage','field-session-commands','work-completion-plan','work-completion-commands','field-scope-floor','mileage-evidence','mileage-field-profile','mobile-trip-interruption','unfulfilled-work-cancellation','support-trip-commands','field-originals','field-source'].map(n=>readFile(new URL('../../planning/proposals/'+n+'.sql',import.meta.url),'utf8')));
 let sandbox,client,web,login,target,accepted,main,original,arrived,mainBody;
 const scalar=async(q,args=[])=>(await client.query(q,args)).rows[0].value;
@@ -54,6 +56,47 @@ test('installs support-trip commands without granting ordinary source or helper 
  for(const role of ['anon','authenticated','crest_web','crest_worker','crest_recovery']){
   assert.equal(await scalar('SELECT has_function_privilege($1,$2,$3) value',[role,'crest_private.support_trip_result(uuid,uuid,uuid)','EXECUTE']),false);
   assert.equal(await scalar('SELECT has_table_privilege($1,$2,$3) value',[role,'crest.travel_legs','SELECT,INSERT,UPDATE,DELETE,TRUNCATE']),false);
+ }
+});
+test('support-trip reader verifies active and retained pages with exact versions and rejects foreign scope',async()=>{
+ const sql=await readFile(new URL('../../planning/proposals/support-trip-reader.sql',import.meta.url),'utf8');
+ await tx(client,()=>client.query(sql));
+ const own=await fixture(),foreign=await fixture(),started=await save(own,departBody(own)),other=await save(foreign,manualBody(foreign));
+ const list=(p,after=null)=>tx(web,async()=>(await web.query(
+  'SELECT crest_commands.read_support_trips($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) value',
+  [...p.auth(),after?.departedAt??null,after?.legId??null,1])).rows[0].value);
+ const history=(p,id,after,through)=>tx(web,async()=>(await web.query(
+  'SELECT crest_commands.read_support_trip_history($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) value',
+  [...p.auth(),id,after,through,1])).rows[0].value);
+ const mileage=(p,id)=>tx(web,async()=>(await web.query(
+  'SELECT crest_commands.read_support_trip_mileage($1,$2,$3,$4,$5,$6,$7,$8,$9) value',[...p.auth(),id])).rows[0].value);
+ const query={businessId:own.business,after:null,pageSize:1};
+ const open=parseSupportTripList(await list(own),query);
+ assert.equal(open.active.legId,started.id);assert.equal(open.active.arrivedAt,null);assert.deepEqual(open.trips,[]);
+ assert.deepEqual(await mileage(own,started.id),{state:'not_found'});
+ assert.deepEqual(await mileage(own,other.id),{state:'not_found'});
+ const ended=await save(own,arriveBody,{id:started.id,expected:started.result.receipt.legVersionId});
+ assert.equal(ended.result.state,'committed');
+ const targetTrip=parseSupportTripMileage(await mileage(own,started.id),own.business,started.id).trip;
+ assert.equal(targetTrip.legVersionId,ended.result.receipt.legVersionId);
+ assert.equal(targetTrip.evidenceVersion,'0');assert.equal(targetTrip.distanceStatus,'unresolved');
+ const older=await save(own,manualBody(own));assert.equal(older.result.state,'committed');
+ const first=parseSupportTripList(await list(own),query);
+ assert.equal(first.active,null);assert.equal(first.trips[0].legId,started.id);assert(first.hasMore);
+ const after={departedAt:first.trips[0].departedAt,legId:first.trips[0].legId};
+ const second=parseSupportTripList(await list(own,after),{...query,after});
+ assert.equal(second.trips[0].legId,older.id);assert.equal(second.hasMore,false);
+ const historyQuery={businessId:own.business,legId:started.id,afterVersion:'0',throughVersion:'2',pageSize:1};
+ const firstVersion=parseSupportTripHistory(await history(own,started.id,'0','2'),historyQuery);
+ const finalVersion=parseSupportTripHistory(await history(own,started.id,'1','2'),{...historyQuery,afterVersion:'1'});
+ assert.equal(firstVersion.trips[0].departedAt,finalVersion.trips[0].departedAt);
+ assert.equal(firstVersion.trips[0].state,'open');assert.equal(finalVersion.trips[0].state,'closed');
+ assert.deepEqual(await history(own,other.id,'0','1'),{state:'not_found'});
+ for(const role of ['anon','authenticated','crest_worker','crest_export']){
+  assert.equal(await scalar('SELECT has_function_privilege($1,$2,$3) value',[role,
+   'crest_commands.read_support_trips(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,timestamptz,uuid,integer)','EXECUTE']),false);
+  assert.equal(await scalar('SELECT has_function_privilege($1,$2,$3) value',[role,
+   'crest_commands.read_support_trip_mileage(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)','EXECUTE']),false);
  }
 });
 test('records an actual support departure without starting work posting money or guessing mileage',async()=>{

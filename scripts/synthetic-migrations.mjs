@@ -16,6 +16,14 @@ export async function requireSyntheticJobMileage(connectionString){
  await requireSyntheticReader(connectionString,'crest_commands.read_job_mileage_trips(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,timestamptz,uuid,integer)','SYNTHETIC_JOB_MILEAGE_MIGRATION_REQUIRED');
 }
 
+export async function requireSyntheticSupportTrips(connectionString){
+ for(const signature of [
+  'read_support_trips(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,timestamptz,uuid,integer)',
+  'read_support_trip_history(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,bigint,bigint,integer)',
+  'read_support_trip_mileage(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)'
+ ])await requireSyntheticReader(connectionString,'crest_commands.'+signature,'SYNTHETIC_SUPPORT_TRIP_MIGRATION_REQUIRED');
+}
+
 async function requireSyntheticReader(connectionString,signature,missing){
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{

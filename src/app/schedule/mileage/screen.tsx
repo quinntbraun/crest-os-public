@@ -42,8 +42,10 @@ function MileageForm({trip,history,jobId,timezone,disabled,findJobs,save}:{
   if(allocation==='split'){
    try{
     split=shares.map(share=>({jobId:share.jobId,fraction:mileageShareFraction(share.percent)}));
-    if(split.length<2||split.reduce((sum,share)=>sum+BigInt(share.fraction.replace('.','')),0n)!==100000000n)throw Error();
-   }catch{setError('Choose at least two saved jobs and enter positive shares totaling exactly 100%. Use up to six decimal places.');return;}
+    if(split.length<(jobId?2:1)||split.reduce((sum,share)=>sum+BigInt(share.fraction.replace('.','')),0n)!==100000000n)throw Error();
+   }catch{setError(jobId
+    ?'Choose at least two saved jobs and enter positive shares totaling exactly 100%. Use up to six decimal places.'
+    :'Choose saved jobs and enter positive shares totaling exactly 100%. Use up to six decimal places.');return;}
   }
   try{
    const body=prepareMileageBody({source,movementKind:text('movement'),
@@ -87,8 +89,8 @@ function MileageForm({trip,history,jobId,timezone,disabled,findJobs,save}:{
    <label htmlFor={id+'-allocation'}>Job attribution</label>
    <select id={id+'-allocation'} value={allocation} onChange={event=>{setAllocation(event.target.value);setError('');}}>
     {recorded.length>0&&<option value="preserve">Keep recorded allocation</option>}
-    <option value="none">Unallocated</option><option value="job">Allocate to this job</option>
-    <option value="split">Split across jobs</option>
+    <option value="none">Unallocated</option>{jobId&&<option value="job">Allocate to this job</option>}
+    <option value="split">{jobId?'Split across jobs':'Allocate to saved jobs'}</option>
    </select>
    {allocation==='split'&&<MileageAttribution jobId={jobId} day={calendarToday(timezone,new Date(trip.departedAt))}
     timezone={timezone} shares={shares} change={next=>{setShares(next);setError('');}} findJobs={findJobs}/>}
@@ -101,7 +103,7 @@ function MileageForm({trip,history,jobId,timezone,disabled,findJobs,save}:{
  </form>;
 }
 
-export function MileageScreen({jobId}:{jobId:string}){
+export function MileageScreen({jobId,legId}:{jobId:string;legId:string}){
  const [view,setView]=useState(initialMileageView),controller=useRef<ReturnType<typeof createMileageController>|null>(null);
  const [downloadMessage,setDownloadMessage]=useState('');
  const downloadUrl=useRef<string|null>(null);
@@ -112,7 +114,7 @@ export function MileageScreen({jobId}:{jobId:string}){
  },[]);
  useEffect(()=>{
   const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)};
-  const current=createMileageController({jobId,store:createPendingSchedulingStore(storage,kind),
+  const current=createMileageController({jobId,legId,store:createPendingSchedulingStore(storage,kind),
    blockers:(Object.keys(pendingSchedulingKeys) as SchedulingOriginalKind[]).filter(key=>key!==kind).map(key=>createPendingSchedulingStore(storage,key)),change:setView});
   controller.current=current;void current.load();
   const leave=()=>{current.suspend();revoke();setDownloadMessage('');};
@@ -120,7 +122,7 @@ export function MileageScreen({jobId}:{jobId:string}){
   const restored=(event:PageTransitionEvent)=>{if(event.persisted)leave();};
   window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);document.addEventListener('visibilitychange',hidden);
   return()=>{controller.current=null;current.dispose();revoke();window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);document.removeEventListener('visibilitychange',hidden);};
- },[jobId,revoke]);
+ },[jobId,legId,revoke]);
  async function action(run:(current:NonNullable<typeof controller.current>)=>Promise<void>){
   const current=controller.current;if(!current)return;
   setDownloadMessage('');
@@ -164,7 +166,7 @@ export function MileageScreen({jobId}:{jobId:string}){
   </>}
   {view.phase==='ready'&&<>
    {!view.canSave&&<p>Changes are paused. Saved mileage is available for review.</p>}
-   {view.trips.length>0&&<ul className="mileage-trip-list" role="list" aria-label="Trips for this job">{view.trips.map(trip=><li key={trip.legId}>
+   {!legId&&view.trips.length>0&&<ul className="mileage-trip-list" role="list" aria-label="Trips for this job">{view.trips.map(trip=><li key={trip.legId}>
     <button type="button" className="secondary" aria-pressed={selected?.legId===trip.legId} disabled={view.busy}
      onClick={()=>void action(current=>current.select(trip.legId))}>{labels[trip.purpose]} · {format(trip.departedAt)}</button>
     <p>{trip.state==='open'?'In progress':trip.state==='cancelled'?'Cancelled':'Ended'} · {distance[trip.distanceStatus]}{selected?.legId===trip.legId?' · Selected':''}</p>
@@ -196,6 +198,7 @@ export function MileageScreen({jobId}:{jobId:string}){
   </>}
   <nav className="work-links" aria-label="Related mileage pages">
    {jobId&&<a href={'/schedule?job='+encodeURIComponent(jobId)}>Saved job</a>}
+   {legId&&<a href="/schedule/travel">Standalone travel</a>}
    <a href="/schedule">Schedule</a>
    <a href={'/save-review?kind='+kind}>Interrupted saves</a>
   </nav>

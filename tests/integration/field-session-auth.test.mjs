@@ -57,7 +57,7 @@ async function fixture(){
 }
 before(async()=>{
  sandbox=await migrationSandbox();target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target,await sandbox.prefix(53));
- assert.equal((await sandbox.apply(target)).history.length,56);
+ assert.equal((await sandbox.apply(target,await sandbox.prefix(56))).history.length,56);
  login='crest_field_auth_'+randomBytes(8).toString('hex');const password=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=password;config={connectionString:url.toString(),environment:'test'};web=await sandbox.connect(url.toString());await web.query('SET ROLE crest_web');
  service=await startRealAuthService(target,{diagnostic:true});const actualBoundary=createProviderBoundary({issuer:service.issuer,publicKey:service.publicKey,environment:'test'},createLiveProviderSessionLookup(config));
  const observed=method=>async(...args)=>{const at=Date.now();try{return await actualBoundary[method](...args);}catch(error){if(providerFailures.length<32)providerFailures.push({stage:method,elapsedMs:Date.now()-at,kind:['denied','unavailable','uncertain'].includes(error?.kind)?error.kind:'other'});throw error;}};

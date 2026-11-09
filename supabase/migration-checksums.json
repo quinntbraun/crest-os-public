@@ -280,6 +280,11 @@
       "version": "20261110180000",
       "file": "20261110180000_job_mileage_trips.sql",
       "sha256": "9f6b4737dd44c1db5f8864f7aec896c642193b024cc6705855f844ae642c6644"
+    },
+    {
+      "version": "20261111180000",
+      "file": "20261111180000_support_trip_readers.sql",
+      "sha256": "ca70018b1f433e0581f657386e999741f0bade8a830a149bb090a6d0d404d834"
     }
   ]
 }
