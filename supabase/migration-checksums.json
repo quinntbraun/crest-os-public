@@ -285,6 +285,11 @@
       "version": "20261111180000",
       "file": "20261111180000_support_trip_readers.sql",
       "sha256": "ca70018b1f433e0581f657386e999741f0bade8a830a149bb090a6d0d404d834"
+    },
+    {
+      "version": "20261112180000",
+      "file": "20261112180000_unfulfilled_cancellation_context.sql",
+      "sha256": "2ec86cffa0e1eb84f65027774a4ae12c90032c04e6fc448fcec0a5ef1fb65d77"
     }
   ]
 }

@@ -19,7 +19,7 @@ function SlotReviewContents({context,input,timezone,reviewKey,value,change}:{con
   catch{if(!controller.signal.aborted)setMessage('Schedule review could not be verified. No booking or time change was sent. Review again, or reload the form if access has changed.');}
   finally{if(!controller.signal.aborted){active.current=null;setBusy(false);}}
  }
- return <section className="slot-review" aria-label="Schedule conflict review" aria-busy={busy}><h2>Check the schedule</h2><p className="field-help">Includes confirmed visits and known travel buffers. A proposal reserves no new time. Review again after changing times or travel estimates.</p>
+ return <section className="slot-review" aria-label="Schedule conflict review" aria-busy={busy}><h2>Check the schedule</h2><p className="field-help">Includes confirmed visits and known travel buffers. Review again after changing times or travel estimates.</p>
   {!input?<p>Enter valid visit start and end times before checking the schedule.</p>:<button type="button" className="secondary" disabled={busy||context.context.writeState!=='ready'} onClick={()=>void load()}>{value?'Review schedule again':'Review schedule'}</button>}
   {message&&<p role="status">{message}</p>}
   {value&&<><p>{value.review.conflictingAppointmentIds.length?`${value.review.conflictingAppointmentIds.length} overlapping confirmed ${value.review.conflictingAppointmentIds.length===1?'visit':'visits'}. Saving requires an explicit override reason.`:'No overlapping confirmed visits found.'}</p>

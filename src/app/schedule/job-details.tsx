@@ -64,11 +64,15 @@ function SavedJobDetailsContent({resources,history,historyComplete,busy,canChang
    <summary>Saved history · version {job.version}</summary>
    {onDownload&&<button type="button" className="secondary" disabled={busy} onClick={onDownload}>Download saved history</button>}
    {history.length===0?<p>Load the retained history to review changes.</p>:<ol>{history.map(event=><li key={event.id}>
-    <p><strong>{events[event.action]}</strong> · version {event.sequence}</p>
+    <p><strong>{event.fromState==='en_route'&&event.toState==='scheduled'?'Trip interrupted and visit rescheduled':
+     event.fromState==='en_route'&&event.toState==='cancelled'?'Trip interrupted and visit cancelled':events[event.action]}</strong> · version {event.sequence}</p>
     <p className="field-help"><time dateTime={event.recordedAt}>{when(event.recordedAt,appointment.timezone)}</time></p>
     {event.reason&&<p>{event.reason}</p>}
     {event.conflictReview?<><p className="field-help">Schedule review: {event.conflictReview.appointmentIds.length?event.conflictReview.appointmentIds.length+' overlapping visits explicitly allowed':'No overlapping reservations recorded'}{event.conflictReview.unknownTravel?' · Unknown travel reviewed':''}.</p>{event.conflictReview.overrideReason&&<><strong>Schedule overlap override</strong><p>{event.conflictReview.overrideReason}</p></>}</>:(event.action==='book'||event.action==='confirm')&&<p className="field-help">Schedule review details are unavailable in this historical display record.</p>}
-    {event.customerCommunication&&<p className="field-help">Customer communication: {event.customerCommunication.state==='sent'?'Recorded as sent':event.customerCommunication.state==='no_contact'?'No contact recorded':'Not sent'}</p>}
+    {event.customerCommunication&&<>
+     <p className="field-help">Customer communication: {event.customerCommunication.state==='sent'?'Recorded as sent':event.customerCommunication.state==='no_contact'?'No contact recorded':'Not sent'}</p>
+     {event.customerCommunication.evidenceNote&&<details><summary>Communication note</summary><p>{event.customerCommunication.evidenceNote}</p></details>}
+    </>}
    </li>)}</ol>}
    {!historyComplete&&onMoreHistory&&<button type="button" className="secondary" disabled={busy} onClick={onMoreHistory}>Load more history</button>}
    <p className="field-help">Saved version {job.version}. Details above use the retained visit snapshots.</p>

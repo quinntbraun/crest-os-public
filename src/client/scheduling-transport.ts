@@ -1,12 +1,12 @@
 import type {Proof} from './authentication';
 import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
-const routes=['slot-review','original','workspace','agreement','resources','pending','list','read','history','mode-history','mode-save','book','cancel','reschedule','field-save','completion-context','complete','mileage-trips','mileage-history','mileage-save','support-trips','support-trip-history','support-trip-mileage','support-trip-save'] as const;
+const routes=['slot-review','original','workspace','agreement','resources','pending','list','read','history','mode-history','mode-save','book','cancel','reschedule','field-save','completion-context','complete','mileage-trips','mileage-history','mileage-save','support-trips','support-trip-history','support-trip-mileage','support-trip-save','interrupt','unfulfilled-context','cancel-unfulfilled'] as const;
 export type SchedulingRoute=typeof routes[number];
 type Kind='input'|'not_submitted'|'recovery'|'limited'|'unknown'|'unavailable';
 export class SchedulingClientError extends Error{readonly kind:Kind;constructor(kind:Kind){super('SCHEDULING_REQUEST_FAILED');this.name='SchedulingClientError';this.kind=kind;}}
 // Domain-only private transport. No retries, storage, auth bypass or external URL.
 export async function postScheduling(route:SchedulingRoute,body:object,proof:Proof,external:AbortSignal){
- const mutation=['book','cancel','reschedule','mode-save','field-save','complete','mileage-save','support-trip-save'].includes(route);let sent=false;
+ const mutation=['book','cancel','reschedule','mode-save','field-save','complete','mileage-save','support-trip-save','interrupt','cancel-unfulfilled'].includes(route);let sent=false;
  try{
   if(!routes.includes(route)||typeof proof?.csrfToken!=='string'||!/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(proof.csrfToken)||!Number.isSafeInteger(proof.expiresAt)||proof.expiresAt<=Date.now())throw Error();
   const signal=AbortSignal.any([external,AbortSignal.timeout(40000)]),encoded=JSON.stringify(body);if(signal.aborted||new TextEncoder().encode(encoded).length>(mutation?131072:16384))throw Error();sent=true;
@@ -34,6 +34,7 @@ export async function postScheduling(route:SchedulingRoute,body:object,proof:Pro
    ...route==='workspace'&&response.headers.get('x-crest-field-session')==='1'?{fieldSessionAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-job-completion')==='1'?{jobCompletionAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-job-mileage')==='1'?{jobMileageAvailable:true as const}:{},
-   ...route==='workspace'&&response.headers.get('x-crest-support-trips')==='1'?{supportTripsAvailable:true as const}:{}};
+   ...route==='workspace'&&response.headers.get('x-crest-support-trips')==='1'?{supportTripsAvailable:true as const}:{},
+   ...route==='workspace'&&response.headers.get('x-crest-unfulfilled-cancellation')==='1'?{unfulfilledCancellationAvailable:true as const}:{}};
  }catch(error){throw error instanceof SchedulingClientError?error:new SchedulingClientError(mutation?(sent?'unknown':'not_submitted'):'unavailable');}
 }

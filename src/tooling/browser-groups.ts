@@ -6,7 +6,7 @@ export const browserGroups = Object.freeze({
   intake: group('lead-http-browser','lead-editor-browser','lead-address-editor-browser','lead-conversion-http-browser','lead-conversion-editor-browser'),
   commercial: group('quote-draft-editor-browser','quote-review-browser','quote-commercial-browser','quote-browser-response'),
   amendments: group('quote-amendment-workspace-browser','quote-amendment-acceptance-product-browser'),
-  schedule: group('appointment-holds-browser','appointment-holds-product-browser','confirmed-bookings-product-browser','book-job-product-browser','job-change-product-browser','booking-divisions-product-browser','combined-booking-product-browser','fulfillment-modes-product-browser','booking-conflict-review-product-browser','field-work-product-browser','work-completion-product-browser','mileage-product-browser','support-trip-product-browser'),
+  schedule: group('appointment-holds-browser','appointment-holds-product-browser','confirmed-bookings-product-browser','book-job-product-browser','job-change-product-browser','booking-divisions-product-browser','combined-booking-product-browser','fulfillment-modes-product-browser','booking-conflict-review-product-browser','field-work-product-browser','work-completion-product-browser','mileage-product-browser','support-trip-product-browser','trip-interruption-product-browser','unfulfilled-cancellation-product-browser'),
   records: group('source-export-browser','source-export-product-browser','workspace-journey-browser','owner-expenses-product-browser')
 });
 export type BrowserGroup = keyof typeof browserGroups;

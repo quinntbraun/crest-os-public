@@ -9,27 +9,37 @@ import type {CompletionBody,CompletionContext,CompletionSave,CompletionSummary} 
 import {parseFieldOriginal,parseFieldOriginalResult} from '../operations/field-original-contract';
 import type {PendingScheduling,createPendingSchedulingStore} from './pending-scheduling';
 import {customerUuid} from '../customer/customer-contract';
+import {parseTripInterruptionSave,tripInterruptionOriginal} from '../operations/trip-interruption-contract';
+import type {InterruptionDraft,TripInterruptionSave} from '../operations/trip-interruption-contract';
+import type {MileageTrip} from '../operations/mileage';
+import {parseUnfulfilledCancellationSave,unfulfilledCancellationOriginal} from '../operations/unfulfilled-cancellation-contract';
+import type {UnfulfilledCancellationContext,UnfulfilledCancellationDraft} from '../operations/unfulfilled-cancellation-contract';
 type Context=Awaited<ReturnType<typeof scheduling.workspace>>;
 type Resources=Exclude<Awaited<ReturnType<typeof scheduling.resources>>,{state:'absent'}>;
 type Vehicle=Awaited<ReturnType<typeof vehicles.list>>['vehicles'][number];
 type Store=ReturnType<typeof createPendingSchedulingStore>;
 type Proof=Awaited<ReturnType<typeof authentication.session>>;
 type FieldResult=Awaited<ReturnType<typeof scheduling.saveFieldSession>>;
-export type FieldSessionView=Readonly<{phase:'loading'|'ready'|'pending'|'review'|'blocked'|'signed-out'|'unavailable'|'committed';busy:boolean;message:string;context:Context|null;resources:Resources|null;vehicles:readonly Vehicle[];moreVehicles:boolean;reference:string;savedJobId:string;savedVersion:string;completion?:CompletionContext;summary?:CompletionSummary}>;
+export type FieldSessionMode='work'|'completion'|'interruption'|'cancellation';
+export const fieldSessionKind={work:'operations.job.field',completion:'operations.job.complete',
+ interruption:'operations.job.interrupt',cancellation:'operations.job.cancel_unfulfilled'} as const;
+export type FieldSessionView=Readonly<{phase:'loading'|'ready'|'pending'|'review'|'blocked'|'signed-out'|'unavailable'|'committed';busy:boolean;message:string;context:Context|null;resources:Resources|null;vehicles:readonly Vehicle[];moreVehicles:boolean;reference:string;savedJobId:string;savedVersion:string;completion?:CompletionContext;summary?:CompletionSummary;openTrip?:MileageTrip;cancellation?:UnfulfilledCancellationContext}>;
 export const initialFieldSessionView:FieldSessionView=Object.freeze({phase:'loading',busy:true,message:'Checking current work and access…',context:null,resources:null,vehicles:[],moreVehicles:false,reference:'',savedJobId:'',savedVersion:''});
 // Keep only the existing opaque pending identity between navigations. Private
 // work/location drafts remain in memory and are cleared on suspension.
-export function createFieldSessionController(deps:{mode?:'work'|'completion';store:Store;blockers?:readonly Store[];change:(view:FieldSessionView)=>void;api?:typeof scheduling;vehicleApi?:typeof vehicles;session?:typeof authentication.session;lookup?:typeof lookupSchedulingOriginal;id?:()=>string}){
+export function createFieldSessionController(deps:{mode?:FieldSessionMode;store:Store;blockers?:readonly Store[];change:(view:FieldSessionView)=>void;api?:typeof scheduling;vehicleApi?:typeof vehicles;session?:typeof authentication.session;lookup?:typeof lookupSchedulingOriginal;id?:()=>string}){
  const api=deps.api??scheduling,vehicleApi=deps.vehicleApi??vehicles,session=deps.session??authentication.session,lookup=deps.lookup??lookupSchedulingOriginal,id=deps.id??(()=>crypto.randomUUID());
  let alive=true,active:AbortController|null=null,context:Context|null=null,resources:Resources|null=null,rows:readonly Vehicle[]=[],hasMore=false,pending:PendingScheduling|null=null,phase:FieldSessionView['phase']='loading',message=initialFieldSessionView.message,savedJobId='',savedVersion='';
- const completing=deps.mode==='completion',kind=completing?'operations.job.complete':'operations.job.field';
- let completion:CompletionContext|null=null,summary:CompletionSummary|null=null;
+ const mode=deps.mode??'work',completing=mode==='completion',interrupting=mode==='interruption',cancelling=mode==='cancellation';
+ const kind=fieldSessionKind[mode];
+ let openTrip:MileageTrip|null=null;
+ let completion:CompletionContext|null=null,summary:CompletionSummary|null=null,cancellation:UnfulfilledCancellationContext|null=null;
  const eligible=()=>!!pending&&!!context&&pending.businessId===context.context.businessId&&pending.binding===context.binding;
- const view=():FieldSessionView=>Object.freeze({phase,busy:!!active,message,context:phase==='ready'?context:null,resources:phase==='ready'?resources:null,vehicles:phase==='ready'?rows:[],moreVehicles:phase==='ready'&&hasMore,reference:phase==='pending'&&eligible()?pending!.reference.operationId:'',savedJobId:(phase==='committed'||phase==='pending'&&eligible())?savedJobId:'',savedVersion:(phase==='committed'||phase==='pending'&&eligible())?savedVersion:'',...(phase==='ready'&&completion?{completion}:{}),...(phase==='committed'&&summary?{summary}:{})});
+ const view=():FieldSessionView=>Object.freeze({phase,busy:!!active,message,context:phase==='ready'?context:null,resources:phase==='ready'?resources:null,vehicles:phase==='ready'?rows:[],moreVehicles:phase==='ready'&&hasMore,reference:phase==='pending'&&eligible()?pending!.reference.operationId:'',savedJobId:(phase==='committed'||phase==='pending'&&eligible())?savedJobId:'',savedVersion:(phase==='committed'||phase==='pending'&&eligible())?savedVersion:'',...(phase==='ready'&&completion?{completion}:{}),...(phase==='ready'&&openTrip?{openTrip}:{}),...(phase==='ready'&&cancellation?{cancellation}:{}),...(phase==='committed'&&summary?{summary}:{})});
  const emit=()=>{if(alive)deps.change(view());};
- const clear=()=>{resources=null;completion=null;summary=null;rows=[];hasMore=false;savedJobId='';savedVersion='';};
+ const clear=()=>{resources=null;completion=null;summary=null;openTrip=null;cancellation=null;rows=[];hasMore=false;savedJobId='';savedVersion='';};
  const live=(signal:AbortSignal)=>{if(!alive||signal.aborted||active?.signal!==signal)throw Error();};
- const same=(a:Context,b:Context)=>a.binding===b.binding&&a.context.businessId===b.context.businessId&&a.context.operatorId===b.context.operatorId&&a.context.writeState===b.context.writeState&&a.context.recoveryEpoch===b.context.recoveryEpoch&&a.fieldSessionAvailable===b.fieldSessionAvailable&&(!completing||a.jobCompletionAvailable===b.jobCompletionAvailable);
+ const same=(a:Context,b:Context)=>a.binding===b.binding&&a.context.businessId===b.context.businessId&&a.context.operatorId===b.context.operatorId&&a.context.writeState===b.context.writeState&&a.context.recoveryEpoch===b.context.recoveryEpoch&&a.fieldSessionAvailable===b.fieldSessionAvailable&&(!completing||a.jobCompletionAvailable===b.jobCompletionAvailable)&&(!interrupting||a.jobMileageAvailable===b.jobMileageAvailable)&&(!cancelling||a.unfulfilledCancellationAvailable===b.unfulfilledCancellationAvailable);
  async function fresh(signal:AbortSignal){const proof=await session(signal);live(signal);const next=await api.workspace(proof,signal);live(signal);return {proof,next};}
  async function run(work:(signal:AbortSignal)=>Promise<void>,failed:(error:unknown)=>void){if(!alive||active)return;const controller=new AbortController();active=controller;emit();try{await work(controller.signal);}catch(error){if(alive&&!controller.signal.aborted&&active===controller)failed(error);}finally{if(active===controller){active=null;emit();}}}
  function unavailable(error:unknown){clear();context=null;phase=error instanceof AuthenticationError&&error.kind==='denied'?'signed-out':'unavailable';message=phase==='signed-out'?(completing?'Sign in to review completion.':'Sign in to review work status.'):'Current work or access could not be verified. Reload before continuing.';}
@@ -40,7 +50,7 @@ export function createFieldSessionController(deps:{mode?:'work'|'completion';sto
   try{deps.store.clear(pending);}catch{clear();if(saved&&saved.state==='committed'){savedJobId=saved.receipt.subjectId;savedVersion=saved.receipt.sourceVersion;}phase='pending';message=saved?'The server confirmed the action was saved. Local reference cleanup could not be verified. Check Save review before another action.':'No action was saved. Local reference cleanup could not be verified. Check Save review.';return;}
   pending=null;clear();context=null;if(!saved){phase='review';message='The saved job or work status changed. No action was saved. Reload before continuing.';return;}
   savedJobId=saved.receipt.subjectId;savedVersion=saved.receipt.sourceVersion;phase='committed';
-  message=completing?'Job completion saved.':'Work status saved. Open the job to reload its current status and history.';
+  message=completing?'Job completion saved.':interrupting?'Trip interruption saved. Open the job to review the current appointment and history.':cancelling?'Job cancelled. Open the job to review its saved history.':'Work status saved. Open the job to reload its current status and history.';
  }
  async function readSavedCompletion(businessId:string,proof:Proof,signal:AbortSignal){
   if(!completing||phase!=='committed')return;
@@ -59,6 +69,18 @@ export function createFieldSessionController(deps:{mode?:'work'|'completion';sto
   if(deps.blockers?.some(store=>store.read()!==null)){phase='blocked';message='Review other interrupted saves before recording work.';return;}
   if(next.fieldSessionAvailable!==true){phase='blocked';message='Work controls are not enabled in this build. Saved jobs remain available in Schedule.';return;}
   if(!customerUuid(jobId)){phase='blocked';message='Open a saved job in Schedule to record work.';return;}
+  if(cancelling){
+   if(next.unfulfilledCancellationAvailable!==true){phase='blocked';message='Cancellation after starting work is unavailable in this build.';return;}
+   const saved=await api.cancellationContext(next.context.businessId,jobId,proof,signal);live(signal);
+   if('state'in saved){phase='blocked';message='This job is no longer eligible for cancellation after starting work. Open its saved history.';return;}
+   const detail=await api.resources(next.context.businessId,jobId,proof,signal);live(signal);
+   if('state'in detail||detail.head.job.version!==saved.jobVersion||detail.head.job.state!==saved.jobState){
+    phase='review';message='The saved job changed while loading. Reload before continuing.';return;
+   }
+   resources=detail;cancellation=saved;phase='ready';
+   message=next.context.writeState==='ready'?'Review the saved work before cancelling.':'Changes are paused. Saved work is available for review.';
+   return;
+  }
   if(completing){
    if(next.jobCompletionAvailable!==true){phase='blocked';message='Job completion is unavailable in this build.';return;}
    const saved=await api.completionContext(next.context.businessId,jobId,proof,signal);live(signal);
@@ -70,6 +92,14 @@ export function createFieldSessionController(deps:{mode?:'work'|'completion';sto
   }
   const saved=await api.resources(next.context.businessId,jobId,proof,signal);live(signal);if('state'in saved){phase='blocked';message='This job is unavailable in the current workspace.';return;}
   const job=saved.head.job;if(job.fulfillment_mode!=='mobile'||job.operator_actor_id!==next.context.operatorId||!['scheduled','en_route','in_progress','paused'].includes(job.state)){phase='blocked';message='These controls support the assigned operator’s active Mobile jobs. Completed, cancelled and custody workflows remain separate.';return;}
+  if(interrupting){
+   if(next.jobMileageAvailable!==true||job.state!=='en_route'){phase='blocked';message='Open an en-route Mobile job to record a trip interruption.';return;}
+   const trips=await api.mileageTrips({businessId:next.context.businessId,jobId,after:null,pageSize:25},proof,signal);live(signal);
+   const open=trips.state==='loaded'?trips.trips.filter(trip=>trip.state==='open'&&trip.purpose==='mobile_work_site'):[];
+   if(open.length!==1){phase='blocked';message='The open trip could not be verified. Reload the job before making any change.';return;}
+   openTrip=open[0]!;resources=saved;phase='ready';message='Saved open trip loaded.';
+   return;
+  }
   resources=saved;if(job.state==='scheduled'){const page=await vehicleApi.list(next.context.businessId,{search:'',afterId:null,includeArchived:false,pageSize:50},proof,signal);live(signal);rows=page.vehicles;hasMore=page.hasMore;}
   phase='ready';message=next.context.writeState==='ready'?'Saved job loaded. Record what is happening now.':'Changes are paused. Saved work is available for review.';
  },error=>{if(pending){clear();phase='pending';message='The original action could not be verified. Keep its reference and check again.';}else unavailable(error);});
@@ -81,9 +111,35 @@ export function createFieldSessionController(deps:{mode?:'work'|'completion';sto
   });
  }
  const save=(body:FieldSessionSave['body'])=>{
-  if(active||phase!=='ready'||!resources||!context||context.context.writeState!=='ready')return Promise.resolve();const prior=context,job=resources.head.job;let request:FieldSessionSave;
+  if(active||mode!=='work'||phase!=='ready'||!resources||!context||context.context.writeState!=='ready')return Promise.resolve();const prior=context,job=resources.head.job;let request:FieldSessionSave;
   try{request=parseFieldSessionSave({schemaVersion:1,businessId:prior.context.businessId,operationId:id(),recoveryEpoch:prior.context.recoveryEpoch,jobId:job.id,expectedJobVersion:job.version,body});const selected=request.body.action==='depart'?request.body.trip.drivenVehicleId:null;if(selected&&!rows.some(row=>row.id===selected))throw Error();const allowed={scheduled:['depart','direct_arrive'],en_route:['arrive'],in_progress:['pause'],paused:['resume']};if(!Object.hasOwn(allowed,job.state)||!allowed[job.state as keyof typeof allowed].includes(request.body.action))throw Error();}catch{message='Review the action, actual vehicle and required details. No request was submitted.';emit();return Promise.resolve();}
   return submit(prior,fieldSessionOriginal(request),(proof,signal)=>api.saveFieldSession(request,proof,signal));
+ };
+ const interrupt=(draft:InterruptionDraft)=>{
+  if(active||!interrupting||phase!=='ready'||!openTrip||!resources||!context||context.context.writeState!=='ready')return Promise.resolve();
+  const prior=context,{head,scopeParts}=resources;
+  let request:TripInterruptionSave;
+  try{
+   const scope=new Map<string,TripInterruptionSave['body']['scope'][number]>();
+   for(const part of scopeParts){
+    if(part.state!=='assigned')throw Error();
+    const observation={sourceAllocationId:part.sourceAllocationId,expectedPlanId:part.planId,
+     expectedSequence:part.planSequence,entitlementVersionId:part.entitlementVersionId};
+    const previous=scope.get(part.sourceAllocationId);
+    if(previous&&JSON.stringify(previous)!==JSON.stringify(observation))throw Error();
+    scope.set(part.sourceAllocationId,observation);
+   }
+   const {action,reason,actualStop}=draft;
+   request=parseTripInterruptionSave({schemaVersion:1,businessId:prior.context.businessId,operationId:id(),
+    recoveryEpoch:prior.context.recoveryEpoch,jobId:head.job.id,expectedJobVersion:head.job.version,body:{
+     action,reason,expectedAppointmentId:head.latestAppointment.id,
+     trip:{legId:openTrip.legId,expectedLegVersionId:openTrip.legVersionId,actualStop},
+     scope:[...scope.keys()].sort().map(key=>scope.get(key)!),
+     ...draft.action==='cancel'?{expectedModeSequence:null,appointment:null,conflictReview:null,customerCommunication:draft.customerCommunication}
+      :{expectedModeSequence:prior.context.modeVersion?.sequence,appointment:draft.appointment,conflictReview:draft.conflictReview,customerCommunication:null}
+    }});
+  }catch{message='Review the actual stop, reason, and appointment details. No request was submitted.';emit();return Promise.resolve();}
+  return submit(prior,tripInterruptionOriginal(request),(proof,signal)=>api.interrupt(request,proof,signal));
  };
  const complete=(body:CompletionBody)=>{
   if(active||!completing||phase!=='ready'||!completion||!context||context.context.writeState!=='ready')return Promise.resolve();
@@ -99,7 +155,18 @@ export function createFieldSessionController(deps:{mode?:'work'|'completion';sto
   }
   return submit(prior,completionOriginal(request),(proof,signal)=>api.complete(request,proof,signal));
  };
+ const cancelUnfulfilled=(draft:UnfulfilledCancellationDraft)=>{
+  if(active||!cancelling||phase!=='ready'||!cancellation||!context||context.context.writeState!=='ready')return Promise.resolve();
+  const prior=context,loaded=cancellation;
+  let request:ReturnType<typeof parseUnfulfilledCancellationSave>;
+  try{
+   request=parseUnfulfilledCancellationSave({schemaVersion:1,businessId:loaded.businessId,operationId:id(),recoveryEpoch:prior.context.recoveryEpoch,
+    jobId:loaded.jobId,expectedJobVersion:loaded.jobVersion,body:{...draft,expectedWorkIntervalId:loaded.workIntervalId,
+     expectedOpenTravelLegVersionIds:loaded.openTravelLegVersionIds,scope:loaded.scope}});
+  }catch{message='Confirm no work was completed and review the reason and communication. No request was submitted.';emit();return Promise.resolve();}
+  return submit(prior,unfulfilledCancellationOriginal(request),(proof,signal)=>api.cancelUnfulfilled(request,proof,signal));
+ };
  const check=()=>run(async signal=>{if(phase!=='pending'||!pending)return;const {proof,next}=await fresh(signal);context=next;if(!eligible()){message='This action belongs to a different signed-in context. Return there for Save review.';return;}await inspect(proof,signal);},()=>{clear();phase='pending';message='The original action could not be verified. Keep its reference and check again.';});
  function suspend(){active?.abort();active=null;clear();context=null;phase=pending?'pending':'review';message=pending?'Private details cleared. Check the original action before continuing.':'Private form cleared. Reload saved work before continuing.';emit();}
- return Object.freeze({view,load,save,complete,check,moreVehicles,suspend,dispose(){alive=false;active?.abort();active=null;clear();context=null;}});
+ return Object.freeze({view,load,save,complete,interrupt,cancelUnfulfilled,check,moreVehicles,suspend,dispose(){alive=false;active?.abort();active=null;clear();context=null;}});
 }

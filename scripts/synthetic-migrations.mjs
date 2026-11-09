@@ -24,6 +24,12 @@ export async function requireSyntheticSupportTrips(connectionString){
  ])await requireSyntheticReader(connectionString,'crest_commands.'+signature,'SYNTHETIC_SUPPORT_TRIP_MIGRATION_REQUIRED');
 }
 
+export async function requireSyntheticUnfulfilledCancellation(connectionString){
+ await requireSyntheticReader(connectionString,
+  'crest_commands.read_unfulfilled_cancellation_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)',
+  'SYNTHETIC_UNFULFILLED_CANCELLATION_MIGRATION_REQUIRED');
+}
+
 async function requireSyntheticReader(connectionString,signature,missing){
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{

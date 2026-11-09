@@ -12,7 +12,7 @@ import pg from 'pg';
 import {AuthClient} from '@supabase/auth-js';
 import {exportJWK,generateKeyPair,SignJWT} from 'jose';
 import {URI} from 'otpauth';
-import {applySyntheticMigrations,requireSyntheticJobCompletion,requireSyntheticJobMileage,requireSyntheticSupportTrips} from './synthetic-migrations.mjs';
+import {applySyntheticMigrations,requireSyntheticJobCompletion,requireSyntheticJobMileage,requireSyntheticSupportTrips,requireSyntheticUnfulfilledCancellation} from './synthetic-migrations.mjs';
 import {importSyntheticSigningKey} from './synthetic-workspace-key.mjs';
 import {readSyntheticTls} from './synthetic-workspace-tls.mjs';
 
@@ -21,8 +21,8 @@ const origin='https://127.0.0.1:4319',issuer='http://127.0.0.1:54328/auth/v1';
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
 const mode=process.argv[2];
 assert(['init','start','stop'].includes(mode),'use init, start or stop');
-const options=process.argv.slice(3),jobCompletion=options.includes('--job-completion'),jobMileage=options.includes('--job-mileage'),supportTrips=options.includes('--support-trips');
-assert(options.length===Number(jobCompletion)+Number(jobMileage)+Number(supportTrips)&&(mode==='start'||options.length===0),'Unexpected synthetic workspace arguments');
+const options=process.argv.slice(3),jobCompletion=options.includes('--job-completion'),jobMileage=options.includes('--job-mileage'),supportTrips=options.includes('--support-trips'),unfulfilledCancellation=options.includes('--unfulfilled-cancellation');
+assert(options.length===Number(jobCompletion)+Number(jobMileage)+Number(supportTrips)+Number(unfulfilledCancellation)&&(mode==='start'||options.length===0),'Unexpected synthetic workspace arguments');
 function docker(args,env={}){try{return execFileSync('docker',args,{env:{...process.env,...env},stdio:['ignore','pipe','pipe'],timeout:120000,maxBuffer:2*1024*1024}).toString().trim();}catch{throw Error('SYNTHETIC_DOCKER_COMMAND_FAILED');}}
 async function exists(path){try{await access(path);return true;}catch(e){if(e.code==='ENOENT')return false;throw e;}}
 async function save(path,value){await writeFile(path,JSON.stringify(value)+'\n',{flag:'wx',mode:0o600});}
@@ -119,10 +119,11 @@ try{
    if(jobCompletion)await requireSyntheticJobCompletion(connection(state,true));
    if(jobMileage)await requireSyntheticJobMileage(connection(state,true));
    if(supportTrips)await requireSyntheticSupportTrips(connection(state,true));
+   if(unfulfilledCancellation)await requireSyntheticUnfulfilledCancellation(connection(state,true));
    process.env.NODE_ENV='production';
    const {createCrestApplication,createAuthenticationRuntime}=await import('../.local/server/application.mjs');
    const runtime=await createAuthenticationRuntime({database:{connectionString:connection(state,true),environment:'test'},provider:{issuer,publicKey:state.publicKey,environment:'test'},owner:state.owner,loginKey:Buffer.from(state.loginKey,'base64url'),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:Buffer.from(state.tokenKey,'base64url')}]});
-   app=await createCrestApplication({origin,environment:'test',tls:{key:tls.key,cert:tls.cert},authentication:runtime.forServer(),business:{businessId:state.businessId},customers:true,vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true,syntheticCatalog:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticAppointmentHolds:true,syntheticQuoteCommercial:true,syntheticQuoteAmendments:true,syntheticQuoteAmendmentAcceptance:true,syntheticExpenses:true,syntheticScheduling:true,syntheticFieldSessions:true,syntheticJobCompletion:jobCompletion,syntheticJobMileage:jobMileage,syntheticSupportTrips:supportTrips});
+   app=await createCrestApplication({origin,environment:'test',tls:{key:tls.key,cert:tls.cert},authentication:runtime.forServer(),business:{businessId:state.businessId},customers:true,vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true,syntheticCatalog:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticAppointmentHolds:true,syntheticQuoteCommercial:true,syntheticQuoteAmendments:true,syntheticQuoteAmendmentAcceptance:true,syntheticExpenses:true,syntheticScheduling:true,syntheticFieldSessions:true,syntheticJobCompletion:jobCompletion,syntheticJobMileage:jobMileage,syntheticSupportTrips:supportTrips,syntheticUnfulfilledCancellation:unfulfilledCancellation});
    await new Promise((ok,no)=>{app.server.once('error',no);app.server.listen(4319,'127.0.0.1',ok);});
    console.log('Synthetic Crest workspace: '+origin+' . Genuine sign-in required; self-signed local TLS, no automatic browser exception. Data lives in the owned Docker volume.');
    const close=async()=>{await app.close();server.closeAllConnections();await new Promise(ok=>server.close(ok));process.exit(0);};process.once('SIGINT',close);process.once('SIGTERM',close);
