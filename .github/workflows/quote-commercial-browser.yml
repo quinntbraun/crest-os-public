@@ -68,8 +68,15 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-fund
       - run: node scripts/install-tools.mjs
-      - if: matrix.suite != 'amendment_integrity'
-        run: npx --no-install playwright install --with-deps chromium webkit
+      - name: Install browser dependencies with bounded Ubuntu downloads
+        if: matrix.suite != 'amendment_integrity'
+        timeout-minutes: 6
+        run: |
+          test -f /etc/apt/apt-mirrors.txt
+          grep -qF 'mirror+file:/etc/apt/apt-mirrors.txt' /etc/apt/sources.list.d/ubuntu.sources
+          printf '%s\tpriority:1\n%s\tpriority:2\n' 'https://archive.ubuntu.com/ubuntu/' 'https://security.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/99crest-ci-downloads > /dev/null
+          npx --no-install playwright install --with-deps chromium webkit
       - if: matrix.suite != 'amendment_integrity'
         run: npm run build
       # Fast, genuine Auth/PostgreSQL/actual Next feedback. This does not replace

@@ -16,6 +16,8 @@ import registered59 from '../support/registered59-migration-checksums.json';
 import coverage59 from '../support/registered59-export-coverage.json';
 import registered60 from '../support/registered60-migration-checksums.json';
 import coverage60 from '../support/registered60-export-coverage.json';
+import registered61 from '../support/registered61-migration-checksums.json';
+import coverage61 from '../support/registered61-export-coverage.json';
 import registry from '../support/registered54-migration-checksums.json';
 import previous from '../support/registered53-migration-checksums.json';
 import previousCoverage from '../support/registered53-export-coverage.json';
@@ -101,9 +103,9 @@ it('adopts the exact pause and resume correction after the frozen work-time read
 it('appends the exact three reviewed first-start bodies and keeps frozen60 readable',()=>{
  expect(sha256(bytes('tests/support/registered60-migration-checksums.json'))).toBe('352ff53636746f58f583cdef4b02256e145277ed892787cf425bd846022e2bba');
  expect(sha256(bytes('tests/support/registered60-export-coverage.json'))).toBe('eefa78c0caf63edc43914398192dc9f27cbf2cdcfeb4f333acaaa4a235d9002d');
- expect(currentRegistry.migrations).toHaveLength(61);
- expect(currentRegistry.migrations.slice(0,60)).toEqual(registered60.migrations);
- const correction=currentRegistry.migrations.at(-1)!;
+ expect(registered61.migrations).toHaveLength(61);
+ expect(registered61.migrations.slice(0,60)).toEqual(registered60.migrations);
+ const correction=registered61.migrations.at(-1)!;
  expect(correction.file).toBe('20261115180000_job_work_start_correction.sql');
  const sql=bytes('supabase/migrations/'+correction.file).toString();
  const bodies=['context','correction','access'].map(name=>{
@@ -113,9 +115,26 @@ it('appends the exact three reviewed first-start bodies and keeps frozen60 reada
  expect(sql).toBe('-- BR07 first work start. Exact reviewed bodies followed by private web grants.\n'+bodies+
   'GRANT EXECUTE ON FUNCTION\n crest_commands.read_job_work_start(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid),\n'+
   ' crest_commands.correct_job_work_start(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,uuid,bigint,uuid,uuid,jsonb)\n TO crest_web;\n');
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered60 as MigrationRegistry)).not.toThrow();
- expect(currentCoverage).toEqual({...coverage60,migrationCount:61});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:61});
+ expect(()=>validateMigrationSet(registered61 as MigrationRegistry,new Map(registered61.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered60 as MigrationRegistry)).not.toThrow();
+ expect(coverage61).toEqual({...coverage60,migrationCount:61});
+});
+it('appends only the reviewed completion-time commands and preserves the frozen61 inventory',()=>{
+ expect(sha256(bytes('tests/support/registered61-migration-checksums.json'))).toBe('4d57aa9dd35b4a3454a052e40d1436bfa9d7c4bd0066d6bd4f082a469e952c9a');
+ expect(sha256(bytes('tests/support/registered61-export-coverage.json'))).toBe('ce1612528cf0c32f98bae9b47aec6dd681ab3d064b798980d47476ac50282b9b');
+ expect(currentRegistry.migrations).toHaveLength(62);
+ const correction=currentRegistry.migrations.at(-1)!;
+ expect(correction.file).toBe('20261116180000_job_work_end_correction.sql');
+ const bodies=['context','correction','access'].map(name=>{
+  const file='planning/proposals/job-work-end-'+name+'.sql';
+  return '\n-- BEGIN REVIEWED '+file+'\n'+bytes(file).toString()+'\n';
+ }).join('');
+ expect(bytes('supabase/migrations/'+correction.file).toString()).toBe(
+  '-- BR07 completed-job time correction. Exact reviewed bodies followed by private web grants.\n'+bodies+
+  'GRANT EXECUTE ON FUNCTION\n crest_commands.read_job_work_end(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid),\n'+
+  ' crest_commands.correct_job_work_end(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,uuid,bigint,uuid,uuid,jsonb)\n TO crest_web;\n');
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered61 as MigrationRegistry)).not.toThrow();
+ expect(currentCoverage).toEqual({...coverage61,migrationCount:62});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:62});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

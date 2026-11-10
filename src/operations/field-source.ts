@@ -8,6 +8,7 @@ import {recordedOperatorOccupancy} from './work-occupancy.ts';
 import {prepareMileageBody} from './mileage.ts';
 import {workBoundaryKind} from './job-work-boundary-contract.ts';
 import {workStartKind} from './job-work-start-contract.ts';
+import {workEndKind} from './job-work-end-contract.ts';
 import {verifyBusinessHistoryEvidence} from '../security/business-history-evidence.ts';
 import {formatBusinessHistoryCsv} from '../security/business-history-csv.ts';
 import {parseHistoryJson,historyJsonEqual,historyJsonNumber,historyJsonBigint} from '../security/history-evidence-json.ts';
@@ -145,6 +146,57 @@ function verifyWorkStartSource(operation:Record<string,unknown>,rows:readonly Ro
  check(historyJsonEqual(event.evidence,parseHistoryJson(JSON.stringify({schemaVersion:1,action:'correct_first_start',
   initialEventId:request.initialEventId,workVersionId:work.id,arrivalVersionId:linkedVersion}))));
 }
+function verifyWorkEndSource(operation:Record<string,unknown>,rows:readonly Row[],work:ReadonlyMap<unknown,Row>,
+ audits:readonly Record<string,unknown>[],events:ReadonlyMap<unknown,Record<string,unknown>>){
+ check(historyJsonNumber(operation.schema_version,1)&&historyJsonNumber(operation.result_schema_version,1)&&
+  operation.origin==='manual'&&operation.import_row_id===null&&typeof operation.result==='string'&&rows.length===1&&audits.length===3);
+ const stored=parseHistoryJson(operation.result);
+ shape(stored,['schemaVersion','request','receipt']);check(historyJsonNumber(stored.schemaVersion,1));
+ const {request,receipt}=stored;
+ const binding=['schemaVersion','commandType','businessId','actorId','operationId','recoveryEpoch','jobId','completionEventId','correctedAt','reason'];
+ shape(request,[...binding,'expectedJobVersion','workVersionId']);
+ shape(receipt,[...binding,'jobVersion','eventId','completionOutcome','previousCompletedAt','work','auditIds']);
+ check(historyJsonNumber(request.schemaVersion,1)&&request.commandType===workEndKind&&
+  request.businessId===operation.business_id&&request.actorId===operation.actor_id&&request.operationId===operation.operation_id&&
+  request.recoveryEpoch===operation.recovery_epoch&&uuid(request.jobId)&&uuid(request.completionEventId)&&uuid(request.workVersionId)&&
+  uuid(receipt.eventId)&&version(request.expectedJobVersion)&&version(receipt.jobVersion)&&
+  BigInt(receipt.jobVersion)===BigInt(request.expectedJobVersion)+1n&&
+  instant(request.correctedAt)&&typeof request.reason==='string'&&request.reason.trim().length>0&&[...request.reason].length<=1000&&
+  (receipt.completionOutcome==='full'||receipt.completionOutcome==='partial')&&
+  binding.every(key=>historyJsonEqual(request[key],receipt[key])));
+ check(Array.isArray(receipt.auditIds)&&receipt.auditIds.length===3&&new Set(receipt.auditIds).size===3&&
+  audits.every(a=>a.actor_id===request.actorId&&a.created_by===request.actorId&&receipt.auditIds instanceof Array&&receipt.auditIds.includes(a.id)));
+ const completionAudit=events.get(request.completionEventId),eventAudit=events.get(receipt.eventId),jobAudit=audits.find(a=>a.entity_kind==='jobs');
+ check(completionAudit&&completionAudit.action==='create'&&eventAudit&&audits.includes(eventAudit)&&eventAudit.action==='create'&&
+  jobAudit&&jobAudit.entity_id===request.jobId&&jobAudit.entity_version===receipt.jobVersion&&jobAudit.action==='revise');
+ const {before:completionBefore,after:completion}=auditImages(completionAudit),{before:eventBefore,after:event}=auditImages(eventAudit);
+ const {before,after}=auditImages(jobAudit);
+ object(completion);object(completion.evidence);object(event);object(before);object(after);
+ check(completionBefore===null&&completion.id===request.completionEventId&&completion.job_id===request.jobId&&
+  completion.created_by===request.actorId&&completion.to_state==='completed'&&
+  (completion.from_state==='in_progress'||completion.from_state==='paused')&&completion.evidence.action==='complete'&&
+  eventBefore===null&&event.id===receipt.eventId&&event.job_id===request.jobId&&event.operation_id===request.operationId&&
+  event.created_by===request.actorId&&event.sequence===receipt.jobVersion&&event.from_state==='completed'&&event.to_state==='completed'&&
+  event.effective_at===request.correctedAt&&event.reason===request.reason&&instant(event.created_at)&&request.correctedAt<=event.created_at&&
+  before.id===request.jobId&&before.version===request.expectedJobVersion&&before.state==='completed'&&before.fulfillment_mode==='mobile'&&
+  before.operator_actor_id===request.actorId&&before.completed_at===receipt.previousCompletedAt&&
+  before.completion_outcome===receipt.completionOutcome&&instant(before.first_work_at)&&request.correctedAt>=before.first_work_at&&
+  after.completed_at===request.correctedAt&&after.version===receipt.jobVersion&&after.operation_id===request.operationId&&after.updated_by===request.actorId&&
+  unchanged(before,after,['completed_at','version','operation_id','updated_at','updated_by']));
+ const saved=rows[0]!,prior=work.get(request.workVersionId),closed=work.get(completion.evidence.closedWorkIntervalId);
+ check(prior&&closed&&closed.change_kind==='close'&&closed.operation_id===completion.operation_id&&
+  closed.job_id===request.jobId&&closed.operator_actor_id===request.actorId&&closed.ended_at===completion.effective_at&&
+  closed.kind===(completion.from_state==='paused'?'pause':'active')&&
+  saved.replaces_id===prior.id&&saved.logical_id===closed.logical_id&&saved.job_id===request.jobId&&saved.operator_actor_id===request.actorId&&
+  saved.kind===closed.kind&&prior.ended_at===receipt.previousCompletedAt&&prior.ended_at!==saved.ended_at&&
+  instant(saved.started_at)&&request.correctedAt>=saved.started_at&&saved.ended_at===request.correctedAt&&
+  saved.change_kind==='correct'&&saved.reason===request.reason&&
+  unchanged(prior,saved,['id','sequence','replaces_id','ended_at','change_kind','reason','created_at','operation_id']));
+ sourceImage('work_intervals',saved,receipt.work);
+ check(historyJsonEqual(event.evidence,parseHistoryJson(JSON.stringify({schemaVersion:1,action:'correct_completion_time',
+  completionEventId:request.completionEventId,workVersionId:saved.id}))));
+}
+
 export function verifyFieldSources(value:unknown){
  try{
   shape(value,['context','rows','historyEvidence']);const c=value.context;shape(c,['schemaVersion','profile','businessId','snapshotToken','historySnapshotToken','observedAt','expectedCounts']);
@@ -169,7 +221,7 @@ export function verifyFieldSources(value:unknown){
   const history=verifyBusinessHistoryEvidence(value.historyEvidence,{businessId:c.businessId});check(history.context.snapshotToken===c.historySnapshotToken);
   const operations=new Map<string,Record<string,unknown>>(),audits=new Map<string,Record<string,unknown>>();
   const boundaryAuditIds=new Map<string,string[]>(),boundaryRows=new Map<string,Row[]>();
-  const startAudits=new Map<string,Record<string,unknown>[]>(),startRows=new Map<string,Row[]>(),jobEventAudits=new Map<unknown,Record<string,unknown>>();
+  const endpointAudits=new Map<string,Record<string,unknown>[]>(),endpointRows=new Map<string,Row[]>(),jobEventAudits=new Map<unknown,Record<string,unknown>>();
   for(const record of history.records){
    const body=parseHistoryJson(record.canonicalEvidence);object(body);object(body.row);
    const r=body.row,id=r.operation_id as string;
@@ -177,10 +229,11 @@ export function verifyFieldSources(value:unknown){
    if(r.entity_kind==='job_events'){
     check(!jobEventAudits.has(r.entity_id));jobEventAudits.set(r.entity_id,r);
    }
-   if(operations.get(id)?.command_type===workStartKind){
-    const entries=startAudits.get(id)??[];entries.push(r);startAudits.set(id,entries);
+   const command=operations.get(id)?.command_type;
+   if(command===workStartKind||command===workEndKind){
+    const entries=endpointAudits.get(id)??[];entries.push(r);endpointAudits.set(id,entries);
    }
-   if(operations.get(id)?.command_type===workBoundaryKind){
+   if(command===workBoundaryKind){
     check(r.entity_kind==='work_intervals');
     const ids=boundaryAuditIds.get(id)??[];ids.push(record.recordId);boundaryAuditIds.set(id,ids);
    }
@@ -198,16 +251,19 @@ export function verifyFieldSources(value:unknown){
     check(group==='work_intervals'&&typeof row.operation_id==='string');
     const pair=boundaryRows.get(row.operation_id)??[];pair.push(row);boundaryRows.set(row.operation_id,pair);
    }
-   if(operation.command_type===workStartKind){
+   if(operation.command_type===workStartKind||operation.command_type===workEndKind){
     check((group==='work_intervals'||group==='travel_legs')&&typeof row.operation_id==='string');
-    const entries=startRows.get(row.operation_id)??[];entries.push(row);startRows.set(row.operation_id,entries);
+    const entries=endpointRows.get(row.operation_id)??[];entries.push(row);endpointRows.set(row.operation_id,entries);
    }
   }check(used.size===audits.size);
   for(const [id,operation] of operations)if(operation.command_type===workBoundaryKind){
    verifyWorkBoundarySource(operation,boundaryRows.get(id)??[],maps.work_intervals,boundaryAuditIds.get(id)??[]);
   }
   for(const [id,operation] of operations)if(operation.command_type===workStartKind){
-   verifyWorkStartSource(operation,startRows.get(id)??[],maps,startAudits.get(id)??[],jobEventAudits);
+   verifyWorkStartSource(operation,endpointRows.get(id)??[],maps,endpointAudits.get(id)??[],jobEventAudits);
+  }
+  for(const [id,operation] of operations)if(operation.command_type===workEndKind){
+   verifyWorkEndSource(operation,endpointRows.get(id)??[],maps.work_intervals,endpointAudits.get(id)??[],jobEventAudits);
   }
   return Object.freeze({context:Object.freeze({...c,expectedCounts:Object.freeze({...c.expectedCounts})}) as Context,rows:Object.freeze(rows),history,occupancy});
  }catch(error){if(error instanceof FieldSourceError)throw error;throw new FieldSourceError();}
