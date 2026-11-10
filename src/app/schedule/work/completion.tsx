@@ -6,6 +6,7 @@ import type {CompletionAllocation,CompletionPiece,WorkOutcome} from '../../../op
 import {isReviewOutcomeAction} from '../../../security/original-operation-reference';
 import type {ReviewOutcomeAction} from '../../../security/original-operation-reference';
 import type {ReviewOutcomeBody,ReviewOutcomeContext} from '../../../operations/review-message-contract';
+import {ReviewMessageHistory} from '../../review-message-history';
 
 type OutcomeChoice=''|WorkOutcome;
 type Selection=OutcomeChoice|'split';
@@ -203,8 +204,9 @@ function ReviewOutcomeForm({disabled,save}:{disabled:boolean;save:(body:ReviewOu
  </details>;
 }
 
-export function SavedCompletion({summary,outcome,outcomeEnabled,canRecordOutcome,disabled,saveOutcome}:{
+export function SavedCompletion({summary,outcome,outcomeEnabled,historyAvailable,canRecordOutcome,disabled,saveOutcome}:{
  summary:CompletionSummary;outcome:ReviewOutcomeContext|undefined;outcomeEnabled:boolean;canRecordOutcome:boolean;disabled:boolean;
+ historyAvailable:boolean;
  saveOutcome:(body:ReviewOutcomeBody)=>Promise<void>
 }){
  const reviewLabel=outcome?reviewLabels[outcome.kind]:outcomeEnabled?'Saved status unavailable':'Prepared';
@@ -216,11 +218,13 @@ export function SavedCompletion({summary,outcome,outcomeEnabled,canRecordOutcome
   <h3>Recorded scope</h3>
   <ul>{summary.outcomes.map(row=><li key={row.id} className="completion-text"><strong>{labels[row.outcome]}</strong> · {row.scopeDescription}{row.reason?' · '+row.reason:''}</li>)}</ul>
   <h3>Review request</h3>
-  {summary.review.message?<PreparedReviewMessage key={summary.jobId+':'+(outcome?.eventId??summary.jobVersion)}
+  {summary.review.message?<PreparedReviewMessage key={'draft:'+summary.jobId+':'+(outcome?.eventId??summary.jobVersion)}
    message={summary.review.message} label={reviewLabel} canCopy={outcomeEnabled?!!outcome&&outcome.kind!=='owner_confirmed_sent':true}/>:
    <p>{summary.review.state==='pending'?'Pending':'Skipped'}{summary.review.reason?' · '+summary.review.reason:''}</p>}
   {outcome&&outcome.kind!=='prepared'&&<p>Recorded <time dateTime={outcome.effectiveAt}>{new Date(outcome.effectiveAt).toLocaleString()}</time>{outcome.reason?' · '+outcome.reason:''}</p>}
   {outcome&&canRecordOutcome&&<ReviewOutcomeForm key={outcome.eventId} disabled={disabled} save={saveOutcome}/>}
+  {historyAvailable&&<ReviewMessageHistory key={'history:'+summary.jobId+':'+(outcome?.eventId??summary.jobVersion)}
+   businessId={summary.businessId} scope={{kind:'job',id:summary.jobId}}/>}
   <h3>Follow-up tasks</h3>
   <ul>{summary.tasks.map(task=><li key={task.kind}>{task.kind==='invoice_finalization'?'Invoice review':'Commercial resolution'} · Open</li>)}</ul>
  </section>;

@@ -1,6 +1,6 @@
 import type {Proof} from './authentication';
 import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
-const routes=['slot-review','original','workspace','agreement','resources','pending','list','read','history','mode-history','mode-save','book','cancel','reschedule','field-save','completion-context','complete','mileage-trips','mileage-history','mileage-save','support-trips','support-trip-history','support-trip-mileage','support-trip-save','interrupt','unfulfilled-context','cancel-unfulfilled','work-time','work-boundary-save','work-start','work-start-save','work-end','work-end-save','mobile-departure','mobile-departure-save','review-outcome','review-outcome-save'] as const;
+const routes=['slot-review','original','workspace','agreement','resources','pending','list','read','history','mode-history','mode-save','book','cancel','reschedule','field-save','completion-context','complete','mileage-trips','mileage-history','mileage-save','support-trips','support-trip-history','support-trip-mileage','support-trip-save','interrupt','unfulfilled-context','cancel-unfulfilled','work-time','work-boundary-save','work-start','work-start-save','work-end','work-end-save','mobile-departure','mobile-departure-save','review-outcome','review-outcome-save','review-history'] as const;
 export type SchedulingRoute=typeof routes[number];
 type Kind='input'|'not_submitted'|'recovery'|'limited'|'unknown'|'unavailable';
 export class SchedulingClientError extends Error{readonly kind:Kind;constructor(kind:Kind){super('SCHEDULING_REQUEST_FAILED');this.name='SchedulingClientError';this.kind=kind;}}
@@ -40,6 +40,7 @@ export async function postScheduling(route:SchedulingRoute,body:object,proof:Pro
    ...route==='workspace'&&response.headers.get('x-crest-work-start')==='1'?{workStartAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-work-end')==='1'?{workEndAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-mobile-departure')==='1'?{mobileDepartureAvailable:true as const}:{},
+   ...route==='workspace'&&response.headers.get('x-crest-review-history')==='1'?{reviewHistoryAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-review-outcome')==='1'?{reviewOutcomeAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-work-boundary')==='1'?{workBoundaryAvailable:true as const}:{}};
  }catch(error){throw error instanceof SchedulingClientError?error:new SchedulingClientError(mutation?(sent?'unknown':'not_submitted'):'unavailable');}

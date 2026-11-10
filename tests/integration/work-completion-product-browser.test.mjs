@@ -10,7 +10,7 @@ import {sourceExportBrowserFixture} from '../support/source-export-browser-fixtu
 const dollars=cents=>(cents/100n).toString()+'.'+(cents%100n).toString().padStart(2,'0');
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine End Job editor and saved completion',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
-  quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true});
+  quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true});
  let browser;
  try{
   browser=await engine.launch();
@@ -201,6 +201,51 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(summary).toContainText('Text draft · Owner-confirmed Sent');
   await expect(reviewDraft).toHaveValue(draftText);
   await capture('outcome');
+  const historyDisclosure=summary.locator('details').filter({has:page.getByText('Review message history',{exact:true})});
+  const historyButton=historyDisclosure.locator('summary');
+  await expect(historyDisclosure.getByRole('listitem')).toHaveCount(0);
+  let historyReads=0;
+  await page.route('**/api/business/scheduling/review-history',async route=>{
+   historyReads++;
+   if(historyReads===1)await route.abort('failed');
+   else await route.continue();
+  });
+  await historyButton.focus();
+  await historyButton.press('Enter');
+  await expect(historyDisclosure.getByRole('alert')).toHaveText('Couldn’t load saved message history.');
+  assert.equal(historyReads,1);
+  await historyDisclosure.getByRole('button',{name:'Retry history',exact:true}).click();
+  const historyRows=historyDisclosure.getByRole('listitem');
+  await expect(historyRows).toHaveCount(3);
+  await expect(historyRows.nth(0)).toContainText('Owner-confirmed sent');
+  await expect(historyRows.nth(1)).toContainText('Synthetic messaging app unavailable');
+  await expect(historyRows.nth(2)).toContainText('Prepared');
+  await expect(historyDisclosure).not.toContainText('https://example.invalid/crest-review');
+  assert.equal(historyReads,2);
+  await capture('history');
+  await historyButton.click();
+  await expect(historyDisclosure.locator('li')).toHaveCount(0);
+  await page.unroute('**/api/business/scheduling/review-history');
+  const customer=(await fixture.client.query(
+   'SELECT c.id,c.display_name FROM crest.customers c JOIN crest.jobs j ON j.business_id=c.business_id AND j.customer_id=c.id WHERE j.id=$1 AND j.business_id=$2',
+   [jobId,fixture.business])).rows[0];
+  assert(customer);
+  const foreignHistory=await post('review-history',{scopeKind:'customer',scopeId:randomUUID(),cursorSource:null,cursorId:null});
+  assert.equal(foreignHistory.status,200);
+  assert.deepEqual(foreignHistory.value.entries,[]);
+  const invalidCursor=await post('review-history',{scopeKind:'customer',scopeId:customer.id,cursorSource:null,cursorId:randomUUID()});
+  assert.equal(invalidCursor.status,400);
+  await page.goto(fixture.origin+'/customers');
+  await page.getByRole('button',{name:customer.display_name,exact:true}).click();
+  const customerHistory=page.locator('details').filter({has:page.getByText('Review message history',{exact:true})});
+  await customerHistory.locator('summary').click();
+  await expect(customerHistory.getByRole('listitem')).toHaveCount(3);
+  await expect(customerHistory.getByRole('listitem').nth(1)).toContainText('Synthetic messaging app unavailable');
+  const jobLink=customerHistory.getByRole('link',{name:'Open job completion',exact:true}).first();
+  await expect(jobLink).toHaveAttribute('href',end);
+  await jobLink.click();
+  await expect(status).toHaveText('Saved completion loaded.');
+  await expect(summary.locator('details[open]').filter({has:page.getByText('Review message history',{exact:true})})).toHaveCount(0);
   await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
   await page.getByRole('link',{name:'Review saved completion',exact:true}).click();
   await expect(status).toHaveText('Saved completion loaded.');

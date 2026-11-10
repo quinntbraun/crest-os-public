@@ -62,7 +62,7 @@ export function FieldSessionScreen({jobId,mode='work'}:{jobId:string;mode?:Field
    const controller=current.current;if(!controller)return;await controller.complete(body);if(current.current===controller)status.current?.focus();
   }}/>}
   {view.summary&&<SavedCompletion summary={view.summary} outcome={view.reviewOutcome} outcomeEnabled={view.reviewOutcomeEnabled===true}
-   canRecordOutcome={view.canRecordReviewOutcome===true} disabled={view.busy} saveOutcome={async body=>{
+   historyAvailable={view.reviewHistoryAvailable===true} canRecordOutcome={view.canRecordReviewOutcome===true} disabled={view.busy} saveOutcome={async body=>{
     const controller=current.current;if(!controller)return;await controller.recordReviewOutcome(body);if(current.current===controller)status.current?.focus();
    }}/>}
   {view.savedJobId&&<>{!view.summary&&<p>Confirmed saved version {view.savedVersion}.</p>}<a className="primary-action" href={'/schedule?job='+encodeURIComponent(view.savedJobId)}>Open updated job in Schedule</a></>}

@@ -70,6 +70,10 @@ export async function requireSyntheticReviewOutcome(connectionString){
  ])await requireSyntheticReader(connectionString,'crest_commands.'+signature,'SYNTHETIC_REVIEW_OUTCOME_MIGRATION_REQUIRED');
 }
 
+export async function requireSyntheticReviewHistory(connectionString){
+ await requireSyntheticReader(connectionString,'crest_commands.read_review_message_history(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,text,uuid,text,uuid)','SYNTHETIC_REVIEW_HISTORY_MIGRATION_REQUIRED');
+}
+
 async function requireSyntheticReader(connectionString,signature,missing){
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{
