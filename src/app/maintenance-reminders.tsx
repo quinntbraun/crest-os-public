@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useId,useRef,useState} from 'react';
+import {useCallback,useEffect,useId,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {createMaintenanceReminderController,initialMaintenanceReminderView} from '../client/maintenance-follow-up';
 import type {MaintenanceAction,MaintenanceHistory,MaintenanceReminderView,MaintenanceScope} from '../client/maintenance-follow-up';
@@ -81,7 +81,7 @@ function ReminderEditor({editor,view,close,controller}:{editor:Editor;view:Maint
  </form>;
 }
 
-function ReminderHistory({history,view,close,more}:{history:MaintenanceHistory;view:MaintenanceReminderView;close:()=>void;more:()=>void}){
+function ReminderHistory({history,view,close,more,download}:{history:MaintenanceHistory;view:MaintenanceReminderView;close:()=>void;more:()=>void;download:()=>void}){
  const heading=useRef<HTMLHeadingElement>(null);
  useEffect(()=>{heading.current?.focus();},[history.taskId]);
  return <section aria-label="Maintenance reminder history">
@@ -94,7 +94,10 @@ function ReminderHistory({history,view,close,more}:{history:MaintenanceHistory;v
    {event.rebookingJobId&&<a href={'/schedule?job='+encodeURIComponent(event.rebookingJobId)}>Open linked rebooking</a>}
   </li>)}</ol>
   {history.hasMore&&<button type="button" className="secondary" disabled={view.busy} onClick={more}>Load more history</button>}
-  <button type="button" className="secondary" disabled={view.busy} onClick={close}>Close history</button>
+  <div className="maintenance-actions">
+   <button type="button" className="secondary" disabled={view.busy} onClick={download}>Download history (CSV + JSON)</button>
+   <button type="button" className="secondary" disabled={view.busy} onClick={close}>Close history</button>
+  </div>
  </section>;
 }
 
@@ -102,23 +105,38 @@ export function MaintenanceReminders({businessId,scope}:{businessId:string;scope
  const [view,setView]=useState(initialMaintenanceReminderView),[editor,setEditor]=useState<Editor|null>(null);
  const current=useRef<ReminderController|null>(null),details=useRef<HTMLDetailsElement>(null),status=useRef<HTMLParagraphElement>(null);
  const {kind,id}=scope,archived=scope.kind==='customer'&&scope.archived;
+ const downloadUrl=useRef<string|null>(null);
+ const revokeDownload=useCallback(()=>{
+  if(downloadUrl.current)URL.revokeObjectURL(downloadUrl.current);
+  downloadUrl.current=null;
+ },[]);
+ function downloadHistory(taskId:string){
+  void current.current?.downloadHistory(taskId,bytes=>{
+   revokeDownload();
+   const url=downloadUrl.current=URL.createObjectURL(new Blob([bytes],{type:'application/zip'}));
+   const link=document.createElement('a');
+   link.href=url;link.download='crest-maintenance-reminder-history.zip';link.rel='noopener noreferrer';link.hidden=true;
+   document.body.append(link);
+   try{link.click();}finally{link.remove();setTimeout(()=>{if(downloadUrl.current===url)revokeDownload();},1000);}
+  });
+ }
  useEffect(()=>{
   const controller=createMaintenanceReminderController({businessId,scope:kind==='customer'?{kind,id,archived}:{kind,id},
    storage:{getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)},change:setView});
   current.current=controller;
   if(details.current?.open)void controller.load();
-  const clear=()=>{if(details.current)details.current.open=false;controller.suspend();setEditor(null);};
+  const clear=()=>{revokeDownload();if(details.current)details.current.open=false;controller.suspend();setEditor(null);};
   const hidden=()=>{if(document.visibilityState==='hidden')clear();};
   const restored=(event:PageTransitionEvent)=>{if(event.persisted)clear();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',clear);window.addEventListener('pageshow',restored);
-  return ()=>{current.current=null;controller.dispose();document.removeEventListener('visibilitychange',hidden);
+  return ()=>{revokeDownload();current.current=null;controller.dispose();document.removeEventListener('visibilitychange',hidden);
    window.removeEventListener('pagehide',clear);window.removeEventListener('pageshow',restored);};
- },[businessId,kind,id,archived]);
+ },[businessId,kind,id,archived,revokeDownload]);
  async function refresh(){const controller=current.current;await controller?.load();if(current.current===controller)status.current?.focus();}
  const closeEditor=()=>{setEditor(null);status.current?.focus();};
  return <details className="review-message-history maintenance-reminders" ref={details} onToggle={event=>{
   if(event.currentTarget.open)void current.current?.load();
-  else{current.current?.suspend();setEditor(null);}
+  else{revokeDownload();current.current?.suspend();setEditor(null);}
  }}>
   <summary>Maintenance reminders</summary>
   <div aria-busy={view.busy}>
@@ -142,8 +160,8 @@ export function MaintenanceReminders({businessId,scope}:{businessId:string;scope
       </div>
      </li>)}</ul>}
     {view.more&&<button type="button" className="secondary" disabled={view.busy||editor!==null} onClick={()=>void current.current?.more()}>Load more reminders</button>}
-    {view.history&&<ReminderHistory history={view.history} view={view} close={()=>current.current?.closeHistory()}
-     more={()=>void current.current?.showHistory(view.history!.taskId,true)}/>}
+    {view.history&&<ReminderHistory history={view.history} view={view} close={()=>{revokeDownload();current.current?.closeHistory();}}
+     more={()=>void current.current?.showHistory(view.history!.taskId,true)} download={()=>downloadHistory(view.history!.taskId)}/>}
     {view.canCreate&&editor===null&&<button type="button" disabled={view.busy}
      onClick={()=>{current.current?.closeHistory();setEditor({kind:'create'});}}>Add maintenance reminder</button>}
     {editor&&<ReminderEditor editor={editor} view={view} controller={()=>current.current} close={closeEditor}/>}

@@ -1,5 +1,7 @@
 import {randomBytes,randomUUID} from 'node:crypto';
 import {expect,it,vi} from 'vitest';
+import {strFromU8,unzipSync} from 'fflate';
+import {buildMaintenanceFollowUpArchive} from '../../src/operations/maintenance-follow-up-archive';
 import {createMaintenanceReminderController,initialMaintenanceReminderView} from '../../src/client/maintenance-follow-up';
 import type {MaintenanceReminderView} from '../../src/client/maintenance-follow-up';
 import {scheduling,SchedulingClientError} from '../../src/client/scheduling';
@@ -15,6 +17,7 @@ function setup(){
  const api={...scheduling,workspace:vi.fn<typeof scheduling.workspace>().mockResolvedValue(snapshot),
   maintenanceList:vi.fn<typeof scheduling.maintenanceList>().mockResolvedValue({schemaVersion:1,businessId,
    scopeKind:'customer',scopeId:customerId,throughAt:null,entries:[],next:null}),
+  maintenanceHistory:vi.fn<typeof scheduling.maintenanceHistory>(),
   saveMaintenance:vi.fn<typeof scheduling.saveMaintenance>()};
  let view:MaintenanceReminderView=initialMaintenanceReminderView;
  const controller=createMaintenanceReminderController({businessId,scope:{kind:'customer',id:customerId,archived:false},
@@ -65,4 +68,36 @@ it('discards late private reads when the reminder panel closes',async()=>{
  release?.({schemaVersion:1,businessId:f.businessId,scopeKind:'customer',scopeId:f.customerId,throughAt:null,entries:[],next:null});
  await loaded;
  expect(f.view()).toEqual(initialMaintenanceReminderView);
+});
+
+it('refuses to download if another save changes the verified history head',async()=>{
+ const f=setup(),taskId=randomUUID();
+ const opened={schemaVersion:1 as const,taskId,customerId:f.customerId,vehicleId:null,sourceJobId:null,
+  dueAt:date,version:'1',eventId:randomUUID(),state:'open' as const,snoozedUntil:null,rebookingJobId:null,
+  reason:'Synthetic saved note',recordedAt:date};
+ const snoozed={...opened,version:'2',eventId:randomUUID(),state:'snoozed' as const,snoozedUntil:date};
+ const ready={state:'found' as const,businessId:f.businessId,taskId,current:opened,entries:[opened],hasMore:false};
+ f.api.maintenanceList.mockResolvedValue({schemaVersion:1,businessId:f.businessId,scopeKind:'customer',scopeId:f.customerId,
+  throughAt:null,entries:[{record:opened,customerName:'Synthetic customer',vehicleLabel:null,effectiveDueAt:date}],next:null});
+ f.api.maintenanceHistory.mockResolvedValueOnce(ready).mockResolvedValueOnce(ready)
+  .mockResolvedValueOnce({...ready,current:snoozed,entries:[snoozed]});
+ await f.controller.load();await f.controller.showHistory(taskId);
+ const download=vi.fn();
+ await f.controller.downloadHistory(taskId,download);
+ expect(f.api.maintenanceHistory.mock.calls.map(call=>call[1])).toEqual([
+  {taskId,afterVersion:'0'},{taskId,afterVersion:'0'},{taskId,afterVersion:'1'},
+ ]);
+ expect(download).not.toHaveBeenCalled();
+ expect(f.view()).toMatchObject({phase:'unavailable',history:null});
+});
+
+it('preserves exact note text and maps a formula marker after a control character',async()=>{
+ const taskId=randomUUID(),businessId=randomUUID(),eventId=randomUUID();
+ const note='\r\n\t=sample\\N';
+ const event={schemaVersion:1,taskId,customerId:randomUUID(),vehicleId:null,sourceJobId:null,dueAt:date,
+  version:'1',eventId,state:'open',snoozedUntil:null,rebookingJobId:null,reason:note,recordedAt:date};
+ const files=unzipSync(await buildMaintenanceFollowUpArchive(businessId,taskId,event,[event]));
+ expect(JSON.parse(strFromU8(files['saved_history.json']!)).events[0].reason).toBe(note);
+ expect(JSON.parse(strFromU8(files['dictionary.json']!)).escapes).toEqual([{event_id:eventId,column:'reason',apostrophe_prefix:true}]);
+ expect(strFromU8(files['maintenance_reminder_history.csv']!)).toContain('"'+String.fromCharCode(39)+'\r\n\t=sample\\\\N"');
 });

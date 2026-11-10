@@ -1,13 +1,16 @@
 import {authentication} from './authentication';
+import type {Proof} from './authentication';
 import {scheduling,SchedulingClientError} from './scheduling';
 import {maintenanceFollowUpKind,maintenanceFollowUpOriginal,parseMaintenanceFollowUpSave} from '../operations/maintenance-follow-up-contract';
 import type {MaintenanceFollowUpSave} from '../operations/maintenance-follow-up-contract';
 import {parseVehicle} from '../customer/vehicle-contract';
+import {buildMaintenanceFollowUpArchive,maintenanceArchiveMaxVersions} from '../operations/maintenance-follow-up-archive';
 import {createPendingSchedulingStore,pendingSchedulingKeys} from './pending-scheduling';
 import type {PendingScheduling} from './pending-scheduling';
 import type {SchedulingOriginalKind} from '../operations/scheduling-original-contract';
 
 type Context=Awaited<ReturnType<typeof scheduling.workspace>>;
+type CheckedContext=Readonly<{proof:Proof;current:Context}>;
 type Page=Awaited<ReturnType<typeof scheduling.maintenanceList>>;
 type History=Awaited<ReturnType<typeof scheduling.maintenanceHistory>>;
 type SavedHistory=Extract<History,{state:'found'}>;
@@ -68,15 +71,18 @@ export function createMaintenanceReminderController(deps:{
   try{await work(controller.signal);}catch{if(alive&&!controller.signal.aborted&&active===controller)failed();}
   finally{if(active===controller){active=null;emit();}}
  }
- async function fresh(signal:AbortSignal){
-  const proof=await session(signal);live(signal);
+ // Each user action starts with a fresh proof. Reuse it for the action's
+ // authorized requests so confirmation does not spend an extra admission.
+ async function fresh(signal:AbortSignal,proof?:Proof):Promise<CheckedContext>{
+  proof??=await session(signal);
+  live(signal);
   const current=await api.workspace(proof,signal);live(signal);
   if(current.context.businessId!==businessId||current.maintenanceFollowUpAvailable!==true||
    context&&!sameContext(context,current))throw Error();
   return {proof,current};
  }
- async function readPage(signal:AbortSignal,cursor:Page['next']){
-  const {proof,current}=await fresh(signal);
+ async function readPage(signal:AbortSignal,cursor:Page['next'],checked?:CheckedContext){
+  const {proof,current}=checked??await fresh(signal);
   if(scope.kind==='job'&&!customerId){
    const job=await api.resources(businessId,scope.id,proof,signal);live(signal);
    if('state'in job||job.head.job.state!=='completed')throw Error();
@@ -86,7 +92,7 @@ export function createMaintenanceReminderController(deps:{
   if(scope.kind==='customer')customerId=scope.id;
   const page=await api.maintenanceList(businessId,{scopeKind:scope.kind,scopeId:scope.id,throughAt:null,
    afterDueAt:cursor?.effectiveDueAt??null,afterTaskId:cursor?.taskId??null},proof,signal);live(signal);
-  const confirmed=await fresh(signal);
+  const confirmed=await fresh(signal,proof);
   if(!sameContext(current,confirmed.current)||page.entries.some(row=>row.record.customerId!==customerId))throw Error();
   const combined=cursor?[...entries,...page.entries]:page.entries;
   if(new Set(combined.map(row=>row.record.taskId)).size!==combined.length)throw Error();
@@ -112,12 +118,46 @@ export function createMaintenanceReminderController(deps:{
   await run(async signal=>{
    const {proof,current}=await fresh(signal),afterVersion=previous?.entries.at(-1)?.version??'0';
    const page=await api.maintenanceHistory(businessId,{taskId,afterVersion},proof,signal);live(signal);
-   const confirmed=await fresh(signal);
+   const confirmed=await fresh(signal,proof);
    if(!sameContext(current,confirmed.current)||page.state!=='found'||page.current.customerId!==customerId||
     scope.kind==='job'&&page.current.sourceJobId!==scope.id)throw Error();
    history={...page,entries:previous?[...previous.entries,...page.entries]:page.entries};
    message='Saved maintenance history loaded.';
   },()=>{clear();setStatus('unavailable','Saved history or workspace access could not be verified. Reload to try again.');});
+ }
+ async function downloadHistory(taskId:string,download:(bytes:Uint8Array<ArrayBuffer>)=>void){
+  const selected=history;
+  if(phase!=='ready'||selected?.taskId!==taskId)return;
+  await run(async signal=>{
+   const deadline=performance.now()+30000;
+   const assertLive=()=>{live(signal);if(performance.now()>=deadline||history!==selected||store.read())throw Error();};
+   const {proof,current}=await fresh(signal);
+   const expected=JSON.stringify(selected.current);
+   if(BigInt(selected.current.version)>BigInt(maintenanceArchiveMaxVersions))throw Error();
+   const entries:SavedHistory['entries'][number][]=[];
+   let cursor='0',complete=false;
+   while(!complete){
+    assertLive();
+    const page=await api.maintenanceHistory(businessId,{taskId,afterVersion:cursor},proof,signal);
+    assertLive();
+    if(page.state!=='found'||page.taskId!==taskId||page.businessId!==businessId||JSON.stringify(page.current)!==expected||
+     page.entries.length===0||entries.length+page.entries.length>maintenanceArchiveMaxVersions)throw Error();
+    entries.push(...page.entries);
+    cursor=entries.at(-1)!.version;
+    complete=!page.hasMore;
+   }
+   const bytes=await buildMaintenanceFollowUpArchive(businessId,taskId,selected.current,entries);
+   try{
+    assertLive();
+    const head=await api.maintenanceHistory(businessId,{taskId,afterVersion:cursor},proof,signal);
+    const confirmed=await fresh(signal,proof);
+    assertLive();
+    if(head.state!=='found'||head.taskId!==taskId||head.businessId!==businessId||head.hasMore||head.entries.length!==0||
+     JSON.stringify(head.current)!==expected||!sameContext(current,confirmed.current))throw Error();
+    download(bytes);
+    message='Reminder history download requested. Check your downloads.';
+   }finally{bytes.fill(0);}
+  },()=>{clear();setStatus('unavailable','No history file was prepared. Reload to verify the reminder and try again.');});
  }
  async function save(taskId:string|null,body:SaveBody){
   if(!mayWrite()||!context)return;
@@ -165,7 +205,7 @@ export function createMaintenanceReminderController(deps:{
     if(result.reason==='snooze'||result.reason==='rebooking'){message=conflictMessages[result.reason]!;return;}
     clear();setStatus('review',conflictMessages[result.reason]??'Reload saved reminders before continuing.');return;
    }
-   await readPage(signal,null);
+   await readPage(signal,null,{proof,current});
    message='Maintenance reminder saved.';
   },()=>{
    if(retained){uncertain();return;}
@@ -177,7 +217,7 @@ export function createMaintenanceReminderController(deps:{
  function suspend(){
   active?.abort();active=null;clear();setStatus('idle',initialMaintenanceReminderView.message);emit();
  }
- return Object.freeze({load,more,showHistory,closeHistory:()=>{history=null;emit();},
+ return Object.freeze({load,more,showHistory,downloadHistory,closeHistory:()=>{history=null;emit();},
   create:(dueAt:string,vehicleId:string|null,reason:string|null)=>save(null,{kind:'created',customerId,
    sourceJobId:scope.kind==='job'?scope.id:null,vehicleId,dueAt,reason}),
   change:(taskId:string,body:MaintenanceAction)=>save(taskId,body),suspend,dispose:()=>{alive=false;suspend();}});
