@@ -7,8 +7,9 @@ import {openPendingOriginalOperation} from '../../src/client/pending-original-op
 import {lookupSchedulingOriginal} from '../../src/client/scheduling-original';
 function packet(kind:typeof fieldOriginalKinds[number]){
  const original=parseFieldOriginal(originalOperationFixture(kind)),ref=original.reference;
- const target='legVersionId'in ref?{subjectId:ref.legId,sourceRecordId:randomUUID(),sourceVersion:'2'}:
-  'jobId'in ref?{subjectId:ref.jobId,sourceRecordId:ref.jobId,
+ const target='messageId'in ref?{subjectId:ref.messageId,sourceRecordId:randomUUID(),sourceVersion:'1'}:
+  'legVersionId'in ref?{subjectId:ref.legId,sourceRecordId:randomUUID(),sourceVersion:'2'}:
+  'expectedJobVersion'in ref?{subjectId:ref.jobId,sourceRecordId:ref.jobId,
    sourceVersion:(BigInt(ref.expectedJobVersion)+(kind==='operations.job.work_boundary.correct'?0n:1n)).toString()}:
   {subjectId:ref.legId,sourceRecordId:randomUUID(),sourceVersion:'expectedEvidenceVersion'in ref?
    (BigInt(ref.expectedEvidenceVersion)+1n).toString():ref.expectedLegVersionId===null?'1':'2'};
@@ -23,7 +24,8 @@ it.each(fieldOriginalKinds)('binds the source-verified minimal %s receipt and ke
  const p=packet(kind),r=parseFieldOriginalResult(p,p.original);expect(r.state).toBe('committed');expect(Object.isFrozen(r)).toBe(true);expect(Object.isFrozen(r.state==='committed'&&r.receipt.sourceAuditIds)).toBe(true);expect(JSON.stringify(r)).not.toMatch(/location|odometer|amount|notes|payload|hash/i);
  for(const key of ['operationId','recoveryEpoch','businessId','subjectId','sourceRecordId']){
   const ref=p.original.reference;
-  const value=key==='sourceRecordId'&&'legVersionId'in ref?ref.legVersionId:
+  const value=key==='sourceRecordId'&&'priorEventId'in ref?ref.priorEventId:
+   key==='sourceRecordId'&&'legVersionId'in ref?ref.legVersionId:
    key==='sourceRecordId'&&!('jobId'in ref)?'invalid':randomUUID();
   const wrong={...p,result:{...p.result,receipt:{...p.result.receipt,[key]:value}}};
   expect(()=>parseFieldOriginalResult(wrong,p.original)).toThrow();

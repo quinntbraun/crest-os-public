@@ -14,6 +14,7 @@ import {verifyBusinessHistoryEvidence} from '../security/business-history-eviden
 import {formatBusinessHistoryCsv} from '../security/business-history-csv.ts';
 import {parseHistoryJson,historyJsonEqual,historyJsonNumber,historyJsonBigint} from '../security/history-evidence-json.ts';
 type Row=Readonly<Record<string,string|boolean|null>>;
+const reviewOutcomeKind='operations.message.record_outcome';
 type Context=Readonly<{schemaVersion:1;profile:'crest.field-sources.v1';businessId:string;snapshotToken:string;historySnapshotToken:string;observedAt:string;expectedCounts:Readonly<Record<FieldSourceGroup,string>>}>;
 export type FieldSourceInput=Readonly<{context:Context;rows:Readonly<Record<FieldSourceGroup,readonly Row[]>>;historyEvidence:string}>;
 export class FieldSourceError extends Error{constructor(){super('FIELD_SOURCE_REVIEW_REQUIRED');this.name='FieldSourceError';}}
@@ -236,6 +237,69 @@ function verifyMobileDepartureSource(operation:Record<string,unknown>,rows:reado
  sourceImage('travel_legs',saved,receipt.leg);
 }
 
+function verifyReviewOutcomes(
+ events:ReadonlyMap<string,Row>,messages:ReadonlyMap<string,Row>,
+ operations:ReadonlyMap<string,Record<string,unknown>>,audits:ReadonlyMap<string,readonly Record<string,unknown>[]>
+){
+ const outcomes=new Map<string,Row>();
+ const roots=new Map<string,Row>();
+ for(const event of events.values()){
+  if(event.kind==='prepared'){
+   check(uuid(event.message_id)&&!roots.has(event.message_id));
+   roots.set(event.message_id,event);
+  }else{
+   check(uuid(event.operation_id)&&!outcomes.has(event.operation_id));
+   outcomes.set(event.operation_id,event);
+  }
+ }
+ const next=new Map<string,string>();
+ for(const [id,operation] of operations){
+  if(operation.command_type!==reviewOutcomeKind)continue;
+  const event=outcomes.get(id),sourceAudits=audits.get(id);
+  check(event&&sourceAudits?.length===1&&typeof operation.result==='string'&&
+   historyJsonNumber(operation.schema_version,1)&&historyJsonNumber(operation.result_schema_version,1)&&
+   operation.origin==='manual'&&operation.import_row_id===null);
+  outcomes.delete(id);
+  const stored=parseHistoryJson(operation.result);
+  shape(stored,['schemaVersion','request','receipt']);
+  check(historyJsonNumber(stored.schemaVersion,1));
+  const {request,receipt}=stored;
+  const identity=['schemaVersion','businessId','actorId','operationId','recoveryEpoch','jobId','messageId','priorEventId','kind'];
+  shape(request,[...identity,'commandType','reason']);
+  shape(receipt,[...identity,'eventId','effectiveAt','auditIds']);
+  check(historyJsonNumber(request.schemaVersion,1)&&request.commandType===reviewOutcomeKind&&
+   request.businessId===operation.business_id&&request.actorId===operation.actor_id&&request.operationId===id&&
+   request.recoveryEpoch===operation.recovery_epoch&&request.kind===event.kind&&request.reason===event.reason&&
+   uuid(request.priorEventId)&&uuid(request.messageId)&&uuid(event.id)&&
+   receipt.eventId===event.id&&receipt.effectiveAt===event.effective_at&&event.effective_at===event.created_at&&
+   ['opened','owner_confirmed_sent','failed','skipped'].includes(String(event.kind))&&
+   (event.reason===null?event.kind!=='failed'&&event.kind!=='skipped':
+    typeof event.reason==='string'&&event.reason.trim().length>0&&[...event.reason].length<=1000)&&
+   identity.every(key=>historyJsonEqual(request[key],receipt[key])));
+  const parent=events.get(request.priorEventId),message=messages.get(request.messageId),audit=sourceAudits[0]!;
+  check(parent&&message&&message.purpose==='review_request'&&message.state==='prepared'&&
+   message.job_id===request.jobId&&event.job_id===request.jobId&&event.message_id===message.id&&
+   parent.job_id===event.job_id&&parent.message_id===event.message_id&&parent.kind!=='owner_confirmed_sent'&&
+   parent.id!==event.id&&!next.has(request.priorEventId)&&
+   audit.entity_kind==='message_events'&&audit.entity_id===event.id&&
+   Array.isArray(receipt.auditIds)&&receipt.auditIds.length===1&&receipt.auditIds[0]===audit.id);
+  const root=roots.get(request.messageId);
+  check(root&&root.operation_id===message.operation_id&&root.job_id===message.job_id&&
+   operations.get(String(root.operation_id))?.command_type==='operations.job.complete');
+  next.set(request.priorEventId,event.id);
+ }
+ check(outcomes.size===0);
+ let reached=0;
+ for(const root of roots.values()){
+  let following=next.get(String(root.id));
+  while(following){
+   reached++;
+   check(reached<=next.size);
+   following=next.get(following);
+  }
+ }
+ check(reached===next.size);
+}
 export function verifyFieldSources(value:unknown){
  try{
   shape(value,['context','rows','historyEvidence']);const c=value.context;shape(c,['schemaVersion','profile','businessId','snapshotToken','historySnapshotToken','observedAt','expectedCounts']);
@@ -261,6 +325,7 @@ export function verifyFieldSources(value:unknown){
   const operations=new Map<string,Record<string,unknown>>(),audits=new Map<string,Record<string,unknown>>();
   const boundaryAuditIds=new Map<string,string[]>(),boundaryRows=new Map<string,Row[]>();
   const endpointAudits=new Map<string,Record<string,unknown>[]>(),endpointRows=new Map<string,Row[]>(),jobEventAudits=new Map<unknown,Record<string,unknown>>();
+  const messageOutcomeAudits=new Map<string,Record<string,unknown>[]>();
   for(const record of history.records){
    const body=parseHistoryJson(record.canonicalEvidence);object(body);object(body.row);
    const r=body.row,id=r.operation_id as string;
@@ -269,6 +334,9 @@ export function verifyFieldSources(value:unknown){
     check(!jobEventAudits.has(r.entity_id));jobEventAudits.set(r.entity_id,r);
    }
    const command=operations.get(id)?.command_type;
+   if(command===reviewOutcomeKind){
+    const entries=messageOutcomeAudits.get(id)??[];entries.push(r);messageOutcomeAudits.set(id,entries);
+   }
    if(command===workStartKind||command===workEndKind||command===mobileDepartureKind){
     const entries=endpointAudits.get(id)??[];entries.push(r);endpointAudits.set(id,entries);
    }
@@ -307,6 +375,7 @@ export function verifyFieldSources(value:unknown){
   for(const [id,operation] of operations)if(operation.command_type===mobileDepartureKind){
    verifyMobileDepartureSource(operation,endpointRows.get(id)??[],maps.travel_legs,endpointAudits.get(id)??[],jobEventAudits);
   }
+  verifyReviewOutcomes(maps.message_events,maps.messages,operations,messageOutcomeAudits);
   return Object.freeze({context:Object.freeze({...c,expectedCounts:Object.freeze({...c.expectedCounts})}) as Context,rows:Object.freeze(rows),history,occupancy});
  }catch(error){if(error instanceof FieldSourceError)throw error;throw new FieldSourceError();}
 }

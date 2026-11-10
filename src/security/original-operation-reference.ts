@@ -7,6 +7,11 @@ import type {QuoteAmendmentSendReference} from '../commercial/quote-amendment-sh
 import {parseQuoteAmendmentAcceptReference} from '../commercial/quote-amendment-acceptance-contract.ts';
 import type {QuoteAmendmentAcceptReference} from '../commercial/quote-amendment-acceptance-contract.ts';
 
+export const reviewOutcomeActions=['opened','owner_confirmed_sent','failed','skipped'] as const;
+export type ReviewOutcomeAction=typeof reviewOutcomeActions[number];
+export function isReviewOutcomeAction(value:unknown):value is ReviewOutcomeAction{
+ return typeof value==='string'&&reviewOutcomeActions.some(action=>action===value);
+}
 type Common=Readonly<{operationId:string;recoveryEpoch:string}>;
 type Targets={
  'operations.job.field':Readonly<{jobId:string;expectedJobVersion:string;action:'depart'|'arrive'|'direct_arrive'|'pause'|'resume'}>;
@@ -17,6 +22,7 @@ type Targets={
  'operations.job.work_start.correct':Readonly<{jobId:string;expectedJobVersion:string;workVersionId:string;arrivalVersionId:string|null}>;
  'operations.job.work_end.correct':Readonly<{jobId:string;expectedJobVersion:string;workVersionId:string;completionEventId:string}>;
  'operations.mobile_departure.correct':Readonly<{jobId:string;expectedJobVersion:string;legId:string;legVersionId:string;departureEventId:string}>;
+ 'operations.message.record_outcome':Readonly<{jobId:string;messageId:string;priorEventId:string;action:ReviewOutcomeAction}>;
  'operations.mileage.record':Readonly<{legId:string;expectedLegVersionId:string;expectedEvidenceVersion:string}>;
  'operations.support_trip.record':Readonly<{legId:string;expectedLegVersionId:string|null;action:'depart'|'arrive'|'cancel'}>;
  'operations.support_trip.correct':Readonly<{legId:string;expectedLegVersionId:string|null;action:'record'|'correct'}>;
@@ -78,6 +84,7 @@ const fields={
  'operations.job.work_start.correct':['jobId','expectedJobVersion','workVersionId','arrivalVersionId'],
  'operations.job.work_end.correct':['jobId','expectedJobVersion','workVersionId','completionEventId'],
  'operations.mobile_departure.correct':['jobId','expectedJobVersion','legId','legVersionId','departureEventId'],
+ 'operations.message.record_outcome':['jobId','messageId','priorEventId','action'],
  'operations.mileage.record':['legId','expectedLegVersionId','expectedEvidenceVersion'],
  'operations.support_trip.record':['legId','expectedLegVersionId','action'],
  'operations.support_trip.correct':['legId','expectedLegVersionId','action'],
@@ -147,6 +154,7 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
   if(kind==='operations.job.work_boundary.correct')require(ref.leftVersionId!==ref.rightVersionId);
   if(kind==='operations.job.work_start.correct')require(ref.workVersionId!==ref.arrivalVersionId&&BigInt(ref.expectedJobVersion as string)<9223372036854775807n);
   if(kind==='operations.job.work_end.correct')require(BigInt(ref.expectedJobVersion as string)<9223372036854775807n);
+  if(kind==='operations.message.record_outcome')require(isReviewOutcomeAction(ref.action));
   if(kind==='operations.support_trip.record'||kind==='operations.support_trip.correct')require((kind==='operations.support_trip.record'?['depart','arrive','cancel']:['record','correct']).includes(ref.action as string)&&(['depart','record'].includes(ref.action as string)===(ref.expectedLegVersionId===null)));
   if(kind==='operations.fulfillment_modes.initialize')require(ref.expectedSequence==='0');
   if(kind==='operations.fulfillment_modes.save')require(version(ref.expectedSequence));

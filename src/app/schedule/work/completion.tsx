@@ -3,6 +3,9 @@ import {useId,useState} from 'react';
 import {quoteDollarsInput,quoteMoney} from '../../../commercial/quote-pricing';
 import type {CompletionAssignment,CompletionBody,CompletionContext,CompletionSummary} from '../../../operations/work-completion-contract';
 import type {CompletionAllocation,CompletionPiece,WorkOutcome} from '../../../operations/work-completion';
+import {isReviewOutcomeAction} from '../../../security/original-operation-reference';
+import type {ReviewOutcomeAction} from '../../../security/original-operation-reference';
+import type {ReviewOutcomeBody,ReviewOutcomeContext} from '../../../operations/review-message-contract';
 
 type OutcomeChoice=''|WorkOutcome;
 type Selection=OutcomeChoice|'split';
@@ -152,7 +155,59 @@ export function CompletionEditor({context,disabled,save}:{context:CompletionCont
  </form>;
 }
 
-export function SavedCompletion({summary}:{summary:CompletionSummary}){
+function PreparedReviewMessage({message,label,canCopy}:{message:NonNullable<CompletionSummary['review']['message']>;label:string;canCopy:boolean}){
+ const [copyStatus,setCopyStatus]=useState('');
+ async function copyMessage(){
+  try{
+   await navigator.clipboard.writeText(message.text);
+   setCopyStatus('Review draft copied.');
+  }catch{
+   setCopyStatus('Copy is unavailable. Select the draft text to copy it manually.');
+  }
+ }
+ return <>
+  <p>{message.channel==='text'?'Text':'Email'} draft · {label}</p>
+  <textarea aria-label="Prepared review draft" readOnly rows={4} value={message.text}/>
+  {canCopy&&<button type="button" className="secondary" onClick={()=>void copyMessage()}>Copy review draft</button>}
+  <p role="status" aria-live="polite">{copyStatus}</p>
+ </>;
+}
+
+const reviewLabels={prepared:'Prepared',opened:'Opened',owner_confirmed_sent:'Owner-confirmed Sent',failed:'Failed',skipped:'Skipped'} as const;
+function ReviewOutcomeForm({disabled,save}:{disabled:boolean;save:(body:ReviewOutcomeBody)=>Promise<void>}){
+ const id=useId();
+ const [action,setAction]=useState<ReviewOutcomeAction|''>(''),[reason,setReason]=useState('');
+ const requiresReason=action==='failed'||action==='skipped';
+ return <details>
+  <summary>Record message outcome</summary>
+  <form onSubmit={event=>{event.preventDefault();if(disabled||!action)return;void save({kind:action,reason:optional(reason)});}}>
+   <fieldset disabled={disabled}>
+    <legend>What happened with this message?</legend>
+    <label htmlFor={id+'-action'}>Message outcome</label>
+    <select id={id+'-action'} required value={action} onChange={event=>{
+     const selected=event.target.value;
+     setAction(isReviewOutcomeAction(selected)?selected:'');
+    }}>
+     <option value="">Choose an outcome</option>
+     <option value="opened">Opened in my messaging app</option>
+     <option value="owner_confirmed_sent">I sent this message</option>
+     <option value="failed">Sending failed</option>
+     <option value="skipped">Skipped</option>
+    </select>
+    <label htmlFor={id+'-reason'}>{requiresReason?'Reason':'Note (optional)'}</label>
+    <textarea id={id+'-reason'} required={requiresReason} rows={2} maxLength={1000} value={reason} onChange={event=>setReason(event.target.value)}/>
+    <p className="field-help">Record what already happened. Use your messaging app to send the draft.</p>
+    <button type="submit" disabled={!action||requiresReason&&!reason.trim()}>Save message outcome</button>
+   </fieldset>
+  </form>
+ </details>;
+}
+
+export function SavedCompletion({summary,outcome,outcomeEnabled,canRecordOutcome,disabled,saveOutcome}:{
+ summary:CompletionSummary;outcome:ReviewOutcomeContext|undefined;outcomeEnabled:boolean;canRecordOutcome:boolean;disabled:boolean;
+ saveOutcome:(body:ReviewOutcomeBody)=>Promise<void>
+}){
+ const reviewLabel=outcome?reviewLabels[outcome.kind]:outcomeEnabled?'Saved status unavailable':'Prepared';
  return <section aria-label="Saved completion">
   <h2>{summary.completionOutcome==='full'?'Full completion':'Partial completion'}</h2>
   <p>Saved version {summary.jobVersion} · <time dateTime={summary.completedAt}>{new Date(summary.completedAt).toLocaleString()}</time></p>
@@ -161,7 +216,11 @@ export function SavedCompletion({summary}:{summary:CompletionSummary}){
   <h3>Recorded scope</h3>
   <ul>{summary.outcomes.map(row=><li key={row.id} className="completion-text"><strong>{labels[row.outcome]}</strong> · {row.scopeDescription}{row.reason?' · '+row.reason:''}</li>)}</ul>
   <h3>Review request</h3>
-  {summary.review.message?<><p>{summary.review.message.channel==='text'?'Text':'Email'} draft · Prepared</p><p className="completion-text">{summary.review.message.text}</p></>:<p>{summary.review.state==='pending'?'Pending':'Skipped'}{summary.review.reason?' · '+summary.review.reason:''}</p>}
+  {summary.review.message?<PreparedReviewMessage key={summary.jobId+':'+(outcome?.eventId??summary.jobVersion)}
+   message={summary.review.message} label={reviewLabel} canCopy={outcomeEnabled?!!outcome&&outcome.kind!=='owner_confirmed_sent':true}/>:
+   <p>{summary.review.state==='pending'?'Pending':'Skipped'}{summary.review.reason?' · '+summary.review.reason:''}</p>}
+  {outcome&&outcome.kind!=='prepared'&&<p>Recorded <time dateTime={outcome.effectiveAt}>{new Date(outcome.effectiveAt).toLocaleString()}</time>{outcome.reason?' · '+outcome.reason:''}</p>}
+  {outcome&&canRecordOutcome&&<ReviewOutcomeForm key={outcome.eventId} disabled={disabled} save={saveOutcome}/>}
   <h3>Follow-up tasks</h3>
   <ul>{summary.tasks.map(task=><li key={task.kind}>{task.kind==='invoice_finalization'?'Invoice review':'Commercial resolution'} · Open</li>)}</ul>
  </section>;

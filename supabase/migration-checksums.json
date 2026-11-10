@@ -315,6 +315,11 @@
       "version": "20261117180000",
       "file": "20261117180000_mobile_trip_departure_correction.sql",
       "sha256": "5798f38f711981decd008faaa36253fcf2462d807c0d0ddf3b5e5998bd82565f"
+    },
+    {
+      "version": "20261118180000",
+      "file": "20261118180000_review_message_outcomes.sql",
+      "sha256": "81d56a4523719e25b51b71203b25a70a6082595be6968da8c73369e4c6df2280"
     }
   ]
 }
