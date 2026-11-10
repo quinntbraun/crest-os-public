@@ -6,6 +6,7 @@ import {fieldSourceGroups,fieldSourceSchema} from './field-source-schema.ts';
 import type {FieldSourceGroup} from './field-source-schema.ts';
 import {recordedOperatorOccupancy} from './work-occupancy.ts';
 import {prepareMileageBody} from './mileage.ts';
+import {workBoundaryKind} from './job-work-boundary-contract.ts';
 import {verifyBusinessHistoryEvidence} from '../security/business-history-evidence.ts';
 import {formatBusinessHistoryCsv} from '../security/business-history-csv.ts';
 import {parseHistoryJson,historyJsonEqual,historyJsonNumber,historyJsonBigint} from '../security/history-evidence-json.ts';
@@ -39,6 +40,41 @@ function sourceImage(group:FieldSourceGroup,row:Row,image:unknown){
   else check(historyJsonEqual(parseHistoryJson(JSON.stringify(v)),image[key]));
  }
 }
+function verifyWorkBoundarySource(operation:Record<string,unknown>,rows:readonly Row[],versions:ReadonlyMap<string,Row>,auditIds:readonly string[]){
+ check(historyJsonNumber(operation.schema_version,1)&&historyJsonNumber(operation.result_schema_version,1)&&
+  operation.origin==='manual'&&operation.import_row_id===null&&typeof operation.result==='string'&&rows.length===2&&auditIds.length===2);
+ const stored=parseHistoryJson(operation.result);
+ shape(stored,['schemaVersion','request','receipt']);
+ check(historyJsonNumber(stored.schemaVersion,1));
+ const {request,receipt}=stored;
+ const binding=['schemaVersion','commandType','businessId','actorId','operationId','recoveryEpoch','jobId','expectedJobVersion','correctedAt','reason'];
+ shape(request,[...binding,'leftVersionId','rightVersionId']);
+ shape(receipt,[...binding,'previousBoundaryAt','left','right','auditIds']);
+ check(historyJsonNumber(request.schemaVersion,1)&&request.commandType===workBoundaryKind&&
+  request.businessId===operation.business_id&&request.actorId===operation.actor_id&&
+  request.operationId===operation.operation_id&&request.recoveryEpoch===operation.recovery_epoch&&uuid(request.jobId)&&
+  version(request.expectedJobVersion)&&uuid(request.leftVersionId)&&uuid(request.rightVersionId)&&request.leftVersionId!==request.rightVersionId&&
+  instant(request.correctedAt)&&typeof request.reason==='string'&&request.reason.trim().length>0&&[...request.reason].length<=1000&&
+  binding.every(key=>historyJsonEqual(request[key],receipt[key]))&&
+  Array.isArray(receipt.auditIds)&&receipt.auditIds.length===2&&new Set(receipt.auditIds).size===2&&
+  auditIds.every(id=>Array.isArray(receipt.auditIds)&&receipt.auditIds.includes(id)));
+ const left=rows.find(row=>row.replaces_id===request.leftVersionId),right=rows.find(row=>row.replaces_id===request.rightVersionId);
+ const originalLeft=versions.get(request.leftVersionId),originalRight=versions.get(request.rightVersionId);
+ check(left&&right&&originalLeft&&originalRight&&left.job_id===request.jobId&&right.job_id===request.jobId&&
+  originalLeft.job_id===request.jobId&&originalRight.job_id===request.jobId&&
+  left.operator_actor_id===request.actorId&&right.operator_actor_id===request.actorId&&
+  left.kind!==right.kind&&left.kind===originalLeft.kind&&right.kind===originalRight.kind&&
+  left.pause_reason===originalLeft.pause_reason&&right.pause_reason===originalRight.pause_reason&&
+  left.change_kind==='correct'&&right.change_kind==='correct'&&left.reason===request.reason&&right.reason===request.reason);
+ const previous=originalLeft.ended_at,corrected=request.correctedAt;
+ check(instant(previous)&&previous===originalRight.started_at&&receipt.previousBoundaryAt===previous&&previous!==corrected&&
+  instant(originalLeft.started_at)&&corrected>originalLeft.started_at&&
+  (originalRight.ended_at===null||instant(originalRight.ended_at)&&corrected<originalRight.ended_at)&&
+  left.started_at===originalLeft.started_at&&right.ended_at===originalRight.ended_at&&
+  left.ended_at===corrected&&right.started_at===corrected);
+ sourceImage('work_intervals',left,receipt.left);
+ sourceImage('work_intervals',right,receipt.right);
+}
 export function verifyFieldSources(value:unknown){
  try{
   shape(value,['context','rows','historyEvidence']);const c=value.context;shape(c,['schemaVersion','profile','businessId','snapshotToken','historySnapshotToken','observedAt','expectedCounts']);
@@ -62,13 +98,33 @@ export function verifyFieldSources(value:unknown){
   for(const r of rows.work_scope_outcomes)check(['completed','unfulfilled','cancelled'].includes(r.outcome as string)&&BigInt(r.completed_cents as string)>=0n&&(r.outcome==='completed'||r.completed_cents==='0'));
   const history=verifyBusinessHistoryEvidence(value.historyEvidence,{businessId:c.businessId});check(history.context.snapshotToken===c.historySnapshotToken);
   const operations=new Map<string,Record<string,unknown>>(),audits=new Map<string,Record<string,unknown>>();
-  for(const record of history.records){const body=parseHistoryJson(record.canonicalEvidence);object(body);object(body.row);const r=body.row;if(record.kind==='operation')operations.set(r.operation_id as string,r);else if(fieldSourceGroups.includes(r.entity_kind as FieldSourceGroup)){const key=[r.entity_kind,r.entity_id,typeof r.entity_version==='string'?r.entity_version:historyJsonBigint(r.entity_version)?.toString()].join(':');check(!audits.has(key));audits.set(key,r);}}
+  const boundaryAuditIds=new Map<string,string[]>(),boundaryRows=new Map<string,Row[]>();
+  for(const record of history.records){
+   const body=parseHistoryJson(record.canonicalEvidence);object(body);object(body.row);
+   const r=body.row,id=r.operation_id as string;
+   if(record.kind==='operation'){operations.set(id,r);continue;}
+   if(operations.get(id)?.command_type===workBoundaryKind){
+    check(r.entity_kind==='work_intervals');
+    const ids=boundaryAuditIds.get(id)??[];ids.push(record.recordId);boundaryAuditIds.set(id,ids);
+   }
+   if(fieldSourceGroups.includes(r.entity_kind as FieldSourceGroup)){
+    const key=[r.entity_kind,r.entity_id,typeof r.entity_version==='string'?r.entity_version:historyJsonBigint(r.entity_version)?.toString()].join(':');
+    check(!audits.has(key));audits.set(key,r);
+   }
+  }
   const used=new Set<string>();for(const group of fieldSourceGroups)for(const row of rows[group]){
    const logical=group==='work_intervals'||group==='travel_legs'?row.logical_id:group==='mileage_evidence'?row.leg_id:row.id,sequence=['work_intervals','travel_legs','mileage_evidence'].includes(group)?row.sequence:'1',key=[group,logical,sequence].join(':'),audit=audits.get(key),operation=operations.get(row.operation_id as string);check(audit&&operation&&!used.has(key));used.add(key);
    check(audit.operation_id===row.operation_id&&audit.actor_id===row.created_by&&audit.created_by===row.created_by&&operation.actor_id===row.created_by&&operation.state==='committed'&&audit.reason===(row.reason??null));const delta=parseHistoryJson(audit.delta as string);shape(delta,['schemaVersion','before','after']);check(historyJsonNumber(delta.schemaVersion,1));sourceImage(group,row,delta.after);
    const prior=['work_intervals','travel_legs','mileage_evidence'].includes(group)&&row.replaces_id!==null?maps[group].get(row.replaces_id as string):undefined;if(prior)sourceImage(group,prior,delta.before);else check(delta.before===null);
    const action=sequence==='1'?'create':group==='mileage_evidence'?'correct':row.change_kind;check(audit.action===action);
+   if(operation.command_type===workBoundaryKind){
+    check(group==='work_intervals'&&typeof row.operation_id==='string');
+    const pair=boundaryRows.get(row.operation_id)??[];pair.push(row);boundaryRows.set(row.operation_id,pair);
+   }
   }check(used.size===audits.size);
+  for(const [id,operation] of operations)if(operation.command_type===workBoundaryKind){
+   verifyWorkBoundarySource(operation,boundaryRows.get(id)??[],maps.work_intervals,boundaryAuditIds.get(id)??[]);
+  }
   return Object.freeze({context:Object.freeze({...c,expectedCounts:Object.freeze({...c.expectedCounts})}) as Context,rows:Object.freeze(rows),history,occupancy});
  }catch(error){if(error instanceof FieldSourceError)throw error;throw new FieldSourceError();}
 }

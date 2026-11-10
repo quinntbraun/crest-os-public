@@ -87,7 +87,7 @@ function target<T extends {businessId:string;binding:string}>(
 }
 export function openPendingOriginalOperation(kind:OriginalOperationKind,storage:StorageAccess,businessId:string):PendingOriginalOperation|null{
  switch(kind){
-  case 'operations.job.field':case 'operations.job.complete':case 'operations.job.interrupt':case 'operations.job.cancel_unfulfilled':case 'operations.mileage.record':case 'operations.support_trip.record':case 'operations.support_trip.correct':
+  case 'operations.job.field':case 'operations.job.complete':case 'operations.job.interrupt':case 'operations.job.cancel_unfulfilled':case 'operations.job.work_boundary.correct':case 'operations.mileage.record':case 'operations.support_trip.record':case 'operations.support_trip.correct':
   case 'operations.fulfillment_modes.initialize':case 'operations.fulfillment_modes.save':case 'operations.job.book':case 'operations.job.cancel':case 'operations.job.reschedule':return target(createPendingSchedulingStore(storage,kind),kind,businessId,p=>p.reference,(p,proof,signal)=>lookupSchedulingOriginal({schemaVersion:1,businessId:p.businessId,commandType:kind,reference:p.reference},proof,signal));
   case 'bookkeeping.expense.save':return target(createPendingExpenseStore(storage),kind,businessId,p=>p.reference,async(p,proof,signal)=>{
    const client=createExpenseClient(async()=>proof),context=await client.context(signal);

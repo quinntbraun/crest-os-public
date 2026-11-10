@@ -12,6 +12,8 @@ import registered57 from '../support/registered57-migration-checksums.json';
 import coverage57 from '../support/registered57-export-coverage.json';
 import registered58 from '../support/registered58-migration-checksums.json';
 import coverage58 from '../support/registered58-export-coverage.json';
+import registered59 from '../support/registered59-migration-checksums.json';
+import coverage59 from '../support/registered59-export-coverage.json';
 import registry from '../support/registered54-migration-checksums.json';
 import previous from '../support/registered53-migration-checksums.json';
 import previousCoverage from '../support/registered53-export-coverage.json';
@@ -75,14 +77,25 @@ it('appends only the cancellation context and history reader over the frozen sta
 it('registers only the private work-time history reader after the frozen cancellation profile',()=>{
  expect(sha256(bytes('tests/support/registered58-migration-checksums.json'))).toBe('6de5309bae313563f0481c1f0985d5b28f1231ae714afc88b1ad3fe49bfbf3d0');
  expect(sha256(bytes('tests/support/registered58-export-coverage.json'))).toBe('1fd339235be0ec1abc0de846d36d118d36020c5a107e3121ec21438a844a2628');
- expect(currentRegistry.migrations).toHaveLength(59);
- expect(currentRegistry.migrations.slice(0,58)).toEqual(registered58.migrations);
- const reader=currentRegistry.migrations.at(-1)!;
+ expect(registered59.migrations).toHaveLength(59);
+ expect(registered59.migrations.slice(0,58)).toEqual(registered58.migrations);
+ const reader=registered59.migrations.at(-1)!;
  expect(reader.file).toBe('20261113180000_job_work_time.sql');
  expect(bytes('supabase/migrations/'+reader.file)).toEqual(bytes('planning/proposals/job-work-time-reader.sql'));
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered58 as MigrationRegistry)).not.toThrow();
- expect(currentCoverage).toEqual({...coverage58,migrationCount:59});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:59});
+ expect(()=>validateMigrationSet(registered59 as MigrationRegistry,new Map(registered59.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered58 as MigrationRegistry)).not.toThrow();
+ expect(coverage59).toEqual({...coverage58,migrationCount:59});
+});
+it('adopts the exact pause and resume correction after the frozen work-time reader',()=>{
+ expect(sha256(bytes('tests/support/registered59-migration-checksums.json'))).toBe('d278abcdbc456cc0fbba5351224d39dea5c4e9d6a26252767d45f88f9ba52620');
+ expect(sha256(bytes('tests/support/registered59-export-coverage.json'))).toBe('160d65cad297377a26ca7e99537cb519a1cd230efdaef29f36562085cebc21c5');
+ expect(currentRegistry.migrations).toHaveLength(60);
+ expect(currentRegistry.migrations.slice(0,59)).toEqual(registered59.migrations);
+ const correction=currentRegistry.migrations.at(-1)!;
+ expect(correction.file).toBe('20261114180000_job_work_boundary_correction.sql');
+ expect(bytes('supabase/migrations/'+correction.file)).toEqual(bytes('planning/proposals/job-work-boundary-correction.sql'));
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered59 as MigrationRegistry)).not.toThrow();
+ expect(currentCoverage).toEqual({...coverage59,migrationCount:60});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:60});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');
