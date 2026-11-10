@@ -8,6 +8,7 @@ import {phonePresentation} from '../../client/phone-presentation';
 import type {Customer,CustomerDraft} from '../../customer/customer-contract';
 import {SavedRecordDownload} from '../saved-record-download';
 import {ReviewMessageHistory} from '../review-message-history';
+import {MaintenanceReminders} from '../maintenance-reminders';
 import {draftFromCustomer} from '../../customer/customer-contract';
 import {draftChanged} from '../../client/draft-changed';
 
@@ -65,6 +66,8 @@ export function CustomerScreen({related:Related}:{related?:ComponentType<{custom
       {view.selected&&Related&&<Related key={view.selected.id} customerId={view.selected.id}/>}
       {view.selected&&view.reviewHistoryAvailable&&<ReviewMessageHistory key={view.selected.id}
        businessId={view.selected.business_id} scope={{kind:'customer',id:view.selected.id}}/>}
+      {view.selected&&view.maintenanceFollowUpAvailable&&<MaintenanceReminders key={view.selected.id}
+       businessId={view.selected.business_id} scope={{kind:'customer',id:view.selected.id,archived:view.selected.archived_at!==null}}/>}
       {view.history&&<section aria-label="Customer history"><h2>Retained history</h2><p>Current version: {view.history.customer.version}</p>
         <SavedRecordDownload key={view.history.customer.id} kind="customer" record={view.history.customer} disabled={view.busy}/>
         {view.history.history.map(event=><details key={event.after.version}><summary>Version {event.after.version} · {event.after.updated_at}</summary>{event.before&&<><h3>Before</h3><CustomerDetails customer={event.before}/></>}<h3>After</h3><CustomerDetails customer={event.after}/></details>)}

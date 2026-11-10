@@ -18,6 +18,9 @@ import {parseMobileDepartureContext,parseMobileDepartureSave,mobileDepartureOrig
 import {parseReviewOutcomeContext,parseReviewOutcomeSave,reviewOutcomeOriginal,parseReviewOutcomeCommitted,reviewOutcomeConflicts} from './review-message-contract.ts';
 import {parseReviewMessageHistory} from './review-message-history-contract.ts';
 import type {ReviewHistoryQuery} from './review-message-history-contract.ts';
+import {maintenanceFollowUpConflicts,maintenanceFollowUpOriginal,parseMaintenanceFollowUpAcknowledgement,parseMaintenanceFollowUpCommitted,parseMaintenanceFollowUpHistory,
+ parseMaintenanceFollowUpList,parseMaintenanceFollowUpSave} from './maintenance-follow-up-contract.ts';
+import type {parseMaintenanceFollowUpHistoryQuery,parseMaintenanceFollowUpListQuery} from './maintenance-follow-up-contract.ts';
 export class FieldDirectoryError extends Error{constructor(code:string){super(code);this.name='FieldDirectoryError';}}
 class PrivateValue<T>{#value:T;constructor(value:T){this.#value=value;}forServer(){return this.#value;}toJSON():never{throw new FieldDirectoryError('FIELD_VALUE_PRIVATE');}}
 export function createFieldDirectory(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>){
@@ -54,10 +57,29 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
    [scope.kind,scope.id,cursor?.source??null,cursor?.id??null]);
   return new PrivateValue(parseReviewMessageHistory(value,businessId,scope));
  }
- async function save(credential:string,input:unknown,signal:AbortSignal,action:'session'|'interruption'|'cancellation'|'work-boundary'|'work-start'|'work-end'|'mobile-departure'|'review-outcome'){
+ async function maintenanceList(credential:string,businessId:string,{scope,after}:ReturnType<typeof parseMaintenanceFollowUpListQuery>,signal:AbortSignal){
+  const value=await readResult(credential,businessId,signal,
+   'SELECT crest_commands.list_maintenance_follow_ups($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::text,$10::uuid,$11::timestamptz,$12::timestamptz,$13::uuid) AS result',
+   [scope.scopeKind,scope.scopeId,scope.throughAt,after?.effectiveDueAt??null,after?.taskId??null]);
+  return new PrivateValue(parseMaintenanceFollowUpList(value,businessId,scope,after));
+ }
+ async function maintenanceHistory(credential:string,businessId:string,{taskId,afterVersion}:ReturnType<typeof parseMaintenanceFollowUpHistoryQuery>,signal:AbortSignal){
+  const value=await readResult(credential,businessId,signal,
+   'SELECT crest_commands.read_maintenance_follow_up($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::bigint) AS result',
+   [taskId,afterVersion]);
+  const history=parseMaintenanceFollowUpHistory(value,businessId,taskId,afterVersion);
+  if(history.state==='absent')return new PrivateValue(history);
+  const {current,entries,hasMore}=history;
+  return new PrivateValue({schemaVersion:1,businessId,taskId,current,entries,hasMore});
+ }
+ async function save(credential:string,input:unknown,signal:AbortSignal,action:'session'|'interruption'|'cancellation'|'work-boundary'|'work-start'|'work-end'|'mobile-departure'|'review-outcome'|'maintenance'){
   let submitted=false,hash:Buffer|undefined;
   try{
-   const prepared=action==='review-outcome'?(()=>{
+   const prepared=action==='maintenance'?(()=>{
+    const request=parseMaintenanceFollowUpSave(input),original=maintenanceFollowUpOriginal(request);
+    return {request,original,conflicts:maintenanceFollowUpConflicts,command:'save_maintenance_follow_up',
+     committed:(observed:unknown)=>parseMaintenanceFollowUpAcknowledgement(observed,request)};
+   })():action==='review-outcome'?(()=>{
     const request=parseReviewOutcomeSave(input);
     return {request,original:reviewOutcomeOriginal(request),conflicts:reviewOutcomeConflicts,
      command:'record_review_message_outcome',committed:(observed:unknown)=>parseReviewOutcomeCommitted(observed,request)};
@@ -102,7 +124,9 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
    const result=await database.commandTransaction(async(query,current)=>{
     if(current.aborted)throw Error();submitted=true;
     const review='messageId'in request;
-    const common=[...args,request.recoveryEpoch,request.operationId,request.jobId,review?request.messageId:request.expectedJobVersion];
+    const common=[...args,request.recoveryEpoch,request.operationId,
+     'taskId'in request?request.taskId:request.jobId,
+     'expectedVersion'in request?request.expectedVersion:review?request.messageId:request.expectedJobVersion];
     const versions=review?[request.priorEventId]:
      'departureEventId'in request?[request.legId,request.legVersionId,request.departureEventId]:
      'leftVersionId'in request?[request.leftVersionId,request.rightVersionId]:
@@ -113,6 +137,7 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
     const value=await query('SELECT crest_commands.'+prepared.command+'($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,1,$11::uuid,$12::'+(review?'uuid':'bigint')+','+parameters+') AS result',[...common,...values]);if(current.aborted)throw Error();
     if(exact(value,['state','reason'])&&value.state==='conflict'&&typeof value.reason==='string'&&prepared.conflicts.some(reason=>reason===value.reason))return new PrivateValue(Object.freeze({state:'conflict' as const,reason:value.reason}));
     if(!exact(value,['state','receipt'])||value.state!=='committed')throw Error();
+    if('taskId'in request)parseMaintenanceFollowUpCommitted(value,request);
     // Reservation release is checked at COMMIT using the command's operation
     // identity. Original lookup clears that identity in its own transaction.
     return action==='session'?readOriginal(query,current):null;
@@ -131,6 +156,9 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
   mobileDeparture:(credential:string,businessId:string,jobId:string,legId:string,signal:AbortSignal)=>read(credential,businessId,jobId,signal,{legId}),
   correctMobileDeparture:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'mobile-departure'),
   reviewHistory,
+  maintenanceList,
+  maintenanceHistory,
+  saveMaintenance:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'maintenance'),
   reviewOutcome:(credential:string,businessId:string,jobId:string,signal:AbortSignal)=>read(credential,businessId,jobId,signal,'review-outcome'),
   recordReviewOutcome:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'review-outcome'),
   correctWorkBoundary:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'work-boundary'),

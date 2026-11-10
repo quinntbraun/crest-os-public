@@ -24,6 +24,8 @@ import registered63 from '../support/registered63-migration-checksums.json';
 import coverage63 from '../support/registered63-export-coverage.json';
 import registered64 from '../support/registered64-migration-checksums.json';
 import coverage64 from '../support/registered64-export-coverage.json';
+import registered65 from '../support/registered65-migration-checksums.json';
+import coverage65 from '../support/registered65-export-coverage.json';
 import registry from '../support/registered54-migration-checksums.json';
 import previous from '../support/registered53-migration-checksums.json';
 import previousCoverage from '../support/registered53-export-coverage.json';
@@ -179,16 +181,32 @@ it('registers only the reviewed message outcomes and preserves frozen schema 63'
 it('registers only the reviewed message history reader and preserves frozen schema 64',()=>{
  expect(sha256(bytes('tests/support/registered64-migration-checksums.json'))).toBe('df5f29afbe850614fdb34afc19bd8feae57e1b085514fb3d03422190eaa9a6d0');
  expect(sha256(bytes('tests/support/registered64-export-coverage.json'))).toBe('e7fa04883058d44d30dae8e95a6cb99ba406d3a0d08c414da3c99868d9ee61af');
- expect(currentRegistry.migrations).toHaveLength(65);
- const entry=currentRegistry.migrations.at(-1)!;
+ expect(registered65.migrations).toHaveLength(65);
+ const entry=registered65.migrations.at(-1)!;
  expect(entry.file).toBe('20261119180000_review_message_history.sql');
  const proposal='planning/proposals/review-message-history.sql';
  expect(bytes('supabase/migrations/'+entry.file).toString()).toBe(
   '-- BR10 scoped review-message history. Exact reviewed reader and private web grant.\n\n-- BEGIN REVIEWED '+proposal+'\n'+
   bytes(proposal).toString()+'\nGRANT EXECUTE ON FUNCTION crest_commands.read_review_message_history(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,text,uuid,text,uuid) TO crest_web;\n');
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered64 as MigrationRegistry)).not.toThrow();
- expect(currentCoverage).toEqual({...coverage64,migrationCount:65});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:65});
+ expect(()=>validateMigrationSet(registered65 as MigrationRegistry,new Map(registered65.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered64 as MigrationRegistry)).not.toThrow();
+ expect(coverage65).toEqual({...coverage64,migrationCount:65});
+});
+it('registers maintenance source relations after the unchanged schema65 prefix',()=>{
+ expect(sha256(bytes('tests/support/registered65-migration-checksums.json'))).toBe('bc59dcf082f3e09d50f4bd4ae5fd7ecf987d2f2abf73990cc16b3905be0c18f8');
+ expect(sha256(bytes('tests/support/registered65-export-coverage.json'))).toBe('6956f43f69821920e583e09de448a0f144aa643bb5fc0e1aa18a8aecb0e55bbf');
+ expect(currentRegistry.migrations).toHaveLength(66);
+ const entry=currentRegistry.migrations.at(-1)!;
+ expect(entry.file).toBe('20261120180000_maintenance_follow_up.sql');
+ const sql=bytes('supabase/migrations/'+entry.file).toString();
+ for(const name of ['tasks','reads','originals','source','schema-compatibility']){
+  const path='planning/proposals/maintenance-follow-up-'+name+'.sql';
+  expect(sql).toContain('-- BEGIN REVIEWED '+path+'\n'+bytes(path).toString().replaceAll('\r\n','\n')+'-- END REVIEWED '+path+'\n');
+ }
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered65 as MigrationRegistry)).not.toThrow();
+ expect(currentCoverage.migrationCount).toBe(66);
+ expect(currentCoverage.tables.slice(0,-2)).toEqual(coverage65.tables);
+ expect(currentCoverage.tables.slice(-2).map(row=>row.table)).toEqual(['crest.follow_up_tasks','crest.follow_up_task_events']);
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:66});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

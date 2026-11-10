@@ -325,6 +325,11 @@
       "version": "20261119180000",
       "file": "20261119180000_review_message_history.sql",
       "sha256": "65e96b587d22c3e9643131261560ba369659322ea31a5bff76f643551a619fa3"
+    },
+    {
+      "version": "20261120180000",
+      "file": "20261120180000_maintenance_follow_up.sql",
+      "sha256": "9a2bcb5c3b463cd3c0a8ffc15406a9013a304ea9309a13fc936bcbf1767b07a2"
     }
   ]
 }

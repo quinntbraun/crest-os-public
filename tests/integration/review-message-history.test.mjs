@@ -20,7 +20,7 @@ before(async()=>{
  await installProviderSchema(client,target);
  assert.equal((await sandbox.apply(target,await sandbox.prefix(64))).history.length,64);
  assert.equal(await value(client,'SELECT to_regprocedure($1) IS NULL value',[historyRoutine]),true);
- assert.equal((await sandbox.apply(target)).history.length,65);
+ assert.equal((await sandbox.apply(target,await sandbox.prefix(65))).history.length,65);
  for(const role of ['anon','authenticated','crest_export'])
   assert.equal(await value(client,"SELECT has_function_privilege($1,$2,'EXECUTE') value",[role,historyRoutine]),false);
  assert.equal(await value(client,"SELECT EXISTS(SELECT 1 FROM pg_proc p,LATERAL aclexplode(p.proacl) a WHERE p.oid=$1::regprocedure AND a.grantee=0 AND a.privilege_type='EXECUTE') value",[historyRoutine]),false);

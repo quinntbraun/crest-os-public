@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 65,
+  "migrationCount": 66,
   "tables": [
     {
       "table": "crest.businesses",
@@ -1917,6 +1917,45 @@
         "ended_at",
         "occupied",
         "work_span"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.follow_up_tasks",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "customer_id",
+        "vehicle_id",
+        "source_job_id",
+        "due_at",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.follow_up_task_events",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "task_id",
+        "version",
+        "prior_version",
+        "kind",
+        "snoozed_until",
+        "rebooking_job_id",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

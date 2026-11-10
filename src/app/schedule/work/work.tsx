@@ -9,6 +9,7 @@ import {reviewOutcomeKind} from '../../../operations/review-message-contract';
 import {parseCustomer} from '../../../customer/customer-contract';
 import {BookingInstantInput} from '../booking-fields';
 import {CompletionEditor,SavedCompletion} from './completion';
+import {MaintenanceReminders} from '../../maintenance-reminders';
 import {TripInterruptionForm} from './interruption';
 import {UnfulfilledCancellationForm} from './cancellation';
 const labels:Readonly<Record<string,string>>={scheduled:'Scheduled',en_route:'En route',in_progress:'In progress',paused:'Paused',completed:'Completed',cancelled:'Cancelled'};
@@ -65,6 +66,8 @@ export function FieldSessionScreen({jobId,mode='work'}:{jobId:string;mode?:Field
    historyAvailable={view.reviewHistoryAvailable===true} canRecordOutcome={view.canRecordReviewOutcome===true} disabled={view.busy} saveOutcome={async body=>{
     const controller=current.current;if(!controller)return;await controller.recordReviewOutcome(body);if(current.current===controller)status.current?.focus();
    }}/>}
+  {view.summary&&view.maintenanceFollowUpAvailable&&<MaintenanceReminders key={view.summary.jobId}
+   businessId={view.summary.businessId} scope={{kind:'job',id:view.summary.jobId}}/>}
   {view.savedJobId&&<>{!view.summary&&<p>Confirmed saved version {view.savedVersion}.</p>}<a className="primary-action" href={'/schedule?job='+encodeURIComponent(view.savedJobId)}>Open updated job in Schedule</a></>}
   {completing&&view.phase==='committed'&&!view.summary&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload saved completion</button>}
   {view.phase==='pending'&&<><p>No request retries automatically. Keep its reference until the original outcome is verified.</p>{view.reference&&<p className="save-reference">Original work reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>{view.pendingKind===reviewOutcomeKind?'Check original message outcome':completing?'Check original completion':interrupting?'Check original trip interruption':cancelling?'Check original cancellation':'Check original work action'}</button><a href={'/save-review?kind='+(view.pendingKind??kind)}>Open Save review</a></>}

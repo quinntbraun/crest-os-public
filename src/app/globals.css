@@ -290,6 +290,10 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .completion-text { overflow-wrap:anywhere; white-space:pre-wrap; }
 .review-message-history > summary { min-height:44px; padding:.65rem 0; cursor:pointer; font-weight:600; }
 .review-message-history li { margin-block:.65rem; }
+@media (min-width:768px) {
+ .maintenance-reminders .maintenance-actions { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.35rem; }
+ .maintenance-reminders .maintenance-actions button { width:auto; margin:0; }
+}
 .slot-review { border-top:1px solid var(--line); margin-top:1.5rem; padding-top:1rem; overflow-wrap:anywhere; }
 .slot-review summary { min-height:44px; padding:.75rem 0; cursor:pointer; }
 .slot-review .follow-up-list { margin-top:.5rem; }

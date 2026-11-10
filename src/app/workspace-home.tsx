@@ -54,7 +54,23 @@ export function WorkspaceHome(){
         {view.schedule===null||view.schedule.visits===null?<p>Upcoming visits could not be verified. Open Schedule to check; this does not mean there are none.</p>:<><p className="field-help">Next seven business dates · {view.schedule.timezone}. Confirmed appointment times are shown.</p>{visits.length===0?<p>{view.schedule.visits.hasMore?'No active visits on this page. Open Schedule to review remaining visits.':'No active saved visits in the next seven days.'}</p>:<ul className="follow-up-list">{visits.map(job=><li key={job.jobId}><a href={'/schedule?job='+encodeURIComponent(job.jobId)} aria-label={'Review visit for '+job.customerName}>{job.customerName}</a><time dateTime={job.startAt}>{when(job.startAt,job.timezone)} – {when(job.endAt,job.timezone)} · {job.timezone}</time><span>{job.vehicleLabels.join(' · ')}{job.vehicleCount>job.vehicleLabels.length?' · '+(job.vehicleCount-job.vehicleLabels.length)+' more vehicles':''}</span><span>{({scheduled:'Scheduled',en_route:'En route',in_progress:'In progress',paused:'Paused',completed:'Completed',cancelled:'Cancelled'})[job.state]}{job.pendingAppointment?' · Time change proposed; confirmed time shown':''}{job.unknownTravel?' · Travel needs review':''}</span></li>)}</ul>}{view.schedule.visits.hasMore&&<p className="field-help">More saved visits are available. Open Schedule for the remaining records.</p>}</>}
         <details className="home-changes" open={!changes||changes.items.length>0}><summary>Appointment changes to review</summary>{!changes?<p>Proposed changes could not be verified. Open Schedule to check.</p>:<>{changes.items.length===0?<p>No proposed appointment changes recorded.</p>:<ul className="follow-up-list">{changes.items.map(({head})=><li key={head.job.id}><a href={'/schedule?job='+encodeURIComponent(head.job.id)}>Review {head.confirmationDraft?.customerName??'saved job'}</a><span>Proposed: {when(head.latestAppointment.start_at,head.latestAppointment.timezone)}</span><span>Confirmed slot: {when(head.appointment.start_at,head.appointment.timezone)}</span></li>)}</ul>}{changes.hasMore&&<p>More proposed changes are available in Schedule.</p>}<p className="field-help">All dates. Proposals reserve no new time.</p></>}</details>
       </section>
-      <section className="home-panel" aria-label="Lead follow-ups"><div className="section-heading"><h2>Follow-ups</h2><a href="/leads">All leads</a></div>
+      {view.schedule&&'maintenance' in view.schedule&&<section className="home-panel" aria-label="Due maintenance reminders">
+        <h2>Maintenance due</h2>
+        <p className="field-help">Due today or overdue in {view.schedule.timezone}.</p>
+        {view.schedule.maintenance===null?<p>Saved reminders could not be verified. Refresh to try again.</p>:
+          view.schedule.maintenance&&<>
+            {view.schedule.maintenance.entries.length===0?<p>No maintenance reminders due.</p>:
+              <ul className="follow-up-list">{view.schedule.maintenance.entries.map(({record,customerName,vehicleLabel,effectiveDueAt})=>
+                <li key={record.taskId}>
+                  <strong>{customerName}</strong>{vehicleLabel&&<span>{vehicleLabel}</span>}
+                  <time dateTime={effectiveDueAt}>{when(effectiveDueAt,view.schedule!.timezone)}</time>
+                  <span>{record.state==='snoozed'?'Snoozed until this time':'Open'}</span>
+                  {record.sourceJobId&&<a href={'/schedule?job='+encodeURIComponent(record.sourceJobId)}>Open saved job</a>}
+                </li>)}</ul>}
+            {view.schedule.maintenance.next&&<p className="field-help">Showing the first 20 due reminders.</p>}
+          </>}
+      </section>}
+      <section className="home-panel" aria-label="Lead follow-ups"><div className="section-heading"><h2>Lead follow-ups</h2><a href="/leads">All leads</a></div>
         {view.followUps===null?<p>Follow-ups could not be loaded. Open leads to check; this does not mean there are none.</p>:<>
           {view.followUps.hasMore&&<p className="notice">Showing reminders from the first 50 leads. Open leads to review the remaining records.</p>}
           {reminders.length===0?<p>No follow-up dates recorded{view.followUps.hasMore?' in this page of leads':''}.</p>:<ul className="follow-up-list">{reminders.map(lead=><li key={lead.id}><strong>{lead.label}</strong><span>{new Date(lead.follow_up_at!).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'})}</span><span>{lead.state==='lost'?'Lost lead · follow-up retained':lead.state.replaceAll('_',' ')}</span></li>)}</ul>}

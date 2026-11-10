@@ -9,6 +9,7 @@ export function schedulingOriginalFixture(kind:SchedulingOriginalKind){
  if(fieldOriginalKinds.includes(kind as FieldOriginalKind)){
   const r=parseFieldOriginal(original).reference;
   const target='messageId'in r?{subjectId:r.messageId,sourceRecordId:randomUUID(),sourceVersion:'1'}:
+   'taskId'in r?{subjectId:r.taskId,sourceRecordId:randomUUID(),sourceVersion:(BigInt(r.expectedVersion)+1n).toString()}:
    'legVersionId'in r?{subjectId:r.legId,sourceRecordId:randomUUID(),sourceVersion:'2'}:
    'expectedJobVersion'in r?{subjectId:r.jobId,sourceRecordId:r.jobId,sourceVersion:(BigInt(r.expectedJobVersion)+(kind==='operations.job.work_boundary.correct'?0n:1n)).toString()}:
    {subjectId:r.legId,sourceRecordId:randomUUID(),sourceVersion:'expectedEvidenceVersion'in r?(BigInt(r.expectedEvidenceVersion)+1n).toString():r.expectedLegVersionId===null?'1':'2'};
