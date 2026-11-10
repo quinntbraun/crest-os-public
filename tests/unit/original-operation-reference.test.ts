@@ -13,6 +13,7 @@ const targets:Record<OriginalOperationKind,Record<string,unknown>>={
  'operations.job.work_end.correct':{jobId:randomUUID(),expectedJobVersion:'4',workVersionId:randomUUID(),completionEventId:randomUUID()},
  'operations.mobile_departure.correct':{jobId:randomUUID(),expectedJobVersion:'3',legId:randomUUID(),legVersionId:randomUUID(),departureEventId:randomUUID()},
  'operations.message.record_outcome':{jobId:randomUUID(),messageId:randomUUID(),priorEventId:randomUUID(),action:'owner_confirmed_sent'},
+ 'operations.follow_up.save':{taskId:randomUUID(),expectedVersion:'0',action:'created'},
  'operations.job.work_boundary.correct':{jobId:randomUUID(),expectedJobVersion:'3',leftVersionId:randomUUID(),rightVersionId:randomUUID()},
  'operations.mileage.record':{legId:randomUUID(),expectedLegVersionId:randomUUID(),expectedEvidenceVersion:'0'},
  'operations.support_trip.record':{legId:randomUUID(),expectedLegVersionId:null,action:'depart'},

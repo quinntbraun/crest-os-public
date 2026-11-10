@@ -24,7 +24,7 @@ const approve=(f,q,c=web)=>value(c,'SELECT crest_commands.approve_quote_revision
 const commercial=(f,q,r,source,related,body,verb,c=web)=>value(c,'SELECT crest_commands.'+(verb==='send'?'confirm_quote_manual_send':'accept_quote_confirmation')+'($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13,$14,$15,$16,$17,$18,$19) AS value',[...auth(f),f.epoch,q.operation,q.family,q.revision,r.familyVersion,r.revisionVersion,r.contentVersion,r.contentHash,source,related,body]);
 async function reviewed(f,content=review(f)){const q=request(f,content),saved=await save(f,q),ready=await submit(f,action(q,saved.receipt)),approval=action(q,ready.receipt,{approval:randomUUID()}),approved=await approve(f,approval);assert.equal(approved.state,'committed');return {q,receipt:approved.receipt,approvalId:approval.approval};}
 async function sentOffer(f,prepared){const q={...prepared.q,operation:randomUUID()},sendId=randomUUID(),body={channel:'in_person',recipientSnapshot:{displayName:'Synthetic recipient',phone:null,email:null},evidenceNote:null,confirmedActualSharing:true,presentationHash:prepared.receipt.presentationHash,replacesRevisionId:null},result=await commercial(f,q,prepared.receipt,sendId,prepared.approvalId,body,'send');assert.equal(result.state,'committed');return {...prepared,q,sendId,sendBody:body,sendResult:result,receipt:result.receipt};}
-const confirmationBody=(f,s,patch={})=>({sendId:s.sendId,customerId:f.customer,conversionId:null,channel:'in_person',counterpartySnapshot:{displayName:'Synthetic recipient',phone:null,email:null},confirmationEffectiveAt:new Date().toISOString().replace(/\.(\d{3})Z$/,'.$1000Z'),evidenceNote:'Customer confirmed the exact retained revision and all offered terms.',confirmedExactTerms:true,...patch});
+const confirmationBody=(f,s,conversionId,confirmationEffectiveAt)=>({sendId:s.sendId,customerId:f.customer,conversionId,channel:'in_person',counterpartySnapshot:{displayName:'Synthetic recipient',phone:null,email:null},confirmationEffectiveAt,evidenceNote:'Customer confirmed the exact retained revision and all offered terms.',confirmedExactTerms:true});
  return async function acceptedFixture(principal,{customerId=null,convertedLead=false,paidLineDiscount=null}={}){
   const f=principal?await prepareCrm(principal,customerId):await state(),content=review(f);
   content.lines[0].lineDiscount=paidLineDiscount;
@@ -33,11 +33,12 @@ const confirmationBody=(f,s,patch={})=>({sendId:s.sendId,customerId:f.customer,c
   content.lines.push({...baseLine(),grossCents:'0',description:'Explicit synthetic complimentary scope',complimentaryReason:'Owner-approved complimentary work',category:null,assessment:null,categoryOverrideNote:null});
   const sent=await sentOffer(f,await reviewed(f,content)),q={...sent.q,operation:randomUUID()},agreementId=randomUUID();
   if(convertedLead){conversionId=randomUUID();const customerVersion=await scalar('SELECT version::text AS value FROM crest.customers WHERE business_id=$1 AND id=$2',[f.business,f.customer]);assert.equal((await value(web,'SELECT crest_commands.convert_lead($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13,$14) AS value',[...auth(f),f.epoch,randomUUID(),conversionId,leadId,sent.receipt.leadVersion,{customer:{kind:'existing',id:f.customer,expectedVersion:customerVersion},vehicles:[],addresses:[]}])).state,'committed');}
-  // This is a SQL authority fixture, not a real customer's confirmation. Use
-  // one observed database timestamp rather than mixing host millisecond time
-  // with PostgreSQL's microsecond approval/recording clock under load.
-  const confirmationEffectiveAt=await scalar('SELECT to_char(clock_timestamp() AT TIME ZONE \'UTC\',\'YYYY-MM-DD"T"HH24:MI:SS.US"Z"\') AS value');
-  const accepted=await commercial(f,q,sent.receipt,randomUUID(),agreementId,confirmationBody(f,sent,{conversionId,confirmationEffectiveAt}),'accept');assert.equal(accepted.state,'committed','Synthetic initial acceptance: '+JSON.stringify(accepted));
+  // The synthetic customer confirms when the retained send is recorded.
+  // Use the exact recorded microseconds instead of sampling a new wall clock.
+  const confirmationEffectiveAt=await scalar(
+   `SELECT to_char(confirmed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS value
+    FROM crest.quote_sends WHERE business_id=$1 AND id=$2`,[f.business,sent.sendId]);
+  const accepted=await commercial(f,q,sent.receipt,randomUUID(),agreementId,confirmationBody(f,sent,conversionId,confirmationEffectiveAt),'accept');assert.equal(accepted.state,'committed','Synthetic initial acceptance: '+JSON.stringify(accepted));
   const sources=(await client.query('SELECT s.id,s.entitlement_id,s.entitlement_version_id,s.agreement_id,s.stable_partition_id,s.amount_cents::text,s.gross_inclusive_cents::text,s.discount_inclusive_cents::text,s.scope_description,e.vehicle_id,e.job_wide FROM crest.scope_allocations s JOIN crest.scope_entitlements e ON e.business_id=s.business_id AND e.id=s.entitlement_id WHERE s.business_id=$1 AND s.agreement_id=$2 ORDER BY s.id',[f.business,agreementId])).rows;
   assert.equal(sources.length,2);assert(sources.some(source=>source.amount_cents==='0'));assert(sources.some(source=>source.vehicle_id===f.vehicle));
   return {...f,agreementId,familyId:q.family,sources,leadId,conversionId,confirmationEffectiveAt,auth:()=>auth(f)};

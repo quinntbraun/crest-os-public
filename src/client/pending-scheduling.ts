@@ -11,6 +11,7 @@ export const pendingSchedulingKeys=Object.freeze({
  'operations.job.work_end.correct':'crest.work-end.pending-reference.v1',
  'operations.mobile_departure.correct':'crest.mobile-departure.pending-reference.v1',
  'operations.message.record_outcome':'crest.review-message-outcome.pending-reference.v1',
+ 'operations.follow_up.save':'crest.maintenance-follow-up.pending-reference.v1',
  'operations.mileage.record':'crest.mileage.pending-reference.v1',
  'operations.support_trip.record':'crest.support-trip.pending-reference.v1',
  'operations.support_trip.correct':'crest.support-trip-correction.pending-reference.v1',

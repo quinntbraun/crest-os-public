@@ -1,12 +1,12 @@
 import type {Proof} from './authentication';
 import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
-const routes=['slot-review','original','workspace','agreement','resources','pending','list','read','history','mode-history','mode-save','book','cancel','reschedule','field-save','completion-context','complete','mileage-trips','mileage-history','mileage-save','support-trips','support-trip-history','support-trip-mileage','support-trip-save','interrupt','unfulfilled-context','cancel-unfulfilled','work-time','work-boundary-save','work-start','work-start-save','work-end','work-end-save','mobile-departure','mobile-departure-save','review-outcome','review-outcome-save','review-history'] as const;
+const routes=['slot-review','original','workspace','agreement','resources','pending','list','read','history','mode-history','mode-save','book','cancel','reschedule','field-save','completion-context','complete','mileage-trips','mileage-history','mileage-save','support-trips','support-trip-history','support-trip-mileage','support-trip-save','interrupt','unfulfilled-context','cancel-unfulfilled','work-time','work-boundary-save','work-start','work-start-save','work-end','work-end-save','mobile-departure','mobile-departure-save','review-outcome','review-outcome-save','review-history','maintenance-list','maintenance-history','maintenance-save'] as const;
 export type SchedulingRoute=typeof routes[number];
 type Kind='input'|'not_submitted'|'recovery'|'limited'|'unknown'|'unavailable';
 export class SchedulingClientError extends Error{readonly kind:Kind;constructor(kind:Kind){super('SCHEDULING_REQUEST_FAILED');this.name='SchedulingClientError';this.kind=kind;}}
 // Domain-only private transport. No retries, storage, auth bypass or external URL.
 export async function postScheduling(route:SchedulingRoute,body:object,proof:Proof,external:AbortSignal){
- const mutation=['book','cancel','reschedule','mode-save','field-save','complete','mileage-save','support-trip-save','interrupt','cancel-unfulfilled','work-boundary-save','work-start-save','work-end-save','mobile-departure-save','review-outcome-save'].includes(route);let sent=false;
+ const mutation=['book','cancel','reschedule','mode-save','field-save','complete','mileage-save','support-trip-save','interrupt','cancel-unfulfilled','work-boundary-save','work-start-save','work-end-save','mobile-departure-save','review-outcome-save','maintenance-save'].includes(route);let sent=false;
  try{
   if(!routes.includes(route)||typeof proof?.csrfToken!=='string'||!/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(proof.csrfToken)||!Number.isSafeInteger(proof.expiresAt)||proof.expiresAt<=Date.now())throw Error();
   const signal=AbortSignal.any([external,AbortSignal.timeout(40000)]),encoded=JSON.stringify(body);if(signal.aborted||new TextEncoder().encode(encoded).length>(mutation?131072:16384))throw Error();sent=true;
@@ -41,6 +41,7 @@ export async function postScheduling(route:SchedulingRoute,body:object,proof:Pro
    ...route==='workspace'&&response.headers.get('x-crest-work-end')==='1'?{workEndAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-mobile-departure')==='1'?{mobileDepartureAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-review-history')==='1'?{reviewHistoryAvailable:true as const}:{},
+   ...route==='workspace'&&response.headers.get('x-crest-maintenance-follow-up')==='1'?{maintenanceFollowUpAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-review-outcome')==='1'?{reviewOutcomeAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-work-boundary')==='1'?{workBoundaryAvailable:true as const}:{}};
  }catch(error){throw error instanceof SchedulingClientError?error:new SchedulingClientError(mutation?(sent?'unknown':'not_submitted'):'unavailable');}

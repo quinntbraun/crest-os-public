@@ -8,6 +8,7 @@ import {lookupSchedulingOriginal} from '../../src/client/scheduling-original';
 function packet(kind:typeof fieldOriginalKinds[number]){
  const original=parseFieldOriginal(originalOperationFixture(kind)),ref=original.reference;
  const target='messageId'in ref?{subjectId:ref.messageId,sourceRecordId:randomUUID(),sourceVersion:'1'}:
+  'taskId'in ref?{subjectId:ref.taskId,sourceRecordId:randomUUID(),sourceVersion:(BigInt(ref.expectedVersion)+1n).toString()}:
   'legVersionId'in ref?{subjectId:ref.legId,sourceRecordId:randomUUID(),sourceVersion:'2'}:
   'expectedJobVersion'in ref?{subjectId:ref.jobId,sourceRecordId:ref.jobId,
    sourceVersion:(BigInt(ref.expectedJobVersion)+(kind==='operations.job.work_boundary.correct'?0n:1n)).toString()}:
@@ -26,6 +27,7 @@ it.each(fieldOriginalKinds)('binds the source-verified minimal %s receipt and ke
   const ref=p.original.reference;
   const value=key==='sourceRecordId'&&'priorEventId'in ref?ref.priorEventId:
    key==='sourceRecordId'&&'legVersionId'in ref?ref.legVersionId:
+   key==='sourceRecordId'&&'taskId'in ref?ref.taskId:
    key==='sourceRecordId'&&!('jobId'in ref)?'invalid':randomUUID();
   const wrong={...p,result:{...p.result,receipt:{...p.result.receipt,[key]:value}}};
   expect(()=>parseFieldOriginalResult(wrong,p.original)).toThrow();
