@@ -63,6 +63,13 @@ export async function requireSyntheticMobileDeparture(connectionString){
  ])await requireSyntheticReader(connectionString,'crest_commands.'+signature,'SYNTHETIC_MOBILE_DEPARTURE_MIGRATION_REQUIRED');
 }
 
+export async function requireSyntheticReviewOutcome(connectionString){
+ for(const signature of [
+  'read_review_message_outcome(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)',
+  'record_review_message_outcome(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,uuid,uuid,uuid,jsonb)'
+ ])await requireSyntheticReader(connectionString,'crest_commands.'+signature,'SYNTHETIC_REVIEW_OUTCOME_MIGRATION_REQUIRED');
+}
+
 async function requireSyntheticReader(connectionString,signature,missing){
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{

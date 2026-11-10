@@ -19,7 +19,8 @@ const laterFieldKinds=new Set([
  'operations.job.work_boundary.correct',
  'operations.job.work_start.correct',
  'operations.job.work_end.correct',
- 'operations.mobile_departure.correct'
+ 'operations.mobile_departure.correct',
+ 'operations.message.record_outcome'
 ]);
 let sandbox,client,web,login,target,accepted;
 const value=async(c,q,args=[])=>(await c.query(q,args)).rows[0].value;

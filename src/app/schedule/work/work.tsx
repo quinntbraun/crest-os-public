@@ -5,6 +5,7 @@ import type {FieldSessionMode,FieldSessionView} from '../../../client/field-sess
 import {createPendingSchedulingStore,pendingSchedulingKeys} from '../../../client/pending-scheduling';
 import type {SchedulingOriginalKind} from '../../../operations/scheduling-original-contract';
 import type {FieldSessionSave,FieldAction} from '../../../operations/field-session-contract';
+import {reviewOutcomeKind} from '../../../operations/review-message-contract';
 import {parseCustomer} from '../../../customer/customer-contract';
 import {BookingInstantInput} from '../booking-fields';
 import {CompletionEditor,SavedCompletion} from './completion';
@@ -34,9 +35,9 @@ export function FieldSessionScreen({jobId,mode='work'}:{jobId:string;mode?:Field
  const [view,setView]=useState(initialFieldSessionView),current=useRef<ReturnType<typeof createFieldSessionController>|null>(null),status=useRef<HTMLParagraphElement>(null);
  const completing=mode==='completion',interrupting=mode==='interruption',cancelling=mode==='cancellation';
  const kind=fieldSessionKind[mode];
- useEffect(()=>{const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)},controller=createFieldSessionController({mode,store:createPendingSchedulingStore(storage,kind),blockers:(Object.keys(pendingSchedulingKeys) as SchedulingOriginalKind[]).filter(key=>key!==kind).map(key=>createPendingSchedulingStore(storage,key)),change:setView});current.current=controller;void controller.load(jobId);
+ useEffect(()=>{const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)},controller=createFieldSessionController({mode,store:createPendingSchedulingStore(storage,kind),...completing?{outcomeStore:createPendingSchedulingStore(storage,reviewOutcomeKind)}:{},blockers:(Object.keys(pendingSchedulingKeys) as SchedulingOriginalKind[]).filter(key=>key!==kind&&(!completing||key!==reviewOutcomeKind)).map(key=>createPendingSchedulingStore(storage,key)),change:setView});current.current=controller;void controller.load(jobId);
   const clear=()=>controller.suspend(),hidden=()=>{if(document.visibilityState==='hidden')clear();},restored=(event:PageTransitionEvent)=>{if(event.persisted)clear();};document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',clear);window.addEventListener('pageshow',restored);return()=>{current.current=null;controller.dispose();document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',clear);window.removeEventListener('pageshow',restored);};
- },[jobId,kind,mode]);
+ },[jobId,kind,mode,completing]);
  async function action(kind:'load'|'check'|'moreVehicles'){const controller=current.current;if(!controller)return;await(kind==='load'?controller.load(jobId):controller[kind]());if(current.current===controller)status.current?.focus();}
  const activeJob=view.resources?.head.job;
  return <section aria-label={completing?'Mobile job completion':interrupting?'Mobile trip interruption':cancelling?'Mobile job cancellation':'Mobile work status'} aria-busy={view.busy}><p className="job-change-status" ref={status} role="status" tabIndex={-1}>{view.message}</p>
@@ -60,10 +61,13 @@ export function FieldSessionScreen({jobId,mode='work'}:{jobId:string;mode?:Field
   {view.phase==='ready'&&view.completion&&<CompletionEditor key={view.completion.jobId+':'+view.completion.jobVersion} context={view.completion} disabled={view.busy||view.context?.context.writeState!=='ready'} save={async body=>{
    const controller=current.current;if(!controller)return;await controller.complete(body);if(current.current===controller)status.current?.focus();
   }}/>}
-  {view.summary&&<SavedCompletion summary={view.summary}/>}
+  {view.summary&&<SavedCompletion summary={view.summary} outcome={view.reviewOutcome} outcomeEnabled={view.reviewOutcomeEnabled===true}
+   canRecordOutcome={view.canRecordReviewOutcome===true} disabled={view.busy} saveOutcome={async body=>{
+    const controller=current.current;if(!controller)return;await controller.recordReviewOutcome(body);if(current.current===controller)status.current?.focus();
+   }}/>}
   {view.savedJobId&&<>{!view.summary&&<p>Confirmed saved version {view.savedVersion}.</p>}<a className="primary-action" href={'/schedule?job='+encodeURIComponent(view.savedJobId)}>Open updated job in Schedule</a></>}
   {completing&&view.phase==='committed'&&!view.summary&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload saved completion</button>}
-  {view.phase==='pending'&&<><p>No request retries automatically. Keep its reference until the original outcome is verified.</p>{view.reference&&<p className="save-reference">Original work reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>{completing?'Check original completion':interrupting?'Check original trip interruption':cancelling?'Check original cancellation':'Check original work action'}</button><a href={'/save-review?kind='+kind}>Open Save review</a></>}
+  {view.phase==='pending'&&<><p>No request retries automatically. Keep its reference until the original outcome is verified.</p>{view.reference&&<p className="save-reference">Original work reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>{view.pendingKind===reviewOutcomeKind?'Check original message outcome':completing?'Check original completion':interrupting?'Check original trip interruption':cancelling?'Check original cancellation':'Check original work action'}</button><a href={'/save-review?kind='+(view.pendingKind??kind)}>Open Save review</a></>}
   {['review','blocked','unavailable'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload saved work</button>}
   <nav aria-label="Work navigation"><a href={'/schedule?job='+encodeURIComponent(jobId)}>Saved job and history</a><a href="/schedule">Schedule</a><a href="/save-review">Interrupted saves</a></nav>
  </section>;
