@@ -14,6 +14,7 @@ const keys:Record<OriginalOperationKind,string>={
  'operations.job.complete':'crest.field-completion.pending-reference.v1',
  'operations.job.interrupt':'crest.trip-interruption.pending-reference.v1',
  'operations.job.cancel_unfulfilled':'crest.unfulfilled-cancellation.pending-reference.v1',
+ 'operations.job.work_boundary.correct':'crest.work-boundary.pending-reference.v1',
  'operations.mileage.record':'crest.mileage.pending-reference.v1',
  'operations.support_trip.record':'crest.support-trip.pending-reference.v1',
  'operations.support_trip.correct':'crest.support-trip-correction.pending-reference.v1',

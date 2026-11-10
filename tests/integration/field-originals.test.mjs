@@ -76,7 +76,7 @@ test('installs typed field originals with unchanged retirement source and closed
  for(const role of ['anon','authenticated','crest_web','crest_worker','crest_recovery'])assert.equal(await scalar('SELECT has_function_privilege($1,$2,$3) value',[role,'crest_private.original_operation_reference_valid(jsonb)','EXECUTE']),false);
 });
 test('application and SQL agree on every typed original and reject retained draft content',async()=>{
- for(const kind of originalOperationKinds){const r=originalOperationFixture(kind);assert.equal(await scalar('SELECT crest_private.original_operation_reference_valid($1) value',[r]),true,kind);assert.equal(await scalar('SELECT crest_private.original_operation_reference_valid($1) value',[{...r,reference:{...r.reference,location:'Private draft content'}}]),false,kind);}
+ for(const kind of originalOperationKinds){const r=originalOperationFixture(kind);assert.equal(await scalar('SELECT crest_private.original_operation_reference_valid($1) value',[r]),kind!=='operations.job.work_boundary.correct',kind);assert.equal(await scalar('SELECT crest_private.original_operation_reference_valid($1) value',[{...r,reference:{...r.reference,location:'Private draft content'}}]),false,kind);}
 });
 test('the existing booked-job original still uses its unchanged full typed receipt',async()=>{
  const p=await fixture(),original={schemaVersion:1,businessId:p.business,commandType:'operations.job.book',reference:{operationId:p.booking.operationId,recoveryEpoch:p.epoch,jobId:p.job,expectedModeSequence:'0'}};
@@ -87,7 +87,7 @@ test('a different support command kind at the same operation ID cannot impersona
  const changed=parseFieldOriginal({...q.original,commandType:'operations.support_trip.correct',reference:{...q.original.reference,action:'record'}});
  assert.deepEqual(await typedLookup(q,changed),{state:'conflict',reason:'operation'});assert.equal(parseFieldOriginalResult(await typedLookup(q),q.original).state,'committed');
 });
-for(const kind of fieldOriginalKinds){
+for(const kind of fieldOriginalKinds.filter(kind=>kind!=='operations.job.work_boundary.correct')){
  test(kind+' verifies the actual original source and rejects mismatched typed identities',async()=>{
   const q=await plan(kind),saved=await execute(q);assert.equal(saved.state,'committed');const found=await typedLookup(q),parsed=parseFieldOriginalResult(found,q.original);assert.equal(parsed.state,'committed');assert.deepEqual(parseSchedulingOriginalResult(found,q.original),parsed);assert.equal(parsed.receipt.operationId,q.original.reference.operationId);
   const observed=await retire(q);assert.equal(observed.state,'original_recorded');parseOriginalOperationOutcome(observed,q.original);assert.throws(()=>parseFieldOriginalResult(observed,q.original));

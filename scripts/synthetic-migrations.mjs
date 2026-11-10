@@ -36,6 +36,12 @@ export async function requireSyntheticWorkTime(connectionString){
   'SYNTHETIC_WORK_TIME_MIGRATION_REQUIRED');
 }
 
+export async function requireSyntheticWorkBoundary(connectionString){
+ await requireSyntheticReader(connectionString,
+  'crest_commands.correct_job_work_boundary(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,uuid,bigint,uuid,uuid,jsonb)',
+  'SYNTHETIC_WORK_BOUNDARY_MIGRATION_REQUIRED');
+}
+
 async function requireSyntheticReader(connectionString,signature,missing){
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{

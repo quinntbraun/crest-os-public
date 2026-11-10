@@ -295,6 +295,11 @@
       "version": "20261113180000",
       "file": "20261113180000_job_work_time.sql",
       "sha256": "15532963a33bc4ddf8a46b7581655fa8a956999b47fff3c5b8f1a5abe135e284"
+    },
+    {
+      "version": "20261114180000",
+      "file": "20261114180000_job_work_boundary_correction.sql",
+      "sha256": "dda35bb1a75989db4515e96867df36e975537c567152b2dc1ba3f6d9fe511fd7"
     }
   ]
 }

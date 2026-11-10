@@ -14,6 +14,8 @@ import {formatAcceptedQuoteAmendmentSourceCsv,formatFieldAcceptedQuoteAmendmentS
 import {verifyAcceptedAmendmentSourceGraph} from '../../src/commercial/quote-amendment-accepted-source.ts';
 import {verifyFieldBookingParents,verifyFieldAllocationPlan} from '../../src/operations/field-plan-source.ts';
 import {formatFieldWorkspaceSources} from '../../src/operations/field-workspace-source.ts';
+import {verifyFieldSources} from '../../src/operations/field-source.ts';
+import {verifyBusinessHistoryEvidence} from '../../src/security/business-history-evidence.ts';
 import {bookingFoundationEvidence} from '../support/booking-source-evidence.mjs';
 import {confirmedBookingRequest} from '../fixtures/confirmed-booking.ts';
 import {reimportFieldWorkspaceSources} from '../support/field-workspace-reimport.mjs';
@@ -169,4 +171,63 @@ for(const state of ['completed','paused'])test('accepted amendment preserves joi
 });
 test('field-inclusive accepted context keeps unknown future finance schema closed',async()=>{
  await client.query('BEGIN');try{await client.query('SET LOCAL ROLE crest_schema_owner');await client.query('CREATE TABLE crest.unreviewed_financial_source(id uuid)');await client.query('RESET ROLE');await assert.rejects(client.query('SELECT crest_commands.quote_amendment_accepted_source_context($1)',[initial.business]),e=>e.code==='42501');}finally{await client.query('ROLLBACK');}
+});
+
+test('exports and reconstructs both corrected interval versions, their predecessors and the exact correction receipt',async()=>{
+ const correction=await readFile(new URL('../../planning/proposals/job-work-boundary-correction.sql',import.meta.url),'utf8');
+ await tx(client,()=>client.query(correction));
+ const p=await fixture.fixture();
+ await fixture.field(p,'direct_arrive');
+ const pause=(await fixture.field(p,'pause')).receipt;
+ const oldLeft=pause.closedWorkIntervalId,oldRight=pause.workIntervalId,operation=randomUUID();
+ const correctedAt=await value(client,`SELECT to_char((ended_at-interval '1 microsecond') AT TIME ZONE 'UTC',
+  'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS value FROM crest.work_intervals WHERE id=$1`,[oldLeft]);
+ const reason='=Corrected observation\nCafé \\N';
+ const saved=await value(web,'SELECT crest_commands.correct_job_work_boundary($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13,$14,$15) AS value',
+  [...p.auth(),p.epoch,operation,p.job,p.version,oldLeft,oldRight,{correctedAt,reason}]);
+ assert.equal(saved.state,'committed');
+ await fixture.field(p,'resume');
+
+ const {workspace}=await capture(p),rows=workspace.field.rows.work_intervals;
+ assert.equal(rows.length,7);
+ const left=rows.find(row=>row.id===saved.receipt.left.id),right=rows.find(row=>row.id===saved.receipt.right.id);
+ assert.equal(left.replaces_id,oldLeft);
+ assert.equal(right.replaces_id,oldRight);
+ assert.equal(left.ended_at,correctedAt);
+ assert.equal(right.started_at,correctedAt);
+ assert.equal(left.reason,reason);
+ assert.equal(right.reason,reason);
+ assert.equal(rows.find(row=>row.id===oldLeft).ended_at,saved.receipt.previousBoundaryAt);
+ assert.equal(rows.find(row=>row.id===oldRight).started_at,saved.receipt.previousBoundaryAt);
+ assert(rows.some(row=>row.replaces_id===right.id&&row.change_kind==='close'));
+ const bundle=formatFieldWorkspaceSources(workspace);
+ const commercial=formatFieldAcceptedQuoteAmendmentSourceCsv(workspace.commercial,workspace.field);
+ const neutral=await sandbox.connect(await sandbox.database());
+ try{
+  const imported=await reimportFieldWorkspaceSources(neutral,bundle,commercial,workspace);
+  assert.equal(imported.tables,47);
+  assert.equal(imported.applicationRestore,false);
+  assert.deepEqual(JSON.parse(await value(neutral,'SELECT result AS value FROM restored_operations WHERE operation_id=$1',[operation])).receipt,saved.receipt);
+ }finally{await neutral.end();}
+
+ // A forged export can recompute unkeyed envelope hashes. The independent
+ // correction verifier must still refuse a receipt that disagrees with its rows.
+ for(const change of [
+  stored=>{stored.receipt.auditIds[0]=randomUUID();},
+  stored=>{stored.receipt.left.ended_at=stored.receipt.previousBoundaryAt;},
+  stored=>{stored.request.rightVersionId=stored.request.leftVersionId;},
+ ]){
+  const history=JSON.parse(workspace.history);
+  const record=history.records.find(record=>record.kind==='operation'&&JSON.parse(record.canonicalEvidence).row.operation_id===operation);
+  const evidence=JSON.parse(record.canonicalEvidence),stored=JSON.parse(evidence.row.result);
+  change(stored);
+  evidence.row.result=JSON.stringify(stored);
+  history.evidenceBytes-=Buffer.byteLength(record.canonicalEvidence);
+  record.canonicalEvidence=JSON.stringify(evidence);
+  history.evidenceBytes+=Buffer.byteLength(record.canonicalEvidence);
+  record.evidenceHash=createHash('sha256').update(record.canonicalEvidence).digest('hex');
+  const forged=JSON.stringify(history);
+  verifyBusinessHistoryEvidence(forged,{businessId:p.business});
+  assert.throws(()=>verifyFieldSources({...workspace.field,historyEvidence:forged}),{message:'FIELD_SOURCE_REVIEW_REQUIRED'});
+ }
 });
