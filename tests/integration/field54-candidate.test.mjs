@@ -14,8 +14,8 @@ import {captureFieldWorkspaceFixture,fieldWorkspaceContent} from '../support/fie
 import {verifyNeutralFieldOccupancyRebuild} from '../support/field-occupancy-rebuild.mjs';
 import {formatFieldWorkspaceSources} from '../../src/operations/field-workspace-source.ts';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
-import {requireSyntheticJobCompletion,requireSyntheticJobMileage,requireSyntheticSupportTrips,requireSyntheticUnfulfilledCancellation,requireSyntheticWorkTime,requireSyntheticWorkBoundary} from '../../scripts/synthetic-migrations.mjs';
-import {inventory,privateWorkspace,keyPair,backupDatabase,restoreDatabase,backupLegacy53Database,restoreLegacy53Database,backupField54CandidateDatabase,restoreField54CandidateDatabase,backupLegacy55Database,restoreLegacy55Database,backupLegacy56Database,restoreLegacy56Database,backupLegacy57Database,restoreLegacy57Database,backupLegacy58Database,restoreLegacy58Database,backupLegacy59Database,restoreLegacy59Database,recoveryCluster,connect} from '../support/recovery-drill.mjs';
+import {requireSyntheticJobCompletion,requireSyntheticJobMileage,requireSyntheticSupportTrips,requireSyntheticUnfulfilledCancellation,requireSyntheticWorkTime,requireSyntheticWorkBoundary,requireSyntheticWorkStart} from '../../scripts/synthetic-migrations.mjs';
+import {inventory,privateWorkspace,keyPair,backupDatabase,restoreDatabase,backupLegacy53Database,restoreLegacy53Database,backupField54CandidateDatabase,restoreField54CandidateDatabase,backupLegacy55Database,restoreLegacy55Database,backupLegacy56Database,restoreLegacy56Database,backupLegacy57Database,restoreLegacy57Database,backupLegacy58Database,restoreLegacy58Database,backupLegacy59Database,restoreLegacy59Database,backupLegacy60Database,restoreLegacy60Database,recoveryCluster,connect} from '../support/recovery-drill.mjs';
 const sha=v=>createHash('sha256').update(v).digest('hex'),value=async(c,q,a=[])=>(await c.query(q,a)).rows[0].value;
 const coverage=JSON.parse(await readFile(new URL('../support/field54-export-coverage.json',import.meta.url)));
 let restored54Target;
@@ -253,7 +253,7 @@ test('frozen59 restores independently and registered60 restores a correction wit
   await assert.rejects(restoreDatabase(oldPoint,keys.path,oldDestination),{message:'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest'});
   assert.deepEqual((await restoreLegacy59Database(oldPoint,keys.path,oldDestination)).rows,baseline);
   await assert.rejects(requireSyntheticWorkBoundary(oldDestination),{message:'SYNTHETIC_WORK_BOUNDARY_MIGRATION_REQUIRED'});
-  const upgraded=await sandbox.apply(target);
+  const upgraded=await sandbox.apply(target,await sandbox.prefix(60));
   assert.equal(upgraded.history.length,60);
   assert.equal(upgraded.history.at(-1).version,'20261114180000');
   await requireSyntheticWorkBoundary(target);
@@ -272,11 +272,12 @@ test('frozen59 restores independently and registered60 restores a correction wit
   const original=await captureFieldWorkspaceFixture(exporter,correctedJob.business);
   formatFieldWorkspaceSources(original);
   const expected=await inventory(client);
-  const {manifest}=await backupDatabase(client,target,currentPoint,keys.recipient);
+  const {manifest}=await backupLegacy60Database(client,target,currentPoint,keys.recipient);
   assert.equal(manifest.schemaVersion,60);
   assert.deepEqual(manifest.rows,expected);
   const destination=await cluster.database();
-  assert.deepEqual((await restoreDatabase(currentPoint,keys.path,destination)).rows,expected);
+  assert.deepEqual((await restoreLegacy60Database(currentPoint,keys.path,destination)).rows,expected);
+  await assert.rejects(requireSyntheticWorkStart(destination),{message:'SYNTHETIC_WORK_START_MIGRATION_REQUIRED'});
   await requireSyntheticWorkBoundary(destination);
   const restored=await connect(destination);
   try{
@@ -289,6 +290,54 @@ test('frozen59 restores independently and registered60 restores a correction wit
   }finally{await restored.end();}
   assert.deepEqual(await inventory(client),expected);
  }finally{await cluster.close();}
+},{timeout:180000});
+test('registered61 preserves the prior tables and restores first-start work, linked travel and exact export',async()=>{
+ await assert.rejects(requireSyntheticWorkStart(target),{message:'SYNTHETIC_WORK_START_MIGRATION_REQUIRED'});
+ const prior=await inventory(client),upgraded=await sandbox.apply(target);
+ assert.equal(upgraded.history.length,61);
+ assert.equal(upgraded.history.at(-1).version,'20261115180000');
+ assert.deepEqual((await sandbox.apply(target)).history,upgraded.history);
+ await requireSyntheticWorkStart(target);
+ assert.deepEqual((await inventory(client)).filter(row=>row.schema!=='supabase_migrations'),prior.filter(row=>row.schema!=='supabase_migrations'));
+ const job=await fixture.fixture();
+ await fixture.field(job,'depart');
+ const arrival=(await fixture.field(job,'arrive')).receipt;
+ const pause=(await fixture.field(job,'pause')).receipt,operation=randomUUID();
+ const correctedAt=await value(client,`SELECT to_char((started_at-interval '1 microsecond') AT TIME ZONE 'UTC',
+  'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') value FROM crest.work_intervals WHERE id=$1`,[pause.closedWorkIntervalId]);
+ const original={schemaVersion:1,businessId:job.business,commandType:'operations.job.work_start.correct',reference:{operationId:operation,
+  recoveryEpoch:job.epoch,jobId:job.job,expectedJobVersion:job.version,workVersionId:pause.closedWorkIntervalId,arrivalVersionId:arrival.travelLegId}};
+ const saved=await value(web,'SELECT crest_commands.correct_job_work_start($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13,$14,$15) value',[
+  ...job.auth(),job.epoch,operation,job.job,job.version,pause.closedWorkIntervalId,arrival.travelLegId,
+  {correctedAt,reason:'=Retained actual start\nCafé \\N'},
+ ]);
+ assert.equal(saved.state,'committed');
+ const lookup='SELECT crest_commands.lookup_scheduling_original($1,$2,$3,$4,$5,$6,$7,$8,$9) value';
+ const originalReceipt=await value(web,lookup,[...job.auth(),original]);
+ job.version=saved.receipt.jobVersion;
+ await fixture.field(job,'resume');
+ const source=await captureFieldWorkspaceFixture(exporter,job.business);
+ formatFieldWorkspaceSources(source);
+ const expected=await inventory(client),point=await privateWorkspace(),cluster=await recoveryCluster();
+ try{
+  const {manifest}=await backupDatabase(client,target,point,keys.recipient);
+  assert.equal(manifest.schemaVersion,61);
+  assert.deepEqual(manifest.rows,expected);
+  const destination=await cluster.database();
+  await assert.rejects(restoreLegacy60Database(point,keys.path,destination),{message:'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest'});
+  assert.deepEqual((await restoreDatabase(point,keys.path,destination)).rows,expected);
+  await requireSyntheticWorkStart(destination);
+  const restored=await connect(destination);
+  try{
+   await restored.query('SET ROLE crest_web');
+   assert.deepEqual(await value(restored,lookup,[...job.auth(),original]),originalReceipt);
+   await restored.query('SET ROLE crest_export');
+   const roundTrip=await captureFieldWorkspaceFixture(restored,job.business);
+   assert.deepEqual(fieldWorkspaceContent(roundTrip),fieldWorkspaceContent(source));
+   formatFieldWorkspaceSources(roundTrip);
+  }finally{await restored.end();}
+ }finally{await cluster.close();}
+ assert.deepEqual(await inventory(client),expected);
 },{timeout:180000});
 test('frozen53 recovery still independently restores the original point without any field source or new functions',async()=>{
  cluster53=await recoveryCluster();const destination=await cluster53.database();await assert.rejects(restoreDatabase(point53,keys.path,destination),e=>e.message==='SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest');const restored=await restoreLegacy53Database(point53,keys.path,destination);restored53=await connect(destination);assert.deepEqual(restored.rows,manifest53.rows);assert.deepEqual(await inventory(restored53),prior53);

@@ -300,6 +300,11 @@
       "version": "20261114180000",
       "file": "20261114180000_job_work_boundary_correction.sql",
       "sha256": "dda35bb1a75989db4515e96867df36e975537c567152b2dc1ba3f6d9fe511fd7"
+    },
+    {
+      "version": "20261115180000",
+      "file": "20261115180000_job_work_start_correction.sql",
+      "sha256": "e98201cb8a0dee92ab7e36801956df369e71a3f22c6a932bd648c4df742a9565"
     }
   ]
 }

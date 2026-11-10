@@ -7,6 +7,7 @@ import type {FieldSourceGroup} from './field-source-schema.ts';
 import {recordedOperatorOccupancy} from './work-occupancy.ts';
 import {prepareMileageBody} from './mileage.ts';
 import {workBoundaryKind} from './job-work-boundary-contract.ts';
+import {workStartKind} from './job-work-start-contract.ts';
 import {verifyBusinessHistoryEvidence} from '../security/business-history-evidence.ts';
 import {formatBusinessHistoryCsv} from '../security/business-history-csv.ts';
 import {parseHistoryJson,historyJsonEqual,historyJsonNumber,historyJsonBigint} from '../security/history-evidence-json.ts';
@@ -75,6 +76,75 @@ function verifyWorkBoundarySource(operation:Record<string,unknown>,rows:readonly
  sourceImage('work_intervals',left,receipt.left);
  sourceImage('work_intervals',right,receipt.right);
 }
+function unchanged(before:Record<string,unknown>,after:Record<string,unknown>,changed:readonly string[]){
+ const retained=(row:Record<string,unknown>)=>Object.fromEntries(Object.entries(row).filter(([key])=>!changed.includes(key)));
+ return historyJsonEqual(retained(before),retained(after));
+}
+function auditImages(audit:Record<string,unknown>){
+ check(typeof audit.delta==='string');
+ const delta=parseHistoryJson(audit.delta);
+ shape(delta,['schemaVersion','before','after']);check(historyJsonNumber(delta.schemaVersion,1));
+ return delta;
+}
+function verifyWorkStartSource(operation:Record<string,unknown>,rows:readonly Row[],maps:Record<FieldSourceGroup,Map<unknown,Row>>,
+ audits:readonly Record<string,unknown>[],events:ReadonlyMap<unknown,Record<string,unknown>>){
+ check(historyJsonNumber(operation.schema_version,1)&&historyJsonNumber(operation.result_schema_version,1)&&
+  operation.origin==='manual'&&operation.import_row_id===null&&typeof operation.result==='string');
+ const stored=parseHistoryJson(operation.result);
+ shape(stored,['schemaVersion','request','receipt']);check(historyJsonNumber(stored.schemaVersion,1));
+ const {request,receipt}=stored;
+ const binding=['schemaVersion','commandType','businessId','actorId','operationId','recoveryEpoch','jobId','initialEventId','correctedAt','reason'];
+ shape(request,[...binding,'expectedJobVersion','workVersionId','arrivalVersionId']);
+ shape(receipt,[...binding,'jobVersion','state','eventId','previousStartedAt','work','arrival','auditIds']);
+ check(historyJsonNumber(request.schemaVersion,1)&&request.commandType===workStartKind&&
+  request.businessId===operation.business_id&&request.actorId===operation.actor_id&&request.operationId===operation.operation_id&&
+  request.recoveryEpoch===operation.recovery_epoch&&uuid(request.jobId)&&uuid(request.initialEventId)&&uuid(receipt.eventId)&&
+  version(request.expectedJobVersion)&&version(receipt.jobVersion)&&BigInt(receipt.jobVersion)===BigInt(request.expectedJobVersion)+1n&&
+  uuid(request.workVersionId)&&(request.arrivalVersionId===null||uuid(request.arrivalVersionId))&&
+  instant(request.correctedAt)&&typeof request.reason==='string'&&request.reason.trim().length>0&&[...request.reason].length<=1000&&
+  binding.every(key=>historyJsonEqual(request[key],receipt[key])));
+ const linked=request.arrivalVersionId!==null;
+ check(rows.length===(linked?2:1)&&audits.length===(linked?4:3)&&Array.isArray(receipt.auditIds)&&
+  receipt.auditIds.length===audits.length&&new Set(receipt.auditIds).size===audits.length&&
+  audits.every(a=>a.actor_id===request.actorId&&a.created_by===request.actorId&&receipt.auditIds instanceof Array&&receipt.auditIds.includes(a.id)));
+ const originalAudit=events.get(request.initialEventId),eventAudit=events.get(receipt.eventId),jobAudit=audits.find(a=>a.entity_kind==='jobs');
+ check(originalAudit&&originalAudit.action==='create'&&eventAudit&&audits.includes(eventAudit)&&eventAudit.action==='create'&&
+  jobAudit&&jobAudit.entity_id===request.jobId&&jobAudit.entity_version===receipt.jobVersion&&jobAudit.action==='revise');
+ const {after:initialEvent}=auditImages(originalAudit),{before:eventBefore,after:event}=auditImages(eventAudit);
+ const {before,after}=auditImages(jobAudit);
+ object(initialEvent);object(event);object(before);object(after);object(initialEvent.evidence);
+ check(eventBefore===null&&initialEvent.id===request.initialEventId&&initialEvent.job_id===request.jobId&&initialEvent.created_by===request.actorId&&
+  initialEvent.to_state==='in_progress'&&initialEvent.from_state===(linked?'en_route':'scheduled')&&
+  initialEvent.evidence.action===(linked?'arrive':'direct_arrive')&&initialEvent.evidence.travelOmissionRecorded===!linked&&
+  event.id===receipt.eventId&&event.job_id===request.jobId&&event.operation_id===request.operationId&&event.created_by===request.actorId&&
+  event.sequence===receipt.jobVersion&&event.from_state===receipt.state&&event.to_state===receipt.state&&
+  event.effective_at===request.correctedAt&&event.reason===request.reason&&instant(event.created_at)&&request.correctedAt<=event.created_at&&
+  before.id===request.jobId&&before.version===request.expectedJobVersion&&before.state===receipt.state&&before.fulfillment_mode==='mobile'&&
+  before.operator_actor_id===request.actorId&&before.first_work_at===receipt.previousStartedAt&&
+  after.first_work_at===request.correctedAt&&after.version===receipt.jobVersion&&after.operation_id===request.operationId&&after.updated_by===request.actorId&&
+  unchanged(before,after,['first_work_at','version','operation_id','updated_at','updated_by']));
+ const work=rows.find(row=>row.replaces_id===request.workVersionId),priorWork=maps.work_intervals.get(request.workVersionId),
+  initialWork=maps.work_intervals.get(initialEvent.evidence.workIntervalId);
+ check(work&&priorWork&&initialWork&&initialWork.change_kind==='open'&&initialWork.operation_id===initialEvent.operation_id&&
+  initialWork.started_at===initialEvent.effective_at&&work.logical_id===initialWork.id&&work.job_id===request.jobId&&work.kind==='active'&&
+  work.operator_actor_id===request.actorId&&work.started_at===request.correctedAt&&priorWork.started_at===receipt.previousStartedAt&&
+  work.started_at!==priorWork.started_at&&work.change_kind==='correct'&&work.reason===request.reason&&
+  unchanged(priorWork,work,['id','sequence','replaces_id','started_at','change_kind','reason','created_at','operation_id']));
+ sourceImage('work_intervals',work,receipt.work);
+ let linkedVersion:unknown=null;
+ if(linked){
+  const trip=rows.find(row=>row.replaces_id===request.arrivalVersionId),priorTrip=maps.travel_legs.get(request.arrivalVersionId),
+   initialTrip=maps.travel_legs.get(initialEvent.evidence.travelLegId);
+  check(trip&&priorTrip&&initialTrip&&initialTrip.change_kind==='arrive'&&initialTrip.operation_id===initialEvent.operation_id&&
+   initialTrip.arrived_at===initialEvent.effective_at&&trip.logical_id===initialTrip.logical_id&&trip.job_context_id===request.jobId&&
+   trip.operator_actor_id===request.actorId&&trip.purpose==='mobile_work_site'&&trip.state==='closed'&&
+   priorTrip.arrived_at===receipt.previousStartedAt&&trip.arrived_at===request.correctedAt&&trip.change_kind==='correct'&&trip.reason===request.reason&&
+   unchanged(priorTrip,trip,['id','sequence','replaces_id','arrived_at','change_kind','reason','created_at','operation_id']));
+  sourceImage('travel_legs',trip,receipt.arrival);linkedVersion=trip.id;
+ }else check(initialEvent.evidence.travelLegId===null&&receipt.arrival===null);
+ check(historyJsonEqual(event.evidence,parseHistoryJson(JSON.stringify({schemaVersion:1,action:'correct_first_start',
+  initialEventId:request.initialEventId,workVersionId:work.id,arrivalVersionId:linkedVersion}))));
+}
 export function verifyFieldSources(value:unknown){
  try{
   shape(value,['context','rows','historyEvidence']);const c=value.context;shape(c,['schemaVersion','profile','businessId','snapshotToken','historySnapshotToken','observedAt','expectedCounts']);
@@ -99,10 +169,17 @@ export function verifyFieldSources(value:unknown){
   const history=verifyBusinessHistoryEvidence(value.historyEvidence,{businessId:c.businessId});check(history.context.snapshotToken===c.historySnapshotToken);
   const operations=new Map<string,Record<string,unknown>>(),audits=new Map<string,Record<string,unknown>>();
   const boundaryAuditIds=new Map<string,string[]>(),boundaryRows=new Map<string,Row[]>();
+  const startAudits=new Map<string,Record<string,unknown>[]>(),startRows=new Map<string,Row[]>(),jobEventAudits=new Map<unknown,Record<string,unknown>>();
   for(const record of history.records){
    const body=parseHistoryJson(record.canonicalEvidence);object(body);object(body.row);
    const r=body.row,id=r.operation_id as string;
    if(record.kind==='operation'){operations.set(id,r);continue;}
+   if(r.entity_kind==='job_events'){
+    check(!jobEventAudits.has(r.entity_id));jobEventAudits.set(r.entity_id,r);
+   }
+   if(operations.get(id)?.command_type===workStartKind){
+    const entries=startAudits.get(id)??[];entries.push(r);startAudits.set(id,entries);
+   }
    if(operations.get(id)?.command_type===workBoundaryKind){
     check(r.entity_kind==='work_intervals');
     const ids=boundaryAuditIds.get(id)??[];ids.push(record.recordId);boundaryAuditIds.set(id,ids);
@@ -121,9 +198,16 @@ export function verifyFieldSources(value:unknown){
     check(group==='work_intervals'&&typeof row.operation_id==='string');
     const pair=boundaryRows.get(row.operation_id)??[];pair.push(row);boundaryRows.set(row.operation_id,pair);
    }
+   if(operation.command_type===workStartKind){
+    check((group==='work_intervals'||group==='travel_legs')&&typeof row.operation_id==='string');
+    const entries=startRows.get(row.operation_id)??[];entries.push(row);startRows.set(row.operation_id,entries);
+   }
   }check(used.size===audits.size);
   for(const [id,operation] of operations)if(operation.command_type===workBoundaryKind){
    verifyWorkBoundarySource(operation,boundaryRows.get(id)??[],maps.work_intervals,boundaryAuditIds.get(id)??[]);
+  }
+  for(const [id,operation] of operations)if(operation.command_type===workStartKind){
+   verifyWorkStartSource(operation,startRows.get(id)??[],maps,startAudits.get(id)??[],jobEventAudits);
   }
   return Object.freeze({context:Object.freeze({...c,expectedCounts:Object.freeze({...c.expectedCounts})}) as Context,rows:Object.freeze(rows),history,occupancy});
  }catch(error){if(error instanceof FieldSourceError)throw error;throw new FieldSourceError();}

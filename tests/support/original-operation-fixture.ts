@@ -8,6 +8,7 @@ export function originalOperationFixture(kind:OriginalOperationKind='crm.custome
  'operations.job.complete':{jobId:id,expectedJobVersion:'2'},
  'operations.job.interrupt':{jobId:id,expectedJobVersion:'2',action:'cancel'},
  'operations.job.cancel_unfulfilled':{jobId:id,expectedJobVersion:'2'},
+ 'operations.job.work_start.correct':{jobId:id,expectedJobVersion:'3',workVersionId:randomUUID(),arrivalVersionId:null},
  'operations.job.work_boundary.correct':{jobId:id,expectedJobVersion:'3',leftVersionId:randomUUID(),rightVersionId:randomUUID()},
  'operations.mileage.record':{legId:id,expectedLegVersionId:randomUUID(),expectedEvidenceVersion:'0'},
  'operations.support_trip.record':{legId:id,expectedLegVersionId:null,action:'depart'},
