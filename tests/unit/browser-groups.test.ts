@@ -23,10 +23,13 @@ describe('complete required browser grouping',()=>{
  it('retains both engines through their original unchanged files, without filtering individual cases',()=>{
   expect(browserGroupFiles(command,'amendments')).toContain('tests/integration/quote-amendment-acceptance-product-browser.test.mjs');
   expect(browserGroupFiles(command,'commercial')).toContain('tests/integration/quote-commercial-browser.test.mjs');
-  expect(browserGroupFiles(command,'schedule')).toContain('tests/integration/support-trip-product-browser.test.mjs');
-  expect(browserGroupFiles(command,'schedule')).toContain('tests/integration/trip-interruption-product-browser.test.mjs');
-  expect(browserGroupFiles(command,'schedule')).toContain('tests/integration/unfulfilled-cancellation-product-browser.test.mjs');
-  expect(browserGroupFiles(command,'schedule')).toContain('tests/integration/job-work-time-product-browser.test.mjs');
-  expect(browserGroupFiles(command,'schedule')).toContain('tests/integration/job-work-boundary-product-browser.test.mjs');
+  expect(browserGroupFiles(command,'schedule')).toContain('tests/integration/job-change-product-browser.test.mjs');
+  const field=browserGroupFiles(command,'field');
+  expect(field).toHaveLength(8);
+  expect(field).toContain('tests/integration/support-trip-product-browser.test.mjs');
+  expect(field).toContain('tests/integration/trip-interruption-product-browser.test.mjs');
+  expect(field).toContain('tests/integration/unfulfilled-cancellation-product-browser.test.mjs');
+  expect(field).toContain('tests/integration/job-work-time-product-browser.test.mjs');
+  expect(field).toContain('tests/integration/job-work-boundary-product-browser.test.mjs');
  });
 });
