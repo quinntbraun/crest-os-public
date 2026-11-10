@@ -30,6 +30,12 @@ export async function requireSyntheticUnfulfilledCancellation(connectionString){
   'SYNTHETIC_UNFULFILLED_CANCELLATION_MIGRATION_REQUIRED');
 }
 
+export async function requireSyntheticWorkTime(connectionString){
+ await requireSyntheticReader(connectionString,
+  'crest_commands.read_job_work_time(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)',
+  'SYNTHETIC_WORK_TIME_MIGRATION_REQUIRED');
+}
+
 async function requireSyntheticReader(connectionString,signature,missing){
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{

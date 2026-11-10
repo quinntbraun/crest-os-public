@@ -46,6 +46,8 @@ export function FieldSessionScreen({jobId,mode='work'}:{jobId:string;mode?:Field
    <a className="primary-action" href={'/schedule/work/interrupt?job='+encodeURIComponent(activeJob.id)}>Interrupt this trip</a>}
   {mode==='work'&&view.context?.unfulfilledCancellationAvailable===true&&activeJob&&['in_progress','paused'].includes(activeJob.state)&&
    <p><a href={'/schedule/work/cancel?job='+encodeURIComponent(activeJob.id)}>Cancel if no work was completed</a></p>}
+  {mode==='work'&&view.context?.workTimeAvailable===true&&activeJob?.first_work_at&&
+   <p><a href={'/schedule/work/time?job='+encodeURIComponent(activeJob.id)}>Review recorded work time</a></p>}
   {mode==='work'&&view.phase==='ready'&&view.resources&&view.context&&<WorkForm key={view.resources.head.job.id+':'+view.resources.head.job.version} view={view} more={()=>action('moreVehicles')} save={async body=>{const controller=current.current;if(!controller)return;await controller.save(body);if(current.current===controller)status.current?.focus();}}/>}
   {interrupting&&view.phase==='ready'&&view.resources&&view.context&&view.openTrip&&
    <TripInterruptionForm key={view.openTrip.legVersionId} view={view} save={async draft=>{

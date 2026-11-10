@@ -20,7 +20,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
   if(error.code!=='ENOENT')throw error;
  }
  const needsScreenshots=['commercial','amendments','schedule','records'].includes(selected);
- const requiredViews=selected==='schedule'?['field-departure','field-pause','completion-editor','completion-saved','mileage-form','mileage-split','mileage-saved','field-cancellation']:[];
+ const requiredViews=selected==='schedule'?['field-departure','field-pause','completion-editor','completion-saved','mileage-form','mileage-split','mileage-saved','field-cancellation','field-work-time']:[];
  const requiredScreenshots=requiredViews.flatMap(view=>['chromium','webkit'].flatMap(engine=>
   [360,390,768,1440].map(width=>`${view}-${engine}-${width}.png`)));
  const missingScreenshots=requiredScreenshots.filter(name=>!screenshots.includes(name));

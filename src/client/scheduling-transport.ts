@@ -1,6 +1,6 @@
 import type {Proof} from './authentication';
 import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
-const routes=['slot-review','original','workspace','agreement','resources','pending','list','read','history','mode-history','mode-save','book','cancel','reschedule','field-save','completion-context','complete','mileage-trips','mileage-history','mileage-save','support-trips','support-trip-history','support-trip-mileage','support-trip-save','interrupt','unfulfilled-context','cancel-unfulfilled'] as const;
+const routes=['slot-review','original','workspace','agreement','resources','pending','list','read','history','mode-history','mode-save','book','cancel','reschedule','field-save','completion-context','complete','mileage-trips','mileage-history','mileage-save','support-trips','support-trip-history','support-trip-mileage','support-trip-save','interrupt','unfulfilled-context','cancel-unfulfilled','work-time'] as const;
 export type SchedulingRoute=typeof routes[number];
 type Kind='input'|'not_submitted'|'recovery'|'limited'|'unknown'|'unavailable';
 export class SchedulingClientError extends Error{readonly kind:Kind;constructor(kind:Kind){super('SCHEDULING_REQUEST_FAILED');this.name='SchedulingClientError';this.kind=kind;}}
@@ -35,6 +35,7 @@ export async function postScheduling(route:SchedulingRoute,body:object,proof:Pro
    ...route==='workspace'&&response.headers.get('x-crest-job-completion')==='1'?{jobCompletionAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-job-mileage')==='1'?{jobMileageAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-support-trips')==='1'?{supportTripsAvailable:true as const}:{},
-   ...route==='workspace'&&response.headers.get('x-crest-unfulfilled-cancellation')==='1'?{unfulfilledCancellationAvailable:true as const}:{}};
+   ...route==='workspace'&&response.headers.get('x-crest-unfulfilled-cancellation')==='1'?{unfulfilledCancellationAvailable:true as const}:{},
+   ...route==='workspace'&&response.headers.get('x-crest-work-time')==='1'?{workTimeAvailable:true as const}:{}};
  }catch(error){throw error instanceof SchedulingClientError?error:new SchedulingClientError(mutation?(sent?'unknown':'not_submitted'):'unavailable');}
 }

@@ -6,7 +6,7 @@ const command=(JSON.parse(readFileSync(new URL('../../package.json',import.meta.
 describe('complete required browser grouping',()=>{
  it('partitions every file in the actual retained full command exactly once',()=>{
   const files=Object.keys(browserGroups).flatMap(name=>browserGroupFiles(command,name));
-  expect([...files].sort()).toEqual(command.split(' ').slice(3).sort());expect(new Set(files).size).toBe(files.length);expect(files).toHaveLength(35);
+  expect([...files].sort()).toEqual(command.split(' ').slice(3).sort());expect(new Set(files).size).toBe(files.length);expect(files).toHaveLength(36);
  });
  it('requires the actual workflow matrix to retain every distinct group',()=>{
   const workflow=readFileSync(new URL('../../.github/workflows/ci.yml',import.meta.url),'utf8'),matrix=workflow.match(/browser_workflows:[\s\S]*?matrix:\s*\n\s*suite: \[([^\]]+)\]/);
@@ -26,5 +26,6 @@ describe('complete required browser grouping',()=>{
   expect(browserGroupFiles(command,'schedule')).toContain('tests/integration/support-trip-product-browser.test.mjs');
   expect(browserGroupFiles(command,'schedule')).toContain('tests/integration/trip-interruption-product-browser.test.mjs');
   expect(browserGroupFiles(command,'schedule')).toContain('tests/integration/unfulfilled-cancellation-product-browser.test.mjs');
+  expect(browserGroupFiles(command,'schedule')).toContain('tests/integration/job-work-time-product-browser.test.mjs');
  });
 });
