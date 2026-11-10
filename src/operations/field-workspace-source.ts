@@ -43,7 +43,7 @@ const sha=(v:string)=>createHash('sha256').update(v,'utf8').digest('hex');
 const commands={
  fulfillment_modes:['operations.fulfillment_modes.initialize','operations.fulfillment_modes.save','operations.job.book'],
  operator_controls:['operations.job.book','operations.support_trip.record'],
- jobs:['operations.job.book','operations.job.reschedule','operations.job.cancel','quote.amendment.accept','operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.job.work_start.correct'],
+ jobs:['operations.job.book','operations.job.reschedule','operations.job.cancel','quote.amendment.accept','operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.job.work_start.correct','operations.job.work_end.correct'],
  appointments:['operations.job.book','operations.job.reschedule','operations.job.cancel','quote.amendment.accept','operations.job.interrupt','operations.job.cancel_unfulfilled'],
  schedule_reservations:['operations.job.book','operations.job.reschedule','operations.job.cancel','quote.amendment.accept','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled'],
  schedule_overrides:['operations.job.book','operations.job.reschedule','quote.amendment.accept','operations.job.interrupt'],
@@ -51,7 +51,7 @@ const commands={
  allocation_plan_versions:['operations.job.book','operations.job.cancel','quote.amendment.accept','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled'],
  allocation_plan_parts:['operations.job.book','operations.job.cancel','quote.amendment.accept','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled'],
  job_vehicles:['operations.job.book'],job_encounters:['operations.job.book'],
- job_events:['operations.job.book','operations.job.reschedule','operations.job.cancel','quote.amendment.accept','operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.job.work_start.correct'],
+ job_events:['operations.job.book','operations.job.reschedule','operations.job.cancel','quote.amendment.accept','operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.job.work_start.correct','operations.job.work_end.correct'],
 } as const;
 const fieldKinds=['operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.mileage.record','operations.support_trip.record','operations.support_trip.correct'];
 function ids(actual:unknown,expected:readonly unknown[]){

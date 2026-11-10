@@ -15,6 +15,7 @@ type Targets={
  'operations.job.cancel_unfulfilled':Readonly<{jobId:string;expectedJobVersion:string}>;
  'operations.job.work_boundary.correct':Readonly<{jobId:string;expectedJobVersion:string;leftVersionId:string;rightVersionId:string}>;
  'operations.job.work_start.correct':Readonly<{jobId:string;expectedJobVersion:string;workVersionId:string;arrivalVersionId:string|null}>;
+ 'operations.job.work_end.correct':Readonly<{jobId:string;expectedJobVersion:string;workVersionId:string;completionEventId:string}>;
  'operations.mileage.record':Readonly<{legId:string;expectedLegVersionId:string;expectedEvidenceVersion:string}>;
  'operations.support_trip.record':Readonly<{legId:string;expectedLegVersionId:string|null;action:'depart'|'arrive'|'cancel'}>;
  'operations.support_trip.correct':Readonly<{legId:string;expectedLegVersionId:string|null;action:'record'|'correct'}>;
@@ -74,6 +75,7 @@ const fields={
  'operations.job.cancel_unfulfilled':['jobId','expectedJobVersion'],
  'operations.job.work_boundary.correct':['jobId','expectedJobVersion','leftVersionId','rightVersionId'],
  'operations.job.work_start.correct':['jobId','expectedJobVersion','workVersionId','arrivalVersionId'],
+ 'operations.job.work_end.correct':['jobId','expectedJobVersion','workVersionId','completionEventId'],
  'operations.mileage.record':['legId','expectedLegVersionId','expectedEvidenceVersion'],
  'operations.support_trip.record':['legId','expectedLegVersionId','action'],
  'operations.support_trip.correct':['legId','expectedLegVersionId','action'],
@@ -142,6 +144,7 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
   if(kind==='operations.job.interrupt')require(['cancel','reschedule'].includes(ref.action as string));
   if(kind==='operations.job.work_boundary.correct')require(ref.leftVersionId!==ref.rightVersionId);
   if(kind==='operations.job.work_start.correct')require(ref.workVersionId!==ref.arrivalVersionId&&BigInt(ref.expectedJobVersion as string)<9223372036854775807n);
+  if(kind==='operations.job.work_end.correct')require(BigInt(ref.expectedJobVersion as string)<9223372036854775807n);
   if(kind==='operations.support_trip.record'||kind==='operations.support_trip.correct')require((kind==='operations.support_trip.record'?['depart','arrive','cancel']:['record','correct']).includes(ref.action as string)&&(['depart','record'].includes(ref.action as string)===(ref.expectedLegVersionId===null)));
   if(kind==='operations.fulfillment_modes.initialize')require(ref.expectedSequence==='0');
   if(kind==='operations.fulfillment_modes.save')require(version(ref.expectedSequence));

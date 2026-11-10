@@ -8,6 +8,7 @@ export const pendingSchedulingKeys=Object.freeze({
  'operations.job.cancel_unfulfilled':'crest.unfulfilled-cancellation.pending-reference.v1',
  'operations.job.work_boundary.correct':'crest.work-boundary.pending-reference.v1',
  'operations.job.work_start.correct':'crest.work-start.pending-reference.v1',
+ 'operations.job.work_end.correct':'crest.work-end.pending-reference.v1',
  'operations.mileage.record':'crest.mileage.pending-reference.v1',
  'operations.support_trip.record':'crest.support-trip.pending-reference.v1',
  'operations.support_trip.correct':'crest.support-trip-correction.pending-reference.v1',

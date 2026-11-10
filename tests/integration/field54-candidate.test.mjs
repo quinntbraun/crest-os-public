@@ -14,8 +14,8 @@ import {captureFieldWorkspaceFixture,fieldWorkspaceContent} from '../support/fie
 import {verifyNeutralFieldOccupancyRebuild} from '../support/field-occupancy-rebuild.mjs';
 import {formatFieldWorkspaceSources} from '../../src/operations/field-workspace-source.ts';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
-import {requireSyntheticJobCompletion,requireSyntheticJobMileage,requireSyntheticSupportTrips,requireSyntheticUnfulfilledCancellation,requireSyntheticWorkTime,requireSyntheticWorkBoundary,requireSyntheticWorkStart} from '../../scripts/synthetic-migrations.mjs';
-import {inventory,privateWorkspace,keyPair,backupDatabase,restoreDatabase,backupLegacy53Database,restoreLegacy53Database,backupField54CandidateDatabase,restoreField54CandidateDatabase,backupLegacy55Database,restoreLegacy55Database,backupLegacy56Database,restoreLegacy56Database,backupLegacy57Database,restoreLegacy57Database,backupLegacy58Database,restoreLegacy58Database,backupLegacy59Database,restoreLegacy59Database,backupLegacy60Database,restoreLegacy60Database,recoveryCluster,connect} from '../support/recovery-drill.mjs';
+import {requireSyntheticJobCompletion,requireSyntheticJobMileage,requireSyntheticSupportTrips,requireSyntheticUnfulfilledCancellation,requireSyntheticWorkTime,requireSyntheticWorkBoundary,requireSyntheticWorkStart,requireSyntheticWorkEnd} from '../../scripts/synthetic-migrations.mjs';
+import {inventory,privateWorkspace,keyPair,backupDatabase,restoreDatabase,backupLegacy53Database,restoreLegacy53Database,backupField54CandidateDatabase,restoreField54CandidateDatabase,backupLegacy55Database,restoreLegacy55Database,backupLegacy56Database,restoreLegacy56Database,backupLegacy57Database,restoreLegacy57Database,backupLegacy58Database,restoreLegacy58Database,backupLegacy59Database,restoreLegacy59Database,backupLegacy60Database,restoreLegacy60Database,backupLegacy61Database,restoreLegacy61Database,recoveryCluster,connect} from '../support/recovery-drill.mjs';
 const sha=v=>createHash('sha256').update(v).digest('hex'),value=async(c,q,a=[])=>(await c.query(q,a)).rows[0].value;
 const coverage=JSON.parse(await readFile(new URL('../support/field54-export-coverage.json',import.meta.url)));
 let restored54Target;
@@ -291,12 +291,12 @@ test('frozen59 restores independently and registered60 restores a correction wit
   assert.deepEqual(await inventory(client),expected);
  }finally{await cluster.close();}
 },{timeout:180000});
-test('registered61 preserves the prior tables and restores first-start work, linked travel and exact export',async()=>{
+test('frozen61 preserves the prior tables and restores first-start work, linked travel and exact export',async()=>{
  await assert.rejects(requireSyntheticWorkStart(target),{message:'SYNTHETIC_WORK_START_MIGRATION_REQUIRED'});
- const prior=await inventory(client),upgraded=await sandbox.apply(target);
+ const prior=await inventory(client),source61=await sandbox.prefix(61),upgraded=await sandbox.apply(target,source61);
  assert.equal(upgraded.history.length,61);
  assert.equal(upgraded.history.at(-1).version,'20261115180000');
- assert.deepEqual((await sandbox.apply(target)).history,upgraded.history);
+ assert.deepEqual((await sandbox.apply(target,source61)).history,upgraded.history);
  await requireSyntheticWorkStart(target);
  assert.deepEqual((await inventory(client)).filter(row=>row.schema!=='supabase_migrations'),prior.filter(row=>row.schema!=='supabase_migrations'));
  const job=await fixture.fixture();
@@ -320,13 +320,65 @@ test('registered61 preserves the prior tables and restores first-start work, lin
  formatFieldWorkspaceSources(source);
  const expected=await inventory(client),point=await privateWorkspace(),cluster=await recoveryCluster();
  try{
-  const {manifest}=await backupDatabase(client,target,point,keys.recipient);
+  const {manifest}=await backupLegacy61Database(client,target,point,keys.recipient);
   assert.equal(manifest.schemaVersion,61);
   assert.deepEqual(manifest.rows,expected);
   const destination=await cluster.database();
   await assert.rejects(restoreLegacy60Database(point,keys.path,destination),{message:'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest'});
-  assert.deepEqual((await restoreDatabase(point,keys.path,destination)).rows,expected);
+  assert.deepEqual((await restoreLegacy61Database(point,keys.path,destination)).rows,expected);
   await requireSyntheticWorkStart(destination);
+  await assert.rejects(requireSyntheticWorkEnd(destination),{message:'SYNTHETIC_WORK_END_MIGRATION_REQUIRED'});
+  const restored=await connect(destination);
+  try{
+   await restored.query('SET ROLE crest_web');
+   assert.deepEqual(await value(restored,lookup,[...job.auth(),original]),originalReceipt);
+   await restored.query('SET ROLE crest_export');
+   const roundTrip=await captureFieldWorkspaceFixture(restored,job.business);
+   assert.deepEqual(fieldWorkspaceContent(roundTrip),fieldWorkspaceContent(source));
+   formatFieldWorkspaceSources(roundTrip);
+  }finally{await restored.end();}
+ }finally{await cluster.close();}
+ assert.deepEqual(await inventory(client),expected);
+},{timeout:180000});
+test('registered62 preserves business tables and independently restores a completed-job correction',async()=>{
+ await assert.rejects(requireSyntheticWorkEnd(target),{message:'SYNTHETIC_WORK_END_MIGRATION_REQUIRED'});
+ const prior=await inventory(client),upgraded=await sandbox.apply(target);
+ assert.equal(upgraded.history.length,62);
+ assert.equal(upgraded.history.at(-1).version,'20261116180000');
+ assert.deepEqual((await sandbox.apply(target)).history,upgraded.history);
+ await requireSyntheticWorkEnd(target);
+ assert.deepEqual((await inventory(client)).filter(row=>row.schema!=='supabase_migrations'),prior.filter(row=>row.schema!=='supabase_migrations'));
+ const job=await fixture.fixture();
+ await fixture.field(job,'direct_arrive');
+ await fixture.field(job,'pause');
+ const completion=await value(web,'SELECT crest_commands.complete_job($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13) value',[
+  ...job.auth(),job.epoch,randomUUID(),job.job,job.version,await fixture.completion(job),
+ ]);
+ assert.equal(completion.state,'committed');
+ const context=await value(web,'SELECT crest_commands.read_job_work_end($1,$2,$3,$4,$5,$6,$7,$8,$9) value',[...job.auth(),job.job]);
+ const operation=randomUUID(),original={schemaVersion:1,businessId:job.business,commandType:'operations.job.work_end.correct',
+  reference:{operationId:operation,recoveryEpoch:job.epoch,jobId:job.job,expectedJobVersion:context.jobVersion,
+   workVersionId:context.workVersionId,completionEventId:context.completionEventId}};
+ const correctedAt=context.finalIntervalStartedAt;
+ const saved=await value(web,'SELECT crest_commands.correct_job_work_end($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13,$14,$15) value',[
+  ...job.auth(),job.epoch,operation,job.job,context.jobVersion,context.workVersionId,context.completionEventId,
+  {correctedAt,reason:'=Retained actual completion\nCafé \\N'},
+ ]);
+ assert.equal(saved.state,'committed');
+ assert.equal(saved.receipt.previousCompletedAt,completion.receipt.completedAt);
+ const lookup='SELECT crest_commands.lookup_scheduling_original($1,$2,$3,$4,$5,$6,$7,$8,$9) value';
+ const originalReceipt=await value(web,lookup,[...job.auth(),original]);
+ const source=await captureFieldWorkspaceFixture(exporter,job.business);
+ formatFieldWorkspaceSources(source);
+ const expected=await inventory(client),point=await privateWorkspace(),cluster=await recoveryCluster();
+ try{
+  const {manifest}=await backupDatabase(client,target,point,keys.recipient);
+  assert.equal(manifest.schemaVersion,62);
+  assert.deepEqual(manifest.rows,expected);
+  const destination=await cluster.database();
+  await assert.rejects(restoreLegacy61Database(point,keys.path,destination),{message:'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest'});
+  assert.deepEqual((await restoreDatabase(point,keys.path,destination)).rows,expected);
+  await requireSyntheticWorkEnd(destination);
   const restored=await connect(destination);
   try{
    await restored.query('SET ROLE crest_web');

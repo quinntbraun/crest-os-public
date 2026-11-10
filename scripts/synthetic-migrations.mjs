@@ -49,6 +49,13 @@ export async function requireSyntheticWorkStart(connectionString){
  ])await requireSyntheticReader(connectionString,'crest_commands.'+signature,'SYNTHETIC_WORK_START_MIGRATION_REQUIRED');
 }
 
+export async function requireSyntheticWorkEnd(connectionString){
+ for(const signature of [
+  'read_job_work_end(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)',
+  'correct_job_work_end(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,uuid,bigint,uuid,uuid,jsonb)'
+ ])await requireSyntheticReader(connectionString,'crest_commands.'+signature,'SYNTHETIC_WORK_END_MIGRATION_REQUIRED');
+}
+
 async function requireSyntheticReader(connectionString,signature,missing){
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{

@@ -10,6 +10,7 @@ const targets:Record<OriginalOperationKind,Record<string,unknown>>={
  'operations.job.interrupt':{jobId:randomUUID(),expectedJobVersion:'2',action:'cancel'},
  'operations.job.cancel_unfulfilled':{jobId:randomUUID(),expectedJobVersion:'2'},
  'operations.job.work_start.correct':{jobId:randomUUID(),expectedJobVersion:'3',workVersionId:randomUUID(),arrivalVersionId:null},
+ 'operations.job.work_end.correct':{jobId:randomUUID(),expectedJobVersion:'4',workVersionId:randomUUID(),completionEventId:randomUUID()},
  'operations.job.work_boundary.correct':{jobId:randomUUID(),expectedJobVersion:'3',leftVersionId:randomUUID(),rightVersionId:randomUUID()},
  'operations.mileage.record':{legId:randomUUID(),expectedLegVersionId:randomUUID(),expectedEvidenceVersion:'0'},
  'operations.support_trip.record':{legId:randomUUID(),expectedLegVersionId:null,action:'depart'},

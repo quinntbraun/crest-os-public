@@ -11,16 +11,23 @@ import {parseWorkBoundarySave,workBoundaries,workBoundaryKind,workBoundaryOrigin
 import type {WorkBoundarySave} from '../../../../operations/job-work-boundary-contract';
 import {parseWorkStartSave,workStartKind,workStartOriginal} from '../../../../operations/job-work-start-contract';
 import type {LoadedWorkStart,WorkStartSave} from '../../../../operations/job-work-start-contract';
+import {parseWorkEndSave,workEndKind,workEndOriginal} from '../../../../operations/job-work-end-contract';
+import type {LoadedWorkEnd,WorkEndSave} from '../../../../operations/job-work-end-contract';
 import type {SchedulingOriginalKind} from '../../../../operations/scheduling-original-contract';
 import {BookingInstantInput} from '../../booking-fields';
 
 type Format='csv'|'json';
 type Workspace=Awaited<ReturnType<typeof scheduling.workspace>>;
-type Correction=WorkBoundarySave|WorkStartSave;
-type CorrectionKind=typeof workBoundaryKind|typeof workStartKind;
+type Correction=WorkBoundarySave|WorkStartSave|WorkEndSave;
+type CorrectionKind=typeof workBoundaryKind|typeof workStartKind|typeof workEndKind;
 type State={phase:'loading'|'unavailable'|'signed-out'|'pending';message:string}|
- {phase:'ready';message:string;data:LoadedJobWorkTime;timezone:string;correction:Workspace|null;start:LoadedWorkStart|null};
+ {phase:'ready';message:string;data:LoadedJobWorkTime;timezone:string;correction:Workspace|null;start:LoadedWorkStart|null;end:LoadedWorkEnd|null};
 const initial:State={phase:'loading',message:'Checking access to recorded work time…'};
+function available(workspace:Workspace,kind:CorrectionKind){
+ if(kind===workEndKind)return workspace.workEndAvailable===true;
+ if(kind===workStartKind)return workspace.workStartAvailable===true;
+ return workspace.workBoundaryAvailable===true;
+}
 function duration(microseconds:string){
  const seconds=BigInt(microseconds)/1000000n;
  const hours=seconds/3600n,minutes=(seconds/60n)%60n;
@@ -56,8 +63,8 @@ export function WorkTimeScreen({jobId}:{jobId:string}){
     const proof=await authentication.session(signal),workspace=await scheduling.workspace(proof,signal);
     signal.throwIfAborted();
     if(!workspace.workTimeAvailable){setState({phase:'unavailable',message:'Recorded work time is unavailable in this build.'});return;}
-    for(const kind of [workBoundaryKind,workStartKind]){
-     if(kind===workBoundaryKind?!workspace.workBoundaryAvailable:!workspace.workStartAvailable)continue;
+    for(const kind of [workBoundaryKind,workStartKind,workEndKind]){
+     if(!available(workspace,kind))continue;
      pending=store(kind).read();
      if(pending){
       if(pending.businessId!==workspace.context.businessId||pending.binding!==workspace.binding||
@@ -78,6 +85,7 @@ export function WorkTimeScreen({jobId}:{jobId:string}){
     if('state'in data){setState({phase:'unavailable',message:'This job’s work time is unavailable in the current workspace.'});return;}
     let message=reported??'Saved work time loaded.';
     let start:LoadedWorkStart|null=null;
+    let end:LoadedWorkEnd|null=null;
     if(workspace.workStartAvailable&&workspace.context.writeState==='ready'&&data.intervals.length>0){
      try{
       const found=await scheduling.jobWorkStart(data.record.businessId,jobId,proof,signal);
@@ -91,12 +99,25 @@ export function WorkTimeScreen({jobId}:{jobId:string}){
       message=reported??'Saved work time loaded. Refresh before correcting the first work start.';
      }
     }
+    if(workspace.workEndAvailable&&workspace.context.writeState==='ready'&&data.record.jobState==='completed'){
+     try{
+      const found=await scheduling.jobWorkEnd(data.record.businessId,jobId,proof,signal);
+      signal.throwIfAborted();
+      if('state'in found||found.jobVersion!==data.record.jobVersion||
+       !data.intervals.some(row=>row.versionId===found.workVersionId&&row.kind===found.finalIntervalKind&&
+        row.startedAt===found.finalIntervalStartedAt&&row.endedAt===found.completedAt))throw Error();
+      end=found;
+     }catch{
+      signal.throwIfAborted();
+      message=reported??'Saved work time loaded. Refresh before correcting the completion time.';
+     }
+    }
     if(format){
      try{download(data,format);message='Download requested. Check your browser’s downloads.';}
      catch{message='The download could not be prepared. Try again.';}
     }
     setState({phase:'ready',message,data,timezone:workspace.context.timezone,
-     correction:workspace.workBoundaryAvailable&&workspace.context.writeState==='ready'?workspace:null,start});
+     correction:workspace.workBoundaryAvailable&&workspace.context.writeState==='ready'?workspace:null,start,end});
    }catch(error){
     if(!signal.aborted){
      const denied=error instanceof AuthenticationError&&error.kind==='denied';
@@ -110,7 +131,7 @@ export function WorkTimeScreen({jobId}:{jobId:string}){
   correct.current=async(input,prior)=>{
    if(active)return;
    const request=active=new AbortController(),signal=request.signal;
-   const kind='workVersionId'in input?workStartKind:workBoundaryKind;
+   const kind='completionEventId'in input?workEndKind:'workVersionId'in input?workStartKind:workBoundaryKind;
    let pinned:PendingScheduling|null=null,reported:string|undefined;
    setState({phase:'loading',message:'Checking access and saving the correction…'});
    try{
@@ -118,16 +139,18 @@ export function WorkTimeScreen({jobId}:{jobId:string}){
     signal.throwIfAborted();
     if(next.binding!==prior.binding||next.context.businessId!==input.businessId||
      next.context.recoveryEpoch!==input.recoveryEpoch||next.context.writeState!=='ready'||
-     (kind===workStartKind?!next.workStartAvailable:!next.workBoundaryAvailable))throw Error();
+     !available(next,kind))throw Error();
     for(const kind of Object.keys(pendingSchedulingKeys) as SchedulingOriginalKind[]){
      if(createPendingSchedulingStore(window.sessionStorage,kind).read()){
       setState({phase:'pending',message:'Review the interrupted schedule save before submitting a correction.'});return;
      }
     }
-    const original='workVersionId'in input?workStartOriginal(input):workBoundaryOriginal(input);
+    const original='completionEventId'in input?workEndOriginal(input):
+     'workVersionId'in input?workStartOriginal(input):workBoundaryOriginal(input);
     pinned={schemaVersion:1,businessId:original.businessId,binding:next.binding,reference:original.reference};
     store(kind).write(pinned);
-    const saved=await ('workVersionId'in input?scheduling.correctWorkStart(input,proof,signal):scheduling.correctWorkBoundary(input,proof,signal));
+    const saved=await ('completionEventId'in input?scheduling.correctWorkEnd(input,proof,signal):
+     'workVersionId'in input?scheduling.correctWorkStart(input,proof,signal):scheduling.correctWorkBoundary(input,proof,signal));
     signal.throwIfAborted();
     if('state'in saved&&saved.reason==='operation'){
      setState({phase:'pending',message:'The correction conflicts with the original save. Check Save review.'});return;
@@ -203,6 +226,8 @@ export function WorkTimeScreen({jobId}:{jobId:string}){
      save={(input,workspace)=>void correct.current?.(input,workspace)}/>}
     {state.correction&&state.start&&<WorkStartForm start={state.start} observedAt={record.observedAt} workspace={state.correction} when={when}
      save={(input,workspace)=>void correct.current?.(input,workspace)}/>}
+    {state.correction&&state.end&&<WorkEndForm end={state.end} observedAt={record.observedAt} workspace={state.correction} when={when}
+     save={(input,workspace)=>void correct.current?.(input,workspace)}/>}
     <div className="work-time-downloads">
      <button type="button" className="secondary" onClick={()=>void refresh.current?.('csv')}>Download CSV</button>
      <button type="button" className="secondary" onClick={()=>void refresh.current?.('json')}>Download JSON</button>
@@ -211,6 +236,35 @@ export function WorkTimeScreen({jobId}:{jobId:string}){
   })()}
   <nav aria-label="Work time navigation"><a href={jobId?'/schedule?job='+encodeURIComponent(jobId):'/schedule'}>Saved job and history</a><a href="/schedule">Schedule</a></nav>
  </section>;
+}
+
+function WorkEndForm({end,observedAt,workspace,when,save}:{end:LoadedWorkEnd;observedAt:string;workspace:Workspace;
+ when:(time:string)=>string;save:(input:WorkEndSave,workspace:Workspace)=>void}){
+ const id=useId(),[correctedAt,setCorrectedAt]=useState(''),[issue,setIssue]=useState('');
+ return <details>
+  <summary>Correct the completion time</summary>
+  <form onSubmit={event=>{
+   event.preventDefault();
+   const reason=String(new FormData(event.currentTarget).get('reason')??'');
+   try{
+    if(!correctedAt||correctedAt===end.completedAt||correctedAt<end.finalIntervalStartedAt||correctedAt>observedAt)throw Error();
+    const input=parseWorkEndSave({schemaVersion:1,businessId:end.businessId,operationId:crypto.randomUUID(),
+     recoveryEpoch:workspace.context.recoveryEpoch,jobId:end.jobId,expectedJobVersion:end.jobVersion,
+     workVersionId:end.workVersionId,completionEventId:end.completionEventId,body:{correctedAt,reason}});
+    setIssue('');save(input,workspace);
+   }catch{setIssue('Enter a different time within the saved limits and give a reason.');}
+  }}>
+   <p>Saved completion <time dateTime={end.completedAt}>{when(end.completedAt)}</time>.</p>
+   {end.originalCompletedAt!==end.completedAt&&<p>First recorded as <time dateTime={end.originalCompletedAt}>{when(end.originalCompletedAt)}</time>.</p>}
+   <p>The final {end.finalIntervalKind==='active'?'work interval':'pause'} began at <time dateTime={end.finalIntervalStartedAt}>
+    {when(end.finalIntervalStartedAt)}</time>. The job stays completed and Crest keeps its original completion in history.</p>
+   <BookingInstantInput label="Corrected completion time" value={correctedAt} zone={workspace.context.timezone} change={setCorrectedAt} seconds/>
+   <label htmlFor={id+'-reason'}>Completion correction reason</label>
+   <textarea name="reason" id={id+'-reason'} rows={2} maxLength={1000} required/>
+   <button type="submit">Save completion correction</button>
+   {issue&&<p role="alert">{issue}</p>}
+  </form>
+ </details>;
 }
 
 function WorkStartForm({start,observedAt,workspace,when,save}:{start:LoadedWorkStart;observedAt:string;workspace:Workspace;
@@ -248,6 +302,8 @@ function WorkBoundaryForm({data,workspace,when,save}:{data:LoadedJobWorkTime;wor
  const id=useId(),[selection,setSelection]=useState(''),[correctedAt,setCorrectedAt]=useState(''),[issue,setIssue]=useState('');
  const boundaries=workBoundaries(data);
  const boundary=boundaries.find(row=>row.leftVersionId===selection);
+ const optionTime=new Intl.DateTimeFormat('en-US',{timeZone:workspace.context.timezone,month:'numeric',day:'numeric',
+  hour:'numeric',minute:'2-digit',second:'2-digit'});
  if(boundaries.length===0)return null;
  return <details>
   <summary>Correct a pause or resume time</summary>
@@ -266,9 +322,10 @@ function WorkBoundaryForm({data,workspace,when,save}:{data:LoadedJobWorkTime;wor
    <label htmlFor={id+'-transition'}>Recorded transition</label>
    <select id={id+'-transition'} required value={selection} onChange={event=>{setSelection(event.target.value);setCorrectedAt('');setIssue('');}}>
     <option value="">Choose a saved pause or resume</option>
-    {boundaries.map(row=><option value={row.leftVersionId} key={row.leftVersionId}>{row.action} · {when(row.at)}</option>)}
+    {boundaries.map(row=><option value={row.leftVersionId} key={row.leftVersionId}>{row.action} · {optionTime.format(new Date(row.at))}</option>)}
    </select>
    {boundary&&<div key={boundary.leftVersionId}>
+    <p>Saved {boundary.action.toLowerCase()} <time dateTime={boundary.at}>{when(boundary.at)}</time>.</p>
     <p>Enter a time after {when(boundary.after)} and before {when(boundary.before)}.</p>
     <BookingInstantInput label="Corrected local time" value={correctedAt} zone={workspace.context.timezone} change={setCorrectedAt} seconds/>
     <label htmlFor={id+'-reason'}>Correction reason</label>
