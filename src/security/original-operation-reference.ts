@@ -16,6 +16,7 @@ type Targets={
  'operations.job.work_boundary.correct':Readonly<{jobId:string;expectedJobVersion:string;leftVersionId:string;rightVersionId:string}>;
  'operations.job.work_start.correct':Readonly<{jobId:string;expectedJobVersion:string;workVersionId:string;arrivalVersionId:string|null}>;
  'operations.job.work_end.correct':Readonly<{jobId:string;expectedJobVersion:string;workVersionId:string;completionEventId:string}>;
+ 'operations.mobile_departure.correct':Readonly<{jobId:string;expectedJobVersion:string;legId:string;legVersionId:string;departureEventId:string}>;
  'operations.mileage.record':Readonly<{legId:string;expectedLegVersionId:string;expectedEvidenceVersion:string}>;
  'operations.support_trip.record':Readonly<{legId:string;expectedLegVersionId:string|null;action:'depart'|'arrive'|'cancel'}>;
  'operations.support_trip.correct':Readonly<{legId:string;expectedLegVersionId:string|null;action:'record'|'correct'}>;
@@ -76,6 +77,7 @@ const fields={
  'operations.job.work_boundary.correct':['jobId','expectedJobVersion','leftVersionId','rightVersionId'],
  'operations.job.work_start.correct':['jobId','expectedJobVersion','workVersionId','arrivalVersionId'],
  'operations.job.work_end.correct':['jobId','expectedJobVersion','workVersionId','completionEventId'],
+ 'operations.mobile_departure.correct':['jobId','expectedJobVersion','legId','legVersionId','departureEventId'],
  'operations.mileage.record':['legId','expectedLegVersionId','expectedEvidenceVersion'],
  'operations.support_trip.record':['legId','expectedLegVersionId','action'],
  'operations.support_trip.correct':['legId','expectedLegVersionId','action'],

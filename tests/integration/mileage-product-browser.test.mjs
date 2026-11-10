@@ -8,6 +8,98 @@ import AxeBuilder from '@axe-core/playwright';
 import {strFromU8,unzipSync} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
+function departureLocalTime(milliseconds){
+ const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Indiana/Indianapolis',year:'numeric',month:'2-digit',
+  day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(milliseconds);
+ const at=Object.fromEntries(parts.map(({type,value})=>[type,value]));
+ return at.year+'-'+at.month+'-'+at.day+'T'+at.hour+':'+at.minute+':'+at.second;
+}
+
+for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' corrects a Mobile departure and recovers the original without rewriting mileage',{timeout:300000},async()=>{
+ const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
+  quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,jobMileage:true,
+  workTime:true,workBoundary:true,workStart:true,workEnd:true,mobileDeparture:true});
+ let browser;
+ try{
+  browser=await engine.launch();
+  const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:844}});
+  const page=await context.newPage();page.setDefaultTimeout(20000);
+  const jobId=fixture.bookingRequest.jobId,job='/schedule?job='+jobId;
+  const status=page.locator('.job-change-status');
+  await page.goto(fixture.origin+'/sign-in');
+  const credentials=fixture.credentials();
+  await page.getByLabel('Email',{exact:true}).fill(credentials.email);
+  await page.getByLabel('Password',{exact:true}).fill(credentials.password);
+  await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
+  assert.equal(await page.evaluate(async input=>{
+   const init={method:'POST',headers:{'content-type':'application/json'},body:'{}'};
+   const {csrfToken}=await (await fetch('/api/auth/session',init)).json();
+   const body=Object.fromEntries(Object.entries(input).filter(([key])=>key!=='businessId'));
+   return (await fetch('/api/business/scheduling/book',{...init,headers:{...init.headers,'x-crest-csrf':csrfToken},body:JSON.stringify(body)})).status;
+  },fixture.bookingRequest),200);
+  await page.goto(fixture.origin+job);
+  await page.getByRole('button',{name:'Record work status…',exact:true}).click();
+  await page.getByLabel('Vehicle you are driving',{exact:true}).selectOption(fixture.fieldVehicleId);
+  await page.getByLabel('Where are you leaving from?',{exact:true}).fill('Synthetic equipment base');
+  await page.getByRole('button',{name:'Record departure',exact:true}).click();
+  await expect(status).toContainText('Work status saved.');
+  await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
+  await page.getByRole('button',{name:'Record work status…',exact:true}).click();
+  await page.getByRole('button',{name:'Record arrival and start work',exact:true}).click();
+  await expect(status).toContainText('Work status saved.');
+  await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
+  await page.getByRole('link',{name:'Review trip mileage',exact:true}).click();
+  await page.getByRole('button',{name:/Travel to job/}).click();
+  await expect(status).toHaveText('Saved mileage history loaded.');
+  await page.getByLabel('Actual miles',{exact:true}).fill('7.125');
+  await page.getByLabel('Type of travel',{exact:true}).selectOption('business_rig');
+  await page.getByRole('button',{name:'Save mileage',exact:true}).click();
+  await expect(status).toHaveText('Mileage saved.');
+  const history=page.getByRole('region',{name:'Saved mileage history',exact:true});
+  await expect(history).toContainText('7.1250 actual miles');
+  const editor=page.getByText('Correct departure time',{exact:true}),form=page.locator('form').filter({
+   has:page.getByRole('button',{name:'Save departure correction',exact:true}),
+  });
+  await editor.click();
+  const original=await form.locator('time').first().getAttribute('datetime');
+  const arrival=await form.locator('time').nth(1).getAttribute('datetime');
+  const corrected=Math.floor((Date.parse(original)-1000)/1000)*1000;
+  const reason='Synthetic earlier departure documented';
+  await form.getByLabel('Corrected departure time',{exact:true}).fill(departureLocalTime(corrected));
+  await form.getByLabel('Departure correction reason',{exact:true}).fill(reason);
+  await expect(form).toContainText('Saved mileage will need review after the correction.');
+  await mkdir('.local/review',{recursive:true});
+  for(const width of [360,390,768,1440]){
+   await page.setViewportSize({width,height:900});
+   await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(row=>row.id),[]);
+   await page.screenshot({path:'.local/review/mileage-departure-correction-'+name+'-'+width+'.png',fullPage:true});
+  }
+  let savedStatus,submissions=0;
+  const route='**/api/business/scheduling/mobile-departure-save',storageKey='crest.mobile-departure.pending-reference.v1';
+  await page.route(route,async request=>{submissions++;savedStatus=(await request.fetch()).status();await request.abort();});
+  await form.getByRole('button',{name:'Save departure correction',exact:true}).press('Enter');
+  await expect(status).toContainText('The save outcome is unknown.');
+  assert.equal(savedStatus,200);
+  const pending=await page.evaluate(key=>sessionStorage.getItem(key),storageKey);
+  assert(pending&&!pending.includes(reason)&&!pending.includes('correctedAt')&&!pending.includes('7.125'));
+  await page.reload();
+  await page.getByRole('button',{name:'Check original departure correction',exact:true}).click();
+  await expect(status).toHaveText('Departure time corrected.');
+  assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),storageKey),null);
+  assert.equal(submissions,1);
+  await expect(history).toContainText('7.1250 actual miles');
+  await expect(page.getByRole('list',{name:'Trips for this job'})).toContainText('Mileage needs review');
+  await editor.click();
+  assert.equal(Date.parse(await form.locator('time').first().getAttribute('datetime')),corrected);
+  assert.equal(await form.locator('time').nth(1).getAttribute('datetime'),original);
+  assert.equal(await form.locator('time').nth(2).getAttribute('datetime'),arrival);
+ }finally{await browser?.close();await fixture.close();}
+});
+
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' saved trip mileage and corrections',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,additionalSchedulingAgreement:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobMileage:true});

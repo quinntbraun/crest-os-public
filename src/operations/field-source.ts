@@ -9,6 +9,7 @@ import {prepareMileageBody} from './mileage.ts';
 import {workBoundaryKind} from './job-work-boundary-contract.ts';
 import {workStartKind} from './job-work-start-contract.ts';
 import {workEndKind} from './job-work-end-contract.ts';
+import {mobileDepartureKind} from './mobile-departure-contract.ts';
 import {verifyBusinessHistoryEvidence} from '../security/business-history-evidence.ts';
 import {formatBusinessHistoryCsv} from '../security/business-history-csv.ts';
 import {parseHistoryJson,historyJsonEqual,historyJsonNumber,historyJsonBigint} from '../security/history-evidence-json.ts';
@@ -197,6 +198,44 @@ function verifyWorkEndSource(operation:Record<string,unknown>,rows:readonly Row[
   completionEventId:request.completionEventId,workVersionId:saved.id}))));
 }
 
+function verifyMobileDepartureSource(operation:Record<string,unknown>,rows:readonly Row[],legs:ReadonlyMap<unknown,Row>,
+ audits:readonly Record<string,unknown>[],events:ReadonlyMap<unknown,Record<string,unknown>>){
+ check(historyJsonNumber(operation.schema_version,1)&&historyJsonNumber(operation.result_schema_version,1)&&
+  operation.origin==='manual'&&operation.import_row_id===null&&typeof operation.result==='string'&&rows.length===1&&audits.length===1);
+ const stored=parseHistoryJson(operation.result);
+ shape(stored,['schemaVersion','request','receipt']);check(historyJsonNumber(stored.schemaVersion,1));
+ const {request,receipt}=stored;
+ const binding=['schemaVersion','commandType','businessId','actorId','operationId','recoveryEpoch','jobId','legId','departureEventId','correctedAt','reason'];
+ shape(request,[...binding,'expectedJobVersion','legVersionId']);
+ shape(receipt,[...binding,'jobVersion','previousDepartedAt','leg','mileageReviewRequired','auditIds']);
+ check(historyJsonNumber(request.schemaVersion,1)&&request.commandType===mobileDepartureKind&&request.businessId===operation.business_id&&
+  request.actorId===operation.actor_id&&request.operationId===operation.operation_id&&request.recoveryEpoch===operation.recovery_epoch&&
+  uuid(request.jobId)&&uuid(request.legId)&&uuid(request.legVersionId)&&uuid(request.departureEventId)&&version(request.expectedJobVersion)&&
+  receipt.jobVersion===request.expectedJobVersion&&receipt.mileageReviewRequired===true&&instant(request.correctedAt)&&
+  typeof request.reason==='string'&&request.reason.trim().length>0&&[...request.reason].length<=1000&&
+  binding.every(key=>historyJsonEqual(request[key],receipt[key])));
+ const audit=audits[0]!,originAudit=events.get(request.departureEventId),saved=rows[0]!;
+ check(originAudit&&originAudit.action==='create'&&Array.isArray(receipt.auditIds)&&receipt.auditIds.length===1&&receipt.auditIds[0]===audit.id&&
+  audit.actor_id===request.actorId&&audit.created_by===request.actorId&&audit.entity_kind==='travel_legs'&&audit.entity_id===request.legId&&
+  audit.entity_version===saved.sequence&&audit.action==='correct');
+ const {before,after:departure}=auditImages(originAudit);
+ object(departure);object(departure.evidence);
+ const original=legs.get(request.legId),prior=legs.get(request.legVersionId);
+ check(before===null&&departure.id===request.departureEventId&&departure.job_id===request.jobId&&departure.created_by===request.actorId&&
+  departure.from_state==='scheduled'&&departure.to_state==='en_route'&&departure.evidence.action==='depart'&&
+  departure.evidence.travelLegId===request.legId&&version(departure.sequence)&&BigInt(departure.sequence)<=BigInt(request.expectedJobVersion)&&
+  original&&original.logical_id===request.legId&&original.sequence==='1'&&original.purpose==='mobile_work_site'&&
+  original.job_context_id===request.jobId&&original.operator_actor_id===request.actorId&&original.change_kind==='depart'&&original.state==='open'&&
+  original.operation_id===departure.operation_id&&original.departed_at===departure.effective_at&&
+  prior&&prior.logical_id===original.logical_id&&saved.replaces_id===prior.id&&saved.logical_id===original.logical_id&&
+  saved.operator_actor_id===request.actorId&&saved.job_context_id===request.jobId&&saved.purpose==='mobile_work_site'&&
+  saved.departed_at===request.correctedAt&&saved.change_kind==='correct'&&saved.reason===request.reason&&
+  prior.departed_at===receipt.previousDepartedAt&&prior.departed_at!==saved.departed_at&&instant(saved.created_at)&&
+  request.correctedAt<=saved.created_at&&(saved.arrived_at===null||instant(saved.arrived_at)&&request.correctedAt<=saved.arrived_at)&&
+  unchanged(prior,saved,['id','sequence','replaces_id','departed_at','change_kind','reason','created_at','operation_id']));
+ sourceImage('travel_legs',saved,receipt.leg);
+}
+
 export function verifyFieldSources(value:unknown){
  try{
   shape(value,['context','rows','historyEvidence']);const c=value.context;shape(c,['schemaVersion','profile','businessId','snapshotToken','historySnapshotToken','observedAt','expectedCounts']);
@@ -230,7 +269,7 @@ export function verifyFieldSources(value:unknown){
     check(!jobEventAudits.has(r.entity_id));jobEventAudits.set(r.entity_id,r);
    }
    const command=operations.get(id)?.command_type;
-   if(command===workStartKind||command===workEndKind){
+   if(command===workStartKind||command===workEndKind||command===mobileDepartureKind){
     const entries=endpointAudits.get(id)??[];entries.push(r);endpointAudits.set(id,entries);
    }
    if(command===workBoundaryKind){
@@ -251,7 +290,7 @@ export function verifyFieldSources(value:unknown){
     check(group==='work_intervals'&&typeof row.operation_id==='string');
     const pair=boundaryRows.get(row.operation_id)??[];pair.push(row);boundaryRows.set(row.operation_id,pair);
    }
-   if(operation.command_type===workStartKind||operation.command_type===workEndKind){
+   if(operation.command_type===workStartKind||operation.command_type===workEndKind||operation.command_type===mobileDepartureKind){
     check((group==='work_intervals'||group==='travel_legs')&&typeof row.operation_id==='string');
     const entries=endpointRows.get(row.operation_id)??[];entries.push(row);endpointRows.set(row.operation_id,entries);
    }
@@ -264,6 +303,9 @@ export function verifyFieldSources(value:unknown){
   }
   for(const [id,operation] of operations)if(operation.command_type===workEndKind){
    verifyWorkEndSource(operation,endpointRows.get(id)??[],maps.work_intervals,endpointAudits.get(id)??[],jobEventAudits);
+  }
+  for(const [id,operation] of operations)if(operation.command_type===mobileDepartureKind){
+   verifyMobileDepartureSource(operation,endpointRows.get(id)??[],maps.travel_legs,endpointAudits.get(id)??[],jobEventAudits);
   }
   return Object.freeze({context:Object.freeze({...c,expectedCounts:Object.freeze({...c.expectedCounts})}) as Context,rows:Object.freeze(rows),history,occupancy});
  }catch(error){if(error instanceof FieldSourceError)throw error;throw new FieldSourceError();}

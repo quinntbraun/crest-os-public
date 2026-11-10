@@ -7,14 +7,27 @@ import {openPendingOriginalOperation} from '../../src/client/pending-original-op
 import {lookupSchedulingOriginal} from '../../src/client/scheduling-original';
 function packet(kind:typeof fieldOriginalKinds[number]){
  const original=parseFieldOriginal(originalOperationFixture(kind)),ref=original.reference;
- const result={state:'committed',receipt:{schemaVersion:1,commandType:kind,businessId:original.businessId,actorId:randomUUID(),operationId:ref.operationId,recoveryEpoch:ref.recoveryEpoch,subjectId:'jobId'in ref?ref.jobId:ref.legId,sourceRecordId:'jobId'in ref?ref.jobId:randomUUID(),sourceVersion:'jobId'in ref?(BigInt(ref.expectedJobVersion)+(kind==='operations.job.work_boundary.correct'?0n:1n)).toString():'expectedEvidenceVersion'in ref?(BigInt(ref.expectedEvidenceVersion)+1n).toString():ref.expectedLegVersionId===null?'1':'2',sourceAuditIds:kind==='operations.job.work_boundary.correct'?[randomUUID(),randomUUID()]:(kind==='operations.job.work_start.correct'||kind==='operations.job.work_end.correct')?[randomUUID(),randomUUID(),randomUUID()]:[randomUUID()]}};
+ const target='legVersionId'in ref?{subjectId:ref.legId,sourceRecordId:randomUUID(),sourceVersion:'2'}:
+  'jobId'in ref?{subjectId:ref.jobId,sourceRecordId:ref.jobId,
+   sourceVersion:(BigInt(ref.expectedJobVersion)+(kind==='operations.job.work_boundary.correct'?0n:1n)).toString()}:
+  {subjectId:ref.legId,sourceRecordId:randomUUID(),sourceVersion:'expectedEvidenceVersion'in ref?
+   (BigInt(ref.expectedEvidenceVersion)+1n).toString():ref.expectedLegVersionId===null?'1':'2'};
+ const auditCount=kind==='operations.job.work_boundary.correct'?2:kind==='operations.job.work_start.correct'||kind==='operations.job.work_end.correct'?3:1;
+ const result={state:'committed',receipt:{schemaVersion:1,commandType:kind,businessId:original.businessId,actorId:randomUUID(),
+  operationId:ref.operationId,recoveryEpoch:ref.recoveryEpoch,...target,sourceAuditIds:Array.from({length:auditCount},()=>randomUUID())}};
  return {schemaVersion:1,original,result};
 }
 const proof=()=>({csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000});
 afterEach(()=>vi.unstubAllGlobals());
 it.each(fieldOriginalKinds)('binds the source-verified minimal %s receipt and keeps private field values out',kind=>{
  const p=packet(kind),r=parseFieldOriginalResult(p,p.original);expect(r.state).toBe('committed');expect(Object.isFrozen(r)).toBe(true);expect(Object.isFrozen(r.state==='committed'&&r.receipt.sourceAuditIds)).toBe(true);expect(JSON.stringify(r)).not.toMatch(/location|odometer|amount|notes|payload|hash/i);
- for(const key of ['operationId','recoveryEpoch','businessId','subjectId','sourceRecordId']){const wrong={...p,result:{...p.result,receipt:{...p.result.receipt,[key]:key==='sourceRecordId'&&!('jobId'in p.original.reference)?'invalid':randomUUID()}}};expect(()=>parseFieldOriginalResult(wrong,p.original)).toThrow();}
+ for(const key of ['operationId','recoveryEpoch','businessId','subjectId','sourceRecordId']){
+  const ref=p.original.reference;
+  const value=key==='sourceRecordId'&&'legVersionId'in ref?ref.legVersionId:
+   key==='sourceRecordId'&&!('jobId'in ref)?'invalid':randomUUID();
+  const wrong={...p,result:{...p.result,receipt:{...p.result.receipt,[key]:value}}};
+  expect(()=>parseFieldOriginalResult(wrong,p.original)).toThrow();
+ }
  expect(()=>parseFieldOriginalResult({...p,result:{...p.result,receipt:{...p.result.receipt,sourceVersion:'0'}}},p.original)).toThrow();
  expect(()=>parseFieldOriginalResult({...p,result:{...p.result,receipt:{...p.result.receipt,sourceAuditIds:[]}}},p.original)).toThrow();
  expect(()=>parseFieldOriginalResult({schemaVersion:1,state:'original_recorded',original:p.original},p.original)).toThrow();
@@ -28,7 +41,12 @@ it.each(fieldOriginalKinds)('reconciles %s through the existing authenticated sc
  const target=openPendingOriginalOperation(kind,storage,p.original.businessId)!;expect(await target.reconcile(proof(),new AbortController().signal)).toBe('committed');expect(memory.has(pendingSchedulingKeys[kind])).toBe(false);expect(fetcher).toHaveBeenCalledExactlyOnceWith('/api/business/scheduling/original',expect.any(Object));
 });
 it.each(['action','expectedLegVersionId','expectedJobVersion','expectedEvidenceVersion','location','draft'])('rejects mismatched or private field reference %s',key=>{
- for(const kind of fieldOriginalKinds){const p=packet(kind),original={...p.original,reference:{...p.original.reference,[key]:key==='expectedJobVersion'||key==='expectedEvidenceVersion'?(kind==='operations.job.work_boundary.correct'?'9223372036854775808':'9223372036854775807'):'Untrusted private value'}};expect(()=>parseFieldOriginal(original)).toThrow();}
+ for(const kind of fieldOriginalKinds){
+  const p=packet(kind),validAtMax=kind==='operations.job.work_boundary.correct'||kind==='operations.mobile_departure.correct';
+  const value=key==='expectedJobVersion'||key==='expectedEvidenceVersion'?validAtMax?'9223372036854775808':'9223372036854775807':'Untrusted private value';
+  const original={...p.original,reference:{...p.original.reference,[key]:value}};
+  expect(()=>parseFieldOriginal(original)).toThrow();
+ }
 });
 it('retrieves the largest permitted audit-reference list within the existing private response limit',async()=>{
  const p=packet('operations.job.complete');p.result.receipt.sourceAuditIds=Array.from({length:10000},()=>randomUUID());expect(new TextEncoder().encode(JSON.stringify(p)).length).toBeLessThan(1048576);

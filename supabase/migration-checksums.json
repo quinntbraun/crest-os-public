@@ -310,6 +310,11 @@
       "version": "20261116180000",
       "file": "20261116180000_job_work_end_correction.sql",
       "sha256": "96cb65cfacf1ab7945c463f7ed6da7b8503b5c619b7245bef096b419dbb0f6d5"
+    },
+    {
+      "version": "20261117180000",
+      "file": "20261117180000_mobile_trip_departure_correction.sql",
+      "sha256": "5798f38f711981decd008faaa36253fcf2462d807c0d0ddf3b5e5998bd82565f"
     }
   ]
 }
