@@ -290,6 +290,11 @@
       "version": "20261112180000",
       "file": "20261112180000_unfulfilled_cancellation_context.sql",
       "sha256": "2ec86cffa0e1eb84f65027774a4ae12c90032c04e6fc448fcec0a5ef1fb65d77"
+    },
+    {
+      "version": "20261113180000",
+      "file": "20261113180000_job_work_time.sql",
+      "sha256": "15532963a33bc4ddf8a46b7581655fa8a956999b47fff3c5b8f1a5abe135e284"
     }
   ]
 }

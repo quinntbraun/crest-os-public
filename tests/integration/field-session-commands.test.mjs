@@ -9,6 +9,7 @@ import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixture.mjs';
 import {confirmedBookingRequest} from '../fixtures/confirmed-booking.ts';
+import {parseJobWorkTime} from '../../src/operations/job-work-time-contract.ts';
 const storage=await readFile(new URL('../../planning/proposals/field-time-storage.sql',import.meta.url),'utf8');
 const commands=await readFile(new URL('../../planning/proposals/field-session-commands.sql',import.meta.url),'utf8');
 let sandbox,client,web,login,restrictedTarget,accepted,f,other,second,firstReceipt,pauseReceipt,resumeReceipt,mobile,departure,arrival;
@@ -30,6 +31,7 @@ async function change(p,action,version,{reason=action==='resume'?null:'Synthetic
 }
 async function lookup(p,operation){return (await tx(web,()=>web.query('SELECT crest_commands.lookup_field_session_operation($1,$2,$3,$4,$5,$6,$7,$8,$9) AS value',[...p.auth(),operation]))).rows[0].value;}
 const noOperation=async(p,operation)=>assert.equal(await scalar('SELECT count(*)::int AS value FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[p.business,operation]),0);
+
 const rigPayload=(archived=false)=>({label:'Synthetic Crest equipment rig',year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'business_rig',notes:null,archived,archiveReason:archived?'Synthetic rig archived for refusal test':null});
 async function newMobile({mode='mobile',contact={kind:'phone',value:'+12025550123'}}={}){const p=await accepted();p.job=await book(p,{mode,contact});p.rig=randomUUID();const r=await tx(web,()=>web.query('SELECT crest_commands.save_vehicle($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS value',[...p.auth(),p.epoch,randomUUID(),p.rig,rigPayload()]));assert.equal(r.rows[0].value.state,'committed');return p;}
 const tripBody=(p,etaAt=null)=>({action:'depart',reason:null,trip:{drivenVehicleId:p.rig,origin:{schemaVersion:1,kind:'manual',locationText:'Synthetic equipment base',instructions:null},etaAt,notes:null}});
@@ -152,4 +154,43 @@ test('two real departures serialize to one saved trip and one stale-version conf
  const p=await newMobile(),peer=await sandbox.connect(restrictedTarget);await peer.query('SET ROLE crest_web');const pids=[(await web.query('SELECT pg_backend_pid() AS pid')).rows[0].pid,(await peer.query('SELECT pg_backend_pid() AS pid')).rows[0].pid];let requests=[];
  try{await client.query('BEGIN');await client.query('SELECT crest_private.lock_booking_operator($1,$2)',[p.business,p.actor]);requests=[change(p,'depart',1,{body:tripBody(p)}),change(p,'depart',1,{body:tripBody(p),connection:peer})];let waiting=false;for(let i=0;i<80;i++){waiting=await scalar("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE pid=ANY($1::int[]) AND wait_event_type='Lock') AS value",[pids]);if(waiting)break;await delay(25);}assert.equal(waiting,true);await client.query('COMMIT');const results=await Promise.all(requests),saved=results.filter(x=>x.result.state==='committed'),stale=results.filter(x=>x.result.state==='conflict');assert.equal(saved.length,1);assert.equal(stale.length,1);assert.equal(stale[0].result.reason,'version');await noOperation(p,stale[0].operation);assert.equal(await scalar('SELECT count(*)::int AS value FROM crest.travel_legs WHERE business_id=$1',[p.business]),1);assert.deepEqual(await lookup(p,saved[0].operation),saved[0].result);
  }finally{await client.query('ROLLBACK');await Promise.allSettled(requests);await peer.end();}
+});
+
+test('saved work-time reader uses server time, scoped intervals and real authorization',async()=>{
+ const proposal=await readFile(new URL('../../planning/proposals/job-work-time-reader.sql',import.meta.url),'utf8');
+ await tx(client,()=>client.query(proposal));
+ const p=await accepted();
+ p.job=await book(p);
+ const read=async(principal,job=p.job,auth=principal.auth())=>(await tx(web,()=>web.query(
+  'SELECT crest_commands.read_job_work_time($1,$2,$3,$4,$5,$6,$7,$8,$9) value',[...auth,job]))).rows[0].value;
+ const empty=parseJobWorkTime(await read(p),p.business,p.job);
+ assert.equal(empty.record.jobState,'scheduled');
+ assert.equal(empty.summary.elapsedMicroseconds,null);
+ assert.deepEqual(await read(other),{state:'absent'});
+ const invalid=p.auth();invalid[0]=randomBytes(32);
+ await assert.rejects(read(p,p.job,invalid),{code:'42501'});
+ assert.equal((await change(p,'direct_arrive','1')).result.state,'committed');
+ assert.equal((await change(p,'pause','2',{reason:'Synthetic equipment check'})).result.state,'committed');
+ const rawPaused=await read(p),paused=parseJobWorkTime(rawPaused,p.business,p.job);
+ assert.equal(paused.record.jobVersion,'3');
+ assert.equal(paused.summary.openInterval.kind,'pause');
+ assert.equal(paused.intervals[0].endedAt,paused.intervals[1].startedAt);
+ assert.equal(paused.intervals[1].pauseReason,'Synthetic equipment check');
+ const closed=paused.intervals[0],original=paused.record.intervalVersions.find(row=>row.versionId===closed.replacesVersionId);
+ assert(original&&original.endedAt===null&&original.changeKind==='open');
+ assert.equal(paused.record.intervalVersions.length,3);
+ assert.throws(()=>parseJobWorkTime({...rawPaused,intervalVersions:rawPaused.intervalVersions.filter(row=>row.versionId!==original.versionId)},p.business,p.job));
+ assert.equal(paused.summary.closedActiveMicroseconds,paused.summary.observedActiveMicroseconds);
+ assert.equal(paused.summary.unrecordedMicroseconds,'0');
+ assert.equal((await change(p,'resume','3')).result.state,'committed');
+ const resumed=parseJobWorkTime(await read(p),p.business,p.job);
+ assert.equal(resumed.summary.openInterval.kind,'active');
+ assert.equal(resumed.intervals.length,3);
+ assert.equal(resumed.record.intervalVersions.length,5);
+ assert.equal(resumed.summary.observedPauseMicroseconds,resumed.summary.closedPauseMicroseconds);
+ assert(BigInt(resumed.summary.observedActiveMicroseconds)>=BigInt(paused.summary.observedActiveMicroseconds));
+ const signature='crest_commands.read_job_work_time(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)';
+ for(const role of ['anon','authenticated','crest_worker','crest_export']){
+  assert.equal(await scalar('SELECT has_function_privilege($1,$2,$3) value',[role,signature,'EXECUTE']),false);
+ }
 });

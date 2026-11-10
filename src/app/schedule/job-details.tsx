@@ -23,10 +23,10 @@ function WorkLocation({value}:{value:BookingLocation}){
 }
 type Props=Readonly<{
  resources:SavedJobResources;history:readonly JobHistoryEvent[];historyComplete:boolean;busy:boolean;canChange:boolean;
- onWorkStatus?:(()=>void)|undefined;completionAvailable?:boolean;mileageAvailable?:boolean;onChangeAppointment?:()=>void;onCancel?:()=>void;onDownload?:()=>void;onMoreHistory?:()=>void;
+ onWorkStatus?:(()=>void)|undefined;completionAvailable?:boolean;mileageAvailable?:boolean;workTimeAvailable?:boolean;onChangeAppointment?:()=>void;onCancel?:()=>void;onDownload?:()=>void;onMoreHistory?:()=>void;
 }>;
 export function SavedJobDetails(props:Props){return <SavedJobDetailsContent key={props.resources.head.job.id+':'+props.resources.head.job.version} {...props}/>;}
-function SavedJobDetailsContent({resources,history,historyComplete,busy,canChange,onWorkStatus,completionAvailable,mileageAvailable,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
+function SavedJobDetailsContent({resources,history,historyComplete,busy,canChange,onWorkStatus,completionAvailable,mileageAvailable,workTimeAvailable,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
  const {head}=resources,{job,appointment,latestAppointment}=head;
  const customer=parseCustomer(resources.vehicles[0]!.customer_snapshot,resources.businessId);
  const location=parseBookingLocation(job.work_location_snapshot,resources.businessId,job.customer_id),contact=parseBookingContact(appointment.contact_snapshot);
@@ -59,6 +59,8 @@ function SavedJobDetailsContent({resources,history,historyComplete,busy,canChang
   {onWorkStatus&&job.fulfillment_mode==='mobile'&&['scheduled','en_route','in_progress','paused'].includes(job.state)&&<section aria-label="Field work actions"><button type="button" disabled={busy||!canChange} onClick={onWorkStatus}>Record work status…</button></section>}
   {completionAvailable&&job.fulfillment_mode==='mobile'&&['in_progress','paused','completed'].includes(job.state)&&<p><a href={'/schedule/work/complete?job='+encodeURIComponent(job.id)}>{job.state==='completed'?'Review saved completion':'Review and end job'}</a></p>}
   {mileageAvailable&&<p><a href={'/schedule/mileage?job='+encodeURIComponent(job.id)}>Review trip mileage</a></p>}
+  {workTimeAvailable&&job.fulfillment_mode==='mobile'&&job.first_work_at&&
+   <p><a href={'/schedule/work/time?job='+encodeURIComponent(job.id)}>Review recorded work time</a></p>}
   {(onChangeAppointment||onCancel)&&job.state==='scheduled'&&<section aria-label="Job actions">{onChangeAppointment&&<button type="button" disabled={!changeable} onClick={onChangeAppointment}>Change appointment…</button>}{onCancel&&<button type="button" className="secondary" disabled={!changeable} onClick={onCancel}>Cancel this job…</button>}</section>}
   <details>
    <summary>Saved history · version {job.version}</summary>

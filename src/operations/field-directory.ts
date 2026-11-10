@@ -10,22 +10,26 @@ import {parseFieldSessionSave,fieldSessionOriginal,parseFieldSessionCommitted,fi
 import {parseTripInterruptionSave,tripInterruptionOriginal,parseTripInterruptionCommitted,tripInterruptionConflicts} from './trip-interruption-contract.ts';
 import {parseUnfulfilledCancellationContext,parseUnfulfilledCancellationSave,unfulfilledCancellationOriginal,
  parseUnfulfilledCancellationCommitted,unfulfilledCancellationConflicts} from './unfulfilled-cancellation-contract.ts';
+import {parseJobWorkTime} from './job-work-time-contract.ts';
 export class FieldDirectoryError extends Error{constructor(code:string){super(code);this.name='FieldDirectoryError';}}
 class PrivateValue<T>{#value:T;constructor(value:T){this.#value=value;}forServer(){return this.#value;}toJSON():never{throw new FieldDirectoryError('FIELD_VALUE_PRIVATE');}}
 export function createFieldDirectory(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>){
  if(config.environment!=='test')throw new FieldDirectoryError('FIELD_CONFIGURATION_REQUIRED');
  const database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
- async function cancellationContext(credential:string,businessId:string,jobId:string,signal:AbortSignal){
+ async function read(credential:string,businessId:string,jobId:string,signal:AbortSignal,kind:'cancellation'|'time'){
   const bounded=AbortSignal.any([signal,AbortSignal.timeout(35000)]);
   const hash=sessionCredentialHash(credential);
   try{
    const verified=await sessions.verify(credential,bounded,'background');
    bounded.throwIfAborted();
-   const value=await database('SELECT crest_commands.read_unfulfilled_cancellation_context($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid) AS result',
+   const command=kind==='time'?'read_job_work_time':'read_unfulfilled_cancellation_context';
+   const value=await database('SELECT crest_commands.'+command+'($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid) AS result',
     [hash,verified.sessionId,verified.actorId,verified.provider.issuer,verified.provider.subject,verified.provider.sessionId,
      new Date(verified.provider.expiresAt),businessId,jobId],bounded);
    bounded.throwIfAborted();
-   return new PrivateValue(parseUnfulfilledCancellationContext(value,businessId,jobId));
+   if(kind==='cancellation')return new PrivateValue(parseUnfulfilledCancellationContext(value,businessId,jobId));
+   const loaded=parseJobWorkTime(value,businessId,jobId);
+   return new PrivateValue('state'in loaded?loaded:loaded.record);
   }finally{hash.fill(0);}
  }
  async function save(credential:string,input:unknown,signal:AbortSignal,action:'session'|'interruption'|'cancellation'){
@@ -67,7 +71,8 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
   finally{hash?.fill(0);}
  }
  return Object.freeze({
-  cancellationContext,
+  cancellationContext:(credential:string,businessId:string,jobId:string,signal:AbortSignal)=>read(credential,businessId,jobId,signal,'cancellation'),
+  jobWorkTime:(credential:string,businessId:string,jobId:string,signal:AbortSignal)=>read(credential,businessId,jobId,signal,'time'),
   saveSession:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'session'),
   interrupt:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'interruption'),
   cancelUnfulfilled:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'cancellation')
