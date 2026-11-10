@@ -6,7 +6,11 @@ import type {SchedulingOriginalKind} from '../../../operations/scheduling-origin
 import {mileageShareFraction,mileageSharePercent,prepareMileageBody} from '../../../operations/mileage';
 import type {MileageBody,MileageTrip} from '../../../operations/mileage';
 import type {MileageHistoryPage} from '../../../operations/mileage-history';
+import {mobileDepartureKind} from '../../../operations/mobile-departure-contract';
+import type {LoadedMobileDeparture,MobileDepartureSave} from '../../../operations/mobile-departure-contract';
+import {parseWorkCorrectionBody} from '../../../operations/job-work-boundary-contract';
 import {calendarToday} from '../../../client/schedule-calendar';
+import {BookingInstantInput} from '../booking-fields';
 import {MileageAttribution} from './attribution';
 import type {FindMileageJobs,MileageShareDraft} from './attribution';
 
@@ -115,7 +119,9 @@ export function MileageScreen({jobId,legId}:{jobId:string;legId:string}){
  useEffect(()=>{
   const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)};
   const current=createMileageController({jobId,legId,store:createPendingSchedulingStore(storage,kind),
-   blockers:(Object.keys(pendingSchedulingKeys) as SchedulingOriginalKind[]).filter(key=>key!==kind).map(key=>createPendingSchedulingStore(storage,key)),change:setView});
+   departureStore:createPendingSchedulingStore(storage,mobileDepartureKind),
+   blockers:(Object.keys(pendingSchedulingKeys) as SchedulingOriginalKind[]).filter(key=>key!==kind&&key!==mobileDepartureKind)
+    .map(key=>createPendingSchedulingStore(storage,key)),change:setView});
   controller.current=current;void current.load();
   const leave=()=>{current.suspend();revoke();setDownloadMessage('');};
   const hidden=()=>{if(document.visibilityState==='hidden')leave();};
@@ -129,6 +135,7 @@ export function MileageScreen({jobId,legId}:{jobId:string;legId:string}){
   await run(current);if(controller.current===current)status.current?.focus();
  }
  const {selected,history}=view;
+ const pendingDeparture=view.pendingKind===mobileDepartureKind;
  const format=(instant:string)=>new Intl.DateTimeFormat('en-US',{timeZone:view.timezone,dateStyle:'medium',timeStyle:'short'}).format(new Date(instant));
  async function downloadHistory(){
   const current=controller.current;
@@ -161,8 +168,8 @@ export function MileageScreen({jobId,legId}:{jobId:string;legId:string}){
   {view.phase==='signed-out'&&<a className="primary-action" href="/sign-in">Sign in to view mileage</a>}
   {(view.phase==='review'||view.phase==='unavailable')&&<button type="button" disabled={view.busy} onClick={()=>void action(current=>current.load())}>Reload saved trips</button>}
   {view.phase==='pending'&&<>
-   {view.reference&&<p className="save-reference">Original mileage reference <code>{view.reference}</code></p>}
-   <button type="button" disabled={view.busy} onClick={()=>void action(current=>current.check())}>Check original mileage</button>
+   {view.reference&&<p className="save-reference">Original {pendingDeparture?'departure correction':'mileage'} reference <code>{view.reference}</code></p>}
+   <button type="button" disabled={view.busy} onClick={()=>void action(current=>current.check())}>{pendingDeparture?'Check original departure correction':'Check original mileage'}</button>
   </>}
   {view.phase==='ready'&&<>
    {!view.canSave&&<p>Changes are paused. Saved mileage is available for review.</p>}
@@ -173,6 +180,9 @@ export function MileageScreen({jobId,legId}:{jobId:string;legId:string}){
    </li>)}</ul>}
    {view.hasMore&&<button type="button" disabled={view.busy} onClick={()=>void action(current=>current.moreTrips())}>Load more trips</button>}
    {selected&&history&&<>
+    {view.canSave&&view.departure&&<DepartureEditor key={view.departure.legVersionId} departure={view.departure}
+     timezone={view.timezone} disabled={view.busy} hasMileage={selected.evidenceVersion!=='0'}
+     save={body=>void action(current=>current.correctDeparture(body))}/>}
     <section aria-label="Saved mileage history">
      <h2>Saved mileage history</h2>
      <p>{labels[selected.purpose]} · {format(selected.departedAt)}</p>
@@ -200,9 +210,41 @@ export function MileageScreen({jobId,legId}:{jobId:string;legId:string}){
    {jobId&&<a href={'/schedule?job='+encodeURIComponent(jobId)}>Saved job</a>}
    {legId&&<a href="/schedule/travel">Standalone travel</a>}
    <a href="/schedule">Schedule</a>
-   <a href={'/save-review?kind='+kind}>Interrupted saves</a>
+   <a href={'/save-review?kind='+(pendingDeparture?mobileDepartureKind:kind)}>Interrupted saves</a>
   </nav>
  </section>;
+}
+
+function DepartureEditor({departure,timezone,disabled,hasMileage,save}:{
+ departure:LoadedMobileDeparture;timezone:string;disabled:boolean;hasMileage:boolean;save:(body:MobileDepartureSave['body'])=>void;
+}){
+ const id=useId(),[correctedAt,setCorrectedAt]=useState(''),[issue,setIssue]=useState('');
+ const format=new Intl.DateTimeFormat('en-US',{timeZone:timezone,dateStyle:'medium',timeStyle:'medium'});
+ const when=(instant:string)=>format.format(new Date(instant));
+ return <details className="mileage-correction">
+  <summary>Correct departure time</summary>
+  <form className="field-work-form" onSubmit={event=>{
+   event.preventDefault();
+   try{
+    const reason=String(new FormData(event.currentTarget).get('reason')??'');
+    if(!correctedAt||correctedAt===departure.departedAt||departure.arrivedAt&&correctedAt>departure.arrivedAt)throw Error();
+    const body=parseWorkCorrectionBody({correctedAt,reason});
+    setIssue('');save(body);
+   }catch{setIssue('Enter a different departure time within the saved trip and give a reason.');}
+  }}>
+   <fieldset disabled={disabled}>
+    <p>Saved departure <time dateTime={departure.departedAt}>{when(departure.departedAt)}</time>.</p>
+    {departure.originalDepartedAt!==departure.departedAt&&<p>First recorded as <time dateTime={departure.originalDepartedAt}>{when(departure.originalDepartedAt)}</time>.</p>}
+    {departure.arrivedAt&&<p>{departure.legState==='cancelled'?'Recorded stop':'Recorded arrival'} <time dateTime={departure.arrivedAt}>{when(departure.arrivedAt)}</time>.</p>}
+    {hasMileage&&<p>Saved mileage will need review after the correction.</p>}
+    <BookingInstantInput label="Corrected departure time" value={correctedAt} zone={timezone} change={setCorrectedAt} seconds/>
+    <label htmlFor={id+'-reason'}>Departure correction reason</label>
+    <textarea id={id+'-reason'} name="reason" maxLength={1000} rows={2} required/>
+    {issue&&<p role="alert">{issue}</p>}
+    <button type="submit">Save departure correction</button>
+   </fieldset>
+  </form>
+ </details>;
 }
 
 function SavedAttribution({history,evidenceId,currentJob,state}:{history:MileageHistoryPage;evidenceId:string;currentJob:string;state:string}){

@@ -13,7 +13,7 @@ const choices:ReadonlyArray<readonly [OriginalOperationKind,string]>=[
  ['operations.fulfillment_modes.initialize','Fulfillment settings setup'],['operations.fulfillment_modes.save','Fulfillment settings'],
  ['operations.job.book','Job booking'],['operations.job.cancel','Scheduled-job cancellation'],['operations.job.reschedule','Appointment change'],
  ['operations.job.field','Mobile work status'],['operations.job.complete','Work completion'],['operations.job.interrupt','En-route change'],
- ['operations.job.cancel_unfulfilled','Unfulfilled-work cancellation'],['operations.job.work_boundary.correct','Work-time correction'],['operations.job.work_start.correct','First work start correction'],['operations.job.work_end.correct','Completion time correction'],['operations.mileage.record','Mileage'],
+ ['operations.job.cancel_unfulfilled','Unfulfilled-work cancellation'],['operations.job.work_boundary.correct','Work-time correction'],['operations.job.work_start.correct','First work start correction'],['operations.job.work_end.correct','Completion time correction'],['operations.mobile_departure.correct','Mobile departure correction'],['operations.mileage.record','Mileage'],
  ['operations.support_trip.record','Support trip'],['operations.support_trip.correct','Support trip correction']
 ];
 function Review({kind}:{kind:OriginalOperationKind}){
