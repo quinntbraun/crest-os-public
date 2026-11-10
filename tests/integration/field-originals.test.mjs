@@ -1,5 +1,5 @@
 // Actual shared operation-key races and restricted-session field recovery.
-// This is not a registered54, genuine browser/MFA or owner-preview claim.
+// This fixture installs the held schema 54 source. Later commands have their own registered-prefix suites.
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
 import {readFile} from 'node:fs/promises';
@@ -15,6 +15,12 @@ import {fieldOriginalKinds,parseFieldOriginal,parseFieldOriginalResult} from '..
 import {parseSchedulingOriginalResult} from '../../src/operations/scheduling-original-contract.ts';
 const names=['field-time-storage','field-session-commands','work-completion-plan','work-completion-commands','field-scope-floor','mileage-evidence','mileage-field-profile','mobile-trip-interruption','unfulfilled-work-cancellation','support-trip-commands','field-originals','field-source'];
 const proposals=await Promise.all(names.map(n=>readFile(new URL('../../planning/proposals/'+n+'.sql',import.meta.url),'utf8')));
+const laterFieldKinds=new Set([
+ 'operations.job.work_boundary.correct',
+ 'operations.job.work_start.correct',
+ 'operations.job.work_end.correct',
+ 'operations.mobile_departure.correct'
+]);
 let sandbox,client,web,login,target,accepted;
 const value=async(c,q,args=[])=>(await c.query(q,args)).rows[0].value;
 const scalar=(q,args=[])=>value(client,q,args);
@@ -75,8 +81,8 @@ test('installs typed field originals with unchanged retirement source and closed
  assert.equal(await scalar("SELECT pg_get_functiondef('crest_private.operation_retirement_result(uuid,uuid,jsonb)'::regprocedure) value"),before);
  for(const role of ['anon','authenticated','crest_web','crest_worker','crest_recovery'])assert.equal(await scalar('SELECT has_function_privilege($1,$2,$3) value',[role,'crest_private.original_operation_reference_valid(jsonb)','EXECUTE']),false);
 });
-test('application and SQL agree on every typed original and reject retained draft content',async()=>{
- for(const kind of originalOperationKinds){const r=originalOperationFixture(kind);assert.equal(await scalar('SELECT crest_private.original_operation_reference_valid($1) value',[r]),!['operations.job.work_boundary.correct','operations.job.work_start.correct'].includes(kind),kind);assert.equal(await scalar('SELECT crest_private.original_operation_reference_valid($1) value',[{...r,reference:{...r.reference,location:'Private draft content'}}]),false,kind);}
+test('held SQL accepts its typed originals, rejects later commands, and rejects retained draft content',async()=>{
+ for(const kind of originalOperationKinds){const r=originalOperationFixture(kind);assert.equal(await scalar('SELECT crest_private.original_operation_reference_valid($1) value',[r]),!laterFieldKinds.has(kind),kind);assert.equal(await scalar('SELECT crest_private.original_operation_reference_valid($1) value',[{...r,reference:{...r.reference,location:'Private draft content'}}]),false,kind);}
 });
 test('the existing booked-job original still uses its unchanged full typed receipt',async()=>{
  const p=await fixture(),original={schemaVersion:1,businessId:p.business,commandType:'operations.job.book',reference:{operationId:p.booking.operationId,recoveryEpoch:p.epoch,jobId:p.job,expectedModeSequence:'0'}};
@@ -87,7 +93,7 @@ test('a different support command kind at the same operation ID cannot impersona
  const changed=parseFieldOriginal({...q.original,commandType:'operations.support_trip.correct',reference:{...q.original.reference,action:'record'}});
  assert.deepEqual(await typedLookup(q,changed),{state:'conflict',reason:'operation'});assert.equal(parseFieldOriginalResult(await typedLookup(q),q.original).state,'committed');
 });
-for(const kind of fieldOriginalKinds.filter(kind=>!['operations.job.work_boundary.correct','operations.job.work_start.correct'].includes(kind))){
+for(const kind of fieldOriginalKinds.filter(kind=>!laterFieldKinds.has(kind))){
  test(kind+' verifies the actual original source and rejects mismatched typed identities',async()=>{
   const q=await plan(kind),saved=await execute(q);assert.equal(saved.state,'committed');const found=await typedLookup(q),parsed=parseFieldOriginalResult(found,q.original);assert.equal(parsed.state,'committed');assert.deepEqual(parseSchedulingOriginalResult(found,q.original),parsed);assert.equal(parsed.receipt.operationId,q.original.reference.operationId);
   const observed=await retire(q);assert.equal(observed.state,'original_recorded');parseOriginalOperationOutcome(observed,q.original);assert.throws(()=>parseFieldOriginalResult(observed,q.original));
