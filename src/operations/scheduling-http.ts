@@ -33,6 +33,7 @@ import {parseSupportTripHistoryQuery,parseSupportTripListQuery,parseSupportTripS
 import {parseTripInterruptionSave} from './trip-interruption-contract.ts';
 import {parseUnfulfilledCancellationSave} from './unfulfilled-cancellation-contract.ts';
 import {parseWorkBoundarySave,workBoundaryKind} from './job-work-boundary-contract.ts';
+import {parseWorkStartSave,workStartKind} from './job-work-start-contract.ts';
 
 type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
 const prefix='/api/business/scheduling/';
@@ -43,6 +44,8 @@ const fields={'mileage-trips':['jobId','afterDepartedAt','afterLegId','pageSize'
  'interrupt':['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','body'],
  'unfulfilled-context':['jobId'],
  'work-time':['jobId'],
+ 'work-start':['jobId'],
+ 'work-start-save':['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','workVersionId','arrivalVersionId','body'],
  'work-boundary-save':['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','leftVersionId','rightVersionId','body'],
  'cancel-unfulfilled':['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','body'],
  'support-trip-save':['schemaVersion','operationId','recoveryEpoch','legId','expectedLegVersionId','body'],
@@ -50,12 +53,12 @@ const fields={'mileage-trips':['jobId','afterDepartedAt','afterLegId','pageSize'
  'mileage-save':['schemaVersion','operationId','recoveryEpoch','legId','expectedLegVersionId','expectedEvidenceVersion','body'],
  'completion-context':['jobId'],complete:['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','body'],'field-save':['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','body'],'slot-review':['schemaVersion','operatorId','rescheduledJobId','startAt','endAt','travelBeforeSeconds','travelAfterSeconds'],original:['originalJson'],workspace:[],agreement:['familyId'],resources:['jobId'],pending:['afterCreatedAt','afterAppointmentId','pageSize'],list:['from','until','afterStart','afterJob','pageSize'],read:['jobId'],history:['jobId','throughVersion','afterVersion','pageSize'],'mode-history':['afterSequence','pageSize'],'mode-save':['schemaVersion','operationId','recoveryEpoch','expectedSequence','payload'],book:['schemaVersion','operationId','recoveryEpoch','jobId','expectedModeSequence','payload'],cancel:['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','payload'],reschedule:['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','payload']} as const;
 type Route=keyof typeof fields;
-const mutation=(route:Route)=>['mode-save','book','cancel','reschedule','field-save','complete','mileage-save','support-trip-save','interrupt','cancel-unfulfilled','work-boundary-save'].includes(route);
+const mutation=(route:Route)=>['mode-save','book','cancel','reschedule','field-save','complete','mileage-save','support-trip-save','interrupt','cancel-unfulfilled','work-boundary-save','work-start-save'].includes(route);
 function failed(status:400|404|405|503){const r=privateJsonResponse({error:'SCHEDULING_REQUEST_FAILED'},status);if(status===405)r.headers.set('Allow','POST');return r;}
 export function schedulingFailureResponse(status:400|404|405|503=400){return failed(status);}
 // Synthetic construction only. Ordinary application composition stays closed
 // until coordinated migration/source/recovery and browser release acceptance.
-export function createSchedulingHttp(config:Configuration,provider:Parameters<typeof createBookingDirectory>[1],tokens:Parameters<typeof createBookingDirectory>[2],enabled=false,amendedEnabled=false,fieldEnabled=false,completionEnabled=false,mileageEnabled=false,supportTripsEnabled=false,unfulfilledCancellationEnabled=false,workTimeEnabled=false,workBoundaryEnabled=false){
+export function createSchedulingHttp(config:Configuration,provider:Parameters<typeof createBookingDirectory>[1],tokens:Parameters<typeof createBookingDirectory>[2],enabled=false,amendedEnabled=false,fieldEnabled=false,completionEnabled=false,mileageEnabled=false,supportTripsEnabled=false,unfulfilledCancellationEnabled=false,workTimeEnabled=false,workBoundaryEnabled=false,workStartEnabled=false){
  if(typeof fieldEnabled!=='boolean'||fieldEnabled&&(!enabled||!amendedEnabled))throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
  if(typeof completionEnabled!=='boolean'||completionEnabled&&!fieldEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
  if(typeof mileageEnabled!=='boolean'||mileageEnabled&&!fieldEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
@@ -63,6 +66,7 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
  if(typeof unfulfilledCancellationEnabled!=='boolean'||unfulfilledCancellationEnabled&&!fieldEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
  if(typeof workTimeEnabled!=='boolean'||workTimeEnabled&&!fieldEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
  if(typeof workBoundaryEnabled!=='boolean'||workBoundaryEnabled&&!workTimeEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
+ if(typeof workStartEnabled!=='boolean'||workStartEnabled&&!workBoundaryEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
  if(!customerUuid(config.businessId)||typeof enabled!=='boolean'||typeof amendedEnabled!=='boolean'||amendedEnabled&&!enabled||enabled&&config.environment!=='test')throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
  const resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config),directory=enabled?createBookingDirectory(config,provider,tokens,amendedEnabled):undefined,modes=enabled?createFulfillmentModeDirectory(config,provider,tokens):undefined,context=enabled?createBusinessSettingsContextReader(config,provider,tokens):undefined,businessId=config.businessId,fieldDirectory=fieldEnabled?createFieldDirectory(config,provider,tokens):undefined;
  const completion=completionEnabled?createCompletionDirectory(config,provider,tokens):undefined;
@@ -79,6 +83,7 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
    if(route==='interrupt'&&(!fieldDirectory||!mileage))return failed(503);
    if(route==='work-time'&&!workTimeEnabled)return failed(503);
    if(route==='work-boundary-save'&&!workBoundaryEnabled)return failed(503);
+   if((route==='work-start'||route==='work-start-save')&&!workStartEnabled)return failed(503);
    if((route==='unfulfilled-context'||route==='cancel-unfulfilled')&&!unfulfilledCancellationEnabled)return failed(503);
    protect.requireOrigin(request);const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;if(!cookie)throw Error();
    const input=mutation(route)?await readNestedJsonBody(bounded,fields[route],131072):await readFlatJsonBody(bounded,fields[route],16384);
@@ -86,7 +91,8 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
    const interruption=route==='interrupt'?parseTripInterruptionSave({...input,businessId}):undefined;
    const unfulfilled=route==='cancel-unfulfilled'?parseUnfulfilledCancellationSave({...input,businessId}):undefined;
    const boundary=route==='work-boundary-save'?parseWorkBoundarySave({...input,businessId}):undefined;
-   if(route==='unfulfilled-context'||route==='work-time')check(customerUuid(input.jobId));
+   const start=route==='work-start-save'?parseWorkStartSave({...input,businessId}):undefined;
+   if(route==='unfulfilled-context'||route==='work-time'||route==='work-start')check(customerUuid(input.jobId));
    const completionSave=route==='complete'?parseCompletionSave({...input,businessId}):undefined;
    const mileageTrips=route==='mileage-trips'?parseMileageTripQuery({businessId,jobId:input.jobId,pageSize:input.pageSize,
     after:input.afterDepartedAt===null&&input.afterLegId===null?null:{departedAt:input.afterDepartedAt,legId:input.afterLegId}}):undefined;
@@ -99,18 +105,21 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
    if(route==='support-trip-mileage')check(customerUuid(input.legId));
    const original=route==='original'?parseSchedulingOriginal(parseOriginalOperationLookupWire(input,businessId)):undefined;
    if(original?.commandType===workBoundaryKind&&!workBoundaryEnabled)return failed(503);
+   if(original?.commandType===workStartKind&&!workStartEnabled)return failed(503);
    const book=route==='book'?parseBookJobCommand({...input,businessId}):undefined,cancel=route==='cancel'?parseCancelJobCommand({...input,businessId}):undefined,reschedule=route==='reschedule'?parseChangeJobScheduleSave({...input,businessId}):undefined,mode=route==='mode-save'?parseFulfillmentModeSave({...input,businessId}):undefined;
    if(!amendedEnabled&&(book?.schemaVersion===2||cancel?.schemaVersion===2))throw Error();
    const slotReview=route==='slot-review'?parseBookingConflictRequest({...input,businessId}):undefined;
    const list=route==='list'?parseJobListRequest({...input,businessId}):undefined,history=route==='history'?parseJobHistoryRequest({...input,businessId}):undefined,pending=route==='pending'?parsePendingChangesRequest({...input,businessId}):undefined;
    if(route==='agreement')check(customerUuid(input.familyId));if(route==='resources'||route==='read'||route==='completion-context')check(customerUuid(input.jobId));if(route==='mode-history')check(customerVersion(input.afterSequence,true)&&typeof input.pageSize==='number'&&Number.isInteger(input.pageSize)&&input.pageSize>=1&&input.pageSize<=20);
    const sessionId=await csrf(bounded,cookie,signal);workStarted=true;if(!await admit(cookie,'ordinary',signal)){const r=privateJsonResponse({error:'SCHEDULING_REQUEST_LIMITED'},429);r.headers.set('Retry-After','60');return r;}check(!signal.aborted);
-   if(route==='workspace'){const workspace=(await directory.workspace(cookie,businessId,signal)).forServer(),authority=(await context(cookie,businessId,signal)).forServer();check(!signal.aborted);const response=privateJsonResponse({...workspace,writeState:authority.writeState,recoveryEpoch:authority.recoveryEpoch});response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.scheduling.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));if(amendedEnabled)response.headers.set('X-Crest-Amended-Scheduling','1');if(fieldEnabled)response.headers.set('X-Crest-Field-Session','1');if(completionEnabled)response.headers.set('X-Crest-Job-Completion','1');if(mileageEnabled)response.headers.set('X-Crest-Job-Mileage','1');if(supportTripsEnabled)response.headers.set('X-Crest-Support-Trips','1');if(unfulfilledCancellationEnabled)response.headers.set('X-Crest-Unfulfilled-Cancellation','1');if(workTimeEnabled)response.headers.set('X-Crest-Work-Time','1');if(workBoundaryEnabled)response.headers.set('X-Crest-Work-Boundary','1');return response;}
+   if(route==='workspace'){const workspace=(await directory.workspace(cookie,businessId,signal)).forServer(),authority=(await context(cookie,businessId,signal)).forServer();check(!signal.aborted);const response=privateJsonResponse({...workspace,writeState:authority.writeState,recoveryEpoch:authority.recoveryEpoch});response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.scheduling.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));if(amendedEnabled)response.headers.set('X-Crest-Amended-Scheduling','1');if(fieldEnabled)response.headers.set('X-Crest-Field-Session','1');if(completionEnabled)response.headers.set('X-Crest-Job-Completion','1');if(mileageEnabled)response.headers.set('X-Crest-Job-Mileage','1');if(supportTripsEnabled)response.headers.set('X-Crest-Support-Trips','1');if(unfulfilledCancellationEnabled)response.headers.set('X-Crest-Unfulfilled-Cancellation','1');if(workTimeEnabled)response.headers.set('X-Crest-Work-Time','1');if(workBoundaryEnabled)response.headers.set('X-Crest-Work-Boundary','1');if(workStartEnabled)response.headers.set('X-Crest-Work-Start','1');return response;}
    let result:object;
    if(route==='field-save'){check(fieldDirectory);submitted=true;result=(await fieldDirectory.saveSession(cookie,fieldSave!,signal)).forServer();}
    else if(route==='interrupt'){check(fieldDirectory&&interruption);submitted=true;result=(await fieldDirectory.interrupt(cookie,interruption,signal)).forServer();}
    else if(route==='work-time'){check(fieldDirectory);result=(await fieldDirectory.jobWorkTime(cookie,businessId,input.jobId as string,signal)).forServer();}
    else if(route==='work-boundary-save'){check(fieldDirectory&&boundary);submitted=true;result=(await fieldDirectory.correctWorkBoundary(cookie,boundary,signal)).forServer();}
+   else if(route==='work-start'){check(fieldDirectory);result=(await fieldDirectory.jobWorkStart(cookie,businessId,input.jobId as string,signal)).forServer();}
+   else if(route==='work-start-save'){check(fieldDirectory&&start);submitted=true;result=(await fieldDirectory.correctWorkStart(cookie,start,signal)).forServer();}
    else if(route==='unfulfilled-context'){check(fieldDirectory);result=(await fieldDirectory.cancellationContext(cookie,businessId,input.jobId as string,signal)).forServer();}
    else if(route==='cancel-unfulfilled'){check(fieldDirectory&&unfulfilled);submitted=true;result=(await fieldDirectory.cancelUnfulfilled(cookie,unfulfilled,signal)).forServer();}
    else if(route==='completion-context'){check(completion);result=(await completion.context(cookie,businessId,input.jobId as string,signal)).forServer();}

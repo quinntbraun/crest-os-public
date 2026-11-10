@@ -12,14 +12,17 @@ export function parseWorkBoundarySave(value:unknown):WorkBoundarySave{
  check(exact(value,['schemaVersion','businessId','operationId','recoveryEpoch','jobId','expectedJobVersion','leftVersionId','rightVersionId','body'])&&
   value.schemaVersion===1&&uuid(value.businessId)&&uuid(value.operationId)&&uuid(value.recoveryEpoch)&&uuid(value.jobId)&&
   version(value.expectedJobVersion)&&uuid(value.leftVersionId)&&uuid(value.rightVersionId)&&value.leftVersionId!==value.rightVersionId);
- const body=value.body;
+ return Object.freeze({...value,body:parseWorkCorrectionBody(value.body)}) as WorkBoundarySave;
+}
+
+export function parseWorkCorrectionBody(body:unknown){
  check(exact(body,['correctedAt','reason'])&&instant(body.correctedAt)&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(body.correctedAt)&&
   typeof body.reason==='string'&&body.reason.trim().length>0&&[...body.reason].length<=1000&&
   [...body.reason].every(character=>{
    const code=character.codePointAt(0)!;
    return (code>=32&&code!==127&&!(code>=0xd800&&code<=0xdfff))||[9,10,13].includes(code);
   }));
- return Object.freeze({...value,body:Object.freeze({...body})}) as WorkBoundarySave;
+ return Object.freeze({correctedAt:body.correctedAt,reason:body.reason});
 }
 
 export function workBoundaryOriginal(request:WorkBoundarySave){
