@@ -9,7 +9,7 @@ import type {PendingCustomer,createPendingCustomerStore} from './pending-custome
 
 type Snapshot=Awaited<ReturnType<typeof customers.context>>;
 type History=Extract<Awaited<ReturnType<typeof customers.history>>,{state:'found'}>;
-export type CustomerEditorView=Readonly<{phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Customer[];hasMore:boolean;search:string;includeArchived:boolean;selected:Customer|null;draft:CustomerDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean}>;
+export type CustomerEditorView=Readonly<{phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Customer[];hasMore:boolean;search:string;includeArchived:boolean;selected:Customer|null;draft:CustomerDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean;reviewHistoryAvailable?:true}>;
 export const initialCustomerEditorView:CustomerEditorView=Object.freeze({phase:'loading',message:'Checking customer access…',busy:true,rows:Object.freeze([]),hasMore:false,search:'',includeArchived:false,selected:null,draft:null,draftIssue:'',history:null,canSave:false,canRetry:false,reference:'',writesPaused:true});
 export const emptyCustomerDraft:CustomerDraft=Object.freeze({displayName:'',phone:null,email:null,contactPreference:null,outreachOptOut:false,notes:null,customerSince:null,archived:false,archiveReason:null});
 
@@ -27,7 +27,7 @@ export function createCustomerEditorController(deps:Dependencies){
   }
   const view=():CustomerEditorView=>Object.freeze({phase,message,busy:!!active,rows:phase==='ready'?rows:Object.freeze([]),hasMore:phase==='ready'&&hasMore,search:phase==='ready'?search:'',includeArchived:phase==='ready'&&includeArchived,selected:phase==='ready'?selected:null,draft:phase==='ready'?draft:null,draftIssue:phase==='ready'?draftIssue():'',history:phase==='ready'?history:null,
     canSave:!active&&phase==='ready'&&snapshot?.context.writeState==='ready'&&draft!==null&&draftIssue()===''&&(!selected||JSON.stringify(draft)!==JSON.stringify(draftFromCustomer(selected))),canRetry:!active&&canRetry,
-    reference:phase==='pending'&&snapshot?.context.businessId===pending?.businessId?pending?.reference.operationId??'':'',writesPaused:snapshot?.context.writeState!=='ready'});
+    reference:phase==='pending'&&snapshot?.context.businessId===pending?.businessId?pending?.reference.operationId??'':'',writesPaused:snapshot?.context.writeState!=='ready',...phase==='ready'&&snapshot?.reviewHistoryAvailable?{reviewHistoryAvailable:true as const}:{}});
   const emit=()=>{if(alive)deps.change(view());};
   const live=(signal:AbortSignal)=>{if(!alive||signal.aborted||active?.signal!==signal)throw new Error();};
   async function fresh(signal:AbortSignal){const nextProof=await session(signal);live(signal);const next=await api.context(nextProof,signal);live(signal);proof=nextProof;snapshot=next;}

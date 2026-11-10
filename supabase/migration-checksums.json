@@ -320,6 +320,11 @@
       "version": "20261118180000",
       "file": "20261118180000_review_message_outcomes.sql",
       "sha256": "81d56a4523719e25b51b71203b25a70a6082595be6968da8c73369e4c6df2280"
+    },
+    {
+      "version": "20261119180000",
+      "file": "20261119180000_review_message_history.sql",
+      "sha256": "65e96b587d22c3e9643131261560ba369659322ea31a5bff76f643551a619fa3"
     }
   ]
 }
