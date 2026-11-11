@@ -242,7 +242,7 @@ test('lead source snapshot, exact cents/microseconds, genuine customer and origi
   for(const role of ['crest_lead_owner','crest_lead_integrity_owner','crest_lead_source_owner','crest_lead_source_integrity_owner'])await assert.rejects(w.connection.query('SET ROLE '+role),e=>e.code==='42501');
   for(const table of ['leads','lead_sources'])await assert.rejects(w.connection.query('SELECT * FROM crest.'+table),e=>e.code==='42501');
  }finally{await w.connection.end();await restored.query('DROP ROLE '+w.login);}
- assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,82);
+ assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,87);
  const quoteTables=['condition_assessments','quote_approvals','quote_families','quote_items','quote_revisions'];
  assert.deepEqual((await restored.query("SELECT c.relname AS name,c.relrowsecurity AND c.relforcerowsecurity AND c.relowner='crest_schema_owner'::regrole AND NOT has_table_privilege('crest_web',c.oid,'SELECT') AS closed FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='crest' AND c.relkind='r' AND c.relname=ANY($1::text[]) ORDER BY c.relname",[quoteTables])).rows,quoteTables.map(name=>({name,closed:true})));
  const commercialTables=['agreements','entitlement_versions','quote_acceptances','quote_family_commercial_state','quote_sends','scope_allocations','scope_entitlements'];
@@ -258,7 +258,8 @@ test('registered coverage accounts for every actual source column and rejects om
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_events').required,[...leadEventColumns]);
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_sources').required,[...leadSourceColumns]);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.leads').required,[...leadColumns]);
  const columns=(await restored.query(`SELECT n.nspname||'.'||c.relname AS "table",a.attname AS "column" FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN ('crest','crest_private') AND c.relkind IN ('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2`)).rows;
- assert.equal(columns.length,1267);assert.deepEqual(verifyExportCoverage(manifest,columns,backup.manifest.schemaVersion),{assurance:'schema_inventory_only',tables:82,requiredColumns:1257,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
+ // Registered67 adds five custody tables and61 required source columns to frozen66.
+ assert.equal(columns.length,1328);assert.deepEqual(verifyExportCoverage(manifest,columns,backup.manifest.schemaVersion),{assurance:'schema_inventory_only',tables:87,requiredColumns:1318,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
  assert.throws(()=>verifyExportCoverage(manifest,columns,52),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
  assert.throws(()=>verifyExportCoverage(manifest,columns,60),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
  assert.throws(()=>verifyExportCoverage(manifest,columns,65),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
