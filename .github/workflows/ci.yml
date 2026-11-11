@@ -282,10 +282,7 @@ jobs:
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 6
         run: |
-          test -s /etc/apt/apt-mirrors.txt
-          grep -qF 'mirror+file:/etc/apt/apt-mirrors.txt' /etc/apt/sources.list.d/ubuntu.sources
-          # Keep Azure and the signed Ubuntu fallbacks supplied by the runner.
-          printf '%s\n' 'Acquire::Retries "1";' 'Acquire::http::Timeout "15";' 'Acquire::https::Timeout "15";' | sudo tee /etc/apt/apt.conf.d/zz-crest-ci-downloads > /dev/null
+          bash scripts/prepare-ci-ubuntu-apt.sh
           npx --no-install playwright install --with-deps chromium webkit
       - name: Build actual product source
         run: npm run build
@@ -377,10 +374,7 @@ jobs:
         run: npm run audit:dependencies
       - name: Install checksum-pinned PDF inspector
         run: |
-          test -s /etc/apt/apt-mirrors.txt
-          grep -qF 'mirror+file:/etc/apt/apt-mirrors.txt' /etc/apt/sources.list.d/ubuntu.sources
-          # Keep Azure and the signed Ubuntu fallbacks supplied by the runner.
-          printf '%s\n' 'Acquire::Retries "1";' 'Acquire::http::Timeout "15";' 'Acquire::https::Timeout "15";' | sudo tee /etc/apt/apt.conf.d/zz-crest-ci-downloads > /dev/null
+          bash scripts/prepare-ci-ubuntu-apt.sh
           # Source-build dependencies only; never copied into the runtime image.
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends cmake g++ make pkg-config libjpeg-dev zlib1g-dev
@@ -438,6 +432,7 @@ jobs:
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 6
         run: |
+          bash scripts/prepare-ci-ubuntu-apt.sh
           npx --no-install playwright install --with-deps chromium webkit
       - name: Production build and focused service workflow
         run: |

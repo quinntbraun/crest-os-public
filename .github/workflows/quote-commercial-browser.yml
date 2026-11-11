@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/quote-commercial-browser.yml'
+      - 'scripts/prepare-ci-ubuntu-apt.sh'
       - 'src/app/quotes/**'
       - 'src/commercial/quote-*'
       - 'src/client/quote-*'
@@ -72,10 +73,7 @@ jobs:
         if: matrix.suite != 'amendment_integrity'
         timeout-minutes: 6
         run: |
-          test -s /etc/apt/apt-mirrors.txt
-          grep -qF 'mirror+file:/etc/apt/apt-mirrors.txt' /etc/apt/sources.list.d/ubuntu.sources
-          # Keep Azure and the signed Ubuntu fallbacks supplied by the runner.
-          printf '%s\n' 'Acquire::Retries "1";' 'Acquire::http::Timeout "15";' 'Acquire::https::Timeout "15";' | sudo tee /etc/apt/apt.conf.d/zz-crest-ci-downloads > /dev/null
+          bash scripts/prepare-ci-ubuntu-apt.sh
           npx --no-install playwright install --with-deps chromium webkit
       - if: matrix.suite != 'amendment_integrity'
         run: npm run build
