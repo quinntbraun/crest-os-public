@@ -9,7 +9,7 @@ import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixtur
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {
- backupDatabase,backupDropoffCandidateDatabase,connect,inventory,keyPair,privateWorkspace,
+ backupDatabase,backupDropoffCandidateDatabase,backupLegacy66Database,connect,inventory,keyPair,privateWorkspace,
  recoveryCluster,restoreDatabase,restoreDropoffCandidateDatabase
 } from '../support/recovery-drill.mjs';
 
@@ -235,7 +235,17 @@ test('an independent encrypted restore preserves held and released Drop-Off reco
   const keys=await keyPair(point);
   const candidatePath=join(point,'dropoff'),registeredPath=join(point,'registered');
   await mkdir(candidatePath,{mode:0o700});await mkdir(registeredPath,{mode:0o700});
-  await assert.rejects(backupDatabase(client,target,registeredPath,keys.recipient),
+  const registry=JSON.parse(await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url),'utf8'));
+  const registered=registry.migrations.map(row=>row.version);
+  // The held SQL has the frozen66 history, so the current profile rejects it
+  // before reading coverage. Frozen66 must also reject its extra custody tables.
+  await assert.rejects(backupDatabase(client,target,registeredPath,keys.recipient),error=>{
+   assert.equal(error.code,'ERR_ASSERTION');
+   assert.deepEqual(error.actual,registered.slice(0,66));
+   assert.deepEqual(error.expected,registered);
+   return true;
+  });
+  await assert.rejects(backupLegacy66Database(client,target,registeredPath,keys.recipient),
    {message:'SYNTHETIC_RECOVERY_BACKUP_FAILED:coverage'});
   const original=await inventory(client);
   const {manifest}=await backupDropoffCandidateDatabase(client,target,candidatePath,keys.recipient);
