@@ -4,6 +4,7 @@ import {join} from 'node:path';
 import {test} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
 import {chromium,expect,webkit} from '@playwright/test';
+import {strFromU8,unzipSync} from 'fflate';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
@@ -18,7 +19,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
     quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,
     dropoffCustody:true,dropoffPolicyRevision:true});
    browser=await engine.launch();
-   const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:844}});
+   const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
    const page=await context.newPage();
    page.setDefaultTimeout(20000);
    await page.goto(fixture.origin+'/sign-in');
@@ -98,6 +99,18 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
    await saved.getByRole('button',{name:'Load Drop-Off policy',exact:true}).click();
    await expect(saved.getByText('Prior synthetic instructions',{exact:true})).toBeVisible();
    await expect(saved.getByRole('button',{name:'Revise for future bookings',exact:true})).toHaveCount(0);
+   await page.getByText('Saved arrangement history · version 2',{exact:true}).click();
+   const started=page.waitForEvent('download');
+   await page.getByRole('button',{name:'Download arrangement history',exact:true}).click();
+   const download=await started;
+   assert.equal(download.suggestedFilename(),'crest-service-arrangements.zip');
+   const stream=await download.createReadStream(),chunks=[];
+   assert(stream);
+   for await(const bytes of stream)chunks.push(bytes);
+   const parts=unzipSync(Buffer.concat(chunks));
+   const retained=JSON.parse(strFromU8(parts['saved_history.json']));
+   assert.deepEqual(retained.versions.map(row=>[row.sequence,row.dropoff_enabled]),[['1',true],['2',true]]);
+   assert(strFromU8(parts['service_arrangements.csv']).includes('Require a documented photo at handoff.'));
   }finally{
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{
