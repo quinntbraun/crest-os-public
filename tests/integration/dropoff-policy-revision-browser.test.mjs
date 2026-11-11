@@ -71,7 +71,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
     const audit=await new AxeBuilder({page}).include('[aria-label="Selected Drop-Off policy"]')
      .withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
     assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
-    await page.screenshot({path:join(directory,'dropoff-policy-revision-'+name+'-'+width+'.png')});
+    await page.screenshot({path:join(directory,'field-dropoff-policy-revision-'+name+'-'+width+'.png')});
    }
    let responseStatus;
    await page.route('**/custody-policy-revise',async route=>{

@@ -9,13 +9,14 @@ export function schedulingOriginalFixture(kind:SchedulingOriginalKind){
  if(fieldOriginalKinds.includes(kind as FieldOriginalKind)){
   const r=parseFieldOriginal(original).reference;
   const target='messageId'in r?{subjectId:r.messageId,sourceRecordId:randomUUID(),sourceVersion:'1'}:
-   'modeVersionId'in r?{subjectId:r.modeVersionId,sourceRecordId:r.operationId,sourceVersion:'1'}:
+   'modeVersionId'in r?{subjectId:r.modeVersionId,sourceRecordId:r.operationId,sourceVersion:'policyId'in r?'2':'1'}:
    'caseId'in r?{subjectId:r.caseId,sourceRecordId:randomUUID(),sourceVersion:r.expectedVersion==='0'?'1':'2'}:
    'taskId'in r?{subjectId:r.taskId,sourceRecordId:randomUUID(),sourceVersion:(BigInt(r.expectedVersion)+1n).toString()}:
    'legVersionId'in r?{subjectId:r.legId,sourceRecordId:randomUUID(),sourceVersion:'2'}:
    'expectedJobVersion'in r?{subjectId:r.jobId,sourceRecordId:r.jobId,sourceVersion:(BigInt(r.expectedJobVersion)+(kind==='operations.job.work_boundary.correct'?0n:1n)).toString()}:
    {subjectId:r.legId,sourceRecordId:randomUUID(),sourceVersion:'expectedEvidenceVersion'in r?(BigInt(r.expectedEvidenceVersion)+1n).toString():r.expectedLegVersionId===null?'1':'2'};
-  const auditCount=kind==='operations.job.work_boundary.correct'?2:kind==='operations.job.work_start.correct'||kind==='operations.job.work_end.correct'?3:1;
+  const auditCount=kind==='operations.job.work_boundary.correct'||kind==='operations.custody.policy.revise'?2:
+   kind==='operations.job.work_start.correct'||kind==='operations.job.work_end.correct'?3:1;
   const receipt={schemaVersion:1,commandType:kind,businessId:original.businessId,actorId:randomUUID(),
    operationId:r.operationId,recoveryEpoch:r.recoveryEpoch,...target,sourceAuditIds:Array.from({length:auditCount},()=>randomUUID())};
   return {original,envelope:{schemaVersion:1,original,result:{state:'committed',receipt}}};
