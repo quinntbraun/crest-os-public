@@ -488,7 +488,8 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       // A matching migration ordinal alone cannot label a construction schema
       // with an additional source column as the registered current profile.
       // Check the actual columns in the same held snapshot used by the dump.
-      const versions=custody67Snapshot?custody67Snapshot.versions:profile.schemaVersion===54?field54Versions:
+      const versions=custody67Snapshot?custody67Snapshot.versions:
+        profile.heldDropoffProposalSha256?legacy66.migrations.map(row=>row.version):profile.schemaVersion===54?field54Versions:
         (profile===legacy66Profile?legacy66:profile===legacy65Profile?legacy65:profile===legacy64Profile?legacy64:profile===legacy63Profile?legacy63:profile===legacy62Profile?legacy62:profile===legacy61Profile?legacy61:profile===legacy60Profile?legacy60:profile===legacy59Profile?legacy59:profile===legacy58Profile?legacy58:profile===legacy57Profile?legacy57:profile===legacy56Profile?legacy56:profile===legacy55Profile?legacy55:profile.schemaVersion===53?legacy53:profile===legacy52Profile?legacy52:registry).migrations.map(row=>row.version);
       stage='coverage';assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(row=>row.version),versions);
       const columns=(await client.query("SELECT n.nspname||'.'||c.relname AS \"table\",a.attname AS \"column\" FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN('crest','crest_private') AND c.relkind IN('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2")).rows;
