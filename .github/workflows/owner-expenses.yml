@@ -53,7 +53,7 @@ concurrency:
 jobs:
   expense_acceptance:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       CI: 'true'
       NEXT_TELEMETRY_DISABLED: '1'
@@ -85,7 +85,7 @@ jobs:
       - run: node --conditions=react-server --test --test-concurrency=1 tests/integration/owner-expenses.test.mjs tests/integration/owner-expenses-http.test.mjs tests/integration/owner-expenses-receipts.test.mjs tests/integration/owner-expenses-receipt-auth.test.mjs tests/integration/owner-expenses-receipt-http.test.mjs tests/integration/owner-expenses-receipt-objects.test.mjs tests/integration/owner-expenses-receipt-recovery.test.mjs tests/integration/owner-expenses-combined-recovery.test.mjs tests/integration/owner-expenses-production-gates.test.mjs tests/integration/owner-expenses-receipt-delivery.test.mjs tests/integration/owner-expenses-history-delivery.test.mjs tests/integration/owner-expenses-activity.test.mjs tests/integration/owner-expenses-original.test.mjs tests/integration/owner-expenses-original-http.test.mjs tests/integration/owner-expenses-receipt-original.test.mjs tests/integration/owner-expenses-resolution.test.mjs tests/integration/owner-expenses-source.test.mjs tests/integration/owner-expenses-registered.test.mjs tests/integration/owner-expenses-registered-source.test.mjs tests/integration/owner-expenses-registered-auth.test.mjs
       - run: npm exec vitest run tests/unit/expense-contract.test.ts tests/unit/expense-receipts.test.ts tests/unit/expense-client.test.ts tests/unit/pending-expense.test.ts tests/unit/pending-receipt.test.ts tests/unit/pending-original-operation.test.ts tests/unit/original-operation-reference.test.ts tests/unit/original-operation-http-contract.test.ts tests/unit/original-operation-review-controller.test.ts tests/unit/owner-expenses-adoption.test.ts tests/unit/quote-commercial-adoption.test.ts tests/unit/node-server.test.ts
       - name: Install browser dependencies with bounded Ubuntu downloads
-        timeout-minutes: 6
+        timeout-minutes: 12
         run: |
           bash scripts/prepare-ci-ubuntu-apt.sh
           npx --no-install playwright install --with-deps chromium webkit

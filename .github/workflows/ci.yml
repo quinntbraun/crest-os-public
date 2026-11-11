@@ -237,7 +237,7 @@ jobs:
   browser_workflows:
     name: Browser workflows (${{ matrix.suite }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
@@ -280,7 +280,7 @@ jobs:
           node scripts/install-tools.mjs
           node scripts/install-recovery-tools.mjs
       - name: Install browser dependencies with bounded Ubuntu downloads
-        timeout-minutes: 6
+        timeout-minutes: 12
         run: |
           bash scripts/prepare-ci-ubuntu-apt.sh
           npx --no-install playwright install --with-deps chromium webkit
@@ -430,7 +430,7 @@ jobs:
       - name: Confirmed booking original source retrieval
         run: npm run test:confirmed-booking-source
       - name: Install browser dependencies with bounded Ubuntu downloads
-        timeout-minutes: 6
+        timeout-minutes: 12
         run: |
           bash scripts/prepare-ci-ubuntu-apt.sh
           npx --no-install playwright install --with-deps chromium webkit
