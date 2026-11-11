@@ -31,12 +31,28 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
  name+(cancelWork?' Drop-Off no-work cancellation retains the vehicle for explicit return':startWork?' Drop-Off work starts explicitly, completes, and awaits separate collection':' Drop-Off forms recover interrupted intake and record collection'),async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:startWork,unfulfilledCancellation:cancelWork,dropoffCustody:true});
- let browser;
+ let browser,page;
+ const responses=[];
+ function logScheduleDiagnostic(path,scheduleStatus){
+  const scheduling=responses.filter(item=>item.route.startsWith('/api/business/scheduling/'));
+  console.log(JSON.stringify({engine:name,scenario:cancelWork?'cancellation':startWork?'completion':'intake',
+   path,scheduleStatus,schedulingResponses:scheduling.length,
+   peakSchedulingResponsesPerMinute:Math.max(0,...scheduling.map(({at})=>scheduling.filter(item=>item.at<=at&&item.at>at-60000).length)),
+   limited:responses.filter(item=>item.status===429).map(item=>item.route),
+   recent:responses.slice(-24).map(({route,status})=>({route,status}))}));
+ }
  try{
   browser=await engine.launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:844}});
-  const page=await context.newPage();
+  page=await context.newPage();
   page.setDefaultTimeout(20000);
+  page.on('response',response=>{
+   const url=new URL(response.url());
+   if(url.origin!==fixture.origin)return;
+   if(url.pathname==='/schedule'||url.pathname==='/api/auth/session'||url.pathname.startsWith('/api/business/scheduling/')){
+    responses.push({route:url.pathname,status:response.status(),at:Date.now()});
+   }
+  });
   await page.goto(fixture.origin+'/sign-in');
   const credentials=fixture.credentials();
   await page.getByLabel('Email',{exact:true}).fill(credentials.email);
@@ -129,7 +145,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
   await panel.getByRole('button',{name:'Load custody history',exact:true}).click();
   await fillHandoff('2026-11-03T09:45',intakePerson);
   await mkdir('.local/review',{recursive:true});
-  for(const width of [390,1440]){
+  for(const width of [360,390,768,1440]){
    await page.setViewportSize({width,height:900});
    await panel.getByRole('group',{name:'Receive vehicle'}).scrollIntoViewIfNeeded();
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
@@ -373,7 +389,17 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
   await vehicle.click();
   await expect(panel.getByText(collectedBy,{exact:true})).toHaveCount(0);
   await expect(panel.getByRole('button',{name:'Load custody history',exact:true})).toBeVisible();
- }finally{try{await browser?.close();}finally{await fixture.close();}}
+ }catch(error){
+  // Include route and status only. Never emit query strings, cookies, request
+  // bodies or authenticator material in hosted diagnostics.
+  const path=page?new URL(page.url()).pathname:null;
+  const safeStatus=page&&path==='/schedule'?await page.locator('.schedule-status').textContent({timeout:500}).catch(()=>null):null;
+  logScheduleDiagnostic(path,safeStatus);
+  throw error;
+ }finally{
+  if(process.env.CREST_CUSTODY_ROUTE_DIAGNOSTICS==='1')logScheduleDiagnostic(page?new URL(page.url()).pathname:null,null);
+  try{await browser?.close();}finally{await fixture.close();}
+ }
 },{timeout:360000});
 
 const photoEngine=process.env.CREST_CUSTODY_PHOTO_ENGINE==='webkit'?['webkit',webkit]:['chromium',chromium];
