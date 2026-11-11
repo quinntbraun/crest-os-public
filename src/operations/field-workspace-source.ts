@@ -26,12 +26,15 @@ import {parseBookedJobCommitted,parseCancelledJobCommitted} from './confirmed-bo
 import {parseRescheduledJobCommitted} from './confirmed-reschedule-contract.ts';
 import {parseAmendedBookedJobCommitted,parseAmendedCancelledJobCommitted} from './amended-booking-contract.ts';
 import {parseFulfillmentModeCommitted} from './fulfillment-mode-contract.ts';
+import {formatDropoffCustodySources} from './dropoff-custody-source.ts';
+import type {CustodySourceInput} from './dropoff-custody-source.ts';
 
 type Row=Readonly<Record<string,unknown>>;
 type Snapshot<T>=Readonly<{businessId:string;snapshotToken:string;expectedRowCount:string;rows:readonly T[]}>;
 export type FieldWorkspaceSourceInput=Readonly<{
  configuration:string;identity:string;history:string;
  commercial:AcceptedQuoteAmendmentSourceInput;field:FieldSourceInput;
+ custody?:CustodySourceInput;
  crm:Readonly<{customers:Snapshot<Customer>;addresses:Snapshot<CustomerAddress>;vehicles:Snapshot<Vehicle>;associations:Snapshot<VehicleAssociationRow>}>;
 }>;
 export class FieldWorkspaceSourceError extends Error {
@@ -68,11 +71,15 @@ function projection(group:BookingRecordGroup,row:Row){
 
 export function formatFieldWorkspaceSources(input:FieldWorkspaceSourceInput){
  try{
-  check(exactCustomerObject(input,['configuration','identity','history','commercial','field','crm'])&&exactCustomerObject(input.crm,['customers','addresses','vehicles','associations']));
+  check(exactCustomerObject(input,['configuration','identity','history','commercial','field','crm',
+   ...Object.hasOwn(input,'custody')?['custody']:[]])&&exactCustomerObject(input.crm,['customers','addresses','vehicles','associations']));
   const businessId=input.commercial.businessId;
   check(input.commercial.historyEvidence===input.history&&input.field.historyEvidence===input.history);
   const foundation=verifyBusinessFoundationEvidence(input.configuration,input.identity,input.history,{businessId});
   const field=verifyFieldSources(input.field),commercial=formatFieldAcceptedQuoteAmendmentSourceCsv(input.commercial,input.field);
+  const custody=Object.hasOwn(input,'custody')?formatDropoffCustodySources(input.custody!):null;
+  if(custody)check(input.custody!.historyEvidence===input.history&&custody.context.businessId===businessId&&
+   custody.context.historySnapshotToken===foundation.history.context.snapshotToken);
   check(foundation.history.context.snapshotToken===input.commercial.bookings.historySnapshotToken&&field.context.historySnapshotToken===foundation.history.context.snapshotToken);
   const formattedCrm={customers:formatCustomerCsv(input.crm.customers),addresses:formatCustomerAddressCsv(input.crm.addresses),vehicles:formatVehicleCsv(input.crm.vehicles),associations:formatVehicleAssociationCsv(input.crm.associations)};
   for(const snapshot of Object.values(input.crm))check(snapshot.businessId===businessId);
@@ -135,6 +142,24 @@ export function formatFieldWorkspaceSources(input:FieldWorkspaceSourceInput){
   for(const group of fieldSourceGroups)for(const fk of fieldSourceSchema[group].foreignKeys){const target=parents[fk.target];check(target);
    const keys=new Set(target.map(row=>JSON.stringify(fk.targetColumns.map(k=>row[k]))));for(const row of field.rows[group]){const key=fk.columns.map(k=>row[k]);if(key.every(v=>v!==null))check(keys.has(JSON.stringify(key)));}
   }
+  if(custody){
+   const jobs=new Map(input.commercial.bookings.rows.jobs.map(row=>[row.id,row]));
+   const vehicles=new Map(input.commercial.bookings.rows.job_vehicles.map(row=>[row.id,row]));
+   const modes=new Set(input.commercial.bookings.rows.fulfillment_mode_versions.map(row=>row.id));
+   const policies=new Map(custody.rows.custody_authorization_configs.map(row=>[row.id,row]));
+   for(const policy of custody.rows.custody_authorization_configs)check(modes.has(String(policy.mode_version_id)));
+   for(const row of [...custody.rows.custody_cases,...custody.rows.custody_photo_attempts]){
+    const job=jobs.get(row.job_id),vehicle=vehicles.get(row.job_vehicle_id);
+    check(job&&vehicle&&job.fulfillment_mode==='dropoff'&&vehicle.job_id===job.id&&vehicle.vehicle_id===row.vehicle_id);
+    if('authorization_config_id'in row)check(policies.get(row.authorization_config_id)?.mode_version_id===job.mode_version_id&&
+     (row.state!=='released'||job.state==='completed'||job.state==='cancelled'));
+    if('actor_id'in row){actor(row.actor_id);check(row.actor_id===job.operator_actor_id);}
+   }
+   for(const row of custody.rows.custody_events)actor(row.created_by);
+   for(const operation of operations.values()){
+    if(typeof operation.command_type==='string'&&operation.command_type.startsWith('operations.custody.'))actor(operation.actor_id);
+   }
+  }
   function current(kind:string,id:unknown){check(customerUuid(id));const row=crmRows[kind]?.find(r=>r.id===id);check(row);return row;}
   function historical(kind:string,id:unknown,snapshot?:unknown){current(kind,id);const found=audits.some(a=>a.entity_kind===kind&&a.entity_id===id&&delta(a).after!==null&&(snapshot===undefined||historyJsonEqual(delta(a).after,snapshot)));check(found);}
   for(const row of input.crm.addresses.rows)current('customers',row.customer_id);
@@ -195,7 +220,11 @@ export function formatFieldWorkspaceSources(input:FieldWorkspaceSourceInput){
   for(const [group,parts]of Object.entries(commercial.bookingFiles.tables)){add(group+'.csv',parts.csv);add(group+'_escape_map.json',parts.escapeMap);add(group+'_dictionary.json',parts.dictionary);}
   add('booking_source_references.json',commercial.bookingFiles.references);add('booking_source_manifest.json',commercial.bookingFiles.manifest);
   for(const [name,content]of Object.entries(commercial.fieldFiles.files))add(name,content);add('field_source_manifest.json',commercial.fieldFiles.manifest);
-  const manifest=JSON.stringify({formatVersion:1,profile:'crest.field-workspace-sources.v1',businessId,generationId:foundation.generationId,historySnapshotToken:foundation.history.context.snapshotToken,includedBookingHistoryVerified:true,includedCrmCurrentAndHistoricalReferencesVerified:true,includedFieldForeignKeysVerified:true,includedActorAndMembershipReferencesVerified:true,includedFieldReceiptAuditSetsVerified:true,bookingAuditCount:usedAudits.size,parts:[...files].map(([name,content])=>({name,bytes:Buffer.byteLength(content),sha256:sha(content)})),assurance:'supplied_source_consistency_only',consistentCaptureProven:false,referenceClosureComplete:false,completePortableExport:false,completeBackup:false})+'\n';
+  if(custody){
+   for(const [name,content]of Object.entries(custody.files))add(name,content);
+   add('custody_source_manifest.json',custody.manifest);
+  }
+  const manifest=JSON.stringify({formatVersion:1,profile:'crest.field-workspace-sources.v1',businessId,generationId:foundation.generationId,historySnapshotToken:foundation.history.context.snapshotToken,includedBookingHistoryVerified:true,includedCrmCurrentAndHistoricalReferencesVerified:true,includedFieldForeignKeysVerified:true,includedActorAndMembershipReferencesVerified:true,includedFieldReceiptAuditSetsVerified:true,bookingAuditCount:usedAudits.size,...(custody?{includedCustodyReceiptAuditSetsVerified:true,includedCustodyJobVehicleReferencesVerified:true}:{}),parts:[...files].map(([name,content])=>({name,bytes:Buffer.byteLength(content),sha256:sha(content)})),assurance:'supplied_source_consistency_only',consistentCaptureProven:false,referenceClosureComplete:false,completePortableExport:false,completeBackup:false})+'\n';
   check(files.size<=1024&&total+Buffer.byteLength(manifest)<=64*1024*1024);
   return Object.freeze({manifest,parts:Object.freeze([...files].map(([name,content])=>Object.freeze({name,content})))});
  }catch(error){if(error instanceof FieldWorkspaceSourceError)throw error;throw new FieldWorkspaceSourceError();}

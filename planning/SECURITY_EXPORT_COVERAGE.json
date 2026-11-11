@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 66,
+  "migrationCount": 67,
   "tables": [
     {
       "table": "crest.businesses",
@@ -1956,6 +1956,107 @@
         "created_by",
         "operation_id",
         "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.custody_authorization_configs",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "mode_version_id",
+        "acknowledgement_text",
+        "condition_photo_required"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.custody_cases",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "job_vehicle_id",
+        "vehicle_id",
+        "mode",
+        "version",
+        "state",
+        "current_event_id",
+        "authorization_config_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.custody_events",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "case_id",
+        "version",
+        "prior_version",
+        "action",
+        "effective_at",
+        "recorded_at",
+        "person_snapshot",
+        "location_snapshot",
+        "notes",
+        "missing_photo_reason",
+        "created_by",
+        "operation_id",
+        "origin",
+        "acknowledgement_confirmed",
+        "condition_photo_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.custody_photo_attempts",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "job_vehicle_id",
+        "vehicle_id",
+        "case_id",
+        "handoff_version",
+        "actor_id",
+        "recovery_epoch",
+        "dispatch_id",
+        "declared_type",
+        "byte_size",
+        "reserved_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.custody_photo_originals",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "photo_id",
+        "detected_type",
+        "byte_size",
+        "sha256",
+        "validation_version",
+        "width",
+        "height",
+        "display_width",
+        "display_height",
+        "bit_depth",
+        "preview_sha256",
+        "preview_byte_size",
+        "preview_width",
+        "preview_height",
+        "verified_at"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

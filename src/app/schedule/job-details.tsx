@@ -7,6 +7,7 @@ import {parseBookingContact,parseBookingLocation} from '../../operations/confirm
 import {parseCustomer} from '../../customer/customer-contract';
 import {parseVehicle} from '../../customer/vehicle-contract';
 import {quoteMoney} from '../../commercial/quote-pricing';
+import {DropoffCustodyHistory} from './dropoff-custody-history';
 
 export type SavedJobResources=Exclude<ReturnType<typeof parseJobResources>,{state:'absent'}>;
 const states:Readonly<Record<string,string>>={scheduled:'Scheduled',en_route:'En route',in_progress:'In progress',paused:'Paused',completed:'Completed',cancelled:'Cancelled'};
@@ -23,10 +24,10 @@ function WorkLocation({value}:{value:BookingLocation}){
 }
 type Props=Readonly<{
  resources:SavedJobResources;history:readonly JobHistoryEvent[];historyComplete:boolean;busy:boolean;canChange:boolean;
- onWorkStatus?:(()=>void)|undefined;completionAvailable?:boolean;mileageAvailable?:boolean;workTimeAvailable?:boolean;onChangeAppointment?:()=>void;onCancel?:()=>void;onDownload?:()=>void;onMoreHistory?:()=>void;
+ onWorkStatus?:(()=>void)|undefined;completionAvailable?:boolean;mileageAvailable?:boolean;workTimeAvailable?:boolean;dropoffCustodyAvailable?:boolean;onChangeAppointment?:()=>void;onCancel?:()=>void;onDownload?:()=>void;onMoreHistory?:()=>void;
 }>;
 export function SavedJobDetails(props:Props){return <SavedJobDetailsContent key={props.resources.head.job.id+':'+props.resources.head.job.version} {...props}/>;}
-function SavedJobDetailsContent({resources,history,historyComplete,busy,canChange,onWorkStatus,completionAvailable,mileageAvailable,workTimeAvailable,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
+function SavedJobDetailsContent({resources,history,historyComplete,busy,canChange,onWorkStatus,completionAvailable,mileageAvailable,workTimeAvailable,dropoffCustodyAvailable,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
  const {head}=resources,{job,appointment,latestAppointment}=head;
  const customer=parseCustomer(resources.vehicles[0]!.customer_snapshot,resources.businessId);
  const location=parseBookingLocation(job.work_location_snapshot,resources.businessId,job.customer_id),contact=parseBookingContact(appointment.contact_snapshot);
@@ -52,12 +53,17 @@ function SavedJobDetailsContent({resources,history,historyComplete,busy,canChang
   <section aria-label="Vehicles for this job"><h3>Vehicles</h3>{resources.vehicles.map(row=>{
    const vehicle=parseVehicle(row.vehicle_snapshot,resources.businessId);
    const pickup=row.pickup_location_snapshot===null?null:parseBookingLocation(row.pickup_location_snapshot,resources.businessId,job.customer_id),returned=row.return_location_snapshot===null?null:parseBookingLocation(row.return_location_snapshot,resources.businessId,job.customer_id);
-   return <details key={row.id}><summary>{vehicle.label}</summary><dl className="customer-values"><dt>Vehicle</dt><dd>{[vehicle.year,vehicle.make,vehicle.model,vehicle.color].filter(v=>v!==null&&v!=='').join(' · ')||vehicle.label}</dd>{vehicle.plate&&<><dt>Plate</dt><dd>{vehicle.plate}</dd></>}{vehicle.vin_raw&&<><dt>VIN</dt><dd>{vehicle.vin_raw}</dd></>}{pickup&&<><dt>Pickup</dt><dd><WorkLocation value={pickup}/></dd></>}{returned&&<><dt>Return</dt><dd><WorkLocation value={returned}/></dd></>}</dl></details>;
+   return <details key={row.id}><summary>{vehicle.label}</summary><dl className="customer-values"><dt>Vehicle</dt><dd>{[vehicle.year,vehicle.make,vehicle.model,vehicle.color].filter(v=>v!==null&&v!=='').join(' · ')||vehicle.label}</dd>{vehicle.plate&&<><dt>Plate</dt><dd>{vehicle.plate}</dd></>}{vehicle.vin_raw&&<><dt>VIN</dt><dd>{vehicle.vin_raw}</dd></>}{pickup&&<><dt>Pickup</dt><dd><WorkLocation value={pickup}/></dd></>}{returned&&<><dt>Return</dt><dd><WorkLocation value={returned}/></dd></>}</dl>
+    {dropoffCustodyAvailable&&job.fulfillment_mode==='dropoff'&&<DropoffCustodyHistory businessId={resources.businessId} jobId={job.id} jobVehicleId={row.id} vehicleId={vehicle.id} timezone={appointment.timezone} canChange={canChange}/>}
+   </details>;
   })}</section>
   <section aria-label="Retained work allocation"><h3>Work for this visit</h3><ul>{resources.scopeParts.map(part=><li key={part.sourceAllocationId+'/'+part.partitionId}><p>{part.scopeDescription}</p><p className="field-help">{quoteMoney(part.amountCents)} allocated · {part.state==='cancelled'?'Cancelled allocation':part.state==='completed'?'Completed scope':'Assigned scope'}</p></li>)}</ul></section>
   {head.confirmationDraft&&<details><summary>Prepared confirmation message</summary><p className="field-help">Prepared only. No message delivery is recorded here.</p><textarea aria-label="Prepared confirmation text" readOnly value={head.confirmationDraft.bodyText} rows={6}/><button type="button" className="secondary" disabled={busy} onClick={()=>void copyMessage()}>Copy message</button><p role="status" aria-live="polite">{copyState}</p></details>}
-  {onWorkStatus&&job.fulfillment_mode==='mobile'&&['scheduled','en_route','in_progress','paused'].includes(job.state)&&<section aria-label="Field work actions"><button type="button" disabled={busy||!canChange} onClick={onWorkStatus}>Record work status…</button></section>}
-  {completionAvailable&&job.fulfillment_mode==='mobile'&&['in_progress','paused','completed'].includes(job.state)&&<p><a href={'/schedule/work/complete?job='+encodeURIComponent(job.id)}>{job.state==='completed'?'Review saved completion':'Review and end job'}</a></p>}
+  {onWorkStatus&&(job.fulfillment_mode==='mobile'&&['scheduled','en_route','in_progress','paused'].includes(job.state)||
+   dropoffCustodyAvailable&&job.fulfillment_mode==='dropoff'&&['scheduled','in_progress','paused'].includes(job.state))&&
+   <section aria-label="Field work actions"><button type="button" disabled={busy||!canChange} onClick={onWorkStatus}>Record work status…</button></section>}
+  {completionAvailable&&(job.fulfillment_mode==='mobile'||dropoffCustodyAvailable&&job.fulfillment_mode==='dropoff')&&
+   ['in_progress','paused','completed'].includes(job.state)&&<p><a href={'/schedule/work/complete?job='+encodeURIComponent(job.id)}>{job.state==='completed'?'Review saved completion':'Review and end job'}</a></p>}
   {mileageAvailable&&<p><a href={'/schedule/mileage?job='+encodeURIComponent(job.id)}>Review trip mileage</a></p>}
   {workTimeAvailable&&job.fulfillment_mode==='mobile'&&job.first_work_at&&
    <p><a href={'/schedule/work/time?job='+encodeURIComponent(job.id)}>Review recorded work time</a></p>}

@@ -18,19 +18,22 @@ class CsrfToken{
   toJSON():never{throw new RequestProtectionError();}
 }
 export function createCsrfToken(sessionId:string,purpose:'session'|'login'='session'){return new CsrfToken(sessionId,purpose);}
-export function createRequestProtection(config:{origin:string;environment:'production'|'test'}){
+export function createRequestProtection(config:{origin:string;environment:'production'|'test'},format:'json'|'condition-photo'='json'){
   let origin:string;
   try{
     const url=new URL(config.origin);
-    if(!['production','test'].includes(config.environment)||url.origin!==config.origin||url.username||url.password
+    if(!['production','test'].includes(config.environment)||!['json','condition-photo'].includes(format)||url.origin!==config.origin||url.username||url.password
       ||!(url.protocol==='https:'||config.environment==='test'&&url.protocol==='http:'&&['127.0.0.1','[::1]'].includes(url.hostname)))throw new Error();
     origin=url.origin;
   }catch{throw new Error('REQUEST_ORIGIN_CONFIGURATION_REQUIRED');}
   const requireOrigin=(request:Pick<Request,'method'|'headers'>):void=>{
     try{
-      if(!['POST','PATCH'].includes(request.method)||request.headers.get('origin')!==origin
+      const type=request.headers.get('content-type')??'';
+      const validBody=format==='condition-photo'?request.method==='POST'&&['image/jpeg','image/png','image/heic'].includes(type):
+        ['POST','PATCH'].includes(request.method)&&/^application\/json(?:;\s*charset=utf-8)?$/i.test(type);
+      if(!validBody||request.headers.get('origin')!==origin
         ||request.headers.has('sec-fetch-site')&&request.headers.get('sec-fetch-site')!=='same-origin'
-        ||!/^application\/json(?:;\s*charset=utf-8)?$/i.test(request.headers.get('content-type')??''))throw new RequestProtectionError();
+      )throw new RequestProtectionError();
     }catch{throw new RequestProtectionError();}
   };
   const requireToken=(request:Pick<Request,'method'|'headers'>,sessionId:string,storedHash:Uint8Array,purpose:'session'|'login'='session'):void=>{

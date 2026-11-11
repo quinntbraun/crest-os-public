@@ -29,6 +29,7 @@ export function UnfulfilledCancellationForm({view,save}:{view:FieldSessionView;s
   <h2>{customer.display_name}</h2>
   <p>{job.jobState==='paused'?'Paused':'In progress'} · Saved version {job.jobVersion}</p>
   <p>Cancelling closes the current work interval, releases the appointment and keeps the reason in history.</p>
+  {resources.head.job.fulfillment_mode==='dropoff'&&<p className="notice">Any vehicle in your custody still needs a separate recorded handoff. Cancellation keeps it in the return queue.</p>}
   <details><summary>Assigned work ({assignments.length})</summary>
    <ul>{assignments.map(part=><li key={part.sourceAllocationId+'/'+part.partitionId}>{part.scopeDescription}</li>)}</ul>
   </details>

@@ -186,7 +186,7 @@ test('actual encrypted database recovery works in a fresh process and separate c
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,backup.manifest.schemaVersion);
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM auth.schema_migrations')).rows[0].n,(await source.query('SELECT count(*)::int AS n FROM auth.schema_migrations')).rows[0].n);
   assert.equal(backup.manifest.completeBackup,false); // vault/files/config/full release remain unfinished
-  assert.equal(backup.manifest.schemaVersion,66);
+  assert.equal(backup.manifest.schemaVersion,67);
   for(const reader of ['read_job_completion_context','read_unfulfilled_cancellation_context','read_job_work_time','read_job_work_start']){
    const signature='crest_commands.'+reader+'(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)';
    assert.equal((await restored.query("SELECT has_function_privilege('crest_web',$1,'EXECUTE') AND NOT has_function_privilege('anon',$1,'EXECUTE') AS closed",[signature])).rows[0].closed,true);
@@ -252,7 +252,7 @@ test('lead source snapshot, exact cents/microseconds, genuine customer and origi
 });
 
 test('registered coverage accounts for every actual source column and rejects omissions on the restored schema',async()=>{
- const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,66);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_vehicles').required,[...leadVehicleColumns]);
+ const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,67);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_vehicles').required,[...leadVehicleColumns]);
  for(const spec of Object.values(expenseSourceTables)){const table='crest.'+spec.entity;assert.deepEqual(manifest.tables.find(t=>t.table===table).required,[...spec.columns]);assert.equal((await restored.query("SELECT relrowsecurity AND relforcerowsecurity AND relowner='crest_schema_owner'::regrole AS protected FROM pg_class WHERE oid=$1::regclass",[table])).rows[0].protected,true);}
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_addresses').required,[...leadAddressColumns]);
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_events').required,[...leadEventColumns]);

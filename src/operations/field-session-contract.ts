@@ -1,8 +1,8 @@
-// Persisted Mobile transitions. This prepares data only; current state,
+// Persisted work transitions. This prepares data only; current state,
 // authority, occupancy and idempotence are enforced by the existing SQL command.
 import {customerUuid,customerVersion,customerInstant} from '../customer/customer-contract.ts';
 import {parseFieldOriginal,parseFieldOriginalResult} from './field-original-contract.ts';
-export type FieldAction='depart'|'arrive'|'direct_arrive'|'pause'|'resume';
+export type FieldAction='depart'|'arrive'|'direct_arrive'|'start_dropoff'|'pause'|'resume';
 type Site=Readonly<{schemaVersion:1;kind:'manual';locationText:string;instructions:string|null}>;
 type Body=Readonly<{action:Exclude<FieldAction,'depart'>;reason:string|null}>|Readonly<{action:'depart';reason:string|null;trip:Readonly<{drivenVehicleId:string;origin:Site;etaAt:string|null;notes:string|null}>}>;
 export type FieldSessionSave=Readonly<{schemaVersion:1;businessId:string;operationId:string;recoveryEpoch:string;jobId:string;expectedJobVersion:string;body:Body}>;
@@ -20,8 +20,8 @@ export function parseFieldSessionSave(value:unknown):FieldSessionSave{
   // Inspect descriptors before reading the action: accessors/hooks are never
   // invoked while sealing an operation's target or draft.
   check(row.body!==null&&typeof row.body==='object');const action=Object.getOwnPropertyDescriptor(row.body,'action');check(action&&Object.hasOwn(action,'value')&&action.enumerable);
-  const body=record(row.body,action.value==='depart'?['action','reason','trip']:['action','reason']);check(typeof body.action==='string'&&['depart','arrive','direct_arrive','pause','resume'].includes(body.action));
-  check(body.reason===null?['depart','arrive','resume'].includes(body.action):text(body.reason,1000));
+  const body=record(row.body,action.value==='depart'?['action','reason','trip']:['action','reason']);check(typeof body.action==='string'&&['depart','arrive','direct_arrive','start_dropoff','pause','resume'].includes(body.action));
+  check(body.reason===null?['depart','arrive','start_dropoff','resume'].includes(body.action):text(body.reason,1000));
   let parsed:Body;
   if(body.action==='depart'){
    const trip=record(body.trip,['drivenVehicleId','origin','etaAt','notes']),origin=record(trip.origin,['schemaVersion','kind','locationText','instructions']);
@@ -38,4 +38,4 @@ export function fieldSessionOriginal(request:FieldSessionSave){
 export function parseFieldSessionCommitted(value:unknown,input:FieldSessionSave){
  const request=parseFieldSessionSave(input),original=fieldSessionOriginal(request),result=parseFieldOriginalResult(value,original);check(result.state==='committed');return Object.freeze({schemaVersion:1 as const,original,result});
 }
-export const fieldSessionConflicts=Object.freeze(['operation','job','version','state','travel','vehicle','occupancy'] as const);
+export const fieldSessionConflicts=Object.freeze(['operation','job','version','state','custody','travel','vehicle','occupancy'] as const);

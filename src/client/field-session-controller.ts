@@ -45,7 +45,7 @@ export function createFieldSessionController(deps:{mode?:FieldSessionMode;store:
  const emit=()=>{if(alive)deps.change(view());};
  const clear=()=>{resources=null;completion=null;summary=null;reviewOutcome=null;reviewOutcomeEnabled=false;openTrip=null;cancellation=null;rows=[];hasMore=false;savedJobId='';savedVersion='';};
  const live=(signal:AbortSignal)=>{if(!alive||signal.aborted||active?.signal!==signal)throw Error();};
- const same=(a:Context,b:Context)=>a.binding===b.binding&&a.context.businessId===b.context.businessId&&a.context.operatorId===b.context.operatorId&&a.context.writeState===b.context.writeState&&a.context.recoveryEpoch===b.context.recoveryEpoch&&a.fieldSessionAvailable===b.fieldSessionAvailable&&(!completing||a.jobCompletionAvailable===b.jobCompletionAvailable&&a.reviewOutcomeAvailable===b.reviewOutcomeAvailable)&&(!interrupting||a.jobMileageAvailable===b.jobMileageAvailable)&&(!cancelling||a.unfulfilledCancellationAvailable===b.unfulfilledCancellationAvailable);
+ const same=(a:Context,b:Context)=>a.binding===b.binding&&a.context.businessId===b.context.businessId&&a.context.operatorId===b.context.operatorId&&a.context.writeState===b.context.writeState&&a.context.recoveryEpoch===b.context.recoveryEpoch&&a.fieldSessionAvailable===b.fieldSessionAvailable&&a.dropoffCustodyAvailable===b.dropoffCustodyAvailable&&(!completing||a.jobCompletionAvailable===b.jobCompletionAvailable&&a.reviewOutcomeAvailable===b.reviewOutcomeAvailable)&&(!interrupting||a.jobMileageAvailable===b.jobMileageAvailable)&&(!cancelling||a.unfulfilledCancellationAvailable===b.unfulfilledCancellationAvailable);
  async function fresh(signal:AbortSignal){const proof=await session(signal);live(signal);const next=await api.workspace(proof,signal);live(signal);return {proof,next};}
  async function run(work:(signal:AbortSignal)=>Promise<void>,failed:(error:unknown)=>void){if(!alive||active)return;const controller=new AbortController();active=controller;emit();try{await work(controller.signal);}catch(error){if(alive&&!controller.signal.aborted&&active===controller)failed(error);}finally{if(active===controller){active=null;emit();}}}
  function unavailable(error:unknown){clear();context=null;phase=error instanceof AuthenticationError&&error.kind==='denied'?'signed-out':'unavailable';message=phase==='signed-out'?(completing?'Sign in to review completion.':'Sign in to review work status.'):'Current work or access could not be verified. Reload before continuing.';}
@@ -55,7 +55,7 @@ export function createFieldSessionController(deps:{mode?:FieldSessionMode;store:
   const ref=original(),saved='state'in result?null:parseFieldOriginalResult(result,ref);if(saved&&saved.state!=='committed')throw Error();
   const confirmed=()=>{if(saved?.state==='committed'){savedJobId=ref.commandType===reviewOutcomeKind?ref.reference.jobId:saved.receipt.subjectId;savedVersion=ref.commandType===reviewOutcomeKind?'':saved.receipt.sourceVersion;}};
   try{pendingStore().clear(pending);}catch{clear();confirmed();phase='pending';message=saved?'The server confirmed the action was saved. Local reference cleanup could not be verified. Check Save review before another action.':'No action was saved. Local reference cleanup could not be verified. Check Save review.';return;}
-  pending=null;clear();context=null;if(!saved){phase='review';message='The saved job or work status changed. No action was saved. Reload before continuing.';return;}
+  pending=null;clear();context=null;if(!saved){phase='review';message='state'in result&&result.reason==='custody'?'Record intake for every booked vehicle before starting work. No work action was saved.':'The saved job or work status changed. No action was saved. Reload before continuing.';return;}
   confirmed();phase='committed';
   message=ref.commandType===reviewOutcomeKind?'Review message outcome saved.':completing?'Job completion saved.':interrupting?'Trip interruption saved. Open the job to review the current appointment and history.':cancelling?'Job cancelled. Open the job to review its saved history.':'Work status saved. Open the job to reload its current status and history.';
  }
@@ -117,14 +117,17 @@ export function createFieldSessionController(deps:{mode?:FieldSessionMode;store:
   if(completing){
    if(next.jobCompletionAvailable!==true){phase='blocked';message='Job completion is unavailable in this build.';return;}
    const saved=await api.completionContext(next.context.businessId,jobId,proof,signal);live(signal);
-   if('state'in saved){phase='blocked';message='Open an active Mobile job to record completion.';return;}
+   if('state'in saved){phase='blocked';message='Open a supported active job to record completion.';return;}
    if(saved.jobState==='completed'){summary=saved;savedJobId=saved.jobId;savedVersion=saved.jobVersion;phase='committed';message='Saved completion loaded.';await loadReviewOutcome(next,proof,signal);return;}
    completion=saved;phase='ready';
    message=next.context.writeState==='ready'?'Review the assigned work before ending this job.':'Changes are paused. Assigned work is available for review.';
    return;
   }
   const saved=await api.resources(next.context.businessId,jobId,proof,signal);live(signal);if('state'in saved){phase='blocked';message='This job is unavailable in the current workspace.';return;}
-  const job=saved.head.job;if(job.fulfillment_mode!=='mobile'||job.operator_actor_id!==next.context.operatorId||!['scheduled','en_route','in_progress','paused'].includes(job.state)){phase='blocked';message='These controls support the assigned operator’s active Mobile jobs. Completed, cancelled and custody workflows remain separate.';return;}
+  const job=saved.head.job;
+  const mobile=job.fulfillment_mode==='mobile'&&['scheduled','en_route','in_progress','paused'].includes(job.state);
+  const dropoff=mode==='work'&&next.dropoffCustodyAvailable===true&&job.fulfillment_mode==='dropoff'&&['scheduled','in_progress','paused'].includes(job.state);
+  if((!mobile&&!dropoff)||job.operator_actor_id!==next.context.operatorId){phase='blocked';message='Open a supported active job assigned to you to record work.';return;}
   if(interrupting){
    if(next.jobMileageAvailable!==true||job.state!=='en_route'){phase='blocked';message='Open an en-route Mobile job to record a trip interruption.';return;}
    const trips=await api.mileageTrips({businessId:next.context.businessId,jobId,after:null,pageSize:25},proof,signal);live(signal);
@@ -133,7 +136,7 @@ export function createFieldSessionController(deps:{mode?:FieldSessionMode;store:
    openTrip=open[0]!;resources=saved;phase='ready';message='Saved open trip loaded.';
    return;
   }
-  resources=saved;if(job.state==='scheduled'){const page=await vehicleApi.list(next.context.businessId,{search:'',afterId:null,includeArchived:false,pageSize:50},proof,signal);live(signal);rows=page.vehicles;hasMore=page.hasMore;}
+  resources=saved;if(mobile&&job.state==='scheduled'){const page=await vehicleApi.list(next.context.businessId,{search:'',afterId:null,includeArchived:false,pageSize:50},proof,signal);live(signal);rows=page.vehicles;hasMore=page.hasMore;}
   phase='ready';message=next.context.writeState==='ready'?'Saved job loaded. Record what is happening now.':'Changes are paused. Saved work is available for review.';
  },error=>{if(pending){clear();phase='pending';message='The original action could not be verified. Keep its reference and check again.';}else unavailable(error);});
  const moreVehicles=()=>run(async signal=>{if(phase!=='ready'||!context||!resources||!hasMore||rows.length===0)return;const prior=context,{proof,next}=await fresh(signal);if(!same(prior,next))throw Error();const page=await vehicleApi.list(next.context.businessId,{search:'',afterId:rows.at(-1)!.id,includeArchived:false,pageSize:50},proof,signal);live(signal);rows=Object.freeze([...rows,...page.vehicles]);hasMore=page.hasMore;},unavailable);
@@ -145,7 +148,13 @@ export function createFieldSessionController(deps:{mode?:FieldSessionMode;store:
  }
  const save=(body:FieldSessionSave['body'])=>{
   if(active||mode!=='work'||phase!=='ready'||!resources||!context||context.context.writeState!=='ready')return Promise.resolve();const prior=context,job=resources.head.job;let request:FieldSessionSave;
-  try{request=parseFieldSessionSave({schemaVersion:1,businessId:prior.context.businessId,operationId:id(),recoveryEpoch:prior.context.recoveryEpoch,jobId:job.id,expectedJobVersion:job.version,body});const selected=request.body.action==='depart'?request.body.trip.drivenVehicleId:null;if(selected&&!rows.some(row=>row.id===selected))throw Error();const allowed={scheduled:['depart','direct_arrive'],en_route:['arrive'],in_progress:['pause'],paused:['resume']};if(!Object.hasOwn(allowed,job.state)||!allowed[job.state as keyof typeof allowed].includes(request.body.action))throw Error();}catch{message='Review the action, actual vehicle and required details. No request was submitted.';emit();return Promise.resolve();}
+  try{
+   request=parseFieldSessionSave({schemaVersion:1,businessId:prior.context.businessId,operationId:id(),recoveryEpoch:prior.context.recoveryEpoch,jobId:job.id,expectedJobVersion:job.version,body});
+   const selected=request.body.action==='depart'?request.body.trip.drivenVehicleId:null;
+   if(selected&&!rows.some(row=>row.id===selected))throw Error();
+   const allowed={scheduled:job.fulfillment_mode==='dropoff'?['start_dropoff']:['depart','direct_arrive'],en_route:['arrive'],in_progress:['pause'],paused:['resume']};
+   if(!Object.hasOwn(allowed,job.state)||!allowed[job.state as keyof typeof allowed].includes(request.body.action))throw Error();
+  }catch{message='Review the action, actual vehicle and required details. No request was submitted.';emit();return Promise.resolve();}
   return submit(prior,fieldSessionOriginal(request),(proof,signal)=>api.saveFieldSession(request,proof,signal));
  };
  const interrupt=(draft:InterruptionDraft)=>{

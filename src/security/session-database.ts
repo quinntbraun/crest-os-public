@@ -3,7 +3,11 @@ import pg from 'pg';
 export type SessionDatabaseConfiguration={connectionString:string;environment:'production'|'test'};
 type Query=(text:string,values:unknown[])=>Promise<unknown>;
 // Trusted server SQL only. No caller-supplied identifiers or browser exposure.
-export function sessionDatabase(config:SessionDatabaseConfiguration){
+export function sessionDatabase(config:SessionDatabaseConfiguration){return databaseForRole(config,'crest_web');}
+export function custodyPhotoDispatcherDatabase(config:SessionDatabaseConfiguration){
+  return databaseForRole(config,'crest_custody_photo_dispatch');
+}
+function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'crest_custody_photo_dispatch'){
   let connectionString:string;
   try{
     const url=new URL(config.connectionString);
@@ -18,7 +22,7 @@ export function sessionDatabase(config:SessionDatabaseConfiguration){
     if(signal.aborted)throw new Error('SESSION_DATABASE_FAILED');
     const controller=new AbortController(),combined=AbortSignal.any([signal,controller.signal]);
     const client=new pg.Client({connectionString,ssl,connectionTimeoutMillis:1000,statement_timeout:command?10000:transaction?11000:1500,lock_timeout:command?3000:transaction?10000:750,
-      query_timeout:command?11000:transaction?12000:2000,options:'-c role=crest_web',application_name:command?'crest_business_command':transaction?'crest_session_refresh':'crest_session_lifecycle'});
+      query_timeout:command?11000:transaction?12000:2000,options:'-c role='+role,application_name:command?'crest_business_command':transaction?'crest_session_refresh':'crest_session_lifecycle'});
     client.on('error',()=>controller.abort());client.once('end',()=>controller.abort());
     const timer=setTimeout(()=>controller.abort(),transaction?15000:3000);timer.unref();
     const abort=()=>{void client.end().catch(()=>undefined);};combined.addEventListener('abort',abort,{once:true});
@@ -26,11 +30,11 @@ export function sessionDatabase(config:SessionDatabaseConfiguration){
     try{
       const pending=(async()=>{
         await client.connect();if(combined.aborted)throw new Error();
-        const guard=await client.query<{allowed:boolean}>(`SELECT current_user='crest_web'
+        const guard=await client.query<{allowed:boolean}>(`SELECT current_user=$1::name
           AND EXISTS (SELECT 1 FROM pg_catalog.pg_roles r WHERE r.rolname=session_user AND r.rolcanlogin
             AND NOT (r.rolsuper OR r.rolbypassrls OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolinherit))
           AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles r ON r.oid=m.roleid
-            WHERE m.member=(SELECT oid FROM pg_catalog.pg_roles WHERE rolname=session_user) AND r.rolname<>'crest_web') AS allowed`);
+            WHERE m.member=(SELECT oid FROM pg_catalog.pg_roles WHERE rolname=session_user) AND r.rolname<>$1::name) AS allowed`,[role]);
         if(guard.rows[0]?.allowed!==true||guard.rows.length!==1||combined.aborted)throw new Error();
         const query:Query=async(text,values)=>{
           if(combined.aborted)throw new Error();

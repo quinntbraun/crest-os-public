@@ -281,6 +281,11 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .field-work-form details { margin-top:1rem; }
 .field-work-form details summary { padding:.5rem 0; }
 .field-work-form details label { display:block; margin-top:.75rem; }
+.custody-photo-controls { display:grid; gap:.5rem; min-width:0; margin-block:.75rem; }
+.custody-photo-controls label { margin-bottom:0; }
+.custody-photo-controls input[type="file"] { width:100%; min-width:0; }
+.custody-photo-preview { display:block; width:100%; max-width:24rem; height:auto; }
+.custody-photo-save { display:grid; place-items:center; min-height:48px; padding:.75rem 1rem; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); color:var(--ink); font-weight:600; }
 .schedule-work-totals { display:grid; gap:.65rem; margin:.75rem 0; }
 .schedule-work-totals > div { display:flex; justify-content:space-between; gap:1rem; border-bottom:1px solid var(--line); padding-bottom:.65rem; }
 .schedule-work-totals dd { margin:0; font-weight:650; font-variant-numeric:tabular-nums; }

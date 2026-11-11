@@ -8,6 +8,8 @@ import {lookupSchedulingOriginal} from '../../src/client/scheduling-original';
 function packet(kind:typeof fieldOriginalKinds[number]){
  const original=parseFieldOriginal(originalOperationFixture(kind)),ref=original.reference;
  const target='messageId'in ref?{subjectId:ref.messageId,sourceRecordId:randomUUID(),sourceVersion:'1'}:
+  'modeVersionId'in ref?{subjectId:ref.modeVersionId,sourceRecordId:ref.operationId,sourceVersion:'1'}:
+  'caseId'in ref?{subjectId:ref.caseId,sourceRecordId:randomUUID(),sourceVersion:ref.expectedVersion==='0'?'1':'2'}:
   'taskId'in ref?{subjectId:ref.taskId,sourceRecordId:randomUUID(),sourceVersion:(BigInt(ref.expectedVersion)+1n).toString()}:
   'legVersionId'in ref?{subjectId:ref.legId,sourceRecordId:randomUUID(),sourceVersion:'2'}:
   'expectedJobVersion'in ref?{subjectId:ref.jobId,sourceRecordId:ref.jobId,
@@ -28,6 +30,7 @@ it.each(fieldOriginalKinds)('binds the source-verified minimal %s receipt and ke
   const value=key==='sourceRecordId'&&'priorEventId'in ref?ref.priorEventId:
    key==='sourceRecordId'&&'legVersionId'in ref?ref.legVersionId:
    key==='sourceRecordId'&&'taskId'in ref?ref.taskId:
+   key==='sourceRecordId'&&'caseId'in ref?ref.caseId:
    key==='sourceRecordId'&&!('jobId'in ref)?'invalid':randomUUID();
   const wrong={...p,result:{...p.result,receipt:{...p.result.receipt,[key]:value}}};
   expect(()=>parseFieldOriginalResult(wrong,p.original)).toThrow();

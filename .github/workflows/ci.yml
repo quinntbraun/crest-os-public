@@ -474,6 +474,18 @@ jobs:
           npm run release:manifest
           docker save crest-os:ci -o .local/release/crest-os-image.tar
           sha256sum .local/release/crest-os-image.tar > .local/release/crest-os-image.tar.sha256
+      - name: Signed-in Drop-Off photo journey with isolated decoder
+        timeout-minutes: 6
+        shell: bash
+        run: |
+          CREST_CUSTODY_PHOTO_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
+          test -n "$CREST_CUSTODY_PHOTO_IMAGE_ID"
+          export CREST_CUSTODY_PHOTO_IMAGE_ID CREST_CUSTODY_PHOTO_ENGINE=chromium
+          node --conditions=react-server --test --test-concurrency=1 --test-reporter=tap \
+            --test-name-pattern='signed-in condition photo' tests/integration/dropoff-custody-product-browser.test.mjs \
+            | tee .local/dropoff-isolated-decoder.log
+          grep -Fx '# tests 1' .local/dropoff-isolated-decoder.log
+          grep -Fx '# pass 1' .local/dropoff-isolated-decoder.log
       - name: Container diagnostics
         if: failure()
         run: docker logs crest-os-smoke || true

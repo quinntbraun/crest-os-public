@@ -1,6 +1,8 @@
 import {createHoldHttp,holdFailureResponse} from '../operations/appointment-hold-http.ts';
 import 'server-only';
 import {createSchedulingHttp,schedulingFailureResponse} from '../operations/scheduling-http.ts';
+import {createDropoffPhotoHttp,dropoffPhotoFailure,dropoffPhotoPrefix} from '../operations/dropoff-photo-http.ts';
+import type {SyntheticDropoffPhotoRuntime} from '../operations/dropoff-photo-http.ts';
 import {createServer} from 'node:http';
 import type {IncomingMessage,ServerResponse,Server} from 'node:http';
 import {createServer as createTlsServer} from 'node:https';
@@ -34,7 +36,7 @@ export type AuthenticationConfiguration=Readonly<{
   provider:Parameters<typeof createAuthenticationHttp>[1];tokens:Parameters<typeof createAuthenticationHttp>[2];
 }>;
 export type SourceExportConfiguration=Readonly<{appReleaseId:string;store:NonNullable<Parameters<typeof createSourceExportDownloadHttp>[3]>}>;
-export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>;customers?:boolean;vehicles?:boolean;associations?:boolean;leads?:boolean;leadConversions?:boolean;operationResolution?:boolean;syntheticCatalog?:boolean;syntheticQuotes?:boolean;syntheticQuoteReview?:boolean;syntheticQuoteCommercial?:boolean;syntheticQuoteAmendments?:boolean;syntheticQuoteAmendmentAcceptance?:boolean;syntheticAppointmentHolds?:boolean;syntheticExpenses?:boolean;syntheticScheduling?:boolean;syntheticFieldSessions?:boolean;syntheticJobCompletion?:boolean;syntheticJobMileage?:boolean;syntheticSupportTrips?:boolean;syntheticUnfulfilledCancellation?:boolean;syntheticWorkTime?:boolean;syntheticWorkBoundary?:boolean;syntheticWorkStart?:boolean;syntheticWorkEnd?:boolean;syntheticMobileDeparture?:boolean;syntheticReviewOutcome?:boolean;syntheticReviewHistory?:boolean;syntheticMaintenanceFollowUp?:boolean;sourceExports?:SourceExportConfiguration}>;
+export type NodeConfiguration=Readonly<{origin:string;environment:'production'|'test';tls?:Readonly<{key:Buffer;cert:Buffer}>;authentication?:AuthenticationConfiguration;business?:Readonly<{businessId:string}>;customers?:boolean;vehicles?:boolean;associations?:boolean;leads?:boolean;leadConversions?:boolean;operationResolution?:boolean;syntheticCatalog?:boolean;syntheticQuotes?:boolean;syntheticQuoteReview?:boolean;syntheticQuoteCommercial?:boolean;syntheticQuoteAmendments?:boolean;syntheticQuoteAmendmentAcceptance?:boolean;syntheticAppointmentHolds?:boolean;syntheticExpenses?:boolean;syntheticScheduling?:boolean;syntheticFieldSessions?:boolean;syntheticJobCompletion?:boolean;syntheticJobMileage?:boolean;syntheticSupportTrips?:boolean;syntheticUnfulfilledCancellation?:boolean;syntheticWorkTime?:boolean;syntheticWorkBoundary?:boolean;syntheticWorkStart?:boolean;syntheticWorkEnd?:boolean;syntheticMobileDeparture?:boolean;syntheticReviewOutcome?:boolean;syntheticReviewHistory?:boolean;syntheticMaintenanceFollowUp?:boolean;syntheticDropoffCustody?:boolean;syntheticDropoffPhotos?:SyntheticDropoffPhotoRuntime;sourceExports?:SourceExportConfiguration}>;
 export type PageHandler=(request:IncomingMessage,response:ServerResponse)=>Promise<void>;
 
 export function createBoundedNodeServer(tls?:NodeConfiguration['tls']):Server{
@@ -92,11 +94,12 @@ export async function writeSourceExportResponse(outgoing:ServerResponse,response
  }
  return writePrivateResponse(outgoing,response,signal,16384);
 }
-async function writePrivateResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal,limit:number):Promise<void>{
-  let finished=false;
+async function writePrivateResponse(outgoing:ServerResponse,response:Response,signal:AbortSignal,limit:number,sensitive=false):Promise<void>{
+  let finished=false,body:Buffer|undefined;
+  const chunks:Uint8Array[]=[];
   try{
     const bounded=AbortSignal.any([signal,AbortSignal.timeout(5000)]);
-    const reader=response.body?.getReader();let size=0;const chunks:Uint8Array[]=[];
+    const reader=response.body?.getReader();let size=0;
     try{
       if(reader)while(true){
         const part=await new Promise<ReadableStreamReadResult<Uint8Array>>((resolve,reject)=>{
@@ -108,7 +111,7 @@ async function writePrivateResponse(outgoing:ServerResponse,response:Response,si
         if(!part.value.byteLength||(size+=part.value.byteLength)>limit)throw new Error();chunks.push(part.value);
       }
     }finally{if(reader){void reader.cancel().catch(()=>{});reader.releaseLock();}}
-    const body=Buffer.concat(chunks);
+    body=Buffer.concat(chunks);
     if(signal.aborted||outgoing.destroyed)throw new Error();
     await new Promise<void>((resolve,reject)=>{
       const timer=setTimeout(fail,5000);timer.unref();
@@ -125,12 +128,13 @@ async function writePrivateResponse(outgoing:ServerResponse,response:Response,si
     });
   }finally{
     if(!finished)outgoing.destroy();
+    if(sensitive){for(const chunk of chunks)chunk.fill(0);body?.fill(0);}
     try{await settleAuthenticationResponse(response,finished);}catch{console.error('AUTHENTICATION_DELIVERY_CLEANUP_FAILED');}
   }
 }
 
 export function bindApplicationHandler(server:Server,config:NodeConfiguration,pages:PageHandler):void{
-  const {origin,environment,authentication,business,customers,vehicles,associations,leads,leadConversions,operationResolution,sourceExports,syntheticCatalog,syntheticQuotes,syntheticQuoteReview,syntheticQuoteCommercial,syntheticQuoteAmendments,syntheticQuoteAmendmentAcceptance,syntheticAppointmentHolds,syntheticExpenses,syntheticScheduling,syntheticFieldSessions,syntheticJobCompletion,syntheticJobMileage,syntheticSupportTrips,syntheticUnfulfilledCancellation,syntheticWorkTime,syntheticWorkBoundary,syntheticWorkStart,syntheticWorkEnd,syntheticMobileDeparture,syntheticReviewOutcome,syntheticReviewHistory,syntheticMaintenanceFollowUp}=config;
+  const {origin,environment,authentication,business,customers,vehicles,associations,leads,leadConversions,operationResolution,sourceExports,syntheticCatalog,syntheticQuotes,syntheticQuoteReview,syntheticQuoteCommercial,syntheticQuoteAmendments,syntheticQuoteAmendmentAcceptance,syntheticAppointmentHolds,syntheticExpenses,syntheticScheduling,syntheticFieldSessions,syntheticJobCompletion,syntheticJobMileage,syntheticSupportTrips,syntheticUnfulfilledCancellation,syntheticWorkTime,syntheticWorkBoundary,syntheticWorkStart,syntheticWorkEnd,syntheticMobileDeparture,syntheticReviewOutcome,syntheticReviewHistory,syntheticMaintenanceFollowUp,syntheticDropoffCustody,syntheticDropoffPhotos}=config;
   const url=new URL(origin);
   if(syntheticFieldSessions!==undefined&&(typeof syntheticFieldSessions!=='boolean'||syntheticFieldSessions&&(environment!=='test'||syntheticQuoteAmendmentAcceptance!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(syntheticJobCompletion!==undefined&&(typeof syntheticJobCompletion!=='boolean'||syntheticJobCompletion&&(environment!=='test'||syntheticFieldSessions!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
@@ -141,6 +145,7 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
   if(syntheticWorkEnd!==undefined&&(typeof syntheticWorkEnd!=='boolean'||syntheticWorkEnd&&(environment!=='test'||syntheticWorkStart!==true||syntheticJobCompletion!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(syntheticReviewOutcome!==undefined&&(typeof syntheticReviewOutcome!=='boolean'||syntheticReviewOutcome&&(environment!=='test'||syntheticJobCompletion!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(syntheticReviewHistory!==undefined&&(typeof syntheticReviewHistory!=='boolean'||syntheticReviewHistory&&(environment!=='test'||syntheticReviewOutcome!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  if(syntheticDropoffCustody!==undefined&&(typeof syntheticDropoffCustody!=='boolean'||syntheticDropoffCustody&&(environment!=='test'||syntheticFieldSessions!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(syntheticMaintenanceFollowUp!==undefined&&(typeof syntheticMaintenanceFollowUp!=='boolean'||syntheticMaintenanceFollowUp&&(environment!=='test'||syntheticJobCompletion!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(syntheticMobileDeparture!==undefined&&(typeof syntheticMobileDeparture!=='boolean'||syntheticMobileDeparture&&(environment!=='test'||syntheticWorkEnd!==true||syntheticJobMileage!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   if(syntheticWorkBoundary!==undefined&&(typeof syntheticWorkBoundary!=='boolean'||syntheticWorkBoundary&&(environment!=='test'||syntheticWorkTime!==true||operationResolution!==true)))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
@@ -160,7 +165,9 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
     ||business&&!authentication||customers!==undefined&&typeof customers!=='boolean'||customers&&(!business||!authentication)||vehicles!==undefined&&typeof vehicles!=='boolean'||vehicles&&(!business||!authentication)||associations!==undefined&&typeof associations!=='boolean'||associations&&(!business||!authentication)||leadConversions!==undefined&&typeof leadConversions!=='boolean'||leadConversions&&!leads||leads!==undefined&&typeof leads!=='boolean'||leads&&(!business||!authentication)||authentication&&environment==='production'&&!config.tls||server.listenerCount('request'))throw new Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   const dispatch=authentication?createAuthenticationHttp({...authentication.configuration,origin,environment},authentication.provider,authentication.tokens):undefined;
   const dispatchBusiness=business&&authentication?createBusinessHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens):undefined;
-  const dispatchScheduling=syntheticScheduling===true&&business&&authentication?createSchedulingHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true,syntheticQuoteAmendmentAcceptance===true,syntheticFieldSessions===true,syntheticJobCompletion===true,syntheticJobMileage===true,syntheticSupportTrips===true,syntheticUnfulfilledCancellation===true,syntheticWorkTime===true,syntheticWorkBoundary===true,syntheticWorkStart===true,syntheticWorkEnd===true,syntheticMobileDeparture===true,syntheticReviewOutcome===true,syntheticReviewHistory===true,syntheticMaintenanceFollowUp===true):undefined;
+  if(syntheticDropoffPhotos&&(environment!=='test'||syntheticDropoffCustody!==true||!authentication||!business))throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+  const dispatchPhotos=syntheticDropoffPhotos&&business&&authentication?createDropoffPhotoHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,syntheticDropoffPhotos):undefined;
+  const dispatchScheduling=syntheticScheduling===true&&business&&authentication?createSchedulingHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true,syntheticQuoteAmendmentAcceptance===true,syntheticFieldSessions===true,syntheticJobCompletion===true,syntheticJobMileage===true,syntheticSupportTrips===true,syntheticUnfulfilledCancellation===true,syntheticWorkTime===true,syntheticWorkBoundary===true,syntheticWorkStart===true,syntheticWorkEnd===true,syntheticMobileDeparture===true,syntheticReviewOutcome===true,syntheticReviewHistory===true,syntheticMaintenanceFollowUp===true,syntheticDropoffCustody===true):undefined;
   const dispatchExpenses=syntheticExpenses===true&&business&&authentication?createExpenseHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
   const dispatchHolds=syntheticAppointmentHolds===true&&business&&authentication?createHoldHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
   const dispatchServices=syntheticCatalog===true&&business&&authentication?createServiceHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
@@ -178,12 +185,12 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
   const dispatchOriginalOperations=operationResolution===true&&business&&authentication?createOriginalOperationHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,true):undefined;
   const dispatchExports=sourceExports&&business&&authentication?createSourceExportHttp({...authentication.configuration,origin,environment,businessId:business.businessId,appReleaseId:sourceExports.appReleaseId},authentication.provider,authentication.tokens,true):undefined;
   const dispatchExportDownloads=sourceExports&&business&&authentication?createSourceExportDownloadHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,sourceExports.store,true):undefined;
-  let activeProtected=0;
+  let activeProtected=0,activePhotoFiles=0;
   server.on('request',(incoming,outgoing)=>{void (async()=>{
     const controller=new AbortController();
     const abort=()=>controller.abort();incoming.once('aborted',abort);
     outgoing.once('close',()=>{if(!outgoing.writableFinished)abort();});
-    let reserved=false,businessRequest=false,serviceRequest=false,quoteRequest=false,holdRequest=false,expenseRequest=false,schedulingRequest=false,customerRequest=false,addressRequest=false,vehicleRequest=false,associationRequest=false,leadRequest=false,leadSourceRequest=false,originalOperationRequest=false,exportRequest=false,exportDownloadRequest=false;
+    let reserved=false,photoFileReserved=false,businessRequest=false,serviceRequest=false,quoteRequest=false,holdRequest=false,expenseRequest=false,schedulingRequest=false,photoRequest=false,customerRequest=false,addressRequest=false,vehicleRequest=false,associationRequest=false,leadRequest=false,leadSourceRequest=false,originalOperationRequest=false,exportRequest=false,exportDownloadRequest=false;
     try{
       if(incoming.rawHeaders.length>256)throw new Error();
       const target=requestTarget(incoming.url,origin);
@@ -191,6 +198,7 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
       const decoded=decodeURIComponent(target.url.pathname);customerRequest=target.business&&(decoded==='/api/business/customers'||decoded.startsWith('/api/business/customers/'));
       serviceRequest=target.business&&(decoded==='/api/business/services'||decoded.startsWith('/api/business/services/'));
       schedulingRequest=target.business&&(decoded==='/api/business/scheduling'||decoded.startsWith('/api/business/scheduling/'));
+      photoRequest=schedulingRequest&&decoded.startsWith(dropoffPhotoPrefix);
       expenseRequest=target.business&&(decoded==='/api/business/expenses'||decoded.startsWith('/api/business/expenses/'));
       holdRequest=target.business&&(decoded==='/api/business/appointment-holds'||decoded.startsWith('/api/business/appointment-holds/'));
       quoteRequest=target.business&&(decoded==='/api/business/quotes'||decoded.startsWith('/api/business/quotes/'));
@@ -204,19 +212,28 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
       exportDownloadRequest=exportRequest&&(decoded==='/api/business/exports/downloads'||decoded.startsWith('/api/business/exports/downloads/')||decoded==='/api/business/exports/file'||decoded.startsWith('/api/business/exports/file/'));
       const exportFileRequest=decoded==='/api/business/exports/file';
       if(!target.authentication&&!target.business){await pages(incoming,outgoing);return;}
-      const handler=schedulingRequest?dispatchScheduling:expenseRequest?dispatchExpenses:holdRequest?dispatchHolds:quoteRequest?dispatchQuotes:serviceRequest?dispatchServices:exportRequest?(exportDownloadRequest?dispatchExportDownloads:dispatchExports):originalOperationRequest?dispatchOriginalOperations:leadSourceRequest?dispatchLeadSources:leadRequest?dispatchLeads:associationRequest?dispatchAssociations:vehicleRequest?dispatchVehicles:addressRequest?dispatchAddresses:customerRequest?dispatchCustomers:target.business?dispatchBusiness:dispatch,failure=schedulingRequest?schedulingFailureResponse:expenseRequest?expenseFailureResponse:holdRequest?holdFailureResponse:quoteRequest?quoteFailureResponse:serviceRequest?serviceFailureResponse:exportRequest?(exportDownloadRequest?sourceExportDownloadFailureResponse:sourceExportFailureResponse):originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:target.business?businessFailureResponse:browserFailureResponse;
+      const handler=photoRequest?dispatchPhotos:schedulingRequest?dispatchScheduling:expenseRequest?dispatchExpenses:holdRequest?dispatchHolds:quoteRequest?dispatchQuotes:serviceRequest?dispatchServices:exportRequest?(exportDownloadRequest?dispatchExportDownloads:dispatchExports):originalOperationRequest?dispatchOriginalOperations:leadSourceRequest?dispatchLeadSources:leadRequest?dispatchLeads:associationRequest?dispatchAssociations:vehicleRequest?dispatchVehicles:addressRequest?dispatchAddresses:customerRequest?dispatchCustomers:target.business?dispatchBusiness:dispatch,failure=photoRequest?dropoffPhotoFailure:schedulingRequest?schedulingFailureResponse:expenseRequest?expenseFailureResponse:holdRequest?holdFailureResponse:quoteRequest?quoteFailureResponse:serviceRequest?serviceFailureResponse:exportRequest?(exportDownloadRequest?sourceExportDownloadFailureResponse:sourceExportFailureResponse):originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:target.business?businessFailureResponse:browserFailureResponse;
       if(!handler||activeProtected>=32){await writeAuthenticationResponse(outgoing,failure(503),controller.signal);return;}
+      if(photoRequest&&target.url.pathname===dropoffPhotoPrefix+'file'){
+       if(activePhotoFiles>=2){await writeAuthenticationResponse(outgoing,dropoffPhotoFailure(429),controller.signal);return;}
+       activePhotoFiles++;photoFileReserved=true;
+      }
       activeProtected++;reserved=true;
       const peer=transportFromIncomingMessage(incoming),headers=new Headers();
       for(let i=0;i<incoming.rawHeaders.length;i+=2)headers.append(incoming.rawHeaders[i]!,incoming.rawHeaders[i+1]!);
       const request=new Request(target.url,{method:incoming.method,headers,signal:controller.signal,
         ...(!['GET','HEAD'].includes(incoming.method??'')?{body:Readable.toWeb(incoming),duplex:'half'}:{})} as RequestInit);
       const response=await handler(request,peer);
-      if(exportRequest)await writeSourceExportResponse(outgoing,response,controller.signal,exportFileRequest);
+      if(dispatchPhotos&&target.url.pathname==='/api/business/scheduling/custody-context'&&response.ok)response.headers.set('X-Crest-Dropoff-Photos','1');
+      if(photoFileReserved&&response.ok){
+       const preview=response.headers.get('content-disposition')?.endsWith('-preview.jpg"');
+       await writePrivateResponse(outgoing,response,controller.signal,(preview?8:25)*1024*1024,true);
+      }
+      else if(exportRequest)await writeSourceExportResponse(outgoing,response,controller.signal,exportFileRequest);
       else await (schedulingRequest?writeSchedulingResponse:expenseRequest?writeExpenseResponse:holdRequest?writeCustomerResponse:quoteRequest?writeQuoteResponse:originalOperationRequest?writeOriginalOperationResponse:serviceRequest||customerRequest||vehicleRequest||associationRequest||leadRequest||leadSourceRequest?writeCustomerResponse:writeAuthenticationResponse)(outgoing,response,controller.signal);
     }catch{
-      if(!outgoing.destroyed&&!outgoing.headersSent)try{await writeAuthenticationResponse(outgoing,(schedulingRequest?schedulingFailureResponse:expenseRequest?expenseFailureResponse:holdRequest?holdFailureResponse:quoteRequest?quoteFailureResponse:serviceRequest?serviceFailureResponse:exportRequest?(exportDownloadRequest?sourceExportDownloadFailureResponse:sourceExportFailureResponse):originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:businessRequest?businessFailureResponse:browserFailureResponse)(),controller.signal);}catch{outgoing.destroy();}
+      if(!outgoing.destroyed&&!outgoing.headersSent)try{await writeAuthenticationResponse(outgoing,(photoRequest?dropoffPhotoFailure:schedulingRequest?schedulingFailureResponse:expenseRequest?expenseFailureResponse:holdRequest?holdFailureResponse:quoteRequest?quoteFailureResponse:serviceRequest?serviceFailureResponse:exportRequest?(exportDownloadRequest?sourceExportDownloadFailureResponse:sourceExportFailureResponse):originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:businessRequest?businessFailureResponse:browserFailureResponse)(),controller.signal);}catch{outgoing.destroy();}
       else outgoing.destroy();
-    }finally{if(reserved)activeProtected--;incoming.off('aborted',abort);}
+    }finally{if(photoFileReserved)activePhotoFiles--;if(reserved)activeProtected--;incoming.off('aborted',abort);}
   })();});
 }
