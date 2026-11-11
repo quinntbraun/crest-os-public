@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/quote-commercial-browser.yml'
+      - 'scripts/prepare-ci-ubuntu-apt.sh'
       - 'src/app/quotes/**'
       - 'src/commercial/quote-*'
       - 'src/client/quote-*'
@@ -36,7 +37,7 @@ concurrency:
 jobs:
   browser_feedback:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -70,12 +71,9 @@ jobs:
       - run: node scripts/install-tools.mjs
       - name: Install browser dependencies with bounded Ubuntu downloads
         if: matrix.suite != 'amendment_integrity'
-        timeout-minutes: 6
+        timeout-minutes: 12
         run: |
-          test -f /etc/apt/apt-mirrors.txt
-          grep -qF 'mirror+file:/etc/apt/apt-mirrors.txt' /etc/apt/sources.list.d/ubuntu.sources
-          printf '%s\tpriority:1\n%s\tpriority:2\n' 'https://archive.ubuntu.com/ubuntu/' 'https://security.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/99crest-ci-downloads > /dev/null
+          bash scripts/prepare-ci-ubuntu-apt.sh
           npx --no-install playwright install --with-deps chromium webkit
       - if: matrix.suite != 'amendment_integrity'
         run: npm run build

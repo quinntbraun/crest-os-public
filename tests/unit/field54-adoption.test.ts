@@ -26,6 +26,8 @@ import registered64 from '../support/registered64-migration-checksums.json';
 import coverage64 from '../support/registered64-export-coverage.json';
 import registered65 from '../support/registered65-migration-checksums.json';
 import coverage65 from '../support/registered65-export-coverage.json';
+import registered66 from '../support/registered66-migration-checksums.json';
+import coverage66 from '../support/registered66-export-coverage.json';
 import registry from '../support/registered54-migration-checksums.json';
 import previous from '../support/registered53-migration-checksums.json';
 import previousCoverage from '../support/registered53-export-coverage.json';
@@ -194,19 +196,30 @@ it('registers only the reviewed message history reader and preserves frozen sche
 it('registers maintenance source relations after the unchanged schema65 prefix',()=>{
  expect(sha256(bytes('tests/support/registered65-migration-checksums.json'))).toBe('bc59dcf082f3e09d50f4bd4ae5fd7ecf987d2f2abf73990cc16b3905be0c18f8');
  expect(sha256(bytes('tests/support/registered65-export-coverage.json'))).toBe('6956f43f69821920e583e09de448a0f144aa643bb5fc0e1aa18a8aecb0e55bbf');
- expect(currentRegistry.migrations).toHaveLength(66);
- const entry=currentRegistry.migrations.at(-1)!;
+ expect(registered66.migrations).toHaveLength(66);
+ const entry=registered66.migrations.at(-1)!;
  expect(entry.file).toBe('20261120180000_maintenance_follow_up.sql');
  const sql=bytes('supabase/migrations/'+entry.file).toString();
  for(const name of ['tasks','reads','originals','source','schema-compatibility']){
   const path='planning/proposals/maintenance-follow-up-'+name+'.sql';
   expect(sql).toContain('-- BEGIN REVIEWED '+path+'\n'+bytes(path).toString().replaceAll('\r\n','\n')+'-- END REVIEWED '+path+'\n');
  }
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered65 as MigrationRegistry)).not.toThrow();
- expect(currentCoverage.migrationCount).toBe(66);
- expect(currentCoverage.tables.slice(0,-2)).toEqual(coverage65.tables);
- expect(currentCoverage.tables.slice(-2).map(row=>row.table)).toEqual(['crest.follow_up_tasks','crest.follow_up_task_events']);
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:66});
+ expect(()=>validateMigrationSet(registered66 as MigrationRegistry,new Map(registered66.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered65 as MigrationRegistry)).not.toThrow();
+ expect(coverage66.migrationCount).toBe(66);
+ expect(coverage66.tables.slice(0,-2)).toEqual(coverage65.tables);
+ expect(coverage66.tables.slice(-2).map(row=>row.table)).toEqual(['crest.follow_up_tasks','crest.follow_up_task_events']);
+});
+it('registers custody after the frozen66 prefix without activating production',()=>{
+ expect(sha256(bytes('tests/support/registered66-migration-checksums.json'))).toBe('f8b1e968201fba0d24b782a9fe3639f0ce6baeea2276eee98c0208ecd0eee28f');
+ expect(sha256(bytes('tests/support/registered66-export-coverage.json'))).toBe('93403923d39cf6ba8125ffb5d0114f36a03819396f8bcb3048e1c161a038dcc7');
+ expect(currentRegistry.migrations).toHaveLength(67);
+ expect(currentRegistry.migrations.at(-1)!.file).toBe('20261121180000_dropoff_custody.sql');
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered66 as MigrationRegistry)).not.toThrow();
+ expect(currentCoverage.migrationCount).toBe(67);
+ expect(currentCoverage.tables.slice(0,coverage66.tables.length)).toEqual(coverage66.tables);
+ expect(currentCoverage.tables.slice(coverage66.tables.length).map(row=>row.table)).toEqual([
+  'crest.custody_authorization_configs','crest.custody_cases','crest.custody_events','crest.custody_photo_attempts','crest.custody_photo_originals']);
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:67});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

@@ -8,7 +8,7 @@ export default async function CancelStartedJobPage({searchParams}:{searchParams:
  const {job}=await searchParams;
  const jobId=typeof job==='string'&&customerUuid(job)?job:'';
  return <main className="customers">
-  <p className="eyebrow">Crest Detailing · Mobile work</p>
+  <p className="eyebrow">Crest Detailing · Work</p>
   <h1>Cancel started job</h1>
   <FieldSessionScreen jobId={jobId} mode="cancellation"/>
  </main>;

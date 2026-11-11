@@ -18,7 +18,8 @@ const check=(s:AbortSignal)=>{if(s.aborted)failure(s.reason?.name==='TimeoutErro
 // Private candidate preparation, not authorization or an Available publication.
 // The trusted job must durably reserve dispatch/original/preview IDs before this
 // call and retain ALL of them after uncertainty, cancellation or lost responses.
-export function createValidatedFileIntake(store:ReturnType<typeof createPrivateObjectStore>,validator:ReturnType<typeof createLocalSandboxValidator>){
+export function createValidatedFileIntake(store:Pick<ReturnType<typeof createPrivateObjectStore>,
+  'readStaging'|'writeOriginalCandidate'|'writePreviewCandidate'>,validator:ReturnType<typeof createLocalSandboxValidator>){
   let busy=false;
   return Object.freeze({async prepare(input:Input,signal?:AbortSignal){
     const c={...input};

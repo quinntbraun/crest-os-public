@@ -19,7 +19,7 @@ import {maintenanceFollowUpOriginal} from '../../src/operations/maintenance-foll
 import {collectMaintenanceFollowUpSourcesInSnapshot} from '../../src/operations/maintenance-follow-up-source-collector.ts';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import {requireSyntheticJobCompletion,requireSyntheticJobMileage,requireSyntheticSupportTrips,requireSyntheticUnfulfilledCancellation,requireSyntheticWorkTime,requireSyntheticWorkBoundary,requireSyntheticWorkStart,requireSyntheticWorkEnd,requireSyntheticMobileDeparture,requireSyntheticReviewOutcome,requireSyntheticReviewHistory,requireSyntheticMaintenanceFollowUp} from '../../scripts/synthetic-migrations.mjs';
-import {inventory,privateWorkspace,keyPair,backupDatabase,restoreDatabase,backupLegacy53Database,restoreLegacy53Database,backupField54CandidateDatabase,restoreField54CandidateDatabase,backupLegacy55Database,restoreLegacy55Database,backupLegacy56Database,restoreLegacy56Database,backupLegacy57Database,restoreLegacy57Database,backupLegacy58Database,restoreLegacy58Database,backupLegacy59Database,restoreLegacy59Database,backupLegacy60Database,restoreLegacy60Database,backupLegacy61Database,restoreLegacy61Database,backupLegacy62Database,restoreLegacy62Database,backupLegacy63Database,restoreLegacy63Database,backupLegacy64Database,restoreLegacy64Database,backupLegacy65Database,restoreLegacy65Database,recoveryCluster,connect} from '../support/recovery-drill.mjs';
+import {inventory,privateWorkspace,keyPair,restoreDatabase,backupLegacy53Database,restoreLegacy53Database,backupField54CandidateDatabase,restoreField54CandidateDatabase,backupLegacy55Database,restoreLegacy55Database,backupLegacy56Database,restoreLegacy56Database,backupLegacy57Database,restoreLegacy57Database,backupLegacy58Database,restoreLegacy58Database,backupLegacy59Database,restoreLegacy59Database,backupLegacy60Database,restoreLegacy60Database,backupLegacy61Database,restoreLegacy61Database,backupLegacy62Database,restoreLegacy62Database,backupLegacy63Database,restoreLegacy63Database,backupLegacy64Database,restoreLegacy64Database,backupLegacy65Database,restoreLegacy65Database,backupLegacy66Database,restoreLegacy66Database,recoveryCluster,connect} from '../support/recovery-drill.mjs';
 const sha=v=>createHash('sha256').update(v).digest('hex'),value=async(c,q,a=[])=>(await c.query(q,a)).rows[0].value;
 const coverage=JSON.parse(await readFile(new URL('../support/field54-export-coverage.json',import.meta.url)));
 let restored54Target;
@@ -593,10 +593,10 @@ test('registered66 preserves prior sources and independently restores reminders,
   assert.equal(finished.state,'committed');
   await assert.rejects(requireSyntheticMaintenanceFollowUp(target),{message:'SYNTHETIC_MAINTENANCE_FOLLOW_UP_MIGRATION_REQUIRED'});
   const before=await inventory(client);
-  const upgrade=await maintenanceSandbox.apply(target);
+  const upgrade=await maintenanceSandbox.apply(target,await maintenanceSandbox.prefix(66));
   assert.equal(upgrade.history.length,66);
   assert.equal(upgrade.history.at(-1).version,'20261120180000');
-  assert.deepEqual((await maintenanceSandbox.apply(target)).history,upgrade.history);
+  assert.deepEqual((await maintenanceSandbox.apply(target,await maintenanceSandbox.prefix(66))).history,upgrade.history);
   await requireSyntheticMaintenanceFollowUp(target);
   const added=new Set(['follow_up_tasks','follow_up_task_events']);
   const oldRows=rows=>rows.filter(row=>row.schema!=='supabase_migrations'&&!(row.schema==='crest'&&added.has(row.name)));
@@ -642,11 +642,11 @@ test('registered66 preserves prior sources and independently restores reminders,
   }
   const expected=await capture(exporter),after=await inventory(client),point=await privateWorkspace(),cluster=await recoveryCluster();
   try{
-   const {manifest}=await backupDatabase(client,target,point,keys.recipient);
+   const {manifest}=await backupLegacy66Database(client,target,point,keys.recipient);
    assert.equal(manifest.schemaVersion,66);assert.equal(manifest.completeBackup,false);assert.deepEqual(manifest.rows,after);
    const destination=await cluster.database();
    await assert.rejects(restoreLegacy65Database(point,keys.path,destination),{message:'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest'});
-   assert.deepEqual((await restoreDatabase(point,keys.path,destination)).rows,after);
+   assert.deepEqual((await restoreLegacy66Database(point,keys.path,destination)).rows,after);
    await requireSyntheticMaintenanceFollowUp(destination);
    const restored=await connect(destination);
    try{

@@ -53,6 +53,11 @@ export function createLocalSandboxValidator(config:{imageId:string}){
       let state;try{state=JSON.parse(inspected.stdout.toString('utf8'));}catch{return fail('SANDBOX_CREATE_UNCERTAIN');}
       if(inspected.exit!==0||state.Id!==id||state.Image!==imageId||state.Config?.Labels?.['crest.file.dispatch']!==nonce)fail('SANDBOX_CREATE_UNCERTAIN');
       owned=true;
+      // Seccomp:2 can be inherited from an outer Docker Desktop container even
+      // when this worker was created with seccomp=unconfined. Confirm the exact
+      // requested profile before starting; the worker also checks kernel limits.
+      const security=state.HostConfig?.SecurityOpt;
+      if(!Array.isArray(security)||security.length!==1||security[0]!=='no-new-privileges')fail('SANDBOX_PROTOCOL_INVALID');
       // Reserve cleanup time inside the 60-second total. Never start after cancel.
       if(signal?.aborted)fail('SANDBOX_ABORTED');const remaining=ends-performance.now()-10000;if(remaining<1)fail('SANDBOX_TIMEOUT');
       const response=await command(['start','--attach','--interactive',id],Math.min(48000,remaining),12*1024*1024,bytes,signal);

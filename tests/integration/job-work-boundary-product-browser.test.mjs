@@ -13,7 +13,8 @@ function localTime(milliseconds){
  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',
   hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(milliseconds);
  const at=Object.fromEntries(parts.map(({type,value})=>[type,value]));
- return at.year+'-'+at.month+'-'+at.day+'T'+at.hour+':'+at.minute+':'+at.second;
+ // datetime-local normalizes zero seconds away even when step is one second.
+ return at.year+'-'+at.month+'-'+at.day+'T'+at.hour+':'+at.minute+(at.second==='00'?'':':'+at.second);
 }
 
 async function signInAndBook(page,fixture){

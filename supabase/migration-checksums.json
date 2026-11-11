@@ -330,6 +330,11 @@
       "version": "20261120180000",
       "file": "20261120180000_maintenance_follow_up.sql",
       "sha256": "9a2bcb5c3b463cd3c0a8ffc15406a9013a304ea9309a13fc936bcbf1767b07a2"
+    },
+    {
+      "version": "20261121180000",
+      "file": "20261121180000_dropoff_custody.sql",
+      "sha256": "cd006b45b809ad13beb4d1b1cf1d5e9be7a41fe26765717c0b3124ccc444a981"
     }
   ]
 }

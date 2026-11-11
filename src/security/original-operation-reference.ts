@@ -14,7 +14,7 @@ export function isReviewOutcomeAction(value:unknown):value is ReviewOutcomeActio
 }
 type Common=Readonly<{operationId:string;recoveryEpoch:string}>;
 type Targets={
- 'operations.job.field':Readonly<{jobId:string;expectedJobVersion:string;action:'depart'|'arrive'|'direct_arrive'|'pause'|'resume'}>;
+ 'operations.job.field':Readonly<{jobId:string;expectedJobVersion:string;action:'depart'|'arrive'|'direct_arrive'|'start_dropoff'|'pause'|'resume'}>;
  'operations.job.complete':Readonly<{jobId:string;expectedJobVersion:string}>;
  'operations.job.interrupt':Readonly<{jobId:string;expectedJobVersion:string;action:'cancel'|'reschedule'}>;
  'operations.job.cancel_unfulfilled':Readonly<{jobId:string;expectedJobVersion:string}>;
@@ -23,6 +23,8 @@ type Targets={
  'operations.job.work_end.correct':Readonly<{jobId:string;expectedJobVersion:string;workVersionId:string;completionEventId:string}>;
  'operations.mobile_departure.correct':Readonly<{jobId:string;expectedJobVersion:string;legId:string;legVersionId:string;departureEventId:string}>;
  'operations.message.record_outcome':Readonly<{jobId:string;messageId:string;priorEventId:string;action:ReviewOutcomeAction}>;
+ 'operations.custody.policy.save':Readonly<{modeVersionId:string}>;
+ 'operations.custody.save':Readonly<{jobVehicleId:string;caseId:string;expectedVersion:'0'|'1'}>;
  'operations.follow_up.save':Readonly<{taskId:string;expectedVersion:string;action:'created'|'snoozed'|'completed'|'dismissed'}>;
  'operations.mileage.record':Readonly<{legId:string;expectedLegVersionId:string;expectedEvidenceVersion:string}>;
  'operations.support_trip.record':Readonly<{legId:string;expectedLegVersionId:string|null;action:'depart'|'arrive'|'cancel'}>;
@@ -86,6 +88,8 @@ const fields={
  'operations.job.work_end.correct':['jobId','expectedJobVersion','workVersionId','completionEventId'],
  'operations.mobile_departure.correct':['jobId','expectedJobVersion','legId','legVersionId','departureEventId'],
  'operations.message.record_outcome':['jobId','messageId','priorEventId','action'],
+ 'operations.custody.policy.save':['modeVersionId'],
+ 'operations.custody.save':['jobVehicleId','caseId','expectedVersion'],
  'operations.follow_up.save':['taskId','expectedVersion','action'],
  'operations.mileage.record':['legId','expectedLegVersionId','expectedEvidenceVersion'],
  'operations.support_trip.record':['legId','expectedLegVersionId','action'],
@@ -151,12 +155,13 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
    else if(key!=='action'&&key!=='nextAssociationId')require(uuid(ref[key]));
   }
   if(['operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled'].includes(kind))require(BigInt(ref.expectedJobVersion as string)<9223372036854775807n);
-  if(kind==='operations.job.field')require(['depart','arrive','direct_arrive','pause','resume'].includes(ref.action as string));
+  if(kind==='operations.job.field')require(['depart','arrive','direct_arrive','start_dropoff','pause','resume'].includes(ref.action as string));
   if(kind==='operations.job.interrupt')require(['cancel','reschedule'].includes(ref.action as string));
   if(kind==='operations.job.work_boundary.correct')require(ref.leftVersionId!==ref.rightVersionId);
   if(kind==='operations.job.work_start.correct')require(ref.workVersionId!==ref.arrivalVersionId&&BigInt(ref.expectedJobVersion as string)<9223372036854775807n);
   if(kind==='operations.job.work_end.correct')require(BigInt(ref.expectedJobVersion as string)<9223372036854775807n);
   if(kind==='operations.message.record_outcome')require(isReviewOutcomeAction(ref.action));
+  if(kind==='operations.custody.save')require(ref.expectedVersion==='0'||ref.expectedVersion==='1');
   if(kind==='operations.follow_up.save')require(['created','snoozed','completed','dismissed'].includes(ref.action as string)&&
    (ref.action==='created')===(ref.expectedVersion==='0')&&ref.expectedVersion!=='9223372036854775807');
   if(kind==='operations.support_trip.record'||kind==='operations.support_trip.correct')require((kind==='operations.support_trip.record'?['depart','arrive','cancel']:['record','correct']).includes(ref.action as string)&&(['depart','record'].includes(ref.action as string)===(ref.expectedLegVersionId===null)));

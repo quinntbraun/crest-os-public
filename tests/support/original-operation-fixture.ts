@@ -12,6 +12,8 @@ export function originalOperationFixture(kind:OriginalOperationKind='crm.custome
  'operations.job.work_end.correct':{jobId:id,expectedJobVersion:'4',workVersionId:randomUUID(),completionEventId:randomUUID()},
  'operations.mobile_departure.correct':{jobId:id,expectedJobVersion:'3',legId:randomUUID(),legVersionId:randomUUID(),departureEventId:randomUUID()},
  'operations.message.record_outcome':{jobId:id,messageId:randomUUID(),priorEventId:randomUUID(),action:'owner_confirmed_sent'},
+ 'operations.custody.policy.save':{modeVersionId:id},
+ 'operations.custody.save':{jobVehicleId:id,caseId:randomUUID(),expectedVersion:'0'},
  'operations.follow_up.save':{taskId:id,expectedVersion:'0',action:'created'},
  'operations.job.work_boundary.correct':{jobId:id,expectedJobVersion:'3',leftVersionId:randomUUID(),rightVersionId:randomUUID()},
  'operations.mileage.record':{legId:id,expectedLegVersionId:randomUUID(),expectedEvidenceVersion:'0'},

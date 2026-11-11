@@ -82,6 +82,16 @@ export async function requireSyntheticMaintenanceFollowUp(connectionString){
  ])await requireSyntheticReader(connectionString,'crest_commands.'+signature,'SYNTHETIC_MAINTENANCE_FOLLOW_UP_MIGRATION_REQUIRED');
 }
 
+export async function requireSyntheticDropoffCustody(connectionString){
+ for(const signature of [
+  'read_dropoff_job_custody(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid)',
+  'save_dropoff_handoff(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer,uuid,uuid,integer,jsonb)',
+  'read_dropoff_policy(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)',
+  'save_dropoff_policy(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,jsonb)',
+  'list_dropoff_collections(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,timestamptz,uuid)'
+ ])await requireSyntheticReader(connectionString,'crest_commands.'+signature,'SYNTHETIC_DROPOFF_CUSTODY_MIGRATION_REQUIRED');
+}
+
 async function requireSyntheticReader(connectionString,signature,missing){
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{

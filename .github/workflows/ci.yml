@@ -237,11 +237,11 @@ jobs:
   browser_workflows:
     name: Browser workflows (${{ matrix.suite }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
-        suite: [crm, intake, commercial, amendments, schedule, field, records]
+        suite: [crm, intake, commercial, amendments, schedule, field, custody, records]
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"
@@ -280,12 +280,9 @@ jobs:
           node scripts/install-tools.mjs
           node scripts/install-recovery-tools.mjs
       - name: Install browser dependencies with bounded Ubuntu downloads
-        timeout-minutes: 6
+        timeout-minutes: 12
         run: |
-          test -f /etc/apt/apt-mirrors.txt
-          grep -qF 'mirror+file:/etc/apt/apt-mirrors.txt' /etc/apt/sources.list.d/ubuntu.sources
-          printf '%s\tpriority:1\n%s\tpriority:2\n' 'https://archive.ubuntu.com/ubuntu/' 'https://security.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/99crest-ci-downloads > /dev/null
+          bash scripts/prepare-ci-ubuntu-apt.sh
           npx --no-install playwright install --with-deps chromium webkit
       - name: Build actual product source
         run: npm run build
@@ -377,13 +374,10 @@ jobs:
         run: npm run audit:dependencies
       - name: Install checksum-pinned PDF inspector
         run: |
-          test -f /etc/apt/apt-mirrors.txt
-          grep -qF 'mirror+file:/etc/apt/apt-mirrors.txt' /etc/apt/sources.list.d/ubuntu.sources
-          printf '%s\tpriority:1\n%s\tpriority:2\n' 'https://archive.ubuntu.com/ubuntu/' 'https://security.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/99crest-ci-downloads > /dev/null
+          bash scripts/prepare-ci-ubuntu-apt.sh
           # Source-build dependencies only; never copied into the runtime image.
-          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 update
-          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 install --yes --no-install-recommends cmake g++ make pkg-config libjpeg-dev zlib1g-dev
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends cmake g++ make pkg-config libjpeg-dev zlib1g-dev
           node scripts/install-pdf-tools.mjs
       - name: Build checksum-pinned HEIC decoder and separate synthetic encoder
         run: |
@@ -436,8 +430,9 @@ jobs:
       - name: Confirmed booking original source retrieval
         run: npm run test:confirmed-booking-source
       - name: Install browser dependencies with bounded Ubuntu downloads
-        timeout-minutes: 6
+        timeout-minutes: 12
         run: |
+          bash scripts/prepare-ci-ubuntu-apt.sh
           npx --no-install playwright install --with-deps chromium webkit
       - name: Production build and focused service workflow
         run: |
@@ -474,6 +469,18 @@ jobs:
           npm run release:manifest
           docker save crest-os:ci -o .local/release/crest-os-image.tar
           sha256sum .local/release/crest-os-image.tar > .local/release/crest-os-image.tar.sha256
+      - name: Signed-in Drop-Off photo journey with isolated decoder
+        timeout-minutes: 6
+        shell: bash
+        run: |
+          CREST_CUSTODY_PHOTO_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
+          test -n "$CREST_CUSTODY_PHOTO_IMAGE_ID"
+          export CREST_CUSTODY_PHOTO_IMAGE_ID CREST_CUSTODY_PHOTO_ENGINE=chromium
+          node --conditions=react-server --test --test-concurrency=1 --test-reporter=tap \
+            --test-name-pattern='signed-in condition photo' tests/integration/dropoff-custody-product-browser.test.mjs \
+            | tee .local/dropoff-isolated-decoder.log
+          grep -Fx '# tests 1' .local/dropoff-isolated-decoder.log
+          grep -Fx '# pass 1' .local/dropoff-isolated-decoder.log
       - name: Container diagnostics
         if: failure()
         run: docker logs crest-os-smoke || true

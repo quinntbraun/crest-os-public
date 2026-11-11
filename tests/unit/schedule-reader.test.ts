@@ -6,6 +6,7 @@ import {AuthenticationError} from '../../src/client/authentication';
 import {parseJobListPage} from '../../src/operations/confirmed-job-read-contract';
 import {parsePendingChangesPage} from '../../src/operations/booking-context-contract';
 import {bookingContextFixture} from '../fixtures/booking-context';
+import {jobChangeFixture} from '../fixtures/job-change';
 function setup(){
  const f=bookingContextFixture(),proof={csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000},session=vi.fn(async()=>proof),context={binding:randomBytes(32).toString('base64url'),context:{schemaVersion:1 as const,businessId:f.q.businessId,operatorId:f.q.payload.operatorId,timezone:'UTC',modeVersion:null,writeState:'ready' as const,recoveryEpoch:randomUUID()}};
  const api={...scheduling,workspace:vi.fn(async()=>context),list:vi.fn(async(input:Parameters<typeof scheduling.list>[0])=>parseJobListPage({schemaVersion:1,businessId:f.q.businessId,jobs:[f.summary],hasMore:false},input)),pending:vi.fn(async(input:Parameters<typeof scheduling.pending>[0])=>parsePendingChangesPage(f.pending,input))};
@@ -29,4 +30,26 @@ it('ignores a late successful private response after the page is hidden',async()
 });
 it('refuses to mix loaded records with a changed authenticated workspace binding',async()=>{
  const {reader,api,context}=setup();await reader.load();api.workspace.mockResolvedValueOnce({...context,binding:randomBytes(32).toString('base64url')});await reader.open(reader.view().rows[0]!.jobId);expect(reader.view()).toMatchObject({phase:'unavailable',rows:[],pending:[],selected:null});expect(api.workspace).toHaveBeenCalledTimes(2);reader.dispose();
+});
+it('loads a saved job deep link and history with the schedule’s one fresh proof',async()=>{
+ const {session,context,api:base}=setup(),{q,resources}=jobChangeFixture();
+ const api={...base,
+  workspace:vi.fn(async()=>({...context,context:{...context.context,businessId:q.businessId}})),
+  list:vi.fn(async()=>({schemaVersion:1 as const,businessId:q.businessId,jobs:[],hasMore:false})),
+  pending:vi.fn(async()=>({schemaVersion:1 as const,businessId:q.businessId,items:[],hasMore:false})),
+  resources:vi.fn<typeof scheduling.resources>().mockResolvedValue(resources),
+  history:vi.fn<typeof scheduling.history>().mockResolvedValue({schemaVersion:1,businessId:q.businessId,
+   jobId:q.jobId,throughVersion:'1',observedVersion:'1',events:[],hasMore:false})
+ };
+ const reader=createScheduleReader({api,session,change:()=>{},now:()=>new Date('2026-11-01T12:00:00Z')});
+ await reader.load(undefined,q.jobId);
+ expect(reader.view()).toMatchObject({phase:'ready',loaded:true,selected:{jobId:q.jobId},historyComplete:true});
+ expect(session).toHaveBeenCalledTimes(1);
+ expect(api.workspace).toHaveBeenCalledTimes(1);
+ const [, ,proof,signal]=api.resources.mock.calls[0]!;
+ expect(api.history).toHaveBeenCalledWith(expect.objectContaining({jobId:q.jobId,throughVersion:'1'}),proof,signal);
+ await reader.open(q.jobId);
+ expect(session).toHaveBeenCalledTimes(2);
+ expect(api.workspace).toHaveBeenCalledTimes(2);
+ reader.dispose();
 });

@@ -18,9 +18,14 @@ import {parseMobileDepartureContext,parseMobileDepartureSave,mobileDepartureOrig
 import {parseReviewOutcomeContext,parseReviewOutcomeSave,reviewOutcomeOriginal,parseReviewOutcomeCommitted,reviewOutcomeConflicts} from './review-message-contract.ts';
 import {parseReviewMessageHistory} from './review-message-history-contract.ts';
 import type {ReviewHistoryQuery} from './review-message-history-contract.ts';
+import {parseCollectionCursor,parseCollectionPage} from './dropoff-collection-contract.ts';
+import type {CollectionCursor} from './dropoff-collection-contract.ts';
 import {maintenanceFollowUpConflicts,maintenanceFollowUpOriginal,parseMaintenanceFollowUpAcknowledgement,parseMaintenanceFollowUpCommitted,parseMaintenanceFollowUpHistory,
  parseMaintenanceFollowUpList,parseMaintenanceFollowUpSave} from './maintenance-follow-up-contract.ts';
 import type {parseMaintenanceFollowUpHistoryQuery,parseMaintenanceFollowUpListQuery} from './maintenance-follow-up-contract.ts';
+import {dropoffCustodyConflicts,dropoffCustodyOriginal,parseDropoffCustody,parseDropoffCustodyAcknowledgement,
+ parseDropoffCustodyCommitted,parseDropoffCustodySave,dropoffPolicyConflicts,dropoffPolicyOriginal,parseDropoffPolicy,
+ parseDropoffPolicySave,parseDropoffPolicyCommitted,parseDropoffPolicyAcknowledgement} from './dropoff-custody-contract.ts';
 export class FieldDirectoryError extends Error{constructor(code:string){super(code);this.name='FieldDirectoryError';}}
 class PrivateValue<T>{#value:T;constructor(value:T){this.#value=value;}forServer(){return this.#value;}toJSON():never{throw new FieldDirectoryError('FIELD_VALUE_PRIVATE');}}
 export function createFieldDirectory(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>){
@@ -72,10 +77,18 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
   const {current,entries,hasMore}=history;
   return new PrivateValue({schemaVersion:1,businessId,taskId,current,entries,hasMore});
  }
- async function save(credential:string,input:unknown,signal:AbortSignal,action:'session'|'interruption'|'cancellation'|'work-boundary'|'work-start'|'work-end'|'mobile-departure'|'review-outcome'|'maintenance'){
+ async function save(credential:string,input:unknown,signal:AbortSignal,action:'session'|'interruption'|'cancellation'|'work-boundary'|'work-start'|'work-end'|'mobile-departure'|'review-outcome'|'maintenance'|'custody'|'custody-policy'){
   let submitted=false,hash:Buffer|undefined;
   try{
-   const prepared=action==='maintenance'?(()=>{
+   const prepared=action==='custody-policy'?(()=>{
+    const request=parseDropoffPolicySave(input),original=dropoffPolicyOriginal(request);
+    return {request,original,conflicts:dropoffPolicyConflicts,command:'save_dropoff_policy',
+     committed:(observed:unknown)=>parseDropoffPolicyAcknowledgement(observed,request)};
+   })():action==='custody'?(()=>{
+    const request=parseDropoffCustodySave(input),original=dropoffCustodyOriginal(request);
+    return {request,original,conflicts:dropoffCustodyConflicts,command:'save_dropoff_handoff',
+     committed:(observed:unknown)=>parseDropoffCustodyAcknowledgement(observed,request)};
+   })():action==='maintenance'?(()=>{
     const request=parseMaintenanceFollowUpSave(input),original=maintenanceFollowUpOriginal(request);
     return {request,original,conflicts:maintenanceFollowUpConflicts,command:'save_maintenance_follow_up',
      committed:(observed:unknown)=>parseMaintenanceFollowUpAcknowledgement(observed,request)};
@@ -123,21 +136,31 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
    };
    const result=await database.commandTransaction(async(query,current)=>{
     if(current.aborted)throw Error();submitted=true;
-    const review='messageId'in request;
+    if('modeVersionId'in request){
+     const value=await query('SELECT crest_commands.save_dropoff_policy($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::uuid,$12::jsonb) AS result',
+      [...args,request.recoveryEpoch,request.operationId,request.modeVersionId,request.body]);
+     current.throwIfAborted();
+     if(exact(value,['state','reason'])&&value.state==='conflict'&&dropoffPolicyConflicts.some(reason=>reason===value.reason))
+      return new PrivateValue(Object.freeze({state:'conflict' as const,reason:value.reason as string}));
+     parseDropoffPolicyCommitted(value,request);
+     return null;
+    }
+    const review='messageId'in request,custody='jobVehicleId'in request;
     const common=[...args,request.recoveryEpoch,request.operationId,
-     'taskId'in request?request.taskId:request.jobId,
-     'expectedVersion'in request?request.expectedVersion:review?request.messageId:request.expectedJobVersion];
-    const versions=review?[request.priorEventId]:
+     custody?request.jobVehicleId:'taskId'in request?request.taskId:request.jobId,
+     custody?request.caseId:'expectedVersion'in request?request.expectedVersion:review?request.messageId:request.expectedJobVersion];
+    const versions=custody?[request.expectedVersion]:review?[request.priorEventId]:
      'departureEventId'in request?[request.legId,request.legVersionId,request.departureEventId]:
      'leftVersionId'in request?[request.leftVersionId,request.rightVersionId]:
      'completionEventId'in request?[request.workVersionId,request.completionEventId]:
      'workVersionId'in request?[request.workVersionId,request.arrivalVersionId]:[];
-    const parameters=versions.map((_,index)=>'$'+(13+index)+'::uuid').concat('$'+(13+versions.length)+'::jsonb').join(',');
+    const parameters=versions.map((_,index)=>'$'+(13+index)+(custody?'::integer':'::uuid')).concat('$'+(13+versions.length)+'::jsonb').join(',');
     const values=[...versions,request.body];
-    const value=await query('SELECT crest_commands.'+prepared.command+'($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,1,$11::uuid,$12::'+(review?'uuid':'bigint')+','+parameters+') AS result',[...common,...values]);if(current.aborted)throw Error();
+    const value=await query('SELECT crest_commands.'+prepared.command+'($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,1,$11::uuid,$12::'+(review||custody?'uuid':'bigint')+','+parameters+') AS result',[...common,...values]);if(current.aborted)throw Error();
     if(exact(value,['state','reason'])&&value.state==='conflict'&&typeof value.reason==='string'&&prepared.conflicts.some(reason=>reason===value.reason))return new PrivateValue(Object.freeze({state:'conflict' as const,reason:value.reason}));
     if(!exact(value,['state','receipt'])||value.state!=='committed')throw Error();
     if('taskId'in request)parseMaintenanceFollowUpCommitted(value,request);
+    if(custody)parseDropoffCustodyCommitted(value,request);
     // Reservation release is checked at COMMIT using the command's operation
     // identity. Original lookup clears that identity in its own transaction.
     return action==='session'?readOriginal(query,current):null;
@@ -156,6 +179,26 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
   mobileDeparture:(credential:string,businessId:string,jobId:string,legId:string,signal:AbortSignal)=>read(credential,businessId,jobId,signal,{legId}),
   correctMobileDeparture:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'mobile-departure'),
   reviewHistory,
+  async dropoffCollections(credential:string,businessId:string,input:CollectionCursor,signal:AbortSignal){
+   const cursor=parseCollectionCursor(input);
+   const value=await readResult(credential,businessId,signal,
+    'SELECT crest_commands.list_dropoff_collections($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::timestamptz,$10::uuid) AS result',
+    [cursor.afterReceivedAt,cursor.afterCaseId]);
+   return new PrivateValue(parseCollectionPage(value,businessId,cursor));
+  },
+  async dropoffCustody(credential:string,businessId:string,jobId:string,jobVehicleId:string,signal:AbortSignal){
+   const value=await readResult(credential,businessId,signal,
+    'SELECT crest_commands.read_dropoff_job_custody($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid) AS result',
+    [jobId,jobVehicleId]);
+   return new PrivateValue(parseDropoffCustody(value,{businessId,jobId,jobVehicleId}));
+  },
+  async dropoffPolicy(credential:string,businessId:string,modeVersionId:string,signal:AbortSignal){
+   const value=await readResult(credential,businessId,signal,
+    'SELECT crest_commands.read_dropoff_policy($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid) AS result',[modeVersionId]);
+   return new PrivateValue(parseDropoffPolicy(value,modeVersionId));
+  },
+  saveCustodyPolicy:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'custody-policy'),
+  saveCustody:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'custody'),
   maintenanceList,
   maintenanceHistory,
   saveMaintenance:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'maintenance'),

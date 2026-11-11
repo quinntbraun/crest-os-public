@@ -66,6 +66,13 @@ const legacy65Bytes=await readFile(join(root,'tests/support/registered65-migrati
 assert.equal(legacy65.migrations.length,65);assert.deepEqual(registry.migrations.slice(0,65),legacy65.migrations);
 const legacy65Coverage=JSON.parse(await readFile(join(root,'tests/support/registered65-export-coverage.json'),'utf8'));
 const legacy65Profile=Object.freeze({schemaVersion:65,registrySha256:hash(legacy65Bytes)});
+const legacy66Bytes=await readFile(join(root,'tests/support/registered66-migration-checksums.json')),legacy66=JSON.parse(legacy66Bytes);
+assert.equal(hash(legacy66Bytes),'f8b1e968201fba0d24b782a9fe3639f0ce6baeea2276eee98c0208ecd0eee28f');
+assert.equal(legacy66.migrations.length,66);assert.deepEqual(registry.migrations.slice(0,66),legacy66.migrations);
+const legacy66CoverageBytes=await readFile(join(root,'tests/support/registered66-export-coverage.json'));
+assert.equal(hash(legacy66CoverageBytes),'93403923d39cf6ba8125ffb5d0114f36a03819396f8bcb3048e1c161a038dcc7');
+const legacy66Coverage=JSON.parse(legacy66CoverageBytes);
+const legacy66Profile=Object.freeze({schemaVersion:66,registrySha256:hash(legacy66Bytes)});
 const legacy52Bytes=await readFile(join(root,'tests/support/registered52-migration-checksums.json')),legacy52=JSON.parse(legacy52Bytes);
 assert.equal(legacy52.migrations.length,52);assert.deepEqual(registry.migrations.slice(0,52),legacy52.migrations);
 const legacy52Profile=Object.freeze({schemaVersion:52,registrySha256:hash(legacy52Bytes)}),legacy52Coverage=JSON.parse(await readFile(join(root,'tests/support/registered52-export-coverage.json'),'utf8')),amendment53Coverage=JSON.parse(await readFile(join(root,'tests/support/amendment53-export-coverage.json'),'utf8'));
@@ -311,6 +318,8 @@ export async function backupLegacy64Database(...args){return backupWithProfile(l
 export async function restoreLegacy64Database(...args){return restoreWithProfile(legacy64Profile,...args);}
 export async function backupLegacy65Database(...args){return backupWithProfile(legacy65Profile,...args);}
 export async function restoreLegacy65Database(...args){return restoreWithProfile(legacy65Profile,...args);}
+export async function backupLegacy66Database(...args){return backupWithProfile(legacy66Profile,...args);}
+export async function restoreLegacy66Database(...args){return restoreWithProfile(legacy66Profile,...args);}
 async function field54CandidateProfile(candidate){
  assert.equal(candidate.file,'20261105180000_field_workspace.sql');
  const bytes=await readFile(join(candidate.directory,'supabase/migration-checksums.json')),value=JSON.parse(bytes);
@@ -324,19 +333,167 @@ export async function backupField54CandidateDatabase(candidate,client,...args){
  return backupWithProfile(checked.profile,client,...args);
 }
 export async function restoreField54CandidateDatabase(candidate,...args){return restoreWithProfile((await field54CandidateProfile(candidate)).profile,...args);}
-async function backupWithProfile(profile,client,url,directory,recipient,duringSnapshot=async()=>{},objectCapture){
+const dropoffCandidateCoverage={
+  ...legacy66Coverage,
+  tables:[
+    ...legacy66Coverage.tables,
+    {table:'crest.custody_cases',scope:'business',
+      required:['id','business_id','job_id','job_vehicle_id','vehicle_id','mode','version','state','current_event_id'],
+      excluded:[],partialEvidenceGroup:null},
+    {table:'crest.custody_events',scope:'business',
+      required:['id','business_id','case_id','version','prior_version','action','effective_at','recorded_at',
+        'person_snapshot','location_snapshot','notes','missing_photo_reason','created_by','operation_id','origin'],
+      excluded:[],partialEvidenceGroup:null}
+  ]
+};
+const dropoffCommandCoverage={
+  ...dropoffCandidateCoverage,
+  tables:[
+    ...legacy66Coverage.tables,
+    {...dropoffCandidateCoverage.tables.at(-2),required:[...dropoffCandidateCoverage.tables.at(-2).required,'authorization_config_id']},
+    {...dropoffCandidateCoverage.tables.at(-1),required:[...dropoffCandidateCoverage.tables.at(-1).required,
+      'acknowledgement_confirmed','condition_photo_id']},
+    {table:'crest.custody_authorization_configs',scope:'business',
+      required:['id','business_id','mode_version_id','acknowledgement_text','condition_photo_required'],
+      excluded:[],partialEvidenceGroup:null},
+    {table:'crest.custody_photo_attempts',scope:'business',
+      required:['id','business_id','job_id','job_vehicle_id','vehicle_id','case_id','handoff_version','actor_id',
+        'recovery_epoch','dispatch_id','declared_type','byte_size','reserved_at'],
+      excluded:[],partialEvidenceGroup:null},
+    {table:'crest.custody_photo_originals',scope:'business',
+      required:['business_id','photo_id','detected_type','byte_size','sha256','validation_version','width','height',
+        'display_width','display_height','bit_depth','preview_sha256','preview_byte_size','preview_width','preview_height','verified_at'],
+      excluded:[],partialEvidenceGroup:null}
+  ]
+};
+async function dropoffCandidateProfile(withCommands=false,withPolicy=false){
+  assert.equal(legacy66Profile.schemaVersion,66);
+  assert.equal(hash(legacy66Bytes),'f8b1e968201fba0d24b782a9fe3639f0ce6baeea2276eee98c0208ecd0eee28f');
+  const proposal=await readFile(join(root,'planning/proposals/dropoff-custody-storage.sql'));
+  const heldDropoffProposalSha256=hash(proposal);
+  assert.equal(heldDropoffProposalSha256,'229d2ad7460ed9525e1179d3631cb5617eb077c00960cbf0ac19bc1b767ea58e');
+  const profile={...legacy66Profile,heldDropoffProposalSha256};
+  if(!withCommands)return profile;
+  const heldDropoffCommandsSha256=hash(await readFile(join(root,'planning/proposals/dropoff-custody-commands.sql')));
+  assert.equal(heldDropoffCommandsSha256,'e92c75c760b7611d8af1c7fb6d641d53c1b669b1c8503d551d869a2079459cf4');
+  const heldDropoffPhotosSha256=hash(await readFile(join(root,'planning/proposals/dropoff-custody-photos.sql')));
+  assert.equal(heldDropoffPhotosSha256,'3cb3deab2d85c08d8b2b5a0f91e15b86256d2c3e174e2bdb74ab029bc3876126');
+  const commandProfile={...profile,heldDropoffCommandsSha256,heldDropoffPhotosSha256};
+  if(!withPolicy)return commandProfile;
+  const heldDropoffPolicySources={
+    reads:'8e9817ac68e46cac6070b11973c8d755d78dab011e3cea9e8584e2251631a7e3',
+    policy:'91ed3c4535d9834a89ac99b4f5c1c6dc87ed4f4aec5378f9af679a76fc11d185',
+    originals:'17156abaa1319ecb2da7f7c9136a7f950dada870c2773343eec13ab9dabe77f6'
+  };
+  for(const [part,digest] of Object.entries(heldDropoffPolicySources)){
+    assert.equal(hash(await readFile(join(root,'planning/proposals/dropoff-custody-'+part+'.sql'))),digest);
+  }
+  return {...commandProfile,heldDropoffPolicySources};
+}
+export async function backupDropoffCandidateDatabase(...args){
+  return backupWithProfile(await dropoffCandidateProfile(),...args);
+}
+export async function restoreDropoffCandidateDatabase(...args){
+  return restoreWithProfile(await dropoffCandidateProfile(),...args);
+}
+export async function backupDropoffCommandDatabase(...args){
+  return backupWithProfile(await dropoffCandidateProfile(true),...args);
+}
+export async function restoreDropoffCommandDatabase(...args){
+  return restoreWithProfile(await dropoffCandidateProfile(true),...args);
+}
+export async function backupDropoffPolicyDatabase(...args){
+  return backupWithProfile(await dropoffCandidateProfile(true,true),...args);
+}
+export async function restoreDropoffPolicyDatabase(...args){
+  return restoreWithProfile(await dropoffCandidateProfile(true,true),...args);
+}
+async function dropoffPhotoProfile(){
+  const profile=await dropoffCandidateProfile(true,true);
+  const heldDropoffPhotoAuthority=hash(await readFile(join(root,'planning/proposals/dropoff-custody-photo-commands.sql')));
+  assert.equal(heldDropoffPhotoAuthority,'6aeda567169e88aa1daad516064a4635faeb37dc3b94a6c265b612604a449f74');
+  return {...profile,heldDropoffPhotoAuthority};
+}
+export async function backupDropoffPhotoDatabase(client,url,directory,recipient,objectCapture){
+  assert(objectCapture);
+  return backupWithProfile(await dropoffPhotoProfile(),client,url,directory,recipient,undefined,objectCapture);
+}
+export async function restoreDropoffPhotoDatabase(directory,identity,url,restoreObjects){
+  assert.equal(typeof restoreObjects,'function');
+  return restoreWithProfile(await dropoffPhotoProfile(),directory,identity,url,restoreObjects);
+}
+async function dropoffPhotoAccessProfile(){
+  const profile=await dropoffPhotoProfile();
+  const sourceSha256=hash(await readFile(join(root,'planning/proposals/dropoff-custody-photo-access.sql')));
+  assert.equal(sourceSha256,'8cecaee637196581da81af56ba7bb3f6de83c2d5eb297395a463fa87baa4dd13');
+  return {...profile,heldDropoffPhotoAccess:sourceSha256};
+}
+export async function backupDropoffPhotoAccessDatabase(client,url,directory,recipient,objectCapture){
+  assert(objectCapture);
+  return backupWithProfile(await dropoffPhotoAccessProfile(),client,url,directory,recipient,undefined,objectCapture);
+}
+export async function restoreDropoffPhotoAccessDatabase(directory,identity,url,restoreObjects){
+  assert.equal(typeof restoreObjects,'function');
+  return restoreWithProfile(await dropoffPhotoAccessProfile(),directory,identity,url,restoreObjects);
+}
+async function dropoffWorkProfile(){
+  const profile=await dropoffPhotoAccessProfile();
+  const heldDropoffWorkSources={
+    work:'a50f9d3627a190ee67d071fc1bfb8829145e70af0e39dbd4a12af225a3e73f9e',
+    completion:'f5b2a8255932e558d10cd401a7dce5ad6e7db8c01f2ad704d60b7ee007f50d04',
+    queue:'11d0a126e7639e64426b4cb5b12ede3f5ced0c22728a118fb94df3f1e052b25b'
+  };
+  for(const [part,digest] of Object.entries(heldDropoffWorkSources)){
+    assert.equal(hash(await readFile(join(root,'planning/proposals/dropoff-custody-'+part+'.sql'))),digest);
+  }
+  return {...profile,heldDropoffWorkSources};
+}
+export async function backupDropoffWorkDatabase(client,url,directory,recipient,objectCapture){
+  assert(objectCapture);
+  return backupWithProfile(await dropoffWorkProfile(),client,url,directory,recipient,undefined,objectCapture);
+}
+export async function restoreDropoffWorkDatabase(directory,identity,url,restoreObjects){
+  assert.equal(typeof restoreObjects,'function');
+  return restoreWithProfile(await dropoffWorkProfile(),directory,identity,url,restoreObjects);
+}
+async function dropoff67RecoveryProfile(candidate){
+  const frozenBytes=await readFile(join(root,'tests/support/registered66-migration-checksums.json'));
+  assert.equal(hash(frozenBytes),'f8b1e968201fba0d24b782a9fe3639f0ce6baeea2276eee98c0208ecd0eee28f');
+  const frozen=JSON.parse(frozenBytes),bytes=await readFile(join(candidate.directory,'supabase/migration-checksums.json'));
+  const registered=JSON.parse(bytes);assert.equal(registered.migrations.length,67);
+  assert.deepEqual(registered.migrations.slice(0,66),frozen.migrations);
+  assert.equal(candidate.file,'20261121180000_dropoff_custody.sql');
+  assert.equal(hash(bytes),candidate.registrySha256);
+  assert.equal(registered.migrations.at(-1).file,candidate.file);
+  assert.equal(registered.migrations.at(-1).sha256,candidate.sha256);
+  assert.equal(hash(await readFile(join(candidate.directory,'supabase/migrations',candidate.file))),candidate.sha256);
+  return {profile:Object.freeze({schemaVersion:67,registrySha256:candidate.registrySha256,
+    heldCustody67MigrationSha256:candidate.sha256}),
+    versions:registered.migrations.map(row=>row.version),coverage:{...dropoffCommandCoverage,migrationCount:67}};
+}
+export async function backupDropoff67CandidateDatabase(candidate,client,url,directory,recipient,objectCapture){
+  assert(objectCapture);const checked=await dropoff67RecoveryProfile(candidate);
+  return backupWithProfile(checked.profile,client,url,directory,recipient,undefined,objectCapture,checked);
+}
+export async function restoreDropoff67CandidateDatabase(candidate,directory,identity,url,restoreObjects){
+  assert.equal(typeof restoreObjects,'function');
+  return restoreWithProfile((await dropoff67RecoveryProfile(candidate)).profile,directory,identity,url,restoreObjects);
+}
+async function backupWithProfile(profile,client,url,directory,recipient,duringSnapshot=async()=>{},objectCapture,custody67Snapshot){
+  assert(custody67Snapshot===undefined||profile.schemaVersion===67&&profile.heldCustody67MigrationSha256);
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   try{
     const snapshot=(await client.query('SELECT pg_export_snapshot() AS value')).rows[0].value;
-    if(profile===currentProfile||profile===legacy65Profile||profile===legacy64Profile||profile===legacy63Profile||profile===legacy62Profile||profile===legacy61Profile||profile===legacy60Profile||profile===legacy59Profile||profile===legacy58Profile||profile===legacy57Profile||profile===legacy56Profile||profile===legacy55Profile||profile===legacy52Profile||profile.schemaVersion===53||profile.schemaVersion===54){
+    if(custody67Snapshot||profile===currentProfile||profile===legacy66Profile||profile.heldDropoffProposalSha256||profile===legacy65Profile||profile===legacy64Profile||profile===legacy63Profile||profile===legacy62Profile||profile===legacy61Profile||profile===legacy60Profile||profile===legacy59Profile||profile===legacy58Profile||profile===legacy57Profile||profile===legacy56Profile||profile===legacy55Profile||profile===legacy52Profile||profile.schemaVersion===53||profile.schemaVersion===54){
       // A matching migration ordinal alone cannot label a construction schema
       // with an additional source column as the registered current profile.
       // Check the actual columns in the same held snapshot used by the dump.
-      const versions=profile.schemaVersion===54?field54Versions:
-        (profile===legacy65Profile?legacy65:profile===legacy64Profile?legacy64:profile===legacy63Profile?legacy63:profile===legacy62Profile?legacy62:profile===legacy61Profile?legacy61:profile===legacy60Profile?legacy60:profile===legacy59Profile?legacy59:profile===legacy58Profile?legacy58:profile===legacy57Profile?legacy57:profile===legacy56Profile?legacy56:profile===legacy55Profile?legacy55:profile.schemaVersion===53?legacy53:profile===legacy52Profile?legacy52:registry).migrations.map(row=>row.version);
+      const versions=custody67Snapshot?custody67Snapshot.versions:
+        profile.heldDropoffProposalSha256?legacy66.migrations.map(row=>row.version):profile.schemaVersion===54?field54Versions:
+        (profile===legacy66Profile?legacy66:profile===legacy65Profile?legacy65:profile===legacy64Profile?legacy64:profile===legacy63Profile?legacy63:profile===legacy62Profile?legacy62:profile===legacy61Profile?legacy61:profile===legacy60Profile?legacy60:profile===legacy59Profile?legacy59:profile===legacy58Profile?legacy58:profile===legacy57Profile?legacy57:profile===legacy56Profile?legacy56:profile===legacy55Profile?legacy55:profile.schemaVersion===53?legacy53:profile===legacy52Profile?legacy52:registry).migrations.map(row=>row.version);
       stage='coverage';assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(row=>row.version),versions);
       const columns=(await client.query("SELECT n.nspname||'.'||c.relname AS \"table\",a.attname AS \"column\" FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN('crest','crest_private') AND c.relkind IN('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2")).rows;
-      const coverage=profile===legacy65Profile?legacy65Coverage:profile===legacy64Profile?legacy64Coverage:profile===legacy63Profile?legacy63Coverage:profile===legacy62Profile?legacy62Coverage:profile===legacy61Profile?legacy61Coverage:profile===legacy60Profile?legacy60Coverage:profile===legacy59Profile?legacy59Coverage:profile===legacy58Profile?legacy58Coverage:profile===legacy57Profile?legacy57Coverage:profile===legacy56Profile?legacy56Coverage:profile===legacy55Profile?legacy55Coverage:profile===legacy53Profile?legacy53Coverage:profile.schemaVersion===54?field54Coverage:profile===legacy52Profile?legacy52Coverage:profile.schemaVersion===53?amendment53Coverage:currentCoverage;
+      const coverage=custody67Snapshot?custody67Snapshot.coverage:profile.heldDropoffCommandsSha256?dropoffCommandCoverage:profile.heldDropoffProposalSha256?dropoffCandidateCoverage:profile===legacy66Profile?legacy66Coverage:profile===legacy65Profile?legacy65Coverage:profile===legacy64Profile?legacy64Coverage:profile===legacy63Profile?legacy63Coverage:profile===legacy62Profile?legacy62Coverage:profile===legacy61Profile?legacy61Coverage:profile===legacy60Profile?legacy60Coverage:profile===legacy59Profile?legacy59Coverage:profile===legacy58Profile?legacy58Coverage:profile===legacy57Profile?legacy57Coverage:profile===legacy56Profile?legacy56Coverage:profile===legacy55Profile?legacy55Coverage:profile===legacy53Profile?legacy53Coverage:profile.schemaVersion===54?field54Coverage:profile===legacy52Profile?legacy52Coverage:profile.schemaVersion===53?amendment53Coverage:currentCoverage;
       verifyExportCoverage(coverage,columns,profile.schemaVersion);
     }
     // Coverage has passed. Pending-object/source refusal belongs to snapshot
@@ -390,6 +547,15 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     stage='manifest';const manifest=JSON.parse((await unseal(join(directory,'manifest.age'),receipt.manifest,identity)).toString());
     assert.equal(manifest.formatVersion,1);assert.equal(manifest.scope,'synthetic_database_drill');assert.equal(manifest.completeBackup,false);
     assert.equal(manifest.schemaVersion,profile.schemaVersion);assert.equal(manifest.registrySha256,profile.registrySha256);assert.equal(manifest.databaseImage,pins.testDatabaseImage);
+    assert.equal(manifest.heldDropoffProposalSha256,profile.heldDropoffProposalSha256);
+    assert.equal(manifest.heldDropoffCommandsSha256,profile.heldDropoffCommandsSha256);
+    assert.equal(manifest.heldDropoffPhotosSha256,profile.heldDropoffPhotosSha256);
+    assert.deepEqual(manifest.heldDropoffPolicySources,profile.heldDropoffPolicySources);
+    assert.equal(manifest.heldDropoffPhotoAuthority,profile.heldDropoffPhotoAuthority);
+    assert.equal(manifest.heldDropoffPhotoAccess,profile.heldDropoffPhotoAccess);
+    assert.deepEqual(manifest.heldDropoffWorkSources,profile.heldDropoffWorkSources);
+    assert.equal(manifest.heldCustody67MigrationSha256,profile.heldCustody67MigrationSha256);
+    if(profile.heldDropoffPhotoAuthority||profile.heldCustody67MigrationSha256)assert(manifest.objectArchive);
     stage='authenticated_dump';const dump=await unseal(join(directory,'database.age'),receipt.dump,identity);
     assert.equal(dump.length,manifest.dump.bytes);assert.equal(hash(dump),manifest.dump.sha256);assert.equal(dump.subarray(0,5).toString(),'PGDMP');
     stage='objects';if(manifest.objectArchive){assert.equal(typeof restoreObjects,'function');await restoreObjects(manifest.objectArchive);}

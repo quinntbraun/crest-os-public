@@ -8,6 +8,7 @@ export const browserGroups = Object.freeze({
   amendments: group('quote-amendment-workspace-browser','quote-amendment-acceptance-product-browser'),
   schedule: group('appointment-holds-browser','appointment-holds-product-browser','confirmed-bookings-product-browser','book-job-product-browser','job-change-product-browser','booking-divisions-product-browser','combined-booking-product-browser','fulfillment-modes-product-browser','booking-conflict-review-product-browser'),
   field: group('field-work-product-browser','work-completion-product-browser','mileage-product-browser','support-trip-product-browser','trip-interruption-product-browser','unfulfilled-cancellation-product-browser','job-work-time-product-browser','job-work-boundary-product-browser','maintenance-reminders-product-browser'),
+  custody: group('dropoff-custody-product-browser'),
   records: group('source-export-browser','source-export-product-browser','workspace-journey-browser','owner-expenses-product-browser')
 });
 export type BrowserGroup = keyof typeof browserGroups;

@@ -12,6 +12,7 @@
 !scripts/
 !scripts/build-server.mjs
 !scripts/install-pdf-tools.mjs
+!scripts/fetch-release-asset.mjs
 !scripts/install-heic-tools.mjs
 !release/
 !release/toolchain.json

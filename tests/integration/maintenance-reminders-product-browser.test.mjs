@@ -59,8 +59,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   async function saveAndRefresh(buttonName){
    const submitted=page.waitForResponse(response=>response.url().endsWith('/api/business/scheduling/maintenance-save'));
    await panel.getByRole('button',{name:buttonName,exact:true}).click();
-   const response=await submitted,result=await response.json();
-   assert.equal(response.status(),200,JSON.stringify({reason:result.reason,error:result.error}));
+   // Browser navigation can discard DevTools' response body. The app must
+   // still confirm the saved response and the journey verifies the records.
+   assert.equal((await submitted).status(),200);
    await expect(panel.getByRole('status')).toHaveText('Maintenance reminder saved.',{timeout:20000});
   }
   await disclosure.focus();await page.keyboard.press('Enter');
