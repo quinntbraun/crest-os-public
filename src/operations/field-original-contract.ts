@@ -1,7 +1,7 @@
 import {customerUuid as uuid,customerVersion as version,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {parseOriginalOperationReference} from '../security/original-operation-reference.ts';
 import type {OriginalOperationReference} from '../security/original-operation-reference.ts';
-export const fieldOriginalKinds=['operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.job.work_boundary.correct','operations.job.work_start.correct','operations.job.work_end.correct','operations.mobile_departure.correct','operations.message.record_outcome','operations.follow_up.save','operations.custody.save','operations.custody.policy.save','operations.mileage.record','operations.support_trip.record','operations.support_trip.correct'] as const;
+export const fieldOriginalKinds=['operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.job.work_boundary.correct','operations.job.work_start.correct','operations.job.work_end.correct','operations.mobile_departure.correct','operations.message.record_outcome','operations.follow_up.save','operations.custody.save','operations.custody.policy.save','operations.custody.policy.revise','operations.mileage.record','operations.support_trip.record','operations.support_trip.correct'] as const;
 export type FieldOriginalKind=typeof fieldOriginalKinds[number];
 export type FieldOriginal=Extract<OriginalOperationReference,{commandType:FieldOriginalKind}>;
 export class FieldOriginalError extends Error{constructor(){super('FIELD_ORIGINAL_REVIEW_REQUIRED');this.name='FieldOriginalError';}}
@@ -39,6 +39,10 @@ export function parseFieldOriginalResult(value:unknown,input:FieldOriginal){
  }
  else if(original.commandType==='operations.custody.policy.save'){
   check(r.subjectId===original.reference.modeVersionId&&r.sourceRecordId===ref.operationId&&r.sourceVersion==='1'&&r.sourceAuditIds.length===1);
+ }
+ else if(original.commandType==='operations.custody.policy.revise'){
+  check(r.subjectId===original.reference.modeVersionId&&r.sourceRecordId===ref.operationId&&
+   BigInt(r.sourceVersion)>1n&&r.sourceAuditIds.length===2);
  }
  else if(original.commandType==='operations.custody.save'){
   check(r.subjectId===original.reference.caseId&&r.sourceRecordId!==r.subjectId&&

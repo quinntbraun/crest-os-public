@@ -28,6 +28,7 @@ import {parseAmendedBookedJobCommitted,parseAmendedCancelledJobCommitted} from '
 import {parseFulfillmentModeCommitted} from './fulfillment-mode-contract.ts';
 import {formatDropoffCustodySources} from './dropoff-custody-source.ts';
 import type {CustodySourceInput} from './dropoff-custody-source.ts';
+import {dropoffPolicyRevisionKind} from './dropoff-custody-contract.ts';
 
 type Row=Readonly<Record<string,unknown>>;
 type Snapshot<T>=Readonly<{businessId:string;snapshotToken:string;expectedRowCount:string;rows:readonly T[]}>;
@@ -44,7 +45,7 @@ function check(v:unknown):asserts v{if(!v)throw new FieldWorkspaceSourceError();
 function object(v:unknown):asserts v is Record<string,unknown>{check(!!v&&typeof v==='object'&&!Array.isArray(v));}
 const sha=(v:string)=>createHash('sha256').update(v,'utf8').digest('hex');
 const commands={
- fulfillment_modes:['operations.fulfillment_modes.initialize','operations.fulfillment_modes.save','operations.job.book'],
+ fulfillment_modes:['operations.fulfillment_modes.initialize','operations.fulfillment_modes.save','operations.job.book',dropoffPolicyRevisionKind],
  operator_controls:['operations.job.book','operations.support_trip.record'],
  jobs:['operations.job.book','operations.job.reschedule','operations.job.cancel','quote.amendment.accept','operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.job.work_start.correct','operations.job.work_end.correct'],
  appointments:['operations.job.book','operations.job.reschedule','operations.job.cancel','quote.amendment.accept','operations.job.interrupt','operations.job.cancel_unfulfilled'],
@@ -105,6 +106,7 @@ export function formatFieldWorkspaceSources(input:FieldWorkspaceSourceInput){
    for(const [index,a]of values.entries()){
     const kind=String(a.entity_kind) as keyof typeof commands,group=(kind==='fulfillment_modes'?'fulfillment_mode_versions':kind) as BookingRecordGroup,op=operationFor(a),v=delta(a),revision=String(index+1);
     check(a.entity_version===revision&&historyJsonEqual(v.before,before)&&commands[kind].some(k=>k===op.command_type));
+    if(op.command_type===dropoffPolicyRevisionKind)check(custody&&kind==='fulfillment_modes'&&index>0);
     const release=kind==='schedule_reservations'&&index===1;
     const acceptedPlan=op.command_type==='quote.amendment.accept'&&(kind==='allocation_plan_versions'||kind==='allocation_plan_parts');
     check(a.action===(acceptedPlan?'accept':kind==='fulfillment_modes'?index===0?'initialize':'revise':release?'release':index===0?'create':'revise'));

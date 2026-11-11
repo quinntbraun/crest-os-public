@@ -335,6 +335,11 @@
       "version": "20261121180000",
       "file": "20261121180000_dropoff_custody.sql",
       "sha256": "cd006b45b809ad13beb4d1b1cf1d5e9be7a41fe26765717c0b3124ccc444a981"
+    },
+    {
+      "version": "20261122180000",
+      "file": "20261122180000_dropoff_policy_revision.sql",
+      "sha256": "9e968b4ef0f9eb6e665d093f28a4f522c4512f8248e7a55ef94dd7739f36831b"
     }
   ]
 }

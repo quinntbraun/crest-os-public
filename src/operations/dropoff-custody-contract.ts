@@ -1,8 +1,10 @@
-import {customerInstant as instant,customerUuid as uuid,exactCustomerObject as exact} from '../customer/customer-contract.ts';
+import {customerInstant as instant,customerUuid as uuid,customerVersion as version,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {parseBookingLocation,requireBooking as check} from './confirmed-booking-contract.ts';
 import {parseFieldOriginal,parseFieldOriginalResult} from './field-original-contract.ts';
 
 export const dropoffPolicyKind='operations.custody.policy.save' as const;
+export const dropoffPolicyRevisionKind='operations.custody.policy.revise' as const;
+export const dropoffPolicyRevisionConflicts=['operation','version','unchanged'] as const;
 export const dropoffPolicyConflicts=['mode','configured','operation'] as const;
 export const dropoffCustodyKind='operations.custody.save' as const;
 export const dropoffCustodyConflicts=['operation','job','version','policy','photo','acknowledgement','vehicle_held'] as const;
@@ -141,6 +143,45 @@ export function parseDropoffPolicyCommitted(value:unknown,request:DropoffPolicyS
 }
 export function parseDropoffPolicyAcknowledgement(value:unknown,request:DropoffPolicySave){
  const original=dropoffPolicyOriginal(request),result=parseFieldOriginalResult(value,original);
+ check(result.state==='committed');
+ return Object.freeze({schemaVersion:1 as const,original,result});
+}
+
+export function parseDropoffPolicyRevision(value:unknown){
+ check(exact(value,['schemaVersion','businessId','operationId','recoveryEpoch','modeVersionId','policyId','body'])&&
+  value.schemaVersion===1&&uuid(value.businessId)&&uuid(value.operationId)&&uuid(value.recoveryEpoch)&&
+  uuid(value.modeVersionId)&&uuid(value.policyId));
+ const body=value.body;
+ check(exact(body,['acknowledgementText','conditionPhotoRequired','reason'])&&
+  (body.acknowledgementText===null||text(body.acknowledgementText,2000))&&
+  typeof body.conditionPhotoRequired==='boolean'&&text(body.reason,1000));
+ return Object.freeze({schemaVersion:1 as const,businessId:value.businessId,operationId:value.operationId,
+  recoveryEpoch:value.recoveryEpoch,modeVersionId:value.modeVersionId,policyId:value.policyId,
+  body:Object.freeze({acknowledgementText:body.acknowledgementText,conditionPhotoRequired:body.conditionPhotoRequired,reason:body.reason})});
+}
+export type DropoffPolicyRevision=ReturnType<typeof parseDropoffPolicyRevision>;
+
+export function dropoffPolicyRevisionOriginal({businessId,operationId,recoveryEpoch,modeVersionId,policyId}:DropoffPolicyRevision){
+ return parseFieldOriginal({schemaVersion:1,businessId,commandType:dropoffPolicyRevisionKind,
+  reference:{operationId,recoveryEpoch,modeVersionId,policyId}});
+}
+
+export function parseDropoffPolicyRevisionCommitted(value:unknown,request:DropoffPolicyRevision){
+ check(exact(value,['state','operationId','recoveryEpoch','receipt'])&&value.state==='committed'&&
+  value.operationId===request.operationId&&value.recoveryEpoch===request.recoveryEpoch);
+ const receipt=value.receipt;
+ check(exact(receipt,['schemaVersion','priorModeVersionId','priorPolicyId','sequence','policy','modeAuditId','policyAuditId'])&&
+  receipt.schemaVersion===1&&receipt.priorModeVersionId===request.modeVersionId&&receipt.priorPolicyId===request.policyId&&
+  version(receipt.sequence)&&BigInt(receipt.sequence)>1n&&uuid(receipt.modeAuditId)&&uuid(receipt.policyAuditId)&&
+  receipt.modeAuditId!==receipt.policyAuditId&&exact(receipt.policy,['id','modeVersionId','acknowledgementText','conditionPhotoRequired'])&&
+  uuid(receipt.policy.modeVersionId)&&receipt.policy.modeVersionId!==request.modeVersionId);
+ const policy=parseDropoffPolicy(receipt.policy,receipt.policy.modeVersionId);
+ check(!('state'in policy)&&policy.id===request.operationId&&policy.acknowledgementText===request.body.acknowledgementText&&
+  policy.conditionPhotoRequired===request.body.conditionPhotoRequired);
+}
+
+export function parseDropoffPolicyRevisionAcknowledgement(value:unknown,request:DropoffPolicyRevision){
+ const original=dropoffPolicyRevisionOriginal(request),result=parseFieldOriginalResult(value,original);
  check(result.state==='committed');
  return Object.freeze({schemaVersion:1 as const,original,result});
 }

@@ -13,6 +13,7 @@ export function originalOperationFixture(kind:OriginalOperationKind='crm.custome
  'operations.mobile_departure.correct':{jobId:id,expectedJobVersion:'3',legId:randomUUID(),legVersionId:randomUUID(),departureEventId:randomUUID()},
  'operations.message.record_outcome':{jobId:id,messageId:randomUUID(),priorEventId:randomUUID(),action:'owner_confirmed_sent'},
  'operations.custody.policy.save':{modeVersionId:id},
+ 'operations.custody.policy.revise':{modeVersionId:id,policyId:randomUUID()},
  'operations.custody.save':{jobVehicleId:id,caseId:randomUUID(),expectedVersion:'0'},
  'operations.follow_up.save':{taskId:id,expectedVersion:'0',action:'created'},
  'operations.job.work_boundary.correct':{jobId:id,expectedJobVersion:'3',leftVersionId:randomUUID(),rightVersionId:randomUUID()},

@@ -12,5 +12,14 @@ it('refuses missing, duplicate, no-op or mismatched head evidence',async()=>{
  const f=modeHistoryFixture(3),head=f.versions.at(-1)!;
  for(const rows of [f.versions.slice(1),[f.versions[0],f.versions[2]],[f.versions[0],{...f.versions[1],id:f.versions[0]!.id},head],[f.versions[0],{...f.versions[1],operation_id:f.versions[0]!.operation_id},head],[f.versions[0],{...f.versions[1],dropoff_enabled:true},head],[...f.versions.slice(0,2),{...head,reason:'Changed head text'}]])await expect(buildFulfillmentModeArchive(f.businessId,head,rows)).rejects.toThrow();
 });
+it('retrieves same-flag history only for enabled Drop-Off policy revisions',async()=>{
+ const f=modeHistoryFixture(3),prior=f.versions[0]!;
+ f.versions[1]={...f.versions[1]!,dropoff_enabled:prior.dropoff_enabled,reason:'Require a photo at handoff'};
+ const rows=f.versions.slice(0,2),head=rows.at(-1)!;
+ const parts=unzipSync(await buildFulfillmentModeArchive(f.businessId,head,rows,true));
+ expect(JSON.parse(strFromU8(parts['saved_history.json']!)).versions).toEqual(rows);
+ const disabled={...head,dropoff_enabled:false},disabledRevision={...f.versions[2]!,dropoff_enabled:false};
+ await expect(buildFulfillmentModeArchive(f.businessId,disabledRevision,[prior,disabled,disabledRevision],true)).rejects.toThrow();
+});
 it('does not invent chronological monotonicity when retained wall clocks differ',async()=>{const f=modeHistoryFixture();f.versions[1]={...f.versions[1]!,created_at:'2026-10-01T01:00:00.123456Z'};expect(await buildFulfillmentModeArchive(f.businessId,f.versions.at(-1),f.versions)).toBeInstanceOf(Uint8Array);});
 it('enforces the disclosed version bound without truncating history',async()=>{const f=modeHistoryFixture(1001);await expect(buildFulfillmentModeArchive(f.businessId,f.versions.at(-1),f.versions)).rejects.toThrow();});

@@ -23,7 +23,8 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  const needsScreenshots=['commercial','amendments','schedule','field','custody','records'].includes(selected);
  const requiredViewsByGroup={
   field:['field-departure','field-pause','completion-editor','completion-saved','mileage-form','mileage-split','mileage-saved','field-cancellation','field-work-time','field-work-boundary','mileage-departure-correction','completion-outcome','completion-history','field-maintenance-history'],
-  custody:['field-dropoff-intake','field-dropoff-work','field-dropoff-cancellation','field-dropoff-completion','field-dropoff-collections','field-dropoff-history']
+  custody:['field-dropoff-intake','field-dropoff-work','field-dropoff-cancellation','field-dropoff-completion',
+   'field-dropoff-collections','field-dropoff-history','field-dropoff-policy-revision']
  };
  const requiredViews=requiredViewsByGroup[selected]??[];
  const requiredScreenshots=requiredViews.flatMap(view=>['chromium','webkit'].flatMap(engine=>
