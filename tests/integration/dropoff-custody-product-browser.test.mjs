@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {createHash,randomUUID} from 'node:crypto';
 import {mkdir,readFile} from 'node:fs/promises';
 import {test} from 'node:test';
+import {setTimeout as delay} from 'node:timers/promises';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import sharp from 'sharp';
@@ -60,6 +61,20 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
   await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
+
+  async function allowReadWindow(){
+   // As in the genuine job-change journey, pace this multi-screen synthetic
+   // scenario against its existing rolling budget. Do not reset admissions,
+   // adjust the database clock, or retry a command.
+   const cookie=(await context.cookies(fixture.origin)).find(row=>row.name==='__Host-crest_session');assert(cookie);
+   const hash=createHash('sha256').update(cookie.value,'ascii').digest();let rows;
+   try{rows=(await fixture.client.query("SELECT greatest(0,ceil(extract(epoch FROM a.admitted_at+interval '1 minute'-clock_timestamp())*1000))::int AS wait_ms FROM crest_private.session_request_admissions a JOIN crest_private.app_sessions s ON s.id=a.session_id WHERE s.token_hash=$1 AND a.bucket='ordinary' AND a.admitted_at>clock_timestamp()-interval '1 minute' ORDER BY a.admitted_at",[hash])).rows;}finally{hash.fill(0);}
+   assert(rows.length<=120);
+   const release=rows[rows.length+24-120-1];if(!release)return;
+   assert(Number.isSafeInteger(release.wait_ms)&&release.wait_ms>=0&&release.wait_ms<=60000);
+   console.log('Synthetic custody read window at '+rows.length+' recent requests.');
+   await delay(release.wait_ms+100);
+  }
 
   const post=(route,body)=>page.evaluate(async({route,body})=>{
    const auth=await fetch('/api/auth/session',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
@@ -246,6 +261,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
      await page.reload();
     }
     await expect(workStatus).toContainText('Job cancelled.');assert.equal(submitted,1);
+    await allowReadWindow();
     await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
     await loadCollections();
     await expect(collectionList.getByText('Return required',{exact:true})).toBeVisible();
@@ -253,6 +269,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
     await vehicle.click();await panel.getByRole('button',{name:'Load custody history',exact:true}).click();
     await expect(panel.getByText('Return required',{exact:true})).toBeVisible();
     const before=await downloadCustodyHistory(page,panel);assert.equal(before.state,'return_required');
+    await allowReadWindow();
     await page.reload();await vehicle.click();await panel.getByRole('button',{name:'Load custody history',exact:true}).click();
     await expect(panel.getByText('Return required',{exact:true})).toBeVisible();
     await fillHandoff(new Date().toISOString().slice(0,19),'Synthetic return recipient',true);
@@ -294,6 +311,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
     await page.screenshot({path:'.local/review/field-dropoff-completion-'+name+'-'+width+'.png',fullPage:true});
    }
    await page.setViewportSize({width:390,height:844});
+   await allowReadWindow();
    await completion.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
    await loadCollections();
    await expect(collectionList.getByRole('status')).toHaveText('Saved vehicle collections loaded.');
@@ -307,6 +325,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
     await page.screenshot({path:'.local/review/field-dropoff-collections-'+name+'-'+width+'.png'});
    }
    await page.setViewportSize({width:390,height:844});
+   await allowReadWindow();
    await page.route('**/api/business/scheduling/custody-collections',route=>route.abort(),{times:1});
    await collectionList.getByRole('button',{name:'Reload vehicle collections',exact:true}).click();
    await expect(collectionList.getByRole('status')).toHaveText('Vehicle collections could not be verified. Reload to try again.');
@@ -326,6 +345,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
    assert.deepEqual((await post('completion-context',{jobId})).value,savedCompletion.value);
    await loadCollections();
    await expect(collectionList.getByRole('status')).toHaveText('No vehicles are awaiting collection or return.');
+   await allowReadWindow();
    await page.getByRole('link',{name:'Review saved completion',exact:true}).click();
    await expect(workStatus).toHaveText('Saved completion loaded.');
    assert.equal((await fixture.client.query('SELECT count(*)::int count FROM crest.travel_legs WHERE business_id=$1 AND job_context_id=$2',[fixture.business,jobId])).rows[0].count,0);

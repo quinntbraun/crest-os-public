@@ -33,13 +33,23 @@ export function createScheduleReader(deps:{change:(view:ScheduleReadView)=>void;
   try{return await work(controller.signal);}catch(error){if(alive&&!controller.signal.aborted&&active===controller){clear();emit({phase:error instanceof AuthenticationError&&error.kind==='denied'?'signed-out':'unavailable',message:error instanceof AuthenticationError&&error.kind==='denied'?'Sign in to view your schedule.':'The schedule could not be verified. Check the connection and reload.'});}}
   finally{if(active===controller){active=null;emit({});}}
  }
- const load=(dates?:Dates)=>run(async signal=>{
-  clear();emit({phase:'loading',message:'Loading saved jobs and proposed changes…'});const {proof,businessId}=await fresh(signal),timezone=context!.context.timezone;
+ async function readJob(jobId:string,{proof,businessId}:Awaited<ReturnType<typeof fresh>>,signal:AbortSignal){
+  const resources=await api.resources(businessId,jobId,proof,signal);live(signal);
+  if('state'in resources){emit({message:'This job is no longer available in your current workspace.'});return;}
+  const history=await api.history({businessId,jobId,throughVersion:resources.head.job.version,afterVersion:'0',pageSize:20},proof,signal);live(signal);if('state'in history)throw Error();
+  emit({selected:resources,history:history.events,historyComplete:!history.hasMore,message:'Saved job loaded at version '+resources.head.job.version+'.'});
+ }
+ const load=(dates?:Dates,initialJobId?:string)=>run(async signal=>{
+  clear();emit({phase:'loading',message:'Loading saved jobs and proposed changes…'});
+  const scope=await fresh(signal),{proof,businessId}=scope,timezone=context!.context.timezone;
   const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format((deps.now??(()=>new Date()))());
   const selectedDates=dates??{fromDate:today,throughDate:dayAfter(today,6)};let window;
   try{window=scheduleDateWindow(selectedDates,timezone);}catch{emit({phase:'ready',timezone,dates:selectedDates,message:'Choose a valid range of at most 92 days. Date boundaries must identify one actual midnight in the business time zone.'});return;}
   const [jobs,pending]=await Promise.all([api.list({businessId,...window,afterStart:null,afterJob:null,pageSize:20},proof,signal),api.pending({businessId,afterCreatedAt:null,afterAppointmentId:null,pageSize:10},proof,signal)]);live(signal);
   emit({phase:'ready',loaded:true,writesPaused:context!.context.writeState!=="ready",fieldSessionAvailable:context!.fieldSessionAvailable===true,...context!.jobCompletionAvailable?{jobCompletionAvailable:true as const}:{},...context!.jobMileageAvailable?{jobMileageAvailable:true as const}:{},...context!.supportTripsAvailable?{supportTripsAvailable:true as const}:{},...context!.workTimeAvailable?{workTimeAvailable:true as const}:{},...context!.dropoffCustodyAvailable?{dropoffCustodyAvailable:true as const}:{},timezone,dates:selectedDates,rows:jobs.jobs,hasMore:jobs.hasMore,pending:pending.items,pendingHasMore:pending.hasMore,message:'Saved schedule loaded. Proposed changes reserve no new time.'});
+  // The link and its schedule are one read. Every endpoint still verifies
+  // the request against the current server session and business.
+  if(initialJobId)await readJob(initialJobId,scope,signal);
  });
  const more=()=>run(async signal=>{
   if(view.phase!=='ready'||!view.hasMore||!view.dates||!view.rows.length)return;
@@ -53,10 +63,7 @@ export function createScheduleReader(deps:{change:(view:ScheduleReadView)=>void;
  });
  const open=(jobId:string)=>run(async signal=>{
   if(view.phase!=='ready')return;emit({selected:null,history:[],historyComplete:false,message:'Loading saved job…'});
-  const {proof,businessId}=await fresh(signal),resources=await api.resources(businessId,jobId,proof,signal);live(signal);
-  if('state'in resources){emit({message:'This job is no longer available in your current workspace.'});return;}
-  const history=await api.history({businessId,jobId,throughVersion:resources.head.job.version,afterVersion:'0',pageSize:20},proof,signal);live(signal);if('state'in history)throw Error();
-  emit({selected:resources,history:history.events,historyComplete:!history.hasMore,message:'Saved job loaded at version '+resources.head.job.version+'.'});
+  await readJob(jobId,await fresh(signal),signal);
  });
  const moreHistory=()=>run(async signal=>{
   if(view.phase!=='ready'||!view.selected||view.historyComplete)return;

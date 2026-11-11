@@ -12,15 +12,15 @@ export function ScheduleScreen({initialJobId}:{initialJobId?:string}){
  const [calendarMode,setCalendarMode]=useState<CalendarMode>('week');
  function revoke(){if(url.current){URL.revokeObjectURL(url.current);url.current=null;}}
  useEffect(()=>{
-  const current=createScheduleReader({change:next=>{setView(next);if(next.dates){setFrom(next.dates.fromDate);setThrough(next.dates.throughDate);}}});reader.current=current;void current.load().then(async()=>{if(initialJobId&&current===reader.current&&current.view().phase==='ready'){await current.open(initialJobId);if(current===reader.current&&current.view().selected?.jobId===initialJobId)review.current?.focus();}});
+  const current=createScheduleReader({change:next=>{setView(next);if(next.dates){setFrom(next.dates.fromDate);setThrough(next.dates.throughDate);}}});reader.current=current;void current.load(undefined,initialJobId).then(()=>{if(initialJobId&&current===reader.current&&current.view().selected?.jobId===initialJobId)review.current?.focus();});
   const clear=()=>{current.suspend();revoke();setDownloadMessage('');},hidden=()=>{if(document.visibilityState==='hidden')clear();},restored=(event:PageTransitionEvent)=>{if(event.persisted)clear();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',clear);window.addEventListener('pageshow',restored);
   return()=>{reader.current=null;current.dispose();revoke();document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',clear);window.removeEventListener('pageshow',restored);};
  },[initialJobId]);
- async function action(kind:'load'|'more'|'morePending'|'moreHistory',dates?:{fromDate:string;throughDate:string}){const current=reader.current;if(!current||current.view().busy)return;if(kind==='load'&&!dates)setCalendarMode('week');await(kind==='load'?current.load(dates):current[kind]());if(current!==reader.current)return;
+ async function action(kind:'load'|'more'|'morePending'|'moreHistory',dates?:{fromDate:string;throughDate:string}){const current=reader.current;if(!current||current.view().busy)return;if(kind==='load'&&!dates)setCalendarMode('week');await(kind==='load'?current.load(dates,dates?undefined:initialJobId):current[kind]());if(current!==reader.current)return;
   // An explicit access retry should recover the requested job after verifying
   // fresh access. A changed date filter continues to show the chosen list.
-  if(kind==='load'&&!dates&&initialJobId&&current.view().phase==='ready'){await current.open(initialJobId);if(current!==reader.current)return;if(current.view().selected?.jobId===initialJobId){review.current?.focus();return;}}
+  if(kind==='load'&&!dates&&initialJobId&&current.view().selected?.jobId===initialJobId){review.current?.focus();return;}
   if(kind==='load'||current.view().phase!=='ready')status.current?.focus();else if(kind==='moreHistory')review.current?.focus();}
  function selectCalendar(range:CalendarRange,mode:CalendarMode){const current=reader.current;if(!current||current.view().busy||current.view().phase!=='ready')return;setCalendarMode(mode);setDownloadMessage('');void action('load',range);}
  async function open(jobId:string){const current=reader.current;if(!current)return;setDownloadMessage('');await current.open(jobId);if(current!==reader.current)return;if(current.view().phase==='ready'&&current.view().selected?.jobId===jobId)review.current?.focus();else status.current?.focus();}
