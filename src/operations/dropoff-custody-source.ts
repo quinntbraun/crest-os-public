@@ -2,7 +2,9 @@ import {createHash} from 'node:crypto';
 import {customerUuid as uuid,customerVersion as version,customerInstant as instant,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {verifyBusinessHistoryEvidence} from '../security/business-history-evidence.ts';
 import {parseHistoryJson,historyJsonEqual,historyJsonNumber} from '../security/history-evidence-json.ts';
-import {parseDropoffCustodySave,parseDropoffPolicySave} from './dropoff-custody-contract.ts';
+import {dropoffPolicyRevisionKind,parseDropoffCustodySave,parseDropoffPolicyRevision,
+ parseDropoffPolicyRevisionCommitted,parseDropoffPolicySave} from './dropoff-custody-contract.ts';
+import {parseFulfillmentModeVersion} from './fulfillment-mode-contract.ts';
 import {imageValidationVersion,heicValidationVersion} from '../files/validation-contract.ts';
 
 const columns={
@@ -22,7 +24,7 @@ const nullable=new Set(['acknowledgement_text','prior_version','notes','missing_
 const integers=new Set(['handoff_version','byte_size','width','height','display_width','display_height','bit_depth',
  'preview_byte_size','preview_width','preview_height']);
 const booleans=new Set(['condition_photo_required','acknowledgement_confirmed']);
-const commands=['operations.custody.policy.save','operations.custody.save','operations.custody.photo.reserve',
+const commands=['operations.custody.policy.save',dropoffPolicyRevisionKind,'operations.custody.save','operations.custody.photo.reserve',
  'operations.custody.photo.publish','operations.custody.photo.access'];
 const entities=['custody_authorization_configs','custody_cases','custody_photos','custody_photo_accesses'];
 function check(value:unknown):asserts value{if(!value)throw Error('CUSTODY_SOURCE_REVIEW_REQUIRED');}
@@ -87,15 +89,19 @@ export function formatDropoffCustodySources(input:CustodySourceInput){
  const history=verifyBusinessHistoryEvidence(input.historyEvidence,{businessId});
  check(history.context.snapshotToken===context.historySnapshotToken);
  const operations=new Map<string,Record<string,unknown>>(),audits=new Map<string,Record<string,unknown>>();
- const selected:typeof history.records[number][]=[];
+ const arrangementAudits=new Map<string,{row:Record<string,unknown>;entry:typeof history.records[number]}>();
+ const selected=new Set<typeof history.records[number]>();
  for(const entry of history.records){
   const evidence=json(entry.canonicalEvidence);object(evidence);object(evidence.row);
   const row=evidence.row;
   if(entry.kind==='operation'&&commands.includes(row.command_type as string)){
-   check(uuid(row.operation_id)&&!operations.has(row.operation_id));operations.set(row.operation_id,row);selected.push(entry);
+   check(uuid(row.operation_id)&&!operations.has(row.operation_id));operations.set(row.operation_id,row);selected.add(entry);
   }
   if(entry.kind==='audit_event'&&entities.includes(row.entity_kind as string)){
-   check(uuid(row.operation_id)&&!audits.has(row.operation_id));audits.set(row.operation_id,row);selected.push(entry);
+   check(uuid(row.operation_id)&&!audits.has(row.operation_id));audits.set(row.operation_id,row);selected.add(entry);
+  }
+  if(entry.kind==='audit_event'&&row.entity_kind==='fulfillment_modes'){
+   check(uuid(row.operation_id)&&!arrangementAudits.has(row.operation_id));arrangementAudits.set(row.operation_id,{row,entry});
   }
  }
  const used=new Set<string>();
@@ -111,9 +117,37 @@ export function formatDropoffCustodySources(input:CustodySourceInput){
   return {op,audit};
  }
  const policies=new Map(rows.custody_authorization_configs.map(row=>[row.id,row]));
+ const policyByMode=new Map(rows.custody_authorization_configs.map(row=>[row.mode_version_id,row]));
+ check(policyByMode.size===policies.size);
  for(const policy of policies.values()){
   const image={id:policy.id,modeVersionId:policy.mode_version_id,acknowledgementText:policy.acknowledgement_text,
    conditionPhotoRequired:policy.condition_photo_required};
+  if(operations.get(String(policy.id))?.command_type===dropoffPolicyRevisionKind){
+   const {op,audit}=evidence(policy.id,dropoffPolicyRevisionKind,'custody_authorization_configs',policy.id,'1','create');
+   const arrangement=arrangementAudits.get(String(policy.id));
+   check(arrangement&&arrangement.row.actor_id===op.actor_id&&arrangement.row.created_by===op.actor_id&&
+    arrangement.row.entity_id===businessId&&arrangement.row.action==='revise'&&arrangement.row.origin==='manual'&&
+    arrangement.row.import_row_id===null);
+   const change=json(arrangement.row.delta);
+   check(exact(change,['schemaVersion','before','after'])&&historyJsonNumber(change.schemaVersion,1));
+   const prior=parseFulfillmentModeVersion(change.before,businessId),next=parseFulfillmentModeVersion(change.after,businessId);
+   const priorPolicy=policyByMode.get(prior.id);
+   check(priorPolicy&&prior.dropoff_enabled&&next.dropoff_enabled&&prior.mobile_enabled===next.mobile_enabled&&
+    prior.pickup_return_enabled===next.pickup_return_enabled&&next.replaces_sequence===prior.sequence&&
+    next.sequence===arrangement.row.entity_version&&next.operation_id===policy.id&&next.id===policy.mode_version_id&&
+    next.created_by===op.actor_id&&(priorPolicy.acknowledgement_text!==policy.acknowledgement_text||
+     priorPolicy.condition_photo_required!==policy.condition_photo_required));
+   const input=parseDropoffPolicyRevision({schemaVersion:1,businessId,operationId:policy.id,recoveryEpoch:op.recovery_epoch,
+    modeVersionId:prior.id,policyId:priorPolicy.id,body:{acknowledgementText:policy.acknowledgement_text,
+     conditionPhotoRequired:policy.condition_photo_required,reason:next.reason}});
+   parseDropoffPolicyRevisionCommitted({state:'committed',operationId:policy.id,recoveryEpoch:op.recovery_epoch,
+    receipt:snapshot(op.result)},input);
+   check(same(json(op.result),{schemaVersion:1,priorModeVersionId:prior.id,priorPolicyId:priorPolicy.id,
+    sequence:next.sequence,policy:image,modeAuditId:arrangement.row.id,policyAuditId:audit.id})&&
+    same(json(audit.delta),{schemaVersion:1,before:null,after:image}));
+   selected.add(arrangement.entry);
+   continue;
+  }
   const {op,audit}=evidence(policy.id,'operations.custody.policy.save','custody_authorization_configs',policy.id,'1','create');
   parseDropoffPolicySave({schemaVersion:1,businessId,operationId:policy.id,recoveryEpoch:op.recovery_epoch,
    modeVersionId:policy.mode_version_id,body:{acknowledgementText:policy.acknowledgement_text,conditionPhotoRequired:policy.condition_photo_required}});
@@ -215,7 +249,8 @@ export function formatDropoffCustodySources(input:CustodySourceInput){
   }).join(','));
   files[group+'.csv']=lines.join('\r\n')+'\r\n';
  }
- files['custody_source.json']=JSON.stringify({context,rows,historyEvidence:{schemaVersion:1,snapshotToken:context.historySnapshotToken,records:selected}})+'\n';
+ files['custody_source.json']=JSON.stringify({context,rows,historyEvidence:{schemaVersion:1,snapshotToken:context.historySnapshotToken,
+  records:history.records.filter(entry=>selected.has(entry))}})+'\n';
  files['custody_source_dictionary.json']=JSON.stringify({schemaVersion:1,profile,columns,escapes,
   booleans:[...booleans],integers:[...integers],jsonTextColumns:['person_snapshot','location_snapshot'],
   keyColumns:{custody_photo_originals:'photo_id',default:'id'},

@@ -21,7 +21,7 @@ const laterFieldKinds=new Set([
  'operations.job.work_end.correct',
  'operations.mobile_departure.correct',
  'operations.message.record_outcome',
- 'operations.follow_up.save','operations.custody.save','operations.custody.policy.save'
+ 'operations.follow_up.save','operations.custody.save','operations.custody.policy.save','operations.custody.policy.revise'
 ]);
 let sandbox,client,web,login,target,accepted;
 const value=async(c,q,args=[])=>(await c.query(q,args)).rows[0].value;

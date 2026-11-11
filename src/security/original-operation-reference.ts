@@ -24,6 +24,7 @@ type Targets={
  'operations.mobile_departure.correct':Readonly<{jobId:string;expectedJobVersion:string;legId:string;legVersionId:string;departureEventId:string}>;
  'operations.message.record_outcome':Readonly<{jobId:string;messageId:string;priorEventId:string;action:ReviewOutcomeAction}>;
  'operations.custody.policy.save':Readonly<{modeVersionId:string}>;
+ 'operations.custody.policy.revise':Readonly<{modeVersionId:string;policyId:string}>;
  'operations.custody.save':Readonly<{jobVehicleId:string;caseId:string;expectedVersion:'0'|'1'}>;
  'operations.follow_up.save':Readonly<{taskId:string;expectedVersion:string;action:'created'|'snoozed'|'completed'|'dismissed'}>;
  'operations.mileage.record':Readonly<{legId:string;expectedLegVersionId:string;expectedEvidenceVersion:string}>;
@@ -89,6 +90,7 @@ const fields={
  'operations.mobile_departure.correct':['jobId','expectedJobVersion','legId','legVersionId','departureEventId'],
  'operations.message.record_outcome':['jobId','messageId','priorEventId','action'],
  'operations.custody.policy.save':['modeVersionId'],
+ 'operations.custody.policy.revise':['modeVersionId','policyId'],
  'operations.custody.save':['jobVehicleId','caseId','expectedVersion'],
  'operations.follow_up.save':['taskId','expectedVersion','action'],
  'operations.mileage.record':['legId','expectedLegVersionId','expectedEvidenceVersion'],

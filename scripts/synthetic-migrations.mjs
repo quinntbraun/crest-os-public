@@ -92,10 +92,20 @@ export async function requireSyntheticDropoffCustody(connectionString){
  ])await requireSyntheticReader(connectionString,'crest_commands.'+signature,'SYNTHETIC_DROPOFF_CUSTODY_MIGRATION_REQUIRED');
 }
 
-async function requireSyntheticReader(connectionString,signature,missing){
+export async function requireSyntheticDropoffPolicyRevision(connectionString){
+ await requireSyntheticReader(connectionString,
+  'crest_commands.revise_dropoff_policy(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,uuid,jsonb)',
+  'SYNTHETIC_DROPOFF_POLICY_REVISION_MIGRATION_REQUIRED','20261122180000');
+}
+
+async function requireSyntheticReader(connectionString,signature,missing,version){
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{
   await client.connect();
+  if(version){
+   const migration=await client.query('SELECT 1 FROM supabase_migrations.schema_migrations WHERE version=$1',[version]);
+   assert(migration.rowCount===1,missing);
+  }
   await client.query('SET ROLE crest_web');
   const {rows}=await client.query("SELECT has_function_privilege(to_regprocedure($1),'EXECUTE') AS available",[signature]);
   assert(rows[0]?.available===true,missing);

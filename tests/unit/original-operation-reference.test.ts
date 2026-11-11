@@ -14,6 +14,7 @@ const targets:Record<OriginalOperationKind,Record<string,unknown>>={
  'operations.mobile_departure.correct':{jobId:randomUUID(),expectedJobVersion:'3',legId:randomUUID(),legVersionId:randomUUID(),departureEventId:randomUUID()},
  'operations.message.record_outcome':{jobId:randomUUID(),messageId:randomUUID(),priorEventId:randomUUID(),action:'owner_confirmed_sent'},
  'operations.custody.policy.save':{modeVersionId:randomUUID()},
+ 'operations.custody.policy.revise':{modeVersionId:randomUUID(),policyId:randomUUID()},
  'operations.custody.save':{jobVehicleId:randomUUID(),caseId:randomUUID(),expectedVersion:'0'},
  'operations.follow_up.save':{taskId:randomUUID(),expectedVersion:'0',action:'created'},
  'operations.job.work_boundary.correct':{jobId:randomUUID(),expectedJobVersion:'3',leftVersionId:randomUUID(),rightVersionId:randomUUID()},

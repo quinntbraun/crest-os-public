@@ -12,6 +12,7 @@ export const pendingSchedulingKeys=Object.freeze({
  'operations.mobile_departure.correct':'crest.mobile-departure.pending-reference.v1',
  'operations.message.record_outcome':'crest.review-message-outcome.pending-reference.v1',
  'operations.custody.policy.save':'crest.dropoff-policy.pending-reference.v1',
+ 'operations.custody.policy.revise':'crest.dropoff-policy-revision.pending-reference.v1',
  'operations.custody.save':'crest.dropoff-custody.pending-reference.v1',
  'operations.follow_up.save':'crest.maintenance-follow-up.pending-reference.v1',
  'operations.mileage.record':'crest.mileage.pending-reference.v1',

@@ -8,7 +8,7 @@ import {lookupSchedulingOriginal} from '../../src/client/scheduling-original';
 function packet(kind:typeof fieldOriginalKinds[number]){
  const original=parseFieldOriginal(originalOperationFixture(kind)),ref=original.reference;
  const target='messageId'in ref?{subjectId:ref.messageId,sourceRecordId:randomUUID(),sourceVersion:'1'}:
-  'modeVersionId'in ref?{subjectId:ref.modeVersionId,sourceRecordId:ref.operationId,sourceVersion:'1'}:
+  'modeVersionId'in ref?{subjectId:ref.modeVersionId,sourceRecordId:ref.operationId,sourceVersion:'policyId'in ref?'2':'1'}:
   'caseId'in ref?{subjectId:ref.caseId,sourceRecordId:randomUUID(),sourceVersion:ref.expectedVersion==='0'?'1':'2'}:
   'taskId'in ref?{subjectId:ref.taskId,sourceRecordId:randomUUID(),sourceVersion:(BigInt(ref.expectedVersion)+1n).toString()}:
   'legVersionId'in ref?{subjectId:ref.legId,sourceRecordId:randomUUID(),sourceVersion:'2'}:
@@ -16,7 +16,8 @@ function packet(kind:typeof fieldOriginalKinds[number]){
    sourceVersion:(BigInt(ref.expectedJobVersion)+(kind==='operations.job.work_boundary.correct'?0n:1n)).toString()}:
   {subjectId:ref.legId,sourceRecordId:randomUUID(),sourceVersion:'expectedEvidenceVersion'in ref?
    (BigInt(ref.expectedEvidenceVersion)+1n).toString():ref.expectedLegVersionId===null?'1':'2'};
- const auditCount=kind==='operations.job.work_boundary.correct'?2:kind==='operations.job.work_start.correct'||kind==='operations.job.work_end.correct'?3:1;
+ const auditCount=kind==='operations.job.work_boundary.correct'||kind==='operations.custody.policy.revise'?2:
+  kind==='operations.job.work_start.correct'||kind==='operations.job.work_end.correct'?3:1;
  const result={state:'committed',receipt:{schemaVersion:1,commandType:kind,businessId:original.businessId,actorId:randomUUID(),
   operationId:ref.operationId,recoveryEpoch:ref.recoveryEpoch,...target,sourceAuditIds:Array.from({length:auditCount},()=>randomUUID())}};
  return {schemaVersion:1,original,result};

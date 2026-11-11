@@ -28,6 +28,8 @@ import registered65 from '../support/registered65-migration-checksums.json';
 import coverage65 from '../support/registered65-export-coverage.json';
 import registered66 from '../support/registered66-migration-checksums.json';
 import coverage66 from '../support/registered66-export-coverage.json';
+import registered67 from '../support/registered67-migration-checksums.json';
+import coverage67 from '../support/registered67-export-coverage.json';
 import registry from '../support/registered54-migration-checksums.json';
 import previous from '../support/registered53-migration-checksums.json';
 import previousCoverage from '../support/registered53-export-coverage.json';
@@ -212,14 +214,23 @@ it('registers maintenance source relations after the unchanged schema65 prefix',
 it('registers custody after the frozen66 prefix without activating production',()=>{
  expect(sha256(bytes('tests/support/registered66-migration-checksums.json'))).toBe('f8b1e968201fba0d24b782a9fe3639f0ce6baeea2276eee98c0208ecd0eee28f');
  expect(sha256(bytes('tests/support/registered66-export-coverage.json'))).toBe('93403923d39cf6ba8125ffb5d0114f36a03819396f8bcb3048e1c161a038dcc7');
- expect(currentRegistry.migrations).toHaveLength(67);
- expect(currentRegistry.migrations.at(-1)!.file).toBe('20261121180000_dropoff_custody.sql');
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered66 as MigrationRegistry)).not.toThrow();
- expect(currentCoverage.migrationCount).toBe(67);
- expect(currentCoverage.tables.slice(0,coverage66.tables.length)).toEqual(coverage66.tables);
- expect(currentCoverage.tables.slice(coverage66.tables.length).map(row=>row.table)).toEqual([
+ expect(registered67.migrations).toHaveLength(67);
+ expect(registered67.migrations.at(-1)!.file).toBe('20261121180000_dropoff_custody.sql');
+ expect(()=>validateMigrationSet(registered67 as MigrationRegistry,new Map(registered67.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered66 as MigrationRegistry)).not.toThrow();
+ expect(coverage67.migrationCount).toBe(67);
+ expect(coverage67.tables.slice(0,coverage66.tables.length)).toEqual(coverage66.tables);
+ expect(coverage67.tables.slice(coverage66.tables.length).map(row=>row.table)).toEqual([
   'crest.custody_authorization_configs','crest.custody_cases','crest.custody_events','crest.custody_photo_attempts','crest.custody_photo_originals']);
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:67});
+});
+it('registers Drop-Off policy revision after the immutable custody schema',()=>{
+ expect(sha256(bytes('tests/support/registered67-migration-checksums.json'))).toBe('a1f68cff218bb818ca48dc444e95eaa30e344603449e2b0bf5c986eab1f35889');
+ expect(sha256(bytes('tests/support/registered67-export-coverage.json'))).toBe('3b97dc516e73b50063c6f30b6642dc983bc8379b40676f7729023e8e5b76c9d9');
+ expect(currentRegistry.migrations).toHaveLength(68);
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261122180000',file:'20261122180000_dropoff_policy_revision.sql',
+  sha256:'9e968b4ef0f9eb6e665d093f28a4f522c4512f8248e7a55ef94dd7739f36831b'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered67 as MigrationRegistry)).not.toThrow();
+ expect(currentCoverage).toEqual({...coverage67,migrationCount:68});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:68});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

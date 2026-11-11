@@ -6,6 +6,8 @@ import type {SessionDatabaseConfiguration} from '../security/session-database.ts
 import type {createProviderBoundary} from '../security/provider-auth.ts';
 import type {createProviderTokenStore} from '../security/provider-token-store.ts';
 import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
+import {dropoffPolicyRevisionConflicts,dropoffPolicyRevisionOriginal,parseDropoffPolicyRevision,
+ parseDropoffPolicyRevisionAcknowledgement,parseDropoffPolicyRevisionCommitted} from './dropoff-custody-contract.ts';
 import {parseFieldSessionSave,fieldSessionOriginal,parseFieldSessionCommitted,fieldSessionConflicts} from './field-session-contract.ts';
 import {parseTripInterruptionSave,tripInterruptionOriginal,parseTripInterruptionCommitted,tripInterruptionConflicts} from './trip-interruption-contract.ts';
 import {parseUnfulfilledCancellationContext,parseUnfulfilledCancellationSave,unfulfilledCancellationOriginal,
@@ -77,10 +79,14 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
   const {current,entries,hasMore}=history;
   return new PrivateValue({schemaVersion:1,businessId,taskId,current,entries,hasMore});
  }
- async function save(credential:string,input:unknown,signal:AbortSignal,action:'session'|'interruption'|'cancellation'|'work-boundary'|'work-start'|'work-end'|'mobile-departure'|'review-outcome'|'maintenance'|'custody'|'custody-policy'){
+ async function save(credential:string,input:unknown,signal:AbortSignal,action:'session'|'interruption'|'cancellation'|'work-boundary'|'work-start'|'work-end'|'mobile-departure'|'review-outcome'|'maintenance'|'custody'|'custody-policy'|'custody-policy-revision'){
   let submitted=false,hash:Buffer|undefined;
   try{
-   const prepared=action==='custody-policy'?(()=>{
+   const prepared=action==='custody-policy-revision'?(()=>{
+    const request=parseDropoffPolicyRevision(input);
+    return {request,original:dropoffPolicyRevisionOriginal(request),conflicts:dropoffPolicyRevisionConflicts,
+     command:'revise_dropoff_policy',committed:(observed:unknown)=>parseDropoffPolicyRevisionAcknowledgement(observed,request)};
+   })():action==='custody-policy'?(()=>{
     const request=parseDropoffPolicySave(input),original=dropoffPolicyOriginal(request);
     return {request,original,conflicts:dropoffPolicyConflicts,command:'save_dropoff_policy',
      committed:(observed:unknown)=>parseDropoffPolicyAcknowledgement(observed,request)};
@@ -136,6 +142,15 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
    };
    const result=await database.commandTransaction(async(query,current)=>{
     if(current.aborted)throw Error();submitted=true;
+    if('policyId'in request){
+     const value=await query('SELECT crest_commands.revise_dropoff_policy($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::jsonb) AS result',
+      [...args,request.recoveryEpoch,request.operationId,request.modeVersionId,request.policyId,request.body]);
+     current.throwIfAborted();
+     if(exact(value,['state','reason'])&&value.state==='conflict'&&dropoffPolicyRevisionConflicts.some(reason=>reason===value.reason))
+      return new PrivateValue(Object.freeze({state:'conflict' as const,reason:value.reason as string}));
+     parseDropoffPolicyRevisionCommitted(value,request);
+     return null;
+    }
     if('modeVersionId'in request){
      const value=await query('SELECT crest_commands.save_dropoff_policy($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::uuid,$12::jsonb) AS result',
       [...args,request.recoveryEpoch,request.operationId,request.modeVersionId,request.body]);
@@ -198,6 +213,7 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
    return new PrivateValue(parseDropoffPolicy(value,modeVersionId));
   },
   saveCustodyPolicy:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'custody-policy'),
+  reviseCustodyPolicy:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'custody-policy-revision'),
   saveCustody:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'custody'),
   maintenanceList,
   maintenanceHistory,

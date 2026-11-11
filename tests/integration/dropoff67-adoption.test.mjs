@@ -64,10 +64,10 @@ test('schema67 custody candidate upgrades the frozen schema66 and retains closed
    assert(!coverage.tables.some(entry=>entry.table==='crest.'+table));
    coverage.tables.push({table:'crest.'+table,scope:'business',required:columns,excluded:[],partialEvidenceGroup:null});
   }
-  assert.deepEqual(JSON.parse(await readFile('planning/SECURITY_EXPORT_COVERAGE.json','utf8')),coverage);
-  const currentRegistry=JSON.parse(await readFile('supabase/migration-checksums.json','utf8'));
-  assert.equal(currentRegistry.migrations.length,67);
-  assert.equal(currentRegistry.migrations.at(-1).sha256,candidate.sha256);
+  assert.deepEqual(JSON.parse(await readFile('tests/support/registered67-export-coverage.json','utf8')),coverage);
+  const frozenRegistry=JSON.parse(await readFile('tests/support/registered67-migration-checksums.json','utf8'));
+  assert.equal(frozenRegistry.migrations.length,67);
+  assert.equal(frozenRegistry.migrations.at(-1).sha256,candidate.sha256);
   await writeFile(path+'/candidate-export-coverage.json',JSON.stringify(coverage,null,2)+'\n');
   const {directory,...publicCandidate}=candidate;
   assert(directory.startsWith(sandbox.workspace));
