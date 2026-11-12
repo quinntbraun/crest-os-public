@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 70,
+  "migrationCount": 71,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2141,7 +2141,6 @@
         "business_id",
         "vehicle_id",
         "dropoff_case_id",
-
         "pickup_collection_id"
       ],
       "excluded": [],
@@ -2187,6 +2186,83 @@
         "recorded_at",
         "created_by",
         "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.accounts",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "code",
+        "account_type",
+        "normal_side",
+        "control_kind",
+        "report_role",
+        "currency",
+        "first_version",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.account_versions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "account_id",
+        "version",
+        "previous_version",
+        "name",
+        "active",
+        "reason",
+        "audit_event_id",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.account_mapping_versions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "purpose",
+        "version",
+        "previous_version",
+        "account_id",
+        "effective_from",
+        "reason",
+        "audit_event_id",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.finance_controls",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "recovery_authority_id",
+        "created_at",
+        "created_by",
+        "origin"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

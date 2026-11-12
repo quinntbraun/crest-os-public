@@ -8,8 +8,8 @@ import {confirmedBookingRequest} from '../fixtures/confirmed-booking.ts';
 import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixture.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
-import {backupDatabase,backupLegacy68Database,backupLegacy69Database,backupPickupReturnCandidateDatabase,connect,hash,inventory,keyPair,privateWorkspace,
- recoveryCluster,restoreDatabase,restoreLegacy68Database,restoreLegacy69Database,restorePickupReturnCandidateDatabase} from '../support/recovery-drill.mjs';
+import {backupLegacy68Database,backupLegacy69Database,backupLegacy70Database,backupPickupReturnCandidateDatabase,connect,hash,inventory,keyPair,privateWorkspace,
+ recoveryCluster,restoreLegacy68Database,restoreLegacy69Database,restoreLegacy70Database,restorePickupReturnCandidateDatabase} from '../support/recovery-drill.mjs';
 import {requireSyntheticPickupCustody,requireSyntheticPickupReturnWorkflow} from '../../scripts/synthetic-migrations.mjs';
 import {parsePickupCollectionContext} from '../../src/operations/pickup-custody-contract.ts';
 import {custodyPhotoObjects} from '../support/custody-photo-objects.mjs';
@@ -845,7 +845,7 @@ test('pickup, return and the custody queue retain exact history through encrypte
   assert.equal(returnManifest.objectArchive.inventory.length,6);
   assert.equal(returnManifest.rows.find(row=>row.schema==='crest_private'&&row.name==='pickup_custody_releases').rows,2);
   const returnDestinationUrl=await destinationCluster.database();
-  await assert.rejects(restoreDatabase(returnPoint,keys.path,returnDestinationUrl),{message:'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest'});
+  await assert.rejects(restoreLegacy70Database(returnPoint,keys.path,returnDestinationUrl),{message:'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest'});
   const returnRecovered=await objectDirectory(join(workspace,'return-recovered'));
   const returnRestored=await restorePickupReturnCandidateDatabase(returnPoint,keys.path,returnDestinationUrl,archive=>
    restoreObjectArchive(archive.receipt,archive.inventory,{
@@ -1147,10 +1147,10 @@ test('registered schema 70 upgrades a held pickup and independently restores the
     location:place('Fictional pickup stop'),notes:null,missingPhotoReason:'Fictional optional photo',acknowledgementConfirmed:null
    }]);
   assert.equal(saved.state,'committed');
-  const before=await inventory(client),adopted=await sandbox.apply(target);
+  const before=await inventory(client),schema70=await sandbox.prefix(70),adopted=await sandbox.apply(target,schema70);
   assert.equal(adopted.history.length,70);
   assert.deepEqual(adopted.history.slice(0,69),previous.history);
-  assert.deepEqual((await sandbox.apply(target)).history,adopted.history);
+  assert.deepEqual((await sandbox.apply(target,schema70)).history,adopted.history);
   await requireSyntheticPickupReturnWorkflow(target);
   const after=await inventory(client);
   assert.equal(after.length,before.length+2);
@@ -1163,12 +1163,12 @@ test('registered schema 70 upgrades a held pickup and independently restores the
   }
   workspace=await privateWorkspace();
   const point=join(workspace,'registered70');await mkdir(point,{mode:0o700});
-  const keys=await keyPair(workspace),backup=await backupDatabase(client,target,point,keys.recipient);
+  const keys=await keyPair(workspace),backup=await backupLegacy70Database(client,target,point,keys.recipient);
   assert.equal(backup.manifest.schemaVersion,70);
   destination=await recoveryCluster();
   const recoveryTarget=await destination.database();
   await assert.rejects(restoreLegacy69Database(point,keys.path,recoveryTarget),{message:'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest'});
-  assert.deepEqual(await restoreDatabase(point,keys.path,recoveryTarget),backup.manifest);
+  assert.deepEqual(await restoreLegacy70Database(point,keys.path,recoveryTarget),backup.manifest);
   await requireSyntheticPickupReturnWorkflow(recoveryTarget);
   restored=await connect(recoveryTarget);
   assert.deepEqual(await value(restored,"SELECT crest_private.pickup_collection_original($1,$2,$3) - 'request' value",

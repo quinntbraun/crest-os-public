@@ -1,5 +1,5 @@
 # Current Crest OS delivery
 
-The owner laptop runs accepted fictional schema69 with pickup travel, collection and verified condition photos. Schema70 adds work-site transport, explicit work start, return travel and handoff, failed-handoff recovery and the all-dates Vehicles awaiting return list. The previous migration history is retained. Hosted exact-source acceptance and a fresh independently restored owner backup are required before the preview is upgraded.
+The accepted fictional laptop preview runs schema70 with Pickup + Return, including the all-dates Vehicles awaiting return queue. This schema71 candidate adds chart of accounts and dated fixed mapping approvals and closures in Settings, with retained history and interrupted-save recovery. The schema70 migration prefix is preserved. Hosted exact-source acceptance and independent owner backup and restore are required before preview delivery. Finance configuration is synthetic and explicit.
 
-Full finance, reporting, portability and recovery, approved Google Calendar and real-use acceptance remain in V1.
+Scoped finance identities, tax profiles, posting, reporting, complete portability and recovery, Google Calendar and real-use acceptance remain in V1.
