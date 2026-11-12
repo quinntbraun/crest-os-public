@@ -31,6 +31,7 @@ for(const engine of [chromium,webkit]){
    await page.goto(fixture.origin+'/settings');
    await page.getByRole('link',{name:'Fictional account setup',exact:true}).click();
    await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+   await expect(page.getByRole('link',{name:'Expense category mappings',exact:true})).toHaveCount(0);
    await page.getByRole('link',{name:'Dated account mappings',exact:true}).click();
 
    const view=page.getByRole('region',{name:'Account mapping lookup',exact:true});
@@ -104,6 +105,8 @@ for(const engine of [chromium,webkit]){
     const response=await post(prefix+action,data,{'x-crest-csrf':csrf,'x-crest-edit-binding':invalidBinding?'invalid':binding});
     return {status:response.status,body:await response.json()};
    },{action,data,invalidBinding});
+   const disabledCategories=await send('mapping-category-accounts',{purpose:'category_fuel',afterCode:null});
+   assert.equal(disabledCategories.status,400);assert(!('rows' in disabledCategories.body));
    assert.equal((await send('mapping-approve',{reference,approval},true)).status,400);
    assert.deepEqual((await send('mapping-operation',reference)).body,{state:'absent'});
    let savedStatus;

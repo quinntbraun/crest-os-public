@@ -5,15 +5,15 @@ import {
  parseFinanceAccountReference,parseFinanceAccountResolution,financeAccountReviewReason,requireFinanceAccount as check,
 } from '../bookkeeping/finance-account-contract';
 import type {FinanceAccountDraft,FinanceAccountReference} from '../bookkeeping/finance-account-contract';
-import {parseFinanceMappingAt,parseFinanceMappingEditor,parseFinanceMappingHistory,parseFinanceMappingOperation,parseFinanceMappingReference} from '../bookkeeping/finance-mapping-contract';
-import type {FinanceMappingApproval,FinanceMappingReference,FixedFinanceMappingPurpose} from '../bookkeeping/finance-mapping-contract';
+import {expenseCategoryMappingPurpose,parseExpenseCategoryMappingAccounts,parseFinanceMappingAt,parseFinanceMappingEditor,parseFinanceMappingHistory,parseFinanceMappingOperation,parseFinanceMappingReference} from '../bookkeeping/finance-mapping-contract';
+import type {ExpenseCategoryMappingPurpose,FinanceMappingApproval,FinanceMappingPurpose,FinanceMappingReference,FixedFinanceMappingPurpose} from '../bookkeeping/finance-mapping-contract';
 
 import {
  matchesFinanceTaxApproval,parseFinanceTaxHistory,parseFinanceTaxOperation,parseFinanceTaxPreview,parseFinanceTaxReference,
 } from '../bookkeeping/finance-tax-contract';
 import type {FinanceTaxApproval,FinanceTaxReference,FinanceTaxScope} from '../bookkeeping/finance-tax-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const pendingKey='crest.finance-account.pending-reference.v1';
@@ -50,16 +50,17 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string)
  }finally{void reader.cancel().catch(()=>undefined);reader.releaseLock();}
  return {status:response.status,value:JSON.parse(text) as unknown,binding:response.headers.get('x-crest-edit-binding'),
   fixedMappings:response.headers.get('x-crest-finance-fixed-mappings')==='1',
-  taxProfiles:response.headers.get('x-crest-finance-tax-profiles')==='1'};
+  taxProfiles:response.headers.get('x-crest-finance-tax-profiles')==='1',
+  categoryMappings:response.headers.get('x-crest-finance-category-mappings')==='1'};
 }
 
 export const financeAccounts={
  async context(signal:AbortSignal):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles}=await post('context',{},signal);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings}=await post('context',{},signal);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
-  return Object.freeze({...value,binding,fixedMappings,taxProfiles}) as FinanceAccountContext;
+  return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings}) as FinanceAccountContext;
  },
  async taxHistory(context:FinanceAccountContext,scope:FinanceTaxScope,beforeVersion:string|null,signal:AbortSignal){
   check(context.taxProfiles);
@@ -100,13 +101,13 @@ export const financeAccounts={
    ||result.state==='retired'&&result.receipt.reviewEpoch===context.recoveryEpoch));
   return result;
  },
- async mappingAt(context:FinanceAccountContext,purpose:FixedFinanceMappingPurpose,date:string,signal:AbortSignal){
-  check(context.fixedMappings);
+ async mappingAt(context:FinanceAccountContext,purpose:FinanceMappingPurpose,date:string,signal:AbortSignal){
+  check(context.fixedMappings&&(!expenseCategoryMappingPurpose(purpose)||context.categoryMappings));
   const {status,value}=await post('mapping-at',{purpose,date},signal,context.binding);
   check(status===200);return parseFinanceMappingAt(value,purpose,date);
  },
- async mappingHistory(context:FinanceAccountContext,purpose:FixedFinanceMappingPurpose,beforeVersion:string|null,signal:AbortSignal){
-  check(context.fixedMappings);
+ async mappingHistory(context:FinanceAccountContext,purpose:FinanceMappingPurpose,beforeVersion:string|null,signal:AbortSignal){
+  check(context.fixedMappings&&(!expenseCategoryMappingPurpose(purpose)||context.categoryMappings));
   const {status,value}=await post('mapping-history',{purpose,beforeVersion},signal,context.binding);
   check(status===200);return parseFinanceMappingHistory(value,context.businessId,purpose,beforeVersion);
  },
@@ -115,13 +116,18 @@ export const financeAccounts={
   const {status,value}=await post('mapping-editor',{purpose},signal,context.binding);
   check(status===200);return parseFinanceMappingEditor(value,context.businessId,purpose);
  },
+ async expenseCategoryAccounts(context:FinanceAccountContext,purpose:ExpenseCategoryMappingPurpose,afterCode:string|null,signal:AbortSignal){
+  check(context.fixedMappings&&context.categoryMappings);
+  const {status,value}=await post('mapping-category-accounts',{purpose,afterCode},signal,context.binding);
+  check(status===200);return parseExpenseCategoryMappingAccounts(value,context.businessId,purpose);
+ },
  async mappingOperation(context:FinanceAccountContext,reference:FinanceMappingReference,signal:AbortSignal){
-  check(context.fixedMappings);
+  check(context.fixedMappings&&(!expenseCategoryMappingPurpose(reference.purpose)||context.categoryMappings));
   const {status,value}=await post('mapping-operation',reference,signal,context.binding);
   check(status===200);return parseFinanceMappingOperation(value,context.businessId,reference);
  },
  async approveMapping(context:FinanceAccountContext,reference:FinanceMappingReference,approval:FinanceMappingApproval,signal:AbortSignal){
-  check(context.fixedMappings&&context.writeState==='ready'&&context.recoveryEpoch===reference.recoveryEpoch);
+  check(context.fixedMappings&&(!expenseCategoryMappingPurpose(reference.purpose)||context.categoryMappings)&&context.writeState==='ready'&&context.recoveryEpoch===reference.recoveryEpoch);
   const {status,value}=await post('mapping-approve',{reference,approval},signal,context.binding);
   if(status===409&&exact(value,['error'])){
    const reason=mappingFailure.find(code=>code===value.error);check(reason);
@@ -134,7 +140,7 @@ export const financeAccounts={
   return result;
  },
  async retireMappingApproval(context:FinanceAccountContext,reference:FinanceMappingReference,reason:string,signal:AbortSignal){
-  check(context.fixedMappings&&context.writeState==='ready'&&context.recoveryEpoch&&financeAccountReviewReason(reason));
+  check(context.fixedMappings&&(!expenseCategoryMappingPurpose(reference.purpose)||context.categoryMappings)&&context.writeState==='ready'&&context.recoveryEpoch&&financeAccountReviewReason(reason));
   const {status,value}=await post('mapping-retire',{reference,reviewEpoch:context.recoveryEpoch,reason},signal,context.binding);
   if(status===409&&exact(value,['error'])){
    const failure=knownFailure.find(code=>code===value.error);check(failure);

@@ -18,9 +18,10 @@ import {
  parseFinanceAccountReceipt,parseFinanceAccountReference,parseFinanceAccountResolution,requireFinanceAccount as check,
 } from './finance-account-contract.ts';
 import {
- fixedFinanceMappingPurpose,parseFinanceMappingApproval,parseFinanceMappingAt,parseFinanceMappingEditor,parseFinanceMappingHistory,
+ expenseCategoryMappingPurpose,fixedFinanceMappingPurpose,parseExpenseCategoryMappingAccounts,parseFinanceMappingApproval,parseFinanceMappingAt,parseFinanceMappingEditor,parseFinanceMappingHistory,
  parseFinanceMappingOperation,parseFinanceMappingReference,
 } from './finance-mapping-contract.ts';
+import type {FinanceMappingPurpose} from './finance-mapping-contract.ts';
 
 import {
  financeTaxCents,matchesFinanceTaxApproval,parseFinanceTaxApproval,parseFinanceTaxHistory,parseFinanceTaxOperation,
@@ -31,7 +32,7 @@ export const financeAccountPrefix='/api/business/finance-accounts/';
 const fields={context:[],list:['afterCode','includeArchived'],history:['accountId','afterVersion'],
  operation:['operationId','recoveryEpoch','accountId','expectedVersion'],save:['reference','draft'],
  retire:['reference','reviewEpoch','reason'], 'mapping-at':['purpose','date'],
- 'mapping-history':['purpose','beforeVersion'], 'mapping-editor':['purpose'],
+ 'mapping-history':['purpose','beforeVersion'], 'mapping-editor':['purpose'], 'mapping-category-accounts':['purpose','afterCode'],
  'mapping-operation':['operationId','recoveryEpoch','purpose','expectedVersion'],
  'mapping-approve':['reference','approval'], 'mapping-retire':['reference','reviewEpoch','reason'],
  'tax-history':['jurisdiction','applicability','serviceId','beforeVersion'],
@@ -48,8 +49,8 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],fixedMappings=false,taxProfiles=false){
- check(config.environment==='test'&&customerUuid(config.businessId));
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],fixedMappings=false,taxProfiles=false,categoryMappings=false){
+ check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings));
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
@@ -58,6 +59,8 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
  const csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
  const sessions=createSessionLifecycle(config,provider,tokens),context=createBusinessSettingsContextReader(config,provider,tokens);
  const businessId=config.businessId;
+ const mappingPurpose=(value:unknown):value is FinanceMappingPurpose=>
+  fixedFinanceMappingPurpose(value)||categoryMappings&&expenseCategoryMappingPurpose(value);
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>)=>{
   let submitted=false,credentialHash:Buffer|undefined;
   try{
@@ -85,6 +88,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     response.headers.set('X-Crest-Edit-Binding',binding);
     if(fixedMappings)response.headers.set('X-Crest-Finance-Fixed-Mappings','1');
     if(taxProfiles)response.headers.set('X-Crest-Finance-Tax-Profiles','1');
+    if(categoryMappings)response.headers.set('X-Crest-Finance-Category-Mappings','1');
     return response;
    }
    credentialHash=sessionCredentialHash(cookie);
@@ -145,15 +149,23 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     },signal);
     return privateJsonResponse(result.value,result.status);
    }
+   if(route==='mapping-category-accounts'){
+    check(categoryMappings&&expenseCategoryMappingPurpose(input.purpose)
+     &&(input.afterCode===null||financeAccountCode(input.afterCode)));
+    const value=await database('SELECT crest_commands.list_expense_category_mapping_accounts('+authority+',$9::text,$10::text,25) AS result',
+     [...args,input.purpose,input.afterCode],signal);
+    parseExpenseCategoryMappingAccounts(value,businessId,input.purpose);
+    return privateJsonResponse(value as object);
+   }
    if(route==='mapping-at'){
-    check(fixedFinanceMappingPurpose(input.purpose)&&customerDate(input.date));
+    check(mappingPurpose(input.purpose)&&customerDate(input.date));
     const value=await database('SELECT crest_commands.resolve_fixed_finance_mapping('+authority+',$9::text,$10::date) AS result',
      [...args,input.purpose,input.date],signal);
     check(parseFinanceMappingAt(value,input.purpose,input.date));
     return privateJsonResponse(value as object);
    }
    if(route==='mapping-history'){
-    check(fixedFinanceMappingPurpose(input.purpose)&&(input.beforeVersion===null||customerVersion(input.beforeVersion)));
+    check(mappingPurpose(input.purpose)&&(input.beforeVersion===null||customerVersion(input.beforeVersion)));
     const value=await database('SELECT crest_commands.read_fixed_finance_mapping_history('+authority+',$9::text,$10::bigint,25) AS result',
      [...args,input.purpose,input.beforeVersion],signal);
     parseFinanceMappingHistory(value,businessId,input.purpose,input.beforeVersion);
@@ -168,6 +180,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    }
    if(route==='mapping-operation'||route==='mapping-approve'||route==='mapping-retire'){
     const reference=parseFinanceMappingReference(route==='mapping-operation'?input:input.reference);
+    check(mappingPurpose(reference.purpose));
     const original=[reference.operationId,reference.recoveryEpoch,reference.purpose,reference.expectedVersion];
     if(route==='mapping-operation'){
      const value=await database('SELECT crest_commands.lookup_fixed_finance_mapping_operation('+authority+',$9::uuid,$10::uuid,$11::text,$12::bigint) AS result',

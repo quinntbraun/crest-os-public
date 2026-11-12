@@ -360,6 +360,11 @@
       "version": "20261126180000",
       "file": "20261126180000_finance_tax_profiles.sql",
       "sha256": "8a747b6cb79950dcb8bcd5d626e88b7ae7d872c8e9793e6be9b6aff65dcb37fe"
+    },
+    {
+      "version": "20261127180000",
+      "file": "20261127180000_finance_expense_category_mappings.sql",
+      "sha256": "05a94db86b56b052461a4d85c639c4d1e107d3e12a641c461ba6dec8782945ae"
     }
   ]
 }

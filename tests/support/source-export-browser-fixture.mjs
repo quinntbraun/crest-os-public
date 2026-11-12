@@ -16,7 +16,7 @@ import {installProviderSchema} from './provider-schema.mjs';
 import {startRealAuthService,authResult} from './real-auth-service.mjs';
 import {buildSourceExportBrowserFixture} from './source-export-browser-build.mjs';
 const signal=()=>new AbortController().signal,sha=value=>createHash('sha256').update(value).digest('hex'),release='a'.repeat(40);
-export async function sourceExportBrowserFixture({product=false,workspace=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,photoFixture}={}){
+export async function sourceExportBrowserFixture({product=false,workspace=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,financeCategoryMappings=false,photoFixture}={}){
  assert.equal(typeof jobCompletion,'boolean');assert(!jobCompletion||fieldSessions,'completion requires registered field sessions');
  assert.equal(typeof fieldSessions,'boolean');assert(!fieldSessions||amendmentAcceptance,'field sessions require the genuine held54 product fixture');
  assert.equal(typeof amendmentAcceptance,'boolean');assert(!amendmentAcceptance||amendments&&product,'accepted amendments require the genuine registered53 product fixture');
@@ -30,6 +30,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  assert.equal(typeof financeAccounts,'boolean');assert(!financeAccounts||product&&workspace);
  assert.equal(typeof financeMappings,'boolean');assert(!financeMappings||financeAccounts);
  assert.equal(typeof financeTaxProfiles,'boolean');assert(!financeTaxProfiles||financeAccounts&&catalog);
+ assert.equal(typeof financeCategoryMappings,'boolean');assert(!financeCategoryMappings||financeAccounts&&financeMappings);
  assert.equal(typeof product,'boolean');assert.equal(typeof catalog,'boolean');assert(!catalog||product,'catalog journey uses the actual product server');
  assert.equal(typeof workspace,'boolean');assert(!workspace||product,'workspace journey uses the actual product server');
  assert.equal(typeof quotes,'boolean');assert(!quotes||product,'quote journey uses the actual product server');
@@ -69,7 +70,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   assert.equal(typeof pickupTrips,'boolean');assert(!pickupTrips||dropoffPolicyRevision);
 
   assert.equal(typeof pickupReturnWorkflow,'boolean');assert(!pickupReturnWorkflow||pickupPhotos&&jobCompletion&&unfulfilledCancellation);
-  if(financeTaxProfiles)assert.equal((await sandbox.apply(target)).history.length,72);
+  if(financeCategoryMappings)assert.equal((await sandbox.apply(target)).history.length,73);
+  else if(financeTaxProfiles)assert.equal((await sandbox.apply(target,await sandbox.prefix(72))).history.length,72);
   else if(financeAccounts)assert.equal((await sandbox.apply(target,await sandbox.prefix(71))).history.length,71);
   else if(pickupReturnWorkflow)assert.equal((await sandbox.apply(target,await sandbox.prefix(70))).history.length,70);
   else if(pickupTrips)assert.equal((await sandbox.apply(target,await sandbox.prefix(69))).history.length,69);
@@ -104,7 +106,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    await sandbox.admin.query('CREATE ROLE '+candidate+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+secret+"'");
    financeLogin=candidate;await sandbox.admin.query('GRANT crest_finance_preview TO '+financeLogin);
    const financeUrl=new URL(target);financeUrl.username=financeLogin;financeUrl.password=secret;
-   financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,taxProfiles:financeTaxProfiles};
+   financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,taxProfiles:financeTaxProfiles,categoryMappings:financeCategoryMappings};
    await client.query("INSERT INTO crest_private.finance_controls(business_id,recovery_authority_id,created_by,origin) SELECT $1,id,$2,'system' FROM crest_private.business_recovery_authorities WHERE business_id=$1",[business,actor]);
   }
   const authentication={database:config,provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
@@ -125,6 +127,19 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     assert.equal((await finance.query(
      'SELECT crest_commands.save_finance_account($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',
      [...args,randomUUID(),accountId,body])).rows[0].result.state,'committed');
+    if(financeCategoryMappings){
+     const candidates=[
+      ...Array.from({length:25},(_,index)=>[String(5000+index),'Fictional eligible account '+(index+1),'expense',null]),
+      ['5100','Fictional fuel account','expense',null],['1000','Fictional bank','asset','money'],
+     ];
+     for(const [code,name,accountType,controlKind] of candidates){
+      const draft={identity:{code,accountType,normalSide:'debit',controlKind,reportRole:controlKind??accountType},
+       name,active:true,reason:null};
+      assert.equal((await finance.query(
+       'SELECT crest_commands.save_finance_account($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',
+       [...args,randomUUID(),randomUUID(),draft])).rows[0].result.state,'committed');
+     }
+    }
     for(const [version,id,date,reason] of [
      ['0',accountId,'2026-01-01','=Fictional initial approval'],
      ['1',accountId,'2026-04-01','Fictional approval renewed'],
