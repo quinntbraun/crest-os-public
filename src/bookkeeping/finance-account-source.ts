@@ -3,6 +3,7 @@ import {
   customerDate, customerInstant, customerUuid, customerVersion, exactCustomerObject,
 } from '../customer/customer-contract.ts';
 import {parseFinanceTaxApproval} from './finance-tax-contract.ts';
+import {parseMoneyChannel} from './finance-money-channel-contract.ts';
 
 export const financeAccountSourceColumns = {
   accounts: ['id','business_id','code','account_type','normal_side','control_kind','report_role','currency',
@@ -16,7 +17,12 @@ export const financeAccountSourceColumns = {
 export const financeTaxSourceColumns=['id','business_id','jurisdiction','applicability','service_id','scope_key',
   'version','previous_version','effective_from','treatment','rate','verification_evidence','reason','synthetic',
   'audit_event_id','created_at','created_by','operation_id','origin'] as const;
-const sourceColumns={...financeAccountSourceColumns,tax_profiles:financeTaxSourceColumns} as const;
+export const financeMoneyChannelSourceColumns=['id','business_id','channel_id','version','previous_version',
+  'effective_from','account_id','owner_actor_id','kind','ownership_scope','provider_namespace','masked_suffix','label',
+  'ownership_evidence','opening_state','opening_on','opening_cents','opening_evidence','active','reason','audit_event_id',
+  'created_at','created_by','operation_id','origin'] as const;
+const sourceColumns={...financeAccountSourceColumns,tax_profiles:financeTaxSourceColumns,
+  money_channel_versions:financeMoneyChannelSourceColumns} as const;
 
 type Entity = keyof typeof sourceColumns;
 type AccountEntity = keyof Pick<typeof financeAccountSourceColumns, 'accounts'|'account_versions'>;
@@ -24,6 +30,7 @@ type Row = Readonly<Record<string, string | boolean | null>>;
 type Tables = Readonly<Record<AccountEntity, readonly Row[]>>;
 const nullable = new Set(['control_kind','previous_version','reason']);
 const nullableTax = new Set(['service_id','rate','verification_evidence']);
+const nullableChannel = new Set(['provider_namespace','masked_suffix','ownership_evidence','opening_on','opening_cents','opening_evidence']);
 const decimal = new Set(['first_version','version','previous_version']);
 const accountTypes = ['asset','liability','equity','revenue','contra_revenue','expense'];
 const role = /^[a-z][a-z0-9_]{0,63}$/;
@@ -49,7 +56,8 @@ function sourceRows(entity: Entity, value: unknown, businessId: string): Row[] {
     for (const field of fields) {
       const item = input[field];
       if (item === null && (nullable.has(field) || entity === 'account_mapping_versions' && field === 'account_id'
-        || entity === 'tax_profiles' && nullableTax.has(field))) continue;
+        || entity === 'tax_profiles' && nullableTax.has(field)
+        || entity === 'money_channel_versions' && nullableChannel.has(field))) continue;
       if (field === 'active' || field === 'synthetic') { requireSource(typeof item === 'boolean'); continue; }
       requireSource(typeof item === 'string' && Buffer.from(item).toString('utf8') === item && !item.includes('\0'));
       if (field === 'id' || field.endsWith('_id') || field === 'created_by') requireSource(customerUuid(item));
@@ -149,12 +157,45 @@ function checkTaxHistory(profiles: readonly Row[]) {
   }
 }
 
+function checkMoneyChannelHistory(accounts: readonly Row[], rows: readonly Row[], businessId: string) {
+  const accountIds = new Set(accounts.map(row => row.id));
+  const pinnedAccounts = new Set();
+  const audits = new Set();
+  const operations = new Set();
+  const latest = new Map<string, ReturnType<typeof parseMoneyChannel>>();
+  const ordered = [...rows].sort((left, right) => String(left.effective_from).localeCompare(String(right.effective_from)));
+  for (const row of ordered) {
+    const channel = parseMoneyChannel({
+      schemaVersion:1,businessId:row.business_id,channelId:row.channel_id,version:row.version,auditEventId:row.audit_event_id,
+      accountId:row.account_id,ownerActorId:row.owner_actor_id,kind:row.kind,ownershipScope:row.ownership_scope,
+      providerNamespace:row.provider_namespace,maskedSuffix:row.masked_suffix,label:row.label,effectiveFrom:row.effective_from,
+      ownershipEvidence:row.ownership_evidence,openingState:row.opening_state,openingOn:row.opening_on,openingCents:row.opening_cents,
+      openingEvidence:row.opening_evidence,active:row.active,reason:row.reason,
+    },businessId);
+    const previous = latest.get(channel.channelId);
+    requireSource(accountIds.has(channel.accountId)&&!audits.has(channel.auditEventId)&&!operations.has(row.operation_id)
+      &&row.previous_version===(previous?.version??null)&&channel.version===String(BigInt(previous?.version??'0')+1n));
+    if(previous){
+      requireSource(channel.effectiveFrom>previous.effectiveFrom&&channel.accountId===previous.accountId
+        &&channel.ownerActorId===previous.ownerActorId&&channel.kind===previous.kind&&channel.ownershipScope===previous.ownershipScope
+        &&channel.providerNamespace===previous.providerNamespace&&channel.maskedSuffix===previous.maskedSuffix);
+    }else{
+      requireSource(channel.ownerActorId===row.created_by&&!pinnedAccounts.has(channel.accountId));
+      pinnedAccounts.add(channel.accountId);
+    }
+    latest.set(channel.channelId,channel);
+    audits.add(channel.auditEventId);
+    operations.add(row.operation_id);
+  }
+}
+
 /** Format one authorized snapshot. This does not grant capture or distribution access. */
 export function formatFinanceAccountSource(input: {
   businessId: string; snapshotToken: string; rows: Readonly<Record<AccountEntity, unknown>>;
   expectedCounts: Readonly<Record<AccountEntity, number>>;
   mappingSnapshot?: Readonly<{ rows: unknown; expectedCount: number }>;
   taxSnapshot?: Readonly<{ rows: unknown; expectedCount: number }>;
+  moneyChannelSnapshot?: Readonly<{ rows: unknown; expectedCount: number }>;
 }) {
   const { businessId, snapshotToken } = input;
   requireSource(customerUuid(businessId) && /^[a-f0-9]{64}$/.test(snapshotToken));
@@ -162,10 +203,14 @@ export function formatFinanceAccountSource(input: {
   const versions = sourceRows('account_versions', input.rows.account_versions, businessId);
   const mappings = input.mappingSnapshot ? sourceRows('account_mapping_versions', input.mappingSnapshot.rows, businessId) : [];
   const taxProfiles = input.taxSnapshot ? sourceRows('tax_profiles', input.taxSnapshot.rows, businessId) : [];
-  const rows = { accounts, account_versions: versions, account_mapping_versions: mappings, tax_profiles: taxProfiles };
+  const moneyChannels = input.moneyChannelSnapshot
+    ? sourceRows('money_channel_versions', input.moneyChannelSnapshot.rows, businessId) : [];
+  const rows = { accounts, account_versions: versions, account_mapping_versions: mappings, tax_profiles: taxProfiles,
+    money_channel_versions: moneyChannels };
   checkAccountHistory(rows);
   checkMappingHistory(accounts, mappings);
   checkTaxHistory(taxProfiles);
+  checkMoneyChannelHistory(accounts,moneyChannels,businessId);
   const entities: Entity[] = ['accounts','account_versions'];
   const expectedCounts: Partial<Record<Entity, number>> = {...input.expectedCounts};
   if(input.mappingSnapshot){
@@ -175,6 +220,10 @@ export function formatFinanceAccountSource(input: {
   if(input.taxSnapshot){
     entities.push('tax_profiles');
     expectedCounts.tax_profiles = input.taxSnapshot.expectedCount;
+  }
+  if(input.moneyChannelSnapshot){
+    entities.push('money_channel_versions');
+    expectedCounts.money_channel_versions = input.moneyChannelSnapshot.expectedCount;
   }
   const files = entities.flatMap(entity => {
     const fields = sourceColumns[entity];
@@ -201,12 +250,12 @@ export function formatFinanceAccountSource(input: {
       { name:entity+'.csv', content:lines.join('\r\n')+'\r\n' },
       { name:entity+'_escape_map.json', content:JSON.stringify({schemaVersion:1,entity,businessId,snapshotToken,escapes})+'\n' },
       { name:entity+'_dictionary.json', content:JSON.stringify({schemaVersion:1,entity,columns:fields,
-        format:'UTF-8 RFC4180 CRLF',key:'id',null:'\\N',booleans:entity==='account_versions'?['active']:entity==='tax_profiles'?['synthetic']:[],
-        exactText:fields.filter(column=>decimal.has(column)||column==='created_at'||column==='effective_from'||column==='rate'),
+        format:'UTF-8 RFC4180 CRLF',key:'id',null:'\\N',booleans:entity==='account_versions'||entity==='money_channel_versions'?['active']:entity==='tax_profiles'?['synthetic']:[],
+        exactText:fields.filter(column=>decimal.has(column)||column==='created_at'||column==='effective_from'||column==='rate'||column==='opening_on'||column==='opening_cents'),
         decode:'Remove only mapped apostrophes, then decode paired backslashes. Treat unescaped \\N as null.'})+'\n' },
     ];
   });
-  const manifest = JSON.stringify({schemaVersion:input.taxSnapshot?3:input.mappingSnapshot?2:1,scope:'finance_account_sources',businessId,snapshotToken,
+  const manifest = JSON.stringify({schemaVersion:input.moneyChannelSnapshot?4:input.taxSnapshot?3:input.mappingSnapshot?2:1,scope:'finance_account_sources',businessId,snapshotToken,
     recordCounts:expectedCounts,referenceClosureComplete:false,completePortableExport:false,completeBackup:false,
     parts:files.map(({name,content})=>({name,bytes:Buffer.byteLength(content),
       sha256:createHash('sha256').update(content).digest('hex')}))})+'\n';

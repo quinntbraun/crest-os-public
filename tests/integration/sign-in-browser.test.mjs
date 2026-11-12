@@ -112,7 +112,19 @@ async function customerEditorFlow(page,other,name){
   assert.equal((await client.query('SELECT contact_preference FROM crest.customers WHERE business_id=$1 AND id=$2',[business,row.id])).rows[0].contact_preference,'','an explicit API empty string remains distinct from an omitted form field');
 }
 async function customerInterruptedFlow(page,name){
-  const leave=dialog=>{assert.equal(dialog.type(),'beforeunload');void dialog.accept();};page.on('dialog',leave);try{
+  const leave=dialog=>{assert.equal(dialog.type(),'beforeunload');void dialog.accept();};
+  const watched=new Set(['/api/auth/session','/api/business/customers/context','/api/business/customers/save','/api/business/customers/operation']);
+  const requests=[];
+  const record=(url,outcome)=>{
+    const path=new URL(url).pathname;
+    if(!watched.has(path))return;
+    requests.push([path,outcome]);
+    if(requests.length>16)requests.shift();
+  };
+  const response=event=>record(event.url(),event.status());
+  const failed=event=>record(event.url(),'request_failed');
+  page.on('dialog',leave);page.on('response',response);page.on('requestfailed',failed);
+  try{
   const key='crest.customer.pending-reference.v1',read=()=>page.evaluate(k=>JSON.parse(sessionStorage.getItem(k)),key),saveButton=()=>page.getByRole('button',{name:'Save customer',exact:true}),loadButton=()=>page.getByRole('button',{name:'Load current customers',exact:true});
   await openCustomers(page);await page.getByRole('button',{name:'Add customer',exact:true}).click();await page.getByLabel('Customer name',{exact:true}).fill(`Synthetic customer lost response ${name}`);let submitted,calls=0;
   const lost=async route=>{calls++;submitted=route.request().postDataJSON();const response=await route.fetch();assert.equal(response.status(),200);await response.body();await route.abort('failed');};
@@ -122,7 +134,13 @@ async function customerInterruptedFlow(page,name){
   const request=page.waitForRequest(r=>r.url().endsWith('/api/business/customers/save'));await page.getByRole('button',{name:'Retry original customer change',exact:true}).click();const retried=(await request).postDataJSON();for(const field of ['operationId','customerId','expectedVersion','recoveryEpoch'])assert.equal(retried[field],retry.reference[field]);await expect(page.getByRole('status')).toContainText('Customer saved');assert.equal(await read(),null);
   await loadButton().click();await page.getByRole('button',{name:'Add customer',exact:true}).click();await page.getByLabel('Customer name',{exact:true}).fill(`Synthetic lost draft ${name}`);await page.route('**/api/business/customers/save',notSent);await saveButton().click();await expect(page.getByRole('status')).toContainText('save could not be confirmed');await page.unroute('**/api/business/customers/save',notSent);const lostDraft=await read();await page.reload();await expect(page.getByRole('status')).toContainText('A pending customer save was found');await page.getByRole('button',{name:'Check customer save status',exact:true}).click();await expect(page.getByRole('status')).toContainText('original draft is no longer in memory');await expect(page.getByRole('button',{name:'Retry original customer change',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Add customer',exact:true})).toHaveCount(0);assert.deepEqual(await read(),lostDraft);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,lostDraft.reference.operationId])).rows[0].n,0);
   await page.goto(origin+'/sign-in');await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
-  }finally{page.off('dialog',leave);}
+  }catch(error){
+    assert(error instanceof Error);
+    error.message+='\nRecent customer request outcomes '+JSON.stringify(requests);
+    throw error;
+  }finally{
+    page.off('dialog',leave);page.off('response',response);page.off('requestfailed',failed);
+  }
 }
 async function openSettings(page){await page.bringToFront();await page.goto(origin+'/settings');await expect(page.getByLabel('Business legal name',{exact:true})).toBeVisible();}
 async function backgroundNameChange(page,legalName){
@@ -219,6 +237,7 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
         await page.getByRole('button',{name:'Sign out on this device',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Signed out on this device.');
         assert.equal(await localCookie(first),undefined,'logout clears credential');const revoked=await row(untrusted);assert(revoked.revoked_at,'local revoked');assert.equal(revoked.provider_token_ciphertext,null);
         assert.equal((await client.query('SELECT count(*)::int AS n FROM auth.sessions WHERE id=$1',[revoked.provider_session_id])).rows[0].n,0,'selected provider session removed');
+        await other.goto(origin+'/sign-in');
         await checkSession(other);await expect(other.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();assert.equal((await row(trusted)).revoked_at,null,'other device stays live');
       });
       await t.test('durable local revocation is observed after reload and cannot leave cached signed-in UI',async()=>{

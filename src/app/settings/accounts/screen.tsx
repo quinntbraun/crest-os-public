@@ -139,6 +139,7 @@ export function FinanceAccountsScreen(){
    if(result.reason==='RECOVERY_REVIEW_REQUIRED')setStale(true);
    setMessage(result.reason==='FINANCE_ACCOUNT_SIGN_IN_REQUIRED'?'Sign in again, then check this save reference.':
     result.reason==='RECOVERY_REVIEW_REQUIRED'?'Account changes are paused. Reload after recovery review.':
+    result.reason==='FINANCE_CHANNEL_ACCOUNT_PINNED'?'Close the linked money channel before archiving this account.':
     'Account setup needs review before changes can be saved.');
    return;
   }
@@ -222,6 +223,7 @@ export function FinanceAccountsScreen(){
  return <section className={styles.workspace} aria-label="Account settings" aria-busy={busy}>
   <p role="status" tabIndex={-1} ref={status}>{message}</p>
   {workspace?.context.fixedMappings&&!editor&&<a href="/settings/accounts/mappings">Dated account mappings</a>}
+  {workspace?.context.moneyChannels&&!editor&&<p><a href="/settings/accounts/channels">Money channels</a></p>}
   {workspace?.context.categoryMappings&&!editor&&<p><a href="/settings/accounts/mappings/categories">Expense category mappings</a></p>}
   {workspace?.context.taxProfiles&&!editor&&<p><a href="/settings/accounts/tax">Tax profiles</a></p>}
   {signedOut&&<a href="/sign-in">Sign in again</a>}

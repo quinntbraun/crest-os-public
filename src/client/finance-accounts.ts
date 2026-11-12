@@ -13,7 +13,13 @@ import {
 } from '../bookkeeping/finance-tax-contract';
 import type {FinanceTaxApproval,FinanceTaxReference,FinanceTaxScope} from '../bookkeeping/finance-tax-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean}>;
+import {
+ moneyChannelReceiptMatches,parseMoneyChannelAccounts,parseMoneyChannelHistory,parseMoneyChannelOperation,
+ parseMoneyChannelPage,parseMoneyChannelReference,
+} from '../bookkeeping/finance-money-channel-contract';
+import type {MoneyChannelDraft,MoneyChannelKind,MoneyChannelReference,MoneyChannelScope} from '../bookkeeping/finance-money-channel-contract';
+
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const pendingKey='crest.finance-account.pending-reference.v1';
@@ -26,6 +32,11 @@ const mappingFailure=[...knownFailure,'FINANCE_MAPPING_VERSION_CONFLICT','FINANC
 const taxPendingKey='crest.finance-tax.pending-reference.v1';
 type TaxPending=Readonly<{businessId:string;binding:string;reference:FinanceTaxReference}>;
 const taxFailure=[...knownFailure,'FINANCE_TAX_VERSION_CONFLICT','FINANCE_TAX_EFFECTIVE_ORDER_REQUIRED'] as const;
+
+const channelPendingKey='crest.finance-money-channel.pending-reference.v1';
+type ChannelPending=Readonly<{businessId:string;binding:string;reference:MoneyChannelReference}>;
+const channelFailure=[...knownFailure,'FINANCE_CHANNEL_VERSION_CONFLICT','FINANCE_CHANNEL_EFFECTIVE_ORDER_REQUIRED',
+ 'FINANCE_CHANNEL_ACCOUNT_REQUIRED','FINANCE_CHANNEL_ACCOUNT_PINNED','FINANCE_CHANNEL_IDENTITY_RETAINED'] as const;
 
 async function post(route:string,body:object,signal:AbortSignal,binding?:string){
  const bounded=AbortSignal.any([signal,AbortSignal.timeout(40000)]),proof=await authentication.session(bounded);
@@ -51,16 +62,60 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string)
  return {status:response.status,value:JSON.parse(text) as unknown,binding:response.headers.get('x-crest-edit-binding'),
   fixedMappings:response.headers.get('x-crest-finance-fixed-mappings')==='1',
   taxProfiles:response.headers.get('x-crest-finance-tax-profiles')==='1',
-  categoryMappings:response.headers.get('x-crest-finance-category-mappings')==='1'};
+  categoryMappings:response.headers.get('x-crest-finance-category-mappings')==='1',
+  moneyChannels:response.headers.get('x-crest-finance-money-channels')==='1'};
 }
 
 export const financeAccounts={
  async context(signal:AbortSignal):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings}=await post('context',{},signal);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels}=await post('context',{},signal);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
-  return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings}) as FinanceAccountContext;
+  return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels}) as FinanceAccountContext;
+ },
+ async moneyChannels(context:FinanceAccountContext,afterChannel:string|null,signal:AbortSignal){
+  check(context.moneyChannels);
+  const {status,value}=await post('channel-list',{afterChannel},signal,context.binding);
+  check(status===200);return parseMoneyChannelPage(value,context.businessId,afterChannel);
+ },
+ async moneyChannelHistory(context:FinanceAccountContext,channelId:string,beforeVersion:string|null,signal:AbortSignal){
+  check(context.moneyChannels);
+  const {status,value}=await post('channel-history',{channelId,beforeVersion},signal,context.binding);
+  check(status===200);return parseMoneyChannelHistory(value,context.businessId,channelId,beforeVersion);
+ },
+ async moneyChannelAccounts(context:FinanceAccountContext,kind:MoneyChannelKind,ownershipScope:MoneyChannelScope,afterCode:string|null,signal:AbortSignal){
+  check(context.moneyChannels);
+  const {status,value}=await post('channel-accounts',{kind,ownershipScope,afterCode},signal,context.binding);
+  check(status===200);return parseMoneyChannelAccounts(value,context.businessId,kind,ownershipScope);
+ },
+ async moneyChannelOperation(context:FinanceAccountContext,reference:MoneyChannelReference,signal:AbortSignal){
+  check(context.moneyChannels);
+  const {status,value}=await post('channel-lookup',reference,signal,context.binding);
+  check(status===200);return parseMoneyChannelOperation(value,context.businessId,reference);
+ },
+ async saveMoneyChannel(context:FinanceAccountContext,reference:MoneyChannelReference,draft:MoneyChannelDraft,signal:AbortSignal){
+  check(context.moneyChannels&&context.writeState==='ready'&&context.recoveryEpoch===reference.recoveryEpoch);
+  const {status,value}=await post('channel-save',{reference,draft},signal,context.binding);
+  if(status===409&&exact(value,['error'])){
+   const reason=channelFailure.find(code=>code===value.error);check(reason);
+   return {state:'rejected',reason} as const;
+  }
+  const result=parseMoneyChannelOperation(value,context.businessId,reference);
+  check(status===409&&result.state==='conflict'||status===200&&result.state==='committed'&&moneyChannelReceiptMatches(result.receipt,draft));
+  return result;
+ },
+ async retireMoneyChannelOperation(context:FinanceAccountContext,reference:MoneyChannelReference,reason:string,signal:AbortSignal){
+  check(context.moneyChannels&&context.writeState==='ready'&&context.recoveryEpoch&&financeAccountReviewReason(reason));
+  const {status,value}=await post('channel-retire',{reference,reviewEpoch:context.recoveryEpoch,reason},signal,context.binding);
+  if(status===409&&exact(value,['error'])){
+   const failure=knownFailure.find(code=>code===value.error);check(failure);
+   return {state:'rejected',reason:failure} as const;
+  }
+  const result=parseMoneyChannelOperation(value,context.businessId,reference);
+  check(status===409&&result.state==='conflict'||status===200&&(result.state==='committed'
+   ||result.state==='retired'&&result.reviewEpoch===context.recoveryEpoch));
+  return result;
  },
  async taxHistory(context:FinanceAccountContext,scope:FinanceTaxScope,beforeVersion:string|null,signal:AbortSignal){
   check(context.taxProfiles);
@@ -181,7 +236,7 @@ export const financeAccounts={
   const {status,value}=await post('save',{reference,draft},signal,context.binding);
   if(status===409){
    if(exact(value,['error'])){
-    const failure=knownFailure.find(code=>code===value.error);check(failure);
+    const failure=[...knownFailure,'FINANCE_CHANNEL_ACCOUNT_PINNED' as const].find(code=>code===value.error);check(failure);
     return {state:'rejected' as const,reason:failure};
    }
    if(exact(value,['state','reason'])&&value.state==='conflict'&&(value.reason==='account'||value.reason==='operation'))
@@ -261,6 +316,29 @@ export function clearPendingFinanceTax(entry:TaxPending){
  check(JSON.stringify(readPendingFinanceTax())===JSON.stringify(entry));
  sessionStorage.removeItem(taxPendingKey);
  check(readPendingFinanceTax()===null);
+}
+
+// Persist an opaque request reference, never an account identifier, label or opening evidence.
+export function readPendingMoneyChannel():ChannelPending|null{
+ const raw=sessionStorage.getItem(channelPendingKey);
+ if(raw===null)return null;
+ check(raw.length<=1500&&(raw.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length===7);
+ const value:unknown=JSON.parse(raw);
+ check(exact(value,['businessId','binding','reference'])&&customerUuid(value.businessId)
+  &&typeof value.binding==='string'&&bindingPattern.test(value.binding));
+ return {businessId:value.businessId,binding:value.binding,reference:parseMoneyChannelReference(value.reference)};
+}
+export function retainPendingMoneyChannel(context:FinanceAccountContext,reference:MoneyChannelReference):ChannelPending{
+ check(readPendingMoneyChannel()===null);
+ const entry={businessId:context.businessId,binding:context.binding,reference};
+ sessionStorage.setItem(channelPendingKey,JSON.stringify(entry));
+ check(JSON.stringify(readPendingMoneyChannel())===JSON.stringify(entry));
+ return entry;
+}
+export function clearPendingMoneyChannel(entry:ChannelPending){
+ check(JSON.stringify(readPendingMoneyChannel())===JSON.stringify(entry));
+ sessionStorage.removeItem(channelPendingKey);
+ check(readPendingMoneyChannel()===null);
 }
 
 export function downloadFinanceHistory(filename:string,rows:readonly (readonly string[])[]){
