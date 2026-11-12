@@ -59,6 +59,7 @@ for(const engine of [chromium,webkit]){
    await expect(status).toHaveText('Channel review saved.');
    await expect(panel.getByText('Opening unknown',{exact:true})).toBeVisible();
    await expect(panel.getByText('Bank account · Business funds held by owner · fictional-bank •••• 9A76 · Account 1070',{exact:true})).toBeVisible();
+   await expect(panel.getByText('Latest review · Open from Jan 1, 2026',{exact:true})).toBeVisible();
 
    await panel.getByRole('button',{name:'Edit review',exact:true}).click();
    await expect(panel.getByLabel('Linked account',{exact:true})).toHaveCount(0);
@@ -99,6 +100,7 @@ for(const engine of [chromium,webkit]){
    await review.click();
    await expect(status).toHaveText('The original channel review was confirmed.');
    await expect(panel.getByText('Verified opening amount · $10.25',{exact:true})).toBeVisible();
+   await expect(panel.getByText('Latest review · Open from Feb 1, 2026',{exact:true})).toBeVisible();
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
 
    await panel.getByRole('button',{name:'Edit review',exact:true}).click();

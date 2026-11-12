@@ -1,5 +1,7 @@
 import {customerDate,customerUuid,customerVersion,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {financeAccountReviewReason,requireFinanceAccount as check} from './finance-account-contract.ts';
+import {calculateInclusiveFinanceCharge,isFinanceCents,isFinanceDecimalRate} from './finance-inclusive-charge.ts';
+export {isFinanceCents as financeTaxCents} from './finance-inclusive-charge.ts';
 
 export type FinanceTaxScope=Readonly<{jurisdiction:string}&(
  {applicability:'service';serviceId:string}|{applicability:'tip';serviceId:null}
@@ -23,11 +25,6 @@ const profileFields=['schemaVersion','id','businessId',...scopeFields,'version',
 const componentFields=['grossInclusiveCents','discountInclusiveCents','inclusiveCents','grossNetCents','netCents',
  'taxCents','discountNetCents'] as const;
 const maxCents=9223372036854775807n;
-const canonicalRate=/^(?:0|[1-9][0-9]*)(?:\.[0-9]*[1-9])?$/;
-
-export function financeTaxCents(value:unknown):value is string {
- return typeof value==='string'&&/^(?:0|[1-9][0-9]{0,18})$/.test(value)&&BigInt(value)<=maxCents;
-}
 
 export function parseFinanceTaxScope(value:unknown):FinanceTaxScope {
  check(exact(value,scopeFields)&&financeAccountReviewReason(value.jurisdiction)&&[...value.jurisdiction].length<=200
@@ -55,8 +52,7 @@ export type FinanceTaxApproval=Readonly<FinanceTaxScope&{
 function validTreatment(value:Record<string,unknown>){
  return typeof value.treatment==='string'&&Object.hasOwn(financeTaxTreatmentLabels,value.treatment)
   &&(value.treatment==='unresolved'?value.verificationEvidence===null:financeAccountReviewReason(value.verificationEvidence))
-  &&(value.treatment==='inclusive_single'?typeof value.rate==='string'&&value.rate.length<=128
-   &&value.rate!=='0'&&canonicalRate.test(value.rate):value.rate===null);
+  &&(value.treatment==='inclusive_single'?isFinanceDecimalRate(value.rate)&&value.rate!=='0':value.rate===null);
 }
 
 export function parseFinanceTaxReference(value:unknown):FinanceTaxReference {
@@ -126,11 +122,9 @@ export function parseFinanceTaxPreview(value:unknown,businessId:string,scope:Fin
  check(exact(value,['state','profile','components'])&&value.state==='ready'&&exact(value.components,componentFields));
  const found=profile(value.profile,businessId,scope),components=value.components;
  check(found.effectiveFrom<=date&&(found.treatment==='inclusive_single'||found.treatment==='non_taxable'));
- check(componentFields.every(key=>financeTaxCents(components[key])));
+ check(componentFields.every(key=>isFinanceCents(components[key])));
  const strings=components as Record<typeof componentFields[number],string>;
- const [g,d,a,gn,n,t,dn]=componentFields.map(key=>BigInt(strings[key])) as [bigint,bigint,bigint,bigint,bigint,bigint,bigint];
- check(strings.grossInclusiveCents===gross&&strings.discountInclusiveCents===discount
-  &&a===g-d&&a===n+t&&gn===n+dn&&gn<=g&&dn<=d
-  &&(found.treatment!=='non_taxable'||(t===0n&&dn===d)));
+ const expected=calculateInclusiveFinanceCharge(gross,discount,found.rate??'0');
+ check(componentFields.every(key=>strings[key]===expected[key]));
  return {state:'ready',profile:found,components:Object.freeze(strings)} as const;
 }

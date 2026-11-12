@@ -23,7 +23,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  const needsScreenshots=['commercial','amendments','schedule','field','custody','records'].includes(selected);
  const requiredViewsByGroup={
   records:['finance-account-settings-recovery','finance-mapping-history','finance-mapping-manage','finance-tax-approval','finance-tax-history','finance-tax-preview','finance-category-approval','finance-category-history','finance-channel-opening','finance-channel-history'],
-  field:['field-departure','field-pause','completion-editor','completion-saved','mileage-form','mileage-split','mileage-saved','field-cancellation','field-work-time','field-work-boundary','mileage-departure-correction','completion-outcome','completion-history','field-maintenance-history'],
+  field:['field-departure','field-pause','completion-editor','completion-saved','mileage-form','mileage-split','mileage-saved','field-cancellation','field-work-time','field-work-boundary','mileage-departure-correction','completion-outcome','completion-history','field-maintenance-history','completion-invoice-preparation'],
   custody:['field-dropoff-intake','field-dropoff-work','field-dropoff-cancellation','field-dropoff-completion',
    'field-dropoff-collections','field-dropoff-history','field-dropoff-policy-revision',
    'field-pickup-policy','field-pickup-departure','field-pickup-collection','field-pickup-photo',

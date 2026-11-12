@@ -25,6 +25,8 @@ type Workspace={context:FinanceAccountContext;page:Page};
 type Editor={record:RecordRow|null;fields:ChannelEditorFields};
 const initialMessage='Load saved money channels.';
 const subscribeToHydration=()=>()=>undefined;
+const dateFormat=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'UTC'});
+const dateLabel=(value:string)=>dateFormat.format(new Date(value+'T00:00:00Z'));
 const blank:ChannelEditorFields={kind:'',scope:'',accountId:'',provider:'',suffix:'',label:'',date:'',ownership:'',
  openingState:'unknown',openingOn:'',openingAmount:'',openingEvidence:'',active:true,reason:''};
 
@@ -244,8 +246,9 @@ export function MoneyChannelsScreen(){
   {workspace&&!editor&&!pending&&<>
    {!workspace.page.rows.length&&<p>No money channels have been saved.</p>}
    <ul className="service-list">{workspace.page.rows.map(row=><li key={row.channelId}>
-    <strong>{row.label} · {row.active?'Open':'Closed'}</strong>
+    <strong>{row.label}</strong>
     <p>{description(row)} · Account {row.accountCode}</p>
+    <p>Latest review · {row.active?'Open':'Closed'} from <time dateTime={row.effectiveFrom}>{dateLabel(row.effectiveFrom)}</time></p>
     <p>{moneyChannelOpeningStates[row.openingState]}{row.openingCents===null?'':' · '+dollars(row.openingCents,true)}</p>
     <div className={styles.actions}>
      <button type="button" className="secondary" disabled={disabled} onClick={()=>loadHistory(row)}>View history</button>

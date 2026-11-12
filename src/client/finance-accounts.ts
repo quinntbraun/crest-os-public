@@ -19,7 +19,9 @@ import {
 } from '../bookkeeping/finance-money-channel-contract';
 import type {MoneyChannelDraft,MoneyChannelKind,MoneyChannelReference,MoneyChannelScope} from '../bookkeeping/finance-money-channel-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean}>;
+import {parseInvoicePreparation} from '../bookkeeping/invoice-preparation-contract';
+
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const pendingKey='crest.finance-account.pending-reference.v1';
@@ -54,7 +56,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string)
   for(;;){
    const part=await reader.read();
    if(part.done)break;
-   bytes+=part.value.byteLength;check(bytes<=196608&&!bounded.aborted);
+   bytes+=part.value.byteLength;check(bytes<=(route==='invoice-preparation'?1048576:196608)&&!bounded.aborted);
    text+=decoder.decode(part.value,{stream:true});
   }
   text+=decoder.decode();
@@ -63,16 +65,22 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string)
   fixedMappings:response.headers.get('x-crest-finance-fixed-mappings')==='1',
   taxProfiles:response.headers.get('x-crest-finance-tax-profiles')==='1',
   categoryMappings:response.headers.get('x-crest-finance-category-mappings')==='1',
-  moneyChannels:response.headers.get('x-crest-finance-money-channels')==='1'};
+  moneyChannels:response.headers.get('x-crest-finance-money-channels')==='1',
+  invoicePreparation:response.headers.get('x-crest-invoice-preparation')==='1'};
 }
 
 export const financeAccounts={
  async context(signal:AbortSignal):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels}=await post('context',{},signal);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation}=await post('context',{},signal);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
-  return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels}) as FinanceAccountContext;
+  return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation}) as FinanceAccountContext;
+ },
+ async invoicePreparation(context:FinanceAccountContext,jobId:string,signal:AbortSignal){
+  check(context.invoicePreparation&&customerUuid(jobId));
+  const {status,value}=await post('invoice-preparation',{jobId},signal,context.binding);
+  check(status===200);return parseInvoicePreparation(value,context.businessId,jobId);
  },
  async moneyChannels(context:FinanceAccountContext,afterChannel:string|null,signal:AbortSignal){
   check(context.moneyChannels);

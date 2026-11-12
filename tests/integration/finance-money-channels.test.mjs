@@ -7,8 +7,8 @@ import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixtur
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {requireSyntheticFinanceAccountConfiguration} from '../../scripts/synthetic-migrations.mjs';
-import {backupDatabase,backupLegacy73Database,connect,inventory,keyPair,privateWorkspace,recoveryCluster,
- restoreDatabase,restoreLegacy73Database} from '../support/recovery-drill.mjs';
+import {backupLegacy74Database,backupLegacy73Database,connect,inventory,keyPair,privateWorkspace,recoveryCluster,
+ restoreLegacy74Database,restoreLegacy73Database} from '../support/recovery-drill.mjs';
 import {formatFinanceAccountSource} from '../../src/bookkeeping/finance-account-source.ts';
 
 async function call(db, command, values){
@@ -71,10 +71,11 @@ test('fictional money channels preserve masked identity, reviewed opening eviden
    await assert.rejects(requireSyntheticFinanceAccountConfiguration(target,owner.business,false,false,true),
     {message:'SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED'});
    const before=await inventory(admin);
-   const adopted=await sandbox.apply(target);
+   const schema74=await sandbox.prefix(74);
+   const adopted=await sandbox.apply(target,schema74);
    assert.equal(adopted.history.length,74);
    assert.deepEqual(adopted.history.slice(0,73),previous.history);
-   assert.deepEqual((await sandbox.apply(target)).history,adopted.history);
+   assert.deepEqual((await sandbox.apply(target,schema74)).history,adopted.history);
    const existing=rows=>rows.filter(row=>row.schema!=='supabase_migrations'&&row.name!=='money_channel_versions');
    const after=await inventory(admin);
    assert.deepEqual(existing(after),existing(before));
@@ -187,14 +188,14 @@ test('fictional money channels preserve masked identity, reviewed opening eviden
     await mkdir(point,{mode:0o700});
     const keys=await keyPair(directory);
     await assert.rejects(backupLegacy73Database(admin,target,point,keys.recipient),{message:'SYNTHETIC_RECOVERY_BACKUP_FAILED:coverage'});
-    const {manifest}=await backupDatabase(admin,target,point,keys.recipient);
+    const {manifest}=await backupLegacy74Database(admin,target,point,keys.recipient);
     assert.equal(manifest.schemaVersion,74);
     assert.equal(manifest.rows.find(row=>row.schema==='crest'&&row.name==='money_channel_versions').rows,7);
     destination=await recoveryCluster();
     const restoredUrl=await destination.database();
     assert.notEqual(new URL(restoredUrl).port,new URL(target).port);
     await assert.rejects(restoreLegacy73Database(point,keys.path,restoredUrl),{message:'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest'});
-    await restoreDatabase(point,keys.path,restoredUrl);
+    await restoreLegacy74Database(point,keys.path,restoredUrl);
     restored=await connect(restoredUrl);
     assert.deepEqual(await inventory(restored),manifest.rows);
     assert.deepEqual(formatFinanceAccountSource(await readSource(restored)),formatFinanceAccountSource(await readSource(admin)));

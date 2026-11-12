@@ -1,7 +1,7 @@
 // Genuine Next/Node/MFA browser acceptance for the isolated completion candidate.
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {mkdir} from 'node:fs/promises';
+import {mkdir,readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
@@ -10,11 +10,12 @@ import {sourceExportBrowserFixture} from '../support/source-export-browser-fixtu
 const dollars=cents=>(cents/100n).toString()+'.'+(cents%100n).toString().padStart(2,'0');
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine End Job editor and saved completion',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
-  quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true});
+  quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
+  financeAccounts:true,invoicePreparation:true});
  let browser;
  try{
   browser=await engine.launch();
-  const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:844}});
+  const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
   const page=await context.newPage();
   page.setDefaultTimeout(20000);
   const jobId=fixture.bookingRequest.jobId,job='/schedule?job='+jobId;
@@ -247,8 +248,59 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(status).toHaveText('Saved completion loaded.');
   await expect(summary.locator('details[open]').filter({has:page.getByText('Review message history',{exact:true})})).toHaveCount(0);
   await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
-  await page.getByRole('link',{name:'Review saved completion',exact:true}).click();
+  const scheduleStatus=page.getByRole('region',{name:'Saved schedule',exact:true}).getByRole('status').first();
+  const requestOutcomes=[];
+  const scheduleResponse=response=>{
+   const path=new URL(response.url()).pathname;
+   if(path.startsWith('/api/business/scheduling/')||path==='/api/auth/session')requestOutcomes.push([path,response.status()]);
+  };
+  page.on('response',scheduleResponse);
+  try{
+   const savedCompletion=page.getByRole('link',{name:'Review saved completion',exact:true});
+   await expect(savedCompletion, 'Schedule should reopen the completed job').toBeVisible({timeout:10000});
+   await savedCompletion.click();
+  }catch(error){
+   assert(error instanceof Error);
+   error.message+='\nSchedule status '+(await scheduleStatus.textContent())+' '+JSON.stringify(requestOutcomes.slice(-12));
+   throw error;
+  }finally{page.off('response',scheduleResponse);}
   await expect(status).toHaveText('Saved completion loaded.');
+  const preparation=page.getByRole('region',{name:'Invoice preparation',exact:true});
+  const load=preparation.getByRole('button',{name:'Load completed work',exact:true});
+  const prepStatus=preparation.getByRole('status');
+  await page.route('**/api/business/finance-accounts/invoice-preparation',route=>route.abort(),{times:1});
+  await load.click();
+  await expect(prepStatus).toHaveText('Crest could not verify the completed work. Try again.');
+  await expect(preparation.getByRole('listitem')).toHaveCount(0);
+  await load.focus();
+  await page.keyboard.press('Enter');
+  await expect(prepStatus).toHaveText('Completed work loaded.');
+  await expect(preparation.getByRole('listitem')).toHaveCount(2);
+  await expect(preparation).toContainText('$0.00 agreed for this portion');
+  if(partial){
+   await expect(preparation).toContainText('Synthetic interior surfaces fulfilled');
+   await expect(preparation).not.toContainText('Synthetic final pass deferred');
+  }
+  const downloading=page.waitForEvent('download');
+  await preparation.getByRole('button',{name:'Download completed work (CSV)',exact:true}).click();
+  const downloaded=await downloading;
+  assert.equal(downloaded.suggestedFilename(),'crest-completed-work.csv');
+  const csv=await readFile(await downloaded.path(),'utf8');
+  assert.match(csv,/"grossInclusiveCents","discountInclusiveCents","inclusiveCents"/);
+  assert(!csv.includes('Synthetic final pass deferred'));
+  for(const width of [360,390,768,1440]){
+   await page.setViewportSize({width,height:900});
+   await preparation.getByRole('list',{name:'Completed portions',exact:true}).evaluate(element=>
+    element.scrollIntoView({block:'center'}));
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+   assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
+   await page.screenshot({path:'.local/review/completion-invoice-preparation-'+name+'-'+width+'.png'});
+  }
+  await page.reload();
+  await expect(preparation.getByRole('listitem')).toHaveCount(0);
+  await load.click();
+  await expect(prepStatus).toHaveText('Completed work loaded.');
  }finally{
   await browser?.close();
   await fixture.close();
