@@ -182,6 +182,15 @@ test('pickup policies, handoffs and verified photo bytes survive encrypted recov
    [...owner.auth(),ref]);
   assert.equal((await lookup(original)).result.receipt.sourceRecordId,firstId);
   await assert.rejects(lookup({...original,reference:{...original.reference,expectedSequence:'1'}}),{code:'23514'});
+  const retiredPolicy={...original,reference:{...original.reference,operationId:randomUUID(),expectedSequence:'2'}};
+  const retirePolicy=()=>value(web,'SELECT crest_commands.retire_original_operation($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) value',
+   [...owner.auth(),owner.epoch,retiredPolicy,'Fictional policy save requires review']);
+  const retired=await retirePolicy();
+  assert.equal(retired.state,'retired');
+  assert.deepEqual(await retirePolicy(),retired);
+  assert.deepEqual(await save(retiredPolicy.reference.operationId,'2',{...body,reason:'Fictional policy correction'}),conflict('operation'));
+  assert.deepEqual(await lookup(retiredPolicy),{state:'absent'});
+  assert.equal((await read()).currentSequence,'2');
   await assert.rejects(web.query('SELECT * FROM crest_private.pickup_job_policies'),{code:'42501'});
   await assert.rejects(web.query('SELECT * FROM crest_private.pickup_custody_policies'),{code:'42501'});
   await assert.rejects(client.query('UPDATE crest_private.pickup_job_policies SET policy_id=$1 WHERE job_id=$2',[secondId,firstJob.jobId]),{code:'55000'});
