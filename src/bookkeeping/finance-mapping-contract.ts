@@ -11,32 +11,42 @@ export const fixedFinanceMappingLabels={
  disposal_gain:'Gain on asset disposal',disposal_loss:'Loss on asset disposal',prepaid:'Prepaid business costs',
  suspense_outflow:'Unresolved outflow clearing',unidentified_inflow:'Unidentified incoming funds',
 } as const;
+export const expenseCategoryMappingLabels={
+ category_supplies:'Supplies',category_equipment:'Equipment',category_vehicle:'Vehicle',category_fuel:'Fuel',
+ category_insurance:'Insurance',category_marketing:'Marketing',category_software:'Software',category_fees:'Fees',
+ category_rent:'Rent',category_utilities:'Utilities',category_professional:'Professional services',
+} as const;
+export const financeMappingLabels={...fixedFinanceMappingLabels,...expenseCategoryMappingLabels};
+export type ExpenseCategoryMappingPurpose=keyof typeof expenseCategoryMappingLabels;
+export type FinanceMappingPurpose=keyof typeof financeMappingLabels;
+export const expenseCategoryMappingPurpose=(value:unknown):value is ExpenseCategoryMappingPurpose=>
+ typeof value==='string'&&Object.hasOwn(expenseCategoryMappingLabels,value);
 export type FixedFinanceMappingPurpose=keyof typeof fixedFinanceMappingLabels;
 export const fixedFinanceMappingPurpose=(value:unknown):value is FixedFinanceMappingPurpose=>
  typeof value==='string'&&Object.hasOwn(fixedFinanceMappingLabels,value);
 
-type Snapshot=Readonly<{schemaVersion:1;id:string;purpose:FixedFinanceMappingPurpose;version:string;accountId:string|null;
+type Snapshot=Readonly<{schemaVersion:1;id:string;purpose:FinanceMappingPurpose;version:string;accountId:string|null;
  effectiveFrom:string;reason:string;auditEventId:string}>;
 type Revision=Readonly<Snapshot&{accountCode:string|null}>;
 export type FinanceMappingReference=Readonly<{operationId:string;recoveryEpoch:string;
- purpose:FixedFinanceMappingPurpose;expectedVersion:string}>;
+ purpose:FinanceMappingPurpose;expectedVersion:string}>;
 export type FinanceMappingApproval=Readonly<{accountId:string|null;effectiveFrom:string;reason:string}>;
 export type FinanceMappingEditorData=Readonly<{
- purpose:FixedFinanceMappingPurpose;
+ purpose:FinanceMappingPurpose;
  latest:Readonly<{version:string;accountId:string|null;effectiveFrom:string}>|null;
  eligible:Readonly<{id:string;code:string;name:string}>|null;
 }>;
 const snapshotFields=['schemaVersion','id','purpose','version','accountId','effectiveFrom','reason','auditEventId'] as const;
 const revisionFields=[...snapshotFields,'accountCode'] as const;
 const detailFields=['effectiveUntil','accountType','normalSide','controlKind','reportRole','currency'] as const;
-function snapshot(value:unknown,purpose:FixedFinanceMappingPurpose):Snapshot{
+function snapshot(value:unknown,purpose:FinanceMappingPurpose):Snapshot{
  check(exact(value,snapshotFields)&&value.schemaVersion===1&&value.purpose===purpose
   &&customerUuid(value.id)&&customerVersion(value.version)&&customerDate(value.effectiveFrom)
   &&financeAccountReviewReason(value.reason)&&customerUuid(value.auditEventId)
   &&(value.accountId===null||customerUuid(value.accountId)));
  return Object.freeze(value) as Snapshot;
 }
-function revision(value:unknown,purpose:FixedFinanceMappingPurpose):Revision{
+function revision(value:unknown,purpose:FinanceMappingPurpose):Revision{
  check(exact(value,revisionFields));
  const {accountCode,...base}=value, parsed=snapshot(base,purpose);
  check(parsed.accountId===null?accountCode===null:financeAccountCode(accountCode));
@@ -44,7 +54,7 @@ function revision(value:unknown,purpose:FixedFinanceMappingPurpose):Revision{
 }
 export function parseFinanceMappingReference(value:unknown):FinanceMappingReference{
  check(exact(value,['operationId','recoveryEpoch','purpose','expectedVersion'])
-  &&customerUuid(value.operationId)&&customerUuid(value.recoveryEpoch)&&fixedFinanceMappingPurpose(value.purpose)
+  &&customerUuid(value.operationId)&&customerUuid(value.recoveryEpoch)&&(fixedFinanceMappingPurpose(value.purpose)||expenseCategoryMappingPurpose(value.purpose))
   &&customerVersion(value.expectedVersion,true)&&BigInt(value.expectedVersion)<9_223_372_036_854_775_807n);
  return Object.freeze(value) as FinanceMappingReference;
 }
@@ -53,7 +63,7 @@ export function parseFinanceMappingApproval(value:unknown):FinanceMappingApprova
   &&customerDate(value.effectiveFrom)&&financeAccountReviewReason(value.reason));
  return Object.freeze(value) as FinanceMappingApproval;
 }
-export function parseFinanceMappingEditor(value:unknown,businessId:string,purpose:FixedFinanceMappingPurpose):FinanceMappingEditorData{
+export function parseFinanceMappingEditor(value:unknown,businessId:string,purpose:FinanceMappingPurpose):FinanceMappingEditorData{
  check(exact(value,['schemaVersion','businessId','purpose','latest','eligible'])&&value.schemaVersion===1
   &&value.businessId===businessId&&value.purpose===purpose);
  const {latest,eligible}=value;
@@ -62,6 +72,24 @@ export function parseFinanceMappingEditor(value:unknown,businessId:string,purpos
  check(eligible===null||exact(eligible,['id','code','name'])&&customerUuid(eligible.id)&&financeAccountCode(eligible.code)
   &&financeAccountReviewReason(eligible.name)&&[...eligible.name].length<=200);
  return {purpose,latest,eligible} as FinanceMappingEditorData;
+}
+export function parseExpenseCategoryMappingAccounts(value:unknown,businessId:string,purpose:ExpenseCategoryMappingPurpose){
+ check(exact(value,['schemaVersion','businessId','purpose','latest','rows','hasMore'])&&value.schemaVersion===1
+  &&value.businessId===businessId&&value.purpose===purpose&&Array.isArray(value.rows)&&value.rows.length<=25
+  &&typeof value.hasMore==='boolean'&&(!value.hasMore||value.rows.length===25));
+ const current=value.latest;
+ check(current===null||exact(current,['version','accountId','effectiveFrom','accountCode'])
+  &&(current.accountId===null?current.accountCode===null:financeAccountCode(current.accountCode)));
+ const basis=current===null?null:{version:current.version,accountId:current.accountId,effectiveFrom:current.effectiveFrom};
+ const latest=parseFinanceMappingEditor({schemaVersion:1,businessId,purpose,latest:basis,eligible:null},businessId,purpose).latest;
+ const accountCode=current?.accountCode as string|null|undefined;
+ const rows=value.rows.map(row=>{
+  check(exact(row,['id','code','name'])&&customerUuid(row.id)&&financeAccountCode(row.code)
+   &&financeAccountReviewReason(row.name)&&[...row.name].length<=200);
+  return {id:row.id,code:row.code,name:row.name};
+ });
+ check(new Set(rows.map(row=>row.id)).size===rows.length&&new Set(rows.map(row=>row.code)).size===rows.length);
+ return {latest:latest&&{...latest,accountCode:accountCode??null},rows,hasMore:value.hasMore};
 }
 export function parseFinanceMappingOperation(value:unknown,businessId:string,reference:FinanceMappingReference){
  if(exact(value,['state'])&&value.state==='absent')return {state:'absent'} as const;
@@ -80,7 +108,7 @@ export function parseFinanceMappingOperation(value:unknown,businessId:string,ref
   &&customerUuid(receipt.auditEventId)&&customerUuid(receipt.reviewEpoch));
  return {state:'retired',reviewEpoch:receipt.reviewEpoch} as const;
 }
-export function parseFinanceMappingHistory(value:unknown,businessId:string,purpose:FixedFinanceMappingPurpose,before:string|null){
+export function parseFinanceMappingHistory(value:unknown,businessId:string,purpose:FinanceMappingPurpose,before:string|null){
  check(exact(value,['schemaVersion','businessId','purpose','rows','hasMore'])&&value.schemaVersion===1
   &&value.businessId===businessId&&value.purpose===purpose&&typeof value.hasMore==='boolean'
   &&Array.isArray(value.rows)&&value.rows.length<=25&&(!value.hasMore||value.rows.length===25));
@@ -95,7 +123,7 @@ export function parseFinanceMappingHistory(value:unknown,businessId:string,purpo
   &&(!rows.length?!value.hasMore&&(before===null||before==='1'):((previous===1n)===!value.hasMore)));
  return {rows,hasMore:value.hasMore};
 }
-export function parseFinanceMappingAt(value:unknown,purpose:FixedFinanceMappingPurpose,date:string){
+export function parseFinanceMappingAt(value:unknown,purpose:FinanceMappingPurpose,date:string){
  if(exact(value,['state'])&&value.state==='unavailable')return null;
  check(exact(value,[...revisionFields,...detailFields]));
  const {effectiveUntil,accountType,normalSide,controlKind,reportRole,currency,...base}=value;

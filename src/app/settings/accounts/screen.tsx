@@ -222,6 +222,7 @@ export function FinanceAccountsScreen(){
  return <section className={styles.workspace} aria-label="Account settings" aria-busy={busy}>
   <p role="status" tabIndex={-1} ref={status}>{message}</p>
   {workspace?.context.fixedMappings&&!editor&&<a href="/settings/accounts/mappings">Dated account mappings</a>}
+  {workspace?.context.categoryMappings&&!editor&&<p><a href="/settings/accounts/mappings/categories">Expense category mappings</a></p>}
   {workspace?.context.taxProfiles&&!editor&&<p><a href="/settings/accounts/tax">Tax profiles</a></p>}
   {signedOut&&<a href="/sign-in">Sign in again</a>}
   {!editor&&!signedOut&&<div className={styles.actions}><button type="button" className="secondary" disabled={busy} onClick={()=>void load()}>

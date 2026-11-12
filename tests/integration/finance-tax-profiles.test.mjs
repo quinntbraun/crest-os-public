@@ -9,8 +9,8 @@ import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixtur
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {
- backupDatabase,backupLegacy71Database,connect,inventory,keyPair,privateWorkspace,recoveryCluster,
- restoreDatabase,restoreLegacy71Database,
+ backupLegacy72Database,backupLegacy71Database,connect,inventory,keyPair,privateWorkspace,recoveryCluster,
+ restoreLegacy72Database,restoreLegacy71Database,
 } from '../support/recovery-drill.mjs';
 
 async function value(db,name,args){
@@ -48,13 +48,14 @@ test('fictional tax profiles resolve and calculate only their exact authorized d
   await assert.rejects(requireSyntheticFinanceAccountConfiguration(target,foreign.business,true),
    {message:'SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED'});
   const beforeTax=await inventory(admin);
-  const adopted=await sandbox.apply(target);
+  const schema72=await sandbox.prefix(72);
+  const adopted=await sandbox.apply(target,schema72);
 
   await t.test('tax upgrade preserves a populated schema71 and creates an empty tax history',async()=>{
    assert.equal(adopted.history.length,72);
    assert.deepEqual(adopted.history.slice(0,71),previous.history);
    await requireSyntheticFinanceAccountConfiguration(target,foreign.business,true);
-   assert.deepEqual((await sandbox.apply(target)).history,adopted.history);
+   assert.deepEqual((await sandbox.apply(target,schema72)).history,adopted.history);
    const afterTax=await inventory(admin),added=afterTax.filter(row=>row.schema==='crest'&&row.name==='tax_profiles');
    assert.equal(added.length,1);
    assert.equal(added[0].rows,0);
@@ -237,14 +238,14 @@ test('fictional tax profiles resolve and calculate only their exact authorized d
     await mkdir(point,{mode:0o700});
     const keys=await keyPair(workspace);
     await assert.rejects(backupLegacy71Database(admin,target,point,keys.recipient),{message:'SYNTHETIC_RECOVERY_BACKUP_FAILED:coverage'});
-    const {manifest}=await backupDatabase(admin,target,point,keys.recipient);
+    const {manifest}=await backupLegacy72Database(admin,target,point,keys.recipient);
     assert.equal(manifest.schemaVersion,72);
     assert.equal(manifest.rows.find(row=>row.schema==='crest'&&row.name==='tax_profiles').rows,6);
     destination=await recoveryCluster();
     const restoredUrl=await destination.database();
     assert.notEqual(new URL(restoredUrl).port,new URL(target).port);
     await assert.rejects(restoreLegacy71Database(point,keys.path,restoredUrl),{message:'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest'});
-    await restoreDatabase(point,keys.path,restoredUrl);
+    await restoreLegacy72Database(point,keys.path,restoredUrl);
     restored=await connect(restoredUrl);
     assert.deepEqual(await inventory(restored),manifest.rows);
     assert.deepEqual(formatFinanceAccountSource((await portableTaxSource(restored)).input),
