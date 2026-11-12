@@ -16,12 +16,13 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  const result=await new Promise(resolve=>{child.once('error',()=>resolve({code:1,signal:null}));child.once('close',(code,signal)=>resolve({code,signal}));});
  let screenshots=[];
  try {
-  screenshots=(await readdir('.local/review')).filter(name=>/^(settings|workspace|home|quote|amendment|appointment|field|completion|mileage|travel)-.*\.png$/.test(name)).sort();
+  screenshots=(await readdir('.local/review')).filter(name=>/^(settings|workspace|home|quote|amendment|appointment|field|completion|mileage|travel|finance)-.*\.png$/.test(name)).sort();
  } catch(error) {
   if(error.code!=='ENOENT')throw error;
  }
  const needsScreenshots=['commercial','amendments','schedule','field','custody','records'].includes(selected);
  const requiredViewsByGroup={
+  records:['finance-account-settings-recovery','finance-mapping-history','finance-mapping-manage'],
   field:['field-departure','field-pause','completion-editor','completion-saved','mileage-form','mileage-split','mileage-saved','field-cancellation','field-work-time','field-work-boundary','mileage-departure-correction','completion-outcome','completion-history','field-maintenance-history'],
   custody:['field-dropoff-intake','field-dropoff-work','field-dropoff-cancellation','field-dropoff-completion',
    'field-dropoff-collections','field-dropoff-history','field-dropoff-policy-revision',
@@ -36,7 +37,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  const passed=result.code===0&&result.signal===null&&(!needsScreenshots||screenshots.length>0)&&missingScreenshots.length===0;
  await mkdir('.local/ci-browser',{recursive:true});await writeFile('.local/ci-browser/'+selected+'.json',JSON.stringify({schemaVersion:1,sourceCommit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),group:selected,files,args,childExitCode:result.code,childSignal:result.signal,screenshots,screenshotsRequired:needsScreenshots,passed},null,2)+'\n',{flag:'wx'});
  if(!passed){
-  if(missingScreenshots.length)console.error('MISSING_FIELD_SCREENSHOTS '+JSON.stringify(missingScreenshots));
+  if(missingScreenshots.length)console.error('MISSING_REQUIRED_SCREENSHOTS '+JSON.stringify(missingScreenshots));
   console.error('REQUIRED_BROWSER_GROUP_FAILED');process.exitCode=typeof result.code==='number'&&result.code!==0?result.code:1;
  }
 }

@@ -7,7 +7,11 @@ export function sessionDatabase(config:SessionDatabaseConfiguration){return data
 export function custodyPhotoDispatcherDatabase(config:SessionDatabaseConfiguration){
   return databaseForRole(config,'crest_custody_photo_dispatch');
 }
-function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'crest_custody_photo_dispatch'){
+export function financePreviewDatabase(config:SessionDatabaseConfiguration){
+  if(config.environment!=='test')throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');
+  return databaseForRole(config,'crest_finance_preview');
+}
+function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'crest_custody_photo_dispatch'|'crest_finance_preview'){
   let connectionString:string;
   try{
     const url=new URL(config.connectionString);
@@ -65,6 +69,25 @@ function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'c
     }catch(error){
       // eslint-disable-next-line preserve-caught-error -- Only a fixed marker crosses after an acknowledged rollback; raw database details stay private.
       if(command&&!combined.aborted&&rollbackConfirmed&&convertedCustomerError!==undefined&&error===convertedCustomerError)throw new Error('LEAD_CONVERTED_CUSTOMER_IMMUTABLE');
+      if(role==='crest_finance_preview'&&command&&!combined.aborted&&rollbackConfirmed&&error instanceof Error&&'code' in error){
+        // eslint-disable-next-line preserve-caught-error -- Only a proven rollback and an exact authority marker cross this boundary.
+        if(error.code==='42501'&&error.message==='CREST_MUTATION_AUTHORIZATION_DENIED')throw new Error('FINANCE_ACCOUNT_SIGN_IN_REQUIRED');
+        // eslint-disable-next-line preserve-caught-error -- This exact setup marker contains no database detail.
+        if(error.code==='P0001'&&error.message==='FINANCE_ACCOUNT_SETUP_REQUIRED')throw new Error('FINANCE_ACCOUNT_SETUP_REQUIRED');
+        if(error.code==='40001'&&error.message==='FINANCE_MAPPING_VERSION_CONFLICT'){
+          // eslint-disable-next-line preserve-caught-error -- The transaction rolled back and the marker is allowlisted.
+          throw new Error(error.message);
+        }
+        if(error.code==='22023'&&['FINANCE_MAPPING_EFFECTIVE_ORDER_REQUIRED','FINANCE_MAPPING_ACCOUNT_REQUIRED','FINANCE_MAPPING_CLOSURE_REQUIRED'].includes(error.message)){
+          // eslint-disable-next-line preserve-caught-error -- No SQL detail leaves this confirmed rollback.
+          throw new Error(error.message);
+        }
+      }
+      if(role==='crest_finance_preview'&&!transaction&&!combined.aborted&&error instanceof Error
+        &&'code' in error&&error.code==='22023'&&error.message==='MAPPING_NOT_READY'){
+        // eslint-disable-next-line preserve-caught-error -- Only this exact read-only domain marker crosses the database boundary.
+        throw new Error('FINANCE_MAPPING_NOT_READY');
+      }
       // Only this fixed, expected business-fence result may cross the command
       // profile. No SQL/SDK cause, detail, hint, parameter or raw message escapes.
       // eslint-disable-next-line preserve-caught-error -- Database causes may contain credentials, SQL text or parameters.

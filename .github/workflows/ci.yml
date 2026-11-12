@@ -308,6 +308,7 @@ jobs:
             .local/review/completion-*.png
             .local/review/mileage-*.png
             .local/review/travel-*.png
+            .local/review/finance-*.png
           include-hidden-files: true
           retention-days: 3
           if-no-files-found: error
@@ -422,6 +423,8 @@ jobs:
         run: npm run test:amendment-upgrade-registered
       - name: Verify field invariants, frozen recovery and registered End Job upgrade
         run: npm run test:field-registered
+      - name: Verify registered finance account configuration and independent restore
+        run: npm run test:finance-registered
       - name: Compare booking times, travel intervals and partitions with PostgreSQL
         run: npm run test:booking-calculations
       - name: Preserve booking schema closure, private history and independent restore

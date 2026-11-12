@@ -1,0 +1,42 @@
+.workspace {
+  max-width: 56rem;
+}
+
+.actions {
+  display: grid;
+  gap: .5rem;
+  margin: .75rem 0;
+}
+
+.actions button {
+  margin: 0;
+}
+
+.lookupFields {
+  display: grid;
+  gap: .75rem;
+}
+
+.lookupFields div {
+  min-width: 0;
+}
+
+.lookupFields label {
+  display: block;
+  margin: .5rem 0;
+}
+
+@media (min-width: 48rem) {
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .actions button {
+    width: auto;
+  }
+
+  .lookupFields {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+}

@@ -121,6 +121,39 @@ export async function requireSyntheticPickupReturnWorkflow(connectionString){
  ].map(signature=>'crest_commands.'+signature),'SYNTHETIC_PICKUP_RETURN_WORKFLOW_MIGRATION_REQUIRED','20261124180000');
 }
 
+export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId){
+ const authority='bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid';
+ const signatures=[
+  'save_finance_account('+authority+',uuid,uuid,integer,uuid,bigint,jsonb)',
+  'lookup_finance_account_operation('+authority+',uuid,uuid,uuid,bigint)',
+  'retire_finance_account_save('+authority+',uuid,uuid,uuid,uuid,bigint,text)',
+  'list_finance_accounts('+authority+',text,boolean,integer)',
+  'read_finance_account_history('+authority+',uuid,bigint,integer)',
+  'approve_fixed_finance_mapping('+authority+',uuid,uuid,text,bigint,uuid,date,text)',
+  'lookup_fixed_finance_mapping_operation('+authority+',uuid,uuid,text,bigint)',
+  'retire_fixed_finance_mapping_approval('+authority+',uuid,uuid,uuid,text,bigint,text)',
+  'resolve_fixed_finance_mapping('+authority+',text,date)',
+  'read_fixed_finance_mapping_history('+authority+',text,bigint,integer)',
+  'fixed_finance_mapping_editor('+authority+',text)'
+ ].map(signature=>'crest_commands.'+signature);
+ const missing='SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED';
+ const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
+ try{
+  await client.connect();
+  const migration=await client.query("SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='20261125180000'");
+  assert(migration.rowCount===1,missing);
+  const {rows}=await client.query(`
+   SELECT bool_and(coalesce(has_function_privilege('crest_finance_preview',oid,'EXECUTE')
+     AND NOT has_function_privilege('crest_web',oid,'EXECUTE'),false)) AS allowed
+   FROM (SELECT to_regprocedure(signature) AS oid FROM unnest($1::text[]) AS signatures(signature)) routines`,[signatures]);
+  assert(rows[0]?.allowed===true,missing);
+  if(businessId!==undefined){
+   const control=await client.query('SELECT 1 FROM crest_private.finance_controls WHERE business_id=$1',[businessId]);
+   assert(control.rowCount===1,'SYNTHETIC_FINANCE_ACCOUNT_SETUP_REQUIRED');
+  }
+ }finally{await client.end();}
+}
+
 async function requireSyntheticReader(connectionString,signature,missing,version){
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{

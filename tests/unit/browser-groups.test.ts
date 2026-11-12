@@ -6,7 +6,7 @@ const command=(JSON.parse(readFileSync(new URL('../../package.json',import.meta.
 describe('complete required browser grouping',()=>{
  it('partitions every file in the actual retained full command exactly once',()=>{
   const files=Object.keys(browserGroups).flatMap(name=>browserGroupFiles(command,name));
-  expect([...files].sort()).toEqual(command.split(' ').slice(3).sort());expect(new Set(files).size).toBe(files.length);expect(files).toHaveLength(43);
+  expect([...files].sort()).toEqual(command.split(' ').slice(3).sort());expect(new Set(files).size).toBe(files.length);expect(files).toHaveLength(45);
  });
  it('requires the actual workflow matrix to retain every distinct group',()=>{
   const workflow=readFileSync(new URL('../../.github/workflows/ci.yml',import.meta.url),'utf8'),matrix=workflow.match(/browser_workflows:[\s\S]*?matrix:\s*\n\s*suite: \[([^\]]+)\]/);
@@ -24,6 +24,9 @@ describe('complete required browser grouping',()=>{
   expect(browserGroupFiles(command,'amendments')).toContain('tests/integration/quote-amendment-acceptance-product-browser.test.mjs');
   expect(browserGroupFiles(command,'commercial')).toContain('tests/integration/quote-commercial-browser.test.mjs');
   expect(browserGroupFiles(command,'schedule')).toContain('tests/integration/job-change-product-browser.test.mjs');
+  expect(browserGroupFiles(command,'records')).toEqual(expect.arrayContaining([
+   'tests/integration/finance-account-settings-browser.test.mjs','tests/integration/finance-mapping-settings-browser.test.mjs'
+  ]));
   const field=browserGroupFiles(command,'field');
   expect(field).toHaveLength(9);
   expect(field).toContain('tests/integration/support-trip-product-browser.test.mjs');
