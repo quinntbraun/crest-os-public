@@ -30,6 +30,9 @@ import registered66 from '../support/registered66-migration-checksums.json';
 import coverage66 from '../support/registered66-export-coverage.json';
 import registered67 from '../support/registered67-migration-checksums.json';
 import coverage67 from '../support/registered67-export-coverage.json';
+import registered68 from '../support/registered68-migration-checksums.json';
+import coverage68 from '../support/registered68-export-coverage.json';
+import {pickupCustodySourceColumns} from '../../src/operations/pickup-custody-source.ts';
 import registry from '../support/registered54-migration-checksums.json';
 import previous from '../support/registered53-migration-checksums.json';
 import previousCoverage from '../support/registered53-export-coverage.json';
@@ -225,12 +228,24 @@ it('registers custody after the frozen66 prefix without activating production',(
 it('registers Drop-Off policy revision after the immutable custody schema',()=>{
  expect(sha256(bytes('tests/support/registered67-migration-checksums.json'))).toBe('a1f68cff218bb818ca48dc444e95eaa30e344603449e2b0bf5c986eab1f35889');
  expect(sha256(bytes('tests/support/registered67-export-coverage.json'))).toBe('3b97dc516e73b50063c6f30b6642dc983bc8379b40676f7729023e8e5b76c9d9');
- expect(currentRegistry.migrations).toHaveLength(68);
- expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261122180000',file:'20261122180000_dropoff_policy_revision.sql',
+ expect(registered68.migrations).toHaveLength(68);
+ expect(registered68.migrations.at(-1)).toEqual({version:'20261122180000',file:'20261122180000_dropoff_policy_revision.sql',
   sha256:'9e968b4ef0f9eb6e665d093f28a4f522c4512f8248e7a55ef94dd7739f36831b'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered67 as MigrationRegistry)).not.toThrow();
- expect(currentCoverage).toEqual({...coverage67,migrationCount:68});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:68});
+ expect(()=>validateMigrationSet(registered68 as MigrationRegistry,new Map(registered68.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered67 as MigrationRegistry)).not.toThrow();
+ expect(coverage68).toEqual({...coverage67,migrationCount:68});
+});
+it('registers pickup custody after frozen68 with the reviewed SQL and exact source columns',()=>{
+ expect(sha256(bytes('tests/support/registered68-migration-checksums.json'))).toBe('4388e636855e46a0ce83c14af951b73c57b9621f3cf6ff8584fc5d4884469d06');
+ expect(sha256(bytes('tests/support/registered68-export-coverage.json'))).toBe('226d4692b549b16374f8e51c0e416cd9b89f920e54f956b9d00f7d8c6aa30b2b');
+ expect(currentRegistry.migrations).toHaveLength(69);
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261123180000',file:'20261123180000_pickup_custody.sql',
+  sha256:'a752174e604d06ea777d64b697c5cda99af34b6d8edb02b2d80822cd8e9dc054'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered68 as MigrationRegistry)).not.toThrow();
+ const expectedTables=Object.entries(pickupCustodySourceColumns).map(([name,required])=>({
+  table:'crest_private.'+name,scope:'business',required,excluded:[],partialEvidenceGroup:null
+ }));
+ expect(currentCoverage).toEqual({...coverage68,migrationCount:69,tables:[...coverage68.tables,...expectedTables]});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:69});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

@@ -3,10 +3,11 @@ import {useEffect,useId,useRef,useState} from 'react';
 import {authentication} from '../../client/authentication';
 import {conditionPhotoType,dropoffPhotos} from '../../client/dropoff-photos';
 import {scheduling} from '../../client/scheduling';
+import type {PickupPhotoBinding} from '../../client/dropoff-photos';
 
 type PickerProps=Readonly<{businessId:string;jobVehicleId:string;caseId:string;handoff:1|2;
- required:boolean;change:(selected:boolean,verifiedId:string|null)=>void}>;
-export function DropoffPhotoPicker({businessId,jobVehicleId,caseId,handoff,required,change}:PickerProps){
+ required:boolean;pickup?:PickupPhotoBinding;change:(selected:boolean,verifiedId:string|null)=>void}>;
+export function DropoffPhotoPicker({businessId,jobVehicleId,caseId,handoff,required,pickup,change}:PickerProps){
  const id=useId(),input=useRef<HTMLInputElement>(null),request=useRef<AbortController|null>(null);
  const [selection,setSelection]=useState<{file:File;type:string;photoId:string}|null>(null);
  const [status,setStatus]=useState({busy:false,verified:false,failed:false,message:''});
@@ -23,9 +24,9 @@ export function DropoffPhotoPicker({businessId,jobVehicleId,caseId,handoff,requi
    const proof=await authentication.session(active.signal),scope={jobVehicleId,photoId:selected.photoId};
    if(action==='upload'){
     const workspace=await scheduling.workspace(proof,active.signal);
-    if(workspace.context.businessId!==businessId||workspace.context.writeState!=='ready')throw Error();
+    if(workspace.context.businessId!==businessId||workspace.context.writeState!=='ready'||pickup&&workspace.pickupPhotosAvailable!==true)throw Error();
     await dropoffPhotos.reserve(proof,active.signal,{...scope,caseId,handoff,epoch:workspace.context.recoveryEpoch,
-     contentType:selected.type,byteSize:selected.file.size});
+     contentType:selected.type,byteSize:selected.file.size},pickup);
     await dropoffPhotos.upload(proof,active.signal,scope,selected.file,selected.type);
     if(!active.signal.aborted)setStatus({busy:true,verified:false,failed:false,message:'Verifying the uploaded photo…'});
    }
@@ -63,7 +64,7 @@ export function DropoffPhotoPicker({businessId,jobVehicleId,caseId,handoff,requi
     <button type="button" className="secondary" onClick={()=>void act('status')}>Check photo status</button>
     <button type="button" className="secondary" onClick={()=>void act('verify')}>Check staged upload</button>
    </>}
-   <button type="button" className="secondary" disabled={status.busy} onClick={clear}>Remove photo from this handoff</button>
+   <button type="button" className="secondary" disabled={status.busy} onClick={clear}>{pickup?'Remove selected photo':'Remove photo from this handoff'}</button>
   </>}
  </div>;
 }

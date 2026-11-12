@@ -460,7 +460,7 @@ jobs:
           npm run release:manifest
           docker save crest-os:ci -o .local/release/crest-os-image.tar
           sha256sum .local/release/crest-os-image.tar > .local/release/crest-os-image.tar.sha256
-      - name: Signed-in Drop-Off photo journey with isolated decoder
+      - name: Signed-in custody photo journeys with isolated decoder
         timeout-minutes: 6
         shell: bash
         run: |
@@ -472,6 +472,11 @@ jobs:
             | tee .local/dropoff-isolated-decoder.log
           grep -Fx '# tests 1' .local/dropoff-isolated-decoder.log
           grep -Fx '# pass 1' .local/dropoff-isolated-decoder.log
+          node --conditions=react-server --test --test-concurrency=1 --test-reporter=tap \
+            --test-name-pattern='^chromium verifies a private pickup photo' tests/integration/pickup-custody-photo-browser.test.mjs \
+            | tee .local/pickup-isolated-decoder.log
+          grep -Fx '# tests 1' .local/pickup-isolated-decoder.log
+          grep -Fx '# pass 1' .local/pickup-isolated-decoder.log
       - name: Container diagnostics
         if: failure()
         run: docker logs crest-os-smoke || true

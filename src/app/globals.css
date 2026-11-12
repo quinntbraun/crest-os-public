@@ -192,8 +192,8 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .service-directory button span { display:block; margin-top:.25rem; color:var(--muted); font-size:.875rem; font-weight:400; }
 .quote-layout .customer-list button strong { display:block; }
 .quote-layout .customer-list button span { display:block; margin-top:.25rem; color:var(--muted); font-size:.875rem; font-weight:400; }
-.customers label.checkbox { display:flex; align-items:center; gap:.75rem; min-height:44px; cursor:pointer; }
-.customers label.checkbox input { width:24px; height:24px; flex-shrink:0; accent-color:var(--black); }
+.customers label.checkbox,.field-work-form fieldset > label.checkbox { display:flex; align-items:center; gap:.75rem; min-height:44px; cursor:pointer; }
+.customers label.checkbox input,.field-work-form label.checkbox input { width:24px; height:24px; flex-shrink:0; accent-color:var(--black); }
 @media(max-width:390px) { .service-pair { grid-template-columns:1fr; gap:0; } }
 .quote-worksheet { margin-top:1rem; padding:1.25rem; border:1px solid var(--line); border-top:3px solid var(--gold-ink); background:var(--paper); overflow-wrap:anywhere; }
 .quote-worksheet header { padding-bottom:1rem; border-bottom:1px solid var(--line); }
@@ -283,6 +283,7 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .field-work-form details label { display:block; margin-top:.75rem; }
 .custody-photo-controls { display:grid; gap:.5rem; min-width:0; margin-block:.75rem; }
 .custody-photo-controls label { margin-bottom:0; }
+.pickup-collection-form .custody-photo-controls > p { margin:0; }
 .custody-photo-controls input[type="file"] { width:100%; min-width:0; }
 .custody-photo-preview { display:block; width:100%; max-width:24rem; height:auto; }
 .custody-photo-save { display:grid; place-items:center; min-height:48px; padding:.75rem 1rem; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); color:var(--ink); font-weight:600; }

@@ -1,5 +1,7 @@
 # Crest OS
 
+The schema69 pickup candidate adds policy, travel to pickup, per-vehicle collection and private condition photos. The owner preview runs accepted fictional schema68. [Current delivery and remaining release gates](planning/WORKING_STATE.md).
+
 Schema67 Drop-Off custody is registered for release verification; the owner preview remains on accepted schema66. See [custody adoption](planning/DROPOFF_CUSTODY_SCHEMA67_ADOPTION.md) for completed construction and remaining release/runtime gates.
 
 The fictional laptop preview at **https://127.0.0.1:4319/** uses the accepted schema54 field release. **Start Crest OS.cmd** opens it. In Schedule, open a confirmed Mobile job and choose **Record work status** for departure, arrival, pause and resume. Saved history and interrupted-save review remain available. The private iPhone address **https://100.78.42.185:4319/** depends on NetBird.

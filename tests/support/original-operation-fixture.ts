@@ -19,6 +19,9 @@ export function originalOperationFixture(kind:OriginalOperationKind='crm.custome
  'operations.job.work_boundary.correct':{jobId:id,expectedJobVersion:'3',leftVersionId:randomUUID(),rightVersionId:randomUUID()},
  'operations.mileage.record':{legId:id,expectedLegVersionId:randomUUID(),expectedEvidenceVersion:'0'},
  'operations.support_trip.record':{legId:id,expectedLegVersionId:null,action:'depart'},
+ 'operations.pickup_custody.policy.save':{expectedSequence:'0'},
+ 'operations.pickup_custody.collect':{jobId:id,expectedJobVersion:'1',jobVehicleId:randomUUID(),pickupLegVersionId:randomUUID(),policyId:randomUUID()},
+ 'operations.pickup_trip.record':{jobId:id,expectedJobVersion:'1',legId:randomUUID(),expectedLegVersionId:null,action:'depart'},
  'operations.support_trip.correct':{legId:id,expectedLegVersionId:randomUUID(),action:'correct'},
 
  'operations.fulfillment_modes.initialize':{expectedSequence:'0'},

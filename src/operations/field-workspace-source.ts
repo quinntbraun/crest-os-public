@@ -26,9 +26,12 @@ import {parseBookedJobCommitted,parseCancelledJobCommitted} from './confirmed-bo
 import {parseRescheduledJobCommitted} from './confirmed-reschedule-contract.ts';
 import {parseAmendedBookedJobCommitted,parseAmendedCancelledJobCommitted} from './amended-booking-contract.ts';
 import {parseFulfillmentModeCommitted} from './fulfillment-mode-contract.ts';
-import {formatDropoffCustodySources} from './dropoff-custody-source.ts';
+import {formatDropoffCustodySources,formatPickupAndDropoffCustodySources} from './dropoff-custody-source.ts';
 import type {CustodySourceInput} from './dropoff-custody-source.ts';
+import type {PickupCustodySourceInput} from './pickup-custody-source.ts';
+import {pickupCollectionKind,pickupPolicyKind} from './pickup-custody-contract.ts';
 import {dropoffPolicyRevisionKind} from './dropoff-custody-contract.ts';
+import {pickupTripKind} from './pickup-trip-contract.ts';
 
 type Row=Readonly<Record<string,unknown>>;
 type Snapshot<T>=Readonly<{businessId:string;snapshotToken:string;expectedRowCount:string;rows:readonly T[]}>;
@@ -36,6 +39,7 @@ export type FieldWorkspaceSourceInput=Readonly<{
  configuration:string;identity:string;history:string;
  commercial:AcceptedQuoteAmendmentSourceInput;field:FieldSourceInput;
  custody?:CustodySourceInput;
+ pickupCustody?:PickupCustodySourceInput;
  crm:Readonly<{customers:Snapshot<Customer>;addresses:Snapshot<CustomerAddress>;vehicles:Snapshot<Vehicle>;associations:Snapshot<VehicleAssociationRow>}>;
 }>;
 export class FieldWorkspaceSourceError extends Error {
@@ -57,7 +61,7 @@ const commands={
  job_vehicles:['operations.job.book'],job_encounters:['operations.job.book'],
  job_events:['operations.job.book','operations.job.reschedule','operations.job.cancel','quote.amendment.accept','operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.job.work_start.correct','operations.job.work_end.correct'],
 } as const;
-const fieldKinds=['operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.mileage.record','operations.support_trip.record','operations.support_trip.correct'];
+const fieldKinds=['operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.mileage.record','operations.support_trip.record','operations.support_trip.correct',pickupTripKind];
 function ids(actual:unknown,expected:readonly unknown[]){
  check(Array.isArray(actual)&&actual.every(customerUuid)&&new Set(actual).size===actual.length&&actual.length===expected.length&&expected.every(v=>typeof v==='string'&&actual.includes(v)));
 }
@@ -73,12 +77,16 @@ function projection(group:BookingRecordGroup,row:Row){
 export function formatFieldWorkspaceSources(input:FieldWorkspaceSourceInput){
  try{
   check(exactCustomerObject(input,['configuration','identity','history','commercial','field','crm',
-   ...Object.hasOwn(input,'custody')?['custody']:[]])&&exactCustomerObject(input.crm,['customers','addresses','vehicles','associations']));
+   ...Object.hasOwn(input,'custody')?['custody']:[],...Object.hasOwn(input,'pickupCustody')?['pickupCustody']:[]])&&exactCustomerObject(input.crm,['customers','addresses','vehicles','associations']));
   const businessId=input.commercial.businessId;
   check(input.commercial.historyEvidence===input.history&&input.field.historyEvidence===input.history);
   const foundation=verifyBusinessFoundationEvidence(input.configuration,input.identity,input.history,{businessId});
   const field=verifyFieldSources(input.field),commercial=formatFieldAcceptedQuoteAmendmentSourceCsv(input.commercial,input.field);
-  const custody=Object.hasOwn(input,'custody')?formatDropoffCustodySources(input.custody!):null;
+  const withPickup=Object.hasOwn(input,'pickupCustody');
+  if(withPickup)check(input.custody&&input.pickupCustody);
+  const combined=withPickup?formatPickupAndDropoffCustodySources(input.custody!,input.pickupCustody!):null;
+  const pickup=combined?.pickup??null;
+  const custody=combined?.custody??(Object.hasOwn(input,'custody')?formatDropoffCustodySources(input.custody!):null);
   if(custody)check(input.custody!.historyEvidence===input.history&&custody.context.businessId===businessId&&
    custody.context.historySnapshotToken===foundation.history.context.snapshotToken);
   check(foundation.history.context.snapshotToken===input.commercial.bookings.historySnapshotToken&&field.context.historySnapshotToken===foundation.history.context.snapshotToken);
@@ -88,6 +96,7 @@ export function formatFieldWorkspaceSources(input:FieldWorkspaceSourceInput){
   for(const r of foundation.history.records){const body=JSON.parse(r.canonicalEvidence) as {row:Row},row=body.row;
    if(r.kind==='operation'){check(typeof row.operation_id==='string'&&!operations.has(row.operation_id));operations.set(row.operation_id,row);}else audits.push(row);
   }
+  if(!pickup)check(![...operations.values()].some(op=>op.command_type===pickupPolicyKind||op.command_type===pickupCollectionKind));
   const actorIds=new Set(foundation.requiredActorIds),configuration=foundation.configuration.records.map(r=>(JSON.parse(r.canonicalEvidence) as {row:Row}).row);
   const memberships=configuration.filter(r=>r.business_id===businessId&&typeof r.actor_id==='string');
   const memberIds=new Set(memberships.map(r=>r.actor_id));
@@ -149,13 +158,48 @@ export function formatFieldWorkspaceSources(input:FieldWorkspaceSourceInput){
    const vehicles=new Map(input.commercial.bookings.rows.job_vehicles.map(row=>[row.id,row]));
    const modes=new Set(input.commercial.bookings.rows.fulfillment_mode_versions.map(row=>row.id));
    const policies=new Map(custody.rows.custody_authorization_configs.map(row=>[row.id,row]));
+   const pickupPhotoIds=new Set(pickup?.rows.pickup_photo_slots.map(slot=>slot.photo_id));
    for(const policy of custody.rows.custody_authorization_configs)check(modes.has(String(policy.mode_version_id)));
    for(const row of [...custody.rows.custody_cases,...custody.rows.custody_photo_attempts]){
     const job=jobs.get(row.job_id),vehicle=vehicles.get(row.job_vehicle_id);
-    check(job&&vehicle&&job.fulfillment_mode==='dropoff'&&vehicle.job_id===job.id&&vehicle.vehicle_id===row.vehicle_id);
+    const expectedMode=pickupPhotoIds.has(String(row.id))?'pickup_return':'dropoff';
+    check(job&&vehicle&&job.fulfillment_mode===expectedMode&&vehicle.job_id===job.id&&vehicle.vehicle_id===row.vehicle_id);
     if('authorization_config_id'in row)check(policies.get(row.authorization_config_id)?.mode_version_id===job.mode_version_id&&
      (row.state!=='released'||job.state==='completed'||job.state==='cancelled'));
     if('actor_id'in row){actor(row.actor_id);check(row.actor_id===job.operator_actor_id);}
+   }
+   if(pickup){
+    const trips=new Map(field.rows.travel_legs.map(leg=>[leg.id,leg]));
+    const pickupJobs=new Map(pickup.rows.pickup_job_policies.map(link=>[link.job_id,link.policy_id]));
+    for(const policy of pickup.rows.pickup_custody_policies){check(modes.has(policy.mode_version_id));actor(policy.created_by);}
+    for(const link of pickup.rows.pickup_job_policies){
+     const job=jobs.get(link.job_id);
+     check(job?.fulfillment_mode==='pickup_return');
+    }
+    function arrival(jobId:unknown,jobVehicleId:unknown,legVersionId:unknown,operatorId:unknown,jobVersion:unknown){
+     check(customerUuid(jobId)&&customerUuid(jobVehicleId)&&customerUuid(legVersionId));actor(operatorId);
+     const job=jobs.get(jobId),vehicle=vehicles.get(jobVehicleId),leg=trips.get(legVersionId);
+     check(job&&vehicle?.job_id===jobId&&job.operator_actor_id===operatorId&&pickupJobs.has(jobId)&&
+      leg?.job_context_id===jobId&&leg.purpose==='pickup'&&leg.state==='closed'&&leg.change_kind==='arrive'&&leg.operator_actor_id===operatorId);
+     const original=operations.get(String(leg.operation_id));
+     check(original?.command_type===pickupTripKind&&typeof original.result==='string');
+     const observed=JSON.parse(original.result) as Row;object(observed.receipt);
+     check(Array.isArray(observed.receipt.jobVehicleIds)&&observed.receipt.jobVehicleIds.includes(jobVehicleId));
+     const versionAudit=chains.get('jobs:'+jobId)?.find(audit=>audit.entity_version===jobVersion);
+     check(versionAudit);const historical=delta(versionAudit).after;object(historical);
+     check(historical.fulfillment_mode==='pickup_return'&&historical.operator_actor_id===operatorId&&historical.state==='scheduled');
+     return {vehicle,leg};
+    }
+    for(const collection of pickup.rows.pickup_custody_collections){
+     const op=operations.get(String(collection.operation_id));
+     check(op?.command_type===pickupCollectionKind&&typeof op.result==='string');
+     const original=JSON.parse(op.result) as Row;object(original.request);
+     const {vehicle,leg}=arrival(collection.job_id,collection.job_vehicle_id,collection.pickup_leg_version_id,collection.created_by,
+      original.request.expectedJobVersion);
+     check(vehicle.vehicle_id===collection.vehicle_id&&typeof leg.arrived_at==='string'&&typeof collection.effective_at==='string'&&
+      collection.effective_at>=leg.arrived_at);
+    }
+    for(const slot of pickup.rows.pickup_photo_slots)arrival(slot.job_id,slot.job_vehicle_id,slot.arrival_version_id,slot.actor_id,slot.job_version);
    }
    for(const row of custody.rows.custody_events)actor(row.created_by);
    for(const operation of operations.values()){
@@ -182,6 +226,28 @@ export function formatFieldWorkspaceSources(input:FieldWorkspaceSourceInput){
    if(!fieldKinds.includes(String(op.command_type)))continue;
    check(op.schema_version===1&&op.result_schema_version===1&&op.state==='committed'&&typeof op.result==='string');
    const stored=JSON.parse(op.result) as Row,support=String(op.command_type).startsWith('operations.support_trip.');
+   if(op.command_type===pickupTripKind){
+    object(stored.request);object(stored.receipt);object(stored.receipt.leg);
+    const request=stored.request,receipt=stored.receipt,leg=stored.receipt.leg;
+    const departure=field.rows.travel_legs.find(row=>row.id===leg.logical_id);
+    check(departure&&departure.job_context_id===request.jobId&&typeof departure.destination_snapshot==='string');
+    const historicalJobAudit=chains.get('jobs:'+request.jobId)?.find(a=>a.entity_version===request.jobVersion);
+    check(historicalJobAudit);
+    const historicalJob=delta(historicalJobAudit).after;
+    object(historicalJob);
+    const mode=input.commercial.bookings.rows.fulfillment_mode_versions.find(row=>row.id===historicalJob.mode_version_id);
+    check(historicalJob.fulfillment_mode==='pickup_return'&&historicalJob.operator_actor_id===op.actor_id&&mode?.pickup_return_enabled===true&&
+     (historicalJob.state==='scheduled'||historicalJob.state==='cancelled'&&leg.change_kind==='cancel'));
+    const targetIds=receipt.jobVehicleIds;check(Array.isArray(targetIds)&&targetIds.length>0);
+    for(const targetId of targetIds){
+     const target=input.commercial.bookings.rows.job_vehicles.find(row=>row.id===targetId);
+     check(target&&target.job_id===request.jobId&&typeof target.pickup_location_snapshot==='string'&&
+      historyJsonEqual(parseHistoryJson(target.pickup_location_snapshot),parseHistoryJson(departure.destination_snapshot)));
+    }
+    const all=audits.filter(a=>a.operation_id===id);
+    ids([receipt.auditId],all.map(a=>a.id));actor(op.actor_id);usedOperations.add(id);
+    continue;
+   }
    if(support){check(exactCustomerObject(stored,['schemaVersion','request','receipt'])&&stored.schemaVersion===1);object(stored.request);object(stored.receipt);check(stored.request.commandType===op.command_type&&stored.request.schemaVersion===1&&stored.request.businessId===businessId&&stored.request.actorId===op.actor_id&&stored.request.recoveryEpoch===op.recovery_epoch);}
    const receipt=(support?stored.receipt:stored) as Row;check(receipt.schemaVersion===1&&receipt.commandType===op.command_type&&receipt.businessId===businessId&&receipt.actorId===op.actor_id&&receipt.operationId===id&&receipt.recoveryEpoch===op.recovery_epoch);actor(op.actor_id);
    const all=audits.filter(a=>a.operation_id===id);ids(receipt[op.command_type==='operations.job.interrupt'||op.command_type==='operations.job.cancel_unfulfilled'||String(op.command_type).startsWith('operations.support_trip.')?'sourceAuditIds':'auditIds'],all.map(a=>a.id));
@@ -226,7 +292,11 @@ export function formatFieldWorkspaceSources(input:FieldWorkspaceSourceInput){
    for(const [name,content]of Object.entries(custody.files))add(name,content);
    add('custody_source_manifest.json',custody.manifest);
   }
-  const manifest=JSON.stringify({formatVersion:1,profile:'crest.field-workspace-sources.v1',businessId,generationId:foundation.generationId,historySnapshotToken:foundation.history.context.snapshotToken,includedBookingHistoryVerified:true,includedCrmCurrentAndHistoricalReferencesVerified:true,includedFieldForeignKeysVerified:true,includedActorAndMembershipReferencesVerified:true,includedFieldReceiptAuditSetsVerified:true,bookingAuditCount:usedAudits.size,...(custody?{includedCustodyReceiptAuditSetsVerified:true,includedCustodyJobVehicleReferencesVerified:true}:{}),parts:[...files].map(([name,content])=>({name,bytes:Buffer.byteLength(content),sha256:sha(content)})),assurance:'supplied_source_consistency_only',consistentCaptureProven:false,referenceClosureComplete:false,completePortableExport:false,completeBackup:false})+'\n';
+  if(pickup){
+   for(const [name,content]of Object.entries(pickup.files))add(name,content);
+   add('pickup_custody_source_manifest.json',pickup.manifest);
+  }
+  const manifest=JSON.stringify({formatVersion:1,profile:'crest.field-workspace-sources.v1',businessId,generationId:foundation.generationId,historySnapshotToken:foundation.history.context.snapshotToken,includedBookingHistoryVerified:true,includedCrmCurrentAndHistoricalReferencesVerified:true,includedFieldForeignKeysVerified:true,includedActorAndMembershipReferencesVerified:true,includedFieldReceiptAuditSetsVerified:true,bookingAuditCount:usedAudits.size,...(custody?{includedCustodyReceiptAuditSetsVerified:true,includedCustodyJobVehicleReferencesVerified:true}:{}),...(pickup?{includedPickupCustodyReferencesVerified:true}:{}),parts:[...files].map(([name,content])=>({name,bytes:Buffer.byteLength(content),sha256:sha(content)})),assurance:'supplied_source_consistency_only',consistentCaptureProven:false,referenceClosureComplete:false,completePortableExport:false,completeBackup:false})+'\n';
   check(files.size<=1024&&total+Buffer.byteLength(manifest)<=64*1024*1024);
   return Object.freeze({manifest,parts:Object.freeze([...files].map(([name,content])=>Object.freeze({name,content})))});
  }catch(error){if(error instanceof FieldWorkspaceSourceError)throw error;throw new FieldWorkspaceSourceError();}

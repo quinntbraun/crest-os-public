@@ -1,5 +1,5 @@
 import 'server-only';
-import {customerUuid as uuid,exactCustomerObject as exact} from '../customer/customer-contract.ts';
+import {customerUuid as uuid,customerVersion as version,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {readBrowserCookies} from '../security/browser-http.ts';
 import {privateJsonResponse,readFlatJsonBody} from '../security/private-http.ts';
 import {createConditionPhotoCsrfVerifier,createSessionCsrfVerifier} from '../security/session-request-guard.ts';
@@ -18,6 +18,7 @@ export const dropoffPhotoPrefix='/api/business/scheduling/custody-photo/';
 const scopeFields=['jobVehicleId','photoId'];
 const fields={
  reserve:[...scopeFields,'epoch','caseId','handoff','contentType','byteSize'],
+ 'reserve-pickup':[...scopeFields,'epoch','caseId','handoff','contentType','byteSize','arrivalVersionId','policyId','jobVersion'],
  status:scopeFields,
  verify:scopeFields,
  file:[...scopeFields,'variant']
@@ -57,7 +58,7 @@ function boundedFile(body:ReadableStream<Uint8Array>,size:number,signal:AbortSig
 // The same-origin relay passes the bytes to one server-signed staging PUT.
 // No object capability, worker database login or decoder enters the browser.
 export function createDropoffPhotoHttp(config:Config,provider:Parameters<typeof createDropoffPhotoDirectory>[1],
- tokens:Parameters<typeof createDropoffPhotoDirectory>[2],runtime:SyntheticDropoffPhotoRuntime){
+ tokens:Parameters<typeof createDropoffPhotoDirectory>[2],runtime:SyntheticDropoffPhotoRuntime,pickupEnabled=false){
  const storage=new URL(runtime.stagingOrigin);
  check(config.environment==='test'&&uuid(config.businessId)&&storage.origin===runtime.stagingOrigin&&
   storage.hostname==='127.0.0.1'&&storage.port&&['http:','https:'].includes(storage.protocol));
@@ -73,6 +74,7 @@ export function createDropoffPhotoHttp(config:Config,provider:Parameters<typeof 
    const url=new URL(request.url),route=url.pathname.slice(dropoffPhotoPrefix.length);
    if(!url.pathname.startsWith(dropoffPhotoPrefix)||url.search||url.hash||
     (route!=='upload'&&!Object.hasOwn(fields,route)))return dropoffPhotoFailure(404);
+   if(route==='reserve-pickup'&&!pickupEnabled)return dropoffPhotoFailure(404);
    if(request.method!=='POST')return dropoffPhotoFailure(405);
    if(request.headers.has('range'))return dropoffPhotoFailure(416);
    const signal=AbortSignal.any([request.signal,AbortSignal.timeout(40000)]);
@@ -84,13 +86,19 @@ export function createDropoffPhotoHttp(config:Config,provider:Parameters<typeof 
     await readFlatJsonBody(bounded,fields[route as keyof typeof fields],4096);
    check(uuid(input.jobVehicleId)&&uuid(input.photoId));
    const scope={businessId:config.businessId,jobVehicleId:input.jobVehicleId,photoId:input.photoId};
-   if(route==='reserve'){
+   if(route==='reserve'||route==='reserve-pickup'){
     check('epoch'in input&&uuid(input.epoch)&&uuid(input.caseId)&&(input.handoff===1||input.handoff===2)&&
      typeof input.contentType==='string'&&photoTypes.includes(input.contentType)&&typeof input.byteSize==='number'&&
      Number.isSafeInteger(input.byteSize)&&input.byteSize>0&&input.byteSize<=maximumFileBytes);
+    let pickup;
+    if(route==='reserve-pickup'){
+     check(input.handoff===1&&'arrivalVersionId'in input&&uuid(input.arrivalVersionId)&&uuid(input.policyId)&&version(input.jobVersion)&&
+      BigInt(input.jobVersion)<9223372036854775807n);
+     pickup={arrivalVersionId:input.arrivalVersionId,policyId:input.policyId,jobVersion:input.jobVersion};
+    }
     started=true;
     return privateJsonResponse(await directory.reserve(credential,{...scope,epoch:input.epoch,caseId:input.caseId,
-     handoff:input.handoff,contentType:input.contentType,byteSize:input.byteSize},signal));
+     handoff:input.handoff,contentType:input.contentType,byteSize:input.byteSize},signal,pickup));
    }
    if(route==='upload'){
     if(activeUploads>=3)return dropoffPhotoFailure(429);

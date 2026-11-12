@@ -12,6 +12,9 @@ function packet(kind:typeof fieldOriginalKinds[number]){
   'caseId'in ref?{subjectId:ref.caseId,sourceRecordId:randomUUID(),sourceVersion:ref.expectedVersion==='0'?'1':'2'}:
   'taskId'in ref?{subjectId:ref.taskId,sourceRecordId:randomUUID(),sourceVersion:(BigInt(ref.expectedVersion)+1n).toString()}:
   'legVersionId'in ref?{subjectId:ref.legId,sourceRecordId:randomUUID(),sourceVersion:'2'}:
+  'expectedJobVersion'in ref&&'expectedLegVersionId'in ref?{subjectId:ref.legId,sourceRecordId:ref.expectedLegVersionId===null?ref.legId:randomUUID(),sourceVersion:ref.expectedLegVersionId===null?'1':'2'}:
+  'expectedSequence'in ref?{subjectId:original.businessId,sourceRecordId:ref.operationId,sourceVersion:(BigInt(ref.expectedSequence)+1n).toString()}:
+  'pickupLegVersionId'in ref?{subjectId:ref.jobVehicleId,sourceRecordId:ref.operationId,sourceVersion:'1'}:
   'expectedJobVersion'in ref?{subjectId:ref.jobId,sourceRecordId:ref.jobId,
    sourceVersion:(BigInt(ref.expectedJobVersion)+(kind==='operations.job.work_boundary.correct'?0n:1n)).toString()}:
   {subjectId:ref.legId,sourceRecordId:randomUUID(),sourceVersion:'expectedEvidenceVersion'in ref?

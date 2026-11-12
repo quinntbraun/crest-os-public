@@ -98,6 +98,19 @@ export async function requireSyntheticDropoffPolicyRevision(connectionString){
   'SYNTHETIC_DROPOFF_POLICY_REVISION_MIGRATION_REQUIRED','20261122180000');
 }
 
+export async function requireSyntheticPickupCustody(connectionString){
+ const authority='bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid';
+ await requireSyntheticReader(connectionString,[
+  'read_pickup_trips('+authority+',uuid,timestamptz,uuid)',
+  'record_pickup_trip('+authority+',uuid,uuid,integer,uuid,bigint,uuid,uuid,jsonb)',
+  'read_pickup_collection('+authority+',uuid,uuid)',
+  'collect_pickup_vehicle('+authority+',uuid,uuid,integer,uuid,bigint,uuid,uuid,uuid,jsonb)',
+  'read_pickup_policy('+authority+',bigint)',
+  'save_pickup_policy('+authority+',uuid,uuid,bigint,jsonb)',
+  'reserve_pickup_photo('+authority+',uuid,uuid,uuid,uuid,uuid,uuid,bigint,text,integer)'
+ ].map(signature=>'crest_commands.'+signature),'SYNTHETIC_PICKUP_CUSTODY_MIGRATION_REQUIRED','20261123180000');
+}
+
 async function requireSyntheticReader(connectionString,signature,missing,version){
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{
@@ -107,7 +120,8 @@ async function requireSyntheticReader(connectionString,signature,missing,version
    assert(migration.rowCount===1,missing);
   }
   await client.query('SET ROLE crest_web');
-  const {rows}=await client.query("SELECT has_function_privilege(to_regprocedure($1),'EXECUTE') AS available",[signature]);
+  const signatures=Array.isArray(signature)?signature:[signature];
+  const {rows}=await client.query("SELECT bool_and(coalesce(has_function_privilege(to_regprocedure(signature),'EXECUTE'),false)) AS available FROM unnest($1::text[]) AS signatures(signature)",[signatures]);
   assert(rows[0]?.available===true,missing);
  }finally{await client.end();}
 }
