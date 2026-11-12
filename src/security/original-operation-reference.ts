@@ -29,6 +29,9 @@ type Targets={
  'operations.follow_up.save':Readonly<{taskId:string;expectedVersion:string;action:'created'|'snoozed'|'completed'|'dismissed'}>;
  'operations.mileage.record':Readonly<{legId:string;expectedLegVersionId:string;expectedEvidenceVersion:string}>;
  'operations.support_trip.record':Readonly<{legId:string;expectedLegVersionId:string|null;action:'depart'|'arrive'|'cancel'}>;
+ 'operations.pickup_custody.policy.save':Readonly<{expectedSequence:string}>;
+ 'operations.pickup_custody.collect':Readonly<{jobId:string;expectedJobVersion:string;jobVehicleId:string;pickupLegVersionId:string;policyId:string}>;
+ 'operations.pickup_trip.record':Readonly<{jobId:string;expectedJobVersion:string;legId:string;expectedLegVersionId:string|null;action:'depart'|'arrive'|'cancel'}>;
  'operations.support_trip.correct':Readonly<{legId:string;expectedLegVersionId:string|null;action:'record'|'correct'}>;
  'operations.fulfillment_modes.initialize':Readonly<{expectedSequence:'0'}>;
  'operations.fulfillment_modes.save':Readonly<{expectedSequence:string}>;
@@ -95,6 +98,9 @@ const fields={
  'operations.follow_up.save':['taskId','expectedVersion','action'],
  'operations.mileage.record':['legId','expectedLegVersionId','expectedEvidenceVersion'],
  'operations.support_trip.record':['legId','expectedLegVersionId','action'],
+ 'operations.pickup_custody.policy.save':['expectedSequence'],
+ 'operations.pickup_custody.collect':['jobId','expectedJobVersion','jobVehicleId','pickupLegVersionId','policyId'],
+ 'operations.pickup_trip.record':['jobId','expectedJobVersion','legId','expectedLegVersionId','action'],
  'operations.support_trip.correct':['legId','expectedLegVersionId','action'],
  'operations.fulfillment_modes.initialize':['expectedSequence'],
  'operations.fulfillment_modes.save':['expectedSequence'],
@@ -152,11 +158,11 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
    else if(key==='expenseRevision')require(version(ref[key]));
    else if(key==='expectedLeadVersion')require(version(ref[key]));
    else if(key==='expectedEvidenceVersion')require(version(ref[key],true)&&BigInt(ref[key] as string)<9223372036854775807n);
-   else if(key==='expectedLegVersionId'&&kind.startsWith('operations.support_trip.'))require(ref[key]===null||uuid(ref[key]));
+   else if(key==='expectedLegVersionId'&&(kind.startsWith('operations.support_trip.')||kind==='operations.pickup_trip.record'))require(ref[key]===null||uuid(ref[key]));
    else if(key==='arrivalVersionId'&&kind==='operations.job.work_start.correct')require(ref[key]===null||uuid(ref[key]));
    else if(key!=='action'&&key!=='nextAssociationId')require(uuid(ref[key]));
   }
-  if(['operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled'].includes(kind))require(BigInt(ref.expectedJobVersion as string)<9223372036854775807n);
+  if(['operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.pickup_trip.record','operations.pickup_custody.collect'].includes(kind))require(BigInt(ref.expectedJobVersion as string)<9223372036854775807n);
   if(kind==='operations.job.field')require(['depart','arrive','direct_arrive','start_dropoff','pause','resume'].includes(ref.action as string));
   if(kind==='operations.job.interrupt')require(['cancel','reschedule'].includes(ref.action as string));
   if(kind==='operations.job.work_boundary.correct')require(ref.leftVersionId!==ref.rightVersionId);
@@ -166,7 +172,8 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
   if(kind==='operations.custody.save')require(ref.expectedVersion==='0'||ref.expectedVersion==='1');
   if(kind==='operations.follow_up.save')require(['created','snoozed','completed','dismissed'].includes(ref.action as string)&&
    (ref.action==='created')===(ref.expectedVersion==='0')&&ref.expectedVersion!=='9223372036854775807');
-  if(kind==='operations.support_trip.record'||kind==='operations.support_trip.correct')require((kind==='operations.support_trip.record'?['depart','arrive','cancel']:['record','correct']).includes(ref.action as string)&&(['depart','record'].includes(ref.action as string)===(ref.expectedLegVersionId===null)));
+  if(kind==='operations.support_trip.record'||kind==='operations.support_trip.correct'||kind==='operations.pickup_trip.record')require((kind==='operations.support_trip.correct'?['record','correct']:['depart','arrive','cancel']).includes(ref.action as string)&&(['depart','record'].includes(ref.action as string)===(ref.expectedLegVersionId===null)));
+  if(kind==='operations.pickup_custody.policy.save')require(BigInt(ref.expectedSequence as string)<9223372036854775807n);
   if(kind==='operations.fulfillment_modes.initialize')require(ref.expectedSequence==='0');
   if(kind==='operations.fulfillment_modes.save')require(version(ref.expectedSequence));
   if(kind==='operations.job.reschedule')require(['propose','confirm','withdraw'].includes(ref.action as string));

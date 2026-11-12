@@ -54,3 +54,44 @@ export async function reimportFieldWorkspaceSources(c,bundle,commercial,workspac
  assert.equal(columnsByTable.size,47);
  return {tables:columnsByTable.size,foreignKeys,allFieldColumns:fieldSourceGroups.reduce((n,g)=>n+Object.keys(fieldSourceSchema[g].fields).length,0),applicationRestore:false};
 }
+
+// Read only the documented portable files. Neutral SQL retains JSON and
+// timestamp text so a round trip can compare the original representations.
+export async function reimportCustodySourceTables(client,bundle){
+ const files=new Map(bundle.parts.map(part=>[part.name,part.content])),manifest=JSON.parse(bundle.manifest);
+ assert.equal(manifest.includedPickupCustodyReferencesVerified,true);
+ for(const {name,bytes,sha256} of manifest.parts){
+  const content=files.get(name);
+  assert.equal(Buffer.byteLength(content),bytes);
+  assert.equal(createHash('sha256').update(content).digest('hex'),sha256);
+ }
+ for(const profile of ['custody','pickup_custody']){
+  const dictionary=JSON.parse(files.get(profile+'_source_dictionary.json')??files.get(profile+'_dictionary.json'));
+  const expected=JSON.parse(files.get(profile+'_source.json')).rows;
+  for(const [group,columns] of Object.entries(dictionary.columns)){
+   const key=dictionary.keyColumns[group]??dictionary.keyColumns.default;
+   const matrix=readCustomerCsv(files.get(group+'.csv')),header=matrix.shift();
+   assert.deepEqual(header,columns);
+   assert(columns.includes(key));
+   const type=column=>dictionary.booleans.includes(column)?'boolean':dictionary.integers?.includes(column)?'integer':'text';
+   await client.query('CREATE TABLE '+table(group)+'('+columns.map(column=>
+    quote(column)+' '+type(column)+(column===key?' PRIMARY KEY':'')).join(',')+')');
+   for(const cells of matrix){
+    assert.equal(cells.length,columns.length);
+    const values=columns.map((column,index)=>{
+     let cell=cells[index];
+     if(cell==='\\N')return null;
+     if(dictionary.escapes.some(entry=>entry.table===group&&entry.rowId===cells[columns.indexOf(key)]&&entry.column===column)){
+      assert(cell.startsWith("'"));
+      cell=cell.slice(1);
+     }
+     return cell.replaceAll('\\\\','\\');
+    });
+    await client.query('INSERT INTO '+table(group)+' VALUES('+columns.map((_,i)=>'$'+(i+1)).join(',')+')',values);
+   }
+   const actual=(await client.query('SELECT to_jsonb(t) value FROM '+table(group)+' t')).rows.map(row=>row.value);
+   const byKey=(a,b)=>a[key].localeCompare(b[key]);
+   assert.deepEqual(actual.sort(byKey),expected[group].sort(byKey),group);
+  }
+ }
+}

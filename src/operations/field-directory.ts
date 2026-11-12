@@ -22,6 +22,11 @@ import {parseReviewMessageHistory} from './review-message-history-contract.ts';
 import type {ReviewHistoryQuery} from './review-message-history-contract.ts';
 import {parseCollectionCursor,parseCollectionPage} from './dropoff-collection-contract.ts';
 import type {CollectionCursor} from './dropoff-collection-contract.ts';
+import {parsePickupTripCommitted,parsePickupTripDatabasePage,parsePickupTripSave,pickupTripConflicts,pickupTripOriginal} from './pickup-trip-contract.ts';
+import type {PickupTripCursor} from './pickup-trip-contract.ts';
+import {parsePickupCollectionAcknowledgement,parsePickupCollectionContext,parsePickupCollectionSave,pickupCollectionConflicts,
+ pickupCollectionOriginal,verifyPickupCollectionWrite,parsePickupPolicyAcknowledgement,parsePickupPolicyPage,
+ parsePickupPolicySave,pickupPolicyConflicts,pickupPolicyOriginal,verifyPickupPolicyWrite} from './pickup-custody-contract.ts';
 import {maintenanceFollowUpConflicts,maintenanceFollowUpOriginal,parseMaintenanceFollowUpAcknowledgement,parseMaintenanceFollowUpCommitted,parseMaintenanceFollowUpHistory,
  parseMaintenanceFollowUpList,parseMaintenanceFollowUpSave} from './maintenance-follow-up-contract.ts';
 import type {parseMaintenanceFollowUpHistoryQuery,parseMaintenanceFollowUpListQuery} from './maintenance-follow-up-contract.ts';
@@ -79,10 +84,18 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
   const {current,entries,hasMore}=history;
   return new PrivateValue({schemaVersion:1,businessId,taskId,current,entries,hasMore});
  }
- async function save(credential:string,input:unknown,signal:AbortSignal,action:'session'|'interruption'|'cancellation'|'work-boundary'|'work-start'|'work-end'|'mobile-departure'|'review-outcome'|'maintenance'|'custody'|'custody-policy'|'custody-policy-revision'){
+ async function save(credential:string,input:unknown,signal:AbortSignal,action:'session'|'interruption'|'cancellation'|'work-boundary'|'work-start'|'work-end'|'mobile-departure'|'review-outcome'|'maintenance'|'custody'|'custody-policy'|'custody-policy-revision'|'pickup-trip'|'pickup-collection'|'pickup-policy'){
   let submitted=false,hash:Buffer|undefined;
   try{
-   const prepared=action==='custody-policy-revision'?(()=>{
+   const prepared=action==='pickup-policy'?(()=>{
+    const request=parsePickupPolicySave(input);
+    return {request,original:pickupPolicyOriginal(request),conflicts:pickupPolicyConflicts,
+     command:'save_pickup_policy',committed:(observed:unknown)=>parsePickupPolicyAcknowledgement(observed,request)};
+   })():action==='pickup-collection'?(()=>{
+    const request=parsePickupCollectionSave(input);
+    return {request,original:pickupCollectionOriginal(request),conflicts:pickupCollectionConflicts,
+     command:'collect_pickup_vehicle',committed:(observed:unknown)=>parsePickupCollectionAcknowledgement(observed,request)};
+   })():action==='custody-policy-revision'?(()=>{
     const request=parseDropoffPolicyRevision(input);
     return {request,original:dropoffPolicyRevisionOriginal(request),conflicts:dropoffPolicyRevisionConflicts,
      command:'revise_dropoff_policy',committed:(observed:unknown)=>parseDropoffPolicyRevisionAcknowledgement(observed,request)};
@@ -106,6 +119,10 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
     const request=parseMobileDepartureSave(input);
     return {request,original:mobileDepartureOriginal(request),conflicts:mobileDepartureConflicts,
      command:'correct_mobile_departure',committed:(observed:unknown)=>parseMobileDepartureCommitted(observed,request)};
+   })():action==='pickup-trip'?(()=>{
+    const request=parsePickupTripSave(input);
+    return {request,original:pickupTripOriginal(request),conflicts:pickupTripConflicts,
+     command:'record_pickup_trip',committed:(observed:unknown)=>parsePickupTripCommitted(observed,request)};
    })():action==='work-end'?(()=>{
     const request=parseWorkEndSave(input);
     return {request,original:workEndOriginal(request),conflicts:workEndConflicts,
@@ -142,6 +159,25 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
    };
    const result=await database.commandTransaction(async(query,current)=>{
     if(current.aborted)throw Error();submitted=true;
+    if('expectedSequence'in request){
+     const value=await query('SELECT crest_commands.save_pickup_policy($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::bigint,$12::jsonb) AS result',
+      [...args,request.recoveryEpoch,request.operationId,request.expectedSequence,request.body]);
+     current.throwIfAborted();
+     if(exact(value,['state','reason'])&&value.state==='conflict'&&pickupPolicyConflicts.some(reason=>reason===value.reason))
+      return new PrivateValue(Object.freeze({state:'conflict' as const,reason:value.reason as string}));
+     verifyPickupPolicyWrite(value,request);
+     return null;
+    }
+    if('pickupLegVersionId'in request){
+     const value=await query('SELECT crest_commands.collect_pickup_vehicle($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,1,$11::uuid,$12::bigint,$13::uuid,$14::uuid,$15::uuid,$16::jsonb) AS result',
+      [...args,request.recoveryEpoch,request.operationId,request.jobId,request.expectedJobVersion,request.jobVehicleId,
+       request.pickupLegVersionId,request.policyId,request.body]);
+     current.throwIfAborted();
+     if(exact(value,['state','reason'])&&value.state==='conflict'&&pickupCollectionConflicts.some(reason=>reason===value.reason))
+      return new PrivateValue(Object.freeze({state:'conflict' as const,reason:value.reason as string}));
+     verifyPickupCollectionWrite(value,request);
+     return null;
+    }
     if('policyId'in request){
      const value=await query('SELECT crest_commands.revise_dropoff_policy($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::jsonb) AS result',
       [...args,request.recoveryEpoch,request.operationId,request.modeVersionId,request.policyId,request.body]);
@@ -165,6 +201,7 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
      custody?request.jobVehicleId:'taskId'in request?request.taskId:request.jobId,
      custody?request.caseId:'expectedVersion'in request?request.expectedVersion:review?request.messageId:request.expectedJobVersion];
     const versions=custody?[request.expectedVersion]:review?[request.priorEventId]:
+     'expectedLegVersionId'in request?[request.legId,request.expectedLegVersionId]:
      'departureEventId'in request?[request.legId,request.legVersionId,request.departureEventId]:
      'leftVersionId'in request?[request.leftVersionId,request.rightVersionId]:
      'completionEventId'in request?[request.workVersionId,request.completionEventId]:
@@ -185,6 +222,28 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
   finally{hash?.fill(0);}
  }
  return Object.freeze({
+  async pickupPolicy(credential:string,businessId:string,beforeSequence:string|null,signal:AbortSignal){
+   const value=await readResult(credential,businessId,signal,
+    'SELECT crest_commands.read_pickup_policy($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::bigint) AS result',[beforeSequence]);
+   return new PrivateValue(parsePickupPolicyPage(value,businessId,beforeSequence));
+  },
+  savePickupPolicy:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'pickup-policy'),
+  async pickupCollection(credential:string,businessId:string,jobId:string,jobVehicleId:string,signal:AbortSignal){
+   const value=await readResult(credential,businessId,signal,
+    'SELECT crest_commands.read_pickup_collection($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid) AS result',
+    [jobId,jobVehicleId]);
+   if(value===null||typeof value!=='object')throw new FieldDirectoryError('PICKUP_COLLECTION_DATA_REQUIRED');
+   parsePickupCollectionContext(value,{businessId,jobId,jobVehicleId});
+   return new PrivateValue(value);
+  },
+  savePickupCollection:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'pickup-collection'),
+  async pickupTrips(credential:string,businessId:string,jobId:string,cursor:PickupTripCursor,signal:AbortSignal){
+   const value=await readResult(credential,businessId,signal,
+    'SELECT crest_commands.read_pickup_trips($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::timestamptz,$11::uuid) AS result',
+    [jobId,cursor.beforeDepartedAt,cursor.beforeLegId]);
+   return new PrivateValue(parsePickupTripDatabasePage(value,{businessId,jobId},cursor));
+  },
+  savePickupTrip:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'pickup-trip'),
   cancellationContext:(credential:string,businessId:string,jobId:string,signal:AbortSignal)=>read(credential,businessId,jobId,signal,'cancellation'),
   jobWorkTime:(credential:string,businessId:string,jobId:string,signal:AbortSignal)=>read(credential,businessId,jobId,signal,'time'),
   jobWorkStart:(credential:string,businessId:string,jobId:string,signal:AbortSignal)=>read(credential,businessId,jobId,signal,'work-start'),

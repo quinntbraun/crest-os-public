@@ -68,7 +68,7 @@ export function parseBookJobSave(v:unknown):BookJobSave{
  requireBooking(exact(v,['schemaVersion','businessId','operationId','recoveryEpoch','jobId','expectedModeSequence','payload'])&&v.schemaVersion===1&&[v.businessId,v.operationId,v.recoveryEpoch,v.jobId].every(customerUuid)&&customerVersion(v.expectedModeSequence,true));
  return Object.freeze({...v,payload:parseBookingPayload(v.payload,v.businessId as string)}) as BookJobSave;
 }
-export const bookingConflictReasons=['operation','mode','mode_disabled','job','customer','vehicle','operator','location','scope','allocation','review'] as const;
+export const bookingConflictReasons=['operation','mode','mode_disabled','pickup_policy','job','customer','vehicle','operator','location','scope','allocation','review'] as const;
 function parseJobCommitted(v:unknown,businessId:string,operationId:string){
  requireBooking(customerUuid(businessId)&&customerUuid(operationId)&&exact(v,['state','operationId','recoveryEpoch','receipt'])&&v.state==='committed'&&v.operationId===operationId&&customerUuid(v.recoveryEpoch));const r=v.receipt;
  requireBooking(exact(r,['schemaVersion','businessId','jobId','version','appointmentId','appointmentSequence','jobAuditEventId','sourceAuditIds'])&&r.schemaVersion===1&&r.businessId===businessId&&[r.jobId,r.appointmentId,r.jobAuditEventId].every(customerUuid)&&customerVersion(r.version)&&customerVersion(r.appointmentSequence)&&Array.isArray(r.sourceAuditIds)&&r.sourceAuditIds.length>0&&r.sourceAuditIds.every(customerUuid)&&new Set(r.sourceAuditIds).size===r.sourceAuditIds.length&&r.sourceAuditIds.includes(r.jobAuditEventId as string));

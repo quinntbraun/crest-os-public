@@ -8,7 +8,7 @@ import {confirmedBookingRequest} from '../fixtures/confirmed-booking.ts';
 import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixture.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
-import {backupDatabase,connect,keyPair,privateWorkspace,recoveryCluster,restoreDatabase} from '../support/recovery-drill.mjs';
+import {backupLegacy68Database,connect,keyPair,privateWorkspace,recoveryCluster,restoreLegacy68Database} from '../support/recovery-drill.mjs';
 import {requireSyntheticDropoffPolicyRevision} from '../../scripts/synthetic-migrations.mjs';
 import {bookingFoundationEvidence} from '../support/booking-source-evidence.mjs';
 import {collectAcceptedAmendmentSources} from '../support/accepted-amendment-source-fixture.mjs';
@@ -55,11 +55,12 @@ test('Drop-Off policy revision preserves existing bookings and atomically change
    [...owner.auth(),job.id,job.vehicle_id]);
   const beforeUpgrade=await policyFor(before);
   assert.deepEqual(beforeUpgrade.policy,{id:firstId,acknowledgementText:'Prior instructions',conditionPhotoRequired:false});
-  const applied=await sandbox.apply(target);
+  const registered68=await sandbox.prefix(68),applied=await sandbox.apply(target,registered68);
   assert.equal(applied.history.length,68);
   assert.deepEqual(applied.history.slice(0,67),previous.history);
-  assert.deepEqual((await sandbox.apply(target)).history,applied.history);
+  assert.deepEqual((await sandbox.apply(target,registered68)).history,applied.history);
   await requireSyntheticDropoffPolicyRevision(target);
+  await assert.rejects(web.query("SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='20261122180000'"),{code:'42501'});
   assert.deepEqual(await policyFor(before),beforeUpgrade);
   const noModeChange=await value(web,'SELECT crest_commands.save_fulfillment_modes($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12) value',
    [...owner.auth(),owner.epoch,randomUUID(),'1',{mobileEnabled:true,dropoffEnabled:true,pickupReturnEnabled:false,reason:'Synthetic no-op'}]);
@@ -164,13 +165,13 @@ test('Drop-Off policy revision preserves existing bookings and atomically change
   await mkdir(point,{mode:0o700});
   const keys=await keyPair(workspace);
   assert.equal((await client.query('SELECT 1 FROM crest.custody_photo_attempts LIMIT 1')).rowCount,0);
-  const sealed=await backupDatabase(client,target,point,keys.recipient);
+  const sealed=await backupLegacy68Database(client,target,point,keys.recipient);
   assert.equal(sealed.manifest.completeBackup,false);
   assert.equal(sealed.manifest.schemaVersion,68);
   assert.equal(sealed.manifest.registrySha256,applied.registrySha256);
   destinationCluster=await recoveryCluster();
   const destination=await destinationCluster.database();
-  const recovered=await restoreDatabase(point,keys.path,destination);
+  const recovered=await restoreLegacy68Database(point,keys.path,destination);
   assert.deepEqual(recovered,sealed.manifest);
   restored=await connect(destination);
   assert.deepEqual(await value(restored,'SELECT crest_private.dropoff_policy_revision_original($1,$2,$3) value',

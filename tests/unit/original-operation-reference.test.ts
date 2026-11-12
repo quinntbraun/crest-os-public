@@ -20,6 +20,9 @@ const targets:Record<OriginalOperationKind,Record<string,unknown>>={
  'operations.job.work_boundary.correct':{jobId:randomUUID(),expectedJobVersion:'3',leftVersionId:randomUUID(),rightVersionId:randomUUID()},
  'operations.mileage.record':{legId:randomUUID(),expectedLegVersionId:randomUUID(),expectedEvidenceVersion:'0'},
  'operations.support_trip.record':{legId:randomUUID(),expectedLegVersionId:null,action:'depart'},
+ 'operations.pickup_custody.policy.save':{expectedSequence:'0'},
+ 'operations.pickup_custody.collect':{jobId:randomUUID(),expectedJobVersion:'1',jobVehicleId:randomUUID(),pickupLegVersionId:randomUUID(),policyId:randomUUID()},
+ 'operations.pickup_trip.record':{jobId:randomUUID(),expectedJobVersion:'1',legId:randomUUID(),expectedLegVersionId:null,action:'depart'},
  'operations.support_trip.correct':{legId:randomUUID(),expectedLegVersionId:randomUUID(),action:'correct'},
 
  'operations.fulfillment_modes.initialize':{expectedSequence:'0'},

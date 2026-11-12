@@ -13,6 +13,9 @@ export function schedulingOriginalFixture(kind:SchedulingOriginalKind){
    'caseId'in r?{subjectId:r.caseId,sourceRecordId:randomUUID(),sourceVersion:r.expectedVersion==='0'?'1':'2'}:
    'taskId'in r?{subjectId:r.taskId,sourceRecordId:randomUUID(),sourceVersion:(BigInt(r.expectedVersion)+1n).toString()}:
    'legVersionId'in r?{subjectId:r.legId,sourceRecordId:randomUUID(),sourceVersion:'2'}:
+   'expectedJobVersion'in r&&'expectedLegVersionId'in r?{subjectId:r.legId,sourceRecordId:r.expectedLegVersionId===null?r.legId:randomUUID(),sourceVersion:r.expectedLegVersionId===null?'1':'2'}:
+   'expectedSequence'in r?{subjectId:original.businessId,sourceRecordId:r.operationId,sourceVersion:(BigInt(r.expectedSequence)+1n).toString()}:
+   'pickupLegVersionId'in r?{subjectId:r.jobVehicleId,sourceRecordId:r.operationId,sourceVersion:'1'}:
    'expectedJobVersion'in r?{subjectId:r.jobId,sourceRecordId:r.jobId,sourceVersion:(BigInt(r.expectedJobVersion)+(kind==='operations.job.work_boundary.correct'?0n:1n)).toString()}:
    {subjectId:r.legId,sourceRecordId:randomUUID(),sourceVersion:'expectedEvidenceVersion'in r?(BigInt(r.expectedEvidenceVersion)+1n).toString():r.expectedLegVersionId===null?'1':'2'};
   const auditCount=kind==='operations.job.work_boundary.correct'||kind==='operations.custody.policy.revise'?2:

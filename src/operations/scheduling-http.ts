@@ -40,6 +40,8 @@ import {parseMobileDepartureSave,mobileDepartureKind} from './mobile-departure-c
 import {parseReviewOutcomeSave,reviewOutcomeKind} from './review-message-contract.ts';
 
 import {parseReviewHistoryQuery} from './review-message-history-contract.ts';
+import {parsePickupCollectionSave,pickupCollectionKind,parsePickupPolicySave,pickupPolicyKind} from './pickup-custody-contract.ts';
+import {parsePickupTripCursor,parsePickupTripSave,pickupTripKind} from './pickup-trip-contract.ts';
 import {dropoffCustodyKind,dropoffPolicyKind,dropoffPolicyRevisionKind,parseDropoffCustodySave,
  parseDropoffPolicySave,parseDropoffPolicyRevision} from './dropoff-custody-contract.ts';
 import {maintenanceFollowUpKind,parseMaintenanceFollowUpSave,parseMaintenanceFollowUpListQuery,
@@ -51,6 +53,12 @@ const fields={'mileage-trips':['jobId','afterDepartedAt','afterLegId','pageSize'
  'support-trips':['afterDepartedAt','afterLegId','pageSize'],
  'support-trip-history':['legId','afterVersion','throughVersion','pageSize'],
  'support-trip-mileage':['legId'],
+ 'pickup-policy':['beforeSequence'],
+ 'pickup-policy-save':['schemaVersion','operationId','recoveryEpoch','expectedSequence','body'],
+ 'pickup-collection':['jobId','jobVehicleId'],
+ 'pickup-collection-save':['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','jobVehicleId','pickupLegVersionId','policyId','body'],
+ 'pickup-trips':['jobId','beforeDepartedAt','beforeLegId'],
+ 'pickup-trip-save':['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','legId','expectedLegVersionId','body'],
  'interrupt':['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','body'],
  'unfulfilled-context':['jobId'],
  'work-time':['jobId'],
@@ -79,12 +87,16 @@ const fields={'mileage-trips':['jobId','afterDepartedAt','afterLegId','pageSize'
  'mileage-save':['schemaVersion','operationId','recoveryEpoch','legId','expectedLegVersionId','expectedEvidenceVersion','body'],
  'completion-context':['jobId'],complete:['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','body'],'field-save':['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','body'],'slot-review':['schemaVersion','operatorId','rescheduledJobId','startAt','endAt','travelBeforeSeconds','travelAfterSeconds'],original:['originalJson'],workspace:[],agreement:['familyId'],resources:['jobId'],pending:['afterCreatedAt','afterAppointmentId','pageSize'],list:['from','until','afterStart','afterJob','pageSize'],read:['jobId'],history:['jobId','throughVersion','afterVersion','pageSize'],'mode-history':['afterSequence','pageSize'],'mode-save':['schemaVersion','operationId','recoveryEpoch','expectedSequence','payload'],book:['schemaVersion','operationId','recoveryEpoch','jobId','expectedModeSequence','payload'],cancel:['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','payload'],reschedule:['schemaVersion','operationId','recoveryEpoch','jobId','expectedJobVersion','payload']} as const;
 type Route=keyof typeof fields;
-const mutation=(route:Route)=>['mode-save','book','cancel','reschedule','field-save','complete','mileage-save','support-trip-save','interrupt','cancel-unfulfilled','work-boundary-save','work-start-save','work-end-save','mobile-departure-save','review-outcome-save','maintenance-save','custody-save','custody-policy-save','custody-policy-revise'].includes(route);
+const mutation=(route:Route)=>['mode-save','book','cancel','reschedule','field-save','complete','mileage-save','support-trip-save','pickup-trip-save','pickup-collection-save','pickup-policy-save','interrupt','cancel-unfulfilled','work-boundary-save','work-start-save','work-end-save','mobile-departure-save','review-outcome-save','maintenance-save','custody-save','custody-policy-save','custody-policy-revise'].includes(route);
 function failed(status:400|404|405|503){const r=privateJsonResponse({error:'SCHEDULING_REQUEST_FAILED'},status);if(status===405)r.headers.set('Allow','POST');return r;}
 export function schedulingFailureResponse(status:400|404|405|503=400){return failed(status);}
 // Synthetic construction only. Ordinary application composition stays closed
 // until coordinated migration/source/recovery and browser release acceptance.
-export function createSchedulingHttp(config:Configuration,provider:Parameters<typeof createBookingDirectory>[1],tokens:Parameters<typeof createBookingDirectory>[2],enabled=false,amendedEnabled=false,fieldEnabled=false,completionEnabled=false,mileageEnabled=false,supportTripsEnabled=false,unfulfilledCancellationEnabled=false,workTimeEnabled=false,workBoundaryEnabled=false,workStartEnabled=false,workEndEnabled=false,mobileDepartureEnabled=false,reviewOutcomeEnabled=false,reviewHistoryEnabled=false,maintenanceEnabled=false,custodyEnabled=false,policyRevisionEnabled=false){
+export function createSchedulingHttp(config:Configuration,provider:Parameters<typeof createBookingDirectory>[1],tokens:Parameters<typeof createBookingDirectory>[2],enabled=false,amendedEnabled=false,fieldEnabled=false,completionEnabled=false,mileageEnabled=false,supportTripsEnabled=false,unfulfilledCancellationEnabled=false,workTimeEnabled=false,workBoundaryEnabled=false,workStartEnabled=false,workEndEnabled=false,mobileDepartureEnabled=false,reviewOutcomeEnabled=false,reviewHistoryEnabled=false,maintenanceEnabled=false,custodyEnabled=false,policyRevisionEnabled=false,pickupTripsEnabled=false,pickupCollectionEnabled=false,pickupPolicyEnabled=false,pickupPhotosEnabled=false){
+ if(typeof pickupPhotosEnabled!=='boolean'||pickupPhotosEnabled&&!pickupPolicyEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
+ if(typeof pickupPolicyEnabled!=='boolean'||pickupPolicyEnabled&&!pickupCollectionEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
+ if(typeof pickupCollectionEnabled!=='boolean'||pickupCollectionEnabled&&!pickupTripsEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
+ if(typeof pickupTripsEnabled!=='boolean'||pickupTripsEnabled&&!fieldEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
  if(typeof fieldEnabled!=='boolean'||fieldEnabled&&(!enabled||!amendedEnabled))throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
  if(typeof completionEnabled!=='boolean'||completionEnabled&&!fieldEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
  if(typeof mileageEnabled!=='boolean'||mileageEnabled&&!fieldEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
@@ -112,6 +124,9 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
    if((route==='completion-context'||route==='complete')&&!completion)return failed(503);
    if(route.startsWith('mileage-')&&!mileage)return failed(503);
    if(route.startsWith('support-trip')&&!supportTrips)return failed(503);
+   if(route.startsWith('pickup-policy')&&!pickupPolicyEnabled)return failed(503);
+   if(route.startsWith('pickup-collection')&&!pickupCollectionEnabled)return failed(503);
+   if(route.startsWith('pickup-trip')&&!pickupTripsEnabled)return failed(503);
    if(route==='support-trip-mileage'&&!mileage)return failed(503);
    if(route==='interrupt'&&(!fieldDirectory||!mileage))return failed(503);
    if(route==='work-time'&&!workTimeEnabled)return failed(503);
@@ -136,7 +151,7 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
    const end=route==='work-end-save'?parseWorkEndSave({...input,businessId}):undefined;
    const departure=route==='mobile-departure-save'?parseMobileDepartureSave({...input,businessId}):undefined;
    const reviewOutcome=route==='review-outcome-save'?parseReviewOutcomeSave({...input,businessId}):undefined;
-   if(route==='custody-context')check(customerUuid(input.jobId)&&customerUuid(input.jobVehicleId));
+   if(route==='custody-context'||route==='pickup-collection')check(customerUuid(input.jobId)&&customerUuid(input.jobVehicleId));
    const collections=route==='custody-collections'?parseCollectionCursor(input):undefined;
    if(route==='review-outcome')check(customerUuid(input.jobId));
    const reviewHistory=route==='review-history'?parseReviewHistoryQuery(input):undefined;
@@ -158,8 +173,18 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
     after:input.afterDepartedAt===null&&input.afterLegId===null?null:{departedAt:input.afterDepartedAt,legId:input.afterLegId}}):undefined;
    const supportHistory=route==='support-trip-history'?parseSupportTripHistoryQuery({...input,businessId}):undefined;
    const supportSave=route==='support-trip-save'?parseSupportTripSave({...input,businessId}):undefined;
+   if(route==='pickup-policy')check(input.beforeSequence===null||customerVersion(input.beforeSequence));
+   const pickupPolicySave=route==='pickup-policy-save'?parsePickupPolicySave({...input,businessId}):undefined;
+   const pickupCollectionSave=route==='pickup-collection-save'?parsePickupCollectionSave({...input,businessId}):undefined;
+   const pickupSave=route==='pickup-trip-save'?parsePickupTripSave({...input,businessId}):undefined;
+   if(pickupCollectionSave?.body.conditionPhotoId&&!pickupPhotosEnabled)return failed(503);
+   const pickupCursor=route==='pickup-trips'?parsePickupTripCursor({beforeDepartedAt:input.beforeDepartedAt,beforeLegId:input.beforeLegId}):undefined;
+   if(pickupCursor)check(customerUuid(input.jobId));
    if(route==='support-trip-mileage')check(customerUuid(input.legId));
    const original=route==='original'?parseSchedulingOriginal(parseOriginalOperationLookupWire(input,businessId)):undefined;
+   if(original?.commandType===pickupPolicyKind&&!pickupPolicyEnabled)return failed(503);
+   if(original?.commandType===pickupCollectionKind&&!pickupCollectionEnabled)return failed(503);
+   if(original?.commandType===pickupTripKind&&!pickupTripsEnabled)return failed(503);
    if(original?.commandType===workBoundaryKind&&!workBoundaryEnabled)return failed(503);
    if(original?.commandType===workStartKind&&!workStartEnabled)return failed(503);
    if(original?.commandType===workEndKind&&!workEndEnabled)return failed(503);
@@ -174,7 +199,7 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
    const list=route==='list'?parseJobListRequest({...input,businessId}):undefined,history=route==='history'?parseJobHistoryRequest({...input,businessId}):undefined,pending=route==='pending'?parsePendingChangesRequest({...input,businessId}):undefined;
    if(route==='agreement')check(customerUuid(input.familyId));if(route==='resources'||route==='read'||route==='completion-context')check(customerUuid(input.jobId));if(route==='mode-history')check(customerVersion(input.afterSequence,true)&&typeof input.pageSize==='number'&&Number.isInteger(input.pageSize)&&input.pageSize>=1&&input.pageSize<=20);
    const sessionId=await csrf(bounded,cookie,signal);workStarted=true;if(!await admit(cookie,'ordinary',signal)){const r=privateJsonResponse({error:'SCHEDULING_REQUEST_LIMITED'},429);r.headers.set('Retry-After','60');return r;}check(!signal.aborted);
-   if(route==='workspace'){const workspace=(await directory.workspace(cookie,businessId,signal)).forServer(),authority=(await context(cookie,businessId,signal)).forServer();check(!signal.aborted);const response=privateJsonResponse({...workspace,writeState:authority.writeState,recoveryEpoch:authority.recoveryEpoch});response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.scheduling.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));if(amendedEnabled)response.headers.set('X-Crest-Amended-Scheduling','1');if(fieldEnabled)response.headers.set('X-Crest-Field-Session','1');if(completionEnabled)response.headers.set('X-Crest-Job-Completion','1');if(mileageEnabled)response.headers.set('X-Crest-Job-Mileage','1');if(supportTripsEnabled)response.headers.set('X-Crest-Support-Trips','1');if(unfulfilledCancellationEnabled)response.headers.set('X-Crest-Unfulfilled-Cancellation','1');if(workTimeEnabled)response.headers.set('X-Crest-Work-Time','1');if(workBoundaryEnabled)response.headers.set('X-Crest-Work-Boundary','1');if(workStartEnabled)response.headers.set('X-Crest-Work-Start','1');if(workEndEnabled)response.headers.set('X-Crest-Work-End','1');if(mobileDepartureEnabled)response.headers.set('X-Crest-Mobile-Departure','1');if(reviewOutcomeEnabled)response.headers.set('X-Crest-Review-Outcome','1');if(reviewHistoryEnabled)response.headers.set('X-Crest-Review-History','1');if(maintenanceEnabled)response.headers.set('X-Crest-Maintenance-Follow-Up','1');if(custodyEnabled)response.headers.set('X-Crest-Dropoff-Custody','1');if(policyRevisionEnabled)response.headers.set('X-Crest-Dropoff-Policy-Revision','1');return response;}
+   if(route==='workspace'){const workspace=(await directory.workspace(cookie,businessId,signal)).forServer(),authority=(await context(cookie,businessId,signal)).forServer();check(!signal.aborted);const response=privateJsonResponse({...workspace,writeState:authority.writeState,recoveryEpoch:authority.recoveryEpoch});response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.scheduling.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));if(amendedEnabled)response.headers.set('X-Crest-Amended-Scheduling','1');if(fieldEnabled)response.headers.set('X-Crest-Field-Session','1');if(completionEnabled)response.headers.set('X-Crest-Job-Completion','1');if(mileageEnabled)response.headers.set('X-Crest-Job-Mileage','1');if(supportTripsEnabled)response.headers.set('X-Crest-Support-Trips','1');if(unfulfilledCancellationEnabled)response.headers.set('X-Crest-Unfulfilled-Cancellation','1');if(workTimeEnabled)response.headers.set('X-Crest-Work-Time','1');if(workBoundaryEnabled)response.headers.set('X-Crest-Work-Boundary','1');if(workStartEnabled)response.headers.set('X-Crest-Work-Start','1');if(workEndEnabled)response.headers.set('X-Crest-Work-End','1');if(mobileDepartureEnabled)response.headers.set('X-Crest-Mobile-Departure','1');if(reviewOutcomeEnabled)response.headers.set('X-Crest-Review-Outcome','1');if(reviewHistoryEnabled)response.headers.set('X-Crest-Review-History','1');if(maintenanceEnabled)response.headers.set('X-Crest-Maintenance-Follow-Up','1');if(custodyEnabled)response.headers.set('X-Crest-Dropoff-Custody','1');if(policyRevisionEnabled)response.headers.set('X-Crest-Dropoff-Policy-Revision','1');if(pickupTripsEnabled)response.headers.set('X-Crest-Pickup-Trips','1');if(pickupCollectionEnabled)response.headers.set('X-Crest-Pickup-Collection','1');if(pickupPolicyEnabled)response.headers.set('X-Crest-Pickup-Policy','1');if(pickupPhotosEnabled)response.headers.set('X-Crest-Pickup-Photos','1');return response;}
    let result:object;
    if(route==='field-save'){check(fieldDirectory);submitted=true;result=(await fieldDirectory.saveSession(cookie,fieldSave!,signal)).forServer();}
    else if(route==='interrupt'){check(fieldDirectory&&interruption);submitted=true;result=(await fieldDirectory.interrupt(cookie,interruption,signal)).forServer();}
@@ -209,6 +234,12 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
    else if(route==='support-trip-history'){check(supportTrips&&supportHistory);result=(await supportTrips.history(cookie,supportHistory,signal)).forServer();}
    else if(route==='support-trip-mileage'){check(supportTrips);result=(await supportTrips.mileage(cookie,businessId,input.legId as string,signal)).forServer();}
    else if(route==='support-trip-save'){check(supportTrips&&supportSave);submitted=true;result=(await supportTrips.save(cookie,supportSave,signal)).forServer();}
+   else if(route==='pickup-policy'){check(fieldDirectory);result=(await fieldDirectory.pickupPolicy(cookie,businessId,input.beforeSequence as string|null,signal)).forServer();}
+   else if(route==='pickup-policy-save'){check(fieldDirectory&&pickupPolicySave);submitted=true;result=(await fieldDirectory.savePickupPolicy(cookie,pickupPolicySave,signal)).forServer();}
+   else if(route==='pickup-collection'){check(fieldDirectory);result=(await fieldDirectory.pickupCollection(cookie,businessId,input.jobId as string,input.jobVehicleId as string,signal)).forServer();}
+   else if(route==='pickup-collection-save'){check(fieldDirectory&&pickupCollectionSave);submitted=true;result=(await fieldDirectory.savePickupCollection(cookie,pickupCollectionSave,signal)).forServer();}
+   else if(route==='pickup-trips'){check(fieldDirectory&&pickupCursor);result=(await fieldDirectory.pickupTrips(cookie,businessId,input.jobId as string,pickupCursor,signal)).forServer();}
+   else if(route==='pickup-trip-save'){check(fieldDirectory&&pickupSave);submitted=true;result=(await fieldDirectory.savePickupTrip(cookie,pickupSave,signal)).forServer();}
    else if(route==='book'){submitted=true;result=(await directory.book(cookie,book!,signal)).forServer();}
    else if(route==='cancel'){submitted=true;result=(await directory.cancel(cookie,cancel!,signal)).forServer();}
    else if(route==='reschedule'){submitted=true;result=(await directory.reschedule(cookie,reschedule!,signal)).forServer();}

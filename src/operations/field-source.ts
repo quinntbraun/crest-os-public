@@ -10,6 +10,7 @@ import {workBoundaryKind} from './job-work-boundary-contract.ts';
 import {workStartKind} from './job-work-start-contract.ts';
 import {workEndKind} from './job-work-end-contract.ts';
 import {mobileDepartureKind} from './mobile-departure-contract.ts';
+import {parsePickupTripSave,pickupTripKind} from './pickup-trip-contract.ts';
 import {verifyBusinessHistoryEvidence} from '../security/business-history-evidence.ts';
 import {formatBusinessHistoryCsv} from '../security/business-history-csv.ts';
 import {parseHistoryJson,historyJsonEqual,historyJsonNumber,historyJsonBigint} from '../security/history-evidence-json.ts';
@@ -42,6 +43,45 @@ function sourceImage(group:FieldSourceGroup,row:Row,image:unknown){
   const v=row[key];if(spec.type==='jsonb'&&v!==null)check(typeof v==='string'&&historyJsonEqual(parseHistoryJson(v),image[key]));
   else if((spec.type==='bigint'||spec.type.startsWith('numeric'))&&v!==null&&typeof image[key]!=='string')check(typeof v==='string'&&historyJsonEqual(parseHistoryJson(v),image[key]));
   else check(historyJsonEqual(parseHistoryJson(JSON.stringify(v)),image[key]));
+ }
+}
+function verifyPickupTripSource(operation:Record<string,unknown>,rows:readonly Row[],versions:ReadonlyMap<string,Row>,
+ operations:ReadonlyMap<string,Record<string,unknown>>,auditIds:readonly unknown[]){
+ check(rows.length===1&&auditIds.length===1&&typeof operation.result==='string'&&historyJsonNumber(operation.schema_version,1)&&historyJsonNumber(operation.result_schema_version,1));
+ const stored=parseHistoryJson(operation.result),wire=JSON.parse(operation.result);
+ shape(stored,['schemaVersion','request','receipt']);check(historyJsonNumber(stored.schemaVersion,1));
+ shape(stored.request,['schemaVersion','commandType','businessId','actorId','recoveryEpoch','jobId','jobVersion','legId','expectedLegVersionId','body']);
+ shape(stored.receipt,['leg','jobVehicleIds','auditId','departure']);
+ const row=rows[0]!,request=wire.request;
+ const checked=parsePickupTripSave({schemaVersion:request.schemaVersion,businessId:request.businessId,operationId:operation.operation_id,
+  recoveryEpoch:request.recoveryEpoch,jobId:request.jobId,expectedJobVersion:request.jobVersion,legId:request.legId,
+  expectedLegVersionId:request.expectedLegVersionId,body:request.body});
+ check(request.commandType===pickupTripKind&&request.businessId===row.business_id&&request.actorId===row.created_by&&
+  request.actorId===row.operator_actor_id&&request.recoveryEpoch===operation.recovery_epoch&&request.jobId===row.job_context_id&&
+  request.legId===row.logical_id&&request.expectedLegVersionId===row.replaces_id&&checked.body.action===row.change_kind&&
+  checked.body.reason===row.reason&&stored.receipt.auditId===auditIds[0]);
+ sourceImage('travel_legs',row,stored.receipt.leg);
+ const departure=versions.get(checked.legId);
+ check(departure&&departure.sequence==='1'&&departure.job_context_id===row.job_context_id&&departure.purpose==='pickup'&&
+  departure.operator_actor_id===row.operator_actor_id&&typeof departure.operation_id==='string');
+ const startOperation=operations.get(departure.operation_id);
+ check(startOperation?.command_type===pickupTripKind&&typeof startOperation.result==='string');
+ const start=parseHistoryJson(startOperation.result);
+ object(start);object(start.request);object(start.request.body);object(start.request.body.trip);
+ check(historyJsonEqual(stored.receipt.departure,start.request.body)&&
+  historyJsonEqual(stored.receipt.jobVehicleIds,start.request.body.trip.jobVehicleIds));
+ const body=checked.body;
+ if(body.action==='depart'){
+  check(row.id===row.logical_id&&row.sequence==='1'&&row.state==='open'&&row.driven_vehicle_id===body.trip.drivenVehicleId&&
+   typeof row.origin_snapshot==='string'&&historyJsonEqual(parseHistoryJson(row.origin_snapshot),parseHistoryJson(JSON.stringify(body.trip.origin)))&&
+   row.eta_at===body.trip.etaAt&&row.eta_source===(body.trip.etaAt===null?null:'owner_entered')&&
+   row.eta_calculated_at===(body.trip.etaAt===null?null:row.departed_at)&&row.notes===body.trip.notes);
+ }else{
+  check(row.sequence==='2'&&row.replaces_id===departure.id&&
+   ['driven_vehicle_id','origin_snapshot','departed_at','eta_at','eta_source','eta_calculated_at','notes'].every(key=>row[key]===departure[key])&&
+   (body.action==='arrive'?row.state==='closed'&&row.destination_snapshot===departure.destination_snapshot:
+    row.state==='cancelled'&&typeof row.destination_snapshot==='string'&&
+    historyJsonEqual(parseHistoryJson(row.destination_snapshot),parseHistoryJson(JSON.stringify(body.trip.actualStop)))));
  }
 }
 function verifyWorkBoundarySource(operation:Record<string,unknown>,rows:readonly Row[],versions:ReadonlyMap<string,Row>,auditIds:readonly string[]){
@@ -349,11 +389,17 @@ export function verifyFieldSources(value:unknown){
     check(!audits.has(key));audits.set(key,r);
    }
   }
+  const pickupRows=new Map<string,Row[]>(),pickupAudits=new Map<string,unknown[]>();
   const used=new Set<string>();for(const group of fieldSourceGroups)for(const row of rows[group]){
    const logical=group==='work_intervals'||group==='travel_legs'?row.logical_id:group==='mileage_evidence'?row.leg_id:row.id,sequence=['work_intervals','travel_legs','mileage_evidence'].includes(group)?row.sequence:'1',key=[group,logical,sequence].join(':'),audit=audits.get(key),operation=operations.get(row.operation_id as string);check(audit&&operation&&!used.has(key));used.add(key);
    check(audit.operation_id===row.operation_id&&audit.actor_id===row.created_by&&audit.created_by===row.created_by&&operation.actor_id===row.created_by&&operation.state==='committed'&&audit.reason===(row.reason??null));const delta=parseHistoryJson(audit.delta as string);shape(delta,['schemaVersion','before','after']);check(historyJsonNumber(delta.schemaVersion,1));sourceImage(group,row,delta.after);
    const prior=['work_intervals','travel_legs','mileage_evidence'].includes(group)&&row.replaces_id!==null?maps[group].get(row.replaces_id as string):undefined;if(prior)sourceImage(group,prior,delta.before);else check(delta.before===null);
    const action=sequence==='1'?'create':group==='mileage_evidence'?'correct':row.change_kind;check(audit.action===action);
+   if(operation.command_type===pickupTripKind||group==='travel_legs'&&row.purpose==='pickup'){
+    check(operation.command_type===pickupTripKind&&group==='travel_legs'&&row.purpose==='pickup'&&typeof row.operation_id==='string');
+    const travel=pickupRows.get(row.operation_id)??[];travel.push(row);pickupRows.set(row.operation_id,travel);
+    const events=pickupAudits.get(row.operation_id)??[];events.push(audit.id);pickupAudits.set(row.operation_id,events);
+   }
    if(operation.command_type===workBoundaryKind){
     check(group==='work_intervals'&&typeof row.operation_id==='string');
     const pair=boundaryRows.get(row.operation_id)??[];pair.push(row);boundaryRows.set(row.operation_id,pair);
@@ -363,6 +409,9 @@ export function verifyFieldSources(value:unknown){
     const entries=endpointRows.get(row.operation_id)??[];entries.push(row);endpointRows.set(row.operation_id,entries);
    }
   }check(used.size===audits.size);
+  for(const [id,operation]of operations)if(operation.command_type===pickupTripKind){
+   verifyPickupTripSource(operation,pickupRows.get(id)??[],maps.travel_legs,operations,pickupAudits.get(id)??[]);
+  }
   for(const [id,operation] of operations)if(operation.command_type===workBoundaryKind){
    verifyWorkBoundarySource(operation,boundaryRows.get(id)??[],maps.work_intervals,boundaryAuditIds.get(id)??[]);
   }

@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 68,
+  "migrationCount": 69,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2057,6 +2057,90 @@
         "preview_width",
         "preview_height",
         "verified_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.pickup_custody_policies",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "mode_version_id",
+        "sequence",
+        "replaces_sequence",
+        "reason",
+        "created_by",
+        "acknowledgement_text",
+        "condition_photo_required",
+        "recorded_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.pickup_job_policies",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "job_id",
+        "policy_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.pickup_custody_collections",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "job_vehicle_id",
+        "vehicle_id",
+        "pickup_leg_version_id",
+        "policy_id",
+        "effective_at",
+        "recorded_at",
+        "person_snapshot",
+        "location_snapshot",
+        "notes",
+        "missing_photo_reason",
+        "condition_photo_id",
+        "acknowledgement_confirmed",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.pickup_photo_slots",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "photo_id",
+        "job_id",
+        "job_vehicle_id",
+        "collection_id",
+        "arrival_version_id",
+        "policy_id",
+        "job_version",
+        "actor_id",
+        "recovery_epoch"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.vehicle_custody_claims",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "vehicle_id",
+        "dropoff_case_id",
+        "pickup_collection_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

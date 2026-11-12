@@ -14,7 +14,9 @@ const choices:ReadonlyArray<readonly [OriginalOperationKind,string]>=[
  ['operations.job.book','Job booking'],['operations.job.cancel','Scheduled-job cancellation'],['operations.job.reschedule','Appointment change'],
  ['operations.job.field','Mobile work status'],['operations.job.complete','Work completion'],['operations.job.interrupt','En-route change'],
  ['operations.job.cancel_unfulfilled','Unfulfilled-work cancellation'],['operations.job.work_boundary.correct','Work-time correction'],['operations.job.work_start.correct','First work start correction'],['operations.job.work_end.correct','Completion time correction'],['operations.mobile_departure.correct','Mobile departure correction'],['operations.mileage.record','Mileage'],
- ['operations.support_trip.record','Support trip'],['operations.support_trip.correct','Support trip correction'],
+ ['operations.pickup_custody.policy.save','Pickup handoff policy'],
+ ['operations.pickup_custody.collect','Pickup vehicle collection'],
+ ['operations.pickup_trip.record','Pickup trip'],['operations.support_trip.record','Support trip'],['operations.support_trip.correct','Support trip correction'],
  ['operations.message.record_outcome','Review message outcome'],['operations.follow_up.save','Maintenance reminder'],['operations.custody.save','Drop-Off handoff'],['operations.custody.policy.save','Drop-Off policy'],['operations.custody.policy.revise','Drop-Off policy revision']
 ];
 function Review({kind}:{kind:OriginalOperationKind}){

@@ -44,6 +44,11 @@ import type {MobileDepartureSave} from '../operations/mobile-departure-contract.
 import {maintenanceFollowUpConflicts,parseMaintenanceFollowUpAcknowledgement,parseMaintenanceFollowUpHistory,
  parseMaintenanceFollowUpHistoryQuery,parseMaintenanceFollowUpList,parseMaintenanceFollowUpListQuery,parseMaintenanceFollowUpSave} from '../operations/maintenance-follow-up-contract.ts';
 import type {MaintenanceFollowUpSave} from '../operations/maintenance-follow-up-contract.ts';
+import {parsePickupTripCommitted,parsePickupTripCursor,parsePickupTripPage,parsePickupTripSave,pickupTripConflicts} from '../operations/pickup-trip-contract.ts';
+import {parsePickupCollectionAcknowledgement,parsePickupCollectionContext,parsePickupCollectionSave,pickupCollectionConflicts,
+ parsePickupPolicyAcknowledgement,parsePickupPolicyPage,parsePickupPolicySave,pickupPolicyConflicts} from '../operations/pickup-custody-contract.ts';
+import type {PickupCollectionSave,PickupPolicySave} from '../operations/pickup-custody-contract.ts';
+import type {PickupTripCursor,PickupTripSave} from '../operations/pickup-trip-contract.ts';
 export {SchedulingClientError};
 function failure(error:unknown,kind:'input'|'unknown'|'unavailable'):never{throw error instanceof SchedulingClientError?error:new SchedulingClientError(kind);}
 function conflict(v:unknown,status:number,reasons:readonly string[]){if(status===409&&exact(v,['state','reason'])&&v.state==='conflict'&&typeof v.reason==='string'&&reasons.includes(v.reason))return Object.freeze({state:'conflict' as const,reason:v.reason});return null;}
@@ -51,11 +56,53 @@ export const scheduling=Object.freeze({
  async workspace(proof:Proof,signal:AbortSignal){try{
   const r=await postScheduling('workspace',{},proof,signal),v=r.value;check(r.status===200&&exact(v,['schemaVersion','businessId','operatorId','timezone','modeVersion','writeState','recoveryEpoch'])&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding));
   const workspace=parseBookingWorkspace({schemaVersion:v.schemaVersion,businessId:v.businessId,operatorId:v.operatorId,timezone:v.timezone,modeVersion:v.modeVersion},v.businessId as string);check(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null);
-  return Object.freeze({...r.amendedSchedulingAvailable===true?{amendedSchedulingAvailable:true as const}:{},...r.fieldSessionAvailable===true?{fieldSessionAvailable:true as const}:{},...r.jobCompletionAvailable===true?{jobCompletionAvailable:true as const}:{},...r.jobMileageAvailable===true?{jobMileageAvailable:true as const}:{},...r.supportTripsAvailable===true?{supportTripsAvailable:true as const}:{},...r.unfulfilledCancellationAvailable===true?{unfulfilledCancellationAvailable:true as const}:{},...r.workTimeAvailable===true?{workTimeAvailable:true as const}:{},...r.workBoundaryAvailable===true?{workBoundaryAvailable:true as const}:{},...r.workStartAvailable===true?{workStartAvailable:true as const}:{},...r.workEndAvailable===true?{workEndAvailable:true as const}:{},...r.mobileDepartureAvailable===true?{mobileDepartureAvailable:true as const}:{},...r.reviewOutcomeAvailable===true?{reviewOutcomeAvailable:true as const}:{},...r.reviewHistoryAvailable===true?{reviewHistoryAvailable:true as const}:{},...r.maintenanceFollowUpAvailable===true?{maintenanceFollowUpAvailable:true as const}:{},...r.dropoffCustodyAvailable===true?{dropoffCustodyAvailable:true as const}:{},...r.dropoffPolicyRevisionAvailable===true?{dropoffPolicyRevisionAvailable:true as const}:{},context:Object.freeze({...workspace,...v.writeState==='ready'?{writeState:'ready' as const,recoveryEpoch:v.recoveryEpoch as string}:{writeState:'paused' as const,recoveryEpoch:null}}),binding:r.binding});
+  return Object.freeze({...r.amendedSchedulingAvailable===true?{amendedSchedulingAvailable:true as const}:{},...r.fieldSessionAvailable===true?{fieldSessionAvailable:true as const}:{},...r.jobCompletionAvailable===true?{jobCompletionAvailable:true as const}:{},...r.jobMileageAvailable===true?{jobMileageAvailable:true as const}:{},...r.pickupPhotosAvailable===true?{pickupPhotosAvailable:true as const}:{},...r.pickupPolicyAvailable===true?{pickupPolicyAvailable:true as const}:{},...r.pickupCollectionAvailable===true?{pickupCollectionAvailable:true as const}:{},...r.pickupTripsAvailable===true?{pickupTripsAvailable:true as const}:{},...r.supportTripsAvailable===true?{supportTripsAvailable:true as const}:{},...r.unfulfilledCancellationAvailable===true?{unfulfilledCancellationAvailable:true as const}:{},...r.workTimeAvailable===true?{workTimeAvailable:true as const}:{},...r.workBoundaryAvailable===true?{workBoundaryAvailable:true as const}:{},...r.workStartAvailable===true?{workStartAvailable:true as const}:{},...r.workEndAvailable===true?{workEndAvailable:true as const}:{},...r.mobileDepartureAvailable===true?{mobileDepartureAvailable:true as const}:{},...r.reviewOutcomeAvailable===true?{reviewOutcomeAvailable:true as const}:{},...r.reviewHistoryAvailable===true?{reviewHistoryAvailable:true as const}:{},...r.maintenanceFollowUpAvailable===true?{maintenanceFollowUpAvailable:true as const}:{},...r.dropoffCustodyAvailable===true?{dropoffCustodyAvailable:true as const}:{},...r.dropoffPolicyRevisionAvailable===true?{dropoffPolicyRevisionAvailable:true as const}:{},context:Object.freeze({...workspace,...v.writeState==='ready'?{writeState:'ready' as const,recoveryEpoch:v.recoveryEpoch as string}:{writeState:'paused' as const,recoveryEpoch:null}}),binding:r.binding});
  }catch(e){failure(e,'unavailable');}},
  async reviewSlot(input:BookingConflictRequest,proof:Proof,signal:AbortSignal){let request:BookingConflictRequest;try{request=parseBookingConflictRequest(input);}catch{throw new SchedulingClientError('input');}try{const {businessId,...body}=request,r=await postScheduling('slot-review',body,proof,signal);check(r.status===200&&businessId===request.businessId);return parseBookingConflictReview(r.value,request);}catch(e){failure(e,'unavailable');}},
  async agreement(businessId:string,familyId:string,proof:Proof,signal:AbortSignal){try{check(uuid(businessId)&&uuid(familyId));const r=await postScheduling('agreement',{familyId},proof,signal);check(r.status===200);return parseBookingAgreement(r.value,businessId,familyId);}catch(e){failure(e,'unavailable');}},
  async resources(businessId:string,jobId:string,proof:Proof,signal:AbortSignal){try{check(uuid(businessId)&&uuid(jobId));const r=await postScheduling('resources',{jobId},proof,signal);check(r.status===200);return parseJobResources(r.value,businessId,jobId);}catch(e){failure(e,'unavailable');}},
+ async pickupPolicy(businessId:string,beforeSequence:string|null,proof:Proof,signal:AbortSignal){
+  try{check(uuid(businessId)&&(beforeSequence===null||version(beforeSequence)));
+   const response=await postScheduling('pickup-policy',{beforeSequence},proof,signal);
+   check(response.status===200);return parsePickupPolicyPage(response.value,businessId,beforeSequence);
+  }catch(error){failure(error,'unavailable');}
+ },
+ async savePickupPolicy(input:PickupPolicySave,proof:Proof,signal:AbortSignal){
+  let request:PickupPolicySave;
+  try{request=parsePickupPolicySave(input);}catch{throw new SchedulingClientError('input');}
+  try{const {businessId,...body}=request,response=await postScheduling('pickup-policy-save',body,proof,signal);
+   const clash=conflict(response.value,response.status,pickupPolicyConflicts);if(clash)return clash;
+   check(response.status===200&&businessId===request.businessId);return parsePickupPolicyAcknowledgement(response.value,request);
+  }catch(error){failure(error,'unknown');}
+ },
+ async pickupCollection(businessId:string,jobId:string,jobVehicleId:string,proof:Proof,signal:AbortSignal){
+  try{check(uuid(businessId)&&uuid(jobId)&&uuid(jobVehicleId));
+   const response=await postScheduling('pickup-collection',{jobId,jobVehicleId},proof,signal);
+   check(response.status===200);return parsePickupCollectionContext(response.value,{businessId,jobId,jobVehicleId});
+  }catch(error){failure(error,'unavailable');}
+ },
+ async savePickupCollection(input:PickupCollectionSave,proof:Proof,signal:AbortSignal){
+  let request:PickupCollectionSave;
+  try{request=parsePickupCollectionSave(input);}catch{throw new SchedulingClientError('input');}
+  try{const {businessId,...body}=request,response=await postScheduling('pickup-collection-save',body,proof,signal);
+   const clash=conflict(response.value,response.status,pickupCollectionConflicts);if(clash)return clash;
+   check(response.status===200&&businessId===request.businessId);return parsePickupCollectionAcknowledgement(response.value,request);
+  }catch(error){failure(error,'unknown');}
+ },
+ async pickupTrips(businessId:string,jobId:string,cursor:PickupTripCursor,proof:Proof,signal:AbortSignal){
+  try{check(uuid(businessId)&&uuid(jobId));const query=parsePickupTripCursor(cursor);
+   const r=await postScheduling('pickup-trips',{jobId,...query},proof,signal);
+   check(r.status===200);return parsePickupTripPage(r.value,{businessId,jobId},query);
+  }catch(e){failure(e,'unavailable');}
+ },
+ async savePickupTrip(input:PickupTripSave,proof:Proof,signal:AbortSignal){
+  let request:PickupTripSave;
+  try{request=parsePickupTripSave(input);}catch{throw new SchedulingClientError('input');}
+  try{const {businessId,...body}=request,r=await postScheduling('pickup-trip-save',body,proof,signal);
+   const clash=conflict(r.value,r.status,pickupTripConflicts);if(clash)return clash;
+   check(r.status===200&&businessId===request.businessId);return parsePickupTripCommitted(r.value,request);
+  }catch(e){failure(e,'unknown');}
+ },
  async completionContext(businessId:string,jobId:string,proof:Proof,signal:AbortSignal){
   try {
    check(uuid(businessId)&&uuid(jobId));
@@ -328,7 +375,7 @@ export const scheduling=Object.freeze({
   }catch(error){failure(error,'unknown');}
  },
  async saveModes(input:FulfillmentModeSave,proof:Proof,signal:AbortSignal){let request:FulfillmentModeSave;try{request=parseFulfillmentModeSave(input);}catch{throw new SchedulingClientError('input');}try{
-  const {businessId,...body}=request,r=await postScheduling('mode-save',body,proof,signal),clash=conflict(r.value,r.status,['operation','review']);if(clash)return clash;
+  const {businessId,...body}=request,r=await postScheduling('mode-save',body,proof,signal),clash=conflict(r.value,r.status,['operation','review','pickup_policy']);if(clash)return clash;
   if(r.status===409&&exact(r.value,['state','reason','currentSequence'])&&r.value.state==='conflict'&&r.value.reason==='version'&&version(r.value.currentSequence,true))return Object.freeze({state:'conflict' as const,reason:'version' as const,currentSequence:r.value.currentSequence});
   check(r.status===200);const result=parseFulfillmentModeCommitted(r.value,businessId,request.operationId);check(result.recoveryEpoch===request.recoveryEpoch&&BigInt(result.receipt.sequence)===BigInt(request.expectedSequence)+1n);return result;
  }catch(e){failure(e,'unknown');}}

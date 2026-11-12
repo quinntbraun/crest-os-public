@@ -1,5 +1,5 @@
 # Current Crest OS delivery
 
-Schema68 registers Drop-Off policy changes for future bookings. Existing bookings retain their saved requirements. Genuine sign-in, interrupted-save verification, common-format policy history and independent encrypted synthetic database recovery passed locally. The owner preview remains on accepted schema66 pending exact schema67 release verification.
+The fictional laptop preview runs accepted schema68. Schema69 registers pickup policy, travel to pickup, per-vehicle collection and private condition photos. The synthetic upgrade preserved all existing Crest table rows and rebuilt the custody claim for an existing Drop-Off. Signed-in Chromium and WebKit, common-format reconstruction and independent encrypted database and photo recovery passed locally. Exact-source hosted release verification and preview promotion are pending.
 
-Full Pickup + Return, immutable finance/reporting, complete portability and recovery, and approved Google Calendar remain in scope. Hosted acceptance, physical iPhone and real Crest use remain pending.
+Transport to the work site, explicit return, remaining follow-up, double-entry finance and reporting, complete portability and recovery, and approved Google Calendar remain in V1. Real use remains gated.

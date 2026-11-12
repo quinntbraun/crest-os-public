@@ -8,6 +8,8 @@ import {parseCustomer} from '../../customer/customer-contract';
 import {parseVehicle} from '../../customer/vehicle-contract';
 import {quoteMoney} from '../../commercial/quote-pricing';
 import {DropoffCustodyHistory} from './dropoff-custody-history';
+import {PickupCollection} from './pickup-collection';
+import {PickupTrips} from './pickup-trips';
 
 export type SavedJobResources=Exclude<ReturnType<typeof parseJobResources>,{state:'absent'}>;
 const states:Readonly<Record<string,string>>={scheduled:'Scheduled',en_route:'En route',in_progress:'In progress',paused:'Paused',completed:'Completed',cancelled:'Cancelled'};
@@ -24,10 +26,10 @@ function WorkLocation({value}:{value:BookingLocation}){
 }
 type Props=Readonly<{
  resources:SavedJobResources;history:readonly JobHistoryEvent[];historyComplete:boolean;busy:boolean;canChange:boolean;
- onWorkStatus?:(()=>void)|undefined;completionAvailable?:boolean;mileageAvailable?:boolean;workTimeAvailable?:boolean;dropoffCustodyAvailable?:boolean;onChangeAppointment?:()=>void;onCancel?:()=>void;onDownload?:()=>void;onMoreHistory?:()=>void;
+ onWorkStatus?:(()=>void)|undefined;completionAvailable?:boolean;mileageAvailable?:boolean;workTimeAvailable?:boolean;dropoffCustodyAvailable?:boolean;pickupTripsAvailable?:boolean;pickupCollectionAvailable?:boolean;pickupPhotosAvailable?:boolean;onChangeAppointment?:()=>void;onCancel?:()=>void;onDownload?:()=>void;onMoreHistory?:()=>void;
 }>;
 export function SavedJobDetails(props:Props){return <SavedJobDetailsContent key={props.resources.head.job.id+':'+props.resources.head.job.version} {...props}/>;}
-function SavedJobDetailsContent({resources,history,historyComplete,busy,canChange,onWorkStatus,completionAvailable,mileageAvailable,workTimeAvailable,dropoffCustodyAvailable,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
+function SavedJobDetailsContent({resources,history,historyComplete,busy,canChange,onWorkStatus,completionAvailable,mileageAvailable,workTimeAvailable,dropoffCustodyAvailable,pickupTripsAvailable,pickupCollectionAvailable,pickupPhotosAvailable,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
  const {head}=resources,{job,appointment,latestAppointment}=head;
  const customer=parseCustomer(resources.vehicles[0]!.customer_snapshot,resources.businessId);
  const location=parseBookingLocation(job.work_location_snapshot,resources.businessId,job.customer_id),contact=parseBookingContact(appointment.contact_snapshot);
@@ -50,10 +52,12 @@ function SavedJobDetailsContent({resources,history,historyComplete,busy,canChang
    <dt>Contact for this visit</dt><dd>{contact.kind==='no_contact'?<>No contact selected: {contact.reason}</>:contact.value}</dd>
   </dl>
   {proposed&&<section aria-label="Proposed appointment change"><h3>Time change awaiting confirmation</h3><p>{when(latestAppointment.start_at,latestAppointment.timezone)} – {when(latestAppointment.end_at,latestAppointment.timezone)}</p><p className="field-help">The confirmed appointment above still reserves the time. This proposal reserves no time.</p></section>}
+  {pickupTripsAvailable&&job.fulfillment_mode==='pickup_return'&&<PickupTrips resources={resources} canChange={canChange&&!busy}/>}
   <section aria-label="Vehicles for this job"><h3>Vehicles</h3>{resources.vehicles.map(row=>{
    const vehicle=parseVehicle(row.vehicle_snapshot,resources.businessId);
    const pickup=row.pickup_location_snapshot===null?null:parseBookingLocation(row.pickup_location_snapshot,resources.businessId,job.customer_id),returned=row.return_location_snapshot===null?null:parseBookingLocation(row.return_location_snapshot,resources.businessId,job.customer_id);
    return <details key={row.id}><summary>{vehicle.label}</summary><dl className="customer-values"><dt>Vehicle</dt><dd>{[vehicle.year,vehicle.make,vehicle.model,vehicle.color].filter(v=>v!==null&&v!=='').join(' · ')||vehicle.label}</dd>{vehicle.plate&&<><dt>Plate</dt><dd>{vehicle.plate}</dd></>}{vehicle.vin_raw&&<><dt>VIN</dt><dd>{vehicle.vin_raw}</dd></>}{pickup&&<><dt>Pickup</dt><dd><WorkLocation value={pickup}/></dd></>}{returned&&<><dt>Return</dt><dd><WorkLocation value={returned}/></dd></>}</dl>
+    {pickupCollectionAvailable&&job.fulfillment_mode==='pickup_return'&&<PickupCollection businessId={resources.businessId} jobId={job.id} jobVehicleId={row.id} jobVersion={job.version} timezone={appointment.timezone} canChange={canChange&&!busy} photosAvailable={pickupPhotosAvailable===true}/>}
     {dropoffCustodyAvailable&&job.fulfillment_mode==='dropoff'&&<DropoffCustodyHistory businessId={resources.businessId} jobId={job.id} jobVehicleId={row.id} vehicleId={vehicle.id} timezone={appointment.timezone} canChange={canChange}/>}
    </details>;
   })}</section>

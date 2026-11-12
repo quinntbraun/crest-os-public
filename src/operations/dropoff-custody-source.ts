@@ -5,6 +5,8 @@ import {parseHistoryJson,historyJsonEqual,historyJsonNumber} from '../security/h
 import {dropoffPolicyRevisionKind,parseDropoffCustodySave,parseDropoffPolicyRevision,
  parseDropoffPolicyRevisionCommitted,parseDropoffPolicySave} from './dropoff-custody-contract.ts';
 import {parseFulfillmentModeVersion} from './fulfillment-mode-contract.ts';
+import {formatPickupCustodySources} from './pickup-custody-source.ts';
+import type {PickupCustodySourceInput,PickupCustodySources} from './pickup-custody-source.ts';
 import {imageValidationVersion,heicValidationVersion} from '../files/validation-contract.ts';
 
 const columns={
@@ -63,7 +65,7 @@ function handoff(custody:Row,event:Row){
   ...event.condition_photo_id!==null?{conditionPhotoId:event.condition_photo_id}:{}};
 }
 
-export function formatDropoffCustodySources(input:CustodySourceInput){
+function formatCustodySources(input:CustodySourceInput,pickup?:PickupCustodySources){
  check(exact(input,['context','rows','historyEvidence'])&&exact(input.context,
   ['schemaVersion','profile','businessId','snapshotToken','historySnapshotToken','expectedCounts'])&&
   input.context.schemaVersion===1&&input.context.profile===profile&&uuid(input.context.businessId)&&
@@ -86,6 +88,7 @@ export function formatDropoffCustodySources(input:CustodySourceInput){
    return row;
   }));
  }
+ if(pickup)check(pickup.context.businessId===businessId&&pickup.context.historySnapshotToken===context.historySnapshotToken);
  const history=verifyBusinessHistoryEvidence(input.historyEvidence,{businessId});
  check(history.context.snapshotToken===context.historySnapshotToken);
  const operations=new Map<string,Record<string,unknown>>(),audits=new Map<string,Record<string,unknown>>();
@@ -156,13 +159,19 @@ export function formatDropoffCustodySources(input:CustodySourceInput){
  const cases=new Map(rows.custody_cases.map(row=>[row.id,row])),events=new Map(rows.custody_events.map(row=>[row.id,row]));
  const originals=new Map(rows.custody_photo_originals.map(row=>[row.photo_id,row]));
  const attempts=new Map(rows.custody_photo_attempts.map(row=>[row.id,row]));
+ const pickupSlots=new Map(pickup?.rows.pickup_photo_slots.map(slot=>[slot.photo_id,slot]));
+ const pickupCollections=new Map(pickup?.rows.pickup_custody_collections.map(collection=>[collection.id,collection]));
+ const claims=new Map(pickup?.rows.vehicle_custody_claims.map(claim=>[claim.vehicle_id,claim]));
  const booked=new Set(),held=new Set(),linkedPhotos=new Set();
  for(const custody of cases.values()){
   const policy=policies.get(custody.authorization_config_id),head=events.get(custody.current_event_id);
   check(policy&&head&&head.case_id===custody.id&&head.version===custody.version&&custody.mode==='dropoff'&&
    (custody.version==='1'&&custody.state==='held'||custody.version==='2'&&custody.state==='released')&&!booked.has(custody.job_vehicle_id));
   booked.add(custody.job_vehicle_id);
-  if(custody.state==='held'){check(!held.has(custody.vehicle_id));held.add(custody.vehicle_id);}
+  if(custody.state==='held'){
+   check(!held.has(custody.vehicle_id)&&(!pickup||claims.get(String(custody.vehicle_id))?.dropoff_case_id===custody.id));
+   held.add(custody.vehicle_id);
+  }
  }
  const chains=new Map<unknown,Row>();
  const ordered=[...events.values()].sort((a,b)=>a.case_id===b.case_id?Number(a.version)-Number(b.version):String(a.case_id).localeCompare(String(b.case_id)));
@@ -194,11 +203,26 @@ export function formatDropoffCustodySources(input:CustodySourceInput){
   chains.set(event.case_id,event);
  }
  check(chains.size===cases.size);
+ for(const claim of claims.values())if(claim.dropoff_case_id!==null){
+  const heldCase=cases.get(claim.dropoff_case_id);
+  check(heldCase?.state==='held'&&heldCase.vehicle_id===claim.vehicle_id);
+ }
+ for(const collection of pickupCollections.values())if(collection.condition_photo_id!==null){
+  const original=originals.get(collection.condition_photo_id),attempt=attempts.get(collection.condition_photo_id),slot=pickupSlots.get(collection.condition_photo_id);
+  check(original&&attempt&&slot&&slot.collection_id===collection.id&&attempt.vehicle_id===collection.vehicle_id&&
+   original.verified_at!<=collection.recorded_at!&&!linkedPhotos.has(collection.condition_photo_id));
+  linkedPhotos.add(collection.condition_photo_id);
+ }
+ check([...pickupSlots.keys()].every(photoId=>attempts.has(photoId)));
  for(const attempt of attempts.values()){
   check((attempt.handoff_version===1||attempt.handoff_version===2)&&Number(attempt.byte_size)<=26214400&&
    ['image/jpeg','image/png','image/heic'].includes(String(attempt.declared_type)));
+  const slot=pickupSlots.get(String(attempt.id));
+  if(slot)check(slot.collection_id===attempt.case_id&&slot.job_id===attempt.job_id&&slot.job_vehicle_id===attempt.job_vehicle_id&&
+   slot.actor_id===attempt.actor_id&&slot.recovery_epoch===attempt.recovery_epoch&&attempt.handoff_version===1);
   const base={photoId:attempt.id,jobId:attempt.job_id,jobVehicleId:attempt.job_vehicle_id,caseId:attempt.case_id,
-   handoffVersion:attempt.handoff_version,declaredType:attempt.declared_type,byteSize:attempt.byte_size};
+   handoffVersion:attempt.handoff_version,declaredType:attempt.declared_type,byteSize:attempt.byte_size,
+   ...(slot?{pickup:{arrivalVersionId:slot.arrival_version_id,policyId:slot.policy_id,jobVersion:slot.job_version}}:{})};
   const reservation=evidence(attempt.id,'operations.custody.photo.reserve','custody_photos',attempt.id,'1','reserve',attempt.actor_id);
   check(reservation.op.recovery_epoch===attempt.recovery_epoch&&
    same(json(reservation.op.result),{schemaVersion:1,photoId:attempt.id,status:'reserved'})&&
@@ -225,9 +249,12 @@ export function formatDropoffCustodySources(input:CustodySourceInput){
  for(const [operationId,operation] of operations){
   if(operation.command_type!=='operations.custody.photo.access')continue;
   const receipt=json(operation.result);object(receipt);object(receipt.scope);
-  const scope=receipt.scope,photo=originals.get(scope.photoId as string),attempt=attempts.get(scope.photoId as string),event=events.get(scope.handoffEventId as string);
-  check(photo&&attempt&&event&&event.condition_photo_id===scope.photoId&&event.case_id===attempt.case_id&&scope.jobVehicleId===attempt.job_vehicle_id);
-  const expectedScope={photoId:photo.photo_id,jobVehicleId:attempt.job_vehicle_id,caseId:attempt.case_id,handoffEventId:event.id,
+  const scope=receipt.scope,photo=originals.get(scope.photoId as string),attempt=attempts.get(scope.photoId as string);
+  const isPickup=pickupSlots.has(scope.photoId as string);
+  const handoff=isPickup?pickupCollections.get(scope.handoffEventId as string):events.get(scope.handoffEventId as string);
+  check(photo&&attempt&&handoff&&handoff.condition_photo_id===scope.photoId&&
+   (isPickup?handoff.id:handoff.case_id)===attempt.case_id&&scope.jobVehicleId===attempt.job_vehicle_id);
+  const expectedScope={photoId:photo.photo_id,jobVehicleId:attempt.job_vehicle_id,caseId:attempt.case_id,handoffEventId:handoff.id,
    sha256:photo.sha256,byteSize:photo.byte_size,contentType:photo.detected_type};
   check(same(scope,expectedScope));
   const {audit}=evidence(operationId,'operations.custody.photo.access','custody_photo_accesses',operationId,'1','authorized_handoff',attempt.actor_id);
@@ -258,7 +285,17 @@ export function formatDropoffCustodySources(input:CustodySourceInput){
  check(Object.values(files).every(value=>Buffer.byteLength(value)<=32*1024*1024));
  const manifest=JSON.stringify({schemaVersion:1,profile,businessId,snapshotToken:context.snapshotToken,
   historySnapshotToken:context.historySnapshotToken,expectedCounts:context.expectedCounts,sourceAuditClosureChecked:true,
+  ...(pickup?{includedPickupPhotoBindingsVerified:true}:{}),
   referenceClosureComplete:false,completePortableExport:false,completeBackup:false,photoBytesIncluded:false,
   parts:Object.entries(files).map(([name,content])=>({name,bytes:Buffer.byteLength(content),sha256:digest(content)}))})+'\n';
  return Object.freeze({files:Object.freeze(files),manifest,context,rows:Object.freeze(rows)});
+}
+
+export function formatDropoffCustodySources(input:CustodySourceInput){
+ return formatCustodySources(input);
+}
+export function formatPickupAndDropoffCustodySources(custodyInput:CustodySourceInput,pickupInput:PickupCustodySourceInput){
+ check(pickupInput.historyEvidence===custodyInput.historyEvidence);
+ const pickup=formatPickupCustodySources(pickupInput);
+ return Object.freeze({pickup,custody:formatCustodySources(custodyInput,pickup)});
 }
