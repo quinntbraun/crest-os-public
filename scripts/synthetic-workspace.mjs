@@ -22,7 +22,8 @@ const origin='https://127.0.0.1:4319',issuer='http://127.0.0.1:54328/auth/v1';
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
 const mode=process.argv[2];
 assert(['init','start','stop'].includes(mode),'use init, start or stop');
-const options=process.argv.slice(3),jobCompletion=options.includes('--job-completion'),jobMileage=options.includes('--job-mileage'),supportTrips=options.includes('--support-trips'),unfulfilledCancellation=options.includes('--unfulfilled-cancellation'),workTime=options.includes('--work-time'),workBoundary=options.includes('--work-boundary'),workStart=options.includes('--work-start'),workEnd=options.includes('--work-end'),mobileDeparture=options.includes('--mobile-departure'),reviewOutcome=options.includes('--review-outcome'),reviewHistory=options.includes('--review-history'),maintenanceFollowUp=options.includes('--maintenance-follow-up'),dropoffCustody=options.includes('--dropoff-custody'),dropoffPolicyRevision=options.includes('--dropoff-policy-revision'),pickupCustody=options.includes('--pickup-custody'),financeAccounts=options.includes('--finance-accounts');
+const options=process.argv.slice(3),jobCompletion=options.includes('--job-completion'),jobMileage=options.includes('--job-mileage'),supportTrips=options.includes('--support-trips'),unfulfilledCancellation=options.includes('--unfulfilled-cancellation'),workTime=options.includes('--work-time'),workBoundary=options.includes('--work-boundary'),workStart=options.includes('--work-start'),workEnd=options.includes('--work-end'),mobileDeparture=options.includes('--mobile-departure'),reviewOutcome=options.includes('--review-outcome'),reviewHistory=options.includes('--review-history'),maintenanceFollowUp=options.includes('--maintenance-follow-up'),dropoffCustody=options.includes('--dropoff-custody'),dropoffPolicyRevision=options.includes('--dropoff-policy-revision'),pickupCustody=options.includes('--pickup-custody'),financeAccounts=options.includes('--finance-accounts'),taxProfiles=options.includes('--tax-profiles');
+ assert(!taxProfiles||financeAccounts,'Finance account setup is required for tax profiles');
  assert(!workBoundary||workTime,'Work-time review is required for corrections');
  assert(!workStart||workBoundary,'Work-time correction setup is required before first-start correction');
  assert(!workEnd||workStart&&jobCompletion,'First-start correction and completion setup are required before completion-time correction');
@@ -33,7 +34,7 @@ const options=process.argv.slice(3),jobCompletion=options.includes('--job-comple
  assert(!dropoffPolicyRevision||dropoffCustody,'Drop-Off custody setup is required before policy revision');
  assert(!pickupCustody||dropoffPolicyRevision,'Drop-Off policy revision setup is required before pickup custody');
  assert(!maintenanceFollowUp||reviewHistory,'Review history setup is required before opening maintenance reminders');
-assert(options.length===Number(jobCompletion)+Number(jobMileage)+Number(supportTrips)+Number(unfulfilledCancellation)+Number(workTime)+Number(workBoundary)+Number(workStart)+Number(workEnd)+Number(mobileDeparture)+Number(reviewOutcome)+Number(reviewHistory)+Number(maintenanceFollowUp)+Number(dropoffCustody)+Number(dropoffPolicyRevision)+Number(pickupCustody)+Number(financeAccounts)&&(mode==='start'||options.length===0),'Unexpected synthetic workspace arguments');
+assert(options.length===Number(jobCompletion)+Number(jobMileage)+Number(supportTrips)+Number(unfulfilledCancellation)+Number(workTime)+Number(workBoundary)+Number(workStart)+Number(workEnd)+Number(mobileDeparture)+Number(reviewOutcome)+Number(reviewHistory)+Number(maintenanceFollowUp)+Number(dropoffCustody)+Number(dropoffPolicyRevision)+Number(pickupCustody)+Number(financeAccounts)+Number(taxProfiles)&&(mode==='start'||options.length===0),'Unexpected synthetic workspace arguments');
 function docker(args,env={}){try{return execFileSync('docker',args,{env:{...process.env,...env},stdio:['ignore','pipe','pipe'],timeout:120000,maxBuffer:2*1024*1024}).toString().trim();}catch{throw Error('SYNTHETIC_DOCKER_COMMAND_FAILED');}}
 async function exists(path){try{await access(path);return true;}catch(e){if(e.code==='ENOENT')return false;throw e;}}
 async function save(path,value){await writeFile(path,JSON.stringify(value)+'\n',{flag:'wx',mode:0o600});}
@@ -144,8 +145,8 @@ try{
    if(pickupCustody)await requireSyntheticPickupCustody(connection(state));
    let financePreview;
    if(financeAccounts){
-    await requireSyntheticFinanceAccountConfiguration(connection(state),state.businessId);
-    financePreview=await readSyntheticFinancePreview(directory,state);
+    await requireSyntheticFinanceAccountConfiguration(connection(state),state.businessId,taxProfiles);
+    financePreview=await readSyntheticFinancePreview(directory,state,taxProfiles);
    }
    process.env.NODE_ENV='production';
    const {createCrestApplication,createAuthenticationRuntime}=await import('../.local/server/application.mjs');

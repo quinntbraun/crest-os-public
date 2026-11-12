@@ -8,7 +8,12 @@ import type {FinanceAccountDraft,FinanceAccountReference} from '../bookkeeping/f
 import {parseFinanceMappingAt,parseFinanceMappingEditor,parseFinanceMappingHistory,parseFinanceMappingOperation,parseFinanceMappingReference} from '../bookkeeping/finance-mapping-contract';
 import type {FinanceMappingApproval,FinanceMappingReference,FixedFinanceMappingPurpose} from '../bookkeeping/finance-mapping-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean}>;
+import {
+ matchesFinanceTaxApproval,parseFinanceTaxHistory,parseFinanceTaxOperation,parseFinanceTaxPreview,parseFinanceTaxReference,
+} from '../bookkeeping/finance-tax-contract';
+import type {FinanceTaxApproval,FinanceTaxReference,FinanceTaxScope} from '../bookkeeping/finance-tax-contract';
+
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const pendingKey='crest.finance-account.pending-reference.v1';
@@ -17,6 +22,10 @@ const mappingPendingKey='crest.finance-mapping.pending-reference.v1';
 type MappingPending=Readonly<{businessId:string;binding:string;reference:FinanceMappingReference}>;
 const mappingFailure=[...knownFailure,'FINANCE_MAPPING_VERSION_CONFLICT','FINANCE_MAPPING_EFFECTIVE_ORDER_REQUIRED',
  'FINANCE_MAPPING_ACCOUNT_REQUIRED','FINANCE_MAPPING_CLOSURE_REQUIRED'] as const;
+
+const taxPendingKey='crest.finance-tax.pending-reference.v1';
+type TaxPending=Readonly<{businessId:string;binding:string;reference:FinanceTaxReference}>;
+const taxFailure=[...knownFailure,'FINANCE_TAX_VERSION_CONFLICT','FINANCE_TAX_EFFECTIVE_ORDER_REQUIRED'] as const;
 
 async function post(route:string,body:object,signal:AbortSignal,binding?:string){
  const bounded=AbortSignal.any([signal,AbortSignal.timeout(40000)]),proof=await authentication.session(bounded);
@@ -40,16 +49,56 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string)
   text+=decoder.decode();
  }finally{void reader.cancel().catch(()=>undefined);reader.releaseLock();}
  return {status:response.status,value:JSON.parse(text) as unknown,binding:response.headers.get('x-crest-edit-binding'),
-  fixedMappings:response.headers.get('x-crest-finance-fixed-mappings')==='1'};
+  fixedMappings:response.headers.get('x-crest-finance-fixed-mappings')==='1',
+  taxProfiles:response.headers.get('x-crest-finance-tax-profiles')==='1'};
 }
 
 export const financeAccounts={
  async context(signal:AbortSignal):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings}=await post('context',{},signal);
+  const {status,value,binding,fixedMappings,taxProfiles}=await post('context',{},signal);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
-  return Object.freeze({...value,binding,fixedMappings}) as FinanceAccountContext;
+  return Object.freeze({...value,binding,fixedMappings,taxProfiles}) as FinanceAccountContext;
+ },
+ async taxHistory(context:FinanceAccountContext,scope:FinanceTaxScope,beforeVersion:string|null,signal:AbortSignal){
+  check(context.taxProfiles);
+  const {status,value}=await post('tax-history',{...scope,beforeVersion},signal,context.binding);
+  check(status===200);return parseFinanceTaxHistory(value,context.businessId,scope,beforeVersion);
+ },
+ async taxPreview(context:FinanceAccountContext,scope:FinanceTaxScope,date:string,grossCents:string,discountCents:string,signal:AbortSignal){
+  check(context.taxProfiles);
+  const {status,value}=await post('tax-preview',{...scope,date,grossCents,discountCents},signal,context.binding);
+  check(status===200);return parseFinanceTaxPreview(value,context.businessId,scope,date,grossCents,discountCents);
+ },
+ async taxOperation(context:FinanceAccountContext,reference:FinanceTaxReference,signal:AbortSignal){
+  check(context.taxProfiles);
+  const {status,value}=await post('tax-operation',reference,signal,context.binding);
+  check(status===200);return parseFinanceTaxOperation(value,context.businessId,reference);
+ },
+ async approveTaxProfile(context:FinanceAccountContext,reference:FinanceTaxReference,approval:FinanceTaxApproval,signal:AbortSignal){
+  check(context.taxProfiles&&context.writeState==='ready'&&context.recoveryEpoch===reference.recoveryEpoch);
+  const {status,value}=await post('tax-approve',{reference,approval},signal,context.binding);
+  if(status===409&&exact(value,['error'])){
+   const reason=taxFailure.find(code=>code===value.error);check(reason);
+   return {state:'rejected',reason} as const;
+  }
+  const result=parseFinanceTaxOperation(value,context.businessId,reference);
+  check(status===409&&result.state==='conflict'||status===200&&result.state==='committed'
+   &&matchesFinanceTaxApproval(result.receipt,approval));
+  return result;
+ },
+ async retireTaxApproval(context:FinanceAccountContext,reference:FinanceTaxReference,reason:string,signal:AbortSignal){
+  check(context.taxProfiles&&context.writeState==='ready'&&context.recoveryEpoch&&financeAccountReviewReason(reason));
+  const {status,value}=await post('tax-retire',{reference,reviewEpoch:context.recoveryEpoch,reason},signal,context.binding);
+  if(status===409&&exact(value,['error'])){
+   const failure=knownFailure.find(code=>code===value.error);check(failure);
+   return {state:'rejected',reason:failure} as const;
+  }
+  const result=parseFinanceTaxOperation(value,context.businessId,reference);
+  check(status===409&&result.state==='conflict'||status===200&&(result.state==='committed'
+   ||result.state==='retired'&&result.receipt.reviewEpoch===context.recoveryEpoch));
+  return result;
  },
  async mappingAt(context:FinanceAccountContext,purpose:FixedFinanceMappingPurpose,date:string,signal:AbortSignal){
   check(context.fixedMappings);
@@ -183,6 +232,29 @@ export function clearPendingFinanceMapping(entry:MappingPending){
  check(JSON.stringify(readPendingFinanceMapping())===JSON.stringify(entry));
  sessionStorage.removeItem(mappingPendingKey);
  check(readPendingFinanceMapping()===null);
+}
+
+// Tax approvals retain only the original operation reference, never the scope or evidence.
+export function readPendingFinanceTax():TaxPending|null{
+ const raw=sessionStorage.getItem(taxPendingKey);
+ if(raw===null)return null;
+ check(raw.length<=1500&&(raw.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length===6);
+ const value:unknown=JSON.parse(raw);
+ check(exact(value,['businessId','binding','reference'])&&customerUuid(value.businessId)
+  &&typeof value.binding==='string'&&bindingPattern.test(value.binding));
+ return {businessId:value.businessId,binding:value.binding,reference:parseFinanceTaxReference(value.reference)};
+}
+export function retainPendingFinanceTax(context:FinanceAccountContext,reference:FinanceTaxReference):TaxPending{
+ check(readPendingFinanceTax()===null);
+ const entry={businessId:context.businessId,binding:context.binding,reference};
+ sessionStorage.setItem(taxPendingKey,JSON.stringify(entry));
+ check(JSON.stringify(readPendingFinanceTax())===JSON.stringify(entry));
+ return entry;
+}
+export function clearPendingFinanceTax(entry:TaxPending){
+ check(JSON.stringify(readPendingFinanceTax())===JSON.stringify(entry));
+ sessionStorage.removeItem(taxPendingKey);
+ check(readPendingFinanceTax()===null);
 }
 
 export function downloadFinanceHistory(filename:string,rows:readonly (readonly string[])[]){

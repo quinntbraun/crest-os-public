@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 71,
+  "migrationCount": 72,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2262,6 +2262,33 @@
         "recovery_authority_id",
         "created_at",
         "created_by",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.tax_profiles",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "jurisdiction",
+        "applicability",
+        "service_id",
+        "scope_key",
+        "version",
+        "previous_version",
+        "effective_from",
+        "treatment",
+        "rate",
+        "verification_evidence",
+        "reason",
+        "synthetic",
+        "audit_event_id",
+        "created_at",
+        "created_by",
+        "operation_id",
         "origin"
       ],
       "excluded": [],

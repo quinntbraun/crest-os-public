@@ -121,7 +121,8 @@ export async function requireSyntheticPickupReturnWorkflow(connectionString){
  ].map(signature=>'crest_commands.'+signature),'SYNTHETIC_PICKUP_RETURN_WORKFLOW_MIGRATION_REQUIRED','20261124180000');
 }
 
-export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId){
+export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false){
+ assert.equal(typeof taxProfiles,'boolean');
  const authority='bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid';
  const signatures=[
   'save_finance_account('+authority+',uuid,uuid,integer,uuid,bigint,jsonb)',
@@ -135,17 +136,26 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
   'resolve_fixed_finance_mapping('+authority+',text,date)',
   'read_fixed_finance_mapping_history('+authority+',text,bigint,integer)',
   'fixed_finance_mapping_editor('+authority+',text)'
- ].map(signature=>'crest_commands.'+signature);
+ ];
+ if(taxProfiles)signatures.push(
+  'approve_finance_tax_profile('+authority+',uuid,uuid,text,text,uuid,bigint,date,text,numeric,text,text)',
+  'lookup_finance_tax_profile_approval('+authority+',uuid,uuid,bigint)',
+  'retire_finance_tax_profile_approval('+authority+',uuid,uuid,uuid,bigint,text)',
+  'preview_finance_tax_charge('+authority+',text,text,uuid,date,bigint,bigint)',
+  'read_finance_tax_profile_history('+authority+',text,text,uuid,bigint,integer)'
+ );
+ const qualified=signatures.map(signature=>'crest_commands.'+signature);
  const missing='SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED';
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{
   await client.connect();
-  const migration=await client.query("SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='20261125180000'");
-  assert(migration.rowCount===1,missing);
+  const versions=taxProfiles?['20261125180000','20261126180000']:['20261125180000'];
+  const migration=await client.query('SELECT 1 FROM supabase_migrations.schema_migrations WHERE version=ANY($1::text[])',[versions]);
+  assert(migration.rowCount===versions.length,missing);
   const {rows}=await client.query(`
    SELECT bool_and(coalesce(has_function_privilege('crest_finance_preview',oid,'EXECUTE')
      AND NOT has_function_privilege('crest_web',oid,'EXECUTE'),false)) AS allowed
-   FROM (SELECT to_regprocedure(signature) AS oid FROM unnest($1::text[]) AS signatures(signature)) routines`,[signatures]);
+   FROM (SELECT to_regprocedure(signature) AS oid FROM unnest($1::text[]) AS signatures(signature)) routines`,[qualified]);
   assert(rows[0]?.allowed===true,missing);
   if(businessId!==undefined){
    const control=await client.query('SELECT 1 FROM crest_private.finance_controls WHERE business_id=$1',[businessId]);

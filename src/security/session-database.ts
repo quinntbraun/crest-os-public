@@ -74,11 +74,12 @@ function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'c
         if(error.code==='42501'&&error.message==='CREST_MUTATION_AUTHORIZATION_DENIED')throw new Error('FINANCE_ACCOUNT_SIGN_IN_REQUIRED');
         // eslint-disable-next-line preserve-caught-error -- This exact setup marker contains no database detail.
         if(error.code==='P0001'&&error.message==='FINANCE_ACCOUNT_SETUP_REQUIRED')throw new Error('FINANCE_ACCOUNT_SETUP_REQUIRED');
-        if(error.code==='40001'&&error.message==='FINANCE_MAPPING_VERSION_CONFLICT'){
+        if(error.code==='40001'&&['FINANCE_MAPPING_VERSION_CONFLICT','FINANCE_TAX_VERSION_CONFLICT'].includes(error.message)){
           // eslint-disable-next-line preserve-caught-error -- The transaction rolled back and the marker is allowlisted.
           throw new Error(error.message);
         }
-        if(error.code==='22023'&&['FINANCE_MAPPING_EFFECTIVE_ORDER_REQUIRED','FINANCE_MAPPING_ACCOUNT_REQUIRED','FINANCE_MAPPING_CLOSURE_REQUIRED'].includes(error.message)){
+        if(error.code==='22023'&&['FINANCE_MAPPING_EFFECTIVE_ORDER_REQUIRED','FINANCE_MAPPING_ACCOUNT_REQUIRED','FINANCE_MAPPING_CLOSURE_REQUIRED',
+         'FINANCE_TAX_EFFECTIVE_ORDER_REQUIRED'].includes(error.message)){
           // eslint-disable-next-line preserve-caught-error -- No SQL detail leaves this confirmed rollback.
           throw new Error(error.message);
         }
