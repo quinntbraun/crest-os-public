@@ -6,7 +6,7 @@ const command=(JSON.parse(readFileSync(new URL('../../package.json',import.meta.
 describe('complete required browser grouping',()=>{
  it('partitions every file in the actual retained full command exactly once',()=>{
   const files=Object.keys(browserGroups).flatMap(name=>browserGroupFiles(command,name));
-  expect([...files].sort()).toEqual(command.split(' ').slice(3).sort());expect(new Set(files).size).toBe(files.length);expect(files).toHaveLength(42);
+  expect([...files].sort()).toEqual(command.split(' ').slice(3).sort());expect(new Set(files).size).toBe(files.length);expect(files).toHaveLength(43);
  });
  it('requires the actual workflow matrix to retain every distinct group',()=>{
   const workflow=readFileSync(new URL('../../.github/workflows/ci.yml',import.meta.url),'utf8'),matrix=workflow.match(/browser_workflows:[\s\S]*?matrix:\s*\n\s*suite: \[([^\]]+)\]/);
@@ -33,6 +33,7 @@ describe('complete required browser grouping',()=>{
   expect(field).toContain('tests/integration/job-work-boundary-product-browser.test.mjs');
   expect(field).toContain('tests/integration/maintenance-reminders-product-browser.test.mjs');
   expect(browserGroupFiles(command,'custody')).toEqual(['tests/integration/dropoff-custody-product-browser.test.mjs','tests/integration/dropoff-policy-revision-browser.test.mjs',
-   'tests/integration/pickup-trip-product-browser.test.mjs','tests/integration/pickup-custody-photo-browser.test.mjs']);
+   'tests/integration/pickup-trip-product-browser.test.mjs','tests/integration/pickup-custody-photo-browser.test.mjs',
+   'tests/integration/pickup-worksite-product-browser.test.mjs']);
  });
 });

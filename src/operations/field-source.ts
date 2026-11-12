@@ -62,7 +62,7 @@ function verifyPickupTripSource(operation:Record<string,unknown>,rows:readonly R
   checked.body.reason===row.reason&&stored.receipt.auditId===auditIds[0]);
  sourceImage('travel_legs',row,stored.receipt.leg);
  const departure=versions.get(checked.legId);
- check(departure&&departure.sequence==='1'&&departure.job_context_id===row.job_context_id&&departure.purpose==='pickup'&&
+ check(departure&&departure.sequence==='1'&&departure.job_context_id===row.job_context_id&&departure.purpose===row.purpose&&
   departure.operator_actor_id===row.operator_actor_id&&typeof departure.operation_id==='string');
  const startOperation=operations.get(departure.operation_id);
  check(startOperation?.command_type===pickupTripKind&&typeof startOperation.result==='string');
@@ -72,7 +72,7 @@ function verifyPickupTripSource(operation:Record<string,unknown>,rows:readonly R
   historyJsonEqual(stored.receipt.jobVehicleIds,start.request.body.trip.jobVehicleIds));
  const body=checked.body;
  if(body.action==='depart'){
-  check(row.id===row.logical_id&&row.sequence==='1'&&row.state==='open'&&row.driven_vehicle_id===body.trip.drivenVehicleId&&
+  check(row.purpose===(body.trip.purpose??'pickup')&&row.id===row.logical_id&&row.sequence==='1'&&row.state==='open'&&row.driven_vehicle_id===body.trip.drivenVehicleId&&
    typeof row.origin_snapshot==='string'&&historyJsonEqual(parseHistoryJson(row.origin_snapshot),parseHistoryJson(JSON.stringify(body.trip.origin)))&&
    row.eta_at===body.trip.etaAt&&row.eta_source===(body.trip.etaAt===null?null:'owner_entered')&&
    row.eta_calculated_at===(body.trip.etaAt===null?null:row.departed_at)&&row.notes===body.trip.notes);
@@ -395,8 +395,8 @@ export function verifyFieldSources(value:unknown){
    check(audit.operation_id===row.operation_id&&audit.actor_id===row.created_by&&audit.created_by===row.created_by&&operation.actor_id===row.created_by&&operation.state==='committed'&&audit.reason===(row.reason??null));const delta=parseHistoryJson(audit.delta as string);shape(delta,['schemaVersion','before','after']);check(historyJsonNumber(delta.schemaVersion,1));sourceImage(group,row,delta.after);
    const prior=['work_intervals','travel_legs','mileage_evidence'].includes(group)&&row.replaces_id!==null?maps[group].get(row.replaces_id as string):undefined;if(prior)sourceImage(group,prior,delta.before);else check(delta.before===null);
    const action=sequence==='1'?'create':group==='mileage_evidence'?'correct':row.change_kind;check(audit.action===action);
-   if(operation.command_type===pickupTripKind||group==='travel_legs'&&row.purpose==='pickup'){
-    check(operation.command_type===pickupTripKind&&group==='travel_legs'&&row.purpose==='pickup'&&typeof row.operation_id==='string');
+   if(operation.command_type===pickupTripKind||group==='travel_legs'&&(row.purpose==='pickup'||row.purpose==='to_work_site'||row.purpose==='return_to_customer')){
+    check(operation.command_type===pickupTripKind&&group==='travel_legs'&&(row.purpose==='pickup'||row.purpose==='to_work_site'||row.purpose==='return_to_customer')&&typeof row.operation_id==='string');
     const travel=pickupRows.get(row.operation_id)??[];travel.push(row);pickupRows.set(row.operation_id,travel);
     const events=pickupAudits.get(row.operation_id)??[];events.push(audit.id);pickupAudits.set(row.operation_id,events);
    }

@@ -24,7 +24,8 @@ export function DropoffPhotoPicker({businessId,jobVehicleId,caseId,handoff,requi
    const proof=await authentication.session(active.signal),scope={jobVehicleId,photoId:selected.photoId};
    if(action==='upload'){
     const workspace=await scheduling.workspace(proof,active.signal);
-    if(workspace.context.businessId!==businessId||workspace.context.writeState!=='ready'||pickup&&workspace.pickupPhotosAvailable!==true)throw Error();
+    if(workspace.context.businessId!==businessId||workspace.context.writeState!=='ready'||pickup&&workspace.pickupPhotosAvailable!==true||
+     pickup&&'collectionId'in pickup&&workspace.pickupReleaseAvailable!==true)throw Error();
     await dropoffPhotos.reserve(proof,active.signal,{...scope,caseId,handoff,epoch:workspace.context.recoveryEpoch,
      contentType:selected.type,byteSize:selected.file.size},pickup);
     await dropoffPhotos.upload(proof,active.signal,scope,selected.file,selected.type);

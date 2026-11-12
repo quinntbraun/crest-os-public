@@ -20,11 +20,13 @@ import {parseMobileDepartureContext,parseMobileDepartureSave,mobileDepartureOrig
 import {parseReviewOutcomeContext,parseReviewOutcomeSave,reviewOutcomeOriginal,parseReviewOutcomeCommitted,reviewOutcomeConflicts} from './review-message-contract.ts';
 import {parseReviewMessageHistory} from './review-message-history-contract.ts';
 import type {ReviewHistoryQuery} from './review-message-history-contract.ts';
-import {parseCollectionCursor,parseCollectionPage} from './dropoff-collection-contract.ts';
+import {parseCollectionCursor,parseCollectionPage,parsePickupReturnPage} from './dropoff-collection-contract.ts';
 import type {CollectionCursor} from './dropoff-collection-contract.ts';
 import {parsePickupTripCommitted,parsePickupTripDatabasePage,parsePickupTripSave,pickupTripConflicts,pickupTripOriginal} from './pickup-trip-contract.ts';
 import type {PickupTripCursor} from './pickup-trip-contract.ts';
-import {parsePickupCollectionAcknowledgement,parsePickupCollectionContext,parsePickupCollectionSave,pickupCollectionConflicts,
+import {parsePickupReturnFailureAcknowledgement,parsePickupReturnFailureSave,pickupReturnFailureConflicts,pickupReturnFailureOriginal,verifyPickupReturnFailureWrite,
+ parsePickupReleaseAcknowledgement,parsePickupReleaseSave,pickupReleaseConflicts,pickupReleaseOriginal,verifyPickupReleaseWrite,
+ parsePickupCollectionAcknowledgement,parsePickupCollectionContext,parsePickupCollectionSave,pickupCollectionConflicts,
  pickupCollectionOriginal,verifyPickupCollectionWrite,parsePickupPolicyAcknowledgement,parsePickupPolicyPage,
  parsePickupPolicySave,pickupPolicyConflicts,pickupPolicyOriginal,verifyPickupPolicyWrite} from './pickup-custody-contract.ts';
 import {maintenanceFollowUpConflicts,maintenanceFollowUpOriginal,parseMaintenanceFollowUpAcknowledgement,parseMaintenanceFollowUpCommitted,parseMaintenanceFollowUpHistory,
@@ -84,13 +86,21 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
   const {current,entries,hasMore}=history;
   return new PrivateValue({schemaVersion:1,businessId,taskId,current,entries,hasMore});
  }
- async function save(credential:string,input:unknown,signal:AbortSignal,action:'session'|'interruption'|'cancellation'|'work-boundary'|'work-start'|'work-end'|'mobile-departure'|'review-outcome'|'maintenance'|'custody'|'custody-policy'|'custody-policy-revision'|'pickup-trip'|'pickup-collection'|'pickup-policy'){
+ async function save(credential:string,input:unknown,signal:AbortSignal,action:'session'|'interruption'|'cancellation'|'work-boundary'|'work-start'|'work-end'|'mobile-departure'|'review-outcome'|'maintenance'|'custody'|'custody-policy'|'custody-policy-revision'|'pickup-trip'|'pickup-collection'|'pickup-policy'|'pickup-release'|'pickup-return-failure'){
   let submitted=false,hash:Buffer|undefined;
   try{
    const prepared=action==='pickup-policy'?(()=>{
     const request=parsePickupPolicySave(input);
     return {request,original:pickupPolicyOriginal(request),conflicts:pickupPolicyConflicts,
      command:'save_pickup_policy',committed:(observed:unknown)=>parsePickupPolicyAcknowledgement(observed,request)};
+   })():action==='pickup-return-failure'?(()=>{
+    const request=parsePickupReturnFailureSave(input);
+    return {request,original:pickupReturnFailureOriginal(request),conflicts:pickupReturnFailureConflicts,
+     command:'fail_pickup_return',committed:(observed:unknown)=>parsePickupReturnFailureAcknowledgement(observed,request)};
+   })():action==='pickup-release'?(()=>{
+    const request=parsePickupReleaseSave(input);
+    return {request,original:pickupReleaseOriginal(request),conflicts:pickupReleaseConflicts,
+     command:'release_pickup_vehicle',committed:(observed:unknown)=>parsePickupReleaseAcknowledgement(observed,request)};
    })():action==='pickup-collection'?(()=>{
     const request=parsePickupCollectionSave(input);
     return {request,original:pickupCollectionOriginal(request),conflicts:pickupCollectionConflicts,
@@ -168,6 +178,19 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
      verifyPickupPolicyWrite(value,request);
      return null;
     }
+    if('returnLegVersionId'in request){
+     const failing='reason'in request.body;
+     const command=failing?'fail_pickup_return':'release_pickup_vehicle';
+     const value=await query('SELECT crest_commands.'+command+'($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,1,$11::uuid,$12::bigint,$13::uuid,$14::uuid,$15::jsonb) AS result',
+      [...args,request.recoveryEpoch,request.operationId,request.jobId,request.expectedJobVersion,
+       request.collectionId,request.returnLegVersionId,request.body]);
+     current.throwIfAborted();
+     if(exact(value,['state','reason'])&&value.state==='conflict'&&(failing?pickupReturnFailureConflicts:pickupReleaseConflicts).some(reason=>reason===value.reason))
+      return new PrivateValue(Object.freeze({state:'conflict' as const,reason:value.reason as string}));
+     if(failing)verifyPickupReturnFailureWrite(value,parsePickupReturnFailureSave(request));
+     else verifyPickupReleaseWrite(value,parsePickupReleaseSave(request));
+     return null;
+    }
     if('pickupLegVersionId'in request){
      const value=await query('SELECT crest_commands.collect_pickup_vehicle($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,1,$11::uuid,$12::bigint,$13::uuid,$14::uuid,$15::uuid,$16::jsonb) AS result',
       [...args,request.recoveryEpoch,request.operationId,request.jobId,request.expectedJobVersion,request.jobVehicleId,
@@ -237,6 +260,8 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
    return new PrivateValue(value);
   },
   savePickupCollection:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'pickup-collection'),
+  savePickupRelease:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'pickup-release'),
+  savePickupReturnFailure:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'pickup-return-failure'),
   async pickupTrips(credential:string,businessId:string,jobId:string,cursor:PickupTripCursor,signal:AbortSignal){
    const value=await readResult(credential,businessId,signal,
     'SELECT crest_commands.read_pickup_trips($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::timestamptz,$11::uuid) AS result',
@@ -253,12 +278,14 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
   mobileDeparture:(credential:string,businessId:string,jobId:string,legId:string,signal:AbortSignal)=>read(credential,businessId,jobId,signal,{legId}),
   correctMobileDeparture:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'mobile-departure'),
   reviewHistory,
-  async dropoffCollections(credential:string,businessId:string,input:CollectionCursor,signal:AbortSignal){
-   const cursor=parseCollectionCursor(input);
+
+  async vehicleCustodyQueue(credential:string,businessId:string,input:CollectionCursor,signal:AbortSignal,kind:'dropoff'|'pickup'){
+   const cursor=parseCollectionCursor(input),command=kind==='pickup'?'list_pickup_returns':'list_dropoff_collections';
    const value=await readResult(credential,businessId,signal,
-    'SELECT crest_commands.list_dropoff_collections($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::timestamptz,$10::uuid) AS result',
+    'SELECT crest_commands.'+command+'($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::timestamptz,$10::uuid) AS result',
     [cursor.afterReceivedAt,cursor.afterCaseId]);
-   return new PrivateValue(parseCollectionPage(value,businessId,cursor));
+   const parse=kind==='pickup'?parsePickupReturnPage:parseCollectionPage;
+   return new PrivateValue(parse(value,businessId,cursor));
   },
   async dropoffCustody(credential:string,businessId:string,jobId:string,jobVehicleId:string,signal:AbortSignal){
    const value=await readResult(credential,businessId,signal,

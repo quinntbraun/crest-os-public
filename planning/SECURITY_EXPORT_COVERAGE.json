@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 69,
+  "migrationCount": 70,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2124,6 +2124,7 @@
         "job_id",
         "job_vehicle_id",
         "collection_id",
+        "return_collection_id",
         "arrival_version_id",
         "policy_id",
         "job_version",
@@ -2140,7 +2141,52 @@
         "business_id",
         "vehicle_id",
         "dropoff_case_id",
+
         "pickup_collection_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.pickup_custody_releases",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "collection_id",
+        "job_id",
+        "job_vehicle_id",
+        "vehicle_id",
+        "policy_id",
+        "return_leg_version_id",
+        "job_version",
+        "effective_at",
+        "recorded_at",
+        "person_snapshot",
+        "location_snapshot",
+        "notes",
+        "missing_photo_reason",
+        "condition_photo_id",
+        "acknowledgement_confirmed",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.pickup_return_failures",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "collection_id",
+        "return_leg_version_id",
+        "job_version",
+        "reason",
+        "recorded_at",
+        "created_by",
+        "operation_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

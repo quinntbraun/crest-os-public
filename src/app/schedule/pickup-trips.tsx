@@ -20,10 +20,18 @@ const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:st
  removeItem:(key:string)=>sessionStorage.removeItem(key)};
 const store=()=>createPendingSchedulingStore(storage,pickupTripKind);
 const initial={busy:false,message:'',page:null as PickupTripPage|null,pending:false,signedOut:false};
-const outcomes={open:'Traveling to pickup',closed:'Arrived at pickup',cancelled:'Pickup trip stopped'};
+const outcomes={
+ pickup:{open:'Traveling to pickup',closed:'Arrived at pickup',cancelled:'Pickup trip stopped'},
+ to_work_site:{open:'Transporting to work site',closed:'Arrived at work site',cancelled:'Work-site transport stopped'},
+ return_to_customer:{open:'Returning to customer',closed:'Arrived at return stop',cancelled:'Return trip stopped'}
+};
 const conflicts:Readonly<Record<string,string>>={
  occupancy:'Another trip or work session is open. Finish it and reload pickup travel.',
  pickup_location:'The selected vehicles no longer share a saved pickup stop. Reload the job.',
+ return_location:'The selected vehicles no longer share a saved return stop. Reload the job.',
+ already_at_return:'A selected vehicle already arrived at its return stop. Reload the trip history.',
+ custody:'Record collection before transporting these vehicles. Reload the saved job.',
+ already_at_work_site:'A selected vehicle already arrived at the work site. Reload the trip history.',
  vehicle:'The driving vehicle is unavailable. Reload and choose an active vehicle.',
  job_version:'The saved job changed. Reload before recording travel.',
  leg_version:'This pickup trip changed. Reload its saved history.'
@@ -39,11 +47,13 @@ function locationLabel(value:BookingLocation){
 function time(value:string,timezone:string){
  return new Intl.DateTimeFormat('en-US',{timeZone:timezone,dateStyle:'medium',timeStyle:'short'}).format(new Date(value));
 }
-function pickupOptions(resources:SavedJobResources){
+function stopOptions(resources:SavedJobResources,returnVehicleIds?:readonly string[]){
  const groups=new Map<string,{location:string;vehicles:{id:string;label:string}[]}>();
  for(const row of resources.vehicles){
-  if(row.pickup_location_snapshot===null)continue;
-  const snapshot=parseBookingLocation(row.pickup_location_snapshot,resources.businessId,resources.head.job.customer_id),key=JSON.stringify(snapshot);
+  if(returnVehicleIds&&!returnVehicleIds.includes(row.id))continue;
+  const saved=returnVehicleIds?row.return_location_snapshot:row.pickup_location_snapshot;
+  if(saved===null)continue;
+  const snapshot=parseBookingLocation(saved,resources.businessId,resources.head.job.customer_id),key=JSON.stringify(snapshot);
   const group=groups.get(key)??{location:locationLabel(snapshot),vehicles:[]};
   group.vehicles.push({id:row.id,label:parseVehicle(row.vehicle_snapshot,resources.businessId).label});
   groups.set(key,group);
@@ -53,27 +63,48 @@ function pickupOptions(resources:SavedJobResources){
   ...group.vehicles.map(row=>({ids:[row.id],location:group.location,label:row.label+' · '+group.location}))
  ]);
 }
-function DepartureForm({resources,choices,busy,timezone,more,save}:{
- resources:SavedJobResources;choices:Choices;busy:boolean;timezone:string;more:()=>void;save:(body:PickupTripBody)=>void
+function DepartureForm({resources,choices,busy,timezone,more,save,worksiteVehicleIds,returnVehicleIds}:{
+ resources:SavedJobResources;choices:Choices;busy:boolean;timezone:string;more:()=>void;save:(body:PickupTripBody)=>void;
+ worksiteVehicleIds?:readonly string[];returnVehicleIds?:readonly string[];
 }){
- const id=useId(),options=pickupOptions(resources);
- const [stop,setStop]=useState(options.length===1?'0':''),[driven,setDriven]=useState(''),
+ const id=useId(),[chooseWorksite,setWorksite]=useState(false);
+ const eligible=resources.vehicles.filter(vehicle=>worksiteVehicleIds?.includes(vehicle.id));
+ const returning=returnVehicleIds!==undefined;
+ const worksite=chooseWorksite&&eligible.length>0;
+ const tripLabel=returning?'return':worksite?'work-site':'pickup';
+ const destination=worksite?locationLabel(parseBookingLocation(resources.head.job.work_location_snapshot,
+  resources.businessId,resources.head.job.customer_id)):'';
+ const options=worksite?[
+  ...eligible.length>1?[{ids:eligible.map(row=>row.id),location:destination,label:'All collected vehicles ('+eligible.length+')'}]:[],
+  ...eligible.map(row=>({ids:[row.id],location:destination,label:parseVehicle(row.vehicle_snapshot,resources.businessId).label}))
+ ]:stopOptions(resources,returnVehicleIds);
+ const [stop,setStop]=useState(''),[driven,setDriven]=useState(''),
   [origin,setOrigin]=useState(''),[eta,setEta]=useState(''),[notes,setNotes]=useState('');
- const selection=stop===''?undefined:options[Number(stop)];
+ const selection=options.length===1?options[0]:stop===''?undefined:options[Number(stop)];
  return <form className="field-work-form" onSubmit={event=>{
   event.preventDefault();
   if(!busy&&selection&&driven&&origin.trim())save({action:'depart',reason:null,trip:{
-   jobVehicleIds:selection.ids,drivenVehicleId:driven,origin:site(origin),etaAt:eta||null,notes:notes.trim()||null
+   jobVehicleIds:selection.ids,drivenVehicleId:driven,origin:site(origin),etaAt:eta||null,notes:notes.trim()||null,
+   ...returning?{purpose:'return_to_customer'}:worksite?{purpose:'to_work_site'}:{}
   }});
  }}>
   <fieldset disabled={busy}>
-   <legend>Leave for pickup</legend>
-   {options.length>1&&<><label htmlFor={id+'-stop'}>Pickup stop and vehicles</label>
+   <legend>{returning?'Return vehicles to customer':worksite?'Transport collected vehicles':'Leave for pickup'}</legend>
+   {eligible.length>0&&<>
+    <label htmlFor={id+'-task'}>Travel task</label>
+    <select id={id+'-task'} value={worksite?'worksite':'pickup'} onChange={event=>{
+     setWorksite(event.target.value==='worksite');setStop('');
+    }}>
+     <option value="pickup">Leave for pickup</option>
+     <option value="worksite">Transport to the work site</option>
+    </select>
+   </>}
+   {options.length>1&&<><label htmlFor={id+'-stop'}>{returning?'Return stop and vehicles':worksite?'Vehicles on this trip':'Pickup stop and vehicles'}</label>
    <select id={id+'-stop'} aria-describedby={selection?id+'-location':undefined} required value={stop} onChange={event=>setStop(event.target.value)}>
-    <option value="">Choose a saved pickup stop</option>
+    <option value="">{worksite?'Choose collected vehicles':'Choose a saved '+tripLabel+' stop'}</option>
     {options.map((row,index)=><option key={row.ids.join(',')} value={index}>{row.label}</option>)}
    </select></>}
-   {selection&&<p id={id+'-location'} className="field-help"><strong>Pickup stop</strong> {selection.location}</p>}
+   {selection&&<p id={id+'-location'} className="field-help"><strong>{returning?'Return stop':worksite?'Work site':'Pickup stop'}</strong> {selection.location}</p>}
    <label htmlFor={id+'-driven'}>Vehicle you are driving</label>
    <select id={id+'-driven'} required value={driven} onChange={event=>setDriven(event.target.value)}>
     <option value="">Choose the actual vehicle</option>
@@ -88,18 +119,19 @@ function DepartureForm({resources,choices,busy,timezone,more,save}:{
     <label htmlFor={id+'-notes'}>Trip notes (optional)</label>
     <textarea id={id+'-notes'} rows={2} maxLength={2000} value={notes} onChange={event=>setNotes(event.target.value)}/>
    </details>
-   <button type="submit">Record pickup departure</button>
+   <button type="submit">Record {tripLabel} departure</button>
   </fieldset>
  </form>;
 }
-function ArrivalForm({busy,canArrive,save}:{busy:boolean;canArrive:boolean;save:(body:PickupTripBody)=>void}){
+function ArrivalForm({busy,canArrive,purpose,save}:{busy:boolean;canArrive:boolean;purpose:PickupTrip['purpose'];save:(body:PickupTripBody)=>void}){
+ const worksite=purpose==='to_work_site',returning=purpose==='return_to_customer';
  const id=useId(),[stop,setStop]=useState(''),[reason,setReason]=useState('');
  return <>
   {canArrive&&<form onSubmit={event=>{event.preventDefault();if(!busy)save({action:'arrive',reason:null,trip:null});}}>
-   <p className="field-help">Record arrival at the pickup stop. Vehicle handoff and work time are separate.</p>
-   <button type="submit" disabled={busy}>Record pickup arrival</button>
+   <p className="field-help">{returning?'Record arrival at the return stop. Vehicle handoff is recorded separately.':worksite?'Record the arrival of these vehicles. Work time is recorded separately.':'Record arrival at the pickup stop. Vehicle handoff and work time are separate.'}</p>
+   <button type="submit" disabled={busy}>{returning?'Record return arrival':worksite?'Record work-site arrival':'Record pickup arrival'}</button>
   </form>}
-  <details><summary>Stop this pickup trip</summary>
+  <details><summary>{returning?'Stop this return trip':worksite?'Stop work-site transport':'Stop this pickup trip'}</summary>
    <form className="field-work-form" onSubmit={event=>{
     event.preventDefault();
     if(!busy&&stop.trim()&&reason.trim())save({action:'cancel',reason:reason.trim(),trip:{actualStop:site(stop)}});
@@ -119,7 +151,7 @@ function ArrivalForm({busy,canArrive,save}:{busy:boolean;canArrive:boolean;save:
 function TripHistory({trips,resources,timezone}:{trips:readonly PickupTrip[];resources:SavedJobResources;timezone:string}){
  const labels=new Map(resources.vehicles.map(row=>[row.id,parseVehicle(row.vehicle_snapshot,resources.businessId).label]));
  return <ol>{trips.map(trip=><li key={trip.legId}>
-  <p><strong>{outcomes[trip.state]}</strong> · {trip.drivenVehicleLabel}</p>
+  <p><strong>{outcomes[trip.purpose][trip.state]}</strong> · {trip.drivenVehicleLabel}</p>
   <p>{trip.jobVehicleIds.map(id=>labels.get(id)).join(', ')}</p>
   <p>Left {locationLabel(trip.origin)} at <time dateTime={trip.departedAt}>{time(trip.departedAt,timezone)}</time></p>
   <p>{trip.state==='cancelled'?'Stopped at':trip.state==='closed'?'Arrived at':'Heading to'} {locationLabel(trip.destination)}
@@ -127,11 +159,11 @@ function TripHistory({trips,resources,timezone}:{trips:readonly PickupTrip[];res
   {trip.etaAt&&<p className="field-help">Recorded estimate {time(trip.etaAt,timezone)}</p>}
   {trip.reason&&<p>{trip.reason}</p>}
   {trip.notes&&<p>{trip.notes}</p>}
-  {trip.state==='cancelled'&&<p className="field-help">Pickup still needs attention. Review the visit before arranging another trip.</p>}
+  {trip.state==='cancelled'&&<p className="field-help">{trip.purpose!=='pickup'?'Custody stays open after a stopped trip. Review the stop before continuing.':'Pickup still needs attention. Review the visit before arranging another trip.'}</p>}
  </li>)}</ol>;
 }
 
-export function PickupTrips({resources,canChange}:{resources:SavedJobResources;canChange:boolean}){
+export function PickupTrips({resources,canChange,workAvailable}:{resources:SavedJobResources;canChange:boolean;workAvailable:boolean}){
  const {businessId,jobId}=resources,jobVersion=resources.head.job.version,timezone=resources.head.appointment.timezone;
  const [view,setView]=useState(initial),[choices,setChoices]=useState(noChoices);
  const panel=useRef<HTMLDetailsElement>(null),status=useRef<HTMLParagraphElement>(null),running=useRef<AbortController|null>(null);
@@ -150,6 +182,8 @@ export function PickupTrips({resources,canChange}:{resources:SavedJobResources;c
   };
  },[]);
  const activeLeg=view.page?.trips.find(trip=>trip.legId===view.page?.activeLegId);
+ const worksiteVehicleIds=view.page?.worksiteVehicleIds??[];
+ const returnVehicleIds=view.page?.returnVehicleIds??[];
  const blocked=()=> (Object.keys(pendingSchedulingKeys) as SchedulingOriginalKind[])
   .some(kind=>createPendingSchedulingStore(storage,kind).read()!==null);
  async function load(more=false){
@@ -162,7 +196,7 @@ export function PickupTrips({resources,canChange}:{resources:SavedJobResources;c
    const cursor=oldest?{beforeDepartedAt:oldest.departedAt,beforeLegId:oldest.legId}:initialCursor;
    const page=await scheduling.pickupTrips(businessId,jobId,cursor,proof,active.signal);
    if(page.state==='absent'||page.jobVersion!==jobVersion||prior&&page.activeLegId!==prior.activeLegId)throw Error();
-   const readyChoices=!prior&&canChange&&!page.activeLegId&&page.jobState==='scheduled'&&!pending?
+   const readyChoices=!prior&&canChange&&!page.activeLegId&&(page.jobState==='scheduled'||Boolean(page.returnVehicleIds?.length))&&!pending?
     await vehicles.list(businessId,{search:'',afterId:null,includeArchived:false,pageSize:25},proof,active.signal):choices;
    active.signal.throwIfAborted();
    setChoices(readyChoices);
@@ -197,7 +231,9 @@ export function PickupTrips({resources,canChange}:{resources:SavedJobResources;c
   const active=new AbortController();running.current=active;
   const pendingStore=store();
   let retained:PendingScheduling|null=null,confirmed=false;
-  const savedMessage=body.action==='depart'?'Pickup departure saved.':body.action==='arrive'?'Pickup arrival saved.':'Stopped pickup trip saved.';
+  const purpose=body.action==='depart'?body.trip.purpose:activeLeg?.purpose;
+  const tripLabel=purpose==='return_to_customer'?'Return':purpose==='to_work_site'?'Work-site':'Pickup';
+  const savedMessage=body.action==='depart'?tripLabel+' departure saved.':body.action==='arrive'?tripLabel+' arrival saved.':tripLabel+' trip stopped.';
   setView({...view,busy:true,message:'Saving pickup travel…'});
   try{
    const proof=await authentication.session(active.signal),workspace=await scheduling.workspace(proof,active.signal);
@@ -254,10 +290,17 @@ export function PickupTrips({resources,canChange}:{resources:SavedJobResources;c
   <button type="button" className="secondary" disabled={view.busy} onClick={()=>void load()}>{view.page?'Reload pickup travel':'Load pickup travel'}</button>
   {view.pending&&<p><a href={'/save-review?kind='+pickupTripKind}>Open Save review</a></p>}
   {view.page&&!view.pending&&canChange&&activeLeg&&<ArrivalForm key={activeLeg.legId} busy={view.busy}
-   canArrive={view.page.jobState==='scheduled'} save={body=>void save(body)}/>}
-  {view.page&&!view.pending&&canChange&&!activeLeg&&view.page.jobState==='scheduled'&&
+   canArrive={view.page.jobState==='scheduled'||activeLeg.purpose==='return_to_customer'} purpose={activeLeg.purpose} save={body=>void save(body)}/>}
+  {view.page?.worksiteReady===true&&workAvailable&&canChange&&!view.pending&&!activeLeg&&
+   <p><a className="primary-action" href={'/schedule/work?job='+encodeURIComponent(jobId)}>Start Work</a></p>}
+  {view.page&&!view.pending&&canChange&&!activeLeg&&view.page.jobState==='scheduled'&&view.page.worksiteReady!==true&&
    <DepartureForm key={view.page.trips[0]?.legVersionId??'planned'} resources={resources} choices={choices}
-    busy={view.busy} timezone={timezone} more={()=>void loadDrivingVehicles()} save={body=>void save(body)}/>}
+    worksiteVehicleIds={worksiteVehicleIds} busy={view.busy} timezone={timezone}
+    more={()=>void loadDrivingVehicles()} save={body=>void save(body)}/>}
+  {view.page&&!view.pending&&canChange&&!activeLeg&&returnVehicleIds.length>0&&
+   <DepartureForm key={view.page.trips[0]?.legVersionId??'awaiting-return'} resources={resources} choices={choices}
+    returnVehicleIds={returnVehicleIds} busy={view.busy} timezone={timezone}
+    more={()=>void loadDrivingVehicles()} save={body=>void save(body)}/>}
   {view.page&&<section aria-label="Saved pickup trips">
    {view.page.trips.length?<TripHistory trips={view.page.trips} resources={resources} timezone={timezone}/>:<p>No pickup trip has been recorded.</p>}
    {view.page.hasMore&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>void load(true)}>Load earlier trips</button>}

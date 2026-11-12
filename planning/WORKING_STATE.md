@@ -1,5 +1,5 @@
 # Current Crest OS delivery
 
-The fictional laptop preview runs accepted schema68. Schema69 registers pickup policy, travel to pickup, per-vehicle collection and private condition photos. The synthetic upgrade preserved all existing Crest table rows and rebuilt the custody claim for an existing Drop-Off. Signed-in Chromium and WebKit, common-format reconstruction and independent encrypted database and photo recovery passed locally. Exact-source hosted release verification and preview promotion are pending.
+The owner laptop runs accepted fictional schema69 with pickup travel, collection and verified condition photos. Schema70 adds work-site transport, explicit work start, return travel and handoff, failed-handoff recovery and the all-dates Vehicles awaiting return list. The previous migration history is retained. Hosted exact-source acceptance and a fresh independently restored owner backup are required before the preview is upgraded.
 
-Transport to the work site, explicit return, remaining follow-up, double-entry finance and reporting, complete portability and recovery, and approved Google Calendar remain in V1. Real use remains gated.
+Full finance, reporting, portability and recovery, approved Google Calendar and real-use acceptance remain in V1.

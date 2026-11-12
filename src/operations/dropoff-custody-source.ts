@@ -161,6 +161,7 @@ function formatCustodySources(input:CustodySourceInput,pickup?:PickupCustodySour
  const attempts=new Map(rows.custody_photo_attempts.map(row=>[row.id,row]));
  const pickupSlots=new Map(pickup?.rows.pickup_photo_slots.map(slot=>[slot.photo_id,slot]));
  const pickupCollections=new Map(pickup?.rows.pickup_custody_collections.map(collection=>[collection.id,collection]));
+ const pickupReleases=new Map(pickup?.rows.pickup_custody_releases?.map(release=>[release.id,release]));
  const claims=new Map(pickup?.rows.vehicle_custody_claims.map(claim=>[claim.vehicle_id,claim]));
  const booked=new Set(),held=new Set(),linkedPhotos=new Set();
  for(const custody of cases.values()){
@@ -207,7 +208,7 @@ function formatCustodySources(input:CustodySourceInput,pickup?:PickupCustodySour
   const heldCase=cases.get(claim.dropoff_case_id);
   check(heldCase?.state==='held'&&heldCase.vehicle_id===claim.vehicle_id);
  }
- for(const collection of pickupCollections.values())if(collection.condition_photo_id!==null){
+ for(const collection of [...pickupCollections.values(),...pickupReleases.values()])if(collection.condition_photo_id!==null){
   const original=originals.get(collection.condition_photo_id),attempt=attempts.get(collection.condition_photo_id),slot=pickupSlots.get(collection.condition_photo_id);
   check(original&&attempt&&slot&&slot.collection_id===collection.id&&attempt.vehicle_id===collection.vehicle_id&&
    original.verified_at!<=collection.recorded_at!&&!linkedPhotos.has(collection.condition_photo_id));
@@ -219,10 +220,12 @@ function formatCustodySources(input:CustodySourceInput,pickup?:PickupCustodySour
    ['image/jpeg','image/png','image/heic'].includes(String(attempt.declared_type)));
   const slot=pickupSlots.get(String(attempt.id));
   if(slot)check(slot.collection_id===attempt.case_id&&slot.job_id===attempt.job_id&&slot.job_vehicle_id===attempt.job_vehicle_id&&
-   slot.actor_id===attempt.actor_id&&slot.recovery_epoch===attempt.recovery_epoch&&attempt.handoff_version===1);
+   slot.actor_id===attempt.actor_id&&slot.recovery_epoch===attempt.recovery_epoch&&
+   attempt.handoff_version===(slot.return_collection_id?2:1));
   const base={photoId:attempt.id,jobId:attempt.job_id,jobVehicleId:attempt.job_vehicle_id,caseId:attempt.case_id,
    handoffVersion:attempt.handoff_version,declaredType:attempt.declared_type,byteSize:attempt.byte_size,
-   ...(slot?{pickup:{arrivalVersionId:slot.arrival_version_id,policyId:slot.policy_id,jobVersion:slot.job_version}}:{})};
+   ...(slot?{pickup:{arrivalVersionId:slot.arrival_version_id,policyId:slot.policy_id,jobVersion:slot.job_version,
+    ...(slot.return_collection_id?{returnCollectionId:slot.return_collection_id}:{})}}:{})};
   const reservation=evidence(attempt.id,'operations.custody.photo.reserve','custody_photos',attempt.id,'1','reserve',attempt.actor_id);
   check(reservation.op.recovery_epoch===attempt.recovery_epoch&&
    same(json(reservation.op.result),{schemaVersion:1,photoId:attempt.id,status:'reserved'})&&
@@ -251,7 +254,8 @@ function formatCustodySources(input:CustodySourceInput,pickup?:PickupCustodySour
   const receipt=json(operation.result);object(receipt);object(receipt.scope);
   const scope=receipt.scope,photo=originals.get(scope.photoId as string),attempt=attempts.get(scope.photoId as string);
   const isPickup=pickupSlots.has(scope.photoId as string);
-  const handoff=isPickup?pickupCollections.get(scope.handoffEventId as string):events.get(scope.handoffEventId as string);
+  const handoff=isPickup?(pickupReleases.get(scope.handoffEventId as string)??pickupCollections.get(scope.handoffEventId as string)):
+   events.get(scope.handoffEventId as string);
   check(photo&&attempt&&handoff&&handoff.condition_photo_id===scope.photoId&&
    (isPickup?handoff.id:handoff.case_id)===attempt.case_id&&scope.jobVehicleId===attempt.job_vehicle_id);
   const expectedScope={photoId:photo.photo_id,jobVehicleId:attempt.job_vehicle_id,caseId:attempt.case_id,handoffEventId:handoff.id,

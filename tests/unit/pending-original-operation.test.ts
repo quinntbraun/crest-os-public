@@ -27,6 +27,8 @@ const keys:Record<OriginalOperationKind,string>={
  'operations.support_trip.record':'crest.support-trip.pending-reference.v1',
  'operations.pickup_custody.policy.save':'crest.pickup-policy.pending-reference.v1',
  'operations.pickup_custody.collect':'crest.pickup-collection.pending-reference.v1',
+ 'operations.pickup_custody.release':'crest.pickup-release.pending-reference.v1',
+ 'operations.pickup_custody.fail_return':'crest.pickup-return-failure.pending-reference.v1',
  'operations.pickup_trip.record':'crest.pickup-trip.pending-reference.v1',
  'operations.support_trip.correct':'crest.support-trip-correction.pending-reference.v1',
  'operations.fulfillment_modes.initialize':'crest.fulfillment-mode-initialize.pending-reference.v1',

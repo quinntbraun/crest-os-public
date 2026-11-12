@@ -9,6 +9,7 @@ import type {DropoffPhotoScope,DropoffPhotoDispatchAuthority} from './dropoff-ph
 
 const auth='$1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid';
 const commands={
+ reserveReturn:`SELECT crest_commands.reserve_pickup_return_photo(${auth},$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::uuid,$14::uuid,$15::bigint,$16::text,$17::integer) AS result`,
  reservePickup:`SELECT crest_commands.reserve_pickup_photo(${auth},$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::uuid,$14::uuid,$15::bigint,$16::text,$17::integer) AS result`,
  read:`SELECT crest_commands.read_dropoff_photo(${auth},$9::uuid) AS result`,
  writable:`SELECT crest_commands.check_dropoff_photo_upload(${auth},$9::uuid,$10::uuid) AS result`,
@@ -20,7 +21,7 @@ type Database=ReturnType<typeof sessionDatabase>;
 type Provider=Parameters<typeof createSessionLifecycle>[1];
 type Tokens=Parameters<typeof createSessionLifecycle>[2];
 type Reservation=DropoffPhotoScope&Readonly<{epoch:string;caseId:string;handoff:1|2;contentType:string;byteSize:number}>;
-export type PickupPhotoBinding=Readonly<{arrivalVersionId:string;policyId:string;jobVersion:string}>;
+import type {PickupPhotoBinding} from './pickup-custody-contract.ts';
 
 function authorized(config:SessionDatabaseConfiguration,provider:Provider,tokens:Tokens,database:Database){
  if(config.environment!=='test')throw new DropoffPhotoError();
@@ -57,8 +58,9 @@ export function createDropoffPhotoDirectory(config:SessionDatabaseConfiguration,
   const scope=Object.freeze({...input});
   if(!uuid(scope.epoch)||!uuid(scope.caseId))throw new DropoffPhotoError();
   const target=[scope.epoch,scope.photoId,scope.jobVehicleId,scope.caseId];
-  const value=pickup?await query('reservePickup',credential,scope,[...target,pickup.arrivalVersionId,pickup.policyId,
-   pickup.jobVersion,scope.contentType,scope.byteSize],signal):
+  const value=pickup?await ('collectionId'in pickup?
+   query('reserveReturn',credential,scope,[...target,pickup.collectionId,pickup.arrivalVersionId,pickup.jobVersion,scope.contentType,scope.byteSize],signal):
+   query('reservePickup',credential,scope,[...target,pickup.arrivalVersionId,pickup.policyId,pickup.jobVersion,scope.contentType,scope.byteSize],signal)):
    await query('reserve',credential,scope,[...target,scope.handoff,scope.contentType,scope.byteSize],signal);
   const r=parsePhotoReservation(value,scope);
   if(r.recovery_epoch!==scope.epoch||r.case_id!==scope.caseId||r.handoff_version!==scope.handoff||

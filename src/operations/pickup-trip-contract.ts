@@ -5,10 +5,15 @@ import {parseFieldSessionSave} from './field-session-contract.ts';
 import {parseFieldOriginal,parseFieldOriginalResult} from './field-original-contract.ts';
 
 export const pickupTripKind='operations.pickup_trip.record' as const;
-export const pickupTripConflicts=['operation','job','job_version','state','leg_version','vehicle','pickup_location','occupancy','leg'] as const;
+export const pickupTripConflicts=['operation','job','job_version','state','leg_version','vehicle','pickup_location','occupancy','leg','custody','already_at_work_site','return_location','already_at_return'] as const;
+type PickupTransportPurpose='to_work_site'|'return_to_customer';
+type PickupTripPurpose='pickup'|PickupTransportPurpose;
+function transportPurpose(value:unknown):value is PickupTransportPurpose{
+ return value==='to_work_site'||value==='return_to_customer';
+}
 type Site=Extract<BookingLocation,{kind:'manual'}>;
 export type PickupTripBody=Readonly<
- {action:'depart';reason:string|null;trip:{jobVehicleIds:readonly string[];drivenVehicleId:string;origin:Site;etaAt:string|null;notes:string|null}}|
+ {action:'depart';reason:string|null;trip:{jobVehicleIds:readonly string[];drivenVehicleId:string;origin:Site;etaAt:string|null;notes:string|null;purpose?:PickupTransportPurpose}}|
  {action:'arrive';reason:string|null;trip:null}|
  {action:'cancel';reason:string;trip:{actualStop:Site}}
 >;
@@ -38,13 +43,15 @@ export function parsePickupTripSave(value:unknown):PickupTripSave{
  check(body.reason===null&&body.action!=='cancel'||text(body.reason,1000));
  let parsed:PickupTripBody;
  if(body.action==='depart'){
-  check(exact(body.trip,['jobVehicleIds','drivenVehicleId','origin','etaAt','notes'])&&targets(body.trip.jobVehicleIds));
-  const {jobVehicleIds,...trip}=body.trip;
+  const hasPurpose=body.trip!==null&&typeof body.trip==='object'&&Object.hasOwn(body.trip,'purpose');
+  check(exact(body.trip,['jobVehicleIds','drivenVehicleId','origin','etaAt','notes',...(hasPurpose?['purpose']:[])])&&
+   targets(body.trip.jobVehicleIds)&&(!hasPurpose||transportPurpose(body.trip.purpose)));
+  const {jobVehicleIds,purpose,...trip}=body.trip;
   const departure=parseFieldSessionSave({schemaVersion:1,businessId:value.businessId,jobId:value.jobId,
    expectedJobVersion:value.expectedJobVersion,operationId:value.operationId,recoveryEpoch:value.recoveryEpoch,
    body:{action:'depart',reason:body.reason,trip}}).body;
   check(departure.action==='depart');
-  parsed={...departure,trip:{...departure.trip,jobVehicleIds}};
+  parsed={...departure,trip:{...departure.trip,jobVehicleIds,...transportPurpose(purpose)?{purpose}:{}}};
  }else if(body.action==='cancel'){
   check(text(body.reason,1000)&&exact(body.trip,['actualStop']));
   const stop=body.trip.actualStop;
@@ -77,21 +84,27 @@ export function parsePickupTripCursor(value:unknown):PickupTripCursor{
 }
 export type PickupTrip=Readonly<{
  legId:string;legVersionId:string;jobVehicleIds:readonly string[];drivenVehicleId:string;drivenVehicleLabel:string;departedAt:string;arrivedAt:string|null;
- state:'open'|'closed'|'cancelled';origin:BookingLocation;destination:BookingLocation;etaAt:string|null;reason:string|null;notes:string|null;
+ state:'open'|'closed'|'cancelled';purpose:PickupTripPurpose;origin:BookingLocation;destination:BookingLocation;etaAt:string|null;reason:string|null;notes:string|null;
 }>;
 export type PickupTripPage=Readonly<{
  schemaVersion:1;state:'loaded';businessId:string;jobId:string;customerId:string;jobVersion:string;
  jobState:'scheduled'|'en_route'|'in_progress'|'paused'|'completed'|'cancelled';activeLegId:string|null;
- trips:readonly PickupTrip[];hasMore:boolean;
+ trips:readonly PickupTrip[];hasMore:boolean;worksiteVehicleIds?:readonly string[];worksiteReady?:boolean;returnVehicleIds?:readonly string[];
 }>;
 const loadedKeys=['schemaVersion','state','businessId','jobId','customerId','jobVersion','jobState','activeLegId','trips','hasMore'];
+function pickupPageShape(value:unknown):value is Record<string,unknown>{
+ return value!==null&&typeof value==='object'&&
+  exact(value,[...loadedKeys,...Object.hasOwn(value,'worksiteVehicleIds')?['worksiteVehicleIds']:[],
+   ...Object.hasOwn(value,'worksiteReady')?['worksiteReady']:[],
+   ...Object.hasOwn(value,'returnVehicleIds')?['returnVehicleIds']:[]]);
+}
 function parsePickupTrip(value:unknown,businessId:string,customerId:string):PickupTrip{
- check(exact(value,['legId','legVersionId','jobVehicleIds','drivenVehicleId','drivenVehicleLabel','departedAt','arrivedAt','state','origin','destination','etaAt','reason','notes']));
+ check(exact(value,['legId','legVersionId','jobVehicleIds','drivenVehicleId','drivenVehicleLabel','departedAt','arrivedAt','state','purpose','origin','destination','etaAt','reason','notes']));
  check(uuid(value.legId)&&uuid(value.legVersionId)&&targets(value.jobVehicleIds)&&uuid(value.drivenVehicleId)&&
   text(value.drivenVehicleLabel,200)&&instant(value.departedAt)&&
   (value.etaAt===null||instant(value.etaAt))&&(value.reason===null||text(value.reason,1000))&&(value.notes===null||text(value.notes,2000)));
  const state=value.state;
- check(state==='open'||state==='closed'||state==='cancelled');
+ check((state==='open'||state==='closed'||state==='cancelled')&&(value.purpose==='pickup'||transportPurpose(value.purpose)));
  check(state==='open'?value.arrivedAt===null&&value.legId===value.legVersionId:
   instant(value.arrivedAt)&&value.arrivedAt>=value.departedAt&&value.legId!==value.legVersionId);
  const origin=parseBookingLocation(value.origin,businessId,customerId),destination=parseBookingLocation(value.destination,businessId,customerId);
@@ -100,10 +113,19 @@ function parsePickupTrip(value:unknown,businessId:string,customerId:string):Pick
 }
 export function parsePickupTripPage(value:unknown,scope:{businessId:string;jobId:string},cursor:PickupTripCursor):PickupTripPage|{state:'absent'}{
  if(exact(value,['state'])&&value.state==='absent')return {state:'absent'};
- check(exact(value,loadedKeys)&&value.schemaVersion===1&&value.state==='loaded'&&value.businessId===scope.businessId&&value.jobId===scope.jobId&&
+ check(pickupPageShape(value)&&value.schemaVersion===1&&value.state==='loaded'&&value.businessId===scope.businessId&&value.jobId===scope.jobId&&
   uuid(value.customerId)&&version(value.jobVersion)&&(value.activeLegId===null||uuid(value.activeLegId))&&typeof value.hasMore==='boolean'&&
   ['scheduled','en_route','in_progress','paused','completed','cancelled'].includes(value.jobState as string)&&Array.isArray(value.trips)&&
   value.trips.length<=20&&(!value.hasMore||value.trips.length===20));
+ const worksite=value.worksiteVehicleIds;
+ check(!Object.hasOwn(value,'worksiteVehicleIds')||Array.isArray(worksite)&&
+  worksite.every(uuid)&&new Set(worksite).size===worksite.length&&(value.jobState==='scheduled'||worksite.length===0));
+ const ready=value.worksiteReady;
+ check(!Object.hasOwn(value,'worksiteReady')||typeof ready==='boolean'&&(!ready||value.jobState==='scheduled'&&Array.isArray(worksite)&&worksite.length===0));
+ const returning=value.returnVehicleIds;
+ check(!Object.hasOwn(value,'returnVehicleIds')||Array.isArray(returning)&&
+  returning.every(uuid)&&new Set(returning).size===returning.length&&
+  (value.jobState==='completed'||value.jobState==='cancelled'||returning.length===0));
  const trips=value.trips.map(row=>parsePickupTrip(row,scope.businessId,value.customerId as string));
  let prior=cursor.beforeDepartedAt===null?'':cursor.beforeDepartedAt+cursor.beforeLegId;
  for(const trip of trips){
@@ -114,18 +136,19 @@ export function parsePickupTripPage(value:unknown,scope:{businessId:string;jobId
  }
  if(cursor.beforeLegId===null&&value.activeLegId!==null)check(trips.some(trip=>trip.legId===value.activeLegId));
  return Object.freeze({schemaVersion:1,state:'loaded',businessId:scope.businessId,jobId:scope.jobId,customerId:value.customerId,
-  jobVersion:value.jobVersion,jobState:value.jobState as PickupTripPage['jobState'],activeLegId:value.activeLegId,trips,hasMore:value.hasMore});
+  jobVersion:value.jobVersion,jobState:value.jobState as PickupTripPage['jobState'],activeLegId:value.activeLegId,trips,hasMore:value.hasMore,...Array.isArray(worksite)?{worksiteVehicleIds:worksite}:{},...typeof ready==='boolean'?{worksiteReady:ready}:{},
+  ...Array.isArray(returning)?{returnVehicleIds:returning}:{} });
 }
 
 export function parsePickupTripDatabasePage(value:unknown,scope:{businessId:string;jobId:string},cursor:PickupTripCursor){
  if(exact(value,['state'])&&value.state==='absent')return {state:'absent' as const};
- check(exact(value,loadedKeys)&&Array.isArray(value.trips));
+ check(pickupPageShape(value)&&Array.isArray(value.trips));
  const trips=value.trips.map(row=>{
   check(exact(row,['leg','jobVehicleIds','auditId','drivenVehicleLabel'])&&uuid(row.auditId)&&row.leg&&typeof row.leg==='object');
   const leg=row.leg as Record<string,unknown>;
-  check(leg.business_id===scope.businessId&&leg.job_context_id===scope.jobId&&leg.purpose==='pickup');
+  check(leg.business_id===scope.businessId&&leg.job_context_id===scope.jobId&&(leg.purpose==='pickup'||transportPurpose(leg.purpose)));
   return {legId:leg.logical_id,legVersionId:leg.id,jobVehicleIds:row.jobVehicleIds,drivenVehicleId:leg.driven_vehicle_id,drivenVehicleLabel:row.drivenVehicleLabel,
-   departedAt:leg.departed_at,arrivedAt:leg.arrived_at,state:leg.state,origin:leg.origin_snapshot,
+   departedAt:leg.departed_at,arrivedAt:leg.arrived_at,state:leg.state,purpose:leg.purpose,origin:leg.origin_snapshot,
    destination:leg.destination_snapshot,etaAt:leg.eta_at,reason:leg.reason,notes:leg.notes};
  });
  return parsePickupTripPage({...value,trips},scope,cursor);

@@ -21,6 +21,8 @@ const targets:Record<OriginalOperationKind,Record<string,unknown>>={
  'operations.mileage.record':{legId:randomUUID(),expectedLegVersionId:randomUUID(),expectedEvidenceVersion:'0'},
  'operations.support_trip.record':{legId:randomUUID(),expectedLegVersionId:null,action:'depart'},
  'operations.pickup_custody.policy.save':{expectedSequence:'0'},
+ 'operations.pickup_custody.release':{jobId:randomUUID(),expectedJobVersion:'1',collectionId:randomUUID(),returnLegVersionId:randomUUID()},
+ 'operations.pickup_custody.fail_return':{jobId:randomUUID(),expectedJobVersion:'1',collectionId:randomUUID(),returnLegVersionId:randomUUID()},
  'operations.pickup_custody.collect':{jobId:randomUUID(),expectedJobVersion:'1',jobVehicleId:randomUUID(),pickupLegVersionId:randomUUID(),policyId:randomUUID()},
  'operations.pickup_trip.record':{jobId:randomUUID(),expectedJobVersion:'1',legId:randomUUID(),expectedLegVersionId:null,action:'depart'},
  'operations.support_trip.correct':{legId:randomUUID(),expectedLegVersionId:randomUUID(),action:'correct'},

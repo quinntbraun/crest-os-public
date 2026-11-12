@@ -25,7 +25,9 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
   field:['field-departure','field-pause','completion-editor','completion-saved','mileage-form','mileage-split','mileage-saved','field-cancellation','field-work-time','field-work-boundary','mileage-departure-correction','completion-outcome','completion-history','field-maintenance-history'],
   custody:['field-dropoff-intake','field-dropoff-work','field-dropoff-cancellation','field-dropoff-completion',
    'field-dropoff-collections','field-dropoff-history','field-dropoff-policy-revision',
-   'field-pickup-policy','field-pickup-departure','field-pickup-collection','field-pickup-photo']
+   'field-pickup-policy','field-pickup-departure','field-pickup-collection','field-pickup-photo',
+   'field-pickup-worksite','field-pickup-start-work','field-pickup-return-travel','field-pickup-return-handoff',
+   'field-pickup-return-failed','field-pickup-return-queue']
  };
  const requiredViews=requiredViewsByGroup[selected]??[];
  const requiredScreenshots=requiredViews.flatMap(view=>['chromium','webkit'].flatMap(engine=>

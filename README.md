@@ -1,12 +1,8 @@
 # Crest OS
 
-The schema69 pickup candidate adds policy, travel to pickup, per-vehicle collection and private condition photos. The owner preview runs accepted fictional schema68. [Current delivery and remaining release gates](planning/WORKING_STATE.md).
+The fictional laptop preview at **https://127.0.0.1:4319/** includes maintenance reminders and saved work-time review. Open a customer or saved completion and expand **Maintenance reminders** to set, snooze, complete or dismiss a dated reminder. **Today** shows due reminders. In **Schedule**, open a saved Mobile job and choose **Review recorded work time** for active and paused totals, earlier versions and CSV/JSON downloads. **Record work status**, **Interrupt this trip**, **Standalone travel** and saved trip mileage remain available. **Start Crest OS.cmd** launches the preview. The private iPhone address **https://100.78.42.185:4319/** requires an active NetBird connection on the laptop and iPhone.
 
-Schema67 Drop-Off custody is registered for release verification; the owner preview remains on accepted schema66. See [custody adoption](planning/DROPOFF_CUSTODY_SCHEMA67_ADOPTION.md) for completed construction and remaining release/runtime gates.
-
-The fictional laptop preview at **https://127.0.0.1:4319/** uses the accepted schema54 field release. **Start Crest OS.cmd** opens it. In Schedule, open a confirmed Mobile job and choose **Record work status** for departure, arrival, pause and resume. Saved history and interrupted-save review remain available. The private iPhone address **https://100.78.42.185:4319/** depends on NetBird.
-
-Release426 passed all ten required jobs and eight artifact checks. A fresh encrypted schema53 point independently restored 96 covered tables. The upgrade preserved all 52 prior business source tables, and genuine MFA passed on the restarted preview. [Current execution](planning/WORKING_STATE.md) · [Registered54 proof](planning/proposals/field54-registration-verification.json).
+The fictional preview now runs schema69. In **Schedule → Service arrangements**, configure the Pickup handoff policy and enable Pickup + Return for fictional bookings. Open a saved Pickup + Return job to record pickup travel, collection and a verified condition photo. Saved Drop-Off jobs retain policy history, vehicle custody, work and explicit collection. The accepted preview passed genuine MFA and all 12 hosted checks for its exact source. The encrypted pre-upgrade restore independently reproduced 115 tables. [Current execution and preview evidence](planning/WORKING_STATE.md).
 
 ## Current usable delivery
 
@@ -16,7 +12,7 @@ Earlier accepted419 quote-amendment delivery: all10 full jobs,8198 units,304 bro
 
 Customers/vehicles/addresses/relationships, leads/follow-ups, catalog, initial quotes/review/manual sharing/acceptance/replacements/proposals, expenses/corrections/void/history/CSV, Today, confirmed/combined jobs/conflicts/changes/cancellation/history and internal Day/week/Month Schedule remain available. Google Calendar is separate unfinished scope.
 
-Field/time/travel/custody/photos/completion/follow-up, full finance/reporting/mileage/receipts, complete portability/recovery/import/cutover and Google Calendar remain unfinished. **Real Crest use is NOT approved.** Partial exports/recovery points are not complete business portability/backups. The existing synthetic workspace is integrated into protected main through PR115 at d4adeb78; all10 post-merge422 CI jobs pass. The accepted426 preview includes Mobile field status. Completion remains in construction behind its own synthetic option. [Full V1 milestones](planning/USABLE_RELEASE_MILESTONES.md).
+Remaining field time and travel, custody, photos, follow-up, full finance, reporting, mileage, receipts, complete portability and recovery, import and cutover, and Google Calendar remain V1 scope. **Real Crest use requires separate release approval.** Current exports and recovery points cover their declared scopes. PR115 at d4adeb78 integrated the existing synthetic workspace into protected main. The End Job release is available in the fictional preview from PR116. [Full V1 milestones](planning/USABLE_RELEASE_MILESTONES.md).
 
 Crest Detailing's internal business operating system.
 

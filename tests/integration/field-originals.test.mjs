@@ -22,7 +22,7 @@ const laterFieldKinds=new Set([
  'operations.mobile_departure.correct',
  'operations.message.record_outcome',
  'operations.follow_up.save','operations.custody.save','operations.custody.policy.save','operations.custody.policy.revise',
- 'operations.pickup_trip.record','operations.pickup_custody.collect','operations.pickup_custody.policy.save'
+ 'operations.pickup_trip.record','operations.pickup_custody.collect','operations.pickup_custody.policy.save','operations.pickup_custody.release','operations.pickup_custody.fail_return'
 ]);
 let sandbox,client,web,login,target,accepted;
 const value=async(c,q,args=[])=>(await c.query(q,args)).rows[0].value;
