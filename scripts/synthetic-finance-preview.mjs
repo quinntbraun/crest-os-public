@@ -24,8 +24,9 @@ export async function requireSyntheticFinancePreviewConnection(connectionString,
  finally{await client.end().catch(()=>undefined);}
 }
 
-export async function readSyntheticFinancePreview(directory,state,taxProfiles=false,categoryMappings=false){
+export async function readSyntheticFinancePreview(directory,state,taxProfiles=false,categoryMappings=false,moneyChannels=false){
  assert.equal(typeof taxProfiles,'boolean',failure);assert.equal(typeof categoryMappings,'boolean',failure);
+ assert.equal(typeof moneyChannels,'boolean',failure);
  let connectionString,login;
  try{
   assert(typeof state.id==='string'&&/^[a-f0-9]{16}$/.test(state.id)&&state.databaseName==='crest_migrate_'+state.id);
@@ -40,5 +41,5 @@ export async function readSyntheticFinancePreview(directory,state,taxProfiles=fa
   connectionString=`postgresql://${login}:${value.password}@127.0.0.1:54329/${state.databaseName}`;
  }catch{throw Error(failure);}
  await requireSyntheticFinancePreviewConnection(connectionString,login);
- return {connectionString,fixedMappings:true,taxProfiles,categoryMappings};
+ return {connectionString,fixedMappings:true,taxProfiles,categoryMappings,moneyChannels};
 }

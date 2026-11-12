@@ -365,6 +365,11 @@
       "version": "20261127180000",
       "file": "20261127180000_finance_expense_category_mappings.sql",
       "sha256": "05a94db86b56b052461a4d85c639c4d1e107d3e12a641c461ba6dec8782945ae"
+    },
+    {
+      "version": "20261128180000",
+      "file": "20261128180000_finance_money_channels.sql",
+      "sha256": "cd1a8efb868e70b9362e58cefcec6dc6d0831da2441f6a694c0e126317fd2418"
     }
   ]
 }

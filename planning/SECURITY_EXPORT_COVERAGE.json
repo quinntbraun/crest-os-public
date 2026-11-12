@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 73,
+  "migrationCount": 74,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2285,6 +2285,39 @@
         "verification_evidence",
         "reason",
         "synthetic",
+        "audit_event_id",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.money_channel_versions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "channel_id",
+        "version",
+        "previous_version",
+        "effective_from",
+        "account_id",
+        "owner_actor_id",
+        "kind",
+        "ownership_scope",
+        "provider_namespace",
+        "masked_suffix",
+        "label",
+        "ownership_evidence",
+        "opening_state",
+        "opening_on",
+        "opening_cents",
+        "opening_evidence",
+        "active",
+        "reason",
         "audit_event_id",
         "created_at",
         "created_by",
