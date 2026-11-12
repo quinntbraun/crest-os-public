@@ -24,7 +24,8 @@ export async function requireSyntheticFinancePreviewConnection(connectionString,
  finally{await client.end().catch(()=>undefined);}
 }
 
-export async function readSyntheticFinancePreview(directory,state,taxProfiles=false,categoryMappings=false,moneyChannels=false){
+export async function readSyntheticFinancePreview(directory,state,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false){
+ assert.equal(typeof invoicePreparation,'boolean',failure);
  assert.equal(typeof taxProfiles,'boolean',failure);assert.equal(typeof categoryMappings,'boolean',failure);
  assert.equal(typeof moneyChannels,'boolean',failure);
  let connectionString,login;
@@ -41,5 +42,5 @@ export async function readSyntheticFinancePreview(directory,state,taxProfiles=fa
   connectionString=`postgresql://${login}:${value.password}@127.0.0.1:54329/${state.databaseName}`;
  }catch{throw Error(failure);}
  await requireSyntheticFinancePreviewConnection(connectionString,login);
- return {connectionString,fixedMappings:true,taxProfiles,categoryMappings,moneyChannels};
+ return {connectionString,fixedMappings:true,taxProfiles,categoryMappings,moneyChannels,invoicePreparation};
 }

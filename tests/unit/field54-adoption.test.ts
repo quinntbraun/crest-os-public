@@ -42,6 +42,8 @@ import registered72 from '../support/registered72-migration-checksums.json';
 import coverage72 from '../support/registered72-export-coverage.json';
 import registered73 from '../support/registered73-migration-checksums.json';
 import coverage73 from '../support/registered73-export-coverage.json';
+import registered74 from '../support/registered74-migration-checksums.json';
+import coverage74 from '../support/registered74-export-coverage.json';
 import {financeAccountSourceColumns,financeMoneyChannelSourceColumns,financeTaxSourceColumns} from '../../src/bookkeeping/finance-account-source.ts';
 import {pickupCustodySourceColumns} from '../../src/operations/pickup-custody-source.ts';
 import registry from '../support/registered54-migration-checksums.json';
@@ -316,14 +318,25 @@ it('registers masked money channels and inventories every retained field after f
  expect(sha256(bytes('tests/support/registered73-migration-checksums.json'))).toBe('eff3ac3de7d256fdf08d1edf13af53c89974e05ecb27e22b18eb3d848deeebd1');
  expect(sha256(bytes('tests/support/registered73-export-coverage.json'))).toBe('d2222bf0761e15c93461e91a231903e05f8e356c6d5de18d6968a1c9b84c1be1');
  const file='20261128180000_finance_money_channels.sql';
- expect(currentRegistry.migrations).toHaveLength(74);
- expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261128180000',file,
+ expect(registered74.migrations).toHaveLength(74);
+ expect(registered74.migrations.at(-1)).toEqual({version:'20261128180000',file,
   sha256:'cd1a8efb868e70b9362e58cefcec6dc6d0831da2441f6a694c0e126317fd2418'});
  expect(bytes('supabase/migrations/'+file).equals(bytes('planning/proposals/finance-money-channels.sql'))).toBe(true);
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered73 as MigrationRegistry)).not.toThrow();
- expect(currentCoverage).toEqual({...coverage73,migrationCount:74,tables:[...coverage73.tables,
+ expect(()=>validateMigrationSet(registered74 as MigrationRegistry,new Map(registered74.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered73 as MigrationRegistry)).not.toThrow();
+ expect(coverage74).toEqual({...coverage73,migrationCount:74,tables:[...coverage73.tables,
   {table:'crest.money_channel_versions',scope:'business',required:financeMoneyChannelSourceColumns,excluded:[],partialEvidenceGroup:null}]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:74});
+});
+it('registers completed-work invoice preparation as a read-only migration over the accepted schema74',()=>{
+ expect(sha256(bytes('tests/support/registered74-migration-checksums.json'))).toBe('72462184a04cd2ecce017c0951b8a7cbc81997aa502a0ec3abb8bc57181ef681');
+ expect(sha256(bytes('tests/support/registered74-export-coverage.json'))).toBe('cb2a6a2c353599947173a8322b8ae6e5909df7262a8889e2bbb31b10e7cd8fcd');
+ const file='20261129180000_finance_invoice_preparation.sql';
+ expect(currentRegistry.migrations).toHaveLength(75);
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261129180000',file,
+  sha256:'254cc0b8324db939ed915d54fe745c17d8173228fff14c75437a2b0885482334'});
+ expect(bytes('supabase/migrations/'+file)).toEqual(bytes('planning/proposals/finance-invoice-preparation.sql'));
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered74 as MigrationRegistry)).not.toThrow();
+ expect(currentCoverage).toEqual({...coverage74,migrationCount:75});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:75});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

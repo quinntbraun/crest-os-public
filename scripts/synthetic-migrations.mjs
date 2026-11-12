@@ -121,7 +121,8 @@ export async function requireSyntheticPickupReturnWorkflow(connectionString){
  ].map(signature=>'crest_commands.'+signature),'SYNTHETIC_PICKUP_RETURN_WORKFLOW_MIGRATION_REQUIRED','20261124180000');
 }
 
-export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false,categoryMappings=false,moneyChannels=false){
+export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false){
+ assert.equal(typeof invoicePreparation,'boolean');
  assert.equal(typeof taxProfiles,'boolean');assert.equal(typeof categoryMappings,'boolean');assert.equal(typeof moneyChannels,'boolean');
  const authority='bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid';
  const signatures=[
@@ -153,6 +154,7 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
   'read_money_channel_history('+authority+',uuid,bigint,integer)',
   'list_money_channel_accounts('+authority+',text,text,text,integer)'
  );
+ if(invoicePreparation)signatures.push('read_invoice_preparation('+authority+',uuid)');
  const qualified=signatures.map(signature=>'crest_commands.'+signature);
  const missing='SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED';
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
@@ -162,6 +164,7 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
   if(taxProfiles||categoryMappings)versions.push('20261126180000');
   if(categoryMappings)versions.push('20261127180000');
   if(moneyChannels)versions.push('20261128180000');
+  if(invoicePreparation)versions.push('20261129180000');
   const migration=await client.query('SELECT 1 FROM supabase_migrations.schema_migrations WHERE version=ANY($1::text[])',[versions]);
   assert(migration.rowCount===versions.length,missing);
   const {rows}=await client.query(`

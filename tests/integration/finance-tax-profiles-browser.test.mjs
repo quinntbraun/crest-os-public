@@ -89,6 +89,21 @@ for(const engine of [chromium,webkit]){
    await date.fill('2026-05-31');
    await gross.fill('110.00');
    await expect(discount).toHaveValue('');
+   await page.route('**/api/business/finance-accounts/tax-preview',async route=>{
+    const response=await route.fetch();
+    assert.equal(response.status(),200);
+    const result=await response.json();
+    assert.equal(result.state,'ready');
+    const {components}=result;
+    // Preserve all sums while changing the rate-derived split by one cent.
+    components.netCents=String(BigInt(components.netCents)-1n);
+    components.taxCents=String(BigInt(components.taxCents)+1n);
+    components.grossNetCents=String(BigInt(components.grossNetCents)-1n);
+    await route.fulfill({response,json:result});
+   },{times:1});
+   await check.press('Enter');
+   await expect(status).toHaveText('Crest could not verify this request. Try again.');
+   await expect(calculation).toHaveCount(0);
    await check.press('Enter');
    await expect(status).toHaveText('Fictional tax calculation loaded.');
    await expect(calculation.getByText('$10.00',{exact:true})).toBeVisible();

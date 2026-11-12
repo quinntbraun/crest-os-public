@@ -1,5 +1,5 @@
 # Current Crest OS delivery
 
-The fictional laptop preview includes dated tax profiles and calculation previews. The expense category candidate is in hosted acceptance. Schema74 adds masked bank, wallet, cash and check reviews, linked chart accounts, explicit unknown and verified opening evidence, retained history and CSV. The registered adoption preserves prior data, and independent encrypted restore reproduced the saved reviews and source bytes. This feature requires its own hosted acceptance and owner-preview restore proof.
+The fictional laptop preview includes masked money channels, reviewed opening amounts, and dated tax and expense category approvals. Schema75 lets the owner open a saved completion, verify the exact completed portions of the accepted work, and download those portions as CSV. It includes complimentary completed work and excludes unfulfilled work. The data path remains restricted to the fictional finance workspace. Delivery of schema75 requires its own hosted acceptance and preserved-data upgrade.
 
-Immutable finance posting, reporting, full portability and recovery, approved Google Calendar and real-use acceptance remain in V1.
+Invoice drafts, issuance, immutable financial posting, collections, reporting, full portability and recovery, Google Calendar and real-use acceptance remain in V1.
