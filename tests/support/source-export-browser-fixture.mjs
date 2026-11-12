@@ -16,7 +16,7 @@ import {installProviderSchema} from './provider-schema.mjs';
 import {startRealAuthService,authResult} from './real-auth-service.mjs';
 import {buildSourceExportBrowserFixture} from './source-export-browser-build.mjs';
 const signal=()=>new AbortController().signal,sha=value=>createHash('sha256').update(value).digest('hex'),release='a'.repeat(40);
-export async function sourceExportBrowserFixture({product=false,workspace=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,photoFixture}={}){
+export async function sourceExportBrowserFixture({product=false,workspace=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,photoFixture}={}){
  assert.equal(typeof jobCompletion,'boolean');assert(!jobCompletion||fieldSessions,'completion requires registered field sessions');
  assert.equal(typeof fieldSessions,'boolean');assert(!fieldSessions||amendmentAcceptance,'field sessions require the genuine held54 product fixture');
  assert.equal(typeof amendmentAcceptance,'boolean');assert(!amendmentAcceptance||amendments&&product,'accepted amendments require the genuine registered53 product fixture');
@@ -29,6 +29,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  assert.equal(typeof appointmentHolds,'boolean');assert(!appointmentHolds||product&&workspace,'appointment proposals require the actual workspace product server');
  assert.equal(typeof financeAccounts,'boolean');assert(!financeAccounts||product&&workspace);
  assert.equal(typeof financeMappings,'boolean');assert(!financeMappings||financeAccounts);
+ assert.equal(typeof financeTaxProfiles,'boolean');assert(!financeTaxProfiles||financeAccounts&&catalog);
  assert.equal(typeof product,'boolean');assert.equal(typeof catalog,'boolean');assert(!catalog||product,'catalog journey uses the actual product server');
  assert.equal(typeof workspace,'boolean');assert(!workspace||product,'workspace journey uses the actual product server');
  assert.equal(typeof quotes,'boolean');assert(!quotes||product,'quote journey uses the actual product server');
@@ -68,7 +69,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   assert.equal(typeof pickupTrips,'boolean');assert(!pickupTrips||dropoffPolicyRevision);
 
   assert.equal(typeof pickupReturnWorkflow,'boolean');assert(!pickupReturnWorkflow||pickupPhotos&&jobCompletion&&unfulfilledCancellation);
-  if(financeAccounts)assert.equal((await sandbox.apply(target)).history.length,71);
+  if(financeTaxProfiles)assert.equal((await sandbox.apply(target)).history.length,72);
+  else if(financeAccounts)assert.equal((await sandbox.apply(target,await sandbox.prefix(71))).history.length,71);
   else if(pickupReturnWorkflow)assert.equal((await sandbox.apply(target,await sandbox.prefix(70))).history.length,70);
   else if(pickupTrips)assert.equal((await sandbox.apply(target,await sandbox.prefix(69))).history.length,69);
   else if(dropoffPolicyRevision)assert.equal((await sandbox.apply(target,await sandbox.prefix(68))).history.length,68);
@@ -102,7 +104,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    await sandbox.admin.query('CREATE ROLE '+candidate+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+secret+"'");
    financeLogin=candidate;await sandbox.admin.query('GRANT crest_finance_preview TO '+financeLogin);
    const financeUrl=new URL(target);financeUrl.username=financeLogin;financeUrl.password=secret;
-   financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings};
+   financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,taxProfiles:financeTaxProfiles};
    await client.query("INSERT INTO crest_private.finance_controls(business_id,recovery_authority_id,created_by,origin) SELECT $1,id,$2,'system' FROM crest_private.business_recovery_authorities WHERE business_id=$1",[business,actor]);
   }
   const authentication={database:config,provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
@@ -131,6 +133,30 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
      assert.equal((await finance.query(
       'SELECT crest_commands.approve_fixed_finance_mapping($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) AS result',
       [...args,randomUUID(),'service_revenue',version,id,date,reason])).rows[0].result.state,'committed');
+    }
+   }finally{seedHash.fill(0);await finance.end();}
+  }
+  if(financeTaxProfiles){
+   const seedHash=runtime.sessionCredentialHash(credential);
+   const finance=await sandbox.connect(financeConfiguration.connectionString);
+   try{
+    const args=[seedHash,verified.sessionId,actor,service.issuer,user.id,verified.provider.sessionId,
+     new Date(verified.provider.expiresAt),business,epoch],serviceId=randomUUID();
+    const definition={name:'Fictional interior detail',inclusions:'Interior cleaning',exclusions:'',internalGuidance:null,
+     rangeLowCents:null,rangeHighCents:null,estimatedSeconds:null};
+    const saved=await database.commandTransaction(q=>q(
+     'SELECT crest_commands.save_service($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',
+     [...args,randomUUID(),serviceId,{code:'fictional-interior',active:true,definition}]),signal());
+    assert.equal(saved.state,'committed');
+    await finance.query('SET ROLE crest_finance_preview');
+    for(const [applicability,id,version,date,treatment,rate,evidence] of [
+     ['service',serviceId,'0','2026-01-01','inclusive_single','0.1','=Fictional rate evidence'],
+     ['service',serviceId,'1','2026-06-01','exempt',null,'Fictional exemption policy'],
+     ['tip',null,'0','2026-01-01','non_taxable',null,'Fictional tip rule'],
+    ]){
+     assert.equal((await finance.query(
+      'SELECT crest_commands.approve_finance_tax_profile($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) AS result',
+      [...args,randomUUID(),'Fictional district',applicability,id,version,date,treatment,rate,evidence,'Fictional tax review'])).rows[0].result.state,'committed');
     }
    }finally{seedHash.fill(0);await finance.end();}
   }

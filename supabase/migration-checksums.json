@@ -355,6 +355,11 @@
       "version": "20261125180000",
       "file": "20261125180000_finance_account_configuration.sql",
       "sha256": "940896bf6d34ff8d3fd72116241fcbc5065b4cd419ca4266e0e10ef71cd2be4d"
+    },
+    {
+      "version": "20261126180000",
+      "file": "20261126180000_finance_tax_profiles.sql",
+      "sha256": "8a747b6cb79950dcb8bcd5d626e88b7ae7d872c8e9793e6be9b6aff65dcb37fe"
     }
   ]
 }

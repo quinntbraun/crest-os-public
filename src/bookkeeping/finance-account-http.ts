@@ -22,13 +22,22 @@ import {
  parseFinanceMappingOperation,parseFinanceMappingReference,
 } from './finance-mapping-contract.ts';
 
+import {
+ financeTaxCents,matchesFinanceTaxApproval,parseFinanceTaxApproval,parseFinanceTaxHistory,parseFinanceTaxOperation,
+ parseFinanceTaxPreview,parseFinanceTaxReference,parseFinanceTaxScope,
+} from './finance-tax-contract.ts';
+
 export const financeAccountPrefix='/api/business/finance-accounts/';
 const fields={context:[],list:['afterCode','includeArchived'],history:['accountId','afterVersion'],
  operation:['operationId','recoveryEpoch','accountId','expectedVersion'],save:['reference','draft'],
  retire:['reference','reviewEpoch','reason'], 'mapping-at':['purpose','date'],
  'mapping-history':['purpose','beforeVersion'], 'mapping-editor':['purpose'],
  'mapping-operation':['operationId','recoveryEpoch','purpose','expectedVersion'],
- 'mapping-approve':['reference','approval'], 'mapping-retire':['reference','reviewEpoch','reason']} as const;
+ 'mapping-approve':['reference','approval'], 'mapping-retire':['reference','reviewEpoch','reason'],
+ 'tax-history':['jurisdiction','applicability','serviceId','beforeVersion'],
+ 'tax-preview':['jurisdiction','applicability','serviceId','date','grossCents','discountCents'],
+ 'tax-operation':['operationId','recoveryEpoch','expectedVersion'], 'tax-approve':['reference','approval'],
+ 'tax-retire':['reference','reviewEpoch','reason']} as const;
 const authority='$1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid';
 type Config=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
 
@@ -39,7 +48,7 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],fixedMappings=false){
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],fixedMappings=false,taxProfiles=false){
  check(config.environment==='test'&&customerUuid(config.businessId));
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
@@ -56,7 +65,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    transport(request,peer);
    const url=new URL(request.url),route=url.pathname.slice(financeAccountPrefix.length) as keyof typeof fields;
    if(url.search||url.hash||!url.pathname.startsWith(financeAccountPrefix)||!Object.hasOwn(fields,route))return financeAccountFailure(404);
-   if(!fixedMappings&&route.startsWith('mapping-'))return financeAccountFailure(404);
+   if(!fixedMappings&&route.startsWith('mapping-')||!taxProfiles&&route.startsWith('tax-'))return financeAccountFailure(404);
    if(request.method!=='POST')return financeAccountFailure(405);
    protect.requireOrigin(request);
    const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;
@@ -75,6 +84,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     const response=privateJsonResponse({businessId,recoveryEpoch:c.recoveryEpoch,writeState:c.writeState});
     response.headers.set('X-Crest-Edit-Binding',binding);
     if(fixedMappings)response.headers.set('X-Crest-Finance-Fixed-Mappings','1');
+    if(taxProfiles)response.headers.set('X-Crest-Finance-Tax-Profiles','1');
     return response;
    }
    credentialHash=sessionCredentialHash(cookie);
@@ -82,6 +92,59 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    check(!signal.aborted&&sessionId===verified.sessionId);
    const args=[credentialHash,sessionId,verified.actorId,verified.provider.issuer,verified.provider.subject,
     verified.provider.sessionId,new Date(verified.provider.expiresAt),businessId];
+   if(route==='tax-history'){
+    const scope=parseFinanceTaxScope({jurisdiction:input.jurisdiction,applicability:input.applicability,serviceId:input.serviceId});
+    check(input.beforeVersion===null||customerVersion(input.beforeVersion));
+    const value=await database('SELECT crest_commands.read_finance_tax_profile_history('+authority+',$9::text,$10::text,$11::uuid,$12::bigint,25) AS result',
+     [...args,scope.jurisdiction,scope.applicability,scope.serviceId,input.beforeVersion],signal);
+    parseFinanceTaxHistory(value,businessId,scope,input.beforeVersion);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='tax-preview'){
+    const scope=parseFinanceTaxScope({jurisdiction:input.jurisdiction,applicability:input.applicability,serviceId:input.serviceId});
+    check(customerDate(input.date)&&financeTaxCents(input.grossCents)&&financeTaxCents(input.discountCents)
+     &&BigInt(input.discountCents)<=BigInt(input.grossCents));
+    const value=await database('SELECT crest_commands.preview_finance_tax_charge('+authority+',$9::text,$10::text,$11::uuid,$12::date,$13::bigint,$14::bigint) AS result',
+     [...args,scope.jurisdiction,scope.applicability,scope.serviceId,input.date,input.grossCents,input.discountCents],signal);
+    parseFinanceTaxPreview(value,businessId,scope,input.date,input.grossCents,input.discountCents);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='tax-operation'||route==='tax-approve'||route==='tax-retire'){
+    const reference=parseFinanceTaxReference(route==='tax-operation'?input:input.reference);
+    const original=[reference.operationId,reference.recoveryEpoch,reference.expectedVersion];
+    if(route==='tax-operation'){
+     const value=await database('SELECT crest_commands.lookup_finance_tax_profile_approval('+authority+',$9::uuid,$10::uuid,$11::bigint) AS result',
+      [...args,...original],signal);
+     const outcome=parseFinanceTaxOperation(value,businessId,reference);
+     check(outcome.state!=='committed'||outcome.receipt.reviewedBy===verified.actorId);
+     return privateJsonResponse(value as object);
+    }
+    if(route==='tax-retire'){
+     check(customerUuid(input.reviewEpoch)&&financeAccountReviewReason(input.reason));
+     const result=await database.commandTransaction(async query=>{
+      submitted=true;
+      const value=await query('SELECT crest_commands.retire_finance_tax_profile_approval('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::bigint,$13::text) AS result',
+       [...args,input.reviewEpoch,...original,input.reason]);
+      const outcome=parseFinanceTaxOperation(value,businessId,reference);
+      check(outcome.state!=='absent'&&(outcome.state!=='retired'||outcome.receipt.reviewEpoch===input.reviewEpoch)
+       &&(outcome.state!=='committed'||outcome.receipt.reviewedBy===verified.actorId));
+      return {value:value as object,status:outcome.state==='conflict'?409:200};
+     },signal);
+     return privateJsonResponse(result.value,result.status);
+    }
+    const approval=parseFinanceTaxApproval(input.approval);
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.approve_finance_tax_profile('+authority+',$9::uuid,$10::uuid,$11::text,$12::text,$13::uuid,$14::bigint,$15::date,$16::text,$17::numeric,$18::text,$19::text) AS result',
+      [...args,reference.recoveryEpoch,reference.operationId,approval.jurisdiction,approval.applicability,approval.serviceId,
+       reference.expectedVersion,approval.effectiveFrom,approval.treatment,approval.rate,approval.verificationEvidence,approval.reason]);
+     const outcome=parseFinanceTaxOperation(value,businessId,reference);
+     check(outcome.state==='conflict'||outcome.state==='committed'&&outcome.receipt.reviewedBy===verified.actorId
+      &&matchesFinanceTaxApproval(outcome.receipt,approval));
+     return {value:value as object,status:outcome.state==='conflict'?409:200};
+    },signal);
+    return privateJsonResponse(result.value,result.status);
+   }
    if(route==='mapping-at'){
     check(fixedFinanceMappingPurpose(input.purpose)&&customerDate(input.date));
     const value=await database('SELECT crest_commands.resolve_fixed_finance_mapping('+authority+',$9::text,$10::date) AS result',
@@ -185,7 +248,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(error instanceof Error&&error.message==='FINANCE_MAPPING_NOT_READY')return privateJsonResponse({state:'unavailable'});
    if(error instanceof Error&&['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED',
     'FINANCE_MAPPING_VERSION_CONFLICT','FINANCE_MAPPING_EFFECTIVE_ORDER_REQUIRED','FINANCE_MAPPING_ACCOUNT_REQUIRED',
-    'FINANCE_MAPPING_CLOSURE_REQUIRED'].includes(error.message))
+    'FINANCE_MAPPING_CLOSURE_REQUIRED','FINANCE_TAX_VERSION_CONFLICT','FINANCE_TAX_EFFECTIVE_ORDER_REQUIRED'].includes(error.message))
     return privateJsonResponse({error:error.message},409);
    return submitted?privateJsonResponse({error:'FINANCE_ACCOUNT_OUTCOME_UNKNOWN'},503):financeAccountFailure();
   }finally{credentialHash?.fill(0);}

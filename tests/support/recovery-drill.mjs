@@ -95,6 +95,13 @@ const legacy70CoverageBytes=await readFile(join(root,'tests/support/registered70
 assert.equal(hash(legacy70CoverageBytes),'ea658e83083978f815089ee648461b10ee7bea73ebeab114cc26332e845355e6');
 const legacy70Coverage=JSON.parse(legacy70CoverageBytes);
 const legacy70Profile=Object.freeze({schemaVersion:70,registrySha256:hash(legacy70Bytes)});
+const legacy71Bytes=await readFile(join(root,'tests/support/registered71-migration-checksums.json')),legacy71=JSON.parse(legacy71Bytes);
+assert.equal(hash(legacy71Bytes),'5769296d8ee5fcc63b2f1a27c38a88a4cd3f2ffff533bc07723b93883113cef3');
+assert.equal(legacy71.migrations.length,71);assert.deepEqual(registry.migrations.slice(0,71),legacy71.migrations);
+const legacy71CoverageBytes=await readFile(join(root,'tests/support/registered71-export-coverage.json'));
+assert.equal(hash(legacy71CoverageBytes),'cffa35a1da8be180222bb15b2154f272aacc3d5de409da1966edd4a052beb5b3');
+const legacy71Coverage=JSON.parse(legacy71CoverageBytes);
+const legacy71Profile=Object.freeze({schemaVersion:71,registrySha256:hash(legacy71Bytes)});
 const legacy52Bytes=await readFile(join(root,'tests/support/registered52-migration-checksums.json')),legacy52=JSON.parse(legacy52Bytes);
 assert.equal(legacy52.migrations.length,52);assert.deepEqual(registry.migrations.slice(0,52),legacy52.migrations);
 const legacy52Profile=Object.freeze({schemaVersion:52,registrySha256:hash(legacy52Bytes)}),legacy52Coverage=JSON.parse(await readFile(join(root,'tests/support/registered52-export-coverage.json'),'utf8')),amendment53Coverage=JSON.parse(await readFile(join(root,'tests/support/amendment53-export-coverage.json'),'utf8'));
@@ -348,6 +355,8 @@ export async function backupLegacy69Database(...args){return backupWithProfile(l
 export async function restoreLegacy69Database(...args){return restoreWithProfile(legacy69Profile,...args);}
 export async function backupLegacy70Database(...args){return backupWithProfile(legacy70Profile,...args);}
 export async function restoreLegacy70Database(...args){return restoreWithProfile(legacy70Profile,...args);}
+export async function backupLegacy71Database(...args){return backupWithProfile(legacy71Profile,...args);}
+export async function restoreLegacy71Database(...args){return restoreWithProfile(legacy71Profile,...args);}
 async function field54CandidateProfile(candidate){
  assert.equal(candidate.file,'20261105180000_field_workspace.sql');
  const bytes=await readFile(join(candidate.directory,'supabase/migration-checksums.json')),value=JSON.parse(bytes);
@@ -570,20 +579,21 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
   assert(checkedSnapshot===undefined||checkedSnapshot.profile===profile&&
     (profile.schemaVersion===67&&profile.heldCustody67MigrationSha256
       ||profile.schemaVersion===69&&profile.heldPickupReturnSources
-      ||profile.schemaVersion===70&&profile.heldFinanceAccountsSha256));
+      ||profile.schemaVersion===70&&profile.heldFinanceAccountsSha256
+      ));
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   try{
     const snapshot=(await client.query('SELECT pg_export_snapshot() AS value')).rows[0].value;
-    if(checkedSnapshot||profile===currentProfile||profile===legacy70Profile||profile===legacy69Profile||profile===legacy68Profile||profile===legacy66Profile||profile.heldDropoffProposalSha256||profile===legacy65Profile||profile===legacy64Profile||profile===legacy63Profile||profile===legacy62Profile||profile===legacy61Profile||profile===legacy60Profile||profile===legacy59Profile||profile===legacy58Profile||profile===legacy57Profile||profile===legacy56Profile||profile===legacy55Profile||profile===legacy52Profile||profile.schemaVersion===53||profile.schemaVersion===54){
+    if(checkedSnapshot||profile===currentProfile||profile===legacy71Profile||profile===legacy70Profile||profile===legacy69Profile||profile===legacy68Profile||profile===legacy66Profile||profile.heldDropoffProposalSha256||profile===legacy65Profile||profile===legacy64Profile||profile===legacy63Profile||profile===legacy62Profile||profile===legacy61Profile||profile===legacy60Profile||profile===legacy59Profile||profile===legacy58Profile||profile===legacy57Profile||profile===legacy56Profile||profile===legacy55Profile||profile===legacy52Profile||profile.schemaVersion===53||profile.schemaVersion===54){
       // A matching migration ordinal alone cannot label a construction schema
       // with an additional source column as the registered current profile.
       // Check the actual columns in the same held snapshot used by the dump.
       const versions=checkedSnapshot?checkedSnapshot.versions:
         profile.heldDropoffProposalSha256?legacy66.migrations.map(row=>row.version):profile.schemaVersion===54?field54Versions:
-        (profile===legacy70Profile?legacy70:profile===legacy69Profile?legacy69:profile===legacy68Profile?legacy68:profile===legacy66Profile?legacy66:profile===legacy65Profile?legacy65:profile===legacy64Profile?legacy64:profile===legacy63Profile?legacy63:profile===legacy62Profile?legacy62:profile===legacy61Profile?legacy61:profile===legacy60Profile?legacy60:profile===legacy59Profile?legacy59:profile===legacy58Profile?legacy58:profile===legacy57Profile?legacy57:profile===legacy56Profile?legacy56:profile===legacy55Profile?legacy55:profile.schemaVersion===53?legacy53:profile===legacy52Profile?legacy52:registry).migrations.map(row=>row.version);
+        (profile===legacy71Profile?legacy71:profile===legacy70Profile?legacy70:profile===legacy69Profile?legacy69:profile===legacy68Profile?legacy68:profile===legacy66Profile?legacy66:profile===legacy65Profile?legacy65:profile===legacy64Profile?legacy64:profile===legacy63Profile?legacy63:profile===legacy62Profile?legacy62:profile===legacy61Profile?legacy61:profile===legacy60Profile?legacy60:profile===legacy59Profile?legacy59:profile===legacy58Profile?legacy58:profile===legacy57Profile?legacy57:profile===legacy56Profile?legacy56:profile===legacy55Profile?legacy55:profile.schemaVersion===53?legacy53:profile===legacy52Profile?legacy52:registry).migrations.map(row=>row.version);
       stage='coverage';assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(row=>row.version),versions);
       const columns=(await client.query("SELECT n.nspname||'.'||c.relname AS \"table\",a.attname AS \"column\" FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN('crest','crest_private') AND c.relkind IN('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2")).rows;
-      const coverage=checkedSnapshot?checkedSnapshot.coverage:profile===legacy70Profile?legacy70Coverage:profile===legacy69Profile?legacy69Coverage:profile===legacy68Profile?legacy68Coverage:profile.heldDropoffCommandsSha256?dropoffCommandCoverage:profile.heldDropoffProposalSha256?dropoffCandidateCoverage:profile===legacy66Profile?legacy66Coverage:profile===legacy65Profile?legacy65Coverage:profile===legacy64Profile?legacy64Coverage:profile===legacy63Profile?legacy63Coverage:profile===legacy62Profile?legacy62Coverage:profile===legacy61Profile?legacy61Coverage:profile===legacy60Profile?legacy60Coverage:profile===legacy59Profile?legacy59Coverage:profile===legacy58Profile?legacy58Coverage:profile===legacy57Profile?legacy57Coverage:profile===legacy56Profile?legacy56Coverage:profile===legacy55Profile?legacy55Coverage:profile===legacy53Profile?legacy53Coverage:profile.schemaVersion===54?field54Coverage:profile===legacy52Profile?legacy52Coverage:profile.schemaVersion===53?amendment53Coverage:currentCoverage;
+      const coverage=checkedSnapshot?checkedSnapshot.coverage:profile===legacy71Profile?legacy71Coverage:profile===legacy70Profile?legacy70Coverage:profile===legacy69Profile?legacy69Coverage:profile===legacy68Profile?legacy68Coverage:profile.heldDropoffCommandsSha256?dropoffCommandCoverage:profile.heldDropoffProposalSha256?dropoffCandidateCoverage:profile===legacy66Profile?legacy66Coverage:profile===legacy65Profile?legacy65Coverage:profile===legacy64Profile?legacy64Coverage:profile===legacy63Profile?legacy63Coverage:profile===legacy62Profile?legacy62Coverage:profile===legacy61Profile?legacy61Coverage:profile===legacy60Profile?legacy60Coverage:profile===legacy59Profile?legacy59Coverage:profile===legacy58Profile?legacy58Coverage:profile===legacy57Profile?legacy57Coverage:profile===legacy56Profile?legacy56Coverage:profile===legacy55Profile?legacy55Coverage:profile===legacy53Profile?legacy53Coverage:profile.schemaVersion===54?field54Coverage:profile===legacy52Profile?legacy52Coverage:profile.schemaVersion===53?amendment53Coverage:currentCoverage;
       verifyExportCoverage(coverage,columns,profile.schemaVersion);
     }
     // Coverage has passed. Pending-object/source refusal belongs to snapshot
@@ -649,6 +659,7 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     assert.equal(manifest.heldFinanceAccountsSha256,profile.heldFinanceAccountsSha256);
     assert.equal(manifest.heldFinanceAccountCommandsSha256,profile.heldFinanceAccountCommandsSha256);
     assert.equal(manifest.heldFinanceAccountMappingsSha256,profile.heldFinanceAccountMappingsSha256);
+    assert.equal(manifest.heldFinanceTaxProfilesSha256,profile.heldFinanceTaxProfilesSha256);
     if(profile.heldDropoffPhotoAuthority||profile.heldCustody67MigrationSha256||profile.heldPickupReturnSources)assert(manifest.objectArchive);
     stage='authenticated_dump';const dump=await unseal(join(directory,'database.age'),receipt.dump,identity);
     assert.equal(dump.length,manifest.dump.bytes);assert.equal(hash(dump),manifest.dump.sha256);assert.equal(dump.subarray(0,5).toString(),'PGDMP');

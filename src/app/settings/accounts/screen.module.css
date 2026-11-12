@@ -26,6 +26,24 @@
   margin: .5rem 0;
 }
 
+.amountBreakdown {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .5rem 1rem;
+  max-width: 27rem;
+  margin: .75rem 0;
+}
+
+.amountBreakdown dd {
+  margin: 0;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.amountBreakdown :nth-child(-n+2) {
+  font-weight: 600;
+}
+
 @media (min-width: 48rem) {
   .actions {
     display: flex;

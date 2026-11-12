@@ -36,7 +36,9 @@ import registered69 from '../support/registered69-migration-checksums.json';
 import coverage69 from '../support/registered69-export-coverage.json';
 import registered70 from '../support/registered70-migration-checksums.json';
 import coverage70 from '../support/registered70-export-coverage.json';
-import {financeAccountSourceColumns} from '../../src/bookkeeping/finance-account-source.ts';
+import registered71 from '../support/registered71-migration-checksums.json';
+import coverage71 from '../support/registered71-export-coverage.json';
+import {financeAccountSourceColumns,financeTaxSourceColumns} from '../../src/bookkeeping/finance-account-source.ts';
 import {pickupCustodySourceColumns} from '../../src/operations/pickup-custody-source.ts';
 import registry from '../support/registered54-migration-checksums.json';
 import previous from '../support/registered53-migration-checksums.json';
@@ -267,11 +269,11 @@ it('registers pickup return after frozen69 and keeps production blocked',()=>{
 it('registers account configuration after the exact accepted70 prefix with complete coverage',()=>{
  expect(sha256(bytes('tests/support/registered70-migration-checksums.json'))).toBe('196cf9e6daffb9c4398a36c6010423545013ec5fa6049defd4ddf3025a858d54');
  expect(sha256(bytes('tests/support/registered70-export-coverage.json'))).toBe('ea658e83083978f815089ee648461b10ee7bea73ebeab114cc26332e845355e6');
- expect(currentRegistry.migrations).toHaveLength(71);
+ expect(registered71.migrations).toHaveLength(71);
  const file='20261125180000_finance_account_configuration.sql';
- expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261125180000',file,
+ expect(registered71.migrations.at(-1)).toEqual({version:'20261125180000',file,
   sha256:'940896bf6d34ff8d3fd72116241fcbc5065b4cd419ca4266e0e10ef71cd2be4d'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered70 as MigrationRegistry)).not.toThrow();
+ expect(()=>validateMigrationSet(registered71 as MigrationRegistry,new Map(registered71.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered70 as MigrationRegistry)).not.toThrow();
  const sql=bytes('supabase/migrations/'+file).toString(),parts=['finance-accounts.sql','finance-account-commands.sql','finance-account-mappings.sql'];
  let previous=-1;
  for(const part of parts){
@@ -280,9 +282,21 @@ it('registers account configuration after the exact accepted70 prefix with compl
  }
  const sourceTables=[...Object.entries(financeAccountSourceColumns).map(([name,columns])=>['crest.'+name,columns] as const),
   ['crest_private.finance_controls',['id','business_id','recovery_authority_id','created_at','created_by','origin']] as const];
- expect(currentCoverage).toEqual({...coverage70,migrationCount:71,tables:[...coverage70.tables,
+ expect(coverage71).toEqual({...coverage70,migrationCount:71,tables:[...coverage70.tables,
   ...sourceTables.map(([table,required])=>({table,scope:'business',required,excluded:[],partialEvidenceGroup:null}))]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:71});
+});
+it('registers tax profiles after the exact accepted71 prefix and inventories every persisted field',()=>{
+ expect(sha256(bytes('tests/support/registered71-migration-checksums.json'))).toBe('5769296d8ee5fcc63b2f1a27c38a88a4cd3f2ffff533bc07723b93883113cef3');
+ expect(sha256(bytes('tests/support/registered71-export-coverage.json'))).toBe('cffa35a1da8be180222bb15b2154f272aacc3d5de409da1966edd4a052beb5b3');
+ const file='20261126180000_finance_tax_profiles.sql';
+ expect(currentRegistry.migrations).toHaveLength(72);
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261126180000',file,
+  sha256:'8a747b6cb79950dcb8bcd5d626e88b7ae7d872c8e9793e6be9b6aff65dcb37fe'});
+ expect(bytes('supabase/migrations/'+file).equals(bytes('planning/proposals/finance-tax-profiles.sql'))).toBe(true);
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered71 as MigrationRegistry)).not.toThrow();
+ expect(currentCoverage).toEqual({...coverage71,migrationCount:72,tables:[...coverage71.tables,
+  {table:'crest.tax_profiles',scope:'business',required:financeTaxSourceColumns,excluded:[],partialEvidenceGroup:null}]});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:72});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

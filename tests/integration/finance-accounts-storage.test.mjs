@@ -8,8 +8,8 @@ import {installProviderSchema} from '../support/provider-schema.mjs';
 import {requireSyntheticFinanceAccountConfiguration} from '../../scripts/synthetic-migrations.mjs';
 import {requireSyntheticFinancePreviewConnection} from '../../scripts/synthetic-finance-preview.mjs';
 import {
-  backupDatabase, backupLegacy70Database, connect, inventory, keyPair,
-  privateWorkspace, recoveryCluster, restoreDatabase, restoreLegacy70Database,
+  backupLegacy71Database, backupLegacy70Database, connect, inventory, keyPair,
+  privateWorkspace, recoveryCluster, restoreLegacy71Database, restoreLegacy70Database,
 } from '../support/recovery-drill.mjs';
 import {financeAccountSourceColumns,formatFinanceAccountSource} from '../../src/bookkeeping/finance-account-source.ts';
 import {readSourceExportCsv} from '../../src/security/source-export-csv-reader.ts';
@@ -122,11 +122,12 @@ test('fictional finance accounts retain audited revisions and enforce scope in P
 
     await t.test('registered migration preserves populated schema70 and adds no accounts or mappings',async () => {
       await assert.rejects(requireSyntheticFinanceAccountConfiguration(target),{message:'SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED'});
-      const before=await inventory(db), adopted=await sandbox.apply(target);
+      const schema71=await sandbox.prefix(71);
+      const before=await inventory(db), adopted=await sandbox.apply(target,schema71);
       await requireSyntheticFinanceAccountConfiguration(target);
       assert.equal(adopted.history.length,71);
       assert.deepEqual(adopted.history.slice(0,70),previous.history);
-      assert.deepEqual((await sandbox.apply(target)).history,adopted.history);
+      assert.deepEqual((await sandbox.apply(target,schema71)).history,adopted.history);
       const after=await inventory(db), newTables=after.filter(row=>!before.some(old=>old.schema===row.schema&&old.name===row.name));
       assert.deepEqual(newTables.map(row=>[row.schema+'.'+row.name,row.rows]),[
         ['crest.account_mapping_versions',0],['crest.account_versions',0],['crest.accounts',0],['crest_private.finance_controls',0]
@@ -530,7 +531,7 @@ test('fictional finance accounts retain audited revisions and enforce scope in P
         await mkdir(point,{mode:0o700});
         keys = await keyPair(workspace);
         await assert.rejects(backupLegacy70Database(db,target,point,keys.recipient),/SYNTHETIC_RECOVERY_BACKUP_FAILED:coverage/);
-        const {manifest} = await backupDatabase(db,target,point,keys.recipient);
+        const {manifest} = await backupLegacy71Database(db,target,point,keys.recipient);
         assert.equal(manifest.schemaVersion,71);
         assert.equal(manifest.rows.find(row=>row.name==='accounts').rows,4);
         assert.equal(manifest.rows.find(row=>row.name==='account_versions').rows,7);
@@ -540,7 +541,7 @@ test('fictional finance accounts retain audited revisions and enforce scope in P
         const destination = await destinationCluster.database();
         assert.notEqual(new URL(target).port,new URL(destination).port);
         await assert.rejects(restoreLegacy70Database(point,keys.path,destination),/SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest/);
-        await restoreDatabase(point,keys.path,destination);
+        await restoreLegacy71Database(point,keys.path,destination);
         restored = await connect(destination);
         assert.deepEqual(await inventory(restored),manifest.rows);
         const restoredMappings=(await restored.query(`
