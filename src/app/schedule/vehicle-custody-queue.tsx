@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useRef,useState} from 'react';
 import {authentication,AuthenticationError} from '../../client/authentication';
 import {scheduling} from '../../client/scheduling';
 import {postScheduling} from '../../client/scheduling-transport';
@@ -8,6 +8,11 @@ import type {CollectionPage,CustodyQueueState} from '../../operations/dropoff-co
 
 type Loaded=Readonly<{businessId:string;binding:string;rows:CollectionPage<CustodyQueueState>['rows'];hasMore:boolean}>;
 type View=Readonly<{loaded:Loaded|null;busy:boolean;signedOut:boolean;message:string}>;
+
+const initialViews:Readonly<Record<'pickup'|'dropoff',View>>={
+ pickup:{loaded:null,busy:false,signedOut:false,message:'Load vehicles still in Crest custody after completed or cancelled work.'},
+ dropoff:{loaded:null,busy:false,signedOut:false,message:'Load vehicles awaiting collection or return across all dates.'},
+};
 
 const states:Readonly<Record<CustodyQueueState,string>>={
  awaiting_collection:'Awaiting collection',
@@ -21,11 +26,10 @@ const states:Readonly<Record<CustodyQueueState,string>>={
 export function VehicleCustodyQueue({timezone,kind}:{timezone:string;kind:'pickup'|'dropoff'}){
  const pickup=kind==='pickup',title=pickup?'Vehicles awaiting return':'Vehicle collections';
  const action=pickup?'vehicles awaiting return':'vehicle collections';
- const initial:View={loaded:null,busy:false,signedOut:false,message:pickup?
-  'Load vehicles still in Crest custody after completed or cancelled work.':'Load vehicles awaiting collection or return across all dates.'};
+ const initial=initialViews[kind];
  const [view,setView]=useState(initial),request=useRef<AbortController|null>(null),status=useRef<HTMLParagraphElement>(null);
  const dates=new Intl.DateTimeFormat('en-US',{timeZone:timezone,month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
- const clear=()=>{request.current?.abort();request.current=null;setView(initial);};
+ const clear=useCallback(()=>{request.current?.abort();request.current=null;setView(initial);},[initial]);
  useEffect(()=>{
   const hidden=()=>{if(document.visibilityState==='hidden')clear();};
   const restored=(event:PageTransitionEvent)=>{if(event.persisted)clear();};
@@ -34,7 +38,7 @@ export function VehicleCustodyQueue({timezone,kind}:{timezone:string;kind:'picku
    request.current?.abort();request.current=null;
    document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',clear);window.removeEventListener('pageshow',restored);
   };
- },[]);
+ },[clear]);
  async function load(more=false){
   if(request.current)return;
   const previous=more?view.loaded:null,last=previous?.rows.at(-1);
