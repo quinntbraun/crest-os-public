@@ -17,6 +17,7 @@ import {captureObjectArchive,restoreObjectArchive} from '../../src/tooling/objec
 import {objectDirectory,encryptor,decryptor} from '../support/object-recovery-drill.mjs';
 
 let sandbox,source,sourceUrl,sourceWeb,cluster,restored,restoredUrl,point,keys,emergencyKey,directory,backup,owner,original,sourceLogin,restoredLogin,liveSource,sourceLoginOwned=false,restoredLoginOwned=false;
+let appliedSchemaVersion,coverageManifest;
 let sourceObjects,vaultObjects,restoredObjects,objectInventory,postSnapshotObject;
 let snapshotCustomer,snapshotAddress,snapshotVehicle,snapshotAssociation,nextAssociation,snapshotLeadSource,snapshotLead,sourceReceipt,leadReceipt;
 const leadSourceOperation=randomUUID(),leadOperation=randomUUID(),leadStateOperation=randomUUID(),laterLeadStateOperation=randomUUID();
@@ -76,7 +77,9 @@ before(async()=>{
   directory=await privateWorkspace();const kit=join(directory,'emergency-kit');point=join(directory,'point');await mkdir(kit,{mode:0o700});await mkdir(point,{mode:0o700});
   keys=await keyPair(kit);emergencyKey=join(kit,'independent-key.txt');await copyFile(keys.path,emergencyKey);await chmod(emergencyKey,0o600);
   sandbox=await migrationSandbox();sourceUrl=await sandbox.database();source=await sandbox.connect(sourceUrl);
-  await sandbox.apply(sourceUrl,await sandbox.prefix(0),true);await installProviderSchema(source,sourceUrl);await sandbox.apply(sourceUrl);
+  await sandbox.apply(sourceUrl,await sandbox.prefix(0),true);await installProviderSchema(source,sourceUrl);
+  const applied=await sandbox.apply(sourceUrl);appliedSchemaVersion=applied.registry.migrations.length;
+  coverageManifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
   const bootstrap=(await source.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id,subject=randomUUID();
   const actor=(await source.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic recovery owner',$1,$2,$3,$3,'manual') RETURNING id",[issuer,subject,bootstrap])).rows[0].id;
   await source.query('BEGIN');
@@ -186,7 +189,7 @@ test('actual encrypted database recovery works in a fresh process and separate c
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,backup.manifest.schemaVersion);
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM auth.schema_migrations')).rows[0].n,(await source.query('SELECT count(*)::int AS n FROM auth.schema_migrations')).rows[0].n);
   assert.equal(backup.manifest.completeBackup,false); // vault/files/config/full release remain unfinished
-  assert.equal(backup.manifest.schemaVersion,69);
+  assert.equal(backup.manifest.schemaVersion,appliedSchemaVersion);
   for(const reader of ['read_job_completion_context','read_unfulfilled_cancellation_context','read_job_work_time','read_job_work_start']){
    const signature='crest_commands.'+reader+'(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)';
    assert.equal((await restored.query("SELECT has_function_privilege('crest_web',$1,'EXECUTE') AND NOT has_function_privilege('anon',$1,'EXECUTE') AS closed",[signature])).rows[0].closed,true);
@@ -242,7 +245,7 @@ test('lead source snapshot, exact cents/microseconds, genuine customer and origi
   for(const role of ['crest_lead_owner','crest_lead_integrity_owner','crest_lead_source_owner','crest_lead_source_integrity_owner'])await assert.rejects(w.connection.query('SET ROLE '+role),e=>e.code==='42501');
   for(const table of ['leads','lead_sources'])await assert.rejects(w.connection.query('SELECT * FROM crest.'+table),e=>e.code==='42501');
  }finally{await w.connection.end();await restored.query('DROP ROLE '+w.login);}
- assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,92);
+ assert.equal((await restored.query("SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('crest','crest_private') AND c.relkind='r'")).rows[0].n,coverageManifest.tables.length);
  const quoteTables=['condition_assessments','quote_approvals','quote_families','quote_items','quote_revisions'];
  assert.deepEqual((await restored.query("SELECT c.relname AS name,c.relrowsecurity AND c.relforcerowsecurity AND c.relowner='crest_schema_owner'::regrole AND NOT has_table_privilege('crest_web',c.oid,'SELECT') AS closed FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='crest' AND c.relkind='r' AND c.relname=ANY($1::text[]) ORDER BY c.relname",[quoteTables])).rows,quoteTables.map(name=>({name,closed:true})));
  const commercialTables=['agreements','entitlement_versions','quote_acceptances','quote_family_commercial_state','quote_sends','scope_allocations','scope_entitlements'];
@@ -252,14 +255,15 @@ test('lead source snapshot, exact cents/microseconds, genuine customer and origi
 });
 
 test('registered coverage accounts for every actual source column and rejects omissions on the restored schema',async()=>{
- const manifest=JSON.parse(await readFile(new URL('../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));assert.equal(manifest.migrationCount,69);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_vehicles').required,[...leadVehicleColumns]);
+ const manifest=coverageManifest;assert.equal(manifest.migrationCount,appliedSchemaVersion);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_vehicles').required,[...leadVehicleColumns]);
  for(const spec of Object.values(expenseSourceTables)){const table='crest.'+spec.entity;assert.deepEqual(manifest.tables.find(t=>t.table===table).required,[...spec.columns]);assert.equal((await restored.query("SELECT relrowsecurity AND relforcerowsecurity AND relowner='crest_schema_owner'::regrole AS protected FROM pg_class WHERE oid=$1::regclass",[table])).rows[0].protected,true);}
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_addresses').required,[...leadAddressColumns]);
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_events').required,[...leadEventColumns]);
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_sources').required,[...leadSourceColumns]);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.leads').required,[...leadColumns]);
  const columns=(await restored.query(`SELECT n.nspname||'.'||c.relname AS "table",a.attname AS "column" FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN ('crest','crest_private') AND c.relkind IN ('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2`)).rows;
- // Registered69 adds five pickup custody tables and 44 source columns to frozen68.
- assert.equal(columns.length,1372);assert.deepEqual(verifyExportCoverage(manifest,columns,backup.manifest.schemaVersion),{assurance:'schema_inventory_only',tables:92,requiredColumns:1362,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
+ const requiredColumns=manifest.tables.reduce((total,entry)=>total+entry.required.length,0);
+ assert.equal(columns.length,requiredColumns+10);
+ assert.deepEqual(verifyExportCoverage(manifest,columns,backup.manifest.schemaVersion),{assurance:'schema_inventory_only',tables:manifest.tables.length,requiredColumns,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
  assert.throws(()=>verifyExportCoverage(manifest,columns,52),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
  assert.throws(()=>verifyExportCoverage(manifest,columns,60),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
  assert.throws(()=>verifyExportCoverage(manifest,columns,65),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
