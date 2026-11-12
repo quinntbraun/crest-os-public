@@ -1,5 +1,5 @@
-import {customerDate,customerUuid,customerVersion,exactCustomerObject as exact} from '../customer/customer-contract';
-import {financeAccountCode,financeAccountReviewReason,parseFinanceAccountIdentity,requireFinanceAccount as check} from './finance-account-contract';
+import {customerDate,customerUuid,customerVersion,exactCustomerObject as exact} from '../customer/customer-contract.ts';
+import {financeAccountCode,financeAccountReviewReason,parseFinanceAccountIdentity,requireFinanceAccount as check} from './finance-account-contract.ts';
 
 export const fixedFinanceMappingLabels={
  service_revenue:'Detailing service revenue',tips_revenue:'Tip revenue',discount:'Service discounts',returns:'Service returns',

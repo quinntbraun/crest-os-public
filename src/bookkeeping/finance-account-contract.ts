@@ -1,4 +1,4 @@
-import {customerUuid,customerVersion,exactCustomerObject as exact} from '../customer/customer-contract';
+import {customerUuid,customerVersion,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 
 export const financeAccountTypes=['asset','liability','equity','revenue','contra_revenue','expense'] as const;
 export type FinanceAccountType=typeof financeAccountTypes[number];
