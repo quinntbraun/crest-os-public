@@ -20,6 +20,8 @@ export function originalOperationFixture(kind:OriginalOperationKind='crm.custome
  'operations.mileage.record':{legId:id,expectedLegVersionId:randomUUID(),expectedEvidenceVersion:'0'},
  'operations.support_trip.record':{legId:id,expectedLegVersionId:null,action:'depart'},
  'operations.pickup_custody.policy.save':{expectedSequence:'0'},
+ 'operations.pickup_custody.release':{jobId:id,expectedJobVersion:'1',collectionId:randomUUID(),returnLegVersionId:randomUUID()},
+ 'operations.pickup_custody.fail_return':{jobId:id,expectedJobVersion:'1',collectionId:randomUUID(),returnLegVersionId:randomUUID()},
  'operations.pickup_custody.collect':{jobId:id,expectedJobVersion:'1',jobVehicleId:randomUUID(),pickupLegVersionId:randomUUID(),policyId:randomUUID()},
  'operations.pickup_trip.record':{jobId:id,expectedJobVersion:'1',legId:randomUUID(),expectedLegVersionId:null,action:'depart'},
  'operations.support_trip.correct':{legId:id,expectedLegVersionId:randomUUID(),action:'correct'},

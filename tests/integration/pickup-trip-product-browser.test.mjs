@@ -226,7 +226,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
     headers:{'cache-control':'private, no-store','retry-after':'60'},
     json:{error:'SCHEDULING_REQUEST_LIMITED'}}),{times:1});
    await panel.getByRole('button',{name:'Record stopped trip'}).click();
-   await expect(panel.getByRole('status')).toHaveText('Stopped pickup trip saved. History requests are temporarily limited. Wait a minute before reloading.');
+   await expect(panel.getByRole('status')).toHaveText('Pickup trip stopped. History requests are temporarily limited. Wait a minute before reloading.');
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),null);
    await panel.getByRole('button',{name:'Load pickup travel',exact:true}).click();
    await expect(panel.getByRole('status')).toHaveText('Saved pickup travel loaded.');

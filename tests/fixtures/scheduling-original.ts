@@ -15,6 +15,7 @@ export function schedulingOriginalFixture(kind:SchedulingOriginalKind){
    'legVersionId'in r?{subjectId:r.legId,sourceRecordId:randomUUID(),sourceVersion:'2'}:
    'expectedJobVersion'in r&&'expectedLegVersionId'in r?{subjectId:r.legId,sourceRecordId:r.expectedLegVersionId===null?r.legId:randomUUID(),sourceVersion:r.expectedLegVersionId===null?'1':'2'}:
    'expectedSequence'in r?{subjectId:original.businessId,sourceRecordId:r.operationId,sourceVersion:(BigInt(r.expectedSequence)+1n).toString()}:
+   'returnLegVersionId'in r?{subjectId:r.collectionId,sourceRecordId:r.operationId,sourceVersion:'1'}:
    'pickupLegVersionId'in r?{subjectId:r.jobVehicleId,sourceRecordId:r.operationId,sourceVersion:'1'}:
    'expectedJobVersion'in r?{subjectId:r.jobId,sourceRecordId:r.jobId,sourceVersion:(BigInt(r.expectedJobVersion)+(kind==='operations.job.work_boundary.correct'?0n:1n)).toString()}:
    {subjectId:r.legId,sourceRecordId:randomUUID(),sourceVersion:'expectedEvidenceVersion'in r?(BigInt(r.expectedEvidenceVersion)+1n).toString():r.expectedLegVersionId===null?'1':'2'};

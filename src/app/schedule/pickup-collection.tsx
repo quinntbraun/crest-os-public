@@ -6,19 +6,20 @@ import type {Proof} from '../../client/authentication';
 import {createPendingSchedulingStore,pendingSchedulingKeys} from '../../client/pending-scheduling';
 import type {PendingScheduling} from '../../client/pending-scheduling';
 import {scheduling,SchedulingClientError} from '../../client/scheduling';
-import {parsePickupCollectionSave,pickupCollectionKind,pickupCollectionOriginal} from '../../operations/pickup-custody-contract';
-import type {PickupCollectionContext,PickupCollectionSave} from '../../operations/pickup-custody-contract';
+import {parsePickupCollectionSave,pickupCollectionKind,pickupCollectionOriginal,
+ parsePickupReleaseSave,pickupReleaseKind,pickupReleaseOriginal,parsePickupReturnFailureSave,pickupReturnFailureKind,pickupReturnFailureOriginal} from '../../operations/pickup-custody-contract';
+import type {PickupCollectionSave} from '../../operations/pickup-custody-contract';
 import type {SchedulingOriginalKind} from '../../operations/scheduling-original-contract';
 import {BookingInstantInput} from './booking-fields';
 import {DropoffPhotoPicker,DropoffPhotoViewer} from './dropoff-photo-fields';
 
-type Props=Readonly<{businessId:string;jobId:string;jobVehicleId:string;jobVersion:string;timezone:string;canChange:boolean;photosAvailable:boolean}>;
-type Collection=Exclude<PickupCollectionContext,{state:'absent'}>;
+type Props=Readonly<{businessId:string;jobId:string;jobVehicleId:string;jobVersion:string;timezone:string;canChange:boolean;photosAvailable:boolean;releaseAvailable?:boolean}>;
+type Collection=Exclude<Awaited<ReturnType<typeof scheduling.pickupCollection>>,{state:'absent'}>;
 type Body=PickupCollectionSave['body'];
 const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),
  removeItem:(key:string)=>sessionStorage.removeItem(key)};
-const store=()=>createPendingSchedulingStore(storage,pickupCollectionKind);
-const initial={context:null as Collection|null,busy:false,pending:false,signedOut:false,message:''};
+const store=(kind:SchedulingOriginalKind)=>createPendingSchedulingStore(storage,kind);
+const initial={context:null as Collection|null,busy:false,pending:null as SchedulingOriginalKind|null,signedOut:false,message:''};
 const statusText={
  awaiting_arrival:'Record arrival at this vehicle’s pickup stop first.',
  requires_policy:'This booking has no pickup handoff policy.',
@@ -26,7 +27,11 @@ const statusText={
  vehicle_held:'This vehicle is already in Crest custody on another job.',
  photo_required:'The saved policy requires a verified condition photo. Pickup photo capture is unavailable.',
  held:'In Crest custody.',
+ awaiting_return:'Work is complete. Vehicle return is still required.',
  return_required:'The job was cancelled. Vehicle return is still required.',
+ return_failed:'Return could not be completed. The vehicle is still in Crest custody. Reload Pickup travel to record a new return trip.',
+ ready_to_release:'Return arrival saved. The vehicle is still in Crest custody until the handoff is recorded.',
+ released:'Vehicle released to the customer.',
  closed:'Collection is closed for this job.'
 };
 const conflicts:Readonly<Record<string,string>>={
@@ -37,16 +42,36 @@ const conflicts:Readonly<Record<string,string>>={
  policy:'The collection policy changed. Reload the saved handoff.',
  arrival:'The collection must follow the saved pickup arrival. Check the handoff time and reload.'
 };
+function FailedReturnForm({busy,save}:{busy:boolean;save:(reason:string)=>void}){
+ const id=useId(),[reason,setReason]=useState('');
+ return <details>
+  <summary>Unable to hand over the vehicle?</summary>
+  <form className="field-work-form" onSubmit={event=>{
+   event.preventDefault();
+   if(!busy&&reason.trim())save(reason.trim());
+  }}>
+   <fieldset disabled={busy}>
+    <legend>Record a failed return</legend>
+    <p className="field-help">Use this after arriving at the return stop. The vehicle stays in Crest custody until a later handoff.</p>
+    <label htmlFor={id}>Why could the vehicle not be handed over?</label>
+    <textarea id={id} value={reason} onChange={event=>setReason(event.target.value)} required maxLength={1000} rows={3}/>
+    <button type="submit" className="secondary" disabled={!reason.trim()}>Save failed return</button>
+   </fieldset>
+  </form>
+ </details>;
+}
 function formatTime(value:string,timezone:string){
  return new Intl.DateTimeFormat('en-US',{timeZone:timezone,dateStyle:'medium',timeStyle:'medium'}).format(new Date(value));
 }
-function CollectionForm({policy,arrival,timezone,busy,save,businessId,jobVehicleId,jobVersion,photosAvailable}:{
+function HandoffForm({policy,arrival,timezone,busy,save,businessId,jobVehicleId,jobVersion,photosAvailable,returnCollectionId}:{
+ returnCollectionId?:string;
  policy:NonNullable<Collection['policy']>;arrival:NonNullable<Collection['arrival']>;
  timezone:string;busy:boolean;save:(body:Body,operationId:string)=>Promise<void>;
  businessId:string;jobVehicleId:string;jobVersion:string;photosAvailable:boolean;
 }){
  const id=useId(),[effectiveAt,setEffectiveAt]=useState(''),[operationId]=useState(()=>crypto.randomUUID());
  const [photo,setPhoto]=useState<{selected:boolean;verifiedId:string|null}>({selected:false,verifiedId:null});
+ const returning=returnCollectionId!==undefined;
  const waitingForPhoto=(policy.conditionPhotoRequired||photo.selected)&&!photo.verifiedId;
  return <form className="field-work-form pickup-collection-form" onSubmit={event=>{
   event.preventDefault();
@@ -60,34 +85,40 @@ function CollectionForm({policy,arrival,timezone,busy,save,businessId,jobVehicle
    notes:value('notes')||null,acknowledgementConfirmed:fields.get('acknowledged')==='on'?true:null},operationId);
  }}>
   <fieldset disabled={busy}>
-   <legend>Record vehicle collection</legend>
-   <p className="field-help">Pickup arrival recorded at {formatTime(arrival.arrivedAt,timezone)}.</p>
-   <BookingInstantInput label="Actual collection time (optional)" zone={timezone} value={effectiveAt} change={setEffectiveAt} seconds required={false}/>
-   <p className="field-help">Leave the time blank only when saving as the handoff happens. Times are in {timezone}.</p>
-   <label htmlFor={id+'-person'}>Who handed over the vehicle?</label>
+   <legend>{returning?'Record return handoff':'Record vehicle collection'}</legend>
+   <p className="field-help">{returning?'Return':'Pickup'} arrival recorded at {formatTime(arrival.arrivedAt,timezone)}.</p>
+   {!returning&&<>
+    <BookingInstantInput label="Actual collection time (optional)" zone={timezone} value={effectiveAt} change={setEffectiveAt} seconds required={false}/>
+    <p className="field-help">Leave the time blank only when saving as the handoff happens. Times are in {timezone}.</p>
+   </>}
+   <label htmlFor={id+'-person'}>{returning?'Who received the vehicle?':'Who handed over the vehicle?'}</label>
    <input id={id+'-person'} name="person" autoComplete="off" maxLength={200} required/>
    <label htmlFor={id+'-location'}>Actual handoff location</label>
    <input id={id+'-location'} name="location" autoComplete="off" maxLength={2000} required/>
-   {photosAvailable&&<DropoffPhotoPicker businessId={businessId} jobVehicleId={jobVehicleId} caseId={operationId} handoff={1}
-    pickup={{arrivalVersionId:arrival.versionId,policyId:policy.id,jobVersion}} required={policy.conditionPhotoRequired}
+   {photosAvailable&&<DropoffPhotoPicker businessId={businessId} jobVehicleId={jobVehicleId} caseId={operationId} handoff={returning?2:1}
+    pickup={{arrivalVersionId:arrival.versionId,jobVersion,...returning?{collectionId:returnCollectionId}:{policyId:policy.id}}} required={policy.conditionPhotoRequired}
     change={(selected,verifiedId)=>setPhoto({selected,verifiedId})}/>}
    {!photo.selected&&!policy.conditionPhotoRequired&&<>
     <label htmlFor={id+'-reason'}>Why is a condition photo missing?</label>
     <textarea id={id+'-reason'} name="missingPhotoReason" autoComplete="off" rows={2} maxLength={1000} required/>
    </>}
-   <details><summary>Add collection notes</summary>
-    <label htmlFor={id+'-notes'}>Collection notes (optional)</label>
+   <details><summary>{returning?'Set an earlier handoff time or add notes':'Add collection notes'}</summary>
+    {returning&&<>
+     <BookingInstantInput label="Actual return time (optional)" zone={timezone} value={effectiveAt} change={setEffectiveAt} seconds required={false}/>
+     <p className="field-help">Leave blank to record the current time. Times are in {timezone}.</p>
+    </>}
+    <label htmlFor={id+'-notes'}>{returning?'Return notes (optional)':'Collection notes (optional)'}</label>
     <textarea id={id+'-notes'} name="notes" autoComplete="off" rows={2} maxLength={1000}/>
    </details>
    {policy.acknowledgementText!==null&&<>
     <p id={id+'-acknowledgement'}>{policy.acknowledgementText}</p>
     <label className="checkbox"><input type="checkbox" name="acknowledged" aria-describedby={id+'-acknowledgement'} required/> Record the required acknowledgement</label>
    </>}
-   <button type="submit" disabled={waitingForPhoto}>Save vehicle collection</button>
+   <button type="submit" disabled={waitingForPhoto}>{returning?'Save return handoff':'Save vehicle collection'}</button>
   </fieldset>
  </form>;
 }
-export function PickupCollection({businessId,jobId,jobVehicleId,jobVersion,timezone,canChange,photosAvailable}:Props){
+export function PickupCollection({businessId,jobId,jobVehicleId,jobVersion,timezone,canChange,photosAvailable,releaseAvailable}:Props){
  const [view,setView]=useState(initial);
  const anchor=useRef<HTMLElement>(null),status=useRef<HTMLParagraphElement>(null),request=useRef<AbortController|null>(null);
  useEffect(()=>{
@@ -121,8 +152,8 @@ export function PickupCollection({businessId,jobId,jobVehicleId,jobVersion,timez
   setView({...initial,busy:true,message:'Loading saved collection…'});
   try{
    const proof=await authentication.session(active.signal),context=await read(proof,active.signal);
-   const pending=store().read()!==null;
-   setView({...initial,context,pending,message:pending?'Review the interrupted collection save before making changes.':
+   const pending=[pickupCollectionKind,pickupReleaseKind,pickupReturnFailureKind].find(kind=>store(kind).read()!==null)??null;
+   setView({...initial,context,pending,message:pending?'Review the interrupted '+(pending===pickupCollectionKind?'collection':'return')+' save before making changes.':
     context.state==='photo_required'&&photosAvailable?'Upload a verified condition photo to record collection.':statusText[context.state]});
   }catch(error){
    if(active.signal.aborted)return;
@@ -130,71 +161,102 @@ export function PickupCollection({businessId,jobId,jobVehicleId,jobVersion,timez
    setView({...initial,signedOut,message:signedOut?'Sign in again to review collection.':'Collection could not be loaded. Reload the saved job and try again.'});
   }finally{finish(active);}
  }
- async function save(body:Body,operationId:string){
+
+ async function save(body:Body|{reason:string},operationId:string){
   const context=view.context;
-  if(request.current||!canChange||view.pending||!context?.policy||!context.arrival||
-   !(context.state==='ready'||context.state==='photo_required'&&photosAvailable&&body.conditionPhotoId))return;
+  if(request.current||!canChange||view.pending||!context?.policy)return;
+  const failed='reason'in body,returning=context.state==='ready_to_release';
+  const arrival=returning?context.returnArrival:context.arrival;
+  const photoId=failed?undefined:body.conditionPhotoId;
+  if(!arrival||failed&&(!returning||!context.pickupReturnFailureAvailable)||
+   returning&&(!releaseAvailable||!context.collection||!failed&&context.policy.conditionPhotoRequired&&!photoId)||
+   !returning&&!(context.state==='ready'||context.state==='photo_required'&&photosAvailable&&photoId))return;
+  const kind=failed?pickupReturnFailureKind:returning?pickupReleaseKind:pickupCollectionKind;
+  const label=failed?'failed return':returning?'return handoff':'collection';
+  const savedMessage=failed?'Failed return saved. The vehicle is still in Crest custody. Reload Pickup travel to record a new return trip.':
+   returning?'Return handoff saved.':'Vehicle collection saved.';
   const active=new AbortController();request.current=active;
   let retained:PendingScheduling|null=null,confirmed=false;
-  const pendingStore=store();
-  setView({...view,busy:true,message:'Saving vehicle collection…'});
+  const pendingStore=store(kind);
+  setView({...view,busy:true,message:failed?'Saving failed return…':returning?'Saving return handoff…':'Saving vehicle collection…'});
   try{
    const proof=await authentication.session(active.signal),workspace=await scheduling.workspace(proof,active.signal);
    active.signal.throwIfAborted();
    if(workspace.context.businessId!==businessId||workspace.pickupCollectionAvailable!==true||workspace.context.writeState!=='ready'||
-    body.conditionPhotoId&&workspace.pickupPhotosAvailable!==true)
+    returning&&workspace.pickupReleaseAvailable!==true||photoId&&workspace.pickupPhotosAvailable!==true)
     throw new SchedulingClientError('recovery');
-   const pending=(Object.keys(pendingSchedulingKeys) as SchedulingOriginalKind[])
-    .some(kind=>createPendingSchedulingStore(storage,kind).read()!==null);
+   const pending=(Object.keys(pendingSchedulingKeys) as SchedulingOriginalKind[]).find(kind=>store(kind).read()!==null);
    if(pending){
-    setView({...initial,pending:true,message:'Review the interrupted scheduling save before recording collection.'});
+    setView({...initial,pending,message:'Review the interrupted scheduling save before recording the '+label+'.'});
     return;
    }
-   let input;
-   try{input=parsePickupCollectionSave({schemaVersion:1,businessId,jobId,jobVehicleId,expectedJobVersion:jobVersion,
-    operationId,recoveryEpoch:workspace.context.recoveryEpoch,pickupLegVersionId:context.arrival.versionId,policyId:context.policy.id,body});}
-   catch{throw new SchedulingClientError('input');}
-   if(input.body.effectiveAt<context.arrival.arrivedAt){
-    setView({...view,message:'Enter a collection time after the recorded pickup arrival.'});
+
+   if(!failed&&body.effectiveAt<arrival.arrivedAt){
+    setView({...view,message:returning?'Enter a handoff time after the recorded return arrival.':'Enter a collection time after the recorded pickup arrival.'});
     return;
    }
-   const original={schemaVersion:1 as const,businessId,binding:workspace.binding,reference:pickupCollectionOriginal(input).reference};
+   const common={schemaVersion:1,businessId,jobId,expectedJobVersion:jobVersion,operationId,recoveryEpoch:workspace.context.recoveryEpoch,body};
+   const returnInput={...common,collectionId:context.collection?.id,returnLegVersionId:arrival.versionId};
+   const prepared=(()=>{
+    try{
+     if(failed){
+      const input=parsePickupReturnFailureSave(returnInput);
+      return {reference:pickupReturnFailureOriginal(input).reference,submit:()=>scheduling.savePickupReturnFailure(input,proof,active.signal)};
+     }
+     if(returning){
+      const input=parsePickupReleaseSave(returnInput);
+      return {reference:pickupReleaseOriginal(input).reference,submit:()=>scheduling.savePickupRelease(input,proof,active.signal)};
+     }
+     const input=parsePickupCollectionSave({...common,jobVehicleId,pickupLegVersionId:arrival.versionId,policyId:context.policy!.id});
+     return {reference:pickupCollectionOriginal(input).reference,submit:()=>scheduling.savePickupCollection(input,proof,active.signal)};
+    }catch{throw new SchedulingClientError('input');}
+   })();
+   const original={schemaVersion:1 as const,businessId,binding:workspace.binding,reference:prepared.reference};
    pendingStore.write(original);retained=original;
-   const result=await scheduling.savePickupCollection(input,proof,active.signal);
+   const result=await prepared.submit();
    active.signal.throwIfAborted();
    if('state'in result){
     if(result.reason==='operation')throw Error();
     pendingStore.clear(retained);retained=null;
-    setView({...initial,message:result.reason==='photo'&&photosAvailable?'The photo does not match this handoff. Reload and verify a photo for this collection.':
-     conflicts[result.reason]??'The saved job changed. Reload before recording collection.'});
+    const message=result.reason==='photo'&&photosAvailable?'The photo does not match this handoff. Reload and verify a photo for the '+label+'.':
+     returning&&result.reason==='arrival'?'Return arrival could not be verified. Reload the saved job.':
+     returning&&result.reason==='released'?'This vehicle already has a saved return handoff. Reload to see it.':
+     result.reason==='failed'?'A failed handoff is already saved for this arrival. Reload to see it.':
+     conflicts[result.reason]??'The saved job changed. Reload before recording the '+label+'.';
+    setView({...initial,message});
     return;
    }
    confirmed=true;
    pendingStore.clear(retained);retained=null;
    const saved=await read(proof,active.signal);
-   if(saved.collection?.id!==result.result.receipt.sourceRecordId)throw Error();
-   setView({...initial,context:saved,message:'Vehicle collection saved.'});
+   if((failed?saved.returnFailure?.id:returning?saved.release?.id:saved.collection?.id)!==result.result.receipt.sourceRecordId)throw Error();
+   setView({...initial,context:saved,message:savedMessage});
   }catch(error){
    if(active.signal.aborted)return;
    if(retained&&error instanceof SchedulingClientError&&['input','not_submitted','recovery','limited'].includes(error.kind)){
     try{pendingStore.clear(retained);retained=null;}catch{/* Keep the original available for review. */}
    }
-   setView(retained?{...initial,pending:true,message:'The collection save could not be confirmed. Check Save review before trying again.'}:
-    confirmed?{...initial,message:'Vehicle collection saved. Reload to see the retained handoff.'}:
+   setView(retained?{...initial,pending:kind,message:'The '+label+' save could not be confirmed. Check Save review before trying again.'}:
+    confirmed?{...initial,message:savedMessage+' Reload collection to see the saved record.'}:
     {...view,busy:false,message:error instanceof SchedulingClientError&&error.kind==='input'?
-     'Check the required handoff details.':'Collection was not submitted. Check your sign-in and reload.'});
+     'Check the required handoff details.':(failed?'Failed return':returning?'Return handoff':'Collection')+' was not submitted. Check your sign-in and reload.'});
   }finally{finish(active);}
  }
- const context=view.context,collection=context?.collection;
+ const context=view.context,collection=context?.collection,release=context?.release;
  return <section ref={anchor} aria-label="Pickup vehicle collection">
   <h4>Pickup collection</h4>
   <button type="button" className="secondary" disabled={view.busy} onClick={()=>void load()}>{context?'Reload pickup collection':'Load pickup collection'}</button>
   <p ref={status} role="status" tabIndex={-1}>{view.message}</p>
   {view.signedOut&&<p><a href="/sign-in">Sign in</a></p>}
-  {view.pending&&<p><a href={'/save-review?kind='+pickupCollectionKind}>Open Save review</a></p>}
+  {view.pending&&<p><a href={'/save-review?kind='+view.pending}>Open Save review</a></p>}
   {(context?.state==='ready'||context?.state==='photo_required'&&photosAvailable)&&!view.pending&&canChange&&context.policy&&context.arrival&&
-   <CollectionForm policy={context.policy} arrival={context.arrival} timezone={timezone} busy={view.busy} save={save}
+   <HandoffForm policy={context.policy} arrival={context.arrival} timezone={timezone} busy={view.busy} save={save}
     businessId={businessId} jobVehicleId={jobVehicleId} jobVersion={jobVersion} photosAvailable={photosAvailable}/>}
+  {context?.state==='ready_to_release'&&releaseAvailable&&context.pickupReturnFailureAvailable&&!view.pending&&canChange&&
+   <FailedReturnForm key={context.returnArrival?.versionId} busy={view.busy} save={reason=>void save({reason},crypto.randomUUID())}/>}
+  {context?.state==='ready_to_release'&&releaseAvailable&&!view.pending&&canChange&&context.policy&&context.returnArrival&&collection&&
+   <HandoffForm policy={context.policy} arrival={context.returnArrival} timezone={timezone} busy={view.busy} save={save}
+    businessId={businessId} jobVehicleId={jobVehicleId} jobVersion={jobVersion} photosAvailable={photosAvailable} returnCollectionId={collection.id}/>}
   {collection&&<dl className="customer-values">
    <dt>Custody</dt><dd>{statusText[context.state]}</dd>
    <dt>Collected</dt><dd><time dateTime={collection.body.effectiveAt}>{formatTime(collection.body.effectiveAt,timezone)}</time></dd>
@@ -204,6 +266,20 @@ export function PickupCollection({businessId,jobId,jobVehicleId,jobVersion,timez
    {collection.body.acknowledgementConfirmed&&<><dt>Acknowledgement</dt><dd>{context.policy?.acknowledgementText}</dd></>}
    {collection.body.notes&&<><dt>Notes</dt><dd>{collection.body.notes}</dd></>}
   </dl>}
+  {context?.returnFailure&&<dl className="customer-values">
+   <dt>Last failed return</dt><dd><time dateTime={context.returnFailure.recordedAt}>{formatTime(context.returnFailure.recordedAt,timezone)}</time></dd>
+   <dt>Reason</dt><dd>{context.returnFailure.reason}</dd>
+  </dl>}
+  {release&&<dl className="customer-values">
+   <dt>Released</dt><dd><time dateTime={release.body.effectiveAt}>{formatTime(release.body.effectiveAt,timezone)}</time></dd>
+   <dt>Received by</dt><dd>{release.body.person.displayName}</dd>
+   <dt>Return handoff location</dt><dd>{release.body.location.locationText}</dd>
+   {release.body.missingPhotoReason&&<><dt>Missing return condition photo</dt><dd>{release.body.missingPhotoReason}</dd></>}
+   {release.body.notes&&<><dt>Return notes</dt><dd>{release.body.notes}</dd></>}
+  </dl>}
   {photosAvailable&&collection?.body.conditionPhotoId&&<DropoffPhotoViewer jobVehicleId={jobVehicleId} photoId={collection.body.conditionPhotoId}/>}
+  {photosAvailable&&release?.body.conditionPhotoId&&<section aria-label="Return condition evidence">
+   <DropoffPhotoViewer jobVehicleId={jobVehicleId} photoId={release.body.conditionPhotoId}/>
+  </section>}
  </section>;
 }

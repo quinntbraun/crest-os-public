@@ -16,6 +16,8 @@ const choices:ReadonlyArray<readonly [OriginalOperationKind,string]>=[
  ['operations.job.cancel_unfulfilled','Unfulfilled-work cancellation'],['operations.job.work_boundary.correct','Work-time correction'],['operations.job.work_start.correct','First work start correction'],['operations.job.work_end.correct','Completion time correction'],['operations.mobile_departure.correct','Mobile departure correction'],['operations.mileage.record','Mileage'],
  ['operations.pickup_custody.policy.save','Pickup handoff policy'],
  ['operations.pickup_custody.collect','Pickup vehicle collection'],
+ ['operations.pickup_custody.release','Vehicle return handoff'],
+ ['operations.pickup_custody.fail_return','Failed vehicle return'],
  ['operations.pickup_trip.record','Pickup trip'],['operations.support_trip.record','Support trip'],['operations.support_trip.correct','Support trip correction'],
  ['operations.message.record_outcome','Review message outcome'],['operations.follow_up.save','Maintenance reminder'],['operations.custody.save','Drop-Off handoff'],['operations.custody.policy.save','Drop-Off policy'],['operations.custody.policy.revise','Drop-Off policy revision']
 ];

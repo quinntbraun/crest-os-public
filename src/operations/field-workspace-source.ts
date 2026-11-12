@@ -29,7 +29,7 @@ import {parseFulfillmentModeCommitted} from './fulfillment-mode-contract.ts';
 import {formatDropoffCustodySources,formatPickupAndDropoffCustodySources} from './dropoff-custody-source.ts';
 import type {CustodySourceInput} from './dropoff-custody-source.ts';
 import type {PickupCustodySourceInput} from './pickup-custody-source.ts';
-import {pickupCollectionKind,pickupPolicyKind} from './pickup-custody-contract.ts';
+import {pickupCollectionKind,pickupPolicyKind,pickupReleaseKind,pickupReturnFailureKind} from './pickup-custody-contract.ts';
 import {dropoffPolicyRevisionKind} from './dropoff-custody-contract.ts';
 import {pickupTripKind} from './pickup-trip-contract.ts';
 
@@ -96,7 +96,8 @@ export function formatFieldWorkspaceSources(input:FieldWorkspaceSourceInput){
   for(const r of foundation.history.records){const body=JSON.parse(r.canonicalEvidence) as {row:Row},row=body.row;
    if(r.kind==='operation'){check(typeof row.operation_id==='string'&&!operations.has(row.operation_id));operations.set(row.operation_id,row);}else audits.push(row);
   }
-  if(!pickup)check(![...operations.values()].some(op=>op.command_type===pickupPolicyKind||op.command_type===pickupCollectionKind));
+  if(!pickup)check(![...operations.values()].some(op=>op.command_type===pickupPolicyKind||
+   op.command_type===pickupCollectionKind||op.command_type===pickupReleaseKind||op.command_type===pickupReturnFailureKind));
   const actorIds=new Set(foundation.requiredActorIds),configuration=foundation.configuration.records.map(r=>(JSON.parse(r.canonicalEvidence) as {row:Row}).row);
   const memberships=configuration.filter(r=>r.business_id===businessId&&typeof r.actor_id==='string');
   const memberIds=new Set(memberships.map(r=>r.actor_id));
@@ -176,18 +177,20 @@ export function formatFieldWorkspaceSources(input:FieldWorkspaceSourceInput){
      const job=jobs.get(link.job_id);
      check(job?.fulfillment_mode==='pickup_return');
     }
-    function arrival(jobId:unknown,jobVehicleId:unknown,legVersionId:unknown,operatorId:unknown,jobVersion:unknown){
+    function arrival(jobId:unknown,jobVehicleId:unknown,legVersionId:unknown,operatorId:unknown,jobVersion:unknown,
+     purpose:'pickup'|'return_to_customer'='pickup'){
      check(customerUuid(jobId)&&customerUuid(jobVehicleId)&&customerUuid(legVersionId));actor(operatorId);
      const job=jobs.get(jobId),vehicle=vehicles.get(jobVehicleId),leg=trips.get(legVersionId);
      check(job&&vehicle?.job_id===jobId&&job.operator_actor_id===operatorId&&pickupJobs.has(jobId)&&
-      leg?.job_context_id===jobId&&leg.purpose==='pickup'&&leg.state==='closed'&&leg.change_kind==='arrive'&&leg.operator_actor_id===operatorId);
+      leg?.job_context_id===jobId&&leg.purpose===purpose&&leg.state==='closed'&&leg.change_kind==='arrive'&&leg.operator_actor_id===operatorId);
      const original=operations.get(String(leg.operation_id));
      check(original?.command_type===pickupTripKind&&typeof original.result==='string');
      const observed=JSON.parse(original.result) as Row;object(observed.receipt);
      check(Array.isArray(observed.receipt.jobVehicleIds)&&observed.receipt.jobVehicleIds.includes(jobVehicleId));
      const versionAudit=chains.get('jobs:'+jobId)?.find(audit=>audit.entity_version===jobVersion);
      check(versionAudit);const historical=delta(versionAudit).after;object(historical);
-     check(historical.fulfillment_mode==='pickup_return'&&historical.operator_actor_id===operatorId&&historical.state==='scheduled');
+     check(historical.fulfillment_mode==='pickup_return'&&historical.operator_actor_id===operatorId&&
+      (purpose==='pickup'?historical.state==='scheduled':historical.state==='completed'||historical.state==='cancelled'));
      return {vehicle,leg};
     }
     for(const collection of pickup.rows.pickup_custody_collections){
@@ -199,7 +202,22 @@ export function formatFieldWorkspaceSources(input:FieldWorkspaceSourceInput){
      check(vehicle.vehicle_id===collection.vehicle_id&&typeof leg.arrived_at==='string'&&typeof collection.effective_at==='string'&&
       collection.effective_at>=leg.arrived_at);
     }
-    for(const slot of pickup.rows.pickup_photo_slots)arrival(slot.job_id,slot.job_vehicle_id,slot.arrival_version_id,slot.actor_id,slot.job_version);
+    for(const release of pickup.rows.pickup_custody_releases??[]){
+     const {vehicle,leg}=arrival(release.job_id,release.job_vehicle_id,release.return_leg_version_id,release.created_by,
+      release.job_version,'return_to_customer');
+     check(vehicle.vehicle_id===release.vehicle_id&&typeof leg.arrived_at==='string'&&typeof release.effective_at==='string'&&
+      release.effective_at>=leg.arrived_at);
+    }
+    const collections=new Map(pickup.rows.pickup_custody_collections.map(collection=>[collection.id,collection]));
+    for(const failure of pickup.rows.pickup_return_failures??[]){
+     const collection=collections.get(failure.collection_id);check(collection);
+     const {vehicle,leg}=arrival(collection.job_id,collection.job_vehicle_id,failure.return_leg_version_id,failure.created_by,
+      failure.job_version,'return_to_customer');
+     check(vehicle.vehicle_id===collection.vehicle_id&&typeof leg.arrived_at==='string'&&typeof failure.recorded_at==='string'&&
+      failure.recorded_at>=leg.arrived_at);
+    }
+    for(const slot of pickup.rows.pickup_photo_slots)arrival(slot.job_id,slot.job_vehicle_id,slot.arrival_version_id,slot.actor_id,
+     slot.job_version,slot.return_collection_id?'return_to_customer':'pickup');
    }
    for(const row of custody.rows.custody_events)actor(row.created_by);
    for(const operation of operations.values()){
@@ -236,13 +254,25 @@ export function formatFieldWorkspaceSources(input:FieldWorkspaceSourceInput){
     const historicalJob=delta(historicalJobAudit).after;
     object(historicalJob);
     const mode=input.commercial.bookings.rows.fulfillment_mode_versions.find(row=>row.id===historicalJob.mode_version_id);
+    const returning=departure.purpose==='return_to_customer';
     check(historicalJob.fulfillment_mode==='pickup_return'&&historicalJob.operator_actor_id===op.actor_id&&mode?.pickup_return_enabled===true&&
-     (historicalJob.state==='scheduled'||historicalJob.state==='cancelled'&&leg.change_kind==='cancel'));
+     (returning?historicalJob.state==='completed'||historicalJob.state==='cancelled':
+      historicalJob.state==='scheduled'||historicalJob.state==='cancelled'&&leg.change_kind==='cancel'));
     const targetIds=receipt.jobVehicleIds;check(Array.isArray(targetIds)&&targetIds.length>0);
+    const destination=parseHistoryJson(departure.destination_snapshot);
+    if(departure.purpose==='to_work_site')check(pickup&&historyJsonEqual(historicalJob.work_location_snapshot,destination));
     for(const targetId of targetIds){
      const target=input.commercial.bookings.rows.job_vehicles.find(row=>row.id===targetId);
-     check(target&&target.job_id===request.jobId&&typeof target.pickup_location_snapshot==='string'&&
-      historyJsonEqual(parseHistoryJson(target.pickup_location_snapshot),parseHistoryJson(departure.destination_snapshot)));
+     check(target&&target.job_id===request.jobId);
+     if(returning||departure.purpose==='to_work_site'){
+      const collected=pickup?.rows.pickup_custody_collections.find(row=>row.job_vehicle_id===targetId);
+      check(collected&&collected.job_id===request.jobId&&collected.vehicle_id===target.vehicle_id&&
+       typeof collected.recorded_at==='string'&&typeof departure.departed_at==='string'&&collected.recorded_at<=departure.departed_at);
+     }
+     if(departure.purpose!=='to_work_site'){
+      const saved=returning?target.return_location_snapshot:target.pickup_location_snapshot;
+      check(typeof saved==='string'&&historyJsonEqual(parseHistoryJson(saved),destination));
+     }
     }
     const all=audits.filter(a=>a.operation_id===id);
     ids([receipt.auditId],all.map(a=>a.id));actor(op.actor_id);usedOperations.add(id);
@@ -255,6 +285,22 @@ export function formatFieldWorkspaceSources(input:FieldWorkspaceSourceInput){
     const events=input.commercial.bookings.rows.job_events.filter(e=>e.operation_id===id);check(events.length===1);const event=events[0]!;
     check(receipt.jobId===event.job_id&&receipt.jobVersion===event.sequence);const evidence=parseHistoryJson(String(event.evidence));object(evidence);object(evidence.request);check(evidence.request.commandType===op.command_type&&evidence.request.businessId===businessId&&evidence.request.actorId===op.actor_id&&evidence.request.recoveryEpoch===op.recovery_epoch&&evidence.request.jobId===event.job_id);
     const job=chains.get('jobs:'+event.job_id)?.find(a=>a.operation_id===id);check(job&&job.entity_version===event.sequence);
+    if(op.command_type==='operations.job.field'&&receipt.action==='start_pickup'){
+     const started=delta(job).after;object(started);
+     check(started.fulfillment_mode==='pickup_return'&&typeof receipt.effectiveAt==='string'&&receipt.travelLegId===null&&receipt.travelOmissionRecorded===false);
+     const ready=new Set<string>();
+     for(const leg of field.rows.travel_legs){
+      if(leg.job_context_id!==event.job_id||leg.purpose!=='to_work_site'||leg.state!=='closed'||leg.change_kind!=='arrive'||
+       typeof leg.arrived_at!=='string'||leg.arrived_at>receipt.effectiveAt)continue;
+      const transport=operations.get(String(leg.operation_id));
+      check(transport?.command_type===pickupTripKind&&typeof transport.result==='string');
+      const observed=parseHistoryJson(transport.result);object(observed);object(observed.receipt);
+      check(Array.isArray(observed.receipt.jobVehicleIds)&&observed.receipt.jobVehicleIds.every(customerUuid));
+      for(const target of observed.receipt.jobVehicleIds)ready.add(target);
+     }
+     const booked=input.commercial.bookings.rows.job_vehicles.filter(row=>row.job_id===event.job_id);
+     check(booked.length>0&&booked.every(row=>customerUuid(row.id)&&ready.has(row.id)));
+    }
    }
    if(op.command_type==='operations.job.complete'){
     ids(receipt.allocationPlanIds,input.commercial.bookings.rows.allocation_plan_versions.filter(p=>p.operation_id===id).map(p=>p.id));ids(receipt.outcomeIds,field.rows.work_scope_outcomes.filter(o=>o.operation_id===id).map(o=>o.id));ids(receipt.finalizationTaskIds,field.rows.job_finalization_tasks.filter(t=>t.operation_id===id).map(t=>t.id));

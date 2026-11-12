@@ -192,7 +192,8 @@ jobs:
   authentication:
     name: Genuine authentication
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    # Keep the serial real-auth suite intact while allowing for runner variance.
+    timeout-minutes: 35
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"

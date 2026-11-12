@@ -4,7 +4,8 @@ import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
 const prefix='/api/business/scheduling/custody-photo/';
 const limit=25*1024*1024;
 type Scope=Readonly<{jobVehicleId:string;photoId:string}>;
-export type PickupPhotoBinding=Readonly<{arrivalVersionId:string;policyId:string;jobVersion:string}>;
+import type {PickupPhotoBinding} from '../operations/pickup-custody-contract.ts';
+export type {PickupPhotoBinding} from '../operations/pickup-custody-contract.ts';
 const types=['image/jpeg','image/png','image/heic'];
 export function conditionPhotoType(file:File){
  const extension=file.name.split('.').pop()?.toLowerCase();
@@ -28,7 +29,8 @@ async function json(route:string,proof:Proof,signal:AbortSignal,scope:Scope,body
 const jsonHeader={'content-type':'application/json'};
 export const dropoffPhotos=Object.freeze({
  async reserve(proof:Proof,signal:AbortSignal,input:Scope&{epoch:string;caseId:string;handoff:1|2;contentType:string;byteSize:number},pickup?:PickupPhotoBinding){
-  const value=await json(pickup?'reserve-pickup':'reserve',proof,signal,input,JSON.stringify({...input,...pickup}),jsonHeader);
+  const route=pickup?'collectionId'in pickup?'reserve-return':'reserve-pickup':'reserve';
+  const value=await json(route,proof,signal,input,JSON.stringify({...input,...pickup}),jsonHeader);
   if(!exact(value,['photoId']))throw Error('DROPOFF_PHOTO_UNCONFIRMED');
  },
  async upload(proof:Proof,signal:AbortSignal,scope:Scope,file:File,type:string){

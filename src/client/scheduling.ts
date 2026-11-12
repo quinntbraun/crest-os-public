@@ -45,9 +45,10 @@ import {maintenanceFollowUpConflicts,parseMaintenanceFollowUpAcknowledgement,par
  parseMaintenanceFollowUpHistoryQuery,parseMaintenanceFollowUpList,parseMaintenanceFollowUpListQuery,parseMaintenanceFollowUpSave} from '../operations/maintenance-follow-up-contract.ts';
 import type {MaintenanceFollowUpSave} from '../operations/maintenance-follow-up-contract.ts';
 import {parsePickupTripCommitted,parsePickupTripCursor,parsePickupTripPage,parsePickupTripSave,pickupTripConflicts} from '../operations/pickup-trip-contract.ts';
-import {parsePickupCollectionAcknowledgement,parsePickupCollectionContext,parsePickupCollectionSave,pickupCollectionConflicts,
+import {parsePickupReturnFailureAcknowledgement,parsePickupReturnFailureSave,pickupReturnFailureConflicts,parsePickupReleaseAcknowledgement,parsePickupReleaseSave,pickupReleaseConflicts,
+ parsePickupCollectionAcknowledgement,parsePickupCollectionContext,parsePickupCollectionSave,pickupCollectionConflicts,
  parsePickupPolicyAcknowledgement,parsePickupPolicyPage,parsePickupPolicySave,pickupPolicyConflicts} from '../operations/pickup-custody-contract.ts';
-import type {PickupCollectionSave,PickupPolicySave} from '../operations/pickup-custody-contract.ts';
+import type {PickupCollectionSave,PickupPolicySave,PickupReleaseSave,PickupReturnFailureSave} from '../operations/pickup-custody-contract.ts';
 import type {PickupTripCursor,PickupTripSave} from '../operations/pickup-trip-contract.ts';
 export {SchedulingClientError};
 function failure(error:unknown,kind:'input'|'unknown'|'unavailable'):never{throw error instanceof SchedulingClientError?error:new SchedulingClientError(kind);}
@@ -56,7 +57,7 @@ export const scheduling=Object.freeze({
  async workspace(proof:Proof,signal:AbortSignal){try{
   const r=await postScheduling('workspace',{},proof,signal),v=r.value;check(r.status===200&&exact(v,['schemaVersion','businessId','operatorId','timezone','modeVersion','writeState','recoveryEpoch'])&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding));
   const workspace=parseBookingWorkspace({schemaVersion:v.schemaVersion,businessId:v.businessId,operatorId:v.operatorId,timezone:v.timezone,modeVersion:v.modeVersion},v.businessId as string);check(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null);
-  return Object.freeze({...r.amendedSchedulingAvailable===true?{amendedSchedulingAvailable:true as const}:{},...r.fieldSessionAvailable===true?{fieldSessionAvailable:true as const}:{},...r.jobCompletionAvailable===true?{jobCompletionAvailable:true as const}:{},...r.jobMileageAvailable===true?{jobMileageAvailable:true as const}:{},...r.pickupPhotosAvailable===true?{pickupPhotosAvailable:true as const}:{},...r.pickupPolicyAvailable===true?{pickupPolicyAvailable:true as const}:{},...r.pickupCollectionAvailable===true?{pickupCollectionAvailable:true as const}:{},...r.pickupTripsAvailable===true?{pickupTripsAvailable:true as const}:{},...r.supportTripsAvailable===true?{supportTripsAvailable:true as const}:{},...r.unfulfilledCancellationAvailable===true?{unfulfilledCancellationAvailable:true as const}:{},...r.workTimeAvailable===true?{workTimeAvailable:true as const}:{},...r.workBoundaryAvailable===true?{workBoundaryAvailable:true as const}:{},...r.workStartAvailable===true?{workStartAvailable:true as const}:{},...r.workEndAvailable===true?{workEndAvailable:true as const}:{},...r.mobileDepartureAvailable===true?{mobileDepartureAvailable:true as const}:{},...r.reviewOutcomeAvailable===true?{reviewOutcomeAvailable:true as const}:{},...r.reviewHistoryAvailable===true?{reviewHistoryAvailable:true as const}:{},...r.maintenanceFollowUpAvailable===true?{maintenanceFollowUpAvailable:true as const}:{},...r.dropoffCustodyAvailable===true?{dropoffCustodyAvailable:true as const}:{},...r.dropoffPolicyRevisionAvailable===true?{dropoffPolicyRevisionAvailable:true as const}:{},context:Object.freeze({...workspace,...v.writeState==='ready'?{writeState:'ready' as const,recoveryEpoch:v.recoveryEpoch as string}:{writeState:'paused' as const,recoveryEpoch:null}}),binding:r.binding});
+  return Object.freeze({...r.pickupReturnsAvailable===true?{pickupReturnsAvailable:true as const}:{},...r.pickupReleaseAvailable===true?{pickupReleaseAvailable:true as const}:{},...r.amendedSchedulingAvailable===true?{amendedSchedulingAvailable:true as const}:{},...r.fieldSessionAvailable===true?{fieldSessionAvailable:true as const}:{},...r.jobCompletionAvailable===true?{jobCompletionAvailable:true as const}:{},...r.jobMileageAvailable===true?{jobMileageAvailable:true as const}:{},...r.pickupWorkAvailable===true?{pickupWorkAvailable:true as const}:{},...r.pickupPhotosAvailable===true?{pickupPhotosAvailable:true as const}:{},...r.pickupPolicyAvailable===true?{pickupPolicyAvailable:true as const}:{},...r.pickupCollectionAvailable===true?{pickupCollectionAvailable:true as const}:{},...r.pickupTripsAvailable===true?{pickupTripsAvailable:true as const}:{},...r.supportTripsAvailable===true?{supportTripsAvailable:true as const}:{},...r.unfulfilledCancellationAvailable===true?{unfulfilledCancellationAvailable:true as const}:{},...r.workTimeAvailable===true?{workTimeAvailable:true as const}:{},...r.workBoundaryAvailable===true?{workBoundaryAvailable:true as const}:{},...r.workStartAvailable===true?{workStartAvailable:true as const}:{},...r.workEndAvailable===true?{workEndAvailable:true as const}:{},...r.mobileDepartureAvailable===true?{mobileDepartureAvailable:true as const}:{},...r.reviewOutcomeAvailable===true?{reviewOutcomeAvailable:true as const}:{},...r.reviewHistoryAvailable===true?{reviewHistoryAvailable:true as const}:{},...r.maintenanceFollowUpAvailable===true?{maintenanceFollowUpAvailable:true as const}:{},...r.dropoffCustodyAvailable===true?{dropoffCustodyAvailable:true as const}:{},...r.dropoffPolicyRevisionAvailable===true?{dropoffPolicyRevisionAvailable:true as const}:{},context:Object.freeze({...workspace,...v.writeState==='ready'?{writeState:'ready' as const,recoveryEpoch:v.recoveryEpoch as string}:{writeState:'paused' as const,recoveryEpoch:null}}),binding:r.binding});
  }catch(e){failure(e,'unavailable');}},
  async reviewSlot(input:BookingConflictRequest,proof:Proof,signal:AbortSignal){let request:BookingConflictRequest;try{request=parseBookingConflictRequest(input);}catch{throw new SchedulingClientError('input');}try{const {businessId,...body}=request,r=await postScheduling('slot-review',body,proof,signal);check(r.status===200&&businessId===request.businessId);return parseBookingConflictReview(r.value,request);}catch(e){failure(e,'unavailable');}},
  async agreement(businessId:string,familyId:string,proof:Proof,signal:AbortSignal){try{check(uuid(businessId)&&uuid(familyId));const r=await postScheduling('agreement',{familyId},proof,signal);check(r.status===200);return parseBookingAgreement(r.value,businessId,familyId);}catch(e){failure(e,'unavailable');}},
@@ -78,8 +79,25 @@ export const scheduling=Object.freeze({
  async pickupCollection(businessId:string,jobId:string,jobVehicleId:string,proof:Proof,signal:AbortSignal){
   try{check(uuid(businessId)&&uuid(jobId)&&uuid(jobVehicleId));
    const response=await postScheduling('pickup-collection',{jobId,jobVehicleId},proof,signal);
-   check(response.status===200);return parsePickupCollectionContext(response.value,{businessId,jobId,jobVehicleId});
+   check(response.status===200);return {...parsePickupCollectionContext(response.value,{businessId,jobId,jobVehicleId}),
+    pickupReturnFailureAvailable:response.pickupReturnFailureAvailable===true};
   }catch(error){failure(error,'unavailable');}
+ },
+ async savePickupRelease(input:PickupReleaseSave,proof:Proof,signal:AbortSignal){
+  let request:PickupReleaseSave;
+  try{request=parsePickupReleaseSave(input);}catch{throw new SchedulingClientError('input');}
+  try{const {businessId,...body}=request,response=await postScheduling('pickup-release-save',body,proof,signal);
+   const clash=conflict(response.value,response.status,pickupReleaseConflicts);if(clash)return clash;
+   check(response.status===200&&businessId===request.businessId);return parsePickupReleaseAcknowledgement(response.value,request);
+  }catch(error){failure(error,'unknown');}
+ },
+ async savePickupReturnFailure(input:PickupReturnFailureSave,proof:Proof,signal:AbortSignal){
+  let request:PickupReturnFailureSave;
+  try{request=parsePickupReturnFailureSave(input);}catch{throw new SchedulingClientError('input');}
+  try{const {businessId,...body}=request,response=await postScheduling('pickup-return-failure-save',body,proof,signal);
+   const clash=conflict(response.value,response.status,pickupReturnFailureConflicts);if(clash)return clash;
+   check(response.status===200&&businessId===request.businessId);return parsePickupReturnFailureAcknowledgement(response.value,request);
+  }catch(error){failure(error,'unknown');}
  },
  async savePickupCollection(input:PickupCollectionSave,proof:Proof,signal:AbortSignal){
   let request:PickupCollectionSave;

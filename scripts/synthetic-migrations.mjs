@@ -111,6 +111,16 @@ export async function requireSyntheticPickupCustody(connectionString){
  ].map(signature=>'crest_commands.'+signature),'SYNTHETIC_PICKUP_CUSTODY_MIGRATION_REQUIRED','20261123180000');
 }
 
+export async function requireSyntheticPickupReturnWorkflow(connectionString){
+ const authority='bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid';
+ await requireSyntheticReader(connectionString,[
+  'release_pickup_vehicle('+authority+',uuid,uuid,integer,uuid,bigint,uuid,uuid,jsonb)',
+  'fail_pickup_return('+authority+',uuid,uuid,integer,uuid,bigint,uuid,uuid,jsonb)',
+  'reserve_pickup_return_photo('+authority+',uuid,uuid,uuid,uuid,uuid,uuid,bigint,text,integer)',
+  'list_pickup_returns('+authority+',timestamptz,uuid)'
+ ].map(signature=>'crest_commands.'+signature),'SYNTHETIC_PICKUP_RETURN_WORKFLOW_MIGRATION_REQUIRED','20261124180000');
+}
+
 async function requireSyntheticReader(connectionString,signature,missing,version){
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{

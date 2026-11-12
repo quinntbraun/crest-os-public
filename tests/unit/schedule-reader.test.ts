@@ -1,7 +1,7 @@
 import {it,expect,vi} from 'vitest';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {createScheduleReader,scheduleDateWindow} from '../../src/client/schedule-reader';
-import {scheduling} from '../../src/client/scheduling';
+import {scheduling,SchedulingClientError} from '../../src/client/scheduling';
 import {AuthenticationError} from '../../src/client/authentication';
 import {parseJobListPage} from '../../src/operations/confirmed-job-read-contract';
 import {parsePendingChangesPage} from '../../src/operations/booking-context-contract';
@@ -24,6 +24,21 @@ it('does not turn invalid dates into a successful empty schedule',async()=>{
 });
 it('clears already loaded private records when subsequent sign-in verification fails',async()=>{
  const {reader,session}=setup();await reader.load();expect(reader.view().rows).toHaveLength(1);session.mockRejectedValueOnce(new AuthenticationError('denied'));await reader.open(reader.view().rows[0]!.jobId);expect(reader.view()).toMatchObject({phase:'signed-out',rows:[],pending:[],selected:null,history:[],loaded:false});reader.dispose();
+});
+it('clears private records on a temporary schedule limit and recovers on an explicit access check',async()=>{
+ const {reader,api}=setup();
+ await reader.load();
+ expect(reader.view().rows).toHaveLength(1);
+ api.workspace.mockRejectedValueOnce(new SchedulingClientError('limited'));
+ await reader.open(reader.view().rows[0]!.jobId);
+ expect(reader.view()).toMatchObject({phase:'unavailable',rows:[],selected:null,loaded:false,
+  message:'Schedule requests are temporarily limited. Wait a minute, then check schedule access again.'});
+ expect(api.workspace).toHaveBeenCalledTimes(2);
+ await reader.load();
+ expect(reader.view()).toMatchObject({phase:'ready',loaded:true});
+ expect(reader.view().rows).toHaveLength(1);
+ expect(api.workspace).toHaveBeenCalledTimes(3);
+ reader.dispose();
 });
 it('ignores a late successful private response after the page is hidden',async()=>{
  const {reader,api}=setup();let resolvePage!:(value:Awaited<ReturnType<typeof scheduling.list>>)=>void;api.list.mockImplementationOnce(()=>new Promise(resolve=>{resolvePage=resolve;}));const loading=reader.load();await vi.waitFor(()=>expect(api.list).toHaveBeenCalledOnce());reader.suspend();resolvePage({schemaVersion:1,businessId:setup().f.q.businessId,jobs:[],hasMore:false});await loading;expect(reader.view()).toMatchObject({phase:'unavailable',rows:[],pending:[],selected:null,loaded:false,busy:false});expect(api.list).toHaveBeenCalledTimes(1);reader.dispose();

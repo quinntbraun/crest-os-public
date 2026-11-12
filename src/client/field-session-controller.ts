@@ -45,7 +45,7 @@ export function createFieldSessionController(deps:{mode?:FieldSessionMode;store:
  const emit=()=>{if(alive)deps.change(view());};
  const clear=()=>{resources=null;completion=null;summary=null;reviewOutcome=null;reviewOutcomeEnabled=false;openTrip=null;cancellation=null;rows=[];hasMore=false;savedJobId='';savedVersion='';};
  const live=(signal:AbortSignal)=>{if(!alive||signal.aborted||active?.signal!==signal)throw Error();};
- const same=(a:Context,b:Context)=>a.binding===b.binding&&a.context.businessId===b.context.businessId&&a.context.operatorId===b.context.operatorId&&a.context.writeState===b.context.writeState&&a.context.recoveryEpoch===b.context.recoveryEpoch&&a.fieldSessionAvailable===b.fieldSessionAvailable&&a.dropoffCustodyAvailable===b.dropoffCustodyAvailable&&(!completing||a.jobCompletionAvailable===b.jobCompletionAvailable&&a.reviewOutcomeAvailable===b.reviewOutcomeAvailable)&&(!interrupting||a.jobMileageAvailable===b.jobMileageAvailable)&&(!cancelling||a.unfulfilledCancellationAvailable===b.unfulfilledCancellationAvailable);
+ const same=(a:Context,b:Context)=>a.binding===b.binding&&a.context.businessId===b.context.businessId&&a.context.operatorId===b.context.operatorId&&a.context.writeState===b.context.writeState&&a.context.recoveryEpoch===b.context.recoveryEpoch&&a.fieldSessionAvailable===b.fieldSessionAvailable&&a.dropoffCustodyAvailable===b.dropoffCustodyAvailable&&a.pickupWorkAvailable===b.pickupWorkAvailable&&(!completing||a.jobCompletionAvailable===b.jobCompletionAvailable&&a.reviewOutcomeAvailable===b.reviewOutcomeAvailable)&&(!interrupting||a.jobMileageAvailable===b.jobMileageAvailable)&&(!cancelling||a.unfulfilledCancellationAvailable===b.unfulfilledCancellationAvailable);
  async function fresh(signal:AbortSignal){const proof=await session(signal);live(signal);const next=await api.workspace(proof,signal);live(signal);return {proof,next};}
  async function run(work:(signal:AbortSignal)=>Promise<void>,failed:(error:unknown)=>void){if(!alive||active)return;const controller=new AbortController();active=controller;emit();try{await work(controller.signal);}catch(error){if(alive&&!controller.signal.aborted&&active===controller)failed(error);}finally{if(active===controller){active=null;emit();}}}
  function unavailable(error:unknown){clear();context=null;phase=error instanceof AuthenticationError&&error.kind==='denied'?'signed-out':'unavailable';message=phase==='signed-out'?(completing?'Sign in to review completion.':'Sign in to review work status.'):'Current work or access could not be verified. Reload before continuing.';}
@@ -55,7 +55,7 @@ export function createFieldSessionController(deps:{mode?:FieldSessionMode;store:
   const ref=original(),saved='state'in result?null:parseFieldOriginalResult(result,ref);if(saved&&saved.state!=='committed')throw Error();
   const confirmed=()=>{if(saved?.state==='committed'){savedJobId=ref.commandType===reviewOutcomeKind?ref.reference.jobId:saved.receipt.subjectId;savedVersion=ref.commandType===reviewOutcomeKind?'':saved.receipt.sourceVersion;}};
   try{pendingStore().clear(pending);}catch{clear();confirmed();phase='pending';message=saved?'The server confirmed the action was saved. Local reference cleanup could not be verified. Check Save review before another action.':'No action was saved. Local reference cleanup could not be verified. Check Save review.';return;}
-  pending=null;clear();context=null;if(!saved){phase='review';message='state'in result&&result.reason==='custody'?'Record intake for every booked vehicle before starting work. No work action was saved.':'The saved job or work status changed. No action was saved. Reload before continuing.';return;}
+  pending=null;clear();context=null;if(!saved){phase='review';message='state'in result&&result.reason==='custody'?(ref.commandType==='operations.job.field'&&ref.reference.action==='start_pickup'?'Record work-site arrival for every booked vehicle before starting work. No work action was saved.':'Record intake for every booked vehicle before starting work. No work action was saved.'):'The saved job or work status changed. No action was saved. Reload before continuing.';return;}
   confirmed();phase='committed';
   message=ref.commandType===reviewOutcomeKind?'Review message outcome saved.':completing?'Job completion saved.':interrupting?'Trip interruption saved. Open the job to review the current appointment and history.':cancelling?'Job cancelled. Open the job to review its saved history.':'Work status saved. Open the job to reload its current status and history.';
  }
@@ -127,7 +127,8 @@ export function createFieldSessionController(deps:{mode?:FieldSessionMode;store:
   const job=saved.head.job;
   const mobile=job.fulfillment_mode==='mobile'&&['scheduled','en_route','in_progress','paused'].includes(job.state);
   const dropoff=mode==='work'&&next.dropoffCustodyAvailable===true&&job.fulfillment_mode==='dropoff'&&['scheduled','in_progress','paused'].includes(job.state);
-  if((!mobile&&!dropoff)||job.operator_actor_id!==next.context.operatorId){phase='blocked';message='Open a supported active job assigned to you to record work.';return;}
+  const pickup=mode==='work'&&next.pickupWorkAvailable===true&&job.fulfillment_mode==='pickup_return'&&['scheduled','in_progress','paused'].includes(job.state);
+  if((!mobile&&!dropoff&&!pickup)||job.operator_actor_id!==next.context.operatorId){phase='blocked';message='Open a supported active job assigned to you to record work.';return;}
   if(interrupting){
    if(next.jobMileageAvailable!==true||job.state!=='en_route'){phase='blocked';message='Open an en-route Mobile job to record a trip interruption.';return;}
    const trips=await api.mileageTrips({businessId:next.context.businessId,jobId,after:null,pageSize:25},proof,signal);live(signal);
@@ -135,6 +136,12 @@ export function createFieldSessionController(deps:{mode?:FieldSessionMode;store:
    if(open.length!==1){phase='blocked';message='The open trip could not be verified. Reload the job before making any change.';return;}
    openTrip=open[0]!;resources=saved;phase='ready';message='Saved open trip loaded.';
    return;
+  }
+  if(pickup&&job.state==='scheduled'){
+   const travel=await api.pickupTrips(next.context.businessId,job.id,{beforeDepartedAt:null,beforeLegId:null},proof,signal);live(signal);
+   if(travel.state!=='loaded'||travel.jobVersion!==job.version||travel.worksiteReady!==true||travel.activeLegId!==null){
+    phase='blocked';message='Record work-site arrival for every booked vehicle before starting work.';return;
+   }
   }
   resources=saved;if(mobile&&job.state==='scheduled'){const page=await vehicleApi.list(next.context.businessId,{search:'',afterId:null,includeArchived:false,pageSize:50},proof,signal);live(signal);rows=page.vehicles;hasMore=page.hasMore;}
   phase='ready';message=next.context.writeState==='ready'?'Saved job loaded. Record what is happening now.':'Changes are paused. Saved work is available for review.';
@@ -152,7 +159,7 @@ export function createFieldSessionController(deps:{mode?:FieldSessionMode;store:
    request=parseFieldSessionSave({schemaVersion:1,businessId:prior.context.businessId,operationId:id(),recoveryEpoch:prior.context.recoveryEpoch,jobId:job.id,expectedJobVersion:job.version,body});
    const selected=request.body.action==='depart'?request.body.trip.drivenVehicleId:null;
    if(selected&&!rows.some(row=>row.id===selected))throw Error();
-   const allowed={scheduled:job.fulfillment_mode==='dropoff'?['start_dropoff']:['depart','direct_arrive'],en_route:['arrive'],in_progress:['pause'],paused:['resume']};
+   const allowed={scheduled:job.fulfillment_mode==='pickup_return'?['start_pickup']:job.fulfillment_mode==='dropoff'?['start_dropoff']:['depart','direct_arrive'],en_route:['arrive'],in_progress:['pause'],paused:['resume']};
    if(!Object.hasOwn(allowed,job.state)||!allowed[job.state as keyof typeof allowed].includes(request.body.action))throw Error();
   }catch{message='Review the action, actual vehicle and required details. No request was submitted.';emit();return Promise.resolve();}
   return submit(prior,fieldSessionOriginal(request),(proof,signal)=>api.saveFieldSession(request,proof,signal));

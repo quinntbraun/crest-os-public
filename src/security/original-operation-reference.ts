@@ -14,7 +14,7 @@ export function isReviewOutcomeAction(value:unknown):value is ReviewOutcomeActio
 }
 type Common=Readonly<{operationId:string;recoveryEpoch:string}>;
 type Targets={
- 'operations.job.field':Readonly<{jobId:string;expectedJobVersion:string;action:'depart'|'arrive'|'direct_arrive'|'start_dropoff'|'pause'|'resume'}>;
+ 'operations.job.field':Readonly<{jobId:string;expectedJobVersion:string;action:'depart'|'arrive'|'direct_arrive'|'start_dropoff'|'start_pickup'|'pause'|'resume'}>;
  'operations.job.complete':Readonly<{jobId:string;expectedJobVersion:string}>;
  'operations.job.interrupt':Readonly<{jobId:string;expectedJobVersion:string;action:'cancel'|'reschedule'}>;
  'operations.job.cancel_unfulfilled':Readonly<{jobId:string;expectedJobVersion:string}>;
@@ -30,6 +30,8 @@ type Targets={
  'operations.mileage.record':Readonly<{legId:string;expectedLegVersionId:string;expectedEvidenceVersion:string}>;
  'operations.support_trip.record':Readonly<{legId:string;expectedLegVersionId:string|null;action:'depart'|'arrive'|'cancel'}>;
  'operations.pickup_custody.policy.save':Readonly<{expectedSequence:string}>;
+ 'operations.pickup_custody.release':Readonly<{jobId:string;expectedJobVersion:string;collectionId:string;returnLegVersionId:string}>;
+ 'operations.pickup_custody.fail_return':Readonly<{jobId:string;expectedJobVersion:string;collectionId:string;returnLegVersionId:string}>;
  'operations.pickup_custody.collect':Readonly<{jobId:string;expectedJobVersion:string;jobVehicleId:string;pickupLegVersionId:string;policyId:string}>;
  'operations.pickup_trip.record':Readonly<{jobId:string;expectedJobVersion:string;legId:string;expectedLegVersionId:string|null;action:'depart'|'arrive'|'cancel'}>;
  'operations.support_trip.correct':Readonly<{legId:string;expectedLegVersionId:string|null;action:'record'|'correct'}>;
@@ -99,6 +101,8 @@ const fields={
  'operations.mileage.record':['legId','expectedLegVersionId','expectedEvidenceVersion'],
  'operations.support_trip.record':['legId','expectedLegVersionId','action'],
  'operations.pickup_custody.policy.save':['expectedSequence'],
+ 'operations.pickup_custody.release':['jobId','expectedJobVersion','collectionId','returnLegVersionId'],
+ 'operations.pickup_custody.fail_return':['jobId','expectedJobVersion','collectionId','returnLegVersionId'],
  'operations.pickup_custody.collect':['jobId','expectedJobVersion','jobVehicleId','pickupLegVersionId','policyId'],
  'operations.pickup_trip.record':['jobId','expectedJobVersion','legId','expectedLegVersionId','action'],
  'operations.support_trip.correct':['legId','expectedLegVersionId','action'],
@@ -162,8 +166,8 @@ export function parseOriginalOperationReference(value:unknown):OriginalOperation
    else if(key==='arrivalVersionId'&&kind==='operations.job.work_start.correct')require(ref[key]===null||uuid(ref[key]));
    else if(key!=='action'&&key!=='nextAssociationId')require(uuid(ref[key]));
   }
-  if(['operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.pickup_trip.record','operations.pickup_custody.collect'].includes(kind))require(BigInt(ref.expectedJobVersion as string)<9223372036854775807n);
-  if(kind==='operations.job.field')require(['depart','arrive','direct_arrive','start_dropoff','pause','resume'].includes(ref.action as string));
+  if(['operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.pickup_trip.record','operations.pickup_custody.collect','operations.pickup_custody.release','operations.pickup_custody.fail_return'].includes(kind))require(BigInt(ref.expectedJobVersion as string)<9223372036854775807n);
+  if(kind==='operations.job.field')require(['depart','arrive','direct_arrive','start_dropoff','start_pickup','pause','resume'].includes(ref.action as string));
   if(kind==='operations.job.interrupt')require(['cancel','reschedule'].includes(ref.action as string));
   if(kind==='operations.job.work_boundary.correct')require(ref.leftVersionId!==ref.rightVersionId);
   if(kind==='operations.job.work_start.correct')require(ref.workVersionId!==ref.arrivalVersionId&&BigInt(ref.expectedJobVersion as string)<9223372036854775807n);

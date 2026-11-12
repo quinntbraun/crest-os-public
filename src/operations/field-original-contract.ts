@@ -1,7 +1,7 @@
 import {customerUuid as uuid,customerVersion as version,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {parseOriginalOperationReference} from '../security/original-operation-reference.ts';
 import type {OriginalOperationReference} from '../security/original-operation-reference.ts';
-export const fieldOriginalKinds=['operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.job.work_boundary.correct','operations.job.work_start.correct','operations.job.work_end.correct','operations.mobile_departure.correct','operations.message.record_outcome','operations.follow_up.save','operations.custody.save','operations.custody.policy.save','operations.custody.policy.revise','operations.mileage.record','operations.support_trip.record','operations.support_trip.correct','operations.pickup_trip.record','operations.pickup_custody.collect','operations.pickup_custody.policy.save'] as const;
+export const fieldOriginalKinds=['operations.job.field','operations.job.complete','operations.job.interrupt','operations.job.cancel_unfulfilled','operations.job.work_boundary.correct','operations.job.work_start.correct','operations.job.work_end.correct','operations.mobile_departure.correct','operations.message.record_outcome','operations.follow_up.save','operations.custody.save','operations.custody.policy.save','operations.custody.policy.revise','operations.mileage.record','operations.support_trip.record','operations.support_trip.correct','operations.pickup_trip.record','operations.pickup_custody.collect','operations.pickup_custody.release','operations.pickup_custody.fail_return','operations.pickup_custody.policy.save'] as const;
 export type FieldOriginalKind=typeof fieldOriginalKinds[number];
 export type FieldOriginal=Extract<OriginalOperationReference,{commandType:FieldOriginalKind}>;
 export class FieldOriginalError extends Error{constructor(){super('FIELD_ORIGINAL_REVIEW_REQUIRED');this.name='FieldOriginalError';}}
@@ -61,6 +61,9 @@ export function parseFieldOriginalResult(value:unknown,input:FieldOriginal){
  else if(original.commandType==='operations.pickup_custody.policy.save'){
   check(r.subjectId===original.businessId&&r.sourceRecordId===ref.operationId&&
    BigInt(r.sourceVersion)===BigInt(original.reference.expectedSequence)+1n&&r.sourceAuditIds.length===1);
+ }
+ else if(original.commandType==='operations.pickup_custody.release'||original.commandType==='operations.pickup_custody.fail_return'){
+  check(r.subjectId===original.reference.collectionId&&r.sourceRecordId===ref.operationId&&r.sourceVersion==='1'&&r.sourceAuditIds.length===1);
  }
  else if(original.commandType==='operations.pickup_custody.collect'){
   check(r.subjectId===original.reference.jobVehicleId&&r.sourceRecordId===ref.operationId&&r.sourceVersion==='1'&&r.sourceAuditIds.length===1);
