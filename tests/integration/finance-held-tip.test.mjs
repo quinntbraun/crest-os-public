@@ -19,6 +19,7 @@ import { captureHeldTipSource } from '../../src/bookkeeping/held-tip-source.ts';
 import { captureFinanceSourceExport } from '../../src/bookkeeping/finance-source-export.ts';
 import { verifyFinanceSourceExport } from '../../src/tooling/verify-finance-source-export.ts';
 import { readSourceExportCsv } from '../../src/security/source-export-csv-reader.ts';
+import { exerciseNeutralFinanceImport } from '../support/neutral-finance-import.mjs';
 import { parseFictionalJournalV4, parseFictionalTrialBalanceV4 } from '../../src/bookkeeping/posted-report-v4-contract.ts';
 
 async function command(connection, name, values) {
@@ -477,6 +478,15 @@ test('held P06 realizes exact funds and restores its audited tip and tax posting
     const manifest=JSON.parse(captured.combined.manifest);
     const verified=verifyFinanceSourceExport(captured.combined.manifest,captured.combined.files,owner.business);
     assert.equal(verified.profile,'crest.posted-finance-source.v4');
+    const neutral=await sandbox.connect(await sandbox.database());
+    try {
+      const rebuilt=await exerciseNeutralFinanceImport(neutral,captured.combined.files,owner.business);
+      assert.equal(rebuilt.tables,27);
+      assert.equal(rebuilt.sourceRows,verified.sourceRows);
+      assert.equal(rebuilt.entries,verified.balancedJournalEntries);
+      assert.equal(rebuilt.debit,verified.debitCents);
+      assert.equal(rebuilt.credit,verified.creditCents);
+    } finally {await neutral.end();}
     assert.equal(manifest.sourceTokens.tip,captured.tip.snapshotToken);
     assert.equal(manifest.rowCounts.tip_realizations,expectedTips);
     const find=name=>captured.combined.files.find(part=>part.name===name).content;

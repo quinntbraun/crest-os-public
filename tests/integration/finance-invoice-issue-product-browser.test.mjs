@@ -10,12 +10,13 @@ const directReceipts=true;
 const paymentCorrections=process.env.CREST_TEST_PAYMENT_CORRECTIONS==='1';
 const fundApplications=process.env.CREST_TEST_FUND_APPLICATIONS==='1';
 const heldTips=process.env.CREST_TEST_HELD_TIPS==='1';
+const invoiceCredits=process.env.CREST_TEST_INVOICE_CREDITS==='1';
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
   financeAccounts:true,financeMappings:true,financeTaxProfiles:true,invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,
   financeMoneyChannels:directReceipts,directReceipts,...paymentCorrections?{
-   expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,fundApplications,heldTips,
+   expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,fundApplications,heldTips,invoiceCredits,
   }:{}});
  let browser;
  const financeResponses=[];
@@ -368,6 +369,61 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
         await expect(payments).toContainText('$160.00 due');
        }
+       if(invoiceCredits){
+        await allowInvoiceReadWindow();
+        await invoice.getByText('Credit an invoice line',{exact:true}).press('Enter');
+        const credit=invoice.getByRole('region',{name:'Credit an invoice line',exact:true});
+        await credit.getByRole('button',{name:'Load credit options',exact:true}).press('Enter');
+        await expect(credit.getByRole('status')).toContainText('Review the credit');
+        await expect(credit).toContainText('Maximum credit · $160.00');
+        const amount=credit.getByLabel('Credit amount (USD)',{exact:true});
+        const save=credit.getByRole('button',{name:'Save invoice credit',exact:true});
+        await amount.fill('160.01');
+        await expect(amount).toHaveAttribute('aria-invalid','true');
+        await expect(save).toBeDisabled();
+        await amount.fill('11.00');
+        await credit.getByLabel('Reason for the credit',{exact:true}).fill('Fictional owner approved a line credit');
+        await expect(credit.getByLabel('Credit preview')).toContainText('$11.00');
+        await expect(credit.getByLabel('Credit preview')).toContainText('$1.00');
+        for(const width of [360,390,768,1440]){
+         await page.setViewportSize({width,height:900});
+         await save.evaluate(button=>button.scrollIntoView({block:'center'}));
+         assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+         const audit=await new AxeBuilder({page}).include('.invoice-credit').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+         assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
+         await page.screenshot({path:'.local/review/finance-invoice-credit-'+name+'-'+width+'.png'});
+        }
+        let posted=false;
+        await page.route('**/api/business/finance-accounts/invoice-credit-submit',async route=>{
+         const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+         if(response.status()===200){posted=true;await route.abort('failed');}
+         else await route.fulfill({response});
+        },{times:1});
+        await save.press('Enter');
+        await expect(credit.getByRole('status')).toContainText('outcome could not be confirmed');
+        assert(posted);
+        const stored=await page.evaluate(()=>sessionStorage.getItem('crest.invoice-credit.pending-reference.v1'));
+        assert(stored&&!stored.includes('Fictional')&&!stored.includes('1100'));
+        assert.deepEqual(Object.keys(JSON.parse(stored).reference).sort(),['invoiceCreditId','operationId','recoveryEpoch']);
+        await allowInvoiceReadWindow();
+        await page.reload();
+        await draftDisclosure.click();
+        await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+        await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
+        await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+        await expect(draftStatus).toHaveText('Issued invoice loaded.');
+        await invoice.getByText('Credit an invoice line',{exact:true}).press('Enter');
+        await credit.getByRole('button',{name:'Load credit options',exact:true}).press('Enter');
+        await expect(credit.getByRole('status')).toHaveText('The original credit was saved.');
+        assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.invoice-credit.pending-reference.v1')),null);
+        const receipt=page.waitForEvent('download');
+        await credit.getByRole('button',{name:'Download invoice credit (CSV)',exact:true}).click();
+        assert.match(await readFile(await (await receipt).path(),'utf8'),/"1100","100","Fictional owner approved/);
+        await allowInvoiceReadWindow();
+        await invoice.getByText('Record a fictional payment',{exact:true}).click();
+        await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
+        await expect(payments).toContainText('$149.00 due');
+       }
        await page.goto(fixture.origin+'/settings/accounts');
        await page.getByRole('button',{name:'Load accounts',exact:true}).click();
        await page.getByText('Fictional trial balance',{exact:true}).click();
@@ -381,6 +437,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        await expect(report).toContainText('Customer funds held');
        if(fundApplications)await expect(report).toContainText('Invoice balance reduced');
        if(heldTips)await expect(report).toContainText('Held tip · Tip revenue');
+       if(invoiceCredits)await expect(report).toContainText('Invoice credit · Sales returns');
       }
      }
     }
@@ -391,4 +448,4 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await browser?.close();
   await fixture.close();
  }
-},{timeout:480000});
+},{timeout:invoiceCredits?720000:480000});
