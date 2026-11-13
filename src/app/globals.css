@@ -85,9 +85,15 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .workspace-purpose { color:#d2cec4; font-size:.875rem; margin:0; }
 .workspace-test-notice { margin:0; padding:.65rem 1.5rem; font-size:.8125rem; line-height:1.5; background:#eee7d6; color:#554218; border-bottom:1px solid var(--line); }
 .workspace-menu { margin-left:auto; position:relative; }
-.workspace-menu summary { min-height:44px; cursor:pointer; font-size:.875rem; padding:.75rem .25rem; }
-.workspace-menu nav { position:absolute; right:0; top:100%; z-index:10; background:var(--paper); border:1px solid var(--line); padding:.5rem; width:15rem; max-height:min(60dvh,30rem); overflow-y:auto; border-radius:var(--radius); box-shadow:0 6px 18px #0000001a; }
-.workspace-menu a { display:flex; align-items:center; min-height:44px; padding:.5rem .75rem; color:var(--ink); }
+.workspace-menu summary { min-height:44px; cursor:pointer; font-weight:600; padding:.625rem .75rem; border:1px solid #686051; border-radius:var(--radius); }
+.workspace-menu[open] summary { color:var(--black); background:var(--gold); border-color:var(--gold); }
+.workspace-menu nav { position:absolute; right:0; top:calc(100% + .5rem); z-index:30; color:var(--ink); background:var(--paper); border:1px solid var(--line); padding:.5rem; width:min(20rem,calc(100vw - 2rem)); max-height:min(70dvh,38rem); overflow-y:auto; border-radius:var(--radius); box-shadow:0 6px 18px #0000001a; }
+.workspace-menu-group + .workspace-menu-group { border-top:1px solid var(--line); margin-top:.25rem; padding-top:.25rem; }
+.workspace-menu-group p { margin:0; padding:.5rem .75rem .25rem; color:var(--muted); font-size:.875rem; font-weight:600; }
+.workspace-menu-group ul { margin:0; padding:0; list-style:none; }
+.workspace-menu a { display:flex; align-items:center; min-height:44px; padding:.5rem .75rem; color:var(--ink); text-decoration:none; border-radius:var(--radius); }
+.workspace-menu a:hover,.workspace-menu a[aria-current] { background:var(--canvas); }
+.workspace-menu a[aria-current] { box-shadow:inset 3px 0 var(--gold-ink); font-weight:600; }
 .workspace-destinations { display:flex; gap:.25rem; background:var(--paper); border-bottom:1px solid var(--line); padding:.25rem 1.5rem; }
 .workspace-destinations a { color:var(--muted); text-decoration:none; padding:.5rem 1rem; border-bottom:3px solid transparent; font-weight:600; }
 .workspace-destinations a[aria-current] { color:var(--ink); border-bottom-color:var(--gold-ink); }
