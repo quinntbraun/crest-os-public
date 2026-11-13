@@ -36,6 +36,15 @@ import {
 import {parseInvoicePreparation} from './invoice-preparation-contract.ts';
 import {parseInvoiceDraftInput,parseInvoiceDraftOperation,parseInvoiceDraftPage,parseInvoiceDraftRead,parseInvoiceDraftReference} from './invoice-draft-contract.ts';
 
+import {parseInvoiceIssueReadiness,parseInvoiceIssueTaxRequest} from './invoice-issue-tax-review-contract.ts';
+import {parseInvoiceIssueReference,parseInvoiceIssueRequest,parseInvoiceIssueResult,parseIssuedInvoice,
+ parseReviewedInvoiceIssue} from './issued-invoice-contract.ts';
+import {invoiceTaxJurisdiction,parseInvoiceTaxMappingApproval,parseInvoiceTaxMappingEditor,parseInvoiceTaxMappingReference,parseInvoiceTaxMappingResult}
+ from './invoice-tax-payable-contract.ts';
+import {parseInvoiceExemptionApproval,parseInvoiceExemptionEditor,parseInvoiceExemptionResult,parseInvoiceExemptionTarget}
+ from './invoice-exemption-contract.ts';
+import {parseInvoiceSetupRead,parseInvoiceSetupResult,parseInvoiceSetupWrite} from './invoice-setup-contract.ts';
+
 export const financeAccountPrefix='/api/business/finance-accounts/';
 const fields={context:[],list:['afterCode','includeArchived'],history:['accountId','afterVersion'],
  operation:['operationId','recoveryEpoch','accountId','expectedVersion'],save:['reference','draft'],
@@ -50,7 +59,19 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
  'channel-list':['afterChannel'], 'channel-history':['channelId','beforeVersion'],
  'channel-accounts':['kind','ownershipScope','afterCode'], 'channel-lookup':['operationId','recoveryEpoch','channelId','expectedVersion'],
  'channel-save':['reference','draft'], 'channel-retire':['reference','reviewEpoch','reason'],
- 'invoice-preparation':['jobId'],
+ 'invoice-preparation':['jobId'], 'invoice-issue-tax-review':['draftId','revision','jurisdictions'],
+ 'invoice-issue-prepare':['draftId','revision','jurisdictions'],
+ 'invoice-issue-submit':['reference','jurisdictions','reviewDigest'],
+ 'invoice-issue-lookup':['operationId','recoveryEpoch','draftId','revision'],
+ 'invoice-issue-retire':['reference','reviewEpoch','reason'],
+ 'invoice-issue-read':['draftId'],
+ 'invoice-issue-tax-mapping-read':['jurisdiction'],
+ 'invoice-issue-tax-mapping-approve':['approval'],
+ 'invoice-issue-tax-mapping-lookup':['operationId','recoveryEpoch','jurisdiction','expectedVersion'],
+ 'invoice-issue-exemption-read':['draftId','draftRevision','outcomeId','jurisdiction','profileId'],
+ 'invoice-issue-exemption-approve':['approval'],
+ 'invoice-setup-read':['requestedOn'],
+ 'invoice-setup-save':['operationId','recoveryEpoch','request'],
  'invoice-draft-list':['jobId','afterDraft'], 'invoice-draft-read':['draftId','revision'],
  'invoice-draft-lookup':['operationId','recoveryEpoch','draftId','jobId','expectedRevision'],
  'invoice-draft-save':['reference','draft'], 'invoice-draft-retire':['reference','reviewEpoch','reason']} as const;
@@ -64,10 +85,10 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false}:Readonly<{
-  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false}:Readonly<{
+  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;
  }>={}){
- check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation));
+ check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings));
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
@@ -86,11 +107,14 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    const url=new URL(request.url),route=url.pathname.slice(financeAccountPrefix.length) as keyof typeof fields;
    if(url.search||url.hash||!url.pathname.startsWith(financeAccountPrefix)||!Object.hasOwn(fields,route))return financeAccountFailure(404);
    if(!fixedMappings&&route.startsWith('mapping-')||!taxProfiles&&route.startsWith('tax-')||!moneyChannels&&route.startsWith('channel-')||!invoicePreparation&&route==='invoice-preparation'||!invoiceDrafts&&route.startsWith('invoice-draft-'))return financeAccountFailure(404);
+   if(route==='invoice-issue-tax-review'&&!invoiceIssueTaxReview)return financeAccountFailure(404);
+   if(route.startsWith('invoice-issue-')&&route!=='invoice-issue-tax-review'&&!invoiceIssue)return financeAccountFailure(404);
+   if(route.startsWith('invoice-setup-')&&!invoiceIssue)return financeAccountFailure(404);
    if(request.method!=='POST')return financeAccountFailure(405);
    protect.requireOrigin(request);
    const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;
    check(cookie);
-   const input=await readNestedJsonBody(bounded,fields[route],8192);
+   const input=await readNestedJsonBody(bounded,fields[route],route.startsWith('invoice-issue-')?131072:8192);
    const sessionId=await csrf(bounded,cookie,signal);
    const binding=createHash('sha256').update('crest.finance.account.edit.v1\0').update(businessId).update('\0')
     .update(sessionId).digest('base64url');
@@ -109,6 +133,8 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     if(moneyChannels)response.headers.set('X-Crest-Finance-Money-Channels','1');
     if(invoicePreparation)response.headers.set('X-Crest-Invoice-Preparation','1');
     if(invoiceDrafts)response.headers.set('X-Crest-Invoice-Drafts','1');
+    if(invoiceIssueTaxReview)response.headers.set('X-Crest-Invoice-Issue-Tax-Review','1');
+    if(invoiceIssue)response.headers.set('X-Crest-Invoice-Issue','1');
     return response;
    }
    credentialHash=sessionCredentialHash(cookie);
@@ -116,12 +142,131 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    check(!signal.aborted&&sessionId===verified.sessionId);
    const args=[credentialHash,sessionId,verified.actorId,verified.provider.issuer,verified.provider.subject,
     verified.provider.sessionId,new Date(verified.provider.expiresAt),businessId];
+   if(route==='invoice-setup-read'){
+    check(input.requestedOn===null||customerDate(input.requestedOn));
+    const value=await database('SELECT crest_commands.read_fictional_invoice_setup('+authority+',$9::date) AS result',
+     [...args,input.requestedOn],signal);
+    parseInvoiceSetupRead(value,businessId,input.requestedOn);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='invoice-setup-save'){
+    const write=parseInvoiceSetupWrite(input);
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.configure_fictional_invoice_setup('+authority+',$9::uuid,$10::uuid,$11::jsonb) AS result',
+      [...args,write.recoveryEpoch,write.operationId,write.request]);
+     const parsed=parseInvoiceSetupResult(value,businessId,write);
+     return {value:value as object,state:parsed.state};
+    },signal);
+    return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
    if(route==='invoice-preparation'){
     check(customerUuid(input.jobId));
     const value=await database('SELECT crest_commands.read_invoice_preparation('+authority+',$9::uuid) AS result',
      [...args,input.jobId],signal);
     parseInvoicePreparation(value,businessId,input.jobId);
     return privateJsonResponse(value as object);
+   }
+   if(route==='invoice-issue-tax-review'){
+    const review=parseInvoiceIssueTaxRequest(input);
+    const value=await database('SELECT crest_commands.review_invoice_issue_accounts('+authority+',$9::uuid,$10::bigint,$11::jsonb) AS result',
+     [...args,review.draftId,review.revision,review.jurisdictions],signal);
+    parseInvoiceIssueReadiness(value,businessId,review);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='invoice-issue-prepare'){
+    const review=parseInvoiceIssueTaxRequest(input);
+    const value=await database('SELECT crest_commands.prepare_reviewed_invoice_issue('+authority+',$9::uuid,$10::bigint,$11::jsonb) AS result',
+     [...args,review.draftId,review.revision,review.jurisdictions],signal);
+    parseReviewedInvoiceIssue(value,businessId,review);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='invoice-issue-read'){
+    check(customerUuid(input.draftId));
+    const value=await database('SELECT crest_commands.read_issued_invoice('+authority+',$9::uuid) AS result',[...args,input.draftId],signal);
+    parseIssuedInvoice(value,businessId,input.draftId);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='invoice-issue-tax-mapping-read'){
+    check(invoiceTaxJurisdiction(input.jurisdiction));
+    const value=await database('SELECT crest_commands.read_invoice_tax_payable_mapping('+authority+',$9::text) AS result',
+     [...args,input.jurisdiction],signal);
+    parseInvoiceTaxMappingEditor(value,businessId,input.jurisdiction);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='invoice-issue-tax-mapping-lookup'){
+    const ref=parseInvoiceTaxMappingReference(input);
+    const value=await database('SELECT crest_commands.lookup_invoice_tax_payable_mapping_approval('+authority
+     +',$9::uuid,$10::uuid,$11::text,$12::bigint) AS result',
+     [...args,ref.operationId,ref.recoveryEpoch,ref.jurisdiction,ref.expectedVersion],signal);
+    parseInvoiceTaxMappingResult(value,businessId,ref);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='invoice-issue-tax-mapping-approve'){
+    const approval=parseInvoiceTaxMappingApproval(input.approval);
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.approve_invoice_tax_payable_mapping('+authority
+      +',$9::uuid,$10::uuid,$11::text,$12::bigint,$13::uuid,$14::date,$15::text) AS result',
+      [...args,approval.recoveryEpoch,approval.operationId,approval.jurisdiction,approval.expectedVersion,approval.accountId,
+       approval.effectiveFrom,approval.reason]);
+     const parsed=parseInvoiceTaxMappingResult(value,businessId,approval,approval);
+     check(parsed.state!=='absent');
+     return {value:value as object,state:parsed.state};
+    },signal);
+    return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
+   if(route==='invoice-issue-exemption-read'){
+    const target=parseInvoiceExemptionTarget(input);
+    const value=await database('SELECT crest_commands.read_invoice_exemption_evidence('+authority
+     +',$9::uuid,$10::bigint,$11::uuid,$12::text,$13::uuid) AS result',
+     [...args,target.draftId,target.draftRevision,target.outcomeId,target.jurisdiction,target.profileId],signal);
+    parseInvoiceExemptionEditor(value,businessId,target);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='invoice-issue-exemption-approve'){
+    const approval=parseInvoiceExemptionApproval(input.approval),target=approval.target;
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.approve_invoice_exemption_evidence('+authority
+      +',$9::uuid,$10::uuid,$11::uuid,$12::bigint,$13::uuid,$14::text,$15::uuid,$16::bigint,$17::date,$18::date,$19::text,$20::text) AS result',
+      [...args,approval.recoveryEpoch,approval.operationId,target.draftId,target.draftRevision,target.outcomeId,target.jurisdiction,
+       target.profileId,approval.expectedVersion,approval.validFrom,approval.validThrough,approval.evidenceReference,approval.reason]);
+     const parsed=parseInvoiceExemptionResult(value,businessId,approval);
+     return {value:value as object,state:parsed.state};
+    },signal);
+    return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
+   if(route==='invoice-issue-lookup'||route==='invoice-issue-submit'||route==='invoice-issue-retire'){
+    if(route==='invoice-issue-lookup'){
+     const ref=parseInvoiceIssueReference(input);
+     const value=await database('SELECT crest_commands.lookup_invoice_issue('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::bigint) AS result',
+      [...args,ref.recoveryEpoch,ref.operationId,ref.draftId,ref.revision],signal);
+     return privateJsonResponse(parseInvoiceIssueResult(value,businessId,ref));
+    }
+    if(route==='invoice-issue-retire'){
+     const ref=parseInvoiceIssueReference(input.reference);
+     check(customerUuid(input.reviewEpoch)&&financeAccountReviewReason(input.reason));
+     const result=await database.commandTransaction(async query=>{
+      submitted=true;
+      const value=await query('SELECT crest_commands.retire_invoice_issue('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::bigint,$14::text) AS result',
+       [...args,input.reviewEpoch,ref.operationId,ref.recoveryEpoch,ref.draftId,ref.revision,input.reason]);
+      const parsed=parseInvoiceIssueResult(value,businessId,ref);
+      check(parsed.state!=='absent'&&(parsed.state!=='retired'||parsed.receipt.reviewEpoch===input.reviewEpoch));
+      return parsed;
+     },signal);
+     return privateJsonResponse(result,result.state==='conflict'?409:200);
+    }
+    const {reference:ref,jurisdictions,reviewDigest}=parseInvoiceIssueRequest(input);
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.issue_reviewed_invoice('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::bigint,$13::jsonb,$14::text) AS result',
+      [...args,ref.recoveryEpoch,ref.operationId,ref.draftId,ref.revision,jurisdictions,reviewDigest]);
+     const parsed=parseInvoiceIssueResult(value,businessId,ref);
+     check(parsed.state!=='absent');
+     return parsed;
+    },signal);
+    return privateJsonResponse(result,result.state==='conflict'?409:200);
    }
    if(route==='invoice-draft-list'){
     check(customerUuid(input.jobId)&&(input.afterDraft===null||customerUuid(input.afterDraft)));
@@ -395,7 +540,10 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     'FINANCE_MAPPING_CLOSURE_REQUIRED','FINANCE_TAX_VERSION_CONFLICT','FINANCE_TAX_EFFECTIVE_ORDER_REQUIRED',
     'FINANCE_CHANNEL_VERSION_CONFLICT','FINANCE_CHANNEL_EFFECTIVE_ORDER_REQUIRED','FINANCE_CHANNEL_ACCOUNT_REQUIRED',
     'FINANCE_CHANNEL_ACCOUNT_PINNED','FINANCE_CHANNEL_IDENTITY_RETAINED',
-    'INVOICE_DRAFT_JOB_REQUIRED','INVOICE_DRAFT_COMPLETED_SCOPE_REQUIRED'].includes(error.message))
+    'INVOICE_DRAFT_JOB_REQUIRED','INVOICE_DRAFT_COMPLETED_SCOPE_REQUIRED','INVOICE_ISSUE_DRAFT_REQUIRED',
+    'INVOICE_ISSUE_REVIEW_REQUIRED','INVOICE_SCOPE_ALREADY_CONSUMED','ACCOUNTING_OPEN_PERIOD_REQUIRED',
+    'APPROVED_INVOICE_SERIES_REQUIRED','INVOICE_TAX_MAPPING_VERSION_CONFLICT','INVOICE_TAX_MAPPING_EFFECTIVE_ORDER_REQUIRED',
+    'INVOICE_TAX_MAPPING_ACCOUNT_REQUIRED'].includes(error.message))
     return privateJsonResponse({error:error.message},409);
    return submitted?privateJsonResponse({error:'FINANCE_ACCOUNT_OUTCOME_UNKNOWN'},503):financeAccountFailure();
   }finally{credentialHash?.fill(0);}

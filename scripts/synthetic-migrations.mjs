@@ -121,7 +121,8 @@ export async function requireSyntheticPickupReturnWorkflow(connectionString){
  ].map(signature=>'crest_commands.'+signature),'SYNTHETIC_PICKUP_RETURN_WORKFLOW_MIGRATION_REQUIRED','20261124180000');
 }
 
-export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false){
+export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false){
+ assert(typeof invoiceIssue==='boolean'&&(!invoiceIssue||taxProfiles&&invoiceDrafts));
  assert.equal(typeof invoiceDrafts,'boolean');
  assert.equal(typeof invoicePreparation,'boolean');
  assert.equal(typeof taxProfiles,'boolean');assert.equal(typeof categoryMappings,'boolean');assert.equal(typeof moneyChannels,'boolean');
@@ -163,6 +164,21 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
   'lookup_invoice_draft_operation('+authority+',uuid,uuid,uuid,bigint,uuid)',
   'retire_invoice_draft_operation('+authority+',uuid,uuid,uuid,uuid,bigint,uuid,text)'
  );
+ if(invoiceIssue)signatures.push(
+  'read_fictional_invoice_setup('+authority+',date)',
+  'configure_fictional_invoice_setup('+authority+',uuid,uuid,jsonb)',
+  'review_invoice_issue_accounts('+authority+',uuid,bigint,jsonb)',
+  'prepare_reviewed_invoice_issue('+authority+',uuid,bigint,jsonb)',
+  'issue_reviewed_invoice('+authority+',uuid,uuid,uuid,bigint,jsonb,text)',
+  'read_issued_invoice('+authority+',uuid)',
+  'lookup_invoice_issue('+authority+',uuid,uuid,uuid,bigint)',
+  'retire_invoice_issue('+authority+',uuid,uuid,uuid,uuid,bigint,text)',
+  'read_invoice_tax_payable_mapping('+authority+',text)',
+  'approve_invoice_tax_payable_mapping('+authority+',uuid,uuid,text,bigint,uuid,date,text)',
+  'lookup_invoice_tax_payable_mapping_approval('+authority+',uuid,uuid,text,bigint)',
+  'read_invoice_exemption_evidence('+authority+',uuid,bigint,uuid,text,uuid)',
+  'approve_invoice_exemption_evidence('+authority+',uuid,uuid,uuid,bigint,uuid,text,uuid,bigint,date,date,text,text)'
+ );
  const qualified=signatures.map(signature=>'crest_commands.'+signature);
  const missing='SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED';
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
@@ -174,6 +190,7 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
   if(moneyChannels)versions.push('20261128180000');
   if(invoicePreparation)versions.push('20261129180000');
   if(invoiceDrafts)versions.push('20261130180000');
+  if(invoiceIssue)versions.push('20261201180000');
   const migration=await client.query('SELECT 1 FROM supabase_migrations.schema_migrations WHERE version=ANY($1::text[])',[versions]);
   assert(migration.rowCount===versions.length,missing);
   const {rows}=await client.query(`

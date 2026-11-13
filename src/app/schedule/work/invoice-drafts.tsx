@@ -3,12 +3,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { AuthenticationError } from '../../../client/authentication';
 import {
-  clearPendingInvoiceDraft, downloadFinanceHistory, financeAccounts, readPendingInvoiceDraft, retainPendingInvoiceDraft,
+  clearPendingInvoiceDraft, downloadFinanceHistory, financeAccounts, readPendingInvoiceDraft, readPendingInvoiceIssue, retainPendingInvoiceDraft,
 } from '../../../client/finance-accounts';
 import type { FinanceAccountContext } from '../../../client/finance-accounts';
 import type { InvoiceDraftInput, InvoiceDraftReference } from '../../../bookkeeping/invoice-draft-contract';
 import { invoicePreparationExportColumns } from '../../../bookkeeping/invoice-preparation-contract';
 import { quoteMoney } from '../../../commercial/quote-pricing';
+
+import { InvoiceIssueTaxReview, IssuedInvoiceDetails } from './invoice-issue-tax-review';
+import type { IssuedInvoice } from './invoice-issue-tax-review';
 
 type DraftPage = Awaited<ReturnType<typeof financeAccounts.invoiceDrafts>>;
 type SavedDraft = Extract<Awaited<ReturnType<typeof financeAccounts.readInvoiceDraft>>, {state:'found'}>;
@@ -22,6 +25,9 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
   const [scope, setScope] = useState<Preparation | null>(null);
   const [editing, setEditing] = useState(false);
   const [current, setCurrent] = useState(false);
+  const [issueTaxAvailable, setIssueTaxAvailable] = useState(false);
+  const [issuedDraft, setIssuedDraft] = useState<string | null>(null);
+  const [openedInvoice, setOpenedInvoice] = useState<IssuedInvoice | null>(null);
   const [canChange, setCanChange] = useState(false);
   const [due, setDue] = useState('');
   const [outcomes, setOutcomes] = useState<readonly string[]>([]);
@@ -38,7 +44,9 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
     request.current?.abort();
     request.current = null;
     setPage(null); setDraft(null); setScope(null); setDue(''); setOutcomes([]); setCancelReason('');
-    setEditing(false); setCurrent(false); setCanChange(false); setBusy(false); setMessage('');
+    setEditing(false); setCurrent(false); setCanChange(false); setIssueTaxAvailable(false); setBusy(false); setMessage('');
+    setIssuedDraft(null);
+    setOpenedInvoice(null);
     setReviewable(false); setRetirementReason('');
   }
 
@@ -68,6 +76,7 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
         return;
       }
       setCanChange(context.writeState === 'ready');
+      setIssueTaxAvailable(context.invoiceIssueTaxReview);
       const stored = readPendingInvoiceDraft();
       setPending(stored !== null);
       setReviewable(false);
@@ -104,7 +113,7 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
       await action(context, signal);
     } catch (error) {
       if (signal.aborted) return;
-      setCanChange(false);
+      setCanChange(false); setIssueTaxAvailable(false);
       setPage(null); setDraft(null); setScope(null); setDue(''); setOutcomes([]); setCancelReason('');
       setEditing(false); setCurrent(false);
       try { setPending(readPendingInvoiceDraft() !== null); } catch { setPending(true); }
@@ -136,11 +145,22 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
 
   function open(draftId: string, revision: string | null = null) {
     void run(async (context,signal) => {
+      setOpenedInvoice(null);
       const loaded = await financeAccounts.readInvoiceDraft(context,draftId,revision,signal);
       if (signal.aborted) return;
       if (loaded.state !== 'found' || loaded.receipt.jobId !== jobId) throw Error();
+      let openedIssuedInvoice=false;
+      if (revision===null && context.invoiceIssue && !readPendingInvoiceIssue()) {
+        const invoice = await financeAccounts.readIssuedInvoice(context,draftId,signal);
+        if (signal.aborted) return;
+        if (invoice.state==='issued') {
+          setOpenedInvoice(invoice); setIssuedDraft(draftId);
+          openedIssuedInvoice=true;
+        }
+      }
       setDraft(loaded); setCurrent(revision === null); setEditing(false); setScope(null); setCancelReason('');
-      setMessage(revision === null ? 'Saved invoice draft loaded.' : 'Earlier draft revision loaded.');
+      setMessage(openedIssuedInvoice?'Issued invoice loaded.':
+        revision === null ? 'Saved invoice draft loaded.' : 'Earlier draft revision loaded.');
     });
   }
 
@@ -217,14 +237,14 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
         <button type="submit" className="secondary" disabled={busy}>Close interrupted draft attempt</button>
       </form>}
       {page && <>
-        <ul className="service-list" aria-label="Saved drafts">
+        {page.rows.length>0 && <ul className="invoice-draft-list" aria-label="Saved drafts">
           {page.rows.map(row=><li key={row.draftId}>
             <button type="button" className="secondary" disabled={busy} onClick={()=>open(row.draftId)}>
               {row.state === 'cancelled' ? 'Open cancelled draft' : 'Open invoice draft'}
             </button>
             <p>Revision {row.revision} · {row.lineCount} completed portions{row.dueOn ? ' · Due '+formatDue(row.dueOn) : ''}</p>
           </li>)}
-        </ul>
+        </ul>}
         {page.hasMore && <button type="button" className="secondary" disabled={busy} onClick={()=>load(page.rows.at(-1)?.draftId)}>
           Load more drafts
         </button>}
@@ -249,7 +269,8 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
         <button type="button" className="secondary" disabled={busy} onClick={()=>{setEditing(false);setScope(null);}}>Close editor</button>
       </form>}
       {!editing && draft && <section aria-label="Saved draft">
-        <h4>{draft.receipt.state === 'cancelled' ? 'Cancelled draft' : 'Saved draft'}</h4>
+        {openedInvoice && <section aria-label="Issued invoice"><IssuedInvoiceDetails invoice={openedInvoice}/></section>}
+        <h4>{issuedDraft===draft.receipt.draftId ? 'Draft history' : draft.receipt.state === 'cancelled' ? 'Cancelled draft' : 'Saved draft'}</h4>
         <p>Revision {draft.receipt.revision}{draft.receipt.dueOn ? ' · Due '+formatDue(draft.receipt.dueOn) : ''}</p>
         {draft.receipt.reason && <p>{draft.receipt.reason}</p>}
         {draft.lines.length === 0 && <p className="field-help">No completed portions saved yet.</p>}
@@ -260,7 +281,11 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
         {BigInt(draft.receipt.revision)>1n && <button type="button" className="secondary" disabled={busy}
           onClick={()=>open(draft.receipt.draftId,String(BigInt(draft.receipt.revision)-1n))}>Previous revision</button>}
         {!current && <button type="button" className="secondary" disabled={busy} onClick={()=>open(draft.receipt.draftId)}>Open current revision</button>}
-        {current && canChange && !pending && draft.receipt.state === 'draft' && <>
+        {current && issueTaxAvailable && !pending && !openedInvoice && draft.receipt.state === 'draft' && draft.lines.length > 0 &&
+          <InvoiceIssueTaxReview key={draft.receipt.draftId+':'+draft.receipt.revision} businessId={businessId} jobId={jobId}
+            draftId={draft.receipt.draftId} revision={draft.receipt.revision} lines={draft.lines}
+            onIssued={()=>setIssuedDraft(draft.receipt.draftId)}/>}
+        {current && canChange && !pending && issuedDraft!==draft.receipt.draftId && draft.receipt.state === 'draft' && <>
           {canPrepare && <button type="button" className="secondary" disabled={busy} onClick={()=>edit(draft)}>Edit draft</button>}
           <details>
             <summary>Cancel this draft</summary>

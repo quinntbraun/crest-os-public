@@ -16,7 +16,7 @@ import {installProviderSchema} from './provider-schema.mjs';
 import {startRealAuthService,authResult} from './real-auth-service.mjs';
 import {buildSourceExportBrowserFixture} from './source-export-browser-build.mjs';
 const signal=()=>new AbortController().signal,sha=value=>createHash('sha256').update(value).digest('hex'),release='a'.repeat(40);
-export async function sourceExportBrowserFixture({product=false,workspace=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,invoicePreparation=false,invoiceDrafts=false,photoFixture}={}){
+export async function sourceExportBrowserFixture({product=false,workspace=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,photoFixture}={}){
  assert.equal(typeof jobCompletion,'boolean');assert(!jobCompletion||fieldSessions,'completion requires registered field sessions');
  assert.equal(typeof fieldSessions,'boolean');assert(!fieldSessions||amendmentAcceptance,'field sessions require the genuine held54 product fixture');
  assert.equal(typeof amendmentAcceptance,'boolean');assert(!amendmentAcceptance||amendments&&product,'accepted amendments require the genuine registered53 product fixture');
@@ -33,6 +33,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  assert.equal(typeof financeCategoryMappings,'boolean');assert(!financeCategoryMappings||financeAccounts&&financeMappings);
  assert.equal(typeof financeMoneyChannels,'boolean');assert(!financeMoneyChannels||financeAccounts);
  assert.equal(typeof invoicePreparation,'boolean');assert(!invoicePreparation||financeAccounts&&jobCompletion);
+ assert.equal(typeof invoiceIssueTaxReview,'boolean');assert(!invoiceIssueTaxReview||invoiceDrafts&&financeTaxProfiles);
+ assert.equal(typeof invoiceIssue,'boolean');assert(!invoiceIssue||invoiceIssueTaxReview&&financeMappings);
  assert.equal(typeof invoiceDrafts,'boolean');assert(!invoiceDrafts||invoicePreparation);
  assert.equal(typeof product,'boolean');assert.equal(typeof catalog,'boolean');assert(!catalog||product,'catalog journey uses the actual product server');
  assert.equal(typeof workspace,'boolean');assert(!workspace||product,'workspace journey uses the actual product server');
@@ -73,7 +75,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   assert.equal(typeof pickupTrips,'boolean');assert(!pickupTrips||dropoffPolicyRevision);
 
   assert.equal(typeof pickupReturnWorkflow,'boolean');assert(!pickupReturnWorkflow||pickupPhotos&&jobCompletion&&unfulfilledCancellation);
-  if(invoiceDrafts)assert.equal((await sandbox.apply(target,await sandbox.prefix(76))).history.length,76);
+  if(invoiceIssue)assert.equal((await sandbox.apply(target,await sandbox.prefix(77))).history.length,77);
+  else if(invoiceDrafts)assert.equal((await sandbox.apply(target,await sandbox.prefix(76))).history.length,76);
   else if(invoicePreparation)assert.equal((await sandbox.apply(target,await sandbox.prefix(75))).history.length,75);
   else if(financeMoneyChannels)assert.equal((await sandbox.apply(target,await sandbox.prefix(74))).history.length,74);
   else if(financeCategoryMappings)assert.equal((await sandbox.apply(target,await sandbox.prefix(73))).history.length,73);
@@ -96,6 +99,17 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   else if(jobMileage)assert.equal((await sandbox.apply(target,await sandbox.prefix(56))).history.length,56);
   else if(jobCompletion)assert.equal((await sandbox.apply(target,await sandbox.prefix(55))).history.length,55);
   else if(fieldSessions){const candidate=await field54Candidate(sandbox),adopted=await sandbox.apply(target,candidate.directory);assert.equal(adopted.registrySha256,candidate.registrySha256);assert.equal(adopted.history.length,54);}
+  if(invoiceIssueTaxReview&&!invoiceIssue){
+   const proposal=await readFile(new URL('../../planning/proposals/finance-invoice-issue-tax-review.sql',import.meta.url),'utf8');
+   await client.query('BEGIN');
+   const accountReview=await readFile(new URL('../../planning/proposals/finance-invoice-issue-account-review.sql',import.meta.url),'utf8');
+   try{
+    await client.query(await readFile(new URL('../../planning/proposals/finance-invoice-exemption-evidence.sql',import.meta.url),'utf8'));
+    await client.query(proposal);await client.query(accountReview);
+    await client.query('COMMIT');
+   }
+   catch(error){await client.query('ROLLBACK');throw error;}
+  }
   const compiled=await buildSourceExportBrowserFixture(sandbox.workspace),runtime=await import(pathToFileURL(compiled.server).href);
   login='crest_export_browser_'+randomBytes(8).toString('hex');const secret=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+secret+"'");owned=true;await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=secret;const config={connectionString:url.toString(),environment:'test'};
   service=await startRealAuthService(target,{diagnostic:amendmentAcceptance});const email='synthetic-browser-export-'+randomUUID()+'@example.com',password=randomBytes(32).toString('base64url'),user=authResult(await service.admin.admin.createUser({email,password,email_confirm:true}),'export_browser_user').user;assert(user?.id);
@@ -112,7 +126,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    await sandbox.admin.query('CREATE ROLE '+candidate+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+secret+"'");
    financeLogin=candidate;await sandbox.admin.query('GRANT crest_finance_preview TO '+financeLogin);
    const financeUrl=new URL(target);financeUrl.username=financeLogin;financeUrl.password=secret;
-   financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,taxProfiles:financeTaxProfiles,categoryMappings:financeCategoryMappings,moneyChannels:financeMoneyChannels,invoicePreparation,invoiceDrafts};
+   financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,taxProfiles:financeTaxProfiles,categoryMappings:financeCategoryMappings,moneyChannels:financeMoneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue};
    await client.query("INSERT INTO crest_private.finance_controls(business_id,recovery_authority_id,created_by,origin) SELECT $1,id,$2,'system' FROM crest_private.business_recovery_authorities WHERE business_id=$1",[business,actor]);
   }
   const authentication={database:config,provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
@@ -149,11 +163,25 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     for(const [version,id,date,reason] of [
      ['0',accountId,'2026-01-01','=Fictional initial approval'],
      ['1',accountId,'2026-04-01','Fictional approval renewed'],
-     ['2',null,'2026-10-01','Fictional mapping closed'],
+     ...(!invoiceIssue?[['2',null,'2026-10-01','Fictional mapping closed']]:[]),
     ]){
      assert.equal((await finance.query(
       'SELECT crest_commands.approve_fixed_finance_mapping($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) AS result',
       [...args,randomUUID(),'service_revenue',version,id,date,reason])).rows[0].result.state,'committed');
+    }
+    if(invoiceIssue){
+     const arId=randomUUID();
+     assert.equal((await finance.query(
+      'SELECT crest_commands.save_finance_account($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',
+      [...args,randomUUID(),arId,{identity:{code:'1100',accountType:'asset',normalSide:'debit',controlKind:'ar',reportRole:'ar'},
+       name:'Fictional receivables',active:true,reason:null}])).rows[0].result.state,'committed');
+     assert.equal((await finance.query(
+      'SELECT crest_commands.approve_fixed_finance_mapping($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) AS result',
+      [...args,randomUUID(),'ar','0',arId,'2026-01-01','Fictional AR mapping'])).rows[0].result.state,'committed');
+     assert.equal((await finance.query(
+      'SELECT crest_commands.save_finance_account($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',
+      [...args,randomUUID(),randomUUID(),{identity:{code:'2100',accountType:'liability',normalSide:'credit',controlKind:'tax_payable',reportRole:'tax_payable'},
+       name:'Fictional sales tax payable',active:true,reason:null}])).rows[0].result.state,'committed');
     }
    }finally{seedHash.fill(0);await finance.end();}
   }
@@ -175,6 +203,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     }
    }finally{seedHash.fill(0);await finance.end();}
   }
+  let issueReviewServiceVersion;
   if(financeTaxProfiles){
    const seedHash=runtime.sessionCredentialHash(credential);
    const finance=await sandbox.connect(financeConfiguration.connectionString);
@@ -187,22 +216,28 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
      'SELECT crest_commands.save_service($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',
      [...args,randomUUID(),serviceId,{code:'fictional-interior',active:true,definition}]),signal());
     assert.equal(saved.state,'committed');
+    if(invoiceIssueTaxReview)issueReviewServiceVersion=(await client.query(
+     'SELECT id FROM crest.service_versions WHERE business_id=$1 AND service_id=$2',[business,serviceId])).rows[0].id;
     await finance.query('SET ROLE crest_finance_preview');
     for(const [applicability,id,version,date,treatment,rate,evidence] of [
      ['service',serviceId,'0','2026-01-01','inclusive_single','0.1','=Fictional rate evidence'],
-     ['service',serviceId,'1','2026-06-01','exempt',null,'Fictional exemption policy'],
+     ...(!invoiceIssueTaxReview?[['service',serviceId,'1','2026-06-01','exempt',null,'Fictional exemption policy']]:[]),
      ['tip',null,'0','2026-01-01','non_taxable',null,'Fictional tip rule'],
     ]){
      assert.equal((await finance.query(
       'SELECT crest_commands.approve_finance_tax_profile($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) AS result',
       [...args,randomUUID(),'Fictional district',applicability,id,version,date,treatment,rate,evidence,'Fictional tax review'])).rows[0].result.state,'committed');
     }
+    if(invoiceIssue)assert.equal((await finance.query(
+     'SELECT crest_commands.approve_finance_tax_profile($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) AS result',
+     [...args,randomUUID(),'Fictional exempt district','service',serviceId,'0','2026-01-01','exempt',null,
+      'Fictional exemption policy','Fictional exempt profile approval'])).rows[0].result.state,'committed');
    }finally{seedHash.fill(0);await finance.end();}
   }
   let bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,fieldVehicleId;
   if(scheduling){
    const web=await sandbox.connect(url.toString()),seedHash=runtime.sessionCredentialHash(credential);
-   try{await web.query('SET ROLE crest_web');const principal=await lifecycle.verify(credential,signal(),'background',true),parent=await createConfirmedBookingFixture({client,web,bootstrap})({hash:seedHash,session:principal.sessionId,actor,issuer:service.issuer,subject:user.id,provider:principal.provider.sessionId,deadline:new Date(principal.provider.expiresAt),business,epoch});bookingRequest=confirmedBookingRequest(parent);bookingFamilyId=parent.familyId;if(fieldSessions){fieldVehicleId=randomUUID();const payload={label:'Synthetic field equipment rig',year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'business_rig',notes:null,archived:false,archiveReason:null};assert.equal((await web.query('SELECT crest_commands.save_vehicle($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',[...parent.auth(),epoch,randomUUID(),fieldVehicleId,payload])).rows[0].result.state,'committed');}if(additionalSchedulingAgreement||combinedSchedulingAgreements){const other=await createConfirmedBookingFixture({client,web,bootstrap})({hash:seedHash,session:principal.sessionId,actor,issuer:service.issuer,subject:user.id,provider:principal.provider.sessionId,deadline:new Date(principal.provider.expiresAt),business,epoch},combinedSchedulingAgreements?{customerId:parent.customer}:{});additionalBookingRequest=confirmedBookingRequest(other);additionalBookingFamilyId=other.familyId;}}
+   try{await web.query('SET ROLE crest_web');const principal=await lifecycle.verify(credential,signal(),'background',true),parent=await createConfirmedBookingFixture({client,web,bootstrap})({hash:seedHash,session:principal.sessionId,actor,issuer:service.issuer,subject:user.id,provider:principal.provider.sessionId,deadline:new Date(principal.provider.expiresAt),business,epoch},invoiceIssueTaxReview?{serviceVersionFor:()=>issueReviewServiceVersion}:{});bookingRequest=confirmedBookingRequest(parent);bookingFamilyId=parent.familyId;if(fieldSessions){fieldVehicleId=randomUUID();const payload={label:'Synthetic field equipment rig',year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'business_rig',notes:null,archived:false,archiveReason:null};assert.equal((await web.query('SELECT crest_commands.save_vehicle($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',[...parent.auth(),epoch,randomUUID(),fieldVehicleId,payload])).rows[0].result.state,'committed');}if(additionalSchedulingAgreement||combinedSchedulingAgreements){const other=await createConfirmedBookingFixture({client,web,bootstrap})({hash:seedHash,session:principal.sessionId,actor,issuer:service.issuer,subject:user.id,provider:principal.provider.sessionId,deadline:new Date(principal.provider.expiresAt),business,epoch},combinedSchedulingAgreements?{customerId:parent.customer}:{});additionalBookingRequest=confirmedBookingRequest(other);additionalBookingFamilyId=other.familyId;}}
    finally{seedHash.fill(0);await web.end();}
   }
   let photoRuntime;
