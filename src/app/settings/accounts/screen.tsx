@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {InvoiceSetup} from './invoice-setup';
+import {TrialBalance} from './trial-balance';
 import styles from './screen.module.css';
 import {AuthenticationError} from '../../../client/authentication';
 import {
@@ -226,6 +227,7 @@ export function FinanceAccountsScreen(){
   {workspace?.context.fixedMappings&&!editor&&<a href="/settings/accounts/mappings">Dated account mappings</a>}
   {workspace?.context.moneyChannels&&!editor&&<p><a href="/settings/accounts/channels">Money channels</a></p>}
   {workspace?.context.invoiceIssue&&!editor&&<InvoiceSetup businessId={workspace.context.businessId}/>}
+  {workspace?.context.trialBalance&&!editor&&<TrialBalance businessId={workspace.context.businessId}/>}
   {workspace?.context.categoryMappings&&!editor&&<p><a href="/settings/accounts/mappings/categories">Expense category mappings</a></p>}
   {workspace?.context.taxProfiles&&!editor&&<p><a href="/settings/accounts/tax">Tax profiles</a></p>}
   {signedOut&&<a href="/sign-in">Sign in again</a>}

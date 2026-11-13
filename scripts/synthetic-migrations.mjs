@@ -121,7 +121,8 @@ export async function requireSyntheticPickupReturnWorkflow(connectionString){
  ].map(signature=>'crest_commands.'+signature),'SYNTHETIC_PICKUP_RETURN_WORKFLOW_MIGRATION_REQUIRED','20261124180000');
 }
 
-export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false){
+export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false){
+ assert(typeof trialBalance==='boolean'&&(!trialBalance||sameDayExpenses));
  assert(typeof sameDayExpenses==='boolean'&&(!sameDayExpenses||directReceipts&&categoryMappings));
  assert(typeof directReceipts==='boolean'&&(!directReceipts||invoiceIssue&&moneyChannels));
  assert(typeof invoiceIssue==='boolean'&&(!invoiceIssue||taxProfiles&&invoiceDrafts));
@@ -193,6 +194,10 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
   'retire_fictional_same_day_expense('+authority+',uuid,uuid,uuid,uuid,text)',
   'post_fictional_same_day_expense('+authority+',uuid,uuid,uuid,uuid,bigint,uuid,bigint,uuid,date,date,text,bigint,uuid,text,text,text,jsonb)'
  );
+ if(trialBalance)signatures.push(
+  'read_fictional_trial_balance('+authority+',date)',
+  'read_fictional_journal('+authority+',date,uuid,uuid,integer)'
+ );
  const qualified=signatures.map(signature=>'crest_commands.'+signature);
  const missing='SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED';
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
@@ -207,6 +212,7 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
   if(invoiceIssue)versions.push('20261201180000');
   if(directReceipts)versions.push('20261202180000');
   if(sameDayExpenses)versions.push('20261203180000');
+  if(trialBalance)versions.push('20261204180000');
   const migration=await client.query('SELECT 1 FROM supabase_migrations.schema_migrations WHERE version=ANY($1::text[])',[versions]);
   assert(migration.rowCount===versions.length,missing);
   const {rows}=await client.query(`

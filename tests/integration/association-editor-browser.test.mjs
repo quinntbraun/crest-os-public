@@ -71,6 +71,20 @@ async function send(page,route,body={},proof=null){
 
 
 const root='business/vehicle-associations/';
+const crmDiagnosticPaths=new Set(['/api/auth/session',...['customers','vehicles','vehicle-associations'].flatMap(domain=>
+ ['context','list','history','save','operation'].map(route=>'/api/business/'+domain+'/'+route))]);
+// Keep only fixed route names and status codes. No headers, query, body,
+// identity, or browser state is copied into test output.
+function observeCrmFailures(page, device, failures){
+ const retain=(entry,status)=>{
+  const url=new URL(entry.url()),pathname=url.pathname;
+  if(url.origin!==origin||!crmDiagnosticPaths.has(pathname))return;
+  failures.push({device,pathname,status});
+  if(failures.length>24)failures.shift();
+ };
+ page.on('response',response=>{if(response.status()>=400)retain(response,response.status());});
+ page.on('requestfailed',request=>retain(request,'aborted'));
+}
 const customer=(name,epoch)=>({schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,customerId:randomUUID(),expectedVersion:'0',displayName:name,phone:null,email:null,contactPreference:null,outreachOptOut:false,notes:null,customerSince:null,archived:false,archiveReason:null});
 const vehicle=(name,epoch)=>({schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,vehicleId:randomUUID(),expectedVersion:'0',label:name,year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'customer_vehicle',notes:null,archived:false,archiveReason:null});
 const panel=page=>page.getByRole('region',{name:'Customers for this vehicle',exact:true});
@@ -89,20 +103,23 @@ async function openDraft(page,name,at){
 for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900}],['webkit',webkit,{width:360,height:800}]]){
  test('genuine vehicle customer-link editor '+name,async t=>{
   const browser=await engine.launch();let first,second,one,two,car,epoch,proof,otherProof;
+  const failures=[];let failed=false;
+  const caseTest=async(title,work)=>t.test(title,async()=>{try{await work();}catch(error){failed=true;throw error;}});
   try{
    first=await browser.newContext({ignoreHTTPSErrors:true,viewport});second=await browser.newContext({ignoreHTTPSErrors:true,viewport});const page=await first.newPage(),other=await second.newPage();
-   await t.test('two genuine MFA devices retain separate private sessions',async()=>{
+   observeCrmFailures(page,'first',failures);observeCrmFailures(other,'second',failures);
+   await caseTest('two genuine MFA devices retain separate private sessions',async()=>{
     for(const p of [page,other]){await p.goto(origin+'/sign-in');await expect(p.getByRole('status')).toHaveText('Sign in to continue.');await fill(p);await expect(p.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();}
     const a=(await first.cookies()).find(c=>c.name===sessionName),b=(await second.cookies()).find(c=>c.name===sessionName);assert(a?.httpOnly&&a.secure&&b?.httpOnly&&b.secure&&a.value!==b.value);
     for(const cookie of [a,b]){const session=(await client.query('SELECT s.id,p.id AS provider_id FROM crest_private.app_sessions s JOIN auth.sessions p ON p.id=s.provider_session_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL',[createHash('sha256').update(cookie.value,'ascii').digest()])).rows[0];assert(session?.id&&session.provider_id);}
 
     proof=(await send(page,'auth/session')).body.csrfToken;otherProof=(await send(other,'auth/session')).body.csrfToken;
    });
-   await t.test('the editor uses real customer and vehicle commands rather than fabricated parents',async()=>{
+   await caseTest('the editor uses real customer and vehicle commands rather than fabricated parents',async()=>{
     epoch=(await send(page,'business/vehicles/context',{},proof)).body.recoveryEpoch;one=customer('Synthetic screen owner '+name,epoch);two=customer('Synthetic screen next '+name,epoch);car=vehicle('Synthetic customer-link screen '+name,epoch);
     for(const [route,value]of [['business/customers/save',one],['business/customers/save',two],['business/vehicles/save',car]])assert.equal((await send(page,route,value,proof)).status,200);
    });
-   await t.test('mobile forms preserve explicit billing, exact periods, conflict review and complete ownership history',async()=>{
+   await caseTest('mobile forms preserve explicit billing, exact periods, conflict review and complete ownership history',async()=>{
     await openPanel(page,car);const box=panel(page);await expect(box.getByRole('status')).toContainText('Review the retained customer links');
     await box.getByRole('button',{name:'Add customer link',exact:true}).click();await expect(box.getByRole('button',{name:'Save customer link',exact:true})).toBeDisabled();await choose(page,one.displayName);
     await box.getByLabel('Relationship',{exact:true}).selectOption('keeper');await expect(box.getByRole('button',{name:'Save customer link',exact:true})).toBeDisabled();await box.getByLabel('Billing selection',{exact:true}).selectOption('no');await box.getByRole('button',{name:'Use current time',exact:true}).click();assert.match(await box.getByLabel('Effective time (UTC)',{exact:true}).inputValue(),/\.[0-9]{6}Z$/);
@@ -119,7 +136,7 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     const rows=(await client.query('SELECT customer_id,valid_to,version::text,is_billing FROM crest.customer_vehicles WHERE business_id=$1 AND vehicle_id=$2 ORDER BY valid_from',[business,car.vehicleId])).rows;assert.equal(rows.length,3);assert.deepEqual(rows.map(r=>r.customer_id),[one.customerId,two.customerId,one.customerId]);assert(rows.every(r=>r.valid_to!==null&&r.version==='2'&&r.is_billing===false));
     await reloadLinks(page);await box.getByRole('button',{name:'View link history for '+one.displayName,exact:true}).last().click();await expect(box.getByRole('region',{name:'Customer link history',exact:true})).toContainText('Current version: 2');
    });
-   await t.test('lost responses resolve original receipts; unchanged retries and lost drafts stay explicit',async()=>{
+   await caseTest('lost responses resolve original receipts; unchanged retries and lost drafts stay explicit',async()=>{
     // This independent MFA device uses its genuine ordinary budget. No table,
     // capability, proof limit or allowance is rewritten by the fixture.
     await openPanel(other,car);const box=panel(other),key='crest.vehicle-association.pending-reference.v1',read=()=>other.evaluate(k=>JSON.parse(sessionStorage.getItem(k)),key),save=()=>box.getByRole('button',{name:'Save customer link',exact:true});
@@ -135,6 +152,9 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     await reloadLinks(other);await openDraft(other,one.displayName,'2026-10-30T00:00:00.000001Z');await other.route(pattern,blocked);await save().click();await expect(box.getByRole('status')).toContainText('save could not be confirmed');await other.unroute(pattern,blocked);const unresolved=await read();
     await openPanel(other,car);await expect(box.getByRole('status')).toContainText('pending customer-link save');await box.getByRole('button',{name:'Check customer-link save status',exact:true}).click();await expect(box.getByRole('status')).toContainText('original draft is no longer in memory');await expect(box.getByRole('button',{name:'Retry original customer-link change',exact:true})).toHaveCount(0);await expect(box.getByRole('button',{name:'Add customer link',exact:true})).toHaveCount(0);assert.deepEqual(await read(),unresolved);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,unresolved.reference.operationId])).rows[0].n,0);
    });
-  }finally{await first?.close();await second?.close();await browser.close();}
+  }finally{
+   if(failed)t.diagnostic('CRM request outcomes: '+JSON.stringify(failures));
+   await first?.close();await second?.close();await browser.close();
+  }
  });
 }
