@@ -7,11 +7,14 @@ import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
 const directReceipts=true;
+const paymentCorrections=process.env.CREST_TEST_PAYMENT_CORRECTIONS==='1';
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
   financeAccounts:true,financeMappings:true,financeTaxProfiles:true,invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,
-  financeMoneyChannels:directReceipts,directReceipts});
+  financeMoneyChannels:directReceipts,directReceipts,...paymentCorrections?{
+   expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,
+  }:{}});
  let browser;
  const financeResponses=[];
  try{
@@ -235,6 +238,66 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
        assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
        await page.screenshot({path:'.local/review/finance-direct-receipt-'+name+'-'+width+'.png'});
+      }
+      if(paymentCorrections){
+       await page.setViewportSize({width:390,height:844});
+       await allowInvoiceReadWindow();
+       await invoice.getByText('Correct an applied payment',{exact:true}).press('Enter');
+       const correction=invoice.getByRole('region',{name:'Correct an applied payment',exact:true});
+       await correction.getByRole('button',{name:'Load applied payments',exact:true}).press('Enter');
+       await expect(correction.getByRole('status')).toHaveText('Saved payments loaded.');
+       await correction.getByRole('button',{name:'Review correction',exact:true}).press('Enter');
+       await expect(correction).toContainText('$100.00');
+       await correction.getByLabel('Amount to move',{exact:true}).fill('25.00');
+       await correction.getByLabel('Reason for correcting payment',{exact:true}).fill('Fictional amount held for another invoice');
+       for(const width of [360,390,768,1440]){
+        await page.setViewportSize({width,height:900});
+        await correction.getByRole('button',{name:'Move to customer funds',exact:true}).scrollIntoViewIfNeeded();
+        assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+        const audit=await new AxeBuilder({page}).include('.direct-receipt').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+        assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
+        await page.screenshot({path:'.local/review/finance-payment-correction-'+name+'-'+width+'.png'});
+       }
+       let committedResponse=false;
+       await page.route('**/api/business/finance-accounts/payment-correction-submit',async route=>{
+        const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+        if(response.status()===200){committedResponse=true;await route.abort('failed');}
+        else await route.fulfill({response});
+       },{times:1});
+       await correction.getByRole('button',{name:'Move to customer funds',exact:true}).press('Enter');
+       await expect(correction.getByRole('status')).toContainText('outcome could not be confirmed');
+       assert(committedResponse);
+       const stored=await page.evaluate(()=>sessionStorage.getItem('crest.payment-correction.pending-reference.v1'));
+       assert(stored&&!stored.includes('Fictional'));
+       assert.deepEqual(Object.keys(JSON.parse(stored).reference).sort(),['operationId','recoveryEpoch','unapplicationId']);
+       await page.reload();
+       await draftDisclosure.click();
+       await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+       await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
+       await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+       await expect(draftStatus).toHaveText('Issued invoice loaded.');
+       await invoice.getByText('Correct an applied payment',{exact:true}).press('Enter');
+       await correction.getByRole('button',{name:'Load applied payments',exact:true}).press('Enter');
+       await expect(correction.getByRole('status')).toHaveText('The original correction was saved.');
+       assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.payment-correction.pending-reference.v1')),null);
+       const correctionDownload=page.waitForEvent('download');
+       await correction.getByRole('button',{name:'Download correction (CSV)',exact:true}).click();
+       assert.match(await readFile(await (await correctionDownload).path(),'utf8'),/"2500","Fictional amount held/);
+       await allowInvoiceReadWindow();
+       await invoice.getByText('Record a fictional payment',{exact:true}).click();
+       await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
+       await expect(payments).toContainText('$175.00 due');
+       await page.goto(fixture.origin+'/settings/accounts');
+       await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+       await page.getByText('Fictional trial balance',{exact:true}).click();
+       const report=page.getByRole('region',{name:'Fictional trial balance',exact:true});
+       await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
+       await expect(report.getByRole('status')).toHaveText('Posted balances loaded.');
+       await expect(report).toContainText('Customer funds held match the ledger');
+       await report.getByText('Journal entries',{exact:true}).click();
+       await report.getByRole('button',{name:'Load journal entries',exact:true}).press('Enter');
+       await expect(report).toContainText('Invoice reopened');
+       await expect(report).toContainText('Customer funds held');
       }
      }
     }

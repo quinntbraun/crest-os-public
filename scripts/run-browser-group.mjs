@@ -12,7 +12,8 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  // TAP emits each failure with its details as soon as the test finishes.
  const selected=process.argv[2],files=browserGroupFiles(command,selected),args=['--test','--test-reporter=tap','--test-concurrency=1',...files];
  console.log('REQUIRED_BROWSER_GROUP '+JSON.stringify({group:selected,files}));
- const child=spawn(process.execPath,args,{stdio:'inherit',windowsHide:true});
+ const child=spawn(process.execPath,args,{stdio:'inherit',windowsHide:true,
+  env:{...process.env,CREST_TEST_PAYMENT_CORRECTIONS:selected==='records'?'1':'0'}});
  const result=await new Promise(resolve=>{child.once('error',()=>resolve({code:1,signal:null}));child.once('close',(code,signal)=>resolve({code,signal}));});
  let screenshots=[];
  try {
@@ -22,7 +23,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  }
  const needsScreenshots=['commercial','amendments','schedule','field','custody','records'].includes(selected);
  const requiredViewsByGroup={
-  records:['finance-account-settings-recovery','finance-mapping-history','finance-mapping-manage','finance-tax-approval','finance-tax-history','finance-tax-preview','finance-category-approval','finance-category-history','finance-channel-opening','finance-channel-history','finance-invoice-issue-product','finance-direct-receipt','finance-expense-posting','finance-trial-balance'],
+  records:['finance-account-settings-recovery','finance-mapping-history','finance-mapping-manage','finance-tax-approval','finance-tax-history','finance-tax-preview','finance-category-approval','finance-category-history','finance-channel-opening','finance-channel-history','finance-invoice-issue-product','finance-direct-receipt','finance-expense-posting','finance-trial-balance','finance-payment-correction'],
   field:['field-departure','field-pause','completion-editor','completion-saved','mileage-form','mileage-split','mileage-saved','field-cancellation','field-work-time','field-work-boundary','mileage-departure-correction','completion-outcome','completion-history','field-maintenance-history','completion-invoice-preparation','completion-invoice-draft'],
   custody:['field-dropoff-intake','field-dropoff-work','field-dropoff-cancellation','field-dropoff-completion',
    'field-dropoff-collections','field-dropoff-history','field-dropoff-policy-revision',

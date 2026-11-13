@@ -57,6 +57,9 @@ import coverage78 from '../support/registered78-export-coverage.json';
 import {postedExpenseSourceAddedColumns,postedExpenseSourceCoverage} from '../../src/bookkeeping/posted-expense-source.ts';
 import registered79 from '../support/registered79-migration-checksums.json';
 import coverage79 from '../support/registered79-export-coverage.json';
+import registered80 from '../support/registered80-migration-checksums.json';
+import coverage80 from '../support/registered80-export-coverage.json';
+import {unapplicationSourceAddedColumns,unapplicationSourceCoverage} from '../../src/bookkeeping/unapplication-source.ts';
 import {financeAccountSourceColumns,financeMoneyChannelSourceColumns,financeTaxSourceColumns,invoiceDraftSourceColumns} from '../../src/bookkeeping/finance-account-source.ts';
 import {pickupCustodySourceColumns} from '../../src/operations/pickup-custody-source.ts';
 import registry from '../support/registered54-migration-checksums.json';
@@ -403,13 +406,25 @@ it('registers read-only posted reports and leaves all prior business table cover
  const file='20261204180000_finance_posted_reports.sql';
  expect(sha256(bytes('tests/support/registered79-migration-checksums.json'))).toBe('c0d4cfe23e4bc8f6ea0819bcf93183e30790c35121c5cd53d902bc617c4b06b0');
  expect(sha256(bytes('tests/support/registered79-export-coverage.json'))).toBe('86fa69fdd355602c725f1bb3fd47bd97f1ea956931973c09842d87fc1ac272ce');
- expect(currentRegistry.migrations).toHaveLength(80);
- expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261204180000',file,
+ expect(registered80.migrations).toHaveLength(80);
+ expect(registered80.migrations.at(-1)).toEqual({version:'20261204180000',file,
   sha256:'e273a9dcdc9dd6eb1c938a4e08014fb7c9a257b8d7e1ac10f37e4bb35f6d5048'});
  expect(bytes('supabase/migrations/'+file)).toEqual(bytes('planning/proposals/finance-posted-reports.sql'));
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered79 as MigrationRegistry)).not.toThrow();
- expect(currentCoverage).toEqual({...coverage79,migrationCount:80});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:80});
+ expect(()=>validateMigrationSet(registered80 as MigrationRegistry,new Map(registered80.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered79 as MigrationRegistry)).not.toThrow();
+ expect(coverage80).toEqual({...coverage79,migrationCount:80});
+});
+it('appends payment correction and portable lineage after the frozen reporting schema',()=>{
+ const file='20261205180000_finance_allocation_unapplication.sql';
+ expect(currentRegistry.migrations).toHaveLength(81);
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261205180000',file,
+  sha256:'b32cf544c783e7f7cadfb14f98a03fb4dd9c1fa7275670a7f45c4affa4ad783c'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered80 as MigrationRegistry)).not.toThrow();
+ const additions:Readonly<Record<string,readonly string[]>>=unapplicationSourceAddedColumns;
+ expect(currentCoverage).toEqual({...coverage80,migrationCount:81,tables:[
+  ...coverage80.tables.map(row=>({...row,required:[...row.required,...additions[row.table]??[]]})),
+  ...unapplicationSourceCoverage,
+ ]});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:81});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

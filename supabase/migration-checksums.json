@@ -400,6 +400,11 @@
       "version": "20261204180000",
       "file": "20261204180000_finance_posted_reports.sql",
       "sha256": "e273a9dcdc9dd6eb1c938a4e08014fb7c9a257b8d7e1ac10f37e4bb35f6d5048"
+    },
+    {
+      "version": "20261205180000",
+      "file": "20261205180000_finance_allocation_unapplication.sql",
+      "sha256": "b32cf544c783e7f7cadfb14f98a03fb4dd9c1fa7275670a7f45c4affa4ad783c"
     }
   ]
 }

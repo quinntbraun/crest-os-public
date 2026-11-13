@@ -44,7 +44,7 @@ export async function migrationSandbox(testConnection=process.env.CREST_TEST_DAT
       assert(count<=registry.migrations.length); registry.migrations=registry.migrations.slice(0,count);
       for(const m of registry.migrations) await writeFile(join(directory,"supabase/migrations",m.file),await readFile(join(root,"supabase/migrations",m.file)));
 
-      const frozen=[68,69,70,71,72,78].includes(count);
+      const frozen=[68,69,70,71,72,78,80].includes(count);
       const registryBytes=frozen?await readFile(join(root,`tests/support/registered${count}-migration-checksums.json`)):JSON.stringify(registry)+"\n";
       if(frozen)assert.deepEqual(JSON.parse(registryBytes),registry);
       await writeFile(join(directory,"supabase/migration-checksums.json"),registryBytes);
