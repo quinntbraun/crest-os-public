@@ -11,12 +11,13 @@ const paymentCorrections=process.env.CREST_TEST_PAYMENT_CORRECTIONS==='1';
 const fundApplications=process.env.CREST_TEST_FUND_APPLICATIONS==='1';
 const heldTips=process.env.CREST_TEST_HELD_TIPS==='1';
 const invoiceCredits=process.env.CREST_TEST_INVOICE_CREDITS==='1';
+const paidInvoiceCredits=process.env.CREST_TEST_PAID_INVOICE_CREDITS==='1';
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
   financeAccounts:true,financeMappings:true,financeTaxProfiles:true,invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,
   financeMoneyChannels:directReceipts,directReceipts,...paymentCorrections?{
-   expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,fundApplications,heldTips,invoiceCredits,
+   expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,
   }:{}});
  let browser;
  const financeResponses=[];
@@ -424,6 +425,68 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
         await expect(payments).toContainText('$149.00 due');
        }
+       if(paidInvoiceCredits){
+        await allowInvoiceReadWindow();
+        await invoice.getByText('Credit a paid or partly paid invoice',{exact:true}).press('Enter');
+        const credit=invoice.getByRole('region',{name:'Credit a paid or partly paid invoice',exact:true});
+        await credit.getByRole('button',{name:'Load applied payments',exact:true}).press('Enter');
+        await expect(credit.getByRole('status')).toContainText('Choose the payment');
+        const choice=credit.getByLabel('Payment',{exact:true});
+        if(await choice.count())await choice.selectOption({label:(await choice.locator('option').nth(1).textContent()).trim()});
+        await credit.getByRole('button',{name:'Review credit and payment',exact:true}).press('Enter');
+        await expect(credit.getByRole('status')).toContainText('Review the credit and the amount');
+        await expect(credit).toContainText('$149.00');
+        const save=credit.getByRole('button',{name:'Save credit and release',exact:true});
+        const amount=credit.getByLabel('Credit amount (USD)',{exact:true});
+        await amount.fill('149.00');
+        await expect(save).toBeDisabled();
+        await amount.fill('160.00');
+        await credit.getByLabel('Reason for the credit',{exact:true}).fill('Fictional paid invoice adjustment');
+        const preview=credit.getByLabel('Paid invoice credit preview');
+        await expect(preview).toContainText('$160.00');
+        await expect(preview).toContainText('$11.00');
+        await expect(preview).toContainText('$0.00');
+        for(const width of [360,390,768,1440]){
+         await page.setViewportSize({width,height:900});
+         await save.evaluate(button=>button.scrollIntoView({block:'center'}));
+         assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+         const audit=await new AxeBuilder({page}).include('.invoice-credit').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+         assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
+         await page.screenshot({path:'.local/review/finance-paid-invoice-credit-'+name+'-'+width+'.png'});
+        }
+        let posted=false;
+        await allowInvoiceReadWindow();
+        await page.route('**/api/business/finance-accounts/paid-invoice-credit-submit',async route=>{
+         const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+         if(response.status()===200){posted=true;await route.abort('failed');}
+         else await route.fulfill({response});
+        },{times:1});
+        await save.press('Enter');
+        await expect(credit.getByRole('status')).toContainText('outcome could not be confirmed');
+        assert(posted);
+        const stored=await page.evaluate(()=>sessionStorage.getItem('crest.paid-invoice-credit.pending-reference.v1'));
+        assert(stored&&!stored.includes('Fictional'));
+        assert.deepEqual(Object.keys(JSON.parse(stored).reference).sort(),['invoiceCreditId','operationId','recoveryEpoch','unapplicationId']);
+        await allowInvoiceReadWindow();
+        await page.reload();
+        await draftDisclosure.click();
+        await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+        await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
+        await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+        await expect(draftStatus).toHaveText('Issued invoice loaded.');
+        await invoice.getByText('Credit a paid or partly paid invoice',{exact:true}).press('Enter');
+        await credit.getByRole('button',{name:'Load applied payments',exact:true}).press('Enter');
+        await expect(credit.getByRole('status')).toHaveText('The original credit and payment release were saved.');
+        assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.paid-invoice-credit.pending-reference.v1')),null);
+        const receipt=page.waitForEvent('download');
+        await credit.getByRole('button',{name:'Download credit and payment release (CSV)',exact:true}).click();
+        assert.match(await readFile(await (await receipt).path(),'utf8'),/"16000","[0-9]+","1100","Fictional paid invoice adjustment"/);
+        await allowInvoiceReadWindow();
+        await invoice.getByText('Record a fictional payment',{exact:true}).click();
+        await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
+        await expect(payments.getByRole('status')).toHaveText('This customer has no outstanding invoices for that date.');
+        await expect(payments).not.toContainText('TEST-1 ·');
+       }
        await page.goto(fixture.origin+'/settings/accounts');
        await page.getByRole('button',{name:'Load accounts',exact:true}).click();
        await page.getByText('Fictional trial balance',{exact:true}).click();
@@ -448,4 +511,4 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await browser?.close();
   await fixture.close();
  }
-},{timeout:invoiceCredits?720000:480000});
+},{timeout:paidInvoiceCredits?840000:invoiceCredits?720000:480000});

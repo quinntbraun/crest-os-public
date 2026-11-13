@@ -5,6 +5,7 @@ import {unapplicationSourceAddedColumns,unapplicationSourceCoverage} from './una
 import {fundApplicationSourceAddedColumns,fundApplicationSourceCoverage} from './fund-application-source.ts';
 import {heldTipSourceAddedColumns,heldTipSourceCoverage} from './held-tip-source.ts';
 import {invoiceCreditSourceAddedColumns,invoiceCreditSourceCoverage} from './invoice-credit-source.ts';
+import {pairedInvoiceCreditSourceCoverage} from './paired-invoice-credit-source.ts';
 
 const receiptColumns:Readonly<Record<string,readonly string[]>>=receiptSourceAddedColumns;
 const expenseColumns:Readonly<Record<string,readonly string[]>>=postedExpenseSourceAddedColumns;
@@ -17,7 +18,7 @@ const originalTables=[...invoiceSourceCoverage,...receiptSourceCoverage,postedEx
   columns:[...table.required,...(receiptColumns[table.table]??[]),...(expenseColumns[table.table]??[])],
 }));
 
-export function financeSourceTables(version:1|2|3|4|5){
+export function financeSourceTables(version:1|2|3|4|5|6){
   if(version===1)return originalTables;
   const correctionTables=[
     ...originalTables.map(table=>({...table,columns:[...table.columns,...(correctionSourceColumns['crest.'+table.name]??[])]})),
@@ -33,8 +34,12 @@ export function financeSourceTables(version:1|2|3|4|5){
     ...applicationTables.map(table=>({...table,columns:[...table.columns,...(heldTipSourceColumns['crest.'+table.name]??[])]})),
     ...heldTipSourceCoverage.map(table=>({name:table.table.slice('crest.'.length),columns:[...table.required]})),
   ];
-  return version===4?tipTables:[
+  if(version===4)return tipTables;
+  const creditTables=[
     ...tipTables.map(table=>({...table,columns:[...table.columns,...(invoiceCreditSourceColumns['crest.'+table.name]??[])]})),
     ...invoiceCreditSourceCoverage.map(table=>({name:table.table.slice('crest.'.length),columns:[...table.required]})),
+  ];
+  return version===5?creditTables:[
+    ...creditTables,{name:'paired_invoice_credit_releases',columns:[...pairedInvoiceCreditSourceCoverage.required]},
   ];
 }

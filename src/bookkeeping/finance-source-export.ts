@@ -6,10 +6,11 @@ import {readSourceExportCsv} from '../security/source-export-csv-reader.ts';
 import {captureInvoiceSource,formatInvoiceSource} from './invoice-source.ts';
 import {captureReceiptSource,formatReceiptSource} from './receipt-source.ts';
 import {capturePostedExpenseSource,formatPostedExpenseSource} from './posted-expense-source.ts';
-import {captureUnapplicationSource,formatUnapplicationSource} from './unapplication-source.ts';
+import {captureUnapplicationSource,formatUnapplicationSource,verifyUnapplicationSourceClosure} from './unapplication-source.ts';
 import {captureFundApplicationSource,formatFundApplicationSource} from './fund-application-source.ts';
 import {captureHeldTipSource,verifyHeldTipSourceClosure} from './held-tip-source.ts';
 import {captureInvoiceCreditSource,verifyInvoiceCreditSourceClosure} from './invoice-credit-source.ts';
+import {capturePairedInvoiceCreditSource,verifyPairedInvoiceCreditSourceClosure} from './paired-invoice-credit-source.ts';
 import {correctionSourceColumns,financeSourceTables,fundApplicationSourceColumns,heldTipSourceColumns,invoiceCreditSourceColumns} from './finance-source-profile.ts';
 
 type Query=(sql:string,parameters:unknown[])=>Promise<unknown[]>;
@@ -27,6 +28,7 @@ const nullableByProfile={
   application:{},
   tip:{},
   credit:{},
+  paired:{},
 } as const;
 const quote=(value:string)=>'"'+value.replaceAll('"','""')+'"';
 
@@ -44,10 +46,11 @@ function rowsOf(value:unknown,table:string):readonly Row[]{
 // A single authorized, read-only repeatable-read export transaction must own
 // query for the entire capture. Every underlying SQL reader checks that mode.
 export async function captureFinanceSourceExport(businessId:string,query:Query,
-  {includeCorrections=false,includeFundApplications=false,includeTips=false,includeCredits=false}:Readonly<{
-    includeCorrections?:boolean;includeFundApplications?:boolean;includeTips?:boolean;includeCredits?:boolean;
+  {includeCorrections=false,includeFundApplications=false,includeTips=false,includeCredits=false,includePairedCredits=false}:Readonly<{
+    includeCorrections?:boolean;includeFundApplications?:boolean;includeTips?:boolean;includeCredits?:boolean;includePairedCredits?:boolean;
   }>={}){
-  check(customerUuid(businessId)&&(!includeFundApplications||includeCorrections)&&(!includeTips||includeFundApplications)&&(!includeCredits||includeTips));
+  check(customerUuid(businessId)&&(!includeFundApplications||includeCorrections)&&(!includeTips||includeFundApplications)
+    &&(!includeCredits||includeTips)&&(!includePairedCredits||includeCredits));
   const one=async(sql:string,parameters:unknown[])=>{
     const result=await query(sql,parameters);
     check(Array.isArray(result)&&result.length===1&&exact(result[0],['result']));
@@ -56,10 +59,13 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
   const invoice=await captureInvoiceSource(businessId,one);
   const receipt=await captureReceiptSource(businessId,query);
   const expense=await capturePostedExpenseSource(businessId,query);
-  const correction=includeCorrections?await captureUnapplicationSource(businessId,query):null;
+  const pairedCapture=includePairedCredits?await capturePairedInvoiceCreditSource(businessId,query):null;
+  const paired=pairedCapture?.paired??null;
+  const correction=pairedCapture?{...pairedCapture.unapplication,history:pairedCapture.history}
+    :includeCorrections?await captureUnapplicationSource(businessId,query):null;
   const application=includeFundApplications&&correction?await captureFundApplicationSource(businessId,query,{invoice,unapplication:correction}):null;
   const tip=includeTips?await captureHeldTipSource(businessId,query):null;
-  const credit=includeCredits?await captureInvoiceCreditSource(businessId,query):null;
+  const credit=pairedCapture?.credit??(includeCredits?await captureInvoiceCreditSource(businessId,query):null);
   const history=await one('SELECT crest_commands.business_history_export_context($1::uuid) AS result',[businessId]);
   check(exact(history,['schemaVersion','scope','businessId','snapshotToken','observedAt','recordCounts'])
     &&history.schemaVersion===1&&history.scope==='business_history'&&history.businessId===businessId
@@ -69,22 +75,27 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     &&isDeepStrictEqual(receipt.history,expense.history)
     &&(!correction||history.snapshotToken===correction.historySnapshotToken&&isDeepStrictEqual(receipt.history,correction.history))
     &&(!application||history.snapshotToken===application.historySnapshotToken)
-    &&(!tip||history.snapshotToken===tip.historySnapshotToken)&&(!credit||history.snapshotToken===credit.historySnapshotToken));
+    &&(!tip||history.snapshotToken===tip.historySnapshotToken)&&(!credit||history.snapshotToken===credit.historySnapshotToken)
+    &&(!paired||history.snapshotToken===paired.historySnapshotToken));
   // Keep each established profile's amount, lineage and round-trip checks.
   formatInvoiceSource(invoice);
   formatReceiptSource(receipt);
   formatPostedExpenseSource(expense);
-  if(correction)formatUnapplicationSource(correction);
+  if(correction){
+    if(paired)verifyUnapplicationSourceClosure(correction.rows,correction.history,
+      new Set(paired.rows.paired_invoice_credit_releases.map(row=>row.operation_id)));
+    else formatUnapplicationSource(correction);
+  }
   if(application)formatFundApplicationSource(application);
 
-  const version=credit?5:tip?4:application?3:correction?2:1;
+  const version=paired?6:credit?5:tip?4:application?3:correction?2:1;
   const tables=financeSourceTables(version);
-  const profiles={invoice,receipt,expense,correction,application,tip,credit};
+  const profiles={invoice,receipt,expense,correction,application,tip,credit,paired};
   const combined=new Map<string,Map<string,Row>>();
   let count=0,bytes=0;
   for(const {name,columns} of tables){
     const rows=new Map<string,Row>();
-    for(const kind of ['invoice','receipt','expense','correction','application','tip','credit'] as const){
+    for(const kind of ['invoice','receipt','expense','correction','application','tip','credit','paired'] as const){
       const source=profiles[kind]?.rows;
       if(!source||!Object.hasOwn(source,name))continue;
       const knownNulls:Readonly<Record<string,readonly string[]>>=nullableByProfile[kind];
@@ -94,11 +105,19 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
         ...(tip&&kind!=='tip'&&kind!=='credit'?heldTipSourceColumns['crest.'+name]??[]:[]),
         ...(credit&&kind!=='credit'?invoiceCreditSourceColumns['crest.'+name]??[]:[])];
       for(const row of rowsOf(source,name)){
-        check(count<maxRows&&customerUuid(row.id)&&row.business_id===businessId&&!rows.has(row.id)
+        check(count<maxRows&&customerUuid(row.id)&&row.business_id===businessId
           &&exact(row,columns.filter(column=>!missing.includes(column))));
-        rows.set(row.id,Object.freeze(Object.fromEntries(columns.map(column=>[
+        const normalized=Object.freeze(Object.fromEntries(columns.map(column=>[
           column,missing.includes(column)?null:row[column]!,
-        ]))));
+        ])));
+        if(rows.has(row.id)){
+          // A paired P05/P07 legitimately shares exactly one group. Both
+          // separately scoped SQL readers must return byte-identical columns.
+          check(paired&&name==='atomic_finance_groups'&&kind==='credit'&&isDeepStrictEqual(rows.get(row.id),normalized)
+            &&paired.rows.paired_invoice_credit_releases.some(link=>link.operation_id===row.operation_id));
+          continue;
+        }
+        rows.set(row.id,normalized);
         count++;
       }
     }
@@ -133,7 +152,8 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     };
     const tableRows=(table:string)=>[...combined.get(table)!.values()];
     verifyHeldTipSourceClosure(tableRows,parsedHistory);
-    if(credit)verifyInvoiceCreditSourceClosure(tableRows,parsedHistory);
+    if(paired)verifyPairedInvoiceCreditSourceClosure(tableRows,parsedHistory);
+    else if(credit)verifyInvoiceCreditSourceClosure(tableRows,parsedHistory);
   }
 
   const files:File[]=[];
@@ -173,7 +193,8 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     tables})+'\n');
   add('README.txt',[
     'Crest OS posted finance source export',
-    credit?'Includes supported issued invoices, invoice credits, direct receipts, payment corrections, customer funds applications, confirmed tips from held funds, same-day posted expenses, their normalized journal and original history projections.'
+    paired?'Includes supported issued invoices, paired invoice credits and payment releases, standalone invoice credits, direct receipts, payment corrections, customer funds applications, confirmed tips from held funds, same-day posted expenses, their normalized journal and original history projections.'
+      :credit?'Includes supported issued invoices, invoice credits, direct receipts, payment corrections, customer funds applications, confirmed tips from held funds, same-day posted expenses, their normalized journal and original history projections.'
       :tip?'Includes supported issued invoices, direct receipts, payment corrections, customer funds applications, confirmed tips from held funds, same-day posted expenses, their normalized journal and original history projections.'
       :application?'Includes supported issued invoices, direct receipts, payment corrections, customer funds applications, same-day posted expenses, their normalized journal and original history projections.'
       :correction?'Includes supported issued invoices, direct receipts, payment corrections, same-day posted expenses, their normalized journal and original history projections.'
@@ -185,7 +206,7 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     observedAt:history.observedAt,historySnapshotToken:history.snapshotToken,
     sourceTokens:{invoice:invoice.snapshotToken,receipt:receipt.snapshotToken,expense:expense.snapshotToken,
       ...correction?{correction:correction.snapshotToken}:{},...application?{application:application.snapshotToken}:{},...tip?{tip:tip.snapshotToken}:{},
-      ...credit?{credit:credit.snapshotToken}:{}},
+      ...credit?{credit:credit.snapshotToken}:{},...paired?{paired:paired.snapshotToken}:{}},
     rowCounts:Object.fromEntries(tables.map(({name})=>[name,combined.get(name)!.size])),
     historyCounts:{operations:receipt.history.operation.length,auditEvents:receipt.history.audit_event.length},
     completePortableExport:false,referenceClosureComplete:false,completeBackup:false,

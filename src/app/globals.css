@@ -354,7 +354,7 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .direct-receipt .direct-receipt-options { border:0; background:none; margin:0; padding:0; }
 .direct-receipt fieldset > .field-help { margin:.15rem 0 .75rem; }
 .direct-receipt :is(button,input,select) { scroll-margin-bottom:6rem; }
-.held-tip textarea { display:block; margin-top:.35rem; width:100%; padding:.75rem; min-height:3rem; font:inherit; font-weight:400; color:inherit; background:var(--paper); border:1px solid #827e73; border-radius:var(--radius); resize:vertical; scroll-margin-bottom:6rem; }
+:is(.held-tip,.invoice-credit) textarea { display:block; margin-top:.35rem; width:100%; padding:.75rem; min-height:3rem; font:inherit; font-weight:400; color:inherit; background:var(--paper); border:1px solid #827e73; border-radius:var(--radius); resize:vertical; scroll-margin-bottom:6rem; }
 :is(.held-tip,.invoice-credit) .customer-values { grid-template-columns:minmax(0,1fr) auto; align-items:baseline; }
 :is(.held-tip,.invoice-credit) .customer-values dd { margin:0; font-variant-numeric:tabular-nums; }
 .invoice-credit-line { margin:0 0 .75rem; font-weight:600; overflow-wrap:anywhere; }

@@ -420,6 +420,11 @@
       "version": "20261208180000",
       "file": "20261208180000_finance_invoice_credit.sql",
       "sha256": "871acd348915589e7c84f5ad1371e32995792e43bcbfc9cf5e0d19769a2f9ce6"
+    },
+    {
+      "version": "20261209180000",
+      "file": "20261209180000_finance_paired_invoice_credit.sql",
+      "sha256": "3baea72bdec504a3bcfe8d83c89f15068985f5c14a2b648ccfafa71e44e15275"
     }
   ]
 }

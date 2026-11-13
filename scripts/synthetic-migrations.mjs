@@ -121,10 +121,11 @@ export async function requireSyntheticPickupReturnWorkflow(connectionString){
  ].map(signature=>'crest_commands.'+signature),'SYNTHETIC_PICKUP_RETURN_WORKFLOW_MIGRATION_REQUIRED','20261124180000');
 }
 
-export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false){
+export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false){
  assert(typeof fundApplications==='boolean'&&(!fundApplications||paymentCorrections));
  assert(typeof heldTips==='boolean'&&(!heldTips||fundApplications&&taxProfiles));
  assert(typeof invoiceCredits==='boolean'&&(!invoiceCredits||heldTips));
+ assert(typeof paidInvoiceCredits==='boolean'&&(!paidInvoiceCredits||invoiceCredits));
  assert(typeof paymentCorrections==='boolean'&&(!paymentCorrections||trialBalance));
  assert(typeof trialBalance==='boolean'&&(!trialBalance||sameDayExpenses));
  assert(typeof sameDayExpenses==='boolean'&&(!sameDayExpenses||directReceipts&&categoryMappings));
@@ -235,6 +236,12 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
   'read_fictional_trial_balance_v5('+authority+',date)',
   'read_fictional_journal_v5('+authority+',date,uuid,uuid,integer)'
  );
+ if(paidInvoiceCredits)signatures.push(
+  'read_fictional_paired_invoice_credit_options('+authority+',uuid,uuid,uuid,date)',
+  'lookup_fictional_paired_invoice_credit('+authority+',uuid,uuid,uuid,uuid)',
+  'retire_fictional_paired_invoice_credit('+authority+',uuid,uuid,uuid,uuid,uuid,text)',
+  'credit_fictional_paid_invoice_line('+authority+',uuid,uuid,uuid,uuid,uuid,date,bigint,bigint,uuid,uuid,uuid,bigint,bigint,uuid,bigint,text)'
+ );
  const qualified=signatures.map(signature=>'crest_commands.'+signature);
  const missing='SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED';
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
@@ -254,6 +261,7 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
   if(fundApplications)versions.push('20261206180000');
   if(heldTips)versions.push('20261207180000');
   if(invoiceCredits)versions.push('20261208180000');
+  if(paidInvoiceCredits)versions.push('20261209180000');
   const migration=await client.query('SELECT 1 FROM supabase_migrations.schema_migrations WHERE version=ANY($1::text[])',[versions]);
   assert(migration.rowCount===versions.length,missing);
   const {rows}=await client.query(`
