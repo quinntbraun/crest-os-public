@@ -410,6 +410,11 @@
       "version": "20261206180000",
       "file": "20261206180000_finance_customer_fund_application.sql",
       "sha256": "4d2259b3a995c044e98c82eb39acfad13692ffa6ad927f786938f91fd122c6c1"
+    },
+    {
+      "version": "20261207180000",
+      "file": "20261207180000_finance_held_tip.sql",
+      "sha256": "ebe1ac1aa9743f55d6b1e1cfbf2ff48b7b7683c329b498f902e09645efd9469b"
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 82,
+  "migrationCount": 83,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2581,7 +2581,8 @@
         "payment_id",
         "posted_expense_id",
         "unapplication_id",
-        "fund_application_id"
+        "fund_application_id",
+        "tip_realization_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2649,7 +2650,8 @@
         "allocation_event_id",
         "unapplication_id",
         "fund_lot_id",
-        "fund_application_id"
+        "fund_application_id",
+        "tip_realization_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2827,6 +2829,48 @@
         "operation_id",
         "created_by",
         "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.tip_realizations",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "fund_lot_id",
+        "first_cent",
+        "last_cent",
+        "inclusive_cents",
+        "net_cents",
+        "tax_cents",
+        "jurisdiction",
+        "tax_profile_id",
+        "revenue_mapping_id",
+        "revenue_account_id",
+        "tax_mapping_id",
+        "tax_account_id",
+        "customer_intent_evidence",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.fund_lot_range_consumptions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "fund_lot_id",
+        "first_cent",
+        "last_cent",
+        "fund_application_id",
+        "tip_realization_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
