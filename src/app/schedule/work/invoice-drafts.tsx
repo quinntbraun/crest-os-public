@@ -35,6 +35,7 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
   const [heldTips, setHeldTips] = useState(false);
   const [invoiceCredits, setInvoiceCredits] = useState(false);
   const [paidInvoiceCredits, setPaidInvoiceCredits] = useState(false);
+  const [serviceRefunds, setServiceRefunds] = useState(false);
   const [due, setDue] = useState('');
   const [outcomes, setOutcomes] = useState<readonly string[]>([]);
   const [cancelReason, setCancelReason] = useState('');
@@ -59,6 +60,7 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
     setHeldTips(false);
     setInvoiceCredits(false);
     setPaidInvoiceCredits(false);
+    setServiceRefunds(false);
     setReviewable(false); setRetirementReason('');
   }
 
@@ -95,6 +97,7 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
       setHeldTips(context.heldTips===true);
       setInvoiceCredits(context.invoiceCredits===true);
       setPaidInvoiceCredits(context.paidInvoiceCredits===true);
+      setServiceRefunds(context.serviceRefunds===true);
       const stored = readPendingInvoiceDraft();
       setPending(stored !== null);
       setReviewable(false);
@@ -289,7 +292,7 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
       {!editing && draft && <section aria-label="Saved draft">
         {openedInvoice && <section aria-label="Issued invoice"><IssuedInvoiceDetails invoice={openedInvoice}
           receiptBusinessId={directReceipts?businessId:undefined} paymentCorrections={paymentCorrections}
-          fundApplications={fundApplications} heldTips={heldTips} invoiceCredits={invoiceCredits} paidInvoiceCredits={paidInvoiceCredits}/></section>}
+          fundApplications={fundApplications} heldTips={heldTips} invoiceCredits={invoiceCredits} paidInvoiceCredits={paidInvoiceCredits} serviceRefunds={serviceRefunds}/></section>}
         <h4>{issuedDraft===draft.receipt.draftId ? 'Draft history' : draft.receipt.state === 'cancelled' ? 'Cancelled draft' : 'Saved draft'}</h4>
         <p>Revision {draft.receipt.revision}{draft.receipt.dueOn ? ' · Due '+formatDue(draft.receipt.dueOn) : ''}</p>
         {draft.receipt.reason && <p>{draft.receipt.reason}</p>}
@@ -305,7 +308,7 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
           <InvoiceIssueTaxReview key={draft.receipt.draftId+':'+draft.receipt.revision} businessId={businessId} jobId={jobId}
             draftId={draft.receipt.draftId} revision={draft.receipt.revision} lines={draft.lines}
             directReceipts={directReceipts} paymentCorrections={paymentCorrections} fundApplications={fundApplications} heldTips={heldTips}
-            invoiceCredits={invoiceCredits} paidInvoiceCredits={paidInvoiceCredits}
+            invoiceCredits={invoiceCredits} paidInvoiceCredits={paidInvoiceCredits} serviceRefunds={serviceRefunds}
             onIssued={()=>setIssuedDraft(draft.receipt.draftId)}/>}
         {current && canChange && !pending && issuedDraft!==draft.receipt.draftId && draft.receipt.state === 'draft' && <>
           {canPrepare && <button type="button" className="secondary" disabled={busy} onClick={()=>edit(draft)}>Edit draft</button>}

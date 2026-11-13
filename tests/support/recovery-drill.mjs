@@ -20,6 +20,8 @@ import {heldTip83File,heldTip83Parts,heldTip83Version,heldTip83PriorRegistrySha2
 import {invoiceCredit84File,invoiceCredit84Parts,invoiceCredit84Version,invoiceCredit84PriorRegistrySha256} from './finance-invoice-credit84-candidate.mjs';
 import {pairedInvoiceCredit85File,pairedInvoiceCredit85Parts,pairedInvoiceCredit85Version,pairedInvoiceCredit85PriorRegistrySha256}
   from './finance-paired-invoice-credit85-candidate.mjs';
+import {serviceRefundCoverage,serviceRefundFile,serviceRefundParts,serviceRefundPriorRegistrySha256,serviceRefundVersion}
+  from './finance-service-refund-candidate.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
@@ -942,6 +944,38 @@ export async function restorePairedInvoiceCredit85CandidateDatabase(candidate,di
   return restoreWithProfile((await pairedInvoiceCredit85RecoveryProfile(candidate)).profile,directory,identity,url);
 }
 
+async function serviceRefundRecoveryProfile(candidate){
+  assert.equal(candidate.file,serviceRefundFile);
+  assert.equal(hash(candidate.priorRegistry),serviceRefundPriorRegistrySha256);
+  const prior=JSON.parse(candidate.priorRegistry);
+  const registry=await readFile(join(candidate.directory,'supabase/migration-checksums.json'));
+  assert.equal(hash(registry),candidate.registrySha256);
+  const {migrations}=JSON.parse(registry);
+  assert.deepEqual(migrations,[...prior.migrations,{version:serviceRefundVersion,file:candidate.file,sha256:candidate.sha256}]);
+  const migration=await readFile(join(candidate.directory,'supabase/migrations',candidate.file));
+  assert.equal(hash(migration),candidate.sha256);
+  assert.equal(migration.length,candidate.bytes);
+  assert.deepEqual(candidate.parts.map(part=>part.path),serviceRefundParts);
+  for(const {path,offset,bytes,sha256} of candidate.parts){
+    const original=await readFile(join(root,path));
+    assert.equal(hash(original),sha256);
+    assert.equal(original.length,bytes);
+    assert(migration.subarray(offset,offset+bytes).equals(original));
+  }
+  assert.equal(candidate.baseline.migrationCount,85);
+  const coverage=serviceRefundCoverage(candidate.baseline);
+  assert.deepEqual(candidate.coverage,coverage);
+  const profile=Object.freeze({schemaVersion:86,registrySha256:candidate.registrySha256,heldServiceRefundMigrationSha256:candidate.sha256});
+  return {profile,versions:migrations.map(row=>row.version),coverage};
+}
+export async function backupServiceRefundCandidateDatabase(candidate,client,url,directory,recipient){
+  const checked=await serviceRefundRecoveryProfile(candidate);
+  return backupWithProfile(checked.profile,client,url,directory,recipient,undefined,undefined,checked);
+}
+export async function restoreServiceRefundCandidateDatabase(candidate,directory,identity,url){
+  return restoreWithProfile((await serviceRefundRecoveryProfile(candidate)).profile,directory,identity,url);
+}
+
 async function expense79RecoveryProfile(candidate){
   assert.equal(candidate.file,expense79File);
   assert.equal(candidate.previousRegistrySha256,legacy78Profile.registrySha256);
@@ -1005,6 +1039,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile.schemaVersion===83&&profile.heldTipMigrationSha256
       ||profile.schemaVersion===84&&profile.heldInvoiceCreditMigrationSha256
       ||profile.schemaVersion===85&&profile.heldPairedInvoiceCreditMigrationSha256
+      ||profile.schemaVersion===86&&profile.heldServiceRefundMigrationSha256
       ||profile.schemaVersion===79&&profile.heldExpenseMigrationSha256
       ));
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -1092,6 +1127,7 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     assert.equal(manifest.heldTipMigrationSha256,profile.heldTipMigrationSha256);
     assert.equal(manifest.heldInvoiceCreditMigrationSha256,profile.heldInvoiceCreditMigrationSha256);
     assert.equal(manifest.heldPairedInvoiceCreditMigrationSha256,profile.heldPairedInvoiceCreditMigrationSha256);
+    assert.equal(manifest.heldServiceRefundMigrationSha256,profile.heldServiceRefundMigrationSha256);
     if(profile.heldDropoffPhotoAuthority||profile.heldCustody67MigrationSha256||profile.heldPickupReturnSources
       ||profile.heldExpenseMigrationSha256)assert(manifest.objectArchive);
     stage='authenticated_dump';const dump=await unseal(join(directory,'database.age'),receipt.dump,identity);

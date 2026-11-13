@@ -12,12 +12,13 @@ const fundApplications=process.env.CREST_TEST_FUND_APPLICATIONS==='1';
 const heldTips=process.env.CREST_TEST_HELD_TIPS==='1';
 const invoiceCredits=process.env.CREST_TEST_INVOICE_CREDITS==='1';
 const paidInvoiceCredits=process.env.CREST_TEST_PAID_INVOICE_CREDITS==='1';
+const serviceRefunds=process.env.CREST_TEST_SERVICE_REFUNDS==='1';
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
   financeAccounts:true,financeMappings:true,financeTaxProfiles:true,invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,
   financeMoneyChannels:directReceipts,directReceipts,...paymentCorrections?{
-   expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,
+   expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,
   }:{}});
  let browser;
  const financeResponses=[];
@@ -486,6 +487,50 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
         await expect(payments.getByRole('status')).toHaveText('This customer has no outstanding invoices for that date.');
         await expect(payments).not.toContainText('TEST-1 ·');
+        if(serviceRefunds){
+         await allowInvoiceReadWindow();
+         await invoice.getByText('Record a settled refund',{exact:true}).press('Enter');
+         const refund=invoice.getByRole('region',{name:'Record a settled refund',exact:true});
+         await refund.getByRole('button',{name:'Load available credits',exact:true}).press('Enter');
+         await expect(refund.getByRole('status')).toHaveText('Enter the date the refund settled.');
+         const date=(await fixture.client.query("SELECT (statement_timestamp() AT TIME ZONE 'America/Indiana/Indianapolis')::date::text AS date")).rows[0].date;
+         await refund.getByLabel('Settlement date',{exact:true}).fill(date);
+         await refund.getByRole('button',{name:'Review refund',exact:true}).press('Enter');
+         await expect(refund.getByRole('status')).toContainText('Match the settled amount');
+         const account=refund.getByRole('combobox',{name:'Refunded from',exact:true});
+         await expect(account).toBeVisible();
+         await account.selectOption({label:'Fictional checking'});
+         await refund.getByLabel('Settled amount (USD)',{exact:true}).fill('5.00');
+         await refund.getByLabel('Reference type',{exact:true}).fill('ledger');
+         await refund.getByLabel('Transaction ID',{exact:true}).fill('synthetic-refund-'+name);
+         await refund.getByLabel('Reference as shown on the account',{exact:true}).fill('Fictional bank outflow');
+         await refund.getByLabel('How you verified settlement',{exact:true}).fill('Fictional bank debit settled');
+         await refund.getByLabel('Reason for the refund',{exact:true}).fill('Fictional service refund confirmed');
+         const record=refund.getByRole('button',{name:'Save refund record',exact:true});
+         for(const width of [360,390,768,1440]){
+          await page.setViewportSize({width,height:900});await record.evaluate(button=>button.scrollIntoView({block:'center'}));
+          assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+          assert.deepEqual((await new AxeBuilder({page}).include('.invoice-credit').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+          await page.screenshot({path:'.local/review/finance-service-refund-'+name+'-'+width+'.png'});
+         }
+         await allowInvoiceReadWindow();
+         let refundPosted=false;
+         await page.route('**/api/business/finance-accounts/service-refund-submit',async route=>{
+          const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+          if(response.status()===200){refundPosted=true;await route.abort('failed');}
+          else await route.fulfill({response});
+         },{times:1});
+         await record.press('Enter');
+         await expect(refund.getByRole('status')).toContainText('could not confirm the save');
+         assert(refundPosted);
+         const ref=await page.evaluate(()=>sessionStorage.getItem('crest.service-refund.pending-reference.v1'));
+         assert(ref&&!ref.includes('Fictional')&&!ref.includes('synthetic-refund-'));
+         await refund.getByRole('button',{name:'Check original refund',exact:true}).press('Enter');
+         await expect(refund.getByRole('status')).toHaveText('The original refund record was saved.');
+         const refundDownload=page.waitForEvent('download');
+         await refund.getByRole('button',{name:'Download refund record (CSV)',exact:true}).click();
+         assert.match(await readFile(await (await refundDownload).path(),'utf8'),/"500","Fictional bank debit settled","Fictional service refund confirmed"/);
+        }
        }
        await page.goto(fixture.origin+'/settings/accounts');
        await page.getByRole('button',{name:'Load accounts',exact:true}).click();
@@ -501,6 +546,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        if(fundApplications)await expect(report).toContainText('Invoice balance reduced');
        if(heldTips)await expect(report).toContainText('Held tip · Tip revenue');
        if(invoiceCredits)await expect(report).toContainText('Invoice credit · Sales returns');
+       if(serviceRefunds){
+        await expect(report).toContainText('Service refund · Held balance reduced');
+        await expect(report).toContainText('Service refund · Settled outflow');
+       }
       }
      }
     }

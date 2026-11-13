@@ -209,6 +209,8 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
         assert.equal((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.length,0,'accessible form');
         if(name==='chromium'){
           await fill(page,{password:'synthetic-wrong-password'});await expect(page.getByRole('status')).toContainText('Sign-in failed.');
+          await expect(page.getByRole('status')).toContainText('phone’s date and time are set automatically');
+          await expect(page.getByLabel('Email',{exact:true})).toHaveValue(fixture.email);
           assert.equal(await page.getByLabel('Password',{exact:true}).inputValue(),'');assert.equal(await page.getByLabel('Authenticator code',{exact:true}).inputValue(),'');assert.equal(await localCookie(first),undefined,'failed login issues no session');
         }
         await fill(page);await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();

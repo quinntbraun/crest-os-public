@@ -425,6 +425,11 @@
       "version": "20261209180000",
       "file": "20261209180000_finance_paired_invoice_credit.sql",
       "sha256": "3baea72bdec504a3bcfe8d83c89f15068985f5c14a2b648ccfafa71e44e15275"
+    },
+    {
+      "version": "20261210180000",
+      "file": "20261210180000_fictional_service_refund.sql",
+      "sha256": "edc38dfde81b21cb9148ea87553bf52f9f87bcda05f5c4d7f2f1019285d854f8"
     }
   ]
 }
