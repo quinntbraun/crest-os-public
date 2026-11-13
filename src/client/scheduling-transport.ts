@@ -54,6 +54,7 @@ export async function postScheduling(route:SchedulingRoute,body:object,proof:Pro
    ...route==='workspace'&&response.headers.get('x-crest-dropoff-policy-revision')==='1'?{dropoffPolicyRevisionAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-maintenance-follow-up')==='1'?{maintenanceFollowUpAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-invoice-preparation')==='1'?{invoicePreparationAvailable:true as const}:{},
+   ...route==='workspace'&&response.headers.get('x-crest-invoice-drafts')==='1'?{invoiceDraftsAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-review-outcome')==='1'?{reviewOutcomeAvailable:true as const}:{},
    ...route==='workspace'&&response.headers.get('x-crest-work-boundary')==='1'?{workBoundaryAvailable:true as const}:{}};
  }catch(error){throw error instanceof SchedulingClientError?error:new SchedulingClientError(mutation?(sent?'unknown':'not_submitted'):'unavailable');}

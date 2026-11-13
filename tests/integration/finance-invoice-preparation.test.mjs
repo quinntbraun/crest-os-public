@@ -9,8 +9,8 @@ import { createConfirmedBookingFixture } from '../support/confirmed-booking-fixt
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
 import { installProviderSchema } from '../support/provider-schema.mjs';
 import { requireSyntheticFinanceAccountConfiguration } from '../../scripts/synthetic-migrations.mjs';
-import { backupDatabase, backupLegacy74Database, connect, inventory, keyPair, privateWorkspace,
-  recoveryCluster, restoreDatabase, restoreLegacy74Database } from '../support/recovery-drill.mjs';
+import { backupLegacy75Database, backupLegacy74Database, connect, inventory, keyPair, privateWorkspace,
+  recoveryCluster, restoreLegacy75Database, restoreLegacy74Database } from '../support/recovery-drill.mjs';
 
 async function call(connection, command, args) {
   const placeholders = args.map((_, index) => '$' + (index + 1)).join(',');
@@ -114,7 +114,7 @@ test('invoice preparation reads retained completed portions, including literal z
       const keys = await keyPair(directory);
       await assert.rejects(backupLegacy74Database(admin,target,point,keys.recipient),
         {message:'SYNTHETIC_RECOVERY_BACKUP_FAILED:coverage'});
-      const {manifest} = await backupDatabase(admin,target,point,keys.recipient);
+      const {manifest} = await backupLegacy75Database(admin,target,point,keys.recipient);
       assert.equal(manifest.schemaVersion,75);
       assert.deepEqual(manifest.rows,await inventory(admin));
       destination = await recoveryCluster();
@@ -122,7 +122,7 @@ test('invoice preparation reads retained completed portions, including literal z
       assert.notEqual(new URL(restoredUrl).port,new URL(target).port);
       await assert.rejects(restoreLegacy74Database(point,keys.path,restoredUrl),
         {message:'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest'});
-      await restoreDatabase(point,keys.path,restoredUrl);
+      await restoreLegacy75Database(point,keys.path,restoredUrl);
       await requireSyntheticFinanceAccountConfiguration(restoredUrl,owner.business,true,true,true,true);
       restored = await connect(restoredUrl);
       assert.deepEqual(await inventory(restored),manifest.rows);

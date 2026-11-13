@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 75,
+  "migrationCount": 76,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2322,6 +2322,31 @@
         "created_at",
         "created_by",
         "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoice_draft_revisions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "draft_id",
+        "revision",
+        "previous_revision",
+        "job_id",
+        "customer_id",
+        "due_on",
+        "selected_outcomes",
+        "retained_lines",
+        "state",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "audit_event_id",
         "origin"
       ],
       "excluded": [],

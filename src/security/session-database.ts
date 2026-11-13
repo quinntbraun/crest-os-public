@@ -78,8 +78,11 @@ function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'c
           // eslint-disable-next-line preserve-caught-error -- The transaction rolled back and the marker is allowlisted.
           throw new Error(error.message);
         }
-        // eslint-disable-next-line preserve-caught-error -- Exact archive refusal after confirmed rollback.
-        if(error.code==='23514'&&error.message==='FINANCE_CHANNEL_ACCOUNT_PINNED')throw new Error(error.message);
+        if(error.code==='23514'&&['FINANCE_CHANNEL_ACCOUNT_PINNED','INVOICE_DRAFT_JOB_REQUIRED',
+         'INVOICE_DRAFT_COMPLETED_SCOPE_REQUIRED'].includes(error.message)){
+          // eslint-disable-next-line preserve-caught-error -- Only allowlisted outcomes cross after rollback.
+          throw new Error(error.message);
+        }
         if(error.code==='22023'&&['FINANCE_MAPPING_EFFECTIVE_ORDER_REQUIRED','FINANCE_MAPPING_ACCOUNT_REQUIRED','FINANCE_MAPPING_CLOSURE_REQUIRED',
          'FINANCE_TAX_EFFECTIVE_ORDER_REQUIRED','FINANCE_CHANNEL_EFFECTIVE_ORDER_REQUIRED','FINANCE_CHANNEL_ACCOUNT_REQUIRED',
          'FINANCE_CHANNEL_ACCOUNT_PINNED','FINANCE_CHANNEL_IDENTITY_RETAINED'].includes(error.message)){

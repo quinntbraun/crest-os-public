@@ -121,7 +121,8 @@ export async function requireSyntheticPickupReturnWorkflow(connectionString){
  ].map(signature=>'crest_commands.'+signature),'SYNTHETIC_PICKUP_RETURN_WORKFLOW_MIGRATION_REQUIRED','20261124180000');
 }
 
-export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false){
+export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false){
+ assert.equal(typeof invoiceDrafts,'boolean');
  assert.equal(typeof invoicePreparation,'boolean');
  assert.equal(typeof taxProfiles,'boolean');assert.equal(typeof categoryMappings,'boolean');assert.equal(typeof moneyChannels,'boolean');
  const authority='bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid';
@@ -155,6 +156,13 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
   'list_money_channel_accounts('+authority+',text,text,text,integer)'
  );
  if(invoicePreparation)signatures.push('read_invoice_preparation('+authority+',uuid)');
+ if(invoiceDrafts)signatures.push(
+  'save_invoice_draft('+authority+',uuid,uuid,uuid,bigint,uuid,date,uuid[],text)',
+  'read_invoice_draft('+authority+',uuid,bigint)',
+  'list_invoice_drafts('+authority+',uuid,uuid)',
+  'lookup_invoice_draft_operation('+authority+',uuid,uuid,uuid,bigint,uuid)',
+  'retire_invoice_draft_operation('+authority+',uuid,uuid,uuid,uuid,bigint,uuid,text)'
+ );
  const qualified=signatures.map(signature=>'crest_commands.'+signature);
  const missing='SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED';
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
@@ -165,6 +173,7 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
   if(categoryMappings)versions.push('20261127180000');
   if(moneyChannels)versions.push('20261128180000');
   if(invoicePreparation)versions.push('20261129180000');
+  if(invoiceDrafts)versions.push('20261130180000');
   const migration=await client.query('SELECT 1 FROM supabase_migrations.schema_migrations WHERE version=ANY($1::text[])',[versions]);
   assert(migration.rowCount===versions.length,missing);
   const {rows}=await client.query(`

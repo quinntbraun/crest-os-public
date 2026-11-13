@@ -1,5 +1,5 @@
 # Current Crest OS delivery
 
-The fictional laptop preview includes masked money channels, reviewed opening amounts, and dated tax and expense category approvals. Schema75 lets the owner open a saved completion, verify the exact completed portions of the accepted work, and download those portions as CSV. It includes complimentary completed work and excludes unfulfilled work. The data path remains restricted to the fictional finance workspace. Delivery of schema75 requires its own hosted acceptance and preserved-data upgrade.
+The fictional workspace supports completed-work invoice review and private CSV retrieval. Schema76 adds saved invoice drafts from a scheduled job, optional due dates, completed portions from retained work, revision history, CSV retrieval and explicit recovery or cancellation. A draft does not issue an invoice, create a receivable or post a journal entry. The schema76 workspace remains subject to hosted acceptance and a verified fictional upgrade.
 
-Invoice drafts, issuance, immutable financial posting, collections, reporting, full portability and recovery, Google Calendar and real-use acceptance remain in V1.
+Invoice issuance, immutable financial posting, collections, reporting, complete portability and recovery, Google Calendar and real-use acceptance remain in V1.
