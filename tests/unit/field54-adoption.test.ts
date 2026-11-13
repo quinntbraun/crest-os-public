@@ -63,6 +63,9 @@ import {unapplicationSourceAddedColumns,unapplicationSourceCoverage} from '../..
 import registered81 from '../support/registered81-migration-checksums.json';
 import coverage81 from '../support/registered81-export-coverage.json';
 import {fundApplicationSourceAddedColumns,fundApplicationSourceCoverage} from '../../src/bookkeeping/fund-application-source.ts';
+import registered82 from '../support/registered82-migration-checksums.json';
+import coverage82 from '../support/registered82-export-coverage.json';
+import {heldTipSourceAddedColumns,heldTipSourceCoverage} from '../../src/bookkeeping/held-tip-source.ts';
 import {financeAccountSourceColumns,financeMoneyChannelSourceColumns,financeTaxSourceColumns,invoiceDraftSourceColumns} from '../../src/bookkeeping/finance-account-source.ts';
 import {pickupCustodySourceColumns} from '../../src/operations/pickup-custody-source.ts';
 import registry from '../support/registered54-migration-checksums.json';
@@ -430,16 +433,28 @@ it('appends payment correction and portable lineage after the frozen reporting s
 });
 it('appends application of exact funds and independent export after frozen corrections',()=>{
  const file='20261206180000_finance_customer_fund_application.sql';
- expect(currentRegistry.migrations).toHaveLength(82);
- expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261206180000',file,
+ expect(registered82.migrations).toHaveLength(82);
+ expect(registered82.migrations.at(-1)).toEqual({version:'20261206180000',file,
   sha256:'4d2259b3a995c044e98c82eb39acfad13692ffa6ad927f786938f91fd122c6c1'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered81 as MigrationRegistry)).not.toThrow();
+ expect(()=>validateMigrationSet(registered82 as MigrationRegistry,new Map(registered82.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered81 as MigrationRegistry)).not.toThrow();
  const additions:Readonly<Record<string,readonly string[]>>=fundApplicationSourceAddedColumns;
- expect(currentCoverage).toEqual({...coverage81,migrationCount:82,tables:[
+ expect(coverage82).toEqual({...coverage81,migrationCount:82,tables:[
   ...coverage81.tables.map(row=>({...row,required:[...row.required,...additions[row.table]??[]]})),
   ...fundApplicationSourceCoverage,
  ]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:82});
+});
+it('appends held tips and shared exact fund ranges after frozen customer funds',()=>{
+ const file='20261207180000_finance_held_tip.sql';
+ expect(currentRegistry.migrations).toHaveLength(83);
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261207180000',file,
+  sha256:'ebe1ac1aa9743f55d6b1e1cfbf2ff48b7b7683c329b498f902e09645efd9469b'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered82 as MigrationRegistry)).not.toThrow();
+ const additions:Readonly<Record<string,readonly string[]>>=heldTipSourceAddedColumns;
+ expect(currentCoverage).toEqual({...coverage82,migrationCount:83,tables:[
+  ...coverage82.tables.map(row=>({...row,required:[...row.required,...additions[row.table]??[]]})),
+  ...heldTipSourceCoverage,
+ ]});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:83});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');
