@@ -34,13 +34,16 @@ import {parseInvoiceExemptionApproval,parseInvoiceExemptionEditor,parseInvoiceEx
 import {parseInvoiceSetupRead,parseInvoiceSetupResult,parseInvoiceSetupWrite} from '../bookkeeping/invoice-setup-contract';
 import {directReceiptMatchesInput,parseDirectReceiptInput,parseDirectReceiptOptions,parseDirectReceiptReference,
  parseDirectReceiptResult} from '../bookkeeping/direct-receipt-contract';
+import {parseSameDayExpenseInput,parseSameDayExpenseOptions,parseSameDayExpenseReference,parseSameDayExpenseResult,
+ sameDayExpenseMatchesInput} from '../bookkeeping/expenses/same-day-expense-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
 const invoiceIssuePendingKey='crest.invoice-issue.pending-reference.v1';
 const directReceiptPendingKey='crest.direct-receipt.pending-reference.v1';
+const sameDayExpensePendingKey='crest.expense-post.pending-reference.v1';
 const invoiceDraftFailure=[...knownFailure,'INVOICE_DRAFT_JOB_REQUIRED','INVOICE_DRAFT_COMPLETED_SCOPE_REQUIRED'] as const;
 const pendingKey='crest.finance-account.pending-reference.v1';
 type Pending=Readonly<{businessId:string;binding:string;reference:FinanceAccountReference}>;
@@ -89,17 +92,46 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string)
   invoiceDrafts:response.headers.get('x-crest-invoice-drafts')==='1',
   invoiceIssueTaxReview:response.headers.get('x-crest-invoice-issue-tax-review')==='1',
   invoiceIssue:response.headers.get('x-crest-invoice-issue')==='1',
-  directReceipts:response.headers.get('x-crest-direct-receipts')==='1'};
+  directReceipts:response.headers.get('x-crest-direct-receipts')==='1',
+  sameDayExpenses:response.headers.get('x-crest-same-day-expenses')==='1'};
 }
 
 export const financeAccounts={
  async context(signal:AbortSignal):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts}=await post('context',{},signal);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses}=await post('context',{},signal);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
   return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,
-   ...(invoiceIssue?{invoiceIssue}:{}),...(directReceipts?{directReceipts}:{})}) as FinanceAccountContext;
+   ...(invoiceIssue?{invoiceIssue}:{}),...(directReceipts?{directReceipts}:{}),...(sameDayExpenses?{sameDayExpenses}:{})}) as FinanceAccountContext;
+ },
+ async sameDayExpenseOptions(context:FinanceAccountContext,expenseId:string,signal:AbortSignal){
+  check(context.sameDayExpenses&&customerUuid(expenseId));
+  const {status,value}=await post('expense-post-options',{expenseId},signal,context.binding);
+  check(status===200);
+  return parseSameDayExpenseOptions(value,context.businessId,expenseId);
+ },
+ async postSameDayExpense(context:FinanceAccountContext,input:ReturnType<typeof parseSameDayExpenseInput>,signal:AbortSignal){
+  check(context.sameDayExpenses&&context.writeState==='ready'&&context.recoveryEpoch===input.reference.recoveryEpoch);
+  const request=parseSameDayExpenseInput(input);
+  const {status,value}=await post('expense-post-submit',request,signal,context.binding);
+  if(status===409&&exact(value,['error'])&&typeof value.error==='string')return {state:'refused' as const,reason:value.error};
+  check(status===200||status===409);
+  const result=parseSameDayExpenseResult(value,context.businessId,request.reference);
+  check(result.state==='conflict'||result.state==='retired'||result.state==='committed'&&sameDayExpenseMatchesInput(result,request));
+  return result;
+ },
+ async lookupSameDayExpense(context:FinanceAccountContext,reference:ReturnType<typeof parseSameDayExpenseReference>,signal:AbortSignal){
+  check(context.sameDayExpenses);
+  const {status,value}=await post('expense-post-lookup',parseSameDayExpenseReference(reference),signal,context.binding);
+  check(status===200);
+  return parseSameDayExpenseResult(value,context.businessId,reference);
+ },
+ async retireSameDayExpense(context:FinanceAccountContext,reference:ReturnType<typeof parseSameDayExpenseReference>,reason:string,signal:AbortSignal){
+  check(context.sameDayExpenses&&context.writeState==='ready'&&customerUuid(context.recoveryEpoch)&&financeAccountReviewReason(reason));
+  const {status,value}=await post('expense-post-retire',{reference:parseSameDayExpenseReference(reference),reviewEpoch:context.recoveryEpoch,reason},signal,context.binding);
+  check(status===200||status===409);
+  return parseSameDayExpenseResult(value,context.businessId,reference);
  },
  async directReceiptOptions(context:FinanceAccountContext,customerId:string,actualOn:string|null,signal:AbortSignal){
   check(context.directReceipts&&customerUuid(customerId)&&(actualOn===null||customerDate(actualOn)));
@@ -602,6 +634,29 @@ export function clearPendingDirectReceipt(entry:PendingDirectReceipt){
  check(JSON.stringify(readPendingDirectReceipt())===JSON.stringify(entry));
  sessionStorage.removeItem(directReceiptPendingKey);
  check(readPendingDirectReceipt()===null);
+}
+
+type PendingSameDayExpense=Readonly<{businessId:string;binding:string;expenseId:string;reference:ReturnType<typeof parseSameDayExpenseReference>}>;
+export function readPendingSameDayExpense():PendingSameDayExpense|null{
+ const raw=sessionStorage.getItem(sameDayExpensePendingKey);
+ if(raw===null)return null;
+ check(raw.length<=800&&(raw.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length===7);
+ const value:unknown=JSON.parse(raw);
+ check(exact(value,['businessId','binding','expenseId','reference'])&&customerUuid(value.businessId)&&customerUuid(value.expenseId)
+  &&typeof value.binding==='string'&&bindingPattern.test(value.binding));
+ return {businessId:value.businessId,binding:value.binding,expenseId:value.expenseId,reference:parseSameDayExpenseReference(value.reference)};
+}
+export function retainPendingSameDayExpense(context:FinanceAccountContext,expenseId:string,reference:PendingSameDayExpense['reference']){
+ check(readPendingSameDayExpense()===null&&customerUuid(expenseId));
+ const entry={businessId:context.businessId,binding:context.binding,expenseId,reference};
+ sessionStorage.setItem(sameDayExpensePendingKey,JSON.stringify(entry));
+ check(JSON.stringify(readPendingSameDayExpense())===JSON.stringify(entry));
+ return entry;
+}
+export function clearPendingSameDayExpense(entry:PendingSameDayExpense){
+ check(JSON.stringify(readPendingSameDayExpense())===JSON.stringify(entry));
+ sessionStorage.removeItem(sameDayExpensePendingKey);
+ check(readPendingSameDayExpense()===null);
 }
 
 export function downloadFinanceHistory(filename:string,rows:readonly (readonly string[])[]){

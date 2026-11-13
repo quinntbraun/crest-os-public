@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 78,
+  "migrationCount": 79,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2578,7 +2578,8 @@
         "template_version",
         "zero_effect_reason",
         "posted_at",
-        "payment_id"
+        "payment_id",
+        "posted_expense_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2739,6 +2740,36 @@
         "partition_id",
         "receivable_id",
         "cents"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.posted_expenses",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "expense_id",
+        "expense_revision",
+        "incurred_on",
+        "paid_on",
+        "gross_cents",
+        "purchase_tax_cents",
+        "purchase_tax_treatment",
+        "mapping_id",
+        "expense_account_id",
+        "channel_version_id",
+        "money_account_id",
+        "evidence_id",
+        "receipt_id",
+        "receipt_revision",
+        "missing_receipt_reason",
+        "unknown_vendor_reason",
+        "review_reason",
+        "operation_id",
+        "created_by",
+        "created_at"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
