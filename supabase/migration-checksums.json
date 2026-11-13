@@ -375,6 +375,11 @@
       "version": "20261129180000",
       "file": "20261129180000_finance_invoice_preparation.sql",
       "sha256": "254cc0b8324db939ed915d54fe745c17d8173228fff14c75437a2b0885482334"
+    },
+    {
+      "version": "20261130180000",
+      "file": "20261130180000_finance_invoice_drafts.sql",
+      "sha256": "013bbea2206f1f5888c0be7b2cdf57c236384fa548b4060b2be7e0e9fb273e53"
     }
   ]
 }

@@ -4,6 +4,7 @@ import {
 } from '../customer/customer-contract.ts';
 import {parseFinanceTaxApproval} from './finance-tax-contract.ts';
 import {parseMoneyChannel} from './finance-money-channel-contract.ts';
+import {parseInvoicePreparationLines} from './invoice-preparation-contract.ts';
 
 export const financeAccountSourceColumns = {
   accounts: ['id','business_id','code','account_type','normal_side','control_kind','report_role','currency',
@@ -21,8 +22,10 @@ export const financeMoneyChannelSourceColumns=['id','business_id','channel_id','
   'effective_from','account_id','owner_actor_id','kind','ownership_scope','provider_namespace','masked_suffix','label',
   'ownership_evidence','opening_state','opening_on','opening_cents','opening_evidence','active','reason','audit_event_id',
   'created_at','created_by','operation_id','origin'] as const;
+export const invoiceDraftSourceColumns=['id','business_id','draft_id','revision','previous_revision','job_id','customer_id',
+  'due_on','selected_outcomes','retained_lines','state','reason','created_at','created_by','operation_id','audit_event_id','origin'] as const;
 const sourceColumns={...financeAccountSourceColumns,tax_profiles:financeTaxSourceColumns,
-  money_channel_versions:financeMoneyChannelSourceColumns} as const;
+  money_channel_versions:financeMoneyChannelSourceColumns,invoice_draft_revisions:invoiceDraftSourceColumns} as const;
 
 type Entity = keyof typeof sourceColumns;
 type AccountEntity = keyof Pick<typeof financeAccountSourceColumns, 'accounts'|'account_versions'>;
@@ -31,7 +34,7 @@ type Tables = Readonly<Record<AccountEntity, readonly Row[]>>;
 const nullable = new Set(['control_kind','previous_version','reason']);
 const nullableTax = new Set(['service_id','rate','verification_evidence']);
 const nullableChannel = new Set(['provider_namespace','masked_suffix','ownership_evidence','opening_on','opening_cents','opening_evidence']);
-const decimal = new Set(['first_version','version','previous_version']);
+const decimal = new Set(['first_version','version','previous_version','revision','previous_revision']);
 const accountTypes = ['asset','liability','equity','revenue','contra_revenue','expense'];
 const role = /^[a-z][a-z0-9_]{0,63}$/;
 const quote = (value: string) => '"' + value.replaceAll('"', '""') + '"';
@@ -57,12 +60,13 @@ function sourceRows(entity: Entity, value: unknown, businessId: string): Row[] {
       const item = input[field];
       if (item === null && (nullable.has(field) || entity === 'account_mapping_versions' && field === 'account_id'
         || entity === 'tax_profiles' && nullableTax.has(field)
-        || entity === 'money_channel_versions' && nullableChannel.has(field))) continue;
+        || entity === 'money_channel_versions' && nullableChannel.has(field)
+        || entity === 'invoice_draft_revisions' && (field === 'due_on' || field === 'previous_revision'))) continue;
       if (field === 'active' || field === 'synthetic') { requireSource(typeof item === 'boolean'); continue; }
       requireSource(typeof item === 'string' && Buffer.from(item).toString('utf8') === item && !item.includes('\0'));
       if (field === 'id' || field.endsWith('_id') || field === 'created_by') requireSource(customerUuid(item));
       else if (field === 'created_at') requireSource(customerInstant(item));
-      else if (field === 'effective_from') requireSource(customerDate(item));
+      else if (field === 'effective_from' || field === 'due_on') requireSource(customerDate(item));
       else if (decimal.has(field)) requireSource(customerVersion(item));
     }
     requireSource(input.origin === 'manual');
@@ -189,6 +193,38 @@ function checkMoneyChannelHistory(accounts: readonly Row[], rows: readonly Row[]
   }
 }
 
+function checkInvoiceDraftHistory(rows: readonly Row[]) {
+  const revisions = new Map<string, Map<bigint, Row>>();
+  const operations = new Set(), audits = new Set();
+  for (const row of rows) {
+    const draftId = String(row.draft_id), revision = BigInt(String(row.revision));
+    requireSource(!operations.has(row.operation_id) && !audits.has(row.audit_event_id)
+      && (row.state === 'draft' && row.reason === null
+        || row.state === 'cancelled' && typeof row.reason === 'string' && row.reason === trimSpaces(row.reason)
+          && [...row.reason].length >= 1 && [...row.reason].length <= 1000 && printable(row.reason))
+      && row.previous_revision === (revision === 1n ? null : String(revision - 1n)));
+    operations.add(row.operation_id); audits.add(row.audit_event_id);
+    const outcomeIds: unknown = JSON.parse(String(row.selected_outcomes));
+    const retained: unknown = JSON.parse(String(row.retained_lines));
+    requireSource(Array.isArray(outcomeIds) && Array.isArray(retained) && outcomeIds.length <= 180
+      && outcomeIds.length === retained.length);
+    const lines = parseInvoicePreparationLines(retained);
+    requireSource(lines.every((line,index)=>line.outcomeId === outcomeIds[index]));
+    const chain = revisions.get(draftId) ?? new Map<bigint,Row>();
+    requireSource(!chain.has(revision));
+    chain.set(revision,row); revisions.set(draftId,chain);
+  }
+  for (const chain of revisions.values()) {
+    for (const [version,row] of chain) {
+      if (version === 1n) { requireSource(row.state === 'draft'); continue; }
+      const previous = chain.get(version - 1n);
+      requireSource(previous?.state === 'draft' && previous.job_id === row.job_id && previous.customer_id === row.customer_id);
+      if (row.state === 'cancelled') requireSource(previous.due_on === row.due_on
+        && previous.selected_outcomes === row.selected_outcomes && previous.retained_lines === row.retained_lines);
+    }
+  }
+}
+
 /** Format one authorized snapshot. This does not grant capture or distribution access. */
 export function formatFinanceAccountSource(input: {
   businessId: string; snapshotToken: string; rows: Readonly<Record<AccountEntity, unknown>>;
@@ -196,6 +232,7 @@ export function formatFinanceAccountSource(input: {
   mappingSnapshot?: Readonly<{ rows: unknown; expectedCount: number }>;
   taxSnapshot?: Readonly<{ rows: unknown; expectedCount: number }>;
   moneyChannelSnapshot?: Readonly<{ rows: unknown; expectedCount: number }>;
+  invoiceDraftSnapshot?: Readonly<{ rows: unknown; expectedCount: number }>;
 }) {
   const { businessId, snapshotToken } = input;
   requireSource(customerUuid(businessId) && /^[a-f0-9]{64}$/.test(snapshotToken));
@@ -205,12 +242,15 @@ export function formatFinanceAccountSource(input: {
   const taxProfiles = input.taxSnapshot ? sourceRows('tax_profiles', input.taxSnapshot.rows, businessId) : [];
   const moneyChannels = input.moneyChannelSnapshot
     ? sourceRows('money_channel_versions', input.moneyChannelSnapshot.rows, businessId) : [];
+  const invoiceDrafts = input.invoiceDraftSnapshot
+    ? sourceRows('invoice_draft_revisions',input.invoiceDraftSnapshot.rows,businessId) : [];
   const rows = { accounts, account_versions: versions, account_mapping_versions: mappings, tax_profiles: taxProfiles,
-    money_channel_versions: moneyChannels };
+    money_channel_versions: moneyChannels, invoice_draft_revisions:invoiceDrafts };
   checkAccountHistory(rows);
   checkMappingHistory(accounts, mappings);
   checkTaxHistory(taxProfiles);
   checkMoneyChannelHistory(accounts,moneyChannels,businessId);
+  checkInvoiceDraftHistory(invoiceDrafts);
   const entities: Entity[] = ['accounts','account_versions'];
   const expectedCounts: Partial<Record<Entity, number>> = {...input.expectedCounts};
   if(input.mappingSnapshot){
@@ -224,6 +264,10 @@ export function formatFinanceAccountSource(input: {
   if(input.moneyChannelSnapshot){
     entities.push('money_channel_versions');
     expectedCounts.money_channel_versions = input.moneyChannelSnapshot.expectedCount;
+  }
+  if(input.invoiceDraftSnapshot){
+    entities.push('invoice_draft_revisions');
+    expectedCounts.invoice_draft_revisions = input.invoiceDraftSnapshot.expectedCount;
   }
   const files = entities.flatMap(entity => {
     const fields = sourceColumns[entity];
@@ -251,11 +295,12 @@ export function formatFinanceAccountSource(input: {
       { name:entity+'_escape_map.json', content:JSON.stringify({schemaVersion:1,entity,businessId,snapshotToken,escapes})+'\n' },
       { name:entity+'_dictionary.json', content:JSON.stringify({schemaVersion:1,entity,columns:fields,
         format:'UTF-8 RFC4180 CRLF',key:'id',null:'\\N',booleans:entity==='account_versions'||entity==='money_channel_versions'?['active']:entity==='tax_profiles'?['synthetic']:[],
-        exactText:fields.filter(column=>decimal.has(column)||column==='created_at'||column==='effective_from'||column==='rate'||column==='opening_on'||column==='opening_cents'),
+        exactText:fields.filter(column=>decimal.has(column)||column==='created_at'||column==='effective_from'||column==='rate'||column==='opening_on'||column==='opening_cents'||column==='due_on'),
+        ...(entity==='invoice_draft_revisions'?{json:['selected_outcomes','retained_lines']}:{}),
         decode:'Remove only mapped apostrophes, then decode paired backslashes. Treat unescaped \\N as null.'})+'\n' },
     ];
   });
-  const manifest = JSON.stringify({schemaVersion:input.moneyChannelSnapshot?4:input.taxSnapshot?3:input.mappingSnapshot?2:1,scope:'finance_account_sources',businessId,snapshotToken,
+  const manifest = JSON.stringify({schemaVersion:input.invoiceDraftSnapshot?5:input.moneyChannelSnapshot?4:input.taxSnapshot?3:input.mappingSnapshot?2:1,scope:'finance_account_sources',businessId,snapshotToken,
     recordCounts:expectedCounts,referenceClosureComplete:false,completePortableExport:false,completeBackup:false,
     parts:files.map(({name,content})=>({name,bytes:Buffer.byteLength(content),
       sha256:createHash('sha256').update(content).digest('hex')}))})+'\n';

@@ -20,10 +20,14 @@ import {
 import type {MoneyChannelDraft,MoneyChannelKind,MoneyChannelReference,MoneyChannelScope} from '../bookkeeping/finance-money-channel-contract';
 
 import {parseInvoicePreparation} from '../bookkeeping/invoice-preparation-contract';
+import {parseInvoiceDraftInput,parseInvoiceDraftOperation,parseInvoiceDraftPage,parseInvoiceDraftRead,parseInvoiceDraftReference} from '../bookkeeping/invoice-draft-contract';
+import type {InvoiceDraftInput,InvoiceDraftReference} from '../bookkeeping/invoice-draft-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
+const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
+const invoiceDraftFailure=[...knownFailure,'INVOICE_DRAFT_JOB_REQUIRED','INVOICE_DRAFT_COMPLETED_SCOPE_REQUIRED'] as const;
 const pendingKey='crest.finance-account.pending-reference.v1';
 type Pending=Readonly<{businessId:string;binding:string;reference:FinanceAccountReference}>;
 const mappingPendingKey='crest.finance-mapping.pending-reference.v1';
@@ -56,7 +60,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string)
   for(;;){
    const part=await reader.read();
    if(part.done)break;
-   bytes+=part.value.byteLength;check(bytes<=(route==='invoice-preparation'?1048576:196608)&&!bounded.aborted);
+   bytes+=part.value.byteLength;check(bytes<=(route==='invoice-preparation'||route==='invoice-draft-read'?1048576:196608)&&!bounded.aborted);
    text+=decoder.decode(part.value,{stream:true});
   }
   text+=decoder.decode();
@@ -66,21 +70,64 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string)
   taxProfiles:response.headers.get('x-crest-finance-tax-profiles')==='1',
   categoryMappings:response.headers.get('x-crest-finance-category-mappings')==='1',
   moneyChannels:response.headers.get('x-crest-finance-money-channels')==='1',
-  invoicePreparation:response.headers.get('x-crest-invoice-preparation')==='1'};
+  invoicePreparation:response.headers.get('x-crest-invoice-preparation')==='1',
+  invoiceDrafts:response.headers.get('x-crest-invoice-drafts')==='1'};
 }
 
 export const financeAccounts={
  async context(signal:AbortSignal):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation}=await post('context',{},signal);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts}=await post('context',{},signal);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
-  return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation}) as FinanceAccountContext;
+  return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts}) as FinanceAccountContext;
  },
  async invoicePreparation(context:FinanceAccountContext,jobId:string,signal:AbortSignal){
   check(context.invoicePreparation&&customerUuid(jobId));
   const {status,value}=await post('invoice-preparation',{jobId},signal,context.binding);
   check(status===200);return parseInvoicePreparation(value,context.businessId,jobId);
+ },
+ async invoiceDrafts(context:FinanceAccountContext,jobId:string,afterDraft:string|null,signal:AbortSignal){
+  check(context.invoiceDrafts&&customerUuid(jobId)&&(afterDraft===null||customerUuid(afterDraft)));
+  const {status,value}=await post('invoice-draft-list',{jobId,afterDraft},signal,context.binding);
+  check(status===200);return parseInvoiceDraftPage(value,context.businessId,jobId,afterDraft);
+ },
+ async readInvoiceDraft(context:FinanceAccountContext,draftId:string,revision:string|null,signal:AbortSignal){
+  check(context.invoiceDrafts&&customerUuid(draftId));
+  const {status,value}=await post('invoice-draft-read',{draftId,revision},signal,context.binding);
+  check(status===200);return parseInvoiceDraftRead(value,draftId,revision);
+ },
+ async invoiceDraftOperation(context:FinanceAccountContext,reference:InvoiceDraftReference,signal:AbortSignal){
+  check(context.invoiceDrafts);
+  const {status,value}=await post('invoice-draft-lookup',parseInvoiceDraftReference(reference),signal,context.binding);
+  check(status===200);
+  const result=parseInvoiceDraftOperation(value,reference);
+  check(result.state!=='conflict'||result.reason==='operation');
+  return result;
+ },
+ async retireInvoiceDraft(context:FinanceAccountContext,reference:InvoiceDraftReference,reason:string,signal:AbortSignal){
+  check(context.invoiceDrafts&&context.writeState==='ready'&&context.recoveryEpoch&&financeAccountReviewReason(reason));
+  const {status,value}=await post('invoice-draft-retire',{reference,reviewEpoch:context.recoveryEpoch,reason},signal,context.binding);
+  const result=parseInvoiceDraftOperation(value,reference);
+  check(status===200&&(result.state==='retired'||result.state==='committed')||status===409&&result.state==='conflict'&&result.reason==='operation');
+  return result;
+ },
+ async saveInvoiceDraft(context:FinanceAccountContext,reference:InvoiceDraftReference,input:InvoiceDraftInput,signal:AbortSignal){
+  check(context.invoiceDrafts&&context.writeState==='ready'&&context.recoveryEpoch===reference.recoveryEpoch);
+  const draft=parseInvoiceDraftInput(input,parseInvoiceDraftReference(reference));
+  const {status,value}=await post('invoice-draft-save',{reference,draft},signal,context.binding);
+  if(status===409&&exact(value,['error'])){
+   const reason=invoiceDraftFailure.find(code=>code===value.error);check(reason);
+   return {state:'rejected',reason} as const;
+  }
+  const result=parseInvoiceDraftOperation(value,reference);
+  check(status===200&&result.state==='committed'||status===409&&result.state==='conflict');
+  if(result.state==='committed'){
+   const saved=result.receipt;
+   check(draft.cancelReason===null?saved.state==='draft'&&saved.dueOn===draft.dueOn&&saved.lineCount===draft.outcomes.length
+    :saved.state==='cancelled'&&saved.reason===draft.cancelReason);
+  }
+  return result;
  },
  async moneyChannels(context:FinanceAccountContext,afterChannel:string|null,signal:AbortSignal){
   check(context.moneyChannels);
@@ -347,6 +394,29 @@ export function clearPendingMoneyChannel(entry:ChannelPending){
  check(JSON.stringify(readPendingMoneyChannel())===JSON.stringify(entry));
  sessionStorage.removeItem(channelPendingKey);
  check(readPendingMoneyChannel()===null);
+}
+
+type PendingInvoiceDraft=Readonly<{businessId:string;binding:string;reference:InvoiceDraftReference}>;
+export function readPendingInvoiceDraft():PendingInvoiceDraft|null{
+ const raw=sessionStorage.getItem(invoiceDraftPendingKey);
+ if(raw===null)return null;
+ check(raw.length<=1500&&(raw.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length===8);
+ const value:unknown=JSON.parse(raw);
+ check(exact(value,['businessId','binding','reference'])&&customerUuid(value.businessId)
+  &&typeof value.binding==='string'&&bindingPattern.test(value.binding));
+ return {businessId:value.businessId,binding:value.binding,reference:parseInvoiceDraftReference(value.reference)};
+}
+export function retainPendingInvoiceDraft(context:FinanceAccountContext,reference:InvoiceDraftReference):PendingInvoiceDraft{
+ check(readPendingInvoiceDraft()===null);
+ const entry={businessId:context.businessId,binding:context.binding,reference};
+ sessionStorage.setItem(invoiceDraftPendingKey,JSON.stringify(entry));
+ check(JSON.stringify(readPendingInvoiceDraft())===JSON.stringify(entry));
+ return entry;
+}
+export function clearPendingInvoiceDraft(entry:PendingInvoiceDraft){
+ check(JSON.stringify(readPendingInvoiceDraft())===JSON.stringify(entry));
+ sessionStorage.removeItem(invoiceDraftPendingKey);
+ check(readPendingInvoiceDraft()===null);
 }
 
 export function downloadFinanceHistory(filename:string,rows:readonly (readonly string[])[]){

@@ -7,16 +7,22 @@ import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
+const invoiceDrafts=true;
 const dollars=cents=>(cents/100n).toString()+'.'+(cents%100n).toString().padStart(2,'0');
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine End Job editor and saved completion',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
-  financeAccounts:true,invoicePreparation:true});
+  financeAccounts:true,invoicePreparation:true,invoiceDrafts});
  let browser;
+ const financeResponses=[];
  try{
   browser=await engine.launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
   const page=await context.newPage();
+  page.on('response',response=>{
+   const path=new URL(response.url()).pathname;
+   if(path.startsWith('/api/business/finance-accounts/'))financeResponses.push([path,response.status()]);
+  });
   page.setDefaultTimeout(20000);
   const jobId=fixture.bookingRequest.jobId,job='/schedule?job='+jobId;
   const end='/schedule/work/complete?job='+jobId;
@@ -45,6 +51,42 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert.equal(booked.status,200);
   assert.equal(booked.value.state,'committed');
   await page.goto(fixture.origin+job);
+  const drafts=page.getByRole('region',{name:'Invoice drafts',exact:true});
+  const draftStatus=drafts.getByRole('status');
+  if(invoiceDrafts){
+   await page.getByText('Invoice drafts',{exact:true}).click();
+   await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+   await expect(draftStatus).toHaveText('No saved invoice drafts found.');
+   await drafts.getByRole('button',{name:'New invoice draft',exact:true}).click();
+   await expect(drafts.getByLabel('Due date (optional)',{exact:true})).toHaveValue('');
+   await page.route('**/api/business/finance-accounts/invoice-draft-save',async route=>{
+    const response=await route.fetch();assert.equal(response.status(),200);await route.abort();
+   },{times:1});
+   await drafts.getByRole('button',{name:'Save invoice draft',exact:true}).click();
+   await expect(drafts.getByRole('button',{name:'Check interrupted draft save',exact:true})).toBeEnabled();
+   assert.equal(await page.evaluate(()=>{
+    const value=JSON.parse(sessionStorage.getItem('crest.invoice-draft.pending-reference.v1')??'null');
+    return value&&Object.keys(value.reference).sort().join(',');
+   }),'draftId,expectedRevision,jobId,operationId,recoveryEpoch');
+   await page.reload();
+   await page.getByText('Invoice drafts',{exact:true}).click();
+   await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+   await expect(draftStatus).toHaveText('The original invoice draft save was confirmed.');
+   await expect(drafts.getByRole('region',{name:'Saved draft',exact:true})).toContainText('Revision 1');
+   await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+   await drafts.getByRole('button',{name:'New invoice draft',exact:true}).click();
+   await page.route('**/api/business/finance-accounts/invoice-draft-save',route=>route.abort(),{times:1});
+   await drafts.getByRole('button',{name:'Save invoice draft',exact:true}).click();
+   const checkDraft=drafts.getByRole('button',{name:'Check interrupted draft save',exact:true});
+   await expect(checkDraft).toBeEnabled();
+   await checkDraft.click();
+   await expect(draftStatus).toContainText('No completed draft save was found.');
+   await drafts.getByLabel('Reason for closing the interrupted attempt',{exact:true}).fill('Synthetic missing acknowledgement');
+   await drafts.getByRole('button',{name:'Close interrupted draft attempt',exact:true}).click();
+   await expect(draftStatus).toContainText('The interrupted draft attempt was closed.');
+   await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+   await expect(drafts.getByRole('button',{name:'Open invoice draft',exact:true})).toHaveCount(1);
+  }
   await page.getByRole('button',{name:'Record work status…',exact:true}).click();
   await page.getByLabel('What is happening?',{exact:true}).selectOption('direct_arrive');
   await page.getByLabel('Why was travel not recorded?',{exact:true}).fill('Synthetic arrival without travel.');
@@ -197,6 +239,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(copyDraft).toHaveCount(0);
   await expect(summary.getByText('Record message outcome',{exact:true})).toHaveCount(0);
   assert.equal(outcomeSubmissions,2);
+  if(invoiceDrafts)await renewBrowserSession();
   await page.reload();
   await expect(status).toHaveText('Saved completion loaded.');
   await expect(summary).toContainText('Text draft · Owner-confirmed Sent');
@@ -242,6 +285,23 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await customerHistory.locator('summary').click();
   await expect(customerHistory.getByRole('listitem')).toHaveCount(3);
   await expect(customerHistory.getByRole('listitem').nth(1)).toContainText('Synthetic messaging app unavailable');
+  async function renewBrowserSession(){
+   // The combined fixture exercises several normally separate operator sessions.
+   // Preserve the normal admission limits while reopening via genuine MFA.
+   await page.goto(fixture.origin+'/sign-in');
+   const logout=page.getByRole('button',{name:'Sign out on this device',exact:true});
+   const email=page.getByLabel('Email',{exact:true});
+   await expect(logout.or(email)).toBeVisible();
+   if(await logout.isVisible())await logout.click();
+   const fresh=fixture.credentials();
+   await email.fill(fresh.email);
+   await page.getByLabel('Password',{exact:true}).fill(fresh.password);
+   await page.getByLabel('Authenticator code',{exact:true}).fill(fresh.code);
+   await page.getByRole('button',{name:'Sign in',exact:true}).click();
+   await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
+   await page.goto(fixture.origin+end);
+   await expect(status).toHaveText('Saved completion loaded.');
+  }
   const jobLink=customerHistory.getByRole('link',{name:'Open job completion',exact:true}).first();
   await expect(jobLink).toHaveAttribute('href',end);
   await jobLink.click();
@@ -301,6 +361,52 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(preparation.getByRole('listitem')).toHaveCount(0);
   await load.click();
   await expect(prepStatus).toHaveText('Completed work loaded.');
+  if(invoiceDrafts){
+   await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
+   await page.getByText('Invoice drafts',{exact:true}).click();
+   await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+   await expect(draftStatus,JSON.stringify(financeResponses.slice(-12))).toHaveText('Saved invoice drafts loaded.');
+   await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+   await drafts.getByRole('button',{name:'Edit draft',exact:true}).click();
+   await drafts.getByLabel('Due date (optional)',{exact:true}).fill('2027-02-09');
+   await drafts.getByRole('button',{name:'Load completed portions',exact:true}).click();
+   await expect(drafts.getByRole('checkbox')).toHaveCount(2);
+   await drafts.getByRole('checkbox').last().check();
+   await drafts.getByRole('button',{name:'Save invoice draft',exact:true}).press('Enter');
+   const saved=drafts.getByRole('region',{name:'Saved draft',exact:true});
+   await expect(draftStatus).toHaveText('Invoice draft saved.');
+   await expect(saved).toContainText('Revision 2');
+   await expect(saved).toContainText('Due Feb 9, 2027');
+   await expect(saved.getByRole('listitem')).toHaveCount(1);
+   const exported=page.waitForEvent('download');
+   await saved.getByRole('button',{name:'Download draft (CSV)',exact:true}).click();
+   const file=await exported;
+   assert.equal(file.suggestedFilename(),'crest-invoice-draft.csv');
+   assert.match(await readFile(await file.path(),'utf8'),/"2","draft","2027-02-09"/);
+   for(const width of [360,390,768,1440]){
+    await page.setViewportSize({width,height:900});
+    await saved.evaluate(el=>el.scrollIntoView({block:'center'}));
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+    assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
+    await page.screenshot({path:'.local/review/completion-invoice-draft-'+name+'-'+width+'.png'});
+   }
+   await saved.getByRole('button',{name:'Previous revision',exact:true}).click();
+   await expect(saved).toContainText('Revision 1');
+   await saved.getByRole('button',{name:'Open current revision',exact:true}).click();
+   await expect(saved).toContainText('Revision 2');
+   await saved.getByText('Cancel this draft',{exact:true}).click();
+   await saved.getByLabel('Reason for cancellation',{exact:true}).fill('Synthetic duplicate draft');
+   await saved.getByRole('button',{name:'Confirm draft cancellation',exact:true}).click();
+   await expect(draftStatus).toHaveText('Draft cancelled. Its history is retained.');
+   await expect(saved).toContainText('Revision 3');
+   await page.getByText('Invoice drafts',{exact:true}).click();
+   await page.getByText('Invoice drafts',{exact:true}).click();
+   await expect(drafts.getByRole('region',{name:'Saved draft',exact:true})).toHaveCount(0);
+  }
+ }catch(error){
+  if(error instanceof Error)error.message+='\nRecent finance responses '+JSON.stringify(financeResponses.slice(-15));
+  throw error;
  }finally{
   await browser?.close();
   await fixture.close();

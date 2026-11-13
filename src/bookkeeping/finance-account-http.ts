@@ -34,6 +34,7 @@ import {
 } from './finance-money-channel-contract.ts';
 
 import {parseInvoicePreparation} from './invoice-preparation-contract.ts';
+import {parseInvoiceDraftInput,parseInvoiceDraftOperation,parseInvoiceDraftPage,parseInvoiceDraftRead,parseInvoiceDraftReference} from './invoice-draft-contract.ts';
 
 export const financeAccountPrefix='/api/business/finance-accounts/';
 const fields={context:[],list:['afterCode','includeArchived'],history:['accountId','afterVersion'],
@@ -49,7 +50,10 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
  'channel-list':['afterChannel'], 'channel-history':['channelId','beforeVersion'],
  'channel-accounts':['kind','ownershipScope','afterCode'], 'channel-lookup':['operationId','recoveryEpoch','channelId','expectedVersion'],
  'channel-save':['reference','draft'], 'channel-retire':['reference','reviewEpoch','reason'],
- 'invoice-preparation':['jobId']} as const;
+ 'invoice-preparation':['jobId'],
+ 'invoice-draft-list':['jobId','afterDraft'], 'invoice-draft-read':['draftId','revision'],
+ 'invoice-draft-lookup':['operationId','recoveryEpoch','draftId','jobId','expectedRevision'],
+ 'invoice-draft-save':['reference','draft'], 'invoice-draft-retire':['reference','reviewEpoch','reason']} as const;
 const authority='$1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid';
 type Config=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
 
@@ -60,10 +64,10 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false}:Readonly<{
-  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false}:Readonly<{
+  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;
  }>={}){
- check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings));
+ check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation));
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
@@ -81,7 +85,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    transport(request,peer);
    const url=new URL(request.url),route=url.pathname.slice(financeAccountPrefix.length) as keyof typeof fields;
    if(url.search||url.hash||!url.pathname.startsWith(financeAccountPrefix)||!Object.hasOwn(fields,route))return financeAccountFailure(404);
-   if(!fixedMappings&&route.startsWith('mapping-')||!taxProfiles&&route.startsWith('tax-')||!moneyChannels&&route.startsWith('channel-')||!invoicePreparation&&route==='invoice-preparation')return financeAccountFailure(404);
+   if(!fixedMappings&&route.startsWith('mapping-')||!taxProfiles&&route.startsWith('tax-')||!moneyChannels&&route.startsWith('channel-')||!invoicePreparation&&route==='invoice-preparation'||!invoiceDrafts&&route.startsWith('invoice-draft-'))return financeAccountFailure(404);
    if(request.method!=='POST')return financeAccountFailure(405);
    protect.requireOrigin(request);
    const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;
@@ -104,6 +108,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     if(categoryMappings)response.headers.set('X-Crest-Finance-Category-Mappings','1');
     if(moneyChannels)response.headers.set('X-Crest-Finance-Money-Channels','1');
     if(invoicePreparation)response.headers.set('X-Crest-Invoice-Preparation','1');
+    if(invoiceDrafts)response.headers.set('X-Crest-Invoice-Drafts','1');
     return response;
    }
    credentialHash=sessionCredentialHash(cookie);
@@ -117,6 +122,56 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
      [...args,input.jobId],signal);
     parseInvoicePreparation(value,businessId,input.jobId);
     return privateJsonResponse(value as object);
+   }
+   if(route==='invoice-draft-list'){
+    check(customerUuid(input.jobId)&&(input.afterDraft===null||customerUuid(input.afterDraft)));
+    const value=await database('SELECT crest_commands.list_invoice_drafts('+authority+',$9::uuid,$10::uuid) AS result',
+     [...args,input.jobId,input.afterDraft],signal);
+    parseInvoiceDraftPage(value,businessId,input.jobId,input.afterDraft);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='invoice-draft-read'){
+    check(customerUuid(input.draftId)&&(input.revision===null||customerVersion(input.revision)));
+    const value=await database('SELECT crest_commands.read_invoice_draft('+authority+',$9::uuid,$10::bigint) AS result',
+     [...args,input.draftId,input.revision],signal);
+    parseInvoiceDraftRead(value,input.draftId,input.revision);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='invoice-draft-lookup'||route==='invoice-draft-save'||route==='invoice-draft-retire'){
+    const ref=parseInvoiceDraftReference(route==='invoice-draft-lookup'?input:input.reference);
+    if(route==='invoice-draft-lookup'){
+     const value=await database('SELECT crest_commands.lookup_invoice_draft_operation('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::bigint,$13::uuid) AS result',
+      [...args,ref.operationId,ref.recoveryEpoch,ref.draftId,ref.expectedRevision,ref.jobId],signal);
+     return privateJsonResponse(parseInvoiceDraftOperation(value,ref));
+    }
+    if(route==='invoice-draft-retire'){
+     check(customerUuid(input.reviewEpoch)&&financeAccountReviewReason(input.reason));
+     const decision=await database.commandTransaction(async query=>{
+      submitted=true;
+      const value=await query('SELECT crest_commands.retire_invoice_draft_operation('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::bigint,$14::uuid,$15::text) AS result',
+       [...args,input.reviewEpoch,ref.operationId,ref.recoveryEpoch,ref.draftId,ref.expectedRevision,ref.jobId,input.reason]);
+      const parsed=parseInvoiceDraftOperation(value,ref);
+      check(parsed.state==='committed'||parsed.state==='retired'||parsed.state==='conflict'&&parsed.reason==='operation');
+      return value as object;
+     },signal);
+     const result=parseInvoiceDraftOperation(decision,ref);
+     return privateJsonResponse(decision,result.state==='conflict'?409:200);
+    }
+    const draft=parseInvoiceDraftInput(input.draft,ref);
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.save_invoice_draft('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::bigint,$13::uuid,$14::date,$15::uuid[],$16::text) AS result',
+      [...args,ref.recoveryEpoch,ref.operationId,ref.draftId,ref.expectedRevision,ref.jobId,draft.dueOn,draft.outcomes,draft.cancelReason]);
+     const parsed=parseInvoiceDraftOperation(value,ref);
+     check(parsed.state==='committed'||parsed.state==='conflict');
+     if(parsed.state==='committed'){
+      const saved=parsed.receipt;
+      check(draft.cancelReason===null?saved.state==='draft'&&saved.dueOn===draft.dueOn&&saved.lineCount===draft.outcomes.length
+       :saved.state==='cancelled'&&saved.reason===draft.cancelReason);
+     }
+     return parsed;
+    },signal);
+    return privateJsonResponse(result,result.state==='conflict'?409:200);
    }
    if(route==='channel-list'){
     check(input.afterChannel===null||customerUuid(input.afterChannel));
@@ -339,7 +394,8 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     'FINANCE_MAPPING_VERSION_CONFLICT','FINANCE_MAPPING_EFFECTIVE_ORDER_REQUIRED','FINANCE_MAPPING_ACCOUNT_REQUIRED',
     'FINANCE_MAPPING_CLOSURE_REQUIRED','FINANCE_TAX_VERSION_CONFLICT','FINANCE_TAX_EFFECTIVE_ORDER_REQUIRED',
     'FINANCE_CHANNEL_VERSION_CONFLICT','FINANCE_CHANNEL_EFFECTIVE_ORDER_REQUIRED','FINANCE_CHANNEL_ACCOUNT_REQUIRED',
-    'FINANCE_CHANNEL_ACCOUNT_PINNED','FINANCE_CHANNEL_IDENTITY_RETAINED'].includes(error.message))
+    'FINANCE_CHANNEL_ACCOUNT_PINNED','FINANCE_CHANNEL_IDENTITY_RETAINED',
+    'INVOICE_DRAFT_JOB_REQUIRED','INVOICE_DRAFT_COMPLETED_SCOPE_REQUIRED'].includes(error.message))
     return privateJsonResponse({error:error.message},409);
    return submitted?privateJsonResponse({error:'FINANCE_ACCOUNT_OUTCOME_UNKNOWN'},503):financeAccountFailure();
   }finally{credentialHash?.fill(0);}

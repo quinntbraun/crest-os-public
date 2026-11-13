@@ -34,7 +34,14 @@ export function parseInvoicePreparation(value: unknown, businessId: string, jobI
     && value.businessId === businessId && value.jobId === jobId && customerUuid(value.customerId)
     && customerInstant(value.completedAt) && (value.completionOutcome === 'full' || value.completionOutcome === 'partial')
     && Array.isArray(value.lines) && value.lines.length >= 1 && value.lines.length <= 10000);
-  const lines = value.lines.map((line: unknown) => {
+  return {
+    state: 'ready', customerId: value.customerId, completedAt: value.completedAt,
+    completionOutcome: value.completionOutcome, lines: parseInvoicePreparationLines(value.lines),
+  } as const;
+}
+
+export function parseInvoicePreparationLines(value: readonly unknown[]) {
+  const lines = value.map(line => {
     check(exactCustomerObject(line, lineKeys) && requiredIds.every(key => customerUuid(line[key]))
       && (line.vehicleId === null || customerUuid(line.vehicleId))
       && (line.serviceId === null && line.serviceVersionId === null
@@ -47,8 +54,5 @@ export function parseInvoicePreparation(value: unknown, businessId: string, jobI
   for (const key of ['outcomeId', 'completionPartId', 'partitionId'] as const) {
     check(new Set(lines.map(line => line[key])).size === lines.length);
   }
-  return {
-    state: 'ready', customerId: value.customerId, completedAt: value.completedAt,
-    completionOutcome: value.completionOutcome, lines: Object.freeze(lines),
-  } as const;
+  return Object.freeze(lines);
 }

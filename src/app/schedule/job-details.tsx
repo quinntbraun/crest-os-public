@@ -10,6 +10,7 @@ import {quoteMoney} from '../../commercial/quote-pricing';
 import {DropoffCustodyHistory} from './dropoff-custody-history';
 import {PickupCollection} from './pickup-collection';
 import {PickupTrips} from './pickup-trips';
+import {InvoiceDrafts} from './work/invoice-drafts';
 
 export type SavedJobResources=Exclude<ReturnType<typeof parseJobResources>,{state:'absent'}>;
 const states:Readonly<Record<string,string>>={scheduled:'Scheduled',en_route:'En route',in_progress:'In progress',paused:'Paused',completed:'Completed',cancelled:'Cancelled'};
@@ -26,10 +27,10 @@ function WorkLocation({value}:{value:BookingLocation}){
 }
 type Props=Readonly<{
  resources:SavedJobResources;initialJobVehicleId?:string;history:readonly JobHistoryEvent[];historyComplete:boolean;busy:boolean;canChange:boolean;
- onWorkStatus?:(()=>void)|undefined;completionAvailable?:boolean;mileageAvailable?:boolean;workTimeAvailable?:boolean;dropoffCustodyAvailable?:boolean;pickupTripsAvailable?:boolean;pickupWorkAvailable?:boolean;pickupCollectionAvailable?:boolean;pickupPhotosAvailable?:boolean;pickupReleaseAvailable?:boolean;onChangeAppointment?:()=>void;onCancel?:()=>void;onDownload?:()=>void;onMoreHistory?:()=>void;
+ onWorkStatus?:(()=>void)|undefined;completionAvailable?:boolean;invoiceDraftsAvailable?:boolean;mileageAvailable?:boolean;workTimeAvailable?:boolean;dropoffCustodyAvailable?:boolean;pickupTripsAvailable?:boolean;pickupWorkAvailable?:boolean;pickupCollectionAvailable?:boolean;pickupPhotosAvailable?:boolean;pickupReleaseAvailable?:boolean;onChangeAppointment?:()=>void;onCancel?:()=>void;onDownload?:()=>void;onMoreHistory?:()=>void;
 }>;
 export function SavedJobDetails(props:Props){return <SavedJobDetailsContent key={props.resources.head.job.id+':'+props.resources.head.job.version} {...props}/>;}
-function SavedJobDetailsContent({resources,initialJobVehicleId,history,historyComplete,busy,canChange,onWorkStatus,completionAvailable,mileageAvailable,workTimeAvailable,dropoffCustodyAvailable,pickupTripsAvailable,pickupWorkAvailable,pickupCollectionAvailable,pickupPhotosAvailable,pickupReleaseAvailable,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
+function SavedJobDetailsContent({resources,initialJobVehicleId,history,historyComplete,busy,canChange,onWorkStatus,completionAvailable,invoiceDraftsAvailable,mileageAvailable,workTimeAvailable,dropoffCustodyAvailable,pickupTripsAvailable,pickupWorkAvailable,pickupCollectionAvailable,pickupPhotosAvailable,pickupReleaseAvailable,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
  const {head}=resources,{job,appointment,latestAppointment}=head;
  const customer=parseCustomer(resources.vehicles[0]!.customer_snapshot,resources.businessId);
  const location=parseBookingLocation(job.work_location_snapshot,resources.businessId,job.customer_id),contact=parseBookingContact(appointment.contact_snapshot);
@@ -72,6 +73,7 @@ function SavedJobDetailsContent({resources,initialJobVehicleId,history,historyCo
   {completionAvailable&&(job.fulfillment_mode==='mobile'||dropoffCustodyAvailable&&job.fulfillment_mode==='dropoff'||
    pickupWorkAvailable&&job.fulfillment_mode==='pickup_return')&&
    ['in_progress','paused','completed'].includes(job.state)&&<p><a href={'/schedule/work/complete?job='+encodeURIComponent(job.id)}>{job.state==='completed'?'Review saved completion':'Review and end job'}</a></p>}
+  {invoiceDraftsAvailable&&<InvoiceDrafts businessId={resources.businessId} jobId={job.id} canPrepare={job.state!=='cancelled'}/>}
   {mileageAvailable&&<p><a href={'/schedule/mileage?job='+encodeURIComponent(job.id)}>Review trip mileage</a></p>}
   {workTimeAvailable&&job.fulfillment_mode==='mobile'&&job.first_work_at&&
    <p><a href={'/schedule/work/time?job='+encodeURIComponent(job.id)}>Review recorded work time</a></p>}
