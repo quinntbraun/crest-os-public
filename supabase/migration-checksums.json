@@ -390,6 +390,11 @@
       "version": "20261202180000",
       "file": "20261202180000_finance_direct_receipts.sql",
       "sha256": "a67a96a20d1ca7c314ec2a653839aede951911c69f71ab4ab0d4ee1e5dc3db85"
+    },
+    {
+      "version": "20261203180000",
+      "file": "20261203180000_finance_same_day_expenses.sql",
+      "sha256": "014a00bdd577f8e971b107a094967f0f988057bd5f6c725223d0c12911924471"
     }
   ]
 }

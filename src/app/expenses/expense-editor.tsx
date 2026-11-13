@@ -3,6 +3,7 @@ import {useState,useRef,useEffect,useId} from 'react';
 import {expenseCategories,expenseCentsFromDollars,expenseDollars,expenseHistory,parseExpenseSave,expenseDate} from '../../bookkeeping/expenses/expense-contract';
 import type {ExpenseRevision,ExpenseSave} from '../../bookkeeping/expenses/expense-contract';
 import {ExpenseReceipts} from './expense-receipts';
+import {SameDayExpense} from './same-day-expense';
 import type {createReceiptClient} from '../../client/expense-receipts';
 import {exportExpenses} from '../../bookkeeping/expenses/expense-export';
 import type {createExpenseClient,ExpenseContext} from '../../client/expenses';
@@ -12,8 +13,13 @@ const empty={paidOn:'',amount:'',category:'' as ''|typeof expenseCategories[numb
 type Pending={context:ExpenseContext|null;request:ExpenseSave|null;record:PendingExpense};
 function download(name:string,text:string,type:string){const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 // The parent supplies an authenticated client; mounting this component grants no access.
-export function ExpenseEditor({client,receiptClient,embedded=false}:{client:ReturnType<typeof createExpenseClient>;receiptClient?:ReturnType<typeof createReceiptClient>;embedded?:boolean}){
+export function ExpenseEditor({client,receiptClient,embedded=false,sameDayExpenses=false}:{client:ReturnType<typeof createExpenseClient>;receiptClient?:ReturnType<typeof createReceiptClient>;embedded?:boolean;sameDayExpenses?:boolean}){
  const choiceId=useId();
+ const [posted,setPosted]=useState<ReadonlySet<string>>(()=>new Set());
+ function markPosted(id:string){
+  setPosted(value=>new Set([...value,id]));
+  if(editing?.expenseId===id)clear();
+ }
  const [context,setContext]=useState<ExpenseContext|null>(null),[rows,setRows]=useState<readonly ExpenseRevision[]>([]),[draft,setDraft]=useState(empty),[editing,setEditing]=useState<ExpenseRevision|null>(null),[pending,setPending]=useState<Pending|null>(null),[busy,setBusy]=useState(false),[dirty,setDirty]=useState(false),[status,setStatus]=useState('Load expenses to begin.'),[from,setFrom]=useState(''),[through,setThrough]=useState(''),[referenceBlocked,setReferenceBlocked]=useState(false),[retryChecked,setRetryChecked]=useState(false);const lock=useRef(false),active=useRef<AbortController|null>(null),store=useRef<ReturnType<typeof createPendingExpenseStore>|null>(null);
  useEffect(()=>{const warn=(e:BeforeUnloadEvent)=>{if(dirty||pending){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty,pending]);
  const mounted=useRef(false),generation=useRef(0);
@@ -73,7 +79,14 @@ export function ExpenseEditor({client,receiptClient,embedded=false}:{client:Retu
    {editing&&<label>Reason for correction or void<input value={draft.changeReason} required maxLength={500} onChange={e=>patch({changeReason:e.target.value})}/></label>}
    <button type="submit">{editing?'Save correction':'Save expense'}</button>{editing&&<><button type="button" className="secondary" onClick={()=>void submit(true)}>Void this expense</button><button type="button" className="secondary" onClick={clear}>Cancel correction</button></>}
   </fieldset></form>
-  <div className="expense-records"><h2>Saved expenses</h2>{context&&latest.length===0&&<p>No paid expenses recorded.</p>}{latest.map(row=><article key={row.expenseId} className="review-card" style={{overflowWrap:'anywhere'}}><h3>{row.payload.description}</h3><p>${expenseDollars(row.payload.amountCents)} · {row.payload.paidOn} · {row.payload.category} · {row.payload.voided?'Void':'Recorded'}</p>{!row.payload.voided&&<button type="button" className="secondary" disabled={busy||!!pending} onClick={()=>open(row)}>Correct or void</button>}<details><summary>History ({row.revision} {row.revision==='1'?'revision':'revisions'})</summary>{rows.filter(r=>r.expenseId===row.expenseId).map(r=><p key={r.revision}>Revision {r.revision}: ${expenseDollars(r.payload.amountCents)} · {r.payload.paidOn} · {r.payload.voided?'Void':'Recorded'} · {r.payload.changeReason??'Initial entry'}</p>)}</details>{receiptClient&&context&&<ExpenseReceipts expense={row} context={context} client={receiptClient}/>}</article>)}
+  <div className="expense-records"><h2>Saved expenses</h2>{context&&latest.length===0&&<p>No paid expenses recorded.</p>}{latest.map(row=><article key={row.expenseId} className="review-card" style={{overflowWrap:'anywhere'}}>
+   <h3>{row.payload.description}</h3>
+   <p>${expenseDollars(row.payload.amountCents)} · {row.payload.paidOn} · {row.payload.category} · {row.payload.voided?'Void':posted.has(row.expenseId)?'Posted to ledger':'Recorded'}</p>
+   {!row.payload.voided&&!posted.has(row.expenseId)&&<button type="button" className="secondary" disabled={busy||!!pending} onClick={()=>open(row)}>Correct or void</button>}
+   <details><summary>History ({row.revision} {row.revision==='1'?'revision':'revisions'})</summary>{rows.filter(r=>r.expenseId===row.expenseId).map(r=><p key={r.revision}>Revision {r.revision}: ${expenseDollars(r.payload.amountCents)} · {r.payload.paidOn} · {r.payload.voided?'Void':'Recorded'} · {r.payload.changeReason??'Initial entry'}</p>)}</details>
+   {receiptClient&&context&&<ExpenseReceipts expense={row} context={context} client={receiptClient}/>}
+   {sameDayExpenses&&context&&!row.payload.voided&&<SameDayExpense businessId={context.businessId} expenseId={row.expenseId} onPosted={markPosted}/>}
+  </article>)}
   <h2>Export expense history</h2><p>Choose payment dates. The download includes corrections, voids and totals for this expense list. {receiptClient?'Receipt files are downloaded separately from the expense CSV.':'Receipt attachments are not available yet.'}</p><label>From<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label><label>Through<input type="date" value={through} onChange={e=>setThrough(e.target.value)}/></label><button type="button" disabled={!context||busy||!!pending} onClick={accountantExport}>Download private expense CSV and notes</button>
   </div></div>
  </section>;

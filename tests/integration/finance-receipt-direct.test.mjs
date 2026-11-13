@@ -8,8 +8,8 @@ import { createConfirmedBookingFixture } from '../support/confirmed-booking-fixt
 import { financeReceipt78Candidate } from '../support/finance-receipt78-candidate.mjs';
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
 import { installProviderSchema } from '../support/provider-schema.mjs';
-import { backupLegacy77Database, backupDatabase, connect, inventory, keyPair, privateWorkspace,
-  recoveryCluster, restoreLegacy77Database, restoreDatabase } from '../support/recovery-drill.mjs';
+import { backupLegacy77Database, backupLegacy78Database, connect, inventory, keyPair, privateWorkspace,
+  recoveryCluster, restoreLegacy77Database, restoreLegacy78Database } from '../support/recovery-drill.mjs';
 import { captureInvoiceSource } from '../../src/bookkeeping/invoice-source.ts';
 import { captureReceiptSource, formatReceiptSource, receiptSourceAddedColumns, receiptSourceCoverage } from '../../src/bookkeeping/receipt-source.ts';
 import { readSourceExportCsv } from '../../src/security/source-export-csv-reader.ts';
@@ -121,7 +121,7 @@ async function verifyRecovery({ candidate, admin, target, owner, invoiceAfterPay
     const keys = await keyPair(directory);
     await assert.rejects(backupLegacy77Database(admin, target, point, keys.recipient),
       { message: 'SYNTHETIC_RECOVERY_BACKUP_FAILED:coverage' });
-    const { manifest } = await backupDatabase(admin, target, point, keys.recipient);
+    const { manifest } = await backupLegacy78Database(admin, target, point, keys.recipient);
     assert.equal(manifest.schemaVersion, 78);
     assert.equal(manifest.heldReceiptMigrationSha256, undefined);
     assert.equal(manifest.registrySha256, candidate.registrySha256);
@@ -136,7 +136,7 @@ async function verifyRecovery({ candidate, admin, target, owner, invoiceAfterPay
     restored = await connect(url);
     await assert.rejects(restoreLegacy77Database(point, keys.path, url), { message: 'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest' });
     assert.deepEqual(await inventory(restored), []);
-    assert.deepEqual(await restoreDatabase(point, keys.path, url), manifest);
+    assert.deepEqual(await restoreLegacy78Database(point, keys.path, url), manifest);
     assert.deepEqual(await inventory(restored), manifest.rows);
 
     reader = await connect(url);
@@ -241,7 +241,7 @@ test('registered direct receipts post reviewed allocations and preserve invoice 
     const candidate=await financeReceipt78Candidate(sandbox);
     assert((await readFile(join(candidate.directory,'supabase/migrations',candidate.file))).equals(
       await readFile(join(sandbox.root,'supabase/migrations',candidate.file))));
-    const adopted=await sandbox.apply(target,sandbox.root);
+    const adopted=await sandbox.apply(target,await sandbox.prefix(78));
     assert.equal(adopted.registrySha256,candidate.registrySha256);
     const currentInventory=await inventory(admin);
     const preserved=row=>row.schema!=='supabase_migrations'

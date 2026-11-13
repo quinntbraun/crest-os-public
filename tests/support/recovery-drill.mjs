@@ -12,6 +12,7 @@ import pg from 'pg';
 import { migrationTestTarget } from '../../src/tooling/migration-coordinator.ts';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import {financeAccountSourceColumns} from '../../src/bookkeeping/finance-account-source.ts';
+import {expense79File,expense79Files,expense79Version} from './finance-expense79-candidate.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
@@ -144,6 +145,13 @@ const legacy77CoverageBytes=await readFile(join(root,'tests/support/registered77
 assert.equal(hash(legacy77CoverageBytes),'e247dfa2af6d718b6f22899dd96728e21636ad904bff41c60c96c3a84b6b9a51');
 const legacy77Coverage=JSON.parse(legacy77CoverageBytes);
 const legacy77Profile=Object.freeze({schemaVersion:77,registrySha256:hash(legacy77Bytes)});
+const legacy78Bytes=await readFile(join(root,'tests/support/registered78-migration-checksums.json')),legacy78=JSON.parse(legacy78Bytes);
+assert.equal(hash(legacy78Bytes),'fc39f30789753f5fc38d356764d0ffe5b28ebf722a1c69dab236fd2a12bdeb98');
+assert.equal(legacy78.migrations.length,78);assert.deepEqual(registry.migrations.slice(0,78),legacy78.migrations);
+const legacy78CoverageBytes=await readFile(join(root,'tests/support/registered78-export-coverage.json'));
+assert.equal(hash(legacy78CoverageBytes),'7b8bee62179d370d4c79c5f903cb18805da603fa70dfbf85af7caf5bdbda7649');
+const legacy78Coverage=JSON.parse(legacy78CoverageBytes);
+const legacy78Profile=Object.freeze({schemaVersion:78,registrySha256:hash(legacy78Bytes)});
 const legacy52Bytes=await readFile(join(root,'tests/support/registered52-migration-checksums.json')),legacy52=JSON.parse(legacy52Bytes);
 assert.equal(legacy52.migrations.length,52);assert.deepEqual(registry.migrations.slice(0,52),legacy52.migrations);
 const legacy52Profile=Object.freeze({schemaVersion:52,registrySha256:hash(legacy52Bytes)}),legacy52Coverage=JSON.parse(await readFile(join(root,'tests/support/registered52-export-coverage.json'),'utf8')),amendment53Coverage=JSON.parse(await readFile(join(root,'tests/support/amendment53-export-coverage.json'),'utf8'));
@@ -632,6 +640,59 @@ export async function backupLegacy77Database(client,url,directory,recipient,duri
     {profile:legacy77Profile,versions:legacy77.migrations.map(row=>row.version),coverage:legacy77Coverage});
 }
 export async function restoreLegacy77Database(...args){return restoreWithProfile(legacy77Profile,...args);}
+export async function backupLegacy78Database(client,url,directory,recipient,duringSnapshot,objectCapture){
+  return backupWithProfile(legacy78Profile,client,url,directory,recipient,duringSnapshot,objectCapture,
+    {profile:legacy78Profile,versions:legacy78.migrations.map(row=>row.version),coverage:legacy78Coverage});
+}
+export async function restoreLegacy78Database(...args){return restoreWithProfile(legacy78Profile,...args);}
+
+async function expense79RecoveryProfile(candidate){
+  assert.equal(candidate.file,expense79File);
+  assert.equal(candidate.previousRegistrySha256,legacy78Profile.registrySha256);
+  const registryBytes=await readFile(join(candidate.directory,'supabase/migration-checksums.json'));
+  const candidateRegistry=JSON.parse(registryBytes);
+  assert.equal(hash(registryBytes),candidate.registrySha256);
+  assert.deepEqual(candidateRegistry.migrations,[...legacy78.migrations,
+    {version:expense79Version,file:candidate.file,sha256:candidate.sha256}]);
+  const migration=await readFile(join(candidate.directory,'supabase/migrations',candidate.file));
+  assert.equal(hash(migration),candidate.sha256);
+  assert.equal(migration.length,candidate.bytes);
+  assert.deepEqual(candidate.parts.map(part=>part.path),expense79Files.map(name=>'planning/proposals/'+name+'.sql'));
+  for(const part of candidate.parts){
+    const original=await readFile(join(root,part.path));
+    assert.equal(hash(original),part.sha256);
+    assert.equal(original.length,part.bytes);
+    assert(migration.subarray(part.offset,part.offset+part.bytes).equals(original));
+  }
+  const dictionaryPart=candidate.parts.at(-1);
+  const dictionary=migration.subarray(dictionaryPart.offset,dictionaryPart.offset+dictionaryPart.bytes).toString('utf8')
+    .split('$dictionary$')[1];
+  const tables=new Map([...dictionary.matchAll(/\('([a-z_]+)', ARRAY\[([\s\S]*?)\]\)/g)].map(([,name,fields])=>
+    ['crest.'+name,[...fields.matchAll(/'([a-z_]+):[^']+'/g)].map(([,column])=>column)]));
+  assert.equal(tables.size,7);
+  const declared=legacy78Coverage.tables.map(entry=>{
+    const fields=tables.get(entry.table);
+    if(!fields)return entry;
+    assert.deepEqual(fields.slice(0,entry.required.length),entry.required);
+    tables.delete(entry.table);
+    return {...entry,required:fields};
+  });
+  assert.deepEqual([...tables.keys()],['crest.posted_expenses']);
+  declared.push({table:'crest.posted_expenses',scope:'business',required:tables.get('crest.posted_expenses'),excluded:[],partialEvidenceGroup:null});
+  const coverage={...legacy78Coverage,migrationCount:79,tables:declared};
+  assert.deepEqual(candidate.coverage,coverage);
+  return {profile:Object.freeze({schemaVersion:79,registrySha256:candidate.registrySha256,heldExpenseMigrationSha256:candidate.sha256}),
+    versions:candidateRegistry.migrations.map(row=>row.version),coverage};
+}
+export async function backupExpense79CandidateDatabase(candidate,client,url,directory,recipient,objectCapture){
+  assert(objectCapture);
+  const checked=await expense79RecoveryProfile(candidate);
+  return backupWithProfile(checked.profile,client,url,directory,recipient,undefined,objectCapture,checked);
+}
+export async function restoreExpense79CandidateDatabase(candidate,directory,identity,url,restoreObjects){
+  assert.equal(typeof restoreObjects,'function');
+  return restoreWithProfile((await expense79RecoveryProfile(candidate)).profile,directory,identity,url,restoreObjects);
+}
 
 async function backupWithProfile(profile,client,url,directory,recipient,duringSnapshot=async()=>{},objectCapture,checkedSnapshot){
   assert(checkedSnapshot===undefined||checkedSnapshot.profile===profile&&
@@ -639,6 +700,8 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile.schemaVersion===69&&profile.heldPickupReturnSources
       ||profile.schemaVersion===70&&profile.heldFinanceAccountsSha256
       ||profile===legacy77Profile
+      ||profile===legacy78Profile
+      ||profile.schemaVersion===79&&profile.heldExpenseMigrationSha256
       ));
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   try{
@@ -719,7 +782,9 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     assert.equal(manifest.heldFinanceAccountCommandsSha256,profile.heldFinanceAccountCommandsSha256);
     assert.equal(manifest.heldFinanceAccountMappingsSha256,profile.heldFinanceAccountMappingsSha256);
     assert.equal(manifest.heldFinanceTaxProfilesSha256,profile.heldFinanceTaxProfilesSha256);
-    if(profile.heldDropoffPhotoAuthority||profile.heldCustody67MigrationSha256||profile.heldPickupReturnSources)assert(manifest.objectArchive);
+    assert.equal(manifest.heldExpenseMigrationSha256,profile.heldExpenseMigrationSha256);
+    if(profile.heldDropoffPhotoAuthority||profile.heldCustody67MigrationSha256||profile.heldPickupReturnSources
+      ||profile.heldExpenseMigrationSha256)assert(manifest.objectArchive);
     stage='authenticated_dump';const dump=await unseal(join(directory,'database.age'),receipt.dump,identity);
     assert.equal(dump.length,manifest.dump.bytes);assert.equal(hash(dump),manifest.dump.sha256);assert.equal(dump.subarray(0,5).toString(),'PGDMP');
     stage='objects';if(manifest.objectArchive){assert.equal(typeof restoreObjects,'function');await restoreObjects(manifest.objectArchive);}
