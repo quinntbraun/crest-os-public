@@ -52,6 +52,9 @@ import {invoiceSourceCoverage} from '../../src/bookkeeping/invoice-source.ts';
 import registered77 from '../support/registered77-migration-checksums.json';
 import coverage77 from '../support/registered77-export-coverage.json';
 import {receiptSourceAddedColumns,receiptSourceCoverage} from '../../src/bookkeeping/receipt-source.ts';
+import registered78 from '../support/registered78-migration-checksums.json';
+import coverage78 from '../support/registered78-export-coverage.json';
+import {postedExpenseSourceAddedColumns,postedExpenseSourceCoverage} from '../../src/bookkeeping/posted-expense-source.ts';
 import {financeAccountSourceColumns,financeMoneyChannelSourceColumns,financeTaxSourceColumns,invoiceDraftSourceColumns} from '../../src/bookkeeping/finance-account-source.ts';
 import {pickupCustodySourceColumns} from '../../src/operations/pickup-custody-source.ts';
 import registry from '../support/registered54-migration-checksums.json';
@@ -371,15 +374,29 @@ it('registers direct receipts with their own source tables and typed shared jour
  const file='20261202180000_finance_direct_receipts.sql';
  expect(sha256(bytes('tests/support/registered77-migration-checksums.json'))).toBe('049fb535109b2d5a3d9d101a0f926ef2d5b110b4452417cdae366b230266a4c7');
  expect(sha256(bytes('tests/support/registered77-export-coverage.json'))).toBe('e247dfa2af6d718b6f22899dd96728e21636ad904bff41c60c96c3a84b6b9a51');
- expect(currentRegistry.migrations).toHaveLength(78);
- expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261202180000',file,
+ expect(registered78.migrations).toHaveLength(78);
+ expect(registered78.migrations.at(-1)).toEqual({version:'20261202180000',file,
   sha256:'a67a96a20d1ca7c314ec2a653839aede951911c69f71ab4ab0d4ee1e5dc3db85'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered77 as MigrationRegistry)).not.toThrow();
+ expect(()=>validateMigrationSet(registered78 as MigrationRegistry,new Map(registered78.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered77 as MigrationRegistry)).not.toThrow();
  const additions:Readonly<Record<string,readonly string[]>>=receiptSourceAddedColumns;
- expect(currentCoverage).toEqual({...coverage77,migrationCount:78,tables:[
+ expect(coverage78).toEqual({...coverage77,migrationCount:78,tables:[
   ...coverage77.tables.map(row=>({...row,required:[...row.required,...additions[row.table]??[]]})),...receiptSourceCoverage,
  ]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:78});
+});
+it('appends reviewed paid expenses to the frozen direct receipt schema',()=>{
+ const file='20261203180000_finance_same_day_expenses.sql';
+ expect(sha256(bytes('tests/support/registered78-migration-checksums.json'))).toBe('fc39f30789753f5fc38d356764d0ffe5b28ebf722a1c69dab236fd2a12bdeb98');
+ expect(sha256(bytes('tests/support/registered78-export-coverage.json'))).toBe('7b8bee62179d370d4c79c5f903cb18805da603fa70dfbf85af7caf5bdbda7649');
+ expect(currentRegistry.migrations).toHaveLength(79);
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261203180000',file,
+  sha256:'014a00bdd577f8e971b107a094967f0f988057bd5f6c725223d0c12911924471'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered78 as MigrationRegistry)).not.toThrow();
+ const additions:Readonly<Record<string,readonly string[]>>=postedExpenseSourceAddedColumns;
+ expect(currentCoverage).toEqual({...coverage78,migrationCount:79,tables:[
+  ...coverage78.tables.map(row=>({...row,required:[...row.required,...additions[row.table]??[]]})),
+  postedExpenseSourceCoverage,
+ ]});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:79});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');
