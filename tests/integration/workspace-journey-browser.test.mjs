@@ -25,6 +25,27 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(skip).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('#workspace-content')).toBeFocused();
+  await expect(page.getByRole('navigation',{name:'Quick actions',exact:true}).getByRole('link',{name:'Open accounting',exact:true})).toHaveAttribute('href','/settings/accounts');
+  const workspaceMenu=page.locator('.workspace-menu summary');
+  const tools=page.getByRole('navigation',{name:'Workspace tools',exact:true});
+  await workspaceMenu.press('Enter');
+  await expect(tools.getByText('Money',{exact:true})).toBeVisible();
+  await expect(tools.getByRole('link',{name:'Accounting',exact:true})).toHaveAttribute('href','/settings/accounts');
+  await tools.getByRole('link',{name:'Accounting',exact:true}).press('Escape');
+  await expect(tools).toBeHidden();
+  await expect(workspaceMenu).toBeFocused();
+  await mkdir('.local/review',{recursive:true});
+  for(const width of [360,390,768,1440]){
+   await page.setViewportSize({width,height:900});
+   await workspaceMenu.click();
+   const expenses=tools.getByRole('link',{name:'Expenses',exact:true});
+   assert((await expenses.boundingBox())?.height>=44);
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.deepEqual((await new AxeBuilder({page}).include('.workspace-menu').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+   await page.screenshot({path:join('.local/review',`workspace-menu-${name}-${width}.png`)});
+   await workspaceMenu.press('Escape');
+  }
+  await page.setViewportSize({width:390,height:844});
   await page.route('**/api/business/settings',route=>route.abort('failed'));await page.getByRole('button',{name:'Refresh workspace',exact:true}).click();await expect(page.getByRole('status')).toContainText('Workspace access could not be verified');await expect(page.getByRole('link',{name:'Open customers',exact:true})).toHaveCount(0);await page.unroute('**/api/business/settings');await page.getByRole('button',{name:'Refresh workspace',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Workspace access verified.');
   await expect(page.getByText('No follow-up dates recorded.',{exact:true})).toBeVisible();
   await page.getByRole('link',{name:'Open customers',exact:true}).click();await page.getByRole('button',{name:'Add customer',exact:true}).click();

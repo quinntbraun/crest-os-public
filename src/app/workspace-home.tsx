@@ -58,7 +58,7 @@ export function WorkspaceHome(){
     {view.phase==='unavailable'&&<div className="notice"><p>No current business information is shown until access is confirmed.</p><a href="/sign-in">Check sign-in</a></div>}
     {view.phase==='ready'&&<>
       {view.paused&&<p className="notice">Changes are paused for recovery review. You can still review available records and history.</p>}
-      <nav className="home-shortcuts" aria-label="Quick actions"><a href="/customers">Open customers</a><a href="/quotes">Open quotes</a><a href="/leads">Open leads</a><a href="/expenses">Open expenses</a></nav>
+      <nav className="home-shortcuts" aria-label="Quick actions"><a href="/customers">Open customers</a><a href="/quotes">Open quotes</a><a href="/expenses">Open expenses</a><a href="/settings/accounts">Open accounting</a></nav>
       <div className="today-grid">
       <section className="home-panel" aria-label="Upcoming saved visits"><div className="section-heading"><h2>Upcoming visits</h2></div>
         {view.schedule===null||view.schedule.visits===null?<p>Upcoming visits could not be verified. <a href="/schedule">Check the schedule</a>.</p>:<><p className="field-help">Confirmed appointments over the next seven days.</p>{visits.length===0?<p>{view.schedule.visits.hasMore?'No active visits on this page. Open Schedule to review remaining visits.':'No active saved visits in the next seven days.'}</p>:<ul className="today-visits">{visits.map(job=><li key={job.jobId}>
