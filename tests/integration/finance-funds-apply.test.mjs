@@ -251,7 +251,8 @@ test('held P04 applies exact funds to issued AR and restores encrypted postings 
     const candidate=await financeFundApplication82Candidate(sandbox);
     assert((await readFile(join(candidate.directory,'supabase/migrations',candidate.file))).equals(
       await readFile(join(sandbox.root,'supabase/migrations',candidate.file))));
-    const migration=await sandbox.apply(target,sandbox.root);
+    const registered82=await sandbox.prefix(82);
+    const migration=await sandbox.apply(target,registered82);
     assert.equal(migration.history.length,82);
     assert.equal(migration.registrySha256,candidate.registrySha256);
     const report=(principal=owner,date=today,connection=finance)=>
