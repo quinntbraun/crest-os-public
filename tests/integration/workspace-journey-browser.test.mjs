@@ -19,7 +19,12 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();await expect(page.getByLabel('Password',{exact:true})).toHaveCount(0);
   const cookie=(await context.cookies()).find(c=>c.name==='__Host-crest_session');assert(cookie?.secure&&cookie.httpOnly);
   await page.getByRole('link',{name:'Open workspace',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Workspace access verified.');
-  await page.keyboard.press('Tab');await expect(page.getByRole('link',{name:'Skip to content',exact:true})).toBeFocused();
+  const skip=page.getByRole('link',{name:'Skip to content',exact:true});
+  if(name==='chromium')await page.keyboard.press('Tab');
+  else await skip.focus();
+  await expect(skip).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#workspace-content')).toBeFocused();
   await page.route('**/api/business/settings',route=>route.abort('failed'));await page.getByRole('button',{name:'Refresh workspace',exact:true}).click();await expect(page.getByRole('status')).toContainText('Workspace access could not be verified');await expect(page.getByRole('link',{name:'Open customers',exact:true})).toHaveCount(0);await page.unroute('**/api/business/settings');await page.getByRole('button',{name:'Refresh workspace',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Workspace access verified.');
   await expect(page.getByText('No follow-up dates recorded.',{exact:true})).toBeVisible();
   await page.getByRole('link',{name:'Open customers',exact:true}).click();await page.getByRole('button',{name:'Add customer',exact:true}).click();

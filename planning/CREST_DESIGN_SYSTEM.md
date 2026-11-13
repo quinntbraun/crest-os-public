@@ -5,8 +5,10 @@
 - IBM Plex Sans regular and semibold, self-hosted under SIL OFL 1.1; exact license in public/fonts/OFL.txt. Official IBM/plex WOFF2 blobs verified before inclusion: Regular 231a1ad716215de37ce8102dde533be859036f91, SemiBold b96a19c2457d296f597169ea104c5c1ab1435a46. These are Git blob SHA-1 identities, not release SHA-256 checksums. No runtime font service or new package.
 - Tokens in src/app/globals.css: near-black #141414; ink #191919; white work surfaces; warm neutral #f7f6f2; restrained gold #b99545 with dark labels; darker #765616 for links on light surfaces. Semantic messages retain text. No revenue/job placeholders or invented metrics.
 - 8px spacing basis, 6px control radii, restrained borders, 30px main headings, readable 16px inputs and tabular numbers. Existing component behavior, nullable fields and retained history remain authoritative.
-- Phone: four labeled bottom destinations with safe-area space; short forms with optional details. Desktop: navigation rail and bounded reading width. Native details for secondary tools; visible focus, skip link, native keyboard behavior and reduced-motion support.
+- Phone: five labeled bottom destinations with safe-area space; short forms with optional details. Desktop: navigation rail and bounded reading width. Native details for secondary tools; visible focus, skip link, native keyboard behavior and reduced-motion support.
 - Workspace navigation uses document links so existing editors' beforeunload protection remains active. No persistent customer draft cache or optimistic save is introduced. Home verifies actual session/business context, labels partial lead retrieval, clears its records when hidden, and requires explicit refresh. Unavailable information never becomes a zero count.
+
+Today uses a date and primary Schedule action, with compact links to Customers, Quotes, Leads and Expenses. Confirmed visits keep their time, customer and status together. Follow-ups use a second column when there is room. Schedule shows the calendar and saved jobs before the custody tools. The test-workspace banner identifies the environment.
 
 This decision does not certify visual quality, real-device behavior, production activation, recovery or release readiness. Those require executed checks and evidence in the current working checkpoint.
 
