@@ -9,10 +9,10 @@ export function ExpensesScreen(){
  const [sameDayExpenses,setSameDayExpenses]=useState(false);
  const checkAccess=useCallback(()=>{
   active.current?.abort();const controller=new AbortController();active.current=controller;
-  void authentication.session(controller.signal).then(async()=>{
+  void authentication.session(controller.signal).then(async proof=>{
    if(active.current!==controller||controller.signal.aborted||document.visibilityState==='hidden')return;
    setPhase('ready');
-   const finance=await financeAccounts.context(controller.signal).catch(()=>null);
+   const finance=await financeAccounts.context(controller.signal,proof).catch(()=>null);
    if(active.current===controller&&!controller.signal.aborted)setSameDayExpenses(finance?.sameDayExpenses===true);
   }).catch(error=>{if(active.current===controller&&!controller.signal.aborted)setPhase(error instanceof AuthenticationError&&error.kind==='denied'?'signed-out':'unavailable');}).finally(()=>{if(active.current===controller)active.current=null;});
  },[]);

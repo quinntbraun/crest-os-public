@@ -61,8 +61,8 @@ type ChannelPending=Readonly<{businessId:string;binding:string;reference:MoneyCh
 const channelFailure=[...knownFailure,'FINANCE_CHANNEL_VERSION_CONFLICT','FINANCE_CHANNEL_EFFECTIVE_ORDER_REQUIRED',
  'FINANCE_CHANNEL_ACCOUNT_REQUIRED','FINANCE_CHANNEL_ACCOUNT_PINNED','FINANCE_CHANNEL_IDENTITY_RETAINED'] as const;
 
-async function post(route:string,body:object,signal:AbortSignal,binding?:string){
- const bounded=AbortSignal.any([signal,AbortSignal.timeout(40000)]),proof=await authentication.session(bounded);
+async function post(route:string,body:object,signal:AbortSignal,binding?:string,existingProof?:Proof){
+ const bounded=AbortSignal.any([signal,AbortSignal.timeout(40000)]),proof=existingProof??await authentication.session(bounded);
  check(!bounded.aborted&&bindingPattern.test(proof.csrfToken)&&proof.expiresAt>Date.now());
  const response=await fetch('/api/business/finance-accounts/'+route,{
   method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer',
@@ -96,9 +96,11 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string)
   sameDayExpenses:response.headers.get('x-crest-same-day-expenses')==='1'};
 }
 
+import type {Proof} from './authentication';
+
 export const financeAccounts={
- async context(signal:AbortSignal):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses}=await post('context',{},signal);
+ async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
