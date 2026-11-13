@@ -48,6 +48,7 @@ import {directReceiptMatchesInput,directReceiptRefusals,parseDirectReceiptInput,
  parseDirectReceiptReference,parseDirectReceiptResult} from './direct-receipt-contract.ts';
 import {parseSameDayExpenseInput,parseSameDayExpenseOptions,parseSameDayExpenseReference,parseSameDayExpenseResult,
  sameDayExpenseMatchesInput,sameDayExpenseRefusals} from './expenses/same-day-expense-contract.ts';
+import {fictionalJournalPageSize,parseFictionalJournal,parseFictionalTrialBalance} from './trial-balance-contract.ts';
 
 export const financeAccountPrefix='/api/business/finance-accounts/';
 const fields={context:[],list:['afterCode','includeArchived'],history:['accountId','afterVersion'],
@@ -85,6 +86,8 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
   'purchaseTaxTreatment','purchaseTaxCents','receiptId','missingReceiptReason','unknownVendorReason','reviewReason','externalIdentity'],
  'expense-post-lookup':['operationId','recoveryEpoch','postedExpenseId'],
  'expense-post-retire':['reference','reviewEpoch','reason'],
+ 'trial-balance':['throughOn'],
+ 'posted-journal':['throughOn','accountId','afterLineId'],
  'invoice-draft-list':['jobId','afterDraft'], 'invoice-draft-read':['draftId','revision'],
  'invoice-draft-lookup':['operationId','recoveryEpoch','draftId','jobId','expectedRevision'],
  'invoice-draft-save':['reference','draft'], 'invoice-draft-retire':['reference','reviewEpoch','reason']} as const;
@@ -98,11 +101,11 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false}:Readonly<{
-  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false}:Readonly<{
+  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;
  }>={}){
  check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
- check(!sameDayExpenses||directReceipts&&categoryMappings);
+ check((!sameDayExpenses||directReceipts&&categoryMappings)&&(!trialBalance||sameDayExpenses));
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
@@ -126,6 +129,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route.startsWith('invoice-setup-')&&!invoiceIssue)return financeAccountFailure(404);
    if(route.startsWith('receipt-')&&!directReceipts)return financeAccountFailure(404);
    if(route.startsWith('expense-post-')&&!sameDayExpenses)return financeAccountFailure(404);
+   if((route==='trial-balance'||route==='posted-journal')&&!trialBalance)return financeAccountFailure(404);
    if(request.method!=='POST')return financeAccountFailure(405);
    protect.requireOrigin(request);
    const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;
@@ -153,6 +157,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     if(invoiceIssue)response.headers.set('X-Crest-Invoice-Issue','1');
     if(directReceipts)response.headers.set('X-Crest-Direct-Receipts','1');
     if(sameDayExpenses)response.headers.set('X-Crest-Same-Day-Expenses','1');
+    if(trialBalance)response.headers.set('X-Crest-Trial-Balance','1');
     return response;
    }
    credentialHash=sessionCredentialHash(cookie);
@@ -160,6 +165,21 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    check(!signal.aborted&&sessionId===verified.sessionId);
    const args=[credentialHash,sessionId,verified.actorId,verified.provider.issuer,verified.provider.subject,
     verified.provider.sessionId,new Date(verified.provider.expiresAt),businessId];
+   if(route==='trial-balance'){
+    check(input.throughOn===null||customerDate(input.throughOn));
+    const value=await database('SELECT crest_commands.read_fictional_trial_balance('+authority+',$9::date) AS result',
+     [...args,input.throughOn],signal);
+    parseFictionalTrialBalance(value,businessId,input.throughOn);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='posted-journal'){
+    const {throughOn,accountId,afterLineId}=input;
+    check(customerDate(throughOn)&&(accountId===null||customerUuid(accountId))&&(afterLineId===null||customerUuid(afterLineId)));
+    const value=await database('SELECT crest_commands.read_fictional_journal('+authority+',$9::date,$10::uuid,$11::uuid,$12::integer) AS result',
+     [...args,throughOn,accountId,afterLineId,fictionalJournalPageSize],signal);
+    parseFictionalJournal(value,businessId,throughOn,accountId,afterLineId);
+    return privateJsonResponse(value as object);
+   }
    if(route==='expense-post-options'){
     check(customerUuid(input.expenseId));
     const value=await database('SELECT crest_commands.read_fictional_same_day_expense_options('+authority+',$9::uuid) AS result',

@@ -36,8 +36,10 @@ import {directReceiptMatchesInput,parseDirectReceiptInput,parseDirectReceiptOpti
  parseDirectReceiptResult} from '../bookkeeping/direct-receipt-contract';
 import {parseSameDayExpenseInput,parseSameDayExpenseOptions,parseSameDayExpenseReference,parseSameDayExpenseResult,
  sameDayExpenseMatchesInput} from '../bookkeeping/expenses/same-day-expense-contract';
+import {parseFictionalJournal,parseFictionalTrialBalance} from '../bookkeeping/trial-balance-contract';
+import type {Proof} from './authentication';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
@@ -77,8 +79,8 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   for(;;){
    const part=await reader.read();
    if(part.done)break;
-   bytes+=part.value.byteLength;check(bytes<=(route==='invoice-preparation'||route==='invoice-draft-read'||route==='invoice-issue-tax-review'
-    ||route==='invoice-issue-prepare'||route==='invoice-issue-read'||route==='receipt-options'?1048576:196608)&&!bounded.aborted);
+   bytes+=part.value.byteLength;check(bytes<=(route==='trial-balance'?2097152:route==='invoice-preparation'||route==='invoice-draft-read'||route==='invoice-issue-tax-review'
+    ||route==='invoice-issue-prepare'||route==='invoice-issue-read'||route==='receipt-options'||route==='expense-post-options'?1048576:196608)&&!bounded.aborted);
    text+=decoder.decode(part.value,{stream:true});
   }
   text+=decoder.decode();
@@ -93,19 +95,31 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   invoiceIssueTaxReview:response.headers.get('x-crest-invoice-issue-tax-review')==='1',
   invoiceIssue:response.headers.get('x-crest-invoice-issue')==='1',
   directReceipts:response.headers.get('x-crest-direct-receipts')==='1',
-  sameDayExpenses:response.headers.get('x-crest-same-day-expenses')==='1'};
+  sameDayExpenses:response.headers.get('x-crest-same-day-expenses')==='1',
+  trialBalance:response.headers.get('x-crest-trial-balance')==='1'};
 }
-
-import type {Proof} from './authentication';
 
 export const financeAccounts={
  async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses}=await post('context',{},signal,undefined,proof);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses,trialBalance}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
   return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,
-   ...(invoiceIssue?{invoiceIssue}:{}),...(directReceipts?{directReceipts}:{}),...(sameDayExpenses?{sameDayExpenses}:{})}) as FinanceAccountContext;
+   ...(invoiceIssue?{invoiceIssue}:{}),...(directReceipts?{directReceipts}:{}),...(sameDayExpenses?{sameDayExpenses}:{}),
+   ...(trialBalance?{trialBalance}:{})}) as FinanceAccountContext;
+ },
+ async readTrialBalance(context:FinanceAccountContext,throughOn:string|null,signal:AbortSignal){
+  check(context.trialBalance&&(throughOn===null||customerDate(throughOn)));
+  const {status,value}=await post('trial-balance',{throughOn},signal,context.binding);
+  check(status===200);
+  return parseFictionalTrialBalance(value,context.businessId,throughOn);
+ },
+ async readPostedJournal(context:FinanceAccountContext,throughOn:string,accountId:string|null,afterLineId:string|null,signal:AbortSignal){
+  check(context.trialBalance&&customerDate(throughOn)&&(accountId===null||customerUuid(accountId))&&(afterLineId===null||customerUuid(afterLineId)));
+  const {status,value}=await post('posted-journal',{throughOn,accountId,afterLineId},signal,context.binding);
+  check(status===200);
+  return parseFictionalJournal(value,context.businessId,throughOn,accountId,afterLineId);
  },
  async sameDayExpenseOptions(context:FinanceAccountContext,expenseId:string,signal:AbortSignal){
   check(context.sameDayExpenses&&customerUuid(expenseId));

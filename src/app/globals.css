@@ -250,6 +250,13 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .expense-posting-dates input { min-width:0; }
 .expense-posting-evidence { display:grid; gap:.75rem; min-width:0; margin:0; padding:.75rem; border:1px solid var(--line); border-radius:var(--radius); }
 @media (min-width:768px) { .expense-posting-dates { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.trial-balance table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:.9375rem; }
+.trial-balance caption { text-align:left; padding-block:.75rem; font-weight:600; }
+.trial-balance th,.trial-balance td { padding:.65rem .25rem; border-bottom:1px solid var(--line); text-align:right; overflow-wrap:anywhere; }
+.trial-balance th:first-child { width:52%; text-align:left; }
+.trial-balance tbody th { font-weight:400; }
+.trial-balance tbody th span,.trial-balance tfoot { font-weight:600; }
+.trial-balance small { display:block; color:var(--muted); }
 .expense-records { padding-top:.75rem; }
 .expense-records > h2:first-child { margin-top:0; }
 .expense-records > article { padding-bottom:1rem; margin-bottom:1.5rem; border-bottom:1px solid var(--line); }

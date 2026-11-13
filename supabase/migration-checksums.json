@@ -395,6 +395,11 @@
       "version": "20261203180000",
       "file": "20261203180000_finance_same_day_expenses.sql",
       "sha256": "014a00bdd577f8e971b107a094967f0f988057bd5f6c725223d0c12911924471"
+    },
+    {
+      "version": "20261204180000",
+      "file": "20261204180000_finance_posted_reports.sql",
+      "sha256": "e273a9dcdc9dd6eb1c938a4e08014fb7c9a257b8d7e1ac10f37e4bb35f6d5048"
     }
   ]
 }

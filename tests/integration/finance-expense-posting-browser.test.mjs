@@ -9,7 +9,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
  const f=await sourceExportBrowserFixture({product:true,workspace:true,expenses:true,catalog:true,quotes:true,
   quoteReview:true,quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,
   financeAccounts:true,financeMappings:true,financeCategoryMappings:true,financeTaxProfiles:true,financeMoneyChannels:true,
-  invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,directReceipts:true,sameDayExpenses:true});
+  invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,directReceipts:true,sameDayExpenses:true,trialBalance:true});
  let browser;
  try{
   browser=await engine.launch();
@@ -82,5 +82,45 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert.match(await readFile(await (await download).path(),'utf8'),/"10000","650","verified_nonrecoverable"/);
   assert.deepEqual((await f.client.query('SELECT gross_cents::text,purchase_tax_cents::text FROM crest.posted_expenses WHERE business_id=$1',
    [f.business])).rows,[{gross_cents:'10000',purchase_tax_cents:'650'}]);
+  await page.goto(f.origin+'/settings/accounts');
+  await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+  await page.getByText('Fictional trial balance',{exact:true}).click();
+  const report=page.getByRole('region',{name:'Fictional trial balance',exact:true});
+  await report.getByLabel('Through date (optional)',{exact:true}).fill(date);
+  await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
+  await expect(report.getByRole('status')).toHaveText('Posted balances loaded.');
+  await expect(report.getByRole('row').filter({hasText:'Fictional wash supplies'})).toContainText('$100.00');
+  await expect(report.getByRole('row').filter({hasText:'Fictional dedicated bank'})).toContainText('$100.00');
+  const csv=page.waitForEvent('download');
+  await report.getByRole('button',{name:'Download trial balance CSV',exact:true}).click();
+  assert.match(await readFile(await (await csv).path(),'utf8'),/"10000","10000","10000","10000"/);
+  for(const width of [360,390,768,1440]){
+   await page.setViewportSize({width,height:900});
+   await report.getByRole('table').scrollIntoViewIfNeeded();
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   const audit=await new AxeBuilder({page}).include('.trial-balance').withTags(['wcag2a','wcag2aa']).analyze();
+   assert.deepEqual(audit.violations.map(entry=>entry.id),[]);
+   await page.screenshot({path:'.local/review/finance-trial-balance-'+name+'-'+width+'.png'});
+  }
+  await report.getByText('Journal entries',{exact:true}).click();
+  await report.getByLabel('Account (optional)',{exact:true}).selectOption({label:'5005 · Fictional wash supplies'});
+  await report.getByRole('button',{name:'Load journal entries',exact:true}).click();
+  const journal=report.getByRole('table',{name:'Posted journal page',exact:true});
+  await expect(journal.getByRole('row').filter({hasText:'Fictional wash supplies'})).toContainText('$100.00');
+  await expect(journal).not.toContainText('Fictional dedicated bank');
+  const journalCsv=page.waitForEvent('download');
+  await report.getByRole('button',{name:'Download journal page CSV',exact:true}).click();
+  assert.match(await readFile(await (await journalCsv).path(),'utf8'),/"Fictional wash supplies",[^\r\n]+"10000","0"/);
+  await report.getByText('Journal entries',{exact:true}).click();
+  await expect(journal).toHaveCount(0);
+  const priorDate=new Date(Date.parse(date+'T00:00:00Z')-86400000).toISOString().slice(0,10);
+  await report.getByLabel('Through date (optional)',{exact:true}).fill(priorDate);
+  await expect(report.getByRole('table')).toHaveCount(0);
+  await report.getByRole('button',{name:'Load trial balance',exact:true}).click();
+  await expect(report.getByRole('status')).toHaveText('No supported entries have been posted through this date.');
+  await page.route('**/api/business/finance-accounts/trial-balance',route=>route.abort('failed'),{times:1});
+  await report.getByRole('button',{name:'Load trial balance',exact:true}).click();
+  await expect(report.getByRole('status')).toContainText('Crest could not load a verified trial balance');
+  await expect(report.getByRole('button',{name:'Download trial balance CSV',exact:true})).toHaveCount(0);
  }finally{await browser?.close();await f.close();}
 },{timeout:240000});

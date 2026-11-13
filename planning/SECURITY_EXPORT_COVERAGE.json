@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 79,
+  "migrationCount": 80,
   "tables": [
     {
       "table": "crest.businesses",
