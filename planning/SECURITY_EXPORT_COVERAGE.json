@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 81,
+  "migrationCount": 82,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2580,7 +2580,8 @@
         "posted_at",
         "payment_id",
         "posted_expense_id",
-        "unapplication_id"
+        "unapplication_id",
+        "fund_application_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2647,7 +2648,8 @@
         "money_movement_id",
         "allocation_event_id",
         "unapplication_id",
-        "fund_lot_id"
+        "fund_lot_id",
+        "fund_application_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2807,6 +2809,24 @@
         "account_id",
         "mapping_id",
         "original_cents"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.customer_fund_applications",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "fund_lot_id",
+        "receivable_id",
+        "first_cent",
+        "last_cent",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

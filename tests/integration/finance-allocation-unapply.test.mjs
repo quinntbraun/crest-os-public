@@ -14,6 +14,8 @@ import { captureInvoiceSource } from '../../src/bookkeeping/invoice-source.ts';
 import { captureReceiptSource } from '../../src/bookkeeping/receipt-source.ts';
 import { capturePostedExpenseSource } from '../../src/bookkeeping/posted-expense-source.ts';
 import { captureUnapplicationSource, formatUnapplicationSource } from '../../src/bookkeeping/unapplication-source.ts';
+import { captureFinanceSourceExport } from '../../src/bookkeeping/finance-source-export.ts';
+import { verifyFinanceSourceExport } from '../../src/tooling/verify-finance-source-export.ts';
 import { readSourceExportCsv } from '../../src/security/source-export-csv-reader.ts';
 
 async function command(connection, name, values) {
@@ -222,7 +224,7 @@ test('held P05 moves exact live P03 ranges with no cash, reopens AR, and restore
     const candidate=await financeUnapplication81Candidate(sandbox);
     assert((await readFile(join(candidate.directory,'supabase/migrations',candidate.file))).equals(
       await readFile(join(sandbox.root,'supabase/migrations',candidate.file))));
-    const registered=await sandbox.apply(target,sandbox.root);
+    const registered=await sandbox.apply(target,await sandbox.prefix(81));
     assert.equal(registered.history.length,81);
     assert.equal(registered.registrySha256,candidate.registrySha256);
     const reportV1=()=>command(finance,'read_fictional_trial_balance',[...owner.auth(),today]);
@@ -338,6 +340,22 @@ test('held P05 moves exact live P03 ranges with no cash, reopens AR, and restore
       const damaged=structuredClone(captured);
       damaged.rows.customer_fund_lots[0].origin_id=randomUUID();
       assert.throws(()=>formatUnapplicationSource(damaged),{message:'UNAPPLICATION_SOURCE_REVIEW_REQUIRED'});
+      const query=async(sql,args)=>(await exporter.query(sql,args)).rows;
+      const combined=(await captureFinanceSourceExport(owner.business,query,{includeCorrections:true})).forServer();
+      const manifest=JSON.parse(combined.manifest);
+      assert.equal(manifest.schemaVersion,2);
+      assert.equal(manifest.rowCounts.allocation_unapplications,2);
+      assert.equal(manifest.rowCounts.customer_fund_lots,2);
+      assert.equal(manifest.rowCounts.allocation_events,2);
+      assert.equal(manifest.sourceTokens.correction,captured.snapshotToken);
+      const verified=verifyFinanceSourceExport(combined.manifest,combined.files,owner.business);
+      assert.equal(verified.profile,'crest.posted-finance-source.v2');
+      assert.equal(verified.balancedJournalEntries,5);
+      const fileFor=name=>combined.files.find(file=>file.name===name).content;
+      const dictionary=JSON.parse(fileFor('dictionary.json')).tables.find(table=>table.name==='customer_fund_lots');
+      assert.deepEqual(readSourceExportCsv(fileFor('customer_fund_lots.csv'),
+        JSON.parse(fileFor('customer_fund_lots_escape_map.json')).escapes,{columns:dictionary.columns,maxRows:100}),
+      captured.rows.customer_fund_lots);
     } finally {await exporter.query('ROLLBACK');}
     await exporter.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
     await assert.rejects(command(exporter,'unapplication_source_snapshot_page',

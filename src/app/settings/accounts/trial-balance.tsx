@@ -3,14 +3,18 @@
 import {useEffect,useRef,useState} from 'react';
 import {expenseDollars} from '../../../bookkeeping/expenses/expense-contract';
 import type {FictionalJournalV2,FictionalTrialBalanceV2} from '../../../bookkeeping/posted-report-v2-contract';
+import type {FictionalJournalV3,FictionalTrialBalanceV3} from '../../../bookkeeping/posted-report-v3-contract';
 import {downloadFinanceHistory,financeAccounts} from '../../../client/finance-accounts';
 
-type Balance=Awaited<ReturnType<typeof financeAccounts.readTrialBalance>>|FictionalTrialBalanceV2;
-type Journal=Awaited<ReturnType<typeof financeAccounts.readPostedJournal>>|FictionalJournalV2;
-type CorrectionJournalRow=FictionalJournalV2['rows'][number];
+type Balance=Awaited<ReturnType<typeof financeAccounts.readTrialBalance>>|FictionalTrialBalanceV2|FictionalTrialBalanceV3;
+type Journal=Awaited<ReturnType<typeof financeAccounts.readPostedJournal>>|FictionalJournalV2|FictionalJournalV3;
+type CorrectionJournalRow=FictionalJournalV2['rows'][number]|FictionalJournalV3['rows'][number];
 const usd=(cents:string)=>'$'+expenseDollars(cents);
 function hasPaymentCorrections(report:Balance|Journal){
-  return 'schemaVersion' in report&&report.schemaVersion===2;
+  return 'schemaVersion' in report&&(report.schemaVersion===2||report.schemaVersion===3);
+}
+function reportVersion(report:Balance|Journal){
+  return 'schemaVersion' in report?report.schemaVersion:1;
 }
 function hasCorrectionFields(row:Journal['rows'][number]):row is CorrectionJournalRow{
   return 'unapplicationId' in row&&'fundLotId' in row;
@@ -66,7 +70,7 @@ export function TrialBalance({businessId}:{businessId:string}){
       if(context.businessId!==businessId)throw Error();
       const result=await financeAccounts.readPostedJournal(context,balance.throughOn,account||null,next?journal!.nextAfterLineId:null,signal);
       if(signal.aborted)return;
-      if(hasPaymentCorrections(result)!==hasPaymentCorrections(balance)){
+      if(reportVersion(result)!==reportVersion(balance)){
         setJournalMessage('Report coverage changed. Reload the trial balance before opening the journal.');
         return;
       }
@@ -80,7 +84,9 @@ export function TrialBalance({businessId}:{businessId:string}){
     downloadFinanceHistory('crest-fictional-trial-balance-'+balance.throughOn+'.csv',[
       ['Through date','Timezone','Currency','Observed UTC','Posted events','Coverage'],
       [balance.throughOn,balance.timeZone,balance.currency,balance.observedAt,balance.postedEventCount,
-        hasPaymentCorrections(balance)
+        reportVersion(balance)===3
+          ?'Fictional partial ledger. Supported invoices, direct payments, customer funds applications, payment corrections and same-day expenses. Opening balances and reconciliation pending.'
+          :hasPaymentCorrections(balance)
           ?'Fictional partial ledger. Supported invoices, direct payments, payment corrections and same-day expenses. Opening balances and reconciliation pending.'
           :'Fictional partial ledger. Supported invoices, direct payments and same-day expenses. Opening balances and reconciliation pending.'],
       [],
@@ -96,14 +102,17 @@ export function TrialBalance({businessId}:{businessId:string}){
   function downloadJournal(){
     if(!journal?.rows.length)return;
     const includesCorrections=hasPaymentCorrections(journal);
+    const includesFundsApplications=reportVersion(journal)===3;
     downloadFinanceHistory('crest-fictional-journal-page-'+journal.throughOn+'.csv',[
       ['Through date','Timezone','Currency','Observed UTC','Coverage'],
       [journal.throughOn,journal.timeZone,journal.currency,journal.observedAt,'Current page of the fictional partial ledger.'],
       [],
       ['Date','Account code','Account','Purpose','Debit cents','Credit cents','Entry ID','Event ID','Source operation ID',
-        ...(includesCorrections?['Posting template','Payment correction ID','Customer funds lot ID']:[])],
+        ...(includesCorrections?['Posting template','Payment correction ID','Customer funds lot ID']:[]),
+        ...(includesFundsApplications?['Customer funds application ID']:[])],
       ...journal.rows.map(row=>[row.effectiveOn,row.code,row.name,row.purpose,row.debitCents,row.creditCents,row.entryId,row.eventId,row.operationId,
-        ...(hasCorrectionFields(row)?[row.template,row.unapplicationId??'',row.fundLotId??'']:[])]),
+        ...(hasCorrectionFields(row)?[row.template,row.unapplicationId??'',row.fundLotId??'']:[]),
+        ...(includesFundsApplications?['fundApplicationId' in row?row.fundApplicationId??'':'']:[])]),
     ]);
   }
   return <details className="review-card" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
@@ -120,7 +129,9 @@ export function TrialBalance({businessId}:{businessId:string}){
       {balance&&<>
         <p>Through <time dateTime={balance.throughOn}>{balance.throughOn}</time> · USD · {balance.timeZone}</p>
         {balance.coverageStart&&<p className="field-help">First included posting {balance.coverageStart} · {balance.postedEventCount} posted {balance.postedEventCount==='1'?'event':'events'}</p>}
-        {hasPaymentCorrections(balance)&&<p className="field-help">Includes payment corrections. Customer funds held match the ledger through this date.</p>}
+        {hasPaymentCorrections(balance)&&<p className="field-help">{reportVersion(balance)===3
+          ?'Includes payment corrections and customer funds applications. Customer funds held match the ledger through this date.'
+          :'Includes payment corrections. Customer funds held match the ledger through this date.'}</p>}
         {balance.rows.length>0&&<table>
           <caption>Net balance by account</caption>
           <thead><tr><th scope="col">Account</th><th scope="col">Debit</th><th scope="col">Credit</th></tr></thead>
@@ -157,6 +168,7 @@ export function TrialBalance({businessId}:{businessId:string}){
               <thead><tr><th scope="col">Date and account</th><th scope="col">Debit</th><th scope="col">Credit</th></tr></thead>
               <tbody>{journal.rows.map(row=>{
                 const correction=hasCorrectionFields(row)&&row.template==='P05'?row:null;
+                const application='fundApplicationId' in row&&row.template==='P04'?row:null;
                 return <tr key={row.lineId}>
                   <th scope="row">
                     <time dateTime={row.effectiveOn}>{row.effectiveOn}</time><small>{row.code} · {row.name}</small>
@@ -166,6 +178,14 @@ export function TrialBalance({businessId}:{businessId:string}){
                         <summary>Source references</summary>
                         <small>Correction {correction.unapplicationId}</small>
                         {correction.fundLotId&&<small>Customer funds lot {correction.fundLotId}</small>}
+                      </details>
+                    </>}
+                    {application&&<>
+                      <small>{application.purpose==='apply_ar'?'Customer funds · Invoice balance reduced':'Customer funds · Held balance reduced'}</small>
+                      <details>
+                        <summary>Source references</summary>
+                        <small>Application {application.fundApplicationId}</small>
+                        {application.fundLotId&&<small>Customer funds lot {application.fundLotId}</small>}
                       </details>
                     </>}
                   </th>

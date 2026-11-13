@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { mkdir, realpath, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import {captureFinanceSourceExport} from '../../src/bookkeeping/finance-source-export.ts';
+import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
 import {readSourceExportCsv} from '../../src/security/source-export-csv-reader.ts';
 import { confirmedBookingRequest } from '../fixtures/confirmed-booking.ts';
 import { createConfirmedBookingFixture } from '../support/confirmed-booking-fixture.mjs';
@@ -209,6 +213,26 @@ test('registered posted trial balance and journal tie exact amounts and refuse i
       assert.equal(lines.reduce((total,line)=>total+BigInt(line.debit_cents),0n),46201n);
       assert.equal(lines.reduce((total,line)=>total+BigInt(line.credit_cents),0n),46201n);
       assert(read('operation_history.ndjson').includes(payment.paymentId));
+      const verified=verifyFinanceSourceExport(manifest,files,owner.business);
+      assert.equal(verified.debitCents,'46201');
+      assert.equal(verified.balancedJournalEntries,4);
+      const folder=join(sandbox.workspace,'finance-export');
+      await mkdir(folder);
+      try{
+        await writeFile(join(folder,'manifest.json'),manifest);
+        for(const file of files)await writeFile(join(folder,file.name),file.content);
+        const stdout=execFileSync(process.execPath,['--conditions=react-server','scripts/verify-source-export.mjs',folder,owner.business],
+          {encoding:'utf8',timeout:10000});
+        assert.deepEqual(JSON.parse(stdout),verified);
+      }finally{
+        const resolved=await realpath(folder);
+        assert.equal(resolved,join(await realpath(sandbox.workspace),'finance-export'));
+        await rm(resolved,{recursive:true});
+      }
+      const broken=files.map(file=>file.name==='journal_lines.csv'?{...file,content:file.content+'\r\n'}:file);
+      assert.throws(()=>verifyFinanceSourceExport(manifest,broken,owner.business));
+      const wrongCounts={...inventory,rowCounts:{...inventory.rowCounts,payments:2}};
+      assert.throws(()=>verifyFinanceSourceExport(JSON.stringify(wrongCounts),files,owner.business));
 
       const duplicateExpense=async(sql,args)=>{
         const rows=await exportQuery(sql,args);

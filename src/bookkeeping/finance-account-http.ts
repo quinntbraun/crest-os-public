@@ -50,6 +50,9 @@ import {parseSameDayExpenseInput,parseSameDayExpenseOptions,parseSameDayExpenseR
  sameDayExpenseMatchesInput,sameDayExpenseRefusals} from './expenses/same-day-expense-contract.ts';
 import {fictionalJournalPageSize,parseFictionalJournal,parseFictionalTrialBalance} from './trial-balance-contract.ts';
 import {fictionalJournalV2PageSize,parseFictionalJournalV2,parseFictionalTrialBalanceV2} from './posted-report-v2-contract.ts';
+import {fictionalJournalV3PageSize,parseFictionalJournalV3,parseFictionalTrialBalanceV3} from './posted-report-v3-contract.ts';
+import {fundApplicationMatchesInput,parseFundApplicationInput,parseFundApplicationOptions,
+ parseFundApplicationReference,parseFundApplicationResult} from './fund-application-contract.ts';
 import {allocationUnapplicationMatchesInput,parseAllocationUnapplicationInput,parseAllocationUnapplicationOptions,
  parseAllocationUnapplicationReference,parseAllocationUnapplicationResult,parseInvoicePaymentAllocations} from './allocation-unapplication-contract.ts';
 
@@ -89,6 +92,10 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
  'payment-correction-submit':['reference','allocationId','customerId','fundsMappingId','effectiveOn','firstCent','lastCent','reason'],
  'payment-correction-lookup':['operationId','recoveryEpoch','unapplicationId'],
  'payment-correction-retire':['reference','reviewEpoch','reason'],
+ 'fund-application-options':['customerId','invoiceId','effectiveOn'],
+ 'fund-application-submit':['reference','fundLotId','receivableId','customerId','effectiveOn','firstCent','lastCent','reason'],
+ 'fund-application-lookup':['operationId','recoveryEpoch','fundApplicationId'],
+ 'fund-application-retire':['reference','reviewEpoch','reason'],
  'expense-post-options':['expenseId'],
  'expense-post-submit':['reference','expenseId','expenseRevision','channelId','channelVersion','mappingId','incurredOn','paidOn',
   'purchaseTaxTreatment','purchaseTaxCents','receiptId','missingReceiptReason','unknownVendorReason','reviewReason','externalIdentity'],
@@ -109,12 +116,13 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false}:Readonly<{
-  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false}:Readonly<{
+  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;
  }>={}){
  check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
  check((!sameDayExpenses||directReceipts&&categoryMappings)&&(!trialBalance||sameDayExpenses));
  check(!paymentCorrections||trialBalance);
+ check(!fundApplications||paymentCorrections);
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
@@ -138,6 +146,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route.startsWith('invoice-setup-')&&!invoiceIssue)return financeAccountFailure(404);
    if(route.startsWith('receipt-')&&!directReceipts)return financeAccountFailure(404);
    if(route.startsWith('payment-correction-')&&!paymentCorrections)return financeAccountFailure(404);
+   if(route.startsWith('fund-application-')&&!fundApplications)return financeAccountFailure(404);
    if(route.startsWith('expense-post-')&&!sameDayExpenses)return financeAccountFailure(404);
    if((route==='trial-balance'||route==='posted-journal')&&!trialBalance)return financeAccountFailure(404);
    if(request.method!=='POST')return financeAccountFailure(405);
@@ -167,6 +176,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     if(invoiceIssue)response.headers.set('X-Crest-Invoice-Issue','1');
     if(directReceipts)response.headers.set('X-Crest-Direct-Receipts','1');
     if(paymentCorrections)response.headers.set('X-Crest-Payment-Corrections','1');
+    if(fundApplications)response.headers.set('X-Crest-Fund-Applications','1');
     if(sameDayExpenses)response.headers.set('X-Crest-Same-Day-Expenses','1');
     if(trialBalance)response.headers.set('X-Crest-Trial-Balance','1');
     return response;
@@ -176,6 +186,47 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    check(!signal.aborted&&sessionId===verified.sessionId);
    const args=[credentialHash,sessionId,verified.actorId,verified.provider.issuer,verified.provider.subject,
     verified.provider.sessionId,new Date(verified.provider.expiresAt),businessId];
+   if(route==='fund-application-options'){
+    check(customerUuid(input.customerId)&&customerUuid(input.invoiceId)&&(input.effectiveOn===null||customerDate(input.effectiveOn)));
+    const value=await database('SELECT crest_commands.read_fictional_customer_funds_application_options('+authority+',$9::uuid,$10::uuid,$11::date) AS result',
+     [...args,input.customerId,input.invoiceId,input.effectiveOn],signal);
+    parseFundApplicationOptions(value,businessId,input.customerId,input.invoiceId,input.effectiveOn);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='fund-application-lookup'){
+    const reference=parseFundApplicationReference(input);
+    const value=await database('SELECT crest_commands.lookup_fictional_customer_fund_application('+authority+',$9::uuid,$10::uuid,$11::uuid) AS result',
+     [...args,reference.recoveryEpoch,reference.operationId,reference.fundApplicationId],signal);
+    const result=parseFundApplicationResult(value,businessId,reference);
+    return privateJsonResponse(value as object,result.state==='conflict'?409:200);
+   }
+   if(route==='fund-application-retire'){
+    const reference=parseFundApplicationReference(input.reference);
+    check(customerUuid(input.reviewEpoch)&&financeAccountReviewReason(input.reason));
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.retire_fictional_customer_fund_application('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::text) AS result',
+      [...args,input.reviewEpoch,reference.operationId,reference.recoveryEpoch,reference.fundApplicationId,input.reason]);
+     const parsed=parseFundApplicationResult(value,businessId,reference);
+     check(parsed.state!=='absent');
+     return {value:value as object,state:parsed.state};
+    },signal);
+    return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
+   if(route==='fund-application-submit'){
+    const application=parseFundApplicationInput(input),reference=application.reference;
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.apply_fictional_customer_funds('+authority
+      +',$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::uuid,$14::uuid,$15::date,$16::bigint,$17::bigint,$18::text) AS result',
+      [...args,reference.recoveryEpoch,reference.operationId,reference.fundApplicationId,application.fundLotId,application.receivableId,
+       application.customerId,application.effectiveOn,application.firstCent,application.lastCent,application.reason]);
+     const parsed=parseFundApplicationResult(value,businessId,reference);
+     check(parsed.state==='conflict'||parsed.state==='committed'&&fundApplicationMatchesInput(parsed,application));
+     return {value:value as object,state:parsed.state};
+    },signal);
+    return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
    if(route==='payment-correction-list'){
     check(customerUuid(input.customerId)&&customerUuid(input.invoiceId));
     const value=await database('SELECT crest_commands.list_fictional_invoice_payment_allocations('+authority+',$9::uuid,$10::uuid) AS result',
@@ -226,20 +277,22 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    }
    if(route==='trial-balance'){
     check(input.throughOn===null||customerDate(input.throughOn));
-    const command=paymentCorrections?'read_fictional_trial_balance_v2':'read_fictional_trial_balance';
+    const command=fundApplications?'read_fictional_trial_balance_v3':paymentCorrections?'read_fictional_trial_balance_v2':'read_fictional_trial_balance';
     const value=await database('SELECT crest_commands.'+command+'('+authority+',$9::date) AS result',
      [...args,input.throughOn],signal);
-    if(paymentCorrections)parseFictionalTrialBalanceV2(value,businessId,input.throughOn);
+    if(fundApplications)parseFictionalTrialBalanceV3(value,businessId,input.throughOn);
+    else if(paymentCorrections)parseFictionalTrialBalanceV2(value,businessId,input.throughOn);
     else parseFictionalTrialBalance(value,businessId,input.throughOn);
     return privateJsonResponse(value as object);
    }
    if(route==='posted-journal'){
     const {throughOn,accountId,afterLineId}=input;
     check(customerDate(throughOn)&&(accountId===null||customerUuid(accountId))&&(afterLineId===null||customerUuid(afterLineId)));
-    const command=paymentCorrections?'read_fictional_journal_v2':'read_fictional_journal';
+    const command=fundApplications?'read_fictional_journal_v3':paymentCorrections?'read_fictional_journal_v2':'read_fictional_journal';
     const value=await database('SELECT crest_commands.'+command+'('+authority+',$9::date,$10::uuid,$11::uuid,$12::integer) AS result',
-     [...args,throughOn,accountId,afterLineId,paymentCorrections?fictionalJournalV2PageSize:fictionalJournalPageSize],signal);
-    if(paymentCorrections)parseFictionalJournalV2(value,businessId,throughOn,accountId,afterLineId);
+     [...args,throughOn,accountId,afterLineId,fundApplications?fictionalJournalV3PageSize:paymentCorrections?fictionalJournalV2PageSize:fictionalJournalPageSize],signal);
+    if(fundApplications)parseFictionalJournalV3(value,businessId,throughOn,accountId,afterLineId);
+    else if(paymentCorrections)parseFictionalJournalV2(value,businessId,throughOn,accountId,afterLineId);
     else parseFictionalJournal(value,businessId,throughOn,accountId,afterLineId);
     return privateJsonResponse(value as object);
    }
@@ -729,7 +782,10 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     'APPROVED_INVOICE_SERIES_REQUIRED','INVOICE_TAX_MAPPING_VERSION_CONFLICT','INVOICE_TAX_MAPPING_EFFECTIVE_ORDER_REQUIRED',
     'INVOICE_TAX_MAPPING_ACCOUNT_REQUIRED','UNAPPLICATION_DATE_REQUIRED','UNAPPLICATION_ALLOCATION_REQUIRED',
     'UNAPPLICATION_RANGE_UNAVAILABLE','UNAPPLICATION_FUNDS_MAPPING_REQUIRED','UNAPPLICATION_ALREADY_RECORDED',
-    'UNAPPLICATION_OPTIONS_LIMIT',...directReceiptRefusals,...sameDayExpenseRefusals].includes(error.message))
+    'UNAPPLICATION_OPTIONS_LIMIT','FUND_APPLICATION_DATE_REQUIRED','FUND_APPLICATION_LOT_REQUIRED',
+    'FUND_APPLICATION_RECEIVABLE_REQUIRED','FUND_APPLICATION_CONTROL_ACCOUNTS_REQUIRED','FUND_APPLICATION_RANGE_UNAVAILABLE',
+    'FUND_APPLICATION_ALREADY_RECORDED','FUND_APPLICATION_EXCEEDS_BALANCE','FUND_APPLICATION_OPTIONS_LIMIT',
+    ...directReceiptRefusals,...sameDayExpenseRefusals].includes(error.message))
     return privateJsonResponse({error:error.message},409);
    return submitted?privateJsonResponse({error:'FINANCE_ACCOUNT_OUTCOME_UNKNOWN'},503):financeAccountFailure();
   }finally{credentialHash?.fill(0);}
