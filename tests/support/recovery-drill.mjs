@@ -137,6 +137,13 @@ const legacy76CoverageBytes=await readFile(join(root,'tests/support/registered76
 assert.equal(hash(legacy76CoverageBytes),'17a1f7e1f2a61751aa0d1f5f9dde2c33d91a1c12c34e14cc7d27d454bded45a2');
 const legacy76Coverage=JSON.parse(legacy76CoverageBytes);
 const legacy76Profile=Object.freeze({schemaVersion:76,registrySha256:hash(legacy76Bytes)});
+const legacy77Bytes=await readFile(join(root,'tests/support/registered77-migration-checksums.json')),legacy77=JSON.parse(legacy77Bytes);
+assert.equal(hash(legacy77Bytes),'049fb535109b2d5a3d9d101a0f926ef2d5b110b4452417cdae366b230266a4c7');
+assert.equal(legacy77.migrations.length,77);assert.deepEqual(registry.migrations.slice(0,77),legacy77.migrations);
+const legacy77CoverageBytes=await readFile(join(root,'tests/support/registered77-export-coverage.json'));
+assert.equal(hash(legacy77CoverageBytes),'e247dfa2af6d718b6f22899dd96728e21636ad904bff41c60c96c3a84b6b9a51');
+const legacy77Coverage=JSON.parse(legacy77CoverageBytes);
+const legacy77Profile=Object.freeze({schemaVersion:77,registrySha256:hash(legacy77Bytes)});
 const legacy52Bytes=await readFile(join(root,'tests/support/registered52-migration-checksums.json')),legacy52=JSON.parse(legacy52Bytes);
 assert.equal(legacy52.migrations.length,52);assert.deepEqual(registry.migrations.slice(0,52),legacy52.migrations);
 const legacy52Profile=Object.freeze({schemaVersion:52,registrySha256:hash(legacy52Bytes)}),legacy52Coverage=JSON.parse(await readFile(join(root,'tests/support/registered52-export-coverage.json'),'utf8')),amendment53Coverage=JSON.parse(await readFile(join(root,'tests/support/amendment53-export-coverage.json'),'utf8'));
@@ -620,12 +627,18 @@ export async function backupLegacy75Database(...args){return backupWithProfile(l
 export async function restoreLegacy75Database(...args){return restoreWithProfile(legacy75Profile,...args);}
 export async function backupLegacy76Database(...args){return backupWithProfile(legacy76Profile,...args);}
 export async function restoreLegacy76Database(...args){return restoreWithProfile(legacy76Profile,...args);}
+export async function backupLegacy77Database(client,url,directory,recipient,duringSnapshot,objectCapture){
+  return backupWithProfile(legacy77Profile,client,url,directory,recipient,duringSnapshot,objectCapture,
+    {profile:legacy77Profile,versions:legacy77.migrations.map(row=>row.version),coverage:legacy77Coverage});
+}
+export async function restoreLegacy77Database(...args){return restoreWithProfile(legacy77Profile,...args);}
 
 async function backupWithProfile(profile,client,url,directory,recipient,duringSnapshot=async()=>{},objectCapture,checkedSnapshot){
   assert(checkedSnapshot===undefined||checkedSnapshot.profile===profile&&
     (profile.schemaVersion===67&&profile.heldCustody67MigrationSha256
       ||profile.schemaVersion===69&&profile.heldPickupReturnSources
       ||profile.schemaVersion===70&&profile.heldFinanceAccountsSha256
+      ||profile===legacy77Profile
       ));
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   try{

@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 77,
+  "migrationCount": 78,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2577,7 +2577,8 @@
         "template",
         "template_version",
         "zero_effect_reason",
-        "posted_at"
+        "posted_at",
+        "payment_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2640,7 +2641,104 @@
         "tax_payable_movement_id",
         "purpose",
         "debit_cents",
-        "credit_cents"
+        "credit_cents",
+        "money_movement_id",
+        "allocation_event_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.external_money_evidence",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "provider_namespace",
+        "external_account_id",
+        "id_namespace",
+        "external_id",
+        "raw_reference",
+        "normalization_rule",
+        "confirmed_on",
+        "signed_cents",
+        "currency"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.payments",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "customer_id",
+        "channel_version_id",
+        "account_id",
+        "actual_on",
+        "gross_cents",
+        "confirmation",
+        "distinct_reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.money_movements",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "event_id",
+        "account_id",
+        "evidence_id",
+        "signed_cents"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.funding_origins",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "payment_id",
+        "customer_id",
+        "cents",
+        "currency"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.funding_partitions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "origin_id",
+        "position",
+        "first_cent",
+        "last_cent"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.allocation_events",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "event_id",
+        "partition_id",
+        "receivable_id",
+        "cents"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

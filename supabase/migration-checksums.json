@@ -385,6 +385,11 @@
       "version": "20261201180000",
       "file": "20261201180000_finance_invoice_issue.sql",
       "sha256": "57bf1c485cf1c29aec69171852753630e8bc0a75be1046a1cf880181af249314"
+    },
+    {
+      "version": "20261202180000",
+      "file": "20261202180000_finance_direct_receipts.sql",
+      "sha256": "a67a96a20d1ca7c314ec2a653839aede951911c69f71ab4ab0d4ee1e5dc3db85"
     }
   ]
 }

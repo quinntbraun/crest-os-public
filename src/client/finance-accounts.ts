@@ -32,12 +32,15 @@ import {invoiceTaxJurisdiction,parseInvoiceTaxMappingApproval,parseInvoiceTaxMap
 import {parseInvoiceExemptionApproval,parseInvoiceExemptionEditor,parseInvoiceExemptionResult,parseInvoiceExemptionTarget}
  from '../bookkeeping/invoice-exemption-contract';
 import {parseInvoiceSetupRead,parseInvoiceSetupResult,parseInvoiceSetupWrite} from '../bookkeeping/invoice-setup-contract';
+import {directReceiptMatchesInput,parseDirectReceiptInput,parseDirectReceiptOptions,parseDirectReceiptReference,
+ parseDirectReceiptResult} from '../bookkeeping/direct-receipt-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
 const invoiceIssuePendingKey='crest.invoice-issue.pending-reference.v1';
+const directReceiptPendingKey='crest.direct-receipt.pending-reference.v1';
 const invoiceDraftFailure=[...knownFailure,'INVOICE_DRAFT_JOB_REQUIRED','INVOICE_DRAFT_COMPLETED_SCOPE_REQUIRED'] as const;
 const pendingKey='crest.finance-account.pending-reference.v1';
 type Pending=Readonly<{businessId:string;binding:string;reference:FinanceAccountReference}>;
@@ -72,7 +75,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string)
    const part=await reader.read();
    if(part.done)break;
    bytes+=part.value.byteLength;check(bytes<=(route==='invoice-preparation'||route==='invoice-draft-read'||route==='invoice-issue-tax-review'
-    ||route==='invoice-issue-prepare'||route==='invoice-issue-read'?1048576:196608)&&!bounded.aborted);
+    ||route==='invoice-issue-prepare'||route==='invoice-issue-read'||route==='receipt-options'?1048576:196608)&&!bounded.aborted);
    text+=decoder.decode(part.value,{stream:true});
   }
   text+=decoder.decode();
@@ -85,17 +88,46 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string)
   invoicePreparation:response.headers.get('x-crest-invoice-preparation')==='1',
   invoiceDrafts:response.headers.get('x-crest-invoice-drafts')==='1',
   invoiceIssueTaxReview:response.headers.get('x-crest-invoice-issue-tax-review')==='1',
-  invoiceIssue:response.headers.get('x-crest-invoice-issue')==='1'};
+  invoiceIssue:response.headers.get('x-crest-invoice-issue')==='1',
+  directReceipts:response.headers.get('x-crest-direct-receipts')==='1'};
 }
 
 export const financeAccounts={
  async context(signal:AbortSignal):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue}=await post('context',{},signal);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts}=await post('context',{},signal);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
   return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,
-   ...(invoiceIssue?{invoiceIssue}:{})}) as FinanceAccountContext;
+   ...(invoiceIssue?{invoiceIssue}:{}),...(directReceipts?{directReceipts}:{})}) as FinanceAccountContext;
+ },
+ async directReceiptOptions(context:FinanceAccountContext,customerId:string,actualOn:string|null,signal:AbortSignal){
+  check(context.directReceipts&&customerUuid(customerId)&&(actualOn===null||customerDate(actualOn)));
+  const {status,value}=await post('receipt-options',{customerId,actualOn},signal,context.binding);
+  check(status===200);
+  return parseDirectReceiptOptions(value,context.businessId,customerId,actualOn);
+ },
+ async recordDirectReceipt(context:FinanceAccountContext,input:ReturnType<typeof parseDirectReceiptInput>,signal:AbortSignal){
+  check(context.directReceipts&&context.writeState==='ready'&&context.recoveryEpoch===input.reference.recoveryEpoch);
+  const request=parseDirectReceiptInput(input);
+  const {status,value}=await post('receipt-record',request,signal,context.binding);
+  if(status===409&&exact(value,['error'])&&typeof value.error==='string')return {state:'refused' as const,reason:value.error};
+  check(status===200||status===409);
+  const result=parseDirectReceiptResult(value,context.businessId,request.reference);
+  check(result.state==='conflict'||result.state==='committed'&&directReceiptMatchesInput(result,request));
+  return result;
+ },
+ async lookupDirectReceipt(context:FinanceAccountContext,reference:ReturnType<typeof parseDirectReceiptReference>,signal:AbortSignal){
+  check(context.directReceipts);
+  const {status,value}=await post('receipt-lookup',parseDirectReceiptReference(reference),signal,context.binding);
+  check(status===200);
+  return parseDirectReceiptResult(value,context.businessId,reference);
+ },
+ async retireDirectReceipt(context:FinanceAccountContext,reference:ReturnType<typeof parseDirectReceiptReference>,reason:string,signal:AbortSignal){
+  check(context.directReceipts&&context.writeState==='ready'&&customerUuid(context.recoveryEpoch)&&financeAccountReviewReason(reason));
+  const {status,value}=await post('receipt-retire',{reference:parseDirectReceiptReference(reference),reviewEpoch:context.recoveryEpoch,reason},signal,context.binding);
+  check(status===200||status===409);
+  return parseDirectReceiptResult(value,context.businessId,reference);
  },
  async invoicePreparation(context:FinanceAccountContext,jobId:string,signal:AbortSignal){
   check(context.invoicePreparation&&customerUuid(jobId));
@@ -547,6 +579,29 @@ export function clearPendingInvoiceIssue(entry:PendingInvoiceIssue){
  check(JSON.stringify(readPendingInvoiceIssue())===JSON.stringify(entry));
  sessionStorage.removeItem(invoiceIssuePendingKey);
  check(readPendingInvoiceIssue()===null);
+}
+
+type PendingDirectReceipt=Readonly<{businessId:string;binding:string;invoiceId:string;reference:ReturnType<typeof parseDirectReceiptReference>}>;
+export function readPendingDirectReceipt():PendingDirectReceipt|null{
+ const raw=sessionStorage.getItem(directReceiptPendingKey);
+ if(raw===null)return null;
+ check(raw.length<=800&&(raw.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length===7);
+ const value:unknown=JSON.parse(raw);
+ check(exact(value,['businessId','binding','invoiceId','reference'])&&customerUuid(value.businessId)&&customerUuid(value.invoiceId)
+  &&typeof value.binding==='string'&&bindingPattern.test(value.binding));
+ return {businessId:value.businessId,binding:value.binding,invoiceId:value.invoiceId,reference:parseDirectReceiptReference(value.reference)};
+}
+export function retainPendingDirectReceipt(context:FinanceAccountContext,invoiceId:string,reference:PendingDirectReceipt['reference']){
+ check(readPendingDirectReceipt()===null&&customerUuid(invoiceId));
+ const entry={businessId:context.businessId,binding:context.binding,invoiceId,reference};
+ sessionStorage.setItem(directReceiptPendingKey,JSON.stringify(entry));
+ check(JSON.stringify(readPendingDirectReceipt())===JSON.stringify(entry));
+ return entry;
+}
+export function clearPendingDirectReceipt(entry:PendingDirectReceipt){
+ check(JSON.stringify(readPendingDirectReceipt())===JSON.stringify(entry));
+ sessionStorage.removeItem(directReceiptPendingKey);
+ check(readPendingDirectReceipt()===null);
 }
 
 export function downloadFinanceHistory(filename:string,rows:readonly (readonly string[])[]){

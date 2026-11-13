@@ -121,7 +121,8 @@ export async function requireSyntheticPickupReturnWorkflow(connectionString){
  ].map(signature=>'crest_commands.'+signature),'SYNTHETIC_PICKUP_RETURN_WORKFLOW_MIGRATION_REQUIRED','20261124180000');
 }
 
-export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false){
+export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false,directReceipts=false){
+ assert(typeof directReceipts==='boolean'&&(!directReceipts||invoiceIssue&&moneyChannels));
  assert(typeof invoiceIssue==='boolean'&&(!invoiceIssue||taxProfiles&&invoiceDrafts));
  assert.equal(typeof invoiceDrafts,'boolean');
  assert.equal(typeof invoicePreparation,'boolean');
@@ -179,6 +180,12 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
   'read_invoice_exemption_evidence('+authority+',uuid,bigint,uuid,text,uuid)',
   'approve_invoice_exemption_evidence('+authority+',uuid,uuid,uuid,bigint,uuid,text,uuid,bigint,date,date,text,text)'
  );
+ if(directReceipts)signatures.push(
+  'read_direct_fictional_receipt_options('+authority+',uuid,date)',
+  'lookup_direct_fictional_receipt('+authority+',uuid,uuid,uuid)',
+  'retire_direct_fictional_receipt('+authority+',uuid,uuid,uuid,uuid,text)',
+  'record_direct_fictional_receipt('+authority+',uuid,uuid,uuid,uuid,uuid,bigint,date,bigint,text,text,jsonb,jsonb)'
+ );
  const qualified=signatures.map(signature=>'crest_commands.'+signature);
  const missing='SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED';
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
@@ -191,6 +198,7 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
   if(invoicePreparation)versions.push('20261129180000');
   if(invoiceDrafts)versions.push('20261130180000');
   if(invoiceIssue)versions.push('20261201180000');
+  if(directReceipts)versions.push('20261202180000');
   const migration=await client.query('SELECT 1 FROM supabase_migrations.schema_migrations WHERE version=ANY($1::text[])',[versions]);
   assert(migration.rowCount===versions.length,missing);
   const {rows}=await client.query(`
