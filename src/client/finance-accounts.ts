@@ -37,14 +37,19 @@ import {directReceiptMatchesInput,parseDirectReceiptInput,parseDirectReceiptOpti
 import {parseSameDayExpenseInput,parseSameDayExpenseOptions,parseSameDayExpenseReference,parseSameDayExpenseResult,
  sameDayExpenseMatchesInput} from '../bookkeeping/expenses/same-day-expense-contract';
 import {parseFictionalJournal,parseFictionalTrialBalance} from '../bookkeeping/trial-balance-contract';
+import {parseFictionalJournalV2,parseFictionalTrialBalanceV2} from '../bookkeeping/posted-report-v2-contract';
+import {allocationUnapplicationMatchesInput,parseAllocationUnapplicationInput,parseAllocationUnapplicationOptions,
+ parseAllocationUnapplicationReference,parseAllocationUnapplicationResult,parseInvoicePaymentAllocations}
+ from '../bookkeeping/allocation-unapplication-contract';
 import type {Proof} from './authentication';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
 const invoiceIssuePendingKey='crest.invoice-issue.pending-reference.v1';
 const directReceiptPendingKey='crest.direct-receipt.pending-reference.v1';
+const paymentCorrectionPendingKey='crest.payment-correction.pending-reference.v1';
 const sameDayExpensePendingKey='crest.expense-post.pending-reference.v1';
 const invoiceDraftFailure=[...knownFailure,'INVOICE_DRAFT_JOB_REQUIRED','INVOICE_DRAFT_COMPLETED_SCOPE_REQUIRED'] as const;
 const pendingKey='crest.finance-account.pending-reference.v1';
@@ -95,31 +100,34 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   invoiceIssueTaxReview:response.headers.get('x-crest-invoice-issue-tax-review')==='1',
   invoiceIssue:response.headers.get('x-crest-invoice-issue')==='1',
   directReceipts:response.headers.get('x-crest-direct-receipts')==='1',
+  paymentCorrections:response.headers.get('x-crest-payment-corrections')==='1',
   sameDayExpenses:response.headers.get('x-crest-same-day-expenses')==='1',
   trialBalance:response.headers.get('x-crest-trial-balance')==='1'};
 }
 
 export const financeAccounts={
  async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses,trialBalance}=await post('context',{},signal,undefined,proof);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
   return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,
    ...(invoiceIssue?{invoiceIssue}:{}),...(directReceipts?{directReceipts}:{}),...(sameDayExpenses?{sameDayExpenses}:{}),
-   ...(trialBalance?{trialBalance}:{})}) as FinanceAccountContext;
+   ...(trialBalance?{trialBalance}:{}),...(paymentCorrections?{paymentCorrections}:{})}) as FinanceAccountContext;
  },
  async readTrialBalance(context:FinanceAccountContext,throughOn:string|null,signal:AbortSignal){
   check(context.trialBalance&&(throughOn===null||customerDate(throughOn)));
   const {status,value}=await post('trial-balance',{throughOn},signal,context.binding);
   check(status===200);
-  return parseFictionalTrialBalance(value,context.businessId,throughOn);
+  return context.paymentCorrections?parseFictionalTrialBalanceV2(value,context.businessId,throughOn)
+   :parseFictionalTrialBalance(value,context.businessId,throughOn);
  },
  async readPostedJournal(context:FinanceAccountContext,throughOn:string,accountId:string|null,afterLineId:string|null,signal:AbortSignal){
   check(context.trialBalance&&customerDate(throughOn)&&(accountId===null||customerUuid(accountId))&&(afterLineId===null||customerUuid(afterLineId)));
   const {status,value}=await post('posted-journal',{throughOn,accountId,afterLineId},signal,context.binding);
   check(status===200);
-  return parseFictionalJournal(value,context.businessId,throughOn,accountId,afterLineId);
+  return context.paymentCorrections?parseFictionalJournalV2(value,context.businessId,throughOn,accountId,afterLineId)
+   :parseFictionalJournal(value,context.businessId,throughOn,accountId,afterLineId);
  },
  async sameDayExpenseOptions(context:FinanceAccountContext,expenseId:string,signal:AbortSignal){
   check(context.sameDayExpenses&&customerUuid(expenseId));
@@ -154,6 +162,42 @@ export const financeAccounts={
   const {status,value}=await post('receipt-options',{customerId,actualOn},signal,context.binding);
   check(status===200);
   return parseDirectReceiptOptions(value,context.businessId,customerId,actualOn);
+ },
+ async invoicePaymentAllocations(context:FinanceAccountContext,customerId:string,invoiceId:string,signal:AbortSignal){
+  check(context.paymentCorrections&&customerUuid(customerId)&&customerUuid(invoiceId));
+  const {status,value}=await post('payment-correction-list',{customerId,invoiceId},signal,context.binding);
+  check(status===200);
+  return parseInvoicePaymentAllocations(value,context.businessId,customerId,invoiceId);
+ },
+ async paymentCorrectionOptions(context:FinanceAccountContext,customerId:string,allocationId:string,effectiveOn:string|null,signal:AbortSignal){
+  check(context.paymentCorrections&&customerUuid(customerId)&&customerUuid(allocationId)
+   &&(effectiveOn===null||customerDate(effectiveOn)));
+  const {status,value}=await post('payment-correction-options',{customerId,allocationId,effectiveOn},signal,context.binding);
+  check(status===200);
+  return parseAllocationUnapplicationOptions(value,context.businessId,customerId,allocationId,effectiveOn);
+ },
+ async submitPaymentCorrection(context:FinanceAccountContext,input:ReturnType<typeof parseAllocationUnapplicationInput>,signal:AbortSignal){
+  check(context.paymentCorrections&&context.writeState==='ready'&&context.recoveryEpoch===input.reference.recoveryEpoch);
+  const request=parseAllocationUnapplicationInput(input);
+  const {status,value}=await post('payment-correction-submit',request,signal,context.binding);
+  if(status===409&&exact(value,['error'])&&typeof value.error==='string')return {state:'refused' as const,reason:value.error};
+  check(status===200||status===409);
+  const result=parseAllocationUnapplicationResult(value,context.businessId,request.reference);
+  check(result.state==='conflict'||result.state==='committed'&&allocationUnapplicationMatchesInput(result,request));
+  return result;
+ },
+ async lookupPaymentCorrection(context:FinanceAccountContext,reference:ReturnType<typeof parseAllocationUnapplicationReference>,signal:AbortSignal){
+  check(context.paymentCorrections);
+  const {status,value}=await post('payment-correction-lookup',parseAllocationUnapplicationReference(reference),signal,context.binding);
+  check(status===200||status===409);
+  return parseAllocationUnapplicationResult(value,context.businessId,reference);
+ },
+ async retirePaymentCorrection(context:FinanceAccountContext,reference:ReturnType<typeof parseAllocationUnapplicationReference>,reason:string,signal:AbortSignal){
+  check(context.paymentCorrections&&context.writeState==='ready'&&customerUuid(context.recoveryEpoch)&&financeAccountReviewReason(reason));
+  const {status,value}=await post('payment-correction-retire',{reference:parseAllocationUnapplicationReference(reference),
+   reviewEpoch:context.recoveryEpoch,reason},signal,context.binding);
+  check(status===200||status===409);
+  return parseAllocationUnapplicationResult(value,context.businessId,reference);
  },
  async recordDirectReceipt(context:FinanceAccountContext,input:ReturnType<typeof parseDirectReceiptInput>,signal:AbortSignal){
   check(context.directReceipts&&context.writeState==='ready'&&context.recoveryEpoch===input.reference.recoveryEpoch);
@@ -650,6 +694,29 @@ export function clearPendingDirectReceipt(entry:PendingDirectReceipt){
  check(JSON.stringify(readPendingDirectReceipt())===JSON.stringify(entry));
  sessionStorage.removeItem(directReceiptPendingKey);
  check(readPendingDirectReceipt()===null);
+}
+
+type PendingPaymentCorrection=Readonly<{businessId:string;binding:string;invoiceId:string;reference:ReturnType<typeof parseAllocationUnapplicationReference>}>;
+export function readPendingPaymentCorrection():PendingPaymentCorrection|null{
+ const raw=sessionStorage.getItem(paymentCorrectionPendingKey);
+ if(raw===null)return null;
+ check(raw.length<=800&&(raw.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length===7);
+ const value:unknown=JSON.parse(raw);
+ check(exact(value,['businessId','binding','invoiceId','reference'])&&customerUuid(value.businessId)&&customerUuid(value.invoiceId)
+  &&typeof value.binding==='string'&&bindingPattern.test(value.binding));
+ return {businessId:value.businessId,binding:value.binding,invoiceId:value.invoiceId,reference:parseAllocationUnapplicationReference(value.reference)};
+}
+export function retainPendingPaymentCorrection(context:FinanceAccountContext,invoiceId:string,reference:PendingPaymentCorrection['reference']){
+ check(readPendingPaymentCorrection()===null&&customerUuid(invoiceId));
+ const entry={businessId:context.businessId,binding:context.binding,invoiceId,reference:parseAllocationUnapplicationReference(reference)};
+ sessionStorage.setItem(paymentCorrectionPendingKey,JSON.stringify(entry));
+ check(JSON.stringify(readPendingPaymentCorrection())===JSON.stringify(entry));
+ return entry;
+}
+export function clearPendingPaymentCorrection(entry:PendingPaymentCorrection){
+ check(JSON.stringify(readPendingPaymentCorrection())===JSON.stringify(entry));
+ sessionStorage.removeItem(paymentCorrectionPendingKey);
+ check(readPendingPaymentCorrection()===null);
 }
 
 type PendingSameDayExpense=Readonly<{businessId:string;binding:string;expenseId:string;reference:ReturnType<typeof parseSameDayExpenseReference>}>;

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { test } from 'node:test';
+import {captureFinanceSourceExport} from '../../src/bookkeeping/finance-source-export.ts';
+import {readSourceExportCsv} from '../../src/security/source-export-csv-reader.ts';
 import { confirmedBookingRequest } from '../fixtures/confirmed-booking.ts';
 import { createConfirmedBookingFixture } from '../support/confirmed-booking-fixture.mjs';
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
@@ -64,7 +66,7 @@ test('registered posted trial balance and journal tie exact amounts and refuse i
     await sandbox.apply(target,await sandbox.prefix(0),true);
     await installProviderSchema(admin,target);
     const previous=await sandbox.apply(target,await sandbox.prefix(79));
-    const registered=await sandbox.apply(target,sandbox.root);
+    const registered=await sandbox.apply(target,await sandbox.prefix(80));
     assert.equal(registered.history.length,80);
     assert.deepEqual(registered.history.slice(0,79),previous.history);
     const web=await sandbox.connect(target);
@@ -172,6 +174,51 @@ test('registered posted trial balance and journal tie exact amounts and refuse i
     assert.deepEqual(arJournal.rows.map(row=>[row.template,row.invoiceId,row.paymentId,row.runningBalanceCents]),[
       ['P01',invoice.invoiceId,null,'25000'],['P03',null,payment.paymentId,'15000'],
     ]);
+    const exportQuery=async(sql,args)=>(await exportReader.query(sql,args)).rows;
+    await assert.rejects(captureFinanceSourceExport(owner.business,exportQuery),{message:'CREST_INVOICE_SOURCE_SNAPSHOT_REQUIRED'});
+    await exportReader.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    try{
+      const capture=await captureFinanceSourceExport(owner.business,exportQuery);
+      assert.throws(()=>JSON.stringify(capture),{message:'FINANCE_SOURCE_EXPORT_PRIVATE'});
+      const {files,manifest}=capture.forServer(),inventory=JSON.parse(manifest);
+      assert.equal(inventory.businessId,owner.business);
+      assert.equal(inventory.completePortableExport,false);
+      assert.equal(inventory.completeBackup,false);
+      assert.equal(inventory.rowCounts.financial_events,4);
+      assert.equal(inventory.rowCounts.posted_expenses,2);
+      assert.equal(inventory.rowCounts.payments,1);
+      assert.equal(inventory.rowCounts.invoices,1);
+      assert.equal(new Set(files.map(file=>file.name)).size,files.length);
+      for(const file of files){
+        const expected=inventory.files.find(part=>part.name===file.name);
+        assert.equal(expected.bytes,Buffer.byteLength(file.content));
+        assert.equal(expected.sha256,createHash('sha256').update(file.content).digest('hex'));
+      }
+      const read=name=>files.find(file=>file.name===name).content;
+      const dictionary=JSON.parse(read('dictionary.json'));
+      const decode=name=>readSourceExportCsv(read(name+'.csv'),JSON.parse(read(name+'_escape_map.json')).escapes,
+        {columns:dictionary.tables.find(table=>table.name===name).columns,maxRows:10000});
+      const events=decode('financial_events');
+      assert.equal(new Set(events.map(row=>row.id)).size,4);
+      assert(events.some(row=>row.template==='P01'&&row.invoice_id===invoice.invoiceId&&row.payment_id===null&&row.posted_expense_id===null));
+      assert(events.some(row=>row.template==='P03'&&row.payment_id===payment.paymentId&&row.invoice_id===null&&row.posted_expense_id===null));
+      assert(events.some(row=>row.template==='P12'&&row.posted_expense_id===first.postedExpenseId&&row.payment_id===null&&row.invoice_id===null));
+      const movements=decode('money_movements');
+      assert.deepEqual(movements.map(row=>Number(row.signed_cents)).sort((a,b)=>a-b),[-10000,-1201,10000]);
+      const lines=decode('journal_lines');
+      assert.equal(lines.reduce((total,line)=>total+BigInt(line.debit_cents),0n),46201n);
+      assert.equal(lines.reduce((total,line)=>total+BigInt(line.credit_cents),0n),46201n);
+      assert(read('operation_history.ndjson').includes(payment.paymentId));
+
+      const duplicateExpense=async(sql,args)=>{
+        const rows=await exportQuery(sql,args);
+        if(sql.includes('posted_expense_source_snapshot_page')&&args[2]==='financial_events'&&rows[0].result.rows.length){
+          rows[0].result.rows[0].id=payment.eventId;
+        }
+        return rows;
+      };
+      await assert.rejects(captureFinanceSourceExport(owner.business,duplicateExpense));
+    }finally{await exportReader.query('ROLLBACK');}
 
     // Fault injection stays uncommitted and is visible only in this test connection.
     for(const [table,mutation,message] of [

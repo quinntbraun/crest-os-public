@@ -2,11 +2,19 @@
 
 import {useEffect,useRef,useState} from 'react';
 import {expenseDollars} from '../../../bookkeeping/expenses/expense-contract';
+import type {FictionalJournalV2,FictionalTrialBalanceV2} from '../../../bookkeeping/posted-report-v2-contract';
 import {downloadFinanceHistory,financeAccounts} from '../../../client/finance-accounts';
 
-type Balance=Awaited<ReturnType<typeof financeAccounts.readTrialBalance>>;
-type Journal=Awaited<ReturnType<typeof financeAccounts.readPostedJournal>>;
+type Balance=Awaited<ReturnType<typeof financeAccounts.readTrialBalance>>|FictionalTrialBalanceV2;
+type Journal=Awaited<ReturnType<typeof financeAccounts.readPostedJournal>>|FictionalJournalV2;
+type CorrectionJournalRow=FictionalJournalV2['rows'][number];
 const usd=(cents:string)=>'$'+expenseDollars(cents);
+function hasPaymentCorrections(report:Balance|Journal){
+  return 'schemaVersion' in report&&report.schemaVersion===2;
+}
+function hasCorrectionFields(row:Journal['rows'][number]):row is CorrectionJournalRow{
+  return 'unapplicationId' in row&&'fundLotId' in row;
+}
 
 export function TrialBalance({businessId}:{businessId:string}){
   const [through,setThrough]=useState('');
@@ -58,6 +66,10 @@ export function TrialBalance({businessId}:{businessId:string}){
       if(context.businessId!==businessId)throw Error();
       const result=await financeAccounts.readPostedJournal(context,balance.throughOn,account||null,next?journal!.nextAfterLineId:null,signal);
       if(signal.aborted)return;
+      if(hasPaymentCorrections(result)!==hasPaymentCorrections(balance)){
+        setJournalMessage('Report coverage changed. Reload the trial balance before opening the journal.');
+        return;
+      }
       setJournal(result);
       setJournalMessage(result.rows.length?'Journal page loaded.':'No posted lines for this account and date.');
     }catch{if(!signal.aborted)setJournalMessage('Crest could not load the journal page. Check your connection and load it again.');}
@@ -68,7 +80,9 @@ export function TrialBalance({businessId}:{businessId:string}){
     downloadFinanceHistory('crest-fictional-trial-balance-'+balance.throughOn+'.csv',[
       ['Through date','Timezone','Currency','Observed UTC','Posted events','Coverage'],
       [balance.throughOn,balance.timeZone,balance.currency,balance.observedAt,balance.postedEventCount,
-        'Fictional partial ledger. Supported invoices, direct payments and same-day expenses. Opening balances and reconciliation pending.'],
+        hasPaymentCorrections(balance)
+          ?'Fictional partial ledger. Supported invoices, direct payments, payment corrections and same-day expenses. Opening balances and reconciliation pending.'
+          :'Fictional partial ledger. Supported invoices, direct payments and same-day expenses. Opening balances and reconciliation pending.'],
       [],
       ['Account code','Account name','Status','Posted debit cents','Posted credit cents','Net debit cents','Net credit cents'],
       ...balance.rows.map(row=>{
@@ -81,12 +95,15 @@ export function TrialBalance({businessId}:{businessId:string}){
   }
   function downloadJournal(){
     if(!journal?.rows.length)return;
+    const includesCorrections=hasPaymentCorrections(journal);
     downloadFinanceHistory('crest-fictional-journal-page-'+journal.throughOn+'.csv',[
       ['Through date','Timezone','Currency','Observed UTC','Coverage'],
       [journal.throughOn,journal.timeZone,journal.currency,journal.observedAt,'Current page of the fictional partial ledger.'],
       [],
-      ['Date','Account code','Account','Purpose','Debit cents','Credit cents','Entry ID','Event ID','Source operation ID'],
-      ...journal.rows.map(row=>[row.effectiveOn,row.code,row.name,row.purpose,row.debitCents,row.creditCents,row.entryId,row.eventId,row.operationId]),
+      ['Date','Account code','Account','Purpose','Debit cents','Credit cents','Entry ID','Event ID','Source operation ID',
+        ...(includesCorrections?['Posting template','Payment correction ID','Customer funds lot ID']:[])],
+      ...journal.rows.map(row=>[row.effectiveOn,row.code,row.name,row.purpose,row.debitCents,row.creditCents,row.entryId,row.eventId,row.operationId,
+        ...(hasCorrectionFields(row)?[row.template,row.unapplicationId??'',row.fundLotId??'']:[])]),
     ]);
   }
   return <details className="review-card" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
@@ -103,6 +120,7 @@ export function TrialBalance({businessId}:{businessId:string}){
       {balance&&<>
         <p>Through <time dateTime={balance.throughOn}>{balance.throughOn}</time> · USD · {balance.timeZone}</p>
         {balance.coverageStart&&<p className="field-help">First included posting {balance.coverageStart} · {balance.postedEventCount} posted {balance.postedEventCount==='1'?'event':'events'}</p>}
+        {hasPaymentCorrections(balance)&&<p className="field-help">Includes payment corrections. Customer funds held match the ledger through this date.</p>}
         {balance.rows.length>0&&<table>
           <caption>Net balance by account</caption>
           <thead><tr><th scope="col">Account</th><th scope="col">Debit</th><th scope="col">Credit</th></tr></thead>
@@ -137,11 +155,24 @@ export function TrialBalance({businessId}:{businessId:string}){
             <table>
               <caption>Posted journal page</caption>
               <thead><tr><th scope="col">Date and account</th><th scope="col">Debit</th><th scope="col">Credit</th></tr></thead>
-              <tbody>{journal.rows.map(row=><tr key={row.lineId}>
-                <th scope="row"><time dateTime={row.effectiveOn}>{row.effectiveOn}</time><small>{row.code} · {row.name}</small></th>
-                <td>{row.debitCents==='0'?'—':usd(row.debitCents)}</td>
-                <td>{row.creditCents==='0'?'—':usd(row.creditCents)}</td>
-              </tr>)}</tbody>
+              <tbody>{journal.rows.map(row=>{
+                const correction=hasCorrectionFields(row)&&row.template==='P05'?row:null;
+                return <tr key={row.lineId}>
+                  <th scope="row">
+                    <time dateTime={row.effectiveOn}>{row.effectiveOn}</time><small>{row.code} · {row.name}</small>
+                    {correction&&<>
+                      <small>{correction.purpose==='unapply_ar'?'Payment correction · Invoice reopened':'Payment correction · Customer funds held'}</small>
+                      <details>
+                        <summary>Source references</summary>
+                        <small>Correction {correction.unapplicationId}</small>
+                        {correction.fundLotId&&<small>Customer funds lot {correction.fundLotId}</small>}
+                      </details>
+                    </>}
+                  </th>
+                  <td>{row.debitCents==='0'?'—':usd(row.debitCents)}</td>
+                  <td>{row.creditCents==='0'?'—':usd(row.creditCents)}</td>
+                </tr>;
+              })}</tbody>
             </table>
             {journal.nextAfterLineId&&<button type="button" className="secondary" disabled={busy} onClick={()=>void loadJournal(true)}>Next journal page</button>}
             <button type="button" className="secondary" onClick={downloadJournal}>Download journal page CSV</button>
