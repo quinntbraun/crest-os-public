@@ -53,10 +53,13 @@ import {fictionalJournalV2PageSize,parseFictionalJournalV2,parseFictionalTrialBa
 import {fictionalJournalV3PageSize,parseFictionalJournalV3,parseFictionalTrialBalanceV3} from './posted-report-v3-contract.ts';
 import {fictionalJournalV4PageSize,parseFictionalJournalV4,parseFictionalTrialBalanceV4} from './posted-report-v4-contract.ts';
 import {fictionalJournalV5PageSize,parseFictionalJournalV5,parseFictionalTrialBalanceV5} from './posted-report-v5-contract.ts';
+import {fictionalJournalV6PageSize,parseFictionalJournalV6,parseFictionalTrialBalanceV6} from './posted-report-v6-contract.ts';
 import {invoiceCreditMatchesInput,invoiceCreditRefusal,parseInvoiceCreditInput,parseInvoiceCreditOptions,
  parseInvoiceCreditReference,parseInvoiceCreditResult} from './invoice-credit-contract.ts';
 import {pairedInvoiceCreditRefusal,parsePairedInvoiceCreditInput,parsePairedInvoiceCreditOptions,
  parsePairedInvoiceCreditReference,parsePairedInvoiceCreditResolution,parsePairedInvoiceCreditResult} from './paired-invoice-credit-contract.ts';
+import {parseServiceRefundCredits,parseServiceRefundInput,parseServiceRefundOptions,parseServiceRefundReference,parseServiceRefundResult,
+ serviceRefundMatchesInput,serviceRefundRefusal} from './service-refund-contract.ts';
 import {heldTipMatchesInput,parseHeldTipInput,parseHeldTipOptions,parseHeldTipReference,parseHeldTipResult} from './held-tip-contract.ts';
 import {fundApplicationMatchesInput,parseFundApplicationInput,parseFundApplicationOptions,
  parseFundApplicationReference,parseFundApplicationResult} from './fund-application-contract.ts';
@@ -116,6 +119,12 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
  'paid-invoice-credit-submit':['credit','release','reviewedArCents'],
  'paid-invoice-credit-lookup':['operationId','recoveryEpoch','invoiceCreditId','unapplicationId'],
  'paid-invoice-credit-retire':['reference','reviewEpoch','reason'],
+ 'service-refund-credits':['customerId','invoiceId'],
+ 'service-refund-options':['customerId','pairedCreditId','actualOn'],
+ 'service-refund-submit':['reference','pairedCreditId','fundLotId','customerId','channelId','channelVersion',
+  'actualOn','firstCent','lastCent','confirmation','reason','externalIdentity'],
+ 'service-refund-lookup':['operationId','recoveryEpoch','serviceRefundId'],
+ 'service-refund-retire':['reference','reviewEpoch','reason'],
  'expense-post-options':['expenseId'],
  'expense-post-submit':['reference','expenseId','expenseRevision','channelId','channelVersion','mappingId','incurredOn','paidOn',
   'purchaseTaxTreatment','purchaseTaxCents','receiptId','missingReceiptReason','unknownVendorReason','reviewReason','externalIdentity'],
@@ -136,8 +145,8 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false}:Readonly<{
-  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false}:Readonly<{
+  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;
  }>={}){
  check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
  check((!sameDayExpenses||directReceipts&&categoryMappings)&&(!trialBalance||sameDayExpenses));
@@ -146,6 +155,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
  check(!heldTips||fundApplications&&taxProfiles);
  check(!invoiceCredits||heldTips);
  check(!paidInvoiceCredits||invoiceCredits);
+ check(!serviceRefunds||paidInvoiceCredits&&directReceipts);
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
@@ -173,6 +183,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route.startsWith('held-tip-')&&!heldTips)return financeAccountFailure(404);
    if(route.startsWith('invoice-credit-')&&!invoiceCredits)return financeAccountFailure(404);
    if(route.startsWith('paid-invoice-credit-')&&!paidInvoiceCredits)return financeAccountFailure(404);
+   if(route.startsWith('service-refund-')&&!serviceRefunds)return financeAccountFailure(404);
    if(route.startsWith('expense-post-')&&!sameDayExpenses)return financeAccountFailure(404);
    if((route==='trial-balance'||route==='posted-journal')&&!trialBalance)return financeAccountFailure(404);
    if(request.method!=='POST')return financeAccountFailure(405);
@@ -206,6 +217,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     if(heldTips)response.headers.set('X-Crest-Held-Tips','1');
     if(invoiceCredits)response.headers.set('X-Crest-Invoice-Credits','1');
     if(paidInvoiceCredits)response.headers.set('X-Crest-Paid-Invoice-Credits','1');
+    if(serviceRefunds)response.headers.set('X-Crest-Service-Refunds','1');
     if(sameDayExpenses)response.headers.set('X-Crest-Same-Day-Expenses','1');
     if(trialBalance)response.headers.set('X-Crest-Trial-Balance','1');
     return response;
@@ -215,6 +227,56 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    check(!signal.aborted&&sessionId===verified.sessionId);
    const args=[credentialHash,sessionId,verified.actorId,verified.provider.issuer,verified.provider.subject,
     verified.provider.sessionId,new Date(verified.provider.expiresAt),businessId];
+   if(route==='service-refund-credits'){
+    const {customerId,invoiceId}=input;
+    check(customerUuid(customerId)&&customerUuid(invoiceId));
+    const value=await database('SELECT crest_commands.list_fictional_service_refund_credits('+authority+',$9::uuid,$10::uuid) AS result',
+     [...args,customerId,invoiceId],signal);
+    parseServiceRefundCredits(value,businessId,customerId,invoiceId);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='service-refund-options'){
+    const {customerId,pairedCreditId,actualOn}=input;
+    check(customerUuid(customerId)&&customerUuid(pairedCreditId)&&customerDate(actualOn));
+    const value=await database('SELECT crest_commands.read_fictional_service_refund_options('+authority+',$9::uuid,$10::uuid,$11::date) AS result',
+     [...args,customerId,pairedCreditId,actualOn],signal);
+    parseServiceRefundOptions(value,businessId,customerId,pairedCreditId,actualOn);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='service-refund-lookup'||route==='service-refund-retire'){
+    const reference=parseServiceRefundReference(route==='service-refund-lookup'?input:input.reference);
+    const {recoveryEpoch,operationId,serviceRefundId}=reference;
+    if(route==='service-refund-lookup'){
+     const value=await database('SELECT crest_commands.lookup_fictional_service_refund('+authority+',$9::uuid,$10::uuid,$11::uuid) AS result',
+      [...args,recoveryEpoch,operationId,serviceRefundId],signal);
+     const result=parseServiceRefundResult(value,businessId,reference);
+     return privateJsonResponse(value as object,result.state==='conflict'?409:200);
+    }
+    check(customerUuid(input.reviewEpoch)&&financeAccountReviewReason(input.reason));
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.retire_fictional_service_refund('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::text) AS result',
+      [...args,input.reviewEpoch,operationId,recoveryEpoch,serviceRefundId,input.reason]);
+     const parsed=parseServiceRefundResult(value,businessId,reference);
+     check(parsed.state!=='absent'&&(parsed.state!=='retired'||parsed.receipt.reviewEpoch===input.reviewEpoch));
+     return {value:value as object,state:parsed.state};
+    },signal);
+    return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
+   if(route==='service-refund-submit'){
+    const refund=parseServiceRefundInput(input),{recoveryEpoch,operationId,serviceRefundId}=refund.reference;
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.record_fictional_service_refund('+authority+
+      ',$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::uuid,$14::uuid,$15::uuid,$16::bigint,$17::date,$18::bigint,$19::bigint,$20::text,$21::text,$22::jsonb) AS result',
+     [...args,recoveryEpoch,operationId,serviceRefundId,refund.pairedCreditId,refund.fundLotId,refund.customerId,refund.channelId,
+      refund.channelVersion,refund.actualOn,refund.firstCent,refund.lastCent,refund.confirmation,refund.reason,refund.externalIdentity]);
+     const parsed=parseServiceRefundResult(value,businessId,refund.reference);
+     check(parsed.state==='conflict'||parsed.state==='committed'&&serviceRefundMatchesInput(parsed.receipt,refund));
+     return {value:value as object,state:parsed.state};
+    },signal);
+    return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
    if(route==='paid-invoice-credit-options'){
     const {customerId,invoiceId,allocationId,effectiveOn}=input;
     check(customerUuid(customerId)&&customerUuid(invoiceId)&&customerUuid(allocationId)&&(effectiveOn===null||customerDate(effectiveOn)));
@@ -435,11 +497,12 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    }
    if(route==='trial-balance'){
     check(input.throughOn===null||customerDate(input.throughOn));
-    const command=invoiceCredits?'read_fictional_trial_balance_v5':heldTips?'read_fictional_trial_balance_v4':fundApplications?'read_fictional_trial_balance_v3'
+    const command=serviceRefunds?'read_fictional_trial_balance_v6':invoiceCredits?'read_fictional_trial_balance_v5':heldTips?'read_fictional_trial_balance_v4':fundApplications?'read_fictional_trial_balance_v3'
      :paymentCorrections?'read_fictional_trial_balance_v2':'read_fictional_trial_balance';
     const value=await database('SELECT crest_commands.'+command+'('+authority+',$9::date) AS result',
      [...args,input.throughOn],signal);
-    if(invoiceCredits)parseFictionalTrialBalanceV5(value,businessId,input.throughOn);
+    if(serviceRefunds)parseFictionalTrialBalanceV6(value,businessId,input.throughOn);
+    else if(invoiceCredits)parseFictionalTrialBalanceV5(value,businessId,input.throughOn);
     else if(heldTips)parseFictionalTrialBalanceV4(value,businessId,input.throughOn);
     else if(fundApplications)parseFictionalTrialBalanceV3(value,businessId,input.throughOn);
     else if(paymentCorrections)parseFictionalTrialBalanceV2(value,businessId,input.throughOn);
@@ -449,13 +512,14 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route==='posted-journal'){
     const {throughOn,accountId,afterLineId}=input;
     check(customerDate(throughOn)&&(accountId===null||customerUuid(accountId))&&(afterLineId===null||customerUuid(afterLineId)));
-    const command=invoiceCredits?'read_fictional_journal_v5':heldTips?'read_fictional_journal_v4':fundApplications?'read_fictional_journal_v3'
+    const command=serviceRefunds?'read_fictional_journal_v6':invoiceCredits?'read_fictional_journal_v5':heldTips?'read_fictional_journal_v4':fundApplications?'read_fictional_journal_v3'
      :paymentCorrections?'read_fictional_journal_v2':'read_fictional_journal';
-    const pageSize=invoiceCredits?fictionalJournalV5PageSize:heldTips?fictionalJournalV4PageSize:fundApplications?fictionalJournalV3PageSize
+    const pageSize=serviceRefunds?fictionalJournalV6PageSize:invoiceCredits?fictionalJournalV5PageSize:heldTips?fictionalJournalV4PageSize:fundApplications?fictionalJournalV3PageSize
      :paymentCorrections?fictionalJournalV2PageSize:fictionalJournalPageSize;
     const value=await database('SELECT crest_commands.'+command+'('+authority+',$9::date,$10::uuid,$11::uuid,$12::integer) AS result',
      [...args,throughOn,accountId,afterLineId,pageSize],signal);
-    if(invoiceCredits)parseFictionalJournalV5(value,businessId,throughOn,accountId,afterLineId);
+    if(serviceRefunds)parseFictionalJournalV6(value,businessId,throughOn,accountId,afterLineId);
+    else if(invoiceCredits)parseFictionalJournalV5(value,businessId,throughOn,accountId,afterLineId);
     else if(heldTips)parseFictionalJournalV4(value,businessId,throughOn,accountId,afterLineId);
     else if(fundApplications)parseFictionalJournalV3(value,businessId,throughOn,accountId,afterLineId);
     else if(paymentCorrections)parseFictionalJournalV2(value,businessId,throughOn,accountId,afterLineId);
@@ -938,7 +1002,8 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    return privateJsonResponse(result,result.state==='conflict'?409:200);
   }catch(error){
    if(error instanceof Error&&error.message==='FINANCE_MAPPING_NOT_READY')return privateJsonResponse({state:'unavailable'});
-   if(error instanceof Error&&(invoiceCreditRefusal(error.message)||pairedInvoiceCreditRefusal(error.message)||error.message==='INVOICE_CREDIT_OPTIONS_LIMIT'))
+   if(error instanceof Error&&(invoiceCreditRefusal(error.message)||pairedInvoiceCreditRefusal(error.message)||serviceRefundRefusal(error.message)||
+     error.message==='INVOICE_CREDIT_OPTIONS_LIMIT'||error.message==='SERVICE_REFUND_OPTIONS_LIMIT'))
     return privateJsonResponse({error:error.message},409);
    if(error instanceof Error&&['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED',
     'FINANCE_MAPPING_VERSION_CONFLICT','FINANCE_MAPPING_EFFECTIVE_ORDER_REQUIRED','FINANCE_MAPPING_ACCOUNT_REQUIRED',

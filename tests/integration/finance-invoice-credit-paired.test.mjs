@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash,randomBytes,randomUUID } from 'node:crypto';
-import { mkdir,realpath,rm } from 'node:fs/promises';
+import { mkdir,readFile,realpath,rm } from 'node:fs/promises';
 import { basename,dirname,join } from 'node:path';
 import { test } from 'node:test';
 import { confirmedBookingRequest } from '../fixtures/confirmed-booking.ts';
@@ -9,8 +9,11 @@ import { migrationSandbox } from '../support/migration-sandbox.mjs';
 import { installProviderSchema } from '../support/provider-schema.mjs';
 import { financeInvoiceCredit84Candidate } from '../support/finance-invoice-credit84-candidate.mjs';
 import { financePairedInvoiceCredit85Candidate } from '../support/finance-paired-invoice-credit85-candidate.mjs';
-import { backupPairedInvoiceCredit85CandidateDatabase,backupInvoiceCredit84ForPairedBaseline,connect,inventory,keyPair,privateWorkspace,
-  recoveryCluster,restorePairedInvoiceCredit85CandidateDatabase,restoreInvoiceCredit84ForPairedBaseline } from '../support/recovery-drill.mjs';
+import { financeServiceRefundCandidate } from '../support/finance-service-refund-candidate.mjs';
+import { requireSyntheticFinanceAccountConfiguration } from '../../scripts/synthetic-migrations.mjs';
+import { backupPairedInvoiceCredit85CandidateDatabase,backupInvoiceCredit84ForPairedBaseline,backupServiceRefundCandidateDatabase,
+  connect,inventory,keyPair,privateWorkspace,recoveryCluster,restorePairedInvoiceCredit85CandidateDatabase,
+  restoreInvoiceCredit84ForPairedBaseline,restoreServiceRefundCandidateDatabase } from '../support/recovery-drill.mjs';
 import { exerciseNeutralFinanceImport } from '../support/neutral-finance-import.mjs';
 import { pairedInvoiceCreditRefusal,parsePairedInvoiceCreditInput,parsePairedInvoiceCreditOptions,parsePairedInvoiceCreditReference,
   parsePairedInvoiceCreditResolution,parsePairedInvoiceCreditResult } from '../../src/bookkeeping/paired-invoice-credit-contract.ts';
@@ -195,7 +198,168 @@ async function verifyRecovery({candidate,admin,target,owner,captured,saved,retir
   }
 }
 
-test('held E08 restores the ordered paired credit and original payment release with exact audit and portable evidence', {timeout:180000}, async()=>{
+const refundExportOptions={includeCorrections:true,includeFundApplications:true,includeTips:true,includeCredits:true,
+  includePairedCredits:true,includeServiceRefunds:true};
+
+async function verifyRefundRecovery({candidate,admin,target,owner,archive,post,retained}){
+  const directory=await privateWorkspace();
+  const point=join(directory,'point');
+  let destination,restored;
+  try{
+    await mkdir(point,{mode:0o700});
+    const keys=await keyPair(directory);
+    const {manifest}=await backupServiceRefundCandidateDatabase(candidate,admin,target,point,keys.recipient);
+    assert.equal(manifest.schemaVersion,86);
+    assert.equal(manifest.heldServiceRefundMigrationSha256,candidate.sha256);
+    assert.equal(manifest.rows.find(row=>row.schema==='crest'&&row.name==='service_credit_refunds').rows,1);
+    destination=await recoveryCluster();
+    const url=await destination.database();
+    assert.notEqual(new URL(url).port,new URL(target).port);
+    assert.deepEqual(await restoreServiceRefundCandidateDatabase(candidate,point,keys.path,url),manifest);
+    restored=await connect(url);
+    assert.deepEqual(await inventory(restored),manifest.rows);
+    await restored.query('SET ROLE crest_export');
+    await restored.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    try{
+      const after=(await captureFinanceSourceExport(owner.business,async(sql,args)=>(await restored.query(sql,args)).rows,
+        refundExportOptions)).forServer();
+      assert.deepEqual(after.files,archive.files);
+      assert.equal(verifyFinanceSourceExport(after.manifest,after.files,owner.business).profile,'crest.posted-finance-source.v7');
+    }finally{await restored.query('ROLLBACK');}
+    await restored.query('RESET ROLE; SET ROLE crest_finance_preview');
+    const lookup=receipt=>command(restored,'lookup_fictional_service_refund',[
+      ...owner.auth(),owner.epoch,receipt.operationId,receipt.serviceRefundId,
+    ]);
+    assert.deepEqual(await lookup(post.receipt),post);
+    assert.deepEqual(await lookup(retained.receipt),retained);
+  }finally{
+    try{await restored?.end();}finally{
+      try{await destination?.close();}finally{
+        const actual=await realpath(directory);
+        assert.equal(dirname(actual),await realpath('.local/recovery-drill'));
+        assert.match(basename(actual),/^case-[a-z0-9]+$/i);
+        await rm(actual,{recursive:true,force:true});
+      }
+    }
+  }
+}
+
+async function verifyServiceRefund({candidate:paired,sandbox,target,admin,exporter,finance,web,owner,foreign,invoice,saved,channel,bank,today}){
+  const candidate=await financeServiceRefundCandidate(sandbox,paired);
+  const changed=['financial_events','journal_lines','fund_lot_range_consumptions'];
+  const comparable=async adopted=>{
+    const byTable=[];
+    for(const table of changed){
+      const record=adopted?"to_jsonb(t)-'service_refund_id'":'to_jsonb(t)';
+      const {rows}=await admin.query(`SELECT (${record})::text AS value FROM crest.${table} t ORDER BY id`);
+      if(adopted)assert.equal((await admin.query(`SELECT count(*)::int AS n FROM crest.${table} WHERE service_refund_id IS NOT NULL`)).rows[0].n,0);
+      byTable.push(rows);
+    }
+    return byTable;
+  };
+  const unaffected=rows=>rows.filter(row=>row.schema!=='supabase_migrations'
+    &&!(row.schema==='crest'&&[...changed,'service_credit_refunds'].includes(row.name)));
+  const before=unaffected(await inventory(admin)),previousRows=await comparable(false);
+  assert.deepEqual(await readFile(join(candidate.directory,'supabase/migration-checksums.json')),
+    await readFile(join(sandbox.root,'supabase/migration-checksums.json')));
+  assert.deepEqual(await readFile(join(candidate.directory,'supabase/migrations',candidate.file)),
+    await readFile(join(sandbox.root,'supabase/migrations',candidate.file)));
+  const requireRefundPreview=()=>requireSyntheticFinanceAccountConfiguration(target,owner.business,
+    true,true,true,true,true,true,true,true,true,true,true,true,true,true,true);
+  await assert.rejects(requireRefundPreview(),{message:'SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED'});
+  const registered=await sandbox.apply(target);
+  assert.equal(registered.history.length,86);
+  assert.equal(registered.registrySha256,candidate.registrySha256);
+  await requireRefundPreview();
+  assert.deepEqual(unaffected(await inventory(admin)),before);
+  assert.deepEqual(await comparable(true),previousRows);
+  assert.equal((await admin.query('SELECT count(*)::int AS n FROM crest.service_credit_refunds')).rows[0].n,0);
+  const credit=saved.receipt.credit, release=saved.receipt.release;
+  const operation=randomUUID(),refundId=randomUUID(), external={namespace:'ledger',id:'fictional-refund-unique',rawReference:'Fictional bank outflow'};
+  const input=[...owner.auth(),owner.epoch,operation,refundId,credit.invoiceCreditId,release.fundLotId,owner.customer,channel,'1',today,'1','500','Fictional bank debit settled','Customer confirmed fictional service refund',external];
+  const options=(principal=owner)=>command(finance,'read_fictional_service_refund_options',[...principal.auth(),principal.customer,credit.invoiceCreditId,today]);
+  const list=(principal=owner)=>command(finance,'list_fictional_service_refund_credits',[...principal.auth(),principal.customer,invoice.invoiceId]);
+  const {parseServiceRefundCredits,parseServiceRefundOptions,parseServiceRefundResult}=await import('../../src/bookkeeping/service-refund-contract.ts');
+  const candidates=parseServiceRefundCredits(await list(),owner.business,owner.customer,invoice.invoiceId);
+  assert.deepEqual(candidates.find(item=>item.pairedCreditId===credit.invoiceCreditId),{pairedCreditId:credit.invoiceCreditId,creditedOn:today,releasedCents:'1100',availableCents:'1100'});
+  assert.deepEqual(parseServiceRefundCredits(await list(foreign),foreign.business,foreign.customer,invoice.invoiceId),[]);
+  const reviewed=await options();
+  const parsedReview=parseServiceRefundOptions(reviewed,owner.business,owner.customer,credit.invoiceCreditId,today);
+  assert.deepEqual(parsedReview.availableRanges,[{firstCent:'1',lastCent:'1100'}]);
+  assert.equal(reviewed.fundLotId,release.fundLotId);
+  assert.deepEqual(reviewed.availableRanges,[{firstCent:'1',lastCent:'1100'}]);
+  assert.deepEqual(reviewed.channels,[{channelId:channel,version:'1',label:'Fictional bank',kind:'bank'}]);
+  assert.deepEqual(await options(foreign),{state:'absent'});
+  await assert.rejects(command(web,'read_fictional_service_refund_options',[...owner.auth(),owner.customer,credit.invoiceCreditId,today]),{code:'42501'});
+  const post=await command(finance,'record_fictional_service_refund',input);
+  assert.deepEqual((await options()).availableRanges,[{firstCent:'501',lastCent:'1100'}]);
+  assert.equal(post.state,'committed');
+  assert.equal(post.receipt.cents,'500');
+  assert.equal(parseServiceRefundResult(post,owner.business,{operationId:operation,recoveryEpoch:owner.epoch,serviceRefundId:refundId}).state,'committed');
+  assert.equal(parseServiceRefundCredits(await list(),owner.business,owner.customer,invoice.invoiceId).find(item=>item.pairedCreditId===credit.invoiceCreditId).availableCents,'600');
+  assert.deepEqual(await command(finance,'record_fictional_service_refund',input),post);
+  const changes=await admin.query('SELECT purpose,debit_cents::text,credit_cents::text FROM crest.journal_lines WHERE service_refund_id=$1 ORDER BY purpose',[refundId]);
+  assert.deepEqual(changes.rows,[{purpose:'refund_funds',debit_cents:'500',credit_cents:'0'},{purpose:'refund_money',debit_cents:'0',credit_cents:'500'}]);
+  assert.equal((await admin.query('SELECT signed_cents::text FROM crest.money_movements WHERE id=$1',[post.receipt.moneyMovementId])).rows[0].signed_cents,'-500');
+  await assert.rejects(command(web,'record_fictional_service_refund',input),{code:'42501'});
+  await assert.rejects(admin.query('DELETE FROM crest.service_credit_refunds WHERE id=$1',[refundId]),{code:'55000'});
+  const balance=await command(finance,'read_fictional_trial_balance_v6',[...owner.auth(),today]);
+  const {parseFictionalTrialBalanceV6,parseFictionalJournalV6}=await import('../../src/bookkeeping/posted-report-v6-contract.ts');
+  assert.equal(parseFictionalTrialBalanceV6(balance,owner.business,today).schemaVersion,6);
+  const journal=await command(finance,'read_fictional_journal_v6',[...owner.auth(),today,null,null,100]);
+  const report=parseFictionalJournalV6(journal,owner.business,today,null,null,100);
+  const reported=report.rows.filter(row=>row.template==='P08');
+  assert.deepEqual(reported.map(row=>[row.purpose,row.serviceRefundId,row.debitCents,row.creditCents]).sort(),
+    [['refund_funds',refundId,'500','0'],['refund_money',refundId,'0','500']]);
+  const bankJournal=await command(finance,'read_fictional_journal_v6',[...owner.auth(),today,bank,null,100]);
+  assert.equal(parseFictionalJournalV6(bankJournal,owner.business,today,bank,null,100).rows.at(-1).serviceRefundId,refundId);
+  assert.throws(()=>parseFictionalJournalV6({...journal,rows:journal.rows.map(row=>row.purpose==='refund_funds'?{...row,serviceRefundId:randomUUID()}:row)},owner.business,today,null,null,100));
+  const lookup=(id=operation,record=refundId,principal=owner)=>command(finance,'lookup_fictional_service_refund',[...principal.auth(),owner.epoch,id,record]);
+  const retire=(id,record)=>command(finance,'retire_fictional_service_refund',[...owner.auth(),owner.epoch,id,owner.epoch,record,'Fictional operation absent after review']);
+  assert.deepEqual(await lookup(),post);
+  assert.deepEqual(await retire(operation,refundId),post);
+  assert.deepEqual(await lookup(operation,randomUUID()),{state:'conflict',reason:'operation'});
+  assert.deepEqual(await lookup(operation,refundId,foreign),{state:'absent'});
+  const retiredOperation=randomUUID(),retiredRefund=randomUUID();
+  const original=[...input]; original[9]=retiredOperation;original[10]=retiredRefund;
+  assert.deepEqual(await lookup(retiredOperation,retiredRefund),{state:'absent'});
+  const retained=await retire(retiredOperation,retiredRefund);
+  assert.equal(retained.state,'retired');
+  assert.deepEqual(await lookup(retiredOperation,retiredRefund),retained);
+  assert.deepEqual(await retire(retiredOperation,retiredRefund),retained);
+  assert.deepEqual(await command(finance,'record_fictional_service_refund',original),{state:'conflict',reason:'operation'});
+  const dup=[...input];dup[9]=randomUUID();dup[10]=randomUUID();dup[17]='501';dup[18]='1000';
+  await assert.rejects(command(finance,'record_fictional_service_refund',dup),{message:'SERVICE_REFUND_EXTERNAL_ID_ALREADY_RECORDED'});
+  const source=()=>command(exporter,'service_refund_source_snapshot',[owner.business]);
+  await assert.rejects(source(),{code:'25001'});
+  await assert.rejects(command(finance,'service_refund_source_snapshot',[owner.business]),{code:'42501'});
+  await exporter.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+  let archive;
+  try {
+   const captured=await source();
+   assert.equal(captured.rows.service_credit_refunds[0].id,refundId);
+   assert.deepEqual(captured.rows.journal_lines.map(row=>row.purpose).sort(),['refund_funds','refund_money']);
+   assert.deepEqual((await command(exporter,'service_refund_source_snapshot',[foreign.business])).rows.service_credit_refunds,[]);
+   const financeSource=await captureFinanceSourceExport(owner.business,async(sql,args)=>(await exporter.query(sql,args)).rows,refundExportOptions);
+   archive=financeSource.forServer();
+   const verified=verifyFinanceSourceExport(archive.manifest,archive.files,owner.business);
+   assert.equal(verified.profile,'crest.posted-finance-source.v7');
+   assert.equal(verified.debitCents,verified.creditCents);
+   const csv=archive.files.find(file=>file.name==='service_credit_refunds.csv').content;
+   assert(csv.includes(refundId));
+   assert(csv.includes('Fictional bank debit settled'));
+  }finally{await exporter.query('ROLLBACK');}
+  const neutral=await sandbox.connect(await sandbox.database());
+  try{
+    const rebuilt=await exerciseNeutralFinanceImport(neutral,archive.files,owner.business,refundExportOptions);
+    assert.equal(rebuilt.tables,30);
+    assert.equal(rebuilt.sourceRows,Object.values(JSON.parse(archive.manifest).rowCounts).reduce((total,rows)=>total+rows,0));
+    assert.equal(rebuilt.debit,rebuilt.credit);
+  }finally{await neutral.end();}
+  await verifyRefundRecovery({candidate,admin,target,owner,archive,post,retained});
+}
+
+test('held E08 restores the ordered paired credit and original payment release with exact audit and portable evidence', {timeout:240000}, async()=>{
   const cluster=await recoveryCluster();
   let sandbox;
   try {
@@ -510,6 +674,7 @@ test('held E08 restores the ordered paired credit and original payment release w
       assert.equal(reconstructed.debit,reconstructed.credit);
     } finally {await neutral.end();}
     await verifyRecovery({candidate,admin,target,owner,captured:portable,saved,retired});
+    await verifyServiceRefund({candidate,sandbox,target,admin,exporter,finance,web,owner,foreign,invoice,saved,channel,bank,today});
   } finally {
     try {await sandbox?.close();} finally {await cluster.close();}
   }

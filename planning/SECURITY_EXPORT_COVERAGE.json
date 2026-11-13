@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 85,
+  "migrationCount": 86,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2583,7 +2583,8 @@
         "unapplication_id",
         "fund_application_id",
         "tip_realization_id",
-        "invoice_credit_id"
+        "invoice_credit_id",
+        "service_refund_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2653,7 +2654,8 @@
         "fund_lot_id",
         "fund_application_id",
         "tip_realization_id",
-        "invoice_credit_id"
+        "invoice_credit_id",
+        "service_refund_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2872,7 +2874,8 @@
         "first_cent",
         "last_cent",
         "fund_application_id",
-        "tip_realization_id"
+        "tip_realization_id",
+        "service_refund_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2917,6 +2920,30 @@
         "operation_id",
         "actor_id",
         "reviewed_ar_cents"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.service_credit_refunds",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "pair_id",
+        "fund_lot_id",
+        "first_cent",
+        "last_cent",
+        "cents",
+        "channel_version_id",
+        "account_id",
+        "evidence_id",
+        "actual_on",
+        "confirmation",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

@@ -35,7 +35,7 @@ export type BusinessSourceJournalCapture=Readonly<{forJournalServer:()=>JournalC
 type CatalogCapture=Readonly<{formatVersion:1;registeredSourceSchemaVersion:43;catalogRegistered:false;source:JournalCapture;catalog:string;metadataBytes:number;evidenceBytes:number;recordCount:number;completePortableExport:false;completeBackup:false}>;
 export type BusinessSourceCatalogCapture=Readonly<{forCatalogServer:()=>CatalogCapture;toJSON:()=>never}>;
 type PostedFinanceCapture=Readonly<{
- businessId:string;profile:'crest.posted-finance-source.v5'|'crest.posted-finance-source.v6';manifest:string;files:readonly Readonly<{name:string;content:string}>[];
+ businessId:string;profile:'crest.posted-finance-source.v5'|'crest.posted-finance-source.v6'|'crest.posted-finance-source.v7';manifest:string;files:readonly Readonly<{name:string;content:string}>[];
  completePortableExport:false;completeBackup:false;
 }>;
 export type PostedFinanceSourceCapture=Readonly<{forFinanceServer:()=>PostedFinanceCapture;toJSON:()=>never}>;
@@ -127,13 +127,14 @@ export function createBusinessSourceJournalCollector(config:Configuration){retur
 export function createBusinessSourceCatalogCollector(config:Configuration){return createCollector(config,true,true,true);}
 // This source profile needs the exact credit reader and never falls back to an older ledger.
 export function createPostedFinanceSourceCollector(config:Configuration){return createCollector(config,false,false,false,true);}
-export function createPairedPostedFinanceSourceCollector(config:Configuration){return createCollector(config,false,false,false,true,true);}
-function createCollector(config:Configuration,includeCrm:false,includeJournal:false,includeCatalog:false,includeFinance:true,includePairedFinance?:boolean):(signal:AbortSignal)=>Promise<PostedFinanceSourceCapture>;
+export function createPairedPostedFinanceSourceCollector(config:Configuration){return createCollector(config,false,false,false,true,6);}
+export function createServiceRefundSourceCollector(config:Configuration){return createCollector(config,false,false,false,true,7);}
+function createCollector(config:Configuration,includeCrm:false,includeJournal:false,includeCatalog:false,includeFinance:true,financeProfile?:5|6|7):(signal:AbortSignal)=>Promise<PostedFinanceSourceCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal:true,includeCatalog:true):(signal:AbortSignal)=>Promise<BusinessSourceCatalogCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal:true):(signal:AbortSignal)=>Promise<BusinessSourceJournalCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal?:false):(signal:AbortSignal)=>Promise<BusinessSourceCapture>;
 function createCollector(config:Configuration,includeCrm:false,includeJournal?:false):(signal:AbortSignal)=>Promise<BusinessFoundationCapture>;
-function createCollector(config:Configuration,includeCrm:boolean,includeJournal=false,includeCatalog=false,includeFinance=false,includePairedFinance=false){
+function createCollector(config:Configuration,includeCrm:boolean,includeJournal=false,includeCatalog=false,includeFinance=false,financeProfile:5|6|7=5){
  let connectionString:string,businessId:string,ssl:false|{rejectUnauthorized:true};
  try{
   const url=new URL(config.connectionString);
@@ -165,10 +166,11 @@ function createCollector(config:Configuration,includeCrm:boolean,includeJournal=
     require((await query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')).command==='BEGIN');
     if(includeFinance){
      const capture=(await captureFinanceSourceExport(businessId,async(sql,args)=>(await query(sql,args)).rows,{
-      includeCorrections:true,includeFundApplications:true,includeTips:true,includeCredits:true,includePairedCredits:includePairedFinance,
+      includeCorrections:true,includeFundApplications:true,includeTips:true,includeCredits:true,includePairedCredits:financeProfile>=6,
+      includeServiceRefunds:financeProfile===7,
      })).forServer();
      const checked=verifyFinanceSourceExport(capture.manifest,capture.files,businessId);
-     const profile=includePairedFinance?'crest.posted-finance-source.v6':'crest.posted-finance-source.v5';
+     const profile=`crest.posted-finance-source.v${financeProfile}` as const;
      require(checked.verified&&checked.profile===profile);
      require((await query('COMMIT')).command==='COMMIT');check();
      const value:PostedFinanceCapture=Object.freeze({businessId,profile,...capture,completePortableExport:false,completeBackup:false});

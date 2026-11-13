@@ -175,7 +175,7 @@ export function InvoiceCredit({businessId,customerId,invoiceId}:{businessId:stri
                 <dt>Credit to invoice</dt><dd>{quoteMoney(preview.inclusiveCents)}</dd>
                 <dt>Included tax</dt><dd>{quoteMoney(preview.taxCents)}</dd>
               </dl>}
-              <label>Reason for the credit<input required maxLength={1000} value={reason}
+              <label>Reason for the credit<textarea required rows={2} maxLength={1000} value={reason}
                 aria-invalid={!!reason&&!validReason} onChange={event=>setReason(event.target.value)}/></label>
               <button type="submit" className="primary-action" disabled={!preview||!validReason}>Save invoice credit</button>
             </>}
