@@ -151,14 +151,18 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
   const location='Synthetic shop bay',missing='Synthetic camera unavailable';
   async function fillHandoff(time,person,releasing=false){
    await panel.getByRole('button',{name:releasing?'Record release…':'Record intake…',exact:true}).click();
-   await panel.getByLabel('Actual handoff time',{exact:true}).fill(time);
+   // A datetime-local input normalizes zero seconds to minute precision.
+   const handoffTime=panel.getByLabel('Actual handoff time',{exact:true});
+   const normalizedTime=time.length===19&&time.endsWith(':00')?time.slice(0,16):time;
+   await handoffTime.fill(normalizedTime);
+   await expect(handoffTime).toHaveValue(normalizedTime);
    await panel.getByLabel(releasing?'Who collected the vehicle?':'Who handed over the vehicle?',{exact:true}).fill(person);
    await panel.getByLabel('Handoff location',{exact:true}).fill(location);
    await panel.getByLabel('Why is a condition photo missing?',{exact:true}).fill(missing);
    await panel.getByRole('checkbox',{name:'Record the required acknowledgement'}).check();
   }
   await panel.getByRole('button',{name:'Load custody history',exact:true}).click();
-  await fillHandoff('2026-11-03T09:45',intakePerson);
+  await fillHandoff('2026-11-03T09:45:00',intakePerson);
   await mkdir('.local/review',{recursive:true});
   for(const width of [360,390,768,1440]){
    await page.setViewportSize({width,height:900});
