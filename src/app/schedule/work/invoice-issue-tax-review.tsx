@@ -9,6 +9,7 @@ import { InvoiceTaxPayableSetup } from './invoice-tax-payable-setup';
 import { InvoiceExemptionSetup } from './invoice-exemption-setup';
 import { DirectReceipt } from './direct-receipt';
 import { PaymentCorrection } from './payment-correction';
+import { FundApplication } from './fund-application';
 
 type Readiness = Awaited<ReturnType<typeof financeAccounts.reviewInvoiceIssueTax>>;
 type Review = Readiness['tax'];
@@ -51,8 +52,8 @@ function IssueLineStatus({ line }: { line: Line }) {
   return <p>{lineMessages[line.state]}</p>;
 }
 
-export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrections }: {
-  invoice:IssuedInvoice;receiptBusinessId:string|undefined;paymentCorrections?:boolean;
+export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrections,fundApplications }: {
+  invoice:IssuedInvoice;receiptBusinessId:string|undefined;paymentCorrections?:boolean;fundApplications?:boolean;
 }) {
   const tax = invoice.lines.reduce((sum,line)=>sum+BigInt(line.taxCents),0n);
   return <div className="issued-invoice-details">
@@ -77,10 +78,12 @@ export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrecti
       customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
     {receiptBusinessId&&paymentCorrections&&<PaymentCorrection businessId={receiptBusinessId}
       customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
+    {receiptBusinessId&&fundApplications&&<FundApplication businessId={receiptBusinessId}
+      customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
   </div>;
 }
 
-export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, lines, onIssued, directReceipts, paymentCorrections }: {
+export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, lines, onIssued, directReceipts, paymentCorrections, fundApplications }: {
   businessId: string;
   jobId: string;
   draftId: string;
@@ -89,6 +92,7 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
   onIssued?: () => void;
   directReceipts?: boolean;
   paymentCorrections?: boolean;
+  fundApplications?: boolean;
 }) {
   const [jurisdictions, setJurisdictions] = useState<Readonly<Record<string, string>>>({});
   const choicesId = useId();
@@ -281,7 +285,8 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
   return <details onToggle={event => { if (!event.currentTarget.open) clear(); }}>
     <summary>Review invoice tax</summary>
     {issued ? <section aria-label="Issued invoice">
-      <IssuedInvoiceDetails invoice={issued} receiptBusinessId={directReceipts?businessId:undefined} paymentCorrections={paymentCorrections===true}/>
+      <IssuedInvoiceDetails invoice={issued} receiptBusinessId={directReceipts?businessId:undefined}
+        paymentCorrections={paymentCorrections===true} fundApplications={fundApplications===true}/>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
     </section> : <form aria-label="Invoice tax review" aria-busy={busy} onSubmit={event => { event.preventDefault(); void review(); }}>
       <p className="field-help">Check for saved jurisdiction suggestions. Then choose the approved jurisdiction for each completed portion.</p>

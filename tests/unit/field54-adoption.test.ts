@@ -60,6 +60,9 @@ import coverage79 from '../support/registered79-export-coverage.json';
 import registered80 from '../support/registered80-migration-checksums.json';
 import coverage80 from '../support/registered80-export-coverage.json';
 import {unapplicationSourceAddedColumns,unapplicationSourceCoverage} from '../../src/bookkeeping/unapplication-source.ts';
+import registered81 from '../support/registered81-migration-checksums.json';
+import coverage81 from '../support/registered81-export-coverage.json';
+import {fundApplicationSourceAddedColumns,fundApplicationSourceCoverage} from '../../src/bookkeeping/fund-application-source.ts';
 import {financeAccountSourceColumns,financeMoneyChannelSourceColumns,financeTaxSourceColumns,invoiceDraftSourceColumns} from '../../src/bookkeeping/finance-account-source.ts';
 import {pickupCustodySourceColumns} from '../../src/operations/pickup-custody-source.ts';
 import registry from '../support/registered54-migration-checksums.json';
@@ -415,16 +418,28 @@ it('registers read-only posted reports and leaves all prior business table cover
 });
 it('appends payment correction and portable lineage after the frozen reporting schema',()=>{
  const file='20261205180000_finance_allocation_unapplication.sql';
- expect(currentRegistry.migrations).toHaveLength(81);
- expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261205180000',file,
+ expect(registered81.migrations).toHaveLength(81);
+ expect(registered81.migrations.at(-1)).toEqual({version:'20261205180000',file,
   sha256:'b32cf544c783e7f7cadfb14f98a03fb4dd9c1fa7275670a7f45c4affa4ad783c'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered80 as MigrationRegistry)).not.toThrow();
+ expect(()=>validateMigrationSet(registered81 as MigrationRegistry,new Map(registered81.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered80 as MigrationRegistry)).not.toThrow();
  const additions:Readonly<Record<string,readonly string[]>>=unapplicationSourceAddedColumns;
- expect(currentCoverage).toEqual({...coverage80,migrationCount:81,tables:[
+ expect(coverage81).toEqual({...coverage80,migrationCount:81,tables:[
   ...coverage80.tables.map(row=>({...row,required:[...row.required,...additions[row.table]??[]]})),
   ...unapplicationSourceCoverage,
  ]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:81});
+});
+it('appends application of exact funds and independent export after frozen corrections',()=>{
+ const file='20261206180000_finance_customer_fund_application.sql';
+ expect(currentRegistry.migrations).toHaveLength(82);
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261206180000',file,
+  sha256:'4d2259b3a995c044e98c82eb39acfad13692ffa6ad927f786938f91fd122c6c1'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered81 as MigrationRegistry)).not.toThrow();
+ const additions:Readonly<Record<string,readonly string[]>>=fundApplicationSourceAddedColumns;
+ expect(currentCoverage).toEqual({...coverage81,migrationCount:82,tables:[
+  ...coverage81.tables.map(row=>({...row,required:[...row.required,...additions[row.table]??[]]})),
+  ...fundApplicationSourceCoverage,
+ ]});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:82});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

@@ -405,6 +405,11 @@
       "version": "20261205180000",
       "file": "20261205180000_finance_allocation_unapplication.sql",
       "sha256": "b32cf544c783e7f7cadfb14f98a03fb4dd9c1fa7275670a7f45c4affa4ad783c"
+    },
+    {
+      "version": "20261206180000",
+      "file": "20261206180000_finance_customer_fund_application.sql",
+      "sha256": "4d2259b3a995c044e98c82eb39acfad13692ffa6ad927f786938f91fd122c6c1"
     }
   ]
 }

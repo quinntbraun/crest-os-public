@@ -8,12 +8,13 @@ import {sourceExportBrowserFixture} from '../support/source-export-browser-fixtu
 
 const directReceipts=true;
 const paymentCorrections=process.env.CREST_TEST_PAYMENT_CORRECTIONS==='1';
+const fundApplications=process.env.CREST_TEST_FUND_APPLICATIONS==='1';
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
   financeAccounts:true,financeMappings:true,financeTaxProfiles:true,invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,
   financeMoneyChannels:directReceipts,directReceipts,...paymentCorrections?{
-   expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,
+   expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,fundApplications,
   }:{}});
  let browser;
  const financeResponses=[];
@@ -287,6 +288,32 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        await invoice.getByText('Record a fictional payment',{exact:true}).click();
        await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
        await expect(payments).toContainText('$175.00 due');
+       if(fundApplications){
+        await allowInvoiceReadWindow();
+        await invoice.getByText('Apply customer funds',{exact:true}).press('Enter');
+        const funds=invoice.getByRole('region',{name:'Apply customer funds',exact:true});
+        await funds.getByRole('button',{name:'Load available funds',exact:true}).press('Enter');
+        await expect(funds.getByRole('status')).toHaveText('Review the amount before applying funds.');
+        await expect(funds).toContainText('Maximum to apply · $25.00');
+        await funds.getByLabel('Amount to apply',{exact:true}).fill('15.00');
+        await funds.getByLabel('Reason for applying funds',{exact:true}).fill('Fictional customer approved use on this invoice');
+        for(const width of [360,390,768,1440]){
+         await page.setViewportSize({width,height:900});
+         await funds.getByRole('button',{name:'Apply funds to invoice',exact:true}).scrollIntoViewIfNeeded();
+         assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+         const audit=await new AxeBuilder({page}).include('.direct-receipt').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+         assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
+         await page.screenshot({path:'.local/review/finance-fund-application-'+name+'-'+width+'.png'});
+        }
+        await funds.getByRole('button',{name:'Apply funds to invoice',exact:true}).press('Enter');
+        await expect(funds.getByRole('status')).toContainText('Funds applied.');
+        const receiptDownload=page.waitForEvent('download');
+        await funds.getByRole('button',{name:'Download funds application (CSV)',exact:true}).click();
+        assert.match(await readFile(await (await receiptDownload).path(),'utf8'),/"1500","Fictional customer approved/);
+        await allowInvoiceReadWindow();
+        await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
+        await expect(payments).toContainText('$160.00 due');
+       }
        await page.goto(fixture.origin+'/settings/accounts');
        await page.getByRole('button',{name:'Load accounts',exact:true}).click();
        await page.getByText('Fictional trial balance',{exact:true}).click();
@@ -298,6 +325,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        await report.getByRole('button',{name:'Load journal entries',exact:true}).press('Enter');
        await expect(report).toContainText('Invoice reopened');
        await expect(report).toContainText('Customer funds held');
+       if(fundApplications)await expect(report).toContainText('Invoice balance reduced');
       }
      }
     }

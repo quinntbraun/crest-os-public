@@ -38,18 +38,22 @@ import {parseSameDayExpenseInput,parseSameDayExpenseOptions,parseSameDayExpenseR
  sameDayExpenseMatchesInput} from '../bookkeeping/expenses/same-day-expense-contract';
 import {parseFictionalJournal,parseFictionalTrialBalance} from '../bookkeeping/trial-balance-contract';
 import {parseFictionalJournalV2,parseFictionalTrialBalanceV2} from '../bookkeeping/posted-report-v2-contract';
+import {parseFictionalJournalV3,parseFictionalTrialBalanceV3} from '../bookkeeping/posted-report-v3-contract';
 import {allocationUnapplicationMatchesInput,parseAllocationUnapplicationInput,parseAllocationUnapplicationOptions,
  parseAllocationUnapplicationReference,parseAllocationUnapplicationResult,parseInvoicePaymentAllocations}
  from '../bookkeeping/allocation-unapplication-contract';
+import {fundApplicationMatchesInput,parseFundApplicationInput,parseFundApplicationOptions,
+ parseFundApplicationReference,parseFundApplicationResult} from '../bookkeeping/fund-application-contract';
 import type {Proof} from './authentication';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
 const invoiceIssuePendingKey='crest.invoice-issue.pending-reference.v1';
 const directReceiptPendingKey='crest.direct-receipt.pending-reference.v1';
 const paymentCorrectionPendingKey='crest.payment-correction.pending-reference.v1';
+const fundApplicationPendingKey='crest.fund-application.pending-reference.v1';
 const sameDayExpensePendingKey='crest.expense-post.pending-reference.v1';
 const invoiceDraftFailure=[...knownFailure,'INVOICE_DRAFT_JOB_REQUIRED','INVOICE_DRAFT_COMPLETED_SCOPE_REQUIRED'] as const;
 const pendingKey='crest.finance-account.pending-reference.v1';
@@ -85,7 +89,8 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
    const part=await reader.read();
    if(part.done)break;
    bytes+=part.value.byteLength;check(bytes<=(route==='trial-balance'?2097152:route==='invoice-preparation'||route==='invoice-draft-read'||route==='invoice-issue-tax-review'
-    ||route==='invoice-issue-prepare'||route==='invoice-issue-read'||route==='receipt-options'||route==='expense-post-options'?1048576:196608)&&!bounded.aborted);
+    ||route==='invoice-issue-prepare'||route==='invoice-issue-read'||route==='receipt-options'||route==='expense-post-options'
+    ||route==='fund-application-options'?1048576:196608)&&!bounded.aborted);
    text+=decoder.decode(part.value,{stream:true});
   }
   text+=decoder.decode();
@@ -101,32 +106,35 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   invoiceIssue:response.headers.get('x-crest-invoice-issue')==='1',
   directReceipts:response.headers.get('x-crest-direct-receipts')==='1',
   paymentCorrections:response.headers.get('x-crest-payment-corrections')==='1',
+  fundApplications:response.headers.get('x-crest-fund-applications')==='1',
   sameDayExpenses:response.headers.get('x-crest-same-day-expenses')==='1',
   trialBalance:response.headers.get('x-crest-trial-balance')==='1'};
 }
 
 export const financeAccounts={
  async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections}=await post('context',{},signal,undefined,proof);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
   return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,
    ...(invoiceIssue?{invoiceIssue}:{}),...(directReceipts?{directReceipts}:{}),...(sameDayExpenses?{sameDayExpenses}:{}),
-   ...(trialBalance?{trialBalance}:{}),...(paymentCorrections?{paymentCorrections}:{})}) as FinanceAccountContext;
+   ...(trialBalance?{trialBalance}:{}),...(paymentCorrections?{paymentCorrections}:{}),...(fundApplications?{fundApplications}:{})}) as FinanceAccountContext;
  },
  async readTrialBalance(context:FinanceAccountContext,throughOn:string|null,signal:AbortSignal){
   check(context.trialBalance&&(throughOn===null||customerDate(throughOn)));
   const {status,value}=await post('trial-balance',{throughOn},signal,context.binding);
   check(status===200);
-  return context.paymentCorrections?parseFictionalTrialBalanceV2(value,context.businessId,throughOn)
+  return context.fundApplications?parseFictionalTrialBalanceV3(value,context.businessId,throughOn)
+   :context.paymentCorrections?parseFictionalTrialBalanceV2(value,context.businessId,throughOn)
    :parseFictionalTrialBalance(value,context.businessId,throughOn);
  },
  async readPostedJournal(context:FinanceAccountContext,throughOn:string,accountId:string|null,afterLineId:string|null,signal:AbortSignal){
   check(context.trialBalance&&customerDate(throughOn)&&(accountId===null||customerUuid(accountId))&&(afterLineId===null||customerUuid(afterLineId)));
   const {status,value}=await post('posted-journal',{throughOn,accountId,afterLineId},signal,context.binding);
   check(status===200);
-  return context.paymentCorrections?parseFictionalJournalV2(value,context.businessId,throughOn,accountId,afterLineId)
+  return context.fundApplications?parseFictionalJournalV3(value,context.businessId,throughOn,accountId,afterLineId)
+   :context.paymentCorrections?parseFictionalJournalV2(value,context.businessId,throughOn,accountId,afterLineId)
    :parseFictionalJournal(value,context.businessId,throughOn,accountId,afterLineId);
  },
  async sameDayExpenseOptions(context:FinanceAccountContext,expenseId:string,signal:AbortSignal){
@@ -168,6 +176,36 @@ export const financeAccounts={
   const {status,value}=await post('payment-correction-list',{customerId,invoiceId},signal,context.binding);
   check(status===200);
   return parseInvoicePaymentAllocations(value,context.businessId,customerId,invoiceId);
+ },
+ async fundApplicationOptions(context:FinanceAccountContext,customerId:string,invoiceId:string,effectiveOn:string|null,signal:AbortSignal){
+  check(context.fundApplications&&customerUuid(customerId)&&customerUuid(invoiceId)
+   &&(effectiveOn===null||customerDate(effectiveOn)));
+  const {status,value}=await post('fund-application-options',{customerId,invoiceId,effectiveOn},signal,context.binding);
+  check(status===200);
+  return parseFundApplicationOptions(value,context.businessId,customerId,invoiceId,effectiveOn);
+ },
+ async submitFundApplication(context:FinanceAccountContext,input:ReturnType<typeof parseFundApplicationInput>,signal:AbortSignal){
+  check(context.fundApplications&&context.writeState==='ready'&&context.recoveryEpoch===input.reference.recoveryEpoch);
+  const request=parseFundApplicationInput(input);
+  const {status,value}=await post('fund-application-submit',request,signal,context.binding);
+  if(status===409&&exact(value,['error'])&&typeof value.error==='string')return {state:'refused' as const,reason:value.error};
+  check(status===200||status===409);
+  const result=parseFundApplicationResult(value,context.businessId,request.reference);
+  check(result.state==='conflict'||result.state==='committed'&&fundApplicationMatchesInput(result,request));
+  return result;
+ },
+ async lookupFundApplication(context:FinanceAccountContext,reference:ReturnType<typeof parseFundApplicationReference>,signal:AbortSignal){
+  check(context.fundApplications);
+  const {status,value}=await post('fund-application-lookup',parseFundApplicationReference(reference),signal,context.binding);
+  check(status===200||status===409);
+  return parseFundApplicationResult(value,context.businessId,reference);
+ },
+ async retireFundApplication(context:FinanceAccountContext,reference:ReturnType<typeof parseFundApplicationReference>,reason:string,signal:AbortSignal){
+  check(context.fundApplications&&context.writeState==='ready'&&customerUuid(context.recoveryEpoch)&&financeAccountReviewReason(reason));
+  const {status,value}=await post('fund-application-retire',{reference:parseFundApplicationReference(reference),
+   reviewEpoch:context.recoveryEpoch,reason},signal,context.binding);
+  check(status===200||status===409);
+  return parseFundApplicationResult(value,context.businessId,reference);
  },
  async paymentCorrectionOptions(context:FinanceAccountContext,customerId:string,allocationId:string,effectiveOn:string|null,signal:AbortSignal){
   check(context.paymentCorrections&&customerUuid(customerId)&&customerUuid(allocationId)
@@ -717,6 +755,29 @@ export function clearPendingPaymentCorrection(entry:PendingPaymentCorrection){
  check(JSON.stringify(readPendingPaymentCorrection())===JSON.stringify(entry));
  sessionStorage.removeItem(paymentCorrectionPendingKey);
  check(readPendingPaymentCorrection()===null);
+}
+
+type PendingFundApplication=Readonly<{businessId:string;binding:string;invoiceId:string;reference:ReturnType<typeof parseFundApplicationReference>}>;
+export function readPendingFundApplication():PendingFundApplication|null{
+ const raw=sessionStorage.getItem(fundApplicationPendingKey);
+ if(raw===null)return null;
+ check(raw.length<=800&&(raw.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length===7);
+ const value:unknown=JSON.parse(raw);
+ check(exact(value,['businessId','binding','invoiceId','reference'])&&customerUuid(value.businessId)&&customerUuid(value.invoiceId)
+  &&typeof value.binding==='string'&&bindingPattern.test(value.binding));
+ return {businessId:value.businessId,binding:value.binding,invoiceId:value.invoiceId,reference:parseFundApplicationReference(value.reference)};
+}
+export function retainPendingFundApplication(context:FinanceAccountContext,invoiceId:string,reference:PendingFundApplication['reference']){
+ check(readPendingFundApplication()===null&&customerUuid(invoiceId));
+ const entry={businessId:context.businessId,binding:context.binding,invoiceId,reference:parseFundApplicationReference(reference)};
+ sessionStorage.setItem(fundApplicationPendingKey,JSON.stringify(entry));
+ check(JSON.stringify(readPendingFundApplication())===JSON.stringify(entry));
+ return entry;
+}
+export function clearPendingFundApplication(entry:PendingFundApplication){
+ check(JSON.stringify(readPendingFundApplication())===JSON.stringify(entry));
+ sessionStorage.removeItem(fundApplicationPendingKey);
+ check(readPendingFundApplication()===null);
 }
 
 type PendingSameDayExpense=Readonly<{businessId:string;binding:string;expenseId:string;reference:ReturnType<typeof parseSameDayExpenseReference>}>;

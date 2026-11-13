@@ -14,6 +14,8 @@ import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
 import {financeAccountSourceColumns} from '../../src/bookkeeping/finance-account-source.ts';
 import {expense79File,expense79Files,expense79Version} from './finance-expense79-candidate.mjs';
 import {unapplication81File,unapplication81Files,unapplication81Version} from './finance-unapplication81-candidate.mjs';
+import {fundApplication82File,fundApplication82Parts,fundApplication82Version,
+  fundApplication82PriorRegistrySha256,readFrozen81} from './finance-fund-application82-candidate.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
@@ -704,6 +706,60 @@ export async function restoreUnapplication81CandidateDatabase(candidate,director
   return restoreWithProfile((await unapplication81RecoveryProfile(candidate)).profile,directory,identity,url);
 }
 
+const legacy81Profile=Object.freeze({schemaVersion:81,registrySha256:fundApplication82PriorRegistrySha256});
+export async function backupLegacy81Database(client,url,directory,recipient){
+  const {registry,coverage}=await readFrozen81(root);
+  return backupWithProfile(legacy81Profile,client,url,directory,recipient,undefined,undefined,
+    {profile:legacy81Profile,versions:registry.migrations.map(row=>row.version),coverage});
+}
+export async function restoreLegacy81Database(...args){return restoreWithProfile(legacy81Profile,...args);}
+
+async function fundApplication82RecoveryProfile(candidate){
+  const {registry,coverage:baseline}=await readFrozen81(root);
+  assert.equal(candidate.file,fundApplication82File);
+  assert.equal(candidate.previousRegistrySha256,legacy81Profile.registrySha256);
+  const registryBytes=await readFile(join(candidate.directory,'supabase/migration-checksums.json'));
+  const candidateRegistry=JSON.parse(registryBytes);
+  assert.equal(hash(registryBytes),candidate.registrySha256);
+  assert.deepEqual(candidateRegistry.migrations,[...registry.migrations,
+    {version:fundApplication82Version,file:candidate.file,sha256:candidate.sha256}]);
+  const migration=await readFile(join(candidate.directory,'supabase/migrations',candidate.file));
+  assert.equal(hash(migration),candidate.sha256);
+  assert.equal(migration.length,candidate.bytes);
+  assert.deepEqual(candidate.parts.map(part=>part.path),fundApplication82Parts.map(name=>'planning/proposals/'+name+'.sql'));
+  for(const part of candidate.parts){
+    const original=await readFile(join(root,part.path));
+    assert.equal(hash(original),part.sha256);
+    assert.equal(original.length,part.bytes);
+    assert(migration.subarray(part.offset,part.offset+part.bytes).equals(original));
+  }
+  const dictionaryPart=candidate.parts.find(part=>part.path.endsWith('finance-funds-apply-source.sql'));
+  const dictionary=migration.subarray(dictionaryPart.offset,dictionaryPart.offset+dictionaryPart.bytes).toString('utf8').split('$dictionary$')[1];
+  const tables=new Map([...dictionary.matchAll(/\('([a-z_]+)', ARRAY\[([\s\S]*?)\]\)/g)].map(([,name,fields])=>
+    ['crest.'+name,[...fields.matchAll(/'([a-z_]+):[^']+'/g)].map(([,column])=>column)]));
+  assert.equal(tables.size,5);
+  const declared=baseline.tables.map(entry=>{
+    const fields=tables.get(entry.table);
+    if(!fields)return entry;
+    assert.deepEqual(fields.slice(0,entry.required.length),entry.required);
+    tables.delete(entry.table);
+    return {...entry,required:fields};
+  });
+  assert.deepEqual([...tables.keys()],['crest.customer_fund_applications']);
+  for(const [table,required] of tables)declared.push({table,scope:'business',required,excluded:[],partialEvidenceGroup:null});
+  const coverage={...baseline,migrationCount:82,tables:declared};
+  assert.deepEqual(candidate.coverage,coverage);
+  return {profile:Object.freeze({schemaVersion:82,registrySha256:candidate.registrySha256,heldFundApplicationMigrationSha256:candidate.sha256}),
+    versions:candidateRegistry.migrations.map(row=>row.version),coverage};
+}
+export async function backupFundApplication82CandidateDatabase(candidate,client,url,directory,recipient){
+  const checked=await fundApplication82RecoveryProfile(candidate);
+  return backupWithProfile(checked.profile,client,url,directory,recipient,undefined,undefined,checked);
+}
+export async function restoreFundApplication82CandidateDatabase(candidate,directory,identity,url){
+  return restoreWithProfile((await fundApplication82RecoveryProfile(candidate)).profile,directory,identity,url);
+}
+
 async function expense79RecoveryProfile(candidate){
   assert.equal(candidate.file,expense79File);
   assert.equal(candidate.previousRegistrySha256,legacy78Profile.registrySha256);
@@ -760,7 +816,9 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile===legacy77Profile
       ||profile===legacy78Profile
       ||profile===legacy80Profile
+      ||profile===legacy81Profile
       ||profile.schemaVersion===81&&profile.heldUnapplicationMigrationSha256
+      ||profile.schemaVersion===82&&profile.heldFundApplicationMigrationSha256
       ||profile.schemaVersion===79&&profile.heldExpenseMigrationSha256
       ));
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -844,6 +902,7 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     assert.equal(manifest.heldFinanceTaxProfilesSha256,profile.heldFinanceTaxProfilesSha256);
     assert.equal(manifest.heldExpenseMigrationSha256,profile.heldExpenseMigrationSha256);
     assert.equal(manifest.heldUnapplicationMigrationSha256,profile.heldUnapplicationMigrationSha256);
+    assert.equal(manifest.heldFundApplicationMigrationSha256,profile.heldFundApplicationMigrationSha256);
     if(profile.heldDropoffPhotoAuthority||profile.heldCustody67MigrationSha256||profile.heldPickupReturnSources
       ||profile.heldExpenseMigrationSha256)assert(manifest.objectArchive);
     stage='authenticated_dump';const dump=await unseal(join(directory,'database.age'),receipt.dump,identity);
