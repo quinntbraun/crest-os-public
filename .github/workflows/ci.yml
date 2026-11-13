@@ -425,6 +425,8 @@ jobs:
         run: npm run test:field-registered
       - name: Verify registered finance account configuration and independent restore
         run: npm run test:finance-registered
+      - name: Verify registered fictional Calendar dispatch, portability and independent restore
+        run: npm run test:google-calendar-registered
       - name: Compare booking times, travel intervals and partitions with PostgreSQL
         run: npm run test:booking-calculations
       - name: Preserve booking schema closure, private history and independent restore

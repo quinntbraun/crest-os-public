@@ -27,10 +27,10 @@ function WorkLocation({value}:{value:BookingLocation}){
 }
 type Props=Readonly<{
  resources:SavedJobResources;initialJobVehicleId?:string;history:readonly JobHistoryEvent[];historyComplete:boolean;busy:boolean;canChange:boolean;
- onWorkStatus?:(()=>void)|undefined;completionAvailable?:boolean;invoiceDraftsAvailable?:boolean;mileageAvailable?:boolean;workTimeAvailable?:boolean;dropoffCustodyAvailable?:boolean;pickupTripsAvailable?:boolean;pickupWorkAvailable?:boolean;pickupCollectionAvailable?:boolean;pickupPhotosAvailable?:boolean;pickupReleaseAvailable?:boolean;onChangeAppointment?:()=>void;onCancel?:()=>void;onDownload?:()=>void;onMoreHistory?:()=>void;
+ onWorkStatus?:(()=>void)|undefined;completionAvailable?:boolean;invoiceDraftsAvailable?:boolean;googleCalendarAvailable?:boolean;mileageAvailable?:boolean;workTimeAvailable?:boolean;dropoffCustodyAvailable?:boolean;pickupTripsAvailable?:boolean;pickupWorkAvailable?:boolean;pickupCollectionAvailable?:boolean;pickupPhotosAvailable?:boolean;pickupReleaseAvailable?:boolean;onChangeAppointment?:()=>void;onCancel?:()=>void;onDownload?:()=>void;onMoreHistory?:()=>void;
 }>;
 export function SavedJobDetails(props:Props){return <SavedJobDetailsContent key={props.resources.head.job.id+':'+props.resources.head.job.version} {...props}/>;}
-function SavedJobDetailsContent({resources,initialJobVehicleId,history,historyComplete,busy,canChange,onWorkStatus,completionAvailable,invoiceDraftsAvailable,mileageAvailable,workTimeAvailable,dropoffCustodyAvailable,pickupTripsAvailable,pickupWorkAvailable,pickupCollectionAvailable,pickupPhotosAvailable,pickupReleaseAvailable,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
+function SavedJobDetailsContent({resources,initialJobVehicleId,history,historyComplete,busy,canChange,onWorkStatus,completionAvailable,invoiceDraftsAvailable,googleCalendarAvailable,mileageAvailable,workTimeAvailable,dropoffCustodyAvailable,pickupTripsAvailable,pickupWorkAvailable,pickupCollectionAvailable,pickupPhotosAvailable,pickupReleaseAvailable,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
  const {head}=resources,{job,appointment,latestAppointment}=head;
  const customer=parseCustomer(resources.vehicles[0]!.customer_snapshot,resources.businessId);
  const location=parseBookingLocation(job.work_location_snapshot,resources.businessId,job.customer_id),contact=parseBookingContact(appointment.contact_snapshot);
@@ -53,6 +53,7 @@ function SavedJobDetailsContent({resources,initialJobVehicleId,history,historyCo
    <dt>Work location</dt><dd><WorkLocation value={location}/></dd>
    <dt>Contact for this visit</dt><dd>{contact.kind==='no_contact'?<>No contact selected: {contact.reason}</>:contact.value}</dd>
   </dl>
+  {googleCalendarAvailable&&<p><a href={'/settings/google-calendar?job='+encodeURIComponent(job.id)}>Calendar sync status</a></p>}
   {proposed&&<section aria-label="Proposed appointment change"><h3>Time change awaiting confirmation</h3><p>{when(latestAppointment.start_at,latestAppointment.timezone)} – {when(latestAppointment.end_at,latestAppointment.timezone)}</p><p className="field-help">The confirmed appointment above still reserves the time. This proposal reserves no time.</p></section>}
   {pickupTripsAvailable&&job.fulfillment_mode==='pickup_return'&&<PickupTrips resources={resources} canChange={canChange&&!busy} workAvailable={pickupWorkAvailable===true}/>}
   <section aria-label="Vehicles for this job"><h3>Vehicles</h3>{resources.vehicles.map(row=>{

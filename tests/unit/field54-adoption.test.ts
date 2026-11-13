@@ -70,6 +70,9 @@ import registered84 from '../support/registered84-migration-checksums.json';
 import coverage84 from '../support/registered84-export-coverage.json';
 import registered85 from '../support/registered85-migration-checksums.json';
 import coverage85 from '../support/registered85-export-coverage.json';
+import registered86 from '../support/registered86-migration-checksums.json';
+import coverage86 from '../support/registered86-export-coverage.json';
+import calendarCoverage from '../support/google-calendar-candidate-export-coverage.json';
 import {serviceRefundSourceAddedColumns,serviceRefundSourceCoverage} from '../../src/bookkeeping/service-refund-source.ts';
 import {pairedInvoiceCreditSourceCoverage} from '../../src/bookkeeping/paired-invoice-credit-source.ts';
 import {invoiceCreditSourceAddedColumns,invoiceCreditSourceCoverage} from '../../src/bookkeeping/invoice-credit-source.ts';
@@ -484,15 +487,22 @@ it('appends exact paired invoice credits after frozen invoice credits',()=>{
 });
 it('appends settled service refunds after frozen paired invoice credits',()=>{
  const file='20261210180000_fictional_service_refund.sql';
- expect(currentRegistry.migrations).toHaveLength(86);
- expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261210180000',file,sha256:'edc38dfde81b21cb9148ea87553bf52f9f87bcda05f5c4d7f2f1019285d854f8'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered85 as MigrationRegistry)).not.toThrow();
+ expect(registered86.migrations).toHaveLength(86);
+ expect(registered86.migrations.at(-1)).toEqual({version:'20261210180000',file,sha256:'edc38dfde81b21cb9148ea87553bf52f9f87bcda05f5c4d7f2f1019285d854f8'});
+ expect(()=>validateMigrationSet(registered86 as MigrationRegistry,new Map(registered86.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered85 as MigrationRegistry)).not.toThrow();
  const added:Readonly<Record<string,readonly string[]>>=serviceRefundSourceAddedColumns;
- expect(currentCoverage).toEqual({...coverage85,migrationCount:86,tables:[...coverage85.tables.map(row=>{
+ expect(coverage86).toEqual({...coverage85,migrationCount:86,tables:[...coverage85.tables.map(row=>{
   const columns=added[row.table];
   return columns?{...row,required:[...row.required,...columns]}:row;
  }),serviceRefundSourceCoverage]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:86});
+});
+it('appends exact fictional Calendar after frozen P08 without production activation',()=>{
+ const file='20261211180000_fictional_google_calendar.sql';
+ expect(currentRegistry.migrations).toHaveLength(87);
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261211180000',file,sha256:'5fe52fd4f4d1af3640dbdf91f2a7fbe6efef027c1d8e582486db3f8ccd0f34bd'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered86 as MigrationRegistry)).not.toThrow();
+ expect(currentCoverage).toEqual({...coverage86,migrationCount:87,tables:[...coverage86.tables,...calendarCoverage.tables]});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:87});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

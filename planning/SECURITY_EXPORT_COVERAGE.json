@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 86,
+  "migrationCount": 87,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2946,6 +2946,443 @@
         "created_at"
       ],
       "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_consents",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "destination_id",
+        "generation",
+        "previous_generation",
+        "recovery_epoch",
+        "state",
+        "client_name",
+        "service_label",
+        "work_address",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_destinations",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "provider_calendar_id",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_disconnects",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "destination_id",
+        "recovery_epoch",
+        "disconnected_generation",
+        "prior_generation",
+        "fenced_at",
+        "drain_until",
+        "actor_id",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_dispatch_leases",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "outbox_id",
+        "attempt_no",
+        "mode",
+        "leased_at",
+        "lease_until"
+      ],
+      "excluded": [
+        {
+          "column": "worker_principal",
+          "reason": "calendar_runtime_principal"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_dispatch_results",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "lease_id",
+        "outcome",
+        "provider_etag",
+        "source_current",
+        "recorded_at",
+        "retry_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_dispatch_sends",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "lease_id",
+        "action",
+        "request_sha256",
+        "prior_etag",
+        "recorded_at"
+      ],
+      "excluded": [
+        {
+          "column": "request_body",
+          "reason": "calendar_provider_payload"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_mappings",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "destination_id",
+        "job_id",
+        "event_uuid",
+        "correlation_marker",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_outbox",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "destination_id",
+        "connection_generation",
+        "recovery_epoch",
+        "job_id",
+        "appointment_id",
+        "appointment_sequence",
+        "mapping_id",
+        "action",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_request_admissions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "lease_id",
+        "setup_attempt_id",
+        "creation_attempt_id",
+        "kind",
+        "admitted_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_revocation_events",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "disconnect_id",
+        "attempt_id",
+        "phase",
+        "admission_phase",
+        "recorded_at",
+        "deadline",
+        "actor_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_code_exchanges",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "attempt_id",
+        "app_session_id",
+        "actor_id",
+        "recovery_epoch",
+        "client_id",
+        "generation",
+        "destination_id",
+        "admitted_at",
+        "deadline"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_creation_intents",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "attempt_id",
+        "actor_id",
+        "app_session_id",
+        "recovery_epoch",
+        "client_id",
+        "correlation_marker",
+        "confirmed_at"
+      ],
+      "excluded": [
+        {
+          "column": "reviewed_google_owner",
+          "reason": "calendar_account_identifier"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_creation_results",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "attempt_id",
+        "recorded_at",
+        "outcome",
+        "provider_calendar_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_credential_key",
+      "scope": "global_configuration",
+      "required": [
+        "singleton"
+      ],
+      "excluded": [
+        {
+          "column": "key_id",
+          "reason": "calendar_grant"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_credentials",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "destination_id",
+        "connection_generation",
+        "recovery_epoch",
+        "client_id",
+        "scope",
+        "version",
+        "source_exchange",
+        "created_at",
+        "updated_at"
+      ],
+      "excluded": [
+        {
+          "column": "key_id",
+          "reason": "calendar_grant"
+        },
+        {
+          "column": "envelope",
+          "reason": "calendar_grant"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_destination_reviews",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "destination_id",
+        "app_session_id",
+        "actor_id",
+        "recovery_epoch",
+        "generation",
+        "client_id",
+        "provider_calendar_id",
+        "reviewed_at",
+        "expires_at"
+      ],
+      "excluded": [
+        {
+          "column": "calendar_owner",
+          "reason": "calendar_account_identifier"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_destination_verifications",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "attempt_id",
+        "review_id",
+        "destination_id",
+        "verified_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_initial_consent_reviews",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "id",
+        "destination_id",
+        "credential_id",
+        "actor_id",
+        "app_session_id",
+        "recovery_epoch",
+        "client_id",
+        "client_name",
+        "service_label",
+        "work_address",
+        "payload_version",
+        "reviewed_at",
+        "expires_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_oauth_attempts",
+      "scope": "runtime_security",
+      "required": [
+        "id",
+        "business_id",
+        "actor_id",
+        "session_id",
+        "recovery_epoch",
+        "destination_id",
+        "connection_generation",
+        "issuer",
+        "client_id",
+        "callback_uri",
+        "created_at",
+        "expires_at",
+        "retired_at",
+        "consumed_at"
+      ],
+      "excluded": [
+        {
+          "column": "state_digest",
+          "reason": "calendar_oauth_proof"
+        },
+        {
+          "column": "verifier_key_id",
+          "reason": "calendar_oauth_proof"
+        },
+        {
+          "column": "verifier_envelope",
+          "reason": "calendar_oauth_proof"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_oauth_client",
+      "scope": "global_configuration",
+      "required": [
+        "singleton",
+        "issuer",
+        "client_id",
+        "callback_uri"
+      ],
+      "excluded": [
+        {
+          "column": "verifier_key_id",
+          "reason": "calendar_oauth_proof"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_refresh_claims",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "credential_id",
+        "credential_version",
+        "admitted_at",
+        "deadline"
+      ],
+      "excluded": [
+        {
+          "column": "worker_principal",
+          "reason": "calendar_runtime_principal"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_refresh_results",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "claim_id",
+        "outcome",
+        "recorded_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_request_budget",
+      "scope": "global_configuration",
+      "required": [
+        "singleton"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_worker_principals",
+      "scope": "runtime_security",
+      "required": [
+        "business_id"
+      ],
+      "excluded": [
+        {
+          "column": "principal",
+          "reason": "calendar_runtime_principal"
+        }
+      ],
       "partialEvidenceGroup": null
     }
   ]
