@@ -49,6 +49,9 @@ import coverage75 from '../support/registered75-export-coverage.json';
 import registered76 from '../support/registered76-migration-checksums.json';
 import coverage76 from '../support/registered76-export-coverage.json';
 import {invoiceSourceCoverage} from '../../src/bookkeeping/invoice-source.ts';
+import registered77 from '../support/registered77-migration-checksums.json';
+import coverage77 from '../support/registered77-export-coverage.json';
+import {receiptSourceAddedColumns,receiptSourceCoverage} from '../../src/bookkeeping/receipt-source.ts';
 import {financeAccountSourceColumns,financeMoneyChannelSourceColumns,financeTaxSourceColumns,invoiceDraftSourceColumns} from '../../src/bookkeeping/finance-account-source.ts';
 import {pickupCustodySourceColumns} from '../../src/operations/pickup-custody-source.ts';
 import registry from '../support/registered54-migration-checksums.json';
@@ -358,12 +361,25 @@ it('appends the exact verified invoice package and inventories all 15 posting so
  const file='20261201180000_finance_invoice_issue.sql';
  expect(sha256(bytes('tests/support/registered76-migration-checksums.json'))).toBe('795db833cfcdd94f7e034273689e3e479b328246391804080f88270be166acd9');
  expect(sha256(bytes('tests/support/registered76-export-coverage.json'))).toBe('17a1f7e1f2a61751aa0d1f5f9dde2c33d91a1c12c34e14cc7d27d454bded45a2');
- expect(currentRegistry.migrations).toHaveLength(77);
- expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261201180000',file,
+ expect(registered77.migrations).toHaveLength(77);
+ expect(registered77.migrations.at(-1)).toEqual({version:'20261201180000',file,
   sha256:'57bf1c485cf1c29aec69171852753630e8bc0a75be1046a1cf880181af249314'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered76 as MigrationRegistry)).not.toThrow();
- expect(currentCoverage).toEqual({...coverage76,migrationCount:77,tables:[...coverage76.tables,...invoiceSourceCoverage]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:77});
+ expect(()=>validateMigrationSet(registered77 as MigrationRegistry,new Map(registered77.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered76 as MigrationRegistry)).not.toThrow();
+ expect(coverage77).toEqual({...coverage76,migrationCount:77,tables:[...coverage76.tables,...invoiceSourceCoverage]});
+});
+it('registers direct receipts with their own source tables and typed shared journal columns',()=>{
+ const file='20261202180000_finance_direct_receipts.sql';
+ expect(sha256(bytes('tests/support/registered77-migration-checksums.json'))).toBe('049fb535109b2d5a3d9d101a0f926ef2d5b110b4452417cdae366b230266a4c7');
+ expect(sha256(bytes('tests/support/registered77-export-coverage.json'))).toBe('e247dfa2af6d718b6f22899dd96728e21636ad904bff41c60c96c3a84b6b9a51');
+ expect(currentRegistry.migrations).toHaveLength(78);
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261202180000',file,
+  sha256:'a67a96a20d1ca7c314ec2a653839aede951911c69f71ab4ab0d4ee1e5dc3db85'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered77 as MigrationRegistry)).not.toThrow();
+ const additions:Readonly<Record<string,readonly string[]>>=receiptSourceAddedColumns;
+ expect(currentCoverage).toEqual({...coverage77,migrationCount:78,tables:[
+  ...coverage77.tables.map(row=>({...row,required:[...row.required,...additions[row.table]??[]]})),...receiptSourceCoverage,
+ ]});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:78});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

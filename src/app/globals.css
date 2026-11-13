@@ -86,8 +86,8 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .workspace-test-notice { margin:0; padding:.65rem 1.5rem; font-size:.8125rem; line-height:1.5; background:#eee7d6; color:#554218; border-bottom:1px solid var(--line); }
 .workspace-menu { margin-left:auto; position:relative; }
 .workspace-menu summary { min-height:44px; cursor:pointer; font-size:.875rem; padding:.75rem .25rem; }
-.workspace-menu nav { position:absolute; right:0; top:100%; z-index:10; background:var(--paper); border:1px solid var(--line); padding:.5rem; width:15rem; border-radius:var(--radius); box-shadow:0 6px 18px #0000001a; }
-.workspace-menu a { display:flex; padding:.5rem .75rem; color:var(--ink); }
+.workspace-menu nav { position:absolute; right:0; top:100%; z-index:10; background:var(--paper); border:1px solid var(--line); padding:.5rem; width:15rem; max-height:min(60dvh,30rem); overflow-y:auto; border-radius:var(--radius); box-shadow:0 6px 18px #0000001a; }
+.workspace-menu a { display:flex; align-items:center; min-height:44px; padding:.5rem .75rem; color:var(--ink); }
 .workspace-destinations { display:flex; gap:.25rem; background:var(--paper); border-bottom:1px solid var(--line); padding:.25rem 1.5rem; }
 .workspace-destinations a { color:var(--muted); text-decoration:none; padding:.5rem 1rem; border-bottom:3px solid transparent; font-weight:600; }
 .workspace-destinations a[aria-current] { color:var(--ink); border-bottom-color:var(--gold-ink); }
@@ -325,6 +325,10 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .issued-invoice-items li { display:flex; justify-content:space-between; align-items:baseline; gap:.75rem; padding:.6rem 0; border-top:1px solid var(--line); }
 .issued-invoice-items span { min-width:0; overflow-wrap:anywhere; }
 .issued-invoice-items strong { white-space:nowrap; }
+.direct-receipt > summary,.direct-receipt-options > summary { min-height:44px; }
+.direct-receipt .direct-receipt-options { border:0; background:none; margin:0; padding:0; }
+.direct-receipt fieldset > .field-help { margin:.15rem 0 .75rem; }
+.direct-receipt :is(button,input,select) { scroll-margin-bottom:6rem; }
 .review-message-history > summary { min-height:44px; padding:.65rem 0; cursor:pointer; font-weight:600; }
 .review-message-history li { margin-block:.65rem; }
 @media (min-width:768px) {

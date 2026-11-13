@@ -11,8 +11,8 @@ import { createConfirmedBookingFixture } from '../support/confirmed-booking-fixt
 import { financeInvoice77Candidate } from '../support/finance-invoice77-candidate.mjs';
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
 import { installProviderSchema } from '../support/provider-schema.mjs';
-import { backupDatabase, backupLegacy76Database, connect, inventory, keyPair,
-  privateWorkspace, recoveryCluster, restoreDatabase, restoreLegacy76Database } from '../support/recovery-drill.mjs';
+import { backupLegacy77Database, backupLegacy76Database, connect, inventory, keyPair,
+  privateWorkspace, recoveryCluster, restoreLegacy77Database, restoreLegacy76Database } from '../support/recovery-drill.mjs';
 
 const beginSnapshot = 'BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY';
 
@@ -191,7 +191,7 @@ async function verifyRecovery({ candidate, admin, target, reader, finance, owner
     assert.deepEqual(originalReceipt, { state: 'committed', receipt: invoice });
     await assert.rejects(backupLegacy76Database(admin, target, point, keys.recipient),
       { message: 'SYNTHETIC_RECOVERY_BACKUP_FAILED:coverage' });
-    const { manifest, receipt } = await backupDatabase(admin, target, point, keys.recipient);
+    const { manifest, receipt } = await backupLegacy77Database(admin, target, point, keys.recipient);
     assert.equal(manifest.schemaVersion, 77);
     assert.equal(manifest.registrySha256, candidate.registrySha256);
     assert.equal(manifest.heldInvoiceMigrationSha256, undefined);
@@ -208,7 +208,7 @@ async function verifyRecovery({ candidate, admin, target, reader, finance, owner
     await assert.rejects(restoreLegacy76Database(point, keys.path, restoredUrl),
       { message: 'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest' });
     assert.deepEqual(await inventory(restored), []);
-    const recoveredManifest = await restoreDatabase(point, keys.path, restoredUrl);
+    const recoveredManifest = await restoreLegacy77Database(point, keys.path, restoredUrl);
     assert.deepEqual(recoveredManifest, manifest);
     assert.deepEqual(await inventory(restored), manifest.rows);
     restoredReader = await openExportLogin(restored, restoredUrl);

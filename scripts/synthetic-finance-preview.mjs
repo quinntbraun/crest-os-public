@@ -24,7 +24,8 @@ export async function requireSyntheticFinancePreviewConnection(connectionString,
  finally{await client.end().catch(()=>undefined);}
 }
 
-export async function readSyntheticFinancePreview(directory,state,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false){
+export async function readSyntheticFinancePreview(directory,state,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false,directReceipts=false){
+ assert(typeof directReceipts==='boolean'&&(!directReceipts||invoiceIssue&&moneyChannels),failure);
  assert(typeof invoiceIssue==='boolean'&&(!invoiceIssue||taxProfiles&&invoiceDrafts),failure);
  assert.equal(typeof invoiceDrafts,'boolean',failure);
  assert.equal(typeof invoicePreparation,'boolean',failure);
@@ -45,5 +46,5 @@ export async function readSyntheticFinancePreview(directory,state,taxProfiles=fa
  }catch{throw Error(failure);}
  await requireSyntheticFinancePreviewConnection(connectionString,login);
  return {connectionString,fixedMappings:true,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,
-  invoiceIssueTaxReview:invoiceIssue,invoiceIssue};
+  invoiceIssueTaxReview:invoiceIssue,invoiceIssue,directReceipts};
 }

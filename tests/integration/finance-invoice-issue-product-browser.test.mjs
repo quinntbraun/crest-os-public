@@ -6,10 +6,12 @@ import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
+const directReceipts=true;
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
-  financeAccounts:true,financeMappings:true,financeTaxProfiles:true,invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true});
+  financeAccounts:true,financeMappings:true,financeTaxProfiles:true,invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,
+  financeMoneyChannels:directReceipts,directReceipts});
  let browser;
  const financeResponses=[];
  try{
@@ -197,6 +199,43 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
       const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
       assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
       await page.screenshot({path:'.local/review/finance-invoice-issue-product-'+name+'-'+width+'.png'});
+     }
+     if(directReceipts){
+      await page.setViewportSize({width:390,height:844});
+      const payments=invoice.getByRole('region',{name:'Record a fictional payment',exact:true});
+      await invoice.getByText('Record a fictional payment',{exact:true}).click();
+      await allowInvoiceReadWindow();
+      await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
+      await expect(payments.getByRole('status')).toHaveText('Saved balances loaded.');
+      await expect(payments.getByLabel('Money received in')).toHaveValue(/^[a-f0-9-]{36}$/);
+      await payments.getByLabel(/Invoice TEST-1/).fill('100.00');
+      await payments.getByLabel('How you verified the payment').fill('Fictional credited payment verified');
+      await page.route('**/api/business/finance-accounts/receipt-record',async route=>{
+       assert.equal((await route.fetch()).status(),200);await route.abort();
+      },{times:1});
+      await payments.getByRole('button',{name:'Record payment',exact:true}).press('Enter');
+      await expect(payments.getByRole('status')).toContainText('could not be confirmed');
+      const pending=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('crest.direct-receipt.pending-reference.v1')??'null'));
+      assert.deepEqual(Object.keys(pending.reference).sort(),['operationId','paymentId','recoveryEpoch']);
+      await payments.getByRole('button',{name:'Check original payment',exact:true}).press('Enter');
+      await expect(payments.getByRole('status')).toHaveText('The original payment was saved.');
+      await expect(payments).toContainText('$100.00');
+      const paymentDownload=page.waitForEvent('download');
+      await payments.getByRole('button',{name:'Download payment (CSV)',exact:true}).click();
+      const paymentCsv=await paymentDownload;
+      assert.equal(paymentCsv.suggestedFilename(),'crest-payment.csv');
+      assert.match(await readFile(await paymentCsv.path(),'utf8'),/"10000"/);
+      await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
+      await expect(payments.getByLabel(/Invoice TEST-1/)).toBeVisible();
+      await expect(payments).toContainText('$150.00 due');
+      for(const width of [360,390,768,1440]){
+       await page.setViewportSize({width,height:900});
+       await payments.evaluate(element=>element.scrollIntoView({block:'center'}));
+       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+       const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+       assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
+       await page.screenshot({path:'.local/review/finance-direct-receipt-'+name+'-'+width+'.png'});
+      }
      }
     }
  }catch(error){
