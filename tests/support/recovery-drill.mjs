@@ -17,6 +17,7 @@ import {unapplication81File,unapplication81Files,unapplication81Version} from '.
 import {fundApplication82File,fundApplication82Parts,fundApplication82Version,
   fundApplication82PriorRegistrySha256,readFrozen81} from './finance-fund-application82-candidate.mjs';
 import {heldTip83File,heldTip83Parts,heldTip83Version,heldTip83PriorRegistrySha256,readFrozen82} from './finance-held-tip83-candidate.mjs';
+import {invoiceCredit84File,invoiceCredit84Parts,invoiceCredit84Version,invoiceCredit84PriorRegistrySha256} from './finance-invoice-credit84-candidate.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
@@ -769,12 +770,17 @@ export async function backupLegacy82Database(client,url,directory,recipient){
 }
 export async function restoreLegacy82Database(...args){return restoreWithProfile(legacy82Profile,...args);}
 
-async function heldTip83RecoveryProfile(candidate){
+async function heldTip83RecoveryProfile(candidate,appendedDirectory){
   const {registry,coverage:baseline}=await readFrozen82(root);
   assert.equal(candidate.file,heldTip83File);
   assert.equal(candidate.previousRegistrySha256,legacy82Profile.registrySha256);
-  const registryBytes=await readFile(join(candidate.directory,'supabase/migration-checksums.json'));
-  const candidateRegistry=JSON.parse(registryBytes);
+  const registeredBytes=await readFile(join(candidate.directory,'supabase/migration-checksums.json'));
+  const candidateRegistry=JSON.parse(registeredBytes);
+  if(appendedDirectory){
+    assert.equal(candidate.directory,appendedDirectory);
+    candidateRegistry.migrations=candidateRegistry.migrations.slice(0,83);
+  }
+  const registryBytes=appendedDirectory?Buffer.from(JSON.stringify(candidateRegistry,null,2)+'\n'):registeredBytes;
   assert.equal(hash(registryBytes),candidate.registrySha256);
   assert.deepEqual(candidateRegistry.migrations,[...registry.migrations,
     {version:heldTip83Version,file:candidate.file,sha256:candidate.sha256}]);
@@ -813,6 +819,63 @@ export async function backupHeldTip83CandidateDatabase(candidate,client,url,dire
 }
 export async function restoreHeldTip83CandidateDatabase(candidate,directory,identity,url){
   return restoreWithProfile((await heldTip83RecoveryProfile(candidate)).profile,directory,identity,url);
+}
+
+export async function backupHeldTip83ForCreditBaseline(candidate,client,url,directory,recipient){
+  const checked=await heldTip83RecoveryProfile(candidate.previous,candidate.directory);
+  return backupWithProfile(checked.profile,client,url,directory,recipient,undefined,undefined,checked);
+}
+export async function restoreHeldTip83ForCreditBaseline(candidate,directory,identity,url){
+  const checked=await heldTip83RecoveryProfile(candidate.previous,candidate.directory);
+  return restoreWithProfile(checked.profile,directory,identity,url);
+}
+
+async function invoiceCredit84RecoveryProfile(candidate){
+  const previous=await heldTip83RecoveryProfile(candidate.previous,candidate.directory);
+  const baseline=previous.coverage;
+  assert.equal(candidate.file,invoiceCredit84File);
+  assert.equal(candidate.previousRegistrySha256,previous.profile.registrySha256);
+  assert.equal(candidate.previousRegistrySha256,invoiceCredit84PriorRegistrySha256);
+  const registryBytes=await readFile(join(candidate.directory,'supabase/migration-checksums.json'));
+  const candidateRegistry=JSON.parse(registryBytes);
+  assert.equal(hash(registryBytes),candidate.registrySha256);
+  assert.deepEqual(candidateRegistry.migrations.slice(0,83).map(row=>row.version),previous.versions);
+  assert.deepEqual(candidateRegistry.migrations.slice(83),[{version:invoiceCredit84Version,file:candidate.file,sha256:candidate.sha256}]);
+  const migration=await readFile(join(candidate.directory,'supabase/migrations',candidate.file));
+  assert.equal(hash(migration),candidate.sha256);
+  assert.equal(migration.length,candidate.bytes);
+  assert.deepEqual(candidate.parts.map(part=>part.path),invoiceCredit84Parts.map(name=>'planning/proposals/'+name+'.sql'));
+  for(const part of candidate.parts){
+    const original=await readFile(join(root,part.path));
+    assert.equal(hash(original),part.sha256);
+    assert.equal(original.length,part.bytes);
+    assert(migration.subarray(part.offset,part.offset+part.bytes).equals(original));
+  }
+  const dictionaryPart=candidate.parts.find(part=>part.path.endsWith('finance-invoice-credit-source.sql'));
+  const dictionary=migration.subarray(dictionaryPart.offset,dictionaryPart.offset+dictionaryPart.bytes).toString('utf8').split('$dictionary$')[1];
+  const tables=new Map([...dictionary.matchAll(/\('([a-z_]+)', ARRAY\[([\s\S]*?)\]\)/g)].map(([,name,fields])=>
+    ['crest.'+name,[...fields.matchAll(/'([a-z_]+):[^']+'/g)].map(([,column])=>column)]));
+  assert.equal(tables.size,5);
+  const declared=baseline.tables.map(entry=>{
+    const fields=tables.get(entry.table);
+    if(!fields)return entry;
+    assert.deepEqual(fields.slice(0,entry.required.length),entry.required);
+    tables.delete(entry.table);
+    return {...entry,required:fields};
+  });
+  assert.deepEqual([...tables.keys()],['crest.invoice_credits']);
+  for(const [table,required] of tables)declared.push({table,scope:'business',required,excluded:[],partialEvidenceGroup:null});
+  const coverage={...baseline,migrationCount:84,tables:declared};
+  assert.deepEqual(candidate.coverage,coverage);
+  return {profile:Object.freeze({schemaVersion:84,registrySha256:candidate.registrySha256,heldInvoiceCreditMigrationSha256:candidate.sha256}),
+    versions:candidateRegistry.migrations.map(row=>row.version),coverage};
+}
+export async function backupInvoiceCredit84CandidateDatabase(candidate,client,url,directory,recipient){
+  const checked=await invoiceCredit84RecoveryProfile(candidate);
+  return backupWithProfile(checked.profile,client,url,directory,recipient,undefined,undefined,checked);
+}
+export async function restoreInvoiceCredit84CandidateDatabase(candidate,directory,identity,url){
+  return restoreWithProfile((await invoiceCredit84RecoveryProfile(candidate)).profile,directory,identity,url);
 }
 
 async function expense79RecoveryProfile(candidate){
@@ -876,6 +939,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile.schemaVersion===81&&profile.heldUnapplicationMigrationSha256
       ||profile.schemaVersion===82&&profile.heldFundApplicationMigrationSha256
       ||profile.schemaVersion===83&&profile.heldTipMigrationSha256
+      ||profile.schemaVersion===84&&profile.heldInvoiceCreditMigrationSha256
       ||profile.schemaVersion===79&&profile.heldExpenseMigrationSha256
       ));
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -961,6 +1025,7 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     assert.equal(manifest.heldUnapplicationMigrationSha256,profile.heldUnapplicationMigrationSha256);
     assert.equal(manifest.heldFundApplicationMigrationSha256,profile.heldFundApplicationMigrationSha256);
     assert.equal(manifest.heldTipMigrationSha256,profile.heldTipMigrationSha256);
+    assert.equal(manifest.heldInvoiceCreditMigrationSha256,profile.heldInvoiceCreditMigrationSha256);
     if(profile.heldDropoffPhotoAuthority||profile.heldCustody67MigrationSha256||profile.heldPickupReturnSources
       ||profile.heldExpenseMigrationSha256)assert(manifest.objectArchive);
     stage='authenticated_dump';const dump=await unseal(join(directory,'database.age'),receipt.dump,identity);

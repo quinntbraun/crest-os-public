@@ -415,6 +415,11 @@
       "version": "20261207180000",
       "file": "20261207180000_finance_held_tip.sql",
       "sha256": "ebe1ac1aa9743f55d6b1e1cfbf2ff48b7b7683c329b498f902e09645efd9469b"
+    },
+    {
+      "version": "20261208180000",
+      "file": "20261208180000_finance_invoice_credit.sql",
+      "sha256": "871acd348915589e7c84f5ad1371e32995792e43bcbfc9cf5e0d19769a2f9ce6"
     }
   ]
 }

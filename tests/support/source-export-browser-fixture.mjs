@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {createConfirmedBookingFixture} from './confirmed-booking-fixture.mjs';
 import {field54Candidate} from './field54-candidate.mjs';
 import {financeHeldTip83Candidate} from './finance-held-tip83-candidate.mjs';
+import {financeInvoiceCredit84Candidate} from './finance-invoice-credit84-candidate.mjs';
 import {confirmedBookingRequest} from '../fixtures/confirmed-booking.ts';
 import {randomBytes,randomUUID,createHash} from 'node:crypto';
 import {browserTestTls} from './browser-test-tls.mjs';
@@ -17,7 +18,7 @@ import {installProviderSchema} from './provider-schema.mjs';
 import {startRealAuthService,authResult} from './real-auth-service.mjs';
 import {buildSourceExportBrowserFixture} from './source-export-browser-build.mjs';
 const signal=()=>new AbortController().signal,sha=value=>createHash('sha256').update(value).digest('hex'),release='a'.repeat(40);
-export async function sourceExportBrowserFixture({product=false,workspace=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,photoFixture}={}){
+export async function sourceExportBrowserFixture({product=false,workspace=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,photoFixture}={}){
  assert.equal(typeof jobCompletion,'boolean');assert(!jobCompletion||fieldSessions,'completion requires registered field sessions');
  assert.equal(typeof fieldSessions,'boolean');assert(!fieldSessions||amendmentAcceptance,'field sessions require the genuine held54 product fixture');
  assert.equal(typeof amendmentAcceptance,'boolean');assert(!amendmentAcceptance||amendments&&product,'accepted amendments require the genuine registered53 product fixture');
@@ -42,6 +43,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  assert(typeof paymentCorrections==='boolean'&&(!paymentCorrections||trialBalance));
  assert(typeof fundApplications==='boolean'&&(!fundApplications||paymentCorrections));
  assert(typeof heldTips==='boolean'&&(!heldTips||fundApplications&&financeTaxProfiles));
+ assert(typeof invoiceCredits==='boolean'&&(!invoiceCredits||heldTips&&invoiceIssue));
  assert.equal(typeof invoiceDrafts,'boolean');assert(!invoiceDrafts||invoicePreparation);
  assert.equal(typeof product,'boolean');assert.equal(typeof catalog,'boolean');assert(!catalog||product,'catalog journey uses the actual product server');
  assert.equal(typeof workspace,'boolean');assert(!workspace||product,'workspace journey uses the actual product server');
@@ -131,9 +133,9 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    assert.equal((await sandbox.apply(target,await sandbox.prefix(82))).history.length,82);
   }
   if(heldTips){
-   const candidate=await financeHeldTip83Candidate(sandbox);
+   const candidate=await (invoiceCredits?financeInvoiceCredit84Candidate:financeHeldTip83Candidate)(sandbox);
    const installed=await sandbox.apply(target,candidate.directory);
-   assert.equal(installed.history.length,83);
+   assert.equal(installed.history.length,invoiceCredits?84:83);
    assert.equal(installed.registrySha256,candidate.registrySha256);
   }
   const compiled=await buildSourceExportBrowserFixture(sandbox.workspace),runtime=await import(pathToFileURL(compiled.server).href);
@@ -152,7 +154,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    await sandbox.admin.query('CREATE ROLE '+candidate+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+secret+"'");
    financeLogin=candidate;await sandbox.admin.query('GRANT crest_finance_preview TO '+financeLogin);
    const financeUrl=new URL(target);financeUrl.username=financeLogin;financeUrl.password=secret;
-   financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,taxProfiles:financeTaxProfiles,categoryMappings:financeCategoryMappings,moneyChannels:financeMoneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips};
+   financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,taxProfiles:financeTaxProfiles,categoryMappings:financeCategoryMappings,moneyChannels:financeMoneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits};
    await client.query("INSERT INTO crest_private.finance_controls(business_id,recovery_authority_id,created_by,origin) SELECT $1,id,$2,'system' FROM crest_private.business_recovery_authorities WHERE business_id=$1",[business,actor]);
   }
   const authentication={database:config,provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
@@ -225,6 +227,16 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
       assert.equal((await finance.query(
        'SELECT crest_commands.approve_invoice_tax_payable_mapping($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) AS result',
        [...args,randomUUID(),district,'0',salesTaxId,'2026-01-01','Fictional tip tax mapping reviewed'])).rows[0].result.state,'committed');
+     }
+     if(invoiceCredits){
+      const returnsId=randomUUID(),identity={code:'4910',accountType:'contra_revenue',normalSide:'debit',
+       controlKind:null,reportRole:'contra_revenue'};
+      assert.equal((await finance.query(
+       'SELECT crest_commands.save_finance_account($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',
+       [...args,randomUUID(),returnsId,{identity,name:'Fictional returns',active:true,reason:null}])).rows[0].result.state,'committed');
+      assert.equal((await finance.query(
+       'SELECT crest_commands.approve_fixed_finance_mapping($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) AS result',
+       [...args,randomUUID(),'returns','0',returnsId,'2026-01-01','Fictional returns reviewed'])).rows[0].result.state,'committed');
      }
     }
    }finally{seedHash.fill(0);await finance.end();}
