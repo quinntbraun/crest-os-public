@@ -4,14 +4,15 @@ import {useEffect,useRef,useState} from 'react';
 import {expenseDollars} from '../../../bookkeeping/expenses/expense-contract';
 import type {FictionalJournalV2,FictionalTrialBalanceV2} from '../../../bookkeeping/posted-report-v2-contract';
 import type {FictionalJournalV3,FictionalTrialBalanceV3} from '../../../bookkeeping/posted-report-v3-contract';
+import type {FictionalJournalV4,FictionalTrialBalanceV4} from '../../../bookkeeping/posted-report-v4-contract';
 import {downloadFinanceHistory,financeAccounts} from '../../../client/finance-accounts';
 
-type Balance=Awaited<ReturnType<typeof financeAccounts.readTrialBalance>>|FictionalTrialBalanceV2|FictionalTrialBalanceV3;
-type Journal=Awaited<ReturnType<typeof financeAccounts.readPostedJournal>>|FictionalJournalV2|FictionalJournalV3;
-type CorrectionJournalRow=FictionalJournalV2['rows'][number]|FictionalJournalV3['rows'][number];
+type Balance=Awaited<ReturnType<typeof financeAccounts.readTrialBalance>>|FictionalTrialBalanceV2|FictionalTrialBalanceV3|FictionalTrialBalanceV4;
+type Journal=Awaited<ReturnType<typeof financeAccounts.readPostedJournal>>|FictionalJournalV2|FictionalJournalV3|FictionalJournalV4;
+type CorrectionJournalRow=FictionalJournalV2['rows'][number]|FictionalJournalV3['rows'][number]|FictionalJournalV4['rows'][number];
 const usd=(cents:string)=>'$'+expenseDollars(cents);
 function hasPaymentCorrections(report:Balance|Journal){
-  return 'schemaVersion' in report&&(report.schemaVersion===2||report.schemaVersion===3);
+  return reportVersion(report)>=2;
 }
 function reportVersion(report:Balance|Journal){
   return 'schemaVersion' in report?report.schemaVersion:1;
@@ -84,7 +85,9 @@ export function TrialBalance({businessId}:{businessId:string}){
     downloadFinanceHistory('crest-fictional-trial-balance-'+balance.throughOn+'.csv',[
       ['Through date','Timezone','Currency','Observed UTC','Posted events','Coverage'],
       [balance.throughOn,balance.timeZone,balance.currency,balance.observedAt,balance.postedEventCount,
-        reportVersion(balance)===3
+        reportVersion(balance)===4
+          ?'Fictional partial ledger. Supported invoices, direct payments, payment corrections, customer funds applications, held tips and same-day expenses. Opening balances and reconciliation pending.'
+          :reportVersion(balance)===3
           ?'Fictional partial ledger. Supported invoices, direct payments, customer funds applications, payment corrections and same-day expenses. Opening balances and reconciliation pending.'
           :hasPaymentCorrections(balance)
           ?'Fictional partial ledger. Supported invoices, direct payments, payment corrections and same-day expenses. Opening balances and reconciliation pending.'
@@ -102,17 +105,19 @@ export function TrialBalance({businessId}:{businessId:string}){
   function downloadJournal(){
     if(!journal?.rows.length)return;
     const includesCorrections=hasPaymentCorrections(journal);
-    const includesFundsApplications=reportVersion(journal)===3;
+    const includesFundsApplications=reportVersion(journal)>=3;
+    const includesHeldTips=reportVersion(journal)>=4;
     downloadFinanceHistory('crest-fictional-journal-page-'+journal.throughOn+'.csv',[
       ['Through date','Timezone','Currency','Observed UTC','Coverage'],
       [journal.throughOn,journal.timeZone,journal.currency,journal.observedAt,'Current page of the fictional partial ledger.'],
       [],
       ['Date','Account code','Account','Purpose','Debit cents','Credit cents','Entry ID','Event ID','Source operation ID',
         ...(includesCorrections?['Posting template','Payment correction ID','Customer funds lot ID']:[]),
-        ...(includesFundsApplications?['Customer funds application ID']:[])],
+        ...(includesFundsApplications?['Customer funds application ID']:[]),...(includesHeldTips?['Held tip ID']:[])],
       ...journal.rows.map(row=>[row.effectiveOn,row.code,row.name,row.purpose,row.debitCents,row.creditCents,row.entryId,row.eventId,row.operationId,
         ...(hasCorrectionFields(row)?[row.template,row.unapplicationId??'',row.fundLotId??'']:[]),
-        ...(includesFundsApplications?['fundApplicationId' in row?row.fundApplicationId??'':'']:[])]),
+        ...(includesFundsApplications?['fundApplicationId' in row?row.fundApplicationId??'':'']:[]),
+        ...(includesHeldTips?['tipRealizationId' in row?row.tipRealizationId??'':'']:[])]),
     ]);
   }
   return <details className="review-card" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
@@ -129,7 +134,9 @@ export function TrialBalance({businessId}:{businessId:string}){
       {balance&&<>
         <p>Through <time dateTime={balance.throughOn}>{balance.throughOn}</time> · USD · {balance.timeZone}</p>
         {balance.coverageStart&&<p className="field-help">First included posting {balance.coverageStart} · {balance.postedEventCount} posted {balance.postedEventCount==='1'?'event':'events'}</p>}
-        {hasPaymentCorrections(balance)&&<p className="field-help">{reportVersion(balance)===3
+        {hasPaymentCorrections(balance)&&<p className="field-help">{reportVersion(balance)===4
+          ?'Includes payment corrections, customer funds applications and held tips. Customer funds and tax payable match the ledger through this date.'
+          :reportVersion(balance)===3
           ?'Includes payment corrections and customer funds applications. Customer funds held match the ledger through this date.'
           :'Includes payment corrections. Customer funds held match the ledger through this date.'}</p>}
         {balance.rows.length>0&&<table>
@@ -169,6 +176,7 @@ export function TrialBalance({businessId}:{businessId:string}){
               <tbody>{journal.rows.map(row=>{
                 const correction=hasCorrectionFields(row)&&row.template==='P05'?row:null;
                 const application='fundApplicationId' in row&&row.template==='P04'?row:null;
+                const tip='tipRealizationId' in row&&row.template==='P06'?row:null;
                 return <tr key={row.lineId}>
                   <th scope="row">
                     <time dateTime={row.effectiveOn}>{row.effectiveOn}</time><small>{row.code} · {row.name}</small>
@@ -186,6 +194,15 @@ export function TrialBalance({businessId}:{businessId:string}){
                         <summary>Source references</summary>
                         <small>Application {application.fundApplicationId}</small>
                         {application.fundLotId&&<small>Customer funds lot {application.fundLotId}</small>}
+                      </details>
+                    </>}
+                    {tip&&<>
+                      <small>{tip.purpose==='tip_funds'?'Held tip · Customer funds reduced'
+                        :tip.purpose==='tip_revenue'?'Held tip · Tip revenue':'Held tip · Tax payable'}</small>
+                      <details>
+                        <summary>Source references</summary>
+                        <small>Tip {tip.tipRealizationId}</small>
+                        {tip.fundLotId&&<small>Customer funds lot {tip.fundLotId}</small>}
                       </details>
                     </>}
                   </th>

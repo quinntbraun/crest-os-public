@@ -9,12 +9,13 @@ import {sourceExportBrowserFixture} from '../support/source-export-browser-fixtu
 const directReceipts=true;
 const paymentCorrections=process.env.CREST_TEST_PAYMENT_CORRECTIONS==='1';
 const fundApplications=process.env.CREST_TEST_FUND_APPLICATIONS==='1';
+const heldTips=process.env.CREST_TEST_HELD_TIPS==='1';
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
   financeAccounts:true,financeMappings:true,financeTaxProfiles:true,invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,
   financeMoneyChannels:directReceipts,directReceipts,...paymentCorrections?{
-   expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,fundApplications,
+   expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,fundApplications,heldTips,
   }:{}});
  let browser;
  const financeResponses=[];
@@ -314,18 +315,72 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
         await expect(payments).toContainText('$160.00 due');
        }
+       if(heldTips){
+        await allowInvoiceReadWindow();
+        await invoice.getByText('Record a tip from held funds',{exact:true}).press('Enter');
+        const tip=invoice.getByRole('region',{name:'Record a tip from held funds',exact:true});
+        await tip.getByRole('button',{name:'Load held funds',exact:true}).press('Enter');
+        await expect(tip.getByRole('status')).toContainText('Choose the jurisdiction');
+        await tip.getByLabel('Tip jurisdiction',{exact:true}).selectOption('Fictional tip district');
+        await tip.getByRole('button',{name:'Load reviewed tax treatment',exact:true}).press('Enter');
+        await expect(tip.getByRole('status')).toContainText('Enter the amount');
+        await tip.getByLabel('Tip amount (USD)',{exact:true}).fill('5.50');
+        await tip.getByLabel('How did the customer confirm the tip?',{exact:true}).fill('Fictional customer confirmed $5.50 as a tip');
+        await tip.getByLabel('What did you review?',{exact:true}).fill('Fictional confirmation and dated tax reviewed');
+        await expect(tip.getByLabel('Tip posting preview')).toContainText('$5.00');
+        await expect(tip.getByLabel('Tip posting preview')).toContainText('$0.50');
+        for(const width of [360,390,768,1440]){
+         await page.setViewportSize({width,height:900});
+         await tip.getByRole('button',{name:'Record tip',exact:true}).evaluate(button=>button.scrollIntoView({block:'center'}));
+         assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+         const audit=await new AxeBuilder({page}).include('.direct-receipt').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+         assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
+         await page.screenshot({path:'.local/review/finance-held-tip-'+name+'-'+width+'.png'});
+        }
+        await allowInvoiceReadWindow();
+        let committed=false;
+        await page.route('**/api/business/finance-accounts/held-tip-submit',async route=>{
+         const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+         if(response.status()===200){committed=true;await route.abort('failed');}
+         else await route.fulfill({response});
+        },{times:1});
+        await tip.getByRole('button',{name:'Record tip',exact:true}).press('Enter');
+        await expect(tip.getByRole('status')).toContainText('outcome could not be confirmed');
+        assert(committed);
+        const stored=await page.evaluate(()=>sessionStorage.getItem('crest.held-tip.pending-reference.v1'));
+        assert(stored&&!stored.includes('Fictional'));
+        assert.deepEqual(Object.keys(JSON.parse(stored).reference).sort(),['operationId','recoveryEpoch','tipRealizationId']);
+        await page.reload();
+        await draftDisclosure.click();
+        await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+        await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
+        await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+        await expect(draftStatus).toHaveText('Issued invoice loaded.');
+        await invoice.getByText('Record a tip from held funds',{exact:true}).press('Enter');
+        await tip.getByRole('button',{name:'Load held funds',exact:true}).press('Enter');
+        await expect(tip.getByRole('status')).toHaveText('The original tip was recorded.');
+        assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.held-tip.pending-reference.v1')),null);
+        const receipt=page.waitForEvent('download');
+        await tip.getByRole('button',{name:'Download saved tip CSV',exact:true}).click();
+        assert.match(await readFile(await (await receipt).path(),'utf8'),/"550","500","50","Fictional customer confirmed/);
+        await allowInvoiceReadWindow();
+        await invoice.getByText('Record a fictional payment',{exact:true}).click();
+        await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
+        await expect(payments).toContainText('$160.00 due');
+       }
        await page.goto(fixture.origin+'/settings/accounts');
        await page.getByRole('button',{name:'Load accounts',exact:true}).click();
        await page.getByText('Fictional trial balance',{exact:true}).click();
        const report=page.getByRole('region',{name:'Fictional trial balance',exact:true});
        await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
        await expect(report.getByRole('status')).toHaveText('Posted balances loaded.');
-       await expect(report).toContainText('Customer funds held match the ledger');
+       await expect(report).toContainText(heldTips?'Customer funds and tax payable match the ledger':'Customer funds held match the ledger');
        await report.getByText('Journal entries',{exact:true}).click();
        await report.getByRole('button',{name:'Load journal entries',exact:true}).press('Enter');
        await expect(report).toContainText('Invoice reopened');
        await expect(report).toContainText('Customer funds held');
        if(fundApplications)await expect(report).toContainText('Invoice balance reduced');
+       if(heldTips)await expect(report).toContainText('Held tip · Tip revenue');
       }
      }
     }
@@ -336,4 +391,4 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await browser?.close();
   await fixture.close();
  }
-});
+},{timeout:480000});

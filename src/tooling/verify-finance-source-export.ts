@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import {customerUuid,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {readSourceExportCsv} from '../security/source-export-csv-reader.ts';
 import {financeSourceTables} from '../bookkeeping/finance-source-profile.ts';
+import {verifyHeldTipSourceClosure} from '../bookkeeping/held-tip-source.ts';
 
 type Part=Readonly<{name:string;content:string}>;
 type Row=Readonly<Record<string,unknown>>;
@@ -32,11 +33,11 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
   const manifest=record(manifestText),version=manifest.schemaVersion;
   require(exact(manifest,['schemaVersion','scope','businessId','currency','observedAt','historySnapshotToken','sourceTokens',
     'rowCounts','historyCounts','completePortableExport','referenceClosureComplete','completeBackup','files'])
-    &&(version===1||version===2||version===3)&&manifest.scope==='crest.posted-finance-source.v'+version&&manifest.businessId===businessId
+    &&(version===1||version===2||version===3||version===4)&&manifest.scope==='crest.posted-finance-source.v'+version&&manifest.businessId===businessId
     &&manifest.currency==='USD'&&typeof manifest.observedAt==='string'&&Number.isFinite(Date.parse(manifest.observedAt))
     &&token(manifest.historySnapshotToken)&&manifest.completePortableExport===false&&manifest.referenceClosureComplete===false
     &&manifest.completeBackup===false);
-  const sourceNames=['invoice','receipt','expense',...(version>=2?['correction']:[]),...(version===3?['application']:[])];
+  const sourceNames=['invoice','receipt','expense',...(version>=2?['correction']:[]),...(version>=3?['application']:[]),...(version===4?['tip']:[])];
   require(exact(manifest.sourceTokens,sourceNames)&&Object.values(manifest.sourceTokens).every(token));
   const tables=financeSourceTables(version),expectedNames=new Set([...names,...tables.flatMap(({name})=>[name+'.csv',name+'_escape_map.json'])]);
   require(exact(manifest.rowCounts,tables.map(table=>table.name))&&Object.values(manifest.rowCounts).every(count)
@@ -80,6 +81,7 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
     require(rows<=maxRows&&records.length===manifest.rowCounts[name]&&records.every(row=>row.business_id===businessId));
     decoded.set(name,records);
   }
+  const history={operation:[] as Row[],audit_event:[] as Row[]};
   for(const [kind,key] of [['operation','operations'],['audit_event','auditEvents']] as const){
     const content=files.get(kind+'_history.ndjson')!;
     const lines=content===''?[]:content.split('\n');
@@ -96,6 +98,7 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
         &&evidence.row&&typeof evidence.row==='object'&&'business_id' in evidence.row&&evidence.row.business_id===businessId
         &&'id' in evidence.row&&evidence.row.id===entry.record_id);
       prior=entry.record_id;
+      if(version===4)history[kind].push(evidence.row as Row);
     }
   }
   const events=new Map(decoded.get('financial_events')!.map(row=>[row.id,row]));
@@ -110,6 +113,7 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
     balance.debit+=debit;balance.credit+=credit;balances.set(entry.id,balance);
   }
   require(entries.size===balances.size&&[...balances.values()].every(balance=>balance.debit===balance.credit));
+  if(version===4)verifyHeldTipSourceClosure(table=>decoded.get(table)!,history);
   const totals=[...balances.values()].reduce((sum,balance)=>sum+balance.debit,0n).toString();
   return Object.freeze({verified:true,profile:manifest.scope,files:files.size,sourceRows:rows,
     balancedJournalEntries:balances.size,debitCents:totals,creditCents:totals,
