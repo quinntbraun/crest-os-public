@@ -25,12 +25,16 @@ const commercial=(f,q,r,source,related,body,verb,c=web)=>value(c,'SELECT crest_c
 async function reviewed(f,content=review(f)){const q=request(f,content),saved=await save(f,q),ready=await submit(f,action(q,saved.receipt)),approval=action(q,ready.receipt,{approval:randomUUID()}),approved=await approve(f,approval);assert.equal(approved.state,'committed');return {q,receipt:approved.receipt,approvalId:approval.approval};}
 async function sentOffer(f,prepared){const q={...prepared.q,operation:randomUUID()},sendId=randomUUID(),body={channel:'in_person',recipientSnapshot:{displayName:'Synthetic recipient',phone:null,email:null},evidenceNote:null,confirmedActualSharing:true,presentationHash:prepared.receipt.presentationHash,replacesRevisionId:null},result=await commercial(f,q,prepared.receipt,sendId,prepared.approvalId,body,'send');assert.equal(result.state,'committed');return {...prepared,q,sendId,sendBody:body,sendResult:result,receipt:result.receipt};}
 const confirmationBody=(f,s,conversionId,confirmationEffectiveAt)=>({sendId:s.sendId,customerId:f.customer,conversionId,channel:'in_person',counterpartySnapshot:{displayName:'Synthetic recipient',phone:null,email:null},confirmationEffectiveAt,evidenceNote:'Customer confirmed the exact retained revision and all offered terms.',confirmedExactTerms:true});
- return async function acceptedFixture(principal,{customerId=null,convertedLead=false,paidLineDiscount=null}={}){
+ return async function acceptedFixture(principal,{customerId=null,convertedLead=false,paidLineDiscount=null,serviceVersionFor=null}={}){
   const f=principal?await prepareCrm(principal,customerId):await state(),content=review(f);
   content.lines[0].lineDiscount=paidLineDiscount;
   let leadId=null,conversionId=null;
   if(convertedLead){leadId=randomUUID();assert.equal((await value(web,'SELECT crest_commands.save_lead($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS value',[...auth(f),f.epoch,randomUUID(),leadId,{label:'Synthetic converted lifecycle lead',customerId:null,sourceId:null,referralText:null,phone:null,email:null,requestedScope:'Synthetic scope',availability:null,estimatedCents:null,followUpAt:null,notes:null}])).state,'committed');content.recipient={...content.recipient,customerId:null,leadId};}
   content.lines.push({...baseLine(),grossCents:'0',description:'Explicit synthetic complimentary scope',complimentaryReason:'Owner-approved complimentary work',category:null,assessment:null,categoryOverrideNote:null});
+  if(serviceVersionFor){
+   const serviceVersionId=await serviceVersionFor(f,()=>auth(f));
+   for(const line of content.lines)line.serviceVersionId=serviceVersionId;
+  }
   const sent=await sentOffer(f,await reviewed(f,content)),q={...sent.q,operation:randomUUID()},agreementId=randomUUID();
   if(convertedLead){conversionId=randomUUID();const customerVersion=await scalar('SELECT version::text AS value FROM crest.customers WHERE business_id=$1 AND id=$2',[f.business,f.customer]);assert.equal((await value(web,'SELECT crest_commands.convert_lead($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13,$14) AS value',[...auth(f),f.epoch,randomUUID(),conversionId,leadId,sent.receipt.leadVersion,{customer:{kind:'existing',id:f.customer,expectedVersion:customerVersion},vehicles:[],addresses:[]}])).state,'committed');}
   // The synthetic customer confirms when the retained send is recorded.
