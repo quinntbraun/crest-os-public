@@ -196,7 +196,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
       assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
-      await page.screenshot({path:'.local/review/invoice-issue-product-'+name+'-'+width+'.png'});
+      await page.screenshot({path:'.local/review/finance-invoice-issue-product-'+name+'-'+width+'.png'});
      }
     }
  }catch(error){
