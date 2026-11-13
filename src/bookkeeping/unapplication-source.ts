@@ -164,7 +164,8 @@ function groupBy(rows: readonly Row[], key: string) {
   return groups;
 }
 
-function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_event: HistoryRow[] }) {
+export function verifyUnapplicationSourceClosure(rows: Rows, history: { operation: HistoryRow[]; audit_event: HistoryRow[] },
+  pairedOperationIds:ReadonlySet<unknown>=new Set()) {
   const unapplications = index(rows.allocation_unapplications);
   const groups = index(rows.atomic_finance_groups);
   const journals = index(rows.journal_entries, 'event_id');
@@ -226,10 +227,12 @@ function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_eve
       fundsAccountId: lot.account_id, mappingId: lot.mapping_id, effectiveOn: event.effective_on, firstCent: unapplication.first_cent,
       lastCent: unapplication.last_cent, cents: cents.toString(), reason: unapplication.reason,
     };
-    requireSource(operation?.command_type === 'finance.allocation.unapply' && operation.state === 'committed'
+    const paired=pairedOperationIds.has(unapplication.operation_id);
+    requireSource(operation?.command_type === (paired?'finance.invoice.credit_paired':'finance.allocation.unapply') && operation.state === 'committed'
       && operation.actor_id === unapplication.created_by && operation.recovery_epoch === group.recovery_epoch && typeof operation.result === 'string'
       && audit.length === 1 && audit[0]!.actor_id === unapplication.created_by && audit[0]!.reason === unapplication.reason);
-    requireSource(isDeepStrictEqual(JSON.parse(operation.result), originalReceipt)
+    const result=JSON.parse(operation.result);
+    requireSource(isDeepStrictEqual(paired?result.release:result, originalReceipt)
       && isDeepStrictEqual(JSON.parse(audit[0]!.delta!), { schemaVersion: 1, before: null, after: originalReceipt }));
   }
 }
@@ -281,7 +284,7 @@ export function formatUnapplicationSource(source: Awaited<ReturnType<typeof capt
     for (const record of history[kind]) requireSource(digest(record.canonical_evidence) === record.evidence_hash);
     add(kind + '_history.ndjson', history[kind].map(record => JSON.stringify(record)).join('\n') + (history[kind].length ? '\n' : ''));
   }
-  verifyClosure(rows, history);
+  verifyUnapplicationSourceClosure(rows, history);
   const manifest = JSON.stringify({ schemaVersion: 1, scope: 'allocation_unapplication_sources', businessId, snapshotToken, historySnapshotToken,
     recordCounts: counts, exactUnapplicationEffectsVerified: true, referenceClosureComplete: false, completePortableExport: false, completeBackup: false,
     parts: files.map(({ name, content }) => ({ name, bytes: Buffer.byteLength(content), sha256: digest(content) })) }) + '\n';

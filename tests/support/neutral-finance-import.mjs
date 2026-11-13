@@ -59,10 +59,12 @@ function columnType(column){
   return 'text';
 }
 
-export async function exerciseNeutralFinanceImport(connection,files,businessId,{includeCredits=false}={}){
+export async function exerciseNeutralFinanceImport(connection,files,businessId,{includeCredits=false,includePairedCredits=false}={}){
+  assert(!includePairedCredits||includeCredits);
   const parts=new Map(files.map(file=>[file.name,file.content]));
   const {tables}=JSON.parse(parts.get('dictionary.json'));
-  assert.deepEqual(tables.map(row=>row.name),includeCredits?[...names,'invoice_credits']:names);
+  assert.deepEqual(tables.map(row=>row.name),[...names,...includeCredits?['invoice_credits']:[],
+    ...includePairedCredits?['paired_invoice_credit_releases']:[]]);
   assert.equal((await connection.query("SELECT count(*)::int AS n FROM pg_namespace WHERE nspname IN('auth','crest','crest_private','crest_commands','neutral_finance')")).rows[0].n,0);
   const exports={};
   await connection.query('BEGIN');
@@ -106,6 +108,31 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
       await connection.query('SAVEPOINT neutral_wrong_credit_link');
       await assert.rejects(connection.query('UPDATE neutral_finance.invoice_credits SET invoice_item_id=$1',[randomUUID()]),{code:'23503'});
       await connection.query('ROLLBACK TO SAVEPOINT neutral_wrong_credit_link');
+    }
+    if(includePairedCredits){
+      for(const [column,target] of [['invoice_credit_id','invoice_credits'],['unapplication_id','allocation_unapplications']]){
+        await connection.query(`ALTER TABLE neutral_finance.paired_invoice_credit_releases
+          ADD FOREIGN KEY(business_id,${q(column)}) REFERENCES ${table(target)}(business_id,id)`);
+      }
+      const {rows}=await connection.query(`
+        SELECT l.id, l.reviewed_ar_cents::text AS reviewed_ar, c.inclusive_cents::text AS credit_cents,
+          (u.last_cent-u.first_cent+1)::text AS release_cents, (credit.group_id=release.group_id) AS same_group,
+          credit.event_sequence::int AS credit_sequence, release.event_sequence::int AS release_sequence
+        FROM neutral_finance.paired_invoice_credit_releases l
+        JOIN neutral_finance.invoice_credits c ON (c.business_id,c.id)=(l.business_id,l.invoice_credit_id)
+        JOIN neutral_finance.allocation_unapplications u ON (u.business_id,u.id)=(l.business_id,l.unapplication_id)
+        JOIN neutral_finance.financial_events credit ON (credit.business_id,credit.invoice_credit_id)=(l.business_id,c.id)
+          AND credit.template='P07'
+        JOIN neutral_finance.financial_events release ON (release.business_id,release.unapplication_id)=(l.business_id,u.id)
+          AND release.template='P05'
+        ORDER BY l.id`);
+      assert(rows.length>0);
+      assert.equal(rows.length,exports.paired_invoice_credit_releases.length);
+      assert(rows.every(row=>row.same_group&&row.release_sequence===1&&row.credit_sequence===2
+        &&BigInt(row.reviewed_ar)+BigInt(row.release_cents)===BigInt(row.credit_cents)));
+      await connection.query('SAVEPOINT neutral_wrong_paired_link');
+      await assert.rejects(connection.query('UPDATE neutral_finance.paired_invoice_credit_releases SET unapplication_id=$1',[randomUUID()]),{code:'23503'});
+      await connection.query('ROLLBACK TO SAVEPOINT neutral_wrong_paired_link');
     }
     const balance=(await connection.query(`
       SELECT count(*)::int AS entries,coalesce(sum(debit),0)::text AS debit,coalesce(sum(credit),0)::text AS credit,

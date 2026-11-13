@@ -55,6 +55,8 @@ import {fictionalJournalV4PageSize,parseFictionalJournalV4,parseFictionalTrialBa
 import {fictionalJournalV5PageSize,parseFictionalJournalV5,parseFictionalTrialBalanceV5} from './posted-report-v5-contract.ts';
 import {invoiceCreditMatchesInput,invoiceCreditRefusal,parseInvoiceCreditInput,parseInvoiceCreditOptions,
  parseInvoiceCreditReference,parseInvoiceCreditResult} from './invoice-credit-contract.ts';
+import {pairedInvoiceCreditRefusal,parsePairedInvoiceCreditInput,parsePairedInvoiceCreditOptions,
+ parsePairedInvoiceCreditReference,parsePairedInvoiceCreditResolution,parsePairedInvoiceCreditResult} from './paired-invoice-credit-contract.ts';
 import {heldTipMatchesInput,parseHeldTipInput,parseHeldTipOptions,parseHeldTipReference,parseHeldTipResult} from './held-tip-contract.ts';
 import {fundApplicationMatchesInput,parseFundApplicationInput,parseFundApplicationOptions,
  parseFundApplicationReference,parseFundApplicationResult} from './fund-application-contract.ts';
@@ -110,6 +112,10 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
  'invoice-credit-submit':['reference','invoiceItemId','customerId','effectiveOn','firstCent','lastCent','returnsMappingId','reason'],
  'invoice-credit-lookup':['operationId','recoveryEpoch','invoiceCreditId'],
  'invoice-credit-retire':['reference','reviewEpoch','reason'],
+ 'paid-invoice-credit-options':['customerId','invoiceId','allocationId','effectiveOn'],
+ 'paid-invoice-credit-submit':['credit','release','reviewedArCents'],
+ 'paid-invoice-credit-lookup':['operationId','recoveryEpoch','invoiceCreditId','unapplicationId'],
+ 'paid-invoice-credit-retire':['reference','reviewEpoch','reason'],
  'expense-post-options':['expenseId'],
  'expense-post-submit':['reference','expenseId','expenseRevision','channelId','channelVersion','mappingId','incurredOn','paidOn',
   'purchaseTaxTreatment','purchaseTaxCents','receiptId','missingReceiptReason','unknownVendorReason','reviewReason','externalIdentity'],
@@ -130,8 +136,8 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false}:Readonly<{
-  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false}:Readonly<{
+  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;
  }>={}){
  check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
  check((!sameDayExpenses||directReceipts&&categoryMappings)&&(!trialBalance||sameDayExpenses));
@@ -139,6 +145,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
  check(!fundApplications||paymentCorrections);
  check(!heldTips||fundApplications&&taxProfiles);
  check(!invoiceCredits||heldTips);
+ check(!paidInvoiceCredits||invoiceCredits);
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
@@ -165,6 +172,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route.startsWith('fund-application-')&&!fundApplications)return financeAccountFailure(404);
    if(route.startsWith('held-tip-')&&!heldTips)return financeAccountFailure(404);
    if(route.startsWith('invoice-credit-')&&!invoiceCredits)return financeAccountFailure(404);
+   if(route.startsWith('paid-invoice-credit-')&&!paidInvoiceCredits)return financeAccountFailure(404);
    if(route.startsWith('expense-post-')&&!sameDayExpenses)return financeAccountFailure(404);
    if((route==='trial-balance'||route==='posted-journal')&&!trialBalance)return financeAccountFailure(404);
    if(request.method!=='POST')return financeAccountFailure(405);
@@ -197,6 +205,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     if(fundApplications)response.headers.set('X-Crest-Fund-Applications','1');
     if(heldTips)response.headers.set('X-Crest-Held-Tips','1');
     if(invoiceCredits)response.headers.set('X-Crest-Invoice-Credits','1');
+    if(paidInvoiceCredits)response.headers.set('X-Crest-Paid-Invoice-Credits','1');
     if(sameDayExpenses)response.headers.set('X-Crest-Same-Day-Expenses','1');
     if(trialBalance)response.headers.set('X-Crest-Trial-Balance','1');
     return response;
@@ -206,6 +215,50 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    check(!signal.aborted&&sessionId===verified.sessionId);
    const args=[credentialHash,sessionId,verified.actorId,verified.provider.issuer,verified.provider.subject,
     verified.provider.sessionId,new Date(verified.provider.expiresAt),businessId];
+   if(route==='paid-invoice-credit-options'){
+    const {customerId,invoiceId,allocationId,effectiveOn}=input;
+    check(customerUuid(customerId)&&customerUuid(invoiceId)&&customerUuid(allocationId)&&(effectiveOn===null||customerDate(effectiveOn)));
+    const value=await database('SELECT crest_commands.read_fictional_paired_invoice_credit_options('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::date) AS result',
+     [...args,customerId,invoiceId,allocationId,effectiveOn],signal);
+    parsePairedInvoiceCreditOptions(value,businessId,customerId,invoiceId,allocationId,effectiveOn);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='paid-invoice-credit-lookup'||route==='paid-invoice-credit-retire'){
+    const reference=parsePairedInvoiceCreditReference(route==='paid-invoice-credit-lookup'?input:input.reference);
+    const {recoveryEpoch,operationId,invoiceCreditId,unapplicationId}=reference;
+    if(route==='paid-invoice-credit-lookup'){
+     const value=await database('SELECT crest_commands.lookup_fictional_paired_invoice_credit('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::uuid) AS result',
+      [...args,recoveryEpoch,operationId,invoiceCreditId,unapplicationId],signal);
+     const result=parsePairedInvoiceCreditResolution(value,businessId,reference);
+     return privateJsonResponse(value as object,result.state==='conflict'?409:200);
+    }
+    check(customerUuid(input.reviewEpoch)&&financeAccountReviewReason(input.reason));
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.retire_fictional_paired_invoice_credit('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::uuid,$14::text) AS result',
+      [...args,input.reviewEpoch,operationId,recoveryEpoch,invoiceCreditId,unapplicationId,input.reason]);
+     const parsed=parsePairedInvoiceCreditResolution(value,businessId,reference);
+     check(parsed.state!=='absent'&&(parsed.state!=='retired'||parsed.receipt.reviewEpoch===input.reviewEpoch));
+     return {value:value as object,state:parsed.state};
+    },signal);
+    return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
+   if(route==='paid-invoice-credit-submit'){
+    const request=parsePairedInvoiceCreditInput(input),{credit,release,reviewedArCents}=request;
+    const {recoveryEpoch,operationId,invoiceCreditId}=credit.reference;
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.credit_fictional_paid_invoice_line('+authority+
+      ',$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::uuid,$14::date,$15::bigint,$16::bigint,$17::uuid,$18::uuid,$19::uuid,$20::bigint,$21::bigint,$22::uuid,$23::bigint,$24::text) AS result',
+     [...args,recoveryEpoch,operationId,invoiceCreditId,credit.invoiceItemId,credit.customerId,credit.effectiveOn,
+      credit.firstCent,credit.lastCent,credit.returnsMappingId,release.reference.unapplicationId,release.allocationId,
+      release.firstCent,release.lastCent,release.fundsMappingId,reviewedArCents,credit.reason]);
+     const parsed=parsePairedInvoiceCreditResult(value,businessId,request);
+     check(parsed.state==='conflict'||parsed.state==='committed');
+     return {value:value as object,state:parsed.state};
+    },signal);
+    return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
    if(route==='invoice-credit-options'){
     const {customerId,invoiceId,effectiveOn}=input;
     check(customerUuid(customerId)&&customerUuid(invoiceId)&&(effectiveOn===null||customerDate(effectiveOn)));
@@ -885,7 +938,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    return privateJsonResponse(result,result.state==='conflict'?409:200);
   }catch(error){
    if(error instanceof Error&&error.message==='FINANCE_MAPPING_NOT_READY')return privateJsonResponse({state:'unavailable'});
-   if(error instanceof Error&&(invoiceCreditRefusal(error.message)||error.message==='INVOICE_CREDIT_OPTIONS_LIMIT'))
+   if(error instanceof Error&&(invoiceCreditRefusal(error.message)||pairedInvoiceCreditRefusal(error.message)||error.message==='INVOICE_CREDIT_OPTIONS_LIMIT'))
     return privateJsonResponse({error:error.message},409);
    if(error instanceof Error&&['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED',
     'FINANCE_MAPPING_VERSION_CONFLICT','FINANCE_MAPPING_EFFECTIVE_ORDER_REQUIRED','FINANCE_MAPPING_ACCOUNT_REQUIRED',

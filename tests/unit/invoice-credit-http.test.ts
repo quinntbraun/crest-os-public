@@ -24,8 +24,8 @@ const config={origin,businessId,environment:'test' as const,ingress:{kind:'direc
 const flags={fixedMappings:true,taxProfiles:true,categoryMappings:true,moneyChannels:true,invoicePreparation:true,
   invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,directReceipts:true,sameDayExpenses:true,trialBalance:true,
   paymentCorrections:true,fundApplications:true,heldTips:true};
-const dispatch=(enabled:boolean)=>createFinanceAccountHttp(config,'postgresql://finance@127.0.0.1/fixture',{} as never,{} as never,
-  {...flags,invoiceCredits:enabled});
+const dispatch=(enabled:boolean,paidInvoiceCredits=false)=>createFinanceAccountHttp(config,'postgresql://finance@127.0.0.1/fixture',{} as never,{} as never,
+  {...flags,invoiceCredits:enabled,paidInvoiceCredits});
 const binding=createHash('sha256').update('crest.finance.account.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url');
 const cookie='__Host-crest_session='+randomBytes(32).toString('base64url');
 const input={reference,customerId,invoiceItemId,effectiveOn,firstCent:'1',lastCent:'3',returnsMappingId,reason:'Fictional concession'};
@@ -113,4 +113,37 @@ it('distinguishes a known refusal from an interrupted or mismatched receipt and 
   expect(calls.write.mock.calls[2]?.[0]).toContain('crest_commands.retire_fictional_invoice_credit');
   expect(calls.write.mock.calls[2]?.[1].slice(7)).toEqual([businessId,reference.recoveryEpoch,reference.operationId,
     reference.recoveryEpoch,reference.invoiceCreditId,reason]);
+});
+
+it('binds paid invoice credit to one payment and never submits either posting on its own',async()=>{
+  const run=dispatch(true,true),allocationId=randomUUID(),unapplicationId=randomUUID(),fundsMappingId=randomUUID();
+  const pair={...reference,unapplicationId};
+  expect((await dispatch(true)(request('paid-invoice-credit-lookup',pair),transportFixture())).status).toBe(404);
+  expect((await run(request('context',{}),transportFixture())).headers.get('x-crest-paid-invoice-credits')).toBe('1');
+  const review=await run(request('paid-invoice-credit-options',{customerId,invoiceId,allocationId,effectiveOn}),transportFixture());
+  expect(await review.json()).toEqual({state:'absent'});
+  expect(calls.read.mock.calls[0]?.[1].slice(7)).toEqual([businessId,customerId,invoiceId,allocationId,effectiveOn]);
+  const {operationId,recoveryEpoch}=reference;
+  const release={reference:{operationId,recoveryEpoch,unapplicationId},allocationId,customerId,fundsMappingId,
+    effectiveOn,firstCent:'20',lastCent:'21',reason:input.reason};
+  const body={credit:input,release,reviewedArCents:'1'};
+  const saved={state:'committed',receipt:{schemaVersion:1,credit:committed.receipt,release:{
+    schemaVersion:1,businessId,operationId,unapplicationId,allocationId,eventId:randomUUID(),fundLotId:randomUUID(),
+    fundingOriginId:randomUUID(),parentPartitionId:randomUUID(),customerId,receivableId,arAccountId:committed.receipt.arAccountId,
+    fundsAccountId:randomUUID(),mappingId:fundsMappingId,effectiveOn,firstCent:'20',lastCent:'21',cents:'2',reason:input.reason,
+  }}};
+  expect((await run(request('paid-invoice-credit-submit',{...body,reviewedArCents:'0'}),transportFixture())).status).toBe(400);
+  expect(calls.transaction).not.toHaveBeenCalled();
+  calls.write.mockResolvedValueOnce(saved);
+  expect(await (await run(request('paid-invoice-credit-submit',body),transportFixture())).json()).toEqual(saved);
+  expect(calls.write.mock.calls[0]?.[0]).toContain('crest_commands.credit_fictional_paid_invoice_line');
+  expect(calls.write.mock.calls[0]?.[1].slice(7)).toEqual([businessId,recoveryEpoch,operationId,reference.invoiceCreditId,
+    invoiceItemId,customerId,effectiveOn,'1','3',returnsMappingId,unapplicationId,allocationId,'20','21',fundsMappingId,'1',input.reason]);
+  expect(calls.transaction).toHaveBeenCalledOnce();
+  calls.read.mockResolvedValueOnce(saved);
+  expect(await (await run(request('paid-invoice-credit-lookup',pair),transportFixture())).json()).toEqual(saved);
+  calls.write.mockRejectedValueOnce(new Error('PAIRED_INVOICE_CREDIT_BALANCE_CHANGED'));
+  expect((await run(request('paid-invoice-credit-submit',body),transportFixture())).status).toBe(409);
+  calls.write.mockResolvedValueOnce({...saved,receipt:{...saved.receipt,release:{...saved.receipt.release,allocationId:randomUUID()}}});
+  expect((await run(request('paid-invoice-credit-submit',body),transportFixture())).status).toBe(503);
 });

@@ -24,10 +24,11 @@ export async function requireSyntheticFinancePreviewConnection(connectionString,
  finally{await client.end().catch(()=>undefined);}
 }
 
-export async function readSyntheticFinancePreview(directory,state,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false){
+export async function readSyntheticFinancePreview(directory,state,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false){
  assert(typeof fundApplications==='boolean'&&(!fundApplications||paymentCorrections),failure);
  assert(typeof heldTips==='boolean'&&(!heldTips||fundApplications&&taxProfiles),failure);
  assert(typeof invoiceCredits==='boolean'&&(!invoiceCredits||heldTips),failure);
+ assert(typeof paidInvoiceCredits==='boolean'&&(!paidInvoiceCredits||invoiceCredits),failure);
  assert(typeof paymentCorrections==='boolean'&&(!paymentCorrections||trialBalance),failure);
  assert(typeof trialBalance==='boolean'&&(!trialBalance||sameDayExpenses),failure);
  assert(typeof sameDayExpenses==='boolean'&&(!sameDayExpenses||directReceipts&&categoryMappings),failure);
@@ -52,5 +53,5 @@ export async function readSyntheticFinancePreview(directory,state,taxProfiles=fa
  }catch{throw Error(failure);}
  await requireSyntheticFinancePreviewConnection(connectionString,login);
  return {connectionString,fixedMappings:true,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,
-  invoiceIssueTaxReview:invoiceIssue,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits};
+  invoiceIssueTaxReview:invoiceIssue,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits};
 }

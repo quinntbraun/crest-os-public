@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 84,
+  "migrationCount": 85,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2902,6 +2902,21 @@
         "operation_id",
         "created_by",
         "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.paired_invoice_credit_releases",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "invoice_credit_id",
+        "unapplication_id",
+        "operation_id",
+        "actor_id",
+        "reviewed_ar_cents"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

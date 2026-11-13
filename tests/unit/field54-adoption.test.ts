@@ -66,6 +66,9 @@ import {fundApplicationSourceAddedColumns,fundApplicationSourceCoverage} from '.
 import registered82 from '../support/registered82-migration-checksums.json';
 import registered83 from '../support/registered83-migration-checksums.json';
 import coverage83 from '../support/registered83-export-coverage.json';
+import registered84 from '../support/registered84-migration-checksums.json';
+import coverage84 from '../support/registered84-export-coverage.json';
+import {pairedInvoiceCreditSourceCoverage} from '../../src/bookkeeping/paired-invoice-credit-source.ts';
 import {invoiceCreditSourceAddedColumns,invoiceCreditSourceCoverage} from '../../src/bookkeeping/invoice-credit-source.ts';
 import coverage82 from '../support/registered82-export-coverage.json';
 import {heldTipSourceAddedColumns,heldTipSourceCoverage} from '../../src/bookkeeping/held-tip-source.ts';
@@ -460,15 +463,22 @@ it('appends held tips and shared exact fund ranges after frozen customer funds',
 });
 it('appends exact invoice credits after frozen held tips',()=>{
  const file='20261208180000_finance_invoice_credit.sql';
- expect(currentRegistry.migrations).toHaveLength(84);
- expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261208180000',file,sha256:'871acd348915589e7c84f5ad1371e32995792e43bcbfc9cf5e0d19769a2f9ce6'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered83 as MigrationRegistry)).not.toThrow();
+ expect(registered84.migrations).toHaveLength(84);
+ expect(registered84.migrations.at(-1)).toEqual({version:'20261208180000',file,sha256:'871acd348915589e7c84f5ad1371e32995792e43bcbfc9cf5e0d19769a2f9ce6'});
+ expect(()=>validateMigrationSet(registered84 as MigrationRegistry,new Map(registered84.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered83 as MigrationRegistry)).not.toThrow();
  const additions:Readonly<Record<string,readonly string[]>>=invoiceCreditSourceAddedColumns;
- expect(currentCoverage).toEqual({...coverage83,migrationCount:84,tables:[
+ expect(coverage84).toEqual({...coverage83,migrationCount:84,tables:[
   ...coverage83.tables.map(row=>({...row,required:[...row.required,...additions[row.table]??[]]})),
   ...invoiceCreditSourceCoverage,
  ]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:84});
+});
+it('appends exact paired invoice credits after frozen invoice credits',()=>{
+ const file='20261209180000_finance_paired_invoice_credit.sql';
+ expect(currentRegistry.migrations).toHaveLength(85);
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261209180000',file,sha256:'3baea72bdec504a3bcfe8d83c89f15068985f5c14a2b648ccfafa71e44e15275'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered84 as MigrationRegistry)).not.toThrow();
+ expect(currentCoverage).toEqual({...coverage84,migrationCount:85,tables:[...coverage84.tables,pairedInvoiceCreditSourceCoverage]});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:85});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');
