@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { mkdir, realpath, rm } from 'node:fs/promises';
+import { mkdir, readFile, realpath, rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { confirmedBookingRequest } from '../fixtures/confirmed-booking.ts';
