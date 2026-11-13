@@ -1,5 +1,5 @@
 import {authentication} from './authentication';
-import {customerUuid,exactCustomerObject as exact} from '../customer/customer-contract';
+import {customerDate,customerUuid,exactCustomerObject as exact} from '../customer/customer-contract';
 import {
  parseFinanceAccountHistory,parseFinanceAccountPage,parseFinanceAccountReceipt,
  parseFinanceAccountReference,parseFinanceAccountResolution,financeAccountReviewReason,requireFinanceAccount as check,
@@ -23,10 +23,21 @@ import {parseInvoicePreparation} from '../bookkeeping/invoice-preparation-contra
 import {parseInvoiceDraftInput,parseInvoiceDraftOperation,parseInvoiceDraftPage,parseInvoiceDraftRead,parseInvoiceDraftReference} from '../bookkeeping/invoice-draft-contract';
 import type {InvoiceDraftInput,InvoiceDraftReference} from '../bookkeeping/invoice-draft-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean}>;
+import {parseInvoiceIssueReadiness,parseInvoiceIssueTaxRequest} from '../bookkeeping/invoice-issue-tax-review-contract';
+import type {InvoiceIssueJurisdictions} from '../bookkeeping/invoice-issue-tax-review-contract';
+import {parseInvoiceIssueReference,parseInvoiceIssueRequest,parseInvoiceIssueResult,parseIssuedInvoice,
+ parseReviewedInvoiceIssue} from '../bookkeeping/issued-invoice-contract';
+import {invoiceTaxJurisdiction,parseInvoiceTaxMappingApproval,parseInvoiceTaxMappingEditor,parseInvoiceTaxMappingReference,parseInvoiceTaxMappingResult}
+ from '../bookkeeping/invoice-tax-payable-contract';
+import {parseInvoiceExemptionApproval,parseInvoiceExemptionEditor,parseInvoiceExemptionResult,parseInvoiceExemptionTarget}
+ from '../bookkeeping/invoice-exemption-contract';
+import {parseInvoiceSetupRead,parseInvoiceSetupResult,parseInvoiceSetupWrite} from '../bookkeeping/invoice-setup-contract';
+
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
+const invoiceIssuePendingKey='crest.invoice-issue.pending-reference.v1';
 const invoiceDraftFailure=[...knownFailure,'INVOICE_DRAFT_JOB_REQUIRED','INVOICE_DRAFT_COMPLETED_SCOPE_REQUIRED'] as const;
 const pendingKey='crest.finance-account.pending-reference.v1';
 type Pending=Readonly<{businessId:string;binding:string;reference:FinanceAccountReference}>;
@@ -60,7 +71,8 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string)
   for(;;){
    const part=await reader.read();
    if(part.done)break;
-   bytes+=part.value.byteLength;check(bytes<=(route==='invoice-preparation'||route==='invoice-draft-read'?1048576:196608)&&!bounded.aborted);
+   bytes+=part.value.byteLength;check(bytes<=(route==='invoice-preparation'||route==='invoice-draft-read'||route==='invoice-issue-tax-review'
+    ||route==='invoice-issue-prepare'||route==='invoice-issue-read'?1048576:196608)&&!bounded.aborted);
    text+=decoder.decode(part.value,{stream:true});
   }
   text+=decoder.decode();
@@ -71,21 +83,116 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string)
   categoryMappings:response.headers.get('x-crest-finance-category-mappings')==='1',
   moneyChannels:response.headers.get('x-crest-finance-money-channels')==='1',
   invoicePreparation:response.headers.get('x-crest-invoice-preparation')==='1',
-  invoiceDrafts:response.headers.get('x-crest-invoice-drafts')==='1'};
+  invoiceDrafts:response.headers.get('x-crest-invoice-drafts')==='1',
+  invoiceIssueTaxReview:response.headers.get('x-crest-invoice-issue-tax-review')==='1',
+  invoiceIssue:response.headers.get('x-crest-invoice-issue')==='1'};
 }
 
 export const financeAccounts={
  async context(signal:AbortSignal):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts}=await post('context',{},signal);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue}=await post('context',{},signal);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
-  return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts}) as FinanceAccountContext;
+  return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,
+   ...(invoiceIssue?{invoiceIssue}:{})}) as FinanceAccountContext;
  },
  async invoicePreparation(context:FinanceAccountContext,jobId:string,signal:AbortSignal){
   check(context.invoicePreparation&&customerUuid(jobId));
   const {status,value}=await post('invoice-preparation',{jobId},signal,context.binding);
   check(status===200);return parseInvoicePreparation(value,context.businessId,jobId);
+ },
+ async reviewInvoiceIssueTax(context:FinanceAccountContext,draftId:string,revision:string,jurisdictions:InvoiceIssueJurisdictions,signal:AbortSignal){
+  check(context.invoiceIssueTaxReview);
+  const input=parseInvoiceIssueTaxRequest({draftId,revision,jurisdictions});
+  const {status,value}=await post('invoice-issue-tax-review',input,signal,context.binding);
+  check(status===200);
+  return parseInvoiceIssueReadiness(value,context.businessId,input);
+ },
+ async prepareInvoiceIssue(context:FinanceAccountContext,draftId:string,revision:string,jurisdictions:InvoiceIssueJurisdictions,signal:AbortSignal){
+  check(context.invoiceIssue);
+  const input=parseInvoiceIssueTaxRequest({draftId,revision,jurisdictions});
+  const {status,value}=await post('invoice-issue-prepare',input,signal,context.binding);
+  check(status===200);
+  return parseReviewedInvoiceIssue(value,context.businessId,input);
+ },
+ async submitInvoiceIssue(context:FinanceAccountContext,input:ReturnType<typeof parseInvoiceIssueRequest>,signal:AbortSignal){
+  check(context.invoiceIssue&&context.writeState==='ready'&&context.recoveryEpoch===input.reference.recoveryEpoch);
+  const request=parseInvoiceIssueRequest(input);
+  const {status,value}=await post('invoice-issue-submit',request,signal,context.binding);
+  if(status===409&&exact(value,['error'])&&typeof value.error==='string')return {state:'refused',reason:value.error} as const;
+  check(status===200||status===409);
+  return parseInvoiceIssueResult(value,context.businessId,request.reference);
+ },
+ async lookupInvoiceIssue(context:FinanceAccountContext,reference:ReturnType<typeof parseInvoiceIssueReference>,signal:AbortSignal){
+  check(context.invoiceIssue);
+  const input=parseInvoiceIssueReference(reference);
+  const {status,value}=await post('invoice-issue-lookup',input,signal,context.binding);
+  check(status===200);
+  return parseInvoiceIssueResult(value,context.businessId,input);
+ },
+ async retireInvoiceIssue(context:FinanceAccountContext,reference:ReturnType<typeof parseInvoiceIssueReference>,reason:string,signal:AbortSignal){
+  check(context.invoiceIssue&&context.writeState==='ready'&&customerUuid(context.recoveryEpoch)&&financeAccountReviewReason(reason));
+  const input=parseInvoiceIssueReference(reference);
+  const {status,value}=await post('invoice-issue-retire',{reference:input,reviewEpoch:context.recoveryEpoch,reason},signal,context.binding);
+  check(status===200||status===409);
+  return parseInvoiceIssueResult(value,context.businessId,input);
+ },
+ async readIssuedInvoice(context:FinanceAccountContext,draftId:string,signal:AbortSignal){
+  check(context.invoiceIssue&&customerUuid(draftId));
+  const {status,value}=await post('invoice-issue-read',{draftId},signal,context.binding);
+  check(status===200);
+  return parseIssuedInvoice(value,context.businessId,draftId);
+ },
+ async readInvoiceSetup(context:FinanceAccountContext,requestedOn:string|null,signal:AbortSignal){
+  check(context.invoiceIssue&&(requestedOn===null||customerDate(requestedOn)));
+  const {status,value}=await post('invoice-setup-read',{requestedOn},signal,context.binding);
+  check(status===200);
+  return parseInvoiceSetupRead(value,context.businessId,requestedOn);
+ },
+ async saveInvoiceSetup(context:FinanceAccountContext,write:ReturnType<typeof parseInvoiceSetupWrite>,signal:AbortSignal){
+  check(context.invoiceIssue&&context.writeState==='ready'&&context.recoveryEpoch===write.recoveryEpoch);
+  const input=parseInvoiceSetupWrite(write);
+  const {status,value}=await post('invoice-setup-save',input,signal,context.binding);
+  check(status===200||status===409);
+  return parseInvoiceSetupResult(value,context.businessId,input);
+ },
+ async readInvoiceTaxMapping(context:FinanceAccountContext,jurisdiction:string,signal:AbortSignal){
+  check(context.invoiceIssue&&invoiceTaxJurisdiction(jurisdiction));
+  const {status,value}=await post('invoice-issue-tax-mapping-read',{jurisdiction},signal,context.binding);
+  check(status===200);
+  return parseInvoiceTaxMappingEditor(value,context.businessId,jurisdiction);
+ },
+ async approveInvoiceTaxMapping(context:FinanceAccountContext,approval:ReturnType<typeof parseInvoiceTaxMappingApproval>,signal:AbortSignal){
+  check(context.invoiceIssue&&context.writeState==='ready'&&context.recoveryEpoch===approval.recoveryEpoch);
+  const request=parseInvoiceTaxMappingApproval(approval);
+  const {status,value}=await post('invoice-issue-tax-mapping-approve',{approval:request},signal,context.binding);
+  if(status===409&&exact(value,['error'])&&typeof value.error==='string')return {state:'refused',reason:value.error} as const;
+  check(status===200||status===409);
+  const result=parseInvoiceTaxMappingResult(value,context.businessId,request,request);
+  check(result.state!=='absent');
+  return result;
+ },
+ async lookupInvoiceTaxMapping(context:FinanceAccountContext,reference:ReturnType<typeof parseInvoiceTaxMappingReference>,signal:AbortSignal){
+  check(context.invoiceIssue);
+  const input=parseInvoiceTaxMappingReference(reference);
+  const {status,value}=await post('invoice-issue-tax-mapping-lookup',input,signal,context.binding);
+  check(status===200);
+  return parseInvoiceTaxMappingResult(value,context.businessId,input);
+ },
+ async readInvoiceExemption(context:FinanceAccountContext,target:ReturnType<typeof parseInvoiceExemptionTarget>,signal:AbortSignal){
+  check(context.invoiceIssue);
+  const input=parseInvoiceExemptionTarget(target);
+  const {status,value}=await post('invoice-issue-exemption-read',input,signal,context.binding);
+  check(status===200);
+  return parseInvoiceExemptionEditor(value,context.businessId,input);
+ },
+ async approveInvoiceExemption(context:FinanceAccountContext,approval:ReturnType<typeof parseInvoiceExemptionApproval>,signal:AbortSignal){
+  check(context.invoiceIssue&&context.writeState==='ready'&&context.recoveryEpoch===approval.recoveryEpoch);
+  const input=parseInvoiceExemptionApproval(approval);
+  const {status,value}=await post('invoice-issue-exemption-approve',{approval:input},signal,context.binding);
+  check(status===200||status===409);
+  return parseInvoiceExemptionResult(value,context.businessId,input);
  },
  async invoiceDrafts(context:FinanceAccountContext,jobId:string,afterDraft:string|null,signal:AbortSignal){
   check(context.invoiceDrafts&&customerUuid(jobId)&&(afterDraft===null||customerUuid(afterDraft)));
@@ -417,6 +524,29 @@ export function clearPendingInvoiceDraft(entry:PendingInvoiceDraft){
  check(JSON.stringify(readPendingInvoiceDraft())===JSON.stringify(entry));
  sessionStorage.removeItem(invoiceDraftPendingKey);
  check(readPendingInvoiceDraft()===null);
+}
+
+type PendingInvoiceIssue = Readonly<{businessId:string;binding:string;reference:ReturnType<typeof parseInvoiceIssueReference>}>;
+export function readPendingInvoiceIssue():PendingInvoiceIssue|null{
+ const raw=sessionStorage.getItem(invoiceIssuePendingKey);
+ if(raw===null)return null;
+ check(raw.length<=800&&(raw.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length===7);
+ const value:unknown=JSON.parse(raw);
+ check(exact(value,['businessId','binding','reference'])&&customerUuid(value.businessId)
+  &&typeof value.binding==='string'&&bindingPattern.test(value.binding));
+ return {businessId:value.businessId,binding:value.binding,reference:parseInvoiceIssueReference(value.reference)};
+}
+export function retainPendingInvoiceIssue(context:FinanceAccountContext,reference:PendingInvoiceIssue['reference']):PendingInvoiceIssue{
+ check(readPendingInvoiceIssue()===null);
+ const entry={businessId:context.businessId,binding:context.binding,reference};
+ sessionStorage.setItem(invoiceIssuePendingKey,JSON.stringify(entry));
+ check(JSON.stringify(readPendingInvoiceIssue())===JSON.stringify(entry));
+ return entry;
+}
+export function clearPendingInvoiceIssue(entry:PendingInvoiceIssue){
+ check(JSON.stringify(readPendingInvoiceIssue())===JSON.stringify(entry));
+ sessionStorage.removeItem(invoiceIssuePendingKey);
+ check(readPendingInvoiceIssue()===null);
 }
 
 export function downloadFinanceHistory(filename:string,rows:readonly (readonly string[])[]){

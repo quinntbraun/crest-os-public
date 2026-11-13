@@ -8,8 +8,8 @@ import { createConfirmedBookingFixture } from '../support/confirmed-booking-fixt
 import { requireSyntheticFinanceAccountConfiguration } from '../../scripts/synthetic-migrations.mjs';
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
 import { installProviderSchema } from '../support/provider-schema.mjs';
-import { backupDatabase,backupLegacy75Database,connect,inventory,keyPair,privateWorkspace,
-  recoveryCluster,restoreDatabase,restoreLegacy75Database } from '../support/recovery-drill.mjs';
+import { backupLegacy76Database,backupLegacy75Database,connect,inventory,keyPair,privateWorkspace,
+  recoveryCluster,restoreLegacy76Database,restoreLegacy75Database } from '../support/recovery-drill.mjs';
 import { formatFinanceAccountSource,invoiceDraftSourceColumns } from '../../src/bookkeeping/finance-account-source.ts';
 
 async function call(connection, command, args) {
@@ -161,14 +161,14 @@ test('invoice drafts save before completion, select retained outcomes, and cance
       await mkdir(point,{mode:0o700});
       const keys=await keyPair(directory);
       await assert.rejects(backupLegacy75Database(admin,target,point,keys.recipient),{message:'SYNTHETIC_RECOVERY_BACKUP_FAILED:coverage'});
-      const {manifest}=await backupDatabase(admin,target,point,keys.recipient);
+      const {manifest}=await backupLegacy76Database(admin,target,point,keys.recipient);
       assert.equal(manifest.schemaVersion,76);
       assert.equal(manifest.rows.find(row=>row.schema==='crest'&&row.name==='invoice_draft_revisions').rows,3);
       destination=await recoveryCluster();
       const restoredUrl=await destination.database();
       assert.notEqual(new URL(restoredUrl).port,new URL(target).port);
       await assert.rejects(restoreLegacy75Database(point,keys.path,restoredUrl),{message:'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest'});
-      await restoreDatabase(point,keys.path,restoredUrl);
+      await restoreLegacy76Database(point,keys.path,restoredUrl);
       restored=await connect(restoredUrl);
       assert.deepEqual(await inventory(restored),manifest.rows);
       assert.deepEqual(formatFinanceAccountSource({...source,invoiceDraftSnapshot:{rows:await readSource(restored),expectedCount:3}}),bundle);

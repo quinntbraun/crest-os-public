@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 76,
+  "migrationCount": 77,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2348,6 +2348,299 @@
         "operation_id",
         "audit_event_id",
         "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.accounting_periods",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "starts_on",
+        "month_start",
+        "through_on",
+        "time_zone",
+        "opening_boundary",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.accounting_period_locks",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "period_id",
+        "generation",
+        "previous_generation",
+        "state",
+        "evidence_ref",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoice_series",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "label",
+        "recovery_epoch",
+        "kind",
+        "incident_id",
+        "approval_reason",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoice_number_reservations",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "full_number",
+        "series_id",
+        "number_sequence",
+        "issued_source_id",
+        "incident_id",
+        "external_evidence",
+        "recovery_epoch",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.tax_payable_mapping_versions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "jurisdiction",
+        "version",
+        "previous_version",
+        "account_id",
+        "effective_from",
+        "reason",
+        "audit_event_id",
+        "created_at",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoice_exemption_evidence",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "draft_id",
+        "draft_revision",
+        "outcome_id",
+        "customer_id",
+        "jurisdiction",
+        "profile_id",
+        "version",
+        "previous_version",
+        "valid_from",
+        "valid_through",
+        "evidence_reference",
+        "reason",
+        "audit_event_id",
+        "created_at",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoices",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "draft_id",
+        "draft_revision",
+        "job_id",
+        "customer_id",
+        "reservation_id",
+        "invoice_number",
+        "issued_on",
+        "due_on",
+        "time_zone",
+        "customer_snapshot",
+        "location_snapshot",
+        "total_cents",
+        "currency",
+        "created_at",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoice_items",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "invoice_id",
+        "position",
+        "outcome_id",
+        "completion_part_id",
+        "partition_id",
+        "agreement_id",
+        "entitlement_version_id",
+        "service_version_id",
+        "tax_profile_id",
+        "exemption_evidence_id",
+        "gross_inclusive_cents",
+        "discount_inclusive_cents",
+        "gross_net_cents",
+        "discount_net_cents",
+        "net_cents",
+        "tax_cents",
+        "total_cents",
+        "description",
+        "created_at",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.billing_consumptions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "invoice_item_id",
+        "partition_id",
+        "consumed_cents",
+        "created_at",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.atomic_finance_groups",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "commit_sequence",
+        "recovery_epoch",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.financial_events",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "group_id",
+        "event_sequence",
+        "invoice_id",
+        "period_id",
+        "period_generation",
+        "reopened_generation",
+        "effective_on",
+        "time_zone",
+        "template",
+        "template_version",
+        "zero_effect_reason",
+        "posted_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.receivable_items",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "invoice_id",
+        "account_id",
+        "customer_id",
+        "original_cents",
+        "due_on"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoice_tax_payable_movements",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "event_id",
+        "invoice_item_id",
+        "tax_profile_id",
+        "mapping_id",
+        "account_id",
+        "jurisdiction",
+        "cents"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.journal_entries",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "event_id",
+        "entry_sequence"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.journal_lines",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "entry_id",
+        "invoice_item_id",
+        "receivable_id",
+        "account_id",
+        "fixed_mapping_id",
+        "tax_payable_movement_id",
+        "purpose",
+        "debit_cents",
+        "credit_cents"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
