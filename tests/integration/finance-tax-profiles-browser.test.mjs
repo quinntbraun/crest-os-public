@@ -198,7 +198,7 @@ for(const engine of [chromium,webkit]){
    await expect(history.getByText('Version 4',{exact:false})).toHaveCount(0);
 
    await page.goBack();
-   await expect(page.getByRole('heading',{name:'Chart of accounts',exact:true})).toBeVisible();
+   await expect(page.getByRole('heading',{name:'Accounting',level:1,exact:true})).toBeVisible();
   }finally{
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{

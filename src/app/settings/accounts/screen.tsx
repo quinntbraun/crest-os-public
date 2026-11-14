@@ -43,7 +43,7 @@ function downloadHistory(rows:readonly FinanceAccountHistory[]){
   ...rows.map(row=>[row.code,row.name,row.version,row.active?'Active':'Archived',row.reason??'']),
  ]);
 }
-const initialMessage='Load accounts to open your finance workspace.';
+const initialMessage='Load accounts to see the reports and tools available to you.';
 
 export function FinanceAccountsScreen(){
  const [workspace,setWorkspace]=useState<Workspace|null>(null),[editor,setEditor]=useState<Editor|null>(null);
@@ -53,6 +53,9 @@ export function FinanceAccountsScreen(){
  const [canRetire,setCanRetire]=useState(false),[reviewReason,setReviewReason]=useState('');
  const request=useRef<AbortController|null>(null),original=useRef<FinanceAccountDraft|null>(null);
  const status=useRef<HTMLParagraphElement>(null);
+ const historyHeading=useRef<HTMLHeadingElement>(null);
+ const historyAccount=history?.account.id;
+ useEffect(()=>{if(historyAccount)historyHeading.current?.focus();},[historyAccount]);
  const clearPrivate=useCallback(()=>{
   request.current?.abort();request.current=null;original.current=null;
   setWorkspace(null);setEditor(null);setHistory(null);setPending(null);setCanRetry(false);setStale(false);
@@ -226,16 +229,25 @@ export function FinanceAccountsScreen(){
  const writable=workspace?.context.writeState==='ready'&&!pending&&!signedOut;
  const context=workspace?.context;
  const hasSetupLinks=context&&(context.fixedMappings||context.moneyChannels||context.categoryMappings||context.taxProfiles);
+ const hasSetup=!!(hasSetupLinks||context?.invoiceIssue);
  return <section className={styles.workspace} aria-label="Account settings" aria-busy={busy}>
   <p role="status" tabIndex={-1} ref={status}>{message}</p>
-  {context?.trialBalance&&!editor&&<section aria-labelledby="finance-reports-heading">
-   <h2 id="finance-reports-heading">Ledger reports</h2>
+  {!editor&&!signedOut&&!workspace&&<button type="button" className={styles.openAccounting} disabled={busy}
+   onClick={()=>void load()}>Load accounts</button>}
+  {signedOut&&<a href="/sign-in">Sign in again</a>}
+  {workspace&&!editor&&(context?.trialBalance||hasSetup)&&<nav className={styles.sectionLinks} aria-label="Accounting sections">
+   {context?.trialBalance&&<a href="#finance-reports-heading">Reports</a>}
+   {hasSetup&&<a href="#finance-setup-heading">Setup</a>}
+   <a href="#finance-accounts-heading">Accounts</a>
+  </nav>}
+  {context?.trialBalance&&!editor&&<section className={styles.section} aria-labelledby="finance-reports-heading">
+   <h2 id="finance-reports-heading" tabIndex={-1}>Reports</h2>
    <TrialBalance businessId={context.businessId}/>
    {context.customerFundsReport&&<CustomerFundsReport key={context.businessId} businessId={context.businessId} includesExcess={context.excessReceipts===true}/>}
    {context.receivableAging&&<ReceivableAging key={context.businessId} businessId={context.businessId}/>}
   </section>}
-  {context&&(hasSetupLinks||context.invoiceIssue)&&!editor&&<section className={styles.setup} aria-labelledby="finance-setup-heading">
-   <h2 id="finance-setup-heading">Finance setup</h2>
+  {context&&hasSetup&&!editor&&<section className={styles.section} aria-labelledby="finance-setup-heading">
+   <h2 id="finance-setup-heading" tabIndex={-1}>Finance setup</h2>
    {hasSetupLinks&&<ul className={styles.setupLinks}>
     {context.fixedMappings&&<li><a href="/settings/accounts/mappings">Dated account mappings</a></li>}
     {context.moneyChannels&&<li><a href="/settings/accounts/channels">Money channels</a></li>}
@@ -244,12 +256,7 @@ export function FinanceAccountsScreen(){
    </ul>}
    {context.invoiceIssue&&<InvoiceSetup businessId={context.businessId}/>}
   </section>}
-  {signedOut&&<a href="/sign-in">Sign in again</a>}
-  {workspace&&!editor&&<h2>Accounts</h2>}
-  {!editor&&!signedOut&&<div className={styles.actions}><button type="button" className="secondary" disabled={busy} onClick={()=>void load()}>
-   {workspace?'Reload accounts':'Load accounts'}
-  </button>{workspace&&writable&&<button type="button" disabled={busy} onClick={()=>setEditor(newEditor)}>Add account</button>}</div>}
-  {pending&&workspace&&<section aria-label="Interrupted account save">
+  {pending&&workspace&&<section className={styles.section} aria-label="Interrupted account save">
    <p className="save-reference">Save reference <code>{pending.reference.operationId}</code></p>
    <button type="button" className="secondary" disabled={busy} onClick={()=>void checkPending()}>Check save status</button>
    {canRetry&&<button type="button" disabled={busy} onClick={()=>void retry()}>Retry original save</button>}
@@ -261,7 +268,12 @@ export function FinanceAccountsScreen(){
     <button type="submit" disabled={busy||!financeAccountReviewReason(reviewReason.trim())}>Close interrupted save</button>
    </form>}
   </section>}
-  {workspace&&!editor&&<>
+  {workspace&&!editor&&<section className={styles.section} aria-labelledby="finance-accounts-heading">
+   <h2 id="finance-accounts-heading" tabIndex={-1}>Chart of accounts</h2>
+   <div className={styles.actions}>
+    {writable&&<button type="button" disabled={busy} onClick={()=>setEditor(newEditor)}>Add account</button>}
+    <button type="button" className="secondary" disabled={busy} onClick={()=>void load()}>Reload accounts</button>
+   </div>
    {workspace.context.writeState==='paused'&&<p className="notice">Account changes are paused for recovery review.</p>}
    <label className="trust"><input type="checkbox" checked={workspace.includeArchived} disabled={busy}
     onChange={event=>void load(event.target.checked)}/>Show archived accounts</label>
@@ -275,7 +287,7 @@ export function FinanceAccountsScreen(){
    </li>)}</ul>
    {workspace.hasMore&&<button type="button" className="secondary" disabled={busy}
     onClick={()=>void moreAccounts(workspace)}>Load more accounts</button>}
-  </>}
+  </section>}
   {editor&&<form onSubmit={event=>void submit(event)}>
    <fieldset disabled={busy||!!pending||signedOut}>
     <legend>{editor.account?'Edit account':'New account'}</legend>
@@ -315,8 +327,8 @@ export function FinanceAccountsScreen(){
     Discard edit
    </button>
   </form>}
-  {history&&workspace&&!editor&&<section aria-label="Saved account history">
-   <h2>{history.account.name} history</h2>
+  {history&&workspace&&!editor&&<section className={styles.section} aria-label="Saved account history">
+   <h2 ref={historyHeading} tabIndex={-1}>{history.account.name} history</h2>
    <ul>{history.rows.map(row=><li key={row.auditEventId}>
     <strong>{row.name}</strong> · {row.active?'Active':'Archived'} · Version {row.version}
     {row.reason&&<p>{row.reason}</p>}

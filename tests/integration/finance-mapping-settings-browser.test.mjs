@@ -86,7 +86,7 @@ for(const engine of [chromium,webkit]){
    await approvals.click();
    await expect(status).toHaveText('No approved versions for this purpose.');
    await page.goBack();
-   await expect(page.getByRole('heading',{name:'Chart of accounts',exact:true})).toBeVisible();
+   await expect(page.getByRole('heading',{name:'Accounting',level:1,exact:true})).toBeVisible();
 
    const epoch=(await fixture.client.query('SELECT active_epoch FROM crest_private.business_recovery_authorities')).rows[0].active_epoch;
    const accountId=(await fixture.client.query("SELECT id FROM crest.accounts WHERE code='4000'")).rows[0].id;

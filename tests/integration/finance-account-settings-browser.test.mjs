@@ -74,6 +74,7 @@ for(const engine of [chromium,webkit]){
    await expect(settings.getByText('1000 · Fictional closed checking',{exact:true})).toBeVisible();
    await settings.getByRole('button',{name:'View history for Fictional closed checking',exact:true}).click();
    const history=settings.getByRole('region',{name:'Saved account history',exact:true});
+   await expect(history.getByRole('heading',{name:'Fictional closed checking history',exact:true})).toBeFocused();
    await expect(history.getByText('Fictional checking',{exact:true})).toBeVisible();
    await expect(history.getByText('Fictional review confirmed closure',{exact:true})).toBeVisible();
    const download=page.waitForEvent('download');
