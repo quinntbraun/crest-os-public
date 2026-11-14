@@ -13,7 +13,7 @@ import { financeServiceRefundCandidate } from '../support/finance-service-refund
 import { requireSyntheticFinanceAccountConfiguration } from '../../scripts/synthetic-migrations.mjs';
 import {prepareSyntheticPostedFinancePreview,readSyntheticPostedFinancePreview} from '../../scripts/synthetic-posted-finance-preview.mjs';
 import { backupPairedInvoiceCredit85CandidateDatabase,backupInvoiceCredit84ForPairedBaseline,backupServiceRefundCandidateDatabase,
-  backupDatabase,connect,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase,restorePairedInvoiceCredit85CandidateDatabase,
+  backupLegacy92Database,connect,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase,restoreLegacy92Database,restorePairedInvoiceCredit85CandidateDatabase,
   restoreInvoiceCredit84ForPairedBaseline,restoreServiceRefundCandidateDatabase } from '../support/recovery-drill.mjs';
 import { exerciseNeutralFinanceImport } from '../support/neutral-finance-import.mjs';
 import { pairedInvoiceCreditRefusal,parsePairedInvoiceCreditInput,parsePairedInvoiceCreditOptions,parsePairedInvoiceCreditReference,
@@ -585,12 +585,13 @@ async function verifyExcessReceipt({admin,finance,web,exporter,owner,foreign,cha
     const point=join(directory,'point');
     await mkdir(point,{mode:0o700});
     const keys=await keyPair(directory);
-    const {manifest}=await backupDatabase(admin,target,point,keys.recipient);
+    const {manifest}=await backupLegacy92Database(admin,target,point,keys.recipient);
     assert.equal(manifest.schemaVersion,92);
     destination=await recoveryCluster();
     const restoredUrl=await destination.database();
     assert.notEqual(new URL(restoredUrl).port,new URL(target).port);
-    assert.deepEqual(await restoreDatabase(point,keys.path,restoredUrl),manifest);
+    await assert.rejects(restoreDatabase(point,keys.path,restoredUrl),{message:'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest'});
+    assert.deepEqual(await restoreLegacy92Database(point,keys.path,restoredUrl),manifest);
     restored=await connect(restoredUrl);
     assert.deepEqual(await inventory(restored),manifest.rows);
     await restored.query('SET ROLE crest_export');

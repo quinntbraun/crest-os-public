@@ -24,7 +24,7 @@ import {serviceRefundCoverage,serviceRefundFile,serviceRefundParts,serviceRefund
   from './finance-service-refund-candidate.mjs';
 
 import {googleCalendarCandidateRecoveryProfile} from './google-calendar-candidate.mjs';
-import {excessReturnCandidateRecoveryProfile} from './finance-excess-return-candidate.mjs';
+import {excessReturnCandidateRecoveryProfile,readFrozen92} from './finance-excess-return-candidate.mjs';
 import {tipReturnCandidateRecoveryProfile} from './finance-tip-return-candidate.mjs';
 import {collectionFailureRecoveryProfile} from './finance-collection-failure-candidate.mjs';
 import {refundTransferRecoveryProfile} from './finance-refund-transfer-candidate.mjs';
@@ -39,6 +39,10 @@ const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8')
 const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8'));
 const currentCoverage=JSON.parse(await readFile(join(root,'planning/SECURITY_EXPORT_COVERAGE.json'),'utf8'));
 const registryHash=hash(await readFile(join(root,'supabase/migration-checksums.json')));
+const frozen92=await readFrozen92(root);
+assert.deepEqual(registry.migrations.slice(0,92),frozen92.migrations);
+const legacy92Profile=Object.freeze({schemaVersion:92,registrySha256:frozen92.registrySha256});
+const legacy92Snapshot={profile:legacy92Profile,versions:frozen92.migrations.map(row=>row.version),coverage:frozen92.coverage};
 const legacy101Bytes=await readFile(join(root,'tests/support/registered101-migration-checksums.json'));
 const legacy101=JSON.parse(legacy101Bytes);
 assert.equal(hash(legacy101Bytes),'1df8605badf83be462340870f4cbe7bd92529577c2b9cdf8f6fc211bed88a018');
@@ -1129,6 +1133,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile===legacy80Profile
       ||profile===legacy81Profile
       ||profile===legacy82Profile
+      ||profile===legacy92Profile
       ||profile===legacy101Profile
       ||profile.schemaVersion===81&&profile.heldUnapplicationMigrationSha256
       ||profile.schemaVersion===82&&profile.heldFundApplicationMigrationSha256
@@ -1192,6 +1197,10 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_RECOVERY_BACKUP_FAILED:'+stage);}
 }
 export async function restoreDatabase(...args){return restoreWithProfile(currentProfile,...args);}
+export async function backupLegacy92Database(client,url,directory,recipient){
+  return backupWithProfile(legacy92Profile,client,url,directory,recipient,undefined,undefined,legacy92Snapshot);
+}
+export async function restoreLegacy92Database(...args){return restoreWithProfile(legacy92Profile,...args);}
 export async function restoreLegacy52Database(...args){return restoreWithProfile(legacy52Profile,...args);}
 export async function restoreLegacy51Database(...args){return restoreWithProfile(legacy51Profile,...args);}
 export async function restoreLegacy50Database(...args){return restoreWithProfile(legacy50Profile,...args);}

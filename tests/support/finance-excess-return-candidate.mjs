@@ -16,16 +16,18 @@ const parts = ['finance-excess-return', 'finance-excess-return-options', 'financ
 const migrationPath = directory => join(directory, 'supabase/migrations', candidateFile);
 const registryPath = directory => join(directory, 'supabase/migration-checksums.json');
 
-async function baseline(root) {
+export async function readFrozen92(root) {
   const prior = await readFile(join(root, 'tests/support/registered92-migration-checksums.json'));
   assert.equal(hash(prior), priorRegistryHash);
   const { migrations } = JSON.parse(prior);
   assert.equal(migrations.length, baselineVersion);
-  const priorCoverage = JSON.parse(await readFile(join(root, 'tests/support/registered87-export-coverage.json'), 'utf8'));
+  const priorCoverageBytes = await readFile(join(root, 'tests/support/registered87-export-coverage.json'));
+  assert.equal(hash(priorCoverageBytes), 'd458065d9eb5bb6404c7cce5319644d748d045edb8a1abbd1841e83cdf31a85e');
+  const priorCoverage = JSON.parse(priorCoverageBytes);
   assert.equal(priorCoverage.migrationCount, 87);
   const coverage = {...priorCoverage, migrationCount: baselineVersion, tables: priorCoverage.tables.map(row =>
     row.table === 'crest.customer_fund_lots' ? {...row, required: [...row.required, 'receipt_event_id']} : row)};
-  return { migrations, coverage };
+  return { migrations, coverage, registrySha256: priorRegistryHash };
 }
 
 async function migration(root) {
@@ -46,7 +48,7 @@ export async function prepareExcessReturnCandidate(sandbox) {
 }
 
 export async function excessReturnCandidateRecoveryProfile(directory, root) {
-  const { migrations, coverage } = await baseline(root);
+  const { migrations, coverage } = await readFrozen92(root);
   const source = await migration(root);
   const sha256 = hash(source);
   const registry = await readFile(registryPath(directory));
