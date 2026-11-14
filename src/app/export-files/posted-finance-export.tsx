@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {authentication} from '../../client/authentication';
-import {postedFinanceExportLimit,postedFinanceExportName,postedFinanceExportPath,postedFinanceExportProfile,excessReceiptExportProfile,excessReturnExportProfile,tipReturnExportProfile} from '../../security/posted-finance-owner-export-contract';
+import {postedFinanceExportLimit,postedFinanceExportName,postedFinanceExportPath,postedFinanceExportProfile,excessReceiptExportProfile,excessReturnExportProfile,tipReturnExportProfile,collectionFailureExportProfile} from '../../security/posted-finance-owner-export-contract';
 
 type Phase='initial'|'ready'|'preparing'|'prepared'|'requested'|'failed';
 const messages:Record<Phase,string>={
@@ -67,7 +67,7 @@ export function PostedFinanceExport(){
     const result:unknown=await response.json();
     if(mounted&&!current.signal.aborted&&result&&typeof result==='object'&&'profile' in result
       &&(result.profile===postedFinanceExportProfile||result.profile===excessReceiptExportProfile
-       ||result.profile===excessReturnExportProfile||result.profile===tipReturnExportProfile)){
+       ||result.profile===excessReturnExportProfile||result.profile===tipReturnExportProfile||result.profile===collectionFailureExportProfile)){
      setAvailable(true);
      setPhase('ready');
     }

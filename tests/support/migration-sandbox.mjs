@@ -18,6 +18,7 @@ export async function migrationSandbox(testConnection=process.env.CREST_TEST_DAT
   roles.push("crest_catalog_integrity_owner","crest_catalog_owner","crest_quote_integrity_owner","crest_quote_owner","crest_hold_integrity_owner","crest_hold_owner","crest_expense_owner","crest_mode_integrity_owner","crest_mode_owner","crest_booking_integrity_owner","crest_booking_owner");
   roles.push("crest_custody_photo_dispatch","crest_finance_integrity_owner","crest_finance_account_owner","crest_finance_preview","crest_receipt_export_owner","crest_paid_expense_export_owner","crest_unapplication_export_owner","crest_fund_application_export_owner","crest_tip_export_owner","crest_invoice_credit_export_owner","crest_paired_credit_export_owner","crest_service_refund_export_owner","crest_excess_return_export_owner","crest_tip_return_export_owner");
   roles.push("crest_calendar_intent_owner","crest_calendar_dispatch_owner","crest_calendar_dispatch","crest_calendar_oauth_owner","crest_calendar_oauth","crest_calendar_export_owner");
+  roles.push("crest_collection_failure_export_owner");
   try { assert.equal((await admin.query("SELECT count(*)::int AS n FROM pg_roles WHERE rolname=ANY($1::text[])",[roles])).rows[0].n,0,"refuse to adopt/drop other operators' roles"); }
   catch (error) { await admin.end(); throw error; }
   const databases = new Set(); const ownedRoles = new Set(); const connections = new Set();
@@ -45,7 +46,7 @@ export async function migrationSandbox(testConnection=process.env.CREST_TEST_DAT
       assert(count<=registry.migrations.length); registry.migrations=registry.migrations.slice(0,count);
       for(const m of registry.migrations) await writeFile(join(directory,"supabase/migrations",m.file),await readFile(join(root,"supabase/migrations",m.file)));
 
-      const frozen=[68,69,70,71,72,78,80,81,82,86,87,88,89,90,91,92,93,94].includes(count);
+      const frozen=[68,69,70,71,72,78,80,81,82,86,87,88,89,90,91,92,93,94,95].includes(count);
       const registryBytes=frozen?await readFile(join(root,`tests/support/registered${count}-migration-checksums.json`)):JSON.stringify(registry)+"\n";
       if(frozen)assert.deepEqual(JSON.parse(registryBytes),registry);
       await writeFile(join(directory,"supabase/migration-checksums.json"),registryBytes);

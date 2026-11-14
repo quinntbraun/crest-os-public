@@ -16,6 +16,7 @@ import { PaidInvoiceCredit } from './paid-invoice-credit';
 import { ServiceRefund } from './service-refund';
 import { ExcessReturn } from './excess-return';
 import { TipReturn } from './tip-return';
+import { CollectionFailure } from './collection-failure';
 
 type Readiness = Awaited<ReturnType<typeof financeAccounts.reviewInvoiceIssueTax>>;
 type Review = Readiness['tax'];
@@ -58,9 +59,9 @@ function IssueLineStatus({ line }: { line: Line }) {
   return <p>{lineMessages[line.state]}</p>;
 }
 
-export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,excessReturns,tipReturns }: {
+export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,excessReturns,tipReturns,collectionFailures }: {
   invoice:IssuedInvoice;receiptBusinessId:string|undefined;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;
-  invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;excessReturns?:boolean;tipReturns?:boolean;
+  invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;
 }) {
   const tax = invoice.lines.reduce((sum,line)=>sum+BigInt(line.taxCents),0n);
   return <div className="issued-invoice-details">
@@ -85,6 +86,8 @@ export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrecti
       customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
     {receiptBusinessId&&paymentCorrections&&<PaymentCorrection businessId={receiptBusinessId}
       customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
+    {receiptBusinessId&&collectionFailures&&<CollectionFailure key={'collection-failure:'+invoice.invoiceId}
+      businessId={receiptBusinessId} customerId={invoice.customer.id}/>}
     {receiptBusinessId&&fundApplications&&<FundApplication businessId={receiptBusinessId}
       customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
     {receiptBusinessId&&invoiceCredits&&<InvoiceCredit key={'invoice-credit:'+invoice.invoiceId} businessId={receiptBusinessId}
@@ -101,7 +104,7 @@ export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrecti
   </div>;
 }
 
-export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, lines, onIssued, directReceipts, paymentCorrections, fundApplications, heldTips, invoiceCredits, paidInvoiceCredits, serviceRefunds, excessReturns, tipReturns }: {
+export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, lines, onIssued, directReceipts, paymentCorrections, fundApplications, heldTips, invoiceCredits, paidInvoiceCredits, serviceRefunds, excessReturns, tipReturns, collectionFailures }: {
   businessId: string;
   jobId: string;
   draftId: string;
@@ -117,6 +120,7 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
   serviceRefunds?: boolean;
   excessReturns?: boolean;
   tipReturns?: boolean;
+  collectionFailures?: boolean;
 }) {
   const [jurisdictions, setJurisdictions] = useState<Readonly<Record<string, string>>>({});
   const choicesId = useId();
@@ -312,7 +316,7 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
       <IssuedInvoiceDetails invoice={issued} receiptBusinessId={directReceipts?businessId:undefined}
         paymentCorrections={paymentCorrections===true} fundApplications={fundApplications===true} heldTips={heldTips===true}
         invoiceCredits={invoiceCredits===true} paidInvoiceCredits={paidInvoiceCredits===true} serviceRefunds={serviceRefunds===true}
-        excessReturns={excessReturns===true} tipReturns={tipReturns===true}/>
+        excessReturns={excessReturns===true} tipReturns={tipReturns===true} collectionFailures={collectionFailures===true}/>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
     </section> : <form aria-label="Invoice tax review" aria-busy={busy} onSubmit={event => { event.preventDefault(); void review(); }}>
       <p className="field-help">Check for saved jurisdiction suggestions. Then choose the approved jurisdiction for each completed portion.</p>

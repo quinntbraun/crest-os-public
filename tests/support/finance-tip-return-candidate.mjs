@@ -54,7 +54,7 @@ export async function prepareTipReturnCandidate(sandbox) {
 }
 
 export async function tipReturnCandidateRecoveryProfile(directory, root) {
-  const { migrations, coverage } = await baseline(root);
+  const { migrations } = await baseline(root);
   const source = await migration(root);
   const sha256 = hash(source);
   const registry = await readFile(registryPath(directory));
@@ -63,6 +63,13 @@ export async function tipReturnCandidateRecoveryProfile(directory, root) {
   assert.equal(await readFile(migrationPath(directory), 'utf8'), source);
   const reviewed = [...migrations, { version: candidateVersion, file: candidateFile, sha256 }];
   assert.deepEqual(JSON.parse(registry).migrations, reviewed);
+  const schemaVersion = baselineVersion + 1;
+  return { profile: Object.freeze({ schemaVersion, registrySha256: hash(registry), heldTipReturnMigrationSha256: sha256 }),
+    versions: reviewed.map(row => row.version), coverage: await tipReturnExportCoverage(root) };
+}
+
+export async function tipReturnExportCoverage(root) {
+  const { coverage } = await baseline(root);
   const added = new Map(Object.entries(tipReturnSourceAddedColumns));
   const tables = coverage.tables.map(row => {
     if (!added.has(row.table)) return row;
@@ -71,8 +78,5 @@ export async function tipReturnCandidateRecoveryProfile(directory, root) {
     return { ...row, required: [...row.required, ...fields] };
   });
   assert.equal(added.size, 0);
-  const schemaVersion = baselineVersion + 1;
-  return { profile: Object.freeze({ schemaVersion, registrySha256: hash(registry), heldTipReturnMigrationSha256: sha256 }),
-    versions: reviewed.map(row => row.version),
-    coverage: { ...coverage, migrationCount: schemaVersion, tables: [...tables, ...tipReturnSourceCoverage] } };
+  return { ...coverage, migrationCount: baselineVersion + 1, tables: [...tables, ...tipReturnSourceCoverage] };
 }
