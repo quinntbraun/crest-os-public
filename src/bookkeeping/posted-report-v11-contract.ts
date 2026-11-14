@@ -20,13 +20,13 @@ function projectRow(input: unknown) {
 }
 
 export function parseFictionalJournalV11(input: unknown, businessId: string, throughOn: string,
-  accountId: string | null, afterLineId: string | null, pageSize = fictionalJournalV11PageSize) {
+  accountId: string | null, afterLineId: string | null, pageSize = fictionalJournalV11PageSize, includeRefundTransferFees = false) {
   check(input !== null && typeof input === 'object' && !Array.isArray(input));
   const report = input as Record<string, unknown>;
   check(report.schemaVersion === 11 && Array.isArray(report.rows) && report.rows.length <= pageSize);
   const candidates = report.rows.map(projectRow);
   const prior = parseFictionalJournalV10({ ...report, schemaVersion: 10, rows: candidates.map(entry => entry.row) },
-    businessId, throughOn, accountId, afterLineId, pageSize);
+    businessId, throughOn, accountId, afterLineId, pageSize, includeRefundTransferFees);
   const rows = prior.rows.map((row, index) => {
     const { tip } = candidates[index]!;
     if (tip === null) return row;

@@ -75,6 +75,12 @@ async function requireRegisteredExport(client,state,versions){
    AND NOT has_function_privilege('crest_web',to_regprocedure('crest_commands.direct_receipt_tip_source_snapshot(uuid)'),'EXECUTE'),false) AS granted`);
   assert.equal(receiptTip.granted,true,failure);
  }
+ if(versions.includes('20261222180000')){
+  const {rows:[refundFee]}=await client.query(`SELECT coalesce(
+   has_function_privilege('crest_export',to_regprocedure('crest_commands.refund_transfer_fee_source_snapshot(uuid)'),'EXECUTE')
+   AND NOT has_function_privilege('crest_web',to_regprocedure('crest_commands.refund_transfer_fee_source_snapshot(uuid)'),'EXECUTE'),false) AS granted`);
+  assert.equal(refundFee.granted,true,failure);
+ }
 }
 
 async function registryVersions(root){

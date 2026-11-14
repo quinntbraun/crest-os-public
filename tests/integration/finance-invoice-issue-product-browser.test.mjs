@@ -28,7 +28,8 @@ const tipReturnExport=process.env.CREST_TEST_TIP_RETURN_EXPORT==='1';
 const collectionFailureExport=process.env.CREST_TEST_COLLECTION_FAILURE_EXPORT==='1';
 const refundTransferExport=process.env.CREST_TEST_REFUND_TRANSFER_EXPORT==='1';
 const directReceiptTipExport=process.env.CREST_TEST_DIRECT_RECEIPT_TIP_EXPORT==='1';
-const postedFinanceSchemaVersion=directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
+const refundTransferFeeExport=process.env.CREST_TEST_REFUND_TRANSFER_FEE_EXPORT==='1';
+const postedFinanceSchemaVersion=refundTransferFeeExport?98:directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
@@ -835,7 +836,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const {['manifest.json']:manifestBytes,['export_delivery.json']:deliveryBytes,...parts}=unzipSync(archive);
         const manifest=strFromU8(manifestBytes),delivery=JSON.parse(strFromU8(deliveryBytes));
         const verified=verifyFinanceSourceExport(manifest,Object.entries(parts).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
-        const exportProfile=directReceiptTipExport?'crest.posted-finance-source.v13':refundTransferExport?'crest.posted-finance-source.v12':collectionFailureExport?'crest.posted-finance-source.v11':tipReturnExport?'crest.posted-finance-source.v10':excessReturnExport?'crest.posted-finance-source.v9':excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
+        const exportProfile=refundTransferFeeExport?'crest.posted-finance-source.v14':directReceiptTipExport?'crest.posted-finance-source.v13':refundTransferExport?'crest.posted-finance-source.v12':collectionFailureExport?'crest.posted-finance-source.v11':tipReturnExport?'crest.posted-finance-source.v10':excessReturnExport?'crest.posted-finance-source.v9':excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
         assert.equal(verified.profile,exportProfile);
         assert.equal(verified.completePortableExport,false);
         assert.equal(delivery.sourceSchemaVersion,postedFinanceSchemaVersion);
@@ -1130,18 +1131,27 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
             await transfer.getByRole('combobox',{name:'What happened?',exact:true}).selectOption(kind);
             await transfer.getByLabel('Settlement date',{exact:true}).fill(committed.actualOn);
             await transfer.getByRole('button',{name:'Load prior transfers',exact:true}).press('Enter');
-            await expect(transfer.getByRole('status')).toContainText('Choose the prior transfer');
+            await expect(transfer.locator(':scope > [role="status"]')).toContainText('Choose the prior transfer');
             await transfer.getByRole('combobox',{name:'Prior transfer',exact:true}).selectOption(eventId);
             await transfer.getByText('$1.00 available',{exact:true}).press('Enter');
             await transfer.getByLabel('Amount to record (USD)',{exact:true}).fill(amount);
             if(kind==='retry')await transfer.getByRole('button',{name:'Start at cent 1',exact:true}).press('Enter');
-            await transfer.getByLabel('Settled amount (USD)',{exact:true}).fill(amount);
+            const withFee=refundTransferFeeExport&&kind==='recredit';
+            await transfer.getByLabel(withFee?'Amount deposited (USD)':'Settled amount (USD)',{exact:true}).fill(withFee?'0.95':amount);
             await transfer.getByRole('combobox',{name:kind==='recredit'?'Account recredited':'Account debited',exact:true}).selectOption({label:'Fictional checking'});
             await transfer.getByLabel('Reference type',{exact:true}).fill('ledger');
             await transfer.getByLabel('Transaction ID',{exact:true}).fill(transaction);
             await transfer.getByLabel('Statement reference',{exact:true}).fill('Fictional statement transfer');
             await transfer.getByLabel('How you verified settlement',{exact:true}).fill('Fictional owner verified settlement');
             await transfer.getByLabel('Reason for the transfer',{exact:true}).fill('Fictional returned disbursement');
+            if(withFee){
+             await transfer.locator('summary').filter({hasText:'Fee withheld from the return'}).press('Enter');
+             await transfer.getByLabel('Fee withheld (USD, optional)',{exact:true}).fill('0.05');
+             await transfer.getByRole('button',{name:'Check fee account',exact:true}).press('Enter');
+             await expect(transfer).toContainText('Fictional provider fees');
+             await transfer.getByLabel('How you verified the withheld fee',{exact:true}).fill('Fictional provider statement shows the fee was withheld.');
+             await expect(transfer).toContainText('$0.95 deposited · $0.05 fee withheld · $1.00 still owed to the customer.');
+            }
            }
            await prepareTransfer('recredit',returned.eventId,'1.00','fictional-refund-recredit');
            const save=transfer.getByRole('button',{name:'Save refund transfer',exact:true});
@@ -1151,18 +1161,21 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
             assert.deepEqual((await new AxeBuilder({page}).include('[aria-label="'+title+'"]')
              .withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
             await page.screenshot({path:'.local/review/finance-refund-transfer-'+name+'-'+width+'.png'});
+            if(refundTransferFeeExport)await page.screenshot({path:'.local/review/finance-refund-transfer-fee-'+name+'-'+width+'.png'});
            }
            await allowInvoiceReadWindow();
            let submitted=0;
-           await page.route('**/api/business/finance-accounts/refund-transfer-submit',async route=>{
+           await page.route('**/api/business/finance-accounts/'+(refundTransferFeeExport?'refund-transfer-fee-submit':'refund-transfer-submit'),async route=>{
             submitted++;
             const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
             if(response.status()!==200){await route.fulfill({response});return;}
             recredit=(await response.json()).receipt;await route.abort('failed');
            },{times:1});
            await save.press('Enter');
-           await expect(transfer.getByRole('status')).toContainText('could not confirm the save');
+           await expect(transfer.locator(':scope > [role="status"]')).toContainText('could not confirm the save');
            assert.deepEqual([recredit?.kind,recredit?.priorEventId,recredit?.cents],['recredit',returned.eventId,'100']);
+           if(refundTransferFeeExport)assert.deepEqual([recredit.schemaVersion,recredit.embeddedFee.netCents,
+            recredit.embeddedFee.cents,recredit.embeddedFee.evidenceId],[2,'95','5',recredit.evidenceId]);
            const key='crest.refund-transfer.pending-reference.v1';
            const pending=JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key));
            assert.deepEqual(Object.keys(pending).sort(),['binding','businessId','customerId','reference']);
@@ -1176,7 +1189,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await expect(draftStatus).toHaveText('Issued invoice loaded.');
            await invoice.getByText(title,{exact:true}).press('Enter');
            await transfer.getByRole('button',{name:'Check original refund transfer',exact:true}).press('Enter');
-           await expect(transfer.getByRole('status')).toHaveText('The original refund transfer was recorded.');
+           await expect(transfer.locator(':scope > [role="status"]')).toHaveText('The original refund transfer was recorded.');
+           if(refundTransferFeeExport)await expect(transfer).toContainText('$0.95 deposited · $0.05 withheld as a fee.');
            assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),null);
            assert.equal(submitted,1);
            await prepareTransfer('retry',recredit.eventId,'0.40','fictional-refund-retry');
@@ -1187,7 +1201,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
             await route.fulfill({response});
            },{times:1});
            await save.press('Enter');
-           await expect(transfer.getByRole('status')).toHaveText('Refund transfer record saved.');
+           await expect(transfer.locator(':scope > [role="status"]')).toHaveText('Refund transfer record saved.');
            assert.deepEqual([refundRetry?.kind,refundRetry?.originalEventId,refundRetry?.priorEventId,refundRetry?.cents],
             ['retry',returned.eventId,recredit.eventId,'40']);
            const csv=page.waitForEvent('download');
@@ -1297,6 +1311,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           const journalText=await readFile(await (await journalCsv).path(),'utf8');
           assert(journalText.includes('Unused payment return ID')&&journalText.includes(returned.excessReturnId));
           if(adjustment)assert(journalText.includes('Original payment ID')&&journalText.includes(adjustment.collectionFailureId));
+          if(refundTransferFeeExport){
+           const account=trial.getByRole('combobox',{name:'Account (optional)',exact:true});
+           await allowInvoiceReadWindow();
+           await account.selectOption({label:'5300 · Fictional provider fees'});
+           await trial.getByRole('button',{name:'Load journal entries',exact:true}).press('Enter');
+           await expect(trial).toContainText('Refund returned · Provider fee withheld');
+          }
           if(directTip){
            const account=trial.getByRole('combobox',{name:'Account (optional)',exact:true});
            await allowInvoiceReadWindow();
@@ -1340,6 +1361,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           assert(strFromU8(excessParts['collection_failure_components.csv']).includes(adjustment.components[0].componentId));
          }
          if(refundRetry)assert(strFromU8(excessParts['refund_transfer_adjustments.csv']).includes(refundRetry.refundTransferAdjustmentId));
+         if(refundTransferFeeExport)assert(strFromU8(excessParts['refund_transfer_embedded_fees.csv']).includes(recredit.refundTransferAdjustmentId));
          if(directTip){
           assert(strFromU8(excessParts['tip_realizations.csv']).includes(directTip.tip.tipRealizationId));
           assert(lots.split(/\r?\n/)[0].includes('receipt_tip_event_id'));
