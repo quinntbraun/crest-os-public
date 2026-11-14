@@ -20,6 +20,7 @@ type Query = (sql: string, parameters: unknown[]) => Promise<unknown[]>;
 type References = Readonly<{
   invoice: Awaited<ReturnType<typeof captureInvoiceSource>>;
   unapplication: Awaited<ReturnType<typeof captureUnapplicationSource>>;
+  receipt?: Readonly<{lots:readonly Row[];partitions:readonly Row[];events:readonly Row[];groups:readonly Row[]}>;
 }>;
 const groups = Object.freeze(Object.keys(schema) as Group[]);
 export const fundApplicationSourceCoverage = Object.freeze([Object.freeze({
@@ -149,10 +150,11 @@ function verifyClosure(rows: Rows, references: References) {
   const events = index(rows.financial_events, 'fund_application_id');
   const journals = index(rows.journal_entries, 'event_id');
   const lines = buckets(rows.journal_lines, 'entry_id');
-  const lots = index(references.unapplication.rows.customer_fund_lots);
+  const lots = index([...references.unapplication.rows.customer_fund_lots,...references.receipt?.lots??[]]);
   const origins = index(references.unapplication.rows.allocation_unapplications);
   const heldEvents = index(references.unapplication.rows.financial_events, 'unapplication_id');
-  const heldGroups = index(references.unapplication.rows.atomic_finance_groups);
+  const heldGroups = index([...references.unapplication.rows.atomic_finance_groups,...references.receipt?.groups??[]]);
+  const receiptEvents=index(references.receipt?.events??[]),receiptPartitions=index(references.receipt?.partitions??[]);
   const receivables = index(references.invoice.rows.receivable_items);
   const issuedEvents = index(references.invoice.rows.financial_events, 'invoice_id');
   const issuedGroups = index(references.invoice.rows.atomic_finance_groups);
@@ -174,8 +176,12 @@ function verifyClosure(rows: Rows, references: References) {
       requireSource(first > previous && applied > 0n);
       previous = last;
       const event = linked(events, application.id), group = linked(groups, event.group_id);
-      const lot = linked(lots, application.fund_lot_id), origin = linked(origins, lot.unapplication_id);
-      const held = linked(heldEvents, origin.id), heldGroup = linked(heldGroups, held.group_id);
+      const lot = linked(lots, application.fund_lot_id);
+      const fromReceipt=lot.unapplication_id===null;
+      const origin=fromReceipt?linked(receiptPartitions,lot.parent_partition_id):linked(origins,lot.unapplication_id);
+      const held=fromReceipt?linked(receiptEvents,lot.receipt_event_id):linked(heldEvents,origin.id);
+      const heldGroup=linked(heldGroups,held.group_id);
+      requireSource(!fromReceipt||held.template==='P03'&&origin.origin_id===lot.origin_id);
       const receivable = linked(receivables, application.receivable_id), issued = linked(issuedEvents, receivable.invoice_id);
       const issuedGroup = linked(issuedGroups, issued.group_id), entry = linked(journals, event.id);
       requireSource(first >= cents(origin, 'first_cent') && last <= cents(origin, 'last_cent')
@@ -202,8 +208,9 @@ function verifyClosure(rows: Rows, references: References) {
       const audit = (audits.get(application.operation_id) ?? []).filter(row =>
         row.entity_kind === 'customer_fund_applications' && row.entity_id === application.id && row.action === 'apply');
       const receipt = {
-        schemaVersion: 1, businessId: application.business_id, fundApplicationId: application.id, operationId: application.operation_id,
-        eventId: event.id, fundLotId: lot.id, unapplicationId: origin.id, fundingOriginId: lot.origin_id, parentPartitionId: lot.parent_partition_id,
+        schemaVersion: fromReceipt?2:1, businessId: application.business_id, fundApplicationId: application.id, operationId: application.operation_id,
+        eventId: event.id, fundLotId: lot.id, unapplicationId: lot.unapplication_id, fundingOriginId: lot.origin_id, parentPartitionId: lot.parent_partition_id,
+        ...(fromReceipt?{receiptEventId:held.id}:{}),
         customerId: lot.customer_id, receivableId: receivable.id, invoiceId: receivable.invoice_id, arAccountId: ar.account_id,
         fundsAccountId: funds.account_id, mappingId: lot.mapping_id, effectiveOn: event.effective_on, firstCent: application.first_cent,
         lastCent: application.last_cent, cents: applied.toString(), reason: application.reason,

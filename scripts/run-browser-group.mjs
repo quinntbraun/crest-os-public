@@ -12,10 +12,17 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  // TAP emits each failure with its details as soon as the test finishes.
  const selected=process.argv[2],files=browserGroupFiles(command,selected),args=['--test','--test-reporter=tap','--test-concurrency=1',...files];
  console.log('REQUIRED_BROWSER_GROUP '+JSON.stringify({group:selected,files}));
- const child=spawn(process.execPath,args,{stdio:'inherit',windowsHide:true,
-  env:{...process.env,CREST_TEST_PAYMENT_CORRECTIONS:selected==='records'?'1':'0',
-   CREST_TEST_FUND_APPLICATIONS:selected==='records'?'1':'0',CREST_TEST_HELD_TIPS:selected==='records'?'1':'0',CREST_TEST_INVOICE_CREDITS:selected==='records'?'1':'0',CREST_TEST_PAID_INVOICE_CREDITS:selected==='records'?'1':'0',CREST_TEST_SERVICE_REFUNDS:selected==='records'?'1':'0',CREST_TEST_RECEIVABLE_AGING:selected==='records'?'1':'0',CREST_TEST_CUSTOMER_FUNDS_REPORT:selected==='records'?'1':'0',CREST_TEST_EXCESS_RECEIPTS:selected==='records'?'1':'0',CREST_TEST_POSTED_FINANCE_EXPORT:selected==='records'?'1':'0'}});
- const result=await new Promise(resolve=>{child.once('error',()=>resolve({code:1,signal:null}));child.once('close',(code,signal)=>resolve({code,signal}));});
+ const env={...process.env,CREST_TEST_PAYMENT_CORRECTIONS:selected==='records'?'1':'0',
+   CREST_TEST_FUND_APPLICATIONS:selected==='records'?'1':'0',CREST_TEST_HELD_TIPS:selected==='records'?'1':'0',CREST_TEST_INVOICE_CREDITS:selected==='records'?'1':'0',CREST_TEST_PAID_INVOICE_CREDITS:selected==='records'?'1':'0',CREST_TEST_SERVICE_REFUNDS:selected==='records'?'1':'0',CREST_TEST_RECEIVABLE_AGING:selected==='records'?'1':'0',CREST_TEST_CUSTOMER_FUNDS_REPORT:selected==='records'?'1':'0',CREST_TEST_EXCESS_RECEIPTS:'0',CREST_TEST_RECEIPT_FUNDS_APPLICATION:'0',CREST_TEST_POSTED_FINANCE_EXPORT:selected==='records'?'1':'0'};
+ const run=(testArgs,testEnv)=>{
+  const child=spawn(process.execPath,testArgs,{stdio:'inherit',windowsHide:true,env:testEnv});
+  return new Promise(resolve=>{child.once('error',()=>resolve({code:1,signal:null}));child.once('close',(code,signal)=>resolve({code,signal}));});
+ };
+ let result=await run(args,env);
+ if(selected==='records'&&result.code===0&&result.signal===null){
+  result=await run(['--test','--test-reporter=tap','--test-concurrency=1','tests/integration/finance-invoice-issue-product-browser.test.mjs'],
+   {...env,CREST_TEST_EXCESS_RECEIPTS:'1',CREST_TEST_RECEIPT_FUNDS_APPLICATION:'1'});
+ }
  let screenshots=[];
  try {
   screenshots=(await readdir('.local/review')).filter(name=>/^(settings|workspace|home|quote|amendment|appointment|field|completion|mileage|travel|finance)-.*\.png$/.test(name)).sort();
@@ -24,7 +31,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  }
  const needsScreenshots=['commercial','amendments','schedule','field','custody','records'].includes(selected);
  const requiredViewsByGroup={
-  records:['workspace-menu','finance-account-settings-recovery','finance-mapping-history','finance-mapping-manage','finance-tax-approval','finance-tax-history','finance-tax-preview','finance-category-approval','finance-category-history','finance-channel-opening','finance-channel-history','finance-invoice-issue-product','finance-direct-receipt','finance-expense-posting','finance-trial-balance','finance-payment-correction','finance-fund-application','finance-held-tip','finance-invoice-credit','finance-paid-invoice-credit','finance-service-refund','finance-posted-export','settings-calendar-synced','settings-calendar-pending'],
+  records:['workspace-menu','finance-account-settings-recovery','finance-mapping-history','finance-mapping-manage','finance-tax-approval','finance-tax-history','finance-tax-preview','finance-category-approval','finance-category-history','finance-channel-opening','finance-channel-history','finance-invoice-issue-product','finance-direct-receipt','finance-expense-posting','finance-trial-balance','finance-payment-correction','finance-fund-application','finance-apply-received-funds','finance-held-tip','finance-invoice-credit','finance-paid-invoice-credit','finance-service-refund','finance-posted-export','settings-calendar-synced','settings-calendar-pending'],
   field:['field-departure','field-pause','completion-editor','completion-saved','mileage-form','mileage-split','mileage-saved','field-cancellation','field-work-time','field-work-boundary','mileage-departure-correction','completion-outcome','completion-history','field-maintenance-history','completion-invoice-preparation','completion-invoice-draft'],
   custody:['field-dropoff-intake','field-dropoff-work','field-dropoff-cancellation','field-dropoff-completion',
    'field-dropoff-collections','field-dropoff-history','field-dropoff-policy-revision',

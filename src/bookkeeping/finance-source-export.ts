@@ -69,7 +69,9 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
   const paired=pairedCapture?.paired??null;
   const correction=pairedCapture?{...pairedCapture.unapplication,history:pairedCapture.history}
     :includeCorrections?await captureUnapplicationSource(businessId,query):null;
-  const application=includeFundApplications&&correction?await captureFundApplicationSource(businessId,query,{invoice,unapplication:correction}):null;
+  const application=includeFundApplications&&correction?await captureFundApplicationSource(businessId,query,{invoice,unapplication:correction,
+    ...(includeExcessReceipts?{receipt:{lots:receiptFunds,partitions:receipt.rows.funding_partitions,
+      events:receipt.rows.financial_events,groups:receipt.rows.atomic_finance_groups}}:{})}):null;
   const tip=includeTips?await captureHeldTipSource(businessId,query):null;
   const credit=pairedCapture?.credit??(includeCredits?await captureInvoiceCreditSource(businessId,query):null);
   const refund=includeServiceRefunds?await captureServiceRefundSource(businessId,query):null;

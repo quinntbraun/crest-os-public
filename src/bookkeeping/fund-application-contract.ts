@@ -59,19 +59,22 @@ export function parseFundApplicationResult(value:unknown,businessId:string,refer
   }
   check(exact(value,['state','receipt'])&&value.state==='committed');
   const {receipt}=value;
-  check(exact(receipt,['schemaVersion','businessId','operationId','fundApplicationId','eventId','fundLotId','unapplicationId',
+  const fields=['schemaVersion','businessId','operationId','fundApplicationId','eventId','fundLotId','unapplicationId',
     'fundingOriginId','parentPartitionId','customerId','receivableId','invoiceId','arAccountId','fundsAccountId','mappingId',
-    'effectiveOn','firstCent','lastCent','cents','reason'])
-    &&receipt.schemaVersion===1&&receipt.businessId===businessId&&receipt.operationId===reference.operationId
+    'effectiveOn','firstCent','lastCent','cents','reason'];
+  check((exact(receipt,fields)&&receipt.schemaVersion===1&&customerUuid(receipt.unapplicationId)
+    ||exact(receipt,[...fields,'receiptEventId'])&&receipt.schemaVersion===2&&receipt.unapplicationId===null&&customerUuid(receipt.receiptEventId))
+    &&receipt.businessId===businessId&&receipt.operationId===reference.operationId
     &&receipt.fundApplicationId===reference.fundApplicationId&&customerUuid(receipt.eventId)&&customerUuid(receipt.fundLotId)
-    &&customerUuid(receipt.unapplicationId)&&customerUuid(receipt.fundingOriginId)&&customerUuid(receipt.parentPartitionId)
+    &&customerUuid(receipt.fundingOriginId)&&customerUuid(receipt.parentPartitionId)
     &&customerUuid(receipt.customerId)&&customerUuid(receipt.receivableId)&&customerUuid(receipt.invoiceId)
     &&customerUuid(receipt.arAccountId)&&customerUuid(receipt.fundsAccountId)&&receipt.arAccountId!==receipt.fundsAccountId
     &&customerUuid(receipt.mappingId)&&validDate(receipt.effectiveOn)&&positive(receipt.cents)&&financeAccountReviewReason(receipt.reason));
   const consumed=range({firstCent:receipt.firstCent,lastCent:receipt.lastCent});
   check(BigInt(receipt.cents)===BigInt(consumed.lastCent)-BigInt(consumed.firstCent)+1n);
   return {state:'committed' as const,receipt:{fundApplicationId:reference.fundApplicationId,eventId:receipt.eventId,
-    fundLotId:receipt.fundLotId,unapplicationId:receipt.unapplicationId,fundingOriginId:receipt.fundingOriginId,
+    fundLotId:receipt.fundLotId,unapplicationId:receipt.unapplicationId,
+    ...(customerUuid(receipt.receiptEventId)?{receiptEventId:receipt.receiptEventId}:{}),fundingOriginId:receipt.fundingOriginId,
     parentPartitionId:receipt.parentPartitionId,customerId:receipt.customerId,receivableId:receipt.receivableId,invoiceId:receipt.invoiceId,
     arAccountId:receipt.arAccountId,fundsAccountId:receipt.fundsAccountId,mappingId:receipt.mappingId,effectiveOn:receipt.effectiveOn,
     ...consumed,cents:receipt.cents,reason:receipt.reason}};

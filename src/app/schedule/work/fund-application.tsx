@@ -180,7 +180,10 @@ export function FundApplication({businessId,customerId,invoiceId}: {businessId:s
       </form>}
       {receipt&&<>
         <p><strong>{quoteMoney(receipt.cents)}</strong> applied on {receipt.effectiveOn}.</p>
-        <button type="button" className="secondary" onClick={()=>downloadFinanceHistory('crest-customer-funds-application.csv',[
+        <button type="button" className="secondary" onClick={()=>downloadFinanceHistory('crest-customer-funds-application.csv',receipt.receiptEventId?[
+          ['Application ID','Customer funds lot ID','Original payment event ID','Invoice ID','Date','Amount cents','Reason'],
+          [receipt.fundApplicationId,receipt.fundLotId,receipt.receiptEventId,receipt.invoiceId,receipt.effectiveOn,receipt.cents,receipt.reason],
+        ]:[
           ['Application ID','Customer funds lot ID','Invoice ID','Date','Amount cents','Reason'],
           [receipt.fundApplicationId,receipt.fundLotId,receipt.invoiceId,receipt.effectiveOn,receipt.cents,receipt.reason],
         ])}>Download funds application (CSV)</button>

@@ -193,12 +193,15 @@ export function verifyHeldTipSourceClosure(read:(table:string)=>readonly Portabl
   requireSource(ranges.length===tips.size+applications.size&&tipEvents.size===tips.size);
   for(const spans of bucket(ranges,'fund_lot_id').values()){
     spans.sort((a,b)=>amount(a,'first_cent')<amount(b,'first_cent')?-1:1);
-    const lot=get(lots,spans[0]!.fund_lot_id),parent=get(released,lot.unapplication_id);
-    const allocation=get(allocations,parent.allocation_id),partition=get(partitions,allocation.partition_id);
-    const root=get(roots,partition.origin_id),receivable=get(originalReceivables,allocation.receivable_id);
+    const lot=get(lots,spans[0]!.fund_lot_id),fromReceipt=lot.unapplication_id===null;
+    const parent=fromReceipt?get(partitions,lot.parent_partition_id):get(released,lot.unapplication_id);
+    const allocation=fromReceipt?null:get(allocations,parent.allocation_id);
+    const partition=allocation?get(partitions,allocation.partition_id):parent;
+    const root=get(roots,partition.origin_id);
+    if(allocation)requireSource(lot.customer_id===get(originalReceivables,allocation.receivable_id).customer_id);
     const parentFirst=amount(parent,'first_cent'),parentLast=amount(parent,'last_cent');
     requireSource(lot.origin_id===root.id&&lot.parent_partition_id===partition.id&&lot.customer_id===root.customer_id
-      &&lot.customer_id===receivable.customer_id&&parentFirst>=amount(partition,'first_cent')
+      &&parentFirst>=amount(partition,'first_cent')
       &&parentLast<=amount(partition,'last_cent')&&parentLast>=parentFirst
       &&amount(lot,'original_cents')===parentLast-parentFirst+1n);
     let previous=0n;
@@ -214,6 +217,7 @@ export function verifyHeldTipSourceClosure(read:(table:string)=>readonly Portabl
         consumedApplications.add(application.id);
         continue;
       }
+      requireSource(!fromReceipt);
       const tip=get(tips,range.tip_realization_id), event=get(tipEvents,tip.id);
       const source=get(held,parent.id), group=get(groups,event.group_id), sourceGroup=get(groups,source.group_id);
       const period=get(openPeriods,event.period_id);
