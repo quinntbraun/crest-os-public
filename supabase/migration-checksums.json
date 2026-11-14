@@ -480,6 +480,11 @@
       "version": "20261220180000",
       "file": "20261220180000_fictional_refund_transfer.sql",
       "sha256": "52ec69175560b3e049ca376c6f8bcfcd07cf7897afb47e1147cd7ca543a0eac8"
+    },
+    {
+      "version": "20261221180000",
+      "file": "20261221180000_fictional_direct_receipt_tip.sql",
+      "sha256": "ae10cc68c1f365ca2fcf1aa6f92c6743b20eac989da8a02dbccdb378e3863895"
     }
   ]
 }

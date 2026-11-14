@@ -94,7 +94,7 @@ function columnType(column){
 
 export async function exerciseNeutralFinanceImport(connection,files,businessId,{
   includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,
-  includeCollectionFailures=false,includeRefundTransferAdjustments=false,
+  includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,
 }={}){
   assert(!includePairedCredits||includeCredits);
   assert(!includeServiceRefunds||includePairedCredits);
@@ -103,6 +103,7 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
   assert(!includeTipReturns||includeExcessReturns);
   assert(!includeCollectionFailures||includeTipReturns);
   assert(!includeRefundTransferAdjustments||includeCollectionFailures);
+  assert(!includeDirectReceiptTips||includeRefundTransferAdjustments);
   const parts=new Map(files.map(file=>[file.name,file.content]));
   const {tables}=JSON.parse(parts.get('dictionary.json'));
   assert.deepEqual(tables.map(row=>row.name),[...names,...includeCredits?['invoice_credits']:[],
@@ -289,7 +290,7 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
         JOIN portions p ON (p.business_id,p.tip_return_id)=(r.business_id,r.id)
         JOIN neutral_finance.tip_realizations t ON (t.business_id,t.id)=(r.business_id,r.tip_realization_id)
         JOIN neutral_finance.financial_events original ON (original.business_id,original.tip_realization_id)=(t.business_id,t.id)
-          AND original.template='P06' AND original.effective_on<=r.actual_on
+          AND original.template IN('P03','P06') AND original.effective_on<=r.actual_on
         JOIN neutral_finance.financial_events e ON (e.business_id,e.tip_return_id)=(r.business_id,r.id) AND e.template='P10'
         JOIN neutral_finance.money_movements m ON (m.business_id,m.event_id)=(e.business_id,e.id)
         JOIN neutral_finance.external_money_evidence proof ON (proof.business_id,proof.id)=(r.business_id,r.evidence_id)
@@ -419,6 +420,44 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
         await assert.rejects(connection.query('UPDATE neutral_finance.refund_transfer_adjustment_ranges SET prior_event_id=$1',[randomUUID()]),
           {code:'23503'});
         await connection.query('ROLLBACK TO SAVEPOINT neutral_wrong_refund_transfer_parent');
+      }
+    }
+    if(includeDirectReceiptTips){
+      await connection.query(`ALTER TABLE neutral_finance.customer_fund_lots
+        ADD UNIQUE(business_id,receipt_tip_event_id),
+        ADD FOREIGN KEY(business_id,receipt_tip_event_id) REFERENCES neutral_finance.financial_events(business_id,id),
+        ADD CHECK(num_nonnulls(unapplication_id,receipt_event_id,receipt_tip_event_id)=1)`);
+      const {rows:directTips}=await connection.query(`
+        SELECT t.id,lot.id IS NOT NULL AND root.id IS NOT NULL AND part.id IS NOT NULL AND claim.id IS NOT NULL
+          AND (root.payment_id,root.customer_id)=(e.payment_id,lot.customer_id)
+          AND (part.origin_id,part.first_cent,part.last_cent)=(root.id,t.first_cent,t.last_cent)
+          AND (claim.fund_lot_id,claim.first_cent,claim.last_cent)=(lot.id,t.first_cent,t.last_cent)
+          AND lot.original_cents=t.inclusive_cents AND t.net_cents::numeric+t.tax_cents=t.inclusive_cents
+          AND NOT EXISTS(SELECT FROM neutral_finance.journal_lines l WHERE (l.business_id,l.entry_id,l.fund_lot_id)=(lot.business_id,j.id,lot.id)) AS exact,
+          count(*) FILTER(WHERE l.purpose='tip_revenue' AND l.account_id=t.revenue_account_id AND l.fixed_mapping_id=t.revenue_mapping_id
+            AND l.debit_cents=0 AND l.credit_cents=t.net_cents)::int AS revenue_lines,
+          count(*) FILTER(WHERE l.purpose='tip_tax' AND l.account_id=t.tax_account_id AND l.fixed_mapping_id IS NULL
+            AND l.debit_cents=0 AND l.credit_cents=t.tax_cents)::int AS tax_lines,
+          count(l.id)::int AS total_lines,
+          t.net_cents::text,t.tax_cents::text
+        FROM neutral_finance.financial_events e
+        JOIN neutral_finance.tip_realizations t ON (t.business_id,t.id)=(e.business_id,e.tip_realization_id)
+        LEFT JOIN neutral_finance.customer_fund_lots lot ON (lot.business_id,lot.id,lot.receipt_tip_event_id)=(e.business_id,t.fund_lot_id,e.id)
+        LEFT JOIN neutral_finance.funding_origins root ON (root.business_id,root.id)=(lot.business_id,lot.origin_id)
+        LEFT JOIN neutral_finance.funding_partitions part ON (part.business_id,part.id)=(lot.business_id,lot.parent_partition_id)
+        LEFT JOIN neutral_finance.fund_lot_range_consumptions claim ON (claim.business_id,claim.tip_realization_id)=(t.business_id,t.id)
+        JOIN neutral_finance.journal_entries j ON (j.business_id,j.event_id)=(e.business_id,e.id)
+        LEFT JOIN neutral_finance.journal_lines l ON (l.business_id,l.entry_id,l.tip_realization_id)=(j.business_id,j.id,t.id)
+        WHERE e.template='P03'
+        GROUP BY t.id,lot.id,root.id,part.id,claim.id,e.id,j.id`);
+      assert.equal(directTips.length,exports.customer_fund_lots.filter(row=>row.receipt_tip_event_id!==null).length);
+      assert(directTips.every(row=>row.exact===true&&row.revenue_lines===Number(row.net_cents!=='0')
+        &&row.tax_lines===Number(row.tax_cents!=='0')&&row.total_lines===row.revenue_lines+row.tax_lines));
+      if(directTips.length){
+        await connection.query('SAVEPOINT neutral_bad_direct_tip_link');
+        await assert.rejects(connection.query('UPDATE neutral_finance.customer_fund_lots SET receipt_tip_event_id=$1 WHERE id=(SELECT id FROM neutral_finance.customer_fund_lots WHERE receipt_tip_event_id IS NOT NULL ORDER BY id LIMIT 1)',[randomUUID()]),
+          {code:'23503'});
+        await connection.query('ROLLBACK TO SAVEPOINT neutral_bad_direct_tip_link');
       }
     }
     const balance=(await connection.query(`

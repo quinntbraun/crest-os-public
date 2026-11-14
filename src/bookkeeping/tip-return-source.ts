@@ -81,7 +81,7 @@ export function verifyTipReturnSourceClosure(read: (group: string) => readonly R
   history: Readonly<{ operation: readonly Row[]; audit_event: readonly Row[] }>) {
   const returns = index(read('tip_returns')), tips = index(read('tip_realizations')), lots = index(read('customer_fund_lots'));
   const groupsById = index(read('atomic_finance_groups')), events = read('financial_events');
-  const tipEvents = index(events.filter(row => row.template === 'P06'), 'tip_realization_id');
+  const tipEvents = index(events.filter(row => row.template === 'P06' || row.template === 'P03' && row.tip_realization_id != null), 'tip_realization_id');
   const returnEvents = index(events.filter(row => row.template === 'P10'), 'tip_return_id');
   const ranges = read('tip_realization_range_consumptions'), rangesByReturn = group(ranges, 'tip_return_id');
   const movements = index(read('money_movements'), 'event_id'), evidence = index(read('external_money_evidence'));

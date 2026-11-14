@@ -158,18 +158,21 @@ function approvalBasis(operations:readonly PortableRow[],command:string){
 // The combined v4 snapshot and the offline verifier both use decoded records
 // with history bytes already checked against the history manifest.
 export function verifyHeldTipSourceClosure(read:(table:string)=>readonly PortableRow[],
-  history:{operation:readonly PortableRow[];audit_event:readonly PortableRow[]}){
-  const tips=index(read('tip_realizations'));
+  history:{operation:readonly PortableRow[];audit_event:readonly PortableRow[]},includeDirectReceiptTips=false){
+  const tipLots=includeDirectReceiptTips?new Set(read('customer_fund_lots').filter(row=>row.receipt_tip_event_id!==null).map(row=>row.id)):new Set();
+  const allTips=read('tip_realizations');
+  const directTips=new Set(allTips.filter(row=>tipLots.has(row.fund_lot_id)).map(row=>row.id));
+  const tips=index(allTips.filter(row=>!directTips.has(row.id)));
   const applications=index(read('customer_fund_applications'));
   const lots=index(read('customer_fund_lots'));
-  const ranges=read('fund_lot_range_consumptions');
+  const ranges=read('fund_lot_range_consumptions').filter(row=>!tipLots.has(row.fund_lot_id));
   const released=index(read('allocation_unapplications'));
   const groups=index(read('atomic_finance_groups'));
-  const eventRows=read('financial_events');
+  const eventRows=read('financial_events').filter(row=>!directTips.has(row.tip_realization_id));
   const held=index(eventRows.filter(row=>row.template==='P05'),'unapplication_id');
   const tipEvents=index(eventRows.filter(row=>row.template==='P06'),'tip_realization_id');
   const entries=index(read('journal_entries'),'event_id');
-  const lines=read('journal_lines');
+  const lines=read('journal_lines').filter(row=>!directTips.has(row.tip_realization_id));
   const byEntry=bucket(lines,'entry_id');
   const movements=read('money_movements');
   const allocationRows=read('allocation_events');

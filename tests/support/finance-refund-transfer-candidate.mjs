@@ -38,6 +38,11 @@ function extendCoverage(coverage, addedColumns, addedTables) {
   return { ...coverage, migrationCount: coverage.migrationCount + 1, tables: [...tables, ...addedTables] };
 }
 
+export async function refundTransferExportCoverage(root) {
+  const coverage95=extendCoverage(await tipReturnExportCoverage(root),collectionFailureSourceAddedColumns,collectionFailureSourceCoverage);
+  return extendCoverage(coverage95,refundTransferSourceAddedColumns,refundTransferSourceCoverage);
+}
+
 export async function refundTransferRecoveryProfile(directory, root) {
   const priorRegistry = await readFile(join(root, 'tests/support/registered95-migration-checksums.json'));
   assert.equal(hash(priorRegistry), priorRegistryHash);
@@ -50,8 +55,7 @@ export async function refundTransferRecoveryProfile(directory, root) {
   const reviewed = [...baseline.migrations, { version: refundTransferVersion, file: refundTransferFile, sha256 }];
   const registry = await readFile(join(directory, 'supabase/migration-checksums.json'));
   assert.deepEqual(JSON.parse(registry), { ...baseline, migrations: reviewed });
-  const coverage95 = extendCoverage(await tipReturnExportCoverage(root), collectionFailureSourceAddedColumns, collectionFailureSourceCoverage);
-  const coverage = extendCoverage(coverage95, refundTransferSourceAddedColumns, refundTransferSourceCoverage);
+  const coverage = await refundTransferExportCoverage(root);
   assert.equal(coverage.migrationCount, reviewed.length);
   return { profile: Object.freeze({ schemaVersion: reviewed.length, registrySha256: hash(registry), heldRefundTransferMigrationSha256: sha256 }),
     versions: reviewed.map(row => row.version), coverage };

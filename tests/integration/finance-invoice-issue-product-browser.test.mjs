@@ -27,7 +27,8 @@ const excessReturnExport=process.env.CREST_TEST_EXCESS_RETURN_EXPORT==='1';
 const tipReturnExport=process.env.CREST_TEST_TIP_RETURN_EXPORT==='1';
 const collectionFailureExport=process.env.CREST_TEST_COLLECTION_FAILURE_EXPORT==='1';
 const refundTransferExport=process.env.CREST_TEST_REFUND_TRANSFER_EXPORT==='1';
-const postedFinanceSchemaVersion=refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
+const directReceiptTipExport=process.env.CREST_TEST_DIRECT_RECEIPT_TIP_EXPORT==='1';
+const postedFinanceSchemaVersion=directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
@@ -234,6 +235,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      }
      if(directReceipts){
       await page.setViewportSize({width:390,height:844});
+      if(paymentCorrections){
+       const actions=invoice.getByRole('navigation',{name:'Invoice actions',exact:true});
+       for(const label of ['Corrections and credits','Payments']){
+        await actions.getByRole('link',{name:label,exact:true}).press('Enter');
+        await expect(invoice.getByRole('heading',{name:label,exact:true})).toBeFocused();
+       }
+      }
       const payments=invoice.getByRole('region',{name:'Record a fictional payment',exact:true});
       await invoice.getByText('Record a fictional payment',{exact:true}).click();
       await allowInvoiceReadWindow();
@@ -657,6 +665,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await expect(credit.getByRole('status')).toContainText('Choose the payment');
         const choice=credit.getByLabel('Payment',{exact:true});
         if(await choice.count())await choice.selectOption({label:(await choice.locator('option').nth(1).textContent()).trim()});
+        await allowInvoiceReadWindow();
         await credit.getByRole('button',{name:'Review credit and payment',exact:true}).press('Enter');
         await expect(credit.getByRole('status')).toContainText('Review the credit and the amount');
         await expect(credit).toContainText('$149.00');
@@ -826,7 +835,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const {['manifest.json']:manifestBytes,['export_delivery.json']:deliveryBytes,...parts}=unzipSync(archive);
         const manifest=strFromU8(manifestBytes),delivery=JSON.parse(strFromU8(deliveryBytes));
         const verified=verifyFinanceSourceExport(manifest,Object.entries(parts).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
-        const exportProfile=refundTransferExport?'crest.posted-finance-source.v12':collectionFailureExport?'crest.posted-finance-source.v11':tipReturnExport?'crest.posted-finance-source.v10':excessReturnExport?'crest.posted-finance-source.v9':excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
+        const exportProfile=directReceiptTipExport?'crest.posted-finance-source.v13':refundTransferExport?'crest.posted-finance-source.v12':collectionFailureExport?'crest.posted-finance-source.v11':tipReturnExport?'crest.posted-finance-source.v10':excessReturnExport?'crest.posted-finance-source.v9':excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
         assert.equal(verified.profile,exportProfile);
         assert.equal(verified.completePortableExport,false);
         assert.equal(delivery.sourceSchemaVersion,postedFinanceSchemaVersion);
@@ -971,7 +980,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           WHERE o.business_id=$1 AND o.payment_id=$2`,[fixture.business,committed.paymentId])).rows;
          assert.deepEqual(funds,[{origin:committed.fundingOriginId,lot:committed.heldFunds.lotId,cents:'1234',unapplication:null,
           event:committed.eventId,mapping:mappingId,partition:committed.heldFunds.fundingPartitionId,first:'1',last:'1234',partitions:1,allocations:0}]);
-         let returned,adjustment,recredit,refundRetry;
+         let returned,adjustment,recredit,refundRetry,directTip;
          if(excessReturnExport){
           await allowInvoiceReadWindow();
           await openReturn(committed.actualOn);
@@ -1185,6 +1194,70 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await transfer.getByRole('button',{name:'Download refund transfer (CSV)',exact:true}).press('Enter');
            assert((await readFile(await (await csv).path(),'utf8')).includes(refundRetry.refundTransferAdjustmentId));
           }
+          if(directReceiptTipExport){
+           await allowInvoiceReadWindow();
+           await page.goto(fixture.origin+'/customers');
+           const customerName='Fictional standalone tip customer';
+           await page.getByRole('button',{name:'Add customer',exact:true}).press('Enter');
+           await page.getByLabel('Customer name',{exact:true}).fill(customerName);
+           await page.getByRole('button',{name:'Save customer',exact:true}).press('Enter');
+           await expect(page.getByRole('region',{name:'Customer directory',exact:true})
+            .locator(':scope > [role="status"]')).toContainText('Customer saved');
+           await page.getByRole('button',{name:'Load current customers',exact:true}).press('Enter');
+           await allowInvoiceReadWindow();
+           await page.getByRole('button',{name:customerName,exact:true}).press('Enter');
+           const customerPayment=page.getByRole('region',{name:'Record a fictional payment',exact:true});
+           await page.getByText('Record a fictional payment',{exact:true}).press('Enter');
+           await customerPayment.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
+           await expect(customerPayment.getByRole('group',{name:'Apply the payment'})).toHaveCount(0);
+           await customerPayment.getByLabel(/^Total received/).fill('0.06');
+           await customerPayment.getByText('Include a customer tip',{exact:true}).press('Enter');
+           await customerPayment.getByLabel('Tip amount (USD, optional)',{exact:true}).fill('0.06');
+           await customerPayment.getByRole('button',{name:'Load tip jurisdictions',exact:true}).press('Enter');
+           await customerPayment.getByRole('combobox',{name:'Tip tax jurisdiction',exact:true}).selectOption('Fictional tip district');
+           await allowInvoiceReadWindow();
+           await customerPayment.getByRole('button',{name:'Review tip tax',exact:true}).press('Enter');
+           await expect(customerPayment).toContainText('$0.05 tip · $0.01 included tax');
+           const saveTipReceipt=customerPayment.getByRole('button',{name:'Record payment',exact:true});
+           await expect(saveTipReceipt).toBeDisabled();
+           await customerPayment.getByLabel('How the customer confirmed the tip',{exact:true}).fill('Fictional customer designated the entire payment as a tip.');
+           await customerPayment.getByLabel('How you verified the payment',{exact:true}).fill('Fictional received amount verified on the bank statement.');
+           for(const width of [360,390,768,1440]){
+            await page.setViewportSize({width,height:900});
+            await saveTipReceipt.scrollIntoViewIfNeeded();
+            assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+            assert.deepEqual((await new AxeBuilder({page}).include('[aria-label="Record a fictional payment"]')
+             .withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+            await page.screenshot({path:'.local/review/finance-direct-tip-'+name+'-'+width+'.png'});
+           }
+           await allowInvoiceReadWindow();
+           await page.route('**/api/business/finance-accounts/receipt-tip-record',async route=>{
+            const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+            if(response.status()!==200){await route.fulfill({response});return;}
+            directTip=(await response.json()).receipt;
+            await route.abort('failed');
+           },{times:1});
+           await saveTipReceipt.press('Enter');
+           const paymentStatus=customerPayment.locator(':scope > [role="status"]');
+           await expect(paymentStatus).toContainText('outcome could not be confirmed');
+           assert.deepEqual([directTip?.schemaVersion,directTip?.grossCents,directTip?.tip.netCents,
+            directTip?.tip.taxCents,directTip?.heldFunds],[3,'6','5','1',null]);
+           assert.deepEqual(directTip.applications,[]);
+           await allowInvoiceReadWindow();
+           const storedTip=JSON.parse(await page.evaluate(()=>sessionStorage.getItem('crest.direct-receipt.pending-reference.v1')));
+           assert.deepEqual(Object.keys(storedTip).sort(),['binding','businessId','customerId','reference']);
+           assert.equal(storedTip.customerId,directTip.customerId);
+           await page.reload();
+           await page.getByRole('button',{name:customerName,exact:true}).press('Enter');
+           await page.getByText('Record a fictional payment',{exact:true}).press('Enter');
+           await customerPayment.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
+           await expect(paymentStatus).toHaveText('The original payment was saved.');
+           await expect(customerPayment).toContainText('$0.06 recorded as a confirmed tip · $0.01 included tax.');
+           const csv=page.waitForEvent('download');
+           await customerPayment.getByRole('button',{name:'Download payment (CSV)',exact:true}).press('Enter');
+           const content=await readFile(await (await csv).path(),'utf8');
+           assert(content.includes(directTip.tip.tipRealizationId)&&content.includes('"6","5","1","Fictional tip district"'));
+          }
           await allowInvoiceReadWindow();
           await page.goto(fixture.origin+'/settings/accounts');
           await page.getByRole('button',{name:'Load accounts',exact:true}).click();
@@ -1224,6 +1297,16 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           const journalText=await readFile(await (await journalCsv).path(),'utf8');
           assert(journalText.includes('Unused payment return ID')&&journalText.includes(returned.excessReturnId));
           if(adjustment)assert(journalText.includes('Original payment ID')&&journalText.includes(adjustment.collectionFailureId));
+          if(directTip){
+           const account=trial.getByRole('combobox',{name:'Account (optional)',exact:true});
+           await allowInvoiceReadWindow();
+           await account.selectOption({label:'4100 · Fictional tip revenue'});
+           await trial.getByRole('button',{name:'Load journal entries',exact:true}).press('Enter');
+           await expect(trial).toContainText('Payment tip · Tip revenue');
+           await account.selectOption({label:'2100 · Fictional sales tax payable'});
+           await trial.getByRole('button',{name:'Load journal entries',exact:true}).press('Enter');
+           await expect(trial).toContainText('Payment tip · Included tax');
+          }
          }
          await allowInvoiceReadWindow();
          await page.goto(fixture.origin+'/export-files');
@@ -1257,6 +1340,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           assert(strFromU8(excessParts['collection_failure_components.csv']).includes(adjustment.components[0].componentId));
          }
          if(refundRetry)assert(strFromU8(excessParts['refund_transfer_adjustments.csv']).includes(refundRetry.refundTransferAdjustmentId));
+         if(directTip){
+          assert(strFromU8(excessParts['tip_realizations.csv']).includes(directTip.tip.tipRealizationId));
+          assert(lots.split(/\r?\n/)[0].includes('receipt_tip_event_id'));
+          assert(ledger.split(/\r?\n/).some(row=>row.includes('"tip_revenue"')&&row.includes(directTip.tip.tipRealizationId)));
+         }
          assert(ledger.split(/\r?\n/).some(row=>row.includes('"receipt_funds"')&&row.includes(committed.heldFunds.lotId)&&row.includes('"1234"')));
          if(returned){
           const returns=strFromU8(excessParts['excess_receipt_returns.csv']);

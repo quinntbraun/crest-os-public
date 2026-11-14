@@ -32,7 +32,7 @@ import {invoiceTaxJurisdiction,parseInvoiceTaxMappingApproval,parseInvoiceTaxMap
 import {parseInvoiceExemptionApproval,parseInvoiceExemptionEditor,parseInvoiceExemptionResult,parseInvoiceExemptionTarget}
  from '../bookkeeping/invoice-exemption-contract';
 import {parseInvoiceSetupRead,parseInvoiceSetupResult,parseInvoiceSetupWrite} from '../bookkeeping/invoice-setup-contract';
-import {directReceiptMatchesInput,parseDirectReceiptInput,parseDirectReceiptOptions,parseDirectReceiptReference,
+import {directReceiptMatchesInput,parseDirectReceiptInput,parseDirectReceiptOptions,parseDirectReceiptTipOptions,parseDirectReceiptReference,
  parseDirectReceiptResult} from '../bookkeeping/direct-receipt-contract';
 import {parseServiceRefundCredits,parseServiceRefundInput,parseServiceRefundOptions,parseServiceRefundReference,parseServiceRefundResult,
  serviceRefundMatchesInput,serviceRefundRefusal} from '../bookkeeping/service-refund-contract';
@@ -58,6 +58,7 @@ import {parseFictionalJournalV7,parseFictionalTrialBalanceV7} from '../bookkeepi
 import {parseRefundTransferInput,parseRefundTransferOptions,parseRefundTransferReference,parseRefundTransferResult,refundTransferMatchesInput,refundTransferRefusal} from '../bookkeeping/refund-transfer-adjustment-contract';
 import type {RefundTransferKind} from '../bookkeeping/refund-transfer-adjustment-contract';
 import {parseFictionalJournalV10,parseFictionalTrialBalanceV10} from '../bookkeeping/posted-report-v10-contract';
+import {parseFictionalJournalV11} from '../bookkeeping/posted-report-v11-contract';
 import {parseFictionalJournalV9,parseFictionalTrialBalanceV9} from '../bookkeeping/posted-report-v9-contract';
 import {parseFictionalJournalV8,parseFictionalTrialBalanceV8} from '../bookkeeping/posted-report-v8-contract';
 import {parseTipReturnInput,parseTipReturnOptions,parseTipReturnReference,parseTipReturnResult,tipReturnMatchesInput,tipReturnRefusal}
@@ -70,7 +71,7 @@ import {parseCustomerFundsReport} from '../bookkeeping/customer-funds-report-con
 import {parseReceivableAging} from '../bookkeeping/receivable-aging-contract';
 import type {Proof} from './authentication';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
@@ -137,6 +138,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   tipReturns:response.headers.get('x-crest-tip-returns')==='1',
   collectionFailures:response.headers.get('x-crest-collection-failures')==='1',
   refundTransfers:response.headers.get('x-crest-refund-transfers')==='1',
+  directReceiptTips:response.headers.get('x-crest-direct-receipt-tips')==='1',
   paymentCorrections:response.headers.get('x-crest-payment-corrections')==='1',
   fundApplications:response.headers.get('x-crest-fund-applications')==='1',
   heldTips:response.headers.get('x-crest-held-tips')==='1',
@@ -151,7 +153,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
 
 export const financeAccounts={
  async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
@@ -161,6 +163,7 @@ export const financeAccounts={
    ...(excessReturns&&tipReturns?{tipReturns}:{}),
    ...(tipReturns&&trialBalance&&collectionFailures?{collectionFailures}:{}),
    ...(collectionFailures&&serviceRefunds&&refundTransfers?{refundTransfers}:{}),
+   ...(refundTransfers&&excessReceipts&&directReceiptTips?{directReceiptTips}:{}),
    ...(sameDayExpenses?{sameDayExpenses}:{}),
    ...(trialBalance?{trialBalance}:{}),...(paymentCorrections?{paymentCorrections}:{}),...(fundApplications?{fundApplications}:{}),
    ...(heldTips?{heldTips}:{}),...(invoiceCredits?{invoiceCredits}:{}),...(paidInvoiceCredits?{paidInvoiceCredits}:{}),
@@ -198,7 +201,8 @@ export const financeAccounts={
   check(context.trialBalance&&customerDate(throughOn)&&(accountId===null||customerUuid(accountId))&&(afterLineId===null||customerUuid(afterLineId)));
   const {status,value}=await post('posted-journal',{throughOn,accountId,afterLineId},signal,context.binding);
   check(status===200);
-  return context.refundTransfers?parseFictionalJournalV10(value,context.businessId,throughOn,accountId,afterLineId)
+  return context.directReceiptTips?parseFictionalJournalV11(value,context.businessId,throughOn,accountId,afterLineId)
+   :context.refundTransfers?parseFictionalJournalV10(value,context.businessId,throughOn,accountId,afterLineId)
    :context.collectionFailures?parseFictionalJournalV9(value,context.businessId,throughOn,accountId,afterLineId)
    :context.tipReturns?parseFictionalJournalV8(value,context.businessId,throughOn,accountId,afterLineId)
    :context.excessReturns?parseFictionalJournalV7(value,context.businessId,throughOn,accountId,afterLineId)
@@ -242,6 +246,13 @@ export const financeAccounts={
   const {status,value}=await post('receipt-options',{customerId,actualOn},signal,context.binding);
   check(status===200);
   return parseDirectReceiptOptions(value,context.businessId,customerId,actualOn,context.excessReceipts);
+ },
+ async directReceiptTipOptions(context:FinanceAccountContext,customerId:string,actualOn:string,jurisdiction:string|null,signal:AbortSignal){
+  check(context.directReceiptTips&&customerUuid(customerId)&&customerDate(actualOn)
+   &&(jurisdiction===null||financeAccountReviewReason(jurisdiction)&&[...jurisdiction].length<=200));
+  const {status,value}=await post('receipt-tip-options',{customerId,actualOn,jurisdiction},signal,context.binding);
+  check(status===200);
+  return parseDirectReceiptTipOptions(value,context.businessId,customerId,actualOn,jurisdiction);
  },
  async invoicePaymentAllocations(context:FinanceAccountContext,customerId:string,invoiceId:string,signal:AbortSignal){
   check(context.paymentCorrections&&customerUuid(customerId)&&customerUuid(invoiceId));
@@ -569,8 +580,8 @@ export const financeAccounts={
  async recordDirectReceipt(context:FinanceAccountContext,input:ReturnType<typeof parseDirectReceiptInput>,signal:AbortSignal){
   check(context.directReceipts&&context.writeState==='ready'&&context.recoveryEpoch===input.reference.recoveryEpoch);
   const request=parseDirectReceiptInput(input);
-  check(request.fundsMappingId===undefined||context.excessReceipts);
-  const {status,value}=await post('receipt-record',request,signal,context.binding);
+  check((request.fundsMappingId===undefined||context.excessReceipts)&&(request.tip===undefined||context.directReceiptTips));
+  const {status,value}=await post(request.tip?'receipt-tip-record':'receipt-record',request,signal,context.binding);
   if(status===409&&exact(value,['error'])&&typeof value.error==='string')return {state:'refused' as const,reason:value.error};
   check(status===200||status===409);
   const result=parseDirectReceiptResult(value,context.businessId,request.reference);
@@ -1041,19 +1052,22 @@ export function clearPendingInvoiceIssue(entry:PendingInvoiceIssue){
  check(readPendingInvoiceIssue()===null);
 }
 
-type PendingDirectReceipt=Readonly<{businessId:string;binding:string;invoiceId:string;reference:ReturnType<typeof parseDirectReceiptReference>}>;
+type DirectReceiptLocation=Readonly<{invoiceId:string}|{customerId:string}>;
+type PendingDirectReceipt=Readonly<{businessId:string;binding:string;reference:ReturnType<typeof parseDirectReceiptReference>}> & DirectReceiptLocation;
 export function readPendingDirectReceipt():PendingDirectReceipt|null{
  const raw=sessionStorage.getItem(directReceiptPendingKey);
  if(raw===null)return null;
  check(raw.length<=800&&(raw.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length===7);
  const value:unknown=JSON.parse(raw);
- check(exact(value,['businessId','binding','invoiceId','reference'])&&customerUuid(value.businessId)&&customerUuid(value.invoiceId)
+ check((exact(value,['businessId','binding','invoiceId','reference'])&&customerUuid(value.invoiceId)
+   ||exact(value,['businessId','binding','customerId','reference'])&&customerUuid(value.customerId))&&customerUuid(value.businessId)
   &&typeof value.binding==='string'&&bindingPattern.test(value.binding));
- return {businessId:value.businessId,binding:value.binding,invoiceId:value.invoiceId,reference:parseDirectReceiptReference(value.reference)};
+ const location=customerUuid(value.invoiceId)?{invoiceId:value.invoiceId}:{customerId:String(value.customerId)};
+ return {businessId:value.businessId,binding:value.binding,...location,reference:parseDirectReceiptReference(value.reference)};
 }
-export function retainPendingDirectReceipt(context:FinanceAccountContext,invoiceId:string,reference:PendingDirectReceipt['reference']){
- check(readPendingDirectReceipt()===null&&customerUuid(invoiceId));
- const entry={businessId:context.businessId,binding:context.binding,invoiceId,reference};
+export function retainPendingDirectReceipt(context:FinanceAccountContext,location:DirectReceiptLocation,reference:PendingDirectReceipt['reference']){
+ check(readPendingDirectReceipt()===null&&('invoiceId' in location?customerUuid(location.invoiceId):customerUuid(location.customerId)));
+ const entry={businessId:context.businessId,binding:context.binding,...location,reference};
  sessionStorage.setItem(directReceiptPendingKey,JSON.stringify(entry));
  check(JSON.stringify(readPendingDirectReceipt())===JSON.stringify(entry));
  return entry;

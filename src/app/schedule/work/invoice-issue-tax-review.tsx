@@ -65,6 +65,9 @@ export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrecti
   invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;
 }) {
   const tax = invoice.lines.reduce((sum,line)=>sum+BigInt(line.taxCents),0n);
+  const actionsId=useId();
+  const showAdjustments=paymentCorrections||collectionFailures||invoiceCredits||paidInvoiceCredits;
+  const showRefunds=serviceRefunds||excessReturns||tipReturns||refundTransfers;
   return <div className="issued-invoice-details">
     <header className="issued-invoice-heading">
       <h4>Invoice {invoice.invoiceNumber}</h4>
@@ -83,27 +86,35 @@ export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrecti
       ...invoice.lines.map(line=>[invoice.invoiceNumber,invoice.customer.displayName,invoice.issuedOn,invoice.dueOn,invoice.currency,
         line.description,line.grossInclusiveCents,line.discountInclusiveCents,line.netCents,line.taxCents,line.inclusiveCents]),
     ])}>Download invoice (CSV)</button>
-    {receiptBusinessId&&<DirectReceipt key={invoice.invoiceId} businessId={receiptBusinessId}
-      customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
-    {receiptBusinessId&&paymentCorrections&&<PaymentCorrection businessId={receiptBusinessId}
-      customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
-    {receiptBusinessId&&collectionFailures&&<CollectionFailure key={'collection-failure:'+invoice.invoiceId}
-      businessId={receiptBusinessId} customerId={invoice.customer.id}/>}
-    {receiptBusinessId&&fundApplications&&<FundApplication businessId={receiptBusinessId}
-      customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
-    {receiptBusinessId&&invoiceCredits&&<InvoiceCredit key={'invoice-credit:'+invoice.invoiceId} businessId={receiptBusinessId}
-      customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
-    {receiptBusinessId&&paidInvoiceCredits&&<PaidInvoiceCredit key={'paid-invoice-credit:'+invoice.invoiceId} businessId={receiptBusinessId}
-      customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
-    {receiptBusinessId&&serviceRefunds&&<ServiceRefund key={'service-refund:'+invoice.invoiceId} businessId={receiptBusinessId}
-      customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
-    {receiptBusinessId&&excessReturns&&<ExcessReturn key={'excess-return:'+invoice.invoiceId} businessId={receiptBusinessId}
-      customerId={invoice.customer.id}/>}
-    {receiptBusinessId&&heldTips&&<HeldTip key={invoice.customer.id} businessId={receiptBusinessId} customerId={invoice.customer.id}/>}
-    {receiptBusinessId&&tipReturns&&<TipReturn key={'tip-return:'+invoice.invoiceId} businessId={receiptBusinessId}
-      customerId={invoice.customer.id}/>}
-    {receiptBusinessId&&refundTransfers&&<RefundTransferAdjustment key={'refund-transfer:'+invoice.invoiceId}
-      businessId={receiptBusinessId} customerId={invoice.customer.id}/>}
+    {receiptBusinessId&&<>
+      {(showAdjustments||showRefunds)&&<nav className="invoice-action-links" aria-label="Invoice actions">
+        <a href={'#'+actionsId+'-payments'}>Payments</a>
+        {showAdjustments&&<a href={'#'+actionsId+'-adjustments'}>Corrections and credits</a>}
+        {showRefunds&&<a href={'#'+actionsId+'-refunds'}>Refunds</a>}
+      </nav>}
+      <section className="invoice-action-section" aria-labelledby={actionsId+'-payments'}>
+        <h5 id={actionsId+'-payments'} tabIndex={-1}>Payments</h5>
+        <DirectReceipt key={invoice.invoiceId} businessId={receiptBusinessId} customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>
+        {fundApplications&&<FundApplication businessId={receiptBusinessId} customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
+        {heldTips&&<HeldTip key={invoice.customer.id} businessId={receiptBusinessId} customerId={invoice.customer.id}/>}
+      </section>
+      {showAdjustments&&<section className="invoice-action-section" aria-labelledby={actionsId+'-adjustments'}>
+        <h5 id={actionsId+'-adjustments'} tabIndex={-1}>Corrections and credits</h5>
+        {paymentCorrections&&<PaymentCorrection businessId={receiptBusinessId} customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
+        {collectionFailures&&<CollectionFailure key={'collection-failure:'+invoice.invoiceId} businessId={receiptBusinessId} customerId={invoice.customer.id}/>}
+        {invoiceCredits&&<InvoiceCredit key={'invoice-credit:'+invoice.invoiceId} businessId={receiptBusinessId} customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
+        {paidInvoiceCredits&&<PaidInvoiceCredit key={'paid-invoice-credit:'+invoice.invoiceId} businessId={receiptBusinessId}
+          customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
+      </section>}
+      {showRefunds&&<section className="invoice-action-section" aria-labelledby={actionsId+'-refunds'}>
+        <h5 id={actionsId+'-refunds'} tabIndex={-1}>Refunds</h5>
+        {serviceRefunds&&<ServiceRefund key={'service-refund:'+invoice.invoiceId} businessId={receiptBusinessId}
+          customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>}
+        {excessReturns&&<ExcessReturn key={'excess-return:'+invoice.invoiceId} businessId={receiptBusinessId} customerId={invoice.customer.id}/>}
+        {tipReturns&&<TipReturn key={'tip-return:'+invoice.invoiceId} businessId={receiptBusinessId} customerId={invoice.customer.id}/>}
+        {refundTransfers&&<RefundTransferAdjustment key={'refund-transfer:'+invoice.invoiceId} businessId={receiptBusinessId} customerId={invoice.customer.id}/>}
+      </section>}
+    </>}
   </div>;
 }
 

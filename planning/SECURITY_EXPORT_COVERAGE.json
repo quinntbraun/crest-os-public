@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 96,
+  "migrationCount": 97,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2824,7 +2824,8 @@
         "account_id",
         "mapping_id",
         "original_cents",
-        "receipt_event_id"
+        "receipt_event_id",
+        "receipt_tip_event_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

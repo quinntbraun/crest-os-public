@@ -109,7 +109,7 @@ export function verifyCollectionFailureSourceClosure(read: (table: string) => re
   const unapplications = index(read('allocation_unapplications')), releasesByAllocation = group([...unapplications.values()], 'allocation_id');
   const applications = index(read('customer_fund_applications')), applicationEvents = index(events.filter(row => row.template === 'P04'), 'fund_application_id');
   const lots = index(read('customer_fund_lots')), unapplyEvents = index(events.filter(row => row.template === 'P05'), 'unapplication_id');
-  const tips = index(read('tip_realizations')), tipEvents = index(events.filter(row => row.template === 'P06'), 'tip_realization_id');
+  const tips = index(read('tip_realizations')), tipEvents = index(events.filter(row => row.template === 'P06' || row.template === 'P03' && row.tip_realization_id != null), 'tip_realization_id');
   const receivables = index(read('receivable_items'));
   const funds = read('fund_lot_range_consumptions'), tipsUsed = read('tip_realization_range_consumptions');
   const fundClaims = index(funds.filter(row => row.collection_failure_component_id !== null), 'collection_failure_component_id');

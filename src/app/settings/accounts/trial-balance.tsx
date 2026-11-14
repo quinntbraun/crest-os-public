@@ -41,6 +41,12 @@ function hasCorrectionFields(row:Journal['rows'][number]):row is CorrectionJourn
 function isCollectionAdjustment(row:Journal['rows'][number]):row is Extract<FictionalJournalV9['rows'][number],{template:'P11'}>{
   return 'collectionFailureId' in row&&row.template==='P11';
 }
+function receiptTipReference({template,purpose,paymentId,tipRealizationId}:{
+  template:string;purpose:string;paymentId:string|null;tipRealizationId?:string|null;
+}){
+  return template==='P03'&&(purpose==='tip_tax'||purpose==='tip_revenue')&&paymentId&&tipRealizationId
+    ?{paymentId,tipRealizationId,includedTax:purpose==='tip_tax'}:null;
+}
 
 export function TrialBalance({businessId}:{businessId:string}){
   const [through,setThrough]=useState('');
@@ -92,7 +98,8 @@ export function TrialBalance({businessId}:{businessId:string}){
       if(context.businessId!==businessId)throw Error();
       const result=await financeAccounts.readPostedJournal(context,balance.throughOn,account||null,next?journal!.nextAfterLineId:null,signal);
       if(signal.aborted)return;
-      if(reportVersion(result)!==reportVersion(balance)){
+      const expectedJournalVersion=context.directReceiptTips&&reportVersion(balance)===10?11:reportVersion(balance);
+      if(reportVersion(result)!==expectedJournalVersion){
         setJournalMessage('Report coverage changed. Reload the trial balance before opening the journal.');
         return;
       }
@@ -252,6 +259,7 @@ export function TrialBalance({businessId}:{businessId:string}){
                 const correction=hasCorrectionFields(row)&&row.template==='P05'?row:null;
                 const application='fundApplicationId' in row&&row.template==='P04'?row:null;
                 const tip='tipRealizationId' in row&&row.template==='P06'?row:null;
+                const receiptTip=receiptTipReference(row);
                 const credit='invoiceCreditId' in row&&row.template==='P07'?row:null;
                 const refund='serviceRefundId' in row&&row.template==='P08'?row:null;
                 const returned='excessReturnId' in row&&row.template==='P09'?row:null;
@@ -265,6 +273,12 @@ export function TrialBalance({businessId}:{businessId:string}){
                       <small>Payment received · Customer funds held</small>
                       <details><summary>Source references</summary><small>Payment {row.paymentId}</small>
                         <small>Customer funds lot {row.fundLotId}</small>
+                      </details>
+                    </>}
+                    {receiptTip&&<>
+                      <small>{receiptTip.includedTax?'Payment tip · Included tax':'Payment tip · Tip revenue'}</small>
+                      <details><summary>Source references</summary><small>Payment {receiptTip.paymentId}</small>
+                        <small>Tip {receiptTip.tipRealizationId}</small>
                       </details>
                     </>}
                     {refund&&<>
