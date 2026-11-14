@@ -18,6 +18,7 @@ const invoiceCredits=process.env.CREST_TEST_INVOICE_CREDITS==='1';
 const paidInvoiceCredits=process.env.CREST_TEST_PAID_INVOICE_CREDITS==='1';
 const serviceRefunds=process.env.CREST_TEST_SERVICE_REFUNDS==='1';
 const receivableAging=process.env.CREST_TEST_RECEIVABLE_AGING==='1';
+const customerFundsReport=process.env.CREST_TEST_CUSTOMER_FUNDS_REPORT==='1';
 const postedFinanceExport=process.env.CREST_TEST_POSTED_FINANCE_EXPORT==='1';
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
@@ -323,6 +324,47 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await allowInvoiceReadWindow();
         await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
         await expect(payments).toContainText('$160.00 due');
+       }
+       if(customerFundsReport){
+        await allowInvoiceReadWindow();
+        await page.goto(fixture.origin+'/settings/accounts');
+        await page.getByRole('button',{name:'Load accounts',exact:true}).press('Enter');
+        const disclosure=page.getByText('Customer funds held',{exact:true});
+        await disclosure.press('Enter');
+        const report=page.getByRole('region',{name:'Customer funds held',exact:true});
+        const reportDate=report.getByLabel('Through date (optional)');
+        const load=report.getByRole('button',{name:'Load customer funds',exact:true});
+        await reportDate.fill('1900-01-01');
+        await load.press('Enter');
+        await expect(report.getByRole('status')).toHaveText('No posted customer funds were held on this date.');
+        await reportDate.fill('');
+        await page.route('**/api/business/finance-accounts/customer-funds-report',route=>route.abort(),{times:1});
+        await load.press('Enter');
+        await expect(report.getByRole('status')).toContainText('Crest could not verify customer funds.');
+        await load.press('Enter');
+        await expect(report.getByRole('status')).toHaveText('Customer funds matched the ledger.');
+        await report.getByText('Held funds by customer (1 of 1 entries)',{exact:true}).press('Enter');
+        await expect(report.getByText('$10.00',{exact:true})).toHaveCount(2);
+        const download=page.waitForEvent('download');
+        const exportButton=report.getByRole('button',{name:'Download listed funds (CSV)',exact:true});
+        await exportButton.press('Enter');
+        assert.match(await readFile(await (await download).path(),'utf8'),/"1000","1","1"/);
+        for(const width of [360,390,768,1440]){
+         await page.setViewportSize({width,height:900});
+         await report.getByText('Total held',{exact:true}).scrollIntoViewIfNeeded();
+         assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+         const audit=await new AxeBuilder({page}).include('[aria-label="Customer funds held"]').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+         assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
+         await page.screenshot({path:'.local/review/finance-customer-funds-'+name+'-'+width+'.png'});
+        }
+        await disclosure.press('Enter');
+        await disclosure.press('Enter');
+        await expect(report.getByText('$10.00',{exact:true})).toHaveCount(0);
+        await page.goto(fixture.origin+job);
+        await draftDisclosure.click();
+        await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+        await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+        await expect(draftStatus).toHaveText('Issued invoice loaded.');
        }
        if(heldTips){
         await allowInvoiceReadWindow();
@@ -635,7 +677,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const verified=verifyFinanceSourceExport(manifest,Object.entries(parts).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
         assert.equal(verified.profile,'crest.posted-finance-source.v7');
         assert.equal(verified.completePortableExport,false);
-        assert.equal(delivery.sourceSchemaVersion,89);
+        assert.equal(delivery.sourceSchemaVersion,customerFundsReport?90:89);
         assert.equal(delivery.manifestSha256,createHash('sha256').update(manifestBytes).digest('hex'));
         assert.match(strFromU8(parts['service_credit_refunds.csv']),/Fictional service refund confirmed/);
         const extract=join(fixture.workspace,'posted-finance-extracted');

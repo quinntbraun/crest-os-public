@@ -3,6 +3,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {InvoiceSetup} from './invoice-setup';
 import {TrialBalance} from './trial-balance';
+import {CustomerFundsReport} from './customer-funds-report';
 import {ReceivableAging} from './receivable-aging';
 import styles from './screen.module.css';
 import {AuthenticationError} from '../../../client/authentication';
@@ -230,6 +231,7 @@ export function FinanceAccountsScreen(){
   {context?.trialBalance&&!editor&&<section aria-labelledby="finance-reports-heading">
    <h2 id="finance-reports-heading">Ledger reports</h2>
    <TrialBalance businessId={context.businessId}/>
+   {context.customerFundsReport&&<CustomerFundsReport key={context.businessId} businessId={context.businessId}/>}
    {context.receivableAging&&<ReceivableAging key={context.businessId} businessId={context.businessId}/>}
   </section>}
   {context&&(hasSetupLinks||context.invoiceIssue)&&!editor&&<section className={styles.setup} aria-labelledby="finance-setup-heading">

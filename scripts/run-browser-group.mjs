@@ -14,7 +14,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  console.log('REQUIRED_BROWSER_GROUP '+JSON.stringify({group:selected,files}));
  const child=spawn(process.execPath,args,{stdio:'inherit',windowsHide:true,
   env:{...process.env,CREST_TEST_PAYMENT_CORRECTIONS:selected==='records'?'1':'0',
-   CREST_TEST_FUND_APPLICATIONS:selected==='records'?'1':'0',CREST_TEST_HELD_TIPS:selected==='records'?'1':'0',CREST_TEST_INVOICE_CREDITS:selected==='records'?'1':'0',CREST_TEST_PAID_INVOICE_CREDITS:selected==='records'?'1':'0',CREST_TEST_SERVICE_REFUNDS:selected==='records'?'1':'0',CREST_TEST_RECEIVABLE_AGING:selected==='records'?'1':'0',CREST_TEST_POSTED_FINANCE_EXPORT:selected==='records'?'1':'0'}});
+   CREST_TEST_FUND_APPLICATIONS:selected==='records'?'1':'0',CREST_TEST_HELD_TIPS:selected==='records'?'1':'0',CREST_TEST_INVOICE_CREDITS:selected==='records'?'1':'0',CREST_TEST_PAID_INVOICE_CREDITS:selected==='records'?'1':'0',CREST_TEST_SERVICE_REFUNDS:selected==='records'?'1':'0',CREST_TEST_RECEIVABLE_AGING:selected==='records'?'1':'0',CREST_TEST_CUSTOMER_FUNDS_REPORT:selected==='records'?'1':'0',CREST_TEST_POSTED_FINANCE_EXPORT:selected==='records'?'1':'0'}});
  const result=await new Promise(resolve=>{child.once('error',()=>resolve({code:1,signal:null}));child.once('close',(code,signal)=>resolve({code,signal}));});
  let screenshots=[];
  try {

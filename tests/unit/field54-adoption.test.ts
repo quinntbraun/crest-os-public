@@ -74,6 +74,7 @@ import registered86 from '../support/registered86-migration-checksums.json';
 import coverage86 from '../support/registered86-export-coverage.json';
 import registered87 from '../support/registered87-migration-checksums.json';
 import registered88 from '../support/registered88-migration-checksums.json';
+import registered89 from '../support/registered89-migration-checksums.json';
 import coverage87 from '../support/registered87-export-coverage.json';
 import calendarCoverage from '../support/google-calendar-candidate-export-coverage.json';
 import {serviceRefundSourceAddedColumns,serviceRefundSourceCoverage} from '../../src/bookkeeping/service-refund-source.ts';
@@ -509,11 +510,17 @@ it('appends exact fictional Calendar after frozen P08 without production activat
 it('appends the scoped posted finance handoff without changing coverage',()=>{
  const file='20261213180000_posted_finance_owner_download.sql';
  expect(registered88.migrations).toHaveLength(88);
- expect(currentRegistry.migrations).toHaveLength(89);
- expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261213180000',file,sha256:'224ff6c65853992445042288c055fe47afed4e424e534d21d9451d3e9515e1c9'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered88 as MigrationRegistry)).not.toThrow();
- expect(currentCoverage).toEqual({...coverage87,migrationCount:89});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:89});
+ expect(registered89.migrations).toHaveLength(89);
+ expect(registered89.migrations.at(-1)).toEqual({version:'20261213180000',file,sha256:'224ff6c65853992445042288c055fe47afed4e424e534d21d9451d3e9515e1c9'});
+ expect(()=>validateMigrationSet(registered89 as MigrationRegistry,new Map(registered89.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered88 as MigrationRegistry)).not.toThrow();
+});
+it('appends the read-only customer funds report with no new stored data',()=>{
+ const file='20261214180000_fictional_customer_funds.sql';
+ expect(currentRegistry.migrations).toHaveLength(90);
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261214180000',file,sha256:'b6e40569e51dd9eb4df95d7b1227c02f1f0c6094b6a1f8fc64550bc45bcf59ea'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered89 as MigrationRegistry)).not.toThrow();
+ expect(currentCoverage).toEqual({...coverage87,migrationCount:90});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:90});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

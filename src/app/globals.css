@@ -143,6 +143,7 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .home-shortcuts a { justify-content:center; min-height:48px; padding:.625rem .5rem; border:1px solid var(--line); border-radius:var(--radius); color:var(--ink); background:var(--paper); text-decoration:none; text-align:center; font-weight:600; }
 .home-shortcuts a:hover { border-color:var(--gold-ink); background:var(--canvas); }
 .today-grid,.today-secondary { display:grid; align-content:start; gap:1rem; min-width:0; }
+.today-grid { margin-top:1rem; }
 .home-panel { min-width:0; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); padding:1.25rem; }
 .workspace-home > .home-panel { margin-top:1rem; }
 .home-panel .section-heading { flex-wrap:wrap; gap:0 .75rem; }
@@ -247,6 +248,11 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .service-directory button span { display:block; margin-top:.25rem; color:var(--muted); font-size:.875rem; font-weight:400; }
 .quote-layout .customer-list button strong { display:block; }
 .quote-layout .customer-list button span { display:block; margin-top:.25rem; color:var(--muted); font-size:.875rem; font-weight:400; }
+.quote-directory-status { color:var(--muted); margin:.25rem 0 1rem; font-size:.9375rem; }
+.quote-layout .quote-add { background:var(--gold); color:var(--black); }
+.quote-retained-summary { margin:1rem 0; padding:.875rem 1rem; border:1px solid var(--line); border-left:3px solid var(--gold-ink); border-radius:var(--radius); background:var(--paper); }
+.quote-retained-summary h3, .quote-retained-summary p { margin:0; overflow-wrap:anywhere; }
+.quote-retained-summary p + p { margin-top:.375rem; }
 .customers label.checkbox,.field-work-form fieldset > label.checkbox { display:flex; align-items:center; gap:.75rem; min-height:44px; cursor:pointer; }
 .customers label.checkbox input,.field-work-form label.checkbox input { width:24px; height:24px; flex-shrink:0; accent-color:var(--black); }
 @media(max-width:390px) { .service-pair { grid-template-columns:1fr; gap:0; } }
