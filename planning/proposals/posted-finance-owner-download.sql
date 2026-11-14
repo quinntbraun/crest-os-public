@@ -39,15 +39,14 @@ CREATE POLICY posted_finance_export_audit_create ON crest_private.audit_events F
 CREATE FUNCTION crest_commands.authorize_posted_finance_export(credential_hash bytea,expected_session uuid,expected_actor uuid,
  expected_issuer text,expected_subject uuid,expected_provider_session uuid,provider_valid_until timestamptz,requested_business uuid)
 RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp SET row_security=on AS $auth$
-DECLARE context jsonb; epoch uuid;
+DECLARE epoch uuid;
 BEGIN
  PERFORM set_config('crest.business_id','',true),set_config('crest.actor_id','',true),set_config('crest.operation_id','',true);
  PERFORM crest_commands.lock_source_export_download_context($1,$2,$3,$4,$5,$6,$7,$8);
- -- Use the reviewed settings reader solely for its current recovery epoch.
- -- This helper grants no settings table or browser authority.
- context:=crest_commands.read_business_settings_context($1,$2,$3,$4,$5,$6,$7,$8);
- epoch:=(context->>'recoveryEpoch')::uuid;
- IF context->>'writeState' IS DISTINCT FROM 'ready' OR epoch IS NULL THEN
+ -- The recent-owner lock holds the recovery root before its epoch is read.
+ SELECT r.active_epoch INTO epoch FROM crest_private.business_recovery_authorities r
+  WHERE r.business_id=requested_business AND r.writes_enabled;
+ IF epoch IS NULL THEN
   RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='CREST_POSTED_FINANCE_EXPORT_DENIED';
  END IF;
  PERFORM crest_commands.lock_source_export_authority($1,$2,$3,$4,$5,$6,$7,$8,epoch);
@@ -93,11 +92,10 @@ BEGIN
 END $handoff$;
 RESET ROLE;
 
-GRANT CREATE ON SCHEMA crest_commands TO crest_command_owner;
-ALTER FUNCTION crest_commands.authorize_posted_finance_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid) OWNER TO crest_command_owner;
+GRANT CREATE ON SCHEMA crest_commands TO crest_session_owner,crest_command_owner;
+ALTER FUNCTION crest_commands.authorize_posted_finance_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid) OWNER TO crest_session_owner;
 ALTER FUNCTION crest_commands.record_posted_finance_export_access(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,integer,text,text,text,text,integer) OWNER TO crest_command_owner;
-REVOKE CREATE ON SCHEMA crest_commands FROM crest_command_owner;
-GRANT EXECUTE ON FUNCTION crest_commands.read_business_settings_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid) TO crest_command_owner;
+REVOKE CREATE ON SCHEMA crest_commands FROM crest_session_owner,crest_command_owner;
 REVOKE ALL ON FUNCTION crest_commands.authorize_posted_finance_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid),
  crest_commands.record_posted_finance_export_access(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,integer,text,text,text,text,integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION crest_commands.authorize_posted_finance_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid),

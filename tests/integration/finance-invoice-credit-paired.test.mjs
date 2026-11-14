@@ -246,6 +246,12 @@ async function verifyPostedFinanceLauncher({admin,owner,sandbox,target}){
   await assert.rejects(prepareSyntheticPostedFinancePreview(config),failure);
   assert.equal((await sandbox.admin.query('SELECT 1 FROM pg_roles WHERE rolname=$1',[login])).rowCount,0);
   assert.equal((await sandbox.apply(target)).history.length,89);
+  const exportAuthority='crest_commands.authorize_posted_finance_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid)';
+  const settingsAuthority='crest_commands.read_business_settings_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid)';
+  assert.deepEqual((await admin.query(`SELECT pg_get_userbyid(proowner) AS owner,
+    has_function_privilege('crest_command_owner',$2,'EXECUTE') AS command_can_read_settings
+    FROM pg_proc WHERE oid=to_regprocedure($1)`,[exportAuthority,settingsAuthority])).rows,
+   [{owner:'crest_session_owner',command_can_read_settings:false}]);
   await assert.rejects(prepareSyntheticPostedFinancePreview(config),failure);
   const bootstrap=(await admin.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
   const subject=randomUUID();

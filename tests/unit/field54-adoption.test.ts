@@ -510,7 +510,7 @@ it('appends the scoped posted finance handoff without changing coverage',()=>{
  const file='20261213180000_posted_finance_owner_download.sql';
  expect(registered88.migrations).toHaveLength(88);
  expect(currentRegistry.migrations).toHaveLength(89);
- expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261213180000',file,sha256:'9462590e47eb70cd8e69e4123a70ca5c6da2d52f1e5e764279d7fc2eb7946884'});
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261213180000',file,sha256:'224ff6c65853992445042288c055fe47afed4e424e534d21d9451d3e9515e1c9'});
  expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered88 as MigrationRegistry)).not.toThrow();
  expect(currentCoverage).toEqual({...coverage87,migrationCount:89});
  expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:89});
