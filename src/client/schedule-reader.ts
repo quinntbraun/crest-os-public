@@ -1,5 +1,5 @@
 import {authentication,AuthenticationError} from './authentication';
-import {scheduling} from './scheduling';
+import {scheduling,SchedulingClientError} from './scheduling';
 import {buildConfirmedJobArchive} from '../operations/confirmed-job-archive';
 import {followUpCandidates} from '../app/leads/follow-up-time';
 import type {JobSummary,JobHistoryEvent} from '../operations/confirmed-job-read-contract';
@@ -7,8 +7,8 @@ type Context=Awaited<ReturnType<typeof scheduling.workspace>>;
 type Resources=Exclude<Awaited<ReturnType<typeof scheduling.resources>>,{state:'absent'}>;
 type Pending=Awaited<ReturnType<typeof scheduling.pending>>['items'];
 type Dates=Readonly<{fromDate:string;throughDate:string}>;
-export type ScheduleReadView=Readonly<{phase:'loading'|'ready'|'signed-out'|'unavailable';busy:boolean;loaded:boolean;writesPaused:boolean;message:string;timezone:string;dates:Dates|null;rows:readonly JobSummary[];hasMore:boolean;pending:Pending;pendingHasMore:boolean;selected:Resources|null;history:readonly JobHistoryEvent[];historyComplete:boolean}>;
-export const initialScheduleReadView:ScheduleReadView=Object.freeze({phase:'loading',busy:true,loaded:false,writesPaused:true,message:'Checking schedule access…',timezone:'',dates:null,rows:[],hasMore:false,pending:[],pendingHasMore:false,selected:null,history:[],historyComplete:false});
+export type ScheduleReadView=Readonly<{phase:'loading'|'ready'|'signed-out'|'unavailable';busy:boolean;loaded:boolean;writesPaused:boolean;fieldSessionAvailable?:boolean;jobCompletionAvailable?:true;invoiceDraftsAvailable?:true;googleCalendarAvailable?:true;jobMileageAvailable?:true;supportTripsAvailable?:true;pickupTripsAvailable?:true;pickupWorkAvailable?:true;pickupReleaseAvailable?:true;pickupReturnsAvailable?:true;pickupCollectionAvailable?:true;pickupPhotosAvailable?:true;workTimeAvailable?:true;dropoffCustodyAvailable?:true;message:string;timezone:string;dates:Dates|null;rows:readonly JobSummary[];hasMore:boolean;pending:Pending;pendingHasMore:boolean;selected:Resources|null;history:readonly JobHistoryEvent[];historyComplete:boolean}>;
+export const initialScheduleReadView:ScheduleReadView=Object.freeze({phase:'loading',busy:true,loaded:false,writesPaused:true,fieldSessionAvailable:false,message:'Checking schedule access…',timezone:'',dates:null,rows:[],hasMore:false,pending:[],pendingHasMore:false,selected:null,history:[],historyComplete:false});
 function dayAfter(day:string,offset=1){return new Date(Date.parse(day+'T12:00:00Z')+offset*86400000).toISOString().slice(0,10);}
 export function scheduleDateWindow(dates:Dates,timezone:string){
  const valid=(day:string)=>/^\d{4}-\d{2}-\d{2}$/.test(day)&&Number.isFinite(Date.parse(day+'T12:00:00Z'))&&new Date(day+'T12:00:00Z').toISOString().slice(0,10)===day;
@@ -25,21 +25,40 @@ export function createScheduleReader(deps:{change:(view:ScheduleReadView)=>void;
  const live=(signal:AbortSignal)=>{if(!alive||signal.aborted||active?.signal!==signal)throw Error();};
  async function fresh(signal:AbortSignal){
   const proof=await session(signal);live(signal);const next=await api.workspace(proof,signal);live(signal);
-  if(context&&(context.binding!==next.binding||context.context.businessId!==next.context.businessId||context.context.recoveryEpoch!==next.context.recoveryEpoch||context.context.writeState!==next.context.writeState))throw Error('SCHEDULE_CONTEXT_CHANGED');
+  if(context&&(context.binding!==next.binding||context.context.businessId!==next.context.businessId||context.context.recoveryEpoch!==next.context.recoveryEpoch||context.context.writeState!==next.context.writeState||context.fieldSessionAvailable!==next.fieldSessionAvailable||context.jobCompletionAvailable!==next.jobCompletionAvailable||context.invoiceDraftsAvailable!==next.invoiceDraftsAvailable||context.googleCalendarAvailable!==next.googleCalendarAvailable||context.jobMileageAvailable!==next.jobMileageAvailable||context.pickupPhotosAvailable!==next.pickupPhotosAvailable||context.pickupCollectionAvailable!==next.pickupCollectionAvailable||context.pickupTripsAvailable!==next.pickupTripsAvailable||context.pickupWorkAvailable!==next.pickupWorkAvailable||context.pickupReleaseAvailable!==next.pickupReleaseAvailable||context.pickupReturnsAvailable!==next.pickupReturnsAvailable||context.supportTripsAvailable!==next.supportTripsAvailable||context.workTimeAvailable!==next.workTimeAvailable||context.dropoffCustodyAvailable!==next.dropoffCustodyAvailable))throw Error('SCHEDULE_CONTEXT_CHANGED');
   context=next;return {proof,businessId:next.context.businessId};
  }
  async function run<T>(work:(signal:AbortSignal)=>Promise<T>){
   if(!alive||active)return;const controller=new AbortController();active=controller;emit({});
-  try{return await work(controller.signal);}catch(error){if(alive&&!controller.signal.aborted&&active===controller){clear();emit({phase:error instanceof AuthenticationError&&error.kind==='denied'?'signed-out':'unavailable',message:error instanceof AuthenticationError&&error.kind==='denied'?'Sign in to view your schedule.':'The schedule could not be verified. Check the connection and reload.'});}}
+  try{return await work(controller.signal);}catch(error){
+   if(alive&&!controller.signal.aborted&&active===controller){
+    clear();
+    const signedOut=error instanceof AuthenticationError&&error.kind==='denied';
+    const limited=error instanceof SchedulingClientError&&error.kind==='limited';
+    emit({phase:signedOut?'signed-out':'unavailable',message:signedOut?'Sign in to view your schedule.':
+     limited?'Schedule requests are temporarily limited. Wait a minute, then check schedule access again.':
+     'The schedule could not be verified. Check the connection and reload.'});
+   }
+  }
   finally{if(active===controller){active=null;emit({});}}
  }
- const load=(dates?:Dates)=>run(async signal=>{
-  clear();emit({phase:'loading',message:'Loading saved jobs and proposed changes…'});const {proof,businessId}=await fresh(signal),timezone=context!.context.timezone;
+ async function readJob(jobId:string,{proof,businessId}:Awaited<ReturnType<typeof fresh>>,signal:AbortSignal){
+  const resources=await api.resources(businessId,jobId,proof,signal);live(signal);
+  if('state'in resources){emit({message:'This job is no longer available in your current workspace.'});return;}
+  const history=await api.history({businessId,jobId,throughVersion:resources.head.job.version,afterVersion:'0',pageSize:20},proof,signal);live(signal);if('state'in history)throw Error();
+  emit({selected:resources,history:history.events,historyComplete:!history.hasMore,message:'Saved job loaded at version '+resources.head.job.version+'.'});
+ }
+ const load=(dates?:Dates,initialJobId?:string)=>run(async signal=>{
+  clear();emit({phase:'loading',message:'Loading saved jobs and proposed changes…'});
+  const scope=await fresh(signal),{proof,businessId}=scope,timezone=context!.context.timezone;
   const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format((deps.now??(()=>new Date()))());
   const selectedDates=dates??{fromDate:today,throughDate:dayAfter(today,6)};let window;
   try{window=scheduleDateWindow(selectedDates,timezone);}catch{emit({phase:'ready',timezone,dates:selectedDates,message:'Choose a valid range of at most 92 days. Date boundaries must identify one actual midnight in the business time zone.'});return;}
   const [jobs,pending]=await Promise.all([api.list({businessId,...window,afterStart:null,afterJob:null,pageSize:20},proof,signal),api.pending({businessId,afterCreatedAt:null,afterAppointmentId:null,pageSize:10},proof,signal)]);live(signal);
-  emit({phase:'ready',loaded:true,writesPaused:context!.context.writeState!=="ready",timezone,dates:selectedDates,rows:jobs.jobs,hasMore:jobs.hasMore,pending:pending.items,pendingHasMore:pending.hasMore,message:'Saved schedule loaded. Proposed changes reserve no new time.'});
+  emit({phase:'ready',loaded:true,writesPaused:context!.context.writeState!=="ready",fieldSessionAvailable:context!.fieldSessionAvailable===true,...context!.jobCompletionAvailable?{jobCompletionAvailable:true as const}:{},...context!.googleCalendarAvailable?{googleCalendarAvailable:true as const}:{},...context!.invoiceDraftsAvailable?{invoiceDraftsAvailable:true as const}:{},...context!.jobMileageAvailable?{jobMileageAvailable:true as const}:{},...context!.pickupPhotosAvailable?{pickupPhotosAvailable:true as const}:{},...context!.pickupCollectionAvailable?{pickupCollectionAvailable:true as const}:{},...context!.pickupTripsAvailable?{pickupTripsAvailable:true as const}:{},...context!.pickupWorkAvailable?{pickupWorkAvailable:true as const}:{},...context!.pickupReleaseAvailable?{pickupReleaseAvailable:true as const}:{},...context!.pickupReturnsAvailable?{pickupReturnsAvailable:true as const}:{},...context!.supportTripsAvailable?{supportTripsAvailable:true as const}:{},...context!.workTimeAvailable?{workTimeAvailable:true as const}:{},...context!.dropoffCustodyAvailable?{dropoffCustodyAvailable:true as const}:{},timezone,dates:selectedDates,rows:jobs.jobs,hasMore:jobs.hasMore,pending:pending.items,pendingHasMore:pending.hasMore,message:'Saved schedule loaded. Proposed changes reserve no new time.'});
+  // The link and its schedule are one read. Every endpoint still verifies
+  // the request against the current server session and business.
+  if(initialJobId)await readJob(initialJobId,scope,signal);
  });
  const more=()=>run(async signal=>{
   if(view.phase!=='ready'||!view.hasMore||!view.dates||!view.rows.length)return;
@@ -53,10 +72,7 @@ export function createScheduleReader(deps:{change:(view:ScheduleReadView)=>void;
  });
  const open=(jobId:string)=>run(async signal=>{
   if(view.phase!=='ready')return;emit({selected:null,history:[],historyComplete:false,message:'Loading saved job…'});
-  const {proof,businessId}=await fresh(signal),resources=await api.resources(businessId,jobId,proof,signal);live(signal);
-  if('state'in resources){emit({message:'This job is no longer available in your current workspace.'});return;}
-  const history=await api.history({businessId,jobId,throughVersion:resources.head.job.version,afterVersion:'0',pageSize:20},proof,signal);live(signal);if('state'in history)throw Error();
-  emit({selected:resources,history:history.events,historyComplete:!history.hasMore,message:'Saved job loaded at version '+resources.head.job.version+'.'});
+  await readJob(jobId,await fresh(signal),signal);
  });
  const moreHistory=()=>run(async signal=>{
   if(view.phase!=='ready'||!view.selected||view.historyComplete)return;

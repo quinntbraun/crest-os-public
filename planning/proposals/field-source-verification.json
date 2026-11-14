@@ -1,0 +1,326 @@
+{
+  "formatVersion": 1,
+  "verifiedAt": "2026-11-05T16:06:53.485Z",
+  "scope": "Private same-snapshot eleven-table field source/history capture, independent source/audit checks, reversible CSV and actual neutral PostgreSQL reimport; held construction, not owner delivery or complete business backup",
+  "trackedParent": "e8e1d99c4dacc3a53643b75d0fc8a38b58a4c8e3",
+  "nativeProof": {
+    "path": ".local/field-source-joint-native-v1/result.json",
+    "sha256": "a84a22e118b4f3d9ac9fcc69c56742972f3e3ac220486ed40e673b60e29e7502",
+    "passed": 233,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "retainedFieldAndOriginalCases": 216,
+    "fieldSourceCases": 17,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "focusedProof": {
+    "path": ".local/field-source-native-v2/result.json",
+    "passed": 17,
+    "failed": 0,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "exactSourceFiles": [
+    {
+      "path": "planning/proposals/field-time-storage.sql",
+      "bytes": 25481,
+      "sha256": "b372fafad1706241dcbabe66544be7eaa45bd98d34a0e0d702c64168b61d05b4"
+    },
+    {
+      "path": "planning/proposals/field-session-commands.sql",
+      "bytes": 44446,
+      "sha256": "968cbaaed4191f27e4697ba6533d0d41bfece7bf8e99c2fdd7f82ecfdeaa2c5d"
+    },
+    {
+      "path": "planning/proposals/work-completion-plan.sql",
+      "bytes": 13940,
+      "sha256": "ba8dba0e67bae9e8b24c0fd2141b883659ec86fd45cd62210c2a818696c69348"
+    },
+    {
+      "path": "planning/proposals/work-completion-commands.sql",
+      "bytes": 70512,
+      "sha256": "56da6f51ed8eae973bca1674ab1cb1d5f7f25e0f1d00d32c8d5130e3bd8c31e6"
+    },
+    {
+      "path": "planning/proposals/field-scope-floor.sql",
+      "bytes": 14964,
+      "sha256": "ebdc82993fa761dff73a298fab9a6aebae27d74c2a2efff6cec066541d2c2d11"
+    },
+    {
+      "path": "planning/proposals/mileage-evidence.sql",
+      "bytes": 41212,
+      "sha256": "c6f1dad9226eb767e83992fb10b570354e649df4800392b8869628cbeaad1bdd"
+    },
+    {
+      "path": "planning/proposals/mileage-field-profile.sql",
+      "bytes": 3700,
+      "sha256": "88e77205648ace4058946647bacec1acbf9570ae3d2911ebb8c436591196bd04"
+    },
+    {
+      "path": "planning/proposals/mobile-trip-interruption.sql",
+      "bytes": 67851,
+      "sha256": "dbe14dea6e55903090e90772b7da9c6786aaa3dba5bababb1adf4eb4d7e8ee13"
+    },
+    {
+      "path": "src/operations/mileage.ts",
+      "bytes": 4678,
+      "sha256": "3cbba274179ff8c6dc47e639c5b7aee127ad47301dace5ad69a2b524a1f80314"
+    },
+    {
+      "path": "src/operations/mileage-history.ts",
+      "bytes": 7730,
+      "sha256": "5e048d1c6ae9978984b802f0c11ac80ab8cfa080c43f8b46c0309535b88cabbc"
+    },
+    {
+      "path": "src/operations/mileage-csv.ts",
+      "bytes": 3621,
+      "sha256": "e4e739a6a8778d6d85c3feeef2243f7de7ba194bc874759ea25d4a3b16ae7136"
+    },
+    {
+      "path": "src/operations/work-completion.ts",
+      "bytes": 6785,
+      "sha256": "dd6dbb5a3a6e26b075f0dc8c7b5b1f425c97e330da143773cb1ddd3297c55533"
+    },
+    {
+      "path": "tests/unit/mileage.test.ts",
+      "bytes": 4279,
+      "sha256": "d1c8ca770e54182dc2cdd55fa2a209ad6bc8e7eb1161386ac4fcc706e9a14d21"
+    },
+    {
+      "path": "tests/unit/work-completion.test.ts",
+      "bytes": 8440,
+      "sha256": "6928599c4e51be79c473c0ad8874c7d7566019f1e84febf0e38aa9981dcde285"
+    },
+    {
+      "path": "tests/integration/field-time-storage.test.mjs",
+      "bytes": 24942,
+      "sha256": "122436eafdcde1a4504d39b18cc2fed6b5e763c75e2f237290e29852e2f30f8c"
+    },
+    {
+      "path": "tests/integration/field-session-commands.test.mjs",
+      "bytes": 28194,
+      "sha256": "d24039f39dda8dc6804405b9eb1b28ba3434a454e570575667d2a791c8e40a2d"
+    },
+    {
+      "path": "tests/integration/work-completion-plan.test.mjs",
+      "bytes": 13868,
+      "sha256": "625a0144d4367e6221acbc95b50ddb7ee9f52d9049da971401702f88ff74c869"
+    },
+    {
+      "path": "tests/integration/work-completion-commands.test.mjs",
+      "bytes": 30329,
+      "sha256": "6131f258db349dc6a353af6171d1bd04b30dcfd227d8f81bfddb9f6df377ffcb"
+    },
+    {
+      "path": "tests/integration/mileage-evidence.test.mjs",
+      "bytes": 24648,
+      "sha256": "b88f5080e6407f11a5976642f034d0b3b8866373bec7d62b2c691e3d6c0379f4"
+    },
+    {
+      "path": "tests/integration/mobile-trip-interruption.test.mjs",
+      "bytes": 28885,
+      "sha256": "b972ebee8c8104d2fb6435cfc0cc0d97300fd4b8953fa6ed028d1dad611c26ef"
+    },
+    {
+      "path": "tests/support/confirmed-booking-fixture.mjs",
+      "bytes": 11207,
+      "sha256": "479f22896ea5e0715cf8c6e85ef3e89756dcbbe0e9aa3c3109a5e181f8d5dc67"
+    },
+    {
+      "path": "tests/support/amendment-acceptance-fixture.mjs",
+      "bytes": 6010,
+      "sha256": "a7adfa0a776e39857ac14a83e6cc58efd2d4a644f45b32b9a37cde2bab1146da"
+    },
+    {
+      "path": "planning/proposals/unfulfilled-work-cancellation.sql",
+      "bytes": 53524,
+      "sha256": "16c9a16fb409a5cc7604c4ebc1c411cec41a9af6624f5a6f178698df666f5b63"
+    },
+    {
+      "path": "tests/integration/unfulfilled-work-cancellation.test.mjs",
+      "bytes": 26397,
+      "sha256": "5bc5bb6ef16e267eafc9e515e011dc176c3c2b8442203456fab30b00472b1139"
+    },
+    {
+      "path": "planning/proposals/support-trip-commands.sql",
+      "bytes": 34010,
+      "sha256": "7c9bac5aba9b972a74cbd0d98d6584db632c0771a9d87846aa8047e1f90f4abf"
+    },
+    {
+      "path": "tests/integration/support-trip-commands.test.mjs",
+      "bytes": 24787,
+      "sha256": "4196e664a10fe83f50fd969bc06db47b2666642e01d15bf3f4b5dbab2aa6fd81"
+    },
+    {
+      "path": "planning/proposals/field-originals.sql",
+      "bytes": 13553,
+      "sha256": "02b082bbd73a87101d312bd4989fdaf5c825df5ff70554b6a60d3ade9ffdd28c"
+    },
+    {
+      "path": "src/operations/field-original-contract.ts",
+      "bytes": 3317,
+      "sha256": "6ad9c32e0e35eb9d6971f78f64d952295978e94f9827740d76e2f8fd7a992f24"
+    },
+    {
+      "path": "src/operations/scheduling-original-contract.ts",
+      "bytes": 4006,
+      "sha256": "5dbe61c47601ecac7947a83485bed37f3e42463508e1e0d68495aa4c0259fb05"
+    },
+    {
+      "path": "src/security/original-operation-reference.ts",
+      "bytes": 16827,
+      "sha256": "69b8d615ae5f3e219b26711edd48793f237224ab56ada80651d7df59b1409f3a"
+    },
+    {
+      "path": "tests/integration/field-originals.test.mjs",
+      "bytes": 17258,
+      "sha256": "a3b3134efd5a3aaa1e8e21d376cf0781b337df18e600d83e3e82bca22ceee072"
+    },
+    {
+      "path": "tests/support/original-operation-fixture.ts",
+      "bytes": 5210,
+      "sha256": "cd4e793c8c7c4aee8ded24bf981e9513e451fe8628e3f0773ea15a916eac4f6f"
+    },
+    {
+      "path": "planning/proposals/field-source.sql",
+      "bytes": 23036,
+      "sha256": "4edc618d433ee26175ed9b322bcf7e5197773c6a0e429b3d129ac716d2fde0da"
+    },
+    {
+      "path": "src/operations/field-source-schema.ts",
+      "bytes": 27792,
+      "sha256": "f0a1b9a6639b917356b74e328cb6666ecdab715f99b8ece6bbe28631dbb48c82"
+    },
+    {
+      "path": "src/operations/field-source.ts",
+      "bytes": 13554,
+      "sha256": "6ce8e8b58e9c52060e7bf19eae7648d3e364195a6081f7c62268790b3a1b2e38"
+    },
+    {
+      "path": "src/operations/field-source-collector.ts",
+      "bytes": 4296,
+      "sha256": "17f5d144b5383207306523e0817a914ba529b9db20e711d030bd3490e4995188"
+    },
+    {
+      "path": "tests/support/field-operation-fixture.mjs",
+      "bytes": 7701,
+      "sha256": "74a329e2af82e72c93548e9bea5d67b43791f5e05c3c5faff43e52835aa34adb"
+    },
+    {
+      "path": "tests/integration/field-source.test.mjs",
+      "bytes": 17135,
+      "sha256": "e8c3210f2f4d70b2637611f013491e5ff387d5eb8905a19af3c3326139d44aab"
+    }
+  ],
+  "relatedUnitProof": {
+    "path": ".local/field-source-unit-results.json",
+    "sha256": "5a27110a97eded31e352c9be0d95fb2fa3095ba6aa7c10c78149cc2c4a235380",
+    "passed": 776,
+    "failed": 0,
+    "pending": 0
+  },
+  "typesPassed": true,
+  "focusedLintPassed": true,
+  "productionNextAndServerBuildPassed": true,
+  "canonicalAmendmentsVerified": 12,
+  "registeredMigrationsVerified": 53,
+  "reviewedSourceProfile": {
+    "measurement": ".local/field-source-predecessor-native/result.json",
+    "retainedPins": ".local/field-source233-reviewed-predecessors.json",
+    "metadataNote": "The retained field-time-storage test overwrites the old shared scratch diagnostic path with its eight registered53 guards. That output is preserved. These four already-tested SQL pins match their retained function-definition bytes; no receiving-database regeneration or source change.",
+    "tables": [
+      "work_intervals",
+      "travel_legs",
+      "work_scope_outcomes",
+      "message_templates",
+      "review_requests",
+      "messages",
+      "message_events",
+      "review_request_encounters",
+      "job_finalization_tasks",
+      "mileage_evidence",
+      "leg_job_allocations"
+    ],
+    "columns": 164,
+    "fullCrestColumnCount": 891,
+    "fullCrestColumnSha256": "6040b02b93bd928108261376362a910f3e0c60dc463eae0a05b3ca2282d6ddc3",
+    "functions": [
+      {
+        "signature": "crest_private.completion_projection(text,jsonb)",
+        "owner": "crest_schema_owner",
+        "security_definer": false,
+        "sha256": "2c93412de606a38d9c294f5634d38be0e722d3cb2183c9aa5ccd9f704b26fe43"
+      },
+      {
+        "signature": "crest_private.field_travel_projection(crest.travel_legs)",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": false,
+        "sha256": "2335d1a4f81e8c0042ab757314dfe758d98bbced80a07850d9c62a67ccc3985d"
+      },
+      {
+        "signature": "crest_private.field_work_projection(crest.work_intervals)",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": false,
+        "sha256": "f05335953731b7b1f836ae7e28aa804163874b42a0cf7305938788ad002efcbe"
+      },
+      {
+        "signature": "crest_private.mileage_projection(text,jsonb)",
+        "owner": "crest_schema_owner",
+        "security_definer": false,
+        "sha256": "3b593f3622fbd7e59c2d31e2ac240bed737fe3c9c3f06136074e0cbb61ebe54d"
+      }
+    ],
+    "receivingDatabaseSelfBlessing": false
+  },
+  "implemented": [
+    "Fixed source readers expose all eleven authoritative field tables only to the separate crest_export role, with no direct table grants or ordinary web/worker/recovery access",
+    "One owned RR READ ONLY transaction captures field context/pages and the complete included business operation/audit history; 20-row/4MiB pages, explicit count/byte/deadline limits, no silent truncation, no cross-snapshot page mixing or automatic retry",
+    "Static reviewed164-column dictionary retains UUIDs, signed64 integers, four/eight-decimal distances/fractions and UTC microseconds as strings; JSONB arrives as original SQL JSON text rather than JavaScript Number",
+    "Independent supplied-source checks verify internal FK tuples, replacement chains/current operator occupancy, mileage allocation/confirmation boundaries and one-to-one retained source/audit before-after images; parent-domain and actor/configuration closure remain explicit external dependencies",
+    "Eleven normalized field CSV tables, existing exact operation/audit CSV/dictionaries/escape maps, structured source JSON and checksummed manifest preserve SQL NULL, literal backslashes, Unicode/newlines, formula-leading text and numeric scale",
+    "Actual reimport into an empty neutral PostgreSQL database reproduces all164 field columns byte-exact in SQL row representations; a protected format fixture proves exact9007199254740993 and long decimal JSON values survive",
+    "A real trip committed during capture is absent from the held snapshot/history and present in the next capture; standalone trips with no job and all earlier interval/trip/mileage versions remain included",
+    "Changed source values/JSON rounding/missing versions/foreign internal keys/tampered history, invalid groups/tokens/page sizes, unsafe grants/unknown finance schema and cancellation before/after BEGIN fail closed with owned transaction rollback",
+    "The closed integrity role gains only command-namespace usage and execution of the existing read-only history context needed for composition; no ordinary grant, schema CREATE, inheritance or permission bypass"
+  ],
+  "retainedFailures": [
+    {
+      "path": ".local/field-source-native-v1/result.json",
+      "passed": 8,
+      "failed": 9,
+      "cause": "Source installation and real fixture writes passed, but the closed verifier lacked USAGE on crest_commands to invoke the fixed history context. Only that namespace usage was added to the existing closed role; direct source tables remain unavailable to the export login and ordinary roles."
+    },
+    {
+      "check": "Initial focused lint",
+      "cause": "Unused exact-object import in the new source formatter; removed without changing checks."
+    }
+  ],
+  "limits": {
+    "fieldRows": 10000,
+    "sourcePageRows": 20,
+    "sourcePageBytes": 4194304,
+    "includedHistoryRows": 1000,
+    "includedHistoryBytes": 8388608,
+    "fieldSourceInputBytes": 33554432,
+    "bundleBytes": 67108864,
+    "partBytes": 8388608,
+    "captureMilliseconds": 30000,
+    "statementMilliseconds": 10000,
+    "oversize": "Refuse with review required; never truncate or substitute another snapshot"
+  },
+  "remaining": [
+    "Compose existing CRM/commercial/accepted-amendment/booking source readers and independent graph verification with the explicit field profile; those global profiles remain closed on held field schema until reviewed",
+    "Complete cross-domain parent/actor/configuration closure and full independent encrypted field-inclusive restore/occupancy rebuild; neutral CSV reimport is not a database backup or disaster-recovery test",
+    "Reviewed registered54 adoption and genuine HTTP/MFA owner history/export/control integration, actual four-width/browser/device/current-source release gates before preview activation",
+    "Remaining manual job/coupled work-site travel corrections, message/outcome/resume and maintenance follow-ups; Phase7 custody/photos; full finance/double-entry/reporting/receipts; complete portability/import/cutover; Google Calendar and real-use gates"
+  ],
+  "completePortableExport": false,
+  "completeBackup": false,
+  "ownerRuntimeChanged": false,
+  "inPr115": false,
+  "completeCrestAcceptance": false,
+  "registeredReleaseClaim": false,
+  "spend": 0
+}

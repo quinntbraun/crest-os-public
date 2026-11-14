@@ -35,15 +35,19 @@ export function createLoginFingerprinter(bytes:Uint8Array){
   };
 }
 export function createLoginAdmission(config:SessionDatabaseConfiguration,key:Uint8Array){
-  const query=sessionDatabase(config),fingerprint=createLoginFingerprinter(key);
+  const {admissionTransaction}=sessionDatabase(config),fingerprint=createLoginFingerprinter(key);
   return async(email:string,address:string,signal:AbortSignal):Promise<boolean>=>{
     let parameters:Buffer[]=[];
     try{
       if(signal.aborted)throw new LoginAdmissionError();
       parameters=fingerprint(email,address).parametersForDatabase();
-      const result=await query('SELECT crest_commands.admit_login($1::bytea,$2::bytea,$3::bytea) AS result',parameters,signal);
-      if(typeof result!=='boolean')throw new LoginAdmissionError();
-      return result;
+      // If the caller aborts while PostgreSQL waits for the admission lock,
+      // a late server-side result must roll back even before it detects EOF.
+      return await admissionTransaction(async query=>{
+        const result=await query('SELECT crest_commands.admit_login($1::bytea,$2::bytea,$3::bytea) AS result',parameters);
+        if(typeof result!=='boolean')throw new LoginAdmissionError();
+        return result;
+      },signal);
     }catch{throw new LoginAdmissionError();}finally{for(const value of parameters)value.fill(0);}
   };
 }
