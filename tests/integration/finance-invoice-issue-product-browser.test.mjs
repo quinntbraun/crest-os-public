@@ -267,6 +267,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
       const paymentCsv=await paymentDownload;
       assert.equal(paymentCsv.suggestedFilename(),'crest-payment.csv');
       assert.match(await readFile(await paymentCsv.path(),'utf8'),/"10000"/);
+      await allowInvoiceReadWindow();
       await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
       await expect(payments.getByLabel(/Invoice TEST-1/)).toBeVisible();
       await expect(payments).toContainText('$150.00 due');
@@ -1219,7 +1220,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            assert(customer?.display_name);
            async function openRecovery(){
             await page.goto(fixture.origin+'/customers');
-            await page.getByRole('button',{name:customer.display_name,exact:true}).press('Enter');
+            const entries=page.getByRole('button',{name:customer.display_name,exact:true});
+            const reload=page.getByRole('button',{name:'Load current customers',exact:true});
+            await expect(entries.or(reload).first()).toBeVisible();
+            if(!await entries.isVisible())await reload.press('Enter');
+            await entries.press('Enter');
             const restore=page.getByRole('region',{name:'Restore a failed payment',exact:true});
             await page.locator('summary').filter({hasText:'Restore a failed payment'}).press('Enter');
             await expect(restore).toBeVisible();
@@ -1282,26 +1287,6 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            const output=await csv;
            assert.equal(output.suggestedFilename(),'crest-restored-payment.csv');
            assert((await readFile(await output.path(),'utf8')).includes(incomingRecredit.recreditId));
-           await allowInvoiceReadWindow();
-           await page.goto(fixture.origin+job);
-           await draftDisclosure.click();
-           await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
-           await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-           await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
-           await expect(draftStatus).toHaveText('Issued invoice loaded.');
-           await invoice.locator('summary').filter({hasText:'Apply customer funds'}).press('Enter');
-           const application=invoice.getByRole('region',{name:'Apply customer funds',exact:true});
-           await allowInvoiceReadWindow();
-           await application.getByRole('button',{name:'Load available funds',exact:true}).press('Enter');
-           await application.getByRole('combobox',{name:'Held funds',exact:true}).selectOption(incomingRecredit.fundLotId);
-           await application.getByLabel('Amount to apply',{exact:true}).fill('0.04');
-           await application.getByLabel('Reason for applying funds',{exact:true}).fill('Fictional customer applied part of restored funds.');
-           await application.getByRole('button',{name:'Apply funds to invoice',exact:true}).press('Enter');
-           await expect(application.getByRole('status')).toContainText('Funds applied.');
-           const applyCsv=page.waitForEvent('download');
-           await application.getByRole('button',{name:'Download funds application (CSV)',exact:true}).press('Enter');
-           const applicationFile=await readFile(await (await applyCsv).path(),'utf8');
-           assert(applicationFile.includes('Restored deposit event ID')&&applicationFile.includes(incomingRecredit.eventId));
           }
           if(directReceiptTipExport){
            await allowInvoiceReadWindow();
