@@ -533,7 +533,7 @@ async function verifyExcessReceipt({admin,finance,web,exporter,owner,foreign,cha
   const view=()=>command(finance,applicationOptions,[...owner.auth(),owner.customer,invoice.invoiceId,today]);
   assert(!(await view()).lots.some(lot=>lot.fundLotId===split.receipt.heldFunds.lotId));
   const beforeApplicationUpgrade=(await inventory(admin)).filter(row=>row.schema!=='supabase_migrations');
-  assert.equal((await sandbox.apply(target)).history.length,92);
+  assert.equal((await sandbox.apply(target,await sandbox.prefix(92))).history.length,92);
   assert.deepEqual((await inventory(admin)).filter(row=>row.schema!=='supabase_migrations'),beforeApplicationUpgrade);
   const before=await view();
   const lot=before.lots.find(item=>item.fundLotId===split.receipt.heldFunds.lotId);

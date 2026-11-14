@@ -16,7 +16,7 @@ export async function migrationSandbox(testConnection=process.env.CREST_TEST_DAT
   await admin.connect();
   const roles = ["crest_schema_owner","crest_command_owner","crest_web","crest_worker","crest_recovery","crest_auth_reader","crest_session_owner","crest_login_owner","crest_integrity_owner","crest_inventory_owner","crest_inventory","crest_cleanup_owner","crest_cleanup","crest_export_owner","crest_export","crest_identity_export_owner","crest_session_export_owner","crest_customer_owner","crest_customer_integrity_owner","crest_address_owner","crest_address_integrity_owner","crest_vehicle_owner","crest_vehicle_integrity_owner","crest_lead_source_owner","crest_lead_source_integrity_owner","crest_lead_owner","crest_lead_integrity_owner"];
   roles.push("crest_catalog_integrity_owner","crest_catalog_owner","crest_quote_integrity_owner","crest_quote_owner","crest_hold_integrity_owner","crest_hold_owner","crest_expense_owner","crest_mode_integrity_owner","crest_mode_owner","crest_booking_integrity_owner","crest_booking_owner");
-  roles.push("crest_custody_photo_dispatch","crest_finance_integrity_owner","crest_finance_account_owner","crest_finance_preview","crest_receipt_export_owner","crest_paid_expense_export_owner","crest_unapplication_export_owner","crest_fund_application_export_owner","crest_tip_export_owner","crest_invoice_credit_export_owner","crest_paired_credit_export_owner","crest_service_refund_export_owner");
+  roles.push("crest_custody_photo_dispatch","crest_finance_integrity_owner","crest_finance_account_owner","crest_finance_preview","crest_receipt_export_owner","crest_paid_expense_export_owner","crest_unapplication_export_owner","crest_fund_application_export_owner","crest_tip_export_owner","crest_invoice_credit_export_owner","crest_paired_credit_export_owner","crest_service_refund_export_owner","crest_excess_return_export_owner");
   roles.push("crest_calendar_intent_owner","crest_calendar_dispatch_owner","crest_calendar_dispatch","crest_calendar_oauth_owner","crest_calendar_oauth","crest_calendar_export_owner");
   try { assert.equal((await admin.query("SELECT count(*)::int AS n FROM pg_roles WHERE rolname=ANY($1::text[])",[roles])).rows[0].n,0,"refuse to adopt/drop other operators' roles"); }
   catch (error) { await admin.end(); throw error; }
@@ -45,7 +45,7 @@ export async function migrationSandbox(testConnection=process.env.CREST_TEST_DAT
       assert(count<=registry.migrations.length); registry.migrations=registry.migrations.slice(0,count);
       for(const m of registry.migrations) await writeFile(join(directory,"supabase/migrations",m.file),await readFile(join(root,"supabase/migrations",m.file)));
 
-      const frozen=[68,69,70,71,72,78,80,81,82,86,87,88,89,90,91].includes(count);
+      const frozen=[68,69,70,71,72,78,80,81,82,86,87,88,89,90,91,92,93].includes(count);
       const registryBytes=frozen?await readFile(join(root,`tests/support/registered${count}-migration-checksums.json`)):JSON.stringify(registry)+"\n";
       if(frozen)assert.deepEqual(JSON.parse(registryBytes),registry);
       await writeFile(join(directory,"supabase/migration-checksums.json"),registryBytes);

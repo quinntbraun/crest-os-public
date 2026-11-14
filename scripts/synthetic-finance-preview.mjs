@@ -24,8 +24,9 @@ export async function requireSyntheticFinancePreviewConnection(connectionString,
  finally{await client.end().catch(()=>undefined);}
 }
 
-export async function readSyntheticFinancePreview(directory,state,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false){
+export async function readSyntheticFinancePreview(directory,state,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false){
  assert(typeof excessReceipts==='boolean'&&(!excessReceipts||directReceipts&&customerFundsReport),failure);
+ assert(typeof excessReturns==='boolean'&&(!excessReturns||excessReceipts&&trialBalance),failure);
  assert(typeof customerFundsReport==='boolean'&&(!customerFundsReport||serviceRefunds),failure);
  assert(typeof receivableAging==='boolean'&&(!receivableAging||serviceRefunds),failure);
  assert(typeof fundApplications==='boolean'&&(!fundApplications||paymentCorrections),failure);
@@ -57,5 +58,5 @@ export async function readSyntheticFinancePreview(directory,state,taxProfiles=fa
  }catch{throw Error(failure);}
  await requireSyntheticFinancePreviewConnection(connectionString,login);
  return {connectionString,fixedMappings:true,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,
-  invoiceIssueTaxReview:invoiceIssue,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport,excessReceipts};
+  invoiceIssueTaxReview:invoiceIssue,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport,excessReceipts,excessReturns};
 }

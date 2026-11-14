@@ -7,6 +7,7 @@ import {heldTipSourceAddedColumns,heldTipSourceCoverage} from './held-tip-source
 import {invoiceCreditSourceAddedColumns,invoiceCreditSourceCoverage} from './invoice-credit-source.ts';
 import {pairedInvoiceCreditSourceCoverage} from './paired-invoice-credit-source.ts';
 import {serviceRefundSourceAddedColumns,serviceRefundSourceCoverage} from './service-refund-source.ts';
+import {excessReturnSourceAddedColumns,excessReturnSourceCoverage} from './excess-return-source.ts';
 
 const receiptColumns:Readonly<Record<string,readonly string[]>>=receiptSourceAddedColumns;
 const expenseColumns:Readonly<Record<string,readonly string[]>>=postedExpenseSourceAddedColumns;
@@ -15,12 +16,13 @@ export const fundApplicationSourceColumns:Readonly<Record<string,readonly string
 export const heldTipSourceColumns:Readonly<Record<string,readonly string[]>>=heldTipSourceAddedColumns;
 export const invoiceCreditSourceColumns:Readonly<Record<string,readonly string[]>>=invoiceCreditSourceAddedColumns;
 export const serviceRefundSourceColumns:Readonly<Record<string,readonly string[]>>=serviceRefundSourceAddedColumns;
+export const excessReturnSourceColumns:Readonly<Record<string,readonly string[]>>=excessReturnSourceAddedColumns;
 const originalTables=[...invoiceSourceCoverage,...receiptSourceCoverage,postedExpenseSourceCoverage].map(table=>({
   name:table.table.slice('crest.'.length),
   columns:[...table.required,...(receiptColumns[table.table]??[]),...(expenseColumns[table.table]??[])],
 }));
 
-export function financeSourceTables(version:1|2|3|4|5|6|7|8){
+export function financeSourceTables(version:1|2|3|4|5|6|7|8|9){
   if(version===1)return originalTables;
   const correctionTables=[
     ...originalTables.map(table=>({...table,columns:[...table.columns,...(correctionSourceColumns['crest.'+table.name]??[])]})),
@@ -48,6 +50,10 @@ export function financeSourceTables(version:1|2|3|4|5|6|7|8){
   if(version===6)return pairedTables;
   const refundTables=[...pairedTables.map(table=>({...table,columns:[...table.columns,...(serviceRefundSourceColumns['crest.'+table.name]??[])]})),
     {name:'service_credit_refunds',columns:[...serviceRefundSourceCoverage.required]}];
-  return version===7?refundTables:refundTables.map(table=>table.name==='customer_fund_lots'
+  if(version===7)return refundTables;
+  const heldTables=refundTables.map(table=>table.name==='customer_fund_lots'
     ?{...table,columns:[...table.columns,'receipt_event_id']}:table);
+  if(version===8)return heldTables;
+  return [...heldTables.map(table=>({...table,columns:[...table.columns,...(excessReturnSourceColumns['crest.'+table.name]??[])]})),
+    {name:'excess_receipt_returns',columns:[...excessReturnSourceCoverage.required]}];
 }

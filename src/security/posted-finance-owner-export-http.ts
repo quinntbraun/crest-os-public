@@ -16,7 +16,7 @@ import {createSessionCsrfVerifier} from './session-request-guard.ts';
 import {downloadObject} from './source-export-download-contract.ts';
 import {createTrustedTransport} from './trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from './trusted-transport.ts';
-import {postedFinanceExportLimit,postedFinanceExportName,postedFinanceExportPath,postedFinanceExportProfile,excessReceiptExportProfile} from './posted-finance-owner-export-contract.ts';
+import {postedFinanceExportLimit,postedFinanceExportName,postedFinanceExportPath,postedFinanceProfileForSchema} from './posted-finance-owner-export-contract.ts';
 
 type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;
  exportConnectionString:string;appReleaseId:string;sourceSchemaVersion:number};
@@ -38,9 +38,8 @@ export function createPostedFinanceOwnerExportHttp(config:Configuration,provider
   throw Error('POSTED_FINANCE_EXPORT_CONFIGURATION_REQUIRED');
  const resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config);
  const admit=createSessionRequestAdmission(config),database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
- const includesExcess=sourceSchemaVersion>=91;
- const profile=includesExcess?excessReceiptExportProfile:postedFinanceExportProfile;
- const collect=createServiceRefundSourceCollector({businessId,environment,connectionString:config.exportConnectionString},includesExcess);
+ const profile=postedFinanceProfileForSchema(sourceSchemaVersion);
+ const collect=createServiceRefundSourceCollector({businessId,environment,connectionString:config.exportConnectionString},sourceSchemaVersion>=91,sourceSchemaVersion>=93);
  let active=false;
  async function authorized<T>(credential:string,signal:AbortSignal,work:(args:unknown[],actorId:string)=>Promise<T>){
   const hash=sessionCredentialHash(credential);
