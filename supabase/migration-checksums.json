@@ -460,6 +460,11 @@
       "version": "20261216180000",
       "file": "20261216180000_fictional_apply_receipt_funds.sql",
       "sha256": "b51a5675730e94e30720603cb910d7e65aee91e62e1af3baa0bb0a07b51c7a24"
+    },
+    {
+      "version": "20261217180000",
+      "file": "20261217180000_fictional_excess_return.sql",
+      "sha256": "6e4dc661a8241e49b5c4e7fe45b4bcd67e50da81cab7c212d014c2c4697ea324"
     }
   ]
 }

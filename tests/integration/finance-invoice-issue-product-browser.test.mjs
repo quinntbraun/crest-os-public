@@ -22,6 +22,8 @@ const customerFundsReport=process.env.CREST_TEST_CUSTOMER_FUNDS_REPORT==='1';
 const postedFinanceExport=process.env.CREST_TEST_POSTED_FINANCE_EXPORT==='1';
 const excessReceipts=process.env.CREST_TEST_EXCESS_RECEIPTS==='1';
 const applyReceiptFunds=excessReceipts&&process.env.CREST_TEST_RECEIPT_FUNDS_APPLICATION==='1';
+const excessReturnExport=process.env.CREST_TEST_EXCESS_RETURN_EXPORT==='1';
+const postedFinanceSchemaVersion=excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
@@ -514,6 +516,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
         await expect(draftStatus).toHaveText('Issued invoice loaded.');
         await invoice.getByText('Credit an invoice line',{exact:true}).press('Enter');
+        await allowInvoiceReadWindow();
         await credit.getByRole('button',{name:'Load credit options',exact:true}).press('Enter');
         await expect(credit.getByRole('status')).toHaveText('The original credit was saved.');
         assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.invoice-credit.pending-reference.v1')),null);
@@ -726,10 +729,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const {['manifest.json']:manifestBytes,['export_delivery.json']:deliveryBytes,...parts}=unzipSync(archive);
         const manifest=strFromU8(manifestBytes),delivery=JSON.parse(strFromU8(deliveryBytes));
         const verified=verifyFinanceSourceExport(manifest,Object.entries(parts).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
-        const exportProfile=excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
+        const exportProfile=excessReturnExport?'crest.posted-finance-source.v9':excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
         assert.equal(verified.profile,exportProfile);
         assert.equal(verified.completePortableExport,false);
-        assert.equal(delivery.sourceSchemaVersion,excessReceipts?91:customerFundsReport?90:89);
+        assert.equal(delivery.sourceSchemaVersion,postedFinanceSchemaVersion);
         assert.equal(delivery.manifestSha256,createHash('sha256').update(manifestBytes).digest('hex'));
         assert.match(strFromU8(parts['service_credit_refunds.csv']),/Fictional service refund confirmed/);
         const extract=join(fixture.workspace,'posted-finance-extracted');
@@ -748,6 +751,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         assert.equal(evidence.length,1);
         assert.equal(evidence[0].command_type,'finance.export_access');
         assert.equal(evidence[0].action,'authorized_handoff');
+        assert.equal(evidence[0].evidence.profile,exportProfile);
         assert.equal(evidence[0].evidence.archiveSha256,digest);
         assert.equal(evidence[0].evidence.manifestSha256,delivery.manifestSha256);
         await assert.rejects(fixture.authorizePostedFinance({requestedBusiness:'00000000-0000-4000-8000-000000000001'}));
@@ -757,6 +761,20 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         assert.equal((await fixture.client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',
          [fixture.business,rolledBack.operationId])).rows[0].n,0);
         if(excessReceipts){
+         const returnTitle='Record a return of unused payment funds';
+         const returnPanel=page.getByRole('region',{name:returnTitle,exact:true});
+         async function openReturn(date){
+          const disclosure=invoice.locator('summary').filter({hasText:returnTitle});
+          const open=await disclosure.evaluate(element=>element.closest('details').open);
+          if(!open)await disclosure.press('Enter');
+          await expect(returnPanel).toBeVisible();
+          if(date){
+           await returnPanel.getByLabel('Settlement date',{exact:true}).fill(date);
+           const loaded=page.waitForResponse(response=>response.url().endsWith('/excess-return-options'));
+           await returnPanel.getByRole('button',{name:'Load eligible payments',exact:true}).press('Enter');
+           assert.equal((await loaded).status(),200,'Return options must be read from the signed-in server.');
+          }
+         }
          async function openPayment(){
           await allowInvoiceReadWindow();
           await page.goto(fixture.origin+job);
@@ -768,6 +786,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           await invoice.getByText('Record a fictional payment',{exact:true}).press('Enter');
          }
          await openPayment();
+         if(excessReturnExport){
+          const date=(await fixture.client.query("SELECT (statement_timestamp() AT TIME ZONE 'UTC')::date::text AS today")).rows[0].today;
+          await openReturn(date);
+          await expect(returnPanel.getByRole('status')).toHaveText('This customer has no unused original payment funds for that date.');
+          await expect(returnPanel.getByRole('combobox',{name:'Original payment',exact:true})).toHaveCount(0);
+          await invoice.getByText(returnTitle,{exact:true}).press('Enter');
+         }
          await payments.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
          await expect(payments.getByRole('status')).toHaveText('This customer has no outstanding invoices for that date.');
          await expect(payments.getByRole('group',{name:'Apply the payment'})).toHaveCount(0);
@@ -849,6 +874,98 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           WHERE o.business_id=$1 AND o.payment_id=$2`,[fixture.business,committed.paymentId])).rows;
          assert.deepEqual(funds,[{origin:committed.fundingOriginId,lot:committed.heldFunds.lotId,cents:'1234',unapplication:null,
           event:committed.eventId,mapping:mappingId,partition:committed.heldFunds.fundingPartitionId,first:'1',last:'1234',partitions:1,allocations:0}]);
+         let returned;
+         if(excessReturnExport){
+          await allowInvoiceReadWindow();
+          await openReturn(committed.actualOn);
+          await expect(returnPanel.getByRole('status')).toHaveText('Choose the original payment and match the settled amount to your account record.');
+          const payment=returnPanel.getByRole('combobox',{name:'Original payment',exact:true});
+          await expect(payment.locator('option')).toHaveCount(2);
+          await expect(payment.locator('option').nth(1)).toContainText('$12.34 available');
+          await payment.selectOption(committed.heldFunds.lotId);
+          await returnPanel.getByRole('combobox',{name:'Returned from',exact:true}).selectOption({label:'Fictional checking'});
+          const amount=returnPanel.getByLabel('Settled amount (USD)',{exact:true});
+          await expect(amount).toHaveAttribute('inputmode','decimal');
+          await amount.fill('1.00');
+          const reason='Fictional unused payment return', confirmation='Fictional statement verifies settled debit';
+          const transaction='fictional-unused-payment-return-browser';
+          await returnPanel.getByLabel('Reference type',{exact:true}).fill('ledger');
+          await returnPanel.getByLabel('Transaction ID',{exact:true}).fill(transaction);
+          await returnPanel.getByLabel('Reference as shown on the account',{exact:true}).fill('Fictional settled debit');
+          await returnPanel.getByLabel('How you verified settlement',{exact:true}).fill(confirmation);
+          await returnPanel.getByLabel('Reason for the return',{exact:true}).fill(reason);
+          const saveReturn=returnPanel.getByRole('button',{name:'Save return record',exact:true});
+          for(const width of [360,390,768,1440]){
+           await page.setViewportSize({width,height:900});
+           await saveReturn.scrollIntoViewIfNeeded();
+           assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+           assert.deepEqual((await new AxeBuilder({page}).include('[aria-label="'+returnTitle+'"]')
+            .withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+           await page.screenshot({path:'.local/review/finance-excess-return-'+name+'-'+width+'.png'});
+          }
+          await allowInvoiceReadWindow();
+          let submitted=0;
+          await page.route('**/api/business/finance-accounts/excess-return-submit',async route=>{
+           submitted++;
+           const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+           if(response.status()!==200){await route.fulfill({response});return;}
+           returned=(await response.json()).receipt;
+           await route.abort('failed');
+          },{times:1});
+          await saveReturn.press('Enter');
+          await expect(returnPanel.getByRole('status')).toContainText('could not confirm the save');
+          assert.equal(submitted,1);
+          assert.equal(returned?.originalPaymentId,committed.paymentId);
+          assert.equal(returned?.fundLotId,committed.heldFunds.lotId);
+          assert.equal(returned?.cents,'100');
+          const pendingKey='crest.excess-return.pending-reference.v1';
+          const heldReference=await page.evaluate(key=>sessionStorage.getItem(key),pendingKey);
+          assert(heldReference&&!heldReference.includes(transaction)&&!heldReference.includes(reason)&&!heldReference.includes(confirmation));
+          const pendingReturn=JSON.parse(heldReference);
+          assert.deepEqual(Object.keys(pendingReturn).sort(),['binding','businessId','customerId','reference']);
+          assert.deepEqual(Object.keys(pendingReturn.reference).sort(),['excessReturnId','operationId','recoveryEpoch']);
+          assert.equal(pendingReturn.reference.excessReturnId,returned.excessReturnId);
+          await openPayment();
+          await openReturn();
+          await returnPanel.getByRole('button',{name:'Check original return',exact:true}).press('Enter');
+          await expect(returnPanel.getByRole('status')).toHaveText('The original return record was saved.');
+          await expect(returnPanel).toContainText('$1.00 recorded');
+          assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
+          assert.equal(submitted,1);
+          assert.equal((await fixture.client.query('SELECT count(*)::int AS n FROM crest.excess_receipt_returns WHERE business_id=$1 AND fund_lot_id=$2',
+           [fixture.business,committed.heldFunds.lotId])).rows[0].n,1);
+          const returnedCsv=page.waitForEvent('download');
+          await returnPanel.getByRole('button',{name:'Download return record (CSV)',exact:true}).press('Enter');
+          const returnedDownload=await returnedCsv;
+          assert.equal(returnedDownload.suggestedFilename(),'crest-unused-payment-return.csv');
+          const returnFile=await readFile(await returnedDownload.path(),'utf8');
+          assert(returnFile.includes(returned.excessReturnId)&&returnFile.includes(committed.paymentId)&&returnFile.includes('"100"'));
+
+          await allowInvoiceReadWindow();
+          await page.goto(fixture.origin+'/settings/accounts');
+          await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+          await page.getByText('Customer funds held',{exact:true}).press('Enter');
+          const heldReport=page.getByRole('region',{name:'Customer funds held',exact:true});
+          await heldReport.getByRole('button',{name:'Load customer funds',exact:true}).press('Enter');
+          await expect(heldReport.getByRole('status')).toHaveText('Customer funds matched the ledger.');
+          await heldReport.getByText(/^Held funds by customer/).press('Enter');
+          await expect(heldReport.getByText('$11.34',{exact:true}).first()).toBeVisible();
+          await page.getByText('Fictional trial balance',{exact:true}).press('Enter');
+          const trial=page.getByRole('region',{name:'Fictional trial balance',exact:true});
+          await trial.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
+          await expect(trial.getByRole('status')).toHaveText('Posted balances loaded.');
+          await trial.getByText('Journal entries',{exact:true}).press('Enter');
+          await allowInvoiceReadWindow();
+          const journalResponse=page.waitForResponse(response=>response.url().endsWith('/posted-journal'));
+          await trial.getByRole('button',{name:'Load journal entries',exact:true}).press('Enter');
+          assert.equal((await journalResponse).status(),200,'The authorized journal must return the posted P09 rows.');
+          await expect(trial).toContainText('Unused payment return · Held balance reduced');
+          await expect(trial).toContainText('Unused payment return · Settled outflow');
+          const journalCsv=page.waitForEvent('download');
+          await trial.getByRole('button',{name:'Download journal page CSV',exact:true}).press('Enter');
+          const journalText=await readFile(await (await journalCsv).path(),'utf8');
+          assert(journalText.includes('Unused payment return ID')&&journalText.includes(returned.excessReturnId));
+         }
          await allowInvoiceReadWindow();
          await page.goto(fixture.origin+'/export-files');
          await expect(prepare).toBeVisible();
@@ -869,7 +986,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           Object.entries(excessParts).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
          assert.equal(verifiedExcess.profile,exportProfile);
          assert.equal(verifiedExcess.completePortableExport,false);
-         assert.equal(JSON.parse(strFromU8(excessDelivery)).sourceSchemaVersion,91);
+         assert.equal(JSON.parse(strFromU8(excessDelivery)).sourceSchemaVersion,postedFinanceSchemaVersion);
          const lots=strFromU8(excessParts['customer_fund_lots.csv']);
          const lot=lots.split(/\r?\n/).find(row=>row.includes(committed.heldFunds.lotId));
          assert(lots.split(/\r?\n/)[0].includes('receipt_event_id'));
@@ -877,6 +994,20 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           &&lot.includes(mappingId)&&lot.includes('"1234"'));
          const ledger=strFromU8(excessParts['journal_lines.csv']);
          assert(ledger.split(/\r?\n/).some(row=>row.includes('"receipt_funds"')&&row.includes(committed.heldFunds.lotId)&&row.includes('"1234"')));
+         if(returned){
+          const returns=strFromU8(excessParts['excess_receipt_returns.csv']);
+          assert(returns.split(/\r?\n/).some(row=>row.includes(returned.excessReturnId)&&row.includes(committed.eventId)
+            &&row.includes(committed.heldFunds.lotId)&&row.includes('"1","100","100"')));
+          assert.deepEqual(ledger.split(/\r?\n/).filter(row=>row.includes(returned.excessReturnId))
+            .map(row=>row.includes('"excess_return_funds"')?'funds':row.includes('"excess_return_money"')?'money':'unexpected').sort(),
+           ['funds','money']);
+          const audit=(await fixture.client.query(
+           "SELECT delta->'after' AS scope FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='finance_export_accesses' AND delta->'after'->>'archiveSha256'=$2",
+           [fixture.business,excessResponse.headers()['x-crest-sha256']])).rows[0].scope;
+          assert.equal(audit.profile,exportProfile);
+          assert.equal(audit.sourceSchemaVersion,93);
+          assert.equal(audit.manifestSha256,createHash('sha256').update(excessManifest).digest('hex'));
+         }
         }
         await fixture.client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[fixture.business]);
         await prepare.press('Enter');
@@ -888,7 +1019,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      }
     }
  }catch(error){
-  if(error instanceof Error)error.message+='\nRecent finance responses '+JSON.stringify(financeResponses.slice(-15));
+  if(error instanceof Error)throw new Error(error.message+'\nRecent finance responses '+JSON.stringify(financeResponses.slice(-15)),{cause:error});
   throw error;
  }finally{
   await browser?.close();

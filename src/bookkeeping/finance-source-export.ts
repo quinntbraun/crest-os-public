@@ -12,7 +12,8 @@ import {captureHeldTipSource,verifyHeldTipSourceClosure} from './held-tip-source
 import {captureInvoiceCreditSource,verifyInvoiceCreditSourceClosure} from './invoice-credit-source.ts';
 import {capturePairedInvoiceCreditSource,verifyPairedInvoiceCreditSourceClosure} from './paired-invoice-credit-source.ts';
 import {captureServiceRefundSource,verifyServiceRefundSourceClosure} from './service-refund-source.ts';
-import {correctionSourceColumns,financeSourceTables,fundApplicationSourceColumns,heldTipSourceColumns,invoiceCreditSourceColumns,serviceRefundSourceColumns} from './finance-source-profile.ts';
+import {captureExcessReturnSource,isExcessReturnOperation,verifyExcessReturnSourceClosure} from './excess-return-source.ts';
+import {correctionSourceColumns,excessReturnSourceColumns,financeSourceTables,fundApplicationSourceColumns,heldTipSourceColumns,invoiceCreditSourceColumns,serviceRefundSourceColumns} from './finance-source-profile.ts';
 
 type Query=(sql:string,parameters:unknown[])=>Promise<unknown[]>;
 type Cell=string|boolean|null;
@@ -31,6 +32,7 @@ const nullableByProfile={
   credit:{},
   paired:{},
   refund:{},
+  excessReturn:{},
 } as const;
 const quote=(value:string)=>'"'+value.replaceAll('"','""')+'"';
 
@@ -48,13 +50,13 @@ function rowsOf(value:unknown,table:string):readonly Row[]{
 // A single authorized, read-only repeatable-read export transaction must own
 // query for the entire capture. Every underlying SQL reader checks that mode.
 export async function captureFinanceSourceExport(businessId:string,query:Query,
-  {includeCorrections=false,includeFundApplications=false,includeTips=false,includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false}:Readonly<{
+  {includeCorrections=false,includeFundApplications=false,includeTips=false,includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false}:Readonly<{
     includeCorrections?:boolean;includeFundApplications?:boolean;includeTips?:boolean;includeCredits?:boolean;includePairedCredits?:boolean;
-    includeServiceRefunds?:boolean;includeExcessReceipts?:boolean;
+    includeServiceRefunds?:boolean;includeExcessReceipts?:boolean;includeExcessReturns?:boolean;
   }>={}){
   check(customerUuid(businessId)&&(!includeFundApplications||includeCorrections)&&(!includeTips||includeFundApplications)
     &&(!includeCredits||includeTips)&&(!includePairedCredits||includeCredits)&&(!includeServiceRefunds||includePairedCredits)
-    &&(!includeExcessReceipts||includeServiceRefunds));
+    &&(!includeExcessReceipts||includeServiceRefunds)&&(!includeExcessReturns||includeExcessReceipts));
   const one=async(sql:string,parameters:unknown[])=>{
     const result=await query(sql,parameters);
     check(Array.isArray(result)&&result.length===1&&exact(result[0],['result']));
@@ -75,6 +77,7 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
   const tip=includeTips?await captureHeldTipSource(businessId,query):null;
   const credit=pairedCapture?.credit??(includeCredits?await captureInvoiceCreditSource(businessId,query):null);
   const refund=includeServiceRefunds?await captureServiceRefundSource(businessId,query):null;
+  const excessReturn=includeExcessReturns?await captureExcessReturnSource(businessId,query):null;
   const history=await one('SELECT crest_commands.business_history_export_context($1::uuid) AS result',[businessId]);
   check(exact(history,['schemaVersion','scope','businessId','snapshotToken','observedAt','recordCounts'])
     &&history.schemaVersion===1&&history.scope==='business_history'&&history.businessId===businessId
@@ -85,7 +88,9 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     &&(!correction||history.snapshotToken===correction.historySnapshotToken&&isDeepStrictEqual(receipt.history,correction.history))
     &&(!application||history.snapshotToken===application.historySnapshotToken)
     &&(!tip||history.snapshotToken===tip.historySnapshotToken)&&(!credit||history.snapshotToken===credit.historySnapshotToken)
-    &&(!paired||history.snapshotToken===paired.historySnapshotToken)&&(!refund||history.snapshotToken===refund.historySnapshotToken));
+    &&(!paired||history.snapshotToken===paired.historySnapshotToken)&&(!refund||history.snapshotToken===refund.historySnapshotToken)
+    &&(!excessReturn||history.snapshotToken===excessReturn.historySnapshotToken));
+  check(excessReturn||receipt.history.operation.every(item=>!isExcessReturnOperation(JSON.parse(item.canonical_evidence).row)));
   // Keep each established profile's amount, lineage and round-trip checks.
   formatInvoiceSource(invoice);
   formatReceiptSource(receipt,receiptFunds);
@@ -97,24 +102,27 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
   }
   if(application)formatFundApplicationSource(application);
 
-  const version=includeExcessReceipts?8:refund?7:paired?6:credit?5:tip?4:application?3:correction?2:1;
+  const version=excessReturn?9:includeExcessReceipts?8:refund?7:paired?6:credit?5:tip?4:application?3:correction?2:1;
   const tables=financeSourceTables(version);
-  const profiles={invoice,receipt,expense,correction,application,tip,credit,paired,refund};
+  const profiles={invoice,receipt,expense,correction,application,tip,credit,paired,refund,excessReturn};
   const combined=new Map<string,Map<string,Row>>();
   let count=0,bytes=0;
   for(const {name,columns} of tables){
     const rows=new Map<string,Row>();
-    for(const kind of ['invoice','receipt','expense','correction','application','tip','credit','paired','refund'] as const){
+    for(const kind of ['invoice','receipt','expense','correction','application','tip','credit','paired','refund','excessReturn'] as const){
       const source=profiles[kind]?.rows;
       if(!source||!Object.hasOwn(source,name))continue;
       const knownNulls:Readonly<Record<string,readonly string[]>>=nullableByProfile[kind];
-      const missing=kind==='refund'?[]:[...(knownNulls[name]??[]),
+      const missing=kind==='excessReturn'?[]:[
+        ...(excessReturn?excessReturnSourceColumns['crest.'+name]??[]:[]),
+        ...kind==='refund'?[]:[...(knownNulls[name]??[]),
         ...(correction&&kind!=='correction'&&kind!=='application'&&kind!=='tip'&&kind!=='credit'?correctionSourceColumns['crest.'+name]??[]:[]),
         ...(application&&kind!=='application'&&kind!=='tip'&&kind!=='credit'?fundApplicationSourceColumns['crest.'+name]??[]:[]),
         ...(tip&&kind!=='tip'&&kind!=='credit'?heldTipSourceColumns['crest.'+name]??[]:[]),
         ...(credit&&kind!=='credit'?invoiceCreditSourceColumns['crest.'+name]??[]:[]),
         ...(refund?serviceRefundSourceColumns['crest.'+name]??[]:[]),
-        ...(includeExcessReceipts&&name==='customer_fund_lots'?['receipt_event_id']:[])];
+        ...(includeExcessReceipts&&name==='customer_fund_lots'?['receipt_event_id']:[])],
+      ];
       for(const row of rowsOf(source,name)){
         check(count<maxRows&&customerUuid(row.id)&&row.business_id===businessId
           &&exact(row,columns.filter(column=>!missing.includes(column))));
@@ -169,10 +177,11 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     };
     const tableRows=(table:string)=>[...combined.get(table)!.values()];
     verifyHeldTipSourceClosure(table=>refund&&table==='fund_lot_range_consumptions'
-      ?tableRows(table).filter(row=>row.service_refund_id===null):tableRows(table),parsedHistory);
+      ?tableRows(table).filter(row=>row.service_refund_id===null&&(!excessReturn||row.excess_return_id===null)):tableRows(table),parsedHistory);
     if(paired)verifyPairedInvoiceCreditSourceClosure(tableRows,parsedHistory);
     else if(credit)verifyInvoiceCreditSourceClosure(tableRows,parsedHistory);
     if(refund)verifyServiceRefundSourceClosure(tableRows,parsedHistory);
+    if(excessReturn)verifyExcessReturnSourceClosure(tableRows,parsedHistory);
   }
 
   const files:File[]=[];
@@ -212,7 +221,8 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     tables})+'\n');
   add('README.txt',[
     'Crest OS posted finance source export',
-    includeExcessReceipts?'Includes settled service refunds, direct receipts with held customer funds, invoices, credits, applied payments, tips, same-day expenses and original history.'
+    includeExcessReturns?'Includes settled returns of held payments, settled service refunds, direct receipts, invoices, credits, applied payments, tips, same-day expenses and original history.'
+      :includeExcessReceipts?'Includes settled service refunds, direct receipts with held customer funds, invoices, credits, applied payments, tips, same-day expenses and original history.'
       :refund?'Includes supported settled service refunds, issued invoices, credits and payment releases, direct receipts, payment corrections, customer funds applications, tips, same-day posted expenses and their source history.'
       :paired?'Includes supported issued invoices, paired invoice credits and payment releases, standalone invoice credits, direct receipts, payment corrections, customer funds applications, confirmed tips from held funds, same-day posted expenses, their normalized journal and original history projections.'
       :credit?'Includes supported issued invoices, invoice credits, direct receipts, payment corrections, customer funds applications, confirmed tips from held funds, same-day posted expenses, their normalized journal and original history projections.'
@@ -227,7 +237,8 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     observedAt:history.observedAt,historySnapshotToken:history.snapshotToken,
     sourceTokens:{invoice:invoice.snapshotToken,receipt:receipt.snapshotToken,expense:expense.snapshotToken,
       ...correction?{correction:correction.snapshotToken}:{},...application?{application:application.snapshotToken}:{},...tip?{tip:tip.snapshotToken}:{},
-      ...credit?{credit:credit.snapshotToken}:{},...paired?{paired:paired.snapshotToken}:{},...refund?{refund:refund.snapshotToken}:{}},
+      ...credit?{credit:credit.snapshotToken}:{},...paired?{paired:paired.snapshotToken}:{},...refund?{refund:refund.snapshotToken}:{},
+      ...excessReturn?{excessReturn:excessReturn.snapshotToken}:{}},
     rowCounts:Object.fromEntries(tables.map(({name})=>[name,combined.get(name)!.size])),
     historyCounts:{operations:receipt.history.operation.length,auditEvents:receipt.history.audit_event.length},
     completePortableExport:false,referenceClosureComplete:false,completeBackup:false,

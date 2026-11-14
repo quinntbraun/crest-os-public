@@ -6,6 +6,7 @@ import {lstat,open,opendir,realpath,stat} from 'node:fs/promises';
 import {resolve,join,dirname} from 'node:path';
 import {verifyBusinessSourceBundle} from '../src/security/business-source-verifier.ts';
 import {verifyFinanceSourceExport} from '../src/tooling/verify-finance-source-export.ts';
+import {postedFinanceProfileForSchema} from '../src/security/posted-finance-owner-export-contract.ts';
 
 const fail=()=>{throw Error('SOURCE_EXPORT_REVIEW_REQUIRED');};
 try{
@@ -49,6 +50,7 @@ try{
     ||delivery.profile!==result.profile||delivery.businessId!==businessId||delivery.observedAt!==JSON.parse(manifestText).observedAt
     ||typeof delivery.appReleaseId!=='string'||!/^[a-f0-9]{40}$/.test(delivery.appReleaseId)||appReleaseId!==undefined&&delivery.appReleaseId!==appReleaseId
     ||!Number.isSafeInteger(delivery.sourceSchemaVersion)||delivery.sourceSchemaVersion<89||delivery.sourceSchemaVersion>999
+    ||delivery.profile!==postedFinanceProfileForSchema(delivery.sourceSchemaVersion)
     ||delivery.manifestSha256!==createHash('sha256').update(manifest).digest('hex')
     ||delivery.completePortableExport!==false||delivery.completeBackup!==false)fail();
   }

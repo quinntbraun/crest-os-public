@@ -45,6 +45,12 @@ async function requireRegisteredExport(client,state,versions){
    AND has_function_privilege('crest_export',to_regprocedure($6),'EXECUTE') AND NOT has_function_privilege('crest_web',to_regprocedure($6),'EXECUTE') AS grants`,
   [state.businessId,state.issuer,state.owner.subject,...routines]);
  assert.deepEqual(capability,{owner:true,grants:true},failure);
+ if(versions.includes('20261217180000')){
+  const {rows:[returned]}=await client.query(`SELECT coalesce(
+   has_function_privilege('crest_export',to_regprocedure('crest_commands.excess_return_source_snapshot(uuid)'),'EXECUTE')
+   AND NOT has_function_privilege('crest_web',to_regprocedure('crest_commands.excess_return_source_snapshot(uuid)'),'EXECUTE'),false) AS granted`);
+  assert.equal(returned.granted,true,failure);
+ }
 }
 
 async function registryVersions(root){

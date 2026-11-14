@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {authentication} from '../../client/authentication';
-import {postedFinanceExportLimit,postedFinanceExportName,postedFinanceExportPath,postedFinanceExportProfile,excessReceiptExportProfile} from '../../security/posted-finance-owner-export-contract';
+import {postedFinanceExportLimit,postedFinanceExportName,postedFinanceExportPath,postedFinanceExportProfile,excessReceiptExportProfile,excessReturnExportProfile} from '../../security/posted-finance-owner-export-contract';
 
 type Phase='initial'|'ready'|'preparing'|'prepared'|'requested'|'failed';
 const messages:Record<Phase,string>={
@@ -65,7 +65,8 @@ export function PostedFinanceExport(){
    try{
     const response=await privateRequest(postedFinanceExportPath+'/context',AbortSignal.any([current.signal,AbortSignal.timeout(20000)]));
     const result:unknown=await response.json();
-    if(mounted&&!current.signal.aborted&&result&&typeof result==='object'&&'profile' in result&&(result.profile===postedFinanceExportProfile||result.profile===excessReceiptExportProfile)){
+    if(mounted&&!current.signal.aborted&&result&&typeof result==='object'&&'profile' in result
+      &&(result.profile===postedFinanceExportProfile||result.profile===excessReceiptExportProfile||result.profile===excessReturnExportProfile)){
      setAvailable(true);
      setPhase('ready');
     }

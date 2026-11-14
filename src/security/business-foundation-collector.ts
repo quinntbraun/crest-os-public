@@ -35,7 +35,7 @@ export type BusinessSourceJournalCapture=Readonly<{forJournalServer:()=>JournalC
 type CatalogCapture=Readonly<{formatVersion:1;registeredSourceSchemaVersion:43;catalogRegistered:false;source:JournalCapture;catalog:string;metadataBytes:number;evidenceBytes:number;recordCount:number;completePortableExport:false;completeBackup:false}>;
 export type BusinessSourceCatalogCapture=Readonly<{forCatalogServer:()=>CatalogCapture;toJSON:()=>never}>;
 type PostedFinanceCapture=Readonly<{
- businessId:string;profile:'crest.posted-finance-source.v5'|'crest.posted-finance-source.v6'|'crest.posted-finance-source.v7'|'crest.posted-finance-source.v8';manifest:string;files:readonly Readonly<{name:string;content:string}>[];
+ businessId:string;profile:'crest.posted-finance-source.v5'|'crest.posted-finance-source.v6'|'crest.posted-finance-source.v7'|'crest.posted-finance-source.v8'|'crest.posted-finance-source.v9';manifest:string;files:readonly Readonly<{name:string;content:string}>[];
  completePortableExport:false;completeBackup:false;
 }>;
 export type PostedFinanceSourceCapture=Readonly<{forFinanceServer:()=>PostedFinanceCapture;toJSON:()=>never}>;
@@ -128,13 +128,15 @@ export function createBusinessSourceCatalogCollector(config:Configuration){retur
 // This source profile needs the exact credit reader and never falls back to an older ledger.
 export function createPostedFinanceSourceCollector(config:Configuration){return createCollector(config,false,false,false,true);}
 export function createPairedPostedFinanceSourceCollector(config:Configuration){return createCollector(config,false,false,false,true,6);}
-export function createServiceRefundSourceCollector(config:Configuration,includeExcessReceipts=false){return createCollector(config,false,false,false,true,includeExcessReceipts?8:7);}
-function createCollector(config:Configuration,includeCrm:false,includeJournal:false,includeCatalog:false,includeFinance:true,financeProfile?:5|6|7|8):(signal:AbortSignal)=>Promise<PostedFinanceSourceCapture>;
+export function createServiceRefundSourceCollector(config:Configuration,includeExcessReceipts=false,includeExcessReturns=false){
+ return createCollector(config,false,false,false,true,includeExcessReturns?9:includeExcessReceipts?8:7);
+}
+function createCollector(config:Configuration,includeCrm:false,includeJournal:false,includeCatalog:false,includeFinance:true,financeProfile?:5|6|7|8|9):(signal:AbortSignal)=>Promise<PostedFinanceSourceCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal:true,includeCatalog:true):(signal:AbortSignal)=>Promise<BusinessSourceCatalogCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal:true):(signal:AbortSignal)=>Promise<BusinessSourceJournalCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal?:false):(signal:AbortSignal)=>Promise<BusinessSourceCapture>;
 function createCollector(config:Configuration,includeCrm:false,includeJournal?:false):(signal:AbortSignal)=>Promise<BusinessFoundationCapture>;
-function createCollector(config:Configuration,includeCrm:boolean,includeJournal=false,includeCatalog=false,includeFinance=false,financeProfile:5|6|7|8=5){
+function createCollector(config:Configuration,includeCrm:boolean,includeJournal=false,includeCatalog=false,includeFinance=false,financeProfile:5|6|7|8|9=5){
  let connectionString:string,businessId:string,ssl:false|{rejectUnauthorized:true};
  try{
   const url=new URL(config.connectionString);
@@ -167,7 +169,7 @@ function createCollector(config:Configuration,includeCrm:boolean,includeJournal=
     if(includeFinance){
      const capture=(await captureFinanceSourceExport(businessId,async(sql,args)=>(await query(sql,args)).rows,{
       includeCorrections:true,includeFundApplications:true,includeTips:true,includeCredits:true,includePairedCredits:financeProfile>=6,
-      includeServiceRefunds:financeProfile>=7,includeExcessReceipts:financeProfile===8,
+      includeServiceRefunds:financeProfile>=7,includeExcessReceipts:financeProfile>=8,includeExcessReturns:financeProfile===9,
      })).forServer();
      const checked=verifyFinanceSourceExport(capture.manifest,capture.files,businessId);
      const profile=`crest.posted-finance-source.v${financeProfile}` as const;

@@ -54,11 +54,14 @@ import {pairedInvoiceCreditRefusal,parsePairedInvoiceCreditInput,parsePairedInvo
 import {parseFictionalJournalV4,parseFictionalTrialBalanceV4} from '../bookkeeping/posted-report-v4-contract';
 import {parseFictionalJournalV5,parseFictionalTrialBalanceV5} from '../bookkeeping/posted-report-v5-contract';
 import {parseFictionalJournalV6,parseFictionalTrialBalanceV6} from '../bookkeeping/posted-report-v6-contract';
+import {parseFictionalJournalV7,parseFictionalTrialBalanceV7} from '../bookkeeping/posted-report-v7-contract';
+import {excessReturnMatchesInput,excessReturnRefusal,parseExcessReturnInput,parseExcessReturnOptions,
+ parseExcessReturnReference,parseExcessReturnResult} from '../bookkeeping/excess-return-contract';
 import {parseCustomerFundsReport} from '../bookkeeping/customer-funds-report-contract';
 import {parseReceivableAging} from '../bookkeeping/receivable-aging-contract';
 import type {Proof} from './authentication';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
@@ -121,6 +124,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   invoiceIssue:response.headers.get('x-crest-invoice-issue')==='1',
   directReceipts:response.headers.get('x-crest-direct-receipts')==='1',
   excessReceipts:response.headers.get('x-crest-excess-receipts')==='1',
+  excessReturns:response.headers.get('x-crest-excess-returns')==='1',
   paymentCorrections:response.headers.get('x-crest-payment-corrections')==='1',
   fundApplications:response.headers.get('x-crest-fund-applications')==='1',
   heldTips:response.headers.get('x-crest-held-tips')==='1',
@@ -135,12 +139,13 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
 
 export const financeAccounts={
  async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
   return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,
    ...(invoiceIssue?{invoiceIssue}:{}),...(directReceipts?{directReceipts}:{}),...(directReceipts&&excessReceipts?{excessReceipts}:{}),
+   ...(directReceipts&&excessReceipts&&excessReturns?{excessReturns}:{}),
    ...(sameDayExpenses?{sameDayExpenses}:{}),
    ...(trialBalance?{trialBalance}:{}),...(paymentCorrections?{paymentCorrections}:{}),...(fundApplications?{fundApplications}:{}),
    ...(heldTips?{heldTips}:{}),...(invoiceCredits?{invoiceCredits}:{}),...(paidInvoiceCredits?{paidInvoiceCredits}:{}),
@@ -163,7 +168,8 @@ export const financeAccounts={
   check(context.trialBalance&&(throughOn===null||customerDate(throughOn)));
   const {status,value}=await post('trial-balance',{throughOn},signal,context.binding);
   check(status===200);
-  return context.serviceRefunds?parseFictionalTrialBalanceV6(value,context.businessId,throughOn)
+  return context.excessReturns?parseFictionalTrialBalanceV7(value,context.businessId,throughOn)
+   :context.serviceRefunds?parseFictionalTrialBalanceV6(value,context.businessId,throughOn)
    :context.invoiceCredits?parseFictionalTrialBalanceV5(value,context.businessId,throughOn)
    :context.heldTips?parseFictionalTrialBalanceV4(value,context.businessId,throughOn)
    :context.fundApplications?parseFictionalTrialBalanceV3(value,context.businessId,throughOn)
@@ -174,7 +180,8 @@ export const financeAccounts={
   check(context.trialBalance&&customerDate(throughOn)&&(accountId===null||customerUuid(accountId))&&(afterLineId===null||customerUuid(afterLineId)));
   const {status,value}=await post('posted-journal',{throughOn,accountId,afterLineId},signal,context.binding);
   check(status===200);
-  return context.serviceRefunds?parseFictionalJournalV6(value,context.businessId,throughOn,accountId,afterLineId)
+  return context.excessReturns?parseFictionalJournalV7(value,context.businessId,throughOn,accountId,afterLineId)
+   :context.serviceRefunds?parseFictionalJournalV6(value,context.businessId,throughOn,accountId,afterLineId)
    :context.invoiceCredits?parseFictionalJournalV5(value,context.businessId,throughOn,accountId,afterLineId)
    :context.heldTips?parseFictionalJournalV4(value,context.businessId,throughOn,accountId,afterLineId)
    :context.fundApplications?parseFictionalJournalV3(value,context.businessId,throughOn,accountId,afterLineId)
@@ -298,6 +305,37 @@ export const financeAccounts={
   const {status,value}=await post('service-refund-retire',{reference:parseServiceRefundReference(reference),reviewEpoch:context.recoveryEpoch,reason},signal,context.binding);
   check(status===200||status===409);
   return parseServiceRefundResult(value,context.businessId,reference);
+ },
+ async excessReturnOptions(context:FinanceAccountContext,customerId:string,actualOn:string,signal:AbortSignal){
+  check(context.excessReturns&&customerUuid(customerId)&&customerDate(actualOn));
+  const {status,value}=await post('excess-return-options',{customerId,actualOn},signal,context.binding);
+  check(status===200);
+  return parseExcessReturnOptions(value,context.businessId,customerId,actualOn);
+ },
+ async recordExcessReturn(context:FinanceAccountContext,input:ReturnType<typeof parseExcessReturnInput>,signal:AbortSignal){
+  check(context.excessReturns&&context.writeState==='ready'&&context.recoveryEpoch===input.reference.recoveryEpoch);
+  const request=parseExcessReturnInput(input);
+  const {status,value}=await post('excess-return-submit',request,signal,context.binding);
+  const reason=status===409&&exact(value,['error'])?excessReturnRefusal(value.error):null;
+  if(reason)return {state:'refused' as const,reason};
+  check(status===200||status===409);
+  const result=parseExcessReturnResult(value,context.businessId,request.reference);
+  check(result.state==='conflict'||result.state==='committed'&&excessReturnMatchesInput(result.receipt,request));
+  return result;
+ },
+ async lookupExcessReturn(context:FinanceAccountContext,reference:ReturnType<typeof parseExcessReturnReference>,signal:AbortSignal){
+  check(context.excessReturns);
+  const {status,value}=await post('excess-return-lookup',parseExcessReturnReference(reference),signal,context.binding);
+  check(status===200||status===409);
+  return parseExcessReturnResult(value,context.businessId,reference);
+ },
+ async retireExcessReturn(context:FinanceAccountContext,reference:ReturnType<typeof parseExcessReturnReference>,reason:string,signal:AbortSignal){
+  check(context.excessReturns&&context.writeState==='ready'&&customerUuid(context.recoveryEpoch)&&financeAccountReviewReason(reason));
+  const {status,value}=await post('excess-return-retire',{reference:parseExcessReturnReference(reference),reviewEpoch:context.recoveryEpoch,reason},signal,context.binding);
+  check(status===200||status===409);
+  const result=parseExcessReturnResult(value,context.businessId,reference);
+  check(result.state!=='absent'&&(result.state!=='retired'||result.receipt.reviewEpoch===context.recoveryEpoch));
+  return result;
  },
  async submitPaidInvoiceCredit(context:FinanceAccountContext,input:ReturnType<typeof parsePairedInvoiceCreditInput>,signal:AbortSignal){
   check(context.paidInvoiceCredits&&context.writeState==='ready'&&context.recoveryEpoch===input.credit.reference.recoveryEpoch);
@@ -949,6 +987,30 @@ export function clearPendingFundApplication(entry:PendingFundApplication){
 }
 
 type PendingPaidInvoiceCredit=Readonly<{businessId:string;binding:string;invoiceId:string;reference:ReturnType<typeof parsePairedInvoiceCreditReference>}>;
+type PendingExcessReturn=Readonly<{businessId:string;binding:string;customerId:string;reference:ReturnType<typeof parseExcessReturnReference>}>;
+const excessReturnPendingKey='crest.excess-return.pending-reference.v1';
+export function readPendingExcessReturn():PendingExcessReturn|null{
+ const raw=sessionStorage.getItem(excessReturnPendingKey);
+ if(raw===null)return null;
+ check(raw.length<=1000&&(raw.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length===7);
+ const value:unknown=JSON.parse(raw);
+ check(exact(value,['businessId','binding','customerId','reference'])&&customerUuid(value.businessId)
+  &&typeof value.binding==='string'&&bindingPattern.test(value.binding)&&customerUuid(value.customerId));
+ return {businessId:value.businessId,binding:value.binding,customerId:value.customerId,reference:parseExcessReturnReference(value.reference)};
+}
+export function retainPendingExcessReturn(context:FinanceAccountContext,customerId:string,reference:PendingExcessReturn['reference']){
+ check(readPendingExcessReturn()===null&&customerUuid(customerId));
+ const entry={businessId:context.businessId,binding:context.binding,customerId,reference:parseExcessReturnReference(reference)};
+ sessionStorage.setItem(excessReturnPendingKey,JSON.stringify(entry));
+ check(JSON.stringify(readPendingExcessReturn())===JSON.stringify(entry));
+ return entry;
+}
+export function clearPendingExcessReturn(entry:PendingExcessReturn){
+ check(JSON.stringify(readPendingExcessReturn())===JSON.stringify(entry));
+ sessionStorage.removeItem(excessReturnPendingKey);
+ check(readPendingExcessReturn()===null);
+}
+
 type PendingServiceRefund=Readonly<{businessId:string;binding:string;invoiceId:string;reference:ReturnType<typeof parseServiceRefundReference>}>;
 const serviceRefundPendingKey='crest.service-refund.pending-reference.v1';
 export function readPendingServiceRefund():PendingServiceRefund|null{
