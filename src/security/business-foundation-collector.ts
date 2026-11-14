@@ -16,6 +16,8 @@ import {parseLeadConversionRecord,parseConversionLink,parseLeadConversionCollect
 import {parseHistoryJson,historyJsonEqual} from './history-evidence-json.ts';
 import {collectJournalSources,journalCollectionContext} from './source-export-journal-collection.ts';
 import {collectServiceCatalogSources,catalogCollectionContext} from './service-catalog-collection.ts';
+import {captureFinanceSourceExport} from '../bookkeeping/finance-source-export.ts';
+import {verifyFinanceSourceExport} from '../tooling/verify-finance-source-export.ts';
 
 type Configuration=Readonly<{connectionString:string;environment:'production'|'test';businessId:string}>;
 type Group='configuration'|'identity'|'history';
@@ -32,6 +34,11 @@ type JournalCapture=Capture&Readonly<{sourceSchemaVersion:43;crm:string;journal:
 export type BusinessSourceJournalCapture=Readonly<{forJournalServer:()=>JournalCapture;toJSON:()=>never}>;
 type CatalogCapture=Readonly<{formatVersion:1;registeredSourceSchemaVersion:43;catalogRegistered:false;source:JournalCapture;catalog:string;metadataBytes:number;evidenceBytes:number;recordCount:number;completePortableExport:false;completeBackup:false}>;
 export type BusinessSourceCatalogCapture=Readonly<{forCatalogServer:()=>CatalogCapture;toJSON:()=>never}>;
+type PostedFinanceCapture=Readonly<{
+ businessId:string;profile:'crest.posted-finance-source.v5'|'crest.posted-finance-source.v6'|'crest.posted-finance-source.v7'|'crest.posted-finance-source.v8'|'crest.posted-finance-source.v9'|'crest.posted-finance-source.v10'|'crest.posted-finance-source.v11'|'crest.posted-finance-source.v12'|'crest.posted-finance-source.v13'|'crest.posted-finance-source.v14'|'crest.posted-finance-source.v15';manifest:string;files:readonly Readonly<{name:string;content:string}>[];
+ completePortableExport:false;completeBackup:false;
+}>;
+export type PostedFinanceSourceCapture=Readonly<{forFinanceServer:()=>PostedFinanceCapture;toJSON:()=>never}>;
 export class BusinessFoundationCollectionError extends Error{
  constructor(){super('BUSINESS_FOUNDATION_COLLECTION_REVIEW_REQUIRED');this.name='BusinessFoundationCollectionError';}
 }
@@ -118,11 +125,18 @@ export function createBusinessSourceJournalCollector(config:Configuration){retur
 // Candidate catalog layers are explicitly separate from the immutable43
 // journal profile. No runtime/worker can silently mistake this for that type.
 export function createBusinessSourceCatalogCollector(config:Configuration){return createCollector(config,true,true,true);}
+// This source profile needs the exact credit reader and never falls back to an older ledger.
+export function createPostedFinanceSourceCollector(config:Configuration){return createCollector(config,false,false,false,true);}
+export function createPairedPostedFinanceSourceCollector(config:Configuration){return createCollector(config,false,false,false,true,6);}
+export function createServiceRefundSourceCollector(config:Configuration,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,includeCollectionFailureRecredits=false){
+ return createCollector(config,false,false,false,true,includeCollectionFailureRecredits?15:includeRefundTransferFees?14:includeDirectReceiptTips?13:includeRefundTransferAdjustments?12:includeCollectionFailures?11:includeTipReturns?10:includeExcessReturns?9:includeExcessReceipts?8:7);
+}
+function createCollector(config:Configuration,includeCrm:false,includeJournal:false,includeCatalog:false,includeFinance:true,financeProfile?:5|6|7|8|9|10|11|12|13|14|15):(signal:AbortSignal)=>Promise<PostedFinanceSourceCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal:true,includeCatalog:true):(signal:AbortSignal)=>Promise<BusinessSourceCatalogCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal:true):(signal:AbortSignal)=>Promise<BusinessSourceJournalCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal?:false):(signal:AbortSignal)=>Promise<BusinessSourceCapture>;
 function createCollector(config:Configuration,includeCrm:false,includeJournal?:false):(signal:AbortSignal)=>Promise<BusinessFoundationCapture>;
-function createCollector(config:Configuration,includeCrm:boolean,includeJournal=false,includeCatalog=false){
+function createCollector(config:Configuration,includeCrm:boolean,includeJournal=false,includeCatalog=false,includeFinance=false,financeProfile:5|6|7|8|9|10|11|12|13|14|15=5){
  let connectionString:string,businessId:string,ssl:false|{rejectUnauthorized:true};
  try{
   const url=new URL(config.connectionString);
@@ -152,6 +166,19 @@ function createCollector(config:Configuration,includeCrm:boolean,includeJournal=
      AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_auth_members m WHERE m.member=(SELECT oid FROM pg_catalog.pg_roles WHERE rolname=$1)) AS allowed`,['crest_export']);
     require(guard.rows.length===1&&exact(guard.rows[0],['allowed'])&&guard.rows[0].allowed===true);
     require((await query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')).command==='BEGIN');
+    if(includeFinance){
+     const capture=(await captureFinanceSourceExport(businessId,async(sql,args)=>(await query(sql,args)).rows,{
+      includeCorrections:true,includeFundApplications:true,includeTips:true,includeCredits:true,includePairedCredits:financeProfile>=6,
+      includeServiceRefunds:financeProfile>=7,includeExcessReceipts:financeProfile>=8,includeExcessReturns:financeProfile>=9,
+      includeTipReturns:financeProfile>=10,includeCollectionFailures:financeProfile>=11,includeRefundTransferAdjustments:financeProfile>=12,includeDirectReceiptTips:financeProfile>=13,includeRefundTransferFees:financeProfile>=14,includeCollectionFailureRecredits:financeProfile===15,
+     })).forServer();
+     const checked=verifyFinanceSourceExport(capture.manifest,capture.files,businessId);
+     const profile=`crest.posted-finance-source.v${financeProfile}` as const;
+     require(checked.verified&&checked.profile===profile);
+     require((await query('COMMIT')).command==='COMMIT');check();
+     const value:PostedFinanceCapture=Object.freeze({businessId,profile,...capture,completePortableExport:false,completeBackup:false});
+     return Object.freeze({forFinanceServer:()=>value,toJSON():never{throw new Error('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');}});
+    }
     const contextSql='SELECT crest_commands.business_configuration_export_context($1::uuid) AS configuration,crest_commands.business_identity_export_context($1::uuid) AS identity,crest_commands.business_history_export_context($1::uuid) AS history';
     const result=await query(contextSql+(includeCrm?crmContexts.map(n=>`,crest_commands.${crmSources[n].routine}_snapshot_context($1::uuid)::text AS "${n}"`).join(''):'')+(includeJournal?',crest_commands.source_export_journal_context($1::uuid)::text AS journal':'')+(includeCatalog?',crest_commands.service_catalog_snapshot_context($1::uuid)::text AS catalog':''),[businessId]);
     require(result.rows.length===1&&exact(result.rows[0],[...groups,...(includeCrm?crmContexts:[]),...(includeJournal?['journal']:[]),...(includeCatalog?['catalog']:[])]));

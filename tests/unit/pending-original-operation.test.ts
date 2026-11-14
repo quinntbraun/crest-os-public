@@ -1,3 +1,4 @@
+import {schedulingOriginalKinds} from '../../src/operations/scheduling-original-contract';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 import {openPendingOriginalOperation,PendingOriginalOperationError} from '../../src/client/pending-original-operation';
@@ -9,6 +10,27 @@ import {originalOperationFixture,retirementFixture,retiredOutcomeFixture} from '
 // Runtime exposure still requires catalog migration/source/recovery adoption.
 const pendingKinds=originalOperationKinds;
 const keys:Record<OriginalOperationKind,string>={
+ 'operations.job.field':'crest.field-session.pending-reference.v1',
+ 'operations.job.complete':'crest.field-completion.pending-reference.v1',
+ 'operations.job.interrupt':'crest.trip-interruption.pending-reference.v1',
+ 'operations.job.cancel_unfulfilled':'crest.unfulfilled-cancellation.pending-reference.v1',
+ 'operations.job.work_start.correct':'crest.work-start.pending-reference.v1',
+ 'operations.job.work_end.correct':'crest.work-end.pending-reference.v1',
+ 'operations.mobile_departure.correct':'crest.mobile-departure.pending-reference.v1',
+ 'operations.message.record_outcome':'crest.review-message-outcome.pending-reference.v1',
+ 'operations.custody.policy.save':'crest.dropoff-policy.pending-reference.v1',
+ 'operations.custody.policy.revise':'crest.dropoff-policy-revision.pending-reference.v1',
+ 'operations.custody.save':'crest.dropoff-custody.pending-reference.v1',
+ 'operations.follow_up.save':'crest.maintenance-follow-up.pending-reference.v1',
+ 'operations.job.work_boundary.correct':'crest.work-boundary.pending-reference.v1',
+ 'operations.mileage.record':'crest.mileage.pending-reference.v1',
+ 'operations.support_trip.record':'crest.support-trip.pending-reference.v1',
+ 'operations.pickup_custody.policy.save':'crest.pickup-policy.pending-reference.v1',
+ 'operations.pickup_custody.collect':'crest.pickup-collection.pending-reference.v1',
+ 'operations.pickup_custody.release':'crest.pickup-release.pending-reference.v1',
+ 'operations.pickup_custody.fail_return':'crest.pickup-return-failure.pending-reference.v1',
+ 'operations.pickup_trip.record':'crest.pickup-trip.pending-reference.v1',
+ 'operations.support_trip.correct':'crest.support-trip-correction.pending-reference.v1',
  'operations.fulfillment_modes.initialize':'crest.fulfillment-mode-initialize.pending-reference.v1',
  'operations.fulfillment_modes.save':'crest.fulfillment-mode.pending-reference.v1',
  'operations.job.book':'crest.book-job.pending-reference.v1',
@@ -70,7 +92,7 @@ it.each(pendingKinds)('keeps an absent %s lookup through its existing typed doma
  const f=fixture(kind),financial=kind.startsWith('bookkeeping.'),freshBinding=randomBytes(32).toString('base64url');
  if(financial)fetcher.mockResolvedValueOnce(contextResponse(f.original.businessId,freshBinding));
  fetcher.mockResolvedValue(response({state:'absent'}));expect(await f.target.reconcile(proof(),signal())).toBe('absent');expect(f.memory.get(f.key)).toBe(f.raw);expect(f.storage.removeItem).not.toHaveBeenCalled();expect(fetcher).toHaveBeenCalledTimes(financial?2:1);
- const request=fetcher.mock.calls.at(-1)![1],scheduling=kind.startsWith('operations.job.')||kind.startsWith('operations.fulfillment_modes.');expect(JSON.parse(request.body)).toEqual(financial?f.original.reference:kind.startsWith("quote.amendment.")?{reference:f.original.reference}:scheduling?{originalJson:JSON.stringify(f.original)}:{operationId:f.original.reference.operationId});if(financial)expect(request.headers['x-crest-edit-binding']).toBe(freshBinding);
+ const request=fetcher.mock.calls.at(-1)![1],scheduling=schedulingOriginalKinds.includes(kind as typeof schedulingOriginalKinds[number]);expect(JSON.parse(request.body)).toEqual(financial?f.original.reference:kind.startsWith("quote.amendment.")?{reference:f.original.reference}:scheduling?{originalJson:JSON.stringify(f.original)}:{operationId:f.original.reference.operationId});if(financial)expect(request.headers['x-crest-edit-binding']).toBe(freshBinding);
 });
 it.each(pendingKinds)('rejects replacement storage for %s before retirement acknowledgment',kind=>{
  const f=fixture(kind);f.memory.set(f.key,JSON.stringify({...f.record,binding:randomBytes(32).toString('base64url')}));expect(()=>f.target.releaseRetired(f.outcome,signal())).toThrow(PendingOriginalOperationError);expect(f.storage.removeItem).not.toHaveBeenCalled();

@@ -50,7 +50,7 @@ export function createBookJobController(deps:{store:Store;blockers?:readonly Sto
    message=saved?'The server confirmed this job was saved. Local reference cleanup could not be verified. Review the saved job and check the original before another booking.':'No booking was saved. Local reference cleanup could not be verified. Review the original request before preparing another booking.';return;
   }
   pending=null;
-  if(result.state==='conflict'){clearPrivate();context=null;phase='review';message=result.reason==='review'?'The schedule or travel review changed. No booking was saved. Reload accepted scope and review the schedule before another attempt.':'The '+result.reason+' facts changed or are unavailable. No booking was saved. Reload current accepted scope.';return;}
+  if(result.state==='conflict'){clearPrivate();context=null;phase='review';message=result.reason==='review'?'The schedule or travel review changed. No booking was saved. Reload accepted scope and review the schedule before another attempt.':result.reason==='pickup_policy'?'Set a pickup handoff policy in Service arrangements before booking Pickup + Return. No booking was saved.':'The '+result.reason+' facts changed or are unavailable. No booking was saved. Reload current accepted scope.';return;}
   const saved=result.receipt.jobId;clearPrivate();context=null;savedJobId=saved;phase='committed';message='Confirmed job saved. Open its retained visit details in Schedule.';
  }
  async function inspect(proof:Awaited<ReturnType<typeof authentication.session>>,signal:AbortSignal){
@@ -58,7 +58,7 @@ export function createBookJobController(deps:{store:Store;blockers?:readonly Sto
   const result=await lookup({schemaVersion:1,businessId:pending.businessId,commandType:'operations.job.book',reference:pending.reference},proof,signal);live(signal);
   if(result.state!=='absent'){
    // The command-specific parser and client bind the exact original identity.
-   if(!('jobId'in result.receipt)||result.receipt.version!=='1')throw Error();
+   if(!('jobId'in result.receipt)||!('version'in result.receipt)||result.receipt.version!=='1')throw Error();
    finish(result as Awaited<ReturnType<typeof api.book>>);return;
   }
   canRetry=!!original&&context?.context.writeState==='ready'&&context.context.recoveryEpoch===pending.reference.recoveryEpoch;
@@ -160,7 +160,7 @@ export function createBookJobController(deps:{store:Store;blockers?:readonly Sto
   if(phase!=='pending'||!pending||!original||!canRetry)return;canRetry=false;const request=original,{proof,next}=await fresh(signal);context=next;
   if(!eligible()||next.context.writeState!=='ready'||next.context.recoveryEpoch!==request.recoveryEpoch)throw Error();deps.store.require(pending);
   const found=await lookup({schemaVersion:1,businessId:pending.businessId,commandType:'operations.job.book',reference:pending.reference},proof,signal);live(signal);
-  if(found.state!=='absent'){if(!('jobId'in found.receipt)||found.receipt.version!=='1')throw Error();finish(found as Awaited<ReturnType<typeof api.book>>);return;}
+  if(found.state!=='absent'){if(!('jobId'in found.receipt)||!('version'in found.receipt)||found.receipt.version!=='1')throw Error();finish(found as Awaited<ReturnType<typeof api.book>>);return;}
   const result=await api.book(request,proof,signal);live(signal);finish(result);
  },failedSave);
  function suspend(){active?.abort();active=null;clearPrivate();context=null;phase=pending?'pending':'review';message=pending?'Private booking details cleared. Load and check the original request before continuing.':'Private booking form cleared. Reload current accepted scope before continuing.';emit();}

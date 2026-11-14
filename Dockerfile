@@ -6,7 +6,7 @@ RUN npm ci --ignore-scripts --no-fund
 
 FROM dependencies AS pdf-tools
 RUN apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 update && apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 install --yes --no-install-recommends cmake g++ make pkg-config libjpeg-dev zlib1g-dev
-COPY scripts/install-pdf-tools.mjs ./scripts/install-pdf-tools.mjs
+COPY scripts/install-pdf-tools.mjs scripts/fetch-release-asset.mjs ./scripts/
 COPY release/toolchain.json ./release/toolchain.json
 RUN node scripts/install-pdf-tools.mjs
 

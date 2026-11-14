@@ -1,0 +1,110 @@
+{
+  "formatVersion": 1,
+  "verifiedAt": "2026-11-05T11:16:10.916Z",
+  "scope": "Atomic Mobile job completion through restricted saved-session PostgreSQL commands; unregistered construction, not owner delivery or release acceptance",
+  "trackedParent": "158a480dff602e392be13e9c39fbea7b141f899a",
+  "nativeProof": {
+    "path": ".local/completion-write-native-v3/result.json",
+    "sha256": "98e17d0e658280fb3b8357882e0ff239653e4e982d179e136f9232eeca2620b7",
+    "passed": 96,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "retainedFieldCases": 61,
+    "privateCompletionPlannerCases": 16,
+    "atomicCompletionCases": 19,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "exactSourceFiles": [
+    {
+      "path": "planning/proposals/field-time-storage.sql",
+      "bytes": 25481,
+      "sha256": "b372fafad1706241dcbabe66544be7eaa45bd98d34a0e0d702c64168b61d05b4"
+    },
+    {
+      "path": "planning/proposals/field-session-commands.sql",
+      "bytes": 44446,
+      "sha256": "968cbaaed4191f27e4697ba6533d0d41bfece7bf8e99c2fdd7f82ecfdeaa2c5d"
+    },
+    {
+      "path": "planning/proposals/work-completion-plan.sql",
+      "bytes": 13940,
+      "sha256": "ba8dba0e67bae9e8b24c0fd2141b883659ec86fd45cd62210c2a818696c69348"
+    },
+    {
+      "path": "planning/proposals/work-completion-commands.sql",
+      "bytes": 70512,
+      "sha256": "56da6f51ed8eae973bca1674ab1cb1d5f7f25e0f1d00d32c8d5130e3bd8c31e6"
+    },
+    {
+      "path": "tests/integration/field-time-storage.test.mjs",
+      "bytes": 24942,
+      "sha256": "122436eafdcde1a4504d39b18cc2fed6b5e763c75e2f237290e29852e2f30f8c"
+    },
+    {
+      "path": "tests/integration/field-session-commands.test.mjs",
+      "bytes": 28194,
+      "sha256": "d24039f39dda8dc6804405b9eb1b28ba3434a454e570575667d2a791c8e40a2d"
+    },
+    {
+      "path": "tests/integration/work-completion-plan.test.mjs",
+      "bytes": 13868,
+      "sha256": "625a0144d4367e6221acbc95b50ddb7ee9f52d9049da971401702f88ff74c869"
+    },
+    {
+      "path": "tests/integration/work-completion-commands.test.mjs",
+      "bytes": 24582,
+      "sha256": "446b381b7435a3452aa390b79f889bbe6e1305288d3346cb5e2efdfcafca03b9"
+    },
+    {
+      "path": "tests/support/confirmed-booking-fixture.mjs",
+      "bytes": 11207,
+      "sha256": "479f22896ea5e0715cf8c6e85ef3e89756dcbbe0e9aa3c3109a5e181f8d5dc67"
+    }
+  ],
+  "pureCompletionCases": 18,
+  "typesPassed": true,
+  "focusedLintPassed": true,
+  "canonicalAmendmentsVerified": 12,
+  "registeredMigrations": 53,
+  "implemented": [
+    "Genuine restricted-session/epoch/version/hash authority and canonical mode/family/operator locking",
+    "Atomic persisted active/pause closure, terminal job/event, immutable replacement allocation plans and typed scope outcomes",
+    "Full/partial/complimentary scope with accepted discount and unrelated visit conservation",
+    "Exactly one primary review request with linked encounter duplicate review and explicit additional-request reason",
+    "Recipient-bound versioned Prepared draft only; invalid/missing URL, absent contact, current opt-out, preference review and owner skip remain explicit",
+    "Open invoice finalization task and partial-work commercial resolution task without invoice, payment or ledger posting",
+    "Original immutable receipt recovery after later customer edits and later family allocation versions",
+    "True competing connections, forced late-COMMIT rollback and forged persisted-outcome refusal",
+    "Seven append-only forced-RLS source tables; ordinary web/worker direct access and private helper execution remain closed"
+  ],
+  "retainedFailures": [
+    {
+      "path": ".local/completion-write-native-v1/result.json",
+      "passed": 83,
+      "failed": 11,
+      "cause": "Closed deferred verifier lacked execution of existing pure UUID/text validators. Narrow execution grants added only to the existing closed integrity role; no ordinary-role grant or gate waiver."
+    },
+    {
+      "path": ".local/completion-write-native-v2/result.json",
+      "passed": 94,
+      "failed": 0,
+      "note": "Pre-expansion green suite. Final96 adds persisted-outcome forgery rollback and deliberate outreach skip/private-helper refusal."
+    }
+  ],
+  "businessBoundary": "Operational completion preserves accepted obligations. Partial work requires later commercial resolution. ACCOUNTING first-consumption allocation, tax, explicit issuance and double-entry gates remain; no finance activation or outbound message sending.",
+  "remaining": [
+    "Actual completed-work floors and explicitly reviewed field schema profiles in later amendment/finance commands",
+    "Travel interruption/cancellation, manual mileage/corrections and safe treatment of an open supply trip at completion",
+    "Message template configuration, outcome/resume actions and maintenance follow-ups",
+    "Typed original-operation retirement, complete field history/private CSV+JSON and independent encrypted recovery/neutral round-trip",
+    "Registered54 adoption, genuine authenticated HTTP and connected phone/desktop field controls, actual visual/browser and full current-source release gates",
+    "Phase7 custody and photos; all finance/reporting/portability/import/cutover/Calendar and real-use requirements"
+  ],
+  "ownerRuntimeChanged": false,
+  "inPr115": false,
+  "completeCrestAcceptance": false,
+  "registeredReleaseClaim": false,
+  "spend": 0
+}

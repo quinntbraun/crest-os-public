@@ -7,6 +7,7 @@ type ExportAction='load'|'older'|'request'|'checkOriginal'|'checkResolution'|'re
 
 export function SourceExportControls({view,action,editReason,selectJob,statusRef}:{view:SourceExportView;action:(kind:ExportAction)=>void;editReason:(value:string)=>void;selectJob:(id:string)=>void;statusRef?:React.Ref<HTMLParagraphElement>}){
  return <section className="export-files" aria-label="Business data exports" aria-busy={view.busy}>
+  <h2>Business export requests</h2>
   <p ref={statusRef} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
   <p>Exports contain private business records. Keep downloaded copies somewhere only you can access. Continue keeping separate database backups.</p>
   <button type="button" disabled={view.busy} onClick={()=>action('load')}>Check sign-in and load exports</button>

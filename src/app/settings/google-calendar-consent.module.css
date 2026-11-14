@@ -1,0 +1,95 @@
+.panel {
+  display: grid;
+  gap: .75rem;
+  max-width: 38rem;
+  margin-block: 1rem;
+  min-width: 0;
+}
+
+.panel h2,
+.panel h3,
+.panel p,
+.panel form,
+.panel button {
+  margin-block: 0;
+}
+
+.panel form {
+  min-width: 0;
+  gap: .875rem;
+}
+
+.options {
+  border-block: 1px solid var(--line);
+}
+
+.options summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: .75rem;
+  font-weight: 600;
+}
+
+.options fieldset,
+.checks {
+  border: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.panel label {
+  margin: 0;
+  font-weight: 400;
+  padding-block: .35rem;
+}
+
+.checks legend {
+  margin-bottom: .35rem;
+  padding: 0;
+  font-weight: 600;
+}
+
+.preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: .25rem 1rem;
+  margin: 0;
+  padding: 1rem;
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.preview dt {
+  font-weight: 600;
+}
+
+.preview dd {
+  margin: 0 0 .5rem;
+  overflow-wrap: anywhere;
+}
+
+.preview dd:last-child {
+  margin-bottom: 0;
+}
+
+.actions {
+  display: grid;
+  gap: .5rem;
+}
+
+@media (min-width: 35rem) {
+  .preview {
+    grid-template-columns: minmax(0, 10rem) minmax(0, 1fr);
+    gap: .5rem 1rem;
+  }
+
+  .preview dd {
+    margin: 0;
+  }
+
+  .actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

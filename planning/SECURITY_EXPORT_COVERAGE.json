@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 53,
+  "migrationCount": 99,
   "tables": [
     {
       "table": "crest.businesses",
@@ -1645,6 +1645,1944 @@
         "created_by",
         "operation_id",
         "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.work_intervals",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "logical_id",
+        "sequence",
+        "replaces_id",
+        "job_id",
+        "operator_actor_id",
+        "kind",
+        "started_at",
+        "ended_at",
+        "pause_reason",
+        "change_kind",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.travel_legs",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "logical_id",
+        "sequence",
+        "replaces_id",
+        "operator_actor_id",
+        "driven_vehicle_id",
+        "job_context_id",
+        "purpose",
+        "origin_snapshot",
+        "destination_snapshot",
+        "departed_at",
+        "arrived_at",
+        "state",
+        "eta_at",
+        "eta_source",
+        "eta_calculated_at",
+        "notes",
+        "change_kind",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.work_scope_outcomes",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "assigned_part_id",
+        "completion_part_id",
+        "partition_id",
+        "outcome",
+        "scope_description",
+        "completed_cents",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.message_templates",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "purpose",
+        "sequence",
+        "body_template",
+        "active",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.review_requests",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "customer_id",
+        "is_primary",
+        "message_id",
+        "state",
+        "suppression_reason",
+        "reason",
+        "additional_request_reason",
+        "duplicate_count",
+        "customer_version",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin",
+        "recipient_snapshot"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.messages",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "customer_id",
+        "request_id",
+        "template_version_id",
+        "purpose",
+        "state",
+        "channel",
+        "recipient_snapshot",
+        "body_snapshot",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.message_events",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "message_id",
+        "kind",
+        "effective_at",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.review_request_encounters",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "request_id",
+        "job_encounter_id",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.job_finalization_tasks",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "kind",
+        "state",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.mileage_evidence",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "leg_id",
+        "leg_version_id",
+        "operator_actor_id",
+        "sequence",
+        "replaces_id",
+        "source",
+        "movement_kind",
+        "actual_miles",
+        "estimate_miles",
+        "estimate_source",
+        "odometer_start",
+        "odometer_end",
+        "allocation_state",
+        "notes",
+        "reason",
+        "confirmed_at",
+        "confirmed_by",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.leg_job_allocations",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "evidence_id",
+        "leg_id",
+        "job_id",
+        "fraction",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.operator_occupancy",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "source_kind",
+        "logical_id",
+        "operator_actor_id",
+        "job_id",
+        "work_interval_id",
+        "travel_leg_id",
+        "started_at",
+        "ended_at",
+        "occupied",
+        "work_span"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.follow_up_tasks",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "customer_id",
+        "vehicle_id",
+        "source_job_id",
+        "due_at",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.follow_up_task_events",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "task_id",
+        "version",
+        "prior_version",
+        "kind",
+        "snoozed_until",
+        "rebooking_job_id",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.custody_authorization_configs",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "mode_version_id",
+        "acknowledgement_text",
+        "condition_photo_required"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.custody_cases",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "job_vehicle_id",
+        "vehicle_id",
+        "mode",
+        "version",
+        "state",
+        "current_event_id",
+        "authorization_config_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.custody_events",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "case_id",
+        "version",
+        "prior_version",
+        "action",
+        "effective_at",
+        "recorded_at",
+        "person_snapshot",
+        "location_snapshot",
+        "notes",
+        "missing_photo_reason",
+        "created_by",
+        "operation_id",
+        "origin",
+        "acknowledgement_confirmed",
+        "condition_photo_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.custody_photo_attempts",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "job_vehicle_id",
+        "vehicle_id",
+        "case_id",
+        "handoff_version",
+        "actor_id",
+        "recovery_epoch",
+        "dispatch_id",
+        "declared_type",
+        "byte_size",
+        "reserved_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.custody_photo_originals",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "photo_id",
+        "detected_type",
+        "byte_size",
+        "sha256",
+        "validation_version",
+        "width",
+        "height",
+        "display_width",
+        "display_height",
+        "bit_depth",
+        "preview_sha256",
+        "preview_byte_size",
+        "preview_width",
+        "preview_height",
+        "verified_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.pickup_custody_policies",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "mode_version_id",
+        "sequence",
+        "replaces_sequence",
+        "reason",
+        "created_by",
+        "acknowledgement_text",
+        "condition_photo_required",
+        "recorded_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.pickup_job_policies",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "job_id",
+        "policy_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.pickup_custody_collections",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "job_id",
+        "job_vehicle_id",
+        "vehicle_id",
+        "pickup_leg_version_id",
+        "policy_id",
+        "effective_at",
+        "recorded_at",
+        "person_snapshot",
+        "location_snapshot",
+        "notes",
+        "missing_photo_reason",
+        "condition_photo_id",
+        "acknowledgement_confirmed",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.pickup_photo_slots",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "photo_id",
+        "job_id",
+        "job_vehicle_id",
+        "collection_id",
+        "return_collection_id",
+        "arrival_version_id",
+        "policy_id",
+        "job_version",
+        "actor_id",
+        "recovery_epoch"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.vehicle_custody_claims",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "vehicle_id",
+        "dropoff_case_id",
+        "pickup_collection_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.pickup_custody_releases",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "collection_id",
+        "job_id",
+        "job_vehicle_id",
+        "vehicle_id",
+        "policy_id",
+        "return_leg_version_id",
+        "job_version",
+        "effective_at",
+        "recorded_at",
+        "person_snapshot",
+        "location_snapshot",
+        "notes",
+        "missing_photo_reason",
+        "condition_photo_id",
+        "acknowledgement_confirmed",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.pickup_return_failures",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "collection_id",
+        "return_leg_version_id",
+        "job_version",
+        "reason",
+        "recorded_at",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.accounts",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "code",
+        "account_type",
+        "normal_side",
+        "control_kind",
+        "report_role",
+        "currency",
+        "first_version",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.account_versions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "account_id",
+        "version",
+        "previous_version",
+        "name",
+        "active",
+        "reason",
+        "audit_event_id",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.account_mapping_versions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "purpose",
+        "version",
+        "previous_version",
+        "account_id",
+        "effective_from",
+        "reason",
+        "audit_event_id",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.finance_controls",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "recovery_authority_id",
+        "created_at",
+        "created_by",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.tax_profiles",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "jurisdiction",
+        "applicability",
+        "service_id",
+        "scope_key",
+        "version",
+        "previous_version",
+        "effective_from",
+        "treatment",
+        "rate",
+        "verification_evidence",
+        "reason",
+        "synthetic",
+        "audit_event_id",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.money_channel_versions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "channel_id",
+        "version",
+        "previous_version",
+        "effective_from",
+        "account_id",
+        "owner_actor_id",
+        "kind",
+        "ownership_scope",
+        "provider_namespace",
+        "masked_suffix",
+        "label",
+        "ownership_evidence",
+        "opening_state",
+        "opening_on",
+        "opening_cents",
+        "opening_evidence",
+        "active",
+        "reason",
+        "audit_event_id",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoice_draft_revisions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "draft_id",
+        "revision",
+        "previous_revision",
+        "job_id",
+        "customer_id",
+        "due_on",
+        "selected_outcomes",
+        "retained_lines",
+        "state",
+        "reason",
+        "created_at",
+        "created_by",
+        "operation_id",
+        "audit_event_id",
+        "origin"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.accounting_periods",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "starts_on",
+        "month_start",
+        "through_on",
+        "time_zone",
+        "opening_boundary",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.accounting_period_locks",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "period_id",
+        "generation",
+        "previous_generation",
+        "state",
+        "evidence_ref",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoice_series",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "label",
+        "recovery_epoch",
+        "kind",
+        "incident_id",
+        "approval_reason",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoice_number_reservations",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "full_number",
+        "series_id",
+        "number_sequence",
+        "issued_source_id",
+        "incident_id",
+        "external_evidence",
+        "recovery_epoch",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.tax_payable_mapping_versions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "jurisdiction",
+        "version",
+        "previous_version",
+        "account_id",
+        "effective_from",
+        "reason",
+        "audit_event_id",
+        "created_at",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoice_exemption_evidence",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "draft_id",
+        "draft_revision",
+        "outcome_id",
+        "customer_id",
+        "jurisdiction",
+        "profile_id",
+        "version",
+        "previous_version",
+        "valid_from",
+        "valid_through",
+        "evidence_reference",
+        "reason",
+        "audit_event_id",
+        "created_at",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoices",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "draft_id",
+        "draft_revision",
+        "job_id",
+        "customer_id",
+        "reservation_id",
+        "invoice_number",
+        "issued_on",
+        "due_on",
+        "time_zone",
+        "customer_snapshot",
+        "location_snapshot",
+        "total_cents",
+        "currency",
+        "created_at",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoice_items",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "invoice_id",
+        "position",
+        "outcome_id",
+        "completion_part_id",
+        "partition_id",
+        "agreement_id",
+        "entitlement_version_id",
+        "service_version_id",
+        "tax_profile_id",
+        "exemption_evidence_id",
+        "gross_inclusive_cents",
+        "discount_inclusive_cents",
+        "gross_net_cents",
+        "discount_net_cents",
+        "net_cents",
+        "tax_cents",
+        "total_cents",
+        "description",
+        "created_at",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.billing_consumptions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "invoice_item_id",
+        "partition_id",
+        "consumed_cents",
+        "created_at",
+        "created_by",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.atomic_finance_groups",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "commit_sequence",
+        "recovery_epoch",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.financial_events",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "group_id",
+        "event_sequence",
+        "invoice_id",
+        "period_id",
+        "period_generation",
+        "reopened_generation",
+        "effective_on",
+        "time_zone",
+        "template",
+        "template_version",
+        "zero_effect_reason",
+        "posted_at",
+        "payment_id",
+        "posted_expense_id",
+        "unapplication_id",
+        "fund_application_id",
+        "tip_realization_id",
+        "invoice_credit_id",
+        "service_refund_id",
+        "excess_return_id",
+        "tip_return_id",
+        "collection_failure_id",
+        "refund_transfer_adjustment_id",
+        "collection_failure_recredit_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.receivable_items",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "invoice_id",
+        "account_id",
+        "customer_id",
+        "original_cents",
+        "due_on"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoice_tax_payable_movements",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "event_id",
+        "invoice_item_id",
+        "tax_profile_id",
+        "mapping_id",
+        "account_id",
+        "jurisdiction",
+        "cents"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.journal_entries",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "event_id",
+        "entry_sequence"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.journal_lines",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "entry_id",
+        "invoice_item_id",
+        "receivable_id",
+        "account_id",
+        "fixed_mapping_id",
+        "tax_payable_movement_id",
+        "purpose",
+        "debit_cents",
+        "credit_cents",
+        "money_movement_id",
+        "allocation_event_id",
+        "unapplication_id",
+        "fund_lot_id",
+        "fund_application_id",
+        "tip_realization_id",
+        "invoice_credit_id",
+        "service_refund_id",
+        "excess_return_id",
+        "tip_return_id",
+        "collection_failure_id",
+        "collection_failure_component_id",
+        "refund_transfer_adjustment_id",
+        "collection_failure_recredit_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.external_money_evidence",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "provider_namespace",
+        "external_account_id",
+        "id_namespace",
+        "external_id",
+        "raw_reference",
+        "normalization_rule",
+        "confirmed_on",
+        "signed_cents",
+        "currency"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.payments",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "customer_id",
+        "channel_version_id",
+        "account_id",
+        "actual_on",
+        "gross_cents",
+        "confirmation",
+        "distinct_reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.money_movements",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "event_id",
+        "account_id",
+        "evidence_id",
+        "signed_cents"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.funding_origins",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "payment_id",
+        "customer_id",
+        "cents",
+        "currency"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.funding_partitions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "origin_id",
+        "position",
+        "first_cent",
+        "last_cent"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.allocation_events",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "event_id",
+        "partition_id",
+        "receivable_id",
+        "cents"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.posted_expenses",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "expense_id",
+        "expense_revision",
+        "incurred_on",
+        "paid_on",
+        "gross_cents",
+        "purchase_tax_cents",
+        "purchase_tax_treatment",
+        "mapping_id",
+        "expense_account_id",
+        "channel_version_id",
+        "money_account_id",
+        "evidence_id",
+        "receipt_id",
+        "receipt_revision",
+        "missing_receipt_reason",
+        "unknown_vendor_reason",
+        "review_reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.allocation_unapplications",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "allocation_id",
+        "first_cent",
+        "last_cent",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.customer_fund_lots",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "unapplication_id",
+        "origin_id",
+        "parent_partition_id",
+        "customer_id",
+        "account_id",
+        "mapping_id",
+        "original_cents",
+        "receipt_event_id",
+        "receipt_tip_event_id",
+        "collection_failure_recredit_event_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.customer_fund_applications",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "fund_lot_id",
+        "receivable_id",
+        "first_cent",
+        "last_cent",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.tip_realizations",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "fund_lot_id",
+        "first_cent",
+        "last_cent",
+        "inclusive_cents",
+        "net_cents",
+        "tax_cents",
+        "jurisdiction",
+        "tax_profile_id",
+        "revenue_mapping_id",
+        "revenue_account_id",
+        "tax_mapping_id",
+        "tax_account_id",
+        "customer_intent_evidence",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.fund_lot_range_consumptions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "fund_lot_id",
+        "first_cent",
+        "last_cent",
+        "fund_application_id",
+        "tip_realization_id",
+        "service_refund_id",
+        "excess_return_id",
+        "collection_failure_component_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.invoice_credits",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "invoice_item_id",
+        "receivable_id",
+        "first_cent",
+        "last_cent",
+        "inclusive_cents",
+        "net_cents",
+        "tax_cents",
+        "discount_cents",
+        "returns_cents",
+        "returns_mapping_id",
+        "returns_account_id",
+        "tax_account_id",
+        "original_tax_movement_id",
+        "discount_mapping_id",
+        "discount_account_id",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.paired_invoice_credit_releases",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "invoice_credit_id",
+        "unapplication_id",
+        "operation_id",
+        "actor_id",
+        "reviewed_ar_cents"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.service_credit_refunds",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "pair_id",
+        "fund_lot_id",
+        "first_cent",
+        "last_cent",
+        "cents",
+        "channel_version_id",
+        "account_id",
+        "evidence_id",
+        "actual_on",
+        "confirmation",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_consents",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "destination_id",
+        "generation",
+        "previous_generation",
+        "recovery_epoch",
+        "state",
+        "client_name",
+        "service_label",
+        "work_address",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_destinations",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "provider_calendar_id",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_disconnects",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "destination_id",
+        "recovery_epoch",
+        "disconnected_generation",
+        "prior_generation",
+        "fenced_at",
+        "drain_until",
+        "actor_id",
+        "operation_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_dispatch_leases",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "outbox_id",
+        "attempt_no",
+        "mode",
+        "leased_at",
+        "lease_until"
+      ],
+      "excluded": [
+        {
+          "column": "worker_principal",
+          "reason": "calendar_runtime_principal"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_dispatch_results",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "lease_id",
+        "outcome",
+        "provider_etag",
+        "source_current",
+        "recorded_at",
+        "retry_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_dispatch_sends",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "lease_id",
+        "action",
+        "request_sha256",
+        "prior_etag",
+        "recorded_at"
+      ],
+      "excluded": [
+        {
+          "column": "request_body",
+          "reason": "calendar_provider_payload"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_mappings",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "destination_id",
+        "job_id",
+        "event_uuid",
+        "correlation_marker",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_outbox",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "destination_id",
+        "connection_generation",
+        "recovery_epoch",
+        "job_id",
+        "appointment_id",
+        "appointment_sequence",
+        "mapping_id",
+        "action",
+        "created_by",
+        "operation_id",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_request_admissions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "lease_id",
+        "setup_attempt_id",
+        "creation_attempt_id",
+        "kind",
+        "admitted_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.google_calendar_revocation_events",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "disconnect_id",
+        "attempt_id",
+        "phase",
+        "admission_phase",
+        "recorded_at",
+        "deadline",
+        "actor_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_code_exchanges",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "attempt_id",
+        "app_session_id",
+        "actor_id",
+        "recovery_epoch",
+        "client_id",
+        "generation",
+        "destination_id",
+        "admitted_at",
+        "deadline"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_creation_intents",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "attempt_id",
+        "actor_id",
+        "app_session_id",
+        "recovery_epoch",
+        "client_id",
+        "correlation_marker",
+        "confirmed_at"
+      ],
+      "excluded": [
+        {
+          "column": "reviewed_google_owner",
+          "reason": "calendar_account_identifier"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_creation_results",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "attempt_id",
+        "recorded_at",
+        "outcome",
+        "provider_calendar_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_credential_key",
+      "scope": "global_configuration",
+      "required": [
+        "singleton"
+      ],
+      "excluded": [
+        {
+          "column": "key_id",
+          "reason": "calendar_grant"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_credentials",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "destination_id",
+        "connection_generation",
+        "recovery_epoch",
+        "client_id",
+        "scope",
+        "version",
+        "source_exchange",
+        "created_at",
+        "updated_at"
+      ],
+      "excluded": [
+        {
+          "column": "key_id",
+          "reason": "calendar_grant"
+        },
+        {
+          "column": "envelope",
+          "reason": "calendar_grant"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_destination_reviews",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "destination_id",
+        "app_session_id",
+        "actor_id",
+        "recovery_epoch",
+        "generation",
+        "client_id",
+        "provider_calendar_id",
+        "reviewed_at",
+        "expires_at"
+      ],
+      "excluded": [
+        {
+          "column": "calendar_owner",
+          "reason": "calendar_account_identifier"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_destination_verifications",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "attempt_id",
+        "review_id",
+        "destination_id",
+        "verified_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_initial_consent_reviews",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "id",
+        "destination_id",
+        "credential_id",
+        "actor_id",
+        "app_session_id",
+        "recovery_epoch",
+        "client_id",
+        "client_name",
+        "service_label",
+        "work_address",
+        "payload_version",
+        "reviewed_at",
+        "expires_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_oauth_attempts",
+      "scope": "runtime_security",
+      "required": [
+        "id",
+        "business_id",
+        "actor_id",
+        "session_id",
+        "recovery_epoch",
+        "destination_id",
+        "connection_generation",
+        "issuer",
+        "client_id",
+        "callback_uri",
+        "created_at",
+        "expires_at",
+        "retired_at",
+        "consumed_at"
+      ],
+      "excluded": [
+        {
+          "column": "state_digest",
+          "reason": "calendar_oauth_proof"
+        },
+        {
+          "column": "verifier_key_id",
+          "reason": "calendar_oauth_proof"
+        },
+        {
+          "column": "verifier_envelope",
+          "reason": "calendar_oauth_proof"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_oauth_client",
+      "scope": "global_configuration",
+      "required": [
+        "singleton",
+        "issuer",
+        "client_id",
+        "callback_uri"
+      ],
+      "excluded": [
+        {
+          "column": "verifier_key_id",
+          "reason": "calendar_oauth_proof"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_refresh_claims",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "credential_id",
+        "credential_version",
+        "admitted_at",
+        "deadline"
+      ],
+      "excluded": [
+        {
+          "column": "worker_principal",
+          "reason": "calendar_runtime_principal"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_refresh_results",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "claim_id",
+        "outcome",
+        "recorded_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_request_budget",
+      "scope": "global_configuration",
+      "required": [
+        "singleton"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_worker_principals",
+      "scope": "runtime_security",
+      "required": [
+        "business_id"
+      ],
+      "excluded": [
+        {
+          "column": "principal",
+          "reason": "calendar_runtime_principal"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.excess_receipt_returns",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "receipt_event_id",
+        "fund_lot_id",
+        "first_cent",
+        "last_cent",
+        "cents",
+        "channel_version_id",
+        "account_id",
+        "evidence_id",
+        "actual_on",
+        "confirmation",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.tip_returns",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "tip_realization_id",
+        "channel_version_id",
+        "account_id",
+        "evidence_id",
+        "actual_on",
+        "cents",
+        "net_cents",
+        "tax_cents",
+        "confirmation",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.tip_realization_range_consumptions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "tip_realization_id",
+        "tip_return_id",
+        "first_cent",
+        "last_cent",
+        "collection_failure_component_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.collection_failures",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "payment_id",
+        "original_event_id",
+        "kind",
+        "channel_version_id",
+        "money_account_id",
+        "evidence_id",
+        "effective_on",
+        "cents",
+        "confirmation",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.collection_failure_components",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "collection_failure_id",
+        "payment_id",
+        "allocation_id",
+        "fund_application_id",
+        "fund_lot_id",
+        "tip_realization_id",
+        "first_cent",
+        "last_cent",
+        "root_first_cent",
+        "root_last_cent",
+        "net_cents",
+        "tax_cents"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.refund_transfer_adjustments",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "kind",
+        "prior_event_id",
+        "original_event_id",
+        "fund_lot_id",
+        "channel_version_id",
+        "account_id",
+        "evidence_id",
+        "actual_on",
+        "cents",
+        "confirmation",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.refund_transfer_adjustment_ranges",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "adjustment_id",
+        "prior_event_id",
+        "first_cent",
+        "last_cent"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.refund_transfer_embedded_fees",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "adjustment_id",
+        "mapping_id",
+        "fee_account_id",
+        "net_cents",
+        "cents",
+        "confirmation",
+        "component_evidence_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.collection_failure_recredits",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "failure_id",
+        "failure_component_id",
+        "customer_id",
+        "channel_version_id",
+        "money_account_id",
+        "evidence_id",
+        "actual_on",
+        "first_cent",
+        "last_cent",
+        "confirmation",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

@@ -8,7 +8,18 @@ const choices:ReadonlyArray<readonly [OriginalOperationKind,string]>=[
  ['business.rename','Business name'],['crm.customer.save','Customer'],['crm.address.save','Customer address'],
  ['crm.vehicle.save','Vehicle'],['crm.vehicle.association','Vehicle customer link'],
  ['crm.lead.source.save','Lead source'],['crm.lead.save','Lead'],['crm.lead.state','Lead status'],
- ['crm.lead.vehicle.save','Reported lead vehicle'],['crm.lead.address.save','Lead address'],['crm.lead.convert','Lead conversion'],['catalog.service.save','Service catalog'],['quote.draft.save','Quote draft'],['quote.review.submit','Quote review submission'],['quote.review.approve','Quote approval'],['quote.replacement.create','Replacement quote draft'],['quote.amendment.create','Amendment draft'],['quote.amendment.send','Amendment sharing confirmation'],['quote.manual.send','Quote sharing confirmation'],['quote.confirmation.accept','Customer quote acceptance'],['operations.appointment_hold.save','Appointment proposal']
+ ['crm.lead.vehicle.save','Reported lead vehicle'],['crm.lead.address.save','Lead address'],['crm.lead.convert','Lead conversion'],['catalog.service.save','Service catalog'],['quote.draft.save','Quote draft'],['quote.review.submit','Quote review submission'],['quote.review.approve','Quote approval'],['quote.replacement.create','Replacement quote draft'],['quote.amendment.create','Amendment draft'],['quote.amendment.send','Amendment sharing confirmation'],['quote.manual.send','Quote sharing confirmation'],['quote.confirmation.accept','Customer quote acceptance'],['operations.appointment_hold.save','Appointment proposal'],
+ ['quote.amendment.accept','Customer amendment acceptance'],
+ ['operations.fulfillment_modes.initialize','Fulfillment settings setup'],['operations.fulfillment_modes.save','Fulfillment settings'],
+ ['operations.job.book','Job booking'],['operations.job.cancel','Scheduled-job cancellation'],['operations.job.reschedule','Appointment change'],
+ ['operations.job.field','Mobile work status'],['operations.job.complete','Work completion'],['operations.job.interrupt','En-route change'],
+ ['operations.job.cancel_unfulfilled','Unfulfilled-work cancellation'],['operations.job.work_boundary.correct','Work-time correction'],['operations.job.work_start.correct','First work start correction'],['operations.job.work_end.correct','Completion time correction'],['operations.mobile_departure.correct','Mobile departure correction'],['operations.mileage.record','Mileage'],
+ ['operations.pickup_custody.policy.save','Pickup handoff policy'],
+ ['operations.pickup_custody.collect','Pickup vehicle collection'],
+ ['operations.pickup_custody.release','Vehicle return handoff'],
+ ['operations.pickup_custody.fail_return','Failed vehicle return'],
+ ['operations.pickup_trip.record','Pickup trip'],['operations.support_trip.record','Support trip'],['operations.support_trip.correct','Support trip correction'],
+ ['operations.message.record_outcome','Review message outcome'],['operations.follow_up.save','Maintenance reminder'],['operations.custody.save','Drop-Off handoff'],['operations.custody.policy.save','Drop-Off policy'],['operations.custody.policy.revise','Drop-Off policy revision']
 ];
 function Review({kind}:{kind:OriginalOperationKind}){
  const [view,setView]=useState(initialOriginalOperationReviewView),current=useRef<ReturnType<typeof createOriginalOperationReviewController>|null>(null),status=useRef<HTMLParagraphElement>(null);

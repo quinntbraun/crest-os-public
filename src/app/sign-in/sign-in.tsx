@@ -4,7 +4,7 @@ import type {FormEvent} from 'react';
 import {authentication,AuthenticationError} from '../../client/authentication';
 import type {Proof,LoginInput} from '../../client/authentication';
 
-type View={phase:'checking'|'form'|'signed'|'unavailable'|'uncertain';message:string;busy:boolean};
+type View={phase:'checking'|'form'|'signed'|'unavailable'|'uncertain';message:string;busy:boolean;retryEmail?:string};
 function PasswordInput(){
   const [visible,setVisible]=useState(false);
   return <div className="password-control"><input id="password" name="password" type={visible?'text':'password'} autoComplete="current-password" maxLength={1024} required/><button type="button" className="secondary" aria-controls="password" aria-pressed={visible} onClick={()=>setVisible(value=>!value)}>{visible?'Hide password':'Show password'}</button></div>;
@@ -32,7 +32,7 @@ export function SignIn(){
     }catch(error){
       const reason=error instanceof AuthenticationError?error.kind:'uncertain';
       next=reason==='unavailable'?{phase:'unavailable',message:'Sign-in is not available while setup is in progress. Check again later.',busy:false}
-        :reason==='denied'&&kind!=='logout'?{phase:'form',message:kind==='login'?'Sign-in failed. Check your email, password and current authenticator code.':'Sign in to continue.',busy:false}
+        :reason==='denied'&&kind!=='logout'?{phase:'form',message:kind==='login'?'Sign-in failed. Check your email and password, then enter a fresh code. If codes keep failing, check that your phone’s date and time are set automatically.':'Sign in to continue.',busy:false,retryEmail:input?.email??''}
         :{phase:'uncertain',message:kind==='logout'?'Sign-out could not be confirmed. Check this device’s session before trying again.':'The session could not be confirmed. Check this device’s session before trying again.',busy:false};
     }
     if(mounted.current&&sequence.current===id){operation.current=null;recheckOnFocus.current=next.phase==='signed'||next.phase==='uncertain';setView(next);if(kind!=='session')requestAnimationFrame(()=>{if(mounted.current&&sequence.current===id)status.current?.focus();});}
@@ -56,12 +56,12 @@ export function SignIn(){
   return <section aria-label="Device sign-in" aria-busy={view.busy}>
     <p ref={status} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
     {view.phase==='form'&&<form onSubmit={submit}>
-      <label htmlFor="email">Email</label><input id="email" name="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={320} required/>
+      <label htmlFor="email">Email</label><input id="email" name="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={320} defaultValue={view.retryEmail} required/>
       <label htmlFor="password">Password</label><PasswordInput/>
       <label htmlFor="code">Authenticator code</label><input id="code" name="code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength={6} maxLength={6} required aria-describedby="code-help"/>
-      <p id="code-help" className="field-help">Enter the six-digit code from your authenticator app.</p>
-      <details className="sign-in-device-options"><summary>Personal device options</summary><label className="trust"><input name="trusted" type="checkbox"/><span>Trust this personal device</span></label><p className="field-help">Stay signed in for up to 30 days, with a seven-day inactivity limit. Leave unchecked on a shared device.</p></details>
+      <p id="code-help" className="field-help">Use the current six-digit code from Passwords or your authenticator app.</p>
       <button type="submit">Sign in</button>
+      <details className="sign-in-device-options"><summary>Personal device options</summary><label className="trust"><input name="trusted" type="checkbox"/><span>Trust this personal device</span></label><p className="field-help">Stay signed in for up to 30 days, with a seven-day inactivity limit. Leave unchecked on a shared device.</p></details>
     </form>}
     {view.phase==='signed'&&<><h2>Session verified</h2><p>Your device is signed in. Workspace tools check your business access before loading records.</p><a className="primary-action" href="/">Open workspace</a><a href="/customers">Customers</a><a href="/leads">Leads</a><a href="/settings">Business settings</a><button type="button" className="secondary" onClick={()=>void run('logout')}>Sign out on this device</button></>}
     {!view.busy&&<button className="secondary" type="button" onClick={()=>void run('session')}>Check session</button>}

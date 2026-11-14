@@ -51,4 +51,16 @@ it('a late label response cannot reopen a suspended private panel',async()=>{let
 it('a failed label/proof check clears private content and keeps pending references',async()=>{customerApi.history.mockResolvedValue({state:'absent'});const c=controller();await c.load();expect(c.view()).toMatchObject({phase:'unavailable',rows:[]});store.write(reference());session.mockRejectedValue(new Error('private'));await c.load();expect(store.read()).not.toBeNull();expect(c.view().phase).toBe('unavailable');});
 it('literal customer search preserves archived identities and pages only the current search',async()=>{const c=controller();await c.load();await c.begin('open');customerApi.list.mockResolvedValue({customers:[other],hasMore:true});await c.searchCustomers('001 %_');expect(customerApi.list.mock.calls.at(-1)![1]).toEqual({search:'001 %_',afterId:null,includeArchived:true,pageSize:25});await c.searchCustomers('001 %_',true);expect(customerApi.list.mock.calls.at(-1)![1]).toEqual({search:'001 %_',afterId:other.id,includeArchived:true,pageSize:25});const count=customerApi.list.mock.calls.length;await c.searchCustomers('different',true);expect(customerApi.list).toHaveBeenCalledTimes(count);});
 it('shows retained history and pages source UUIDs without using names as identity',async()=>{const c=controller();api.list.mockResolvedValue({associations:[row],hasMore:true});await c.load();await c.inspect(row.id);expect(c.view().history!.association.id).toBe(row.id);api.list.mockResolvedValue({associations:[],hasMore:false});await c.more();expect(api.list.mock.calls.at(-1)![1]).toEqual({vehicleId,afterId:row.id,pageSize:10});expect(c.view()).toMatchObject({rows:[],selected:null,draft:null,history:null});});
+it('reuses only the customer label from the current link page while reviewing fresh link history',async()=>{
+ const c=controller();await c.load();await c.begin('close',row.id);
+ expect(c.view().selectedCustomer?.id).toBe(row.customer_id);
+ await c.inspect(row.id);
+ expect(c.view().history?.association.id).toBe(row.id);
+ expect(api.history).toHaveBeenCalledTimes(2);
+ expect(customerApi.history).toHaveBeenCalledTimes(1);
+ api.history.mockResolvedValueOnce({state:'found',association:{...row,customer_id:other.id},history:[],hasMore:false});
+ await c.inspect(row.id);
+ expect(c.view()).toMatchObject({phase:'unavailable',history:null,selectedCustomer:null});
+ expect(customerApi.history).toHaveBeenCalledTimes(1);
+});
 it('oversized valid raw evidence stays available for correction without creating an operation',async()=>{const c=await prepared();c.edit({...c.view().draft!,evidence:'😀'.repeat(2000)});expect(c.view().draftIssue).toContain('too large');await c.save();expect(api.save).not.toHaveBeenCalled();expect(id).not.toHaveBeenCalled();c.edit({...c.view().draft!,evidence:'Corrected 😀'});expect(c.view().canSave).toBe(true);});

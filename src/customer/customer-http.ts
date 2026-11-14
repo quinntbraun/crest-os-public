@@ -22,8 +22,8 @@ export function customerFailureResponse(status:400|404|405|503=400):Response{
 }
 // Only trusted composition can select this business. All routes share the
 // existing committed ordinary admission budget with authentication/settings.
-export function createCustomerHttp(config:Configuration,provider:Parameters<typeof createCustomerDirectory>[1],tokens:Parameters<typeof createCustomerDirectory>[2]){
-  if(!customerUuid(config.businessId))throw new Error('CUSTOMER_HTTP_CONFIGURATION_REQUIRED');
+export function createCustomerHttp(config:Configuration,provider:Parameters<typeof createCustomerDirectory>[1],tokens:Parameters<typeof createCustomerDirectory>[2],reviewHistoryEnabled=false,maintenanceEnabled=false){
+  if(!customerUuid(config.businessId)||typeof reviewHistoryEnabled!=='boolean'||typeof maintenanceEnabled!=='boolean'||(reviewHistoryEnabled||maintenanceEnabled)&&config.environment!=='test')throw new Error('CUSTOMER_HTTP_CONFIGURATION_REQUIRED');
   const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
   const directory=createCustomerDirectory(config,provider,tokens),context=createBusinessSettingsContextReader(config,provider,tokens);
   return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>):Promise<Response>=>{
@@ -52,7 +52,10 @@ export function createCustomerHttp(config:Configuration,provider:Parameters<type
         await directory.list(cookie,{businessId,search:'',afterId:null,includeArchived:false,pageSize:1},signal);
         const value=(await context(cookie,businessId,signal)).forServer();if(signal.aborted)throw new Error();
         const response=privateJsonResponse({schemaVersion:value.schemaVersion,businessId:value.businessId,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});
-        response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.customer.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));return response;
+        response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.customer.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));
+        if(reviewHistoryEnabled)response.headers.set('X-Crest-Review-History','1');
+        if(maintenanceEnabled)response.headers.set('X-Crest-Maintenance-Follow-Up','1');
+        return response;
       }
       if(route==='save'){
         submitted=true;

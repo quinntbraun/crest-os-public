@@ -39,9 +39,10 @@ function storageFailure(error:unknown,signal:AbortSignal):never{
 class UploadCapability {
   #url:string;
   readonly contentType:string;
-  constructor(url:string,contentType:string){this.#url=url;this.contentType=contentType;Object.freeze(this);}
+  readonly expiresInSeconds:number;
+  constructor(url:string,contentType:string,seconds=uploadLifetimeSeconds){this.#url=url;this.contentType=contentType;this.expiresInSeconds=seconds;Object.freeze(this);}
   // Explicit handoff to an authorized upload response; never log or persist this bearer URL.
-  forUpload(){return {url:this.#url,method:'PUT' as const,headers:{'content-type':this.contentType},expiresInSeconds:uploadLifetimeSeconds};}
+  forUpload(){return {url:this.#url,method:'PUT' as const,headers:{'content-type':this.contentType},expiresInSeconds:this.expiresInSeconds};}
   toJSON():never{return fail('OBJECT_INPUT_INVALID');}
 }
 export type ObjectDigest=Readonly<{key:string;byteSize:number;sha256:string}>;
@@ -69,7 +70,7 @@ export function createPrivateObjectStore(client:S3Client,bucket:string,timeoutMs
   validBucket(bucket);
   if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>60000)fail('OBJECT_INPUT_INVALID');
   const deadline=(signal?:AbortSignal)=>AbortSignal.any([AbortSignal.timeout(timeoutMs),...(signal?[signal]:[])]);
-  async function read(key:string,expectedSize:number,signal:AbortSignal,collect:boolean){
+  async function read(key:string,expectedSize:number,signal:AbortSignal,collect:boolean,expectedType?:string){
     guardSignal(signal);
     let body:Readable|undefined;
     const abort=()=>body?.destroy(new PrivateObjectError(signal.reason?.name==='TimeoutError'?'OBJECT_TIMEOUT':'OBJECT_ABORTED'));
@@ -80,6 +81,7 @@ export function createPrivateObjectStore(client:S3Client,bucket:string,timeoutMs
       body=stream;
       signal.addEventListener('abort',abort,{once:true});
       guardSignal(signal);
+      if(expectedType!==undefined&&response.ContentType!==expectedType)fail('OBJECT_BYTES_MISMATCH');
       if(typeof length!=='number'||!Number.isSafeInteger(length)||length<1)throw new PrivateObjectError('OBJECT_BYTES_MISMATCH');
       if(length>maximumFileBytes)fail('OBJECT_TOO_LARGE');
       if(length!==expectedSize)fail('OBJECT_BYTES_MISMATCH');
@@ -119,6 +121,18 @@ export function createPrivateObjectStore(client:S3Client,bucket:string,timeoutMs
     return Object.freeze({key,byteSize:verified.byteSize,sha256});
   }
   return Object.freeze({
+    async issueReservedStagingUpload(key:string,contentType:string,expiresIn:number,signal?:AbortSignal){
+      if(!stagingPattern.test(key)||!Number.isSafeInteger(expiresIn)||expiresIn<1||expiresIn>uploadLifetimeSeconds)fail('OBJECT_INPUT_INVALID');
+      validType(contentType);
+      const bounded=deadline(signal);
+      try{
+        guardSignal(bounded);
+        const url=await getSignedUrl(client,new PutObjectCommand({Bucket:bucket,Key:key,ContentType:contentType}),
+          {expiresIn,signableHeaders:new Set(['content-type'])});
+        guardSignal(bounded);
+        return new UploadCapability(url,contentType,expiresIn);
+      }catch(error){return storageFailure(error,bounded);}
+    },
     async issueStagingUpload(input:{businessId:string;attemptId:string;byteSize:number;contentType:string}){
       validBusiness(input.businessId);validBusiness(input.attemptId);validSize(input.byteSize);validType(input.contentType);
       const key=`staging/${input.businessId}/${input.attemptId}/${randomUUID()}`;
@@ -134,6 +148,15 @@ export function createPrivateObjectStore(client:S3Client,bucket:string,timeoutMs
       const result=await read(key,expectedSize,deadline(signal),true);
       if(!result.bytes)fail('OBJECT_STORAGE_FAILED');
       return {...result,bytes:result.bytes};
+    },
+    async readVerifiedCandidate(input:ObjectDigest&{contentType:string},signal?:AbortSignal){
+      const {key,byteSize,sha256,contentType}=input,preview=previewPattern.test(key);
+      if((!preview&&!originalPattern.test(key))||!/^[a-f0-9]{64}$/.test(sha256)
+       ||(preview&&(contentType!=='image/jpeg'||byteSize>8*1024*1024)))fail('OBJECT_INPUT_INVALID');
+      validSize(byteSize);validType(contentType);
+      const result=await read(key,byteSize,deadline(signal),true,contentType);
+      if(!result.bytes||result.sha256!==sha256)fail('OBJECT_BYTES_MISMATCH');
+      return result.bytes;
     },
     async writeOriginalCandidate(input:{key:string;bytes:Uint8Array;sha256:string;contentType:string},signal?:AbortSignal):Promise<ObjectDigest>{
       if(!originalPattern.test(input.key)||!(input.bytes instanceof Uint8Array)||!/^[a-f0-9]{64}$/.test(input.sha256))fail('OBJECT_INPUT_INVALID');

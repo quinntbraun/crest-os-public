@@ -1,16 +1,8 @@
 # Usable release milestones and execution reporting
 
-## Current delivery — 2026-11-05
+## Current delivery
 
-Accepted immutable53/local3e252b1/public47858247/tree05a03235 is delivered at **https://127.0.0.1:4319/** and privately **https://100.78.42.185:4319/** with NetBird. Project-root **Start Crest OS.cmd** now selects accepted53/419. Existing sign-in/MFA and test records are preserved; use fictional data only. Never start an older52 build against53 or init/reset the workspace.
-
-Amendment acceptance/remaining allocations/revised visits/separate visit and commercial cancellation/reopened Drafts, retained history/private CSV+JSON and exact original-command recovery are delivered. Full419 all10jobs/8198units/304browsers/277Auth and focused amendment5/native170/commercial36/expense pass; eight required artifacts and current rendered review verified. A fresh encrypted52 point independently restored96 covered tables; all52 original business-source tables remain exact through53 upgrade and both genuine-MFA read-only deployed walkthroughs. [Current delivery proof](proposals/quote-amendment53-delivery-verification.json).
-
-The owner dataset has no accepted work or job in the tested range; populated amendment workflows pass in isolated genuine fixtures. Physical iPhone acceptance remains owner-deferred. Protected main remains at8d2ef72c/PR89. PR115 full420 fails a recovery schema comparison and Chromium body capture. The browser correction passes both whole native journeys/4 HTTP cases; local recovery37 passes but does not explain the Linux mismatch. Fresh corrected-source Linux release acceptance remains required. No merged-main, complete operational release, complete export/backup or real-use claim is implied.
-
-Next usable milestone: persisted En Route/Arrived/Start Work/pause/resume with actual travel/occupancy/custody prerequisites, scope/history/private retrieval and original-save recovery, then photos/completion/follow-up. Held timing calculations pass78 focused cases/types/lint; additional unregistered field storage passes30 real PostgreSQL cases, including actual two-connection exclusion and exact audit refusal. None provides an authenticated field command, timer UI or complete durable-session workflow yet. Finance, complete portability/recovery/import/cutover and Google Calendar remain fully approved V1 scope.
-
-Roughly41% V1 coded; remaining200–350 active hours, VERY LOW confidence, one worker/full scope/waits excluded. No trustworthy cumulative time ledger. Real Crest use NOT ready; spend$0; no owner action required now. Repository/live evidence is sufficient; no chat move required solely for length.
+The [current execution checkpoint](WORKING_STATE.md) records what the owner can open today, the exact release evidence, the next delivery gates and the remaining V1 scope.
 
 ## Historical starting baseline
 
