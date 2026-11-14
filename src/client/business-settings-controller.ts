@@ -4,7 +4,7 @@ import {businessSettings,BusinessSettingsError,legalName} from './business-setti
 import type {Snapshot,RenameResult} from './business-settings';
 import {pendingEdit,PendingEditError} from './pending-business-edit';
 import type {PendingEdit,createPendingEditStore} from './pending-business-edit';
-export type SettingsView=Readonly<{phase:'loading'|'ready'|'review'|'pending'|'unavailable'|'blocked';message:string;busy:boolean;draft:string;currentName:string;canSave:boolean;canRetry:boolean;reference:string;financeAccountsAvailable?:true}>;
+export type SettingsView=Readonly<{phase:'loading'|'ready'|'review'|'pending'|'unavailable'|'blocked';message:string;busy:boolean;draft:string;currentName:string;canSave:boolean;canRetry:boolean;reference:string;financeAccountsAvailable?:true;syntheticCalendarAvailable?:true}>;
 export const initialSettingsView:SettingsView=Object.freeze({phase:'loading',message:'Checking business settings…',busy:true,draft:'',currentName:'',canSave:false,canRetry:false,reference:''});
 type Dependencies={store:ReturnType<typeof createPendingEditStore>;change:(view:SettingsView)=>void;api?:typeof businessSettings;session?:typeof authentication.session;id?:()=>string};
 export function createBusinessSettingsController(deps:Dependencies){
@@ -14,7 +14,8 @@ export function createBusinessSettingsController(deps:Dependencies){
   const view=():SettingsView=>Object.freeze({phase,message,busy:!!active,draft:phase==='ready'?draft:'',currentName:phase==='ready'?snapshot?.context.legalName??'':'',
     canSave:!active&&phase==='ready'&&snapshot?.context.writeState==='ready'&&legalName(draft)&&draft!==snapshot.context.legalName,canRetry:!active&&canRetry,
     reference:phase==='pending'&&snapshot?.context.businessId===pending?.businessId?pending?.command.operationId??'':'',
-    ...(snapshot?.financeAccountsAvailable?{financeAccountsAvailable:true as const}:{})});
+    ...(snapshot?.financeAccountsAvailable?{financeAccountsAvailable:true as const}:{}),
+    ...(snapshot?.syntheticCalendarAvailable?{syntheticCalendarAvailable:true as const}:{})});
   const emit=()=>{if(alive)deps.change(view());};
   const live=(signal:AbortSignal)=>{if(!alive||signal.aborted)throw new Error();};
   async function fresh(signal:AbortSignal){

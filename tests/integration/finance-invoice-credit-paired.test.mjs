@@ -261,13 +261,13 @@ async function verifyServiceRefund({candidate:paired,sandbox,target,admin,export
     &&!(row.schema==='crest'&&[...changed,'service_credit_refunds'].includes(row.name)));
   const before=unaffected(await inventory(admin)),previousRows=await comparable(false);
   assert.deepEqual(await readFile(join(candidate.directory,'supabase/migration-checksums.json')),
-    await readFile(join(sandbox.root,'supabase/migration-checksums.json')));
+    await readFile(join(sandbox.root,'tests/support/registered86-migration-checksums.json')));
   assert.deepEqual(await readFile(join(candidate.directory,'supabase/migrations',candidate.file)),
     await readFile(join(sandbox.root,'supabase/migrations',candidate.file)));
   const requireRefundPreview=()=>requireSyntheticFinanceAccountConfiguration(target,owner.business,
     true,true,true,true,true,true,true,true,true,true,true,true,true,true,true);
   await assert.rejects(requireRefundPreview(),{message:'SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED'});
-  const registered=await sandbox.apply(target);
+  const registered=await sandbox.apply(target,await sandbox.prefix(86));
   assert.equal(registered.history.length,86);
   assert.equal(registered.registrySha256,candidate.registrySha256);
   await requireRefundPreview();

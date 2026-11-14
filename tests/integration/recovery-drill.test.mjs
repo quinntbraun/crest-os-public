@@ -262,8 +262,15 @@ test('registered coverage accounts for every actual source column and rejects om
  assert.deepEqual(manifest.tables.find(t=>t.table==='crest.lead_sources').required,[...leadSourceColumns]);assert.deepEqual(manifest.tables.find(t=>t.table==='crest.leads').required,[...leadColumns]);
  const columns=(await restored.query(`SELECT n.nspname||'.'||c.relname AS "table",a.attname AS "column" FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN ('crest','crest_private') AND c.relkind IN ('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2`)).rows;
  const requiredColumns=manifest.tables.reduce((total,entry)=>total+entry.required.length,0);
- assert.equal(columns.length,requiredColumns+10);
- assert.deepEqual(verifyExportCoverage(manifest,columns,backup.manifest.schemaVersion),{assurance:'schema_inventory_only',tables:manifest.tables.length,requiredColumns,excludedColumns:10,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
+ const excludedColumns=manifest.tables.reduce((total,entry)=>total+entry.excluded.length,0);
+ assert.equal(excludedColumns,23,'10 prior exclusions and 13 reviewed Calendar exclusions');
+ assert.equal(columns.length,requiredColumns+excludedColumns);
+ assert.deepEqual(verifyExportCoverage(manifest,columns,backup.manifest.schemaVersion),{assurance:'schema_inventory_only',tables:manifest.tables.length,requiredColumns,excludedColumns,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
+ const incompleteCalendar=structuredClone(manifest);
+ const credential=incompleteCalendar.tables.find(entry=>entry.table==='crest_private.google_calendar_credentials');
+ assert(credential.excluded.some(entry=>entry.column==='envelope'&&entry.reason==='calendar_grant'));
+ credential.excluded=credential.excluded.filter(entry=>entry.column!=='envelope');
+ assert.throws(()=>verifyExportCoverage(incompleteCalendar,columns,backup.manifest.schemaVersion),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
  assert.throws(()=>verifyExportCoverage(manifest,columns,52),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
  assert.throws(()=>verifyExportCoverage(manifest,columns,60),/EXPORT_COVERAGE_REVIEW_REQUIRED/);
  assert.throws(()=>verifyExportCoverage(manifest,columns,65),/EXPORT_COVERAGE_REVIEW_REQUIRED/);

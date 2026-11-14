@@ -3,7 +3,7 @@ export const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}
 export const binding=/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/;
 export type Rename=Readonly<{schemaVersion:1;operationId:string;recoveryEpoch:string;expectedVersion:string;legalName:string}>;
 export type Settings=Readonly<{schemaVersion:1;businessId:string;legalName:string;businessVersion:string}&({writeState:'ready';recoveryEpoch:string}|{writeState:'paused';recoveryEpoch:null})>;
-export type Snapshot=Readonly<{context:Settings;binding:string;financeAccountsAvailable?:true}>;
+export type Snapshot=Readonly<{context:Settings;binding:string;financeAccountsAvailable?:true;syntheticCalendarAvailable?:true}>;
 export type Committed=Readonly<{state:'committed';operationId:string;recoveryEpoch:string;receipt:Readonly<{schemaVersion:1;businessId:string;businessVersion:string;auditEventId:string}>}>;
 export type RenameResult=Committed|Readonly<{state:'conflict';reason:'version';currentVersion:string}|{state:'conflict';reason:'operation'}>;
 type Kind='input'|'not_submitted'|'denied'|'recovery'|'limited'|'unknown'|'unavailable';
@@ -40,7 +40,8 @@ async function post(path:'settings'|'rename'|'operation',body:object,proof:Proof
       const match=typeof value.error==='string'?codes[value.error]:undefined;if(match&&response.status===match[0])throw new BusinessSettingsError(match[1]);
       throw new BusinessSettingsError(path==='rename'?'unknown':'unavailable');
     }
-    return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding'),financeAccountsAvailable:response.headers.get('x-crest-finance-accounts')==='1'};
+    return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding'),financeAccountsAvailable:response.headers.get('x-crest-finance-accounts')==='1',
+      syntheticCalendarAvailable:response.headers.get('x-crest-google-calendar-setup')==='1'};
   }catch(error){throw error instanceof BusinessSettingsError?error:new BusinessSettingsError('unknown');}
 }
 export const businessSettings=Object.freeze({
@@ -49,7 +50,8 @@ export const businessSettings=Object.freeze({
     if(result.status!==200||typeof result.binding!=='string'||!binding.test(result.binding)||!exact(v,['schemaVersion','businessId','legalName','businessVersion','writeState','recoveryEpoch'])
       ||v.schemaVersion!==1||typeof v.businessId!=='string'||!uuid.test(v.businessId)||!legalName(v.legalName)||!version(v.businessVersion)
       ||!(v.writeState==='ready'&&typeof v.recoveryEpoch==='string'&&uuid.test(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null))throw new BusinessSettingsError('unknown');
-    return Object.freeze({context:Object.freeze({...v}) as Settings,binding:result.binding,...(result.financeAccountsAvailable?{financeAccountsAvailable:true as const}:{})});
+    return Object.freeze({context:Object.freeze({...v}) as Settings,binding:result.binding,...(result.financeAccountsAvailable?{financeAccountsAvailable:true as const}:{}),
+      ...(result.syntheticCalendarAvailable?{syntheticCalendarAvailable:true as const}:{})});
   },
   async rename(businessId:string,command:Rename,proof:Proof,signal:AbortSignal):Promise<RenameResult>{
     if(!uuid.test(businessId)||!renameInput(command))throw new BusinessSettingsError('input');

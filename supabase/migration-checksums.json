@@ -430,6 +430,11 @@
       "version": "20261210180000",
       "file": "20261210180000_fictional_service_refund.sql",
       "sha256": "edc38dfde81b21cb9148ea87553bf52f9f87bcda05f5c4d7f2f1019285d854f8"
+    },
+    {
+      "version": "20261211180000",
+      "file": "20261211180000_fictional_google_calendar.sql",
+      "sha256": "5fe52fd4f4d1af3640dbdf91f2a7fbe6efef027c1d8e582486db3f8ccd0f34bd"
     }
   ]
 }

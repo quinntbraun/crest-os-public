@@ -23,6 +23,8 @@ import {pairedInvoiceCredit85File,pairedInvoiceCredit85Parts,pairedInvoiceCredit
 import {serviceRefundCoverage,serviceRefundFile,serviceRefundParts,serviceRefundPriorRegistrySha256,serviceRefundVersion}
   from './finance-service-refund-candidate.mjs';
 
+import {googleCalendarCandidateRecoveryProfile} from './google-calendar-candidate.mjs';
+
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
 const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8'));
@@ -976,6 +978,14 @@ export async function restoreServiceRefundCandidateDatabase(candidate,directory,
   return restoreWithProfile((await serviceRefundRecoveryProfile(candidate)).profile,directory,identity,url);
 }
 
+export async function backupGoogleCalendarCandidateDatabase(candidate,client,url,directory,recipient){
+  const checked=await googleCalendarCandidateRecoveryProfile(candidate,root);
+  return backupWithProfile(checked.profile,client,url,directory,recipient,undefined,undefined,checked);
+}
+export async function restoreGoogleCalendarCandidateDatabase(candidate,directory,identity,url){
+  return restoreWithProfile((await googleCalendarCandidateRecoveryProfile(candidate,root)).profile,directory,identity,url);
+}
+
 async function expense79RecoveryProfile(candidate){
   assert.equal(candidate.file,expense79File);
   assert.equal(candidate.previousRegistrySha256,legacy78Profile.registrySha256);
@@ -1040,6 +1050,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile.schemaVersion===84&&profile.heldInvoiceCreditMigrationSha256
       ||profile.schemaVersion===85&&profile.heldPairedInvoiceCreditMigrationSha256
       ||profile.schemaVersion===86&&profile.heldServiceRefundMigrationSha256
+      ||profile.schemaVersion===87&&profile.heldGoogleCalendarMigrationSha256
       ||profile.schemaVersion===79&&profile.heldExpenseMigrationSha256
       ));
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -1128,6 +1139,7 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     assert.equal(manifest.heldInvoiceCreditMigrationSha256,profile.heldInvoiceCreditMigrationSha256);
     assert.equal(manifest.heldPairedInvoiceCreditMigrationSha256,profile.heldPairedInvoiceCreditMigrationSha256);
     assert.equal(manifest.heldServiceRefundMigrationSha256,profile.heldServiceRefundMigrationSha256);
+    assert.equal(manifest.heldGoogleCalendarMigrationSha256,profile.heldGoogleCalendarMigrationSha256);
     if(profile.heldDropoffPhotoAuthority||profile.heldCustody67MigrationSha256||profile.heldPickupReturnSources
       ||profile.heldExpenseMigrationSha256)assert(manifest.objectArchive);
     stage='authenticated_dump';const dump=await unseal(join(directory,'database.age'),receipt.dump,identity);

@@ -2,6 +2,7 @@ import 'server-only';
 import pg from 'pg';
 export type SessionDatabaseConfiguration={connectionString:string;environment:'production'|'test'};
 type Query=(text:string,values:unknown[])=>Promise<unknown>;
+type ConnectionProfile='read'|'admission'|'refresh'|'command';
 // Trusted server SQL only. No caller-supplied identifiers or browser exposure.
 export function sessionDatabase(config:SessionDatabaseConfiguration){return databaseForRole(config,'crest_web');}
 export function custodyPhotoDispatcherDatabase(config:SessionDatabaseConfiguration){
@@ -21,14 +22,15 @@ function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'c
     connectionString=url.toString();
   }catch{throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');}
   const ssl=config.environment==='production'?{rejectUnauthorized:true}:false;
-  async function connection<T>(signal:AbortSignal,transaction:boolean,work:(query:Query,signal:AbortSignal)=>Promise<T>,command=false):Promise<T>{
+  async function connection<T>(signal:AbortSignal,profile:ConnectionProfile,work:(query:Query,signal:AbortSignal)=>Promise<T>):Promise<T>{
     let convertedCustomerError:unknown,rollbackConfirmed=false;
     if(signal.aborted)throw new Error('SESSION_DATABASE_FAILED');
+    const transaction=profile!=='read',command=profile==='command',refresh=profile==='refresh';
     const controller=new AbortController(),combined=AbortSignal.any([signal,controller.signal]);
-    const client=new pg.Client({connectionString,ssl,connectionTimeoutMillis:1000,statement_timeout:command?10000:transaction?11000:1500,lock_timeout:command?3000:transaction?10000:750,
-      query_timeout:command?11000:transaction?12000:2000,options:'-c role='+role,application_name:command?'crest_business_command':transaction?'crest_session_refresh':'crest_session_lifecycle'});
+    const client=new pg.Client({connectionString,ssl,connectionTimeoutMillis:1000,statement_timeout:command?10000:refresh?11000:1500,lock_timeout:command?3000:refresh?10000:750,
+      query_timeout:command?11000:refresh?12000:2000,options:'-c role='+role,application_name:command?'crest_business_command':refresh?'crest_session_refresh':'crest_session_lifecycle'});
     client.on('error',()=>controller.abort());client.once('end',()=>controller.abort());
-    const timer=setTimeout(()=>controller.abort(),transaction?15000:3000);timer.unref();
+    const timer=setTimeout(()=>controller.abort(),command||refresh?15000:3000);timer.unref();
     const abort=()=>{void client.end().catch(()=>undefined);};combined.addEventListener('abort',abort,{once:true});
     const interrupted=new Promise<never>((_,reject)=>combined.addEventListener('abort',()=>reject(new Error('SESSION_DATABASE_FAILED')),{once:true}));
     try{
@@ -56,7 +58,9 @@ function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'c
         if(!transaction)return work(query,combined);
         await client.query('BEGIN ISOLATION LEVEL READ COMMITTED');
         try{
-          await client.query("SET LOCAL idle_in_transaction_session_timeout='12s'; SET LOCAL transaction_timeout='15s'");
+          await client.query(profile==='admission'?
+            "SET LOCAL idle_in_transaction_session_timeout='3s'; SET LOCAL transaction_timeout='3s'":
+            "SET LOCAL idle_in_transaction_session_timeout='12s'; SET LOCAL transaction_timeout='15s'");
           const result=await work(query,combined);if(combined.aborted)throw new Error();
           const completion=await client.query('COMMIT');
           // PostgreSQL answers ROLLBACK if a callback swallowed a statement
@@ -104,7 +108,8 @@ function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'c
     }
     finally{clearTimeout(timer);combined.removeEventListener('abort',abort);await client.end().catch(()=>undefined);}
   }
-  const query=async(text:string,values:unknown[],signal:AbortSignal)=>connection(signal,false,current=>current(text,values));
-  return Object.assign(query,{transaction:<T>(work:(query:Query,signal:AbortSignal)=>Promise<T>,signal:AbortSignal)=>connection(signal,true,work),
-    commandTransaction:<T>(work:(query:Query,signal:AbortSignal)=>Promise<T>,signal:AbortSignal)=>connection(signal,true,work,true)});
+  const query=async(text:string,values:unknown[],signal:AbortSignal)=>connection(signal,'read',current=>current(text,values));
+  return Object.assign(query,{transaction:<T>(work:(query:Query,signal:AbortSignal)=>Promise<T>,signal:AbortSignal)=>connection(signal,'refresh',work),
+    commandTransaction:<T>(work:(query:Query,signal:AbortSignal)=>Promise<T>,signal:AbortSignal)=>connection(signal,'command',work),
+    admissionTransaction:<T>(work:(query:Query,signal:AbortSignal)=>Promise<T>,signal:AbortSignal)=>connection(signal,'admission',work)});
 }
