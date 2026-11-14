@@ -50,6 +50,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  const receivableAging=serviceRefunds&&process.env.CREST_TEST_RECEIVABLE_AGING==='1';
  const customerFundsReport=serviceRefunds&&process.env.CREST_TEST_CUSTOMER_FUNDS_REPORT==='1';
  const excessReceipts=process.env.CREST_TEST_EXCESS_RECEIPTS==='1';
+ const applyReceiptFunds=excessReceipts&&process.env.CREST_TEST_RECEIPT_FUNDS_APPLICATION==='1';
  assert(!excessReceipts||product&&directReceipts&&customerFundsReport&&postedFinanceExport);
  assert.equal(typeof invoiceDrafts,'boolean');assert(!invoiceDrafts||invoicePreparation);
  assert.equal(typeof product,'boolean');assert.equal(typeof catalog,'boolean');assert(!catalog||product,'catalog journey uses the actual product server');
@@ -154,7 +155,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   if(receivableAging&&!postedFinanceExport)assert.equal((await sandbox.apply(target,await sandbox.prefix(88))).history.length,88);
   let postedFinanceConfiguration;
   if(postedFinanceExport){
-   const schemaVersion=excessReceipts?91:customerFundsReport?90:89;
+   const schemaVersion=applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
    const registered=await sandbox.apply(target,await sandbox.prefix(schemaVersion));
    assert.equal(registered.history.length,schemaVersion);
    postedFinanceLogin='crest_posted_finance_test_'+randomBytes(8).toString('hex');

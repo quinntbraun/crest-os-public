@@ -455,6 +455,11 @@
       "version": "20261215180000",
       "file": "20261215180000_fictional_excess_receipts.sql",
       "sha256": "1fd3cf438515e8ed9c9bad8af475235cd102ebbb3d24b91891e7b629b433ad5a"
+    },
+    {
+      "version": "20261216180000",
+      "file": "20261216180000_fictional_apply_receipt_funds.sql",
+      "sha256": "b51a5675730e94e30720603cb910d7e65aee91e62e1af3baa0bb0a07b51c7a24"
     }
   ]
 }

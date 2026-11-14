@@ -477,7 +477,7 @@ async function verifyExcessReceipt({admin,finance,web,exporter,owner,foreign,cha
   const preview=()=>requireSyntheticFinanceAccountConfiguration(target,owner.business,
     true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true);
   await assert.rejects(preview(),{message:'SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED'});
-  assert.equal((await sandbox.apply(target)).history.length,91);
+  assert.equal((await sandbox.apply(target,await sandbox.prefix(91))).history.length,91);
   await preview();
   assert.deepEqual(unaffected(await inventory(admin)),existing);
   assert.deepEqual(await priorLots(),retainedLots);
@@ -528,6 +528,38 @@ async function verifyExcessReceipt({admin,finance,web,exporter,owner,foreign,cha
     [['receipt_ar','0','1200'],['receipt_funds','0','250'],['receipt_money','1450','0']]);
   const changed=[...partial];changed[15]='1451';
   assert.deepEqual(await command(finance,route,changed),{state:'conflict',reason:'operation'});
+  const applicationOptions='read_fictional_customer_funds_application_options';
+  const applyFunds='apply_fictional_customer_funds';
+  const view=()=>command(finance,applicationOptions,[...owner.auth(),owner.customer,invoice.invoiceId,today]);
+  assert(!(await view()).lots.some(lot=>lot.fundLotId===split.receipt.heldFunds.lotId));
+  const beforeApplicationUpgrade=(await inventory(admin)).filter(row=>row.schema!=='supabase_migrations');
+  assert.equal((await sandbox.apply(target)).history.length,92);
+  assert.deepEqual((await inventory(admin)).filter(row=>row.schema!=='supabase_migrations'),beforeApplicationUpgrade);
+  const before=await view();
+  const lot=before.lots.find(item=>item.fundLotId===split.receipt.heldFunds.lotId);
+  assert.deepEqual(lot.availableRanges,[{firstCent:'1201',lastCent:'1450'}]);
+  const request=[...owner.auth(),owner.epoch,randomUUID(),randomUUID(),lot.fundLotId,invoice.receivableId,owner.customer,today,
+    '1201','1300','Fictional customer approved applying part of held receipt'];
+  const applied=await command(finance,applyFunds,request);
+  assert.equal(applied.state,'committed');
+  assert.equal(applied.receipt.schemaVersion,2);
+  assert.equal(applied.receipt.receiptEventId,split.receipt.eventId);
+  assert.equal(applied.receipt.unapplicationId,null);
+  assert.equal(applied.receipt.cents,'100');
+  assert.deepEqual(await command(finance,applyFunds,request),applied);
+  const {parseFundApplicationResult}=await import('../../src/bookkeeping/fund-application-contract.ts');
+  assert.equal(parseFundApplicationResult(applied,owner.business,{operationId:request[9],fundApplicationId:request[10],
+    recoveryEpoch:owner.epoch}).receipt.receiptEventId,split.receipt.eventId);
+  const after=await view();
+  assert.equal(BigInt(before.availableBalanceCents)-BigInt(after.availableBalanceCents),100n);
+  assert.deepEqual(after.lots.find(item=>item.fundLotId===lot.fundLotId).availableRanges,[{firstCent:'1301',lastCent:'1450'}]);
+  const overlap=[...request];overlap[9]=randomUUID();overlap[10]=randomUUID();
+  await assert.rejects(command(finance,applyFunds,overlap),{message:'FUND_APPLICATION_RANGE_UNAVAILABLE'});
+  await assert.rejects(command(web,applyFunds,request),{code:'42501'});
+  const applicationOriginal=await command(finance,'lookup_fictional_customer_fund_application',[...owner.auth(),owner.epoch,request[9],request[10]]);
+  assert.deepEqual(applicationOriginal,applied);
+  const heldAfter=await command(finance,'read_fictional_customer_funds',[...owner.auth(),today]);
+  assert.equal(heldAfter.rows.find(row=>row.lotId===lot.fundLotId)?.heldCents,'150');
   await assert.rejects(command(finance,'receipt_funds_source_snapshot',[owner.business,'a'.repeat(64)]),{code:'42501'});
   let originalArchive;
   await exporter.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -554,7 +586,7 @@ async function verifyExcessReceipt({admin,finance,web,exporter,owner,foreign,cha
     await mkdir(point,{mode:0o700});
     const keys=await keyPair(directory);
     const {manifest}=await backupDatabase(admin,target,point,keys.recipient);
-    assert.equal(manifest.schemaVersion,91);
+    assert.equal(manifest.schemaVersion,92);
     destination=await recoveryCluster();
     const restoredUrl=await destination.database();
     assert.notEqual(new URL(restoredUrl).port,new URL(target).port);

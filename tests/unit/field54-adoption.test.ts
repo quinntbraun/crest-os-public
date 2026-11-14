@@ -76,6 +76,7 @@ import registered87 from '../support/registered87-migration-checksums.json';
 import registered88 from '../support/registered88-migration-checksums.json';
 import registered89 from '../support/registered89-migration-checksums.json';
 import registered90 from '../support/registered90-migration-checksums.json';
+import registered91 from '../support/registered91-migration-checksums.json';
 import coverage87 from '../support/registered87-export-coverage.json';
 import calendarCoverage from '../support/google-calendar-candidate-export-coverage.json';
 import {serviceRefundSourceAddedColumns,serviceRefundSourceCoverage} from '../../src/bookkeeping/service-refund-source.ts';
@@ -522,12 +523,17 @@ it('appends the read-only customer funds report with no new stored data',()=>{
  expect(()=>validateMigrationSet(registered90 as MigrationRegistry,new Map(registered90.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered89 as MigrationRegistry)).not.toThrow();
 });
 it('appends the reviewed P03 funding lineage after the exact report schema',()=>{
- expect(currentRegistry.migrations).toHaveLength(91);
- expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261215180000',file:'20261215180000_fictional_excess_receipts.sql',sha256:'1fd3cf438515e8ed9c9bad8af475235cd102ebbb3d24b91891e7b629b433ad5a'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered90 as MigrationRegistry)).not.toThrow();
- expect(currentCoverage).toEqual({...coverage87,migrationCount:91,tables:coverage87.tables.map(row=>row.table==='crest.customer_fund_lots'
+ expect(registered91.migrations).toHaveLength(91);
+ expect(registered91.migrations.at(-1)).toEqual({version:'20261215180000',file:'20261215180000_fictional_excess_receipts.sql',sha256:'1fd3cf438515e8ed9c9bad8af475235cd102ebbb3d24b91891e7b629b433ad5a'});
+ expect(()=>validateMigrationSet(registered91 as MigrationRegistry,new Map(registered91.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered90 as MigrationRegistry)).not.toThrow();
+});
+it('registers the original payment application without adding stored rows',()=>{
+ expect(currentRegistry.migrations).toHaveLength(92);
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261216180000',file:'20261216180000_fictional_apply_receipt_funds.sql',sha256:'b51a5675730e94e30720603cb910d7e65aee91e62e1af3baa0bb0a07b51c7a24'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered91 as MigrationRegistry)).not.toThrow();
+ expect(currentCoverage).toEqual({...coverage87,migrationCount:92,tables:coverage87.tables.map(row=>row.table==='crest.customer_fund_lots'
   ?{...row,required:[...row.required,'receipt_event_id']}:row)});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:91});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:92});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

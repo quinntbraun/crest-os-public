@@ -150,6 +150,41 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
         &&receipt.heldFunds.fundingPartitionId===part.id&&receipt.heldFunds.mappingId===lot.mapping_id&&receipt.heldFunds.cents===lot.original_cents);
     }
     require(seen.size===heldLines.length);
+    const lots=new Map(decoded.get('customer_fund_lots')!.map(row=>[row.id,row]));
+    const groups=new Map(decoded.get('atomic_finance_groups')!.map(row=>[row.id,row]));
+    const applications=decoded.get('customer_fund_applications')!;
+    const applicationEvents=new Map([...events.values()].filter(row=>row.template==='P04').map(row=>[row.fund_application_id,row]));
+    const entryByEvent=new Map([...entries.values()].map(row=>[row.event_id,row]));
+    const applicationLines=new Map<unknown,Row[]>();
+    for(const row of decoded.get('journal_lines')!)if(row.fund_application_id!==null){
+      const lines=applicationLines.get(row.fund_application_id)??[];
+      lines.push(row);applicationLines.set(row.fund_application_id,lines);
+    }
+    const receivables=new Map(decoded.get('receivable_items')!.map(row=>[row.id,row]));
+    for(const application of applications){
+      const lot=lots.get(application.fund_lot_id);
+      require(lot);
+      if(lot.receipt_event_id===null)continue;
+      const event=applicationEvents.get(application.id),original=events.get(lot.receipt_event_id);
+      const group=event&&groups.get(event.group_id),sourceGroup=original&&groups.get(original.group_id);
+      const item=receivables.get(application.receivable_id);
+      const originalRequest=operations.get(application.operation_id);
+      const receipt=originalRequest&&typeof originalRequest.result==='string'?record(originalRequest.result):null;
+      const lines=applicationLines.get(application.id)??[];
+      const funds=lines.find(row=>row.purpose==='apply_funds'),ar=lines.find(row=>row.purpose==='apply_ar');
+      const cents=money(application.last_cent)-money(application.first_cent)+1n;
+      require(event&&original&&group&&sourceGroup&&item&&typeof event.effective_on==='string'&&typeof original.effective_on==='string'
+        &&event.effective_on>=original.effective_on&&money(group.commit_sequence)>money(sourceGroup.commit_sequence)
+        &&group.operation_id===application.operation_id&&item.customer_id===lot.customer_id
+        &&lines.length===2&&funds&&ar&&funds.entry_id===entryByEvent.get(event.id)?.id&&funds.entry_id===ar.entry_id
+        &&funds.fund_lot_id===lot.id&&funds.fixed_mapping_id===lot.mapping_id&&funds.account_id===lot.account_id
+        &&funds.debit_cents===String(cents)&&funds.credit_cents==='0'&&ar.credit_cents===String(cents)&&ar.debit_cents==='0'
+        &&ar.receivable_id===item.id&&ar.account_id===item.account_id&&ar.fund_lot_id===null
+        &&originalRequest?.command_type==='finance.funds.apply'&&originalRequest.state==='committed'
+        &&receipt?.schemaVersion===2&&receipt.unapplicationId===null&&receipt.receiptEventId===original.id
+        &&receipt.eventId===event.id&&receipt.fundApplicationId===application.id&&receipt.fundLotId===lot.id
+        &&receipt.firstCent===application.first_cent&&receipt.lastCent===application.last_cent&&receipt.cents===String(cents));
+    }
   }
   const totals=[...balances.values()].reduce((sum,balance)=>sum+balance.debit,0n).toString();
   return Object.freeze({verified:true,profile:manifest.scope,files:files.size,sourceRows:rows,

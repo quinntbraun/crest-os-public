@@ -21,6 +21,7 @@ const receivableAging=process.env.CREST_TEST_RECEIVABLE_AGING==='1';
 const customerFundsReport=process.env.CREST_TEST_CUSTOMER_FUNDS_REPORT==='1';
 const postedFinanceExport=process.env.CREST_TEST_POSTED_FINANCE_EXPORT==='1';
 const excessReceipts=process.env.CREST_TEST_EXCESS_RECEIPTS==='1';
+const applyReceiptFunds=excessReceipts&&process.env.CREST_TEST_RECEIPT_FUNDS_APPLICATION==='1';
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
@@ -251,6 +252,51 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
        assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
        await page.screenshot({path:'.local/review/finance-direct-receipt-'+name+'-'+width+'.png'});
+      }
+      if(applyReceiptFunds){
+       await allowInvoiceReadWindow();
+       const heldPayment=payments.getByLabel('Total received (optional)',{exact:true});
+       await heldPayment.fill('12.34');
+       await payments.getByRole('combobox',{name:'Remaining amount',exact:true}).selectOption({label:'Hold as customer funds'});
+       await payments.getByLabel('How you verified the payment',{exact:true}).fill('Fictional funds received separately');
+       const postReceipt=page.waitForResponse(response=>response.url().endsWith('/receipt-record'));
+       await payments.getByRole('button',{name:'Record payment',exact:true}).press('Enter');
+       const heldResponse=await postReceipt;
+       assert.equal(heldResponse.status(),200);
+       const held=(await heldResponse.json()).receipt;
+       await expect(payments).toContainText('$12.34 held as customer funds.');
+       await invoice.getByText('Apply customer funds',{exact:true}).press('Enter');
+       const funds=invoice.getByRole('region',{name:'Apply customer funds',exact:true});
+       await funds.getByRole('button',{name:'Load available funds',exact:true}).press('Enter');
+       await expect(funds).toContainText('Maximum to apply · $12.34');
+       await funds.getByLabel('Amount to apply',{exact:true}).fill('12.34');
+       await funds.getByLabel('Reason for applying funds',{exact:true}).fill('Fictional customer approved applying the held payment');
+       const apply=funds.getByRole('button',{name:'Apply funds to invoice',exact:true});
+       for(const width of [360,390,768,1440]){
+        await page.setViewportSize({width,height:900});
+        await apply.evaluate(button=>button.scrollIntoView({block:'center'}));
+        assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+        assert.deepEqual((await new AxeBuilder({page}).include('.direct-receipt').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+        await page.screenshot({path:'.local/review/finance-apply-received-funds-'+name+'-'+width+'.png'});
+       }
+       const postApplication=page.waitForResponse(response=>response.url().endsWith('/fund-application-submit'));
+       await apply.press('Enter');
+       const applied=await postApplication;
+       assert.equal(applied.status(),200);
+       assert.equal((await applied.json()).receipt.receiptEventId,held.eventId);
+       await expect(funds).toContainText('$12.34 applied on');
+       const download=page.waitForEvent('download');
+       await funds.getByRole('button',{name:'Download funds application (CSV)',exact:true}).press('Enter');
+       assert((await readFile(await (await download).path(),'utf8')).includes(held.eventId));
+       await page.reload();
+       await draftDisclosure.click();
+       await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).press('Enter');
+       await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).press('Enter');
+       await expect(draftStatus).toHaveText('Issued invoice loaded.');
+       await invoice.getByText('Record a fictional payment',{exact:true}).press('Enter');
+       await payments.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
+       await expect(payments).toContainText('$137.66 due');
+       return;
       }
       if(paymentCorrections){
        await page.setViewportSize({width:390,height:844});
