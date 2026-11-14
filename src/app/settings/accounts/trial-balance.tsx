@@ -10,11 +10,12 @@ import type {FictionalJournalV6,FictionalTrialBalanceV6} from '../../../bookkeep
 import type {FictionalJournalV7,FictionalTrialBalanceV7} from '../../../bookkeeping/posted-report-v7-contract';
 import type {FictionalJournalV8,FictionalTrialBalanceV8} from '../../../bookkeeping/posted-report-v8-contract';
 import type {FictionalJournalV9,FictionalTrialBalanceV9} from '../../../bookkeeping/posted-report-v9-contract';
+import type {FictionalJournalV10,FictionalTrialBalanceV10} from '../../../bookkeeping/posted-report-v10-contract';
 import {downloadFinanceHistory,financeAccounts} from '../../../client/finance-accounts';
 import styles from './screen.module.css';
 
-type Balance=Awaited<ReturnType<typeof financeAccounts.readTrialBalance>>|FictionalTrialBalanceV2|FictionalTrialBalanceV3|FictionalTrialBalanceV4|FictionalTrialBalanceV5|FictionalTrialBalanceV6|FictionalTrialBalanceV7|FictionalTrialBalanceV8|FictionalTrialBalanceV9;
-type Journal=Awaited<ReturnType<typeof financeAccounts.readPostedJournal>>|FictionalJournalV2|FictionalJournalV3|FictionalJournalV4|FictionalJournalV5|FictionalJournalV6|FictionalJournalV7|FictionalJournalV8|FictionalJournalV9;
+type Balance=Awaited<ReturnType<typeof financeAccounts.readTrialBalance>>|FictionalTrialBalanceV2|FictionalTrialBalanceV3|FictionalTrialBalanceV4|FictionalTrialBalanceV5|FictionalTrialBalanceV6|FictionalTrialBalanceV7|FictionalTrialBalanceV8|FictionalTrialBalanceV9|FictionalTrialBalanceV10;
+type Journal=Awaited<ReturnType<typeof financeAccounts.readPostedJournal>>|FictionalJournalV2|FictionalJournalV3|FictionalJournalV4|FictionalJournalV5|FictionalJournalV6|FictionalJournalV7|FictionalJournalV8|FictionalJournalV9|FictionalJournalV10;
 type CorrectionJournalRow=FictionalJournalV2['rows'][number]|FictionalJournalV3['rows'][number]|FictionalJournalV4['rows'][number];
 const usd=(cents:string)=>'$'+expenseDollars(cents);
 const adjustmentPurpose={
@@ -24,6 +25,10 @@ const adjustmentPurpose={
  collection_failure_tip_tax:'Original tip tax reduced',
  collection_failure_money:'Money account credited',
 } as const;
+const refundDueLabels={service:'Service refund',excess:'Unused payment return',tip_return_due:'Tip return'} as const;
+function isRefundTransfer(row:Journal['rows'][number]):row is Extract<FictionalJournalV10['rows'][number],{refundTransferAdjustmentId:string}>{
+  return 'refundTransferAdjustmentId' in row&&typeof row.refundTransferAdjustmentId==='string';
+}
 function hasPaymentCorrections(report:Balance|Journal){
   return reportVersion(report)>=2;
 }
@@ -101,7 +106,9 @@ export function TrialBalance({businessId}:{businessId:string}){
     downloadFinanceHistory('crest-fictional-trial-balance-'+balance.throughOn+'.csv',[
       ['Through date','Timezone','Currency','Observed UTC','Posted events','Coverage'],
       [balance.throughOn,balance.timeZone,balance.currency,balance.observedAt,balance.postedEventCount,
-        reportVersion(balance)===9
+        reportVersion(balance)===10
+          ?'Fictional partial ledger. Includes returned and retried refunds. Opening balances and reconciliation pending.'
+          :reportVersion(balance)===9
           ?'Fictional partial ledger. Includes adjustments for incoming payments, refunds, credits and same-day expenses. Opening balances and reconciliation pending.'
           :reportVersion(balance)===8
           ?'Fictional partial ledger. Includes settled tip returns, unused payment returns, service refunds, credits, payments, held funds and same-day expenses. Opening balances and reconciliation pending.'
@@ -138,6 +145,7 @@ export function TrialBalance({businessId}:{businessId:string}){
     const includesExcessReturns=reportVersion(journal)>=7;
     const includesTipReturns=reportVersion(journal)>=8;
     const includesCollectionFailures=reportVersion(journal)>=9;
+    const includesRefundTransfers=reportVersion(journal)>=10;
     downloadFinanceHistory('crest-fictional-journal-page-'+journal.throughOn+'.csv',[
       ['Through date','Timezone','Currency','Observed UTC','Coverage'],
       [journal.throughOn,journal.timeZone,journal.currency,journal.observedAt,'Current page of the fictional partial ledger.'],
@@ -147,7 +155,8 @@ export function TrialBalance({businessId}:{businessId:string}){
         ...(includesFundsApplications?['Customer funds application ID']:[]),...(includesHeldTips?['Held tip ID']:[]),
         ...(includesInvoiceCredits?['Invoice credit ID']:[]),...(includesServiceRefunds?['Service refund ID']:[]),
         ...(includesExcessReturns?['Unused payment return ID']:[]),...(includesTipReturns?['Tip return ID']:[]),
-        ...(includesCollectionFailures?['Payment adjustment ID','Payment adjustment component ID','Adjustment type','Original payment ID']:[])],
+        ...(includesCollectionFailures?['Payment adjustment ID','Payment adjustment component ID','Adjustment type','Original payment ID']:[]),
+        ...(includesRefundTransfers?['Refund transfer adjustment ID','Refund transfer type','Prior refund event ID','Original refund event ID']:[])],
       ...journal.rows.map(row=>[row.effectiveOn,row.code,row.name,row.purpose,row.debitCents,row.creditCents,row.entryId,row.eventId,row.operationId,
         ...(hasCorrectionFields(row)?[row.template,row.unapplicationId??'',row.fundLotId??'']:[]),
         ...(includesFundsApplications?['fundApplicationId' in row?row.fundApplicationId??'':'']:[]),
@@ -158,6 +167,9 @@ export function TrialBalance({businessId}:{businessId:string}){
         ...(includesTipReturns?['tipReturnId' in row?row.tipReturnId??'':'']:[]),
         ...(includesCollectionFailures?isCollectionAdjustment(row)
           ?[row.collectionFailureId??'',row.collectionFailureComponentId??'',row.collectionFailureKind??'',row.originalPaymentId??'']
+          :['','','','']:[]),
+        ...(includesRefundTransfers?isRefundTransfer(row)
+          ?[row.refundTransferAdjustmentId,row.refundTransferKind,row.priorRefundEventId,row.originalRefundEventId]
           :['','','','']:[])]),
     ]);
   }
@@ -175,7 +187,9 @@ export function TrialBalance({businessId}:{businessId:string}){
       {balance&&<>
         <p>Through <time dateTime={balance.throughOn}>{balance.throughOn}</time> · USD · {balance.timeZone}</p>
         {balance.coverageStart&&<p className="field-help">First included posting {balance.coverageStart} · {balance.postedEventCount} posted {balance.postedEventCount==='1'?'event':'events'}</p>}
-        {hasPaymentCorrections(balance)&&<p className="field-help">{reportVersion(balance)===9
+        {hasPaymentCorrections(balance)&&<p className="field-help">{reportVersion(balance)===10
+          ?'Includes returned and retried refunds. Customer funds and tax payable match the ledger through this date. Refunds still due are a separate customer liability.'
+          :reportVersion(balance)===9
           ?'Includes recording errors and settled failures for incoming payments. Customer funds and tax payable match the ledger through this date.'
           :reportVersion(balance)===8
           ?'Includes settled tip returns, unused payment returns, service refunds, credits, payment corrections and funds applications. Customer funds and tax payable match the ledger through this date.'
@@ -204,6 +218,16 @@ export function TrialBalance({businessId}:{businessId:string}){
             <td>{usd(balance.totals.creditBalanceCents)}</td></tr></tfoot>
         </table></div>}
         <button type="button" className="secondary" onClick={download}>Download trial balance CSV</button>
+        {'refundDue' in balance&&<details className="review-card">
+          <summary>Refunds still due · {usd(balance.refundDue.totalCents)}</summary>
+          {balance.refundDue.rows.length===0?<p>No recredited refunds are due through this date.</p>:<>
+            <ul className={styles.agingInvoices}>{balance.refundDue.rows.map(row=><li key={row.recreditEventId}>
+              <div><strong>{row.customerName}</strong><span>{refundDueLabels[row.obligationType]} · {row.recreditedOn}</span></div>
+              <strong>{usd(row.remainingCents)}</strong>
+            </li>)}</ul>
+            {balance.refundDue.truncated&&<p className="field-help">Showing the first 100 recorded obligations. The total includes all refunds due.</p>}
+          </>}
+        </details>}
         {balance.rows.length>0&&<details className="review-card" onToggle={event=>{
           if(!event.currentTarget.open&&event.target===event.currentTarget){
             if(active.current){active.current.abort();active.current=null;setBusy(false);}
@@ -233,6 +257,7 @@ export function TrialBalance({businessId}:{businessId:string}){
                 const returned='excessReturnId' in row&&row.template==='P09'?row:null;
                 const tipReturned='tipReturnId' in row&&row.template==='P10'?row:null;
                 const adjustment=isCollectionAdjustment(row)?row:null;
+                const refundTransfer=isRefundTransfer(row)?row:null;
                 return <tr key={row.lineId}>
                   <th scope="row">
                     <time dateTime={row.effectiveOn}>{row.effectiveOn}</time><small>{row.code} · {row.name}</small>
@@ -264,6 +289,13 @@ export function TrialBalance({businessId}:{businessId:string}){
                       <details><summary>Source references</summary>
                         <small>Adjustment {adjustment.collectionFailureId}</small>
                         <small>Original payment {adjustment.originalPaymentId}</small>
+                      </details>
+                    </>}
+                    {refundTransfer&&<>
+                      <small>{refundTransfer.refundTransferKind==='recredit'?'Refund returned · Recredited by bank or wallet':'Retried refund · Settled debit'}</small>
+                      <details><summary>Source references</summary>
+                        <small>Transfer {refundTransfer.refundTransferAdjustmentId}</small>
+                        <small>Original refund {refundTransfer.originalRefundEventId}</small>
                       </details>
                     </>}
                     {correction&&<>
