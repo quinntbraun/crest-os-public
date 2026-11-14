@@ -65,7 +65,10 @@ export function parseFundApplicationResult(value:unknown,businessId:string,refer
   check((exact(receipt,fields)&&receipt.schemaVersion===1&&customerUuid(receipt.unapplicationId)
     ||exact(receipt,[...fields,'receiptEventId'])&&receipt.schemaVersion===2&&receipt.unapplicationId===null&&customerUuid(receipt.receiptEventId)
     ||exact(receipt,[...fields,'collectionFailureRecreditEventId'])&&receipt.schemaVersion===3&&receipt.unapplicationId===null
-      &&customerUuid(receipt.collectionFailureRecreditEventId))
+      &&customerUuid(receipt.collectionFailureRecreditEventId)
+    ||exact(receipt,[...fields,'collectionFailureSettlementEventId','collectionFailureSettlementComponentId'])
+      &&receipt.schemaVersion===4&&receipt.unapplicationId===null&&customerUuid(receipt.collectionFailureSettlementEventId)
+      &&customerUuid(receipt.collectionFailureSettlementComponentId))
     &&receipt.businessId===businessId&&receipt.operationId===reference.operationId
     &&receipt.fundApplicationId===reference.fundApplicationId&&customerUuid(receipt.eventId)&&customerUuid(receipt.fundLotId)
     &&customerUuid(receipt.fundingOriginId)&&customerUuid(receipt.parentPartitionId)
@@ -78,6 +81,9 @@ export function parseFundApplicationResult(value:unknown,businessId:string,refer
     fundLotId:receipt.fundLotId,unapplicationId:receipt.unapplicationId,
     ...(customerUuid(receipt.receiptEventId)?{receiptEventId:receipt.receiptEventId}:{}),
     ...(customerUuid(receipt.collectionFailureRecreditEventId)?{collectionFailureRecreditEventId:receipt.collectionFailureRecreditEventId}:{}),
+    ...(customerUuid(receipt.collectionFailureSettlementEventId)&&customerUuid(receipt.collectionFailureSettlementComponentId)?{
+      collectionFailureSettlementEventId:receipt.collectionFailureSettlementEventId,
+      collectionFailureSettlementComponentId:receipt.collectionFailureSettlementComponentId}:{}),
     fundingOriginId:receipt.fundingOriginId,
     parentPartitionId:receipt.parentPartitionId,customerId:receipt.customerId,receivableId:receipt.receivableId,invoiceId:receipt.invoiceId,
     arAccountId:receipt.arAccountId,fundsAccountId:receipt.fundsAccountId,mappingId:receipt.mappingId,effectiveOn:receipt.effectiveOn,

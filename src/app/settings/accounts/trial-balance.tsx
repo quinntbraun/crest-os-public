@@ -49,6 +49,15 @@ function collectionRecredit(row:Journal['rows'][number]){
   return {recreditId:row.collectionFailureRecreditId,failureId:row.recreditedFailureId,
     componentId:row.recreditedFailureComponentId,paymentId:row.recreditedPaymentId};
 }
+function groupedRecovery(row:Journal['rows'][number]){
+  if(!('collectionFailureSettlementId' in row)||typeof row.collectionFailureSettlementId!=='string'
+    ||!('settledFailureId' in row)||typeof row.settledFailureId!=='string'
+    ||!('settledPaymentId' in row)||typeof row.settledPaymentId!=='string')return null;
+  return {settlementId:row.collectionFailureSettlementId,failureId:row.settledFailureId,paymentId:row.settledPaymentId,
+    componentId:'collectionFailureSettlementComponentId' in row&&typeof row.collectionFailureSettlementComponentId==='string'
+      ?row.collectionFailureSettlementComponentId:null,
+    failureComponentId:'settledFailureComponentId' in row&&typeof row.settledFailureComponentId==='string'?row.settledFailureComponentId:null};
+}
 function receiptTipReference({template,purpose,paymentId,tipRealizationId}:{
   template:string;purpose:string;paymentId:string|null;tipRealizationId?:string|null;
 }){
@@ -107,7 +116,8 @@ export function TrialBalance({businessId}:{businessId:string}){
       const result=await financeAccounts.readPostedJournal(context,balance.throughOn,account||null,next?journal!.nextAfterLineId:null,signal);
       if(signal.aborted)return;
       const balanceVersion=reportVersion(balance);
-      const expectedJournalVersion=balanceVersion===10&&context.collectionFailureRecredits?13
+      const expectedJournalVersion=balanceVersion===10&&context.collectionFailureGroupedRecredits?14
+        :balanceVersion===10&&context.collectionFailureRecredits?13
         :balanceVersion===10&&context.refundTransferFees?12
         :balanceVersion===10&&context.directReceiptTips?11:balanceVersion;
       if(reportVersion(result)!==expectedJournalVersion){
@@ -165,6 +175,7 @@ export function TrialBalance({businessId}:{businessId:string}){
     const includesCollectionFailures=reportVersion(journal)>=9;
     const includesRefundTransfers=reportVersion(journal)>=10;
     const includesCollectionRecredits=reportVersion(journal)>=13;
+    const includesGroupedRecoveries=reportVersion(journal)>=14;
     downloadFinanceHistory('crest-fictional-journal-page-'+journal.throughOn+'.csv',[
       ['Through date','Timezone','Currency','Observed UTC','Coverage'],
       [journal.throughOn,journal.timeZone,journal.currency,journal.observedAt,'Current page of the fictional partial ledger.'],
@@ -177,9 +188,11 @@ export function TrialBalance({businessId}:{businessId:string}){
         ...(includesExcessReturns?['Unused payment return ID']:[]),...(includesTipReturns?['Tip return ID']:[]),
         ...(includesCollectionFailures?['Payment adjustment ID','Payment adjustment component ID','Adjustment type','Original payment ID']:[]),
         ...(includesRefundTransfers?['Refund transfer adjustment ID','Refund transfer type','Prior refund event ID','Original refund event ID']:[]),
-        ...(includesCollectionRecredits?['Restored deposit ID','Original failure ID','Original failure component ID','Restored payment ID']:[])],
+        ...(includesCollectionRecredits?['Restored deposit ID','Original failure ID','Original failure component ID','Restored payment ID']:[]),
+        ...(includesGroupedRecoveries?['Grouped deposit ID','Grouped deposit portion ID','Grouped original failure ID','Grouped original failure component ID','Grouped original payment ID']:[])],
       ...journal.rows.map(row=>{
        const recredit=collectionRecredit(row);
+       const settlement=groupedRecovery(row);
        return [row.effectiveOn,row.code,row.name,row.purpose,row.debitCents,row.creditCents,row.entryId,row.eventId,row.operationId,
         ...(hasCorrectionFields(row)?[row.template,row.unapplicationId??'',row.fundLotId??'']:[]),
         ...(includesFundsApplications?['fundApplicationId' in row?row.fundApplicationId??'':'']:[]),
@@ -195,7 +208,9 @@ export function TrialBalance({businessId}:{businessId:string}){
           ?[row.refundTransferAdjustmentId,row.refundTransferKind,row.priorRefundEventId,row.originalRefundEventId]
           :['','','','']:[]),
         ...(includesCollectionRecredits?[recredit?.recreditId??'',recredit?.failureId??'',
-          recredit?.componentId??'',recredit?.paymentId??'']:[])];
+          recredit?.componentId??'',recredit?.paymentId??'']:[]),
+        ...(includesGroupedRecoveries?[settlement?.settlementId??'',settlement?.componentId??'',settlement?.failureId??'',
+          settlement?.failureComponentId??'',settlement?.paymentId??'']:[])];
       }),
     ]);
   }
@@ -286,6 +301,7 @@ export function TrialBalance({businessId}:{businessId:string}){
                 const adjustment=isCollectionAdjustment(row)?row:null;
                 const refundTransfer=isRefundTransfer(row)?row:null;
                 const recredit=collectionRecredit(row);
+                const settlement=groupedRecovery(row);
                 return <tr key={row.lineId}>
                   <th scope="row">
                     <time dateTime={row.effectiveOn}>{row.effectiveOn}</time><small>{row.code} · {row.name}</small>
@@ -323,6 +339,16 @@ export function TrialBalance({businessId}:{businessId:string}){
                       <details><summary>Source references</summary>
                         <small>Adjustment {adjustment.collectionFailureId}</small>
                         <small>Original payment {adjustment.originalPaymentId}</small>
+                      </details>
+                    </>}
+                    {settlement&&<>
+                      <small>{String(row.purpose)==='collection_settlement_money'?'Failed payment restored · Verified deposit'
+                        :String(row.purpose)==='collection_settlement_ar'?'Failed payment restored · Original invoice balance reduced'
+                        :'Failed payment restored · Customer funds available'}</small>
+                      <details><summary>Source references</summary>
+                        <small>Restored deposit {settlement.settlementId}</small>
+                        <small>Original payment {settlement.paymentId}</small>
+                        <small>Original failure {settlement.failureId}</small>
                       </details>
                     </>}
                     {recredit&&<>

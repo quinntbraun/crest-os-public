@@ -31,6 +31,7 @@ import {refundTransferRecoveryProfile} from './finance-refund-transfer-candidate
 import {directReceiptTipRecoveryProfile} from './finance-direct-receipt-tip-candidate.mjs';
 import {refundTransferFeeRecoveryProfile} from './finance-refund-transfer-fee-candidate.mjs';
 import {collectionFailureRecreditRecoveryProfile} from './finance-collection-failure-recredit-candidate.mjs';
+import {collectionFailureGroupedRecreditRecoveryProfile} from './finance-collection-failure-grouped-recredit-candidate.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
@@ -1045,6 +1046,14 @@ export async function restoreCollectionFailureRecreditDatabase(candidate,prior,d
   return restoreWithProfile((await collectionFailureRecreditRecoveryProfile(candidate,prior,directTip,root)).profile,directory,identity,url);
 }
 
+export async function backupCollectionFailureGroupedRecreditDatabase(candidate,prior,fee,tip,client,url,directory,recipient){
+  const checked=await collectionFailureGroupedRecreditRecoveryProfile(candidate,prior,fee,tip,root);
+  return backupWithProfile(checked.profile,client,url,directory,recipient,undefined,undefined,checked);
+}
+export async function restoreCollectionFailureGroupedRecreditDatabase(candidate,prior,fee,tip,directory,identity,url){
+  return restoreWithProfile((await collectionFailureGroupedRecreditRecoveryProfile(candidate,prior,fee,tip,root)).profile,directory,identity,url);
+}
+
 async function expense79RecoveryProfile(candidate){
   assert.equal(candidate.file,expense79File);
   assert.equal(candidate.previousRegistrySha256,legacy78Profile.registrySha256);
@@ -1117,6 +1126,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile.schemaVersion===97&&profile.heldDirectReceiptTipMigrationSha256
       ||profile.schemaVersion===98&&profile.heldRefundTransferFeeMigrationSha256
       ||profile.schemaVersion===99&&profile.heldCollectionFailureRecreditMigrationSha256
+      ||profile.schemaVersion===100&&profile.heldCollectionFailureGroupedRecreditMigrationSha256
       ||profile.schemaVersion===79&&profile.heldExpenseMigrationSha256
       ));
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -1213,6 +1223,7 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     assert.equal(manifest.heldDirectReceiptTipMigrationSha256,profile.heldDirectReceiptTipMigrationSha256);
     assert.equal(manifest.heldRefundTransferFeeMigrationSha256,profile.heldRefundTransferFeeMigrationSha256);
     assert.equal(manifest.heldCollectionFailureRecreditMigrationSha256,profile.heldCollectionFailureRecreditMigrationSha256);
+    assert.equal(manifest.heldCollectionFailureGroupedRecreditMigrationSha256,profile.heldCollectionFailureGroupedRecreditMigrationSha256);
     if(profile.heldDropoffPhotoAuthority||profile.heldCustody67MigrationSha256||profile.heldPickupReturnSources
       ||profile.heldExpenseMigrationSha256)assert(manifest.objectArchive);
     stage='authenticated_dump';const dump=await unseal(join(directory,'database.age'),receipt.dump,identity);

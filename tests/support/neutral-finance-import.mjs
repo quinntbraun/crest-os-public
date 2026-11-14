@@ -94,7 +94,7 @@ function columnType(column){
 
 export async function exerciseNeutralFinanceImport(connection,files,businessId,{
   includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,
-  includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,includeCollectionFailureRecredits=false,
+  includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,includeCollectionFailureRecredits=false,includeCollectionFailureGroupedRecredits=false,
 }={}){
   assert(!includePairedCredits||includeCredits);
   assert(!includeServiceRefunds||includePairedCredits);
@@ -106,6 +106,7 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
   assert(!includeDirectReceiptTips||includeRefundTransferAdjustments);
   assert(!includeRefundTransferFees||includeDirectReceiptTips);
   assert(!includeCollectionFailureRecredits||includeRefundTransferFees);
+  assert(!includeCollectionFailureGroupedRecredits||includeCollectionFailureRecredits);
   const parts=new Map(files.map(file=>[file.name,file.content]));
   const {tables}=JSON.parse(parts.get('dictionary.json'));
   assert.deepEqual(tables.map(row=>row.name),[...names,...includeCredits?['invoice_credits']:[],
@@ -114,7 +115,8 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
     ...includeCollectionFailures?['collection_failures','collection_failure_components']:[],
     ...includeRefundTransferAdjustments?['refund_transfer_adjustments','refund_transfer_adjustment_ranges']:[],
     ...includeRefundTransferFees?['refund_transfer_embedded_fees']:[],
-    ...includeCollectionFailureRecredits?['collection_failure_recredits']:[]]);
+    ...includeCollectionFailureRecredits?['collection_failure_recredits']:[],
+    ...includeCollectionFailureGroupedRecredits?['collection_failure_settlements','collection_failure_settlement_components','collection_failure_recredit_claims']:[]]);
   assert.equal((await connection.query("SELECT count(*)::int AS n FROM pg_namespace WHERE nspname IN('auth','crest','crest_private','crest_commands','neutral_finance')")).rows[0].n,0);
   const exports={};
   await connection.query('BEGIN');
@@ -456,7 +458,7 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
       await connection.query(`ALTER TABLE neutral_finance.customer_fund_lots
         ADD UNIQUE(business_id,receipt_tip_event_id),
         ADD FOREIGN KEY(business_id,receipt_tip_event_id) REFERENCES neutral_finance.financial_events(business_id,id),
-        ADD CHECK(num_nonnulls(unapplication_id,receipt_event_id,receipt_tip_event_id${includeCollectionFailureRecredits?',collection_failure_recredit_event_id':''})=1)`);
+        ADD CHECK(num_nonnulls(unapplication_id,receipt_event_id,receipt_tip_event_id${includeCollectionFailureRecredits?',collection_failure_recredit_event_id':''}${includeCollectionFailureGroupedRecredits?',collection_failure_settlement_component_id':''})=1)`);
       const {rows:directTips}=await connection.query(`
         SELECT t.id,lot.id IS NOT NULL AND root.id IS NOT NULL AND part.id IS NOT NULL AND claim.id IS NOT NULL
           AND (root.payment_id,root.customer_id)=(e.payment_id,lot.customer_id)
@@ -545,6 +547,57 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
           {code:'23503'});
         await connection.query('ROLLBACK TO SAVEPOINT neutral_bad_recredit');
       }
+    }
+    if(includeCollectionFailureGroupedRecredits){
+      await connection.query(`
+        ALTER TABLE neutral_finance.collection_failure_settlements
+         ADD FOREIGN KEY(business_id,failure_id) REFERENCES neutral_finance.collection_failures(business_id,id),
+         ADD FOREIGN KEY(business_id,evidence_id) REFERENCES neutral_finance.external_money_evidence(business_id,id);
+        ALTER TABLE neutral_finance.collection_failure_settlement_components
+         ADD FOREIGN KEY(business_id,settlement_id) REFERENCES neutral_finance.collection_failure_settlements(business_id,id),
+         ADD FOREIGN KEY(business_id,failure_id,failure_component_id) REFERENCES neutral_finance.collection_failure_components(business_id,collection_failure_id,id),
+         ADD FOREIGN KEY(business_id,parent_partition_id) REFERENCES neutral_finance.funding_partitions(business_id,id),
+         ADD FOREIGN KEY(business_id,receivable_id) REFERENCES neutral_finance.receivable_items(business_id,id);
+        ALTER TABLE neutral_finance.collection_failure_recredit_claims
+         ADD UNIQUE(business_id,legacy_recredit_id),ADD UNIQUE(business_id,settlement_component_id),
+         ADD CHECK(num_nonnulls(legacy_recredit_id,settlement_component_id)=1),
+         ADD FOREIGN KEY(business_id,legacy_recredit_id) REFERENCES neutral_finance.collection_failure_recredits(business_id,id),
+         ADD FOREIGN KEY(business_id,settlement_component_id) REFERENCES neutral_finance.collection_failure_settlement_components(business_id,id),
+         ADD FOREIGN KEY(business_id,failure_component_id) REFERENCES neutral_finance.collection_failure_components(business_id,id);
+        ALTER TABLE neutral_finance.financial_events
+         ADD FOREIGN KEY(business_id,collection_failure_settlement_id) REFERENCES neutral_finance.collection_failure_settlements(business_id,id);
+        ALTER TABLE neutral_finance.journal_lines
+         ADD FOREIGN KEY(business_id,collection_failure_settlement_id) REFERENCES neutral_finance.collection_failure_settlements(business_id,id),
+         ADD FOREIGN KEY(business_id,collection_failure_settlement_component_id) REFERENCES neutral_finance.collection_failure_settlement_components(business_id,id);
+        ALTER TABLE neutral_finance.customer_fund_lots
+         ADD FOREIGN KEY(business_id,collection_failure_settlement_component_id) REFERENCES neutral_finance.collection_failure_settlement_components(business_id,id)`);
+      const {rows}=await connection.query(`
+        SELECT s.id,e.template='P11' AND e.template_version=3 AND e.effective_on=s.actual_on
+          AND m.evidence_id=s.evidence_id AND m.signed_cents=s.cents AND m.account_id=s.money_account_id
+          AND count(*) FILTER(WHERE line.purpose='collection_settlement_money' AND line.debit_cents=s.cents AND line.money_movement_id=m.id)=1
+          AND sum(line.credit_cents)=s.cents AND count(c.id)=count(*)-1
+          AND coalesce(bool_and(line.credit_cents=c.last_cent-c.first_cent+1 AND c.settlement_id=s.id
+            AND c.first_cent>=failed.root_first_cent AND c.last_cent<=failed.root_last_cent
+            AND (line.purpose='collection_settlement_ar' AND c.receivable_id=line.receivable_id AND line.fund_lot_id IS NULL
+              OR line.purpose='collection_settlement_funds' AND c.receivable_id IS NULL AND lot.id=line.fund_lot_id
+                AND lot.original_cents=line.credit_cents AND lot.customer_id=s.customer_id)) FILTER(WHERE c.id IS NOT NULL),false) AS exact
+        FROM neutral_finance.collection_failure_settlements s
+        JOIN neutral_finance.financial_events e ON e.business_id=s.business_id AND e.collection_failure_settlement_id=s.id
+        JOIN neutral_finance.money_movements m ON m.business_id=e.business_id AND m.event_id=e.id
+        JOIN neutral_finance.journal_entries entry ON entry.business_id=e.business_id AND entry.event_id=e.id
+        JOIN neutral_finance.journal_lines line ON line.business_id=entry.business_id AND line.entry_id=entry.id
+        LEFT JOIN neutral_finance.collection_failure_settlement_components c ON c.business_id=line.business_id AND c.id=line.collection_failure_settlement_component_id
+        LEFT JOIN neutral_finance.collection_failure_components failed ON failed.business_id=c.business_id AND failed.id=c.failure_component_id
+        LEFT JOIN neutral_finance.customer_fund_lots lot ON lot.business_id=c.business_id AND lot.collection_failure_settlement_component_id=c.id
+        GROUP BY s.id,e.id,m.id`);
+      assert.equal(rows.length,exports.collection_failure_settlements.length);
+      assert(rows.every(row=>row.exact===true));
+      const {rows:[{overlap}]}=await connection.query(`
+        SELECT count(*)::int AS overlap FROM neutral_finance.collection_failure_recredit_claims a
+        JOIN neutral_finance.collection_failure_recredit_claims b ON a.business_id=b.business_id
+          AND a.failure_component_id=b.failure_component_id AND a.id<b.id
+        WHERE a.first_cent<=b.last_cent AND b.first_cent<=a.last_cent`);
+      assert.equal(overlap,0);
     }
     const balance=(await connection.query(`
       SELECT count(*)::int AS entries,coalesce(sum(debit),0)::text AS debit,coalesce(sum(credit),0)::text AS credit,

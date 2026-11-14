@@ -10,8 +10,9 @@ export const refundTransferExportProfile='crest.posted-finance-source.v12';
 export const directReceiptTipExportProfile='crest.posted-finance-source.v13';
 export const refundTransferFeeExportProfile='crest.posted-finance-source.v14';
 export const collectionFailureRecreditExportProfile='crest.posted-finance-source.v15';
+export const collectionFailureGroupedRecreditExportProfile='crest.posted-finance-source.v16';
 
 export function postedFinanceProfileForSchema(sourceSchemaVersion:number){
- return sourceSchemaVersion>=99?collectionFailureRecreditExportProfile:sourceSchemaVersion>=98?refundTransferFeeExportProfile:sourceSchemaVersion>=97?directReceiptTipExportProfile:sourceSchemaVersion>=96?refundTransferExportProfile:sourceSchemaVersion>=95?collectionFailureExportProfile:sourceSchemaVersion>=94?tipReturnExportProfile:sourceSchemaVersion>=93?excessReturnExportProfile
+ return sourceSchemaVersion>=100?collectionFailureGroupedRecreditExportProfile:sourceSchemaVersion>=99?collectionFailureRecreditExportProfile:sourceSchemaVersion>=98?refundTransferFeeExportProfile:sourceSchemaVersion>=97?directReceiptTipExportProfile:sourceSchemaVersion>=96?refundTransferExportProfile:sourceSchemaVersion>=95?collectionFailureExportProfile:sourceSchemaVersion>=94?tipReturnExportProfile:sourceSchemaVersion>=93?excessReturnExportProfile
   :sourceSchemaVersion>=91?excessReceiptExportProfile:postedFinanceExportProfile;
 }

@@ -18,6 +18,7 @@ const refusalText: Record<NonNullable<ReturnType<typeof collectionFailureRecredi
   input_required: 'Check the amount and complete the deposit evidence.',
   source_unavailable: 'Crest could not verify the failed payment for this customer.',
   range_unavailable: 'This portion is no longer available. Check the failed payment again.',
+  receivable_unavailable: 'The original invoice balance changed. Check the saved payment again.',
   amount_required: 'The confirmed deposit must match the portion you selected.',
   invalid_date: 'Choose a deposit date on or after the failed payment, through today.',
   channel_review_required: 'Choose a bank or wallet verified for the deposit date.',
@@ -32,7 +33,7 @@ function depositCents(value: string) {
   try { return BigInt(quoteDollarsInput(value)); } catch { return 0n; }
 }
 
-export function CollectionFailureRecredit({businessId, customerId}: {businessId: string; customerId: string}) {
+export function CollectionFailureRecredit({businessId, customerId, recoveryOnly=false}: {businessId: string; customerId: string; recoveryOnly?:boolean}) {
   const [failures, setFailures] = useState<Failures | null>(null);
   const [selectedId, setSelectedId] = useState('');
   const [date, setDate] = useState('');
@@ -197,7 +198,7 @@ export function CollectionFailureRecredit({businessId, customerId}: {businessId:
     if (event.target !== event.currentTarget) return;
     if (event.currentTarget.open) refreshPending(); else suspend();
   }}>
-    <summary>{title}</summary>
+    <summary>{recoveryOnly?'Check an earlier held-funds recovery':title}</summary>
     <section aria-label={title} aria-busy={busy}>
       <p className="field-help">Record money the bank or wallet credited back after a failed incoming payment. This restores customer funds that were held before the failure. Choose a verified deposit with no fee.</p>
       <p role="status" tabIndex={-1} ref={status}>{message}</p>
@@ -208,17 +209,17 @@ export function CollectionFailureRecredit({businessId, customerId}: {businessId:
             onChange={event => setCloseReason(event.target.value)}/></label>
           <button className="secondary" disabled={busy || !financeAccountReviewReason(closeReason.trim())}>Close original attempt</button>
         </form>}
-      </> : <>
+      </> : recoveryOnly?<p>No interrupted held-funds recovery was found.</p>:<>
         <button type="button" className="secondary" disabled={busy} onClick={load}>Load failed payments</button>
         {!!failures?.failures.length && <form onSubmit={event => {event.preventDefault(); review();}}>
-          <div><label htmlFor="failed-payment">Failed payment</label><select id="failed-payment" required disabled={busy} value={selectedId} onChange={event => {
+          <label>Failed payment<select required disabled={busy} value={selectedId} onChange={event => {
             setSelectedId(event.target.value); setOptions(null); setDeposit(emptyDeposit);
           }}>
             <option value="">Choose a failed payment</option>
             {failures.failures.map(failure => <option key={failure.failureId} value={failure.failureId}>
               {failure.failedOn} · {quoteMoney(failure.availableCents)} available · {failure.originalPaymentId.slice(0, 8)}
             </option>)}
-          </select></div>
+          </select></label>
           {failures.hasMore && <p className="field-help">Showing the 50 most recent failed payments with funds available to restore.</p>}
           <label>Date the deposit cleared<input type="date" required disabled={busy} min={selected?.failedOn} value={date}
             onChange={event => {setDate(event.target.value); setOptions(null); setDeposit(emptyDeposit);}}/></label>
@@ -226,13 +227,13 @@ export function CollectionFailureRecredit({businessId, customerId}: {businessId:
         </form>}
         {options && <form onSubmit={event => {event.preventDefault(); save();}}>
           <fieldset disabled={busy}><legend>Verified deposit</legend>
-            <div><label htmlFor="recredit-funds">Held funds to restore</label><select id="recredit-funds" required value={deposit.section}
+            <label>Held funds to restore<select required value={deposit.section}
               onChange={event => setDeposit(current => ({...current, section: event.target.value, start: ''}))}>
               <option value="">Choose a portion</option>
               {portions.map(item => <option key={item.id} value={item.id}>
                 {quoteMoney(String(BigInt(item.lastCent) - BigInt(item.firstCent) + 1n))} available · cents {item.firstCent}–{item.lastCent}
               </option>)}
-            </select></div>
+            </select></label>
             <label>Amount deposited (USD)<input required inputMode="decimal" maxLength={22} value={deposit.amount}
               onChange={event => change('amount', event.target.value)}/></label>
             {portion && <details className="direct-receipt-options"><summary>Choose a different starting position</summary>
@@ -240,11 +241,11 @@ export function CollectionFailureRecredit({businessId, customerId}: {businessId:
                 value={deposit.start} onChange={event => change('start', event.target.value)}/></label>
               <p className="field-help">Leave blank to start at the first available cent in this portion.</p>
             </details>}
-            <div><label htmlFor="recredit-bank">Bank or wallet credited</label><select id="recredit-bank" required value={deposit.channelId}
+            <label>Bank or wallet credited<select required value={deposit.channelId}
               onChange={event => change('channelId', event.target.value)}>
               <option value="">Choose a verified account</option>
               {options.channels.map(item => <option key={item.channelId} value={item.channelId}>{item.label}</option>)}
-            </select></div>
+            </select></label>
             <label>Reference type<input required maxLength={80} value={deposit.namespace}
               onChange={event => change('namespace', event.target.value)}/></label>
             <label>Transaction ID<input required maxLength={200} value={deposit.transaction}
