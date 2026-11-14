@@ -70,6 +70,12 @@ const collectionFailureLinks={
   collection_failure_components:{collection_failure_id:'collection_failures',payment_id:'payments',allocation_id:'allocation_events',
     fund_application_id:'customer_fund_applications',fund_lot_id:'customer_fund_lots',tip_realization_id:'tip_realizations'},
 };
+const refundTransferLinks={
+  financial_events:{refund_transfer_adjustment_id:'refund_transfer_adjustments'},
+  journal_lines:{refund_transfer_adjustment_id:'refund_transfer_adjustments'},
+  refund_transfer_adjustments:{prior_event_id:'financial_events',original_event_id:'financial_events',
+    fund_lot_id:'customer_fund_lots',evidence_id:'external_money_evidence'},
+};
 const integers=new Set(['version','previous_version','generation','previous_generation','draft_revision','receipt_revision',
   'number_sequence','position','commit_sequence','event_sequence','period_generation','reopened_generation','template_version','entry_sequence',
   'first_cent','last_cent','root_first_cent','root_last_cent','cents']);
@@ -88,7 +94,7 @@ function columnType(column){
 
 export async function exerciseNeutralFinanceImport(connection,files,businessId,{
   includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,
-  includeCollectionFailures=false,
+  includeCollectionFailures=false,includeRefundTransferAdjustments=false,
 }={}){
   assert(!includePairedCredits||includeCredits);
   assert(!includeServiceRefunds||includePairedCredits);
@@ -96,12 +102,14 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
   assert(!includeExcessReturns||includeExcessReceipts);
   assert(!includeTipReturns||includeExcessReturns);
   assert(!includeCollectionFailures||includeTipReturns);
+  assert(!includeRefundTransferAdjustments||includeCollectionFailures);
   const parts=new Map(files.map(file=>[file.name,file.content]));
   const {tables}=JSON.parse(parts.get('dictionary.json'));
   assert.deepEqual(tables.map(row=>row.name),[...names,...includeCredits?['invoice_credits']:[],
     ...includePairedCredits?['paired_invoice_credit_releases']:[],...includeServiceRefunds?['service_credit_refunds']:[],
     ...includeExcessReturns?['excess_receipt_returns']:[],...includeTipReturns?['tip_returns','tip_realization_range_consumptions']:[],
-    ...includeCollectionFailures?['collection_failures','collection_failure_components']:[]]);
+    ...includeCollectionFailures?['collection_failures','collection_failure_components']:[],
+    ...includeRefundTransferAdjustments?['refund_transfer_adjustments','refund_transfer_adjustment_ranges']:[]]);
   assert.equal((await connection.query("SELECT count(*)::int AS n FROM pg_namespace WHERE nspname IN('auth','crest','crest_private','crest_commands','neutral_finance')")).rows[0].n,0);
   const exports={};
   await connection.query('BEGIN');
@@ -336,6 +344,82 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
         JOIN neutral_finance.collection_failure_components b ON (a.business_id,a.payment_id)=(b.business_id,b.payment_id) AND a.id<b.id
         WHERE a.root_first_cent<=b.root_last_cent AND b.root_first_cent<=a.root_last_cent`);
       assert.equal(overlap.rows[0].broken,0);
+    }
+    if(includeRefundTransferAdjustments){
+      for(const [name,columns] of Object.entries(refundTransferLinks)){
+        for(const [column,target] of Object.entries(columns))await connection.query(
+          `ALTER TABLE ${table(name)} ADD FOREIGN KEY(business_id,${q(column)}) REFERENCES ${table(target)}(business_id,id)`);
+      }
+      await connection.query(`
+        ALTER TABLE neutral_finance.refund_transfer_adjustments ADD UNIQUE(business_id,id,prior_event_id);
+        ALTER TABLE neutral_finance.refund_transfer_adjustment_ranges ADD FOREIGN KEY(business_id,adjustment_id,prior_event_id)
+          REFERENCES neutral_finance.refund_transfer_adjustments(business_id,id,prior_event_id)`);
+      const {rows:refundTransfers}=await connection.query(`
+        WITH ranges AS (
+          SELECT business_id,adjustment_id,sum(last_cent::numeric-first_cent+1) AS total,
+            bool_and(first_cent>0 AND last_cent>=first_cent) AS valid
+          FROM neutral_finance.refund_transfer_adjustment_ranges GROUP BY business_id,adjustment_id
+        )
+        SELECT a.id,a.kind,p.valid AND p.total=a.cents AND original.template_version=1 AND e.template_version=2
+          AND original.template=e.template AND preceding.template=e.template AND e.effective_on>=preceding.effective_on
+          AND g.commit_sequence>prior_group.commit_sequence
+          AND CASE WHEN preceding.template_version=1 THEN a.kind='recredit' AND preceding.id=original.id
+          ELSE prior.kind=CASE a.kind WHEN 'recredit' THEN 'retry' ELSE 'recredit' END
+            AND prior.original_event_id=original.id AND prior.fund_lot_id=a.fund_lot_id END
+          AND proof.external_account_id=a.account_id::text AND proof.confirmed_on=a.actual_on AND proof.signed_cents=m.signed_cents
+          AND m.account_id=a.account_id AND m.evidence_id=a.evidence_id
+          AND m.signed_cents=CASE a.kind WHEN 'recredit' THEN a.cents ELSE -a.cents END AS exact_source,
+          count(*)::int AS lines,
+          count(*) FILTER(WHERE l.purpose='refund_transfer_money' AND l.account_id=a.account_id AND l.money_movement_id=m.id
+            AND l.debit_cents-l.credit_cents=m.signed_cents)::int AS money,
+          count(*) FILTER(WHERE l.purpose='refund_transfer_funds' AND l.account_id=lot.account_id
+            AND l.fixed_mapping_id=lot.mapping_id AND l.fund_lot_id=lot.id AND l.credit_cents-l.debit_cents=m.signed_cents)::int AS funds
+        FROM neutral_finance.refund_transfer_adjustments a
+        JOIN ranges p ON (p.business_id,p.adjustment_id)=(a.business_id,a.id)
+        JOIN neutral_finance.customer_fund_lots lot ON (lot.business_id,lot.id)=(a.business_id,a.fund_lot_id)
+        JOIN neutral_finance.financial_events original ON (original.business_id,original.id)=(a.business_id,a.original_event_id)
+        JOIN neutral_finance.financial_events preceding ON (preceding.business_id,preceding.id)=(a.business_id,a.prior_event_id)
+        LEFT JOIN neutral_finance.refund_transfer_adjustments prior ON (prior.business_id,prior.id)=(a.business_id,preceding.refund_transfer_adjustment_id)
+        JOIN neutral_finance.financial_events e ON (e.business_id,e.refund_transfer_adjustment_id)=(a.business_id,a.id)
+        JOIN neutral_finance.atomic_finance_groups g ON (g.business_id,g.id)=(e.business_id,e.group_id)
+        JOIN neutral_finance.atomic_finance_groups prior_group ON (prior_group.business_id,prior_group.id)=(preceding.business_id,preceding.group_id)
+        JOIN neutral_finance.money_movements m ON (m.business_id,m.event_id)=(e.business_id,e.id)
+        JOIN neutral_finance.external_money_evidence proof ON (proof.business_id,proof.id)=(a.business_id,a.evidence_id)
+        JOIN neutral_finance.journal_entries j ON (j.business_id,j.event_id)=(e.business_id,e.id)
+        JOIN neutral_finance.journal_lines l ON (l.business_id,l.entry_id,l.refund_transfer_adjustment_id)=(j.business_id,j.id,a.id)
+        GROUP BY a.id,p.total,p.valid,original.id,preceding.id,prior.id,e.id,g.id,prior_group.id,m.id,proof.id`);
+      assert.equal(refundTransfers.length,exports.refund_transfer_adjustments.length);
+      assert(refundTransfers.every(row=>row.exact_source===true&&row.lines===2&&row.funds===1&&row.money===1));
+      const {rows:[{overlap,outside}]}=await connection.query(`
+        WITH available AS (
+          SELECT e.business_id,e.id AS event_id,r.first_cent,r.last_cent
+          FROM neutral_finance.financial_events e JOIN neutral_finance.service_credit_refunds r ON (r.business_id,r.id)=(e.business_id,e.service_refund_id)
+          UNION ALL
+          SELECT e.business_id,e.id,r.first_cent,r.last_cent
+          FROM neutral_finance.financial_events e JOIN neutral_finance.excess_receipt_returns r ON (r.business_id,r.id)=(e.business_id,e.excess_return_id)
+          UNION ALL
+          SELECT e.business_id,e.id,t.first_cent+(r.first_cent-1),t.first_cent+(r.last_cent-1)
+          FROM neutral_finance.financial_events e JOIN neutral_finance.tip_realization_range_consumptions r ON (r.business_id,r.tip_return_id)=(e.business_id,e.tip_return_id)
+          JOIN neutral_finance.tip_realizations t ON (t.business_id,t.id)=(r.business_id,r.tip_realization_id)
+          UNION ALL
+          SELECT e.business_id,e.id,r.first_cent,r.last_cent
+          FROM neutral_finance.financial_events e
+          JOIN neutral_finance.refund_transfer_adjustment_ranges r ON (r.business_id,r.adjustment_id)=(e.business_id,e.refund_transfer_adjustment_id)
+        )
+        SELECT (SELECT count(*)::int FROM neutral_finance.refund_transfer_adjustment_ranges a
+          JOIN neutral_finance.refund_transfer_adjustment_ranges b ON (a.business_id,a.prior_event_id)=(b.business_id,b.prior_event_id) AND a.id<b.id
+          WHERE a.first_cent<=b.last_cent AND b.first_cent<=a.last_cent) AS overlap,
+         (SELECT count(*)::int FROM neutral_finance.refund_transfer_adjustment_ranges r WHERE NOT EXISTS(
+          SELECT FROM available a WHERE (a.business_id,a.event_id)=(r.business_id,r.prior_event_id)
+           AND r.first_cent>=a.first_cent AND r.last_cent<=a.last_cent)) AS outside`);
+      assert.equal(overlap,0);
+      assert.equal(outside,0);
+      if(refundTransfers.length){
+        await connection.query('SAVEPOINT neutral_wrong_refund_transfer_parent');
+        await assert.rejects(connection.query('UPDATE neutral_finance.refund_transfer_adjustment_ranges SET prior_event_id=$1',[randomUUID()]),
+          {code:'23503'});
+        await connection.query('ROLLBACK TO SAVEPOINT neutral_wrong_refund_transfer_parent');
+      }
     }
     const balance=(await connection.query(`
       SELECT count(*)::int AS entries,coalesce(sum(debit),0)::text AS debit,coalesce(sum(credit),0)::text AS credit,

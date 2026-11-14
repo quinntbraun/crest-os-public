@@ -475,6 +475,11 @@
       "version": "20261219180000",
       "file": "20261219180000_fictional_collection_failure.sql",
       "sha256": "321d195d999b93e6895f7b0ca18e5e2857a98d3e20249c525c3c2b83a00e12d1"
+    },
+    {
+      "version": "20261220180000",
+      "file": "20261220180000_fictional_refund_transfer.sql",
+      "sha256": "52ec69175560b3e049ca376c6f8bcfcd07cf7897afb47e1147cd7ca543a0eac8"
     }
   ]
 }

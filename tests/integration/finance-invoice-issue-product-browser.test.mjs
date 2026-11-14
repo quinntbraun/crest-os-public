@@ -26,7 +26,8 @@ const applyReceiptFunds=excessReceipts&&process.env.CREST_TEST_RECEIPT_FUNDS_APP
 const excessReturnExport=process.env.CREST_TEST_EXCESS_RETURN_EXPORT==='1';
 const tipReturnExport=process.env.CREST_TEST_TIP_RETURN_EXPORT==='1';
 const collectionFailureExport=process.env.CREST_TEST_COLLECTION_FAILURE_EXPORT==='1';
-const postedFinanceSchemaVersion=collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
+const refundTransferExport=process.env.CREST_TEST_REFUND_TRANSFER_EXPORT==='1';
+const postedFinanceSchemaVersion=refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
@@ -397,7 +398,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await allowInvoiceReadWindow();
         await page.goto(fixture.origin+'/settings/accounts');
         await page.getByRole('button',{name:'Load accounts',exact:true}).press('Enter');
-        const disclosure=page.getByText('Customer funds held',{exact:true});
+        const disclosure=page.getByText(refundTransferExport?'Available customer funds':'Customer funds held',{exact:true});
         await disclosure.press('Enter');
         const report=page.getByRole('region',{name:'Customer funds held',exact:true});
         const reportDate=report.getByLabel('Through date (optional)');
@@ -825,7 +826,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const {['manifest.json']:manifestBytes,['export_delivery.json']:deliveryBytes,...parts}=unzipSync(archive);
         const manifest=strFromU8(manifestBytes),delivery=JSON.parse(strFromU8(deliveryBytes));
         const verified=verifyFinanceSourceExport(manifest,Object.entries(parts).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
-        const exportProfile=collectionFailureExport?'crest.posted-finance-source.v11':tipReturnExport?'crest.posted-finance-source.v10':excessReturnExport?'crest.posted-finance-source.v9':excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
+        const exportProfile=refundTransferExport?'crest.posted-finance-source.v12':collectionFailureExport?'crest.posted-finance-source.v11':tipReturnExport?'crest.posted-finance-source.v10':excessReturnExport?'crest.posted-finance-source.v9':excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
         assert.equal(verified.profile,exportProfile);
         assert.equal(verified.completePortableExport,false);
         assert.equal(delivery.sourceSchemaVersion,postedFinanceSchemaVersion);
@@ -970,7 +971,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           WHERE o.business_id=$1 AND o.payment_id=$2`,[fixture.business,committed.paymentId])).rows;
          assert.deepEqual(funds,[{origin:committed.fundingOriginId,lot:committed.heldFunds.lotId,cents:'1234',unapplication:null,
           event:committed.eventId,mapping:mappingId,partition:committed.heldFunds.fundingPartitionId,first:'1',last:'1234',partitions:1,allocations:0}]);
-         let returned,adjustment;
+         let returned,adjustment,recredit,refundRetry;
          if(excessReturnExport){
           await allowInvoiceReadWindow();
           await openReturn(committed.actualOn);
@@ -1111,10 +1112,83 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await panel.getByRole('button',{name:'Download adjustment (CSV)',exact:true}).press('Enter');
            assert((await readFile(await (await csv).path(),'utf8')).includes(adjustment.collectionFailureId));
           }
+          if(refundTransferExport){
+           await allowInvoiceReadWindow();
+           const title='Review a returned refund';
+           const transfer=invoice.getByRole('region',{name:title,exact:true});
+           await invoice.getByText(title,{exact:true}).press('Enter');
+           async function prepareTransfer(kind,eventId,amount,transaction){
+            await transfer.getByRole('combobox',{name:'What happened?',exact:true}).selectOption(kind);
+            await transfer.getByLabel('Settlement date',{exact:true}).fill(committed.actualOn);
+            await transfer.getByRole('button',{name:'Load prior transfers',exact:true}).press('Enter');
+            await expect(transfer.getByRole('status')).toContainText('Choose the prior transfer');
+            await transfer.getByRole('combobox',{name:'Prior transfer',exact:true}).selectOption(eventId);
+            await transfer.getByText('$1.00 available',{exact:true}).press('Enter');
+            await transfer.getByLabel('Amount to record (USD)',{exact:true}).fill(amount);
+            if(kind==='retry')await transfer.getByRole('button',{name:'Start at cent 1',exact:true}).press('Enter');
+            await transfer.getByLabel('Settled amount (USD)',{exact:true}).fill(amount);
+            await transfer.getByRole('combobox',{name:kind==='recredit'?'Account recredited':'Account debited',exact:true}).selectOption({label:'Fictional checking'});
+            await transfer.getByLabel('Reference type',{exact:true}).fill('ledger');
+            await transfer.getByLabel('Transaction ID',{exact:true}).fill(transaction);
+            await transfer.getByLabel('Statement reference',{exact:true}).fill('Fictional statement transfer');
+            await transfer.getByLabel('How you verified settlement',{exact:true}).fill('Fictional owner verified settlement');
+            await transfer.getByLabel('Reason for the transfer',{exact:true}).fill('Fictional returned disbursement');
+           }
+           await prepareTransfer('recredit',returned.eventId,'1.00','fictional-refund-recredit');
+           const save=transfer.getByRole('button',{name:'Save refund transfer',exact:true});
+           for(const width of [360,390,768,1440]){
+            await page.setViewportSize({width,height:900});await save.scrollIntoViewIfNeeded();
+            assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+            assert.deepEqual((await new AxeBuilder({page}).include('[aria-label="'+title+'"]')
+             .withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+            await page.screenshot({path:'.local/review/finance-refund-transfer-'+name+'-'+width+'.png'});
+           }
+           await allowInvoiceReadWindow();
+           let submitted=0;
+           await page.route('**/api/business/finance-accounts/refund-transfer-submit',async route=>{
+            submitted++;
+            const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+            if(response.status()!==200){await route.fulfill({response});return;}
+            recredit=(await response.json()).receipt;await route.abort('failed');
+           },{times:1});
+           await save.press('Enter');
+           await expect(transfer.getByRole('status')).toContainText('could not confirm the save');
+           assert.deepEqual([recredit?.kind,recredit?.priorEventId,recredit?.cents],['recredit',returned.eventId,'100']);
+           const key='crest.refund-transfer.pending-reference.v1';
+           const pending=JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key));
+           assert.deepEqual(Object.keys(pending).sort(),['binding','businessId','customerId','reference']);
+           assert.deepEqual(Object.keys(pending.reference).sort(),['operationId','recoveryEpoch','refundTransferAdjustmentId']);
+           await allowInvoiceReadWindow();
+           await page.reload();
+           await draftDisclosure.click();
+           await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+           await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
+           await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+           await expect(draftStatus).toHaveText('Issued invoice loaded.');
+           await invoice.getByText(title,{exact:true}).press('Enter');
+           await transfer.getByRole('button',{name:'Check original refund transfer',exact:true}).press('Enter');
+           await expect(transfer.getByRole('status')).toHaveText('The original refund transfer was recorded.');
+           assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),null);
+           assert.equal(submitted,1);
+           await prepareTransfer('retry',recredit.eventId,'0.40','fictional-refund-retry');
+           await allowInvoiceReadWindow();
+           await page.route('**/api/business/finance-accounts/refund-transfer-submit',async route=>{
+            const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+            if(response.status()===200)refundRetry=(await response.json()).receipt;
+            await route.fulfill({response});
+           },{times:1});
+           await save.press('Enter');
+           await expect(transfer.getByRole('status')).toHaveText('Refund transfer record saved.');
+           assert.deepEqual([refundRetry?.kind,refundRetry?.originalEventId,refundRetry?.priorEventId,refundRetry?.cents],
+            ['retry',returned.eventId,recredit.eventId,'40']);
+           const csv=page.waitForEvent('download');
+           await transfer.getByRole('button',{name:'Download refund transfer (CSV)',exact:true}).press('Enter');
+           assert((await readFile(await (await csv).path(),'utf8')).includes(refundRetry.refundTransferAdjustmentId));
+          }
           await allowInvoiceReadWindow();
           await page.goto(fixture.origin+'/settings/accounts');
           await page.getByRole('button',{name:'Load accounts',exact:true}).click();
-          await page.getByText('Customer funds held',{exact:true}).press('Enter');
+          await page.getByText(refundTransferExport?'Available customer funds':'Customer funds held',{exact:true}).press('Enter');
           const heldReport=page.getByRole('region',{name:'Customer funds held',exact:true});
           await heldReport.getByRole('button',{name:'Load customer funds',exact:true}).press('Enter');
           await expect(heldReport.getByRole('status')).toHaveText('Customer funds matched the ledger.');
@@ -1124,6 +1198,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           const trial=page.getByRole('region',{name:'Fictional trial balance',exact:true});
           await trial.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
           await expect(trial.getByRole('status')).toHaveText('Posted balances loaded.');
+          if(refundTransferExport)await expect(trial).toContainText('Refunds still due · $0.60');
           await trial.getByText('Journal entries',{exact:true}).press('Enter');
           await allowInvoiceReadWindow();
           const journalResponse=page.waitForResponse(response=>response.url().endsWith('/posted-journal'));
@@ -1139,6 +1214,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           if(adjustment){
            await expect(trial).toContainText('Failed payment · Customer funds reduced');
            await expect(trial).toContainText('Failed payment · Money account credited');
+          }
+          if(refundRetry){
+           await expect(trial).toContainText('Refund returned · Recredited by bank or wallet');
+           await expect(trial).toContainText('Retried refund · Settled debit');
           }
           const journalCsv=page.waitForEvent('download');
           await trial.getByRole('button',{name:'Download journal page CSV',exact:true}).press('Enter');
@@ -1177,6 +1256,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           assert(strFromU8(excessParts['collection_failures.csv']).includes(adjustment.collectionFailureId));
           assert(strFromU8(excessParts['collection_failure_components.csv']).includes(adjustment.components[0].componentId));
          }
+         if(refundRetry)assert(strFromU8(excessParts['refund_transfer_adjustments.csv']).includes(refundRetry.refundTransferAdjustmentId));
          assert(ledger.split(/\r?\n/).some(row=>row.includes('"receipt_funds"')&&row.includes(committed.heldFunds.lotId)&&row.includes('"1234"')));
          if(returned){
           const returns=strFromU8(excessParts['excess_receipt_returns.csv']);

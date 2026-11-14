@@ -243,7 +243,8 @@ export function FinanceAccountsScreen(){
   {context?.trialBalance&&!editor&&<section className={styles.section} aria-labelledby="finance-reports-heading">
    <h2 id="finance-reports-heading" tabIndex={-1}>Reports</h2>
    <TrialBalance businessId={context.businessId}/>
-   {context.customerFundsReport&&<CustomerFundsReport key={context.businessId} businessId={context.businessId} includesExcess={context.excessReceipts===true}/>}
+   {context.customerFundsReport&&<CustomerFundsReport key={context.businessId} businessId={context.businessId}
+    includesExcess={context.excessReceipts===true} includesRefundTransfers={context.refundTransfers===true}/>}
    {context.receivableAging&&<ReceivableAging key={context.businessId} businessId={context.businessId}/>}
   </section>}
   {context&&hasSetup&&!editor&&<section className={styles.section} aria-labelledby="finance-setup-heading">

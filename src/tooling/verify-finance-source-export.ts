@@ -9,6 +9,7 @@ import {verifyServiceRefundSourceClosure} from '../bookkeeping/service-refund-so
 import {isExcessReturnOperation,verifyExcessReturnSourceClosure} from '../bookkeeping/excess-return-source.ts';
 import {isTipReturnOperation,verifyTipReturnSourceClosure} from '../bookkeeping/tip-return-source.ts';
 import {isCollectionFailureOperation,verifyCollectionFailureSourceClosure} from '../bookkeeping/collection-failure-source.ts';
+import {isRefundTransferOperation,verifyRefundTransferSourceClosure} from '../bookkeeping/refund-transfer-source.ts';
 
 type Part=Readonly<{name:string;content:string}>;
 type Row=Readonly<Record<string,unknown>>;
@@ -39,14 +40,14 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
   const manifest=record(manifestText),version=manifest.schemaVersion;
   require(exact(manifest,['schemaVersion','scope','businessId','currency','observedAt','historySnapshotToken','sourceTokens',
     'rowCounts','historyCounts','completePortableExport','referenceClosureComplete','completeBackup','files'])
-    &&(version===1||version===2||version===3||version===4||version===5||version===6||version===7||version===8||version===9||version===10||version===11)
+    &&(version===1||version===2||version===3||version===4||version===5||version===6||version===7||version===8||version===9||version===10||version===11||version===12)
     &&manifest.scope==='crest.posted-finance-source.v'+version&&manifest.businessId===businessId
     &&manifest.currency==='USD'&&typeof manifest.observedAt==='string'&&Number.isFinite(Date.parse(manifest.observedAt))
     &&token(manifest.historySnapshotToken)&&manifest.completePortableExport===false&&manifest.referenceClosureComplete===false
     &&manifest.completeBackup===false);
   const sourceNames=['invoice','receipt','expense',...(version>=2?['correction']:[]),...(version>=3?['application']:[]),
     ...(version>=4?['tip']:[]),...(version>=5?['credit']:[]),...(version>=6?['paired']:[]),...(version>=7?['refund']:[]),
-    ...(version>=9?['excessReturn']:[]),...(version>=10?['tipReturn']:[]),...(version>=11?['collectionFailure']:[])];
+    ...(version>=9?['excessReturn']:[]),...(version>=10?['tipReturn']:[]),...(version>=11?['collectionFailure']:[]),...(version>=12?['refundTransfer']:[])];
   require(exact(manifest.sourceTokens,sourceNames)&&Object.values(manifest.sourceTokens).every(token));
   const tables=financeSourceTables(version),expectedNames=new Set([...names,...tables.flatMap(({name})=>[name+'.csv',name+'_escape_map.json'])]);
   require(exact(manifest.rowCounts,tables.map(table=>table.name))&&Object.values(manifest.rowCounts).every(count)
@@ -110,6 +111,7 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
       require(version>=9||kind!=='operation'||!isExcessReturnOperation(evidence.row as Row));
       require(version>=10||kind!=='operation'||!isTipReturnOperation(evidence.row as Row));
       require(version>=11||kind!=='operation'||!isCollectionFailureOperation(evidence.row as Row));
+      require(version>=12||kind!=='operation'||!isRefundTransferOperation(evidence.row as Row));
       if(version>=4)history[kind].push(evidence.row as Row);
     }
   }
@@ -130,7 +132,9 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
       &&(version<11||row.collection_failure_component_id===null)):decoded.get(table)!,history);
   if(version===5)verifyInvoiceCreditSourceClosure(table=>decoded.get(table)!,history);
   if(version>=6)verifyPairedInvoiceCreditSourceClosure(table=>decoded.get(table)!,history);
-  if(version>=7)verifyServiceRefundSourceClosure(table=>decoded.get(table)!,history);
+  const originalRefundRows=(table:string)=>version>=12&&table==='financial_events'
+    ?decoded.get(table)!.filter(row=>row.refund_transfer_adjustment_id===null):decoded.get(table)!;
+  if(version>=7)verifyServiceRefundSourceClosure(originalRefundRows,history);
   if(version>=8){
     const roots=new Map(decoded.get('funding_origins')!.map(row=>[row.id,row]));
     const parts=new Map(decoded.get('funding_partitions')!.map(row=>[row.id,row]));
@@ -195,10 +199,11 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
         &&receipt.firstCent===application.first_cent&&receipt.lastCent===application.last_cent&&receipt.cents===String(cents));
     }
   }
-  if(version>=9)verifyExcessReturnSourceClosure(table=>decoded.get(table)!,history);
+  if(version>=9)verifyExcessReturnSourceClosure(originalRefundRows,history);
   if(version>=10)verifyTipReturnSourceClosure(table=>version>=11&&table==='tip_realization_range_consumptions'
-    ?decoded.get(table)!.filter(row=>row.collection_failure_component_id===null):decoded.get(table)!,history);
+    ?decoded.get(table)!.filter(row=>row.collection_failure_component_id===null):originalRefundRows(table),history);
   if(version>=11)verifyCollectionFailureSourceClosure(table=>decoded.get(table)!,history);
+  if(version>=12)verifyRefundTransferSourceClosure(table=>decoded.get(table)!,history);
   const totals=[...balances.values()].reduce((sum,balance)=>sum+balance.debit,0n).toString();
   return Object.freeze({verified:true,profile:manifest.scope,files:files.size,sourceRows:rows,
     balancedJournalEntries:balances.size,debitCents:totals,creditCents:totals,
