@@ -24,7 +24,7 @@ export async function requireSyntheticFinancePreviewConnection(connectionString,
  finally{await client.end().catch(()=>undefined);}
 }
 
-export async function readSyntheticFinancePreview(directory,state,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false){
+export async function readSyntheticFinancePreview(directory,state,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false,collectionFailureRecredits=false){
  assert(typeof excessReceipts==='boolean'&&(!excessReceipts||directReceipts&&customerFundsReport),failure);
  assert(typeof excessReturns==='boolean'&&(!excessReturns||excessReceipts&&trialBalance),failure);
  assert(typeof tipReturns==='boolean'&&(!tipReturns||excessReturns&&heldTips),failure);
@@ -32,6 +32,7 @@ export async function readSyntheticFinancePreview(directory,state,taxProfiles=fa
  assert(typeof refundTransfers==='boolean'&&(!refundTransfers||collectionFailures&&serviceRefunds),failure);
  assert(typeof directReceiptTips==='boolean'&&(!directReceiptTips||refundTransfers&&excessReceipts&&taxProfiles),failure);
  assert(typeof refundTransferFees==='boolean'&&(!refundTransferFees||directReceiptTips&&refundTransfers),failure);
+ assert(typeof collectionFailureRecredits==='boolean'&&(!collectionFailureRecredits||refundTransferFees&&fundApplications),failure);
  assert(typeof customerFundsReport==='boolean'&&(!customerFundsReport||serviceRefunds),failure);
  assert(typeof receivableAging==='boolean'&&(!receivableAging||serviceRefunds),failure);
  assert(typeof fundApplications==='boolean'&&(!fundApplications||paymentCorrections),failure);
@@ -63,5 +64,5 @@ export async function readSyntheticFinancePreview(directory,state,taxProfiles=fa
  }catch{throw Error(failure);}
  await requireSyntheticFinancePreviewConnection(connectionString,login);
  return {connectionString,fixedMappings:true,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,
-  invoiceIssueTaxReview:invoiceIssue,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees};
+  invoiceIssueTaxReview:invoiceIssue,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits};
 }

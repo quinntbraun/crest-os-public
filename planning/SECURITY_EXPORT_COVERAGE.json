@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 98,
+  "migrationCount": 99,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2588,7 +2588,8 @@
         "excess_return_id",
         "tip_return_id",
         "collection_failure_id",
-        "refund_transfer_adjustment_id"
+        "refund_transfer_adjustment_id",
+        "collection_failure_recredit_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2664,7 +2665,8 @@
         "tip_return_id",
         "collection_failure_id",
         "collection_failure_component_id",
-        "refund_transfer_adjustment_id"
+        "refund_transfer_adjustment_id",
+        "collection_failure_recredit_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2825,7 +2827,8 @@
         "mapping_id",
         "original_cents",
         "receipt_event_id",
-        "receipt_tip_event_id"
+        "receipt_tip_event_id",
+        "collection_failure_recredit_event_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -3556,6 +3559,30 @@
         "cents",
         "confirmation",
         "component_evidence_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.collection_failure_recredits",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "failure_id",
+        "failure_component_id",
+        "customer_id",
+        "channel_version_id",
+        "money_account_id",
+        "evidence_id",
+        "actual_on",
+        "first_cent",
+        "last_cent",
+        "confirmation",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

@@ -121,7 +121,7 @@ export async function requireSyntheticPickupReturnWorkflow(connectionString){
  ].map(signature=>'crest_commands.'+signature),'SYNTHETIC_PICKUP_RETURN_WORKFLOW_MIGRATION_REQUIRED','20261124180000');
 }
 
-export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false){
+export async function requireSyntheticFinanceAccountConfiguration(connectionString,businessId,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false,collectionFailureRecredits=false){
  assert(typeof fundApplications==='boolean'&&(!fundApplications||paymentCorrections));
  assert(typeof heldTips==='boolean'&&(!heldTips||fundApplications&&taxProfiles));
  assert(typeof invoiceCredits==='boolean'&&(!invoiceCredits||heldTips));
@@ -294,6 +294,13 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
  if(refundTransferFees)signatures.push('read_fictional_refund_transfer_fee_option('+authority+',uuid,uuid,date)',
   'record_fictional_refund_transfer_adjustment_with_fee('+authority+',uuid,uuid,uuid,uuid,uuid,text,uuid,bigint,date,bigint,text,text,jsonb,jsonb,jsonb)',
   'read_fictional_journal_v12('+authority+',date,uuid,uuid,integer)');
+ assert(typeof collectionFailureRecredits==='boolean'&&(!collectionFailureRecredits||refundTransferFees&&fundApplications));
+ if(collectionFailureRecredits)signatures.push('list_fictional_collection_failure_held_recredits('+authority+',uuid)',
+  'read_fictional_collection_failure_held_recredit_options('+authority+',uuid,uuid,date)',
+  'record_fictional_collection_failure_held_recredit('+authority+',uuid,uuid,uuid,uuid,uuid,uuid,uuid,bigint,date,bigint,bigint,bigint,text,text,jsonb)',
+  'lookup_fictional_collection_failure_held_recredit('+authority+',uuid,uuid,uuid)',
+  'retire_fictional_collection_failure_held_recredit('+authority+',uuid,uuid,uuid,uuid,text)',
+  'read_fictional_journal_v13('+authority+',date,uuid,uuid,integer)');
  assert(typeof receivableAging==='boolean'&&(!receivableAging||serviceRefunds));
  if(receivableAging)signatures.push('read_fictional_receivable_aging('+authority+',date)');
  const qualified=signatures.map(signature=>'crest_commands.'+signature);
@@ -326,6 +333,7 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
   if(refundTransfers)versions.push('20261220180000');
   if(directReceiptTips)versions.push('20261221180000');
   if(refundTransferFees)versions.push('20261222180000');
+  if(collectionFailureRecredits)versions.push('20261223180000');
   const migration=await client.query('SELECT 1 FROM supabase_migrations.schema_migrations WHERE version=ANY($1::text[])',[versions]);
   assert(migration.rowCount===versions.length,missing);
   const {rows}=await client.query(`

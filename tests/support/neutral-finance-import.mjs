@@ -94,7 +94,7 @@ function columnType(column){
 
 export async function exerciseNeutralFinanceImport(connection,files,businessId,{
   includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,
-  includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,
+  includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,includeCollectionFailureRecredits=false,
 }={}){
   assert(!includePairedCredits||includeCredits);
   assert(!includeServiceRefunds||includePairedCredits);
@@ -105,6 +105,7 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
   assert(!includeRefundTransferAdjustments||includeCollectionFailures);
   assert(!includeDirectReceiptTips||includeRefundTransferAdjustments);
   assert(!includeRefundTransferFees||includeDirectReceiptTips);
+  assert(!includeCollectionFailureRecredits||includeRefundTransferFees);
   const parts=new Map(files.map(file=>[file.name,file.content]));
   const {tables}=JSON.parse(parts.get('dictionary.json'));
   assert.deepEqual(tables.map(row=>row.name),[...names,...includeCredits?['invoice_credits']:[],
@@ -112,7 +113,8 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
     ...includeExcessReturns?['excess_receipt_returns']:[],...includeTipReturns?['tip_returns','tip_realization_range_consumptions']:[],
     ...includeCollectionFailures?['collection_failures','collection_failure_components']:[],
     ...includeRefundTransferAdjustments?['refund_transfer_adjustments','refund_transfer_adjustment_ranges']:[],
-    ...includeRefundTransferFees?['refund_transfer_embedded_fees']:[]]);
+    ...includeRefundTransferFees?['refund_transfer_embedded_fees']:[],
+    ...includeCollectionFailureRecredits?['collection_failure_recredits']:[]]);
   assert.equal((await connection.query("SELECT count(*)::int AS n FROM pg_namespace WHERE nspname IN('auth','crest','crest_private','crest_commands','neutral_finance')")).rows[0].n,0);
   const exports={};
   await connection.query('BEGIN');
@@ -454,7 +456,7 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
       await connection.query(`ALTER TABLE neutral_finance.customer_fund_lots
         ADD UNIQUE(business_id,receipt_tip_event_id),
         ADD FOREIGN KEY(business_id,receipt_tip_event_id) REFERENCES neutral_finance.financial_events(business_id,id),
-        ADD CHECK(num_nonnulls(unapplication_id,receipt_event_id,receipt_tip_event_id)=1)`);
+        ADD CHECK(num_nonnulls(unapplication_id,receipt_event_id,receipt_tip_event_id${includeCollectionFailureRecredits?',collection_failure_recredit_event_id':''})=1)`);
       const {rows:directTips}=await connection.query(`
         SELECT t.id,lot.id IS NOT NULL AND root.id IS NOT NULL AND part.id IS NOT NULL AND claim.id IS NOT NULL
           AND (root.payment_id,root.customer_id)=(e.payment_id,lot.customer_id)
@@ -486,6 +488,62 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
         await assert.rejects(connection.query('UPDATE neutral_finance.customer_fund_lots SET receipt_tip_event_id=$1 WHERE id=(SELECT id FROM neutral_finance.customer_fund_lots WHERE receipt_tip_event_id IS NOT NULL ORDER BY id LIMIT 1)',[randomUUID()]),
           {code:'23503'});
         await connection.query('ROLLBACK TO SAVEPOINT neutral_bad_direct_tip_link');
+      }
+    }
+    if(includeCollectionFailureRecredits){
+      await connection.query(`
+        ALTER TABLE neutral_finance.collection_failure_components ADD UNIQUE(business_id,collection_failure_id,id);
+        ALTER TABLE neutral_finance.collection_failure_recredits
+          ADD FOREIGN KEY(business_id,failure_id,failure_component_id)
+            REFERENCES neutral_finance.collection_failure_components(business_id,collection_failure_id,id),
+          ADD FOREIGN KEY(business_id,evidence_id) REFERENCES neutral_finance.external_money_evidence(business_id,id);
+        ALTER TABLE neutral_finance.financial_events
+          ADD UNIQUE(business_id,collection_failure_recredit_id),
+          ADD FOREIGN KEY(business_id,collection_failure_recredit_id) REFERENCES neutral_finance.collection_failure_recredits(business_id,id);
+        ALTER TABLE neutral_finance.journal_lines
+          ADD FOREIGN KEY(business_id,collection_failure_recredit_id) REFERENCES neutral_finance.collection_failure_recredits(business_id,id);
+        ALTER TABLE neutral_finance.customer_fund_lots
+          ADD UNIQUE(business_id,collection_failure_recredit_event_id),
+          ADD FOREIGN KEY(business_id,collection_failure_recredit_event_id) REFERENCES neutral_finance.financial_events(business_id,id)`);
+      const {rows}=await connection.query(`
+        SELECT r.id, c.fund_lot_id=base.id AND f.kind='settled_failure' AND f.effective_on<=r.actual_on
+          AND r.first_cent>=c.root_first_cent AND r.last_cent<=c.root_last_cent AND r.last_cent>=r.first_cent
+          AND e.template='P11' AND e.template_version=2 AND e.effective_on=r.actual_on
+          AND recovered.origin_id=base.origin_id AND recovered.customer_id=base.customer_id
+          AND recovered.parent_partition_id=base.parent_partition_id AND recovered.original_cents=r.last_cent-r.first_cent+1
+          AND move.account_id=r.money_account_id AND move.evidence_id=r.evidence_id AND move.signed_cents=recovered.original_cents
+          AND proof.signed_cents=move.signed_cents AND proof.confirmed_on=r.actual_on AND proof.external_account_id=move.account_id::text
+          AND count(*)=2 AND count(*) FILTER(WHERE line.purpose='collection_recredit_money' AND line.money_movement_id=move.id
+              AND line.account_id=move.account_id AND line.debit_cents=move.signed_cents AND line.credit_cents=0)=1
+          AND count(*) FILTER(WHERE line.purpose='collection_recredit_funds' AND line.fund_lot_id=recovered.id
+              AND line.account_id=recovered.account_id AND line.fixed_mapping_id=recovered.mapping_id
+              AND line.credit_cents=recovered.original_cents AND line.debit_cents=0)=1 AS exact
+        FROM neutral_finance.collection_failure_recredits r
+        JOIN neutral_finance.collection_failures f ON f.business_id=r.business_id AND f.id=r.failure_id
+        JOIN neutral_finance.collection_failure_components c ON c.business_id=r.business_id AND c.id=r.failure_component_id
+        JOIN neutral_finance.customer_fund_lots base ON base.business_id=c.business_id AND base.id=c.fund_lot_id
+        JOIN neutral_finance.financial_events e ON e.business_id=r.business_id AND e.collection_failure_recredit_id=r.id
+        JOIN neutral_finance.customer_fund_lots recovered ON recovered.business_id=e.business_id AND recovered.collection_failure_recredit_event_id=e.id
+        JOIN neutral_finance.money_movements move ON move.business_id=e.business_id AND move.event_id=e.id
+        JOIN neutral_finance.external_money_evidence proof ON proof.business_id=move.business_id AND proof.id=move.evidence_id
+        JOIN neutral_finance.journal_entries entry ON entry.business_id=e.business_id AND entry.event_id=e.id
+        JOIN neutral_finance.journal_lines line ON line.business_id=entry.business_id AND line.entry_id=entry.id AND line.collection_failure_recredit_id=r.id
+        GROUP BY r.id,f.id,c.id,base.id,e.id,recovered.id,move.id,proof.id`);
+      assert.equal(rows.length,exports.collection_failure_recredits.length);
+      assert(rows.every(row=>row.exact===true));
+      const {rows:[{invalid}]}=await connection.query(`
+        SELECT count(*)::int AS invalid FROM neutral_finance.customer_fund_applications a
+        JOIN neutral_finance.customer_fund_lots l ON l.business_id=a.business_id AND l.id=a.fund_lot_id
+        JOIN neutral_finance.financial_events e ON e.business_id=l.business_id AND e.id=l.collection_failure_recredit_event_id
+        JOIN neutral_finance.collection_failure_recredits r ON r.business_id=e.business_id AND r.id=e.collection_failure_recredit_id
+        JOIN neutral_finance.receivable_items receivable ON receivable.business_id=a.business_id AND receivable.id=a.receivable_id
+        WHERE a.first_cent<r.first_cent OR a.last_cent>r.last_cent OR l.customer_id<>receivable.customer_id`);
+      assert.equal(invalid,0);
+      if(rows.length){
+        await connection.query('SAVEPOINT neutral_bad_recredit');
+        await assert.rejects(connection.query('UPDATE neutral_finance.collection_failure_recredits SET failure_component_id=$1',[randomUUID()]),
+          {code:'23503'});
+        await connection.query('ROLLBACK TO SAVEPOINT neutral_bad_recredit');
       }
     }
     const balance=(await connection.query(`

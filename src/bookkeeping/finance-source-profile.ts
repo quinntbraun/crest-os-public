@@ -1,3 +1,4 @@
+import {collectionFailureRecreditSourceColumns,collectionFailureRecreditSourceCoverage} from './collection-failure-recredit-source.ts';
 import {refundTransferFeeSourceCoverage} from './refund-transfer-fee-source.ts';
 import {invoiceSourceCoverage} from './invoice-source.ts';
 import {receiptSourceAddedColumns,receiptSourceCoverage} from './receipt-source.ts';
@@ -34,7 +35,7 @@ export const refundTransferSourceColumns:Readonly<Record<string,readonly string[
 
 export const directReceiptTipSourceColumns:Readonly<Record<string,readonly string[]>>=directReceiptTipSourceAddedColumns;
 
-export function financeSourceTables(version:1|2|3|4|5|6|7|8|9|10|11|12|13|14){
+export function financeSourceTables(version:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15){
   if(version===1)return originalTables;
   const correctionTables=[
     ...originalTables.map(table=>({...table,columns:[...table.columns,...(correctionSourceColumns['crest.'+table.name]??[])]})),
@@ -81,6 +82,11 @@ export function financeSourceTables(version:1|2|3|4|5|6|7|8|9|10|11|12|13|14){
   const directTipTables=refundTransferTables.map(table=>({...table,
     columns:[...table.columns,...(directReceiptTipSourceColumns['crest.'+table.name]??[])],
   }));
-  return version===13?directTipTables:[...directTipTables,
+  if(version===13)return directTipTables;
+  const feeTables=[...directTipTables,
     {name:'refund_transfer_embedded_fees',columns:[...refundTransferFeeSourceCoverage.required]}];
+  if(version===14)return feeTables;
+  const recreditColumns:Readonly<Record<string,readonly string[]>>=collectionFailureRecreditSourceColumns;
+  return [...feeTables.map(table=>({...table,columns:[...table.columns,...recreditColumns['crest.'+table.name]??[]]})),
+    {name:'collection_failure_recredits',columns:[...collectionFailureRecreditSourceCoverage.required]}];
 }

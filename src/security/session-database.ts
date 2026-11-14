@@ -84,17 +84,31 @@ function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'c
         }
         if(error.code==='23514'&&['FINANCE_CHANNEL_ACCOUNT_PINNED','INVOICE_DRAFT_JOB_REQUIRED',
          'INVOICE_DRAFT_COMPLETED_SCOPE_REQUIRED','DIRECT_RECEIPT_TIP_BASIS_REQUIRED','DIRECT_RECEIPT_TIP_AMOUNT_REQUIRED',
-         'REFUND_TRANSFER_FEE_AMOUNT_REQUIRED','REFUND_TRANSFER_FEE_MAPPING_REQUIRED'].includes(error.message)){
+         'REFUND_TRANSFER_FEE_AMOUNT_REQUIRED','REFUND_TRANSFER_FEE_MAPPING_REQUIRED','COLLECTION_RECREDIT_AMOUNT_REQUIRED',
+         'COLLECTION_RECREDIT_FAILURE_REQUIRED','COLLECTION_RECREDIT_DATE_REQUIRED','COLLECTION_RECREDIT_RANGE_UNAVAILABLE',
+         'COLLECTION_RECREDIT_VERIFIED_CHANNEL_REQUIRED','COLLECTION_RECREDIT_FUNDS_MAPPING_REQUIRED'].includes(error.message)){
           // eslint-disable-next-line preserve-caught-error -- Only allowlisted outcomes cross after rollback.
           throw new Error(error.message);
         }
         if(error.code==='22023'&&['FINANCE_MAPPING_EFFECTIVE_ORDER_REQUIRED','FINANCE_MAPPING_ACCOUNT_REQUIRED','FINANCE_MAPPING_CLOSURE_REQUIRED',
          'FINANCE_TAX_EFFECTIVE_ORDER_REQUIRED','FINANCE_CHANNEL_EFFECTIVE_ORDER_REQUIRED','FINANCE_CHANNEL_ACCOUNT_REQUIRED',
          'FINANCE_CHANNEL_ACCOUNT_PINNED','FINANCE_CHANNEL_IDENTITY_RETAINED','DIRECT_RECEIPT_TIP_INPUT_REQUIRED',
-         'REFUND_TRANSFER_FEE_INPUT_REQUIRED','REFUND_TRANSFER_FEE_EVIDENCE_REQUIRED'].includes(error.message)){
+         'REFUND_TRANSFER_FEE_INPUT_REQUIRED','REFUND_TRANSFER_FEE_EVIDENCE_REQUIRED',
+         'COLLECTION_RECREDIT_INPUT_REQUIRED','COLLECTION_RECREDIT_EVIDENCE_REQUIRED'].includes(error.message)){
           // eslint-disable-next-line preserve-caught-error -- No SQL detail leaves this confirmed rollback.
           throw new Error(error.message);
         }
+      }
+      if(role==='crest_finance_preview'&&command&&!combined.aborted&&rollbackConfirmed&&error instanceof Error&&'code' in error
+        &&error.code==='23505'&&['COLLECTION_RECREDIT_ALREADY_RECORDED','COLLECTION_RECREDIT_EXTERNAL_ID_ALREADY_RECORDED'].includes(error.message)){
+        // eslint-disable-next-line preserve-caught-error -- The acknowledged rollback confines this response to exact known markers.
+        throw new Error(error.message);
+      }
+      if(role==='crest_finance_preview'&&!transaction&&!combined.aborted&&error instanceof Error&&'code' in error
+        &&(error.code==='54000'&&error.message==='COLLECTION_RECREDIT_OPTIONS_LIMIT'
+          ||error.code==='23514'&&error.message==='COLLECTION_RECREDIT_DATE_REQUIRED')){
+        // eslint-disable-next-line preserve-caught-error -- The bounded read reports only the exact expected marker.
+        throw new Error(error.message);
       }
       if(role==='crest_finance_preview'&&!transaction&&!combined.aborted&&error instanceof Error
         &&'code' in error&&error.code==='22023'&&error.message==='MAPPING_NOT_READY'){
