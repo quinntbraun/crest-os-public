@@ -29,6 +29,7 @@ import {tipReturnCandidateRecoveryProfile} from './finance-tip-return-candidate.
 import {collectionFailureRecoveryProfile} from './finance-collection-failure-candidate.mjs';
 import {refundTransferRecoveryProfile} from './finance-refund-transfer-candidate.mjs';
 import {directReceiptTipRecoveryProfile} from './finance-direct-receipt-tip-candidate.mjs';
+import {refundTransferFeeRecoveryProfile} from './finance-refund-transfer-fee-candidate.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
@@ -1027,6 +1028,14 @@ export async function restoreDirectReceiptTipDatabase(candidate,directory,identi
   return restoreWithProfile((await directReceiptTipRecoveryProfile(candidate,root)).profile,directory,identity,url);
 }
 
+export async function backupRefundTransferFeeDatabase(candidate,prior,client,url,directory,recipient){
+  const checked=await refundTransferFeeRecoveryProfile(candidate,prior,root);
+  return backupWithProfile(checked.profile,client,url,directory,recipient,undefined,undefined,checked);
+}
+export async function restoreRefundTransferFeeDatabase(candidate,prior,directory,identity,url){
+  return restoreWithProfile((await refundTransferFeeRecoveryProfile(candidate,prior,root)).profile,directory,identity,url);
+}
+
 async function expense79RecoveryProfile(candidate){
   assert.equal(candidate.file,expense79File);
   assert.equal(candidate.previousRegistrySha256,legacy78Profile.registrySha256);
@@ -1097,6 +1106,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile.schemaVersion===95&&profile.heldCollectionFailureMigrationSha256
       ||profile.schemaVersion===96&&profile.heldRefundTransferMigrationSha256
       ||profile.schemaVersion===97&&profile.heldDirectReceiptTipMigrationSha256
+      ||profile.schemaVersion===98&&profile.heldRefundTransferFeeMigrationSha256
       ||profile.schemaVersion===79&&profile.heldExpenseMigrationSha256
       ));
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -1191,6 +1201,7 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     assert.equal(manifest.heldCollectionFailureMigrationSha256,profile.heldCollectionFailureMigrationSha256);
     assert.equal(manifest.heldRefundTransferMigrationSha256,profile.heldRefundTransferMigrationSha256);
     assert.equal(manifest.heldDirectReceiptTipMigrationSha256,profile.heldDirectReceiptTipMigrationSha256);
+    assert.equal(manifest.heldRefundTransferFeeMigrationSha256,profile.heldRefundTransferFeeMigrationSha256);
     if(profile.heldDropoffPhotoAuthority||profile.heldCustody67MigrationSha256||profile.heldPickupReturnSources
       ||profile.heldExpenseMigrationSha256)assert(manifest.objectArchive);
     stage='authenticated_dump';const dump=await unseal(join(directory,'database.age'),receipt.dump,identity);

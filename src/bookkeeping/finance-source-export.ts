@@ -16,6 +16,7 @@ import {captureExcessReturnSource,isExcessReturnOperation,verifyExcessReturnSour
 import {captureTipReturnSource,isTipReturnOperation,verifyTipReturnSourceClosure} from './tip-return-source.ts';
 import {captureCollectionFailureSource,isCollectionFailureOperation,verifyCollectionFailureSourceClosure} from './collection-failure-source.ts';
 import {captureRefundTransferSource,isRefundTransferOperation,verifyRefundTransferSourceClosure} from './refund-transfer-source.ts';
+import {captureRefundTransferFeeSource,isRefundTransferFeeOperation} from './refund-transfer-fee-source.ts';
 import {captureDirectReceiptTipSource,isDirectReceiptTipOperation,verifyDirectReceiptTipSourceClosure} from './direct-receipt-tip-source.ts';
 import {directReceiptTipSourceColumns,refundTransferSourceColumns,collectionFailureSourceColumns,correctionSourceColumns,excessReturnSourceColumns,financeSourceTables,fundApplicationSourceColumns,heldTipSourceColumns,invoiceCreditSourceColumns,serviceRefundSourceColumns,tipReturnSourceColumns} from './finance-source-profile.ts';
 
@@ -57,13 +58,13 @@ function rowsOf(value:unknown,table:string):readonly Row[]{
 // A single authorized, read-only repeatable-read export transaction must own
 // query for the entire capture. Every underlying SQL reader checks that mode.
 export async function captureFinanceSourceExport(businessId:string,query:Query,
-  {includeCorrections=false,includeFundApplications=false,includeTips=false,includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false}:Readonly<{
+  {includeCorrections=false,includeFundApplications=false,includeTips=false,includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false}:Readonly<{
     includeCorrections?:boolean;includeFundApplications?:boolean;includeTips?:boolean;includeCredits?:boolean;includePairedCredits?:boolean;
-    includeServiceRefunds?:boolean;includeExcessReceipts?:boolean;includeExcessReturns?:boolean;includeTipReturns?:boolean;includeCollectionFailures?:boolean;includeRefundTransferAdjustments?:boolean;includeDirectReceiptTips?:boolean;
+    includeServiceRefunds?:boolean;includeExcessReceipts?:boolean;includeExcessReturns?:boolean;includeTipReturns?:boolean;includeCollectionFailures?:boolean;includeRefundTransferAdjustments?:boolean;includeDirectReceiptTips?:boolean;includeRefundTransferFees?:boolean;
   }>={}){
   check(customerUuid(businessId)&&(!includeFundApplications||includeCorrections)&&(!includeTips||includeFundApplications)
     &&(!includeCredits||includeTips)&&(!includePairedCredits||includeCredits)&&(!includeServiceRefunds||includePairedCredits)
-    &&(!includeExcessReceipts||includeServiceRefunds)&&(!includeExcessReturns||includeExcessReceipts)&&(!includeTipReturns||includeExcessReturns)&&(!includeCollectionFailures||includeTipReturns)&&(!includeRefundTransferAdjustments||includeCollectionFailures)&&(!includeDirectReceiptTips||includeRefundTransferAdjustments));
+    &&(!includeExcessReceipts||includeServiceRefunds)&&(!includeExcessReturns||includeExcessReceipts)&&(!includeTipReturns||includeExcessReturns)&&(!includeCollectionFailures||includeTipReturns)&&(!includeRefundTransferAdjustments||includeCollectionFailures)&&(!includeDirectReceiptTips||includeRefundTransferAdjustments)&&(!includeRefundTransferFees||includeDirectReceiptTips));
   const one=async(sql:string,parameters:unknown[])=>{
     const result=await query(sql,parameters);
     check(Array.isArray(result)&&result.length===1&&exact(result[0],['result']));
@@ -106,6 +107,8 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     &&(!tipReturn||history.snapshotToken===tipReturn.historySnapshotToken)
     &&(!collectionFailure||history.snapshotToken===collectionFailure.historySnapshotToken)
     &&(!refundTransfer||history.snapshotToken===refundTransfer.historySnapshotToken));
+  const refundFee=includeRefundTransferFees?await captureRefundTransferFeeSource(businessId,history.snapshotToken,query):null;
+  if(!refundFee)check(receipt.history.operation.every(item=>!isRefundTransferFeeOperation(JSON.parse(item.canonical_evidence).row)));
   if(!directTip)check(receipt.history.operation.every(item=>{
     const operation=JSON.parse(item.canonical_evidence).row;
     return !isDirectReceiptTipOperation(operation)&&(refundTransfer||!isRefundTransferOperation(operation))
@@ -124,7 +127,7 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
   }
   if(application)formatFundApplicationSource(application);
 
-  const version=directTip?13:refundTransfer?12:collectionFailure?11:tipReturn?10:excessReturn?9:includeExcessReceipts?8:refund?7:paired?6:credit?5:tip?4:application?3:correction?2:1;
+  const version=refundFee?14:directTip?13:refundTransfer?12:collectionFailure?11:tipReturn?10:excessReturn?9:includeExcessReceipts?8:refund?7:paired?6:credit?5:tip?4:application?3:correction?2:1;
   const tables=financeSourceTables(version);
   const profiles={invoice,receipt,expense,correction,application,tip,credit,paired,refund,excessReturn,tipReturn,collectionFailure,refundTransfer};
   const combined=new Map<string,Map<string,Row>>();
@@ -182,6 +185,11 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
       check(count<maxRows&&customerUuid(anchor.id)&&!rows.has(anchor.id)&&exact(anchor,columns));
       rows.set(anchor.id,Object.freeze(anchor));count++;
     }
+    const feeRows=name==='refund_transfer_embedded_fees'?refundFee?.fees:name==='external_money_evidence'?refundFee?.components:undefined;
+    for(const row of feeRows??[]){
+      check(count<maxRows&&customerUuid(row.id)&&!rows.has(row.id)&&exact(row,columns));
+      rows.set(row.id,Object.freeze(row));count++;
+    }
     combined.set(name,rows);
   }
   for(const row of combined.get('allocation_events')!.values()){
@@ -224,7 +232,7 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     if(tipReturn)verifyTipReturnSourceClosure(table=>collectionFailure&&table==='tip_realization_range_consumptions'
       ?tableRows(table).filter(row=>row.collection_failure_component_id===null):originalRefundRows(table),parsedHistory);
     if(collectionFailure)verifyCollectionFailureSourceClosure(tableRows,parsedHistory);
-    if(refundTransfer)verifyRefundTransferSourceClosure(tableRows,parsedHistory);
+    if(refundTransfer)verifyRefundTransferSourceClosure(tableRows,parsedHistory,Boolean(refundFee));
     if(directTip)verifyDirectReceiptTipSourceClosure(tableRows,parsedHistory);
   }
 
@@ -265,7 +273,8 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     tables})+'\n');
   add('README.txt',[
     'Crest OS posted finance source export',
-    includeDirectReceiptTips?'Includes explicit direct receipt tips, original tax components, returned transfers and retained source history.'
+    includeRefundTransferFees?'Includes provider-withheld fees, net recredits and full refund obligations with retained statement evidence.'
+      :includeDirectReceiptTips?'Includes explicit direct receipt tips, original tax components, returned transfers and retained source history.'
       :includeRefundTransferAdjustments?'Includes returned refund transfers and verified retries, ordinary refund and receipt history, and linked normalized accounting sources.'
       :includeCollectionFailures?'Includes failed collection adjustments, no-movement recording corrections, settled returns, receipts, invoices, credits, tips, same-day expenses and original history.'
       :includeTipReturns?'Includes settled tip returns and held payment returns, settled service refunds, direct receipts, invoices, credits, applied payments, tips, same-day expenses and original history.'
@@ -288,7 +297,8 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
       ...credit?{credit:credit.snapshotToken}:{},...paired?{paired:paired.snapshotToken}:{},...refund?{refund:refund.snapshotToken}:{},
       ...excessReturn?{excessReturn:excessReturn.snapshotToken}:{},...tipReturn?{tipReturn:tipReturn.snapshotToken}:{},
       ...collectionFailure?{collectionFailure:collectionFailure.snapshotToken}:{},
-      ...refundTransfer?{refundTransfer:refundTransfer.snapshotToken}:{},...directTip?{directTip:directTip.snapshotToken}:{}},
+      ...refundTransfer?{refundTransfer:refundTransfer.snapshotToken}:{},...directTip?{directTip:directTip.snapshotToken}:{},
+      ...refundFee?{refundFee:refundFee.snapshotToken}:{}},
     rowCounts:Object.fromEntries(tables.map(({name})=>[name,combined.get(name)!.size])),
     historyCounts:{operations:receipt.history.operation.length,auditEvents:receipt.history.audit_event.length},
     completePortableExport:false,referenceClosureComplete:false,completeBackup:false,

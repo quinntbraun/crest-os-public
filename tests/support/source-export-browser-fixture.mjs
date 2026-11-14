@@ -57,12 +57,14 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  const collectionFailureExport=process.env.CREST_TEST_COLLECTION_FAILURE_EXPORT==='1';
  const refundTransferExport=process.env.CREST_TEST_REFUND_TRANSFER_EXPORT==='1';
  const directReceiptTipExport=process.env.CREST_TEST_DIRECT_RECEIPT_TIP_EXPORT==='1';
+ const refundTransferFeeExport=process.env.CREST_TEST_REFUND_TRANSFER_FEE_EXPORT==='1';
  assert(!excessReceipts||product&&directReceipts&&customerFundsReport&&postedFinanceExport);
  assert(!excessReturnExport||excessReceipts&&postedFinanceExport);
  assert(!tipReturnExport||excessReturnExport&&heldTips);
  assert(!collectionFailureExport||tipReturnExport&&trialBalance);
  assert(!refundTransferExport||collectionFailureExport&&serviceRefunds);
  assert(!directReceiptTipExport||refundTransferExport&&financeTaxProfiles);
+ assert(!refundTransferFeeExport||directReceiptTipExport);
  assert.equal(typeof invoiceDrafts,'boolean');assert(!invoiceDrafts||invoicePreparation);
  assert.equal(typeof product,'boolean');assert.equal(typeof catalog,'boolean');assert(!catalog||product,'catalog journey uses the actual product server');
  assert.equal(typeof workspace,'boolean');assert(!workspace||product,'workspace journey uses the actual product server');
@@ -166,7 +168,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   if(receivableAging&&!postedFinanceExport)assert.equal((await sandbox.apply(target,await sandbox.prefix(88))).history.length,88);
   let postedFinanceConfiguration;
   if(postedFinanceExport){
-   const schemaVersion=directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
+   const schemaVersion=refundTransferFeeExport?98:directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
    const currentRegistry=JSON.parse(await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url),'utf8'));
    const source=excessReturnExport&&currentRegistry.migrations.length===92
     ?await prepareExcessReturnCandidate(sandbox):await sandbox.prefix(schemaVersion);
@@ -218,7 +220,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    await sandbox.admin.query('CREATE ROLE '+candidate+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+secret+"'");
    financeLogin=candidate;await sandbox.admin.query('GRANT crest_finance_preview TO '+financeLogin);
    const financeUrl=new URL(target);financeUrl.username=financeLogin;financeUrl.password=secret;
-   financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,taxProfiles:financeTaxProfiles,categoryMappings:financeCategoryMappings,moneyChannels:financeMoneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport,...excessReceipts?{excessReceipts}:{},...excessReturnExport?{excessReturns:true}:{},...tipReturnExport?{tipReturns:true}:{},...collectionFailureExport?{collectionFailures:true}:{},...refundTransferExport?{refundTransfers:true}:{},...directReceiptTipExport?{directReceiptTips:true}:{}};
+   financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,taxProfiles:financeTaxProfiles,categoryMappings:financeCategoryMappings,moneyChannels:financeMoneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport,...excessReceipts?{excessReceipts}:{},...excessReturnExport?{excessReturns:true}:{},...tipReturnExport?{tipReturns:true}:{},...collectionFailureExport?{collectionFailures:true}:{},...refundTransferExport?{refundTransfers:true}:{},...directReceiptTipExport?{directReceiptTips:true}:{},...refundTransferFeeExport?{refundTransferFees:true}:{}};
    await client.query("INSERT INTO crest_private.finance_controls(business_id,recovery_authority_id,created_by,origin) SELECT $1,id,$2,'system' FROM crest_private.business_recovery_authorities WHERE business_id=$1",[business,actor]);
   }
   const authentication={database:config,provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
@@ -349,6 +351,16 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     assert.equal((await finance.query(
      'SELECT crest_commands.approve_fixed_finance_mapping($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) AS result',
      [...args,randomUUID(),'category_supplies','0',expenseAccount,'2026-01-01','Fictional supplies account approved'])).rows[0].result.state,'committed');
+    if(refundTransferFeeExport){
+     const feeAccount=randomUUID();
+     assert.equal((await finance.query(
+      'SELECT crest_commands.save_finance_account($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',
+      [...args,randomUUID(),feeAccount,{identity:{code:'5300',accountType:'expense',normalSide:'debit',controlKind:null,reportRole:'fee'},
+       name:'Fictional provider fees',active:true,reason:null}])).rows[0].result.state,'committed');
+     assert.equal((await finance.query(
+      'SELECT crest_commands.approve_fixed_finance_mapping($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) AS result',
+      [...args,randomUUID(),'fee','0',feeAccount,'2026-01-01','Fictional provider fee account approved'])).rows[0].result.state,'committed');
+    }
     if(paymentCorrections){
      const funds=randomUUID();
      assert.equal((await finance.query(

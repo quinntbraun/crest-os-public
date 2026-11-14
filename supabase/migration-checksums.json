@@ -485,6 +485,11 @@
       "version": "20261221180000",
       "file": "20261221180000_fictional_direct_receipt_tip.sql",
       "sha256": "ae10cc68c1f365ca2fcf1aa6f92c6743b20eac989da8a02dbccdb378e3863895"
+    },
+    {
+      "version": "20261222180000",
+      "file": "20261222180000_fictional_refund_transfer_withheld_fee.sql",
+      "sha256": "8aedbff39ea12d2cea1008a4e4a1b63b4db80db6b3fb46d6743cc24af4c61fa0"
     }
   ]
 }

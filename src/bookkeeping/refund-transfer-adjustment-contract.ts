@@ -11,6 +11,48 @@ const isTransferKind = (value: unknown): value is RefundTransferKind => value ==
 const obligations = {P08: 'service', P09: 'excess', P10: 'tip_return_due'} as const;
 const isTemplate = (value: unknown): value is RefundTemplate =>
   typeof value === 'string' && Object.hasOwn(obligations, value);
+const transferInputFields = ['reference', 'priorEventId', 'customerId', 'kind', 'channelId', 'channelVersion',
+  'actualOn', 'verifiedCents', 'confirmation', 'reason', 'externalIdentity', 'ranges'];
+const transferReceiptFields = ['schemaVersion', 'businessId', 'refundTransferAdjustmentId', 'operationId',
+  'eventId', 'originalEventId', 'priorEventId', 'originalTemplate', 'obligationType', 'kind', 'fundLotId', 'fundingOriginId',
+  'customerId', 'fundsAccountId', 'fundsMappingId', 'moneyAccountId', 'moneyChannelId', 'moneyChannelVersion',
+  'moneyMovementId', 'evidenceId', 'actualOn', 'cents', 'confirmation', 'reason', 'ranges'];
+
+function transferEvidence(value:unknown){
+  check(exact(value, ['namespace', 'id', 'rawReference']) && typeof value.namespace === 'string'
+    && /^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$/.test(value.namespace)
+    && reviewed(value.id) && [...value.id].length <= 200 && reviewed(value.rawReference));
+  return {namespace:value.namespace,id:value.id,rawReference:value.rawReference};
+}
+
+function transferFee(value:unknown,gross:string){
+  check(exact(value,['cents','netCents','mappingId','confirmation','externalIdentity'])&&positive(value.cents)
+    &&positive(value.netCents)&&BigInt(value.cents)+BigInt(value.netCents)===BigInt(gross)
+    &&customerUuid(value.mappingId)&&reviewed(value.confirmation));
+  return {cents:value.cents,netCents:value.netCents,mappingId:value.mappingId,confirmation:value.confirmation,
+    externalIdentity:value.externalIdentity===null?null:transferEvidence(value.externalIdentity)};
+}
+
+function receiptFee(value:unknown,gross:string,fundsAccount:string,moneyAccount:string){
+  check(exact(value,['cents','netCents','mappingId','accountId','evidenceId','confirmation'])
+    &&positive(value.cents)&&positive(value.netCents)&&BigInt(value.cents)+BigInt(value.netCents)===BigInt(gross)
+    &&customerUuid(value.mappingId)&&customerUuid(value.accountId)&&customerUuid(value.evidenceId)&&reviewed(value.confirmation)
+    &&value.accountId!==moneyAccount&&value.accountId!==fundsAccount);
+  return {cents:value.cents,netCents:value.netCents,mappingId:value.mappingId,accountId:value.accountId,
+    evidenceId:value.evidenceId,confirmation:value.confirmation};
+}
+
+export function parseRefundTransferFeeOption(value:unknown,businessId:string,customerId:string,priorEventId:string,actualOn:string){
+  if(exact(value,['state'])&&value.state==='absent')return {state:'absent' as const};
+  check(exact(value,['state','schemaVersion','businessId','customerId','priorEventId','actualOn','feeMapping'])
+    &&value.state==='ready'&&value.schemaVersion===1&&value.businessId===businessId&&value.customerId===customerId
+    &&value.priorEventId===priorEventId&&value.actualOn===actualOn&&dated(actualOn));
+  const mapping=value.feeMapping;
+  if(mapping===null)return {state:'ready' as const,mapping:null};
+  check(exact(mapping,['mappingId','accountId','label'])&&customerUuid(mapping.mappingId)
+    &&customerUuid(mapping.accountId)&&reviewed(mapping.label));
+  return {state:'ready' as const,mapping:{mappingId:mapping.mappingId,accountId:mapping.accountId,label:mapping.label}};
+}
 
 function transferRanges(value: unknown, cents?: string) {
   check(Array.isArray(value) && value.length > 0 && value.length <= 180);
@@ -35,21 +77,19 @@ export function parseRefundTransferReference(value: unknown) {
 }
 
 export function parseRefundTransferInput(value: unknown) {
-  check(exact(value, ['reference', 'priorEventId', 'customerId', 'kind', 'channelId', 'channelVersion',
-    'actualOn', 'verifiedCents', 'confirmation', 'reason', 'externalIdentity', 'ranges'])
+  check((exact(value,transferInputFields)||exact(value,[...transferInputFields,'embeddedFee']))
     && customerUuid(value.priorEventId) && customerUuid(value.customerId) && isTransferKind(value.kind)
     && customerUuid(value.channelId) && customerVersion(value.channelVersion) && dated(value.actualOn)
     && positive(value.verifiedCents) && reviewed(value.confirmation) && reviewed(value.reason));
-  const external = value.externalIdentity;
-  check(exact(external, ['namespace', 'id', 'rawReference']) && typeof external.namespace === 'string'
-    && /^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$/.test(external.namespace)
-    && reviewed(external.id) && [...external.id].length <= 200 && reviewed(external.rawReference));
+  const embeddedFee=Object.hasOwn(value,'embeddedFee')?transferFee(value.embeddedFee,value.verifiedCents):null;
+  check(!embeddedFee||value.kind==='recredit');
   return {
     reference: parseRefundTransferReference(value.reference), priorEventId: value.priorEventId, customerId: value.customerId,
     kind: value.kind, channelId: value.channelId, channelVersion: value.channelVersion, actualOn: value.actualOn,
     verifiedCents: value.verifiedCents, confirmation: value.confirmation, reason: value.reason,
-    externalIdentity: {namespace: external.namespace, id: external.id, rawReference: external.rawReference},
+    externalIdentity:transferEvidence(value.externalIdentity),
     ranges: transferRanges(value.ranges, value.verifiedCents),
+    ...(embeddedFee?{embeddedFee}:{}),
   };
 }
 
@@ -91,11 +131,9 @@ export function parseRefundTransferResult(value: unknown, businessId: string, re
       && customerUuid(receipt.reviewEpoch) && reviewed(receipt.reason));
     return {state: 'retired', receipt: {...reference, reviewEpoch: receipt.reviewEpoch, reason: receipt.reason}} as const;
   }
-  check(value.state === 'committed' && exact(receipt, ['schemaVersion', 'businessId', 'refundTransferAdjustmentId', 'operationId',
-    'eventId', 'originalEventId', 'priorEventId', 'originalTemplate', 'obligationType', 'kind', 'fundLotId', 'fundingOriginId',
-    'customerId', 'fundsAccountId', 'fundsMappingId', 'moneyAccountId', 'moneyChannelId', 'moneyChannelVersion',
-    'moneyMovementId', 'evidenceId', 'actualOn', 'cents', 'confirmation', 'reason', 'ranges'])
-    && receipt.schemaVersion === 1 && receipt.businessId === businessId && receipt.operationId === reference.operationId
+  check(value.state === 'committed' && (exact(receipt,transferReceiptFields)&&receipt.schemaVersion===1
+    ||exact(receipt,[...transferReceiptFields,'embeddedFee'])&&receipt.schemaVersion===2)
+    && receipt.businessId === businessId && receipt.operationId === reference.operationId
     && receipt.refundTransferAdjustmentId === reference.refundTransferAdjustmentId && customerUuid(receipt.eventId)
     && customerUuid(receipt.originalEventId) && customerUuid(receipt.priorEventId)
     && receipt.originalEventId !== receipt.eventId && receipt.priorEventId !== receipt.eventId
@@ -106,8 +144,10 @@ export function parseRefundTransferResult(value: unknown, businessId: string, re
     && customerVersion(receipt.moneyChannelVersion) && customerUuid(receipt.moneyMovementId) && customerUuid(receipt.evidenceId)
     && dated(receipt.actualOn) && positive(receipt.cents) && reviewed(receipt.confirmation) && reviewed(receipt.reason));
   const obligationType: RefundObligation = obligations[receipt.originalTemplate];
+  check(receipt.schemaVersion===1||receipt.kind==='recredit');
+  const fee=receipt.schemaVersion===2?receiptFee(receipt.embeddedFee,receipt.cents,receipt.fundsAccountId,receipt.moneyAccountId):null;
   return {state: 'committed', receipt: {
-    schemaVersion: 1, businessId, refundTransferAdjustmentId: reference.refundTransferAdjustmentId, operationId: reference.operationId,
+    schemaVersion: receipt.schemaVersion, businessId, refundTransferAdjustmentId: reference.refundTransferAdjustmentId, operationId: reference.operationId,
     eventId: receipt.eventId, originalEventId: receipt.originalEventId, priorEventId: receipt.priorEventId,
     originalTemplate: receipt.originalTemplate, obligationType, kind: receipt.kind, fundLotId: receipt.fundLotId,
     fundingOriginId: receipt.fundingOriginId, customerId: receipt.customerId, fundsAccountId: receipt.fundsAccountId,
@@ -115,6 +155,7 @@ export function parseRefundTransferResult(value: unknown, businessId: string, re
     moneyChannelVersion: receipt.moneyChannelVersion, moneyMovementId: receipt.moneyMovementId, evidenceId: receipt.evidenceId,
     actualOn: receipt.actualOn, cents: receipt.cents, confirmation: receipt.confirmation, reason: receipt.reason,
     ranges: transferRanges(receipt.ranges, receipt.cents),
+    ...(fee?{embeddedFee:fee}:{}),
   }} as const;
 }
 
@@ -126,6 +167,10 @@ export function refundTransferMatchesInput(
     && receipt.moneyChannelId === input.channelId && receipt.moneyChannelVersion === input.channelVersion
     && receipt.actualOn === input.actualOn && receipt.cents === input.verifiedCents
     && receipt.confirmation === input.confirmation && receipt.reason === input.reason
+    && (input.embeddedFee?receipt.embeddedFee!==undefined
+      &&receipt.embeddedFee.cents===input.embeddedFee.cents&&receipt.embeddedFee.netCents===input.embeddedFee.netCents
+      &&receipt.embeddedFee.mappingId===input.embeddedFee.mappingId&&receipt.embeddedFee.confirmation===input.embeddedFee.confirmation
+      :receipt.embeddedFee===undefined)
     && receipt.ranges.length === input.ranges.length && receipt.ranges.every((range, index) =>
       range.firstCent === input.ranges[index]?.firstCent && range.lastCent === input.ranges[index]?.lastCent);
 }
@@ -139,6 +184,10 @@ const refusals = {
   REFUND_TRANSFER_ALREADY_RECORDED: 'id_conflict',
   REFUND_TRANSFER_VERIFIED_CHANNEL_REQUIRED: 'channel_review_required',
   REFUND_TRANSFER_EXTERNAL_ID_ALREADY_RECORDED: 'external_id_already_recorded',
+  REFUND_TRANSFER_FEE_INPUT_REQUIRED: 'fee_review_required',
+  REFUND_TRANSFER_FEE_AMOUNT_REQUIRED: 'amount_mismatch',
+  REFUND_TRANSFER_FEE_EVIDENCE_REQUIRED: 'evidence_required',
+  REFUND_TRANSFER_FEE_MAPPING_REQUIRED: 'fee_review_required',
 } as const;
 
 export function refundTransferRefusal(value: unknown) {

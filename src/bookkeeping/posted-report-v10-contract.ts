@@ -48,7 +48,7 @@ export function parseFictionalTrialBalanceV10(input: unknown, businessId: string
   return { ...report, schemaVersion: 10 as const, refundDue: projected.refundDue };
 }
 
-function projectRow(input: unknown) {
+function projectRow(input: unknown, includeRefundTransferFees: boolean) {
   check(input !== null && typeof input === 'object' && !Array.isArray(input)
     && adjustmentFields.every(field => Object.hasOwn(input, field)));
   const { refundTransferAdjustmentId, refundTransferKind, priorRefundEventId, originalRefundEventId, ...row } =
@@ -68,6 +68,9 @@ function projectRow(input: unknown) {
       'collectionFailureKind', 'originalPaymentId'].every(field => row[field] === null));
   if (purpose === 'refund_transfer_money') {
     check(fundLotId === null && (refundTransferKind === 'recredit' ? creditCents === '0' : debitCents === '0'));
+  } else if (purpose === 'refund_transfer_fee') {
+    check(includeRefundTransferFees && refundTransferKind === 'recredit' && fundLotId === null
+      && code === '5300' && debitCents !== '0' && creditCents === '0');
   } else {
     check(purpose === 'refund_transfer_funds' && customerUuid(fundLotId) && code === '2000'
       && (refundTransferKind === 'recredit' ? debitCents === '0' : creditCents === '0'));
@@ -79,11 +82,11 @@ function projectRow(input: unknown) {
 }
 
 export function parseFictionalJournalV10(input: unknown, businessId: string, throughOn: string,
-  accountId: string | null, afterLineId: string | null, pageSize = fictionalJournalV10PageSize) {
+  accountId: string | null, afterLineId: string | null, pageSize = fictionalJournalV10PageSize, includeRefundTransferFees = false) {
   const projected = projectReport(input);
   const { report: raw } = projected;
   check('rows' in raw && Array.isArray(raw.rows) && raw.rows.length <= pageSize);
-  const candidates = raw.rows.map(projectRow);
+  const candidates = raw.rows.map(row => projectRow(row, includeRefundTransferFees));
   const report = parseFictionalJournalV9({ ...raw, rows: candidates.map(candidate => candidate.row) },
     businessId, throughOn, accountId, afterLineId, pageSize);
   const rows = report.rows.map((row, index) => {
@@ -94,29 +97,34 @@ export function parseFictionalJournalV10(input: unknown, businessId: string, thr
     return { ...row, ...adjustment, paymentId: null };
   });
   type TransferRow = Extract<(typeof rows)[number], { refundTransferAdjustmentId: string }>;
-  const transfers = new Map<string, TransferRow>();
+  const transfers = new Map<string, TransferRow[]>();
   const events = new Map<string, string | null>();
-  const completedPairs = new Set<string>();
   for (const row of rows) {
     const previous = events.get(row.eventId);
     check(previous === undefined || previous === row.refundTransferAdjustmentId);
     events.set(row.eventId, row.refundTransferAdjustmentId);
     if (row.refundTransferAdjustmentId === null) continue;
-    const peer = transfers.get(row.refundTransferAdjustmentId);
-    if (!peer) {
-      transfers.set(row.refundTransferAdjustmentId, row);
-      continue;
+    const peers = transfers.get(row.refundTransferAdjustmentId) ?? [];
+    const peer = peers[0];
+    check(!peers.some(line => line.purpose === row.purpose));
+    if (peer) {
+      check(peer.eventId === row.eventId && peer.entryId === row.entryId && peer.operationId === row.operationId
+        && peer.effectiveOn === row.effectiveOn && peer.commitSequence === row.commitSequence
+        && peer.eventSequence === row.eventSequence && peer.entrySequence === row.entrySequence
+        && peer.template === row.template && peer.refundTransferKind === row.refundTransferKind
+        && peer.priorRefundEventId === row.priorRefundEventId && peer.originalRefundEventId === row.originalRefundEventId);
     }
-    check(!completedPairs.has(row.refundTransferAdjustmentId) && peer.purpose !== row.purpose
-      && peer.eventId === row.eventId && peer.entryId === row.entryId && peer.operationId === row.operationId
-      && peer.effectiveOn === row.effectiveOn && peer.commitSequence === row.commitSequence
-      && peer.eventSequence === row.eventSequence && peer.entrySequence === row.entrySequence
-      && peer.template === row.template && peer.refundTransferKind === row.refundTransferKind
-      && peer.priorRefundEventId === row.priorRefundEventId && peer.originalRefundEventId === row.originalRefundEventId
-      && BigInt(peer.debitCents) - BigInt(peer.creditCents) === BigInt(row.creditCents) - BigInt(row.debitCents));
-    completedPairs.add(row.refundTransferAdjustmentId);
+    peers.push(row);
+    transfers.set(row.refundTransferAdjustmentId, peers);
   }
-  if (accountId === null && afterLineId === null && !report.hasMore) check(completedPairs.size === transfers.size);
+  const entireReport = accountId === null && afterLineId === null && !report.hasMore;
+  for (const lines of transfers.values()) {
+    const hasFee = lines.some(line => line.purpose === 'refund_transfer_fee');
+    if (entireReport || !includeRefundTransferFees && lines.length === 2 || lines.length === 3) {
+      check(lines.length === (hasFee ? 3 : 2)
+        && lines.reduce((net, line) => net + BigInt(line.debitCents) - BigInt(line.creditCents), 0n) === 0n);
+    }
+  }
   return { ...report, schemaVersion: 10 as const, rows, refundDue: projected.refundDue };
 }
 

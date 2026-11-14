@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { customerDate, customerUuid, exactCustomerObject as exact } from '../customer/customer-contract.ts';
+import { customerDate, customerInstant, customerUuid, exactCustomerObject as exact } from '../customer/customer-contract.ts';
+import { financeAccountReviewReason } from './finance-account-contract.ts';
 import { isFinanceCents } from './finance-inclusive-charge.ts';
 
 const adjustmentFields = ['id', 'business_id', 'kind', 'prior_event_id', 'original_event_id', 'fund_lot_id', 'channel_version_id',
@@ -89,9 +90,18 @@ function parseHistory(operation: Row, audit: Row) {
 }
 
 export function verifyRefundTransferSourceClosure(read: (table: string) => readonly Row[],
-  history: Readonly<{ operation: readonly Row[]; audit_event: readonly Row[] }>) {
+  history: Readonly<{ operation: readonly Row[]; audit_event: readonly Row[] }>, includeFees = false) {
   const adjustments = index(read('refund_transfer_adjustments')), ranges = read('refund_transfer_adjustment_ranges');
   const rangesByAdjustment = group(ranges, 'adjustment_id');
+  const fees = index(includeFees ? read('refund_transfer_embedded_fees') : [], 'adjustment_id');
+  check([...fees.keys()].every(id => adjustments.has(id)));
+  const canonicalHistoryTime = (value: unknown) => typeof value === 'string'
+    ? value.replace(/^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,6}))?\+00:00$/u,
+      (_match, instant: string, micros: string | undefined) => instant + '.' + (micros ?? '').padEnd(6,'0') + 'Z')
+    : null;
+  const reviewedMappings = includeFees ? history.operation.filter(row => row.command_type === 'finance.mapping.approve'
+    && row.state === 'committed' && typeof row.result === 'string').map((row): Row => ({...JSON.parse(row.result as string) as Row,createdAt:canonicalHistoryTime(row.committed_at)}))
+    .filter((row: Row) => row.purpose === 'fee') : [];
   const events = read('financial_events'), eventById = index(events), groupsById = index(read('atomic_finance_groups'));
   const adjustmentEvents = index(events.filter(row => row.refund_transfer_adjustment_id !== null), 'refund_transfer_adjustment_id');
   const serviceRefunds = index(read('service_credit_refunds')), excessReturns = index(read('excess_receipt_returns'));
@@ -165,31 +175,59 @@ export function verifyRefundTransferSourceClosure(read: (table: string) => reado
 
     const movement = movements.get(event.id), proof = movement && evidence.get(movement.evidence_id);
     const amount = saved.kind === 'recredit' ? total : -total;
+    const fee = fees.get(id);
+    const net = fee ? cents(fee.net_cents) : amount;
+    if (fee) {
+      check(saved.kind === 'recredit' && net > 0n && cents(fee.cents) > 0n && net + cents(fee.cents) === amount
+        && customerUuid(fee.id) && customerUuid(fee.fee_account_id) && customerUuid(fee.mapping_id)
+        && financeAccountReviewReason(fee.confirmation)
+        && customerInstant(saved.created_at));
+      const recordedAt = saved.created_at, effectiveOn = saved.actual_on;
+      const mappings = reviewedMappings.filter(mapping => customerInstant(mapping.createdAt) && mapping.createdAt <= recordedAt
+        && customerDate(mapping.effectiveFrom) && mapping.effectiveFrom <= effectiveOn).sort((left,right) =>
+        String(right.effectiveFrom).localeCompare(String(left.effectiveFrom)));
+      check(mappings[0]?.id === fee.mapping_id && mappings[0].accountId === fee.fee_account_id);
+      if (fee.component_evidence_id !== null) {
+        const component = evidence.get(fee.component_evidence_id);
+        check(component && proof && component.id !== proof.id && !usedEvidence.has(component.id)
+          && ![...movements.values()].some(row => row.evidence_id === component.id)
+          && component.external_account_id === saved.account_id && component.provider_namespace === proof.provider_namespace
+          && (component.id_namespace !== proof.id_namespace || component.external_id !== proof.external_id)
+          && component.confirmed_on === saved.actual_on && component.currency === 'USD'
+          && component.normalization_rule === 'exact_case_v1' && component.signed_cents === String(-cents(fee.cents)));
+        usedEvidence.add(component.id);
+      }
+    }
     check(movement && proof && !usedEvidence.has(proof.id) && movement.account_id === saved.account_id
       && movement.evidence_id === saved.evidence_id && proof.external_account_id === saved.account_id
       && proof.confirmed_on === saved.actual_on && proof.currency === 'USD' && proof.normalization_rule === 'exact_case_v1'
-      && proof.signed_cents === String(amount) && movement.signed_cents === proof.signed_cents);
+      && proof.signed_cents === String(net) && movement.signed_cents === proof.signed_cents);
     usedEvidence.add(proof.id);
     const journal = entries.get(event.id);
     check(journal?.length === 1 && journal[0]!.entry_sequence === '1');
     const posted = linesByEntry.get(journal[0]!.id);
-    check(posted?.length === 2 && posted.every(line => line.refund_transfer_adjustment_id === id
+    check(posted?.length === (fee ? 3 : 2) && posted.every(line => line.refund_transfer_adjustment_id === id
       && ['invoice_item_id','receivable_id','tax_payable_movement_id','allocation_event_id','unapplication_id','fund_application_id',
         'tip_realization_id','invoice_credit_id','service_refund_id','excess_return_id','tip_return_id','collection_failure_id',
         'collection_failure_component_id'].every(field => line[field] === null)));
     const cash = posted.find(line => line.purpose === 'refund_transfer_money'), funds = posted.find(line => line.purpose === 'refund_transfer_funds');
     const debit = amount > 0n ? saved.cents : '0', credit = amount < 0n ? saved.cents : '0';
     check(cash && funds && cash.account_id === saved.account_id && cash.money_movement_id === movement.id
-      && cash.fixed_mapping_id === null && cash.fund_lot_id === null && cash.debit_cents === debit && cash.credit_cents === credit
+      && cash.fixed_mapping_id === null && cash.fund_lot_id === null && cash.debit_cents === (net > 0n ? String(net) : '0') && cash.credit_cents === credit
       && funds.account_id === lot.account_id && funds.fixed_mapping_id === lot.mapping_id && funds.fund_lot_id === lot.id
       && funds.money_movement_id === null && funds.debit_cents === credit && funds.credit_cents === debit);
+    if (fee) {
+      const line = posted.find(line => line.purpose === 'refund_transfer_fee');
+      check(line && line.account_id === fee.fee_account_id && line.fixed_mapping_id === fee.mapping_id
+        && line.fund_lot_id === null && line.money_movement_id === null && line.debit_cents === fee.cents && line.credit_cents === '0');
+    }
     posted.forEach(line => counted.add(line.id));
 
     const receipt = parseHistory(operation,audit);
     check(exact(receipt,['schemaVersion','businessId','refundTransferAdjustmentId','operationId','eventId','originalEventId','priorEventId',
       'originalTemplate','obligationType','kind','fundLotId','fundingOriginId','customerId','fundsAccountId','fundsMappingId',
-      'moneyAccountId','moneyChannelId','moneyChannelVersion','moneyMovementId','evidenceId','actualOn','cents','confirmation','reason','ranges'])
-      && receipt.schemaVersion === 1 && receipt.businessId === saved.business_id && receipt.refundTransferAdjustmentId === id
+      'moneyAccountId','moneyChannelId','moneyChannelVersion','moneyMovementId','evidenceId','actualOn','cents','confirmation','reason','ranges',...(fee ? ['embeddedFee'] : [])])
+      && receipt.schemaVersion === (fee ? 2 : 1) && String(operation.result_schema_version) === String(receipt.schemaVersion) && receipt.businessId === saved.business_id && receipt.refundTransferAdjustmentId === id
       && receipt.operationId === saved.operation_id && receipt.eventId === event.id && receipt.originalEventId === original.id
       && receipt.priorEventId === prior.id && receipt.originalTemplate === event.template && receipt.obligationType === obligation[event.template]
       && receipt.kind === saved.kind && receipt.fundLotId === lot.id && receipt.fundingOriginId === root.id && receipt.customerId === lot.customer_id
@@ -200,10 +238,14 @@ export function verifyRefundTransferSourceClosure(read: (table: string) => reado
       && Array.isArray(receipt.ranges) && receipt.ranges.length === portions.length
       && receipt.ranges.every((row,position) => exact(row,['firstCent','lastCent'])
         && row.firstCent === String(portions[position]!.first) && row.lastCent === String(portions[position]!.last)));
+    if (fee) check('embeddedFee' in receipt && exact(receipt.embeddedFee,['cents','netCents','mappingId','accountId','evidenceId','confirmation'])
+      && receipt.embeddedFee.cents === fee.cents && receipt.embeddedFee.netCents === fee.net_cents
+      && receipt.embeddedFee.mappingId === fee.mapping_id && receipt.embeddedFee.accountId === fee.fee_account_id
+      && receipt.embeddedFee.evidenceId === (fee.component_evidence_id ?? proof.id) && receipt.embeddedFee.confirmation === fee.confirmation);
   }
 
   check(lines.every(line => line.refund_transfer_adjustment_id === null
-    ? line.purpose !== 'refund_transfer_money' && line.purpose !== 'refund_transfer_funds' : counted.has(line.id)));
+    ? !['refund_transfer_money','refund_transfer_funds','refund_transfer_fee'].includes(String(line.purpose)) : counted.has(line.id)));
   const retired = index(history.operation.filter(row => row.command_type === retirement && row.state === 'committed'), 'operation_id');
   const retirementAudits = index(history.audit_event.filter(row => row.entity_kind === 'operations'
     && row.action === 'retire' && retired.has(row.operation_id)), 'operation_id');

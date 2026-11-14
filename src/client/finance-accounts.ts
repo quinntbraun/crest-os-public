@@ -55,10 +55,11 @@ import {parseFictionalJournalV4,parseFictionalTrialBalanceV4} from '../bookkeepi
 import {parseFictionalJournalV5,parseFictionalTrialBalanceV5} from '../bookkeeping/posted-report-v5-contract';
 import {parseFictionalJournalV6,parseFictionalTrialBalanceV6} from '../bookkeeping/posted-report-v6-contract';
 import {parseFictionalJournalV7,parseFictionalTrialBalanceV7} from '../bookkeeping/posted-report-v7-contract';
-import {parseRefundTransferInput,parseRefundTransferOptions,parseRefundTransferReference,parseRefundTransferResult,refundTransferMatchesInput,refundTransferRefusal} from '../bookkeeping/refund-transfer-adjustment-contract';
+import {parseRefundTransferInput,parseRefundTransferFeeOption,parseRefundTransferOptions,parseRefundTransferReference,parseRefundTransferResult,refundTransferMatchesInput,refundTransferRefusal} from '../bookkeeping/refund-transfer-adjustment-contract';
 import type {RefundTransferKind} from '../bookkeeping/refund-transfer-adjustment-contract';
 import {parseFictionalJournalV10,parseFictionalTrialBalanceV10} from '../bookkeeping/posted-report-v10-contract';
 import {parseFictionalJournalV11} from '../bookkeeping/posted-report-v11-contract';
+import {parseFictionalJournalV12} from '../bookkeeping/posted-report-v12-contract';
 import {parseFictionalJournalV9,parseFictionalTrialBalanceV9} from '../bookkeeping/posted-report-v9-contract';
 import {parseFictionalJournalV8,parseFictionalTrialBalanceV8} from '../bookkeeping/posted-report-v8-contract';
 import {parseTipReturnInput,parseTipReturnOptions,parseTipReturnReference,parseTipReturnResult,tipReturnMatchesInput,tipReturnRefusal}
@@ -71,7 +72,7 @@ import {parseCustomerFundsReport} from '../bookkeeping/customer-funds-report-con
 import {parseReceivableAging} from '../bookkeeping/receivable-aging-contract';
 import type {Proof} from './authentication';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
@@ -139,6 +140,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   collectionFailures:response.headers.get('x-crest-collection-failures')==='1',
   refundTransfers:response.headers.get('x-crest-refund-transfers')==='1',
   directReceiptTips:response.headers.get('x-crest-direct-receipt-tips')==='1',
+  refundTransferFees:response.headers.get('x-crest-refund-transfer-fees')==='1',
   paymentCorrections:response.headers.get('x-crest-payment-corrections')==='1',
   fundApplications:response.headers.get('x-crest-fund-applications')==='1',
   heldTips:response.headers.get('x-crest-held-tips')==='1',
@@ -153,7 +155,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
 
 export const financeAccounts={
  async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
@@ -164,6 +166,7 @@ export const financeAccounts={
    ...(tipReturns&&trialBalance&&collectionFailures?{collectionFailures}:{}),
    ...(collectionFailures&&serviceRefunds&&refundTransfers?{refundTransfers}:{}),
    ...(refundTransfers&&excessReceipts&&directReceiptTips?{directReceiptTips}:{}),
+   ...(refundTransfers&&directReceiptTips&&refundTransferFees?{refundTransferFees}:{}),
    ...(sameDayExpenses?{sameDayExpenses}:{}),
    ...(trialBalance?{trialBalance}:{}),...(paymentCorrections?{paymentCorrections}:{}),...(fundApplications?{fundApplications}:{}),
    ...(heldTips?{heldTips}:{}),...(invoiceCredits?{invoiceCredits}:{}),...(paidInvoiceCredits?{paidInvoiceCredits}:{}),
@@ -201,7 +204,8 @@ export const financeAccounts={
   check(context.trialBalance&&customerDate(throughOn)&&(accountId===null||customerUuid(accountId))&&(afterLineId===null||customerUuid(afterLineId)));
   const {status,value}=await post('posted-journal',{throughOn,accountId,afterLineId},signal,context.binding);
   check(status===200);
-  return context.directReceiptTips?parseFictionalJournalV11(value,context.businessId,throughOn,accountId,afterLineId)
+  return context.refundTransferFees?parseFictionalJournalV12(value,context.businessId,throughOn,accountId,afterLineId)
+   :context.directReceiptTips?parseFictionalJournalV11(value,context.businessId,throughOn,accountId,afterLineId)
    :context.refundTransfers?parseFictionalJournalV10(value,context.businessId,throughOn,accountId,afterLineId)
    :context.collectionFailures?parseFictionalJournalV9(value,context.businessId,throughOn,accountId,afterLineId)
    :context.tipReturns?parseFictionalJournalV8(value,context.businessId,throughOn,accountId,afterLineId)
@@ -447,10 +451,17 @@ export const financeAccounts={
   check(status===200);
   return {state:'ready' as const,options:parseRefundTransferOptions(value,context.businessId,customerId,kind,actualOn)};
  },
+ async refundTransferFeeOption(context:FinanceAccountContext,customerId:string,priorEventId:string,actualOn:string,signal:AbortSignal){
+  check(context.refundTransferFees&&customerUuid(customerId)&&customerUuid(priorEventId)&&customerDate(actualOn));
+  const {status,value}=await post('refund-transfer-fee-option',{customerId,priorEventId,actualOn},signal,context.binding);
+  check(status===200);
+  return parseRefundTransferFeeOption(value,context.businessId,customerId,priorEventId,actualOn);
+ },
  async recordRefundTransfer(context:FinanceAccountContext,input:ReturnType<typeof parseRefundTransferInput>,signal:AbortSignal){
   check(context.refundTransfers&&context.writeState==='ready'&&context.recoveryEpoch===input.reference.recoveryEpoch);
   const request=parseRefundTransferInput(input);
-  const {status,value}=await post('refund-transfer-submit',request,signal,context.binding);
+  check(!request.embeddedFee||context.refundTransferFees);
+  const {status,value}=await post(request.embeddedFee?'refund-transfer-fee-submit':'refund-transfer-submit',request,signal,context.binding);
   const reason=status===409&&exact(value,['error'])?refundTransferRefusal(value.error):null;
   if(reason)return {state:'refused' as const,reason};
   check(status===200||status===409);

@@ -94,7 +94,7 @@ function columnType(column){
 
 export async function exerciseNeutralFinanceImport(connection,files,businessId,{
   includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,
-  includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,
+  includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,
 }={}){
   assert(!includePairedCredits||includeCredits);
   assert(!includeServiceRefunds||includePairedCredits);
@@ -104,13 +104,15 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
   assert(!includeCollectionFailures||includeTipReturns);
   assert(!includeRefundTransferAdjustments||includeCollectionFailures);
   assert(!includeDirectReceiptTips||includeRefundTransferAdjustments);
+  assert(!includeRefundTransferFees||includeDirectReceiptTips);
   const parts=new Map(files.map(file=>[file.name,file.content]));
   const {tables}=JSON.parse(parts.get('dictionary.json'));
   assert.deepEqual(tables.map(row=>row.name),[...names,...includeCredits?['invoice_credits']:[],
     ...includePairedCredits?['paired_invoice_credit_releases']:[],...includeServiceRefunds?['service_credit_refunds']:[],
     ...includeExcessReturns?['excess_receipt_returns']:[],...includeTipReturns?['tip_returns','tip_realization_range_consumptions']:[],
     ...includeCollectionFailures?['collection_failures','collection_failure_components']:[],
-    ...includeRefundTransferAdjustments?['refund_transfer_adjustments','refund_transfer_adjustment_ranges']:[]]);
+    ...includeRefundTransferAdjustments?['refund_transfer_adjustments','refund_transfer_adjustment_ranges']:[],
+    ...includeRefundTransferFees?['refund_transfer_embedded_fees']:[]]);
   assert.equal((await connection.query("SELECT count(*)::int AS n FROM pg_namespace WHERE nspname IN('auth','crest','crest_private','crest_commands','neutral_finance')")).rows[0].n,0);
   const exports={};
   await connection.query('BEGIN');
@@ -355,6 +357,14 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
         ALTER TABLE neutral_finance.refund_transfer_adjustments ADD UNIQUE(business_id,id,prior_event_id);
         ALTER TABLE neutral_finance.refund_transfer_adjustment_ranges ADD FOREIGN KEY(business_id,adjustment_id,prior_event_id)
           REFERENCES neutral_finance.refund_transfer_adjustments(business_id,id,prior_event_id)`);
+      if(includeRefundTransferFees)await connection.query(`
+        ALTER TABLE neutral_finance.refund_transfer_embedded_fees
+         ADD UNIQUE(business_id,adjustment_id), ADD UNIQUE(business_id,component_evidence_id),
+         ADD FOREIGN KEY(business_id,adjustment_id) REFERENCES neutral_finance.refund_transfer_adjustments(business_id,id),
+         ADD FOREIGN KEY(business_id,component_evidence_id) REFERENCES neutral_finance.external_money_evidence(business_id,id)`);
+      const feeJoin=includeRefundTransferFees?
+        'LEFT JOIN neutral_finance.refund_transfer_embedded_fees fee ON fee.business_id=a.business_id AND fee.adjustment_id=a.id'
+        :'LEFT JOIN LATERAL (SELECT NULL::uuid AS id,NULL::bigint AS net_cents,NULL::bigint AS cents,NULL::uuid AS fee_account_id,NULL::uuid AS mapping_id) fee ON true';
       const {rows:refundTransfers}=await connection.query(`
         WITH ranges AS (
           SELECT business_id,adjustment_id,sum(last_cent::numeric-first_cent+1) AS total,
@@ -369,12 +379,17 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
             AND prior.original_event_id=original.id AND prior.fund_lot_id=a.fund_lot_id END
           AND proof.external_account_id=a.account_id::text AND proof.confirmed_on=a.actual_on AND proof.signed_cents=m.signed_cents
           AND m.account_id=a.account_id AND m.evidence_id=a.evidence_id
-          AND m.signed_cents=CASE a.kind WHEN 'recredit' THEN a.cents ELSE -a.cents END AS exact_source,
+          AND m.signed_cents=coalesce(fee.net_cents,CASE a.kind WHEN 'recredit' THEN a.cents ELSE -a.cents END)
+          AND (fee.id IS NULL OR a.kind='recredit' AND fee.net_cents>0 AND fee.cents>0 AND fee.net_cents::numeric+fee.cents=a.cents) AS exact_source,
+          fee.id IS NOT NULL AS embedded_fee,
           count(*)::int AS lines,
           count(*) FILTER(WHERE l.purpose='refund_transfer_money' AND l.account_id=a.account_id AND l.money_movement_id=m.id
             AND l.debit_cents-l.credit_cents=m.signed_cents)::int AS money,
           count(*) FILTER(WHERE l.purpose='refund_transfer_funds' AND l.account_id=lot.account_id
-            AND l.fixed_mapping_id=lot.mapping_id AND l.fund_lot_id=lot.id AND l.credit_cents-l.debit_cents=m.signed_cents)::int AS funds
+            AND l.fixed_mapping_id=lot.mapping_id AND l.fund_lot_id=lot.id
+            AND l.credit_cents-l.debit_cents=CASE a.kind WHEN 'recredit' THEN a.cents ELSE -a.cents END)::int AS funds,
+          count(*) FILTER(WHERE l.purpose='refund_transfer_fee' AND l.debit_cents=fee.cents AND l.credit_cents=0
+            AND l.account_id=fee.fee_account_id AND l.fixed_mapping_id=fee.mapping_id AND l.money_movement_id IS NULL)::int AS fee_lines
         FROM neutral_finance.refund_transfer_adjustments a
         JOIN ranges p ON (p.business_id,p.adjustment_id)=(a.business_id,a.id)
         JOIN neutral_finance.customer_fund_lots lot ON (lot.business_id,lot.id)=(a.business_id,a.fund_lot_id)
@@ -388,9 +403,22 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
         JOIN neutral_finance.external_money_evidence proof ON (proof.business_id,proof.id)=(a.business_id,a.evidence_id)
         JOIN neutral_finance.journal_entries j ON (j.business_id,j.event_id)=(e.business_id,e.id)
         JOIN neutral_finance.journal_lines l ON (l.business_id,l.entry_id,l.refund_transfer_adjustment_id)=(j.business_id,j.id,a.id)
-        GROUP BY a.id,p.total,p.valid,original.id,preceding.id,prior.id,e.id,g.id,prior_group.id,m.id,proof.id`);
+        ${feeJoin}
+        GROUP BY a.id,p.total,p.valid,original.id,preceding.id,prior.id,e.id,g.id,prior_group.id,m.id,proof.id,fee.id,fee.net_cents,fee.cents,fee.fee_account_id,fee.mapping_id`);
       assert.equal(refundTransfers.length,exports.refund_transfer_adjustments.length);
-      assert(refundTransfers.every(row=>row.exact_source===true&&row.lines===2&&row.funds===1&&row.money===1));
+      assert(refundTransfers.every(row=>row.exact_source===true&&row.funds===1&&row.money===1
+        &&row.lines===(row.embedded_fee?3:2)&&row.fee_lines===(row.embedded_fee?1:0)));
+      if(includeRefundTransferFees){
+        const {rows:[{invalid}]}=await connection.query(`
+          SELECT count(*)::int AS invalid FROM neutral_finance.refund_transfer_embedded_fees f
+          JOIN neutral_finance.refund_transfer_adjustments a ON a.business_id=f.business_id AND a.id=f.adjustment_id
+          JOIN neutral_finance.external_money_evidence main ON main.business_id=a.business_id AND main.id=a.evidence_id
+          LEFT JOIN neutral_finance.external_money_evidence part ON part.business_id=f.business_id AND part.id=f.component_evidence_id
+          WHERE f.component_evidence_id IS NOT NULL AND (part.id=main.id OR part.signed_cents<>-f.cents
+            OR part.external_account_id<>main.external_account_id OR part.provider_namespace<>main.provider_namespace
+            OR part.confirmed_on<>main.confirmed_on OR EXISTS(SELECT FROM neutral_finance.money_movements m WHERE m.evidence_id=part.id))`);
+        assert.equal(invalid,0);
+      }
       const {rows:[{overlap,outside}]}=await connection.query(`
         WITH available AS (
           SELECT e.business_id,e.id AS event_id,r.first_cent,r.last_cent

@@ -98,7 +98,9 @@ export function TrialBalance({businessId}:{businessId:string}){
       if(context.businessId!==businessId)throw Error();
       const result=await financeAccounts.readPostedJournal(context,balance.throughOn,account||null,next?journal!.nextAfterLineId:null,signal);
       if(signal.aborted)return;
-      const expectedJournalVersion=context.directReceiptTips&&reportVersion(balance)===10?11:reportVersion(balance);
+      const balanceVersion=reportVersion(balance);
+      const expectedJournalVersion=balanceVersion===10&&context.refundTransferFees?12
+        :balanceVersion===10&&context.directReceiptTips?11:balanceVersion;
       if(reportVersion(result)!==expectedJournalVersion){
         setJournalMessage('Report coverage changed. Reload the trial balance before opening the journal.');
         return;
@@ -159,7 +161,8 @@ export function TrialBalance({businessId}:{businessId:string}){
       [],
       ['Date','Account code','Account','Purpose','Debit cents','Credit cents','Entry ID','Event ID','Source operation ID',
         ...(includesCorrections?['Posting template','Payment correction ID','Customer funds lot ID']:[]),
-        ...(includesFundsApplications?['Customer funds application ID']:[]),...(includesHeldTips?['Held tip ID']:[]),
+        ...(includesFundsApplications?['Customer funds application ID']:[]),
+        ...(includesHeldTips?[reportVersion(journal)>=11?'Tip ID':'Held tip ID']:[]),
         ...(includesInvoiceCredits?['Invoice credit ID']:[]),...(includesServiceRefunds?['Service refund ID']:[]),
         ...(includesExcessReturns?['Unused payment return ID']:[]),...(includesTipReturns?['Tip return ID']:[]),
         ...(includesCollectionFailures?['Payment adjustment ID','Payment adjustment component ID','Adjustment type','Original payment ID']:[]),
@@ -306,7 +309,8 @@ export function TrialBalance({businessId}:{businessId:string}){
                       </details>
                     </>}
                     {refundTransfer&&<>
-                      <small>{refundTransfer.refundTransferKind==='recredit'?'Refund returned · Recredited by bank or wallet':'Retried refund · Settled debit'}</small>
+                      <small>{String(row.purpose)==='refund_transfer_fee'?'Refund returned · Provider fee withheld'
+                        :refundTransfer.refundTransferKind==='recredit'?'Refund returned · Recredited by bank or wallet':'Retried refund · Settled debit'}</small>
                       <details><summary>Source references</summary>
                         <small>Transfer {refundTransfer.refundTransferAdjustmentId}</small>
                         <small>Original refund {refundTransfer.originalRefundEventId}</small>

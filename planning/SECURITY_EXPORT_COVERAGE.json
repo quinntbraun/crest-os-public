@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 97,
+  "migrationCount": 98,
   "tables": [
     {
       "table": "crest.businesses",
@@ -3539,6 +3539,23 @@
         "prior_event_id",
         "first_cent",
         "last_cent"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.refund_transfer_embedded_fees",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "adjustment_id",
+        "mapping_id",
+        "fee_account_id",
+        "net_cents",
+        "cents",
+        "confirmation",
+        "component_evidence_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
