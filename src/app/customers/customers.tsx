@@ -52,10 +52,10 @@ export function CustomerScreen({related:Related}:{related?:ComponentType<{custom
         <label className="trust"><input name="archived" type="checkbox" defaultChecked={view.includeArchived} disabled={view.busy}/>Include archived customers</label>
       </form>
       {view.rows.length>0?<ul className="customer-list customer-directory-list">{view.rows.map(row=><li key={row.id}>
-        <button type="button" className="secondary" aria-current={selectedId===row.id?'true':undefined} aria-labelledby={'customer-name-'+row.id} aria-describedby={'customer-contact-'+row.id} disabled={view.busy} onClick={()=>void open(row.id)}>
-          <span id={'customer-name-'+row.id}>{row.display_name}{row.archived_at!==null?' — archived':''}</span>
-          <span className="customer-contact" id={'customer-contact-'+row.id}>{[row.phone_raw?phonePresentation(row.phone_raw):null,row.email_raw].filter(Boolean).join(' · ')||'Contact details not recorded'}</span>
+        <button type="button" className="secondary" aria-current={selectedId===row.id?'true':undefined} aria-describedby={'customer-contact-'+row.id} disabled={view.busy} onClick={()=>void open(row.id)}>
+          {row.display_name}{row.archived_at!==null?' — archived':''}
         </button>
+        <p className="customer-contact" id={'customer-contact-'+row.id}>{[row.phone_raw?phonePresentation(row.phone_raw):null,row.email_raw].filter(Boolean).join(' · ')||'Contact details not recorded'}</p>
       </li>)}</ul>:<p className="customer-directory-empty">{view.search||view.includeArchived?'No customers match this search.':'No customers yet. Use Add customer to create a record.'}</p>}
       {view.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>query(view.search,view.includeArchived,true)}>Next customer page</button>}
       </section>

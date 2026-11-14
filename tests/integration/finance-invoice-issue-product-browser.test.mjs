@@ -7,6 +7,7 @@ import {test} from 'node:test';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {unzipSync,strFromU8} from 'fflate';
+import {parseInvoiceCreditReference} from '../../src/bookkeeping/invoice-credit-contract.ts';
 import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
@@ -401,8 +402,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
          await page.screenshot({path:'.local/review/finance-invoice-credit-'+name+'-'+width+'.png'});
         }
-        let posted=false;
+        const {rows:[savedInvoice]}=await fixture.client.query(
+         'SELECT id FROM crest.invoices WHERE business_id=$1 AND job_id=$2 AND invoice_number=$3',
+         [fixture.business,jobId,'TEST-1']);
+        let posted=false,submittedReference,submittedBinding;
         await page.route('**/api/business/finance-accounts/invoice-credit-submit',async route=>{
+         submittedReference=parseInvoiceCreditReference(route.request().postDataJSON().reference);
+         submittedBinding=route.request().headers()['x-crest-edit-binding'];
          const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
          if(response.status()===200){posted=true;await route.abort('failed');}
          else await route.fulfill({response});
@@ -411,8 +417,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await expect(credit.getByRole('status')).toContainText('outcome could not be confirmed');
         assert(posted);
         const stored=await page.evaluate(()=>sessionStorage.getItem('crest.invoice-credit.pending-reference.v1'));
-        assert(stored&&!stored.includes('Fictional')&&!stored.includes('1100'));
-        assert.deepEqual(Object.keys(JSON.parse(stored).reference).sort(),['invoiceCreditId','operationId','recoveryEpoch']);
+        assert(stored);
+        assert.match(submittedBinding,/^[A-Za-z0-9_-]{43}$/);
+        assert.deepEqual(JSON.parse(stored),{businessId:fixture.business,binding:submittedBinding,
+         invoiceId:savedInvoice.id,reference:submittedReference});
         await allowInvoiceReadWindow();
         await page.reload();
         await draftDisclosure.click();

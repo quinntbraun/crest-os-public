@@ -5,13 +5,14 @@ import {strFromU8,unzipSync} from 'fflate';
 import {test} from 'node:test';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {maintenanceFollowUpOriginal,parseMaintenanceFollowUpSave} from '../../src/operations/maintenance-follow-up-contract.ts';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine maintenance reminder lifecycle and interrupted save',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,
   reviewOutcome:true,reviewHistory:true,maintenanceFollowUp:true});
- let browser,page,checkRefreshBudget=false;
+ let browser,page,workspaceBinding,checkRefreshBudget=false;
  const reminderResponses=[],authorityFailures=[];
  try{
   browser=await engine.launch();
@@ -20,6 +21,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   page.on('response',response=>{
    const path=new URL(response.url()).pathname;
    if(path.startsWith('/api/business/scheduling/maintenance-'))reminderResponses.push({path,status:response.status()});
+   if(path==='/api/business/scheduling/workspace'&&response.ok())workspaceBinding=response.headers()['x-crest-edit-binding'];
    if(checkRefreshBudget&&response.status()>=400&&['/api/auth/session','/api/business/scheduling/workspace'].includes(path))
     authorityFailures.push({path,status:response.status()});
   });
@@ -104,9 +106,12 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(panel.getByText('Snoozed',{exact:true})).toBeVisible();
   await panel.getByRole('button',{name:'Update reminder',exact:true}).click();
   await panel.getByLabel('What should happen?',{exact:true}).selectOption('completed');
-  let submissions=0;
+  let submissions=0,submittedBinding,submittedReference;
   await page.route('**/api/business/scheduling/maintenance-save',async route=>{
    submissions++;
+   submittedBinding=workspaceBinding;
+   const request=parseMaintenanceFollowUpSave({...route.request().postDataJSON(),businessId:fixture.business});
+   submittedReference=maintenanceFollowUpOriginal(request).reference;
    const response=await route.fetch();
    assert.equal(response.status(),200);
    await route.abort('failed');
@@ -120,7 +125,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    FROM crest.follow_up_task_events WHERE business_id=$1`,[fixture.business]);
   assert.deepEqual(proof,{count:3,events:['created','snoozed','completed']});
   const storage=await page.evaluate(()=>sessionStorage.getItem('crest.maintenance-follow-up.pending-reference.v1'));
-  assert(storage&&!storage.includes(note)&&!storage.includes('2098'));
+  assert(storage);
+  assert.match(submittedBinding,/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/);
+  assert.deepEqual(JSON.parse(storage),{schemaVersion:1,businessId:fixture.business,binding:submittedBinding,reference:submittedReference});
   await page.getByRole('button',{name:'Check original resolution',exact:true}).click();
   await page.getByRole('button',{name:'Verify original save receipt',exact:true}).click();
   await expect(page.getByText(/The original save receipt is verified/)).toBeVisible();
