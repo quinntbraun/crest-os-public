@@ -42,7 +42,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const page=await context.newPage();
   page.on('response',response=>{
    const path=new URL(response.url()).pathname;
-   if(path.startsWith('/api/business/finance-accounts/')||path==='/api/auth/session'){
+   if(path.startsWith('/api/business/finance-accounts/')||path==='/api/auth/session'||path==='/api/business/scheduling/workspace'){
     financeResponses.push([path,response.status()]);
    }
   });
@@ -598,10 +598,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         assert.deepEqual(JSON.parse(stored),{businessId:fixture.business,binding:submittedBinding,
          invoiceId:savedInvoice.id,reference:submittedReference});
         await allowInvoiceReadWindow();
+        const scheduleReady=page.waitForResponse(response=>response.url().endsWith('/api/business/scheduling/workspace'));
         await page.reload();
+        assert.equal((await scheduleReady).status(),200,JSON.stringify(financeResponses.slice(-12)));
         await draftDisclosure.click();
         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
         await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
+        await allowInvoiceReadWindow();
         await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
         await expect(draftStatus).toHaveText('Issued invoice loaded.');
         await invoice.getByText('Credit an invoice line',{exact:true}).press('Enter');
@@ -1039,7 +1042,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await invoice.getByText(title,{exact:true}).press('Enter');
            await panel.getByRole('button',{name:'Load customer payments',exact:true}).press('Enter');
            const payment=panel.getByLabel('Original payment',{exact:true});
-           await expect(payment.locator('option').filter({hasText:committed.paymentId.slice(-8)})).toContainText('$12.34');
+           const savedOption=payment.locator('option[value="'+committed.paymentId+'"]');
+           await expect(savedOption).toContainText('$12.34');
+           await expect(savedOption).toContainText(committed.paymentId.slice(-8));
            await payment.selectOption(committed.paymentId);
            await panel.getByLabel('Adjustment date',{exact:true}).fill(committed.actualOn);
            await panel.getByLabel('What happened?',{exact:true}).selectOption('settled_failure');
