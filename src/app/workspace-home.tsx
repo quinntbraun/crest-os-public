@@ -58,7 +58,6 @@ export function WorkspaceHome(){
     {view.phase==='unavailable'&&<div className="notice"><p>No current business information is shown until access is confirmed.</p><a href="/sign-in">Check sign-in</a></div>}
     {view.phase==='ready'&&<>
       {view.paused&&<p className="notice">Changes are paused for recovery review. You can still review available records and history.</p>}
-      <nav className="home-shortcuts" aria-label="Quick actions"><a href="/customers">Open customers</a><a href="/quotes">Open quotes</a><a href="/expenses">Open expenses</a><a href="/settings/accounts">Open accounting</a></nav>
       <div className="today-grid">
       <section className="home-panel" aria-label="Upcoming saved visits"><div className="section-heading"><h2>Upcoming visits</h2></div>
         {view.schedule===null||view.schedule.visits===null?<p>Upcoming visits could not be verified. <a href="/schedule">Check the schedule</a>.</p>:<><p className="field-help">Confirmed appointments over the next seven days.</p>{visits.length===0?<p>{view.schedule.visits.hasMore?'No active visits on this page. Open Schedule to review remaining visits.':'No active saved visits in the next seven days.'}</p>:<ul className="today-visits">{visits.map(job=><li key={job.jobId}>
@@ -95,6 +94,7 @@ export function WorkspaceHome(){
       </section>
       {view.proposals!==null&&<section className="home-panel" aria-label="Unconfirmed appointment proposals"><div className="section-heading"><h2>Proposed times</h2><a href="/appointment-holds">Review proposals</a></div>{view.proposals.holds.length===0?<p>No saved proposals on this page.</p>:<ul className="follow-up-list">{view.proposals.holds.map(hold=><li key={hold.id}><strong>{hold.label}</strong><span>{hold.local_start.slice(0,16).replace('T',' ')} · {hold.timezone}</span><span>{hold.state==='withdrawn'?'Withdrawn':'Unconfirmed · does not reserve time'}</span></li>)}</ul>}<p className="field-help">First page of retained proposals, including withdrawals. {view.proposals.hasMore?'More proposals are available. ':''}These are not confirmed bookings.</p><a className="primary-action" href="/appointment-holds">Propose a time</a></section>}
       </div></div>
+      <nav className="home-shortcuts" aria-label="Quick actions"><a href="/customers" aria-label="Open customers">Customers</a><a href="/quotes" aria-label="Open quotes">Quotes</a><a href="/expenses" aria-label="Open expenses">Expenses</a><a href="/settings/accounts" aria-label="Open accounting">Accounting</a></nav>
       <div className="today-footer"><a href="/save-review">Review interrupted saves</a><p className="field-help">Last checked {view.checkedAt===null?'':new Date(view.checkedAt).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}</p></div>
     </>}
     {view.phase!=='checking'&&<button type="button" className="secondary today-refresh" onClick={()=>{setView(initial);void load();}}>Refresh workspace</button>}

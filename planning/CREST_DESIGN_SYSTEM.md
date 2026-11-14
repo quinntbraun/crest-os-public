@@ -8,7 +8,7 @@
 - Phone: five labeled bottom destinations with safe-area space; short forms with optional details. Desktop: navigation rail and bounded reading width. Native details for secondary tools; visible focus, skip link, native keyboard behavior and reduced-motion support.
 - Workspace navigation uses document links so existing editors' beforeunload protection remains active. No persistent customer draft cache or optimistic save is introduced. Home verifies actual session/business context, labels partial lead retrieval, clears its records when hidden, and requires explicit refresh. Unavailable information never becomes a zero count.
 
-Today uses a date and primary Schedule action, with compact links to Customers, Quotes, Expenses and Accounting. The main navigation keeps Leads one tap away. Workspace tools group customer and job tasks, money, and workspace settings. The menu uses native disclosure behavior, marks the current tool and returns focus to its trigger when dismissed with Escape. Confirmed visits keep their time, customer and status together. Follow-ups use a second column when there is room. Schedule shows the calendar and saved jobs before the custody tools. The test-workspace banner identifies the environment.
+Today opens with the date and Schedule action, then shows visits and follow-ups before shortcuts to Customers, Quotes, Expenses and Accounting. The main navigation keeps Leads one tap away. Workspace tools group customer and job tasks, money, and workspace settings. The menu uses native disclosure behavior, marks the current tool and returns focus to its trigger when dismissed with Escape. Confirmed visits keep their time, customer and status together. Follow-ups use a second column when there is room. Schedule shows the calendar and saved jobs before the custody tools. The test-workspace banner identifies the environment.
 
 This decision does not certify visual quality, real-device behavior, production activation, recovery or release readiness. Those require executed checks and evidence in the current working checkpoint.
 
@@ -21,6 +21,8 @@ The service directory uses a compact two-action toolbar and a single search row 
 Customers puts Add customer before the search results and makes each complete result row selectable. Names and contact details share a row, with an accessible name and description and an outlined selection. Narrow phones stack search controls and wide screens place lookup beside the editor and record history. A saved record and a new record use the same editor, with extra fields in native disclosure.
 
 Saved jobs place status, appointment and the available work action before vehicles and retained scope. Secondary tools such as Calendar status and mileage stay grouped within the job. Wider Schedule screens keep the work list beside job review.
+
+Quotes shows New quote as the primary action. Retained quotes show recipient, total, status and version at a glance. The original fields and exact customer document open on request, with retained agreement and download actions available below the summary.
 
 Owner update,2026-10-28: use the exact supplied Crest Detailing logo on genuine sign-in, with local Next image optimization and no external image service. Compact phone branding and native optional device details keep the primary submit reachable; laptop layout places brand beside form. Password visibility is an explicit non-submit toggle that resets when the form unmounts; credential clearing and genuine MFA/session rules are unchanged.
 

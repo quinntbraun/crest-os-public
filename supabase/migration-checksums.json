@@ -445,6 +445,11 @@
       "version": "20261213180000",
       "file": "20261213180000_posted_finance_owner_download.sql",
       "sha256": "224ff6c65853992445042288c055fe47afed4e424e534d21d9451d3e9515e1c9"
+    },
+    {
+      "version": "20261214180000",
+      "file": "20261214180000_fictional_customer_funds.sql",
+      "sha256": "b6e40569e51dd9eb4df95d7b1227c02f1f0c6094b6a1f8fc64550bc45bcf59ea"
     }
   ]
 }

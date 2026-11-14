@@ -245,7 +245,13 @@ async function verifyPostedFinanceLauncher({admin,owner,sandbox,target}){
   const failure={message:'SYNTHETIC_POSTED_FINANCE_EXPORT_REVIEW_REQUIRED'};
   await assert.rejects(prepareSyntheticPostedFinancePreview(config),failure);
   assert.equal((await sandbox.admin.query('SELECT 1 FROM pg_roles WHERE rolname=$1',[login])).rowCount,0);
-  assert.equal((await sandbox.apply(target)).history.length,89);
+  const before=(await inventory(admin)).filter(row=>row.schema!=='supabase_migrations');
+  const requireFundsPreview=()=>requireSyntheticFinanceAccountConfiguration(target,owner.business,
+    true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true);
+  await assert.rejects(requireFundsPreview(),{message:'SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED'});
+  assert.equal((await sandbox.apply(target)).history.length,90);
+  await requireFundsPreview();
+  assert.deepEqual((await inventory(admin)).filter(row=>row.schema!=='supabase_migrations'),before);
   const exportAuthority='crest_commands.authorize_posted_finance_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid)';
   const settingsAuthority='crest_commands.read_business_settings_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid)';
   assert.deepEqual((await admin.query(`SELECT pg_get_userbyid(proowner) AS owner,
@@ -444,6 +450,24 @@ async function verifyServiceRefund({candidate:paired,sandbox,target,admin,export
     assert.equal(rebuilt.debit,rebuilt.credit);
   }finally{await neutral.end();}
   await verifyRefundRecovery({candidate,admin,target,owner,archive,post,retained});
+}
+
+async function verifyCustomerFundsReport({finance,web,owner,foreign,saved,today}){
+  const {parseCustomerFundsReport}=await import('../../src/bookkeeping/customer-funds-report-contract.ts');
+  const route='read_fictional_customer_funds';
+  const report=async(principal,date)=>parseCustomerFundsReport(
+    await command(finance,route,[...principal.auth(),date]),principal.business,date);
+  const funds=await report(owner,today);
+  const released=funds.rows.find(row=>row.lotId===saved.receipt.release.fundLotId);
+  assert.equal(released?.heldCents,'600');
+  assert.equal(released?.customerId,owner.customer);
+  assert.equal((await report(owner,null)).totalCents,funds.totalCents);
+  assert.equal((await report(owner,'1900-01-01')).totalCents,'0');
+  assert.equal((await report(foreign,today)).totalCents,'0');
+  const foreignTarget=foreign.auth();foreignTarget[7]=owner.business;
+  await assert.rejects(command(finance,route,[...foreignTarget,today]),{code:'42501'});
+  await assert.rejects(command(web,route,[...owner.auth(),today]),{code:'42501'});
+  await assert.rejects(report(owner,'9999-12-31'),{message:'FINANCE_REPORT_DATE_REQUIRED'});
 }
 
 test('held E08 restores the ordered paired credit and original payment release with exact audit and portable evidence', {timeout:240000}, async()=>{
@@ -764,6 +788,7 @@ test('held E08 restores the ordered paired credit and original payment release w
     await verifyServiceRefund({candidate,sandbox,target,admin,exporter,finance,web,owner,foreign,invoice,saved,channel,bank,today});
     await verifyReceivableAging({admin,finance,web,owner,foreign,saved,today,sandbox,target,makeOwner,service});
     await verifyPostedFinanceLauncher({admin,owner,sandbox,target});
+    await verifyCustomerFundsReport({finance,web,owner,foreign,saved,today});
   } finally {
     try {await sandbox?.close();} finally {await cluster.close();}
   }
