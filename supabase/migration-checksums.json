@@ -505,6 +505,11 @@
       "version": "20261225180000",
       "file": "20261225180000_fictional_collection_failure_restored_tip.sql",
       "sha256": "ee6881b8b40f07b683bcfe34b4d93e4c78a02d02b5075983fd3553da87eaebee"
+    },
+    {
+      "version": "20261226180000",
+      "file": "20261226180000_fictional_opening_worksheet.sql",
+      "sha256": "e7a3847ddcf1bbfe586d9618300c405c1f0d0e7de457a92ee041a7538866abed"
     }
   ]
 }

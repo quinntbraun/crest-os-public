@@ -1,5 +1,6 @@
 import {captureCollectionFailureGroupedRecreditSource,collectionFailureGroupedRecreditSourceColumns,isCollectionFailureGroupedRecreditOperation,verifyCollectionFailureGroupedRecreditSourceClosure} from './collection-failure-grouped-recredit-source.ts';
 import {captureRestoredTipSource,restoredTipSourceColumns} from './restored-tip-source.ts';
+import {captureOpeningWorksheetSource,verifyOpeningWorksheetBusinessHistory} from './opening-worksheet-source.ts';
 import 'server-only';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
@@ -63,13 +64,15 @@ function rowsOf(value:unknown,table:string):readonly Row[]{
 // A single authorized, read-only repeatable-read export transaction must own
 // query for the entire capture. Every underlying SQL reader checks that mode.
 export async function captureFinanceSourceExport(businessId:string,query:Query,
-  {includeCorrections=false,includeFundApplications=false,includeTips=false,includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,includeCollectionFailureRecredits=false,includeCollectionFailureGroupedRecredits=false,includeRestoredTips=false}:Readonly<{
+  {includeCorrections=false,includeFundApplications=false,includeTips=false,includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,includeCollectionFailureRecredits=false,includeCollectionFailureGroupedRecredits=false,includeRestoredTips=false,includeOpeningWorksheets=false}:Readonly<{
+    includeOpeningWorksheets?:boolean;
     includeCorrections?:boolean;includeFundApplications?:boolean;includeTips?:boolean;includeCredits?:boolean;includePairedCredits?:boolean;
     includeServiceRefunds?:boolean;includeExcessReceipts?:boolean;includeExcessReturns?:boolean;includeTipReturns?:boolean;includeCollectionFailures?:boolean;includeRefundTransferAdjustments?:boolean;includeDirectReceiptTips?:boolean;includeRefundTransferFees?:boolean;includeCollectionFailureRecredits?:boolean;includeCollectionFailureGroupedRecredits?:boolean;includeRestoredTips?:boolean;
   }>={}){
   check(customerUuid(businessId)&&(!includeFundApplications||includeCorrections)&&(!includeTips||includeFundApplications)
     &&(!includeCredits||includeTips)&&(!includePairedCredits||includeCredits)&&(!includeServiceRefunds||includePairedCredits)
     &&(!includeExcessReceipts||includeServiceRefunds)&&(!includeExcessReturns||includeExcessReceipts)&&(!includeTipReturns||includeExcessReturns)&&(!includeCollectionFailures||includeTipReturns)&&(!includeRefundTransferAdjustments||includeCollectionFailures)&&(!includeDirectReceiptTips||includeRefundTransferAdjustments)&&(!includeRefundTransferFees||includeDirectReceiptTips)&&(!includeCollectionFailureRecredits||includeRefundTransferFees)&&(!includeCollectionFailureGroupedRecredits||includeCollectionFailureRecredits)&&(!includeRestoredTips||includeCollectionFailureGroupedRecredits));
+  check(!includeOpeningWorksheets||includeRestoredTips);
   const one=async(sql:string,parameters:unknown[])=>{
     const result=await query(sql,parameters);
     check(Array.isArray(result)&&result.length===1&&exact(result[0],['result']));
@@ -143,8 +146,13 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
   }
   if(application)formatFundApplicationSource(application);
 
-  const version=restored?17:failureGrouped?16:failureRecredit?15:refundFee?14:directTip?13:refundTransfer?12:collectionFailure?11:tipReturn?10:excessReturn?9:includeExcessReceipts?8:refund?7:paired?6:credit?5:tip?4:application?3:correction?2:1;
-  const tables=financeSourceTables(version);
+  const opening=includeOpeningWorksheets?await captureOpeningWorksheetSource(businessId,query):null;
+  const version=opening?18:restored?17:failureGrouped?16:failureRecredit?15:refundFee?14:directTip?13:refundTransfer?12:collectionFailure?11:tipReturn?10:excessReturn?9:includeExcessReceipts?8:refund?7:paired?6:credit?5:tip?4:application?3:correction?2:1;
+  const tables=financeSourceTables(version===18?17:version);
+  if(opening)verifyOpeningWorksheetBusinessHistory(JSON.parse(opening),businessId,{
+    operation:receipt.history.operation.map(row=>JSON.parse(row.canonical_evidence).row),
+    audit_event:receipt.history.audit_event.map(row=>JSON.parse(row.canonical_evidence).row),
+  });
   const profiles={invoice,receipt,expense,correction,application,tip,credit,paired,refund,excessReturn,tipReturn,collectionFailure,refundTransfer,failureRecredit,failureGrouped};
   const combined=new Map<string,Map<string,Row>>();
   let count=0,bytes=0;
@@ -303,13 +311,15 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     // Carry the single history projection and its original hashes.
     add(kind+'_history.ndjson',records.map(row=>JSON.stringify(row)+'\n').join(''));
   }
+  if(opening)add('opening_worksheet_source.json',opening);
   add('dictionary.json',JSON.stringify({schemaVersion:1,format:'UTF-8 RFC4180 CRLF',primaryKey:'id',
     null:'\\N',booleans:['accounting_periods.opening_boundary'],
     decode:'Import as text. Remove only the mapped leading apostrophe, then unescape paired backslashes. Retain decimal cents and JSON text exactly.',
     tables})+'\n');
   add('README.txt',[
     'Crest OS posted finance source export',
-    restored?'Includes confirmed tip restorations that retain the original posted tip and tax ranges.'
+    opening?'Includes nonposting opening worksheet revisions with operation and audit history, plus confirmed tip restorations and supported posted finance.'
+      :restored?'Includes confirmed tip restorations that retain the original posted tip and tax ranges.'
       :includeCollectionFailureGroupedRecredits?'Includes grouped linked collection recoveries and the reviewed disposition of each original range.'
       :includeCollectionFailureRecredits?'Includes recovered incoming payments, selected original ranges, retained failures and ordinary customer funds.'
       :includeRefundTransferFees?'Includes provider-withheld fees, net recredits and full refund obligations with retained statement evidence.'

@@ -33,6 +33,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
   'payment-recovery':['finance-excess-receipt','finance-excess-return','finance-tip-return','finance-collection-failure','finance-refund-transfer',
    'finance-direct-tip','finance-refund-transfer-fee','finance-collection-recredit','finance-grouped-recredit','finance-posted-export'],
   'restored-tip':['finance-restored-tip'],
+  'opening-worksheet':['finance-opening-worksheet'],
   field:['field-departure','field-pause','completion-editor','completion-saved','mileage-form','mileage-split','mileage-saved','field-cancellation','field-work-time','field-work-boundary','mileage-departure-correction','completion-outcome','completion-history','field-maintenance-history','completion-invoice-preparation','completion-invoice-draft'],
   custody:['field-dropoff-intake','field-dropoff-work','field-dropoff-cancellation','field-dropoff-completion',
    'field-dropoff-collections','field-dropoff-history','field-dropoff-policy-revision',

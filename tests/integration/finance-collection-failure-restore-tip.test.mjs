@@ -7,7 +7,7 @@ import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixtur
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {exerciseNeutralFinanceImport} from '../support/neutral-finance-import.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
-import {backupDatabase,connect,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase} from '../support/recovery-drill.mjs';
+import {backupRestoredTipDatabase,connect,inventory,keyPair,privateWorkspace,recoveryCluster,restoreRestoredTipDatabase} from '../support/recovery-drill.mjs';
 import {captureFinanceSourceExport} from '../../src/bookkeeping/finance-source-export.ts';
 import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
 import {parseFictionalJournalV15} from '../../src/bookkeeping/posted-report-v15-contract.ts';
@@ -92,7 +92,7 @@ test('reinstated original tips retain exact tax offsets through an actual return
     const componentFor=async failure=>(await admin.query('SELECT id FROM crest.collection_failure_components WHERE collection_failure_id=$1',
       [failure.collectionFailureId])).rows[0].id;
     const initialComponent=await componentFor(tipFailure);
-    assert.equal((await sandbox.apply(target)).history.length,101);
+    assert.equal((await sandbox.apply(target,await sandbox.prefix(101))).history.length,101);
     const record='record_fictional_collection_failure_recredit';
     const range=(component,firstCent,lastCent,confirmed=true)=>({failureComponentId:component,firstCent,lastCent,disposition:'tip',
       ...(confirmed?{intentEvidence:'Fictional customer reconfirmed the same tip'}:{})});
@@ -229,12 +229,12 @@ test('reinstated original tips retain exact tax offsets through an actual return
       const point=join(workspace,'point');
       await mkdir(point,{mode:0o700});
       const keys=await keyPair(workspace);
-      const {manifest}=await backupDatabase(admin,target,point,keys.recipient);
+      const {manifest}=await backupRestoredTipDatabase(admin,target,point,keys.recipient);
       assert.equal(manifest.schemaVersion,101);
       destination=await recoveryCluster();
       const restoredUrl=await destination.database();
       assert.notEqual(new URL(restoredUrl).port,new URL(target).port);
-      assert.deepEqual(await restoreDatabase(point,keys.path,restoredUrl),manifest);
+      assert.deepEqual(await restoreRestoredTipDatabase(point,keys.path,restoredUrl),manifest);
       restoredClient=await connect(restoredUrl);
       assert.deepEqual(await inventory(restoredClient),manifest.rows);
       await restoredClient.query('SET ROLE crest_export');

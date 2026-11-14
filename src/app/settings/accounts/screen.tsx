@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {InvoiceSetup} from './invoice-setup';
+import {OpeningWorksheet} from './opening-worksheet';
 import {TrialBalance} from './trial-balance';
 import {CustomerFundsReport} from './customer-funds-report';
 import {ReceivableAging} from './receivable-aging';
@@ -229,7 +230,7 @@ export function FinanceAccountsScreen(){
  const writable=workspace?.context.writeState==='ready'&&!pending&&!signedOut;
  const context=workspace?.context;
  const hasSetupLinks=context&&(context.fixedMappings||context.moneyChannels||context.categoryMappings||context.taxProfiles);
- const hasSetup=!!(hasSetupLinks||context?.invoiceIssue);
+ const hasSetup=!!(hasSetupLinks||context?.invoiceIssue||context?.openingWorksheet);
  return <section className={styles.workspace} aria-label="Account settings" aria-busy={busy}>
   <p role="status" tabIndex={-1} ref={status}>{message}</p>
   {!editor&&!signedOut&&!workspace&&<button type="button" className={styles.openAccounting} disabled={busy}
@@ -256,6 +257,7 @@ export function FinanceAccountsScreen(){
     {context.taxProfiles&&<li><a href="/settings/accounts/tax">Tax profiles</a></li>}
    </ul>}
    {context.invoiceIssue&&<InvoiceSetup businessId={context.businessId}/>}
+   {context.openingWorksheet&&<OpeningWorksheet businessId={context.businessId}/>}
   </section>}
   {pending&&workspace&&<section className={styles.section} aria-label="Interrupted account save">
    <p className="save-reference">Save reference <code>{pending.reference.operationId}</code></p>

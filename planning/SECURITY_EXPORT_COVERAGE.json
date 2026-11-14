@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 101,
+  "migrationCount": 102,
   "tables": [
     {
       "table": "crest.businesses",
@@ -3644,6 +3644,27 @@
         "last_cent",
         "legacy_recredit_id",
         "settlement_component_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.opening_worksheet_revisions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "revision",
+        "prior_revision",
+        "cutover_on",
+        "cutover_at",
+        "time_zone",
+        "operation_id",
+        "audit_event_id",
+        "recorded_by",
+        "recorded_at",
+        "evidence",
+        "evidence_sha256"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

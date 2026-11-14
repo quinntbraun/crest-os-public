@@ -14,34 +14,27 @@ export const browserGroups = Object.freeze({
 export type BrowserGroup = keyof typeof browserGroups;
 const invoiceJourney = 'tests/integration/finance-invoice-issue-product-browser.test.mjs';
 const restoredTipJourney = 'tests/integration/finance-restored-tip-product-browser.test.mjs';
+const openingWorksheetJourney = 'tests/integration/finance-opening-worksheet-browser.test.mjs';
+const paymentRecovery=Object.freeze({
+  CREST_TEST_EXCESS_RECEIPTS:'1',
+  CREST_TEST_EXCESS_RETURN_EXPORT:'1',
+  CREST_TEST_TIP_RETURN_EXPORT:'1',
+  CREST_TEST_COLLECTION_FAILURE_EXPORT:'1',
+  CREST_TEST_REFUND_TRANSFER_EXPORT:'1',
+  CREST_TEST_DIRECT_RECEIPT_TIP_EXPORT:'1',
+  CREST_TEST_REFUND_TRANSFER_FEE_EXPORT:'1',
+  CREST_TEST_COLLECTION_FAILURE_RECREDIT_EXPORT:'1',
+  CREST_TEST_COLLECTION_FAILURE_GROUPED_RECREDIT_EXPORT:'1',
+});
+const restoredTip=Object.freeze({...paymentRecovery,CREST_TEST_RESTORED_TIP_EXPORT:'1'});
 export const browserScenarios = Object.freeze({
   'receipt-funds': Object.freeze({
     CREST_TEST_EXCESS_RECEIPTS:'1',
     CREST_TEST_RECEIPT_FUNDS_APPLICATION:'1',
   }),
-  'payment-recovery': Object.freeze({
-    CREST_TEST_EXCESS_RECEIPTS:'1',
-    CREST_TEST_EXCESS_RETURN_EXPORT:'1',
-    CREST_TEST_TIP_RETURN_EXPORT:'1',
-    CREST_TEST_COLLECTION_FAILURE_EXPORT:'1',
-    CREST_TEST_REFUND_TRANSFER_EXPORT:'1',
-    CREST_TEST_DIRECT_RECEIPT_TIP_EXPORT:'1',
-    CREST_TEST_REFUND_TRANSFER_FEE_EXPORT:'1',
-    CREST_TEST_COLLECTION_FAILURE_RECREDIT_EXPORT:'1',
-    CREST_TEST_COLLECTION_FAILURE_GROUPED_RECREDIT_EXPORT:'1',
-  }),
-  'restored-tip': Object.freeze({
-    CREST_TEST_EXCESS_RECEIPTS:'1',
-    CREST_TEST_EXCESS_RETURN_EXPORT:'1',
-    CREST_TEST_TIP_RETURN_EXPORT:'1',
-    CREST_TEST_COLLECTION_FAILURE_EXPORT:'1',
-    CREST_TEST_REFUND_TRANSFER_EXPORT:'1',
-    CREST_TEST_DIRECT_RECEIPT_TIP_EXPORT:'1',
-    CREST_TEST_REFUND_TRANSFER_FEE_EXPORT:'1',
-    CREST_TEST_COLLECTION_FAILURE_RECREDIT_EXPORT:'1',
-    CREST_TEST_COLLECTION_FAILURE_GROUPED_RECREDIT_EXPORT:'1',
-    CREST_TEST_RESTORED_TIP_EXPORT:'1',
-  }),
+  'payment-recovery': paymentRecovery,
+  'restored-tip': restoredTip,
+  'opening-worksheet': Object.freeze({...restoredTip,CREST_TEST_OPENING_WORKSHEET_EXPORT:'1'}),
 });
 export const browserGroupNames = Object.freeze([...Object.keys(browserGroups), ...Object.keys(browserScenarios)]);
 
@@ -58,7 +51,7 @@ export function browserGroupFiles(command: unknown, selected: unknown): readonly
     || declared.length !== expected.length || declared.some(file => !expected.includes(file))) return invalid();
   if (browserScenario(selected)) {
     if (!browserGroups.records.includes(invoiceJourney)) return invalid();
-    return [selected==='restored-tip'?restoredTipJourney:invoiceJourney];
+    return [selected==='opening-worksheet'?openingWorksheetJourney:selected==='restored-tip'?restoredTipJourney:invoiceJourney];
   }
   return browserGroups[selected as BrowserGroup];
 }

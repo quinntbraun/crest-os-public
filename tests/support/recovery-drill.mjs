@@ -32,12 +32,23 @@ import {directReceiptTipRecoveryProfile} from './finance-direct-receipt-tip-cand
 import {refundTransferFeeRecoveryProfile} from './finance-refund-transfer-fee-candidate.mjs';
 import {collectionFailureRecreditRecoveryProfile} from './finance-collection-failure-recredit-candidate.mjs';
 import {collectionFailureGroupedRecreditRecoveryProfile} from './finance-collection-failure-grouped-recredit-candidate.mjs';
+import {openingWorksheetSourceCoverage} from '../../src/bookkeeping/opening-worksheet-source.ts';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
 const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8'));
 const currentCoverage=JSON.parse(await readFile(join(root,'planning/SECURITY_EXPORT_COVERAGE.json'),'utf8'));
 const registryHash=hash(await readFile(join(root,'supabase/migration-checksums.json')));
+const legacy101Bytes=await readFile(join(root,'tests/support/registered101-migration-checksums.json'));
+const legacy101=JSON.parse(legacy101Bytes);
+assert.equal(hash(legacy101Bytes),'1df8605badf83be462340870f4cbe7bd92529577c2b9cdf8f6fc211bed88a018');
+assert.deepEqual(registry.migrations.slice(0,101),legacy101.migrations);
+const legacy101Profile=Object.freeze({schemaVersion:101,registrySha256:hash(legacy101Bytes)});
+const legacy101Snapshot={
+ profile:legacy101Profile,
+ versions:legacy101.migrations.map(row=>row.version),
+ coverage:{...currentCoverage,migrationCount:101,tables:currentCoverage.tables.filter(row=>row.table!==openingWorksheetSourceCoverage.table)},
+};
 const legacy53Bytes=await readFile(join(root,'tests/support/registered53-migration-checksums.json')),legacy53=JSON.parse(legacy53Bytes);
 assert.equal(legacy53.migrations.length,53);assert.deepEqual(registry.migrations.slice(0,53),legacy53.migrations);
 const legacy53Coverage=JSON.parse(await readFile(join(root,'tests/support/registered53-export-coverage.json'),'utf8'));
@@ -1053,6 +1064,12 @@ export async function backupCollectionFailureGroupedRecreditDatabase(candidate,p
 export async function restoreCollectionFailureGroupedRecreditDatabase(candidate,prior,fee,tip,directory,identity,url){
   return restoreWithProfile((await collectionFailureGroupedRecreditRecoveryProfile(candidate,prior,fee,tip,root)).profile,directory,identity,url);
 }
+export async function backupRestoredTipDatabase(client,url,directory,recipient){
+  return backupWithProfile(legacy101Profile,client,url,directory,recipient,undefined,undefined,legacy101Snapshot);
+}
+export async function restoreRestoredTipDatabase(directory,identity,url){
+  return restoreWithProfile(legacy101Profile,directory,identity,url);
+}
 
 async function expense79RecoveryProfile(candidate){
   assert.equal(candidate.file,expense79File);
@@ -1112,6 +1129,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile===legacy80Profile
       ||profile===legacy81Profile
       ||profile===legacy82Profile
+      ||profile===legacy101Profile
       ||profile.schemaVersion===81&&profile.heldUnapplicationMigrationSha256
       ||profile.schemaVersion===82&&profile.heldFundApplicationMigrationSha256
       ||profile.schemaVersion===83&&profile.heldTipMigrationSha256

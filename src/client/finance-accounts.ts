@@ -1,5 +1,5 @@
 import {authentication} from './authentication';
-import {customerDate,customerUuid,exactCustomerObject as exact} from '../customer/customer-contract';
+import {customerDate,customerUuid,customerVersion,exactCustomerObject as exact} from '../customer/customer-contract';
 import {
  parseFinanceAccountHistory,parseFinanceAccountPage,parseFinanceAccountReceipt,
  parseFinanceAccountReference,parseFinanceAccountResolution,financeAccountReviewReason,requireFinanceAccount as check,
@@ -81,8 +81,10 @@ import {collectionFailureRecreditMatchesInput, collectionFailureRecreditRefusal,
 
 import {groupedRecreditMatchesInput, parseGroupedRecreditInput, parseGroupedRecreditOptions, parseGroupedRecreditReference,
  parseGroupedRecreditResult} from '../bookkeeping/collection-failure-grouped-recredit-contract';
+import {parseOpeningDraft,parseOpeningProjection,parseOpeningReference,parseOpeningResult} from '../bookkeeping/opening-worksheet-contract';
+import type {OpeningDraft,OpeningReference} from '../bookkeeping/opening-worksheet-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;openingWorksheet?:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
@@ -139,6 +141,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   taxProfiles:response.headers.get('x-crest-finance-tax-profiles')==='1',
   categoryMappings:response.headers.get('x-crest-finance-category-mappings')==='1',
   moneyChannels:response.headers.get('x-crest-finance-money-channels')==='1',
+  openingWorksheet:response.headers.get('x-crest-opening-worksheet')==='1',
   invoicePreparation:response.headers.get('x-crest-invoice-preparation')==='1',
   invoiceDrafts:response.headers.get('x-crest-invoice-drafts')==='1',
   invoiceIssueTaxReview:response.headers.get('x-crest-invoice-issue-tax-review')==='1',
@@ -168,11 +171,12 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
 
 export const financeAccounts={
  async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,collectionFailureTipReinstatements,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,openingWorksheet,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,collectionFailureTipReinstatements,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
   return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,
+   ...(moneyChannels&&openingWorksheet?{openingWorksheet}:{}),
    ...(invoiceIssue?{invoiceIssue}:{}),...(directReceipts?{directReceipts}:{}),...(directReceipts&&excessReceipts?{excessReceipts}:{}),
    ...(directReceipts&&excessReceipts&&excessReturns?{excessReturns}:{}),
    ...(excessReturns&&tipReturns?{tipReturns}:{}),
@@ -188,6 +192,32 @@ export const financeAccounts={
    ...(heldTips?{heldTips}:{}),...(invoiceCredits?{invoiceCredits}:{}),...(paidInvoiceCredits?{paidInvoiceCredits}:{}),
    ...(serviceRefunds?{serviceRefunds}:{}),...(receivableAging?{receivableAging}:{}),
    ...(customerFundsReport?{customerFundsReport}:{})}) as FinanceAccountContext;
+ },
+ async readOpeningWorksheet(context:FinanceAccountContext,requestedOn:string|null,signal:AbortSignal){
+  check(context.openingWorksheet&&context.recoveryEpoch&&(requestedOn===null||customerDate(requestedOn)));
+  const {status,value}=await post('opening-worksheet-read',{reviewEpoch:context.recoveryEpoch,requestedOn},signal,context.binding);
+  check(status===200);
+  return parseOpeningProjection(value,context.businessId,requestedOn);
+ },
+ async saveOpeningWorksheet(context:FinanceAccountContext,reference:OpeningReference,expectedRevision:string,draft:OpeningDraft,signal:AbortSignal){
+  check(context.openingWorksheet&&context.recoveryEpoch===reference.recoveryEpoch&&customerVersion(expectedRevision,true));
+  parseOpeningReference(reference);parseOpeningDraft(draft);
+  const {status,value}=await post('opening-worksheet-save',{reference,expectedRevision,draft},signal,context.binding);
+  if(status===409&&exact(value,['error'])&&typeof value.error==='string'){
+   if(value.error==='OPENING_WORKSHEET_REVISION_CONFLICT')return {state:'revision_conflict'} as const;
+   if(value.error.startsWith('OPENING_WORKSHEET_')||value.error==='FINANCE_ACCOUNT_SETUP_REQUIRED')return {state:'invalid'} as const;
+  }
+  check(status===200||status===409);
+  return parseOpeningResult(value,context.businessId,reference.operationId);
+ },
+ async resolveOpeningWorksheet(context:FinanceAccountContext,reference:OpeningReference,reason:string|null,signal:AbortSignal){
+  check(context.openingWorksheet&&context.recoveryEpoch&&(reason===null||financeAccountReviewReason(reason)));
+  parseOpeningReference(reference);
+  const request={reviewEpoch:context.recoveryEpoch,reference};
+  const {status,value}=reason===null?await post('opening-worksheet-lookup',request,signal,context.binding)
+   :await post('opening-worksheet-retire',{...request,reason},signal,context.binding);
+  check(status===200||status===409);
+  return parseOpeningResult(value,context.businessId,reference.operationId);
  },
  async readCustomerFundsReport(context:FinanceAccountContext,throughOn:string|null,signal:AbortSignal){
   check(context.customerFundsReport&&(throughOn===null||customerDate(throughOn)));
