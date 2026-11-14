@@ -176,13 +176,16 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      await tax.getByText('Confirm and issue invoice',{exact:true}).click();
      await expect(tax).toContainText('Included tax');
      let submitCount=0;
+     let issueResponse;
      await page.route('**/api/business/finance-accounts/invoice-issue-submit',async route=>{
       submitCount++;
-      assert.equal((await route.fetch()).status(),200);
-      await route.abort();
+      const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+      issueResponse={status:response.status(),state:(await response.json()).state};
+      await route.abort('failed');
      },{times:1});
      await tax.getByRole('button',{name:'Issue invoice',exact:true}).press('Enter');
      await expect(tax.getByRole('status')).toHaveText('The issue outcome is uncertain. Check the original before attempting another issue.');
+     assert.deepEqual(issueResponse,{status:200,state:'committed'},'Only a committed issue response should be discarded.');
      // This test combines two interrupted issue journeys. Keep the same sign-in
      // for the saved operation reference and respect the ordinary request window.
      await allowInvoiceReadWindow();
@@ -192,6 +195,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
      await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
      await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+     await expect(draftStatus).toHaveText('Saved invoice draft loaded.');
      await expand.click();
      await check.press('Enter');
      const invoice=saved.getByRole('region',{name:'Issued invoice',exact:true});

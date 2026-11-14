@@ -18,12 +18,12 @@ const expectedMigrationSha256 = '5fe52fd4f4d1af3640dbdf91f2a7fbe6efef027c1d8e582
 const expectedRegistrySha256 = 'fe99060ba5b3d6edee5d85f5d636ade8bf806e93917c1a7ffb22a0cff7e76f60';
 
 export async function googleCalendarCandidate(sandbox) {
-  const root = sandbox.root, schema86 = await sandbox.prefix(86);
-  const registryBytes = await readFile(join(root, 'supabase/migration-checksums.json'));
+  const root = sandbox.root, schema86 = await sandbox.prefix(86), schema87 = await sandbox.prefix(87);
+  const registryBytes = await readFile(join(schema87, 'supabase/migration-checksums.json'));
   assert.equal(hash(registryBytes), expectedRegistrySha256);
   const registry = JSON.parse(registryBytes), versions = registry.migrations.map(entry => entry.version);
-  const coverage = JSON.parse(await readFile(join(root, 'planning/SECURITY_EXPORT_COVERAGE.json')));
-  return { directory: root, schema86, sha256: expectedMigrationSha256, coverage, registrySha256: expectedRegistrySha256, versions, parentRegistrySha256 };
+  const coverage = JSON.parse(await readFile(join(root, 'tests/support/registered87-export-coverage.json')));
+  return { directory: schema87, schema86, sha256: expectedMigrationSha256, coverage, registrySha256: expectedRegistrySha256, versions, parentRegistrySha256 };
 }
 
 export async function googleCalendarCandidateRecoveryProfile(candidate, root) {
@@ -39,7 +39,7 @@ export async function googleCalendarCandidateRecoveryProfile(candidate, root) {
   assert.deepEqual(entries.slice(0, 86), JSON.parse(frozen).migrations);
   assert.deepEqual(entries.slice(86), [{ version, file: googleCalendarCandidateFile, sha256: expectedMigrationSha256 }]);
   assert.deepEqual(entries.map(entry => entry.version), candidate.versions);
-  const migration = await readFile(join(root, 'supabase/migrations', googleCalendarCandidateFile));
+  const migration = await readFile(join(candidate.directory, 'supabase/migrations', googleCalendarCandidateFile));
   assert.equal(hash(migration), expectedMigrationSha256);
   let offset = Buffer.byteLength('-- P20 fictional Google Calendar. The migration coordinator owns the transaction.\n');
   for (const path of googleCalendarCandidateParts) {
