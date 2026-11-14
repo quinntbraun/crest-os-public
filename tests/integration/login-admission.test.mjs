@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {before,after,test} from 'node:test';
 import {setTimeout as delay} from 'node:timers/promises';
+import {createConnection,createServer} from 'node:net';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {createLoginAdmission,createLoginFingerprinter,LoginAdmissionError} from '../../src/security/login-admission.ts';
@@ -36,10 +37,18 @@ async function asWeb(work,isolation='READ COMMITTED'){
   await client.query(`BEGIN ISOLATION LEVEL ${isolation}`);try{await client.query('SET LOCAL ROLE crest_web');return await work();}finally{await client.query('ROLLBACK');}
 }
 async function denied(pending){await assert.rejects(pending,error=>error instanceof LoginAdmissionError&&error.message==='LOGIN_ADMISSION_FAILED'&&error.cause===undefined);}
-async function blocked(minimum=1){
+async function runtimeBackends(){
+  return (await sandbox.admin.query("SELECT state,wait_event_type FROM pg_stat_activity WHERE datname=$1 AND usename=$2",
+    [new URL(target).pathname.slice(1),login])).rows;
+}
+async function waitForBackends(accept,message){
   const deadline=Date.now()+500;
-  while(Date.now()<deadline){const n=(await sandbox.admin.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname=$1 AND usename=$2 AND wait_event_type='Lock'",[new URL(target).pathname.slice(1),login])).rows[0].n;if(n>=minimum)return;await delay(5);}
-  assert.fail('runtime admission must wait on the actual held database root');
+  while(Date.now()<deadline){if(accept(await runtimeBackends()))return;await delay(5);}
+  assert.fail(message);
+}
+async function blocked(minimum=1){
+  await waitForBackends(rows=>rows.filter(row=>row.wait_event_type==='Lock').length>=minimum,
+    'runtime admission must wait on the actual held database root');
 }
 
 test('schema7 upgrade preserves prior sessions, identity and append-only migration history',async()=>{
@@ -130,13 +139,37 @@ test('rolled-back admission leaves no durable reservation and a committed reserv
 });
 test('cancellation and database failure fail closed and retain no runtime connection',async()=>{
   const identifier=email(),address=ip(),locker=await sandbox.connect(target),controller=new AbortController();
-  await locker.query('BEGIN');await locker.query('SELECT singleton FROM crest_private.login_limit_state FOR UPDATE');
-  const pending=denied(admit(identifier,address,controller.signal));try{await blocked();controller.abort();await pending;}finally{await locker.query('ROLLBACK');}
+  // Hold the upstream socket after the client disconnects to model a server
+  // that has not received EOF while it waits for the database lock.
+  const sockets=new Set(),runtime=new URL(runtimeUrl);
+  const upstreamPort=Number(runtime.port);
+  const proxy=createServer({allowHalfOpen:true},downstream=>{
+    const upstream=createConnection({host:'127.0.0.1',port:upstreamPort});
+    sockets.add(downstream);sockets.add(upstream);
+    downstream.on('error',()=>{});upstream.on('error',()=>downstream.destroy());
+    downstream.pipe(upstream,{end:false});upstream.pipe(downstream);
+  });
+  await new Promise((resolve,reject)=>{proxy.once('error',reject);proxy.listen(0,'127.0.0.1',resolve);});
+  try{
+    runtime.port=String(proxy.address().port);
+    const delayed=createLoginAdmission({connectionString:runtime.toString(),environment:'test'},key);
+    await locker.query('BEGIN');
+    await locker.query('SELECT singleton FROM crest_private.login_limit_state FOR UPDATE');
+    const pending=denied(delayed(identifier,address,controller.signal));
+    try{await blocked();controller.abort();await pending;}
+    finally{await locker.query('ROLLBACK');}
+    await waitForBackends(rows=>rows.some(row=>row.state==='idle'||row.state==='idle in transaction'),
+      'PostgreSQL must finish the late statement while its upstream socket remains open');
+    assert.equal(await count(identifier,address),0);
+  }finally{
+    for(const socket of sockets)socket.destroy();
+    await new Promise(resolve=>proxy.close(resolve));
+  }
   assert.equal(await count(identifier,address),0);
   const url=new URL(runtimeUrl);url.port='1';await denied(createLoginAdmission({connectionString:url.toString(),environment:'test'},key)(identifier,address,signal()));
   await denied(createLoginAdmission({connectionString:target,environment:'test'},key)(identifier,address,signal()));
   assert.equal(await call(identifier,address),true);
-  assert.equal((await sandbox.admin.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname=$1 AND usename=$2",[new URL(target).pathname.slice(1),login])).rows[0].n,0);
+  await waitForBackends(rows=>rows.length===0,'runtime database connections must close');
 });
 test('migration rejects owned-role and writable-schema drift without partially creating operational tables',async()=>{
   // Release only this fixture-owned runtime membership before new DB bootstrap.
