@@ -7,6 +7,7 @@ import {test} from 'node:test';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {unzipSync,strFromU8} from 'fflate';
+import {parseInvoiceCreditReference} from '../../src/bookkeeping/invoice-credit-contract.ts';
 import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
@@ -40,7 +41,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const page=await context.newPage();
   page.on('response',response=>{
    const path=new URL(response.url()).pathname;
-   if(path.startsWith('/api/business/finance-accounts/'))financeResponses.push([path,response.status()]);
+   if(path.startsWith('/api/business/finance-accounts/')||path==='/api/auth/session'){
+    financeResponses.push([path,response.status()]);
+   }
   });
   page.setDefaultTimeout(20000);
   const jobId=fixture.bookingRequest.jobId,job='/schedule?job='+jobId;
@@ -125,7 +128,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         FROM crest_private.session_request_admissions a JOIN crest_private.app_sessions s ON s.id=a.session_id
         WHERE s.token_hash=$1 AND a.bucket='ordinary' AND admitted_at>clock_timestamp()-interval '1 minute'
         ORDER BY admitted_at`,[admissionHash]);
-       const release=rows[rows.length-89];
+       // A work-page navigation performs several independent session and business reads.
+       // Start these synthetic batches with headroom under the shared 120-per-minute cap.
+       const release=rows[rows.length-60];
        if(release){
         assert(Number.isSafeInteger(release.wait_ms)&&release.wait_ms>=0&&release.wait_ms<=60000);
         await new Promise(resolve=>setTimeout(resolve,release.wait_ms+100));
@@ -266,12 +271,15 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        await heldPayment.fill('12.34');
        await payments.getByRole('combobox',{name:'Remaining amount',exact:true}).selectOption({label:'Hold as customer funds'});
        await payments.getByLabel('How you verified the payment',{exact:true}).fill('Fictional funds received separately');
-       const postReceipt=page.waitForResponse(response=>response.url().endsWith('/receipt-record'));
+       let held;
+       await page.route('**/api/business/finance-accounts/receipt-record',async route=>{
+        const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+        if(response.status()===200)held=(await response.json()).receipt;
+        await route.fulfill({response});
+       },{times:1});
        await payments.getByRole('button',{name:'Record payment',exact:true}).press('Enter');
-       const heldResponse=await postReceipt;
-       assert.equal(heldResponse.status(),200);
-       const held=(await heldResponse.json()).receipt;
        await expect(payments).toContainText('$12.34 held as customer funds.');
+       assert(held?.eventId);
        await invoice.getByText('Apply customer funds',{exact:true}).press('Enter');
        const funds=invoice.getByRole('region',{name:'Apply customer funds',exact:true});
        await funds.getByRole('button',{name:'Load available funds',exact:true}).press('Enter');
@@ -286,12 +294,15 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         assert.deepEqual((await new AxeBuilder({page}).include('.direct-receipt').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
         await page.screenshot({path:'.local/review/finance-apply-received-funds-'+name+'-'+width+'.png'});
        }
-       const postApplication=page.waitForResponse(response=>response.url().endsWith('/fund-application-submit'));
+       let applied;
+       await page.route('**/api/business/finance-accounts/fund-application-submit',async route=>{
+        const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+        if(response.status()===200)applied=(await response.json()).receipt;
+        await route.fulfill({response});
+       },{times:1});
        await apply.press('Enter');
-       const applied=await postApplication;
-       assert.equal(applied.status(),200);
-       assert.equal((await applied.json()).receipt.receiptEventId,held.eventId);
        await expect(funds).toContainText('$12.34 applied on');
+       assert.equal(applied?.receiptEventId,held.eventId);
        const download=page.waitForEvent('download');
        await funds.getByRole('button',{name:'Download funds application (CSV)',exact:true}).press('Enter');
        assert((await readFile(await (await download).path(),'utf8')).includes(held.eventId));
@@ -565,8 +576,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
          await page.screenshot({path:'.local/review/finance-invoice-credit-'+name+'-'+width+'.png'});
         }
-        let posted=false;
+        const {rows:[savedInvoice]}=await fixture.client.query(
+         'SELECT id FROM crest.invoices WHERE business_id=$1 AND job_id=$2 AND invoice_number=$3',
+         [fixture.business,jobId,'TEST-1']);
+        let posted=false,submittedReference,submittedBinding;
         await page.route('**/api/business/finance-accounts/invoice-credit-submit',async route=>{
+         submittedReference=parseInvoiceCreditReference(route.request().postDataJSON().reference);
+         submittedBinding=route.request().headers()['x-crest-edit-binding'];
          const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
          if(response.status()===200){posted=true;await route.abort('failed');}
          else await route.fulfill({response});
@@ -575,8 +591,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await expect(credit.getByRole('status')).toContainText('outcome could not be confirmed');
         assert(posted);
         const stored=await page.evaluate(()=>sessionStorage.getItem('crest.invoice-credit.pending-reference.v1'));
-        assert(stored&&!stored.includes('Fictional')&&!stored.includes('1100'));
-        assert.deepEqual(Object.keys(JSON.parse(stored).reference).sort(),['invoiceCreditId','operationId','recoveryEpoch']);
+        assert(stored);
+        assert.match(submittedBinding,/^[A-Za-z0-9_-]{43}$/);
+        assert.deepEqual(JSON.parse(stored),{businessId:fixture.business,binding:submittedBinding,
+         invoiceId:savedInvoice.id,reference:submittedReference});
         await allowInvoiceReadWindow();
         await page.reload();
         await draftDisclosure.click();

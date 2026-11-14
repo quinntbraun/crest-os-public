@@ -3,6 +3,7 @@ import {mkdir,readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
 import {chromium,expect,webkit} from '@playwright/test';
+import {parseMoneyChannelReference} from '../../src/bookkeeping/finance-money-channel-contract.ts';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
@@ -86,16 +87,30 @@ for(const engine of [chromium,webkit]){
    }
    await capture('opening',panel.getByLabel('Opening date',{exact:true}));
    await page.setViewportSize({width:390,height:900});
-   let committedStatus;
+   // An opaque operation ID can contain the same digits as the opening amount.
+   const operationId='10250000-0000-4000-8000-000000000001';
+   await page.evaluate(id=>{
+    const generate=crypto.randomUUID;
+    crypto.randomUUID=()=>{crypto.randomUUID=generate;return id;};
+   },operationId);
+   let committedStatus,submittedReference,submittedBinding;
    await page.route('**/api/business/finance-accounts/channel-save',async route=>{
+    submittedReference=route.request().postDataJSON().reference;
+    submittedBinding=route.request().headers()['x-crest-edit-binding'];
     const response=await route.fetch();committedStatus=response.status();await route.abort();
    },{times:1});
    await save.click();
    await expect(status).toContainText('The channel review could not be confirmed');
    assert.equal(committedStatus,200);
    const stored=await page.evaluate(key=>sessionStorage.getItem(key),pendingKey);
-   assert(stored&&!stored.includes(accountId)&&!stored.includes('fictional-bank')&&!stored.includes('Fictional')&&!stored.includes('1025'));
-   assert.deepEqual(Object.keys(JSON.parse(stored).reference).sort(),['channelId','expectedVersion','operationId','recoveryEpoch']);
+   assert(stored);
+   const pending=JSON.parse(stored);
+   const reference=parseMoneyChannelReference(pending.reference);
+   assert.equal(reference.operationId,operationId);
+   assert.equal(reference.expectedVersion,'1');
+   assert(!Object.values(reference).includes(accountId));
+   assert.match(submittedBinding,/^[A-Za-z0-9_-]{43}$/);
+   assert.deepEqual(pending,{businessId:fixture.business,binding:submittedBinding,reference:submittedReference});
    await page.reload();
    await review.click();
    await expect(status).toHaveText('The original channel review was confirmed.');
