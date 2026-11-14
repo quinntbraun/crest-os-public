@@ -955,7 +955,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           await trial.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
           await expect(trial.getByRole('status')).toHaveText('Posted balances loaded.');
           await trial.getByText('Journal entries',{exact:true}).press('Enter');
+          await allowInvoiceReadWindow();
+          const journalResponse=page.waitForResponse(response=>response.url().endsWith('/posted-journal'));
           await trial.getByRole('button',{name:'Load journal entries',exact:true}).press('Enter');
+          assert.equal((await journalResponse).status(),200,'The authorized journal must return the posted P09 rows.');
           await expect(trial).toContainText('Unused payment return · Held balance reduced');
           await expect(trial).toContainText('Unused payment return · Settled outflow');
           const journalCsv=page.waitForEvent('download');
@@ -1016,7 +1019,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      }
     }
  }catch(error){
-  if(error instanceof Error)error.message+='\nRecent finance responses '+JSON.stringify(financeResponses.slice(-15));
+  if(error instanceof Error)throw new Error(error.message+'\nRecent finance responses '+JSON.stringify(financeResponses.slice(-15)),{cause:error});
   throw error;
  }finally{
   await browser?.close();
