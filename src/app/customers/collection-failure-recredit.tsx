@@ -211,14 +211,14 @@ export function CollectionFailureRecredit({businessId, customerId}: {businessId:
       </> : <>
         <button type="button" className="secondary" disabled={busy} onClick={load}>Load failed payments</button>
         {!!failures?.failures.length && <form onSubmit={event => {event.preventDefault(); review();}}>
-          <label>Failed payment<select required disabled={busy} value={selectedId} onChange={event => {
+          <div><label htmlFor="failed-payment">Failed payment</label><select id="failed-payment" required disabled={busy} value={selectedId} onChange={event => {
             setSelectedId(event.target.value); setOptions(null); setDeposit(emptyDeposit);
           }}>
             <option value="">Choose a failed payment</option>
             {failures.failures.map(failure => <option key={failure.failureId} value={failure.failureId}>
               {failure.failedOn} · {quoteMoney(failure.availableCents)} available · {failure.originalPaymentId.slice(0, 8)}
             </option>)}
-          </select></label>
+          </select></div>
           {failures.hasMore && <p className="field-help">Showing the 50 most recent failed payments with funds available to restore.</p>}
           <label>Date the deposit cleared<input type="date" required disabled={busy} min={selected?.failedOn} value={date}
             onChange={event => {setDate(event.target.value); setOptions(null); setDeposit(emptyDeposit);}}/></label>
@@ -226,13 +226,13 @@ export function CollectionFailureRecredit({businessId, customerId}: {businessId:
         </form>}
         {options && <form onSubmit={event => {event.preventDefault(); save();}}>
           <fieldset disabled={busy}><legend>Verified deposit</legend>
-            <label>Held funds to restore<select required value={deposit.section}
+            <div><label htmlFor="recredit-funds">Held funds to restore</label><select id="recredit-funds" required value={deposit.section}
               onChange={event => setDeposit(current => ({...current, section: event.target.value, start: ''}))}>
               <option value="">Choose a portion</option>
               {portions.map(item => <option key={item.id} value={item.id}>
                 {quoteMoney(String(BigInt(item.lastCent) - BigInt(item.firstCent) + 1n))} available · cents {item.firstCent}–{item.lastCent}
               </option>)}
-            </select></label>
+            </select></div>
             <label>Amount deposited (USD)<input required inputMode="decimal" maxLength={22} value={deposit.amount}
               onChange={event => change('amount', event.target.value)}/></label>
             {portion && <details className="direct-receipt-options"><summary>Choose a different starting position</summary>
@@ -240,11 +240,11 @@ export function CollectionFailureRecredit({businessId, customerId}: {businessId:
                 value={deposit.start} onChange={event => change('start', event.target.value)}/></label>
               <p className="field-help">Leave blank to start at the first available cent in this portion.</p>
             </details>}
-            <label>Bank or wallet credited<select required value={deposit.channelId}
+            <div><label htmlFor="recredit-bank">Bank or wallet credited</label><select id="recredit-bank" required value={deposit.channelId}
               onChange={event => change('channelId', event.target.value)}>
               <option value="">Choose a verified account</option>
               {options.channels.map(item => <option key={item.channelId} value={item.channelId}>{item.label}</option>)}
-            </select></label>
+            </select></div>
             <label>Reference type<input required maxLength={80} value={deposit.namespace}
               onChange={event => change('namespace', event.target.value)}/></label>
             <label>Transaction ID<input required maxLength={200} value={deposit.transaction}

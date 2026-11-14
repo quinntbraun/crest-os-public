@@ -319,6 +319,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        const download=page.waitForEvent('download');
        await funds.getByRole('button',{name:'Download funds application (CSV)',exact:true}).press('Enter');
        assert((await readFile(await (await download).path(),'utf8')).includes(held.eventId));
+       await allowInvoiceReadWindow();
        await page.reload();
        await draftDisclosure.click();
        await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).press('Enter');
@@ -360,6 +361,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        const stored=await page.evaluate(()=>sessionStorage.getItem('crest.payment-correction.pending-reference.v1'));
        assert(stored&&!stored.includes('Fictional'));
        assert.deepEqual(Object.keys(JSON.parse(stored).reference).sort(),['operationId','recoveryEpoch','unapplicationId']);
+       await allowInvoiceReadWindow();
        await page.reload();
        await draftDisclosure.click();
        await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
@@ -481,6 +483,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const stored=await page.evaluate(()=>sessionStorage.getItem('crest.held-tip.pending-reference.v1'));
         assert(stored&&!stored.includes('Fictional'));
         assert.deepEqual(Object.keys(JSON.parse(stored).reference).sort(),['operationId','recoveryEpoch','tipRealizationId']);
+        await allowInvoiceReadWindow();
         await page.reload();
         await draftDisclosure.click();
         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
@@ -1226,13 +1229,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await restore.getByRole('button',{name:'Load failed payments',exact:true}).press('Enter');
            const status=restore.locator(':scope > [role="status"]');
            await expect(status).toHaveText('Choose the failed payment that the provider credited back.');
-           await restore.getByLabel('Failed payment',{exact:true}).selectOption(adjustment.collectionFailureId);
+           await restore.getByRole('combobox',{name:'Failed payment',exact:true}).selectOption(adjustment.collectionFailureId);
            await restore.getByLabel('Date the deposit cleared',{exact:true}).fill(committed.actualOn);
            await allowInvoiceReadWindow();
            await restore.getByRole('button',{name:'Check available funds',exact:true}).press('Enter');
            await expect(status).toHaveText('Enter the verified deposit and select the saved funds it restores.');
            await restore.getByLabel('Amount deposited (USD)',{exact:true}).fill('0.10');
-           await restore.getByLabel('Bank or wallet credited',{exact:true}).selectOption({label:'Fictional checking'});
+           await restore.getByRole('combobox',{name:'Bank or wallet credited',exact:true}).selectOption({label:'Fictional checking'});
            await restore.getByLabel('Reference type',{exact:true}).fill('ledger');
            const transaction='fictional-collection-recredit-restore';
            await restore.getByLabel('Transaction ID',{exact:true}).fill(transaction);
@@ -1290,7 +1293,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            const application=invoice.getByRole('region',{name:'Apply customer funds',exact:true});
            await allowInvoiceReadWindow();
            await application.getByRole('button',{name:'Load available funds',exact:true}).press('Enter');
-           await application.getByLabel('Held funds',{exact:true}).selectOption(incomingRecredit.fundLotId);
+           await application.getByRole('combobox',{name:'Held funds',exact:true}).selectOption(incomingRecredit.fundLotId);
            await application.getByLabel('Amount to apply',{exact:true}).fill('0.04');
            await application.getByLabel('Reason for applying funds',{exact:true}).fill('Fictional customer applied part of restored funds.');
            await application.getByRole('button',{name:'Apply funds to invoice',exact:true}).press('Enter');
@@ -1353,6 +1356,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            const storedTip=JSON.parse(await page.evaluate(()=>sessionStorage.getItem('crest.direct-receipt.pending-reference.v1')));
            assert.deepEqual(Object.keys(storedTip).sort(),['binding','businessId','customerId','reference']);
            assert.equal(storedTip.customerId,directTip.customerId);
+           await allowInvoiceReadWindow();
            await page.reload();
            await page.getByRole('button',{name:customerName,exact:true}).press('Enter');
            await page.getByText('Record a fictional payment',{exact:true}).press('Enter');
