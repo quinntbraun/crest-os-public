@@ -51,7 +51,7 @@ function SavedJobDetailsContent({resources,initialJobVehicleId,history,historyCo
   pickupWorkAvailable&&job.fulfillment_mode==='pickup_return')&&['in_progress','paused','completed'].includes(job.state);
  return <article className="schedule-job" aria-label="Saved job">
   <header className="schedule-job-heading">
-   <p className="schedule-job-state"><strong>{states[job.state]}</strong><span>{modes[job.fulfillment_mode]}</span></p>
+   <p className="schedule-job-state"><strong>{states[job.state]}</strong><span>{' · '}{modes[job.fulfillment_mode]}</span></p>
    <h2>{customer.display_name}</h2>
   </header>
   <dl className="customer-values">
