@@ -54,6 +54,7 @@ import {fictionalJournalV3PageSize,parseFictionalJournalV3,parseFictionalTrialBa
 import {fictionalJournalV4PageSize,parseFictionalJournalV4,parseFictionalTrialBalanceV4} from './posted-report-v4-contract.ts';
 import {fictionalJournalV5PageSize,parseFictionalJournalV5,parseFictionalTrialBalanceV5} from './posted-report-v5-contract.ts';
 import {fictionalJournalV6PageSize,parseFictionalJournalV6,parseFictionalTrialBalanceV6} from './posted-report-v6-contract.ts';
+import {parseReceivableAging} from './receivable-aging-contract.ts';
 import {invoiceCreditMatchesInput,invoiceCreditRefusal,parseInvoiceCreditInput,parseInvoiceCreditOptions,
  parseInvoiceCreditReference,parseInvoiceCreditResult} from './invoice-credit-contract.ts';
 import {pairedInvoiceCreditRefusal,parsePairedInvoiceCreditInput,parsePairedInvoiceCreditOptions,
@@ -131,6 +132,7 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
  'expense-post-lookup':['operationId','recoveryEpoch','postedExpenseId'],
  'expense-post-retire':['reference','reviewEpoch','reason'],
  'trial-balance':['throughOn'],
+ 'receivable-aging':['throughOn'],
  'posted-journal':['throughOn','accountId','afterLineId'],
  'invoice-draft-list':['jobId','afterDraft'], 'invoice-draft-read':['draftId','revision'],
  'invoice-draft-lookup':['operationId','recoveryEpoch','draftId','jobId','expectedRevision'],
@@ -145,8 +147,8 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false}:Readonly<{
-  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false}:Readonly<{
+  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;
  }>={}){
  check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
  check((!sameDayExpenses||directReceipts&&categoryMappings)&&(!trialBalance||sameDayExpenses));
@@ -156,6 +158,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
  check(!invoiceCredits||heldTips);
  check(!paidInvoiceCredits||invoiceCredits);
  check(!serviceRefunds||paidInvoiceCredits&&directReceipts);
+ check(typeof receivableAging==='boolean'&&(!receivableAging||serviceRefunds));
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
@@ -186,6 +189,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route.startsWith('service-refund-')&&!serviceRefunds)return financeAccountFailure(404);
    if(route.startsWith('expense-post-')&&!sameDayExpenses)return financeAccountFailure(404);
    if((route==='trial-balance'||route==='posted-journal')&&!trialBalance)return financeAccountFailure(404);
+   if(route==='receivable-aging'&&!receivableAging)return financeAccountFailure(404);
    if(request.method!=='POST')return financeAccountFailure(405);
    protect.requireOrigin(request);
    const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;
@@ -218,6 +222,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     if(invoiceCredits)response.headers.set('X-Crest-Invoice-Credits','1');
     if(paidInvoiceCredits)response.headers.set('X-Crest-Paid-Invoice-Credits','1');
     if(serviceRefunds)response.headers.set('X-Crest-Service-Refunds','1');
+    if(receivableAging)response.headers.set('X-Crest-Receivable-Aging','1');
     if(sameDayExpenses)response.headers.set('X-Crest-Same-Day-Expenses','1');
     if(trialBalance)response.headers.set('X-Crest-Trial-Balance','1');
     return response;
@@ -494,6 +499,13 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
      return {value:value as object,state:parsed.state};
     },signal);
     return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
+   if(route==='receivable-aging'){
+    check(input.throughOn===null||customerDate(input.throughOn));
+    const value=await database('SELECT crest_commands.read_fictional_receivable_aging('+authority+',$9::date) AS result',
+     [...args,input.throughOn],signal);
+    parseReceivableAging(value,businessId,input.throughOn);
+    return privateJsonResponse(value as object);
    }
    if(route==='trial-balance'){
     check(input.throughOn===null||customerDate(input.throughOn));

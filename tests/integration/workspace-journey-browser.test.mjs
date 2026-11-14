@@ -15,7 +15,27 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:844}}),page=await context.newPage();
   await page.goto(f.origin+'/');await expect(page.getByRole('status')).toHaveText('Sign in to open your workspace.');await expect(page.getByRole('link',{name:'Open customers',exact:true})).toHaveCount(0);
   await page.getByRole('link',{name:'Sign in to Crest OS',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Sign in to continue.');
-  const credentials=f.credentials();await page.getByLabel('Email',{exact:true}).fill(credentials.email);await page.getByLabel('Password',{exact:true}).fill(credentials.password);await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  const credentials=f.credentials(),email=page.getByLabel('Email',{exact:true}),password=page.getByLabel('Password',{exact:true}),code=page.getByLabel('Authenticator code',{exact:true});
+  const signIn=page.getByRole('button',{name:'Sign in',exact:true}),deviceOptions=page.getByText('Personal device options',{exact:true});
+  await mkdir('.local/review',{recursive:true});
+  for(const width of [360,390,768,1440]){
+   await page.setViewportSize({width,height:width<768?844:950});
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   const primary=await signIn.boundingBox(),optional=await deviceOptions.boundingBox();
+   assert(primary&&optional&&primary.height>=44&&primary.y<optional.y);
+   assert.deepEqual((await new AxeBuilder({page}).include('.sign-in-panel').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+   await page.screenshot({path:join('.local/review',`settings-sign-in-${name}-${width}.png`),fullPage:true});
+  }
+  await page.setViewportSize({width:390,height:844});
+  await email.fill(credentials.email);
+  if(name==='chromium'){
+   await password.fill('synthetic-wrong-password');await code.fill(f.credentials().code);
+   await signIn.click();
+   await expect(page.getByRole('status')).toContainText('phone’s date and time are set automatically');
+   await expect(email).toHaveValue(credentials.email);
+   await expect(password).toHaveValue('');await expect(code).toHaveValue('');
+  }
+  const current=f.credentials();await password.fill(current.password);await code.fill(current.code);await signIn.click();
   await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();await expect(page.getByLabel('Password',{exact:true})).toHaveCount(0);
   const cookie=(await context.cookies()).find(c=>c.name==='__Host-crest_session');assert(cookie?.secure&&cookie.httpOnly);
   await page.getByRole('link',{name:'Open workspace',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Workspace access verified.');
@@ -48,9 +68,16 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.setViewportSize({width:390,height:844});
   await page.route('**/api/business/settings',route=>route.abort('failed'));await page.getByRole('button',{name:'Refresh workspace',exact:true}).click();await expect(page.getByRole('status')).toContainText('Workspace access could not be verified');await expect(page.getByRole('link',{name:'Open customers',exact:true})).toHaveCount(0);await page.unroute('**/api/business/settings');await page.getByRole('button',{name:'Refresh workspace',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Workspace access verified.');
   await expect(page.getByText('No follow-up dates recorded.',{exact:true})).toBeVisible();
-  await page.getByRole('link',{name:'Open customers',exact:true}).click();await page.getByRole('button',{name:'Add customer',exact:true}).click();
+  await page.getByRole('link',{name:'Open customers',exact:true}).click();
+  const addCustomer=page.getByRole('button',{name:'Add customer',exact:true});
+  await expect(page.getByText('No customers yet. Use Add customer to create a record.',{exact:true})).toBeVisible();
+  const addPosition=await addCustomer.boundingBox(),searchPosition=await page.getByRole('searchbox',{name:'Customer search',exact:true}).boundingBox();
+  assert(addPosition&&searchPosition&&addPosition.height>=44&&addPosition.y<searchPosition.y);
+  await addCustomer.press('Enter');await expect(page.getByRole('heading',{name:'New customer',exact:true})).toBeFocused();
   const label='Synthetic workshop customer '+name;await page.getByLabel('Customer name',{exact:true}).fill(label);await page.getByLabel('Phone value',{exact:true}).fill('5555550123');await page.getByRole('button',{name:'Save customer',exact:true}).click();await expect(page.getByRole('status')).toContainText('Customer saved');
   await page.reload();await page.getByRole('button',{name:label,exact:true}).click();await expect(page.getByLabel('Customer name',{exact:true})).toHaveValue(label);await expect(page.getByRole('region',{name:'Customer history',exact:true})).toContainText('Current version: 1');
+  await expect(page.getByRole('button',{name:label,exact:true})).toHaveAttribute('aria-current','true');
+  await expect(page.getByRole('button',{name:label,exact:true})).toHaveAccessibleDescription('(555) 555-0123');
   await expect(page.getByRole('heading',{name:'Edit customer',exact:true})).toBeFocused();
   // Disabled Save is not proof of a clean draft: clearing a required name is
   // still an edit. Canceling a search/record switch must keep it in memory.
@@ -75,6 +102,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await mkdir('.local/review',{recursive:true});
   for(const width of [360,390,768,1440]){
    await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+   const lookup=await page.getByRole('region',{name:'Customer lookup',exact:true}).boundingBox();
+   const editor=await page.getByRole('form',{name:'Customer editor',exact:true}).boundingBox();
+   assert(lookup&&editor&&(width>=768?lookup.x+lookup.width<editor.x:lookup.y+lookup.height<editor.y));
    await page.screenshot({path:join('.local/review',`workspace-customers-${name}-${width}.png`),fullPage:true});
   }
   await page.getByRole('link',{name:'Manage vehicles',exact:true}).click();await page.getByRole('button',{name:'Add vehicle',exact:true}).click();const vehicle='Synthetic workshop van '+name;await page.getByLabel('Vehicle label',{exact:true}).fill(vehicle);await page.getByRole('button',{name:'Save vehicle',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');

@@ -12,6 +12,27 @@
   margin: 0;
 }
 
+.setup {
+  margin: 1.5rem 0;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+}
+
+.setupLinks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: .25rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setupLinks a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+
 .lookupFields {
   display: grid;
   gap: .75rem;
@@ -42,6 +63,32 @@
 
 .amountBreakdown :nth-child(-n+2) {
   font-weight: 600;
+}
+
+.agingInvoices {
+  display: grid;
+  gap: .75rem;
+  margin: .75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agingInvoices li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .75rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+
+.agingInvoices span {
+  display: block;
+  color: var(--muted);
+}
+
+.agingInvoices li > :last-child {
+  text-align: end;
 }
 
 @media (min-width: 48rem) {

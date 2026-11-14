@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash,randomBytes,randomUUID } from 'node:crypto';
-import { mkdir,readFile,realpath,rm } from 'node:fs/promises';
+import { mkdir,readFile,realpath,rm,writeFile } from 'node:fs/promises';
 import { basename,dirname,join } from 'node:path';
 import { test } from 'node:test';
 import { confirmedBookingRequest } from '../fixtures/confirmed-booking.ts';
@@ -11,6 +11,7 @@ import { financeInvoiceCredit84Candidate } from '../support/finance-invoice-cred
 import { financePairedInvoiceCredit85Candidate } from '../support/finance-paired-invoice-credit85-candidate.mjs';
 import { financeServiceRefundCandidate } from '../support/finance-service-refund-candidate.mjs';
 import { requireSyntheticFinanceAccountConfiguration } from '../../scripts/synthetic-migrations.mjs';
+import {prepareSyntheticPostedFinancePreview,readSyntheticPostedFinancePreview} from '../../scripts/synthetic-posted-finance-preview.mjs';
 import { backupPairedInvoiceCredit85CandidateDatabase,backupInvoiceCredit84ForPairedBaseline,backupServiceRefundCandidateDatabase,
   connect,inventory,keyPair,privateWorkspace,recoveryCluster,restorePairedInvoiceCredit85CandidateDatabase,
   restoreInvoiceCredit84ForPairedBaseline,restoreServiceRefundCandidateDatabase } from '../support/recovery-drill.mjs';
@@ -200,6 +201,92 @@ async function verifyRecovery({candidate,admin,target,owner,captured,saved,retir
 
 const refundExportOptions={includeCorrections:true,includeFundApplications:true,includeTips:true,includeCredits:true,
   includePairedCredits:true,includeServiceRefunds:true};
+
+async function verifyReceivableAging({admin,finance,web,owner,foreign,saved,today,sandbox,target,makeOwner,service}){
+  assert.equal((await sandbox.apply(target,await sandbox.prefix(87))).history.length,87);
+  const inventoryBefore=(await inventory(admin)).filter(row=>row.schema!=='supabase_migrations');
+  const requireAgingPreview=()=>requireSyntheticFinanceAccountConfiguration(target,owner.business,
+    true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true);
+  await assert.rejects(requireAgingPreview(),{message:'SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED'});
+  assert.equal((await sandbox.apply(target,await sandbox.prefix(88))).history.length,88);
+  await requireAgingPreview();
+  assert.deepEqual((await inventory(admin)).filter(row=>row.schema!=='supabase_migrations'),inventoryBefore);
+  const {parseReceivableAging}=await import('../../src/bookkeeping/receivable-aging-contract.ts');
+  const route='read_fictional_receivable_aging';
+  const aging=(principal=owner,date=today)=>command(finance,route,[...principal.auth(),date]);
+  assert.equal(parseReceivableAging(await aging(),owner.business,today).itemCount,'0');
+  const customer=await makeOwner(owner,{paidLineDiscount:{kind:'fixed',cents:'3000'},serviceVersionFor:async()=>
+    (await admin.query('SELECT id FROM crest.service_versions WHERE business_id=$1 AND service_id=$2',[owner.business,service])).rows[0].id});
+  const {invoice}=await issueInvoice({admin,web,finance,owner:customer,service,today,setup:false,appointmentDay:'2026-11-05'});
+  const raw=await aging();
+  const report=parseReceivableAging(raw,owner.business,today);
+  assert.equal(report.totalCents,invoice.totalCents);
+  assert.equal(report.buckets.current,invoice.totalCents);
+  assert.equal(report.rows.length,1);
+  assert.equal(report.rows[0].invoiceId,invoice.invoiceId);
+  assert.equal(report.rows[0].customerId,customer.customer);
+  assert.notEqual(report.rows[0].invoiceId,saved.receipt.credit.invoiceId);
+  assert.equal(parseReceivableAging(await aging(owner,null),owner.business,null).throughOn,today);
+  assert.equal(parseReceivableAging(await aging(owner,'2026-01-01'),owner.business,'2026-01-01').itemCount,'0');
+  assert.equal(parseReceivableAging(await aging(foreign),foreign.business,today).itemCount,'0');
+  await assert.rejects(command(web,route,[...owner.auth(),today]),{code:'42501'});
+  await assert.rejects(aging(owner,'9999-12-31'),{message:'FINANCE_REPORT_DATE_REQUIRED'});
+  assert.throws(()=>parseReceivableAging({...raw,totalCents:'1'},owner.business,today));
+  assert.throws(()=>parseReceivableAging({...raw,rows:[{...raw.rows[0],daysOverdue:1}]},owner.business,today));
+}
+
+async function verifyPostedFinanceLauncher({admin,owner,sandbox,target}){
+  const databaseName=new URL(target).pathname.slice(1),id=databaseName.slice('crest_migrate_'.length);
+  assert.match(id,/^[a-f0-9]{16}$/);
+  const root=sandbox.root,directory=sandbox.workspace,login='crest_export_local_'+id;
+  const issuer='http://127.0.0.1:54328/auth/v1';
+  const state={schemaVersion:1,id,databaseName,businessId:owner.business,issuer,owner:{subject:owner.subject}};
+  const config={root,directory,state,administrator:target,db:admin};
+  const failure={message:'SYNTHETIC_POSTED_FINANCE_EXPORT_REVIEW_REQUIRED'};
+  await assert.rejects(prepareSyntheticPostedFinancePreview(config),failure);
+  assert.equal((await sandbox.admin.query('SELECT 1 FROM pg_roles WHERE rolname=$1',[login])).rowCount,0);
+  assert.equal((await sandbox.apply(target)).history.length,89);
+  const exportAuthority='crest_commands.authorize_posted_finance_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid)';
+  const settingsAuthority='crest_commands.read_business_settings_context(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid)';
+  assert.deepEqual((await admin.query(`SELECT pg_get_userbyid(proowner) AS owner,
+    has_function_privilege('crest_command_owner',$2,'EXECUTE') AS command_can_read_settings
+    FROM pg_proc WHERE oid=to_regprocedure($1)`,[exportAuthority,settingsAuthority])).rows,
+   [{owner:'crest_session_owner',command_can_read_settings:false}]);
+  await assert.rejects(prepareSyntheticPostedFinancePreview(config),failure);
+  const bootstrap=(await admin.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
+  const subject=randomUUID();
+  await admin.query('BEGIN');
+  try{
+   const actor=(await admin.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Fictional preview export owner',$1,$2,$3,$3,'manual') RETURNING id",[issuer,subject,bootstrap])).rows[0].id;
+   const business=(await admin.query("INSERT INTO crest.businesses(legal_name,timezone,created_by,updated_by,origin) VALUES('Fictional preview export','UTC',$1,$1,'manual') RETURNING id",[actor])).rows[0].id;
+   await admin.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,actor]);
+   await admin.query("INSERT INTO crest_private.business_recovery_authorities(business_id,writes_enabled,created_by,updated_by,origin) VALUES($1,true,$2,$2,'manual')",[business,actor]);
+   await admin.query('COMMIT');
+   state.businessId=business;
+  }catch(error){await admin.query('ROLLBACK');throw error;}
+  state.owner.subject=subject;
+  try{
+   await prepareSyntheticPostedFinancePreview(config);
+   await prepareSyntheticPostedFinancePreview(config);
+   const stored=JSON.parse(await readFile(join(directory,'posted-finance-preview.json'),'utf8'));
+   const exporterUrl=new URL(target);exporterUrl.username=login;exporterUrl.password=stored.password;
+   const restricted=await connect(exporterUrl.href);
+   try{
+    await assert.rejects(restricted.query('SELECT 1 FROM crest_private.audit_events'),{code:'42501'});
+    await assert.rejects(restricted.query('SET ROLE crest_web'),{code:'42501'});
+    await restricted.query('SET ROLE crest_export');
+    await assert.rejects(restricted.query('SELECT 1 FROM crest_private.audit_events'),{code:'42501'});
+   }finally{await restricted.end();}
+   await sandbox.admin.query('GRANT crest_web TO '+login);
+   try{await assert.rejects(prepareSyntheticPostedFinancePreview(config),failure);}
+   finally{await sandbox.admin.query('REVOKE crest_web FROM '+login);}
+   await writeFile(join(directory,'posted-finance-preview.json'),JSON.stringify({...stored,businessId:randomUUID()}),{mode:0o600});
+   await assert.rejects(prepareSyntheticPostedFinancePreview(config),failure);
+   await assert.rejects(readSyntheticPostedFinancePreview(directory,directory,state,target),failure);
+  }finally{
+   await sandbox.admin.query('DROP ROLE IF EXISTS '+login);
+  }
+}
 
 async function verifyRefundRecovery({candidate,admin,target,owner,archive,post,retained}){
   const directory=await privateWorkspace();
@@ -675,6 +762,8 @@ test('held E08 restores the ordered paired credit and original payment release w
     } finally {await neutral.end();}
     await verifyRecovery({candidate,admin,target,owner,captured:portable,saved,retired});
     await verifyServiceRefund({candidate,sandbox,target,admin,exporter,finance,web,owner,foreign,invoice,saved,channel,bank,today});
+    await verifyReceivableAging({admin,finance,web,owner,foreign,saved,today,sandbox,target,makeOwner,service});
+    await verifyPostedFinanceLauncher({admin,owner,sandbox,target});
   } finally {
     try {await sandbox?.close();} finally {await cluster.close();}
   }

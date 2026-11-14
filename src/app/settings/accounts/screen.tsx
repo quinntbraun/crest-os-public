@@ -3,6 +3,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {InvoiceSetup} from './invoice-setup';
 import {TrialBalance} from './trial-balance';
+import {ReceivableAging} from './receivable-aging';
 import styles from './screen.module.css';
 import {AuthenticationError} from '../../../client/authentication';
 import {
@@ -41,7 +42,7 @@ function downloadHistory(rows:readonly FinanceAccountHistory[]){
   ...rows.map(row=>[row.code,row.name,row.version,row.active?'Active':'Archived',row.reason??'']),
  ]);
 }
-const initialMessage='Load your private accounts.';
+const initialMessage='Load accounts to open your finance workspace.';
 
 export function FinanceAccountsScreen(){
  const [workspace,setWorkspace]=useState<Workspace|null>(null),[editor,setEditor]=useState<Editor|null>(null);
@@ -222,15 +223,27 @@ export function FinanceAccountsScreen(){
    reportRole:account.reportRole,controlKind:account.controlKind??'',active:account.active,reason:''});
  }
  const writable=workspace?.context.writeState==='ready'&&!pending&&!signedOut;
+ const context=workspace?.context;
+ const hasSetupLinks=context&&(context.fixedMappings||context.moneyChannels||context.categoryMappings||context.taxProfiles);
  return <section className={styles.workspace} aria-label="Account settings" aria-busy={busy}>
   <p role="status" tabIndex={-1} ref={status}>{message}</p>
-  {workspace?.context.fixedMappings&&!editor&&<a href="/settings/accounts/mappings">Dated account mappings</a>}
-  {workspace?.context.moneyChannels&&!editor&&<p><a href="/settings/accounts/channels">Money channels</a></p>}
-  {workspace?.context.invoiceIssue&&!editor&&<InvoiceSetup businessId={workspace.context.businessId}/>}
-  {workspace?.context.trialBalance&&!editor&&<TrialBalance businessId={workspace.context.businessId}/>}
-  {workspace?.context.categoryMappings&&!editor&&<p><a href="/settings/accounts/mappings/categories">Expense category mappings</a></p>}
-  {workspace?.context.taxProfiles&&!editor&&<p><a href="/settings/accounts/tax">Tax profiles</a></p>}
+  {context?.trialBalance&&!editor&&<section aria-labelledby="finance-reports-heading">
+   <h2 id="finance-reports-heading">Ledger reports</h2>
+   <TrialBalance businessId={context.businessId}/>
+   {context.receivableAging&&<ReceivableAging key={context.businessId} businessId={context.businessId}/>}
+  </section>}
+  {context&&(hasSetupLinks||context.invoiceIssue)&&!editor&&<section className={styles.setup} aria-labelledby="finance-setup-heading">
+   <h2 id="finance-setup-heading">Finance setup</h2>
+   {hasSetupLinks&&<ul className={styles.setupLinks}>
+    {context.fixedMappings&&<li><a href="/settings/accounts/mappings">Dated account mappings</a></li>}
+    {context.moneyChannels&&<li><a href="/settings/accounts/channels">Money channels</a></li>}
+    {context.categoryMappings&&<li><a href="/settings/accounts/mappings/categories">Expense category mappings</a></li>}
+    {context.taxProfiles&&<li><a href="/settings/accounts/tax">Tax profiles</a></li>}
+   </ul>}
+   {context.invoiceIssue&&<InvoiceSetup businessId={context.businessId}/>}
+  </section>}
   {signedOut&&<a href="/sign-in">Sign in again</a>}
+  {workspace&&!editor&&<h2>Accounts</h2>}
   {!editor&&!signedOut&&<div className={styles.actions}><button type="button" className="secondary" disabled={busy} onClick={()=>void load()}>
    {workspace?'Reload accounts':'Load accounts'}
   </button>{workspace&&writable&&<button type="button" disabled={busy} onClick={()=>setEditor(newEditor)}>Add account</button>}</div>}

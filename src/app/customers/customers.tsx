@@ -36,19 +36,34 @@ export function CustomerScreen({related:Related}:{related?:ComponentType<{custom
   function edit<K extends keyof CustomerDraft>(key:K,value:CustomerDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
   function submit(event:FormEvent){event.preventDefault();void action('save');}
   function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const data=new FormData(event.currentTarget);query(String(data.get('search')??''),data.get('archived')==='on');}
-  return <section aria-label="Customer directory" aria-busy={view.busy}>
-    <p ref={status} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
+  return <section className="customer-directory" aria-label="Customer directory" aria-busy={view.busy}>
+    <p className="customer-directory-status" ref={status} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
     {view.phase==='ready'&&<>
       {view.writesPaused&&<p className="notice">Customer changes are paused. You can review current records and history.</p>}
-      <form onSubmit={search} aria-label="Search customers"><label htmlFor="customer-search">Customer search</label><input id="customer-search" name="search" type="search" autoComplete="off" maxLength={400} defaultValue={view.search} disabled={view.busy}/><label className="trust"><input name="archived" type="checkbox" defaultChecked={view.includeArchived} disabled={view.busy}/>Include archived customers</label><button className="secondary" type="submit" disabled={view.busy}>Search customers</button></form>
-      <p className="field-help">Search names, email or phone text. Shared contact details do not merge customers. You’ll be asked before a search or record change discards unsaved edits.</p>
-      <ul className="customer-list">{view.rows.map(row=><li key={row.id}><button type="button" className="secondary" disabled={view.busy} onClick={()=>void open(row.id)}>{row.display_name}{row.archived_at!==null?' — archived':''}</button><p className="contact-summary">{[row.phone_raw===null?null:phonePresentation(row.phone_raw),row.email_raw].filter(value=>value!==null).join(' · ')||'Contact details not recorded'}</p></li>)}</ul>
-      {view.rows.length===0&&<p>No customers found on this page.</p>}
+      <div className="customer-directory-layout">
+      <section className="customer-lookup" aria-label="Customer lookup">
+      <button className="customer-add" type="button" disabled={view.busy||view.writesPaused} onClick={create}>Add customer</button>
+      <form className="customer-search" onSubmit={search} aria-label="Search customers">
+        <label htmlFor="customer-search">Customer search</label>
+        <div className="customer-search-row">
+          <input id="customer-search" name="search" type="search" placeholder="Name, phone or email" autoComplete="off" maxLength={400} defaultValue={view.search} disabled={view.busy}/>
+          <button className="secondary" type="submit" aria-label="Search customers" disabled={view.busy}>Search</button>
+        </div>
+        <label className="trust"><input name="archived" type="checkbox" defaultChecked={view.includeArchived} disabled={view.busy}/>Include archived customers</label>
+      </form>
+      {view.rows.length>0?<ul className="customer-list customer-directory-list">{view.rows.map(row=><li key={row.id}>
+        <button type="button" className="secondary" aria-current={selectedId===row.id?'true':undefined} aria-describedby={'customer-contact-'+row.id} disabled={view.busy} onClick={()=>void open(row.id)}>
+          {row.display_name}{row.archived_at!==null?' — archived':''}
+        </button>
+        <p className="customer-contact" id={'customer-contact-'+row.id}>{[row.phone_raw?phonePresentation(row.phone_raw):null,row.email_raw].filter(Boolean).join(' · ')||'Contact details not recorded'}</p>
+      </li>)}</ul>:<p className="customer-directory-empty">{view.search||view.includeArchived?'No customers match this search.':'No customers yet. Use Add customer to create a record.'}</p>}
       {view.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>query(view.search,view.includeArchived,true)}>Next customer page</button>}
-      <button type="button" disabled={view.busy||view.writesPaused} onClick={create}>Add customer</button>
-      {view.draft&&<form onSubmit={submit} aria-label="Customer editor"><h2 ref={heading} tabIndex={-1} className="editor-heading">{view.selected?'Edit customer':'New customer'}</h2>
-        <p className="field-help">Name is required. Phone and email are optional. Unsaved changes clear when you leave or hide this page.</p>
-        <fieldset disabled={view.busy||view.writesPaused}><legend>Customer details</legend><label htmlFor="customer-name">Customer name</label><input id="customer-name" name="customer-name" autoComplete="off" maxLength={400} value={view.draft.displayName} onChange={event=>edit('displayName',event.target.value)} required/><p className="field-help">{[...view.draft.displayName].length}/200 characters.</p>
+      </section>
+      <div className="customer-record">
+      {view.draft&&<form className="customer-record-editor" onSubmit={submit} aria-label="Customer editor"><h2 ref={heading} tabIndex={-1} className="editor-heading">{view.selected?'Edit customer':'New customer'}</h2>
+        <p className="field-help">Unsaved changes clear when you leave or hide this page.</p>
+        <fieldset disabled={view.busy||view.writesPaused}><legend className="visually-hidden">Customer details</legend><label htmlFor="customer-name">Customer name</label><input id="customer-name" name="customer-name" autoComplete="off" maxLength={400} value={view.draft.displayName} onChange={event=>edit('displayName',event.target.value)} required/>
+          {[...view.draft.displayName].length>160&&<p className="field-help">{[...view.draft.displayName].length}/200 characters.</p>}
           <NullableText name="phone" label="Phone" limit={512} value={view.draft.phone} disabled={view.busy} change={value=>edit('phone',value)}/>
           <NullableText name="email" label="Email" limit={512} value={view.draft.email} disabled={view.busy} change={value=>edit('email',value)}/>
           {view.draft.outreachOptOut&&<p className="notice">This customer has opted out of outreach.</p>}
@@ -73,10 +88,11 @@ export function CustomerScreen({related:Related}:{related?:ComponentType<{custom
         {view.history.history.map(event=><details key={event.after.version}><summary>Version {event.after.version} · {event.after.updated_at}</summary>{event.before&&<><h3>Before</h3><CustomerDetails customer={event.before}/></>}<h3>After</h3><CustomerDetails customer={event.after}/></details>)}
         {view.history.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('moreHistory')}>Next history page</button>}
       </section>}
+      </div>
+      </div>
     </>}
     {view.phase==='pending'&&<><p className="field-help">Keep the original save reference until the outcome is confirmed. No retry runs automatically.</p>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check customer save status</button>{view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('retry')}>Retry original customer change</button>}</>}
     {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current customers</button>}
 <nav aria-label="Customer navigation"><a href="/save-review">Review interrupted save</a><a href="/vehicles">Vehicles</a><a href="/leads">Leads</a><a href="/addresses">Address save review</a><a href="/settings">Business settings</a><a href="/export-files">Business data exports</a><a href="/sign-in">Device sign-in and sign-out</a><a href="/">Crest OS home</a></nav>
-    <p className="field-help">Setup and synthetic testing are still in progress. This screen does not approve real customer records or production use.</p>
   </section>;
 }
