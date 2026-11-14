@@ -173,7 +173,8 @@ function groupBy(rows: readonly Row[], key: string) {
   return groups;
 }
 
-function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_event: HistoryRow[] },funds:readonly Row[] = []) {
+function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_event: HistoryRow[] },funds:readonly Row[] = [],
+  tips?:Readonly<{anchors:readonly Readonly<Row>[];lines:readonly Readonly<{id:string;eventId:string;tipRealizationId:string}>[]}>) {
   const payments = index(rows.payments);
   const groups = index(rows.atomic_finance_groups);
   const journal = index(rows.journal_entries, 'event_id');
@@ -183,6 +184,8 @@ function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_eve
   const partitions = groupBy(rows.funding_partitions, 'origin_id');
   const applications = index(rows.allocation_events, 'partition_id');
   const heldByEvent = index(funds, 'receipt_event_id');
+  const tipAnchors = new Map(tips?.anchors.map(row => [row.receipt_tip_event_id, row]) ?? []);
+  const tipLineIds = new Set(tips?.lines.map(row => row.id) ?? []);
   const lines = groupBy(rows.journal_lines, 'entry_id');
   const operations = new Map(history.operation.map(source => {
     const { row } = JSON.parse(source.canonical_evidence);
@@ -198,7 +201,8 @@ function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_eve
   const { length: paymentCount } = rows.payments;
   requireSource(rows.financial_events.length === paymentCount && groups.size === paymentCount && journal.size === paymentCount
     && movements.size === paymentCount && origins.size === paymentCount
-    && rows.funding_partitions.length === applications.size + funds.length && rows.journal_lines.length === paymentCount + applications.size + funds.length);
+    && rows.funding_partitions.length === applications.size + funds.length + tipAnchors.size
+    && rows.journal_lines.length === paymentCount + applications.size + funds.length + tipLineIds.size);
   const seenPayments = new Set<string | null | undefined>(), seenGroups = new Set<string | null | undefined>();
   const seenEvidence = new Set<string | null | undefined>(), seenPartitions = new Set<string | null | undefined>();
   for (const event of rows.financial_events) {
@@ -221,7 +225,8 @@ function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_eve
       seenEvidence.add(original.id);
     }
     const split = (partitions.get(root.id) ?? []).sort((a, b) => Number(a.position) - Number(b.position));
-    const journalLines = lines.get(entry.id) ?? [];
+    const tipAnchor = tipAnchors.get(event.id);
+    const journalLines = (lines.get(entry.id) ?? []).filter(line => !tipLineIds.has(line.id!));
     const money = journalLines.filter(line => line.purpose === 'receipt_money');
     const allocations = index(journalLines.filter(line => line.purpose === 'receipt_ar'), 'allocation_event_id');
     const held=heldByEvent.get(event.id),heldLine=journalLines.find(line=>line.id===held?.journal_line_id);
@@ -231,7 +236,8 @@ function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_eve
       &&heldLine.account_id===held.account_id&&heldLine.fixed_mapping_id===held.mapping_id&&heldLine.receivable_id===null
       &&heldLine.money_movement_id===null&&heldLine.allocation_event_id===null&&amount(heldLine,'debit_cents')===0n
       &&amount(heldLine,'credit_cents')===amount(held,'original_cents'));
-    requireSource(split.length > 0 && money.length === 1 && journalLines.length === split.length + 1 && allocations.size + (held?1:0) === split.length
+    requireSource(split.length > 0 && money.length === 1 && journalLines.length === split.length + 1 - Number(Boolean(tipAnchor))
+      && allocations.size + Number(Boolean(held)) + Number(Boolean(tipAnchor)) === split.length
       && money[0]!.money_movement_id === movement.id && money[0]!.account_id === payment.account_id
       && money[0]!.receivable_id === null && money[0]!.allocation_event_id === null && amount(money[0]!, 'debit_cents') === gross
       && amount(money[0]!, 'credit_cents') === 0n && journalLines.every(line =>
@@ -243,6 +249,14 @@ function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_eve
         const cents=amount(held,'original_cents');
         requireSource(cents>0n&&i===split.length-1&&!applications.has(part.id)&&part.position===String(i+1)
           &&amount(part,'first_cent')===used+1n&&amount(part,'last_cent')===used+cents);
+        seenPartitions.add(part.id);
+        used+=cents;
+        continue;
+      }
+      if(tipAnchor&&tipAnchor.parent_partition_id===part.id){
+        const cents=amount(tipAnchor,'original_cents');
+        requireSource(cents>0n&&i===split.length-1-Number(Boolean(held))&&!applications.has(part.id)
+          &&part.position===String(i+1)&&amount(part,'first_cent')===used+1n&&amount(part,'last_cent')===used+cents);
         seenPartitions.add(part.id);
         used+=cents;
         continue;
@@ -272,7 +286,13 @@ function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_eve
       && audit.length === 1 && audit[0]!.actor_id === payment.created_by && audit[0]!.reason === payment.confirmation);
     const original = JSON.parse(operation.result);
     const delta = JSON.parse(audit[0]!.delta!);
-    requireSource(isDeepStrictEqual(original, originalReceipt)
+    if(tipAnchor){
+      requireSource(original?.schemaVersion===3&&isDeepStrictEqual(delta,{schemaVersion:1,before:null,after:original}));
+      const {tip:_tip,heldFunds:originalHeld,...base}=original;
+      const {heldFunds:expectedHeld,...expected}=originalReceipt;
+      requireSource(isDeepStrictEqual({...base,schemaVersion:expected.schemaVersion},expected)
+        &&isDeepStrictEqual(originalHeld,expectedHeld??null));
+    }else requireSource(isDeepStrictEqual(original, originalReceipt)
       && isDeepStrictEqual(delta, { schemaVersion: 1, before: null, after: originalReceipt }));
   }
   requireSource(seenEvidence.size === evidence.size && seenPartitions.size === rows.funding_partitions.length);
@@ -289,7 +309,8 @@ export async function captureReceiptFunds(businessId:string,snapshotToken:string
   });
 }
 
-export function formatReceiptSource(source: Awaited<ReturnType<typeof captureReceiptSource>>,funds:readonly Row[] = []) {
+export function formatReceiptSource(source: Awaited<ReturnType<typeof captureReceiptSource>>,funds:readonly Row[] = [],
+  tips?:Parameters<typeof verifyClosure>[3]) {
   const { businessId, snapshotToken, historySnapshotToken, counts, rows, history } = source;
   requireSource(customerUuid(businessId) && token(snapshotToken) && token(historySnapshotToken) && exact(rows, groups) && exact(counts, groups));
   const files: { name: string; content: string }[] = [];
@@ -336,7 +357,7 @@ export function formatReceiptSource(source: Awaited<ReturnType<typeof captureRec
     for (const record of history[kind]) requireSource(digest(record.canonical_evidence) === record.evidence_hash);
     add(kind + '_history.ndjson', history[kind].map(record => JSON.stringify(record)).join('\n') + (history[kind].length ? '\n' : ''));
   }
-  verifyClosure(rows, history,funds);
+  verifyClosure(rows, history,funds,tips);
   const manifest = JSON.stringify({ schemaVersion: 1, scope: 'direct_receipt_sources', businessId, snapshotToken, historySnapshotToken,
     recordCounts: counts, exactReceiptEffectsVerified: true, referenceClosureComplete: false, completePortableExport: false, completeBackup: false,
     parts: files.map(({ name, content }) => ({ name, bytes: Buffer.byteLength(content), sha256: digest(content) })) }) + '\n';

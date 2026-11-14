@@ -404,6 +404,11 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .issued-invoice-items li { display:flex; justify-content:space-between; align-items:baseline; gap:.75rem; padding:.6rem 0; border-top:1px solid var(--line); }
 .issued-invoice-items span { min-width:0; overflow-wrap:anywhere; }
 .issued-invoice-items strong { white-space:nowrap; }
+.invoice-action-links { display:flex; flex-wrap:wrap; gap:0 .875rem; margin:.75rem 0; border-bottom:1px solid var(--line); }
+.invoice-action-links a { display:inline-flex; align-items:center; font-size:.875rem; }
+.invoice-action-section { margin-top:1.25rem; }
+.invoice-action-section h5 { margin:0 0 .5rem; font-size:.9375rem; scroll-margin-top:1rem; }
+.invoice-action-section > details { margin-top:.5rem; }
 .direct-receipt > summary,.direct-receipt-options > summary { min-height:44px; }
 .direct-receipt .direct-receipt-options { border:0; background:none; margin:0; padding:0; }
 .direct-receipt fieldset > .field-help { margin:.15rem 0 .75rem; }

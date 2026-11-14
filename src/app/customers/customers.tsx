@@ -11,6 +11,7 @@ import {ReviewMessageHistory} from '../review-message-history';
 import {MaintenanceReminders} from '../maintenance-reminders';
 import {draftFromCustomer} from '../../customer/customer-contract';
 import {draftChanged} from '../../client/draft-changed';
+import {CustomerPayments} from './customer-payments';
 
 function CustomerDetails({customer}:{customer:Customer}){
   const unknown=(value:string|null)=>value===null?'Not recorded':value===''?'Recorded as empty':value;
@@ -79,6 +80,8 @@ export function CustomerScreen({related:Related}:{related?:ComponentType<{custom
       </form>}
       {view.selected&&<section className="home-panel"><h2>Vehicles and addresses</h2><p>Save vehicles in the vehicle directory, then add a customer link to record their relationship and billing selection.</p><a className="primary-action" href="/vehicles">Manage vehicles</a><a className="text-action" href={"/addresses?customer="+view.selected.id}>Manage customer addresses</a></section>}
       {view.selected&&Related&&<Related key={view.selected.id} customerId={view.selected.id}/>}
+      {view.selected&&view.selected.archived_at===null&&<CustomerPayments key={'payments:'+view.selected.id}
+        businessId={view.selected.business_id} customerId={view.selected.id}/>}
       {view.selected&&view.reviewHistoryAvailable&&<ReviewMessageHistory key={view.selected.id}
        businessId={view.selected.business_id} scope={{kind:'customer',id:view.selected.id}}/>}
       {view.selected&&view.maintenanceFollowUpAvailable&&<MaintenanceReminders key={view.selected.id}

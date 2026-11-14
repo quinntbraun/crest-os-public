@@ -11,6 +11,7 @@ import {excessReturnSourceAddedColumns,excessReturnSourceCoverage} from './exces
 import {tipReturnSourceAddedColumns,tipReturnSourceCoverage} from './tip-return-source.ts';
 import {collectionFailureSourceAddedColumns,collectionFailureSourceCoverage} from './collection-failure-source.ts';
 import {refundTransferSourceAddedColumns,refundTransferSourceCoverage} from './refund-transfer-source.ts';
+import {directReceiptTipSourceAddedColumns} from './direct-receipt-tip-source.ts';
 
 const receiptColumns:Readonly<Record<string,readonly string[]>>=receiptSourceAddedColumns;
 const expenseColumns:Readonly<Record<string,readonly string[]>>=postedExpenseSourceAddedColumns;
@@ -30,7 +31,9 @@ export const collectionFailureSourceColumns:Readonly<Record<string,readonly stri
 
 export const refundTransferSourceColumns:Readonly<Record<string,readonly string[]>>=refundTransferSourceAddedColumns;
 
-export function financeSourceTables(version:1|2|3|4|5|6|7|8|9|10|11|12){
+export const directReceiptTipSourceColumns:Readonly<Record<string,readonly string[]>>=directReceiptTipSourceAddedColumns;
+
+export function financeSourceTables(version:1|2|3|4|5|6|7|8|9|10|11|12|13){
   if(version===1)return originalTables;
   const correctionTables=[
     ...originalTables.map(table=>({...table,columns:[...table.columns,...(correctionSourceColumns['crest.'+table.name]??[])]})),
@@ -71,6 +74,9 @@ export function financeSourceTables(version:1|2|3|4|5|6|7|8|9|10|11|12){
   const collectionFailureTables=[...tipReturnTables.map(table=>({...table,columns:[...table.columns,...(collectionFailureSourceColumns['crest.'+table.name]??[])]})),
     ...collectionFailureSourceCoverage.map(table=>({name:table.table.slice('crest.'.length),columns:[...table.required]}))];
   if(version===11)return collectionFailureTables;
-  return [...collectionFailureTables.map(table=>({...table,columns:[...table.columns,...(refundTransferSourceColumns['crest.'+table.name]??[])]})),
+  const refundTransferTables=[...collectionFailureTables.map(table=>({...table,columns:[...table.columns,...(refundTransferSourceColumns['crest.'+table.name]??[])]})),
     ...refundTransferSourceCoverage.map(table=>({name:table.table.slice('crest.'.length),columns:[...table.required]}))];
+  return version===12?refundTransferTables:refundTransferTables.map(table=>({...table,
+    columns:[...table.columns,...(directReceiptTipSourceColumns['crest.'+table.name]??[])],
+  }));
 }

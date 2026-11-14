@@ -28,6 +28,7 @@ import {excessReturnCandidateRecoveryProfile} from './finance-excess-return-cand
 import {tipReturnCandidateRecoveryProfile} from './finance-tip-return-candidate.mjs';
 import {collectionFailureRecoveryProfile} from './finance-collection-failure-candidate.mjs';
 import {refundTransferRecoveryProfile} from './finance-refund-transfer-candidate.mjs';
+import {directReceiptTipRecoveryProfile} from './finance-direct-receipt-tip-candidate.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
@@ -1018,6 +1019,13 @@ export async function backupRefundTransferDatabase(candidate,client,url,director
 export async function restoreRefundTransferDatabase(candidate,directory,identity,url){
   return restoreWithProfile((await refundTransferRecoveryProfile(candidate,root)).profile,directory,identity,url);
 }
+export async function backupDirectReceiptTipDatabase(candidate,client,url,directory,recipient){
+  const checked=await directReceiptTipRecoveryProfile(candidate,root);
+  return backupWithProfile(checked.profile,client,url,directory,recipient,undefined,undefined,checked);
+}
+export async function restoreDirectReceiptTipDatabase(candidate,directory,identity,url){
+  return restoreWithProfile((await directReceiptTipRecoveryProfile(candidate,root)).profile,directory,identity,url);
+}
 
 async function expense79RecoveryProfile(candidate){
   assert.equal(candidate.file,expense79File);
@@ -1088,6 +1096,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile.schemaVersion===94&&profile.heldTipReturnMigrationSha256
       ||profile.schemaVersion===95&&profile.heldCollectionFailureMigrationSha256
       ||profile.schemaVersion===96&&profile.heldRefundTransferMigrationSha256
+      ||profile.schemaVersion===97&&profile.heldDirectReceiptTipMigrationSha256
       ||profile.schemaVersion===79&&profile.heldExpenseMigrationSha256
       ));
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -1181,6 +1190,7 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     assert.equal(manifest.heldTipReturnMigrationSha256,profile.heldTipReturnMigrationSha256);
     assert.equal(manifest.heldCollectionFailureMigrationSha256,profile.heldCollectionFailureMigrationSha256);
     assert.equal(manifest.heldRefundTransferMigrationSha256,profile.heldRefundTransferMigrationSha256);
+    assert.equal(manifest.heldDirectReceiptTipMigrationSha256,profile.heldDirectReceiptTipMigrationSha256);
     if(profile.heldDropoffPhotoAuthority||profile.heldCustody67MigrationSha256||profile.heldPickupReturnSources
       ||profile.heldExpenseMigrationSha256)assert(manifest.objectArchive);
     stage='authenticated_dump';const dump=await unseal(join(directory,'database.age'),receipt.dump,identity);
