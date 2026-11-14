@@ -67,7 +67,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const arrival=await form.locator('time').nth(1).getAttribute('datetime');
   const corrected=Math.floor((Date.parse(original)-1000)/1000)*1000;
   const reason='Synthetic earlier departure documented';
-  await form.getByLabel('Corrected departure time',{exact:true}).fill(departureLocalTime(corrected));
+  const wallTime=departureLocalTime(corrected);
+  // datetime-local normalizes a zero-seconds value to minute precision.
+  await form.getByLabel('Corrected departure time',{exact:true}).fill(wallTime.endsWith(':00')?wallTime.slice(0,-3):wallTime);
   await form.getByLabel('Departure correction reason',{exact:true}).fill(reason);
   await expect(form).toContainText('Saved mileage will need review after the correction.');
   await mkdir('.local/review',{recursive:true});
