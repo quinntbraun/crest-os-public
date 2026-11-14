@@ -383,6 +383,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
          await page.screenshot({path:'.local/review/finance-fund-application-'+name+'-'+width+'.png'});
         }
+        await allowInvoiceReadWindow();
         await funds.getByRole('button',{name:'Apply funds to invoice',exact:true}).press('Enter');
         await expect(funds.getByRole('status')).toContainText('Funds applied.');
         const receiptDownload=page.waitForEvent('download');
@@ -427,6 +428,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await disclosure.press('Enter');
         await disclosure.press('Enter');
         await expect(report.getByText('$10.00',{exact:true})).toHaveCount(0);
+        await allowInvoiceReadWindow();
         await page.goto(fixture.origin+job);
         await draftDisclosure.click();
         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
@@ -1041,13 +1043,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            const panel=invoice.getByRole('region',{name:title,exact:true});
            await invoice.getByText(title,{exact:true}).press('Enter');
            await panel.getByRole('button',{name:'Load customer payments',exact:true}).press('Enter');
-           const payment=panel.getByLabel('Original payment',{exact:true});
-           const savedOption=payment.locator('option[value="'+committed.paymentId+'"]');
-           await expect(savedOption).toContainText('$12.34');
-           await expect(savedOption).toContainText(committed.paymentId.slice(-8));
+           const payment=panel.getByRole('combobox',{name:'Original payment',exact:true});
+           await expect(payment).toBeVisible();
            await payment.selectOption(committed.paymentId);
+           const label=await payment.evaluate(select=>select.selectedOptions[0]?.textContent);
+           assert(label?.includes('$12.34')&&label.includes(committed.paymentId.slice(-8)));
            await panel.getByLabel('Adjustment date',{exact:true}).fill(committed.actualOn);
-           await panel.getByLabel('What happened?',{exact:true}).selectOption('settled_failure');
+           await panel.getByRole('combobox',{name:'What happened?',exact:true}).selectOption('settled_failure');
            await panel.getByRole('button',{name:'Review remaining amounts',exact:true}).press('Enter');
            const affected=panel.getByRole('region',{name:'Held funds · Customer funds held',exact:true});
            await affected.getByText('$11.34 available',{exact:true}).press('Enter');
@@ -1059,7 +1061,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await expect(save).toBeDisabled();
            await affected.getByRole('button',{name:'Start at cent 101',exact:true}).press('Enter');
            await debit.fill('0.25');
-           await panel.getByLabel('Account debited',{exact:true}).selectOption({label:'Fictional checking'});
+           await panel.getByRole('combobox',{name:'Account debited',exact:true}).selectOption({label:'Fictional checking'});
            await panel.getByLabel('Reference type',{exact:true}).fill('ledger');
            const transaction='fictional-incoming-failure';
            await panel.getByLabel('Transaction ID',{exact:true}).fill(transaction);
