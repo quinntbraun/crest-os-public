@@ -304,7 +304,7 @@ export function DirectReceipt({businessId,customerId,invoiceId}: {businessId:str
             <option value={options.fundsMappingId}>Hold as customer funds</option>
           </select></label>:<p className="field-help">Set up the customer funds account before recording a remainder.</p>}
         </div>}
-        <label>How you verified the payment<input required maxLength={1000} value={confirmation}
+        <label className="receipt-confirmation">How you verified the payment<textarea required rows={2} maxLength={1000} value={confirmation}
           onChange={event=>setConfirmation(event.target.value)} disabled={busy}/></label>
         <details className="direct-receipt-options">
           <summary>Provider reference and duplicate review</summary>
