@@ -10,7 +10,7 @@ const dateFormat=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'U
 const displayDate=(date:string)=>dateFormat.format(new Date(date+'T12:00:00Z'));
 const usd=(cents:string)=>'$'+expenseDollars(cents);
 
-export function CustomerFundsReport({businessId}:{businessId:string}){
+export function CustomerFundsReport({businessId,includesExcess=false}:{businessId:string;includesExcess?:boolean}){
   const [through,setThrough]=useState('');
   const [report,setReport]=useState<ReturnType<typeof parseCustomerFundsReport>|null>(null);
   const [status,setStatus]=useState('');
@@ -72,7 +72,7 @@ export function CustomerFundsReport({businessId}:{businessId:string}){
   return <details className="review-card" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
     <summary onClick={event=>{if(event.currentTarget.closest('details')?.open)clear();}}>Customer funds held</summary>
     <section aria-label="Customer funds held" aria-busy={busy}>
-      <p className="field-help">Fictional funds held from payment corrections, checked against account 2000.</p>
+      <p className="field-help">Fictional funds held from {includesExcess?'payments and payment corrections':'payment corrections'}, checked against account 2000.</p>
       <form onSubmit={event=>{event.preventDefault();void load();}}>
         <label>Through date (optional)<input type="date" min="1900-01-01" value={through} disabled={busy}
           onChange={event=>{setThrough(event.target.value);setReport(null);setStatus('');}}/></label>

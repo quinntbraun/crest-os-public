@@ -45,7 +45,7 @@ try{
    const delivery=JSON.parse(decoder.decode(await read(deliveryName)));
    const keys=['schemaVersion','profile','businessId','observedAt','appReleaseId','sourceSchemaVersion','manifestSha256','completePortableExport','completeBackup'];
    if(!delivery||typeof delivery!=='object'||Array.isArray(delivery)||Object.keys(delivery).length!==keys.length
-    ||!keys.every(key=>Object.hasOwn(delivery,key))||delivery.schemaVersion!==1||delivery.profile!=='crest.posted-finance-source.v7'
+    ||!keys.every(key=>Object.hasOwn(delivery,key))||delivery.schemaVersion!==1
     ||delivery.profile!==result.profile||delivery.businessId!==businessId||delivery.observedAt!==JSON.parse(manifestText).observedAt
     ||typeof delivery.appReleaseId!=='string'||!/^[a-f0-9]{40}$/.test(delivery.appReleaseId)||appReleaseId!==undefined&&delivery.appReleaseId!==appReleaseId
     ||!Number.isSafeInteger(delivery.sourceSchemaVersion)||delivery.sourceSchemaVersion<89||delivery.sourceSchemaVersion>999

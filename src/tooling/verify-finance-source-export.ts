@@ -36,12 +36,12 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
   const manifest=record(manifestText),version=manifest.schemaVersion;
   require(exact(manifest,['schemaVersion','scope','businessId','currency','observedAt','historySnapshotToken','sourceTokens',
     'rowCounts','historyCounts','completePortableExport','referenceClosureComplete','completeBackup','files'])
-    &&(version===1||version===2||version===3||version===4||version===5||version===6||version===7)&&manifest.scope==='crest.posted-finance-source.v'+version&&manifest.businessId===businessId
+    &&(version===1||version===2||version===3||version===4||version===5||version===6||version===7||version===8)&&manifest.scope==='crest.posted-finance-source.v'+version&&manifest.businessId===businessId
     &&manifest.currency==='USD'&&typeof manifest.observedAt==='string'&&Number.isFinite(Date.parse(manifest.observedAt))
     &&token(manifest.historySnapshotToken)&&manifest.completePortableExport===false&&manifest.referenceClosureComplete===false
     &&manifest.completeBackup===false);
   const sourceNames=['invoice','receipt','expense',...(version>=2?['correction']:[]),...(version>=3?['application']:[]),
-    ...(version>=4?['tip']:[]),...(version>=5?['credit']:[]),...(version>=6?['paired']:[]),...(version===7?['refund']:[])];
+    ...(version>=4?['tip']:[]),...(version>=5?['credit']:[]),...(version>=6?['paired']:[]),...(version>=7?['refund']:[])];
   require(exact(manifest.sourceTokens,sourceNames)&&Object.values(manifest.sourceTokens).every(token));
   const tables=financeSourceTables(version),expectedNames=new Set([...names,...tables.flatMap(({name})=>[name+'.csv',name+'_escape_map.json'])]);
   require(exact(manifest.rowCounts,tables.map(table=>table.name))&&Object.values(manifest.rowCounts).every(count)
@@ -117,11 +117,40 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
     balance.debit+=debit;balance.credit+=credit;balances.set(entry.id,balance);
   }
   require(entries.size===balances.size&&[...balances.values()].every(balance=>balance.debit===balance.credit));
-  if(version>=4)verifyHeldTipSourceClosure(table=>version===7&&table==='fund_lot_range_consumptions'
+  if(version>=4)verifyHeldTipSourceClosure(table=>version>=7&&table==='fund_lot_range_consumptions'
     ?decoded.get(table)!.filter(row=>row.service_refund_id===null):decoded.get(table)!,history);
   if(version===5)verifyInvoiceCreditSourceClosure(table=>decoded.get(table)!,history);
   if(version>=6)verifyPairedInvoiceCreditSourceClosure(table=>decoded.get(table)!,history);
-  if(version===7)verifyServiceRefundSourceClosure(table=>decoded.get(table)!,history);
+  if(version>=7)verifyServiceRefundSourceClosure(table=>decoded.get(table)!,history);
+  if(version===8){
+    const roots=new Map(decoded.get('funding_origins')!.map(row=>[row.id,row]));
+    const parts=new Map(decoded.get('funding_partitions')!.map(row=>[row.id,row]));
+    const payments=new Map(decoded.get('payments')!.map(row=>[row.id,row]));
+    const operations=new Map(history.operation.map(row=>[row.operation_id,row]));
+    const heldLines=decoded.get('journal_lines')!.filter(row=>row.purpose==='receipt_funds');
+    const byLot=new Map(heldLines.map(row=>[row.fund_lot_id,row]));
+    const applied=new Set(decoded.get('allocation_events')!.map(row=>row.partition_id));
+    const seen=new Set<unknown>();
+    require(byLot.size===heldLines.length);
+    for(const lot of decoded.get('customer_fund_lots')!){
+      if(lot.receipt_event_id===null){require(customerUuid(lot.unapplication_id)&&!byLot.has(lot.id));continue;}
+      require(lot.unapplication_id===null&&customerUuid(lot.receipt_event_id)&&!seen.has(lot.receipt_event_id));
+      seen.add(lot.receipt_event_id);
+      const event=events.get(lot.receipt_event_id),line=byLot.get(lot.id),root=roots.get(lot.origin_id),part=parts.get(lot.parent_partition_id);
+      const entry=line&&entries.get(line.entry_id),payment=event&&payments.get(event.payment_id),operation=payment&&operations.get(payment.operation_id);
+      const receipt=operation&&typeof operation.result==='string'?record(operation.result):null;
+      require(event?.template==='P03'&&root&&part&&payment&&line&&entry?.event_id===event.id
+        &&root.payment_id===payment.id&&root.customer_id===lot.customer_id&&payment.customer_id===lot.customer_id
+        &&part.origin_id===root.id&&part.last_cent===root.cents&&!applied.has(part.id)
+        &&money(part.last_cent)-money(part.first_cent)+1n===money(lot.original_cents)
+        &&line.account_id===lot.account_id&&line.fixed_mapping_id===lot.mapping_id&&line.debit_cents==='0'&&line.credit_cents===lot.original_cents
+        &&operation?.command_type==='finance.receipt.record'&&operation.state==='committed'&&receipt?.schemaVersion===2
+        &&receipt.paymentId===payment.id&&receipt.eventId===event.id&&receipt.fundingOriginId===root.id
+        &&exact(receipt.heldFunds,['lotId','fundingPartitionId','mappingId','cents'])&&receipt.heldFunds.lotId===lot.id
+        &&receipt.heldFunds.fundingPartitionId===part.id&&receipt.heldFunds.mappingId===lot.mapping_id&&receipt.heldFunds.cents===lot.original_cents);
+    }
+    require(seen.size===heldLines.length);
+  }
   const totals=[...balances.values()].reduce((sum,balance)=>sum+balance.debit,0n).toString();
   return Object.freeze({verified:true,profile:manifest.scope,files:files.size,sourceRows:rows,
     balancedJournalEntries:balances.size,debitCents:totals,creditCents:totals,

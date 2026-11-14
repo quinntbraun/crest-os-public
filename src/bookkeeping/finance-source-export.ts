@@ -4,7 +4,7 @@ import {isDeepStrictEqual} from 'node:util';
 import {customerUuid,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {readSourceExportCsv} from '../security/source-export-csv-reader.ts';
 import {captureInvoiceSource,formatInvoiceSource} from './invoice-source.ts';
-import {captureReceiptSource,formatReceiptSource} from './receipt-source.ts';
+import {captureReceiptFunds,captureReceiptSource,formatReceiptSource} from './receipt-source.ts';
 import {capturePostedExpenseSource,formatPostedExpenseSource} from './posted-expense-source.ts';
 import {captureUnapplicationSource,formatUnapplicationSource,verifyUnapplicationSourceClosure} from './unapplication-source.ts';
 import {captureFundApplicationSource,formatFundApplicationSource} from './fund-application-source.ts';
@@ -48,12 +48,13 @@ function rowsOf(value:unknown,table:string):readonly Row[]{
 // A single authorized, read-only repeatable-read export transaction must own
 // query for the entire capture. Every underlying SQL reader checks that mode.
 export async function captureFinanceSourceExport(businessId:string,query:Query,
-  {includeCorrections=false,includeFundApplications=false,includeTips=false,includeCredits=false,includePairedCredits=false,includeServiceRefunds=false}:Readonly<{
+  {includeCorrections=false,includeFundApplications=false,includeTips=false,includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false}:Readonly<{
     includeCorrections?:boolean;includeFundApplications?:boolean;includeTips?:boolean;includeCredits?:boolean;includePairedCredits?:boolean;
-    includeServiceRefunds?:boolean;
+    includeServiceRefunds?:boolean;includeExcessReceipts?:boolean;
   }>={}){
   check(customerUuid(businessId)&&(!includeFundApplications||includeCorrections)&&(!includeTips||includeFundApplications)
-    &&(!includeCredits||includeTips)&&(!includePairedCredits||includeCredits)&&(!includeServiceRefunds||includePairedCredits));
+    &&(!includeCredits||includeTips)&&(!includePairedCredits||includeCredits)&&(!includeServiceRefunds||includePairedCredits)
+    &&(!includeExcessReceipts||includeServiceRefunds));
   const one=async(sql:string,parameters:unknown[])=>{
     const result=await query(sql,parameters);
     check(Array.isArray(result)&&result.length===1&&exact(result[0],['result']));
@@ -61,6 +62,8 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
   };
   const invoice=await captureInvoiceSource(businessId,one);
   const receipt=await captureReceiptSource(businessId,query);
+  const receiptFunds=includeExcessReceipts?await captureReceiptFunds(businessId,receipt.snapshotToken,query):[];
+  const heldByLine=new Map(receiptFunds.map(lot=>[lot.journal_line_id,lot]));
   const expense=await capturePostedExpenseSource(businessId,query);
   const pairedCapture=includePairedCredits?await capturePairedInvoiceCreditSource(businessId,query):null;
   const paired=pairedCapture?.paired??null;
@@ -83,7 +86,7 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     &&(!paired||history.snapshotToken===paired.historySnapshotToken)&&(!refund||history.snapshotToken===refund.historySnapshotToken));
   // Keep each established profile's amount, lineage and round-trip checks.
   formatInvoiceSource(invoice);
-  formatReceiptSource(receipt);
+  formatReceiptSource(receipt,receiptFunds);
   formatPostedExpenseSource(expense);
   if(correction){
     if(paired)verifyUnapplicationSourceClosure(correction.rows,correction.history,
@@ -92,7 +95,7 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
   }
   if(application)formatFundApplicationSource(application);
 
-  const version=refund?7:paired?6:credit?5:tip?4:application?3:correction?2:1;
+  const version=includeExcessReceipts?8:refund?7:paired?6:credit?5:tip?4:application?3:correction?2:1;
   const tables=financeSourceTables(version);
   const profiles={invoice,receipt,expense,correction,application,tip,credit,paired,refund};
   const combined=new Map<string,Map<string,Row>>();
@@ -108,12 +111,13 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
         ...(application&&kind!=='application'&&kind!=='tip'&&kind!=='credit'?fundApplicationSourceColumns['crest.'+name]??[]:[]),
         ...(tip&&kind!=='tip'&&kind!=='credit'?heldTipSourceColumns['crest.'+name]??[]:[]),
         ...(credit&&kind!=='credit'?invoiceCreditSourceColumns['crest.'+name]??[]:[]),
-        ...(refund?serviceRefundSourceColumns['crest.'+name]??[]:[])];
+        ...(refund?serviceRefundSourceColumns['crest.'+name]??[]:[]),
+        ...(includeExcessReceipts&&name==='customer_fund_lots'?['receipt_event_id']:[])];
       for(const row of rowsOf(source,name)){
         check(count<maxRows&&customerUuid(row.id)&&row.business_id===businessId
           &&exact(row,columns.filter(column=>!missing.includes(column))));
         const normalized=Object.freeze(Object.fromEntries(columns.map(column=>[
-          column,missing.includes(column)?null:row[column]!,
+          column,kind==='receipt'&&column==='fund_lot_id'?heldByLine.get(String(row.id))?.id??null:missing.includes(column)?null:row[column]!,
         ])));
         if(rows.has(row.id)){
           // A paired P05/P07 legitimately shares exactly one group. Both
@@ -125,6 +129,12 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
         rows.set(row.id,normalized);
         count++;
       }
+    }
+    if(name==='customer_fund_lots')for(const source of receiptFunds){
+      check(count<maxRows&&customerUuid(source.id)&&!rows.has(source.id));
+      const {journal_line_id:lineId,...lot}=source;
+      check(customerUuid(lineId)&&exact(lot,columns));
+      rows.set(source.id,Object.freeze(lot));count++;
     }
     combined.set(name,rows);
   }
@@ -200,7 +210,8 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     tables})+'\n');
   add('README.txt',[
     'Crest OS posted finance source export',
-    refund?'Includes supported settled service refunds, issued invoices, credits and payment releases, direct receipts, payment corrections, customer funds applications, tips, same-day posted expenses and their source history.'
+    includeExcessReceipts?'Includes settled service refunds, direct receipts with held customer funds, invoices, credits, applied payments, tips, same-day expenses and original history.'
+      :refund?'Includes supported settled service refunds, issued invoices, credits and payment releases, direct receipts, payment corrections, customer funds applications, tips, same-day posted expenses and their source history.'
       :paired?'Includes supported issued invoices, paired invoice credits and payment releases, standalone invoice credits, direct receipts, payment corrections, customer funds applications, confirmed tips from held funds, same-day posted expenses, their normalized journal and original history projections.'
       :credit?'Includes supported issued invoices, invoice credits, direct receipts, payment corrections, customer funds applications, confirmed tips from held funds, same-day posted expenses, their normalized journal and original history projections.'
       :tip?'Includes supported issued invoices, direct receipts, payment corrections, customer funds applications, confirmed tips from held funds, same-day posted expenses, their normalized journal and original history projections.'

@@ -13,7 +13,7 @@ import { financeServiceRefundCandidate } from '../support/finance-service-refund
 import { requireSyntheticFinanceAccountConfiguration } from '../../scripts/synthetic-migrations.mjs';
 import {prepareSyntheticPostedFinancePreview,readSyntheticPostedFinancePreview} from '../../scripts/synthetic-posted-finance-preview.mjs';
 import { backupPairedInvoiceCredit85CandidateDatabase,backupInvoiceCredit84ForPairedBaseline,backupServiceRefundCandidateDatabase,
-  connect,inventory,keyPair,privateWorkspace,recoveryCluster,restorePairedInvoiceCredit85CandidateDatabase,
+  backupDatabase,connect,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase,restorePairedInvoiceCredit85CandidateDatabase,
   restoreInvoiceCredit84ForPairedBaseline,restoreServiceRefundCandidateDatabase } from '../support/recovery-drill.mjs';
 import { exerciseNeutralFinanceImport } from '../support/neutral-finance-import.mjs';
 import { pairedInvoiceCreditRefusal,parsePairedInvoiceCreditInput,parsePairedInvoiceCreditOptions,parsePairedInvoiceCreditReference,
@@ -238,7 +238,7 @@ async function verifyReceivableAging({admin,finance,web,owner,foreign,saved,toda
 async function verifyPostedFinanceLauncher({admin,owner,sandbox,target}){
   const databaseName=new URL(target).pathname.slice(1),id=databaseName.slice('crest_migrate_'.length);
   assert.match(id,/^[a-f0-9]{16}$/);
-  const root=sandbox.root,directory=sandbox.workspace,login='crest_export_local_'+id;
+  const root=await sandbox.prefix(90),directory=sandbox.workspace,login='crest_export_local_'+id;
   const issuer='http://127.0.0.1:54328/auth/v1';
   const state={schemaVersion:1,id,databaseName,businessId:owner.business,issuer,owner:{subject:owner.subject}};
   const config={root,directory,state,administrator:target,db:admin};
@@ -249,7 +249,7 @@ async function verifyPostedFinanceLauncher({admin,owner,sandbox,target}){
   const requireFundsPreview=()=>requireSyntheticFinanceAccountConfiguration(target,owner.business,
     true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true);
   await assert.rejects(requireFundsPreview(),{message:'SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED'});
-  assert.equal((await sandbox.apply(target)).history.length,90);
+  assert.equal((await sandbox.apply(target,await sandbox.prefix(90))).history.length,90);
   await requireFundsPreview();
   assert.deepEqual((await inventory(admin)).filter(row=>row.schema!=='supabase_migrations'),before);
   const exportAuthority='crest_commands.authorize_posted_finance_export(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid)';
@@ -468,6 +468,119 @@ async function verifyCustomerFundsReport({finance,web,owner,foreign,saved,today}
   await assert.rejects(command(finance,route,[...foreignTarget,today]),{code:'42501'});
   await assert.rejects(command(web,route,[...owner.auth(),today]),{code:'42501'});
   await assert.rejects(report(owner,'9999-12-31'),{message:'FINANCE_REPORT_DATE_REQUIRED'});
+}
+
+async function verifyExcessReceipt({admin,finance,web,exporter,owner,foreign,channel,fundsMapping,today,makeOwner,service,sandbox,target}){
+  const unaffected=rows=>rows.filter(row=>row.schema!=='supabase_migrations'&&!(row.schema==='crest'&&row.name==='customer_fund_lots'));
+  const priorLots=async()=> (await admin.query("SELECT to_jsonb(l)-'receipt_event_id' AS row FROM crest.customer_fund_lots l ORDER BY l.id")).rows;
+  const existing=unaffected(await inventory(admin)),retainedLots=await priorLots();
+  const preview=()=>requireSyntheticFinanceAccountConfiguration(target,owner.business,
+    true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true);
+  await assert.rejects(preview(),{message:'SYNTHETIC_FINANCE_ACCOUNT_MIGRATION_REQUIRED'});
+  assert.equal((await sandbox.apply(target)).history.length,91);
+  await preview();
+  assert.deepEqual(unaffected(await inventory(admin)),existing);
+  assert.deepEqual(await priorLots(),retainedLots);
+  assert.equal((await admin.query('SELECT count(*)::int AS n FROM crest.customer_fund_lots WHERE receipt_event_id IS NOT NULL')).rows[0].n,0);
+  const options='read_direct_fictional_receipt_funds_options';
+  const route='record_direct_fictional_receipt_with_funds';
+  assert.equal((await command(finance,options,[...owner.auth(),owner.customer,today])).fundsMappingId,fundsMapping);
+  assert.deepEqual(await command(finance,options,[...foreign.auth(),owner.customer,today]),{state:'absent'});
+  await assert.rejects(command(web,options,[...owner.auth(),owner.customer,today]),{code:'42501'});
+  const makeArgs=(amount,applications={})=>[...owner.auth(),owner.epoch,randomUUID(),randomUUID(),owner.customer,channel,
+    '1',today,amount,'Fictional actual bank receipt verified',null,null,applications,fundsMapping];
+  const noInvoice=makeArgs('4100');
+  const saved=await command(finance,route,noInvoice);
+  assert.equal(saved.state,'committed');
+  assert.equal(saved.receipt.schemaVersion,2);
+  assert.deepEqual(saved.receipt.applications,[]);
+  assert.equal(saved.receipt.heldFunds.cents,'4100');
+  assert.deepEqual(await command(finance,route,noInvoice),saved);
+  const duplicate=[...noInvoice];duplicate[9]=randomUUID();duplicate[10]=randomUUID();
+  await assert.rejects(command(finance,route,duplicate),{message:'DIRECT_RECEIPT_DUPLICATE_REVIEW_REQUIRED'});
+  const wrongMapping=makeArgs('4600');wrongMapping[20]=randomUUID();
+  await assert.rejects(command(finance,route,wrongMapping),{message:'DIRECT_RECEIPT_FUNDS_MAPPING_REQUIRED'});
+  const old=[...noInvoice];old[9]=randomUUID();old[10]=randomUUID();
+  await assert.rejects(command(finance,'record_direct_fictional_receipt',old.slice(0,20)),{message:'DIRECT_RECEIPT_FULL_ALLOCATION_REQUIRED'});
+  await assert.rejects(command(web,route,makeArgs('4700')),{code:'42501'});
+  const original=await command(finance,'lookup_direct_fictional_receipt',[...owner.auth(),owner.epoch,noInvoice[9],noInvoice[10]]);
+  assert.deepEqual(original,saved);
+  const lines=(await admin.query("SELECT purpose,debit_cents::text,credit_cents::text FROM crest.journal_lines l JOIN crest.journal_entries e ON (e.business_id,e.id)=(l.business_id,l.entry_id) WHERE e.event_id=$1 ORDER BY l.purpose",[saved.receipt.eventId])).rows;
+  assert.deepEqual(lines,[{purpose:'receipt_funds',debit_cents:'0',credit_cents:'4100'},{purpose:'receipt_money',debit_cents:'4100',credit_cents:'0'}]);
+  const held=await command(finance,'read_fictional_customer_funds',[...owner.auth(),today]);
+  assert.equal(held.rows.find(row=>row.lotId===saved.receipt.heldFunds.lotId)?.heldCents,'4100');
+  const next=await makeOwner(owner,{customerId:owner.customer,paidLineDiscount:{kind:'fixed',cents:'3000'},serviceVersionFor:async()=>
+    (await admin.query('SELECT id FROM crest.service_versions WHERE business_id=$1 AND service_id=$2',[owner.business,service])).rows[0].id});
+  const {invoice}=await issueInvoice({admin,web,finance,owner:next,service,today,setup:false,appointmentDay:'2026-11-06'});
+  const partial=makeArgs('1450',{[invoice.receivableId]:'1200'});
+  const split=await command(finance,route,partial);
+  assert.equal(split.state,'committed');
+  assert.equal(split.receipt.applications[0].cents,'1200');
+  assert.equal(split.receipt.heldFunds.cents,'250');
+  assert.notEqual(split.receipt.applications[0].fundingPartitionId,split.receipt.heldFunds.fundingPartitionId);
+  const roots=(await admin.query('SELECT first_cent::text,last_cent::text FROM crest.funding_partitions WHERE origin_id=$1 ORDER BY position',
+    [split.receipt.fundingOriginId])).rows;
+  assert.deepEqual(roots,[{first_cent:'1',last_cent:'1200'},{first_cent:'1201',last_cent:'1450'}]);
+  const journal=await command(finance,'read_fictional_journal_v6',[...owner.auth(),today,null,null,100]);
+  const {parseFictionalJournalV6}=await import('../../src/bookkeeping/posted-report-v6-contract.ts');
+  const posted=parseFictionalJournalV6(journal,owner.business,today,null,null,100).rows.filter(row=>row.eventId===split.receipt.eventId);
+  assert.deepEqual(posted.map(row=>[row.purpose,row.debitCents,row.creditCents]).sort(),
+    [['receipt_ar','0','1200'],['receipt_funds','0','250'],['receipt_money','1450','0']]);
+  const changed=[...partial];changed[15]='1451';
+  assert.deepEqual(await command(finance,route,changed),{state:'conflict',reason:'operation'});
+  await assert.rejects(command(finance,'receipt_funds_source_snapshot',[owner.business,'a'.repeat(64)]),{code:'42501'});
+  let originalArchive;
+  await exporter.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+  try{
+    const query=async(sql,args)=>(await exporter.query(sql,args)).rows;
+    const v8=(await captureFinanceSourceExport(owner.business,query,{...refundExportOptions,includeExcessReceipts:true})).forServer();
+    assert.equal(verifyFinanceSourceExport(v8.manifest,v8.files,owner.business).profile,'crest.posted-finance-source.v8');
+    const lotCsv=v8.files.find(file=>file.name==='customer_fund_lots.csv').content;
+    assert(lotCsv.includes(saved.receipt.heldFunds.lotId)&&lotCsv.includes(split.receipt.eventId));
+    const lineCsv=v8.files.find(file=>file.name==='journal_lines.csv').content;
+    assert(lineCsv.includes('receipt_funds')&&lineCsv.includes(split.receipt.heldFunds.lotId));
+    originalArchive=v8;
+  }finally{await exporter.query('ROLLBACK');}
+  const neutral=await sandbox.connect(await sandbox.database());
+  try{
+    const recovered=await exerciseNeutralFinanceImport(neutral,originalArchive.files,owner.business,{...refundExportOptions,includeExcessReceipts:true});
+    assert.equal(recovered.tables,30);
+    assert.equal(recovered.debit,recovered.credit);
+  }finally{await neutral.end();}
+  const directory=await privateWorkspace();
+  let destination,restored;
+  try{
+    const point=join(directory,'point');
+    await mkdir(point,{mode:0o700});
+    const keys=await keyPair(directory);
+    const {manifest}=await backupDatabase(admin,target,point,keys.recipient);
+    assert.equal(manifest.schemaVersion,91);
+    destination=await recoveryCluster();
+    const restoredUrl=await destination.database();
+    assert.notEqual(new URL(restoredUrl).port,new URL(target).port);
+    assert.deepEqual(await restoreDatabase(point,keys.path,restoredUrl),manifest);
+    restored=await connect(restoredUrl);
+    assert.deepEqual(await inventory(restored),manifest.rows);
+    await restored.query('SET ROLE crest_export');
+    await restored.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    try{
+      const replay=(await captureFinanceSourceExport(owner.business,async(sql,args)=>(await restored.query(sql,args)).rows,
+        {...refundExportOptions,includeExcessReceipts:true})).forServer();
+      assert.deepEqual(replay.files,originalArchive.files);
+      assert.equal(verifyFinanceSourceExport(replay.manifest,replay.files,owner.business).profile,'crest.posted-finance-source.v8');
+    }finally{await restored.query('ROLLBACK');}
+    await restored.query('RESET ROLE; SET ROLE crest_finance_preview');
+    assert.deepEqual(await command(restored,'lookup_direct_fictional_receipt',[...owner.auth(),owner.epoch,partial[9],partial[10]]),split);
+  }finally{
+    try{await restored?.end();}finally{
+      try{await destination?.close();}finally{
+        const actual=await realpath(directory);
+        assert.equal(dirname(actual),await realpath('.local/recovery-drill'));
+        assert.match(basename(actual),/^case-[a-z0-9]+$/i);
+        await rm(actual,{recursive:true,force:true});
+      }
+    }
+  }
 }
 
 test('held E08 restores the ordered paired credit and original payment release with exact audit and portable evidence', {timeout:240000}, async()=>{
@@ -789,6 +902,7 @@ test('held E08 restores the ordered paired credit and original payment release w
     await verifyReceivableAging({admin,finance,web,owner,foreign,saved,today,sandbox,target,makeOwner,service});
     await verifyPostedFinanceLauncher({admin,owner,sandbox,target});
     await verifyCustomerFundsReport({finance,web,owner,foreign,saved,today});
+    await verifyExcessReceipt({admin,finance,web,exporter,owner,foreign,channel,fundsMapping,today,makeOwner,service,sandbox,target});
   } finally {
     try {await sandbox?.close();} finally {await cluster.close();}
   }

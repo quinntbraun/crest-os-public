@@ -16,7 +16,7 @@ import {createSessionCsrfVerifier} from './session-request-guard.ts';
 import {downloadObject} from './source-export-download-contract.ts';
 import {createTrustedTransport} from './trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from './trusted-transport.ts';
-import {postedFinanceExportLimit,postedFinanceExportName,postedFinanceExportPath,postedFinanceExportProfile} from './posted-finance-owner-export-contract.ts';
+import {postedFinanceExportLimit,postedFinanceExportName,postedFinanceExportPath,postedFinanceExportProfile,excessReceiptExportProfile} from './posted-finance-owner-export-contract.ts';
 
 type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;
  exportConnectionString:string;appReleaseId:string;sourceSchemaVersion:number};
@@ -38,7 +38,9 @@ export function createPostedFinanceOwnerExportHttp(config:Configuration,provider
   throw Error('POSTED_FINANCE_EXPORT_CONFIGURATION_REQUIRED');
  const resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config);
  const admit=createSessionRequestAdmission(config),database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
- const collect=createServiceRefundSourceCollector({businessId,environment,connectionString:config.exportConnectionString});
+ const includesExcess=sourceSchemaVersion>=91;
+ const profile=includesExcess?excessReceiptExportProfile:postedFinanceExportProfile;
+ const collect=createServiceRefundSourceCollector({businessId,environment,connectionString:config.exportConnectionString},includesExcess);
  let active=false;
  async function authorized<T>(credential:string,signal:AbortSignal,work:(args:unknown[],actorId:string)=>Promise<T>){
   const hash=sessionCredentialHash(credential);
@@ -75,20 +77,20 @@ export function createPostedFinanceOwnerExportHttp(config:Configuration,provider
    if(!await admit(credential,'ordinary',signal))return postedFinanceExportFailure(429);
    if(url.pathname.endsWith('/context')){
     await authorize(credential,signal);
-    return privateJsonResponse({profile:postedFinanceExportProfile});
+    return privateJsonResponse({profile});
    }
    if(active)return postedFinanceExportFailure(429);
    active=true;entered=true;
    const first=await authorize(credential,signal);
    const capture=(await collect(signal)).forFinanceServer();
-   require(capture.businessId===businessId&&capture.profile===postedFinanceExportProfile&&!signal.aborted);
+   require(capture.businessId===businessId&&capture.profile===profile&&!signal.aborted);
    const checked=verifyFinanceSourceExport(capture.manifest,capture.files,businessId);
-   require(checked.profile===postedFinanceExportProfile&&checked.verified);
+   require(checked.profile===profile&&checked.verified);
    const observedAt:unknown=JSON.parse(capture.manifest).observedAt;
    require(typeof observedAt==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?\+00:00$/.test(observedAt)
     &&Number.isFinite(Date.parse(observedAt))&&Date.parse(observedAt)<=Date.now());
    const manifestSha256=digest(capture.manifest);
-   const provenance={schemaVersion:1,profile:postedFinanceExportProfile,businessId,observedAt,
+   const provenance={schemaVersion:1,profile,businessId,observedAt,
     appReleaseId,sourceSchemaVersion,manifestSha256,completePortableExport:false,completeBackup:false};
    const entries=Object.fromEntries([...capture.files,{name:'manifest.json',content:capture.manifest},
     {name:'export_delivery.json',content:JSON.stringify(provenance,null,2)+'\n'}].map(file=>[file.name,Buffer.from(file.content)]));
@@ -98,7 +100,7 @@ export function createPostedFinanceOwnerExportHttp(config:Configuration,provider
    }finally{for(const bytes of Object.values(entries))bytes.fill(0);}
    require(archive.byteLength>0&&archive.byteLength<=postedFinanceExportLimit&&!signal.aborted);
    const archiveSha256=digest(archive),archiveBytes=archive.byteLength;
-   const scope={profile:postedFinanceExportProfile,sourceSchemaVersion,appReleaseId,businessId,actorId:first.actorId,
+   const scope={profile,sourceSchemaVersion,appReleaseId,businessId,actorId:first.actorId,
     recoveryEpoch:first.recoveryEpoch,observedAt,manifestSha256,archiveSha256,archiveBytes};
    await authorized(credential,signal,async(args,actorId)=>{
     require(actorId===first.actorId);

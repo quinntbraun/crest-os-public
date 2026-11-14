@@ -60,11 +60,12 @@ export async function readFlatJsonBody(request:Request,keys:readonly string[],bo
 
 // Quotes contain ordered lines and scoped snapshots. Keep the established flat
 // reader closed; this bounded path also rejects duplicate decoded nested keys.
-export async function readNestedJsonBody(request:Request,keys:readonly string[],bodyLimit=131072):Promise<Readonly<Record<string,unknown>>>{
+export async function readNestedJsonBody(request:Request,keys:readonly string[],bodyLimit=131072,optionalKey?:string):Promise<Readonly<Record<string,unknown>>>{
  try{
   if(!Number.isSafeInteger(bodyLimit)||bodyLimit<1||bodyLimit>131072)throw new PrivateHttpError();
   const signal=AbortSignal.any([request.signal,AbortSignal.timeout(5000)]),text=await boundedBody(request,signal,bodyLimit),value:unknown=JSON.parse(text);
-  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length!==keys.length||!keys.every(key=>Object.hasOwn(value,key)))throw new PrivateHttpError();
+  if(!value||typeof value!=='object'||Array.isArray(value)||!keys.every(key=>Object.hasOwn(value,key))
+   ||Object.keys(value).length!==keys.length+(optionalKey!==undefined&&Object.hasOwn(value,optionalKey)?1:0))throw new PrivateHttpError();
   const pending:{value:unknown;depth:number}[]=[{value,depth:0}];let fields=0,nodes=0;
   while(pending.length){
    const entry=pending.pop()!;if(++nodes>20000||entry.depth>16)throw new PrivateHttpError();

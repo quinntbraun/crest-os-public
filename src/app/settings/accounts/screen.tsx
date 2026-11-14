@@ -231,7 +231,7 @@ export function FinanceAccountsScreen(){
   {context?.trialBalance&&!editor&&<section aria-labelledby="finance-reports-heading">
    <h2 id="finance-reports-heading">Ledger reports</h2>
    <TrialBalance businessId={context.businessId}/>
-   {context.customerFundsReport&&<CustomerFundsReport key={context.businessId} businessId={context.businessId}/>}
+   {context.customerFundsReport&&<CustomerFundsReport key={context.businessId} businessId={context.businessId} includesExcess={context.excessReceipts===true}/>}
    {context.receivableAging&&<ReceivableAging key={context.businessId} businessId={context.businessId}/>}
   </section>}
   {context&&(hasSetupLinks||context.invoiceIssue)&&!editor&&<section className={styles.setup} aria-labelledby="finance-setup-heading">

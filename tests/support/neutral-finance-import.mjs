@@ -66,10 +66,11 @@ function columnType(column){
 }
 
 export async function exerciseNeutralFinanceImport(connection,files,businessId,{
-  includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,
+  includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,
 }={}){
   assert(!includePairedCredits||includeCredits);
   assert(!includeServiceRefunds||includePairedCredits);
+  assert(!includeExcessReceipts||includeServiceRefunds);
   const parts=new Map(files.map(file=>[file.name,file.content]));
   const {tables}=JSON.parse(parts.get('dictionary.json'));
   assert.deepEqual(tables.map(row=>row.name),[...names,...includeCredits?['invoice_credits']:[],
@@ -168,6 +169,21 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
       await connection.query('SAVEPOINT neutral_wrong_refund_link');
       await assert.rejects(connection.query('UPDATE neutral_finance.service_credit_refunds SET fund_lot_id=$1',[randomUUID()]),{code:'23503'});
       await connection.query('ROLLBACK TO SAVEPOINT neutral_wrong_refund_link');
+    }
+    if(includeExcessReceipts){
+      await connection.query('ALTER TABLE neutral_finance.customer_fund_lots ADD FOREIGN KEY(business_id,receipt_event_id) REFERENCES neutral_finance.financial_events(business_id,id)');
+      const {rows}=await connection.query(`
+        SELECT l.id,l.original_cents::text AS held,
+          count(*) FILTER(WHERE jl.purpose='receipt_funds' AND jl.fund_lot_id=l.id AND jl.credit_cents=l.original_cents)::int AS held_lines,
+          count(*) FILTER(WHERE jl.purpose='receipt_money' AND jl.debit_cents=p.gross_cents)::int AS money_lines
+        FROM neutral_finance.customer_fund_lots l
+        JOIN neutral_finance.financial_events e ON (e.business_id,e.id)=(l.business_id,l.receipt_event_id) AND e.template='P03'
+        JOIN neutral_finance.payments p ON (p.business_id,p.id)=(e.business_id,e.payment_id)
+        JOIN neutral_finance.journal_entries j ON (j.business_id,j.event_id)=(e.business_id,e.id)
+        JOIN neutral_finance.journal_lines jl ON (jl.business_id,jl.entry_id)=(j.business_id,j.id)
+        GROUP BY l.id`);
+      assert.deepEqual(rows.map(row=>row.held).sort(),exports.customer_fund_lots.filter(lot=>lot.receipt_event_id!==null).map(lot=>lot.original_cents).sort());
+      assert(rows.length>0&&rows.every(row=>row.held_lines===1&&row.money_lines===1));
     }
     const balance=(await connection.query(`
       SELECT count(*)::int AS entries,coalesce(sum(debit),0)::text AS debit,coalesce(sum(credit),0)::text AS credit,

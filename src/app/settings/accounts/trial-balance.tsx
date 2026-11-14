@@ -197,6 +197,12 @@ export function TrialBalance({businessId}:{businessId:string}){
                 return <tr key={row.lineId}>
                   <th scope="row">
                     <time dateTime={row.effectiveOn}>{row.effectiveOn}</time><small>{row.code} · {row.name}</small>
+                    {'fundLotId' in row&&row.purpose==='receipt_funds'&&<>
+                      <small>Payment received · Customer funds held</small>
+                      <details><summary>Source references</summary><small>Payment {row.paymentId}</small>
+                        <small>Customer funds lot {row.fundLotId}</small>
+                      </details>
+                    </>}
                     {refund&&<>
                       <small>{refund.purpose==='refund_funds'?'Service refund · Held balance reduced':'Service refund · Settled outflow'}</small>
                       <details><summary>Source references</summary><small>Refund {refund.serviceRefundId}</small>
