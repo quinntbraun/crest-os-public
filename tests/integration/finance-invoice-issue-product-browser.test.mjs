@@ -665,6 +665,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await expect(credit.getByRole('status')).toContainText('Choose the payment');
         const choice=credit.getByLabel('Payment',{exact:true});
         if(await choice.count())await choice.selectOption({label:(await choice.locator('option').nth(1).textContent()).trim()});
+        await allowInvoiceReadWindow();
         await credit.getByRole('button',{name:'Review credit and payment',exact:true}).press('Enter');
         await expect(credit.getByRole('status')).toContainText('Review the credit and the amount');
         await expect(credit).toContainText('$149.00');
@@ -1202,6 +1203,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await page.getByRole('button',{name:'Save customer',exact:true}).press('Enter');
            await expect(page.getByRole('region',{name:'Customer directory',exact:true})
             .locator(':scope > [role="status"]')).toContainText('Customer saved');
+           await page.getByRole('button',{name:'Load current customers',exact:true}).press('Enter');
+           await allowInvoiceReadWindow();
+           await page.getByRole('button',{name:customerName,exact:true}).press('Enter');
            const customerPayment=page.getByRole('region',{name:'Record a fictional payment',exact:true});
            await page.getByText('Record a fictional payment',{exact:true}).press('Enter');
            await customerPayment.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
@@ -1211,6 +1215,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await customerPayment.getByLabel('Tip amount (USD, optional)',{exact:true}).fill('0.06');
            await customerPayment.getByRole('button',{name:'Load tip jurisdictions',exact:true}).press('Enter');
            await customerPayment.getByRole('combobox',{name:'Tip tax jurisdiction',exact:true}).selectOption('Fictional tip district');
+           await allowInvoiceReadWindow();
            await customerPayment.getByRole('button',{name:'Review tip tax',exact:true}).press('Enter');
            await expect(customerPayment).toContainText('$0.05 tip · $0.01 included tax');
            const saveTipReceipt=customerPayment.getByRole('button',{name:'Record payment',exact:true});
