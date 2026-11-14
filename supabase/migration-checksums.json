@@ -465,6 +465,11 @@
       "version": "20261217180000",
       "file": "20261217180000_fictional_excess_return.sql",
       "sha256": "6e4dc661a8241e49b5c4e7fe45b4bcd67e50da81cab7c212d014c2c4697ea324"
+    },
+    {
+      "version": "20261218180000",
+      "file": "20261218180000_fictional_tip_return.sql",
+      "sha256": "64c2bb2a7f239907d28ec7743c422de3cde16734b6badda9cb6f1ccca2583a8c"
     }
   ]
 }

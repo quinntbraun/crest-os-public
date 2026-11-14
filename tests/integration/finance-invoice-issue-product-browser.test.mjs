@@ -23,7 +23,8 @@ const postedFinanceExport=process.env.CREST_TEST_POSTED_FINANCE_EXPORT==='1';
 const excessReceipts=process.env.CREST_TEST_EXCESS_RECEIPTS==='1';
 const applyReceiptFunds=excessReceipts&&process.env.CREST_TEST_RECEIPT_FUNDS_APPLICATION==='1';
 const excessReturnExport=process.env.CREST_TEST_EXCESS_RETURN_EXPORT==='1';
-const postedFinanceSchemaVersion=excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
+const tipReturnExport=process.env.CREST_TEST_TIP_RETURN_EXPORT==='1';
+const postedFinanceSchemaVersion=tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
@@ -467,6 +468,74 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const receipt=page.waitForEvent('download');
         await tip.getByRole('button',{name:'Download saved tip CSV',exact:true}).click();
         assert.match(await readFile(await (await receipt).path(),'utf8'),/"550","500","50","Fictional customer confirmed/);
+        if(tipReturnExport){
+         await allowInvoiceReadWindow();
+         const returnTitle='Record a settled tip return';
+         const returnPanel=invoice.getByRole('region',{name:returnTitle,exact:true});
+         await invoice.getByText(returnTitle,{exact:true}).press('Enter');
+         const actualOn=(await fixture.client.query("SELECT (statement_timestamp() AT TIME ZONE 'UTC')::date::text AS today")).rows[0].today;
+         await returnPanel.getByLabel('Settlement date',{exact:true}).fill(actualOn);
+         const optionsResponse=page.waitForResponse(response=>response.url().endsWith('/tip-return-options'));
+         await returnPanel.getByRole('button',{name:'Load eligible tips',exact:true}).press('Enter');
+         assert.equal((await optionsResponse).status(),200);
+         await expect(returnPanel.getByRole('status')).toHaveText('Choose the original tip and match the settled amount to your account record.');
+         const originalTip=JSON.parse(stored).reference.tipRealizationId;
+         const original=returnPanel.getByRole('combobox',{name:'Original tip',exact:true});
+         await expect(original.locator('option').nth(1)).toContainText('$5.50 available');
+         await original.selectOption(originalTip);
+         await returnPanel.getByRole('combobox',{name:'Returned from',exact:true}).selectOption({label:'Fictional checking'});
+         const amount=returnPanel.getByLabel('Settled amount (USD)',{exact:true});
+         const saveTipReturn=returnPanel.getByRole('button',{name:'Save tip return',exact:true});
+         await amount.fill('5.51');
+         await expect(saveTipReturn).toBeDisabled();
+         await expect(returnPanel).toContainText('The settled amount exceeds the remaining tip balance.');
+         await amount.fill('1.10');
+         await returnPanel.getByLabel('Reference type',{exact:true}).fill('ledger');
+         await returnPanel.getByLabel('Transaction ID',{exact:true}).fill('fictional-tip-return-transaction');
+         await returnPanel.getByLabel('Reference as shown on the account',{exact:true}).fill('Fictional settled tip debit');
+         await returnPanel.getByLabel('How you verified settlement',{exact:true}).fill('Fictional statement verifies settlement');
+         await returnPanel.getByLabel('Reason for the return',{exact:true}).fill('Fictional confirmed tip return');
+         for(const width of [360,390,768,1440]){
+          await page.setViewportSize({width,height:900});
+          await saveTipReturn.evaluate(button=>button.scrollIntoView({block:'center'}));
+          assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+          assert.deepEqual((await new AxeBuilder({page}).include('[aria-label="'+returnTitle+'"]')
+           .withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+          await page.screenshot({path:'.local/review/finance-tip-return-'+name+'-'+width+'.png'});
+         }
+         let returned,submissions=0;
+         await page.route('**/api/business/finance-accounts/tip-return-submit',async route=>{
+          submissions++;
+          const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+          if(response.status()!==200){await route.fulfill({response});return;}
+          returned=(await response.json()).receipt;
+          await route.abort('failed');
+         },{times:1});
+         await allowInvoiceReadWindow();
+         await saveTipReturn.press('Enter');
+         await expect(returnPanel.getByRole('status')).toContainText('could not confirm the save');
+         assert.deepEqual([returned?.tipRealizationId,returned?.cents,returned?.netCents,returned?.taxCents],[originalTip,'110','100','10']);
+         const key='crest.tip-return.pending-reference.v1';
+         const pendingReturn=await page.evaluate(key=>sessionStorage.getItem(key),key);
+         assert(pendingReturn&&!pendingReturn.includes('fictional-tip-return-transaction'));
+         await allowInvoiceReadWindow();
+         await page.reload();
+         await draftDisclosure.click();
+         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+         await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
+         await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+         await expect(draftStatus).toHaveText('Issued invoice loaded.');
+         await invoice.getByText(returnTitle,{exact:true}).press('Enter');
+         await returnPanel.getByRole('button',{name:'Check original return',exact:true}).press('Enter');
+         await expect(returnPanel.getByRole('status')).toHaveText('The original return record was saved.');
+         assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),null);
+         assert.equal(submissions,1);
+         const download=page.waitForEvent('download');
+         await returnPanel.getByRole('button',{name:'Download tip return (CSV)',exact:true}).press('Enter');
+         const csv=await readFile(await (await download).path(),'utf8');
+         assert(csv.includes(originalTip)&&csv.includes(returned.tipReturnId)&&csv.includes('"110","100","10"'));
+         await invoice.getByText(returnTitle,{exact:true}).press('Enter');
+        }
         await allowInvoiceReadWindow();
         await invoice.getByText('Record a fictional payment',{exact:true}).click();
         await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
@@ -547,9 +616,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
           await page.screenshot({path:'.local/review/finance-receivable-aging-populated-'+name+'-'+width+'.png'});
          }
+         await allowInvoiceReadWindow();
          await page.goto(fixture.origin+job);
          await draftDisclosure.click();
          await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+         await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
          await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
          await expect(draftStatus).toHaveText('Issued invoice loaded.');
         }
@@ -729,7 +800,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const {['manifest.json']:manifestBytes,['export_delivery.json']:deliveryBytes,...parts}=unzipSync(archive);
         const manifest=strFromU8(manifestBytes),delivery=JSON.parse(strFromU8(deliveryBytes));
         const verified=verifyFinanceSourceExport(manifest,Object.entries(parts).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
-        const exportProfile=excessReturnExport?'crest.posted-finance-source.v9':excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
+        const exportProfile=tipReturnExport?'crest.posted-finance-source.v10':excessReturnExport?'crest.posted-finance-source.v9':excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
         assert.equal(verified.profile,exportProfile);
         assert.equal(verified.completePortableExport,false);
         assert.equal(delivery.sourceSchemaVersion,postedFinanceSchemaVersion);
@@ -958,9 +1029,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           await allowInvoiceReadWindow();
           const journalResponse=page.waitForResponse(response=>response.url().endsWith('/posted-journal'));
           await trial.getByRole('button',{name:'Load journal entries',exact:true}).press('Enter');
-          assert.equal((await journalResponse).status(),200,'The authorized journal must return the posted P09 rows.');
+          assert.equal((await journalResponse).status(),200);
           await expect(trial).toContainText('Unused payment return · Held balance reduced');
           await expect(trial).toContainText('Unused payment return · Settled outflow');
+          if(tipReturnExport){
+           await expect(trial).toContainText('Tip return · Original tip revenue reduced');
+           await expect(trial).toContainText('Tip return · Original tax reduced');
+           await expect(trial).toContainText('Tip return · Settled outflow');
+          }
           const journalCsv=page.waitForEvent('download');
           await trial.getByRole('button',{name:'Download journal page CSV',exact:true}).press('Enter');
           const journalText=await readFile(await (await journalCsv).path(),'utf8');
@@ -1005,7 +1081,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            "SELECT delta->'after' AS scope FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='finance_export_accesses' AND delta->'after'->>'archiveSha256'=$2",
            [fixture.business,excessResponse.headers()['x-crest-sha256']])).rows[0].scope;
           assert.equal(audit.profile,exportProfile);
-          assert.equal(audit.sourceSchemaVersion,93);
+          assert.equal(audit.sourceSchemaVersion,postedFinanceSchemaVersion);
           assert.equal(audit.manifestSha256,createHash('sha256').update(excessManifest).digest('hex'));
          }
         }
