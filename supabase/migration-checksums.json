@@ -470,6 +470,11 @@
       "version": "20261218180000",
       "file": "20261218180000_fictional_tip_return.sql",
       "sha256": "64c2bb2a7f239907d28ec7743c422de3cde16734b6badda9cb6f1ccca2583a8c"
+    },
+    {
+      "version": "20261219180000",
+      "file": "20261219180000_fictional_collection_failure.sql",
+      "sha256": "321d195d999b93e6895f7b0ca18e5e2857a98d3e20249c525c3c2b83a00e12d1"
     }
   ]
 }

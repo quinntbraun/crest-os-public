@@ -61,9 +61,18 @@ const tipReturnLinks={
   tip_returns:{tip_realization_id:'tip_realizations',evidence_id:'external_money_evidence'},
   tip_realization_range_consumptions:{tip_return_id:'tip_returns',tip_realization_id:'tip_realizations'},
 };
+const collectionFailureLinks={
+  financial_events:{collection_failure_id:'collection_failures'},
+  journal_lines:{collection_failure_id:'collection_failures',collection_failure_component_id:'collection_failure_components'},
+  fund_lot_range_consumptions:{collection_failure_component_id:'collection_failure_components'},
+  tip_realization_range_consumptions:{collection_failure_component_id:'collection_failure_components'},
+  collection_failures:{payment_id:'payments',original_event_id:'financial_events',evidence_id:'external_money_evidence'},
+  collection_failure_components:{collection_failure_id:'collection_failures',payment_id:'payments',allocation_id:'allocation_events',
+    fund_application_id:'customer_fund_applications',fund_lot_id:'customer_fund_lots',tip_realization_id:'tip_realizations'},
+};
 const integers=new Set(['version','previous_version','generation','previous_generation','draft_revision','receipt_revision',
   'number_sequence','position','commit_sequence','event_sequence','period_generation','reopened_generation','template_version','entry_sequence',
-  'first_cent','last_cent','cents']);
+  'first_cent','last_cent','root_first_cent','root_last_cent','cents']);
 const q=identifier=>{
   assert.match(identifier,/^[a-z][a-z0-9_]{0,62}$/);
   return '"'+identifier+'"';
@@ -79,17 +88,20 @@ function columnType(column){
 
 export async function exerciseNeutralFinanceImport(connection,files,businessId,{
   includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,
+  includeCollectionFailures=false,
 }={}){
   assert(!includePairedCredits||includeCredits);
   assert(!includeServiceRefunds||includePairedCredits);
   assert(!includeExcessReceipts||includeServiceRefunds);
   assert(!includeExcessReturns||includeExcessReceipts);
   assert(!includeTipReturns||includeExcessReturns);
+  assert(!includeCollectionFailures||includeTipReturns);
   const parts=new Map(files.map(file=>[file.name,file.content]));
   const {tables}=JSON.parse(parts.get('dictionary.json'));
   assert.deepEqual(tables.map(row=>row.name),[...names,...includeCredits?['invoice_credits']:[],
     ...includePairedCredits?['paired_invoice_credit_releases']:[],...includeServiceRefunds?['service_credit_refunds']:[],
-    ...includeExcessReturns?['excess_receipt_returns']:[],...includeTipReturns?['tip_returns','tip_realization_range_consumptions']:[]]);
+    ...includeExcessReturns?['excess_receipt_returns']:[],...includeTipReturns?['tip_returns','tip_realization_range_consumptions']:[],
+    ...includeCollectionFailures?['collection_failures','collection_failure_components']:[]]);
   assert.equal((await connection.query("SELECT count(*)::int AS n FROM pg_namespace WHERE nspname IN('auth','crest','crest_private','crest_commands','neutral_finance')")).rows[0].n,0);
   const exports={};
   await connection.query('BEGIN');
@@ -290,6 +302,40 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
         await assert.rejects(connection.query('UPDATE neutral_finance.tip_realization_range_consumptions SET tip_return_id=$1',[randomUUID()]),{code:'23503'});
         await connection.query('ROLLBACK TO SAVEPOINT neutral_wrong_tip_return');
       }
+    }
+    if(includeCollectionFailures){
+      for(const [name,columns] of Object.entries(collectionFailureLinks)){
+        for(const [column,target] of Object.entries(columns))await connection.query(
+          `ALTER TABLE ${table(name)} ADD FOREIGN KEY(business_id,${q(column)}) REFERENCES ${table(target)}(business_id,id)`);
+      }
+      const {rows}=await connection.query(`
+        WITH portions AS (
+          SELECT c.business_id,c.collection_failure_id,sum(c.net_cents::numeric+c.tax_cents) AS total,
+            bool_and(c.last_cent-c.first_cent=c.root_last_cent-c.root_first_cent
+              AND c.net_cents::numeric+c.tax_cents=c.last_cent-c.first_cent+1
+              AND (c.tax_cents=0 OR c.tip_realization_id IS NOT NULL)) AS exact
+          FROM neutral_finance.collection_failure_components c GROUP BY c.business_id,c.collection_failure_id
+        )
+        SELECT f.id,p.exact AND p.total=f.cents AND original.payment_id=f.payment_id AND original.template='P03'
+          AND CASE f.kind WHEN 'settled_failure' THEN
+            m.signed_cents=-f.cents AND proof.signed_cents=-f.cents AND m.evidence_id=f.evidence_id
+            AND m.account_id=f.money_account_id AND proof.confirmed_on=f.effective_on
+          WHEN 'recording_error' THEN m.id IS NULL AND f.evidence_id IS NULL AND paid.account_id=f.money_account_id
+          ELSE false END AS matches
+        FROM neutral_finance.collection_failures f
+        JOIN portions p ON (p.business_id,p.collection_failure_id)=(f.business_id,f.id)
+        JOIN neutral_finance.payments paid ON (paid.business_id,paid.id)=(f.business_id,f.payment_id)
+        JOIN neutral_finance.financial_events original ON (original.business_id,original.id)=(f.business_id,f.original_event_id)
+        JOIN neutral_finance.financial_events e ON (e.business_id,e.collection_failure_id)=(f.business_id,f.id) AND e.template='P11'
+        LEFT JOIN neutral_finance.money_movements m ON (m.business_id,m.event_id)=(e.business_id,e.id)
+        LEFT JOIN neutral_finance.external_money_evidence proof ON (proof.business_id,proof.id)=(f.business_id,f.evidence_id)`);
+      assert.equal(rows.length,exports.collection_failures.length);
+      assert(rows.every(row=>row.matches===true));
+      const overlap=await connection.query(`
+        SELECT count(*)::int AS broken FROM neutral_finance.collection_failure_components a
+        JOIN neutral_finance.collection_failure_components b ON (a.business_id,a.payment_id)=(b.business_id,b.payment_id) AND a.id<b.id
+        WHERE a.root_first_cent<=b.root_last_cent AND b.root_first_cent<=a.root_last_cent`);
+      assert.equal(overlap.rows[0].broken,0);
     }
     const balance=(await connection.query(`
       SELECT count(*)::int AS entries,coalesce(sum(debit),0)::text AS debit,coalesce(sum(credit),0)::text AS credit,

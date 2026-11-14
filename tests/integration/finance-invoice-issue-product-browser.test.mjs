@@ -25,7 +25,8 @@ const excessReceipts=process.env.CREST_TEST_EXCESS_RECEIPTS==='1';
 const applyReceiptFunds=excessReceipts&&process.env.CREST_TEST_RECEIPT_FUNDS_APPLICATION==='1';
 const excessReturnExport=process.env.CREST_TEST_EXCESS_RETURN_EXPORT==='1';
 const tipReturnExport=process.env.CREST_TEST_TIP_RETURN_EXPORT==='1';
-const postedFinanceSchemaVersion=tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
+const collectionFailureExport=process.env.CREST_TEST_COLLECTION_FAILURE_EXPORT==='1';
+const postedFinanceSchemaVersion=collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
@@ -41,7 +42,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const page=await context.newPage();
   page.on('response',response=>{
    const path=new URL(response.url()).pathname;
-   if(path.startsWith('/api/business/finance-accounts/')||path==='/api/auth/session'){
+   if(path.startsWith('/api/business/finance-accounts/')||path==='/api/auth/session'||path==='/api/business/scheduling/workspace'){
     financeResponses.push([path,response.status()]);
    }
   });
@@ -102,6 +103,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await setup.getByRole('button',{name:'Open accounting period',exact:true}).click();
     await expect(setup.getByRole('status')).toHaveText('Invoice setup saved.');
     await expect(setup).toContainText('· Open ·');
+  await allowInvoiceReadWindow();
   await page.goto(fixture.origin+job);
   await page.getByText('Invoice drafts',{exact:true}).click();
   await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
@@ -381,6 +383,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
          await page.screenshot({path:'.local/review/finance-fund-application-'+name+'-'+width+'.png'});
         }
+        await allowInvoiceReadWindow();
         await funds.getByRole('button',{name:'Apply funds to invoice',exact:true}).press('Enter');
         await expect(funds.getByRole('status')).toContainText('Funds applied.');
         const receiptDownload=page.waitForEvent('download');
@@ -425,6 +428,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await disclosure.press('Enter');
         await disclosure.press('Enter');
         await expect(report.getByText('$10.00',{exact:true})).toHaveCount(0);
+        await allowInvoiceReadWindow();
         await page.goto(fixture.origin+job);
         await draftDisclosure.click();
         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
@@ -596,10 +600,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         assert.deepEqual(JSON.parse(stored),{businessId:fixture.business,binding:submittedBinding,
          invoiceId:savedInvoice.id,reference:submittedReference});
         await allowInvoiceReadWindow();
+        const scheduleReady=page.waitForResponse(response=>response.url().endsWith('/api/business/scheduling/workspace'));
         await page.reload();
+        assert.equal((await scheduleReady).status(),200,JSON.stringify(financeResponses.slice(-12)));
         await draftDisclosure.click();
         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
         await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
+        await allowInvoiceReadWindow();
         await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
         await expect(draftStatus).toHaveText('Issued invoice loaded.');
         await invoice.getByText('Credit an invoice line',{exact:true}).press('Enter');
@@ -818,7 +825,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const {['manifest.json']:manifestBytes,['export_delivery.json']:deliveryBytes,...parts}=unzipSync(archive);
         const manifest=strFromU8(manifestBytes),delivery=JSON.parse(strFromU8(deliveryBytes));
         const verified=verifyFinanceSourceExport(manifest,Object.entries(parts).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
-        const exportProfile=tipReturnExport?'crest.posted-finance-source.v10':excessReturnExport?'crest.posted-finance-source.v9':excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
+        const exportProfile=collectionFailureExport?'crest.posted-finance-source.v11':tipReturnExport?'crest.posted-finance-source.v10':excessReturnExport?'crest.posted-finance-source.v9':excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
         assert.equal(verified.profile,exportProfile);
         assert.equal(verified.completePortableExport,false);
         assert.equal(delivery.sourceSchemaVersion,postedFinanceSchemaVersion);
@@ -963,7 +970,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           WHERE o.business_id=$1 AND o.payment_id=$2`,[fixture.business,committed.paymentId])).rows;
          assert.deepEqual(funds,[{origin:committed.fundingOriginId,lot:committed.heldFunds.lotId,cents:'1234',unapplication:null,
           event:committed.eventId,mapping:mappingId,partition:committed.heldFunds.fundingPartitionId,first:'1',last:'1234',partitions:1,allocations:0}]);
-         let returned;
+         let returned,adjustment;
          if(excessReturnExport){
           await allowInvoiceReadWindow();
           await openReturn(committed.actualOn);
@@ -1030,6 +1037,80 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           const returnFile=await readFile(await returnedDownload.path(),'utf8');
           assert(returnFile.includes(returned.excessReturnId)&&returnFile.includes(committed.paymentId)&&returnFile.includes('"100"'));
 
+          if(collectionFailureExport){
+           await allowInvoiceReadWindow();
+           const title='Correct a customer payment';
+           const panel=invoice.getByRole('region',{name:title,exact:true});
+           await invoice.getByText(title,{exact:true}).press('Enter');
+           await panel.getByRole('button',{name:'Load customer payments',exact:true}).press('Enter');
+           const payment=panel.getByRole('combobox',{name:'Original payment',exact:true});
+           await expect(payment).toBeVisible();
+           await payment.selectOption(committed.paymentId);
+           const label=await payment.evaluate(select=>select.selectedOptions[0]?.textContent);
+           assert(label?.includes('$12.34')&&label.includes(committed.paymentId.slice(-8)));
+           await panel.getByLabel('Adjustment date',{exact:true}).fill(committed.actualOn);
+           await panel.getByRole('combobox',{name:'What happened?',exact:true}).selectOption('settled_failure');
+           await panel.getByRole('button',{name:'Review remaining amounts',exact:true}).press('Enter');
+           const affected=panel.getByRole('region',{name:'Held funds · Customer funds held',exact:true});
+           await affected.getByText('$11.34 available',{exact:true}).press('Enter');
+           const selection=affected.getByLabel('Amount to adjust (USD)',{exact:true});
+           await selection.fill('0.25');
+           const save=panel.getByRole('button',{name:'Save payment adjustment',exact:true});
+           const debit=panel.getByLabel('Amount debited (USD)',{exact:true});
+           await debit.fill('0.26');
+           await expect(save).toBeDisabled();
+           await affected.getByRole('button',{name:'Start at cent 101',exact:true}).press('Enter');
+           await debit.fill('0.25');
+           await panel.getByRole('combobox',{name:'Account debited',exact:true}).selectOption({label:'Fictional checking'});
+           await panel.getByLabel('Reference type',{exact:true}).fill('ledger');
+           const transaction='fictional-incoming-failure';
+           await panel.getByLabel('Transaction ID',{exact:true}).fill(transaction);
+           await panel.getByLabel('Statement reference',{exact:true}).fill('Fictional failed deposit debit');
+           await panel.getByLabel('How you verified the debit',{exact:true}).fill('Fictional owner checked the settled statement debit');
+           await panel.getByLabel('Reason for the adjustment',{exact:true}).fill('Fictional incoming payment failed');
+           for(const width of [360,390,768,1440]){
+            await page.setViewportSize({width,height:900});
+            await save.scrollIntoViewIfNeeded();
+            assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+            assert.deepEqual((await new AxeBuilder({page}).include('[aria-label="'+title+'"]')
+             .withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+            await page.screenshot({path:'.local/review/finance-collection-failure-'+name+'-'+width+'.png'});
+           }
+           await allowInvoiceReadWindow();
+           let requests=0;
+           await page.route('**/api/business/finance-accounts/collection-failure-submit',async route=>{
+            requests++;
+            const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+            if(response.status()!==200){await route.fulfill({response});return;}
+            adjustment=(await response.json()).receipt;
+            await route.abort('failed');
+           },{times:1});
+           await save.press('Enter');
+           await expect(panel.getByRole('status')).toContainText('could not confirm the save');
+           assert.deepEqual([adjustment?.originalPaymentId,adjustment?.cents,adjustment?.kind],
+            [committed.paymentId,'25','settled_failure']);
+           assert.deepEqual(adjustment.components.map(({kind,firstCent,lastCent})=>[kind,firstCent,lastCent]),[['funds','101','125']]);
+           const key='crest.collection-failure.pending-reference.v1';
+           const retained=JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key));
+           assert.deepEqual(Object.keys(retained).sort(),['binding','businessId','customerId','paymentId','reference']);
+           assert.deepEqual(Object.keys(retained.reference).sort(),['collectionFailureId','operationId','recoveryEpoch']);
+           assert.equal(retained.paymentId,committed.paymentId);
+           await allowInvoiceReadWindow();
+           await page.reload();
+           await draftDisclosure.click();
+           await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+           await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
+           await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+           await expect(draftStatus).toHaveText('Issued invoice loaded.');
+           await invoice.getByText(title,{exact:true}).press('Enter');
+           await panel.getByRole('button',{name:'Check original adjustment',exact:true}).press('Enter');
+           await expect(panel.getByRole('status')).toHaveText('The original payment adjustment was saved.');
+           assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),null);
+           assert.equal(requests,1);
+           const csv=page.waitForEvent('download');
+           await panel.getByRole('button',{name:'Download adjustment (CSV)',exact:true}).press('Enter');
+           assert((await readFile(await (await csv).path(),'utf8')).includes(adjustment.collectionFailureId));
+          }
           await allowInvoiceReadWindow();
           await page.goto(fixture.origin+'/settings/accounts');
           await page.getByRole('button',{name:'Load accounts',exact:true}).click();
@@ -1038,7 +1119,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           await heldReport.getByRole('button',{name:'Load customer funds',exact:true}).press('Enter');
           await expect(heldReport.getByRole('status')).toHaveText('Customer funds matched the ledger.');
           await heldReport.getByText(/^Held funds by customer/).press('Enter');
-          await expect(heldReport.getByText('$11.34',{exact:true}).first()).toBeVisible();
+          await expect(heldReport.getByText(collectionFailureExport?'$11.09':'$11.34',{exact:true}).first()).toBeVisible();
           await page.getByText('Fictional trial balance',{exact:true}).press('Enter');
           const trial=page.getByRole('region',{name:'Fictional trial balance',exact:true});
           await trial.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
@@ -1055,10 +1136,15 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await expect(trial).toContainText('Tip return · Original tax reduced');
            await expect(trial).toContainText('Tip return · Settled outflow');
           }
+          if(adjustment){
+           await expect(trial).toContainText('Failed payment · Customer funds reduced');
+           await expect(trial).toContainText('Failed payment · Money account credited');
+          }
           const journalCsv=page.waitForEvent('download');
           await trial.getByRole('button',{name:'Download journal page CSV',exact:true}).press('Enter');
           const journalText=await readFile(await (await journalCsv).path(),'utf8');
           assert(journalText.includes('Unused payment return ID')&&journalText.includes(returned.excessReturnId));
+          if(adjustment)assert(journalText.includes('Original payment ID')&&journalText.includes(adjustment.collectionFailureId));
          }
          await allowInvoiceReadWindow();
          await page.goto(fixture.origin+'/export-files');
@@ -1087,6 +1173,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          assert(lot?.includes(committed.eventId)&&lot.includes(committed.heldFunds.fundingPartitionId)
           &&lot.includes(mappingId)&&lot.includes('"1234"'));
          const ledger=strFromU8(excessParts['journal_lines.csv']);
+         if(adjustment){
+          assert(strFromU8(excessParts['collection_failures.csv']).includes(adjustment.collectionFailureId));
+          assert(strFromU8(excessParts['collection_failure_components.csv']).includes(adjustment.components[0].componentId));
+         }
          assert(ledger.split(/\r?\n/).some(row=>row.includes('"receipt_funds"')&&row.includes(committed.heldFunds.lotId)&&row.includes('"1234"')));
          if(returned){
           const returns=strFromU8(excessParts['excess_receipt_returns.csv']);

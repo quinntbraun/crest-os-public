@@ -68,6 +68,9 @@ import {excessReturnMatchesInput,excessReturnRefusal,parseExcessReturnInput,pars
  parseExcessReturnReference,parseExcessReturnResult} from './excess-return-contract.ts';
 import {parseTipReturnInput,parseTipReturnOptions,parseTipReturnReference,parseTipReturnResult,tipReturnMatchesInput,tipReturnRefusal}
  from './tip-return-contract.ts';
+import {collectionFailureMatchesInput,collectionFailureRefusal,parseCollectionFailureInput,parseCollectionFailureOptions,parseCollectionFailurePayments,
+ parseCollectionFailureReference,parseCollectionFailureResult} from './collection-failure-contract.ts';
+import {fictionalJournalV9PageSize,parseFictionalJournalV9,parseFictionalTrialBalanceV9} from './posted-report-v9-contract.ts';
 import {heldTipMatchesInput,parseHeldTipInput,parseHeldTipOptions,parseHeldTipReference,parseHeldTipResult} from './held-tip-contract.ts';
 import {fundApplicationMatchesInput,parseFundApplicationInput,parseFundApplicationOptions,
  parseFundApplicationReference,parseFundApplicationResult} from './fund-application-contract.ts';
@@ -143,6 +146,12 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
   'verifiedCents','confirmation','reason','externalIdentity'],
  'tip-return-lookup':['operationId','recoveryEpoch','tipReturnId'],
  'tip-return-retire':['reference','reviewEpoch','reason'],
+ 'collection-failure-options':['customerId','originalPaymentId','effectiveOn'],
+ 'collection-failure-payments':['customerId'],
+ 'collection-failure-submit':['reference','originalPaymentId','customerId','kind','channelId','channelVersion','effectiveOn',
+  'verifiedCents','confirmation','reason','externalIdentity','components'],
+ 'collection-failure-lookup':['operationId','recoveryEpoch','collectionFailureId'],
+ 'collection-failure-retire':['reference','reviewEpoch','reason'],
  'expense-post-options':['expenseId'],
  'expense-post-submit':['reference','expenseId','expenseRevision','channelId','channelVersion','mappingId','incurredOn','paidOn',
   'purchaseTaxTreatment','purchaseTaxCents','receiptId','missingReceiptReason','unknownVendorReason','reviewReason','externalIdentity'],
@@ -165,8 +174,8 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false}:Readonly<{
-  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false}:Readonly<{
+  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;
  }>={}){
  check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
  check((!sameDayExpenses||directReceipts&&categoryMappings)&&(!trialBalance||sameDayExpenses));
@@ -181,6 +190,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
  check(typeof excessReceipts==='boolean'&&(!excessReceipts||directReceipts&&customerFundsReport));
  check(typeof excessReturns==='boolean'&&(!excessReturns||excessReceipts));
  check(typeof tipReturns==='boolean'&&(!tipReturns||excessReturns&&heldTips));
+ check(typeof collectionFailures==='boolean'&&(!collectionFailures||tipReturns&&trialBalance));
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
@@ -211,6 +221,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route.startsWith('service-refund-')&&!serviceRefunds)return financeAccountFailure(404);
    if(route.startsWith('excess-return-')&&!excessReturns)return financeAccountFailure(404);
    if(route.startsWith('tip-return-')&&!tipReturns)return financeAccountFailure(404);
+   if(route.startsWith('collection-failure-')&&!collectionFailures)return financeAccountFailure(404);
    if(route.startsWith('expense-post-')&&!sameDayExpenses)return financeAccountFailure(404);
    if((route==='trial-balance'||route==='posted-journal')&&!trialBalance)return financeAccountFailure(404);
    if(route==='receivable-aging'&&!receivableAging)return financeAccountFailure(404);
@@ -219,7 +230,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    protect.requireOrigin(request);
    const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;
    check(cookie);
-   const input=await readNestedJsonBody(bounded,fields[route],route.startsWith('invoice-issue-')?131072:route==='receipt-record'||route==='expense-post-submit'?32768:8192,
+   const input=await readNestedJsonBody(bounded,fields[route],route.startsWith('invoice-issue-')?131072:route==='receipt-record'||route==='expense-post-submit'||route==='collection-failure-submit'?49152:8192,
     excessReceipts&&route==='receipt-record'?'fundsMappingId':undefined);
    const sessionId=await csrf(bounded,cookie,signal);
    const binding=createHash('sha256').update('crest.finance.account.edit.v1\0').update(businessId).update('\0')
@@ -245,6 +256,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     if(excessReceipts)response.headers.set('X-Crest-Excess-Receipts','1');
     if(excessReturns)response.headers.set('X-Crest-Excess-Returns','1');
     if(tipReturns)response.headers.set('X-Crest-Tip-Returns','1');
+    if(collectionFailures)response.headers.set('X-Crest-Collection-Failures','1');
     if(paymentCorrections)response.headers.set('X-Crest-Payment-Corrections','1');
     if(fundApplications)response.headers.set('X-Crest-Fund-Applications','1');
     if(heldTips)response.headers.set('X-Crest-Held-Tips','1');
@@ -262,6 +274,57 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    check(!signal.aborted&&sessionId===verified.sessionId);
    const args=[credentialHash,sessionId,verified.actorId,verified.provider.issuer,verified.provider.subject,
     verified.provider.sessionId,new Date(verified.provider.expiresAt),businessId];
+   if(route==='collection-failure-payments'){
+    const {customerId}=input;
+    check(customerUuid(customerId));
+    const value=await database('SELECT crest_commands.list_fictional_collection_failure_payments('+authority+',$9::uuid) AS result',
+     [...args,customerId],signal);
+    parseCollectionFailurePayments(value,businessId,customerId);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='collection-failure-options'){
+    const {customerId,originalPaymentId,effectiveOn}=input;
+    check(customerUuid(customerId)&&customerUuid(originalPaymentId)&&customerDate(effectiveOn));
+    const value=await database('SELECT crest_commands.read_fictional_collection_failure_options('+authority+',$9::uuid,$10::uuid,$11::date) AS result',
+     [...args,customerId,originalPaymentId,effectiveOn],signal);
+    parseCollectionFailureOptions(value,businessId,customerId,originalPaymentId,effectiveOn);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='collection-failure-lookup'||route==='collection-failure-retire'){
+    const reference=parseCollectionFailureReference(route==='collection-failure-lookup'?input:input.reference);
+    const {recoveryEpoch,operationId,collectionFailureId}=reference;
+    if(route==='collection-failure-lookup'){
+     const value=await database('SELECT crest_commands.lookup_fictional_collection_failure('+authority+',$9::uuid,$10::uuid,$11::uuid) AS result',
+      [...args,recoveryEpoch,operationId,collectionFailureId],signal);
+     const result=parseCollectionFailureResult(value,businessId,reference);
+     return privateJsonResponse(value as object,result.state==='conflict'?409:200);
+    }
+    check(customerUuid(input.reviewEpoch)&&financeAccountReviewReason(input.reason));
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.retire_fictional_collection_failure('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::text) AS result',
+      [...args,input.reviewEpoch,operationId,recoveryEpoch,collectionFailureId,input.reason]);
+     const parsed=parseCollectionFailureResult(value,businessId,reference);
+     check(parsed.state!=='absent'&&(parsed.state!=='retired'||parsed.receipt.reviewEpoch===input.reviewEpoch));
+     return {value:value as object,state:parsed.state};
+    },signal);
+    return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
+   if(route==='collection-failure-submit'){
+    const change=parseCollectionFailureInput(input),{recoveryEpoch,operationId,collectionFailureId}=change.reference;
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.record_fictional_collection_failure('+authority+
+      ',$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::uuid,$14::text,$15::uuid,$16::bigint,$17::date,$18::bigint,$19::text,$20::text,$21::jsonb,$22::jsonb) AS result',
+      [...args,recoveryEpoch,operationId,collectionFailureId,change.originalPaymentId,change.customerId,change.kind,
+       change.channelId,change.channelVersion,change.effectiveOn,change.verifiedCents,change.confirmation,change.reason,
+       change.externalIdentity,JSON.stringify(change.components)]);
+     const parsed=parseCollectionFailureResult(value,businessId,change.reference);
+     check(parsed.state==='conflict'||parsed.state==='committed'&&collectionFailureMatchesInput(parsed.receipt,change));
+     return {value:value as object,state:parsed.state};
+    },signal);
+    return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
    if(route==='tip-return-options'){
     const {customerId,actualOn}=input;
     check(customerUuid(customerId)&&customerDate(actualOn));
@@ -630,11 +693,12 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    }
    if(route==='trial-balance'){
     check(input.throughOn===null||customerDate(input.throughOn));
-    const command=tipReturns?'read_fictional_trial_balance_v8':excessReturns?'read_fictional_trial_balance_v7':serviceRefunds?'read_fictional_trial_balance_v6':invoiceCredits?'read_fictional_trial_balance_v5':heldTips?'read_fictional_trial_balance_v4':fundApplications?'read_fictional_trial_balance_v3'
+    const command=collectionFailures?'read_fictional_trial_balance_v9':tipReturns?'read_fictional_trial_balance_v8':excessReturns?'read_fictional_trial_balance_v7':serviceRefunds?'read_fictional_trial_balance_v6':invoiceCredits?'read_fictional_trial_balance_v5':heldTips?'read_fictional_trial_balance_v4':fundApplications?'read_fictional_trial_balance_v3'
      :paymentCorrections?'read_fictional_trial_balance_v2':'read_fictional_trial_balance';
     const value=await database('SELECT crest_commands.'+command+'('+authority+',$9::date) AS result',
      [...args,input.throughOn],signal);
-    if(tipReturns)parseFictionalTrialBalanceV8(value,businessId,input.throughOn);
+    if(collectionFailures)parseFictionalTrialBalanceV9(value,businessId,input.throughOn);
+    else if(tipReturns)parseFictionalTrialBalanceV8(value,businessId,input.throughOn);
     else if(excessReturns)parseFictionalTrialBalanceV7(value,businessId,input.throughOn);
     else if(serviceRefunds)parseFictionalTrialBalanceV6(value,businessId,input.throughOn);
     else if(invoiceCredits)parseFictionalTrialBalanceV5(value,businessId,input.throughOn);
@@ -647,13 +711,14 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route==='posted-journal'){
     const {throughOn,accountId,afterLineId}=input;
     check(customerDate(throughOn)&&(accountId===null||customerUuid(accountId))&&(afterLineId===null||customerUuid(afterLineId)));
-    const command=tipReturns?'read_fictional_journal_v8':excessReturns?'read_fictional_journal_v7':serviceRefunds?'read_fictional_journal_v6':invoiceCredits?'read_fictional_journal_v5':heldTips?'read_fictional_journal_v4':fundApplications?'read_fictional_journal_v3'
+    const command=collectionFailures?'read_fictional_journal_v9':tipReturns?'read_fictional_journal_v8':excessReturns?'read_fictional_journal_v7':serviceRefunds?'read_fictional_journal_v6':invoiceCredits?'read_fictional_journal_v5':heldTips?'read_fictional_journal_v4':fundApplications?'read_fictional_journal_v3'
      :paymentCorrections?'read_fictional_journal_v2':'read_fictional_journal';
-    const pageSize=tipReturns?fictionalJournalV8PageSize:excessReturns?fictionalJournalV7PageSize:serviceRefunds?fictionalJournalV6PageSize:invoiceCredits?fictionalJournalV5PageSize:heldTips?fictionalJournalV4PageSize:fundApplications?fictionalJournalV3PageSize
+    const pageSize=collectionFailures?fictionalJournalV9PageSize:tipReturns?fictionalJournalV8PageSize:excessReturns?fictionalJournalV7PageSize:serviceRefunds?fictionalJournalV6PageSize:invoiceCredits?fictionalJournalV5PageSize:heldTips?fictionalJournalV4PageSize:fundApplications?fictionalJournalV3PageSize
      :paymentCorrections?fictionalJournalV2PageSize:fictionalJournalPageSize;
     const value=await database('SELECT crest_commands.'+command+'('+authority+',$9::date,$10::uuid,$11::uuid,$12::integer) AS result',
      [...args,throughOn,accountId,afterLineId,pageSize],signal);
-    if(tipReturns)parseFictionalJournalV8(value,businessId,throughOn,accountId,afterLineId);
+    if(collectionFailures)parseFictionalJournalV9(value,businessId,throughOn,accountId,afterLineId);
+    else if(tipReturns)parseFictionalJournalV8(value,businessId,throughOn,accountId,afterLineId);
     else if(excessReturns)parseFictionalJournalV7(value,businessId,throughOn,accountId,afterLineId);
     else if(serviceRefunds)parseFictionalJournalV6(value,businessId,throughOn,accountId,afterLineId);
     else if(invoiceCredits)parseFictionalJournalV5(value,businessId,throughOn,accountId,afterLineId);
@@ -1143,7 +1208,8 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
   }catch(error){
    if(error instanceof Error&&error.message==='FINANCE_MAPPING_NOT_READY')return privateJsonResponse({state:'unavailable'});
    if(error instanceof Error&&(invoiceCreditRefusal(error.message)||pairedInvoiceCreditRefusal(error.message)||serviceRefundRefusal(error.message)||
-     excessReturnRefusal(error.message)||tipReturnRefusal(error.message)||error.message==='TIP_RETURN_OPTIONS_LIMIT'||error.message==='EXCESS_RETURN_OPTIONS_LIMIT'||
+     excessReturnRefusal(error.message)||tipReturnRefusal(error.message)||collectionFailureRefusal(error.message)||
+     error.message==='COLLECTION_FAILURE_OPTIONS_LIMIT'||error.message==='TIP_RETURN_OPTIONS_LIMIT'||error.message==='EXCESS_RETURN_OPTIONS_LIMIT'||
      error.message==='INVOICE_CREDIT_OPTIONS_LIMIT'||error.message==='SERVICE_REFUND_OPTIONS_LIMIT'))
     return privateJsonResponse({error:error.message},409);
    if(error instanceof Error&&['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED',

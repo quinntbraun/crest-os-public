@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 94,
+  "migrationCount": 95,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2586,7 +2586,8 @@
         "invoice_credit_id",
         "service_refund_id",
         "excess_return_id",
-        "tip_return_id"
+        "tip_return_id",
+        "collection_failure_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2659,7 +2660,9 @@
         "invoice_credit_id",
         "service_refund_id",
         "excess_return_id",
-        "tip_return_id"
+        "tip_return_id",
+        "collection_failure_id",
+        "collection_failure_component_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2881,7 +2884,8 @@
         "fund_application_id",
         "tip_realization_id",
         "service_refund_id",
-        "excess_return_id"
+        "excess_return_id",
+        "collection_failure_component_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -3447,7 +3451,53 @@
         "tip_realization_id",
         "tip_return_id",
         "first_cent",
-        "last_cent"
+        "last_cent",
+        "collection_failure_component_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.collection_failures",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "payment_id",
+        "original_event_id",
+        "kind",
+        "channel_version_id",
+        "money_account_id",
+        "evidence_id",
+        "effective_on",
+        "cents",
+        "confirmation",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.collection_failure_components",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "collection_failure_id",
+        "payment_id",
+        "allocation_id",
+        "fund_application_id",
+        "fund_lot_id",
+        "tip_realization_id",
+        "first_cent",
+        "last_cent",
+        "root_first_cent",
+        "root_last_cent",
+        "net_cents",
+        "tax_cents"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
