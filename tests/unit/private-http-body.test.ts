@@ -1,6 +1,6 @@
 import {it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-import {readFlatJsonBody} from '../../src/security/private-http.ts';
+import {readFlatJsonBody,readNestedJsonBody} from '../../src/security/private-http.ts';
 const request=(text:string,headers:Record<string,string>={})=>new Request('https://crest.example.com/private',{method:'POST',headers,body:text});
 it('default8KiB and explicitly bounded larger bodies count exact UTF8 bytes',async()=>{
  const text=JSON.stringify({notes:'😀'.repeat(4000)}),bytes=Buffer.byteLength(text);
@@ -16,4 +16,12 @@ it('chunked oversized bodies are cancelled without accepting partial content',as
  const cancel=vi.fn(),stream=new ReadableStream<Uint8Array>({start(controller){controller.enqueue(new TextEncoder().encode('{"notes":"'));controller.enqueue(new Uint8Array(131072).fill(32));},cancel});
  const value=new Request('https://crest.example.com/private',{method:'POST',body:stream,duplex:'half'} as RequestInit);
  await expect(readFlatJsonBody(value,['notes'],131072)).rejects.toThrow('PRIVATE_HTTP_FAILED');expect(cancel).toHaveBeenCalledTimes(1);
+});
+
+it('only admits the named optional nested field when enabled and still rejects duplicate keys',async()=>{
+ const input='{"amount":"4500","fundsMappingId":"fictional"}';
+ expect(await readNestedJsonBody(request(input),['amount'],8192,'fundsMappingId')).toEqual({amount:'4500',fundsMappingId:'fictional'});
+ await expect(readNestedJsonBody(request(input),['amount'])).rejects.toThrow('PRIVATE_HTTP_FAILED');
+ await expect(readNestedJsonBody(request('{"amount":"4500","unknown":"x"}'),['amount'],8192,'fundsMappingId')).rejects.toThrow('PRIVATE_HTTP_FAILED');
+ await expect(readNestedJsonBody(request('{"amount":"4500","fundsMappingId":"first","fundsMappin\\u0067Id":"second"}'),['amount'],8192,'fundsMappingId')).rejects.toThrow('PRIVATE_HTTP_FAILED');
 });

@@ -20,6 +20,7 @@ const serviceRefunds=process.env.CREST_TEST_SERVICE_REFUNDS==='1';
 const receivableAging=process.env.CREST_TEST_RECEIVABLE_AGING==='1';
 const customerFundsReport=process.env.CREST_TEST_CUSTOMER_FUNDS_REPORT==='1';
 const postedFinanceExport=process.env.CREST_TEST_POSTED_FINANCE_EXPORT==='1';
+const excessReceipts=process.env.CREST_TEST_EXCESS_RECEIPTS==='1';
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
@@ -675,9 +676,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const {['manifest.json']:manifestBytes,['export_delivery.json']:deliveryBytes,...parts}=unzipSync(archive);
         const manifest=strFromU8(manifestBytes),delivery=JSON.parse(strFromU8(deliveryBytes));
         const verified=verifyFinanceSourceExport(manifest,Object.entries(parts).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
-        assert.equal(verified.profile,'crest.posted-finance-source.v7');
+        const exportProfile=excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
+        assert.equal(verified.profile,exportProfile);
         assert.equal(verified.completePortableExport,false);
-        assert.equal(delivery.sourceSchemaVersion,customerFundsReport?90:89);
+        assert.equal(delivery.sourceSchemaVersion,excessReceipts?91:customerFundsReport?90:89);
         assert.equal(delivery.manifestSha256,createHash('sha256').update(manifestBytes).digest('hex'));
         assert.match(strFromU8(parts['service_credit_refunds.csv']),/Fictional service refund confirmed/);
         const extract=join(fixture.workspace,'posted-finance-extracted');
@@ -704,11 +706,133 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         assert.equal(rolledBack.state,'authorized_handoff');
         assert.equal((await fixture.client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',
          [fixture.business,rolledBack.operationId])).rows[0].n,0);
+        if(excessReceipts){
+         async function openPayment(){
+          await allowInvoiceReadWindow();
+          await page.goto(fixture.origin+job);
+          await draftDisclosure.click();
+          await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+          await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
+          await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+          await expect(draftStatus).toHaveText('Issued invoice loaded.');
+          await invoice.getByText('Record a fictional payment',{exact:true}).press('Enter');
+         }
+         await openPayment();
+         await payments.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
+         await expect(payments.getByRole('status')).toHaveText('This customer has no outstanding invoices for that date.');
+         await expect(payments.getByRole('group',{name:'Apply the payment'})).toHaveCount(0);
+         await payments.getByLabel('Total received',{exact:true}).fill('12.34');
+         await expect(payments).toContainText('$0.00 applied to invoices. $12.34 remaining.');
+         const hold=payments.getByRole('combobox',{name:'Remaining amount',exact:true});
+         await expect(hold).toHaveValue('');
+         const confirmation='Fictional separately credited customer funds';
+         await payments.getByLabel('How you verified the payment',{exact:true}).fill(confirmation);
+         const record=payments.getByRole('button',{name:'Record payment',exact:true});
+         const sent=()=>financeResponses.filter(([path])=>path.endsWith('/receipt-record')).length;
+         const before=sent();
+         await record.press('Enter');
+         assert.equal(await hold.evaluate(select=>select.validity.valueMissing),true);
+         assert.equal(sent(),before,'The remaining amount requires explicit review.');
+         await hold.selectOption({label:'Hold as customer funds'});
+         const mappingId=await hold.inputValue();
+         assert.match(mappingId,/^[a-f0-9-]{36}$/);
+         for(const width of [360,390,768,1440]){
+          await page.setViewportSize({width,height:900});
+          await record.evaluate(button=>button.scrollIntoView({block:'center'}));
+          assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+          assert.deepEqual((await new AxeBuilder({page}).include('.direct-receipt').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+          await page.screenshot({path:'.local/review/finance-excess-receipt-'+name+'-'+width+'.png'});
+         }
+         await allowInvoiceReadWindow();
+         let committed,forwarded=0;
+         await page.route('**/api/business/finance-accounts/receipt-record',async route=>{
+          forwarded++;
+          const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+          if(response.status()!==200){await route.fulfill({response});return;}
+          committed=(await response.json()).receipt;
+          await route.abort('failed');
+         },{times:1});
+         await record.press('Enter');
+         await expect(payments.getByRole('status')).toContainText('outcome could not be confirmed');
+         assert.equal(committed?.schemaVersion,2);
+         assert.equal(committed?.grossCents,'1234');
+         assert.deepEqual(committed?.applications,[]);
+         assert.equal(committed?.heldFunds.mappingId,mappingId);
+         assert.equal(committed?.heldFunds.cents,'1234');
+         const raw=await page.evaluate(()=>sessionStorage.getItem('crest.direct-receipt.pending-reference.v1'));
+         assert(raw&&!raw.includes(confirmation)&&!raw.includes(mappingId));
+         const pending=JSON.parse(raw);
+         assert.deepEqual(Object.keys(pending).sort(),['binding','businessId','invoiceId','reference']);
+         assert.deepEqual(Object.keys(pending.reference).sort(),['operationId','paymentId','recoveryEpoch']);
+         assert.equal(pending.reference.paymentId,committed.paymentId);
+         await openPayment();
+         await payments.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
+         await expect(payments.getByRole('status')).toHaveText('The original payment was saved.');
+         await expect(payments).toContainText('$12.34 held as customer funds.');
+         assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.direct-receipt.pending-reference.v1')),null);
+         assert.equal(forwarded,1);
+         assert.equal(sent(),before,'Lookup recovers the original without another record response.');
+         const exportReceipt=page.waitForEvent('download');
+         await payments.getByRole('button',{name:'Download payment (CSV)',exact:true}).press('Enter');
+         const csv=await readFile(await (await exportReceipt).path(),'utf8');
+         assert(csv.includes('"Held funds lot ID","Held funding partition ID","Held funds mapping ID","Held cents"'));
+         assert(csv.includes([committed.heldFunds.lotId,committed.heldFunds.fundingPartitionId,mappingId,'1234']
+          .map(field=>'"'+field+'"').join(',')));
+         const history=(await fixture.client.query(`SELECT p.gross_cents::text AS gross,l.purpose,
+          a.code,l.debit_cents::text AS debit,l.credit_cents::text AS credit,l.fund_lot_id AS lot
+          FROM crest.payments p JOIN crest.financial_events e ON (e.business_id,e.payment_id)=(p.business_id,p.id)
+          JOIN crest.journal_entries j ON (j.business_id,j.event_id)=(e.business_id,e.id)
+          JOIN crest.journal_lines l ON (l.business_id,l.entry_id)=(j.business_id,j.id)
+          JOIN crest.accounts a ON (a.business_id,a.id)=(l.business_id,l.account_id)
+          WHERE p.business_id=$1 AND p.id=$2 ORDER BY l.purpose`,[fixture.business,committed.paymentId])).rows;
+         assert.deepEqual(history,[
+          {gross:'1234',purpose:'receipt_funds',code:'2000',debit:'0',credit:'1234',lot:committed.heldFunds.lotId},
+          {gross:'1234',purpose:'receipt_money',code:'1000',debit:'1234',credit:'0',lot:null},
+         ]);
+         const funds=(await fixture.client.query(`SELECT o.id AS origin,l.id AS lot,l.original_cents::text AS cents,
+          l.unapplication_id AS unapplication,l.receipt_event_id AS event,l.mapping_id AS mapping,
+          f.id AS partition,f.first_cent::text AS first,f.last_cent::text AS last,
+          (SELECT count(*)::int FROM crest.funding_partitions v WHERE (v.business_id,v.origin_id)=(o.business_id,o.id)) AS partitions,
+          (SELECT count(*)::int FROM crest.allocation_events v WHERE (v.business_id,v.event_id)=(l.business_id,l.receipt_event_id)) AS allocations
+          FROM crest.funding_origins o JOIN crest.customer_fund_lots l ON (l.business_id,l.origin_id)=(o.business_id,o.id)
+          JOIN crest.funding_partitions f ON (f.business_id,f.id)=(l.business_id,l.parent_partition_id)
+          WHERE o.business_id=$1 AND o.payment_id=$2`,[fixture.business,committed.paymentId])).rows;
+         assert.deepEqual(funds,[{origin:committed.fundingOriginId,lot:committed.heldFunds.lotId,cents:'1234',unapplication:null,
+          event:committed.eventId,mapping:mappingId,partition:committed.heldFunds.fundingPartitionId,first:'1',last:'1234',partitions:1,allocations:0}]);
+         await allowInvoiceReadWindow();
+         await page.goto(fixture.origin+'/export-files');
+         await expect(prepare).toBeVisible();
+         const excessExportResponse=page.waitForResponse(result=>new URL(result.url()).pathname==='/api/business/exports/posted-finance');
+         await prepare.press('Enter');
+         const excessResponse=await excessExportResponse;
+         assert.equal(excessResponse.status(),200);
+         assert.match(excessResponse.headers()['cache-control'],/no-store/);
+         await expect(save).toBeVisible();
+         const waitingForZip=page.waitForEvent('download');
+         await save.press('Enter');
+         const exported=await waitingForZip;
+         assert.equal(exported.suggestedFilename(),'crest-posted-finance.zip');
+         const excessZip=await readFile(await exported.path());
+         assert.equal(createHash('sha256').update(excessZip).digest('hex'),excessResponse.headers()['x-crest-sha256']);
+         const {['manifest.json']:excessManifest,['export_delivery.json']:excessDelivery,...excessParts}=unzipSync(excessZip);
+         const verifiedExcess=verifyFinanceSourceExport(strFromU8(excessManifest),
+          Object.entries(excessParts).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
+         assert.equal(verifiedExcess.profile,exportProfile);
+         assert.equal(verifiedExcess.completePortableExport,false);
+         assert.equal(JSON.parse(strFromU8(excessDelivery)).sourceSchemaVersion,91);
+         const lots=strFromU8(excessParts['customer_fund_lots.csv']);
+         const lot=lots.split(/\r?\n/).find(row=>row.includes(committed.heldFunds.lotId));
+         assert(lots.split(/\r?\n/)[0].includes('receipt_event_id'));
+         assert(lot?.includes(committed.eventId)&&lot.includes(committed.heldFunds.fundingPartitionId)
+          &&lot.includes(mappingId)&&lot.includes('"1234"'));
+         const ledger=strFromU8(excessParts['journal_lines.csv']);
+         assert(ledger.split(/\r?\n/).some(row=>row.includes('"receipt_funds"')&&row.includes(committed.heldFunds.lotId)&&row.includes('"1234"')));
+        }
         await fixture.client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[fixture.business]);
         await prepare.press('Enter');
         await expect(exporter.getByRole('status')).toContainText('could not prepare');
         assert.equal(await save.count(),0);
-        assert.equal((await fixture.client.query("SELECT count(*)::int AS n FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='finance_export_accesses'",[fixture.business])).rows[0].n,1);
+        assert.equal((await fixture.client.query("SELECT count(*)::int AS n FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='finance_export_accesses'",[fixture.business])).rows[0].n,excessReceipts?2:1);
        }
       }
      }
@@ -720,4 +844,4 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await browser?.close();
   await fixture.close();
  }
-},{timeout:paidInvoiceCredits?840000:invoiceCredits?720000:480000});
+},{timeout:excessReceipts?960000:paidInvoiceCredits?840000:invoiceCredits?720000:480000});

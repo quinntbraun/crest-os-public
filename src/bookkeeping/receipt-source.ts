@@ -18,6 +18,8 @@ const schema = {
 type Group = keyof typeof schema;
 type Row = Record<string, string | null>;
 type Rows = Record<Group, Row[]>;
+export const receiptFundFields=['id','business_id','unapplication_id','origin_id','parent_partition_id','customer_id','account_id',
+  'mapping_id','original_cents','receipt_event_id','journal_line_id'] as const;
 type HistoryRow = { record_id: string; representation: 'snapshot_projection'; canonical_evidence: string; evidence_hash: string };
 const groups = Object.freeze(Object.keys(schema) as Group[]);
 const shared = new Set<Group>(['atomic_finance_groups', 'financial_events', 'journal_entries', 'journal_lines']);
@@ -171,7 +173,7 @@ function groupBy(rows: readonly Row[], key: string) {
   return groups;
 }
 
-function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_event: HistoryRow[] }) {
+function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_event: HistoryRow[] },funds:readonly Row[] = []) {
   const payments = index(rows.payments);
   const groups = index(rows.atomic_finance_groups);
   const journal = index(rows.journal_entries, 'event_id');
@@ -180,6 +182,7 @@ function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_eve
   const evidence = index(rows.external_money_evidence);
   const partitions = groupBy(rows.funding_partitions, 'origin_id');
   const applications = index(rows.allocation_events, 'partition_id');
+  const heldByEvent = index(funds, 'receipt_event_id');
   const lines = groupBy(rows.journal_lines, 'entry_id');
   const operations = new Map(history.operation.map(source => {
     const { row } = JSON.parse(source.canonical_evidence);
@@ -195,7 +198,7 @@ function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_eve
   const { length: paymentCount } = rows.payments;
   requireSource(rows.financial_events.length === paymentCount && groups.size === paymentCount && journal.size === paymentCount
     && movements.size === paymentCount && origins.size === paymentCount
-    && rows.funding_partitions.length === applications.size && rows.journal_lines.length === paymentCount + applications.size);
+    && rows.funding_partitions.length === applications.size + funds.length && rows.journal_lines.length === paymentCount + applications.size + funds.length);
   const seenPayments = new Set<string | null | undefined>(), seenGroups = new Set<string | null | undefined>();
   const seenEvidence = new Set<string | null | undefined>(), seenPartitions = new Set<string | null | undefined>();
   for (const event of rows.financial_events) {
@@ -221,14 +224,29 @@ function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_eve
     const journalLines = lines.get(entry.id) ?? [];
     const money = journalLines.filter(line => line.purpose === 'receipt_money');
     const allocations = index(journalLines.filter(line => line.purpose === 'receipt_ar'), 'allocation_event_id');
-    requireSource(split.length > 0 && money.length === 1 && journalLines.length === split.length + 1 && allocations.size === split.length
+    const held=heldByEvent.get(event.id),heldLine=journalLines.find(line=>line.id===held?.journal_line_id);
+    requireSource(journalLines.filter(line=>line.purpose==='receipt_funds').length===(held?1:0));
+    if(held)requireSource(heldLine?.purpose==='receipt_funds'&&held.business_id===payment.business_id
+      &&held.origin_id===root.id&&held.customer_id===payment.customer_id&&held.unapplication_id===null
+      &&heldLine.account_id===held.account_id&&heldLine.fixed_mapping_id===held.mapping_id&&heldLine.receivable_id===null
+      &&heldLine.money_movement_id===null&&heldLine.allocation_event_id===null&&amount(heldLine,'debit_cents')===0n
+      &&amount(heldLine,'credit_cents')===amount(held,'original_cents'));
+    requireSource(split.length > 0 && money.length === 1 && journalLines.length === split.length + 1 && allocations.size + (held?1:0) === split.length
       && money[0]!.money_movement_id === movement.id && money[0]!.account_id === payment.account_id
       && money[0]!.receivable_id === null && money[0]!.allocation_event_id === null && amount(money[0]!, 'debit_cents') === gross
       && amount(money[0]!, 'credit_cents') === 0n && journalLines.every(line =>
-        line.invoice_item_id === null && line.fixed_mapping_id === null && line.tax_payable_movement_id === null));
+        line.invoice_item_id === null && (line===heldLine||line.fixed_mapping_id === null) && line.tax_payable_movement_id === null));
     let used = 0n;
     const originalApplications = [];
     for (const [i, part] of split.entries()) {
+      if(held&&held.parent_partition_id===part.id){
+        const cents=amount(held,'original_cents');
+        requireSource(cents>0n&&i===split.length-1&&!applications.has(part.id)&&part.position===String(i+1)
+          &&amount(part,'first_cent')===used+1n&&amount(part,'last_cent')===used+cents);
+        seenPartitions.add(part.id);
+        used+=cents;
+        continue;
+      }
       const application = find(applications, part.id), line = find(allocations, application.id);
       const cents = amount(application, 'cents');
       requireSource(part.position === String(i + 1) && cents > 0n && amount(part, 'first_cent') === used + 1n
@@ -244,9 +262,10 @@ function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_eve
     const audit = (audits.get(payment.operation_id) ?? []).filter(item =>
       item.entity_kind === 'payments' && item.entity_id === payment.id && item.action === 'record');
     const originalReceipt = {
-      schemaVersion: 1, businessId: payment.business_id, paymentId: payment.id, eventId: event.id, customerId: payment.customer_id,
+      schemaVersion: held?2:1, businessId: payment.business_id, paymentId: payment.id, eventId: event.id, customerId: payment.customer_id,
       channelVersionId: payment.channel_version_id, accountId: payment.account_id, actualOn: payment.actual_on, grossCents: payment.gross_cents,
       fundingOriginId: root.id, moneyMovementId: movement.id, externalEvidenceId: movement.evidence_id, applications: originalApplications,
+      ...(held?{heldFunds:{lotId:held.id,fundingPartitionId:held.parent_partition_id,mappingId:held.mapping_id,cents:held.original_cents}}:{}),
     };
     requireSource(operation?.command_type === 'finance.receipt.record' && operation.state === 'committed'
       && operation.actor_id === payment.created_by && operation.recovery_epoch === group.recovery_epoch && typeof operation.result === 'string'
@@ -259,7 +278,18 @@ function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_eve
   requireSource(seenEvidence.size === evidence.size && seenPartitions.size === rows.funding_partitions.length);
 }
 
-export function formatReceiptSource(source: Awaited<ReturnType<typeof captureReceiptSource>>) {
+export async function captureReceiptFunds(businessId:string,snapshotToken:string,query:Query){
+  const result=await query('SELECT crest_commands.receipt_funds_source_snapshot($1::uuid,$2::text) AS result',[businessId,snapshotToken]);
+  requireSource(result.length===1&&exact(result[0],['result'])&&Array.isArray(result[0].result)&&result[0].result.length<=1000);
+  return result[0].result.map((row:unknown)=>{
+    requireSource(exact(row,receiptFundFields)&&row.business_id===businessId&&row.unapplication_id===null
+      &&typeof row.original_cents==='string'&&/^[1-9][0-9]{0,18}$/.test(row.original_cents)
+      &&receiptFundFields.every(key=>key==='unapplication_id'||key==='original_cents'||customerUuid(row[key])));
+    return row as Row;
+  });
+}
+
+export function formatReceiptSource(source: Awaited<ReturnType<typeof captureReceiptSource>>,funds:readonly Row[] = []) {
   const { businessId, snapshotToken, historySnapshotToken, counts, rows, history } = source;
   requireSource(customerUuid(businessId) && token(snapshotToken) && token(historySnapshotToken) && exact(rows, groups) && exact(counts, groups));
   const files: { name: string; content: string }[] = [];
@@ -306,7 +336,7 @@ export function formatReceiptSource(source: Awaited<ReturnType<typeof captureRec
     for (const record of history[kind]) requireSource(digest(record.canonical_evidence) === record.evidence_hash);
     add(kind + '_history.ndjson', history[kind].map(record => JSON.stringify(record)).join('\n') + (history[kind].length ? '\n' : ''));
   }
-  verifyClosure(rows, history);
+  verifyClosure(rows, history,funds);
   const manifest = JSON.stringify({ schemaVersion: 1, scope: 'direct_receipt_sources', businessId, snapshotToken, historySnapshotToken,
     recordCounts: counts, exactReceiptEffectsVerified: true, referenceClosureComplete: false, completePortableExport: false, completeBackup: false,
     parts: files.map(({ name, content }) => ({ name, bytes: Buffer.byteLength(content), sha256: digest(content) })) }) + '\n';

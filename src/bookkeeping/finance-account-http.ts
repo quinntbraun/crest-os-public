@@ -149,8 +149,8 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false}:Readonly<{
-  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false}:Readonly<{
+  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;excessReceipts?:boolean;
  }>={}){
  check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
  check((!sameDayExpenses||directReceipts&&categoryMappings)&&(!trialBalance||sameDayExpenses));
@@ -162,6 +162,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
  check(!serviceRefunds||paidInvoiceCredits&&directReceipts);
  check(typeof receivableAging==='boolean'&&(!receivableAging||serviceRefunds));
  check(typeof customerFundsReport==='boolean'&&(!customerFundsReport||serviceRefunds));
+ check(typeof excessReceipts==='boolean'&&(!excessReceipts||directReceipts&&customerFundsReport));
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
@@ -198,7 +199,8 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    protect.requireOrigin(request);
    const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;
    check(cookie);
-   const input=await readNestedJsonBody(bounded,fields[route],route.startsWith('invoice-issue-')?131072:route==='receipt-record'||route==='expense-post-submit'?32768:8192);
+   const input=await readNestedJsonBody(bounded,fields[route],route.startsWith('invoice-issue-')?131072:route==='receipt-record'||route==='expense-post-submit'?32768:8192,
+    excessReceipts&&route==='receipt-record'?'fundsMappingId':undefined);
    const sessionId=await csrf(bounded,cookie,signal);
    const binding=createHash('sha256').update('crest.finance.account.edit.v1\0').update(businessId).update('\0')
     .update(sessionId).digest('base64url');
@@ -220,6 +222,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     if(invoiceIssueTaxReview)response.headers.set('X-Crest-Invoice-Issue-Tax-Review','1');
     if(invoiceIssue)response.headers.set('X-Crest-Invoice-Issue','1');
     if(directReceipts)response.headers.set('X-Crest-Direct-Receipts','1');
+    if(excessReceipts)response.headers.set('X-Crest-Excess-Receipts','1');
     if(paymentCorrections)response.headers.set('X-Crest-Payment-Corrections','1');
     if(fundApplications)response.headers.set('X-Crest-Fund-Applications','1');
     if(heldTips)response.headers.set('X-Crest-Held-Tips','1');
@@ -594,9 +597,10 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    }
    if(route==='receipt-options'){
     check(customerUuid(input.customerId)&&(input.actualOn===null||customerDate(input.actualOn)));
-    const value=await database('SELECT crest_commands.read_direct_fictional_receipt_options('+authority+',$9::uuid,$10::date) AS result',
+    const command=excessReceipts?'read_direct_fictional_receipt_funds_options':'read_direct_fictional_receipt_options';
+    const value=await database('SELECT crest_commands.'+command+'('+authority+',$9::uuid,$10::date) AS result',
      [...args,input.customerId,input.actualOn],signal);
-    parseDirectReceiptOptions(value,businessId,input.customerId,input.actualOn);
+    parseDirectReceiptOptions(value,businessId,input.customerId,input.actualOn,excessReceipts);
     return privateJsonResponse(value as object);
    }
    if(route==='receipt-lookup'){
@@ -623,10 +627,12 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     const receipt=parseDirectReceiptInput(input),reference=receipt.reference;
     const result=await database.commandTransaction(async query=>{
      submitted=true;
-     const value=await query('SELECT crest_commands.record_direct_fictional_receipt('+authority
-      +',$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::uuid,$14::bigint,$15::date,$16::bigint,$17::text,$18::text,$19::jsonb,$20::jsonb) AS result',
+     const mapping='fundsMappingId' in receipt?receipt.fundsMappingId:null;
+     const command=mapping?'record_direct_fictional_receipt_with_funds':'record_direct_fictional_receipt';
+     const signature=authority+',$9::uuid,$10::uuid,$11::uuid,$12::uuid,$13::uuid,$14::bigint,$15::date,$16::bigint,$17::text,$18::text,$19::jsonb,$20::jsonb';
+     const value=await query('SELECT crest_commands.'+command+'('+signature+(mapping?',$21::uuid':'')+') AS result',
       [...args,reference.recoveryEpoch,reference.operationId,reference.paymentId,receipt.customerId,receipt.channelId,
-       receipt.channelVersion,receipt.actualOn,receipt.grossCents,receipt.confirmation,receipt.distinctReason,receipt.externalIdentity,receipt.applications]);
+       receipt.channelVersion,receipt.actualOn,receipt.grossCents,receipt.confirmation,receipt.distinctReason,receipt.externalIdentity,receipt.applications,...(mapping?[mapping]:[])]);
      const parsed=parseDirectReceiptResult(value,businessId,reference);
      check(parsed.state==='conflict'||parsed.state==='committed'&&directReceiptMatchesInput(parsed,receipt));
      return {value:value as object,state:parsed.state};

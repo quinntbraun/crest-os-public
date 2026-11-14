@@ -20,7 +20,7 @@ const originalTables=[...invoiceSourceCoverage,...receiptSourceCoverage,postedEx
   columns:[...table.required,...(receiptColumns[table.table]??[]),...(expenseColumns[table.table]??[])],
 }));
 
-export function financeSourceTables(version:1|2|3|4|5|6|7){
+export function financeSourceTables(version:1|2|3|4|5|6|7|8){
   if(version===1)return originalTables;
   const correctionTables=[
     ...originalTables.map(table=>({...table,columns:[...table.columns,...(correctionSourceColumns['crest.'+table.name]??[])]})),
@@ -46,6 +46,8 @@ export function financeSourceTables(version:1|2|3|4|5|6|7){
     ...creditTables,{name:'paired_invoice_credit_releases',columns:[...pairedInvoiceCreditSourceCoverage.required]},
   ];
   if(version===6)return pairedTables;
-  return [...pairedTables.map(table=>({...table,columns:[...table.columns,...(serviceRefundSourceColumns['crest.'+table.name]??[])]})),
+  const refundTables=[...pairedTables.map(table=>({...table,columns:[...table.columns,...(serviceRefundSourceColumns['crest.'+table.name]??[])]})),
     {name:'service_credit_refunds',columns:[...serviceRefundSourceCoverage.required]}];
+  return version===7?refundTables:refundTables.map(table=>table.name==='customer_fund_lots'
+    ?{...table,columns:[...table.columns,'receipt_event_id']}:table);
 }

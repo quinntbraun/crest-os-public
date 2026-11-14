@@ -25,7 +25,11 @@ function projectRow(value:unknown){
   const {serviceRefundId,...row}=value as Record<string,unknown>;
   if(row.template!=='P08'){
     check(serviceRefundId===null);
-    return {row,refund:null};
+    if(row.template==='P03'&&row.purpose==='receipt_funds'){
+      check(row.code==='2000'&&row.debitCents==='0'&&customerUuid(row.fundLotId));
+      return {row:{...row,purpose:'receipt_ar',fundLotId:null},refund:null,held:row.fundLotId};
+    }
+    return {row,refund:null,held:null};
   }
   const {purpose,fundLotId}=row;
   check(customerUuid(serviceRefundId)&&row.invoiceId===null&&row.paymentId===null&&row.postedExpenseId===null
@@ -33,7 +37,7 @@ function projectRow(value:unknown){
   check(purpose==='refund_funds'&&row.code==='2000'&&customerUuid(fundLotId)&&row.creditCents==='0'
     ||purpose==='refund_money'&&fundLotId===null&&row.debitCents==='0');
   return {row:{...row,template:'P03',purpose:purpose==='refund_funds'?'receipt_money':'receipt_ar',
-    paymentId:serviceRefundId,fundLotId:null},refund:{serviceRefundId,purpose,fundLotId}};
+    paymentId:serviceRefundId,fundLotId:null},refund:{serviceRefundId,purpose,fundLotId},held:null};
 }
 
 export function parseFictionalJournalV6(value:unknown,businessId:string,throughOn:string,accountId:string|null,
@@ -44,12 +48,21 @@ export function parseFictionalJournalV6(value:unknown,businessId:string,throughO
   const candidates=projected.rows.map(projectRow);
   const report=parseFictionalJournalV5({...projected,rows:candidates.map(item=>item.row)},businessId,throughOn,accountId,afterLineId,pageSize);
   const rows=report.rows.map((row,index)=>{
-    const refund=candidates[index]!.refund;
+    const {refund,held}=candidates[index]!;
+    if(held!==null){
+      check(row.template==='P03');
+      return {...row,purpose:'receipt_funds' as const,fundLotId:held,serviceRefundId:null};
+    }
     return refund===null?{...row,serviceRefundId:null}:{...row,...refund,template:'P08' as const,paymentId:null};
   });
   type RefundLine=Extract<(typeof rows)[number],{template:'P08'}>;
   const byRefund=new Map<string,RefundLine[]>(),byEvent=new Map<string,string|null>();
+  const heldEvents=new Set<string>();
   for(const row of rows){
+    if(row.purpose==='receipt_funds'){
+      check(!heldEvents.has(row.eventId));
+      heldEvents.add(row.eventId);
+    }
     const previous=byEvent.get(row.eventId);
     check(previous===undefined||previous===row.serviceRefundId);
     byEvent.set(row.eventId,row.serviceRefundId);

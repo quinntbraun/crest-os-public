@@ -49,6 +49,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  assert(typeof serviceRefunds==='boolean'&&(!serviceRefunds||paidInvoiceCredits&&directReceipts));
  const receivableAging=serviceRefunds&&process.env.CREST_TEST_RECEIVABLE_AGING==='1';
  const customerFundsReport=serviceRefunds&&process.env.CREST_TEST_CUSTOMER_FUNDS_REPORT==='1';
+ const excessReceipts=process.env.CREST_TEST_EXCESS_RECEIPTS==='1';
+ assert(!excessReceipts||product&&directReceipts&&customerFundsReport&&postedFinanceExport);
  assert.equal(typeof invoiceDrafts,'boolean');assert(!invoiceDrafts||invoicePreparation);
  assert.equal(typeof product,'boolean');assert.equal(typeof catalog,'boolean');assert(!catalog||product,'catalog journey uses the actual product server');
  assert.equal(typeof workspace,'boolean');assert(!workspace||product,'workspace journey uses the actual product server');
@@ -152,8 +154,9 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   if(receivableAging&&!postedFinanceExport)assert.equal((await sandbox.apply(target,await sandbox.prefix(88))).history.length,88);
   let postedFinanceConfiguration;
   if(postedFinanceExport){
-   const registered=await sandbox.apply(target,await sandbox.prefix(customerFundsReport?90:89));
-   assert.equal(registered.history.length,customerFundsReport?90:89);
+   const schemaVersion=excessReceipts?91:customerFundsReport?90:89;
+   const registered=await sandbox.apply(target,await sandbox.prefix(schemaVersion));
+   assert.equal(registered.history.length,schemaVersion);
    postedFinanceLogin='crest_posted_finance_test_'+randomBytes(8).toString('hex');
    const exportSecret=randomBytes(32).toString('hex');
    await sandbox.admin.query('CREATE ROLE '+postedFinanceLogin+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+exportSecret+"'");
@@ -200,7 +203,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    await sandbox.admin.query('CREATE ROLE '+candidate+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+secret+"'");
    financeLogin=candidate;await sandbox.admin.query('GRANT crest_finance_preview TO '+financeLogin);
    const financeUrl=new URL(target);financeUrl.username=financeLogin;financeUrl.password=secret;
-   financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,taxProfiles:financeTaxProfiles,categoryMappings:financeCategoryMappings,moneyChannels:financeMoneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport};
+   financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,taxProfiles:financeTaxProfiles,categoryMappings:financeCategoryMappings,moneyChannels:financeMoneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport,...excessReceipts?{excessReceipts}:{}};
    await client.query("INSERT INTO crest_private.finance_controls(business_id,recovery_authority_id,created_by,origin) SELECT $1,id,$2,'system' FROM crest_private.business_recovery_authorities WHERE business_id=$1",[business,actor]);
   }
   const authentication={database:config,provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
