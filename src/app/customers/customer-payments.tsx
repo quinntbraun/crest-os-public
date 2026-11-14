@@ -4,10 +4,12 @@ import {useEffect,useState} from 'react';
 import {financeAccounts} from '../../client/finance-accounts';
 import {DirectReceipt} from '../schedule/work/direct-receipt';
 import {CollectionFailureRecredit} from './collection-failure-recredit';
+import {GroupedPaymentRecredit} from './grouped-payment-recredit';
 
 export function CustomerPayments({businessId,customerId}:{businessId:string;customerId:string}){
   const [payments,setPayments]=useState(false);
   const [recredits,setRecredits]=useState(false);
+  const [groupedRecredits,setGroupedRecredits]=useState(false);
 
   useEffect(()=>{
     let controller:AbortController|undefined;
@@ -16,6 +18,7 @@ export function CustomerPayments({businessId,customerId}:{businessId:string;cust
       controller=undefined;
       setPayments(false);
       setRecredits(false);
+      setGroupedRecredits(false);
     }
     function inspect(){
       if(document.visibilityState!=='visible'){clear();return;}
@@ -26,7 +29,8 @@ export function CustomerPayments({businessId,customerId}:{businessId:string;cust
         if(signal.aborted)return;
         setPayments(context.businessId===businessId&&context.directReceiptTips===true);
         setRecredits(context.businessId===businessId&&context.collectionFailureRecredits===true);
-      }).catch(()=>{if(!signal.aborted){setPayments(false);setRecredits(false);}});
+        setGroupedRecredits(context.businessId===businessId&&context.collectionFailureGroupedRecredits===true);
+      }).catch(()=>{if(!signal.aborted){setPayments(false);setRecredits(false);setGroupedRecredits(false);}});
     }
     function restore(event:PageTransitionEvent){if(event.persisted)inspect();}
     inspect();
@@ -43,6 +47,7 @@ export function CustomerPayments({businessId,customerId}:{businessId:string;cust
 
   return <>
     {payments&&<DirectReceipt businessId={businessId} customerId={customerId}/>}
-    {recredits&&<CollectionFailureRecredit businessId={businessId} customerId={customerId}/>}
+    {groupedRecredits&&<GroupedPaymentRecredit businessId={businessId} customerId={customerId}/>}
+    {recredits&&<CollectionFailureRecredit businessId={businessId} customerId={customerId} recoveryOnly={groupedRecredits}/>}
   </>;
 }

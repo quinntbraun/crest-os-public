@@ -27,6 +27,7 @@ export const browserScenarios = Object.freeze({
     CREST_TEST_DIRECT_RECEIPT_TIP_EXPORT:'1',
     CREST_TEST_REFUND_TRANSFER_FEE_EXPORT:'1',
     CREST_TEST_COLLECTION_FAILURE_RECREDIT_EXPORT:'1',
+    CREST_TEST_COLLECTION_FAILURE_GROUPED_RECREDIT_EXPORT:'1',
   }),
 });
 export const browserGroupNames = Object.freeze([...Object.keys(browserGroups), ...Object.keys(browserScenarios)]);

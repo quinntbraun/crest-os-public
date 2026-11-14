@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 99,
+  "migrationCount": 100,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2589,7 +2589,8 @@
         "tip_return_id",
         "collection_failure_id",
         "refund_transfer_adjustment_id",
-        "collection_failure_recredit_id"
+        "collection_failure_recredit_id",
+        "collection_failure_settlement_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2666,7 +2667,9 @@
         "collection_failure_id",
         "collection_failure_component_id",
         "refund_transfer_adjustment_id",
-        "collection_failure_recredit_id"
+        "collection_failure_recredit_id",
+        "collection_failure_settlement_id",
+        "collection_failure_settlement_component_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2828,7 +2831,8 @@
         "original_cents",
         "receipt_event_id",
         "receipt_tip_event_id",
-        "collection_failure_recredit_event_id"
+        "collection_failure_recredit_event_id",
+        "collection_failure_settlement_component_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -3583,6 +3587,60 @@
         "operation_id",
         "created_by",
         "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.collection_failure_settlements",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "failure_id",
+        "customer_id",
+        "channel_version_id",
+        "money_account_id",
+        "evidence_id",
+        "actual_on",
+        "cents",
+        "confirmation",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.collection_failure_settlement_components",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "settlement_id",
+        "failure_id",
+        "failure_component_id",
+        "parent_partition_id",
+        "first_cent",
+        "last_cent",
+        "receivable_id"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.collection_failure_recredit_claims",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "failure_component_id",
+        "first_cent",
+        "last_cent",
+        "legacy_recredit_id",
+        "settlement_component_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

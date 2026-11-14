@@ -1,3 +1,4 @@
+import {collectionFailureGroupedRecreditSourceColumns,collectionFailureGroupedRecreditSourceCoverage} from './collection-failure-grouped-recredit-source.ts';
 import {collectionFailureRecreditSourceColumns,collectionFailureRecreditSourceCoverage} from './collection-failure-recredit-source.ts';
 import {refundTransferFeeSourceCoverage} from './refund-transfer-fee-source.ts';
 import {invoiceSourceCoverage} from './invoice-source.ts';
@@ -35,7 +36,7 @@ export const refundTransferSourceColumns:Readonly<Record<string,readonly string[
 
 export const directReceiptTipSourceColumns:Readonly<Record<string,readonly string[]>>=directReceiptTipSourceAddedColumns;
 
-export function financeSourceTables(version:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15){
+export function financeSourceTables(version:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16){
   if(version===1)return originalTables;
   const correctionTables=[
     ...originalTables.map(table=>({...table,columns:[...table.columns,...(correctionSourceColumns['crest.'+table.name]??[])]})),
@@ -87,6 +88,10 @@ export function financeSourceTables(version:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15)
     {name:'refund_transfer_embedded_fees',columns:[...refundTransferFeeSourceCoverage.required]}];
   if(version===14)return feeTables;
   const recreditColumns:Readonly<Record<string,readonly string[]>>=collectionFailureRecreditSourceColumns;
-  return [...feeTables.map(table=>({...table,columns:[...table.columns,...recreditColumns['crest.'+table.name]??[]]})),
+  const recreditTables=[...feeTables.map(table=>({...table,columns:[...table.columns,...recreditColumns['crest.'+table.name]??[]]})),
     {name:'collection_failure_recredits',columns:[...collectionFailureRecreditSourceCoverage.required]}];
+  if(version===15)return recreditTables;
+  const settlementColumns:Readonly<Record<string,readonly string[]>>=collectionFailureGroupedRecreditSourceColumns;
+  return [...recreditTables.map(table=>({...table,columns:[...table.columns,...settlementColumns['crest.'+table.name]??[]]})),
+    ...collectionFailureGroupedRecreditSourceCoverage.map(table=>({name:table.table.slice('crest.'.length),columns:[...table.required]}))];
 }
