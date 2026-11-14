@@ -10,6 +10,7 @@ import type {FictionalJournalV6,FictionalTrialBalanceV6} from '../../../bookkeep
 import type {FictionalJournalV7,FictionalTrialBalanceV7} from '../../../bookkeeping/posted-report-v7-contract';
 import type {FictionalJournalV8,FictionalTrialBalanceV8} from '../../../bookkeeping/posted-report-v8-contract';
 import {downloadFinanceHistory,financeAccounts} from '../../../client/finance-accounts';
+import styles from './screen.module.css';
 
 type Balance=Awaited<ReturnType<typeof financeAccounts.readTrialBalance>>|FictionalTrialBalanceV2|FictionalTrialBalanceV3|FictionalTrialBalanceV4|FictionalTrialBalanceV5|FictionalTrialBalanceV6|FictionalTrialBalanceV7|FictionalTrialBalanceV8;
 type Journal=Awaited<ReturnType<typeof financeAccounts.readPostedJournal>>|FictionalJournalV2|FictionalJournalV3|FictionalJournalV4|FictionalJournalV5|FictionalJournalV6|FictionalJournalV7|FictionalJournalV8;
@@ -169,7 +170,7 @@ export function TrialBalance({businessId}:{businessId:string}){
           :reportVersion(balance)===3
           ?'Includes payment corrections and customer funds applications. Customer funds held match the ledger through this date.'
           :'Includes payment corrections. Customer funds held match the ledger through this date.'}</p>}
-        {balance.rows.length>0&&<table>
+        {balance.rows.length>0&&<div className={styles.balanceScroll} role="region" aria-label="Account balance table" tabIndex={0}><table className={styles.balanceTable}>
           <caption>Net balance by account</caption>
           <thead><tr><th scope="col">Account</th><th scope="col">Debit</th><th scope="col">Credit</th></tr></thead>
           <tbody>{balance.rows.map(row=>{
@@ -181,7 +182,7 @@ export function TrialBalance({businessId}:{businessId:string}){
           })}</tbody>
           <tfoot><tr><th scope="row">Total</th><td>{usd(balance.totals.debitBalanceCents)}</td>
             <td>{usd(balance.totals.creditBalanceCents)}</td></tr></tfoot>
-        </table>}
+        </table></div>}
         <button type="button" className="secondary" onClick={download}>Download trial balance CSV</button>
         {balance.rows.length>0&&<details className="review-card" onToggle={event=>{
           if(!event.currentTarget.open&&event.target===event.currentTarget){

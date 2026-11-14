@@ -6,8 +6,8 @@ export const runtime='nodejs';
 export default function FinanceAccountsPage(){
  return <main className="customers services-workspace">
   <a href="/settings">Business settings</a>
-  <h1>Chart of accounts</h1>
-  <p className="field-help">Review ledger reports, manage accounts, and find finance settings.</p>
+  <h1>Accounting</h1>
+  <p className="field-help">Review posted balances, customer funds, and outstanding invoices.</p>
   <FinanceAccountsScreen/>
  </main>;
 }

@@ -84,6 +84,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    [f.business])).rows,[{gross_cents:'10000',purchase_tax_cents:'650'}]);
   await page.goto(f.origin+'/settings/accounts');
   await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+  const accounting=page.getByRole('navigation',{name:'Accounting sections',exact:true});
+  await accounting.getByRole('link',{name:'Reports',exact:true}).press('Enter');
+  await expect(page.getByRole('heading',{name:'Reports',exact:true})).toBeFocused();
+  await expect(accounting.getByRole('link',{name:'Setup',exact:true})).toBeVisible();
+  await expect(accounting.getByRole('link',{name:'Accounts',exact:true})).toBeVisible();
   await page.getByText('Fictional trial balance',{exact:true}).click();
   const report=page.getByRole('region',{name:'Fictional trial balance',exact:true});
   await report.getByLabel('Through date (optional)',{exact:true}).fill(date);
@@ -98,6 +103,12 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await page.setViewportSize({width,height:900});
    await report.getByRole('table').scrollIntoViewIfNeeded();
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   const amount=report.getByRole('cell',{name:'$100.00',exact:true}).first();
+   assert(await amount.evaluate(cell=>{
+    const range=document.createRange();
+    range.selectNodeContents(cell);
+    return range.getClientRects().length===1;
+   }),'Amounts keep their cents on the same line.');
    const audit=await new AxeBuilder({page}).include('.trial-balance').withTags(['wcag2a','wcag2aa']).analyze();
    assert.deepEqual(audit.violations.map(entry=>entry.id),[]);
    await page.screenshot({path:'.local/review/finance-trial-balance-'+name+'-'+width+'.png'});
