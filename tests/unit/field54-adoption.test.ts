@@ -78,6 +78,8 @@ import registered89 from '../support/registered89-migration-checksums.json';
 import registered90 from '../support/registered90-migration-checksums.json';
 import registered91 from '../support/registered91-migration-checksums.json';
 import registered92 from '../support/registered92-migration-checksums.json';
+import registered93 from '../support/registered93-migration-checksums.json';
+import {tipReturnSourceAddedColumns,tipReturnSourceCoverage} from '../../src/bookkeeping/tip-return-source.ts';
 import {excessReturnSourceAddedColumns,excessReturnSourceCoverage} from '../../src/bookkeeping/excess-return-source.ts';
 import coverage87 from '../support/registered87-export-coverage.json';
 import calendarCoverage from '../support/google-calendar-candidate-export-coverage.json';
@@ -537,13 +539,19 @@ it('registers the original payment application without adding stored rows',()=>{
  expect(()=>validateMigrationSet(registered92 as MigrationRegistry,new Map(registered92.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered91 as MigrationRegistry)).not.toThrow();
 });
 it('registers settled unused-payment returns and all of their new source fields',()=>{
- expect(currentRegistry.migrations).toHaveLength(93);
- expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261217180000',file:'20261217180000_fictional_excess_return.sql',sha256:'6e4dc661a8241e49b5c4e7fe45b4bcd67e50da81cab7c212d014c2c4697ea324'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered92 as MigrationRegistry)).not.toThrow();
- const fields=new Map(Object.entries(excessReturnSourceAddedColumns));
- expect(currentCoverage).toEqual({...coverage92,migrationCount:93,tables:[...coverage92.tables.map(row=>
-  fields.has(row.table)?{...row,required:[...row.required,...fields.get(row.table)!]}:row),excessReturnSourceCoverage]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:93});
+ expect(registered93.migrations).toHaveLength(93);
+ expect(registered93.migrations.at(-1)).toEqual({version:'20261217180000',file:'20261217180000_fictional_excess_return.sql',sha256:'6e4dc661a8241e49b5c4e7fe45b4bcd67e50da81cab7c212d014c2c4697ea324'});
+ expect(()=>validateMigrationSet(registered93 as MigrationRegistry,new Map(registered93.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered92 as MigrationRegistry)).not.toThrow();
+});
+it('registers settled tip returns with original tax slices and all portable source fields',()=>{
+ expect(currentRegistry.migrations).toHaveLength(94);
+ expect(currentRegistry.migrations.at(-1)).toEqual({version:'20261218180000',file:'20261218180000_fictional_tip_return.sql',sha256:'64c2bb2a7f239907d28ec7743c422de3cde16734b6badda9cb6f1ccca2583a8c'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered93 as MigrationRegistry)).not.toThrow();
+ const excessFields=new Map(Object.entries(excessReturnSourceAddedColumns)),tipFields=new Map(Object.entries(tipReturnSourceAddedColumns));
+ expect(currentCoverage).toEqual({...coverage92,migrationCount:94,tables:[...coverage92.tables.map(row=>
+  ({...row,required:[...row.required,...excessFields.get(row.table)??[],...tipFields.get(row.table)??[]]})),
+  excessReturnSourceCoverage,...tipReturnSourceCoverage]});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:94});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

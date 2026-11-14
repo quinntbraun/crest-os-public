@@ -8,6 +8,7 @@ import {invoiceCreditSourceAddedColumns,invoiceCreditSourceCoverage} from './inv
 import {pairedInvoiceCreditSourceCoverage} from './paired-invoice-credit-source.ts';
 import {serviceRefundSourceAddedColumns,serviceRefundSourceCoverage} from './service-refund-source.ts';
 import {excessReturnSourceAddedColumns,excessReturnSourceCoverage} from './excess-return-source.ts';
+import {tipReturnSourceAddedColumns,tipReturnSourceCoverage} from './tip-return-source.ts';
 
 const receiptColumns:Readonly<Record<string,readonly string[]>>=receiptSourceAddedColumns;
 const expenseColumns:Readonly<Record<string,readonly string[]>>=postedExpenseSourceAddedColumns;
@@ -17,12 +18,13 @@ export const heldTipSourceColumns:Readonly<Record<string,readonly string[]>>=hel
 export const invoiceCreditSourceColumns:Readonly<Record<string,readonly string[]>>=invoiceCreditSourceAddedColumns;
 export const serviceRefundSourceColumns:Readonly<Record<string,readonly string[]>>=serviceRefundSourceAddedColumns;
 export const excessReturnSourceColumns:Readonly<Record<string,readonly string[]>>=excessReturnSourceAddedColumns;
+export const tipReturnSourceColumns:Readonly<Record<string,readonly string[]>>=tipReturnSourceAddedColumns;
 const originalTables=[...invoiceSourceCoverage,...receiptSourceCoverage,postedExpenseSourceCoverage].map(table=>({
   name:table.table.slice('crest.'.length),
   columns:[...table.required,...(receiptColumns[table.table]??[]),...(expenseColumns[table.table]??[])],
 }));
 
-export function financeSourceTables(version:1|2|3|4|5|6|7|8|9){
+export function financeSourceTables(version:1|2|3|4|5|6|7|8|9|10){
   if(version===1)return originalTables;
   const correctionTables=[
     ...originalTables.map(table=>({...table,columns:[...table.columns,...(correctionSourceColumns['crest.'+table.name]??[])]})),
@@ -54,6 +56,9 @@ export function financeSourceTables(version:1|2|3|4|5|6|7|8|9){
   const heldTables=refundTables.map(table=>table.name==='customer_fund_lots'
     ?{...table,columns:[...table.columns,'receipt_event_id']}:table);
   if(version===8)return heldTables;
-  return [...heldTables.map(table=>({...table,columns:[...table.columns,...(excessReturnSourceColumns['crest.'+table.name]??[])]})),
+  const excessReturnTables=[...heldTables.map(table=>({...table,columns:[...table.columns,...(excessReturnSourceColumns['crest.'+table.name]??[])]})),
     {name:'excess_receipt_returns',columns:[...excessReturnSourceCoverage.required]}];
+  if(version===9)return excessReturnTables;
+  return [...excessReturnTables.map(table=>({...table,columns:[...table.columns,...(tipReturnSourceColumns['crest.'+table.name]??[])]})),
+    ...tipReturnSourceCoverage.map(table=>({name:table.table.slice('crest.'.length),columns:[...table.required]}))];
 }

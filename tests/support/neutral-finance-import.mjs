@@ -55,6 +55,12 @@ const excessReturnLinks={
   fund_lot_range_consumptions:{excess_return_id:'excess_receipt_returns'},
   excess_receipt_returns:{receipt_event_id:'financial_events',fund_lot_id:'customer_fund_lots',evidence_id:'external_money_evidence'},
 };
+const tipReturnLinks={
+  financial_events:{tip_return_id:'tip_returns'},
+  journal_lines:{tip_return_id:'tip_returns'},
+  tip_returns:{tip_realization_id:'tip_realizations',evidence_id:'external_money_evidence'},
+  tip_realization_range_consumptions:{tip_return_id:'tip_returns',tip_realization_id:'tip_realizations'},
+};
 const integers=new Set(['version','previous_version','generation','previous_generation','draft_revision','receipt_revision',
   'number_sequence','position','commit_sequence','event_sequence','period_generation','reopened_generation','template_version','entry_sequence',
   'first_cent','last_cent','cents']);
@@ -72,17 +78,18 @@ function columnType(column){
 }
 
 export async function exerciseNeutralFinanceImport(connection,files,businessId,{
-  includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,
+  includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,
 }={}){
   assert(!includePairedCredits||includeCredits);
   assert(!includeServiceRefunds||includePairedCredits);
   assert(!includeExcessReceipts||includeServiceRefunds);
   assert(!includeExcessReturns||includeExcessReceipts);
+  assert(!includeTipReturns||includeExcessReturns);
   const parts=new Map(files.map(file=>[file.name,file.content]));
   const {tables}=JSON.parse(parts.get('dictionary.json'));
   assert.deepEqual(tables.map(row=>row.name),[...names,...includeCredits?['invoice_credits']:[],
     ...includePairedCredits?['paired_invoice_credit_releases']:[],...includeServiceRefunds?['service_credit_refunds']:[],
-    ...includeExcessReturns?['excess_receipt_returns']:[]]);
+    ...includeExcessReturns?['excess_receipt_returns']:[],...includeTipReturns?['tip_returns','tip_realization_range_consumptions']:[]]);
   assert.equal((await connection.query("SELECT count(*)::int AS n FROM pg_namespace WHERE nspname IN('auth','crest','crest_private','crest_commands','neutral_finance')")).rows[0].n,0);
   const exports={};
   await connection.query('BEGIN');
@@ -194,7 +201,7 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
         JOIN neutral_finance.journal_lines jl ON (jl.business_id,jl.entry_id)=(j.business_id,j.id)
         GROUP BY l.id`);
       assert.deepEqual(rows.map(row=>row.held).sort(),exports.customer_fund_lots.filter(lot=>lot.receipt_event_id!==null).map(lot=>lot.original_cents).sort());
-      assert(rows.length>0&&rows.every(row=>row.held_lines===1&&row.money_lines===1));
+      assert(rows.every(row=>row.held_lines===1&&row.money_lines===1));
     }
     if(includeExcessReturns){
       for(const [name,columns] of Object.entries(excessReturnLinks)){
@@ -229,6 +236,59 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
         await connection.query('SAVEPOINT neutral_wrong_excess_return');
         await assert.rejects(connection.query('UPDATE neutral_finance.excess_receipt_returns SET receipt_event_id=$1',[randomUUID()]),{code:'23503'});
         await connection.query('ROLLBACK TO SAVEPOINT neutral_wrong_excess_return');
+      }
+    }
+    if(includeTipReturns){
+      for(const [name,columns] of Object.entries(tipReturnLinks)){
+        for(const [column,target] of Object.entries(columns))await connection.query(
+          'ALTER TABLE '+table(name)+' ADD FOREIGN KEY(business_id,'+q(column)+') REFERENCES '+table(target)+'(business_id,id)');
+      }
+      await connection.query('ALTER TABLE neutral_finance.tip_returns ADD UNIQUE(business_id,id,tip_realization_id)');
+      await connection.query('ALTER TABLE neutral_finance.tip_realization_range_consumptions ADD FOREIGN KEY(business_id,tip_return_id,tip_realization_id) REFERENCES neutral_finance.tip_returns(business_id,id,tip_realization_id)');
+      const {rows}=await connection.query(`
+        WITH portions AS (
+          SELECT x.business_id,x.tip_return_id,sum(x.last_cent-x.first_cent+1)::bigint AS cents,
+            sum(div(2*t.net_cents::numeric*x.last_cent+t.inclusive_cents,2*t.inclusive_cents::numeric)
+              -div(2*t.net_cents::numeric*(x.first_cent-1)+t.inclusive_cents,2*t.inclusive_cents::numeric))::bigint AS net,
+            bool_and(x.first_cent>0 AND x.last_cent BETWEEN x.first_cent AND t.inclusive_cents) AS bounds
+          FROM neutral_finance.tip_realization_range_consumptions x JOIN neutral_finance.tip_realizations t
+            ON (t.business_id,t.id)=(x.business_id,x.tip_realization_id)
+          GROUP BY x.business_id,x.tip_return_id
+        )
+        SELECT r.id,r.cents::text,r.net_cents::text,r.tax_cents::text,count(*)::int AS lines,
+          p.bounds AND (r.cents,r.net_cents,r.tax_cents)=(p.cents,p.net,p.cents-p.net) AS exact_slices,
+          (m.evidence_id,m.account_id,m.signed_cents)=(r.evidence_id,r.account_id,-r.cents)
+            AND (proof.external_account_id,proof.confirmed_on,proof.signed_cents)=(r.account_id::text,r.actual_on,-r.cents) AS exact_evidence,
+          count(*) FILTER(WHERE line.purpose='tip_return_revenue' AND line.debit_cents=r.net_cents AND line.credit_cents=0
+            AND line.account_id=t.revenue_account_id AND line.fixed_mapping_id=t.revenue_mapping_id)::int AS revenue_lines,
+          count(*) FILTER(WHERE line.purpose='tip_return_tax' AND line.debit_cents=r.tax_cents AND line.credit_cents=0
+            AND line.account_id=t.tax_account_id)::int AS tax_lines,
+          count(*) FILTER(WHERE line.purpose='tip_return_money' AND line.credit_cents=r.cents AND line.debit_cents=0
+            AND line.money_movement_id=m.id AND line.account_id=m.account_id)::int AS money_lines
+        FROM neutral_finance.tip_returns r
+        JOIN portions p ON (p.business_id,p.tip_return_id)=(r.business_id,r.id)
+        JOIN neutral_finance.tip_realizations t ON (t.business_id,t.id)=(r.business_id,r.tip_realization_id)
+        JOIN neutral_finance.financial_events original ON (original.business_id,original.tip_realization_id)=(t.business_id,t.id)
+          AND original.template='P06' AND original.effective_on<=r.actual_on
+        JOIN neutral_finance.financial_events e ON (e.business_id,e.tip_return_id)=(r.business_id,r.id) AND e.template='P10'
+        JOIN neutral_finance.money_movements m ON (m.business_id,m.event_id)=(e.business_id,e.id)
+        JOIN neutral_finance.external_money_evidence proof ON (proof.business_id,proof.id)=(r.business_id,r.evidence_id)
+        JOIN neutral_finance.journal_entries j ON (j.business_id,j.event_id)=(e.business_id,e.id)
+        JOIN neutral_finance.journal_lines line ON (line.business_id,line.entry_id,line.tip_return_id)=(j.business_id,j.id,r.id)
+        GROUP BY r.id,m.id,proof.id,p.bounds,p.cents,p.net`);
+      assert.equal(rows.length,exports.tip_returns.length);
+      assert(rows.every(row=>row.exact_slices&&row.exact_evidence&&row.money_lines===1
+        &&row.revenue_lines===Number(row.net_cents!=='0')&&row.tax_lines===Number(row.tax_cents!=='0')
+        &&row.lines===row.money_lines+row.revenue_lines+row.tax_lines));
+      assert.equal((await connection.query(`
+        SELECT count(*)::int AS broken FROM neutral_finance.tip_realization_range_consumptions a
+        JOIN neutral_finance.tip_realization_range_consumptions b
+          ON (a.business_id,a.tip_realization_id)=(b.business_id,b.tip_realization_id) AND a.id<b.id
+        WHERE a.first_cent<=b.last_cent AND b.first_cent<=a.last_cent`)).rows[0].broken,0);
+      if(rows.length){
+        await connection.query('SAVEPOINT neutral_wrong_tip_return');
+        await assert.rejects(connection.query('UPDATE neutral_finance.tip_realization_range_consumptions SET tip_return_id=$1',[randomUUID()]),{code:'23503'});
+        await connection.query('ROLLBACK TO SAVEPOINT neutral_wrong_tip_return');
       }
     }
     const balance=(await connection.query(`

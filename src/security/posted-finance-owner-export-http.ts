@@ -39,7 +39,8 @@ export function createPostedFinanceOwnerExportHttp(config:Configuration,provider
  const resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config);
  const admit=createSessionRequestAdmission(config),database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
  const profile=postedFinanceProfileForSchema(sourceSchemaVersion);
- const collect=createServiceRefundSourceCollector({businessId,environment,connectionString:config.exportConnectionString},sourceSchemaVersion>=91,sourceSchemaVersion>=93);
+ const collect=createServiceRefundSourceCollector({businessId,environment,connectionString:config.exportConnectionString},
+  sourceSchemaVersion>=91,sourceSchemaVersion>=93,sourceSchemaVersion>=94);
  let active=false;
  async function authorized<T>(credential:string,signal:AbortSignal,work:(args:unknown[],actorId:string)=>Promise<T>){
   const hash=sessionCredentialHash(credential);

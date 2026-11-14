@@ -25,6 +25,7 @@ import {serviceRefundCoverage,serviceRefundFile,serviceRefundParts,serviceRefund
 
 import {googleCalendarCandidateRecoveryProfile} from './google-calendar-candidate.mjs';
 import {excessReturnCandidateRecoveryProfile} from './finance-excess-return-candidate.mjs';
+import {tipReturnCandidateRecoveryProfile} from './finance-tip-return-candidate.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
@@ -994,6 +995,13 @@ export async function backupExcessReturnCandidateDatabase(candidate,client,url,d
 export async function restoreExcessReturnCandidateDatabase(candidate,directory,identity,url){
   return restoreWithProfile((await excessReturnCandidateRecoveryProfile(candidate,root)).profile,directory,identity,url);
 }
+export async function backupTipReturnCandidateDatabase(candidate,client,url,directory,recipient){
+  const checked=await tipReturnCandidateRecoveryProfile(candidate,root);
+  return backupWithProfile(checked.profile,client,url,directory,recipient,undefined,undefined,checked);
+}
+export async function restoreTipReturnCandidateDatabase(candidate,directory,identity,url){
+  return restoreWithProfile((await tipReturnCandidateRecoveryProfile(candidate,root)).profile,directory,identity,url);
+}
 
 async function expense79RecoveryProfile(candidate){
   assert.equal(candidate.file,expense79File);
@@ -1061,6 +1069,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile.schemaVersion===86&&profile.heldServiceRefundMigrationSha256
       ||profile.schemaVersion===87&&profile.heldGoogleCalendarMigrationSha256
       ||profile.schemaVersion===93&&profile.heldExcessReturnMigrationSha256
+      ||profile.schemaVersion===94&&profile.heldTipReturnMigrationSha256
       ||profile.schemaVersion===79&&profile.heldExpenseMigrationSha256
       ));
   target(url);let stage='snapshot';await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -1151,6 +1160,7 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     assert.equal(manifest.heldServiceRefundMigrationSha256,profile.heldServiceRefundMigrationSha256);
     assert.equal(manifest.heldGoogleCalendarMigrationSha256,profile.heldGoogleCalendarMigrationSha256);
     assert.equal(manifest.heldExcessReturnMigrationSha256,profile.heldExcessReturnMigrationSha256);
+    assert.equal(manifest.heldTipReturnMigrationSha256,profile.heldTipReturnMigrationSha256);
     if(profile.heldDropoffPhotoAuthority||profile.heldCustody67MigrationSha256||profile.heldPickupReturnSources
       ||profile.heldExpenseMigrationSha256)assert(manifest.objectArchive);
     stage='authenticated_dump';const dump=await unseal(join(directory,'database.age'),receipt.dump,identity);

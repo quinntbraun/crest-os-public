@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 93,
+  "migrationCount": 94,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2585,7 +2585,8 @@
         "tip_realization_id",
         "invoice_credit_id",
         "service_refund_id",
-        "excess_return_id"
+        "excess_return_id",
+        "tip_return_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2657,7 +2658,8 @@
         "tip_realization_id",
         "invoice_credit_id",
         "service_refund_id",
-        "excess_return_id"
+        "excess_return_id",
+        "tip_return_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -3409,6 +3411,43 @@
         "operation_id",
         "created_by",
         "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.tip_returns",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "tip_realization_id",
+        "channel_version_id",
+        "account_id",
+        "evidence_id",
+        "actual_on",
+        "cents",
+        "net_cents",
+        "tax_cents",
+        "confirmation",
+        "reason",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.tip_realization_range_consumptions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "tip_realization_id",
+        "tip_return_id",
+        "first_cent",
+        "last_cent"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

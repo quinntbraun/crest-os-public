@@ -13,7 +13,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  const selected=process.argv[2],files=browserGroupFiles(command,selected),args=['--test','--test-reporter=tap','--test-concurrency=1',...files];
  console.log('REQUIRED_BROWSER_GROUP '+JSON.stringify({group:selected,files}));
  const env={...process.env,CREST_TEST_PAYMENT_CORRECTIONS:selected==='records'?'1':'0',
-   CREST_TEST_FUND_APPLICATIONS:selected==='records'?'1':'0',CREST_TEST_HELD_TIPS:selected==='records'?'1':'0',CREST_TEST_INVOICE_CREDITS:selected==='records'?'1':'0',CREST_TEST_PAID_INVOICE_CREDITS:selected==='records'?'1':'0',CREST_TEST_SERVICE_REFUNDS:selected==='records'?'1':'0',CREST_TEST_RECEIVABLE_AGING:selected==='records'?'1':'0',CREST_TEST_CUSTOMER_FUNDS_REPORT:selected==='records'?'1':'0',CREST_TEST_EXCESS_RECEIPTS:'0',CREST_TEST_RECEIPT_FUNDS_APPLICATION:'0',CREST_TEST_EXCESS_RETURN_EXPORT:'0',CREST_TEST_POSTED_FINANCE_EXPORT:selected==='records'?'1':'0'};
+   CREST_TEST_FUND_APPLICATIONS:selected==='records'?'1':'0',CREST_TEST_HELD_TIPS:selected==='records'?'1':'0',CREST_TEST_INVOICE_CREDITS:selected==='records'?'1':'0',CREST_TEST_PAID_INVOICE_CREDITS:selected==='records'?'1':'0',CREST_TEST_SERVICE_REFUNDS:selected==='records'?'1':'0',CREST_TEST_RECEIVABLE_AGING:selected==='records'?'1':'0',CREST_TEST_CUSTOMER_FUNDS_REPORT:selected==='records'?'1':'0',CREST_TEST_EXCESS_RECEIPTS:'0',CREST_TEST_RECEIPT_FUNDS_APPLICATION:'0',CREST_TEST_EXCESS_RETURN_EXPORT:'0',CREST_TEST_TIP_RETURN_EXPORT:'0',CREST_TEST_POSTED_FINANCE_EXPORT:selected==='records'?'1':'0'};
  const run=(testArgs,testEnv)=>{
   const child=spawn(process.execPath,testArgs,{stdio:'inherit',windowsHide:true,env:testEnv});
   return new Promise(resolve=>{child.once('error',()=>resolve({code:1,signal:null}));child.once('close',(code,signal)=>resolve({code,signal}));});
@@ -21,9 +21,10 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  let result=await run(args,env);
  if(selected==='records'){
   const invoiceJourney=['--test','--test-reporter=tap','--test-concurrency=1','tests/integration/finance-invoice-issue-product-browser.test.mjs'];
-  for(const capability of ['CREST_TEST_RECEIPT_FUNDS_APPLICATION','CREST_TEST_EXCESS_RETURN_EXPORT']){
+  for(const capabilities of [{CREST_TEST_RECEIPT_FUNDS_APPLICATION:'1'},
+    {CREST_TEST_EXCESS_RETURN_EXPORT:'1',CREST_TEST_TIP_RETURN_EXPORT:'1'}]){
    if(result.code!==0||result.signal!==null)break;
-   result=await run(invoiceJourney,{...env,CREST_TEST_EXCESS_RECEIPTS:'1',[capability]:'1'});
+   result=await run(invoiceJourney,{...env,CREST_TEST_EXCESS_RECEIPTS:'1',...capabilities});
   }
  }
  let screenshots=[];
@@ -43,6 +44,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
    'field-pickup-return-failed','field-pickup-return-queue']
  };
  const requiredViews=requiredViewsByGroup[selected]??[];
+ if(selected==='records')requiredViews.push('finance-tip-return');
  const requiredScreenshots=requiredViews.flatMap(view=>['chromium','webkit'].flatMap(engine=>
   [360,390,768,1440].map(width=>`${view}-${engine}-${width}.png`)));
  if(selected==='records')for(const view of ['settings-calendar-default-disclosure','settings-calendar-disclosure'])
