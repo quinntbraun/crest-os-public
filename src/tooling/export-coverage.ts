@@ -2,7 +2,8 @@
 // read, publishes a file, or proves that an export contains source records.
 const exclusions = new Set([
   'session_credential', 'browser_credential', 'network_identifier_digest',
-  'throttle_key_fingerprint'
+  'throttle_key_fingerprint', 'calendar_oauth_proof', 'calendar_grant',
+  'calendar_account_identifier', 'calendar_runtime_principal', 'calendar_provider_payload'
 ]);
 const scopes = new Set(['actor', 'business', 'mixed_identity', 'global_configuration', 'runtime_security']);
 const groups = new Set([
@@ -33,7 +34,20 @@ const excludedColumnsBySource = new Map([
   ['crest_private.login_contexts.credential_hash', 'browser_credential'],
   ['crest_private.login_contexts.ip_hash', 'network_identifier_digest'],
   ['crest_private.login_contexts.csrf_hash', 'browser_credential'],
-  ['crest_private.session_csrf_tokens.token_hash', 'browser_credential']
+  ['crest_private.session_csrf_tokens.token_hash', 'browser_credential'],
+  ['crest_private.google_calendar_oauth_client.verifier_key_id', 'calendar_oauth_proof'],
+  ['crest_private.google_calendar_oauth_attempts.state_digest', 'calendar_oauth_proof'],
+  ['crest_private.google_calendar_oauth_attempts.verifier_key_id', 'calendar_oauth_proof'],
+  ['crest_private.google_calendar_oauth_attempts.verifier_envelope', 'calendar_oauth_proof'],
+  ['crest_private.google_calendar_credential_key.key_id', 'calendar_grant'],
+  ['crest_private.google_calendar_credentials.key_id', 'calendar_grant'],
+  ['crest_private.google_calendar_credentials.envelope', 'calendar_grant'],
+  ['crest_private.google_calendar_creation_intents.reviewed_google_owner', 'calendar_account_identifier'],
+  ['crest_private.google_calendar_destination_reviews.calendar_owner', 'calendar_account_identifier'],
+  ['crest_private.google_calendar_worker_principals.principal', 'calendar_runtime_principal'],
+  ['crest_private.google_calendar_refresh_claims.worker_principal', 'calendar_runtime_principal'],
+  ['crest.google_calendar_dispatch_leases.worker_principal', 'calendar_runtime_principal'],
+  ['crest.google_calendar_dispatch_sends.request_body', 'calendar_provider_payload']
 ]);
 type Row = Record<string, unknown>;
 function require(value: unknown): asserts value {

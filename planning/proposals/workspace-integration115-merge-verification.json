@@ -1,0 +1,159 @@
+{
+  "formatVersion": 1,
+  "verifiedAt": "2026-11-05T16:01:33.061Z",
+  "ownerApproval": "Explicit owner approval for PR115 at head e7244f58, received this continuation",
+  "pr": 115,
+  "url": "https://github.com/quinntbraun/crest-os-public/pull/115",
+  "merged": true,
+  "mergeCommit": "d4adeb789a7a0aaaa5849e65c3821dff71e0bced",
+  "head": "e7244f58c2979e7f8ab2ddd4d560944b608390f9",
+  "previousMain": "8d2ef72c09b178fe5ce8b552f37e5f2a0d72fd6e",
+  "tree": "bb134a0d2849df24c8fe2aa3c612f05126f1ceb5",
+  "testedMerge": "4c635a0ec287bead0d9c03092a9ec28694136764",
+  "treeMatchesAccepted421": true,
+  "preMergeFullRun": 41988528753,
+  "preMergeRequiredJobs": 10,
+  "preMergeAllSuccess": true,
+  "preMergeRequiredArtifacts": 8,
+  "allArtifactsUnexpired": true,
+  "postMergeRuns": [
+    {
+      "id": 42053484576,
+      "number": 422,
+      "head": "d4adeb789a7a0aaaa5849e65c3821dff71e0bced",
+      "status": "completed",
+      "conclusion": "success",
+      "event": "push",
+      "updated_at": "2026-11-05T15:59:24Z"
+    }
+  ],
+  "ownerRuntimeChanged": false,
+  "realDataOrFinanceActivated": false,
+  "spend": 0,
+  "postMergeAllRequiredJobsPassed": true,
+  "postMergeJobs": [
+    {
+      "id": 127335492169,
+      "name": "Genuine authentication",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 127335492572,
+      "name": "Browser workflows (intake)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 127335492644,
+      "name": "Database foundation",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 127335492761,
+      "name": "Browser workflows (schedule)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 127335492800,
+      "name": "Browser workflows (records)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 127335492863,
+      "name": "Browser workflows (crm)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 127335492874,
+      "name": "Browser workflows (commercial)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 127335492877,
+      "name": "Browser workflows (amendments)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 127335493098,
+      "name": "Provider and evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 127348909883,
+      "name": "Foundation checks",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "postMergeArtifacts": [
+    {
+      "id": 13431116519,
+      "name": "phase-1-candidate-d4adeb789a7a0aaaa5849e65c3821dff71e0bced-attempt-1",
+      "expired": false,
+      "expiresAt": "2026-11-08T15:59:04Z",
+      "head": "d4adeb789a7a0aaaa5849e65c3821dff71e0bced"
+    },
+    {
+      "id": 13430354260,
+      "name": "service-review-d4adeb789a7a0aaaa5849e65c3821dff71e0bced-attempt-1",
+      "expired": false,
+      "expiresAt": "2026-11-08T15:53:37Z",
+      "head": "d4adeb789a7a0aaaa5849e65c3821dff71e0bced"
+    },
+    {
+      "id": 13429525392,
+      "name": "settings-review-commercial-d4adeb789a7a0aaaa5849e65c3821dff71e0bced-attempt-1",
+      "expired": false,
+      "expiresAt": "2026-11-08T15:26:15Z",
+      "head": "d4adeb789a7a0aaaa5849e65c3821dff71e0bced"
+    },
+    {
+      "id": 13428667189,
+      "name": "settings-review-schedule-d4adeb789a7a0aaaa5849e65c3821dff71e0bced-attempt-1",
+      "expired": false,
+      "expiresAt": "2026-11-08T15:30:15Z",
+      "head": "d4adeb789a7a0aaaa5849e65c3821dff71e0bced"
+    },
+    {
+      "id": 13428516915,
+      "name": "settings-review-crm-d4adeb789a7a0aaaa5849e65c3821dff71e0bced-attempt-1",
+      "expired": false,
+      "expiresAt": "2026-11-08T15:27:08Z",
+      "head": "d4adeb789a7a0aaaa5849e65c3821dff71e0bced"
+    },
+    {
+      "id": 13428377347,
+      "name": "settings-review-intake-d4adeb789a7a0aaaa5849e65c3821dff71e0bced-attempt-1",
+      "expired": false,
+      "expiresAt": "2026-11-08T15:30:13Z",
+      "head": "d4adeb789a7a0aaaa5849e65c3821dff71e0bced"
+    },
+    {
+      "id": 13428302467,
+      "name": "settings-review-amendments-d4adeb789a7a0aaaa5849e65c3821dff71e0bced-attempt-1",
+      "expired": false,
+      "expiresAt": "2026-11-08T15:30:40Z",
+      "head": "d4adeb789a7a0aaaa5849e65c3821dff71e0bced"
+    },
+    {
+      "id": 13427694129,
+      "name": "settings-review-records-d4adeb789a7a0aaaa5849e65c3821dff71e0bced-attempt-1",
+      "expired": false,
+      "expiresAt": "2026-11-08T15:23:26Z",
+      "head": "d4adeb789a7a0aaaa5849e65c3821dff71e0bced"
+    }
+  ],
+  "postMergeArtifactAvailabilityVerified": true,
+  "postMergeArtifactBytesIndependentlyVerified": false,
+  "preMergeArtifactByteAcceptance": ".local/integration115-correction-publication/accepted421-ci.json",
+  "currentMainVerified": true,
+  "heldFieldConstructionExcluded": true
+}
