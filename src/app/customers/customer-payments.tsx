@@ -3,16 +3,19 @@
 import {useEffect,useState} from 'react';
 import {financeAccounts} from '../../client/finance-accounts';
 import {DirectReceipt} from '../schedule/work/direct-receipt';
+import {CollectionFailureRecredit} from './collection-failure-recredit';
 
 export function CustomerPayments({businessId,customerId}:{businessId:string;customerId:string}){
-  const [available,setAvailable]=useState(false);
+  const [payments,setPayments]=useState(false);
+  const [recredits,setRecredits]=useState(false);
 
   useEffect(()=>{
     let controller:AbortController|undefined;
     function clear(){
       controller?.abort();
       controller=undefined;
-      setAvailable(false);
+      setPayments(false);
+      setRecredits(false);
     }
     function inspect(){
       if(document.visibilityState!=='visible'){clear();return;}
@@ -20,8 +23,10 @@ export function CustomerPayments({businessId,customerId}:{businessId:string;cust
       controller=new AbortController();
       const {signal}=controller;
       void financeAccounts.context(signal).then(context=>{
-        if(!signal.aborted)setAvailable(context.businessId===businessId&&context.directReceiptTips===true);
-      }).catch(()=>{if(!signal.aborted)setAvailable(false);});
+        if(signal.aborted)return;
+        setPayments(context.businessId===businessId&&context.directReceiptTips===true);
+        setRecredits(context.businessId===businessId&&context.collectionFailureRecredits===true);
+      }).catch(()=>{if(!signal.aborted){setPayments(false);setRecredits(false);}});
     }
     function restore(event:PageTransitionEvent){if(event.persisted)inspect();}
     inspect();
@@ -36,5 +41,8 @@ export function CustomerPayments({businessId,customerId}:{businessId:string;cust
     };
   },[businessId]);
 
-  return available?<DirectReceipt businessId={businessId} customerId={customerId}/>:null;
+  return <>
+    {payments&&<DirectReceipt businessId={businessId} customerId={customerId}/>}
+    {recredits&&<CollectionFailureRecredit businessId={businessId} customerId={customerId}/>}
+  </>;
 }

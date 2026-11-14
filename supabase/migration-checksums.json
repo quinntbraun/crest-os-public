@@ -490,6 +490,11 @@
       "version": "20261222180000",
       "file": "20261222180000_fictional_refund_transfer_withheld_fee.sql",
       "sha256": "8aedbff39ea12d2cea1008a4e4a1b63b4db80db6b3fb46d6743cc24af4c61fa0"
+    },
+    {
+      "version": "20261223180000",
+      "file": "20261223180000_fictional_collection_failure_held_recredit.sql",
+      "sha256": "d1f871aed731db515ca6385f6611cc1765cb2dfe696b6ff179a1df6450237f39"
     }
   ]
 }

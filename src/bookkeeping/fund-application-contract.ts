@@ -63,7 +63,9 @@ export function parseFundApplicationResult(value:unknown,businessId:string,refer
     'fundingOriginId','parentPartitionId','customerId','receivableId','invoiceId','arAccountId','fundsAccountId','mappingId',
     'effectiveOn','firstCent','lastCent','cents','reason'];
   check((exact(receipt,fields)&&receipt.schemaVersion===1&&customerUuid(receipt.unapplicationId)
-    ||exact(receipt,[...fields,'receiptEventId'])&&receipt.schemaVersion===2&&receipt.unapplicationId===null&&customerUuid(receipt.receiptEventId))
+    ||exact(receipt,[...fields,'receiptEventId'])&&receipt.schemaVersion===2&&receipt.unapplicationId===null&&customerUuid(receipt.receiptEventId)
+    ||exact(receipt,[...fields,'collectionFailureRecreditEventId'])&&receipt.schemaVersion===3&&receipt.unapplicationId===null
+      &&customerUuid(receipt.collectionFailureRecreditEventId))
     &&receipt.businessId===businessId&&receipt.operationId===reference.operationId
     &&receipt.fundApplicationId===reference.fundApplicationId&&customerUuid(receipt.eventId)&&customerUuid(receipt.fundLotId)
     &&customerUuid(receipt.fundingOriginId)&&customerUuid(receipt.parentPartitionId)
@@ -74,7 +76,9 @@ export function parseFundApplicationResult(value:unknown,businessId:string,refer
   check(BigInt(receipt.cents)===BigInt(consumed.lastCent)-BigInt(consumed.firstCent)+1n);
   return {state:'committed' as const,receipt:{fundApplicationId:reference.fundApplicationId,eventId:receipt.eventId,
     fundLotId:receipt.fundLotId,unapplicationId:receipt.unapplicationId,
-    ...(customerUuid(receipt.receiptEventId)?{receiptEventId:receipt.receiptEventId}:{}),fundingOriginId:receipt.fundingOriginId,
+    ...(customerUuid(receipt.receiptEventId)?{receiptEventId:receipt.receiptEventId}:{}),
+    ...(customerUuid(receipt.collectionFailureRecreditEventId)?{collectionFailureRecreditEventId:receipt.collectionFailureRecreditEventId}:{}),
+    fundingOriginId:receipt.fundingOriginId,
     parentPartitionId:receipt.parentPartitionId,customerId:receipt.customerId,receivableId:receipt.receivableId,invoiceId:receipt.invoiceId,
     arAccountId:receipt.arAccountId,fundsAccountId:receipt.fundsAccountId,mappingId:receipt.mappingId,effectiveOn:receipt.effectiveOn,
     ...consumed,cents:receipt.cents,reason:receipt.reason}};

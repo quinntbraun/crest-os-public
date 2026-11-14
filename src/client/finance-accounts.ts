@@ -60,6 +60,7 @@ import type {RefundTransferKind} from '../bookkeeping/refund-transfer-adjustment
 import {parseFictionalJournalV10,parseFictionalTrialBalanceV10} from '../bookkeeping/posted-report-v10-contract';
 import {parseFictionalJournalV11} from '../bookkeeping/posted-report-v11-contract';
 import {parseFictionalJournalV12} from '../bookkeeping/posted-report-v12-contract';
+import {parseFictionalJournalV13} from '../bookkeeping/posted-report-v13-contract';
 import {parseFictionalJournalV9,parseFictionalTrialBalanceV9} from '../bookkeeping/posted-report-v9-contract';
 import {parseFictionalJournalV8,parseFictionalTrialBalanceV8} from '../bookkeeping/posted-report-v8-contract';
 import {parseTipReturnInput,parseTipReturnOptions,parseTipReturnReference,parseTipReturnResult,tipReturnMatchesInput,tipReturnRefusal}
@@ -72,7 +73,11 @@ import {parseCustomerFundsReport} from '../bookkeeping/customer-funds-report-con
 import {parseReceivableAging} from '../bookkeeping/receivable-aging-contract';
 import type {Proof} from './authentication';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
+import {collectionFailureRecreditMatchesInput, collectionFailureRecreditRefusal, parseCollectionFailureRecreditInput,
+ parseCollectionFailureRecreditList, parseCollectionFailureRecreditOptions, parseCollectionFailureRecreditReference,
+ parseCollectionFailureRecreditResult} from '../bookkeeping/collection-failure-recredit-contract';
+
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
@@ -119,7 +124,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
    if(part.done)break;
    bytes+=part.value.byteLength;check(bytes<=(route==='trial-balance'?2097152:route==='invoice-preparation'||route==='invoice-draft-read'||route==='invoice-issue-tax-review'
     ||route==='invoice-issue-prepare'||route==='invoice-issue-read'||route==='receipt-options'||route==='expense-post-options'
-    ||route==='fund-application-options'||route==='held-tip-options'||route==='collection-failure-options'||route==='refund-transfer-options'?1048576:196608)&&!bounded.aborted);
+    ||route==='fund-application-options'||route==='held-tip-options'||route==='collection-failure-options'||route==='payment-recredit-options'||route==='refund-transfer-options'?1048576:196608)&&!bounded.aborted);
    text+=decoder.decode(part.value,{stream:true});
   }
   text+=decoder.decode();
@@ -138,6 +143,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   excessReturns:response.headers.get('x-crest-excess-returns')==='1',
   tipReturns:response.headers.get('x-crest-tip-returns')==='1',
   collectionFailures:response.headers.get('x-crest-collection-failures')==='1',
+  collectionFailureRecredits:response.headers.get('x-crest-collection-failure-recredits')==='1',
   refundTransfers:response.headers.get('x-crest-refund-transfers')==='1',
   directReceiptTips:response.headers.get('x-crest-direct-receipt-tips')==='1',
   refundTransferFees:response.headers.get('x-crest-refund-transfer-fees')==='1',
@@ -155,7 +161,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
 
 export const financeAccounts={
  async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
@@ -167,6 +173,7 @@ export const financeAccounts={
    ...(collectionFailures&&serviceRefunds&&refundTransfers?{refundTransfers}:{}),
    ...(refundTransfers&&excessReceipts&&directReceiptTips?{directReceiptTips}:{}),
    ...(refundTransfers&&directReceiptTips&&refundTransferFees?{refundTransferFees}:{}),
+   ...(refundTransferFees&&collectionFailures&&fundApplications&&collectionFailureRecredits?{collectionFailureRecredits}:{}),
    ...(sameDayExpenses?{sameDayExpenses}:{}),
    ...(trialBalance?{trialBalance}:{}),...(paymentCorrections?{paymentCorrections}:{}),...(fundApplications?{fundApplications}:{}),
    ...(heldTips?{heldTips}:{}),...(invoiceCredits?{invoiceCredits}:{}),...(paidInvoiceCredits?{paidInvoiceCredits}:{}),
@@ -204,7 +211,8 @@ export const financeAccounts={
   check(context.trialBalance&&customerDate(throughOn)&&(accountId===null||customerUuid(accountId))&&(afterLineId===null||customerUuid(afterLineId)));
   const {status,value}=await post('posted-journal',{throughOn,accountId,afterLineId},signal,context.binding);
   check(status===200);
-  return context.refundTransferFees?parseFictionalJournalV12(value,context.businessId,throughOn,accountId,afterLineId)
+  return context.collectionFailureRecredits?parseFictionalJournalV13(value,context.businessId,throughOn,accountId,afterLineId)
+   :context.refundTransferFees?parseFictionalJournalV12(value,context.businessId,throughOn,accountId,afterLineId)
    :context.directReceiptTips?parseFictionalJournalV11(value,context.businessId,throughOn,accountId,afterLineId)
    :context.refundTransfers?parseFictionalJournalV10(value,context.businessId,throughOn,accountId,afterLineId)
    :context.collectionFailures?parseFictionalJournalV9(value,context.businessId,throughOn,accountId,afterLineId)
@@ -411,6 +419,53 @@ export const financeAccounts={
   if(reason)return {state:'refused' as const,reason};
   check(status===200);
   return {state:'ready' as const,options:parseCollectionFailureOptions(value,context.businessId,customerId,originalPaymentId,effectiveOn)};
+ },
+ async collectionFailureRecredits(context:FinanceAccountContext,customerId:string,signal:AbortSignal){
+  check(context.collectionFailureRecredits&&customerUuid(customerId));
+  const {status,value}=await post('payment-recredit-list',{customerId},signal,context.binding);
+  if(status===409&&exact(value,['error'])){
+   const reason=collectionFailureRecreditRefusal(value.error);
+   if(reason)return {state:'refused' as const,reason};
+  }
+  check(status===200);
+  return parseCollectionFailureRecreditList(value,context.businessId,customerId);
+ },
+ async collectionFailureRecreditOptions(context:FinanceAccountContext,customerId:string,failureId:string,actualOn:string,signal:AbortSignal){
+  check(context.collectionFailureRecredits&&customerUuid(customerId)&&customerUuid(failureId)&&customerDate(actualOn));
+  const {status,value}=await post('payment-recredit-options',{customerId,failureId,actualOn},signal,context.binding);
+  if(status===409&&exact(value,['error'])){
+   const reason=collectionFailureRecreditRefusal(value.error);
+   if(reason)return {state:'refused' as const,reason};
+  }
+  check(status===200);
+  return parseCollectionFailureRecreditOptions(value,context.businessId,customerId,failureId,actualOn);
+ },
+ async recordCollectionFailureRecredit(context:FinanceAccountContext,input:ReturnType<typeof parseCollectionFailureRecreditInput>,signal:AbortSignal){
+  check(context.collectionFailureRecredits&&context.writeState==='ready'&&input.reference.recoveryEpoch===context.recoveryEpoch);
+  const change=parseCollectionFailureRecreditInput(input);
+  const {status,value}=await post('payment-recredit-submit',change,signal,context.binding);
+  if(status===409&&exact(value,['error'])){
+   const reason=collectionFailureRecreditRefusal(value.error);
+   if(reason)return {state:'refused' as const,reason};
+  }
+  check(status===200||status===409);
+  const result=parseCollectionFailureRecreditResult(value,context.businessId,change.reference);
+  check(result.state==='conflict'||result.state==='committed'&&collectionFailureRecreditMatchesInput(result.receipt,change));
+  return result;
+ },
+ async lookupCollectionFailureRecredit(context:FinanceAccountContext,reference:ReturnType<typeof parseCollectionFailureRecreditReference>,signal:AbortSignal){
+  check(context.collectionFailureRecredits);
+  const {status,value}=await post('payment-recredit-lookup',parseCollectionFailureRecreditReference(reference),signal,context.binding);
+  check(status===200||status===409);
+  return parseCollectionFailureRecreditResult(value,context.businessId,reference);
+ },
+ async retireCollectionFailureRecredit(context:FinanceAccountContext,reference:ReturnType<typeof parseCollectionFailureRecreditReference>,reason:string,signal:AbortSignal){
+  check(context.collectionFailureRecredits&&context.writeState==='ready'&&customerUuid(context.recoveryEpoch)&&financeAccountReviewReason(reason));
+  const {status,value}=await post('payment-recredit-retire',{reference:parseCollectionFailureRecreditReference(reference),reviewEpoch:context.recoveryEpoch,reason},signal,context.binding);
+  check(status===200||status===409);
+  const result=parseCollectionFailureRecreditResult(value,context.businessId,reference);
+  check(result.state!=='absent'&&(result.state!=='retired'||result.receipt.reviewEpoch===context.recoveryEpoch));
+  return result;
  },
  async collectionFailurePayments(context:FinanceAccountContext,customerId:string,signal:AbortSignal){
   check(context.collectionFailures&&customerUuid(customerId));
@@ -1359,4 +1414,28 @@ export function downloadFinanceHistory(filename:string,rows:readonly (readonly s
  const link=document.createElement('a');
  link.href=url;link.download=filename;link.click();
  window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+type PendingCollectionFailureRecredit=Readonly<{businessId:string;binding:string;customerId:string;reference:ReturnType<typeof parseCollectionFailureRecreditReference>}>;
+const collectionFailureRecreditPendingKey='crest.collection-failure-recredit.pending-reference.v1';
+export function readPendingCollectionFailureRecredit():PendingCollectionFailureRecredit|null{
+ const raw=sessionStorage.getItem(collectionFailureRecreditPendingKey);
+ if(raw===null)return null;
+ check(raw.length<=1000&&(raw.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length===7);
+ const parsed:unknown=JSON.parse(raw);
+ check(exact(parsed,['businessId','binding','customerId','reference'])&&customerUuid(parsed.businessId)
+  &&typeof parsed.binding==='string'&&bindingPattern.test(parsed.binding)&&customerUuid(parsed.customerId));
+ return {businessId:parsed.businessId,binding:parsed.binding,customerId:parsed.customerId,reference:parseCollectionFailureRecreditReference(parsed.reference)};
+}
+export function retainPendingCollectionFailureRecredit(context:FinanceAccountContext,customerId:string,reference:PendingCollectionFailureRecredit['reference']){
+ check(readPendingCollectionFailureRecredit()===null&&customerUuid(customerId));
+ const entry={businessId:context.businessId,binding:context.binding,customerId,reference:parseCollectionFailureRecreditReference(reference)};
+ sessionStorage.setItem(collectionFailureRecreditPendingKey,JSON.stringify(entry));
+ check(JSON.stringify(readPendingCollectionFailureRecredit())===JSON.stringify(entry));
+ return entry;
+}
+export function clearPendingCollectionFailureRecredit(entry:PendingCollectionFailureRecredit){
+ check(JSON.stringify(readPendingCollectionFailureRecredit())===JSON.stringify(entry));
+ sessionStorage.removeItem(collectionFailureRecreditPendingKey);
+ check(readPendingCollectionFailureRecredit()===null);
 }

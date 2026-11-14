@@ -39,7 +39,15 @@ function hasCorrectionFields(row:Journal['rows'][number]):row is CorrectionJourn
   return 'unapplicationId' in row&&'fundLotId' in row;
 }
 function isCollectionAdjustment(row:Journal['rows'][number]):row is Extract<FictionalJournalV9['rows'][number],{template:'P11'}>{
-  return 'collectionFailureId' in row&&row.template==='P11';
+  return 'collectionFailureId' in row&&typeof row.collectionFailureId==='string'&&row.template==='P11';
+}
+function collectionRecredit(row:Journal['rows'][number]){
+  if(!('collectionFailureRecreditId' in row)||typeof row.collectionFailureRecreditId!=='string'
+    ||!('recreditedFailureId' in row)||typeof row.recreditedFailureId!=='string'
+    ||!('recreditedFailureComponentId' in row)||typeof row.recreditedFailureComponentId!=='string'
+    ||!('recreditedPaymentId' in row)||typeof row.recreditedPaymentId!=='string')return null;
+  return {recreditId:row.collectionFailureRecreditId,failureId:row.recreditedFailureId,
+    componentId:row.recreditedFailureComponentId,paymentId:row.recreditedPaymentId};
 }
 function receiptTipReference({template,purpose,paymentId,tipRealizationId}:{
   template:string;purpose:string;paymentId:string|null;tipRealizationId?:string|null;
@@ -99,7 +107,8 @@ export function TrialBalance({businessId}:{businessId:string}){
       const result=await financeAccounts.readPostedJournal(context,balance.throughOn,account||null,next?journal!.nextAfterLineId:null,signal);
       if(signal.aborted)return;
       const balanceVersion=reportVersion(balance);
-      const expectedJournalVersion=balanceVersion===10&&context.refundTransferFees?12
+      const expectedJournalVersion=balanceVersion===10&&context.collectionFailureRecredits?13
+        :balanceVersion===10&&context.refundTransferFees?12
         :balanceVersion===10&&context.directReceiptTips?11:balanceVersion;
       if(reportVersion(result)!==expectedJournalVersion){
         setJournalMessage('Report coverage changed. Reload the trial balance before opening the journal.');
@@ -155,6 +164,7 @@ export function TrialBalance({businessId}:{businessId:string}){
     const includesTipReturns=reportVersion(journal)>=8;
     const includesCollectionFailures=reportVersion(journal)>=9;
     const includesRefundTransfers=reportVersion(journal)>=10;
+    const includesCollectionRecredits=reportVersion(journal)>=13;
     downloadFinanceHistory('crest-fictional-journal-page-'+journal.throughOn+'.csv',[
       ['Through date','Timezone','Currency','Observed UTC','Coverage'],
       [journal.throughOn,journal.timeZone,journal.currency,journal.observedAt,'Current page of the fictional partial ledger.'],
@@ -166,8 +176,11 @@ export function TrialBalance({businessId}:{businessId:string}){
         ...(includesInvoiceCredits?['Invoice credit ID']:[]),...(includesServiceRefunds?['Service refund ID']:[]),
         ...(includesExcessReturns?['Unused payment return ID']:[]),...(includesTipReturns?['Tip return ID']:[]),
         ...(includesCollectionFailures?['Payment adjustment ID','Payment adjustment component ID','Adjustment type','Original payment ID']:[]),
-        ...(includesRefundTransfers?['Refund transfer adjustment ID','Refund transfer type','Prior refund event ID','Original refund event ID']:[])],
-      ...journal.rows.map(row=>[row.effectiveOn,row.code,row.name,row.purpose,row.debitCents,row.creditCents,row.entryId,row.eventId,row.operationId,
+        ...(includesRefundTransfers?['Refund transfer adjustment ID','Refund transfer type','Prior refund event ID','Original refund event ID']:[]),
+        ...(includesCollectionRecredits?['Restored deposit ID','Original failure ID','Original failure component ID','Restored payment ID']:[])],
+      ...journal.rows.map(row=>{
+       const recredit=collectionRecredit(row);
+       return [row.effectiveOn,row.code,row.name,row.purpose,row.debitCents,row.creditCents,row.entryId,row.eventId,row.operationId,
         ...(hasCorrectionFields(row)?[row.template,row.unapplicationId??'',row.fundLotId??'']:[]),
         ...(includesFundsApplications?['fundApplicationId' in row?row.fundApplicationId??'':'']:[]),
         ...(includesHeldTips?['tipRealizationId' in row?row.tipRealizationId??'':'']:[]),
@@ -180,7 +193,10 @@ export function TrialBalance({businessId}:{businessId:string}){
           :['','','','']:[]),
         ...(includesRefundTransfers?isRefundTransfer(row)
           ?[row.refundTransferAdjustmentId,row.refundTransferKind,row.priorRefundEventId,row.originalRefundEventId]
-          :['','','','']:[])]),
+          :['','','','']:[]),
+        ...(includesCollectionRecredits?[recredit?.recreditId??'',recredit?.failureId??'',
+          recredit?.componentId??'',recredit?.paymentId??'']:[])];
+      }),
     ]);
   }
   return <details className="review-card" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
@@ -269,6 +285,7 @@ export function TrialBalance({businessId}:{businessId:string}){
                 const tipReturned='tipReturnId' in row&&row.template==='P10'?row:null;
                 const adjustment=isCollectionAdjustment(row)?row:null;
                 const refundTransfer=isRefundTransfer(row)?row:null;
+                const recredit=collectionRecredit(row);
                 return <tr key={row.lineId}>
                   <th scope="row">
                     <time dateTime={row.effectiveOn}>{row.effectiveOn}</time><small>{row.code} · {row.name}</small>
@@ -306,6 +323,15 @@ export function TrialBalance({businessId}:{businessId:string}){
                       <details><summary>Source references</summary>
                         <small>Adjustment {adjustment.collectionFailureId}</small>
                         <small>Original payment {adjustment.originalPaymentId}</small>
+                      </details>
+                    </>}
+                    {recredit&&<>
+                      <small>{String(row.purpose)==='collection_recredit_money'?'Failed payment restored · Verified deposit'
+                        :'Failed payment restored · Customer funds available'}</small>
+                      <details><summary>Source references</summary>
+                        <small>Restored deposit {recredit.recreditId}</small>
+                        <small>Original payment {recredit.paymentId}</small>
+                        <small>Original failure {recredit.failureId}</small>
                       </details>
                     </>}
                     {refundTransfer&&<>

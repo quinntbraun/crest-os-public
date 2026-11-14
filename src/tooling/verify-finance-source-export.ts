@@ -10,6 +10,7 @@ import {isExcessReturnOperation,verifyExcessReturnSourceClosure} from '../bookke
 import {isTipReturnOperation,verifyTipReturnSourceClosure} from '../bookkeeping/tip-return-source.ts';
 import {isCollectionFailureOperation,verifyCollectionFailureSourceClosure} from '../bookkeeping/collection-failure-source.ts';
 import {isRefundTransferOperation,verifyRefundTransferSourceClosure} from '../bookkeeping/refund-transfer-source.ts';
+import {isCollectionFailureRecreditOperation,verifyCollectionFailureRecreditSourceClosure} from '../bookkeeping/collection-failure-recredit-source.ts';
 import {isRefundTransferFeeOperation} from '../bookkeeping/refund-transfer-fee-source.ts';
 import {isDirectReceiptTipOperation,verifyDirectReceiptTipSourceClosure} from '../bookkeeping/direct-receipt-tip-source.ts';
 
@@ -42,14 +43,14 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
   const manifest=record(manifestText),version=manifest.schemaVersion;
   require(exact(manifest,['schemaVersion','scope','businessId','currency','observedAt','historySnapshotToken','sourceTokens',
     'rowCounts','historyCounts','completePortableExport','referenceClosureComplete','completeBackup','files'])
-    &&(version===1||version===2||version===3||version===4||version===5||version===6||version===7||version===8||version===9||version===10||version===11||version===12||version===13||version===14)
+    &&(version===1||version===2||version===3||version===4||version===5||version===6||version===7||version===8||version===9||version===10||version===11||version===12||version===13||version===14||version===15)
     &&manifest.scope==='crest.posted-finance-source.v'+version&&manifest.businessId===businessId
     &&manifest.currency==='USD'&&typeof manifest.observedAt==='string'&&Number.isFinite(Date.parse(manifest.observedAt))
     &&token(manifest.historySnapshotToken)&&manifest.completePortableExport===false&&manifest.referenceClosureComplete===false
     &&manifest.completeBackup===false);
   const sourceNames=['invoice','receipt','expense',...(version>=2?['correction']:[]),...(version>=3?['application']:[]),
     ...(version>=4?['tip']:[]),...(version>=5?['credit']:[]),...(version>=6?['paired']:[]),...(version>=7?['refund']:[]),
-    ...(version>=9?['excessReturn']:[]),...(version>=10?['tipReturn']:[]),...(version>=11?['collectionFailure']:[]),...(version>=12?['refundTransfer']:[]),...(version>=13?['directTip']:[]),...(version>=14?['refundFee']:[])];
+    ...(version>=9?['excessReturn']:[]),...(version>=10?['tipReturn']:[]),...(version>=11?['collectionFailure']:[]),...(version>=12?['refundTransfer']:[]),...(version>=13?['directTip']:[]),...(version>=14?['refundFee']:[]),...(version>=15?['failureRecredit']:[])];
   require(exact(manifest.sourceTokens,sourceNames)&&Object.values(manifest.sourceTokens).every(token));
   const tables=financeSourceTables(version),expectedNames=new Set([...names,...tables.flatMap(({name})=>[name+'.csv',name+'_escape_map.json'])]);
   require(exact(manifest.rowCounts,tables.map(table=>table.name))&&Object.values(manifest.rowCounts).every(count)
@@ -116,6 +117,7 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
       require(version>=12||kind!=='operation'||!isRefundTransferOperation(evidence.row as Row));
       require(version>=13||kind!=='operation'||!isDirectReceiptTipOperation(evidence.row as Row));
       require(version>=14||kind!=='operation'||!isRefundTransferFeeOperation(evidence.row as Row));
+      require(version>=15||kind!=='operation'||!isCollectionFailureRecreditOperation(evidence.row as Row));
       if(version>=4)history[kind].push(evidence.row as Row);
     }
   }
@@ -133,7 +135,7 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
   require(entries.size===balances.size&&[...balances.values()].every(balance=>balance.debit===balance.credit));
   if(version>=4)verifyHeldTipSourceClosure(table=>version>=7&&table==='fund_lot_range_consumptions'
     ?decoded.get(table)!.filter(row=>row.service_refund_id===null&&(version<9||row.excess_return_id===null)
-      &&(version<11||row.collection_failure_component_id===null)):decoded.get(table)!,history,version>=13);
+      &&(version<11||row.collection_failure_component_id===null)):decoded.get(table)!,history,version>=13,version>=15);
   if(version===5)verifyInvoiceCreditSourceClosure(table=>decoded.get(table)!,history);
   if(version>=6)verifyPairedInvoiceCreditSourceClosure(table=>decoded.get(table)!,history);
   const originalRefundRows=(table:string)=>version>=12&&table==='financial_events'
@@ -152,6 +154,11 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
     for(const lot of decoded.get('customer_fund_lots')!){
       if(version>=13&&lot.receipt_tip_event_id!==null){
         require(customerUuid(lot.receipt_tip_event_id)&&lot.receipt_event_id===null&&lot.unapplication_id===null&&!byLot.has(lot.id));
+        continue;
+      }
+      if(version>=15&&lot.collection_failure_recredit_event_id!==null){
+        require(customerUuid(lot.collection_failure_recredit_event_id)&&lot.unapplication_id===null&&lot.receipt_event_id===null
+          &&lot.receipt_tip_event_id===null&&!byLot.has(lot.id));
         continue;
       }
       if(lot.receipt_event_id===null){require(customerUuid(lot.unapplication_id)&&!byLot.has(lot.id));continue;}
@@ -211,9 +218,12 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
   if(version>=9)verifyExcessReturnSourceClosure(originalRefundRows,history);
   if(version>=10)verifyTipReturnSourceClosure(table=>version>=11&&table==='tip_realization_range_consumptions'
     ?decoded.get(table)!.filter(row=>row.collection_failure_component_id===null):originalRefundRows(table),history);
-  if(version>=11)verifyCollectionFailureSourceClosure(table=>decoded.get(table)!,history);
-  if(version>=12)verifyRefundTransferSourceClosure(table=>decoded.get(table)!,history,version>=14);
+  const beforeRecredit=(table:string)=>version>=15&&table==='financial_events'
+    ?decoded.get(table)!.filter(row=>row.collection_failure_recredit_id===null):decoded.get(table)!;
+  if(version>=11)verifyCollectionFailureSourceClosure(beforeRecredit,history);
+  if(version>=12)verifyRefundTransferSourceClosure(beforeRecredit,history,version>=14);
   if(version>=13)verifyDirectReceiptTipSourceClosure(table=>decoded.get(table)!,history);
+  if(version>=15)verifyCollectionFailureRecreditSourceClosure(table=>decoded.get(table)!,history);
   const totals=[...balances.values()].reduce((sum,balance)=>sum+balance.debit,0n).toString();
   return Object.freeze({verified:true,profile:manifest.scope,files:files.size,sourceRows:rows,
     balancedJournalEntries:balances.size,debitCents:totals,creditCents:totals,

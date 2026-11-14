@@ -29,7 +29,8 @@ const collectionFailureExport=process.env.CREST_TEST_COLLECTION_FAILURE_EXPORT==
 const refundTransferExport=process.env.CREST_TEST_REFUND_TRANSFER_EXPORT==='1';
 const directReceiptTipExport=process.env.CREST_TEST_DIRECT_RECEIPT_TIP_EXPORT==='1';
 const refundTransferFeeExport=process.env.CREST_TEST_REFUND_TRANSFER_FEE_EXPORT==='1';
-const postedFinanceSchemaVersion=refundTransferFeeExport?98:directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
+const collectionFailureRecreditExport=process.env.CREST_TEST_COLLECTION_FAILURE_RECREDIT_EXPORT==='1';
+const postedFinanceSchemaVersion=collectionFailureRecreditExport?99:refundTransferFeeExport?98:directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
@@ -836,7 +837,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const {['manifest.json']:manifestBytes,['export_delivery.json']:deliveryBytes,...parts}=unzipSync(archive);
         const manifest=strFromU8(manifestBytes),delivery=JSON.parse(strFromU8(deliveryBytes));
         const verified=verifyFinanceSourceExport(manifest,Object.entries(parts).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
-        const exportProfile=refundTransferFeeExport?'crest.posted-finance-source.v14':directReceiptTipExport?'crest.posted-finance-source.v13':refundTransferExport?'crest.posted-finance-source.v12':collectionFailureExport?'crest.posted-finance-source.v11':tipReturnExport?'crest.posted-finance-source.v10':excessReturnExport?'crest.posted-finance-source.v9':excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
+        const exportProfile=collectionFailureRecreditExport?'crest.posted-finance-source.v15':refundTransferFeeExport?'crest.posted-finance-source.v14':directReceiptTipExport?'crest.posted-finance-source.v13':refundTransferExport?'crest.posted-finance-source.v12':collectionFailureExport?'crest.posted-finance-source.v11':tipReturnExport?'crest.posted-finance-source.v10':excessReturnExport?'crest.posted-finance-source.v9':excessReceipts?'crest.posted-finance-source.v8':'crest.posted-finance-source.v7';
         assert.equal(verified.profile,exportProfile);
         assert.equal(verified.completePortableExport,false);
         assert.equal(delivery.sourceSchemaVersion,postedFinanceSchemaVersion);
@@ -981,7 +982,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           WHERE o.business_id=$1 AND o.payment_id=$2`,[fixture.business,committed.paymentId])).rows;
          assert.deepEqual(funds,[{origin:committed.fundingOriginId,lot:committed.heldFunds.lotId,cents:'1234',unapplication:null,
           event:committed.eventId,mapping:mappingId,partition:committed.heldFunds.fundingPartitionId,first:'1',last:'1234',partitions:1,allocations:0}]);
-         let returned,adjustment,recredit,refundRetry,directTip;
+         let returned,adjustment,recredit,refundRetry,directTip,incomingRecredit;
          if(excessReturnExport){
           await allowInvoiceReadWindow();
           await openReturn(committed.actualOn);
@@ -1145,7 +1146,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
             await transfer.getByLabel('How you verified settlement',{exact:true}).fill('Fictional owner verified settlement');
             await transfer.getByLabel('Reason for the transfer',{exact:true}).fill('Fictional returned disbursement');
             if(withFee){
-             await transfer.locator('summary').filter({hasText:'Fee withheld from the return'}).press('Enter');
+             await transfer.getByText('Fee withheld from the return',{exact:true}).press('Enter');
              await transfer.getByLabel('Fee withheld (USD, optional)',{exact:true}).fill('0.05');
              await transfer.getByRole('button',{name:'Check fee account',exact:true}).press('Enter');
              await expect(transfer).toContainText('Fictional provider fees');
@@ -1207,6 +1208,97 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            const csv=page.waitForEvent('download');
            await transfer.getByRole('button',{name:'Download refund transfer (CSV)',exact:true}).press('Enter');
            assert((await readFile(await (await csv).path(),'utf8')).includes(refundRetry.refundTransferAdjustmentId));
+          }
+          if(collectionFailureRecreditExport){
+           await allowInvoiceReadWindow();
+           const {rows:[customer]}=await fixture.client.query('SELECT display_name FROM crest.customers WHERE business_id=$1 AND id=$2',
+            [fixture.business,adjustment.customerId]);
+           assert(customer?.display_name);
+           async function openRecovery(){
+            await page.goto(fixture.origin+'/customers');
+            await page.getByRole('button',{name:customer.display_name,exact:true}).press('Enter');
+            const restore=page.getByRole('region',{name:'Restore a failed payment',exact:true});
+            await page.locator('summary').filter({hasText:'Restore a failed payment'}).press('Enter');
+            await expect(restore).toBeVisible();
+            return restore;
+           }
+           const restore=await openRecovery();
+           await restore.getByRole('button',{name:'Load failed payments',exact:true}).press('Enter');
+           const status=restore.locator(':scope > [role="status"]');
+           await expect(status).toHaveText('Choose the failed payment that the provider credited back.');
+           await restore.getByLabel('Failed payment',{exact:true}).selectOption(adjustment.collectionFailureId);
+           await restore.getByLabel('Date the deposit cleared',{exact:true}).fill(committed.actualOn);
+           await allowInvoiceReadWindow();
+           await restore.getByRole('button',{name:'Check available funds',exact:true}).press('Enter');
+           await expect(status).toHaveText('Enter the verified deposit and select the saved funds it restores.');
+           await restore.getByLabel('Amount deposited (USD)',{exact:true}).fill('0.10');
+           await restore.getByLabel('Bank or wallet credited',{exact:true}).selectOption({label:'Fictional checking'});
+           await restore.getByLabel('Reference type',{exact:true}).fill('ledger');
+           const transaction='fictional-collection-recredit-restore';
+           await restore.getByLabel('Transaction ID',{exact:true}).fill(transaction);
+           await restore.getByLabel('Statement reference',{exact:true}).fill('Fictional provider deposit statement');
+           await restore.getByLabel('How you verified the deposit',{exact:true}).fill('Confirmed against the settled fictional deposit on the bank statement.');
+           await restore.getByLabel('Reason for this recovery',{exact:true}).fill('Fictional provider recovered part of the original failed payment.');
+           const save=restore.getByRole('button',{name:'Record restored payment',exact:true});
+           await expect(save).toBeEnabled();
+           for(const width of [360,390,768,1440]){
+            await page.setViewportSize({width,height:900});await save.scrollIntoViewIfNeeded();
+            assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+            assert.deepEqual((await new AxeBuilder({page}).include('[aria-label="Restore a failed payment"]')
+             .withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+            await page.screenshot({path:'.local/review/finance-collection-recredit-'+name+'-'+width+'.png'});
+           }
+           await allowInvoiceReadWindow();
+           let submitted=0;
+           await page.route('**/api/business/finance-accounts/payment-recredit-submit',async route=>{
+            submitted++;
+            const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+            if(response.status()!==200){await route.fulfill({response});return;}
+            incomingRecredit=(await response.json()).receipt;
+            await route.abort('failed');
+           },{times:1});
+           await save.press('Enter');
+           await expect(status).toContainText('could not confirm the save');
+           assert.deepEqual([incomingRecredit?.failureId,incomingRecredit?.originalPaymentId,incomingRecredit?.cents,
+            incomingRecredit?.firstCent,incomingRecredit?.lastCent],[adjustment.collectionFailureId,committed.paymentId,'10','101','110']);
+           const key='crest.collection-failure-recredit.pending-reference.v1';
+           const raw=await page.evaluate(key=>sessionStorage.getItem(key),key);
+           assert(raw&&!raw.includes(transaction));
+           const original=JSON.parse(raw);
+           assert.deepEqual(Object.keys(original).sort(),['binding','businessId','customerId','reference']);
+           assert.deepEqual(Object.keys(original.reference).sort(),['operationId','recoveryEpoch','recreditId']);
+           await allowInvoiceReadWindow();
+           const recovered=await openRecovery();
+           await recovered.getByRole('button',{name:'Check original save',exact:true}).press('Enter');
+           await expect(recovered.locator(':scope > [role="status"]')).toHaveText('Crest found the saved deposit and restored funds.');
+           await expect(recovered).toContainText('$0.10 restored to available customer funds.');
+           assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),null);
+           assert.equal(submitted,1);
+           const csv=page.waitForEvent('download');
+           await recovered.getByRole('button',{name:'Download restored payment (CSV)',exact:true}).press('Enter');
+           const output=await csv;
+           assert.equal(output.suggestedFilename(),'crest-restored-payment.csv');
+           assert((await readFile(await output.path(),'utf8')).includes(incomingRecredit.recreditId));
+           await allowInvoiceReadWindow();
+           await page.goto(fixture.origin+job);
+           await draftDisclosure.click();
+           await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+           await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
+           await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+           await expect(draftStatus).toHaveText('Issued invoice loaded.');
+           await invoice.locator('summary').filter({hasText:'Apply customer funds'}).press('Enter');
+           const application=invoice.getByRole('region',{name:'Apply customer funds',exact:true});
+           await allowInvoiceReadWindow();
+           await application.getByRole('button',{name:'Load available funds',exact:true}).press('Enter');
+           await application.getByLabel('Held funds',{exact:true}).selectOption(incomingRecredit.fundLotId);
+           await application.getByLabel('Amount to apply',{exact:true}).fill('0.04');
+           await application.getByLabel('Reason for applying funds',{exact:true}).fill('Fictional customer applied part of restored funds.');
+           await application.getByRole('button',{name:'Apply funds to invoice',exact:true}).press('Enter');
+           await expect(application.getByRole('status')).toContainText('Funds applied.');
+           const applyCsv=page.waitForEvent('download');
+           await application.getByRole('button',{name:'Download funds application (CSV)',exact:true}).press('Enter');
+           const applicationFile=await readFile(await (await applyCsv).path(),'utf8');
+           assert(applicationFile.includes('Restored deposit event ID')&&applicationFile.includes(incomingRecredit.eventId));
           }
           if(directReceiptTipExport){
            await allowInvoiceReadWindow();
@@ -1311,6 +1403,17 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           const journalText=await readFile(await (await journalCsv).path(),'utf8');
           assert(journalText.includes('Unused payment return ID')&&journalText.includes(returned.excessReturnId));
           if(adjustment)assert(journalText.includes('Original payment ID')&&journalText.includes(adjustment.collectionFailureId));
+          if(incomingRecredit){
+           const account=trial.getByRole('combobox',{name:'Account (optional)',exact:true});
+           await allowInvoiceReadWindow();
+           await account.selectOption({label:'2000 · Fictional customer funds'});
+           await trial.getByRole('button',{name:'Load journal entries',exact:true}).press('Enter');
+           await expect(trial).toContainText('Failed payment restored · Customer funds available');
+           const download=page.waitForEvent('download');
+           await trial.getByRole('button',{name:'Download journal page CSV',exact:true}).press('Enter');
+           const text=await readFile(await (await download).path(),'utf8');
+           assert(text.includes('Restored deposit ID')&&text.includes(incomingRecredit.recreditId));
+          }
           if(refundTransferFeeExport){
            const account=trial.getByRole('combobox',{name:'Account (optional)',exact:true});
            await allowInvoiceReadWindow();
@@ -1362,6 +1465,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          }
          if(refundRetry)assert(strFromU8(excessParts['refund_transfer_adjustments.csv']).includes(refundRetry.refundTransferAdjustmentId));
          if(refundTransferFeeExport)assert(strFromU8(excessParts['refund_transfer_embedded_fees.csv']).includes(recredit.refundTransferAdjustmentId));
+         if(incomingRecredit)assert(strFromU8(excessParts['collection_failure_recredits.csv']).includes(incomingRecredit.recreditId));
          if(directTip){
           assert(strFromU8(excessParts['tip_realizations.csv']).includes(directTip.tip.tipRealizationId));
           assert(lots.split(/\r?\n/)[0].includes('receipt_tip_event_id'));

@@ -275,7 +275,7 @@ export function RefundTransferAdjustment({businessId,customerId}:{businessId:str
                 <button type="button" className="secondary" disabled={busy} onClick={loadFeeMapping}>Check fee account</button>
                 <p ref={feeStatus} role="status" tabIndex={-1}>{feeMessage}</p>
                 {feeMapping&&<p className="field-help">Fee account · {feeMapping.label}</p>}
-                <label>How you verified the withheld fee<textarea rows={2} maxLength={1000} value={form.feeConfirmation}
+                <label>How you verified the withheld fee<textarea rows={3} maxLength={1000} value={form.feeConfirmation}
                   onChange={event=>field('feeConfirmation',event.target.value)}/></label>
                 <details className="direct-receipt-options">
                   <summary>Separate provider reference, if supplied</summary>

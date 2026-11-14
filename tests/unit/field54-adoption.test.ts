@@ -83,6 +83,8 @@ import registered94 from '../support/registered94-migration-checksums.json';
 import registered95 from '../support/registered95-migration-checksums.json';
 import registered96 from '../support/registered96-migration-checksums.json';
 import registered97 from '../support/registered97-migration-checksums.json';
+import registered98 from '../support/registered98-migration-checksums.json';
+import {collectionFailureRecreditSourceColumns,collectionFailureRecreditSourceCoverage} from '../../src/bookkeeping/collection-failure-recredit-source.ts';
 import {refundTransferFeeSourceCoverage} from '../../src/bookkeeping/refund-transfer-fee-source.ts';
 import {directReceiptTipSourceAddedColumns} from '../../src/bookkeeping/direct-receipt-tip-source.ts';
 import {tipReturnSourceAddedColumns,tipReturnSourceCoverage} from '../../src/bookkeeping/tip-return-source.ts';
@@ -561,16 +563,19 @@ it('preserves the registered failed-payment lineage migration',()=>{
  expect(registered95.migrations.at(-1)).toMatchObject({version:'20261219180000',file:'20261219180000_fictional_collection_failure.sql'});
  expect(()=>validateMigrationSet(registered95 as MigrationRegistry,new Map(registered95.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered94 as MigrationRegistry)).not.toThrow();
 });
-it('retains refund and direct-tip lineage and adds the returned-refund fee source',()=>{
+it('retains refund and tip lineage and adds the recovered payment sources',()=>{
  expect(registered96.migrations).toHaveLength(96);
  expect(registered96.migrations.at(-1)).toMatchObject({version:'20261220180000',file:'20261220180000_fictional_refund_transfer.sql'});
  expect(()=>validateMigrationSet(registered96 as MigrationRegistry,new Map(registered96.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered95 as MigrationRegistry)).not.toThrow();
  expect(registered97.migrations).toHaveLength(97);
  expect(registered97.migrations.at(-1)).toMatchObject({version:'20261221180000',file:'20261221180000_fictional_direct_receipt_tip.sql'});
  expect(()=>validateMigrationSet(registered97 as MigrationRegistry,new Map(registered97.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered96 as MigrationRegistry)).not.toThrow();
- expect(currentRegistry.migrations).toHaveLength(98);
- expect(currentRegistry.migrations.at(-1)).toMatchObject({version:'20261222180000',file:'20261222180000_fictional_refund_transfer_withheld_fee.sql'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered97 as MigrationRegistry)).not.toThrow();
+ expect(registered98.migrations).toHaveLength(98);
+ expect(registered98.migrations.at(-1)).toMatchObject({version:'20261222180000',file:'20261222180000_fictional_refund_transfer_withheld_fee.sql'});
+ expect(()=>validateMigrationSet(registered98 as MigrationRegistry,new Map(registered98.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered97 as MigrationRegistry)).not.toThrow();
+ expect(currentRegistry.migrations).toHaveLength(99);
+ expect(currentRegistry.migrations.at(-1)).toMatchObject({version:'20261223180000',file:'20261223180000_fictional_collection_failure_held_recredit.sql'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered98 as MigrationRegistry)).not.toThrow();
  const excessFields=new Map(Object.entries(excessReturnSourceAddedColumns)),tipFields=new Map(Object.entries(tipReturnSourceAddedColumns));
  const failureFields=new Map(Object.entries(collectionFailureSourceAddedColumns));
  const tables=[...coverage92.tables.map(row=>({...row,required:[...row.required,...excessFields.get(row.table)??[],...tipFields.get(row.table)??[]]})),
@@ -580,8 +585,10 @@ it('retains refund and direct-tip lineage and adds the returned-refund fee sourc
  const withTransfers=[...withFailures.map(row=>({...row,required:[...row.required,...transferFields.get(row.table)??[]]})),...refundTransferSourceCoverage];
  const directTipFields=new Map(Object.entries(directReceiptTipSourceAddedColumns));
  const withDirectTips=withTransfers.map(row=>({...row,required:[...row.required,...directTipFields.get(row.table)??[]]}));
- expect(currentCoverage).toEqual({...coverage92,migrationCount:98,tables:[...withDirectTips,refundTransferFeeSourceCoverage]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:98});
+ const recreditFields=new Map(Object.entries(collectionFailureRecreditSourceColumns));
+ const withFee=[...withDirectTips,refundTransferFeeSourceCoverage].map(row=>({...row,required:[...row.required,...recreditFields.get(row.table)??[]]}));
+ expect(currentCoverage).toEqual({...coverage92,migrationCount:99,tables:[...withFee,collectionFailureRecreditSourceCoverage]});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:99});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');
