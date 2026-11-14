@@ -13,7 +13,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  const selected=process.argv[2],files=browserGroupFiles(command,selected),args=['--test','--test-reporter=tap','--test-concurrency=1',...files];
  const scenario=browserScenario(selected),finance=selected==='records'||scenario!==undefined;
  console.log('REQUIRED_BROWSER_GROUP '+JSON.stringify({group:selected,files}));
- const env={...process.env,CREST_TEST_COLLECTION_FAILURE_GROUPED_RECREDIT_EXPORT:'0',CREST_TEST_COLLECTION_FAILURE_RECREDIT_EXPORT:'0',CREST_TEST_REFUND_TRANSFER_FEE_EXPORT:'0',CREST_TEST_DIRECT_RECEIPT_TIP_EXPORT:'0',CREST_TEST_REFUND_TRANSFER_EXPORT:'0',CREST_TEST_COLLECTION_FAILURE_EXPORT:'0',CREST_TEST_PAYMENT_CORRECTIONS:finance?'1':'0',
+ const env={...process.env,CREST_TEST_RESTORED_TIP_EXPORT:'0',CREST_TEST_COLLECTION_FAILURE_GROUPED_RECREDIT_EXPORT:'0',CREST_TEST_COLLECTION_FAILURE_RECREDIT_EXPORT:'0',CREST_TEST_REFUND_TRANSFER_FEE_EXPORT:'0',CREST_TEST_DIRECT_RECEIPT_TIP_EXPORT:'0',CREST_TEST_REFUND_TRANSFER_EXPORT:'0',CREST_TEST_COLLECTION_FAILURE_EXPORT:'0',CREST_TEST_PAYMENT_CORRECTIONS:finance?'1':'0',
    CREST_TEST_FUND_APPLICATIONS:finance?'1':'0',CREST_TEST_HELD_TIPS:finance?'1':'0',CREST_TEST_INVOICE_CREDITS:finance?'1':'0',CREST_TEST_PAID_INVOICE_CREDITS:finance?'1':'0',CREST_TEST_SERVICE_REFUNDS:finance?'1':'0',CREST_TEST_RECEIVABLE_AGING:finance?'1':'0',CREST_TEST_CUSTOMER_FUNDS_REPORT:finance?'1':'0',CREST_TEST_EXCESS_RECEIPTS:'0',CREST_TEST_RECEIPT_FUNDS_APPLICATION:'0',CREST_TEST_EXCESS_RETURN_EXPORT:'0',CREST_TEST_TIP_RETURN_EXPORT:'0',CREST_TEST_POSTED_FINANCE_EXPORT:finance?'1':'0',...scenario};
  const run=(testArgs,testEnv)=>{
   const child=spawn(process.execPath,testArgs,{stdio:'inherit',windowsHide:true,env:testEnv});
@@ -32,6 +32,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
   'receipt-funds':['finance-invoice-issue-product','finance-direct-receipt','finance-apply-received-funds'],
   'payment-recovery':['finance-excess-receipt','finance-excess-return','finance-tip-return','finance-collection-failure','finance-refund-transfer',
    'finance-direct-tip','finance-refund-transfer-fee','finance-collection-recredit','finance-grouped-recredit','finance-posted-export'],
+  'restored-tip':['finance-restored-tip'],
   field:['field-departure','field-pause','completion-editor','completion-saved','mileage-form','mileage-split','mileage-saved','field-cancellation','field-work-time','field-work-boundary','mileage-departure-correction','completion-outcome','completion-history','field-maintenance-history','completion-invoice-preparation','completion-invoice-draft'],
   custody:['field-dropoff-intake','field-dropoff-work','field-dropoff-cancellation','field-dropoff-completion',
    'field-dropoff-collections','field-dropoff-history','field-dropoff-policy-revision',

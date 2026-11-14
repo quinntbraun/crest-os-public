@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { customerDate, customerUuid, exactCustomerObject as exact } from '../customer/customer-contract.ts';
-import { creditRangeComponents } from './credit-ranges.ts';
+import {createTipSourceLineage} from './restored-tip-source.ts';
 import { isFinanceCents } from './finance-inclusive-charge.ts';
 
 const failureFields = ['id', 'business_id', 'payment_id', 'original_event_id', 'kind', 'channel_version_id', 'money_account_id',
@@ -99,17 +99,17 @@ function parseHistory(operation: Row, audit: Row) {
 type Debit = { purpose: string; accountId: unknown; cents: bigint; mappingId: unknown; lotId: unknown; receivableId: unknown };
 
 export function verifyCollectionFailureSourceClosure(read: (table: string) => readonly Row[],
-  history: Readonly<{ operation: readonly Row[]; audit_event: readonly Row[] }>) {
+  history: Readonly<{ operation: readonly Row[]; audit_event: readonly Row[] }>, restoredTips=false) {
   const failures = index(read('collection_failures')), components = read('collection_failure_components');
   const componentsByFailure = group(components, 'collection_failure_id');
   const events = read('financial_events'), eventById = index(events), groupsById = index(read('atomic_finance_groups'));
-  const failureEvents = index(events.filter(row => row.template === 'P11'), 'collection_failure_id');
+  const failureEvents = index(events.filter(row => row.template === 'P11'&&row.collection_failure_id!==null), 'collection_failure_id');
   const payments = index(read('payments')), roots = index(read('funding_origins'), 'payment_id');
   const parts = index(read('funding_partitions')), allocations = index(read('allocation_events'));
   const unapplications = index(read('allocation_unapplications')), releasesByAllocation = group([...unapplications.values()], 'allocation_id');
   const applications = index(read('customer_fund_applications')), applicationEvents = index(events.filter(row => row.template === 'P04'), 'fund_application_id');
   const lots = index(read('customer_fund_lots')), unapplyEvents = index(events.filter(row => row.template === 'P05'), 'unapplication_id');
-  const tips = index(read('tip_realizations')), tipEvents = index(events.filter(row => row.template === 'P06' || row.template === 'P03' && row.tip_realization_id != null), 'tip_realization_id');
+  const tips = index(read('tip_realizations')), tipLineage=createTipSourceLineage(read,restoredTips);
   const receivables = index(read('receivable_items'));
   const funds = read('fund_lot_range_consumptions'), tipsUsed = read('tip_realization_range_consumptions');
   const fundClaims = index(funds.filter(row => row.collection_failure_component_id !== null), 'collection_failure_component_id');
@@ -124,8 +124,8 @@ export function verifyCollectionFailureSourceClosure(read: (table: string) => re
     && operations.size === failures.size && audits.size === failures.size
     && events.every(row => row.template === 'P11' || row.collection_failure_id === null));
 
-  for (const [paymentId, portions] of group(components, 'payment_id')) {
-    const root = roots.get(paymentId);
+  for (const portions of group(components.map(row=>({...row,generationKey:JSON.stringify([row.payment_id,row.restored_tip_generation_id??null])})), 'generationKey').values()) {
+    const root = roots.get(portions[0]?.payment_id);
     check(root);
     const ranges = portions.map(row => ({ first: cents(row.root_first_cent), last: cents(row.root_last_cent) }))
       .sort((a, b) => a.first < b.first ? -1 : 1);
@@ -184,6 +184,9 @@ export function verifyCollectionFailureSourceClosure(read: (table: string) => re
 
     for (const component of [...selected].sort((a,b) => cents(a.root_first_cent) < cents(b.root_first_cent) ? -1 : 1)) {
       const range = offsets(component);
+      check(!restoredTips||component.restored_tip_generation_id==null&&tips.get(component.tip_realization_id)?.restored_settlement_component_id==null
+        ||component.restored_tip_generation_id===component.tip_realization_id&&saved.kind==='settled_failure'
+          &&tips.get(component.tip_realization_id)?.restored_settlement_component_id!=null);
       check(component.payment_id === payment.id && component.business_id === saved.business_id
         && [component.allocation_id,component.fund_application_id,component.fund_lot_id,component.tip_realization_id]
           .filter(source => source !== null).length === 1);
@@ -230,12 +233,11 @@ export function verifyCollectionFailureSourceClosure(read: (table: string) => re
           && claim.first_cent === component.first_cent && claim.last_cent === component.last_cent && claim.tip_return_id === null
           && usedByTip.get(tip.id)?.every(other => other.id === claim.id || !overlaps(range,offsets(other))));
         countedClaims.add(claim.id);
-        const split = creditRangeComponents({inclusiveCents:cents(tip.inclusive_cents),netCents:cents(tip.net_cents),
-          taxCents:cents(tip.tax_cents),discountCents:0n},[range]);
+        const split = tipLineage.split(tip,[range]);
         net = split.netCents; tax = split.taxCents;
         const start = cents(tip.first_cent)-1n;
         rootRange = {first:start+range.first,last:start+range.last};
-        kind = 'tip'; sourceId = tip.id; parent = tipEvents.get(tip.id);
+        kind = 'tip'; sourceId = tip.id; parent = tipLineage.posting(tip);
         debits = [
           {purpose:'collection_failure_tip_revenue',accountId:tip.revenue_account_id,cents:net,mappingId:tip.revenue_mapping_id,lotId:null,receivableId:null},
           {purpose:'collection_failure_tip_tax',accountId:tip.tax_account_id,cents:tax,mappingId:null,lotId:null,receivableId:null},

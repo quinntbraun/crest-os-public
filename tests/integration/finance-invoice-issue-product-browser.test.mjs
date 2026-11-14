@@ -212,6 +212,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
      await expect(draftStatus).toHaveText('Saved invoice draft loaded.');
      await expand.click();
+     await allowInvoiceReadWindow();
      await check.press('Enter');
      const invoice=saved.getByRole('region',{name:'Issued invoice',exact:true});
      await expect(invoice.getByRole('heading',{name:'Invoice TEST-1'})).toBeVisible();

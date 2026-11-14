@@ -94,7 +94,7 @@ function columnType(column){
 
 export async function exerciseNeutralFinanceImport(connection,files,businessId,{
   includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,
-  includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,includeCollectionFailureRecredits=false,includeCollectionFailureGroupedRecredits=false,
+  includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,includeCollectionFailureRecredits=false,includeCollectionFailureGroupedRecredits=false,includeRestoredTips=false,
 }={}){
   assert(!includePairedCredits||includeCredits);
   assert(!includeServiceRefunds||includePairedCredits);
@@ -107,6 +107,7 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
   assert(!includeRefundTransferFees||includeDirectReceiptTips);
   assert(!includeCollectionFailureRecredits||includeRefundTransferFees);
   assert(!includeCollectionFailureGroupedRecredits||includeCollectionFailureRecredits);
+  assert(!includeRestoredTips||includeCollectionFailureGroupedRecredits);
   const parts=new Map(files.map(file=>[file.name,file.content]));
   const {tables}=JSON.parse(parts.get('dictionary.json'));
   assert.deepEqual(tables.map(row=>row.name),[...names,...includeCredits?['invoice_credits']:[],
@@ -139,6 +140,13 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
       for(const [column,target] of Object.entries(columns))await connection.query(
         `ALTER TABLE ${table(name)} ADD FOREIGN KEY(business_id,${q(column)}) REFERENCES ${table(target)}(business_id,id)`);
     }
+    if(includeRestoredTips)await connection.query(`
+      ALTER TABLE neutral_finance.tip_realizations
+        ADD FOREIGN KEY(business_id,restored_settlement_component_id) REFERENCES neutral_finance.collection_failure_settlement_components(business_id,id);
+      ALTER TABLE neutral_finance.collection_failure_settlement_components
+        ADD FOREIGN KEY(business_id,original_tip_realization_id) REFERENCES neutral_finance.tip_realizations(business_id,id);
+      ALTER TABLE neutral_finance.collection_failure_components
+        ADD FOREIGN KEY(business_id,restored_tip_generation_id) REFERENCES neutral_finance.tip_realizations(business_id,id)`);
     if(includeCredits){
       for(const [name,columns] of Object.entries(creditLinks)){
         for(const [column,target] of Object.entries(columns))await connection.query(
@@ -273,13 +281,23 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
       await connection.query('ALTER TABLE neutral_finance.tip_returns ADD UNIQUE(business_id,id,tip_realization_id)');
       await connection.query('ALTER TABLE neutral_finance.tip_realization_range_consumptions ADD FOREIGN KEY(business_id,tip_return_id,tip_realization_id) REFERENCES neutral_finance.tip_returns(business_id,id,tip_realization_id)');
       const {rows}=await connection.query(`
-        WITH portions AS (
+        WITH RECURSIVE origins AS (
+          SELECT business_id,id AS generation_id,id AS original_id,first_cent AS original_start,inclusive_cents,net_cents
+          FROM neutral_finance.tip_realizations ${includeRestoredTips?'WHERE restored_settlement_component_id IS NULL':''}
+          ${includeRestoredTips?`
+          UNION ALL
+          SELECT t.business_id,t.id,origins.original_id,origins.original_start,origins.inclusive_cents,origins.net_cents
+          FROM origins JOIN neutral_finance.collection_failure_settlement_components c
+            ON (c.business_id,c.original_tip_realization_id)=(origins.business_id,origins.generation_id)
+          JOIN neutral_finance.tip_realizations t ON (t.business_id,t.restored_settlement_component_id)=(c.business_id,c.id)`:''}
+        ), portions AS (
           SELECT x.business_id,x.tip_return_id,sum(x.last_cent-x.first_cent+1)::bigint AS cents,
-            sum(div(2*t.net_cents::numeric*x.last_cent+t.inclusive_cents,2*t.inclusive_cents::numeric)
-              -div(2*t.net_cents::numeric*(x.first_cent-1)+t.inclusive_cents,2*t.inclusive_cents::numeric))::bigint AS net,
+            sum(div(2*origin.net_cents::numeric*(t.first_cent-origin.original_start+x.last_cent)+origin.inclusive_cents,2*origin.inclusive_cents::numeric)
+              -div(2*origin.net_cents::numeric*(t.first_cent-origin.original_start+x.first_cent-1)+origin.inclusive_cents,2*origin.inclusive_cents::numeric))::bigint AS net,
             bool_and(x.first_cent>0 AND x.last_cent BETWEEN x.first_cent AND t.inclusive_cents) AS bounds
           FROM neutral_finance.tip_realization_range_consumptions x JOIN neutral_finance.tip_realizations t
             ON (t.business_id,t.id)=(x.business_id,x.tip_realization_id)
+          JOIN origins origin ON (origin.business_id,origin.generation_id)=(t.business_id,t.id)
           GROUP BY x.business_id,x.tip_return_id
         )
         SELECT r.id,r.cents::text,r.net_cents::text,r.tax_cents::text,count(*)::int AS lines,
@@ -295,8 +313,11 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
         FROM neutral_finance.tip_returns r
         JOIN portions p ON (p.business_id,p.tip_return_id)=(r.business_id,r.id)
         JOIN neutral_finance.tip_realizations t ON (t.business_id,t.id)=(r.business_id,r.tip_realization_id)
-        JOIN neutral_finance.financial_events original ON (original.business_id,original.tip_realization_id)=(t.business_id,t.id)
-          AND original.template IN('P03','P06') AND original.effective_on<=r.actual_on
+        ${includeRestoredTips?`LEFT JOIN neutral_finance.collection_failure_settlement_components restore
+          ON (restore.business_id,restore.id)=(t.business_id,t.restored_settlement_component_id)`:''}
+        JOIN neutral_finance.financial_events original ON original.business_id=t.business_id AND original.effective_on<=r.actual_on
+          AND (original.tip_realization_id=t.id AND original.template IN('P03','P06')
+            ${includeRestoredTips?"OR original.collection_failure_settlement_id=restore.settlement_id AND original.template='P11'":''})
         JOIN neutral_finance.financial_events e ON (e.business_id,e.tip_return_id)=(r.business_id,r.id) AND e.template='P10'
         JOIN neutral_finance.money_movements m ON (m.business_id,m.event_id)=(e.business_id,e.id)
         JOIN neutral_finance.external_money_evidence proof ON (proof.business_id,proof.id)=(r.business_id,r.evidence_id)
@@ -349,7 +370,8 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
       const overlap=await connection.query(`
         SELECT count(*)::int AS broken FROM neutral_finance.collection_failure_components a
         JOIN neutral_finance.collection_failure_components b ON (a.business_id,a.payment_id)=(b.business_id,b.payment_id) AND a.id<b.id
-        WHERE a.root_first_cent<=b.root_last_cent AND b.root_first_cent<=a.root_last_cent`);
+        WHERE a.root_first_cent<=b.root_last_cent AND b.root_first_cent<=a.root_last_cent
+         ${includeRestoredTips?'AND a.restored_tip_generation_id IS NOT DISTINCT FROM b.restored_tip_generation_id':''}`);
       assert.equal(overlap.rows[0].broken,0);
     }
     if(includeRefundTransferAdjustments){
@@ -576,11 +598,14 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
           AND m.evidence_id=s.evidence_id AND m.signed_cents=s.cents AND m.account_id=s.money_account_id
           AND count(*) FILTER(WHERE line.purpose='collection_settlement_money' AND line.debit_cents=s.cents AND line.money_movement_id=m.id)=1
           AND sum(line.credit_cents)=s.cents AND count(c.id)=count(*)-1
-          AND coalesce(bool_and(line.credit_cents=c.last_cent-c.first_cent+1 AND c.settlement_id=s.id
+          AND coalesce(bool_and(c.settlement_id=s.id
             AND c.first_cent>=failed.root_first_cent AND c.last_cent<=failed.root_last_cent
-            AND (line.purpose='collection_settlement_ar' AND c.receivable_id=line.receivable_id AND line.fund_lot_id IS NULL
+            AND (line.credit_cents=c.last_cent-c.first_cent+1 AND (line.purpose='collection_settlement_ar' AND c.receivable_id=line.receivable_id AND line.fund_lot_id IS NULL
               OR line.purpose='collection_settlement_funds' AND c.receivable_id IS NULL AND lot.id=line.fund_lot_id
-                AND lot.original_cents=line.credit_cents AND lot.customer_id=s.customer_id)) FILTER(WHERE c.id IS NOT NULL),false) AS exact
+                AND lot.original_cents=line.credit_cents AND lot.customer_id=s.customer_id)
+             ${includeRestoredTips?`OR c.original_tip_realization_id=failed.tip_realization_id AND c.receivable_id IS NULL AND t.first_cent=c.first_cent AND t.last_cent=c.last_cent
+               AND (line.purpose='collection_settlement_tip_revenue' AND line.credit_cents=t.net_cents AND line.account_id=t.revenue_account_id
+                 OR line.purpose='collection_settlement_tip_tax' AND line.credit_cents=t.tax_cents AND line.account_id=t.tax_account_id)`:''})) FILTER(WHERE c.id IS NOT NULL),false) AS exact
         FROM neutral_finance.collection_failure_settlements s
         JOIN neutral_finance.financial_events e ON e.business_id=s.business_id AND e.collection_failure_settlement_id=s.id
         JOIN neutral_finance.money_movements m ON m.business_id=e.business_id AND m.event_id=e.id
@@ -589,6 +614,7 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
         LEFT JOIN neutral_finance.collection_failure_settlement_components c ON c.business_id=line.business_id AND c.id=line.collection_failure_settlement_component_id
         LEFT JOIN neutral_finance.collection_failure_components failed ON failed.business_id=c.business_id AND failed.id=c.failure_component_id
         LEFT JOIN neutral_finance.customer_fund_lots lot ON lot.business_id=c.business_id AND lot.collection_failure_settlement_component_id=c.id
+        ${includeRestoredTips?'LEFT JOIN neutral_finance.tip_realizations t ON (t.business_id,t.restored_settlement_component_id)=(c.business_id,c.id)':''}
         GROUP BY s.id,e.id,m.id`);
       assert.equal(rows.length,exports.collection_failure_settlements.length);
       assert(rows.every(row=>row.exact===true));
@@ -618,7 +644,8 @@ export async function exerciseNeutralFinanceImport(connection,files,businessId,{
       SELECT count(*)::int AS broken FROM neutral_finance.tip_realizations t
       LEFT JOIN neutral_finance.fund_lot_range_consumptions r
         ON (r.business_id,r.tip_realization_id)=(t.business_id,t.id)
-      WHERE (r.fund_lot_id,r.first_cent,r.last_cent) IS DISTINCT FROM (t.fund_lot_id,t.first_cent,t.last_cent)
+      WHERE ((r.fund_lot_id,r.first_cent,r.last_cent) IS DISTINCT FROM (t.fund_lot_id,t.first_cent,t.last_cent)
+        ${includeRestoredTips?'AND t.restored_settlement_component_id IS NULL':''})
         OR t.inclusive_cents::numeric<>t.net_cents::numeric+t.tax_cents::numeric`)).rows[0].broken,0);
     for(const {name,columns} of tables){
       const projection=columns.map(column=>columnType(column)==='boolean'?q(column):q(column)+'::text AS '+q(column));

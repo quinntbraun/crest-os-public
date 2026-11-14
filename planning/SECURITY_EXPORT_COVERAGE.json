@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 100,
+  "migrationCount": 101,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2877,7 +2877,8 @@
         "reason",
         "operation_id",
         "created_by",
-        "created_at"
+        "created_at",
+        "restored_settlement_component_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -3507,7 +3508,8 @@
         "root_first_cent",
         "root_last_cent",
         "net_cents",
-        "tax_cents"
+        "tax_cents",
+        "restored_tip_generation_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -3625,7 +3627,8 @@
         "parent_partition_id",
         "first_cent",
         "last_cent",
-        "receivable_id"
+        "receivable_id",
+        "original_tip_realization_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

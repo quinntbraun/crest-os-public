@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {customerDate,customerUuid,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {financeAccountReviewReason} from './finance-account-contract.ts';
+import {createTipSourceLineage} from './restored-tip-source.ts';
 import {isFinanceCents} from './finance-inclusive-charge.ts';
 
 const dimensions={
@@ -72,7 +73,7 @@ export async function captureCollectionFailureGroupedRecreditSource(businessId:s
 }
 
 export function verifyCollectionFailureGroupedRecreditSourceClosure(read:(table:string)=>readonly Row[],
-  history:Readonly<{operation:readonly Row[];audit_event:readonly Row[]}>){
+  history:Readonly<{operation:readonly Row[];audit_event:readonly Row[]}>,restoredTips=false){
   const settlements=index(read('collection_failure_settlements')),children=index(read('collection_failure_settlement_components'));
   const legacy=index(read('collection_failure_recredits')),failures=index(read('collection_failures'));
   const failedComponents=index(read('collection_failure_components')),payments=index(read('payments'));
@@ -97,6 +98,9 @@ export function verifyCollectionFailureGroupedRecreditSourceClosure(read:(table:
   const applicationAudits=index(history.audit_event.filter(row=>row.entity_kind==='customer_fund_applications'&&row.action==='apply'),'operation_id');
   const mappingReviews=history.operation.filter(row=>row.command_type==='finance.mapping.approve'&&row.state==='committed'
     &&typeof row.result==='string').map(row=>JSON.parse(row.result as string) as Row);
+  const tipLineage=createTipSourceLineage(read,restoredTips);
+  const restoredByChild=index([...tips.values()].filter(row=>row.restored_settlement_component_id!=null),'restored_settlement_component_id');
+  const seenTips=new Set<unknown>();
   const childSets=bucket([...children.values()],'settlement_id');
   check(settlements.size===settlementEvents.size&&settlements.size===childSets.size&&settlements.size===audits.size);
   const appliedRecovered=new Set<unknown>(),seenLots=new Set<unknown>(),seenLines=new Set<unknown>(),seenClaims=new Set<unknown>();
@@ -129,16 +133,19 @@ export function verifyCollectionFailureGroupedRecreditSourceClosure(read:(table:
       &&event.effective_on===recoveredPayment.actual_on&&customerDate(event.effective_on)&&customerDate(failure.effective_on)
       &&event.effective_on>=failure.effective_on&&order(event)>order(failed)
       &&group.operation_id===operation.operation_id&&group.recovery_epoch===operation.recovery_epoch&&operation.actor_id===recoveredPayment.created_by
-      &&operation.command_type===save&&operation.state==='committed'&&String(operation.result_schema_version)==='2'
+      &&operation.command_type===save&&operation.state==='committed'
       &&audit.actor_id===operation.actor_id&&audit.entity_id===recoveredPayment.id&&audit.reason===recoveredPayment.reason
       &&move.account_id===recoveredPayment.money_account_id&&move.evidence_id===recoveredPayment.evidence_id
       &&proof.external_account_id===move.account_id&&proof.confirmed_on===recoveredPayment.actual_on&&proof.currency==='USD'
       &&proof.normalization_rule==='exact_case_v1'&&proof.signed_cents===move.signed_cents&&move.signed_cents===recoveredPayment.cents
       &&financeAccountReviewReason(recoveredPayment.confirmation)&&financeAccountReviewReason(recoveredPayment.reason));
+    const hasTips=restoredTips&&related.some(row=>row.original_tip_realization_id!==null);
     const posted=linesByEntry.get(entry.id)??[];
+    const creditsByChild=bucket(posted.filter(row=>row.collection_failure_settlement_component_id!==null),'collection_failure_settlement_component_id');
     const cash=posted.find(row=>row.purpose==='collection_settlement_money');
     check(cash&&cash.money_movement_id===move.id&&cash.account_id===move.account_id&&cash.debit_cents===recoveredPayment.cents&&cash.credit_cents==='0'
-      &&cash.collection_failure_settlement_component_id===null&&posted.length===related.length+1
+      &&cash.collection_failure_settlement_component_id===null&&posted.filter(row=>row.collection_failure_settlement_component_id===null).length===1
+      &&creditsByChild.size===related.length&&String(operation.result_schema_version)===(hasTips?'3':'2')
       &&posted.every(row=>row.collection_failure_settlement_id===recoveredPayment.id));
     posted.forEach(row=>seenLines.add(row.id));
     let total=0n;
@@ -152,11 +159,37 @@ export function verifyCollectionFailureGroupedRecreditSourceClosure(read:(table:
       const partition=parts.get(allocation?.partition_id??oldLot?.parent_partition_id),root=partition&&roots.get(partition.origin_id);
       const item=receivables.get(allocation?.receivable_id??application?.receivable_id);
       const first=amount(child.first_cent),last=amount(child.last_cent),value=last-first+1n;
-      const credit=posted.find(row=>row.collection_failure_settlement_component_id===child.id);
+      const childLines=creditsByChild.get(child.id)??[];
+      const credit=childLines[0];
       check(partition&&root&&partition.id===child.parent_partition_id&&root.payment_id===payment.id&&root.customer_id===recoveredPayment.customer_id
         &&first>=amount(damaged.root_first_cent)&&last<=amount(damaged.root_last_cent)&&value>0n
-        &&credit&&credit.money_movement_id===null&&credit.debit_cents==='0'&&credit.credit_cents===String(value));
+        &&childLines.length>0&&childLines.every(row=>row.money_movement_id===null&&row.debit_cents==='0'&&amount(row.credit_cents)>0n)
+        &&childLines.reduce((sum,row)=>sum+amount(row.credit_cents),0n)===value);
       total+=value;
+      const restored=restoredByChild.get(child.id);
+      if(restoredTips&&child.original_tip_realization_id!==null){
+        check(restored&&tip&&child.original_tip_realization_id===tip.id&&child.receivable_id===null&&!recovered.has(child.id));
+        const start=amount(tip.first_cent)-1n;
+        const split=tipLineage.split(tip,[{first:first-start,last:last-start}]);
+        check(restored.first_cent===child.first_cent&&restored.last_cent===child.last_cent
+          &&restored.inclusive_cents===String(value)&&restored.net_cents===String(split.netCents)&&restored.tax_cents===String(split.taxCents)
+          &&restored.operation_id===operation.operation_id&&restored.created_by===recoveredPayment.created_by&&restored.reason===recoveredPayment.reason
+          &&financeAccountReviewReason(restored.customer_intent_evidence)
+          &&['fund_lot_id','jurisdiction','tax_profile_id','revenue_mapping_id','revenue_account_id','tax_mapping_id','tax_account_id']
+            .every(key=>restored[key]===tip[key]));
+        const expected=[['collection_settlement_tip_revenue',tip.revenue_account_id,tip.revenue_mapping_id,split.netCents],
+          ['collection_settlement_tip_tax',tip.tax_account_id,null,split.taxCents]].filter(row=>row[3]!==0n);
+        check(childLines.length===expected.length&&expected.every(([purpose,account,mapping,cents])=>childLines.some(row=>
+          row.purpose===purpose&&row.account_id===account&&row.fixed_mapping_id===mapping&&row.credit_cents===String(cents)
+            &&row.fund_lot_id===null&&row.receivable_id===null)));
+        seenTips.add(restored.id);
+        components.push({settlementComponentId:child.id,failureComponentId:damaged.id,parentPartitionId:partition.id,
+          firstCent:child.first_cent,lastCent:child.last_cent,cents:String(value),disposition:'tip',receivableId:null,fundLotId:null,
+          tip:{tipRealizationId:restored.id,originalTipRealizationId:tip.id,netCents:restored.net_cents,
+            taxCents:restored.tax_cents,intentEvidence:restored.customer_intent_evidence}});
+        continue;
+      }
+      check(!restored&&credit&&childLines.length===1);
       if(item){
         const balances=dispositions.get(item.id)??{ar:0n,held:0n};
         if(child.receivable_id===null)balances.held+=value;else balances.ar+=value;
@@ -206,7 +239,7 @@ export function verifyCollectionFailureGroupedRecreditSourceClosure(read:(table:
     check(total===amount(recoveredPayment.cents)&&typeof operation.result==='string'&&typeof audit.delta==='string');
     const receipt=JSON.parse(operation.result) as Row;
     check(customerUuid(receipt.moneyChannelId)&&amount(receipt.moneyChannelVersion)>0n);
-    const retained={schemaVersion:2,businessId:recoveredPayment.business_id,operationId:operation.operation_id,
+    const retained={schemaVersion:hasTips?3:2,businessId:recoveredPayment.business_id,operationId:operation.operation_id,
       settlementId:recoveredPayment.id,eventId:event.id,failureId:failure.id,originalPaymentId:payment.id,originalEventId:original.id,
       customerId:recoveredPayment.customer_id,moneyAccountId:move.account_id,moneyChannelId:receipt.moneyChannelId,
       moneyChannelVersion:receipt.moneyChannelVersion,moneyMovementId:move.id,evidenceId:proof.id,actualOn:recoveredPayment.actual_on,
@@ -250,7 +283,7 @@ export function verifyCollectionFailureGroupedRecreditSourceClosure(read:(table:
       check(destination.ar<=capacity&&(destination.held===0n||destination.ar===capacity));
     }
   }
-  check(seenLots.size===recovered.size&&lines.every(line=>line.collection_failure_settlement_id===null||seenLines.has(line.id)));
+  check(seenTips.size===restoredByChild.size&&seenLots.size===recovered.size&&lines.every(line=>line.collection_failure_settlement_id===null||seenLines.has(line.id)));
   const recoveredIds=new Set([...recovered.values()].map(row=>row.id));
   check([...applications.values()].every(row=>!recoveredIds.has(row.fund_lot_id)||appliedRecovered.has(row.id)));
   const retired=index(history.operation.filter(row=>row.command_type===retire&&row.state==='committed'),'operation_id');

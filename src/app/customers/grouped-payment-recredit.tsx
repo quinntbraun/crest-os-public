@@ -20,8 +20,8 @@ const originName = {
   funds: 'Previously held funds',
   tip: 'Previously recorded tip',
 } as const;
-type Choice = Readonly<{amount:string;start:string;destination:'receivable'|'funds'|''}>;
-const emptyChoice:Choice = {amount:'',start:'',destination:''};
+type Choice = Readonly<{amount:string;start:string;destination:'receivable'|'funds'|'tip'|'';intentEvidence:string}>;
+const emptyChoice:Choice = {amount:'',start:'',destination:'',intentEvidence:''};
 const refusalText: Record<NonNullable<ReturnType<typeof collectionFailureRecreditRefusal>>, string> = {
   input_required: 'Check the amount and complete the deposit evidence.',
   source_unavailable: 'Crest could not verify the failed payment for this customer.',
@@ -74,7 +74,8 @@ export function GroupedPaymentRecredit({businessId, customerId}: {businessId: st
     const first=/^[1-9][0-9]{0,18}$/.test(position)?BigInt(position):0n;
     const last=first+cents-1n;
     const original=portion.component.originalReceivableId;
-    const disposition=original?choice.destination:'funds';
+    const tip=portion.component.tipReinstatement;
+    const disposition=original||tip?choice.destination:'funds';
     if(cents<=0n||first<BigInt(portion.firstCent)||last>BigInt(portion.lastCent)||!disposition){
       rangesValid=false;continue;
     }
@@ -84,8 +85,11 @@ export function GroupedPaymentRecredit({businessId, customerId}: {businessId: st
       if(next>BigInt(portion.component.receivableCapacityCents??'0'))rangesValid=false;
     }
     if(disposition==='funds'&&!options?.fundsMapping)rangesValid=false;
+    const intentEvidence=choice.intentEvidence.trim();
+    if(disposition==='tip'&&(!tip||!financeAccountReviewReason(intentEvidence)))rangesValid=false;
     selectedTotal+=cents;
-    selectedRanges.push({failureComponentId:portion.component.failureComponentId,firstCent:String(first),lastCent:String(last),disposition});
+    const selected={failureComponentId:portion.component.failureComponentId,firstCent:String(first),lastCent:String(last)};
+    selectedRanges.push(disposition==='tip'?{...selected,disposition,intentEvidence}:{...selected,disposition});
   }
   const exactAmount = rangesValid&&selectedRanges.length>0&&amount===selectedTotal;
   const selected = failures?.failures.find(failure => failure.failureId === selectedId);
@@ -266,6 +270,7 @@ export function GroupedPaymentRecredit({businessId, customerId}: {businessId: st
                 const length=BigInt(portion.lastCent)-BigInt(portion.firstCent)+1n;
                 const original=portion.component.originalReceivableId;
                 const available=portion.component.receivableCapacityCents??'0';
+                const tip=portion.component.tipReinstatement;
                 const update=(next:Choice)=>setChoices(current=>({...current,[portion.id]:next}));
                 return <details key={portion.id} className="direct-receipt-options">
                   <summary>{originName[portion.component.sourceKind]}
@@ -273,13 +278,19 @@ export function GroupedPaymentRecredit({businessId, customerId}: {businessId: st
                     {' · '}{quoteMoney(String(length))} available</summary>
                   <label>Amount to restore (USD)<input inputMode="decimal" maxLength={22} value={choice.amount}
                     onChange={event=>update({...choice,amount:event.target.value})}/></label>
-                  {original ? <div><label htmlFor={'restore-to-'+portion.id}>Restore to</label><select id={'restore-to-'+portion.id} value={choice.destination}
-                    onChange={event=>update({...choice,destination:event.target.value as Choice['destination']})}>
-                    <option value="">Choose where to restore this amount</option>
-                    <option value="receivable" disabled={available==='0'}>Invoice {portion.component.originalInvoiceNumber} · up to {quoteMoney(available)}</option>
-                    <option value="funds" disabled={!options.fundsMapping}>Held funds for this customer</option>
-                  </select></div> : <p className="field-help">This amount becomes held funds for this customer.</p>}
-                  {portion.component.sourceKind==='tip'&&<p className="field-help">Choose this portion when the recovered money should be held. The original tip entry remains in history.</p>}
+                  {original||tip ? <div><label htmlFor={'restore-to-'+portion.id}>Restore to</label>
+                    <select id={'restore-to-'+portion.id} value={choice.destination}
+                      onChange={event=>update({...choice,destination:event.target.value as Choice['destination']})}>
+                      <option value="">Choose where to restore this amount</option>
+                      {original&&<option value="receivable" disabled={available==='0'}>Invoice {portion.component.originalInvoiceNumber} · up to {quoteMoney(available)}</option>}
+                      <option value="funds" disabled={!options.fundsMapping}>Held funds for this customer</option>
+                      {tip&&<option value="tip">Original tip</option>}
+                    </select></div> : <p className="field-help">This amount becomes held funds for this customer.</p>}
+                  {choice.destination==='tip'&&tip&&<>
+                    <p className="field-help">Crest restores the original tip and any included tax for the selected cents.</p>
+                    <label>How the customer confirmed the original tip<textarea rows={3} required maxLength={1000}
+                      value={choice.intentEvidence} onChange={event=>update({...choice,intentEvidence:event.target.value})}/></label>
+                  </>}
                   <details className="direct-receipt-options"><summary>Choose a different starting position</summary>
                     <label>First cent to restore (optional)<input inputMode="numeric" maxLength={19} placeholder={portion.firstCent}
                       value={choice.start} onChange={event=>update({...choice,start:event.target.value})}/></label>
@@ -313,13 +324,15 @@ export function GroupedPaymentRecredit({businessId, customerId}: {businessId: st
       {receipt && <>
         <p><strong>{quoteMoney(receipt.cents)}</strong> restored from the verified deposit.</p>
         <ul>{receipt.components.map(row => <li key={row.settlementComponentId}>
-          {quoteMoney(row.cents)} · {row.disposition==='receivable'?'Applied to the original invoice':'Available as held customer funds'}
+          {quoteMoney(row.cents)} · {row.disposition==='receivable'?'Applied to the original invoice':row.disposition==='tip'?'Restored to the original tip':'Available as held customer funds'}
+          {row.tip&&<small> · {quoteMoney(row.tip.netCents)} tip and {quoteMoney(row.tip.taxCents)} included tax</small>}
         </li>)}</ul>
         <button type="button" className="secondary" onClick={() => downloadFinanceHistory('crest-restored-payment.csv', [
           ['Recovery ID', 'Payment ID', 'Failed payment record', 'Deposit date', 'Cents restored', 'First cent', 'Last cent',
-            'Applied to invoice receivable ID', 'Restored funds lot ID', 'Verification', 'Reason'],
+            'Applied to invoice receivable ID', 'Restored funds lot ID', 'Original tip ID', 'Restored tip ID', 'Tip net cents', 'Tip tax cents', 'Tip confirmation', 'Verification', 'Reason'],
           ...receipt.components.map(row=>[receipt.settlementId, receipt.originalPaymentId, receipt.failureId, receipt.actualOn,
-            row.cents, row.firstCent, row.lastCent, row.receivableId??'', row.fundLotId??'', receipt.confirmation, receipt.reason]),
+            row.cents, row.firstCent, row.lastCent, row.receivableId??'', row.fundLotId??'', row.tip?.originalTipRealizationId??'',
+            row.tip?.tipRealizationId??'',row.tip?.netCents??'',row.tip?.taxCents??'',row.tip?.intentEvidence??'',receipt.confirmation,receipt.reason]),
         ])}>Download restored payment (CSV)</button>
       </>}
     </section>

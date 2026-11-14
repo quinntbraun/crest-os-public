@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { customerUuid, exactCustomerObject as exact } from '../customer/customer-contract.ts';
-import { creditRangeComponents } from './credit-ranges.ts';
+import {createTipSourceLineage} from './restored-tip-source.ts';
 import { isFinanceCents } from './finance-inclusive-charge.ts';
 
 const returnFields = ['id', 'business_id', 'tip_realization_id', 'channel_version_id', 'account_id', 'evidence_id', 'actual_on',
@@ -78,11 +78,11 @@ function group(rows: readonly Row[], key: string) {
 }
 
 export function verifyTipReturnSourceClosure(read: (group: string) => readonly Row[],
-  history: Readonly<{ operation: readonly Row[]; audit_event: readonly Row[] }>) {
+  history: Readonly<{ operation: readonly Row[]; audit_event: readonly Row[] }>, restoredTips=false) {
   const returns = index(read('tip_returns')), tips = index(read('tip_realizations')), lots = index(read('customer_fund_lots'));
   const groupsById = index(read('atomic_finance_groups')), events = read('financial_events');
-  const tipEvents = index(events.filter(row => row.template === 'P06' || row.template === 'P03' && row.tip_realization_id != null), 'tip_realization_id');
-  const returnEvents = index(events.filter(row => row.template === 'P10'), 'tip_return_id');
+  const tipLineage=createTipSourceLineage(read,restoredTips);
+  const returnEvents = index(events.filter(row => row.template === 'P10'&&row.tip_return_id!==null), 'tip_return_id');
   const ranges = read('tip_realization_range_consumptions'), rangesByReturn = group(ranges, 'tip_return_id');
   const movements = index(read('money_movements'), 'event_id'), evidence = index(read('external_money_evidence'));
   const entries = group(read('journal_entries'), 'event_id'), lines = read('journal_lines'), linesByEntry = group(lines, 'entry_id');
@@ -96,12 +96,11 @@ export function verifyTipReturnSourceClosure(read: (group: string) => readonly R
     const original = tips.get(tipId);
     check(original);
     const ordered = portions.map(row => ({ first: cents(row.first_cent), last: cents(row.last_cent) })).sort((a, b) => a.first < b.first ? -1 : 1);
-    creditRangeComponents({ inclusiveCents: cents(original.inclusive_cents), netCents: cents(original.net_cents),
-      taxCents: cents(original.tax_cents), discountCents: 0n }, ordered);
+    tipLineage.split(original,ordered);
   }
 
   for (const [id, saved] of returns) {
-    const event = returnEvents.get(id), tip = tips.get(saved.tip_realization_id), original = tip && tipEvents.get(tip.id);
+    const event = returnEvents.get(id), tip = tips.get(saved.tip_realization_id), original = tip && tipLineage.posting(tip);
     const lot = tip && lots.get(tip.fund_lot_id), posting = event && groupsById.get(event.group_id);
     const originalPosting = original && groupsById.get(original.group_id);
     check(event && tip && original && lot && posting && originalPosting && event.event_sequence === '1' && event.template_version === '1'
@@ -115,8 +114,7 @@ export function verifyTipReturnSourceClosure(read: (group: string) => readonly R
     const rawRanges = rangesByReturn.get(id);
     check(rawRanges && rawRanges.length >= 1 && rawRanges.length <= 180 && rawRanges.every(row => row.tip_realization_id === tip.id));
     const portions = rawRanges.map(row => ({ first: cents(row.first_cent), last: cents(row.last_cent) })).sort((a, b) => a.first < b.first ? -1 : 1);
-    const amounts = creditRangeComponents({ inclusiveCents: cents(tip.inclusive_cents), netCents: cents(tip.net_cents),
-      taxCents: cents(tip.tax_cents), discountCents: 0n }, portions);
+    const amounts = tipLineage.split(tip,portions);
     check(amounts.inclusiveCents === cents(saved.cents) && amounts.netCents === cents(saved.net_cents) && amounts.taxCents === cents(saved.tax_cents));
     const movement = movements.get(event.id), proof = movement && evidence.get(movement.evidence_id);
     check(movement && proof && !usedEvidence.has(proof.id) && movement.account_id === saved.account_id && movement.evidence_id === saved.evidence_id

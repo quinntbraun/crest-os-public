@@ -288,9 +288,10 @@ function verifyClosure(rows: Rows, history: { operation: HistoryRow[]; audit_eve
     const delta = JSON.parse(audit[0]!.delta!);
     if(tipAnchor){
       requireSource(original?.schemaVersion===3&&isDeepStrictEqual(delta,{schemaVersion:1,before:null,after:original}));
-      const {tip:_tip,heldFunds:originalHeld,...base}=original;
+      const {tip:originalTip,heldFunds:originalHeld,...base}=original;
       const {heldFunds:expectedHeld,...expected}=originalReceipt;
-      requireSource(isDeepStrictEqual({...base,schemaVersion:expected.schemaVersion},expected)
+      requireSource(originalTip?.fundingPartitionId===tipAnchor.parent_partition_id
+        &&isDeepStrictEqual({...base,schemaVersion:expected.schemaVersion},expected)
         &&isDeepStrictEqual(originalHeld,expectedHeld??null));
     }else requireSource(isDeepStrictEqual(original, originalReceipt)
       && isDeepStrictEqual(delta, { schemaVersion: 1, before: null, after: originalReceipt }));

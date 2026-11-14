@@ -113,6 +113,7 @@ test('P03 explicit tip posts with one receipt root and exact existing refund and
     assert.deepEqual([reviewed.selected.taxProfileId,reviewed.selected.revenueMappingId,reviewed.selected.taxMappingId],
       [profile.id,revenueMapping.id,taxMapping.id]);
     assert.deepEqual(await readOptions(null,randomUUID()),{state:'absent'});
+    assert.deepEqual(await readOptions(null,foreign.customer),{state:'absent'});
     assert.equal((await readOptions('Fictional unreviewed place')).selected,null);
     await assert.rejects(command(web,name,args()),{code:'42501'});
     await assert.rejects(command(finance,name,args({tip:tipInput({confirmation:''})})),{message:'DIRECT_RECEIPT_TIP_INPUT_REQUIRED'});

@@ -22,9 +22,10 @@ describe('complete required browser grouping',()=>{
  it.each([undefined,null,[],{},'node --test','node --test --test-concurrency=2','node --test --test-concurrency=1 --test-name-pattern=none','sh -c '+command])('refuses malformed or filtered complete command %j',value=>{expect(()=>browserGroupFiles(value,'crm')).toThrow();});
  it('runs both supplemental invoice workflows on separately required jobs with their exact capabilities',()=>{
   const invoice='tests/integration/finance-invoice-issue-product-browser.test.mjs';
-  expect(browserGroupNames.filter(group=>browserScenario(group))).toEqual(['receipt-funds','payment-recovery']);
+  expect(browserGroupNames.filter(group=>browserScenario(group))).toEqual(['receipt-funds','payment-recovery','restored-tip']);
   expect(browserGroupFiles(command,'receipt-funds')).toEqual([invoice]);
   expect(browserGroupFiles(command,'payment-recovery')).toEqual([invoice]);
+  expect(browserGroupFiles(command,'restored-tip')).toEqual(['tests/integration/finance-restored-tip-product-browser.test.mjs']);
   expect(browserGroupFiles(command,'records')).toContain(invoice);
   expect(browserScenario('receipt-funds')).toEqual({CREST_TEST_EXCESS_RECEIPTS:'1',CREST_TEST_RECEIPT_FUNDS_APPLICATION:'1'});
   expect(browserScenario('payment-recovery')).toEqual({
@@ -33,6 +34,7 @@ describe('complete required browser grouping',()=>{
    CREST_TEST_REFUND_TRANSFER_FEE_EXPORT:'1',CREST_TEST_COLLECTION_FAILURE_RECREDIT_EXPORT:'1',
    CREST_TEST_COLLECTION_FAILURE_GROUPED_RECREDIT_EXPORT:'1',
   });
+  expect(browserScenario('restored-tip')).toEqual({...browserScenario('payment-recovery'),CREST_TEST_RESTORED_TIP_EXPORT:'1'});
  });
  it('retains both engines through their original unchanged files, without filtering individual cases',()=>{
   expect(browserGroupFiles(command,'amendments')).toContain('tests/integration/quote-amendment-acceptance-product-browser.test.mjs');

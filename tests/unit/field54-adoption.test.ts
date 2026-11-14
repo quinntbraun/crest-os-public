@@ -109,6 +109,8 @@ import previousCompatibility from '../support/registered53-compatibility.json';
 import coverage from '../support/field54-export-coverage.json';
 import currentCoverage from '../../planning/SECURITY_EXPORT_COVERAGE.json';
 import compatibility from '../support/registered54-compatibility.json';
+import {restoredTipSourceColumns} from '../../src/bookkeeping/restored-tip-source.ts';
+import registered100 from '../support/registered100-migration-checksums.json';
 import currentCompatibility from '../../release/compatibility.json';
 import registration from '../../planning/FIELD54_REGISTRATION.json';
 const bytes=(path:string)=>readFileSync(new URL('../../'+path,import.meta.url));
@@ -578,9 +580,11 @@ it('retains refund and tip lineage and adds the recovered payment sources',()=>{
  expect(registered99.migrations).toHaveLength(99);
  expect(registered99.migrations.at(-1)).toMatchObject({version:'20261223180000',file:'20261223180000_fictional_collection_failure_held_recredit.sql'});
  expect(()=>validateMigrationSet(registered99 as MigrationRegistry,new Map(registered99.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered98 as MigrationRegistry)).not.toThrow();
- expect(currentRegistry.migrations).toHaveLength(100);
- expect(currentRegistry.migrations.at(-1)).toMatchObject({version:'20261224180000',file:'20261224180000_fictional_collection_failure_grouped_recredit.sql'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered99 as MigrationRegistry)).not.toThrow();
+ expect(registered100.migrations).toHaveLength(100);
+ expect(currentRegistry.migrations).toHaveLength(101);
+ expect(currentRegistry.migrations.at(-1)).toMatchObject({version:'20261225180000',file:'20261225180000_fictional_collection_failure_restored_tip.sql'});
+ expect(registered100.migrations.at(-1)).toMatchObject({version:'20261224180000',file:'20261224180000_fictional_collection_failure_grouped_recredit.sql'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered100 as MigrationRegistry)).not.toThrow();
  const excessFields=new Map(Object.entries(excessReturnSourceAddedColumns)),tipFields=new Map(Object.entries(tipReturnSourceAddedColumns));
  const failureFields=new Map(Object.entries(collectionFailureSourceAddedColumns));
  const tables=[...coverage92.tables.map(row=>({...row,required:[...row.required,...excessFields.get(row.table)??[],...tipFields.get(row.table)??[]]})),
@@ -594,8 +598,10 @@ it('retains refund and tip lineage and adds the recovered payment sources',()=>{
  const withFee=[...withDirectTips,refundTransferFeeSourceCoverage].map(row=>({...row,required:[...row.required,...recreditFields.get(row.table)??[]]}));
  const grouped=new Map(Object.entries(collectionFailureGroupedRecreditSourceColumns));
  const recredits=[...withFee,collectionFailureRecreditSourceCoverage].map(row=>({...row,required:[...row.required,...grouped.get(row.table)??[]]}));
- expect(currentCoverage).toEqual({...coverage92,migrationCount:100,tables:[...recredits,...collectionFailureGroupedRecreditSourceCoverage]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:100});
+ expect(currentCoverage).toEqual({...coverage92,migrationCount:101,tables:[...recredits,...collectionFailureGroupedRecreditSourceCoverage].map(row=>({
+   ...row,required:[...row.required,...restoredTipSourceColumns[row.table.slice('crest.'.length)]??[]],
+ }))});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:101});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

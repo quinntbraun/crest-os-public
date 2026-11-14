@@ -500,6 +500,11 @@
       "version": "20261224180000",
       "file": "20261224180000_fictional_collection_failure_grouped_recredit.sql",
       "sha256": "5bfc2b4916d3d51343615881f4c022b3c1a5e2d39322fc594fdd783e4c165d22"
+    },
+    {
+      "version": "20261225180000",
+      "file": "20261225180000_fictional_collection_failure_restored_tip.sql",
+      "sha256": "ee6881b8b40f07b683bcfe34b4d93e4c78a02d02b5075983fd3553da87eaebee"
     }
   ]
 }

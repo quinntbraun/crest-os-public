@@ -75,6 +75,7 @@ import {fictionalJournalV11PageSize,parseFictionalJournalV11} from './posted-rep
 import {fictionalJournalV12PageSize,parseFictionalJournalV12} from './posted-report-v12-contract.ts';
 import {fictionalJournalV13PageSize,parseFictionalJournalV13} from './posted-report-v13-contract.ts';
 import {fictionalJournalV14PageSize,parseFictionalJournalV14} from './posted-report-v14-contract.ts';
+import {fictionalJournalV15PageSize,parseFictionalJournalV15} from './posted-report-v15-contract.ts';
 import {fictionalJournalV9PageSize,parseFictionalJournalV9,parseFictionalTrialBalanceV9} from './posted-report-v9-contract.ts';
 import {parseRefundTransferInput,parseRefundTransferFeeOption,parseRefundTransferOptions,parseRefundTransferReference,parseRefundTransferResult,
  refundTransferMatchesInput,refundTransferRefusal} from './refund-transfer-adjustment-contract.ts';
@@ -209,8 +210,8 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false,collectionFailureRecredits=false,collectionFailureGroupedRecredits=false}:Readonly<{
-  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false,collectionFailureRecredits=false,collectionFailureGroupedRecredits=false,collectionFailureTipReinstatements=false}:Readonly<{
+  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;
  }>={}){
  check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
  check((!sameDayExpenses||directReceipts&&categoryMappings)&&(!trialBalance||sameDayExpenses));
@@ -231,6 +232,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
  check(typeof refundTransferFees==='boolean'&&(!refundTransferFees||refundTransfers&&directReceiptTips));
  check(typeof collectionFailureRecredits==='boolean'&&(!collectionFailureRecredits||refundTransferFees&&collectionFailures&&fundApplications));
  check(typeof collectionFailureGroupedRecredits==='boolean'&&(!collectionFailureGroupedRecredits||collectionFailureRecredits));
+ check(typeof collectionFailureTipReinstatements==='boolean'&&(!collectionFailureTipReinstatements||collectionFailureGroupedRecredits));
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
@@ -307,6 +309,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     if(refundTransferFees)response.headers.set('X-Crest-Refund-Transfer-Fees','1');
     if(collectionFailureRecredits)response.headers.set('X-Crest-Collection-Failure-Recredits','1');
     if(collectionFailureGroupedRecredits)response.headers.set('X-Crest-Collection-Failure-Grouped-Recredits','1');
+    if(collectionFailureTipReinstatements)response.headers.set('X-Crest-Collection-Failure-Tip-Reinstatements','1');
     if(paymentCorrections)response.headers.set('X-Crest-Payment-Corrections','1');
     if(fundApplications)response.headers.set('X-Crest-Fund-Applications','1');
     if(heldTips)response.headers.set('X-Crest-Held-Tips','1');
@@ -392,7 +395,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     check(customerUuid(customerId)&&customerUuid(failureId)&&customerDate(actualOn));
     const value=await database('SELECT crest_commands.read_fictional_collection_failure_recredit_options('+authority+
      ',$9::uuid,$10::uuid,$11::date) AS result',[...args,customerId,failureId,actualOn],signal);
-    parseGroupedRecreditOptions(value,businessId,customerId,failureId,actualOn);
+    parseGroupedRecreditOptions(value,businessId,customerId,failureId,actualOn,collectionFailureTipReinstatements);
     return privateJsonResponse(value as object);
    }
    if(route==='grouped-payment-recredit-lookup'||route==='grouped-payment-recredit-retire'){
@@ -418,6 +421,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    }
    if(route==='grouped-payment-recredit-submit'){
     const change=parseGroupedRecreditInput(input),{recoveryEpoch,operationId,settlementId}=change.reference;
+    check(collectionFailureTipReinstatements||change.ranges.every(range=>range.disposition!=='tip'));
     const result=await database.commandTransaction(async query=>{
      submitted=true;
      const value=await query('SELECT crest_commands.record_fictional_collection_failure_recredit('+authority+
@@ -920,13 +924,14 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route==='posted-journal'){
     const {throughOn,accountId,afterLineId}=input;
     check(customerDate(throughOn)&&(accountId===null||customerUuid(accountId))&&(afterLineId===null||customerUuid(afterLineId)));
-    const command=collectionFailureGroupedRecredits?'read_fictional_journal_v14':collectionFailureRecredits?'read_fictional_journal_v13':refundTransferFees?'read_fictional_journal_v12':directReceiptTips?'read_fictional_journal_v11':refundTransfers?'read_fictional_journal_v10':collectionFailures?'read_fictional_journal_v9':tipReturns?'read_fictional_journal_v8':excessReturns?'read_fictional_journal_v7':serviceRefunds?'read_fictional_journal_v6':invoiceCredits?'read_fictional_journal_v5':heldTips?'read_fictional_journal_v4':fundApplications?'read_fictional_journal_v3'
+    const command=collectionFailureTipReinstatements?'read_fictional_journal_v15':collectionFailureGroupedRecredits?'read_fictional_journal_v14':collectionFailureRecredits?'read_fictional_journal_v13':refundTransferFees?'read_fictional_journal_v12':directReceiptTips?'read_fictional_journal_v11':refundTransfers?'read_fictional_journal_v10':collectionFailures?'read_fictional_journal_v9':tipReturns?'read_fictional_journal_v8':excessReturns?'read_fictional_journal_v7':serviceRefunds?'read_fictional_journal_v6':invoiceCredits?'read_fictional_journal_v5':heldTips?'read_fictional_journal_v4':fundApplications?'read_fictional_journal_v3'
      :paymentCorrections?'read_fictional_journal_v2':'read_fictional_journal';
-    const pageSize=collectionFailureGroupedRecredits?fictionalJournalV14PageSize:collectionFailureRecredits?fictionalJournalV13PageSize:refundTransferFees?fictionalJournalV12PageSize:directReceiptTips?fictionalJournalV11PageSize:refundTransfers?fictionalJournalV10PageSize:collectionFailures?fictionalJournalV9PageSize:tipReturns?fictionalJournalV8PageSize:excessReturns?fictionalJournalV7PageSize:serviceRefunds?fictionalJournalV6PageSize:invoiceCredits?fictionalJournalV5PageSize:heldTips?fictionalJournalV4PageSize:fundApplications?fictionalJournalV3PageSize
+    const pageSize=collectionFailureTipReinstatements?fictionalJournalV15PageSize:collectionFailureGroupedRecredits?fictionalJournalV14PageSize:collectionFailureRecredits?fictionalJournalV13PageSize:refundTransferFees?fictionalJournalV12PageSize:directReceiptTips?fictionalJournalV11PageSize:refundTransfers?fictionalJournalV10PageSize:collectionFailures?fictionalJournalV9PageSize:tipReturns?fictionalJournalV8PageSize:excessReturns?fictionalJournalV7PageSize:serviceRefunds?fictionalJournalV6PageSize:invoiceCredits?fictionalJournalV5PageSize:heldTips?fictionalJournalV4PageSize:fundApplications?fictionalJournalV3PageSize
      :paymentCorrections?fictionalJournalV2PageSize:fictionalJournalPageSize;
     const value=await database('SELECT crest_commands.'+command+'('+authority+',$9::date,$10::uuid,$11::uuid,$12::integer) AS result',
      [...args,throughOn,accountId,afterLineId,pageSize],signal);
-    if(collectionFailureGroupedRecredits)parseFictionalJournalV14(value,businessId,throughOn,accountId,afterLineId);
+    if(collectionFailureTipReinstatements)parseFictionalJournalV15(value,businessId,throughOn,accountId,afterLineId);
+    else if(collectionFailureGroupedRecredits)parseFictionalJournalV14(value,businessId,throughOn,accountId,afterLineId);
     else if(collectionFailureRecredits)parseFictionalJournalV13(value,businessId,throughOn,accountId,afterLineId);
     else if(refundTransferFees)parseFictionalJournalV12(value,businessId,throughOn,accountId,afterLineId);
     else if(directReceiptTips)parseFictionalJournalV11(value,businessId,throughOn,accountId,afterLineId);

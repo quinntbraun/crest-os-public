@@ -8,11 +8,11 @@ const fields=['collectionFailureSettlementId','collectionFailureSettlementCompon
   'settledFailureComponentId','settledPaymentId'] as const;
 type Source = {collectionFailureSettlementId:string;settledFailureId:string;settledPaymentId:string} & (
   {purpose:'collection_settlement_money';collectionFailureSettlementComponentId:null;settledFailureComponentId:null;fundLotId:null} |
-  {purpose:'collection_settlement_ar'|'collection_settlement_funds';collectionFailureSettlementComponentId:string;
+  {purpose:'collection_settlement_ar'|'collection_settlement_funds'|'collection_settlement_tip_revenue'|'collection_settlement_tip_tax';collectionFailureSettlementComponentId:string;
     settledFailureComponentId:string;fundLotId:string|null}
 );
 
-function project(value:unknown){
+function project(value:unknown,includeRestoredTips:boolean){
   check(value!==null&&typeof value==='object'&&!Array.isArray(value)&&fields.every(field=>Object.hasOwn(value,field)));
   const {collectionFailureSettlementId,collectionFailureSettlementComponentId,settledFailureId,settledFailureComponentId,
     settledPaymentId,...row}=value as Record<string,unknown>;
@@ -34,7 +34,9 @@ function project(value:unknown){
   }else{
     check(customerUuid(collectionFailureSettlementComponentId)&&customerUuid(settledFailureComponentId)&&debitCents==='0'
       &&(purpose==='collection_settlement_ar'&&code==='1100'&&fundLotId===null
-      ||purpose==='collection_settlement_funds'&&code==='2000'&&customerUuid(fundLotId)));
+      ||purpose==='collection_settlement_funds'&&code==='2000'&&customerUuid(fundLotId)
+      ||includeRestoredTips&&fundLotId===null&&(purpose==='collection_settlement_tip_revenue'&&code==='4100'
+        ||purpose==='collection_settlement_tip_tax'&&code==='2100')));
     source={...header,purpose,collectionFailureSettlementComponentId,settledFailureComponentId,fundLotId};
   }
   return {source,row:{...row,template:'P03',paymentId:collectionFailureSettlementId,fundLotId:null,
@@ -42,11 +44,11 @@ function project(value:unknown){
 }
 
 export function parseFictionalJournalV14(input:unknown,businessId:string,throughOn:string,accountId:string|null,afterLineId:string|null,
-  pageSize=fictionalJournalV14PageSize){
+  pageSize=fictionalJournalV14PageSize,includeRestoredTips=false){
   check(input!==null&&typeof input==='object'&&!Array.isArray(input));
   const report=input as Record<string,unknown>;
   check(report.schemaVersion===14&&Array.isArray(report.rows)&&report.rows.length<=pageSize);
-  const candidates=report.rows.map(project);
+  const candidates=report.rows.map(row=>project(row,includeRestoredTips));
   const prior=parseFictionalJournalV13({...report,schemaVersion:13,rows:candidates.map(item=>item.row)},businessId,throughOn,accountId,afterLineId,pageSize);
   const rows=prior.rows.map((row,index)=>{
     const {source}=candidates[index]!;
@@ -56,7 +58,7 @@ export function parseFictionalJournalV14(input:unknown,businessId:string,through
     return {...row,...source,template:'P11' as const,paymentId:null};
   });
   type Row=Extract<(typeof rows)[number],{collectionFailureSettlementId:string}>;
-  const events=new Map<string,string|null>(), settlements=new Map<string,Row[]>(), allComponents=new Set<string>();
+  const events=new Map<string,string|null>(), settlements=new Map<string,Row[]>(), allComponents=new Map<string,Row[]>();
   for(const row of rows){
     const event=events.get(row.eventId);
     check(event===undefined||event===row.collectionFailureSettlementId);
@@ -70,8 +72,13 @@ export function parseFictionalJournalV14(input:unknown,businessId:string,through
       &&first.entrySequence===row.entrySequence);
     if(row.collectionFailureSettlementComponentId===null)check(!peers.some(peer=>peer.collectionFailureSettlementComponentId===null));
     else{
-      check(!allComponents.has(row.collectionFailureSettlementComponentId));
-      allComponents.add(row.collectionFailureSettlementComponentId);
+      const matching=allComponents.get(row.collectionFailureSettlementComponentId)??[];
+      const existing=matching[0];
+      if(existing)check(includeRestoredTips&&matching.length===1&&row.collectionFailureSettlementId===existing.collectionFailureSettlementId
+        &&row.settledFailureComponentId===existing.settledFailureComponentId&&row.purpose!==existing.purpose
+        &&[row.purpose,existing.purpose].every(purpose=>purpose==='collection_settlement_tip_revenue'||purpose==='collection_settlement_tip_tax'));
+      matching.push(row);
+      allComponents.set(row.collectionFailureSettlementComponentId,matching);
     }
     peers.push(row);
     settlements.set(row.collectionFailureSettlementId,peers);

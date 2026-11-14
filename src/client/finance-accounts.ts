@@ -62,6 +62,7 @@ import {parseFictionalJournalV11} from '../bookkeeping/posted-report-v11-contrac
 import {parseFictionalJournalV12} from '../bookkeeping/posted-report-v12-contract';
 import {parseFictionalJournalV13} from '../bookkeeping/posted-report-v13-contract';
 import {parseFictionalJournalV14} from '../bookkeeping/posted-report-v14-contract';
+import {parseFictionalJournalV15} from '../bookkeeping/posted-report-v15-contract';
 import {parseFictionalJournalV9,parseFictionalTrialBalanceV9} from '../bookkeeping/posted-report-v9-contract';
 import {parseFictionalJournalV8,parseFictionalTrialBalanceV8} from '../bookkeeping/posted-report-v8-contract';
 import {parseTipReturnInput,parseTipReturnOptions,parseTipReturnReference,parseTipReturnResult,tipReturnMatchesInput,tipReturnRefusal}
@@ -81,7 +82,7 @@ import {collectionFailureRecreditMatchesInput, collectionFailureRecreditRefusal,
 import {groupedRecreditMatchesInput, parseGroupedRecreditInput, parseGroupedRecreditOptions, parseGroupedRecreditReference,
  parseGroupedRecreditResult} from '../bookkeeping/collection-failure-grouped-recredit-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
@@ -149,6 +150,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   collectionFailures:response.headers.get('x-crest-collection-failures')==='1',
   collectionFailureRecredits:response.headers.get('x-crest-collection-failure-recredits')==='1',
   collectionFailureGroupedRecredits:response.headers.get('x-crest-collection-failure-grouped-recredits')==='1',
+  collectionFailureTipReinstatements:response.headers.get('x-crest-collection-failure-tip-reinstatements')==='1',
   refundTransfers:response.headers.get('x-crest-refund-transfers')==='1',
   directReceiptTips:response.headers.get('x-crest-direct-receipt-tips')==='1',
   refundTransferFees:response.headers.get('x-crest-refund-transfer-fees')==='1',
@@ -166,7 +168,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
 
 export const financeAccounts={
  async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,collectionFailureTipReinstatements,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
@@ -180,6 +182,7 @@ export const financeAccounts={
    ...(refundTransfers&&directReceiptTips&&refundTransferFees?{refundTransferFees}:{}),
    ...(refundTransferFees&&collectionFailures&&fundApplications&&collectionFailureRecredits?{collectionFailureRecredits}:{}),
    ...(collectionFailureRecredits&&collectionFailureGroupedRecredits?{collectionFailureGroupedRecredits}:{}),
+   ...(collectionFailureGroupedRecredits&&collectionFailureTipReinstatements?{collectionFailureTipReinstatements}:{}),
    ...(sameDayExpenses?{sameDayExpenses}:{}),
    ...(trialBalance?{trialBalance}:{}),...(paymentCorrections?{paymentCorrections}:{}),...(fundApplications?{fundApplications}:{}),
    ...(heldTips?{heldTips}:{}),...(invoiceCredits?{invoiceCredits}:{}),...(paidInvoiceCredits?{paidInvoiceCredits}:{}),
@@ -217,7 +220,8 @@ export const financeAccounts={
   check(context.trialBalance&&customerDate(throughOn)&&(accountId===null||customerUuid(accountId))&&(afterLineId===null||customerUuid(afterLineId)));
   const {status,value}=await post('posted-journal',{throughOn,accountId,afterLineId},signal,context.binding);
   check(status===200);
-  return context.collectionFailureGroupedRecredits?parseFictionalJournalV14(value,context.businessId,throughOn,accountId,afterLineId)
+  return context.collectionFailureTipReinstatements?parseFictionalJournalV15(value,context.businessId,throughOn,accountId,afterLineId)
+   :context.collectionFailureGroupedRecredits?parseFictionalJournalV14(value,context.businessId,throughOn,accountId,afterLineId)
    :context.collectionFailureRecredits?parseFictionalJournalV13(value,context.businessId,throughOn,accountId,afterLineId)
    :context.refundTransferFees?parseFictionalJournalV12(value,context.businessId,throughOn,accountId,afterLineId)
    :context.directReceiptTips?parseFictionalJournalV11(value,context.businessId,throughOn,accountId,afterLineId)
@@ -445,11 +449,12 @@ export const financeAccounts={
    if(reason)return {state:'refused' as const,reason};
   }
   check(status===200);
-  return parseGroupedRecreditOptions(value,context.businessId,customerId,failureId,actualOn);
+  return parseGroupedRecreditOptions(value,context.businessId,customerId,failureId,actualOn,context.collectionFailureTipReinstatements===true);
  },
  async recordGroupedRecredit(context:FinanceAccountContext,input:ReturnType<typeof parseGroupedRecreditInput>,signal:AbortSignal){
   check(context.collectionFailureGroupedRecredits&&context.writeState==='ready'&&context.recoveryEpoch===input.reference.recoveryEpoch);
   const change=parseGroupedRecreditInput(input);
+  check(context.collectionFailureTipReinstatements||change.ranges.every(range=>range.disposition!=='tip'));
   const {status,value}=await post('grouped-payment-recredit-submit',change,signal,context.binding);
   if(status===409&&exact(value,['error'])){
    const reason=collectionFailureRecreditRefusal(value.error);

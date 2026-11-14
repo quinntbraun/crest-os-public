@@ -15,6 +15,7 @@ import {tipReturnSourceAddedColumns,tipReturnSourceCoverage} from './tip-return-
 import {collectionFailureSourceAddedColumns,collectionFailureSourceCoverage} from './collection-failure-source.ts';
 import {refundTransferSourceAddedColumns,refundTransferSourceCoverage} from './refund-transfer-source.ts';
 import {directReceiptTipSourceAddedColumns} from './direct-receipt-tip-source.ts';
+import {restoredTipSourceColumns} from './restored-tip-source.ts';
 
 const receiptColumns:Readonly<Record<string,readonly string[]>>=receiptSourceAddedColumns;
 const expenseColumns:Readonly<Record<string,readonly string[]>>=postedExpenseSourceAddedColumns;
@@ -36,7 +37,7 @@ export const refundTransferSourceColumns:Readonly<Record<string,readonly string[
 
 export const directReceiptTipSourceColumns:Readonly<Record<string,readonly string[]>>=directReceiptTipSourceAddedColumns;
 
-export function financeSourceTables(version:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16){
+export function financeSourceTables(version:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17){
   if(version===1)return originalTables;
   const correctionTables=[
     ...originalTables.map(table=>({...table,columns:[...table.columns,...(correctionSourceColumns['crest.'+table.name]??[])]})),
@@ -92,6 +93,8 @@ export function financeSourceTables(version:1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|
     {name:'collection_failure_recredits',columns:[...collectionFailureRecreditSourceCoverage.required]}];
   if(version===15)return recreditTables;
   const settlementColumns:Readonly<Record<string,readonly string[]>>=collectionFailureGroupedRecreditSourceColumns;
-  return [...recreditTables.map(table=>({...table,columns:[...table.columns,...settlementColumns['crest.'+table.name]??[]]})),
+  const grouped=[...recreditTables.map(table=>({...table,columns:[...table.columns,...settlementColumns['crest.'+table.name]??[]]})),
     ...collectionFailureGroupedRecreditSourceCoverage.map(table=>({name:table.table.slice('crest.'.length),columns:[...table.required]}))];
+  if(version===16)return grouped;
+  return grouped.map(table=>({...table,columns:[...table.columns,...restoredTipSourceColumns[table.name]??[]]}));
 }

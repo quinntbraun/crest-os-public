@@ -116,7 +116,8 @@ export function TrialBalance({businessId}:{businessId:string}){
       const result=await financeAccounts.readPostedJournal(context,balance.throughOn,account||null,next?journal!.nextAfterLineId:null,signal);
       if(signal.aborted)return;
       const balanceVersion=reportVersion(balance);
-      const expectedJournalVersion=balanceVersion===10&&context.collectionFailureGroupedRecredits?14
+      const expectedJournalVersion=balanceVersion===10&&context.collectionFailureTipReinstatements?15
+        :balanceVersion===10&&context.collectionFailureGroupedRecredits?14
         :balanceVersion===10&&context.collectionFailureRecredits?13
         :balanceVersion===10&&context.refundTransferFees?12
         :balanceVersion===10&&context.directReceiptTips?11:balanceVersion;
@@ -344,6 +345,8 @@ export function TrialBalance({businessId}:{businessId:string}){
                     {settlement&&<>
                       <small>{String(row.purpose)==='collection_settlement_money'?'Failed payment restored · Verified deposit'
                         :String(row.purpose)==='collection_settlement_ar'?'Failed payment restored · Original invoice balance reduced'
+                        :String(row.purpose)==='collection_settlement_tip_revenue'?'Failed payment restored · Original tip revenue'
+                        :String(row.purpose)==='collection_settlement_tip_tax'?'Failed payment restored · Original tip tax'
                         :'Failed payment restored · Customer funds available'}</small>
                       <details><summary>Source references</summary>
                         <small>Restored deposit {settlement.settlementId}</small>
