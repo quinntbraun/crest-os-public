@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {mkdir,readFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
+import {execFileSync} from 'node:child_process';
+import {join} from 'node:path';
 import {test} from 'node:test';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {unzipSync,strFromU8} from 'fflate';
+import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
 const directReceipts=true;
@@ -13,12 +17,14 @@ const heldTips=process.env.CREST_TEST_HELD_TIPS==='1';
 const invoiceCredits=process.env.CREST_TEST_INVOICE_CREDITS==='1';
 const paidInvoiceCredits=process.env.CREST_TEST_PAID_INVOICE_CREDITS==='1';
 const serviceRefunds=process.env.CREST_TEST_SERVICE_REFUNDS==='1';
+const receivableAging=process.env.CREST_TEST_RECEIVABLE_AGING==='1';
+const postedFinanceExport=process.env.CREST_TEST_POSTED_FINANCE_EXPORT==='1';
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
   financeAccounts:true,financeMappings:true,financeTaxProfiles:true,invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,
   financeMoneyChannels:directReceipts,directReceipts,...paymentCorrections?{
-   expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,
+   expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,postedFinanceExport,
   }:{}});
  let browser;
  const financeResponses=[];
@@ -427,6 +433,30 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await expect(payments).toContainText('$149.00 due');
        }
        if(paidInvoiceCredits){
+        if(receivableAging){
+         await allowInvoiceReadWindow();
+         await page.setViewportSize({width:390,height:900});
+         await page.goto(fixture.origin+'/settings/accounts');
+         await page.getByRole('button',{name:'Load accounts',exact:true}).press('Enter');
+         await page.getByText('Outstanding invoices by due date',{exact:true}).press('Enter');
+         const aging=page.getByRole('region',{name:'Outstanding invoices by due date',exact:true});
+         await aging.getByRole('button',{name:'Load outstanding invoices',exact:true}).press('Enter');
+         await expect(aging.getByRole('status')).toHaveText('Outstanding invoices loaded.');
+         await aging.getByText('Invoice details (1 of 1)',{exact:true}).press('Enter');
+         await expect(aging).toContainText('Invoice TEST-1');
+         await expect(aging).toContainText('$149.00');
+         for(const width of [360,390,768,1440]){
+          await page.setViewportSize({width,height:900});
+          await aging.getByText('Invoice TEST-1',{exact:true}).scrollIntoViewIfNeeded();
+          assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+          await page.screenshot({path:'.local/review/finance-receivable-aging-populated-'+name+'-'+width+'.png'});
+         }
+         await page.goto(fixture.origin+job);
+         await draftDisclosure.click();
+         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+         await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+         await expect(draftStatus).toHaveText('Issued invoice loaded.');
+        }
         await allowInvoiceReadWindow();
         await invoice.getByText('Credit a paid or partly paid invoice',{exact:true}).press('Enter');
         const credit=invoice.getByRole('region',{name:'Credit a paid or partly paid invoice',exact:true});
@@ -549,6 +579,94 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        if(serviceRefunds){
         await expect(report).toContainText('Service refund · Held balance reduced');
         await expect(report).toContainText('Service refund · Settled outflow');
+       }
+       if(receivableAging){
+        await allowInvoiceReadWindow();
+        await page.getByText('Outstanding invoices by due date',{exact:true}).press('Enter');
+        const aging=page.getByRole('region',{name:'Outstanding invoices by due date',exact:true});
+        const load=aging.getByRole('button',{name:'Load outstanding invoices',exact:true});
+        await page.route('**/api/business/finance-accounts/receivable-aging',route=>route.abort(),{times:1});
+        await load.press('Enter');
+        await expect(aging.getByRole('status')).toContainText('could not verify the report');
+        await load.press('Enter');
+        await expect(aging.getByRole('status')).toContainText(/Outstanding invoices loaded|No posted invoices/);
+        await expect(aging).toContainText('Total outstanding');
+        await expect(aging).toContainText('91+ days');
+        await expect(aging).not.toContainText('Invoice TEST-1');
+        for(const width of [360,390,768,1440]){
+         await page.setViewportSize({width,height:900});
+         await aging.evaluate(element=>element.scrollIntoView({block:'center'}));
+         assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+         assert.deepEqual((await new AxeBuilder({page}).include('.review-card').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+         await page.screenshot({path:'.local/review/finance-receivable-aging-'+name+'-'+width+'.png'});
+        }
+        await page.getByText('Outstanding invoices by due date',{exact:true}).press('Enter');
+        await page.getByText('Outstanding invoices by due date',{exact:true}).press('Enter');
+        await expect(aging).not.toContainText('Total outstanding');
+       }
+       if(postedFinanceExport){
+        await allowInvoiceReadWindow();
+        await page.goto(fixture.origin+'/export-files');
+        const exporter=page.getByRole('region',{name:'Posted finance export',exact:true});
+        const prepare=exporter.getByRole('button',{name:'Prepare posted finance CSV',exact:true});
+        await expect(prepare).toBeVisible();
+        for(const width of [360,390,768,1440]){
+         await page.setViewportSize({width,height:900});
+         assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+         assert.deepEqual((await new AxeBuilder({page}).include('.export-files').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+         await page.screenshot({path:'.local/review/finance-posted-export-'+name+'-'+width+'.png'});
+        }
+        const responseReady=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/business/exports/posted-finance');
+        await prepare.press('Enter');
+        const response=await responseReady;
+        assert.equal(response.status(),200);
+        assert.match(response.headers()['cache-control'],/no-store/);
+        const save=exporter.getByRole('button',{name:'Save ZIP',exact:true});
+        await expect(save).toBeVisible();
+        const ready=page.waitForEvent('download');
+        await save.press('Enter');
+        const download=await ready;
+        assert.equal(download.suggestedFilename(),'crest-posted-finance.zip');
+        const archive=await readFile(await download.path());
+        const digest=createHash('sha256').update(archive).digest('hex');
+        assert.equal(digest,response.headers()['x-crest-sha256']);
+        const {['manifest.json']:manifestBytes,['export_delivery.json']:deliveryBytes,...parts}=unzipSync(archive);
+        const manifest=strFromU8(manifestBytes),delivery=JSON.parse(strFromU8(deliveryBytes));
+        const verified=verifyFinanceSourceExport(manifest,Object.entries(parts).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
+        assert.equal(verified.profile,'crest.posted-finance-source.v7');
+        assert.equal(verified.completePortableExport,false);
+        assert.equal(delivery.sourceSchemaVersion,89);
+        assert.equal(delivery.manifestSha256,createHash('sha256').update(manifestBytes).digest('hex'));
+        assert.match(strFromU8(parts['service_credit_refunds.csv']),/Fictional service refund confirmed/);
+        const extract=join(fixture.workspace,'posted-finance-extracted');
+        await mkdir(extract,{mode:0o700});
+        for(const [file,bytes] of Object.entries({'manifest.json':manifestBytes,'export_delivery.json':deliveryBytes,...parts})){
+         assert(file==='README.txt'||/^[a-z][a-z0-9_]{0,79}\.(csv|json|ndjson)$/.test(file));
+         await writeFile(join(extract,file),bytes,{flag:'wx',mode:0o600});
+        }
+        const cli=JSON.parse(execFileSync(process.execPath,['--conditions=react-server','scripts/verify-source-export.mjs',
+         extract,fixture.business,delivery.appReleaseId],{encoding:'utf8',timeout:10000}));
+        assert.equal(cli.profile,verified.profile);
+        assert.equal(cli.sourceRows,verified.sourceRows);
+        const evidence=(await fixture.client.query(`SELECT o.command_type,a.action,a.delta->'after' AS evidence
+          FROM crest_private.audit_events a JOIN crest_private.operations o USING (business_id,operation_id)
+          WHERE a.business_id=$1 AND a.entity_kind='finance_export_accesses'`,[fixture.business])).rows;
+        assert.equal(evidence.length,1);
+        assert.equal(evidence[0].command_type,'finance.export_access');
+        assert.equal(evidence[0].action,'authorized_handoff');
+        assert.equal(evidence[0].evidence.archiveSha256,digest);
+        assert.equal(evidence[0].evidence.manifestSha256,delivery.manifestSha256);
+        await assert.rejects(fixture.authorizePostedFinance({requestedBusiness:'00000000-0000-4000-8000-000000000001'}));
+        await assert.rejects(fixture.authorizePostedFinance({epochOverride:'00000000-0000-4000-8000-000000000002',record:true}));
+        const rolledBack=await fixture.authorizePostedFinance({record:true,rollback:true});
+        assert.equal(rolledBack.state,'authorized_handoff');
+        assert.equal((await fixture.client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',
+         [fixture.business,rolledBack.operationId])).rows[0].n,0);
+        await fixture.client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[fixture.business]);
+        await prepare.press('Enter');
+        await expect(exporter.getByRole('status')).toContainText('could not prepare');
+        assert.equal(await save.count(),0);
+        assert.equal((await fixture.client.query("SELECT count(*)::int AS n FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='finance_export_accesses'",[fixture.business])).rows[0].n,1);
        }
       }
      }

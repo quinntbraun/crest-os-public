@@ -44,16 +44,26 @@ function SavedJobDetailsContent({resources,initialJobVehicleId,history,historyCo
  }
  const changeable=canChange&&!busy&&job.state==='scheduled'&&job.first_work_at===null;
  const proposed=latestAppointment.confirmation_state==='proposed'&&latestAppointment.id!==appointment.id;
- return <article aria-label="Saved job">
-  <p className="eyebrow">{states[job.state]} · {modes[job.fulfillment_mode]}</p>
-  <h2>{customer.display_name}</h2>
+ const fieldAction=onWorkStatus&&(job.fulfillment_mode==='mobile'&&['scheduled','en_route','in_progress','paused'].includes(job.state)||
+  dropoffCustodyAvailable&&job.fulfillment_mode==='dropoff'&&['scheduled','in_progress','paused'].includes(job.state)||
+  pickupWorkAvailable&&job.fulfillment_mode==='pickup_return'&&['in_progress','paused'].includes(job.state));
+ const completionAction=completionAvailable&&(job.fulfillment_mode==='mobile'||dropoffCustodyAvailable&&job.fulfillment_mode==='dropoff'||
+  pickupWorkAvailable&&job.fulfillment_mode==='pickup_return')&&['in_progress','paused','completed'].includes(job.state);
+ return <article className="schedule-job" aria-label="Saved job">
+  <header className="schedule-job-heading">
+   <p className="schedule-job-state"><strong>{states[job.state]}</strong><span>{modes[job.fulfillment_mode]}</span></p>
+   <h2>{customer.display_name}</h2>
+  </header>
   <dl className="customer-values">
    <dt>{job.state==='cancelled'?'Retained appointment':'Confirmed appointment'}</dt>
    <dd><time dateTime={appointment.start_at}>{when(appointment.start_at,appointment.timezone)}</time> – <time dateTime={appointment.end_at}>{when(appointment.end_at,appointment.timezone)}</time><div className="field-help">{appointment.timezone}</div></dd>
    <dt>Work location</dt><dd><WorkLocation value={location}/></dd>
    <dt>Contact for this visit</dt><dd>{contact.kind==='no_contact'?<>No contact selected: {contact.reason}</>:contact.value}</dd>
   </dl>
-  {googleCalendarAvailable&&<p><a href={'/settings/google-calendar?job='+encodeURIComponent(job.id)}>Calendar sync status</a></p>}
+  {(fieldAction||completionAction)&&<section className="schedule-job-primary" aria-label="Field work actions">
+   {fieldAction&&<button type="button" disabled={busy||!canChange} onClick={onWorkStatus}>Record work status…</button>}
+   {completionAction&&<a className={fieldAction?'schedule-job-completion':'primary-action'} href={'/schedule/work/complete?job='+encodeURIComponent(job.id)}>{job.state==='completed'?'Review saved completion':'Review and end job'}</a>}
+  </section>}
   {proposed&&<section aria-label="Proposed appointment change"><h3>Time change awaiting confirmation</h3><p>{when(latestAppointment.start_at,latestAppointment.timezone)} – {when(latestAppointment.end_at,latestAppointment.timezone)}</p><p className="field-help">The confirmed appointment above still reserves the time. This proposal reserves no time.</p></section>}
   {pickupTripsAvailable&&job.fulfillment_mode==='pickup_return'&&<PickupTrips resources={resources} canChange={canChange&&!busy} workAvailable={pickupWorkAvailable===true}/>}
   <section aria-label="Vehicles for this job"><h3>Vehicles</h3>{resources.vehicles.map(row=>{
@@ -67,17 +77,13 @@ function SavedJobDetailsContent({resources,initialJobVehicleId,history,historyCo
   })}</section>
   <section aria-label="Retained work allocation"><h3>Work for this visit</h3><ul>{resources.scopeParts.map(part=><li key={part.sourceAllocationId+'/'+part.partitionId}><p>{part.scopeDescription}</p><p className="field-help">{quoteMoney(part.amountCents)} allocated · {part.state==='cancelled'?'Cancelled allocation':part.state==='completed'?'Completed scope':'Assigned scope'}</p></li>)}</ul></section>
   {head.confirmationDraft&&<details><summary>Prepared confirmation message</summary><p className="field-help">Prepared only. No message delivery is recorded here.</p><textarea aria-label="Prepared confirmation text" readOnly value={head.confirmationDraft.bodyText} rows={6}/><button type="button" className="secondary" disabled={busy} onClick={()=>void copyMessage()}>Copy message</button><p role="status" aria-live="polite">{copyState}</p></details>}
-  {onWorkStatus&&(job.fulfillment_mode==='mobile'&&['scheduled','en_route','in_progress','paused'].includes(job.state)||
-   dropoffCustodyAvailable&&job.fulfillment_mode==='dropoff'&&['scheduled','in_progress','paused'].includes(job.state)||
-   pickupWorkAvailable&&job.fulfillment_mode==='pickup_return'&&['in_progress','paused'].includes(job.state))&&
-   <section aria-label="Field work actions"><button type="button" disabled={busy||!canChange} onClick={onWorkStatus}>Record work status…</button></section>}
-  {completionAvailable&&(job.fulfillment_mode==='mobile'||dropoffCustodyAvailable&&job.fulfillment_mode==='dropoff'||
-   pickupWorkAvailable&&job.fulfillment_mode==='pickup_return')&&
-   ['in_progress','paused','completed'].includes(job.state)&&<p><a href={'/schedule/work/complete?job='+encodeURIComponent(job.id)}>{job.state==='completed'?'Review saved completion':'Review and end job'}</a></p>}
   {invoiceDraftsAvailable&&<InvoiceDrafts businessId={resources.businessId} jobId={job.id} canPrepare={job.state!=='cancelled'}/>}
-  {mileageAvailable&&<p><a href={'/schedule/mileage?job='+encodeURIComponent(job.id)}>Review trip mileage</a></p>}
-  {workTimeAvailable&&job.fulfillment_mode==='mobile'&&job.first_work_at&&
-   <p><a href={'/schedule/work/time?job='+encodeURIComponent(job.id)}>Review recorded work time</a></p>}
+  {(googleCalendarAvailable||mileageAvailable||workTimeAvailable&&job.fulfillment_mode==='mobile'&&job.first_work_at)&&
+   <nav className="schedule-job-tools" aria-label="Saved job tools">
+    {googleCalendarAvailable&&<a href={'/settings/google-calendar?job='+encodeURIComponent(job.id)}>Calendar sync status</a>}
+    {mileageAvailable&&<a href={'/schedule/mileage?job='+encodeURIComponent(job.id)}>Review trip mileage</a>}
+    {workTimeAvailable&&job.fulfillment_mode==='mobile'&&job.first_work_at&&<a href={'/schedule/work/time?job='+encodeURIComponent(job.id)}>Review recorded work time</a>}
+   </nav>}
   {(onChangeAppointment||onCancel)&&job.state==='scheduled'&&<section aria-label="Job actions">{onChangeAppointment&&<button type="button" disabled={!changeable} onClick={onChangeAppointment}>Change appointment…</button>}{onCancel&&<button type="button" className="secondary" disabled={!changeable} onClick={onCancel}>Cancel this job…</button>}</section>}
   <details>
    <summary>Saved history · version {job.version}</summary>

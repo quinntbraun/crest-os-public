@@ -87,7 +87,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
    await expect(drafts.getByRole('button',{name:'Open invoice draft',exact:true})).toHaveCount(1);
   }
-  await page.getByRole('button',{name:'Record work status…',exact:true}).click();
+  const recordWorkStatus=page.getByRole('button',{name:'Record work status…',exact:true});
+  const jobVehicles=page.getByRole('region',{name:'Vehicles for this job',exact:true});
+  const workActionPosition=await recordWorkStatus.boundingBox(),vehiclesPosition=await jobVehicles.boundingBox();
+  assert(workActionPosition&&vehiclesPosition&&workActionPosition.height>=44&&workActionPosition.y<vehiclesPosition.y);
+  await mkdir('.local/review',{recursive:true});
+  await recordWorkStatus.scrollIntoViewIfNeeded();
+  await page.screenshot({path:'.local/review/schedule-work-action-'+name+'-390.png'});
+  await recordWorkStatus.click();
   await page.getByLabel('What is happening?',{exact:true}).selectOption('direct_arrive');
   await page.getByLabel('Why was travel not recorded?',{exact:true}).fill('Synthetic arrival without travel.');
   await page.getByRole('button',{name:'Start work without recorded travel',exact:true}).click();

@@ -1,6 +1,7 @@
 // Read-only offline profile verifier. No provider, database or network access;
 // output is a bounded summary, never private rows, paths or raw exceptions.
 import {constants} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {lstat,open,opendir,realpath,stat} from 'node:fs/promises';
 import {resolve,join,dirname} from 'node:path';
 import {verifyBusinessSourceBundle} from '../src/security/business-source-verifier.ts';
@@ -16,8 +17,9 @@ try{
  for await(const entry of dir){if(!entry.isFile()||entry.isSymbolicLink()
   ||entry.name!=='README.txt'&&!/^[a-z][a-z0-9_]{0,79}\.(csv|json|txt|ndjson)$/.test(entry.name)||names.length>=1025)fail();names.push(entry.name);}
  const finance=names.includes('manifest.json');
- if(finance===names.includes('source_manifest.json')||finance&&appReleaseId!==undefined
-  ||!finance&&names.some(name=>name==='README.txt'||name.endsWith('.ndjson')))fail();
+ const deliveryName='export_delivery.json';
+ if(finance===names.includes('source_manifest.json')||finance&&appReleaseId!==undefined&&!names.includes(deliveryName)
+  ||!finance&&names.some(name=>name===deliveryName||name==='README.txt'||name.endsWith('.ndjson')))fail();
  let total=0;
  async function read(name){
   const path=resolve(join(root,name));if(dirname(path)!==root)fail();
@@ -34,10 +36,22 @@ try{
  }
  const manifestName=finance?'manifest.json':'source_manifest.json';
  const manifest=await read(manifestName),parts=[];
- for(const name of names.filter(name=>name!==manifestName).sort())parts.push({name,bytes:await read(name)});
+ for(const name of names.filter(name=>name!==manifestName&&name!==deliveryName).sort())parts.push({name,bytes:await read(name)});
  if(finance){
   const decoder=new TextDecoder('utf-8',{fatal:true});
-  const result=verifyFinanceSourceExport(decoder.decode(manifest),parts.map(part=>({name:part.name,content:decoder.decode(part.bytes)})),businessId);
+  const manifestText=decoder.decode(manifest);
+  const result=verifyFinanceSourceExport(manifestText,parts.map(part=>({name:part.name,content:decoder.decode(part.bytes)})),businessId);
+  if(names.includes(deliveryName)){
+   const delivery=JSON.parse(decoder.decode(await read(deliveryName)));
+   const keys=['schemaVersion','profile','businessId','observedAt','appReleaseId','sourceSchemaVersion','manifestSha256','completePortableExport','completeBackup'];
+   if(!delivery||typeof delivery!=='object'||Array.isArray(delivery)||Object.keys(delivery).length!==keys.length
+    ||!keys.every(key=>Object.hasOwn(delivery,key))||delivery.schemaVersion!==1||delivery.profile!=='crest.posted-finance-source.v7'
+    ||delivery.profile!==result.profile||delivery.businessId!==businessId||delivery.observedAt!==JSON.parse(manifestText).observedAt
+    ||typeof delivery.appReleaseId!=='string'||!/^[a-f0-9]{40}$/.test(delivery.appReleaseId)||appReleaseId!==undefined&&delivery.appReleaseId!==appReleaseId
+    ||!Number.isSafeInteger(delivery.sourceSchemaVersion)||delivery.sourceSchemaVersion<89||delivery.sourceSchemaVersion>999
+    ||delivery.manifestSha256!==createHash('sha256').update(manifest).digest('hex')
+    ||delivery.completePortableExport!==false||delivery.completeBackup!==false)fail();
+  }
   process.stdout.write(JSON.stringify(result)+'\n');
  }else{
   const result=verifyBusinessSourceBundle({manifest,parts},{businessId,...(appReleaseId===undefined?{}:{appReleaseId})}).forServer();

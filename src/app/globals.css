@@ -76,6 +76,42 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .customer-list { margin:1rem 0; border-top:1px solid var(--line); }
 .customer-list li { padding:.25rem 0 .75rem; border-bottom:1px solid var(--line); }
 .customer-list button { border:0; background:transparent; margin:.25rem 0 0; }
+.customer-directory-page { max-width:75rem; }
+.customer-directory-page h1 { margin-bottom:.5rem; }
+.customer-directory-status { color:var(--muted); margin:.25rem 0 1rem; font-size:.9375rem; }
+.customer-directory-layout { display:grid; align-items:start; gap:1rem; }
+.customer-directory-layout > *, .customer-search-row > * { min-width:0; }
+.customer-lookup, .customer-record-editor { padding:1rem; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); }
+.customer-add { margin:0 0 .875rem; background:var(--gold); color:var(--black); }
+.customer-search { gap:.25rem; }
+.customer-search label, .customer-search button { margin:0; }
+.customer-search .trust { font-size:.875rem; }
+.customer-search-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.5rem; align-items:start; }
+.customer-search-row button { width:auto; padding-inline:.75rem; }
+.customer-directory-list { margin:.5rem 0 0; }
+.customer-directory-list li { padding:0; }
+.customer-directory-list button { display:grid; gap:.25rem; width:100%; margin:0; padding:.75rem; border-inline-start:3px solid transparent; border-radius:0; background:transparent; }
+.customer-directory-list button:hover { background:var(--canvas); }
+.customer-directory-list button[aria-current] { border-inline-start-color:var(--gold-ink); background:#f1ead8; }
+.customer-contact, .customer-directory-empty { color:var(--muted); font-size:.875rem; font-weight:400; }
+.customer-directory-empty { margin:.75rem 0 0; padding:.875rem 0 0; border-top:1px solid var(--line); }
+.customer-record:empty { display:none; }
+.customer-record > * + * { margin-top:1rem; }
+.customer-record-editor > h2, .customer-record-editor > .field-help { margin:0; }
+.customers .customer-record-editor fieldset { border:0; padding:0; margin:.5rem 0 0; }
+.customers .customer-record-editor fieldset fieldset { margin-top:.875rem; }
+.customers .customer-record-editor fieldset legend:not(.visually-hidden) { padding:0; margin-bottom:.25rem; }
+.customers .customer-record-editor .customer-extra { margin:1rem 0 0; padding:.5rem .75rem; }
+.customer-record-editor .customer-extra summary { display:list-item; padding:.5rem 0; }
+.customer-record-editor > button { margin-top:.25rem; }
+@media (max-width:320px) {
+  .customer-search-row { grid-template-columns:minmax(0,1fr); }
+  .customer-search-row button { justify-self:start; }
+}
+@media (min-width:760px) {
+  .customer-directory-layout { grid-template-columns:minmax(17rem,2fr) minmax(0,3fr); gap:1.25rem; }
+  .customer-record-editor { padding:1.25rem; }
+}
 .contact-summary { color:var(--muted); }
 .customer-values { display:grid; grid-template-columns:minmax(6rem,1fr) minmax(0,3fr); gap:.75rem 1rem; }
 .customer-values dd { margin:0; }
@@ -268,6 +304,17 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .expense-records > article { padding-bottom:1rem; margin-bottom:1.5rem; border-bottom:1px solid var(--line); }
 @media (min-width:1200px) { .expense-layout { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:2rem; } }
 .schedule-date-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+.schedule-page { max-width:75rem; }
+.schedule-job-heading h2 { margin:.25rem 0 1rem; overflow-wrap:anywhere; }
+.schedule-job-state { display:flex; flex-wrap:wrap; align-items:center; gap:.375rem .75rem; margin:0; color:var(--muted); font-size:.875rem; }
+.schedule-job-state strong { border-left:3px solid var(--gold-ink); padding-left:.5rem; color:var(--ink); }
+.schedule-job-primary { display:flex; flex-wrap:wrap; gap:.5rem 1rem; align-items:center; margin:1rem 0; }
+.schedule-job-primary button { margin:0; width:auto; }
+.schedule-job-tools a { min-height:44px; }
+@media (max-width:600px) {
+  .schedule-job-primary > *, .schedule-job-primary button { width:100%; }
+  .schedule-job-completion { justify-content:center; }
+}
 .schedule-calendar { margin:1.25rem 0; }
 .calendar-heading,.calendar-toolbar,.calendar-toolbar > div { display:flex; align-items:center; flex-wrap:wrap; gap:.5rem; }
 .calendar-heading,.calendar-toolbar { justify-content:space-between; margin-bottom:.75rem; }
