@@ -136,6 +136,7 @@ export function GroupedPaymentRecredit({businessId, customerId}: {businessId: st
   function load() {
     setReceipt(null); setOptions(null); setDeposit(emptyDeposit); setChoices({});
     void run(async (context, signal) => {
+      if (readPendingCollectionFailureRecredit()) { setLegacyPending(true); setMessage('Check the original held-funds save first.'); return; }
       const original = readPendingGroupedRecredit();
       if (original) { setPending(true); setMessage('Check the original save first.'); return; }
       const result = await financeAccounts.groupedRecredits(context, customerId, signal);
@@ -239,7 +240,7 @@ export function GroupedPaymentRecredit({businessId, customerId}: {businessId: st
         </form>}
       </> : <>
         {legacyPending&&<p className="field-help">Check the interrupted held-funds recovery before starting another.</p>}
-        <button type="button" className="secondary" disabled={busy||legacyPending} onClick={load}>Load failed payments</button>
+        <button type="button" className="secondary" disabled={busy} onClick={load}>Load failed payments</button>
         {!!failures?.failures.length && <form onSubmit={event => {event.preventDefault(); review();}}>
           <div><label htmlFor="grouped-failed-payment">Failed payment</label><select id="grouped-failed-payment" required disabled={busy} value={selectedId} onChange={event => {
             setSelectedId(event.target.value); setOptions(null); setDeposit(emptyDeposit); setChoices({});
@@ -255,7 +256,7 @@ export function GroupedPaymentRecredit({businessId, customerId}: {businessId: st
           <button className="secondary" disabled={busy || !selected || !date}>Check available funds</button>
         </form>}
         {options && <form onSubmit={event => {event.preventDefault(); save();}}>
-          <fieldset disabled={busy}><legend>Verified deposit</legend>
+          <fieldset className="service-refund-evidence" disabled={busy}><legend>Verified deposit</legend>
             <label>Amount deposited (USD)<input required inputMode="decimal" maxLength={22} value={deposit.amount}
               onChange={event => change('amount', event.target.value)}/></label>
             <fieldset><legend>Amounts to restore</legend>
@@ -298,11 +299,11 @@ export function GroupedPaymentRecredit({businessId, customerId}: {businessId: st
               onChange={event => change('namespace', event.target.value)}/></label>
             <label>Transaction ID<input required maxLength={200} value={deposit.transaction}
               onChange={event => change('transaction', event.target.value)}/></label>
-            <label>Statement reference<input required maxLength={1000} value={deposit.statement}
+            <label>Statement reference<textarea required rows={2} maxLength={1000} value={deposit.statement}
               onChange={event => change('statement', event.target.value)}/></label>
-            <label>How you verified the deposit<textarea required rows={2} maxLength={1000} value={deposit.confirmation}
+            <label>How you verified the deposit<textarea required rows={3} maxLength={1000} value={deposit.confirmation}
               onChange={event => change('confirmation', event.target.value)}/></label>
-            <label>Reason for this recovery<textarea required rows={2} maxLength={1000} value={deposit.reason}
+            <label>Reason for this recovery<textarea required rows={3} maxLength={1000} value={deposit.reason}
               onChange={event => change('reason', event.target.value)}/></label>
             {exactAmount && <p>{quoteMoney(String(amount))} will be restored across the selected portions after the save is confirmed.</p>}
             <button className="primary-action" disabled={!exactAmount || !account}>Record restored payment</button>
