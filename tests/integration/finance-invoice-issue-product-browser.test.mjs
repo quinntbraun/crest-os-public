@@ -1146,7 +1146,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
             await transfer.getByLabel('How you verified settlement',{exact:true}).fill('Fictional owner verified settlement');
             await transfer.getByLabel('Reason for the transfer',{exact:true}).fill('Fictional returned disbursement');
             if(withFee){
-             await transfer.getByText('Fee withheld from the return',{exact:true}).press('Enter');
+             await transfer.locator('summary').filter({hasText:'Fee withheld from the return'}).press('Enter');
              await transfer.getByLabel('Fee withheld (USD, optional)',{exact:true}).fill('0.05');
              await transfer.getByRole('button',{name:'Check fee account',exact:true}).press('Enter');
              await expect(transfer).toContainText('Fictional provider fees');
