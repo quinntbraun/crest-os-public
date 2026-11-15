@@ -59,7 +59,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await payment.getByLabel('Tip amount (USD, optional)',{exact:true}).fill('0.06');
    await payment.getByRole('button',{name:'Load tip jurisdictions',exact:true}).press('Enter');
    await payment.getByRole('combobox',{name:'Tip tax jurisdiction',exact:true}).selectOption('Fictional tip district');
+   const tipReview=page.waitForResponse(response=>new URL(response.url()).pathname.endsWith('/receipt-tip-options'));
    await payment.getByRole('button',{name:'Review tip tax',exact:true}).press('Enter');
+   assert.equal((await tipReview).status(),200,'The saved tip-tax review must return successfully');
    await expect(payment).toContainText('$0.05 tip · $0.01 included tax');
    await payment.getByLabel('How the customer confirmed the tip',{exact:true}).fill('Fictional customer designated the entire payment as a tip.');
    await payment.getByLabel('How you verified the payment',{exact:true}).fill('Fictional received amount verified on the bank statement.');
@@ -164,11 +166,15 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await trial.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
    await expect(trial.getByRole('status')).toHaveText('Posted balances loaded.');
    await trial.getByText('Journal entries',{exact:true}).press('Enter');
-   const ledger=page.waitForResponse(response=>response.url().endsWith('/posted-journal'));
+   let raw;
+   await page.route('**/api/business/finance-accounts/posted-journal',async route=>{
+    const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});
+    if(response.status()===200)raw=await response.json();
+    await route.fulfill({response});
+   },{times:1});
    await trial.getByRole('button',{name:'Load journal entries',exact:true}).press('Enter');
-   const journal=await ledger;
-   assert.equal(journal.status(),200);
-   const raw=await journal.json();
+   await expect(trial.getByRole('table',{name:'Posted journal page',exact:true})).toBeVisible();
+   assert(raw);
    assert.equal(raw.schemaVersion,15);
    assert(raw.rows.some(row=>row.purpose==='collection_settlement_tip_tax'&&row.creditCents==='1'));
 
