@@ -1,0 +1,128 @@
+{
+  "formatVersion": 1,
+  "verifiedAt": "2026-11-05T20:49:29.545Z",
+  "scope": "unregistered field54 coordinator candidate, complete synthetic database snapshot restoration and neutral occupancy reconstruction",
+  "trackedParent": "936f4674a1d43f84e0510215f155a495637bca97",
+  "exactSourceFiles": {
+    "planning/proposals/work-completion-commands.sql": "abadfe130d6f57bcf4fb04d17f4cd5e5ad5d922d930cc764140855e7b162a347",
+    "planning/proposals/mileage-evidence.sql": "9e333d96f138e3bd8cb7fd0091d80f460876821c3900a12fe022d73023211d5c",
+    "tests/support/field54-candidate.mjs": "9fa2570da04958bef2c3615cf9cb7b2eddeb976a1b345274f2227a56e3814cc3",
+    "tests/support/field54-export-coverage.json": "7760215b8c4ab71ec34f144deb955a184002b9c72261af0acd079f5b6042b543",
+    "tests/support/registered53-migration-checksums.json": "033199a5f2e528f629799cdba48901bf2a4687df1eea3166b0cf7bfcf5ec3c67",
+    "tests/support/recovery-drill.mjs": "bf7bdf970a31f074ba1e20f0fba4f25bb15c1b471535700fa8053a28acf0d9ac",
+    "tests/support/field-workspace-source-fixture.mjs": "ceb68b4535a368a3444334c106104b791bbd5546a46f307b2256c0e356df101b",
+    "tests/support/field-occupancy-rebuild.mjs": "d968811f593cb3a180edd133e7e0ae174442c87a9c6726185b188f67511f544d",
+    "tests/integration/field54-candidate.test.mjs": "ca4d7d322511c74cc2c35b834ec34bb65e0ed164dfdffdfe46d18cff8aa08544"
+  },
+  "nativeProof": {
+    "path": ".local/field54-joint-native-v1/result.json",
+    "sha256": "efef2937e2cbc55335bfeea9fa5457d6ef2e9195f68ac6acbab21d76143a8711",
+    "passed": 265,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true,
+    "retainedFieldAndOriginalAndSourceCases": 233,
+    "joinedWorkspaceCases": 19,
+    "field54CoordinatorRecoveryCases": 13
+  },
+  "fullUnitProof": {
+    "path": ".local/field54-full-unit-v1.json",
+    "sha256": "f3f0bb5f233d4c424b62acb620348c1ed6dcb97aa7914d1ad0ce09f55b6acc7e",
+    "passed": 8400,
+    "failed": 0,
+    "pending": 0
+  },
+  "typesPassed": true,
+  "focusedLintPassed": true,
+  "productionNextAndServerBuildPassed": true,
+  "canonicalAmendmentsVerified": 12,
+  "repositoryRegisteredMigrationsVerified": 53,
+  "candidate": {
+    "parts": 13,
+    "file": "20261105180000_field_workspace.sql",
+    "sha256": "ebc88d2029dbac5815415a92f708e1213eaf3edbdcb342d583b925a4f3ff6524",
+    "registrySha256": "4834f520561796ce811f3b5a1d9391c3490b472a4f72a6fa9af5f232d3751dac",
+    "previousRegistrySha256": "033199a5f2e528f629799cdba48901bf2a4687df1eea3166b0cf7bfcf5ec3c67",
+    "repositoryRegistered": false,
+    "ownerApplied": false
+  },
+  "independentRecovery": {
+    "frozen53Tables": 96,
+    "field54Tables": 108,
+    "coveredCrestSourceTables": 80,
+    "requiredColumns": 1234,
+    "explicitCredentialExclusions": 10,
+    "fieldColumns": 164,
+    "allRowsExact": true,
+    "allClosedRolesExact": true,
+    "allSchemaGrantsFunctionsPoliciesConstraintsExact": true,
+    "strictSchemaComparatorUnchanged": true,
+    "independentFieldAndFrozenClustersClosed": true,
+    "originalIncludedSourcesExact": true,
+    "concurrentMileageCorrectionExcludedFromHeldSnapshot": true,
+    "forgedCiphertextChecksumCannotBypassDecryption": true,
+    "wrongRegistryAndVersionRefuseBeforeSourceRestoration": true,
+    "unknownFinanceSchemaCannotBeLabelledAs54": true
+  },
+  "occupancyReconstruction": {
+    "total": 7,
+    "open_travel": 1,
+    "open_work": 1,
+    "pauses": 2,
+    "physicalAndWorkSessionExclusions": 2,
+    "originalProjectionUnchanged": true,
+    "recoveryRuntimeReinserted": false
+  },
+  "implemented": [
+    "Frozen53 registry bytes retained at SHA256033199a5f2e528f629799cdba48901bf2a4687df1eea3166b0cf7bfcf5ec3c67; thirteen source-bound SQL bodies package one owned coordinator54 candidate. Root registry remains53 and no owner migration is performed.",
+    "A deliberately failed late body transaction leaves all original rows and no field tables; the real coordinator upgrade preserves every pre-existing business source. Applied schema coverage verifies80 source tables/1234 required columns and exactly10 prior credential exclusions.",
+    "Actual restricted field commands populate all eleven authoritative groups, preserve maximum-scale mileage/corrections and prepared-only review tasks, and retain separate paused and open-travel sessions.",
+    "Encrypted manifest and custom PostgreSQL dump share one held snapshot. A real later mileage correction commits concurrently but is absent from the point; independent restoration preserves the original included sources and all108 table row hashes.",
+    "Exact original closed-role order, policies, functions, constraints and grants survive restoration. The existing strict row and schema comparators are unchanged. Frozen53 still independently restores its original96-table point.",
+    "A separate temporary projection reconstructs seven occupancy rows directly from current authoritative versions with both copied exclusion constraints; it matches every derived value except nonauthoritative generated row IDs. It retains one open trip, one open paused session and two pause spans without changing Crest source/projection rows.",
+    "Wrong profile/candidate identity refuses before restoration. Modified ciphertext with a forged external checksum still fails authenticated decryption before source tables exist. Restored sources do not recreate original runtime login roles or grant writes to the fresh export principal."
+  ],
+  "rootCauseAndFix": {
+    "constraints": [
+      "work_scope_outcomes_scope_description_check",
+      "mileage_evidence_reason_check",
+      "mileage_evidence_estimate_source_check"
+    ],
+    "cause": "PostgreSQL expands BETWEEN into a nested AND in the initial stored CHECK tree; restoring its deparsed SQL flattens that AND. Three equivalent predicates differed textually. Explicit >= and <= retain the same boundary/NULL semantics and restore byte-identically. Exact schema comparator remains unchanged.",
+    "privateDiagnosticPath": ".local/field54-constraint-diagnostic.json",
+    "privateDiagnosticSha256": "6b83d196cf05bf4c13b932fd60886911a5c60ef572ed5018323542f8ece67e06",
+    "changedRegisteredMigrationBytes": false,
+    "changedTableColumnsOrBusinessRules": false,
+    "changedComparator": false,
+    "boundaryRegression": "NULL/NOT NULL, empty, ASCII whitespace, minimum, exact maximum, above maximum, Unicode and padded nonempty text all retain the original predicate behavior. Temporary schema diagnostics were removed after diagnosis."
+  },
+  "retainedFailures": [
+    {
+      "path": ".local/field54-native-v1/result.json",
+      "passed": 10,
+      "failed": 2,
+      "reason": "Rows and roles restored; strict schema comparison found three CHECK-expression parse/deparse parentheses differences. Dependent occupancy case did not run successfully."
+    },
+    {
+      "path": ".local/field54-native-v2/result.json",
+      "passed": 10,
+      "failed": 2,
+      "reason": "Failure-only paired synthetic schema definitions isolated exactly those three text-length expressions. Replaced BETWEEN with equivalent explicit comparisons only in held unregistered field SQL; no comparator exception or guard removal."
+    }
+  ],
+  "remaining": [
+    "Reviewed field54 registration/adoption plus genuine field read/action HTTP/MFA, human Save-review labels and connected mobile controls, rendered four-width/browser/device/full current-source release gates before owner-preview activation.",
+    "Neutral occupancy reconstruction is not an ordinary runtime reinsertion permission. Full recovery epoch/authority cutover, runtime credential reprovisioning, external objects/app image/independent vault/owner custody and complete business portability/import remain separate gates.",
+    "Atomic manual job/coupled Mobile work-site travel corrections and messages/configuration/outcomes/resume/maintenance follow-ups remain mandatory; retain Phase7 custody/photos, all finance/reporting, Google Calendar and real-use acceptance."
+  ],
+  "completePortableExport": false,
+  "completeBackup": false,
+  "ownerRuntimeChanged": false,
+  "realDataOrFinanceActivated": false,
+  "genuineFieldHttpOrBrowserAcceptance": false,
+  "registeredReleaseClaim": false,
+  "completeCrestAcceptance": false,
+  "spend": 0
+}

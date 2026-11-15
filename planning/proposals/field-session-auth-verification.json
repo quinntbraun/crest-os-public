@@ -1,0 +1,120 @@
+{
+  "formatVersion": 1,
+  "verifiedAt": "2026-11-05T23:21:10.770Z",
+  "scope": "held54 genuine field session actions over existing authentication, private scheduling HTTP and browser-client protocol; no rendered controls or owner activation",
+  "trackedParent": "ec3d971c7f1104100b1470aae516d01043fa9253",
+  "exactSourceFiles": [
+    {
+      "path": "src/operations/field-session-contract.ts",
+      "sha256": "3bac8caa3695ca8edc3ff6f46714b44aed5e199960306cbd6be698965fa9a622"
+    },
+    {
+      "path": "src/operations/field-directory.ts",
+      "sha256": "f418beaa14001a7142caaa06fb2a368d32b1a9d51b21ea9b696d550ea7320f06"
+    },
+    {
+      "path": "src/operations/scheduling-http.ts",
+      "sha256": "a1884284a9a79cb6f5efeb05120f404246648795a004c0d19de9a9b1f468a20b"
+    },
+    {
+      "path": "src/client/scheduling-transport.ts",
+      "sha256": "21bf1e0662484d062fe3401ffd8f9d76d5479cc85697358f0fed2a22644d0bff"
+    },
+    {
+      "path": "src/client/scheduling.ts",
+      "sha256": "d02e447cf33b02e81d78e8853d9b15b5624a324c644d5a388177304fbbf9100e"
+    },
+    {
+      "path": "tests/unit/field-session-contract.test.ts",
+      "sha256": "57aa58b28a564133f12247733a8da07ab26e7cb0041c2e3a738a60b70889893a"
+    },
+    {
+      "path": "tests/unit/field-session-client.test.ts",
+      "sha256": "eadc6994223700cb02269e2f99717b0c7d4268251141f4944425671f315cdbea"
+    },
+    {
+      "path": "tests/integration/field-session-auth.test.mjs",
+      "sha256": "20f299ba7c6b401cb82e60f3c92a3aa3bba28945b38f344eb38242c1b2cd8afe"
+    },
+    {
+      "path": "package.json",
+      "sha256": "69f725adcd48ddc95b8de37a4cafae73491b46388189584d556f95f7c4ef8099"
+    }
+  ],
+  "nativeProof": {
+    "path": ".local/field-session-auth-native-v7/result.json",
+    "sha256": "3c03bfb113ea7228d65329964d5e8199a5ee47aebf4eca628e3ca325b49ca015",
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "compatibilityProof": {
+    "path": ".local/field-session-auth-native-v5/result.json",
+    "sha256": "df33a95771bf703f9b0ca2b3ea82d4019cc671551bb198cf0437e1ebf32d8871",
+    "passed": 28,
+    "retainedBookingCases": 14,
+    "fieldCases": 14,
+    "sourceBoundToItsRetainedSnapshot": true,
+    "finalDelta": "Strictly refuse non-string action without conversion hooks, one regression; final fixture adds fixed-category diagnostics. Final14 re-executed on exact current application source. The package change removes an unintended duplicate test entry from the separate amendment script."
+  },
+  "fullUnitProof": {
+    "path": ".local/field-session-full-unit-v2.json",
+    "sha256": "9b84c2d58490868d949778f372a5ac7211feac801b5a8d2e08887292bea184d5",
+    "passed": 8440,
+    "failed": 0,
+    "pending": 0
+  },
+  "typesPassed": true,
+  "affectedLintPassed": true,
+  "productionNextAndServerBuildPassed": true,
+  "canonicalAmendmentsVerified": 12,
+  "repositoryRegisteredMigrations": 53,
+  "retainedField54RecoverySourceUnchanged": true,
+  "retainedRecoveryProof": "planning/proposals/field54-recovery-verification.json",
+  "verified": [
+    "Genuine password/TOTP/local session/fresh provider authorization; no manufactured signed-in session",
+    "Depart, arrive, direct arrival, pause/resume persist under restricted commands; acknowledged COMMIT only",
+    "Original receipt, fresh job/history reads, replay, stale/state/body collision, cross-tenant refusal and recovery write pause",
+    "Actual deferred COMMIT rollback; lost HTTP acknowledgement observed as unknown with one delivery and typed original recovery",
+    "Origin, CSRF, fixed body shape/business binding, route/method/cache/error boundaries and explicit disabled feature flag",
+    "Opaque existing pending reference only; browser-client save/read/history and original lookup without automatic retry",
+    "Explicit absent-original retirement blocks late write; revoked session/pre-aborted input refuses before submission; competing genuine adapters commit one start",
+    "Exact signed64 increment ceiling; immutable descriptor-safe input and no action conversion hook invocation"
+  ],
+  "diagnostics": [
+    {
+      "run": ".local/field-session-auth-native-v1/result.json",
+      "outcome": "4/12; adapter wrongly required root operationId/recoveryEpoch although authoritative field command returns state/receipt. Raw same-transaction change/original/COMMIT succeeds. Adapter now validates the actual two-key result, then verifies the complete typed original and actor before acknowledged COMMIT."
+    },
+    {
+      "run": ".local/field-session-auth-native-v2/result.json",
+      "outcome": "5/12; temporary private raw-transaction diagnostic verified SQL/lookup/COMMIT; instrumentation removed from tracked source."
+    },
+    {
+      "run": ".local/field-session-auth-native-v6/result.json",
+      "outcome": "13/14; one fixture lifecycle.login failed while full units ran concurrently, before the HTTP assertions. Root cause unproven. No deadline/security/retry change. Instrumented serial v7 passes14/14; retain as unresolved intermittent sign-in concern, not a demonstrated fix."
+    },
+    {
+      "check": ".local/review-field-action-coercion.mjs",
+      "outcome": "Before: rejected action object invoked toString twice. After explicit typeof check: rejected, zero conversion hooks; regression included in8440 units."
+    }
+  ],
+  "constructionOnly": true,
+  "ownerPreviewChanged": false,
+  "ownerDatabaseApplied": false,
+  "root54Registered": false,
+  "renderedBrowserAcceptance": false,
+  "physicalPhoneAcceptance": false,
+  "completeV1": false,
+  "realDataOrFinanceActivation": false,
+  "remaining": [
+    "Connect field read/action controller and mobile/desktop controls, with human Save-review labels, privacy clearing and rendered error/refresh/recovery verification",
+    "Connect completion/mileage/interruption/cancellation/support-trip APIs and controls; manual job/coupled work-site time corrections and message/follow-up actions remain",
+    "Reviewed54 registration/adoption, full current-source release/visual/browser/device gates and safe owner-preview upgrade before delivery",
+    "Retain intermittent fixture login concern and fixed-category observability; investigate any recurrence rather than rerun without evidence",
+    "All remaining Phase7 custody/photos, finance/reporting, complete portability/recovery/cutover and Calendar P20/BR21/ADR35/full real-use acceptance"
+  ]
+}

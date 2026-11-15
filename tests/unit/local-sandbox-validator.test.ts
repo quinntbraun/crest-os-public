@@ -25,7 +25,10 @@ beforeEach(()=>{
     child.stdin.once('finish',()=>queueMicrotask(()=>{
       const send=(v:unknown,exit=0)=>{child.stdout.end(typeof v==='string'?v:JSON.stringify(v));child.emit('close',exit);};
       if(args[0]==='create'){label=args[args.indexOf('--label')+1]!.split('=')[1]!;send(mode==='create-unknown'?'not-an-id':container);}
-      else if(args[0]==='inspect'&&args[2]==='{{json .}}')send({Id:container,Image:imageId,Config:{Labels:{'crest.file.dispatch':mode==='wrong-owner'?'other':label}}});
+      else if(args[0]==='inspect'&&args[2]==='{{json .}}')send({Id:container,Image:imageId,Config:{Labels:{'crest.file.dispatch':mode==='wrong-owner'?'other':label}},
+        HostConfig:{SecurityOpt:mode==='seccomp-unconfined'?['no-new-privileges','seccomp=unconfined']:
+          mode==='missing-security'?null:mode==='missing-privilege-guard'?[]:
+          mode==='custom-seccomp'?['no-new-privileges','seccomp=/unreviewed.json']:['no-new-privileges']}});
       else if(args[0]==='inspect')send({Running:false,OOMKilled:mode==='oom',ExitCode:mode==='quarantine'?1:0});
       else if(args[0]==='rm')send(container,mode==='cleanup-failed'?1:0);
       else if(args[0]==='start'){
@@ -51,6 +54,11 @@ it('pins the local image, fixed isolation, no pulls/log retention/host mounts, a
   expect(argsHistory.at(-1)).toEqual(['rm','--force',container]);expect(mocks.rmdir).toHaveBeenCalledOnce();
 });
 it('seals caller bytes before any asynchronous work',async()=>{const input=Buffer.from(bytes),pending=client().validate(input,'image/png',dispatch);input.fill(0);await pending;expect(body).toEqual(bytes);});
+it.each(['seccomp-unconfined','missing-security','missing-privilege-guard','custom-seccomp'])('refuses the inspected security profile before passing bytes, then removes only its verified container: %s',async failure=>{
+  mode=failure;await expect(run()).rejects.toMatchObject({code:'SANDBOX_PROTOCOL_INVALID'});
+  expect(argsHistory.some(args=>args[0]==='start')).toBe(false);expect(body).toHaveLength(0);
+  expect(argsHistory.at(-1)).toEqual(['rm','--force',container]);
+});
 it.each(['wrong-hash','bad-json','overflow','oom','quarantine'])('withholds invalid/failed output and removes the exact owned container: %s',async failure=>{
   mode=failure;await expect(run()).rejects.toMatchObject({code:failure==='oom'?'SANDBOX_EXECUTION_FAILED':failure==='quarantine'?'FILE_QUARANTINED':'SANDBOX_PROTOCOL_INVALID'});
   expect(argsHistory.at(-1)).toEqual(['rm','--force',container]);
