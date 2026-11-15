@@ -7,16 +7,55 @@ export const browserGroups = Object.freeze({
   commercial: group('quote-draft-editor-browser','quote-review-browser','quote-commercial-browser','quote-browser-response'),
   amendments: group('quote-amendment-workspace-browser','quote-amendment-acceptance-product-browser'),
   schedule: group('appointment-holds-browser','appointment-holds-product-browser','confirmed-bookings-product-browser','book-job-product-browser','job-change-product-browser','booking-divisions-product-browser','combined-booking-product-browser','fulfillment-modes-product-browser','booking-conflict-review-product-browser'),
-  records: group('source-export-browser','source-export-product-browser','workspace-journey-browser','owner-expenses-product-browser')
+  field: group('field-work-product-browser','work-completion-product-browser','mileage-product-browser','support-trip-product-browser','trip-interruption-product-browser','unfulfilled-cancellation-product-browser','job-work-time-product-browser','job-work-boundary-product-browser','maintenance-reminders-product-browser'),
+  custody: group('dropoff-custody-product-browser','dropoff-policy-revision-browser','pickup-trip-product-browser','pickup-custody-photo-browser','pickup-worksite-product-browser'),
+  'statement-staging': group('finance-statement-staging-browser'),
+  records: group('source-export-browser','source-export-product-browser','workspace-journey-browser','owner-expenses-product-browser','finance-account-settings-browser','finance-mapping-settings-browser','finance-tax-profiles-browser','finance-expense-category-browser','finance-money-channel-browser','finance-invoice-issue-product-browser','finance-expense-posting-browser','google-calendar-settings-product-browser')
 });
 export type BrowserGroup = keyof typeof browserGroups;
+const invoiceJourney = 'tests/integration/finance-invoice-issue-product-browser.test.mjs';
+const restoredTipJourney = 'tests/integration/finance-restored-tip-product-browser.test.mjs';
+const openingWorksheetJourney = 'tests/integration/finance-opening-worksheet-browser.test.mjs';
+const incomeStatementJourney = 'tests/integration/finance-expense-posting-browser.test.mjs';
+const paymentRecovery=Object.freeze({
+  CREST_TEST_EXCESS_RECEIPTS:'1',
+  CREST_TEST_EXCESS_RETURN_EXPORT:'1',
+  CREST_TEST_TIP_RETURN_EXPORT:'1',
+  CREST_TEST_COLLECTION_FAILURE_EXPORT:'1',
+  CREST_TEST_REFUND_TRANSFER_EXPORT:'1',
+  CREST_TEST_DIRECT_RECEIPT_TIP_EXPORT:'1',
+  CREST_TEST_REFUND_TRANSFER_FEE_EXPORT:'1',
+  CREST_TEST_COLLECTION_FAILURE_RECREDIT_EXPORT:'1',
+  CREST_TEST_COLLECTION_FAILURE_GROUPED_RECREDIT_EXPORT:'1',
+});
+const restoredTip=Object.freeze({...paymentRecovery,CREST_TEST_RESTORED_TIP_EXPORT:'1'});
+export const browserScenarios = Object.freeze({
+  'receipt-funds': Object.freeze({
+    CREST_TEST_EXCESS_RECEIPTS:'1',
+    CREST_TEST_RECEIPT_FUNDS_APPLICATION:'1',
+  }),
+  'payment-recovery': paymentRecovery,
+  'restored-tip': restoredTip,
+  'opening-worksheet': Object.freeze({...restoredTip,CREST_TEST_OPENING_WORKSHEET_EXPORT:'1'}),
+  'income-statement': Object.freeze({...restoredTip,CREST_TEST_RECORDED_INCOME_STATEMENT:'1'}),
+});
+export const browserGroupNames = Object.freeze([...Object.keys(browserGroups), ...Object.keys(browserScenarios)]);
+
+export function browserScenario(selected: string) {
+  return Object.hasOwn(browserScenarios, selected) ? browserScenarios[selected as keyof typeof browserScenarios] : undefined;
+}
 export function browserGroupFiles(command: unknown, selected: unknown): readonly string[] {
   const invalid = () => { throw new Error('BROWSER_GROUP_COVERAGE_REVIEW_REQUIRED'); };
-  if (typeof command !== 'string' || typeof selected !== 'string' || !Object.hasOwn(browserGroups, selected)) return invalid();
+  if (typeof command !== 'string' || typeof selected !== 'string' || !browserGroupNames.includes(selected)) return invalid();
   const tokens = command.trim().split(/\s+/);
   if (tokens[0] !== 'node' || tokens[1] !== '--test' || tokens[2] !== '--test-concurrency=1') return invalid();
   const declared = tokens.slice(3), expected = Object.values(browserGroups).flat();
   if (new Set(expected).size !== expected.length || new Set(declared).size !== declared.length
     || declared.length !== expected.length || declared.some(file => !expected.includes(file))) return invalid();
+  if (browserScenario(selected)) {
+    if (!browserGroups.records.includes(invoiceJourney)) return invalid();
+    if (selected==='income-statement') return [incomeStatementJourney];
+    return [selected==='opening-worksheet'?openingWorksheetJourney:selected==='restored-tip'?restoredTipJourney:invoiceJourney];
+  }
   return browserGroups[selected as BrowserGroup];
 }
