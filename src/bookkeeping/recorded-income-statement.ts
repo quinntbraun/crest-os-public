@@ -1,5 +1,5 @@
-import { customerDate, customerInstant, customerUuid, exactCustomerObject as exact } from '../customer/customer-contract';
-import { financeAccountCode, financeAccountReviewReason, requireFinanceAccount as check } from './finance-account-contract';
+import { customerDate, customerInstant, customerUuid, exactCustomerObject as exact } from '../customer/customer-contract.ts';
+import { financeAccountCode, financeAccountReviewReason, requireFinanceAccount as check } from './finance-account-contract.ts';
 
 export const incomeSections = {
   service_revenue: 'Gross service revenue',
