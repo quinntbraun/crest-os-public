@@ -78,7 +78,8 @@ function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'c
         if(error.code==='42501'&&error.message==='CREST_MUTATION_AUTHORIZATION_DENIED')throw new Error('FINANCE_ACCOUNT_SIGN_IN_REQUIRED');
         // eslint-disable-next-line preserve-caught-error -- This exact setup marker contains no database detail.
         if(error.code==='P0001'&&error.message==='FINANCE_ACCOUNT_SETUP_REQUIRED')throw new Error('FINANCE_ACCOUNT_SETUP_REQUIRED');
-        if(error.code==='40001'&&['FINANCE_MAPPING_VERSION_CONFLICT','FINANCE_TAX_VERSION_CONFLICT','FINANCE_CHANNEL_VERSION_CONFLICT'].includes(error.message)){
+        if(error.code==='40001'&&['FINANCE_MAPPING_VERSION_CONFLICT','FINANCE_TAX_VERSION_CONFLICT','FINANCE_CHANNEL_VERSION_CONFLICT',
+         'OPENING_WORKSHEET_REVISION_CONFLICT','OPENING_AR_REVISION_CONFLICT'].includes(error.message)){
           // eslint-disable-next-line preserve-caught-error -- The transaction rolled back and the marker is allowlisted.
           throw new Error(error.message);
         }
@@ -87,7 +88,8 @@ function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'c
          'REFUND_TRANSFER_FEE_AMOUNT_REQUIRED','REFUND_TRANSFER_FEE_MAPPING_REQUIRED','COLLECTION_RECREDIT_AMOUNT_REQUIRED',
          'COLLECTION_RECREDIT_FAILURE_REQUIRED','COLLECTION_RECREDIT_DATE_REQUIRED','COLLECTION_RECREDIT_RANGE_UNAVAILABLE',
          'COLLECTION_RECREDIT_RECEIVABLE_REQUIRED',
-         'COLLECTION_RECREDIT_VERIFIED_CHANNEL_REQUIRED','COLLECTION_RECREDIT_FUNDS_MAPPING_REQUIRED'].includes(error.message)){
+         'COLLECTION_RECREDIT_VERIFIED_CHANNEL_REQUIRED','COLLECTION_RECREDIT_FUNDS_MAPPING_REQUIRED',
+         'OPENING_RECEIVABLES_CUSTOMER_REQUIRED','OPENING_AR_BALANCE_REQUIRED'].includes(error.message)){
           // eslint-disable-next-line preserve-caught-error -- Only allowlisted outcomes cross after rollback.
           throw new Error(error.message);
         }
@@ -95,19 +97,22 @@ function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'c
          'FINANCE_TAX_EFFECTIVE_ORDER_REQUIRED','FINANCE_CHANNEL_EFFECTIVE_ORDER_REQUIRED','FINANCE_CHANNEL_ACCOUNT_REQUIRED',
          'FINANCE_CHANNEL_ACCOUNT_PINNED','FINANCE_CHANNEL_IDENTITY_RETAINED','DIRECT_RECEIPT_TIP_INPUT_REQUIRED',
          'REFUND_TRANSFER_FEE_INPUT_REQUIRED','REFUND_TRANSFER_FEE_EVIDENCE_REQUIRED',
-         'COLLECTION_RECREDIT_INPUT_REQUIRED','COLLECTION_RECREDIT_EVIDENCE_REQUIRED'].includes(error.message)){
+         'COLLECTION_RECREDIT_INPUT_REQUIRED','COLLECTION_RECREDIT_EVIDENCE_REQUIRED',
+         'OPENING_AR_EVIDENCE_REQUIRED','OPENING_AR_DATE_REQUIRED','OPENING_AR_AMOUNT_REQUIRED'].includes(error.message)){
           // eslint-disable-next-line preserve-caught-error -- No SQL detail leaves this confirmed rollback.
           throw new Error(error.message);
         }
       }
       if(role==='crest_finance_preview'&&command&&!combined.aborted&&rollbackConfirmed&&error instanceof Error&&'code' in error
-        &&error.code==='23505'&&['COLLECTION_RECREDIT_ALREADY_RECORDED','COLLECTION_RECREDIT_EXTERNAL_ID_ALREADY_RECORDED'].includes(error.message)){
+        &&error.code==='23505'&&['COLLECTION_RECREDIT_ALREADY_RECORDED','COLLECTION_RECREDIT_EXTERNAL_ID_ALREADY_RECORDED',
+         'OPENING_AR_DUPLICATE_EVIDENCE'].includes(error.message)){
         // eslint-disable-next-line preserve-caught-error -- The acknowledged rollback confines this response to exact known markers.
         throw new Error(error.message);
       }
       if(role==='crest_finance_preview'&&!transaction&&!combined.aborted&&error instanceof Error&&'code' in error
         &&(error.code==='54000'&&error.message==='COLLECTION_RECREDIT_OPTIONS_LIMIT'
-          ||error.code==='23514'&&error.message==='COLLECTION_RECREDIT_DATE_REQUIRED')){
+          ||error.code==='23514'&&['COLLECTION_RECREDIT_DATE_REQUIRED','OPENING_RECEIVABLES_CUSTOMER_REQUIRED'].includes(error.message)
+          ||(error.code==='40001'||error.code==='22023')&&error.message==='OPENING_WORKSHEET_REVISION_CONFLICT')){
         // eslint-disable-next-line preserve-caught-error -- The bounded read reports only the exact expected marker.
         throw new Error(error.message);
       }

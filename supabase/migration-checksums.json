@@ -520,6 +520,11 @@
       "version": "20261228180000",
       "file": "20261228180000_fictional_recorded_income_statement.sql",
       "sha256": "f332211497c0fc2d00c5292f4145f5e64d8a1c9a9f5246a1256559d989c452f3"
+    },
+    {
+      "version": "20261229180000",
+      "file": "20261229180000_fictional_opening_receivables_schedule.sql",
+      "sha256": "29724ab0a21eb5fa7acade8db765d1e1fb7130d899457879f8730f611335d9a3"
     }
   ]
 }

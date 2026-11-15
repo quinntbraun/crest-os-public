@@ -11,7 +11,7 @@ import { confirmedBookingRequest } from '../fixtures/confirmed-booking.ts';
 import { createConfirmedBookingFixture } from '../support/confirmed-booking-fixture.mjs';
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
 import { installProviderSchema } from '../support/provider-schema.mjs';
-import { backupDatabase, connect, keyPair, recoveryCluster, restoreDatabase } from '../support/recovery-drill.mjs';
+import { backupIncomeReportDatabase, connect, keyPair, recoveryCluster, restoreIncomeReportDatabase } from '../support/recovery-drill.mjs';
 
 async function command(connection, name, values) {
   const args=values.map((_,index)=>'$'+(index+1)).join(',');
@@ -283,14 +283,14 @@ test('registered reports tie exact amounts, reject inconsistent source and survi
     const point=join(sandbox.workspace,'income-report-recovery');
     await mkdir(point,{mode:0o700});
     const keys=await keyPair(sandbox.workspace);
-    const {manifest}=await backupDatabase(admin,target,point,keys.recipient);
+    const {manifest}=await backupIncomeReportDatabase(admin,target,point,keys.recipient);
     assert.equal(manifest.schemaVersion,104);
     const destination=await recoveryCluster();
     let restored;
     try {
       const restoredUrl=await destination.database();
       assert.notEqual(new URL(restoredUrl).port,new URL(target).port);
-      assert.deepEqual(await restoreDatabase(point,keys.path,restoredUrl),manifest);
+      assert.deepEqual(await restoreIncomeReportDatabase(point,keys.path,restoredUrl),manifest);
       restored=await connect(restoredUrl);
       await restored.query('SET ROLE crest_finance_preview');
       const recovered=await statement(today,today,owner,restored);

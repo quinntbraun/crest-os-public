@@ -40,20 +40,26 @@ const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8')
 const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8'));
 const currentCoverage=JSON.parse(await readFile(join(root,'planning/SECURITY_EXPORT_COVERAGE.json'),'utf8'));
 const registryHash=hash(await readFile(join(root,'supabase/migration-checksums.json')));
+const priorArCoverage={...currentCoverage,tables:currentCoverage.tables.filter(row=>row.table!=="crest.opening_receivable_schedule_revisions")};
+const legacy104Bytes=await readFile(join(root,'tests/support/registered104-migration-checksums.json'));
+const legacy104=JSON.parse(legacy104Bytes);
+assert.equal(hash(legacy104Bytes),'8084ff6ebd02d9d416ee4c2d2f38ea4188c16fe2495a8939f9492bda9e5ea757');
+assert.deepEqual(registry.migrations.slice(0,104),legacy104.migrations);
+const legacy104Profile=Object.freeze({schemaVersion:104,registrySha256:hash(legacy104Bytes)});
 const legacy103Bytes=await readFile(join(root,'tests/support/registered103-migration-checksums.json'));
 const legacy103=JSON.parse(legacy103Bytes);
 assert.equal(hash(legacy103Bytes),'202692d913c41b75e4f70888d6346bed77d1ec2751cae0da439861078e73326b');
 assert.deepEqual(registry.migrations.slice(0,103),legacy103.migrations);
 const legacy103Profile=Object.freeze({schemaVersion:103,registrySha256:hash(legacy103Bytes)});
 const legacy103Snapshot={profile:legacy103Profile,versions:legacy103.migrations.map(row=>row.version),
- coverage:{...currentCoverage,migrationCount:103}};
+ coverage:{...priorArCoverage,migrationCount:103}};
 const legacy102Bytes=await readFile(join(root,'tests/support/registered102-migration-checksums.json'));
 const legacy102=JSON.parse(legacy102Bytes);
 assert.equal(hash(legacy102Bytes),'41cfa74f25a053308cc93033628da3a72c4394d893f12bffadb129147930e8d7');
 assert.deepEqual(registry.migrations.slice(0,102),legacy102.migrations);
 const legacy102Profile=Object.freeze({schemaVersion:102,registrySha256:hash(legacy102Bytes)});
 const statementTables=new Set(statementSourceCoverage.map(row=>String(row.table)));
-const legacy102Coverage={...currentCoverage,migrationCount:102,tables:currentCoverage.tables.filter(row=>!statementTables.has(row.table))};
+const legacy102Coverage={...priorArCoverage,migrationCount:102,tables:priorArCoverage.tables.filter(row=>!statementTables.has(row.table))};
 const legacy102Snapshot={profile:legacy102Profile,versions:legacy102.migrations.map(row=>row.version),coverage:legacy102Coverage};
 const frozen92=await readFrozen92(root);
 assert.deepEqual(registry.migrations.slice(0,92),frozen92.migrations);
@@ -1151,7 +1157,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile===legacy82Profile
       ||profile===legacy92Profile
       ||profile===legacy101Profile
-      ||profile===legacy102Profile||profile===legacy103Profile
+      ||profile===legacy102Profile||profile===legacy103Profile||profile===legacy104Profile
       ||profile.schemaVersion===81&&profile.heldUnapplicationMigrationSha256
       ||profile.schemaVersion===82&&profile.heldFundApplicationMigrationSha256
       ||profile.schemaVersion===83&&profile.heldTipMigrationSha256
@@ -1214,6 +1220,13 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_RECOVERY_BACKUP_FAILED:'+stage);}
 }
 export async function restoreDatabase(...args){return restoreWithProfile(currentProfile,...args);}
+export async function backupIncomeReportDatabase(client,url,directory,recipient){
+ const versions=legacy104.migrations.map(row=>row.version);
+ assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(row=>row.version),versions);
+ return backupWithProfile(legacy104Profile,client,url,directory,recipient,undefined,undefined,
+  {profile:legacy104Profile,versions,coverage:{...priorArCoverage,migrationCount:104}});
+}
+export async function restoreIncomeReportDatabase(...args){return restoreWithProfile(legacy104Profile,...args);}
 export async function backupStatementStagingDatabase(client,url,directory,recipient){
   return backupWithProfile(legacy103Profile,client,url,directory,recipient,undefined,undefined,legacy103Snapshot);
 }

@@ -34,6 +34,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
    'finance-direct-tip','finance-refund-transfer-fee','finance-collection-recredit','finance-grouped-recredit','finance-posted-export'],
   'restored-tip':['finance-restored-tip'],
   'opening-worksheet':['finance-opening-worksheet'],
+  'opening-receivables':['finance-opening-worksheet','finance-opening-receivables'],
   'income-statement':['finance-income-statement'],
   'statement-staging':['finance-statement-staging'],
   field:['field-departure','field-pause','completion-editor','completion-saved','mileage-form','mileage-split','mileage-saved','field-cancellation','field-work-time','field-work-boundary','mileage-departure-correction','completion-outcome','completion-history','field-maintenance-history','completion-invoice-preparation','completion-invoice-draft'],

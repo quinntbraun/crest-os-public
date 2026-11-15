@@ -3,51 +3,16 @@
 import {useEffect,useRef,useState} from 'react';
 import type {FormEvent,ReactNode} from 'react';
 import {openingControls,parseOpeningDraft,parseOpeningReference} from '../../../bookkeeping/opening-worksheet-contract';
-import type {OpeningBank,OpeningBankOption,OpeningControl,OpeningDocument,OpeningDraft,OpeningProjection,OpeningReference,OpeningTiming} from '../../../bookkeeping/opening-worksheet-contract';
+import type {OpeningBank,OpeningBankOption,OpeningControl,OpeningDraft,OpeningProjection,OpeningReference,OpeningTiming} from '../../../bookkeeping/opening-worksheet-contract';
 import {financeAccounts} from '../../../client/finance-accounts';
 import type {FinanceAccountContext} from '../../../client/finance-accounts';
 import {financeAccountReviewReason} from '../../../bookkeeping/finance-account-contract';
 import styles from './screen.module.css';
+import {DollarField,EvidenceFields,Note,amount,dollars,readEvidence,value} from './opening-worksheet-fields';
+import {OpeningReceivables} from './opening-receivables';
 
 type ControlKey=keyof typeof openingControls;
 const pendingKey=(businessId:string)=>'crest.opening-worksheet.original.v1.'+businessId;
-const value=(form:FormData,name:string)=>String(form.get(name)??'').trim();
-
-function amount(input:string){
- const parts=/^(-?)(0|[1-9][0-9]{0,15})(?:\.([0-9]{1,2}))?$/.exec(input);
- if(!parts)throw Error('Enter dollar amounts with up to two decimal places.');
- const absolute=BigInt(parts[2]!)*100n+BigInt((parts[3]??'').padEnd(2,'0'));
- return (parts[1]?-absolute:absolute).toString();
-}
-function dollars(value:string|null){
- if(value===null)return '';
- const cents=BigInt(value),absolute=cents<0n?-cents:cents;
- return `${cents<0n?'-':''}${absolute/100n}.${String(absolute%100n).padStart(2,'0')}`;
-}
-function readEvidence(form:FormData,name:string):OpeningDocument{
- return {reference:value(form,`${name}-reference`),sha256:value(form,`${name}-sha256`).toLowerCase()};
-}
-function EvidenceFields({name,initial}:{name:string;initial?:OpeningDocument|null|undefined}){
- return <>
-  <label htmlFor={`${name}-reference`}>Document reference</label>
-  <input id={`${name}-reference`} name={`${name}-reference`} required maxLength={200} defaultValue={initial?.reference}/>
-  <label htmlFor={`${name}-sha256`}>Document SHA-256 checksum</label>
-  <input id={`${name}-sha256`} name={`${name}-sha256`} required minLength={64} maxLength={64} pattern="[a-fA-F0-9]{64}"
-   autoCapitalize="none" spellCheck={false} defaultValue={initial?.sha256}/>
- </>;
-}
-function Note({name,initial,label}:{name:string;initial:string|undefined;label:string}){
- return <>
-  <label htmlFor={name}>{label}</label>
-  <input id={name} name={name} required maxLength={1000} defaultValue={initial}/>
- </>;
-}
-function DollarField({name,label,initial}:{name:string;label:string;initial:string|null|undefined}){
- return <>
-  <label htmlFor={name}>{label}</label>
-  <input id={name} name={name} required inputMode="decimal" maxLength={20} defaultValue={dollars(initial??null)}/>
- </>;
-}
 function EvidenceGroup({label,initialState,states,id,children}:{label:string;initialState:string;states:Record<string,string>;
  id:string;children:(verified:boolean)=>ReactNode}){
  const [state,setState]=useState(initialState);
@@ -105,7 +70,7 @@ function readDraft(form:FormData,projection:OpeningProjection):OpeningDraft{
   equityBasis:value(form,'opening-equity'),banks:projection.banks.map(option=>readBank(form,option)),controls:Object.fromEntries(controls)});
 }
 
-export function OpeningWorksheet({businessId}:{businessId:string}){
+export function OpeningWorksheet({businessId,arPreview}:{businessId:string;arPreview:boolean}){
  const [projection,setProjection]=useState<OpeningProjection|null>(null),[date,setDate]=useState('');
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[pending,setPending]=useState<OpeningReference|null>(null);
  const [mayClose,setMayClose]=useState(false),[reason,setReason]=useState('');
@@ -235,6 +200,8 @@ export function OpeningWorksheet({businessId}:{businessId:string}){
       <dt>Provisional opening equity</dt><dd>{dollars(latest.provisionalEquityCents)} USD</dd>
      </dl>
      <button type="button" className="secondary" disabled={busy} onClick={download}>Download saved worksheet (JSON)</button>
+     {arPreview&&!pending&&<OpeningReceivables key={latest.revision} businessId={businessId} revision={latest.revision}
+      worksheetRevisionId={latest.worksheetRevisionId} cutoverOn={latest.cutoverOn}/>}
     </div>}
     <form onSubmit={event=>{event.preventDefault();load(date);}}>
      <label htmlFor="opening-cutover">Proposed local cutover date ({projection.timeZone})</label>

@@ -1,0 +1,13 @@
+# Fictional opening receivable evidence storage
+
+Schema 105 registers the fictional workflow with immutable, auditable schedules. Each schedule revision pins one saved opening worksheet revision. A new schedule may be saved only on the latest worksheet revision. If the cutover worksheet changes, review and save evidence against that new revision. Earlier schedules remain readable by their explicit boundary. Carrying a balance forward requires a separate review.
+
+The save command independently verifies tenant and current finance authority, positive exact cents, pre-cutover charge/payment/credit dates, evidence references and hashes, source uniqueness within the schedule, and original charge less reductions equaling the actual remaining receivable. The original due date may fall after cutover. Missing tax evidence remains unknown. A saved schedule retains its signed-in author, receipt, reason, exact evidence hash and the preceding and current revision in the audit history. Same-ID retries return the exact committed result. An authenticated current owner may look up the original ID after reopening the workspace, subject to business, actor and recovery-epoch rules.
+
+The Accounting worksheet now supports preview, an explicit reason and save, and reopening the latest saved schedule for the selected worksheet. The browser holds draft evidence only in memory and retains only an opaque operation and recovery-epoch reference while a save is uncertain. A recent authenticated owner may check for the original result after reload. If no save is found, closing the attempt with a reason claims the same operation ID and prevents a late submission from writing it. A previously committed result takes precedence over retirement.
+
+The owner can download the displayed saved receipt as JSON after Crest verifies current access and confirms that its revision is still the latest for the worksheet. The file includes exact cents, the evidence checksum, the worksheet and schedule revision identifiers, and the original operation and audit references.
+
+The v20 private finance ZIP includes every saved schedule revision and links each to its worksheet, operation and audit. It retains the original evidence text for exact checksum verification. The verifier rejects missing revisions, broken chains, mismatched worksheets and missing save or retirement audits. Independent encrypted restore returns identical source snapshots.
+
+Saving or reviewing leaves the journal, live receivables, posting authority, and trial balance untouched. Full revision browsing, held-funds evidence, legacy collections and P27 posting remain open.

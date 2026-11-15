@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 104,
+  "migrationCount": 105,
   "tables": [
     {
       "table": "crest.businesses",
@@ -3704,6 +3704,25 @@
         "id",
         "statement_on",
         "signed_cents"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.opening_receivable_schedule_revisions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "worksheet_revision_id",
+        "revision",
+        "prior_revision",
+        "operation_id",
+        "audit_event_id",
+        "recorded_by",
+        "recorded_at",
+        "evidence",
+        "evidence_sha256"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

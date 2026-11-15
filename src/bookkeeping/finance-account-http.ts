@@ -1,5 +1,6 @@
 import 'server-only';
 import {createHash} from 'node:crypto';
+import {isDeepStrictEqual} from 'node:util';
 import {customerDate,customerUuid,customerVersion,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {readBrowserCookies} from '../security/browser-http.ts';
 import {createBusinessSettingsContextReader} from '../security/business-settings-context.ts';
@@ -92,6 +93,8 @@ import {parseStatementDraft,parseStatementReference,parseStatementResult} from '
 import {assessStatementRows} from './statement-reconciliation.ts';
 import {parseOpeningDraft,parseOpeningProjection,parseOpeningReference,parseOpeningResult} from './opening-worksheet-contract.ts';
 import {parseRecordedIncomeStatement} from './recorded-income-statement.ts';
+import {parseOpeningArInput,previewOpeningReceivables,requireOpeningAr} from './opening-receivables-preview.ts';
+import {parseOpeningArOperation,parseOpeningArSave,parseOpeningArStored} from './opening-receivables-schedule-contract.ts';
 
 export const financeAccountPrefix='/api/business/finance-accounts/';
 const fields={context:[],list:['afterCode','includeArchived'],history:['accountId','afterVersion'],
@@ -124,6 +127,11 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
  'statement-staging-lookup':['reference'],
  'opening-worksheet-read':['reviewEpoch','requestedOn'],
  'recorded-income-statement':['fromOn','throughOn'],
+ 'opening-worksheet-ar-preview':['reviewEpoch','preview'],
+ 'opening-worksheet-ar-read':['reviewEpoch','worksheetRevision'],
+ 'opening-worksheet-ar-save':['reference','worksheetRevisionId','draft'],
+ 'opening-worksheet-ar-lookup':['reference','reviewEpoch'],
+ 'opening-worksheet-ar-retire':['reference','reviewEpoch','reason'],
  'opening-worksheet-save':['reference','expectedRevision','draft'],
  'opening-worksheet-lookup':['reviewEpoch','reference'],
  'opening-worksheet-retire':['reviewEpoch','reference','reason'],
@@ -221,8 +229,8 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false,collectionFailureRecredits=false,collectionFailureGroupedRecredits=false,collectionFailureTipReinstatements=false,openingWorksheet=false,statementStaging=false,recordedIncomeStatement=false}:Readonly<{
-  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;openingWorksheet?:boolean;statementStaging?:boolean;recordedIncomeStatement?:boolean;
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false,collectionFailureRecredits=false,collectionFailureGroupedRecredits=false,collectionFailureTipReinstatements=false,openingWorksheet=false,openingArPreview=false,statementStaging=false,recordedIncomeStatement=false}:Readonly<{
+  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;openingWorksheet?:boolean;openingArPreview?:boolean;statementStaging?:boolean;recordedIncomeStatement?:boolean;
  }>={}){
  check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
  check((!sameDayExpenses||directReceipts&&categoryMappings)&&(!trialBalance||sameDayExpenses));
@@ -247,6 +255,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
  check(typeof statementStaging==='boolean'&&(!statementStaging||moneyChannels));
  check(typeof openingWorksheet==='boolean'&&(!openingWorksheet||moneyChannels));
  check(typeof recordedIncomeStatement==='boolean'&&(!recordedIncomeStatement||trialBalance&&refundTransfers));
+ check(typeof openingArPreview==='boolean'&&(!openingArPreview||openingWorksheet));
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
@@ -271,6 +280,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route.startsWith('statement-staging-')&&!statementStaging)return financeAccountFailure(404);
    if(route==='recorded-income-statement'&&!recordedIncomeStatement)return financeAccountFailure(404);
    if(route.startsWith('opening-worksheet-')&&!openingWorksheet)return financeAccountFailure(404);
+   if(route.startsWith('opening-worksheet-ar-')&&!openingArPreview)return financeAccountFailure(404);
    if(route.startsWith('receipt-')&&!directReceipts)return financeAccountFailure(404);
    if(route.startsWith('receipt-tip-')&&!directReceiptTips)return financeAccountFailure(404);
    if(route.startsWith('payment-correction-')&&!paymentCorrections)return financeAccountFailure(404);
@@ -294,7 +304,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    protect.requireOrigin(request);
    const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;
    check(cookie);
-   const input=await readNestedJsonBody(bounded,fields[route],route.startsWith('invoice-issue-')?131072:route==='statement-staging-save'||route==='opening-worksheet-save'||route==='receipt-record'||route==='receipt-tip-record'||route==='expense-post-submit'||route==='collection-failure-submit'||route==='refund-transfer-submit'||route==='refund-transfer-fee-submit'||route==='grouped-payment-recredit-submit'?49152:8192,
+   const input=await readNestedJsonBody(bounded,fields[route],route.startsWith('invoice-issue-')?131072:route==='statement-staging-save'||route==='opening-worksheet-save'||route==='opening-worksheet-ar-preview'||route==='opening-worksheet-ar-save'||route==='receipt-record'||route==='receipt-tip-record'||route==='expense-post-submit'||route==='collection-failure-submit'||route==='refund-transfer-submit'||route==='refund-transfer-fee-submit'||route==='grouped-payment-recredit-submit'?49152:8192,
     excessReceipts&&route==='receipt-record'?'fundsMappingId':undefined);
    const sessionId=await csrf(bounded,cookie,signal);
    const binding=createHash('sha256').update('crest.finance.account.edit.v1\0').update(businessId).update('\0')
@@ -315,6 +325,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     if(statementStaging)response.headers.set('X-Crest-Statement-Staging','1');
     if(openingWorksheet)response.headers.set('X-Crest-Opening-Worksheet','1');
     if(recordedIncomeStatement)response.headers.set('X-Crest-Recorded-Income-Statement','1');
+    if(openingArPreview)response.headers.set('X-Crest-Opening-AR-Preview','1');
     if(invoicePreparation)response.headers.set('X-Crest-Invoice-Preparation','1');
     if(invoiceDrafts)response.headers.set('X-Crest-Invoice-Drafts','1');
     if(invoiceIssueTaxReview)response.headers.set('X-Crest-Invoice-Issue-Tax-Review','1');
@@ -382,6 +393,63 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
      [...args,fromOn,throughOn],signal);
     parseRecordedIncomeStatement(value,businessId,fromOn,throughOn);
     return privateJsonResponse(value as object);
+   }
+   if(route==='opening-worksheet-ar-preview'){
+    const {reviewEpoch}=input;
+    check(customerUuid(reviewEpoch));
+    const preview=parseOpeningArInput(input.preview);
+    const customers=[...new Set(preview.lines.map(row=>row.customerId))];
+    const boundary=await database('SELECT crest_commands.review_fictional_opening_receivables('+authority+
+     ',$9::uuid,$10::bigint,$11::uuid[]) AS result',[...args,reviewEpoch,preview.revision,customers],signal);
+    requireOpeningAr(exact(boundary,['schemaVersion','businessId','revision','worksheetRevisionId','cutoverOn'])&&
+     boundary.schemaVersion===1&&boundary.businessId===businessId&&boundary.revision===preview.revision&&
+     customerUuid(boundary.worksheetRevisionId)&&customerDate(boundary.cutoverOn));
+    return privateJsonResponse(previewOpeningReceivables(preview,boundary.cutoverOn));
+   }
+   if(route==='opening-worksheet-ar-read'){
+    check(customerUuid(input.reviewEpoch)&&customerVersion(input.worksheetRevision));
+    const value=await database('SELECT crest_commands.read_fictional_opening_ar_schedule('+authority+',$9::uuid,$10::bigint) AS result',
+     [...args,input.reviewEpoch,input.worksheetRevision],signal);
+    parseOpeningArStored(value,businessId);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='opening-worksheet-ar-save'||route==='opening-worksheet-ar-lookup'||route==='opening-worksheet-ar-retire'){
+    const reference=parseOpeningReference(input.reference);
+    const parseResult=(value:unknown)=>parseOpeningArOperation(value,businessId,reference.operationId);
+    if(route==='opening-worksheet-ar-lookup'){
+     check(customerUuid(input.reviewEpoch));
+     const value=await database('SELECT crest_commands.lookup_fictional_opening_ar_save('+authority+',$9::uuid,$10::uuid,$11::uuid) AS result',
+      [...args,input.reviewEpoch,reference.operationId,reference.recoveryEpoch],signal);
+     return privateJsonResponse(value as object,parseResult(value).state==='conflict'?409:200);
+    }
+    if(route==='opening-worksheet-ar-retire'){
+     check(customerUuid(input.reviewEpoch)&&financeAccountReviewReason(input.reason));
+     const result=await database.commandTransaction(async query=>{
+      submitted=true;
+      const value=await query('SELECT crest_commands.retire_fictional_opening_ar_save('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::text) AS result',
+       [...args,input.reviewEpoch,reference.operationId,reference.recoveryEpoch,input.reason]);
+      const {state}=parseResult(value);
+      check(state==='conflict'||state==='retired'||state==='committed');
+      return {value:value as object,state};
+     },signal);
+     return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+    }
+    const {preview,expectedRevision,reason}=parseOpeningArSave(input.draft);
+    const {worksheetRevisionId}=input;
+    check(customerUuid(worksheetRevisionId));
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.save_fictional_opening_ar_schedule('+authority+
+      ',$9::uuid,$10::uuid,$11::bigint,$12::bigint,$13::jsonb,$14::text) AS result',
+      [...args,reference.recoveryEpoch,reference.operationId,preview.revision,expectedRevision,JSON.stringify(preview.lines),reason]);
+     const parsed=parseResult(value);
+     check(parsed.state==='conflict'||parsed.state==='retired'||parsed.state==='committed'
+      &&parsed.receipt.worksheetRevisionId===worksheetRevisionId&&parsed.receipt.recordedBy===verified.actorId
+      &&parsed.receipt.revision===String(BigInt(expectedRevision)+1n)&&parsed.receipt.evidence.reason===reason
+      &&isDeepStrictEqual(parsed.receipt.evidence.lines,previewOpeningReceivables(preview,parsed.receipt.evidence.cutoverOn).lines));
+     return {value:value as object,state:parsed.state};
+    },signal);
+    return privateJsonResponse(result.value,result.state==='conflict'?409:200);
    }
    if(route==='opening-worksheet-read'){
     const {reviewEpoch,requestedOn}=input;
@@ -1545,6 +1613,9 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     'OPENING_WORKSHEET_INPUT_REQUIRED','OPENING_WORKSHEET_REVISION_CONFLICT','OPENING_WORKSHEET_DUPLICATE_BANK',
     'OPENING_WORKSHEET_CONTROL_EVIDENCE_REQUIRED','OPENING_WORKSHEET_BANK_UNKNOWN_AMOUNTS','OPENING_WORKSHEET_BANK_EVIDENCE_REQUIRED',
     'OPENING_WORKSHEET_TIMING_EVIDENCE_REQUIRED','OPENING_WORKSHEET_DUPLICATE_TIMING','OPENING_WORKSHEET_BANK_BRIDGE_REQUIRED',
+    'OPENING_RECEIVABLES_EVIDENCE_REQUIRED','OPENING_RECEIVABLES_CUSTOMER_REQUIRED',
+    'OPENING_AR_EVIDENCE_REQUIRED','OPENING_AR_DATE_REQUIRED','OPENING_AR_AMOUNT_REQUIRED','OPENING_AR_DUPLICATE_EVIDENCE',
+    'OPENING_AR_BALANCE_REQUIRED','OPENING_AR_REVISION_CONFLICT',
     'FINANCE_MAPPING_VERSION_CONFLICT','FINANCE_MAPPING_EFFECTIVE_ORDER_REQUIRED','FINANCE_MAPPING_ACCOUNT_REQUIRED',
     'FINANCE_MAPPING_CLOSURE_REQUIRED','FINANCE_TAX_VERSION_CONFLICT','FINANCE_TAX_EFFECTIVE_ORDER_REQUIRED',
     'FINANCE_CHANNEL_VERSION_CONFLICT','FINANCE_CHANNEL_EFFECTIVE_ORDER_REQUIRED','FINANCE_CHANNEL_ACCOUNT_REQUIRED',

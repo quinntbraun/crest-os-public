@@ -37,6 +37,7 @@ export const browserScenarios = Object.freeze({
   'payment-recovery': paymentRecovery,
   'restored-tip': restoredTip,
   'opening-worksheet': Object.freeze({...restoredTip,CREST_TEST_OPENING_WORKSHEET_EXPORT:'1'}),
+  'opening-receivables': Object.freeze({...restoredTip,CREST_TEST_OPENING_AR_PREVIEW:'1'}),
   'income-statement': Object.freeze({...restoredTip,CREST_TEST_RECORDED_INCOME_STATEMENT:'1'}),
 });
 export const browserGroupNames = Object.freeze([...Object.keys(browserGroups), ...Object.keys(browserScenarios)]);
@@ -55,7 +56,7 @@ export function browserGroupFiles(command: unknown, selected: unknown): readonly
   if (browserScenario(selected)) {
     if (!browserGroups.records.includes(invoiceJourney)) return invalid();
     if (selected==='income-statement') return [incomeStatementJourney];
-    return [selected==='opening-worksheet'?openingWorksheetJourney:selected==='restored-tip'?restoredTipJourney:invoiceJourney];
+    return [selected==='opening-worksheet'||selected==='opening-receivables'?openingWorksheetJourney:selected==='restored-tip'?restoredTipJourney:invoiceJourney];
   }
   return browserGroups[selected as BrowserGroup];
 }

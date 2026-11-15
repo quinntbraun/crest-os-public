@@ -261,7 +261,7 @@ export function FinanceAccountsScreen(){
    </ul>}
    {context.invoiceIssue&&<InvoiceSetup businessId={context.businessId}/>}
    {context.statementStaging&&<StatementStaging key={context.businessId} context={context}/>}
-   {context.openingWorksheet&&<OpeningWorksheet businessId={context.businessId}/>}
+   {context.openingWorksheet&&<OpeningWorksheet businessId={context.businessId} arPreview={context.openingArPreview===true}/>}
   </section>}
   {pending&&workspace&&<section className={styles.section} aria-label="Interrupted account save">
    <p className="save-reference">Save reference <code>{pending.reference.operationId}</code></p>
