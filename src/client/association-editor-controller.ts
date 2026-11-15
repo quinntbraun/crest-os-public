@@ -47,6 +47,11 @@ export function createAssociationEditorController(deps:Dependencies){
   const result=await customerApi.history(businessId,{customerId,afterVersion:'0',pageSize:1},proof!,signal);live(signal);requireValue(result.state==='found'&&result.customer.id===customerId&&result.customer.business_id===businessId);
   return Object.freeze({id:result.customer.id,label:result.customer.display_name,archived:result.customer.archived_at!==null});
  }
+ function displayedCustomer(source:VehicleAssociationRow){
+  const shown=rows.find(link=>link.source.id===source.id);
+  requireValue(shown?.customer.id===source.customer_id);
+  return shown.customer;
+ }
  async function list(signal:AbortSignal,afterId:string|null=null){
   const page=await api.list(businessId,{vehicleId,afterId,pageSize:10},proof!,signal);live(signal);const labels=new Map<string,CustomerChoice>();
   // At most ten unique label reads, using existing authorized commands. Never
@@ -76,14 +81,14 @@ export function createAssociationEditorController(deps:Dependencies){
    requireValue(uuid(associationId));const result=await api.history(businessId,{associationId,afterVersion:'0',pageSize:20},proof!,signal);live(signal);
    if(result.state==='absent'||result.association.vehicle_id!==vehicleId||result.association.valid_to!==null||result.association.version!=='1'){message='The link changed or has ended. Load current links before changing it.';return;}
    history=result;selected=result.association;
-   if(action==='close')selectedCustomer=await customerLabel(selected.customer_id,signal);
+   if(action==='close')selectedCustomer=displayedCustomer(selected);
    live(signal);draft=Object.freeze({action,customerId:action==='close'?selected.customer_id:'',effectiveAt:'',relationship:null,isBilling:null,evidence:null,reason:''});message=action==='close'?'Choose the effective end time and record why this link is ending.':'Choose the next customer and explicit relationship, billing selection, transfer time and reason. The earlier link will be retained.';
   },()=>{clearPrivate();phase='unavailable';message='The original link could not be verified. Load current links again.';});
  };
  const inspect=(associationId:string)=>{
   if(phase!=='ready'||!proof||!snapshot||!uuid(associationId))return Promise.resolve();
   return run(async signal=>{draft=null;selectedCustomer=null;selected=null;history=null;emit();const result=await api.history(businessId,{associationId,afterVersion:'0',pageSize:20},proof!,signal);live(signal);
-   if(result.state==='absent'||result.association.vehicle_id!==vehicleId){message='This link was not found for this vehicle. Load current links again.';return;}selectedCustomer=await customerLabel(result.association.customer_id,signal);live(signal);history=result;selected=result.association;message='Review the complete retained link history.';
+   if(result.state==='absent'||result.association.vehicle_id!==vehicleId){message='This link was not found for this vehicle. Load current links again.';return;}selectedCustomer=displayedCustomer(result.association);history=result;selected=result.association;message='Review the complete retained link history.';
   },()=>{clearPrivate();phase='unavailable';message='Retained link history could not be verified. Load current links again.';});
  };
  function finish(result:Awaited<ReturnType<typeof associations.save>>,lookup=false){

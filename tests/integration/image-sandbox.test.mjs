@@ -6,10 +6,21 @@ import {execFileSync,spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import sharp from 'sharp';
 import {imageFixtures,chunk} from '../support/image-fixtures.mjs';
-const image='crest-os:ci',maximum=25*1024*1024,hash=b=>createHash('sha256').update(b).digest('hex');
-let fixtures;
-before(async()=>{assert.equal(process.platform,'linux');fixtures=await imageFixtures();});
+const maximum=25*1024*1024,hash=b=>createHash('sha256').update(b).digest('hex');
 const docker=(args,options={})=>execFileSync('docker',args,{encoding:'utf8',timeout:30000,maxBuffer:12*1024*1024,...options});
+let fixtures,image;
+before(async()=>{
+  // Retain the Linux-host negative gate: Docker Desktop may inherit an outer
+  // seccomp filter even for seccomp=unconfined. Its Seccomp:2 is insufficient
+  // evidence that the requested worker filter was installed.
+  assert.equal(process.platform,'linux');
+  assert.equal(docker(['info','--format','{{.OSType}}']).trim(),'linux');
+  const reference=process.env.CREST_IMAGE_ID??'crest-os:ci';
+  assert(reference==='crest-os:ci'||/^sha256:[a-f0-9]{64}$/.test(reference));
+  image=docker(['image','inspect','--format','{{.Id}}',reference]).trim();
+  assert.match(image,/^sha256:[a-f0-9]{64}$/);
+  fixtures=await imageFixtures();
+});
 function create(overrides={},type='image/png'){
   const profile={network:['--network','none'],readonly:['--read-only'],capabilities:['--cap-drop','ALL'],privileges:['--security-opt','no-new-privileges'],
     memory:['--memory','512m','--memory-swap','512m'],cpu:['--cpus','1'],pids:['--pids-limit','32'],user:['--user','node'],...overrides};

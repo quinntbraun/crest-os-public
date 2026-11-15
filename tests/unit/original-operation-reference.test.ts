@@ -5,6 +5,28 @@ import type {OriginalOperationKind} from '../../src/security/original-operation-
 
 const businessId=randomUUID(),operationId=randomUUID(),originalEpoch=randomUUID(),authorityEpoch=randomUUID();
 const targets:Record<OriginalOperationKind,Record<string,unknown>>={
+ 'operations.job.field':{jobId:randomUUID(),expectedJobVersion:'1',action:'direct_arrive'},
+ 'operations.job.complete':{jobId:randomUUID(),expectedJobVersion:'2'},
+ 'operations.job.interrupt':{jobId:randomUUID(),expectedJobVersion:'2',action:'cancel'},
+ 'operations.job.cancel_unfulfilled':{jobId:randomUUID(),expectedJobVersion:'2'},
+ 'operations.job.work_start.correct':{jobId:randomUUID(),expectedJobVersion:'3',workVersionId:randomUUID(),arrivalVersionId:null},
+ 'operations.job.work_end.correct':{jobId:randomUUID(),expectedJobVersion:'4',workVersionId:randomUUID(),completionEventId:randomUUID()},
+ 'operations.mobile_departure.correct':{jobId:randomUUID(),expectedJobVersion:'3',legId:randomUUID(),legVersionId:randomUUID(),departureEventId:randomUUID()},
+ 'operations.message.record_outcome':{jobId:randomUUID(),messageId:randomUUID(),priorEventId:randomUUID(),action:'owner_confirmed_sent'},
+ 'operations.custody.policy.save':{modeVersionId:randomUUID()},
+ 'operations.custody.policy.revise':{modeVersionId:randomUUID(),policyId:randomUUID()},
+ 'operations.custody.save':{jobVehicleId:randomUUID(),caseId:randomUUID(),expectedVersion:'0'},
+ 'operations.follow_up.save':{taskId:randomUUID(),expectedVersion:'0',action:'created'},
+ 'operations.job.work_boundary.correct':{jobId:randomUUID(),expectedJobVersion:'3',leftVersionId:randomUUID(),rightVersionId:randomUUID()},
+ 'operations.mileage.record':{legId:randomUUID(),expectedLegVersionId:randomUUID(),expectedEvidenceVersion:'0'},
+ 'operations.support_trip.record':{legId:randomUUID(),expectedLegVersionId:null,action:'depart'},
+ 'operations.pickup_custody.policy.save':{expectedSequence:'0'},
+ 'operations.pickup_custody.release':{jobId:randomUUID(),expectedJobVersion:'1',collectionId:randomUUID(),returnLegVersionId:randomUUID()},
+ 'operations.pickup_custody.fail_return':{jobId:randomUUID(),expectedJobVersion:'1',collectionId:randomUUID(),returnLegVersionId:randomUUID()},
+ 'operations.pickup_custody.collect':{jobId:randomUUID(),expectedJobVersion:'1',jobVehicleId:randomUUID(),pickupLegVersionId:randomUUID(),policyId:randomUUID()},
+ 'operations.pickup_trip.record':{jobId:randomUUID(),expectedJobVersion:'1',legId:randomUUID(),expectedLegVersionId:null,action:'depart'},
+ 'operations.support_trip.correct':{legId:randomUUID(),expectedLegVersionId:randomUUID(),action:'correct'},
+
  'operations.fulfillment_modes.initialize':{expectedSequence:'0'},
  'operations.fulfillment_modes.save':{expectedSequence:'1'},
  'operations.job.book':{jobId:randomUUID(),expectedModeSequence:'0'},

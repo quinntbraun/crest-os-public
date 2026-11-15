@@ -20,7 +20,7 @@ export function businessFailureResponse(status:400|404|405|503=400):Response{
 }
 // Only explicit trusted runtime configuration selects the provisioned business.
 // No browser-selected actor, tenant, capability, timestamps or SQL callback.
-export function createBusinessHttp(config:Configuration,provider:Parameters<typeof createBusinessNameCommand>[1],tokens:Parameters<typeof createBusinessNameCommand>[2]){
+export function createBusinessHttp(config:Configuration,provider:Parameters<typeof createBusinessNameCommand>[1],tokens:Parameters<typeof createBusinessNameCommand>[2],syntheticCalendar=false){
   if(typeof config.businessId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(config.businessId))throw new Error('BUSINESS_HTTP_CONFIGURATION_REQUIRED');
   const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
   const rename=createBusinessNameCommand(config,provider,tokens),settings=createBusinessSettingsContextReader(config,provider,tokens),lookup=createBusinessOperationLookup(config,provider,tokens);
@@ -51,6 +51,7 @@ export function createBusinessHttp(config:Configuration,provider:Parameters<type
         // Non-authorizing scope marker for a per-tab pending intent. Neither a
         // credential digest nor the session UUID, and never accepted as proof.
         response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.business.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));
+        if(syntheticCalendar===true&&config.environment==='test')response.headers.set('X-Crest-Google-Calendar-Setup','1');
         return response;
       }
       if(url.pathname==='/api/business/operation'){
