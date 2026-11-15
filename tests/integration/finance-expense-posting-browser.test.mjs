@@ -7,12 +7,14 @@ import {sourceExportBrowserFixture} from '../support/source-export-browser-fixtu
 
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' posts a reviewed paid expense and recovers the original',async()=>{
  const income=process.env.CREST_TEST_RECORDED_INCOME_STATEMENT==='1';
+ const matchStatement=process.env.CREST_TEST_STATEMENT_MATCH_REVIEW==='1';
  const f=await sourceExportBrowserFixture({product:true,workspace:true,expenses:true,catalog:true,quotes:true,
   quoteReview:true,quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,
   financeAccounts:true,financeMappings:true,financeCategoryMappings:true,financeTaxProfiles:true,financeMoneyChannels:true,
   invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,directReceipts:true,sameDayExpenses:true,trialBalance:true,
   ...(income?{paymentCorrections:true,fundApplications:true,heldTips:true,invoiceCredits:true,paidInvoiceCredits:true,
-   serviceRefunds:true,postedFinanceExport:true}:{})});
+   serviceRefunds:true,postedFinanceExport:true}:{}),
+  ...(matchStatement?{postedFinanceExport:true,statementStaging:true}:{})});
  let browser;
  try{
   browser=await engine.launch();
@@ -90,6 +92,38 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const accounting=page.getByRole('navigation',{name:'Accounting sections',exact:true});
   await accounting.getByRole('link',{name:'Reports',exact:true}).press('Enter');
   await expect(page.getByRole('heading',{name:'Reports',exact:true})).toBeFocused();
+  if(matchStatement){
+   const staging=page.getByRole('region',{name:'Fictional bank statement staging',exact:true});
+   await staging.getByLabel('Dedicated money account').selectOption({label:'Fictional checking (1234)'});
+   await staging.getByLabel('Fictional source file for checksum').setInputFiles({
+    name:'fictional-bank.csv',mimeType:'text/csv',buffer:Buffer.from(date+', -100.00\n'),
+   });
+   await staging.getByLabel('Statement start date').fill(date);
+   await staging.getByLabel('Statement end date').fill(date);
+   await staging.getByLabel('Opening balance (USD)').fill('40.00');
+   await staging.getByLabel('Closing balance (USD)').fill('-60.00');
+   await staging.getByLabel('Provider statement date convention').fill('Fictional settlement day');
+   await staging.getByLabel('Completeness review').fill('Fictional full statement reviewed');
+   await staging.getByLabel('Statement rows',{exact:true}).fill(date+', -100.00');
+   await staging.getByRole('button',{name:'Review statement',exact:true}).click();
+   await staging.getByRole('button',{name:'Stage reviewed statement',exact:true}).click();
+   await expect(staging.getByText('Statement staged. 1 rows retained',{exact:false})).toBeVisible();
+   await staging.getByText('Review statement matches',{exact:true}).click();
+   const match=staging.getByRole('region',{name:'Statement match review',exact:true});
+   await match.getByRole('button',{name:'Load posted movements',exact:true}).click();
+   await expect(match.getByRole('status')).toHaveText('Posted movements loaded.');
+   await match.getByLabel('Statement row',{exact:true}).selectOption({index:1});
+   await match.getByLabel('Posted movement',{exact:true}).selectOption({index:1});
+   await match.getByLabel('Signed amount to allocate (USD)',{exact:true}).fill('-100.01');
+   await match.getByRole('button',{name:'Add proposed match',exact:true}).click();
+   await expect(match.getByRole('status')).toContainText('Check the signed amount.');
+   await match.getByLabel('Signed amount to allocate (USD)',{exact:true}).fill('-100.00');
+   await match.getByRole('button',{name:'Add proposed match',exact:true}).click();
+   await expect(match.getByText('Every statement row is fully allocated in this preview.',{exact:true})).toBeVisible();
+   await match.getByRole('button',{name:'Remove match 1',exact:true}).click();
+   await expect(match.getByText('1 statement row needs a match.',{exact:true})).toBeVisible();
+   await staging.getByText('Review statement matches',{exact:true}).click();
+  }
   if(income){
    await page.getByText('Income statement',{exact:true}).click();
    const statement=page.getByRole('region',{name:'Recorded income statement',exact:true});

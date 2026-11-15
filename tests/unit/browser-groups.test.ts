@@ -22,12 +22,14 @@ describe('complete required browser grouping',()=>{
  it.each([undefined,null,[],{},'node --test','node --test --test-concurrency=2','node --test --test-concurrency=1 --test-name-pattern=none','sh -c '+command])('refuses malformed or filtered complete command %j',value=>{expect(()=>browserGroupFiles(value,'crm')).toThrow();});
  it('runs both supplemental invoice workflows on separately required jobs with their exact capabilities',()=>{
   const invoice='tests/integration/finance-invoice-issue-product-browser.test.mjs';
-  expect(browserGroupNames.filter(group=>browserScenario(group))).toEqual(['receipt-funds','payment-recovery','restored-tip','opening-worksheet','opening-receivables','income-statement']);
+  expect(browserGroupNames.filter(group=>browserScenario(group))).toEqual(['receipt-funds','payment-recovery','restored-tip','opening-worksheet','statement-matching','opening-receivables','income-statement']);
   expect(browserGroupFiles(command,'receipt-funds')).toEqual([invoice]);
   expect(browserGroupFiles(command,'payment-recovery')).toEqual([invoice]);
   expect(browserGroupFiles(command,'restored-tip')).toEqual(['tests/integration/finance-restored-tip-product-browser.test.mjs']);
   expect(browserGroupFiles(command,'opening-worksheet')).toEqual(['tests/integration/finance-opening-worksheet-browser.test.mjs']);
   expect(browserGroupFiles(command,'opening-receivables')).toEqual(['tests/integration/finance-opening-worksheet-browser.test.mjs']);
+  expect(browserGroupFiles(command,'statement-matching')).toEqual(['tests/integration/finance-statement-staging-browser.test.mjs',
+   'tests/integration/finance-expense-posting-browser.test.mjs']);
   expect(browserGroupFiles(command,'statement-staging')).toEqual(['tests/integration/finance-statement-staging-browser.test.mjs']);
   expect(browserGroupFiles(command,'income-statement')).toEqual(['tests/integration/finance-expense-posting-browser.test.mjs']);
   expect(browserGroupFiles(command,'records')).toContain(invoice);

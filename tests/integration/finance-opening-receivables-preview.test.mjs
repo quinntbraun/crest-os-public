@@ -6,7 +6,7 @@ import {test} from 'node:test';
 import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixture.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
-import {backupDatabase,connect,keyPair,recoveryCluster,restoreDatabase} from '../support/recovery-drill.mjs';
+import {backupOpeningReceivablesDatabase,connect,keyPair,recoveryCluster,restoreOpeningReceivablesDatabase} from '../support/recovery-drill.mjs';
 
 async function command(connection,name,values){
  const args=values.map((_,index)=>'$'+(index+1)).join(',');
@@ -153,14 +153,14 @@ test('registered opening receivables preserve audited revisions through independ
   assert.deepEqual((await capture(admin,other.business)).revisions,[]);
   const point=join(sandbox.workspace,'opening-ar-point'),keys=await keyPair(sandbox.workspace);
   await mkdir(point,{mode:0o700});
-  const {manifest}=await backupDatabase(admin,target,point,keys.recipient);
+  const {manifest}=await backupOpeningReceivablesDatabase(admin,target,point,keys.recipient);
   assert.equal(manifest.schemaVersion,105);
   const recovery=await recoveryCluster();
   let restored;
   try{
    const recoveryUrl=await recovery.database();
    assert.notEqual(new URL(recoveryUrl).port,new URL(target).port);
-   assert.deepEqual(await restoreDatabase(point,keys.path,recoveryUrl),manifest);
+   assert.deepEqual(await restoreOpeningReceivablesDatabase(point,keys.path,recoveryUrl),manifest);
    restored=await connect(recoveryUrl);
    assert.deepEqual(await capture(restored,owner.business),exported);
    await restored.query('SET ROLE crest_finance_preview');

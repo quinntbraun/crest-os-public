@@ -8,6 +8,7 @@ import {assessStatementRows} from '../../../bookkeeping/statement-reconciliation
 import type {MoneyChannel} from '../../../bookkeeping/finance-money-channel-contract';
 import {financeAccounts} from '../../../client/finance-accounts';
 import type {FinanceAccountContext} from '../../../client/finance-accounts';
+import {StatementMatchReview} from './statement-match-review';
 import styles from './screen.module.css';
 
 type Preview={reference:StatementReference;draft:StatementDraft};
@@ -217,5 +218,7 @@ export function StatementStaging({context}:{context:FinanceAccountContext}){
    <p>File checksum <code>{saved.receipt.fileSha256}</code></p>
    <p>Save reference <code>{displayReference(saved.reference)}</code></p>
   </div>}
+  {saved&&context.statementMatchReview&&<StatementMatchReview key={saved.reference.statementId} context={context}
+   statementId={saved.reference.statementId} format={dollars} parse={cents}/>}
  </section>;
 }

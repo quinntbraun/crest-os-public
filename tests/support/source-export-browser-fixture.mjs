@@ -58,6 +58,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  const tipReturnExport=process.env.CREST_TEST_TIP_RETURN_EXPORT==='1';
  const collectionFailureExport=process.env.CREST_TEST_COLLECTION_FAILURE_EXPORT==='1';
  const refundTransferExport=process.env.CREST_TEST_REFUND_TRANSFER_EXPORT==='1';
+ const statementMatchReview=statementStaging&&process.env.CREST_TEST_STATEMENT_MATCH_REVIEW==='1';
  const openingArPreview=openingWorksheet&&process.env.CREST_TEST_OPENING_AR_PREVIEW==='1';
  assert(!openingArPreview||postedFinanceExport);
  const recordedIncomeStatement=process.env.CREST_TEST_RECORDED_INCOME_STATEMENT==='1';
@@ -181,7 +182,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   if(receivableAging&&!postedFinanceExport)assert.equal((await sandbox.apply(target,await sandbox.prefix(88))).history.length,88);
   let postedFinanceConfiguration;
   if(postedFinanceExport){
-   const schemaVersion=openingArPreview?105:recordedIncomeStatement?104:statementStaging?103:openingWorksheet?102:restoredTips?101:collectionFailureGroupedRecreditExport?100:collectionFailureRecreditExport?99:refundTransferFeeExport?98:directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
+   const schemaVersion=statementMatchReview?106:openingArPreview?105:recordedIncomeStatement?104:statementStaging?103:openingWorksheet?102:restoredTips?101:collectionFailureGroupedRecreditExport?100:collectionFailureRecreditExport?99:refundTransferFeeExport?98:directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
    const currentRegistry=JSON.parse(await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url),'utf8'));
    const source=excessReturnExport&&currentRegistry.migrations.length===92
     ?await prepareExcessReturnCandidate(sandbox):await sandbox.prefix(schemaVersion);
@@ -237,6 +238,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,taxProfiles:financeTaxProfiles,categoryMappings:financeCategoryMappings,moneyChannels:financeMoneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport,...excessReceipts?{excessReceipts}:{},...excessReturnExport?{excessReturns:true}:{},...tipReturnExport?{tipReturns:true}:{},...collectionFailureExport?{collectionFailures:true}:{},...refundTransferExport?{refundTransfers:true}:{},...directReceiptTipExport?{directReceiptTips:true}:{},...refundTransferFeeExport?{refundTransferFees:true}:{},...collectionFailureRecreditExport?{collectionFailureRecredits:true}:{},...collectionFailureGroupedRecreditExport?{collectionFailureGroupedRecredits:true}:{},...restoredTips?{collectionFailureTipReinstatements:true}:{}};
    if(openingWorksheet)financeConfiguration.openingWorksheet=true;
    if(statementStaging)financeConfiguration.statementStaging=true;
+   if(statementMatchReview)financeConfiguration.statementMatchReview=true;
    if(recordedIncomeStatement)financeConfiguration.recordedIncomeStatement=true;
    if(openingArPreview)financeConfiguration.openingArPreview=true;
    await client.query("INSERT INTO crest_private.finance_controls(business_id,recovery_authority_id,created_by,origin) SELECT $1,id,$2,'system' FROM crest_private.business_recovery_authorities WHERE business_id=$1",[business,actor]);

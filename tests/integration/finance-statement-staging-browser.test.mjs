@@ -10,6 +10,7 @@ import {sourceExportBrowserFixture} from '../support/source-export-browser-fixtu
 import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
 
 const route='/api/business/finance-accounts/statement-staging-';
+const matching=process.env.CREST_TEST_STATEMENT_MATCH_REVIEW==='1';
 for(const engine of [chromium,webkit]){
  test(engine.name()+' genuine owner stages a fictional statement and recovers an interrupted save',{timeout:300000},async()=>{
   const previous=process.env.CREST_TEST_DATABASE_URL,cluster=previous?null:await recoveryCluster();
@@ -94,6 +95,21 @@ for(const engine of [chromium,webkit]){
    await reopened.getByLabel('Statement save reference',{exact:true}).fill(reference);
    await reopened.getByRole('button',{name:'Check saved statement'}).click();
    await expect(reopened.getByRole('status')).toContainText('Statement staged. 2 rows retained');
+   if(matching){
+    await reopened.getByText('Review statement matches',{exact:true}).click();
+    const matchReview=reopened.getByRole('region',{name:'Statement match review',exact:true});
+    await matchReview.getByRole('button',{name:'Load posted movements',exact:true}).click();
+    await expect(matchReview.getByRole('status')).toHaveText('There are no posted movements in this search window.');
+    await expect(matchReview.getByText('2 statement rows need matching.',{exact:true})).toBeVisible();
+    await expect(matchReview.getByText('Resolve the −$0.50 statement difference',{exact:false})).toBeVisible();
+    for(const width of [360,390,768,1440]){
+     await page.setViewportSize({width,height:900});
+     await matchReview.scrollIntoViewIfNeeded();
+     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+     assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
+     await page.screenshot({path:`.local/review/finance-statement-matching-${engine.name()}-${width}.png`});
+    }
+   }
    assert.equal((await fixture.client.query('SELECT count(*)::int n FROM crest.journal_entries WHERE business_id=$1',[fixture.business])).rows[0].n,0);
 
    await page.goto(fixture.origin+'/export-files');
@@ -103,8 +119,8 @@ for(const engine of [chromium,webkit]){
    const download=await downloadPromise;
    const {['manifest.json']:manifest,['export_delivery.json']:delivery,...source}=unzipSync(await readFile(await download.path()));
    const verified=verifyFinanceSourceExport(strFromU8(manifest),Object.entries(source).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
-   assert.equal(verified.profile,'crest.posted-finance-source.v19');
-   assert.equal(JSON.parse(strFromU8(delivery)).sourceSchemaVersion,103);
+   assert.equal(verified.profile,matching?'crest.posted-finance-source.v20':'crest.posted-finance-source.v19');
+   assert.equal(JSON.parse(strFromU8(delivery)).sourceSchemaVersion,matching?106:103);
    const [statement]=JSON.parse(strFromU8(source['statement_staging_source.json'])).batches;
    assert.deepEqual([statement.id,statement.operationId,statement.fileSha256,statement.statementDifferenceCents],
     [saved.statementId,saved.operationId,hash,'-50']);

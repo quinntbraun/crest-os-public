@@ -525,6 +525,11 @@
       "version": "20261229180000",
       "file": "20261229180000_fictional_opening_receivables_schedule.sql",
       "sha256": "29724ab0a21eb5fa7acade8db765d1e1fb7130d899457879f8730f611335d9a3"
+    },
+    {
+      "version": "20261230180000",
+      "file": "20261230180000_fictional_statement_match_review.sql",
+      "sha256": "e87044b4ccbafef607401e027ef4aaee570c17672ec919bf99f7d3c1dc2d0392"
     }
   ]
 }

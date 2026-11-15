@@ -242,7 +242,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [crm, intake, commercial, amendments, schedule, field, custody, records, statement-staging, receipt-funds, payment-recovery, restored-tip, opening-worksheet, opening-receivables, income-statement]
+        suite: [crm, intake, commercial, amendments, schedule, field, custody, records, statement-staging, receipt-funds, payment-recovery, restored-tip, opening-worksheet, statement-matching, opening-receivables, income-statement]
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"

@@ -15,6 +15,7 @@ export const browserGroups = Object.freeze({
 export type BrowserGroup = keyof typeof browserGroups;
 const invoiceJourney = 'tests/integration/finance-invoice-issue-product-browser.test.mjs';
 const restoredTipJourney = 'tests/integration/finance-restored-tip-product-browser.test.mjs';
+const statementMatchingJourney = 'tests/integration/finance-statement-staging-browser.test.mjs';
 const openingWorksheetJourney = 'tests/integration/finance-opening-worksheet-browser.test.mjs';
 const incomeStatementJourney = 'tests/integration/finance-expense-posting-browser.test.mjs';
 const paymentRecovery=Object.freeze({
@@ -37,6 +38,7 @@ export const browserScenarios = Object.freeze({
   'payment-recovery': paymentRecovery,
   'restored-tip': restoredTip,
   'opening-worksheet': Object.freeze({...restoredTip,CREST_TEST_OPENING_WORKSHEET_EXPORT:'1'}),
+  'statement-matching': Object.freeze({CREST_TEST_STATEMENT_MATCH_REVIEW:'1'}),
   'opening-receivables': Object.freeze({...restoredTip,CREST_TEST_OPENING_AR_PREVIEW:'1'}),
   'income-statement': Object.freeze({...restoredTip,CREST_TEST_RECORDED_INCOME_STATEMENT:'1'}),
 });
@@ -55,6 +57,7 @@ export function browserGroupFiles(command: unknown, selected: unknown): readonly
     || declared.length !== expected.length || declared.some(file => !expected.includes(file))) return invalid();
   if (browserScenario(selected)) {
     if (!browserGroups.records.includes(invoiceJourney)) return invalid();
+    if (selected==='statement-matching') return [statementMatchingJourney,incomeStatementJourney];
     if (selected==='income-statement') return [incomeStatementJourney];
     return [selected==='opening-worksheet'||selected==='opening-receivables'?openingWorksheetJourney:selected==='restored-tip'?restoredTipJourney:invoiceJourney];
   }

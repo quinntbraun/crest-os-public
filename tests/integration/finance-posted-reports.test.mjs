@@ -11,7 +11,9 @@ import { confirmedBookingRequest } from '../fixtures/confirmed-booking.ts';
 import { createConfirmedBookingFixture } from '../support/confirmed-booking-fixture.mjs';
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
 import { installProviderSchema } from '../support/provider-schema.mjs';
-import { backupIncomeReportDatabase, connect, keyPair, recoveryCluster, restoreIncomeReportDatabase } from '../support/recovery-drill.mjs';
+import { backupDatabase, backupIncomeReportDatabase, connect, keyPair, recoveryCluster, restoreDatabase,
+  restoreIncomeReportDatabase } from '../support/recovery-drill.mjs';
+import {parseStatementMatchSnapshot,reviewStatementMatches} from '../../src/bookkeeping/statement-match-review.ts';
 
 async function command(connection, name, values) {
   const args=values.map((_,index)=>'$'+(index+1)).join(',');
@@ -298,6 +300,45 @@ test('registered reports tie exact amounts, reject inconsistent source and survi
       assert.deepEqual({...recovered,observedAt:income.observedAt},income);
     } finally {
       try {await restored?.end();} finally {await destination.close();}
+    }
+    assert.equal((await sandbox.apply(target,await sandbox.prefix(106))).history.length,106);
+    const stagedStatement=randomUUID(),statementRows=[
+      {id:randomUUID(),statementOn:today,signedCents:'-11201'},
+      {id:randomUUID(),statementOn:today,signedCents:'10000'},
+    ];
+    await committed(finance,'stage_fictional_statement_import',
+      [...mutate(),stagedStatement,channel,'1',today,today,'0','-1201','b'.repeat(64),
+       'Fictional settlement dates','Fictional complete statement reviewed',JSON.stringify(statementRows)]);
+    const matchOptions=(principal=owner,connection=finance)=>command(connection,'read_fictional_statement_match_review',
+      [...principal.auth(),stagedStatement,null]);
+    const snapshot=parseStatementMatchSnapshot(await matchOptions(),owner.business,stagedStatement,null);
+    assert.equal(snapshot.accountId,bank);
+    assert.equal(snapshot.statementDifferenceCents,'0');
+    assert.deepEqual(snapshot.movements.map(row=>row.signedCents).sort(),['-10000','-1201','10000']);
+    const optionsById=new Map(snapshot.movements.map(row=>[row.id,row]));
+    const matching=reviewStatementMatches(snapshot,snapshot.movements.map(row=>({
+      statementRowId:statementRows[row.signedCents.startsWith('-')?0:1].id,movementId:row.id,signedCents:row.signedCents,
+    })),id=>optionsById.get(id));
+    assert.deepEqual(matching,{state:'fully_allocated',outstanding:[]});
+    await assert.rejects(matchOptions(foreign),{message:'STATEMENT_MATCH_SOURCE_REQUIRED'});
+    await assert.rejects(matchOptions(owner,web),{code:'42501'});
+    await assert.rejects(matchOptions(owner,exportReader),{code:'42501'});
+    assert.deepEqual((await trial()).totals,complete.totals);
+    const matchingPoint=join(sandbox.workspace,'statement-match-recovery');
+    await mkdir(matchingPoint,{mode:0o700});
+    const savedMatchingSource=await backupDatabase(admin,target,matchingPoint,keys.recipient);
+    const matchingDestination=await recoveryCluster();
+    let restoredMatching;
+    try{
+      const restoredUrl=await matchingDestination.database();
+      assert.notEqual(new URL(restoredUrl).port,new URL(target).port);
+      assert.deepEqual(await restoreDatabase(matchingPoint,keys.path,restoredUrl),savedMatchingSource.manifest);
+      restoredMatching=await connect(restoredUrl);
+      await restoredMatching.query('SET ROLE crest_finance_preview');
+      const recovered=parseStatementMatchSnapshot(await matchOptions(owner,restoredMatching),owner.business,stagedStatement,null);
+      assert.deepEqual({...recovered,observedAt:snapshot.observedAt},snapshot);
+    } finally {
+      try{await restoredMatching?.end();}finally{await matchingDestination.close();}
     }
   } finally {
     try {await sandbox?.close();} finally {await cluster.close();}
