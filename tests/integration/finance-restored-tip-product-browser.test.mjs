@@ -63,11 +63,18 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await expect(payment).toContainText('$0.05 tip · $0.01 included tax');
    await payment.getByLabel('How the customer confirmed the tip',{exact:true}).fill('Fictional customer designated the entire payment as a tip.');
    await payment.getByLabel('How you verified the payment',{exact:true}).fill('Fictional received amount verified on the bank statement.');
-   const posted=page.waitForResponse(response=>response.url().endsWith('/receipt-tip-record'));
+   let directTip;
+   await page.route('**/receipt-tip-record',async route=>{
+    const response=await route.fetch();
+    try {
+     assert.equal(response.status(),200);
+     directTip=(await response.json()).receipt;
+    } finally {
+     await route.fulfill({response});
+    }
+   },{times:1});
    await payment.getByRole('button',{name:'Record payment',exact:true}).press('Enter');
-   const response=await posted;
-   assert.equal(response.status(),200);
-   const directTip=(await response.json()).receipt;
+   await expect.poll(()=>directTip).toBeDefined();
    assert.deepEqual([directTip.grossCents,directTip.tip.netCents,directTip.tip.taxCents],['6','5','1']);
    let restoredTip;
    await mkdir('.local/review',{recursive:true});

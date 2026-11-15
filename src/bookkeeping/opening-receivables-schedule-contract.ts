@@ -28,7 +28,7 @@ function receipt(value:unknown,businessId:string,worksheetRevision?:string){
  const input=parseOpeningArInput({revision:'1',lines:rawLines});
  const expected=previewOpeningReceivables(input,evidence.cutoverOn);
  check(expected.totals.remainingCents===evidence.totals.remainingCents);
- return {...value,scheduleRevisionId:value.scheduleRevisionId,revision:value.revision,worksheetRevisionId:value.worksheetRevisionId,operationId:value.operationId,
+ return {...value,businessId,scheduleRevisionId:value.scheduleRevisionId,revision:value.revision,worksheetRevisionId:value.worksheetRevisionId,operationId:value.operationId,
   recordedBy:value.recordedBy,evidence:{...evidence,lines:expected.lines,totals:expected.totals,cutoverOn:evidence.cutoverOn,reason:evidence.reason}};
 }
 

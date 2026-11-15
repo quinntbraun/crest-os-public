@@ -291,7 +291,9 @@ export async function inventory(client){
     const rows=(await client.query(`SELECT row_to_json(t)::text AS value FROM ${quote(table.schema)}.${quote(table.name)} t ORDER BY row_to_json(t)::text COLLATE "C" LIMIT 10001`)).rows;
     assert(rows.length<=10000,'synthetic recovery fixture capacity exceeded');
     const digest=createHash('sha256');
-    for(const {value} of rows){total+=Buffer.byteLength(value)+1;assert(total<=8*1024*1024,'synthetic recovery fixture capacity exceeded');digest.update(value+'\n');}
+    // Registered migration statements contribute to this inventory alongside the
+    // business rows. Use the same bounded byte budget as the encrypted dump.
+    for(const {value} of rows){total+=Buffer.byteLength(value)+1;assert(total<=maxBytes,'synthetic recovery fixture capacity exceeded');digest.update(value+'\n');}
     result.push({...table,rows:rows.length,sha256:digest.digest('hex')});
   }
   return result;

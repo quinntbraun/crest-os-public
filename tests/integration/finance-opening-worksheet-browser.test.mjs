@@ -187,6 +187,11 @@ for(const engine of [chromium,webkit]){
     await expect(ar.getByRole('status')).toHaveText('The original receivables save was confirmed.');
     await expect(ar.getByText('Saved receivables revision 1 · $125.50 USD')).toBeVisible();
     assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),arPendingKey),null);
+    await ar.getByText('Preview opening entry from saved evidence',{exact:true}).click();
+    await expect(ar.getByText('1100 · Opening customer balances owed',{exact:true})).toBeVisible();
+    await expect(ar.getByText('Debit 125.50 USD',{exact:true})).toBeVisible();
+    await expect(ar.getByText('Credit 226.50 USD',{exact:true})).toBeVisible();
+    await expect(ar.getByText('Verify customer funds held.',{exact:true})).toBeVisible();
     await ar.getByText('Saved receivables revision 1 · $125.50 USD').click();
     const arDownload=page.waitForEvent('download');
     await ar.getByRole('button',{name:'Download saved receivables (JSON)',exact:true}).click();

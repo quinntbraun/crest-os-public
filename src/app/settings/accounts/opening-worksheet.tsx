@@ -200,8 +200,7 @@ export function OpeningWorksheet({businessId,arPreview}:{businessId:string;arPre
       <dt>Provisional opening equity</dt><dd>{dollars(latest.provisionalEquityCents)} USD</dd>
      </dl>
      <button type="button" className="secondary" disabled={busy} onClick={download}>Download saved worksheet (JSON)</button>
-     {arPreview&&!pending&&<OpeningReceivables key={latest.revision} businessId={businessId} revision={latest.revision}
-      worksheetRevisionId={latest.worksheetRevisionId} cutoverOn={latest.cutoverOn}/>}
+     {arPreview&&!pending&&<OpeningReceivables key={latest.revision} worksheet={latest}/>}
     </div>}
     <form onSubmit={event=>{event.preventDefault();load(date);}}>
      <label htmlFor="opening-cutover">Proposed local cutover date ({projection.timeZone})</label>

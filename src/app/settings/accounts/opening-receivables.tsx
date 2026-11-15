@@ -10,6 +10,8 @@ import type {OpeningArLine,OpeningArReduction} from '../../../bookkeeping/openin
 import {financeAccountReviewReason} from '../../../bookkeeping/finance-account-contract';
 import {parseOpeningReference} from '../../../bookkeeping/opening-worksheet-contract';
 import type {OpeningReference} from '../../../bookkeeping/opening-worksheet-contract';
+import type {OpeningReceipt} from '../../../bookkeeping/opening-worksheet-contract';
+import {previewOpeningPosting} from '../../../bookkeeping/opening-posting-preview';
 import {DollarField,EvidenceFields,Note,amount,dollars,readEvidence,value} from './opening-worksheet-fields';
 import styles from './screen.module.css';
 
@@ -18,9 +20,8 @@ type Preview=NonNullable<Awaited<ReturnType<typeof financeAccounts.reviewOpening
 type Saved=Awaited<ReturnType<typeof financeAccounts.readOpeningArSchedule>>;
 const pendingKey=(businessId:string)=>'crest.opening-ar.pending.v1.'+businessId;
 
-export function OpeningReceivables({businessId,revision,worksheetRevisionId,cutoverOn}:{
- businessId:string;revision:string;worksheetRevisionId:string;cutoverOn:string;
-}){
+export function OpeningReceivables({worksheet}:{worksheet:OpeningReceipt}){
+ const {businessId,revision,worksheetRevisionId,cutoverOn}=worksheet;
  const [selected,setSelected]=useState<Choice|null>(null),[options,setOptions]=useState<Choice[]>([]);
  const [lines,setLines]=useState<{item:OpeningArLine;label:string}[]>([]),[reductions,setReductions]=useState<string[]>([]);
  const [tax,setTax]=useState(false),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
@@ -165,6 +166,7 @@ export function OpeningReceivables({businessId,revision,worksheetRevisionId,cuto
   },'Crest could not review this evidence. Check that charges, payments, and credits predate cutover and the customers remain available.');
  }
 
+ const posting=saved===undefined?null:previewOpeningPosting(worksheet,saved);
  return <details onToggle={event=>{if(!event.currentTarget.open)clear();}}>
   <summary>Preview customer balances owed</summary>
   <section aria-label="Opening receivables preview" aria-busy={busy}>
@@ -180,6 +182,19 @@ export function OpeningReceivables({businessId,revision,worksheetRevisionId,cuto
     </form>}
    </div>}
    <div hidden={!!pending}>
+   {posting&&<details>
+    <summary>Preview opening entry from saved evidence</summary>
+    <p>This preview uses the saved bank and receivables evidence. Posting requires verified controls, approved account mappings, and cutover approval.</p>
+    {posting.blockers.length>0&&<ul>{posting.blockers.map(blocker=><li key={blocker}>{blocker}</li>)}</ul>}
+    {posting.lines.length>0&&<dl>
+     {posting.lines.map(line=><div key={line.accountCode}>
+      <dt>{line.accountCode} · {line.label}</dt>
+      <dd>{line.debitCents==='0'?'Credit '+dollars(line.creditCents):'Debit '+dollars(line.debitCents)} USD</dd>
+     </div>)}
+     <div><dt>Total debits</dt><dd>{dollars(posting.totalDebitCents)} USD</dd></div>
+     <div><dt>Total credits</dt><dd>{dollars(posting.totalCreditCents)} USD</dd></div>
+    </dl>}
+   </details>}
    {saved&&<details>
     <summary>Saved receivables revision {saved.revision} · ${dollars(saved.evidence.totals.remainingCents)} USD</summary>
     <p>{saved.evidence.reason}</p>

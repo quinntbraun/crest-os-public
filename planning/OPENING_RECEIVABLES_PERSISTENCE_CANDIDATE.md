@@ -10,4 +10,6 @@ The owner can download the displayed saved receipt as JSON after Crest verifies 
 
 The v20 private finance ZIP includes every saved schedule revision and links each to its worksheet, operation and audit. It retains the original evidence text for exact checksum verification. The verifier rejects missing revisions, broken chains, mismatched worksheets and missing save or retirement audits. Independent encrypted restore returns identical source snapshots.
 
+The opening entry preview uses the saved bank book balances and remaining receivables to show provisional exact debit and credit totals. Unknown balances, a negative bank position that needs classification, and conflicting receivables evidence remain visible. Approved mappings, verified control schedules, and authorization of the cutover remain prerequisites for posting.
+
 Saving or reviewing leaves the journal, live receivables, posting authority, and trial balance untouched. Full revision browsing, held-funds evidence, legacy collections and P27 posting remain open.
