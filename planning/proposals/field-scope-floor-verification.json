@@ -1,0 +1,202 @@
+{
+  "formatVersion": 1,
+  "verifiedAt": "2026-11-05T11:44:37.795Z",
+  "scope": "Completed Mobile scope survives later accepted amendments and linked visits; unregistered Phase6 construction, not owner delivery",
+  "trackedParent": "d4698a0d1885eb9239c34e0ad549b3241829dfb7",
+  "nativeProof": {
+    "path": ".local/field-floor-native-v5/result.json",
+    "sha256": "efddd90540a2067f2fae576f31e0bb70bf2cb0d9d1156afaba6ad7c91b7d5949",
+    "passed": 101,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "storageCases": 34,
+    "mobileSessionCases": 27,
+    "plannerCases": 16,
+    "completionAndAmendmentCases": 24,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "focusedProof": {
+    "path": ".local/field-floor-focused-v4/result.json",
+    "passed": 24,
+    "failed": 0
+  },
+  "reviewedFieldProfile": {
+    "columns": 857,
+    "sha256": "7d59758a46a631d2ddb9db8df7825aeb77745ba121655b85b4acb87b2748d56b",
+    "referenceSource": "Fresh independently constructed registered53 plus the four reviewed field/completion proposals, never owner runtime",
+    "predecessorMeasurement": ".local/field-floor-predecessor-native-v3/result.json",
+    "predecessors": [
+      {
+        "signature": "crest_private.amendment_accept_result(uuid,uuid,uuid)",
+        "owner": "crest_quote_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "367adbfce356da6671c1bb328a5089c09ada5a54d5c0023a14314b999dfc7758"
+      },
+      {
+        "signature": "crest_private.apply_quote_amendment_acceptance(bytea,uuid,uuid,text,uuid,uuid,timestamp with time zone,uuid,uuid,uuid,jsonb)",
+        "owner": "crest_quote_owner",
+        "security_definer": false,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "14a6c72922999a32e5e2cd398f54ebdca27469c0a5e66e3e6761e32ecb1b43d1"
+      },
+      {
+        "signature": "crest_commands.book_job(bytea,uuid,uuid,text,uuid,uuid,timestamp with time zone,uuid,uuid,uuid,integer,uuid,bigint,jsonb)",
+        "owner": "crest_booking_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "bb24d3913d30194af74cd4ab53ef4c40d849a66a8c9270d1339a14bbce49a83e"
+      },
+      {
+        "signature": "crest_commands.cancel_scheduled_job(bytea,uuid,uuid,text,uuid,uuid,timestamp with time zone,uuid,uuid,uuid,integer,uuid,bigint,jsonb)",
+        "owner": "crest_booking_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "679c95e0e89ac8418b36a61981c0f0a3f829888db0eef684823554fd463f3005"
+      },
+      {
+        "signature": "crest_private.check_amendment_allocation_binding()",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "c5662c263dfd81142b52a2dfb18e5788f0e066ada9eb36e7e963bbc9deceff5b"
+      },
+      {
+        "signature": "crest_private.check_booking_plan()",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "1c55cdf246af977128c774b5e68341cae6b181ca97466797c132a8c3af254fa7"
+      },
+      {
+        "signature": "crest_private.check_quote_amendment_accept_operation()",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "7276908984cef333f476fd4cdd9fa7929d2bf18d2cf81ba62aa1258856bc7bd5"
+      }
+    ]
+  },
+  "exactSourceFiles": [
+    {
+      "path": "planning/proposals/field-time-storage.sql",
+      "bytes": 25481,
+      "sha256": "b372fafad1706241dcbabe66544be7eaa45bd98d34a0e0d702c64168b61d05b4"
+    },
+    {
+      "path": "planning/proposals/field-session-commands.sql",
+      "bytes": 44446,
+      "sha256": "968cbaaed4191f27e4697ba6533d0d41bfece7bf8e99c2fdd7f82ecfdeaa2c5d"
+    },
+    {
+      "path": "planning/proposals/work-completion-plan.sql",
+      "bytes": 13940,
+      "sha256": "ba8dba0e67bae9e8b24c0fd2141b883659ec86fd45cd62210c2a818696c69348"
+    },
+    {
+      "path": "planning/proposals/work-completion-commands.sql",
+      "bytes": 70512,
+      "sha256": "56da6f51ed8eae973bca1674ab1cb1d5f7f25e0f1d00d32c8d5130e3bd8c31e6"
+    },
+    {
+      "path": "planning/proposals/field-scope-floor.sql",
+      "bytes": 14964,
+      "sha256": "ebdc82993fa761dff73a298fab9a6aebae27d74c2a2efff6cec066541d2c2d11"
+    },
+    {
+      "path": "tests/integration/field-time-storage.test.mjs",
+      "bytes": 24942,
+      "sha256": "122436eafdcde1a4504d39b18cc2fed6b5e763c75e2f237290e29852e2f30f8c"
+    },
+    {
+      "path": "tests/integration/field-session-commands.test.mjs",
+      "bytes": 28194,
+      "sha256": "d24039f39dda8dc6804405b9eb1b28ba3434a454e570575667d2a791c8e40a2d"
+    },
+    {
+      "path": "tests/integration/work-completion-plan.test.mjs",
+      "bytes": 13868,
+      "sha256": "625a0144d4367e6221acbc95b50ddb7ee9f52d9049da971401702f88ff74c869"
+    },
+    {
+      "path": "tests/integration/work-completion-commands.test.mjs",
+      "bytes": 34701,
+      "sha256": "ef36eaaff63cf927a30c9fc19e48d0631c92545e57f2dc4ea05e1c392e902848"
+    },
+    {
+      "path": "tests/support/confirmed-booking-fixture.mjs",
+      "bytes": 11207,
+      "sha256": "479f22896ea5e0715cf8c6e85ef3e89756dcbbe0e9aa3c3109a5e181f8d5dc67"
+    }
+  ],
+  "typesPassed": true,
+  "focusedLintPassed": true,
+  "canonicalAmendmentsVerified": 12,
+  "registeredMigrations": 53,
+  "implemented": [
+    "Actual typed fulfilled outcomes establish an immutable per-source allocation floor, including complimentary identity and exact gross/discount/final values",
+    "Each target plan is checked against its own immutable prefix; later completions cannot invalidate an older original receipt",
+    "Deferred booking-plan and amendment-result guards check the floor below the UI, once per plan",
+    "Pinned amendment/booking/cancellation write profiles recognize only the exact reviewed field schema and refuse unknown future financial tables/columns",
+    "Retained Mobile field/completed jobs require their actual saved immutable field/completion receipt and unchanged confirmed appointment/reservation/source bindings",
+    "Completion can carry forward the same active previously accepted amended entitlement; it cannot change that commercial authorization",
+    "Real saved-session completion to later amendment acceptance, another linked completed visit, and paused amendment to completion retain original receipts",
+    "Source drift/unsafe verifier/schema refusal and ordinary-role private-execution refusal retain all existing protections"
+  ],
+  "retainedFailures": [
+    {
+      "path": ".local/field-floor-native-v1/result.json",
+      "passed": 98,
+      "failed": 2,
+      "cause": "New fixture read gross/discount from entitlement_versions instead of the retained source quote item; corrected fixture without changing assertions."
+    },
+    {
+      "path": ".local/field-floor-native-v2/result.json",
+      "passed": 98,
+      "failed": 2,
+      "cause": "Registered53 retained-job amendment checker recognized only booking/reschedule/cancellation and refused genuine completed field jobs. Extended the exact pinned guard using actual immutable field/completion receipts and retained slot/source rules."
+    },
+    {
+      "path": ".local/field-floor-native-v3/result.json",
+      "passed": 99,
+      "failed": 2,
+      "cause": "Registered53 amended allocation binding refused completion after acceptance. Narrow completion branch now requires the same active predecessor entitlement/authorization; all other branches remain unchanged."
+    }
+  ],
+  "remaining": [
+    "Travel interruption/cancellation/reschedule, manual mileage/corrections and explicit open-supply-trip resolution",
+    "Message template configuration/outcome/resume commands and maintenance follow-ups",
+    "Typed original retirement, full field history/private CSV+JSON and independent recovery/neutral round-trip; the separate source/export profiles intentionally remain closed",
+    "Registered54 adoption, genuine HTTP/MFA and connected mobile/desktop field controls, visual/browser/current-source release gates",
+    "Finance ledger consumption rules and full finance/double-entry/reporting; unknown ledgers still fail closed",
+    "Phase7 custody/photos and complete portability/recovery/import/cutover/Google Calendar/real-use gates"
+  ],
+  "ownerRuntimeChanged": false,
+  "inPr115": false,
+  "completeCrestAcceptance": false,
+  "registeredReleaseClaim": false,
+  "spend": 0
+}

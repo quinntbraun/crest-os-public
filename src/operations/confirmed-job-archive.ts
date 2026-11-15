@@ -21,7 +21,11 @@ export async function buildConfirmedJobArchive(input:{head:unknown;events:readon
  for(let i=1;i<events.length;i++)check(events[i]!.fromState===events[i-1]!.toState);
  // The event is inserted after its job update. Its recorded timestamp is
  // deliberately later; the command's effective timestamp binds that update.
- const last=events.at(-1)!;check(last.toState===head.job.state&&last.actorId===head.job.updated_by&&last.operationId===head.job.operation_id&&last.effectiveAt===(last.action==='book'?head.job.created_at:head.job.updated_at)&&last.recordedAt>=head.job.updated_at);
+ // Field commands capture the physical action time before appending interval
+ // evidence and updating the job. The job's own stamp is deliberately later.
+ // Keep both exact source timestamps; booking/schedule changes retain their
+ // original equality requirement and every action still binds the head.
+ const last=events.at(-1)!;check(last.toState===head.job.state&&last.actorId===head.job.updated_by&&last.operationId===head.job.operation_id&&(last.action==='state_change'?last.effectiveAt<=head.job.updated_at:last.effectiveAt===(last.action==='book'?head.job.created_at:head.job.updated_at))&&last.recordedAt>=head.job.updated_at);
  const appointments=events.flatMap(e=>e.appointment?[e.appointment]:[]);
  check(appointments.length>0&&new Set(appointments.map(a=>a.id)).size===appointments.length);
  for(let i=0;i<appointments.length;i++)check(appointments[i]!.sequence===String(i+1)&&appointments[i]!.replaces_id===(i===0?null:appointments[i-1]!.id));

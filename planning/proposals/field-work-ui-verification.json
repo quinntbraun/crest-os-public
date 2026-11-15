@@ -1,0 +1,300 @@
+{
+  "formatVersion": 1,
+  "verifiedAt": "2026-11-06T00:03:45.261Z",
+  "scope": "Actual synthetic held54 Next/Node/MFA Mobile departure, arrival, pause/resume and existing history retrieval/recovery controls; no owner delivery",
+  "trackedParent": "c59f7a330baff346dad769222cbc91909906c1de",
+  "sourceFiles": [
+    {
+      "path": "package.json",
+      "sha256": "4c37811a104b31cf12b3279cc56b12fe855a5ff9f65a6683bf1bbc1bfda4eb62"
+    },
+    {
+      "path": "src/app/globals.css",
+      "sha256": "9a928c856916935d7b52515f8b6bbdafd4b0584b0fb913a0ebe49dd8d3513269"
+    },
+    {
+      "path": "src/app/save-review/review.tsx",
+      "sha256": "ae5becbd3800a01acd926b4374b166a0e37b0c3064597aa9a999237f613b16ce"
+    },
+    {
+      "path": "src/app/schedule/booking-fields.tsx",
+      "sha256": "31a0e65364619b0051826e641ff2969a990d38c4c70391134abaeb8442a724a7"
+    },
+    {
+      "path": "src/app/schedule/job-details.tsx",
+      "sha256": "039a9a7d033e96ed7e2dec4fb9ec8f0dacd59e4176cfb78cbad2282e3a07f267"
+    },
+    {
+      "path": "src/app/schedule/screen.tsx",
+      "sha256": "2e1f036dd8167cc9cb411e53bf37a73f64ada6842afbad4a34a6f9b99e055142"
+    },
+    {
+      "path": "src/app/schedule/work/page.tsx",
+      "sha256": "09fba2d0c7cc19eeaccb6044a777c919b765dfb83a3ddcbcae1b1ce618084953"
+    },
+    {
+      "path": "src/app/schedule/work/work.tsx",
+      "sha256": "22a49819fff874735d91fac88137c094c37e8410da4adfe7c61848fea82d825f"
+    },
+    {
+      "path": "src/client/field-session-controller.ts",
+      "sha256": "982dee6f2d544bd129271a33550d51262352b50c474b3d71cbce139eb52de13c"
+    },
+    {
+      "path": "src/client/schedule-reader.ts",
+      "sha256": "c05245c54c06eba76b2b423d0f8f629765daa448aaeda5a9a66353833260285d"
+    },
+    {
+      "path": "src/operations/confirmed-job-archive.ts",
+      "sha256": "538a722352e12592022b3b80744d141e7d276a2cb18081bfdb9bca1b8ffa4def"
+    },
+    {
+      "path": "src/server/node-server.ts",
+      "sha256": "9a0fbf588f01c1f1fc8f381c96b58ec3826d6028972c0361d237d59c3b0141ff"
+    },
+    {
+      "path": "src/tooling/browser-groups.ts",
+      "sha256": "456702870c8674efe6f59fccad523ea22e89a0a51a68f26886f93ab1ef1cc2ed"
+    },
+    {
+      "path": "tests/integration/field-work-product-browser.test.mjs",
+      "sha256": "7471d8a77df20d39ee646cb475b0cfd31f150b14ae9c40df9fbec359978016c0"
+    },
+    {
+      "path": "tests/support/source-export-browser-fixture.mjs",
+      "sha256": "549c9793744ab5459ca290af3aea83e523600bdb9e2ba748ebedd0d3481f70de"
+    },
+    {
+      "path": "tests/unit/browser-groups.test.ts",
+      "sha256": "eb88ac2489a6f48bd63ea5c556dae8c4312d38b53d543b44e15af89a4325ce97"
+    },
+    {
+      "path": "tests/unit/confirmed-job-archive.test.ts",
+      "sha256": "fabc1d5cb15e48f13258dbf24b61800458d9ebc2cbd1c60c28c29f1c8c13b582"
+    },
+    {
+      "path": "tests/unit/field-session-controller.test.ts",
+      "sha256": "51f85a25744c6abc770161ead8a7408acb0ab2ebe9b4dba00f97a21d59553851"
+    },
+    {
+      "path": "tests/unit/node-server.test.ts",
+      "sha256": "e342d441519a5a8a7687ec169dfddedf21e9b4c50084f1d8b6e3032eb0605232"
+    }
+  ],
+  "nativeBrowserProof": {
+    "path": ".local/field-work-browser-native-v4/result.json",
+    "sha256": "2b3b06a40f5404db561da04e2f7616031f64bfe835aef08f646c817556fa419a",
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "fieldJourneys": 2,
+    "retainedBookingJourneys": 2,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "fullUnitProof": {
+    "path": ".local/field-work-full-unit-v2.json",
+    "sha256": "4178cda295cdfcb8f52ce680148f7e9f24287cb56e1b5f53280b6dc960945163",
+    "passed": 8468,
+    "failed": 0,
+    "pending": 0,
+    "execution": "all cases, one worker, file parallelism disabled; original assertions and deadlines unchanged"
+  },
+  "typesPassed": true,
+  "affectedLintPassed": true,
+  "productionBuild": {
+    "path": ".local/field-work-build-v2.json",
+    "sha256": "85259e7d6899fa3761e8fa1c81d2d6c93e6315307dca8d74eeee1d703a19a585",
+    "next": true,
+    "server": true
+  },
+  "canonicalAmendmentsVerified": 12,
+  "rootRegistry": 53,
+  "root54Registered": false,
+  "ownerDatabaseApplied": false,
+  "ownerPreviewChanged": false,
+  "constructionOnly": true,
+  "realDataAndFinanceActivated": false,
+  "releaseAccepted": false,
+  "requiredBrowserFileUnion": 30,
+  "requiredBrowserGroups": 6,
+  "screenshots": [
+    {
+      "path": ".local/review/field-departure-chromium-360.png",
+      "engine": "chromium",
+      "state": "departure",
+      "width": 360,
+      "sha256": "63bb6ae0fd35766de51b5ee1971ea9f08bb6ab33722234088999acb0eddcfc20"
+    },
+    {
+      "path": ".local/review/field-departure-chromium-390.png",
+      "engine": "chromium",
+      "state": "departure",
+      "width": 390,
+      "sha256": "8a7738243e68633215aabb9fda935eb5bb0bda1d05c5fe7065d4dce3bb634089"
+    },
+    {
+      "path": ".local/review/field-departure-chromium-768.png",
+      "engine": "chromium",
+      "state": "departure",
+      "width": 768,
+      "sha256": "475f01b0c5f7b342e75a42dd20596fef5776ab0e8f4c67e22ff6e476b365a141"
+    },
+    {
+      "path": ".local/review/field-departure-chromium-1440.png",
+      "engine": "chromium",
+      "state": "departure",
+      "width": 1440,
+      "sha256": "5b6cdfe7e26593ea0d763773eac1e2f96edb53fa6bd90606f72f2676a45fb1b2"
+    },
+    {
+      "path": ".local/review/field-pause-chromium-360.png",
+      "engine": "chromium",
+      "state": "pause",
+      "width": 360,
+      "sha256": "9d603cb5bd6cd57f232d9369e684cee04c34e3f967bc119791cbec450055abab"
+    },
+    {
+      "path": ".local/review/field-pause-chromium-390.png",
+      "engine": "chromium",
+      "state": "pause",
+      "width": 390,
+      "sha256": "7c61cbc97918518c4b1de365962f4806c0e04561fd7118d28ae9ad8b5342374e"
+    },
+    {
+      "path": ".local/review/field-pause-chromium-768.png",
+      "engine": "chromium",
+      "state": "pause",
+      "width": 768,
+      "sha256": "922e394e85e13f6379a846c5244c74c203d3b37e708edd3c9deb3b51ae34e006"
+    },
+    {
+      "path": ".local/review/field-pause-chromium-1440.png",
+      "engine": "chromium",
+      "state": "pause",
+      "width": 1440,
+      "sha256": "2198ea49ebf835d5108d6c2deae3112ec994ba1385209a30c9caadda5e689f72"
+    },
+    {
+      "path": ".local/review/field-departure-webkit-360.png",
+      "engine": "webkit",
+      "state": "departure",
+      "width": 360,
+      "sha256": "8e2c5390426222cb5c01169ab6d89f8e3d56c17324dc7faaae4ae86a4aed6e7b"
+    },
+    {
+      "path": ".local/review/field-departure-webkit-390.png",
+      "engine": "webkit",
+      "state": "departure",
+      "width": 390,
+      "sha256": "43b0c6e22247a4b01dd57bd140478f73bb7ed6e708b752ddf039c97b1d8d25d2"
+    },
+    {
+      "path": ".local/review/field-departure-webkit-768.png",
+      "engine": "webkit",
+      "state": "departure",
+      "width": 768,
+      "sha256": "3cbcf6c8327aea6fc179575dcba9cdd6d3a44b2f0da29f088a27e8545b9678c5"
+    },
+    {
+      "path": ".local/review/field-departure-webkit-1440.png",
+      "engine": "webkit",
+      "state": "departure",
+      "width": 1440,
+      "sha256": "8ced8bb779406f62b576fbbf14de88d12ba9b9bd5fb6d909da531cee1a3dcfb8"
+    },
+    {
+      "path": ".local/review/field-pause-webkit-360.png",
+      "engine": "webkit",
+      "state": "pause",
+      "width": 360,
+      "sha256": "0b28a0b423423d5fde2be09e18661c3214130172443dfe1a6203f5042869b11c"
+    },
+    {
+      "path": ".local/review/field-pause-webkit-390.png",
+      "engine": "webkit",
+      "state": "pause",
+      "width": 390,
+      "sha256": "35164d39c927bde6ac9a5c9f8c8731cd88d505e16124200e5b88a45ee59f52f6"
+    },
+    {
+      "path": ".local/review/field-pause-webkit-768.png",
+      "engine": "webkit",
+      "state": "pause",
+      "width": 768,
+      "sha256": "264a7f622d788bce56ee022ed98d14ea77cdc24d8cc6163ca8360f132d8acab9"
+    },
+    {
+      "path": ".local/review/field-pause-webkit-1440.png",
+      "engine": "webkit",
+      "state": "pause",
+      "width": 1440,
+      "sha256": "e8ea702daf726279ef004151921365ccda1cb3303d3c52a6a5d2c11b0779bc09"
+    }
+  ],
+  "manualVisualInspection": [
+    "field-departure-chromium-360.png",
+    "field-pause-webkit-390.png",
+    "field-departure-webkit-768.png",
+    "field-pause-chromium-1440.png"
+  ],
+  "accessibility": {
+    "engines": [
+      "chromium",
+      "webkit"
+    ],
+    "widths": [
+      360,
+      390,
+      768,
+      1440
+    ],
+    "states": [
+      "departure",
+      "pause"
+    ],
+    "axeViolations": 0,
+    "horizontalOverflow": false,
+    "controlsMinimumHeight": 44,
+    "controlsMinimumTextSize": 16,
+    "keyboard": "Actual Enter submission of focused departure action; native labeled inputs, reload/back and privacy/error recovery exercised. This is not exhaustive assistive-technology or physical-device acceptance."
+  },
+  "verified": [
+    "Genuine sign-in then saved-job navigation to field controls; tenant-bound provider/session and restricted SQL paths",
+    "Actual vehicle/manual origin, blank optional fields, optional estimate and daylight-saving gap refusal",
+    "Departure/en-route state; arrival/work start; pause and resume; exact acknowledged versions2–5 and fresh reload",
+    "Hide/leave clears private form; only opaque original identity survives an interrupted save",
+    "Lost committed reply does not retry; explicit original check confirms committed action; absent original stays pending",
+    "Human field Save-review label, explicit retirement/reason/confirmation/acknowledgement and later fresh action",
+    "CSV and JSON history download preserves all five states and exact distinct effective/job-update timestamps",
+    "Resources/network failure hides form; explicit access retry and back navigation recover",
+    "Separate default-off synthetic field capability; production/prerequisite refusal and legacy browser behavior retained"
+  ],
+  "diagnostics": [
+    {
+      "run": ".local/field-work-browser-native-v1/result.json",
+      "outcome": "Both fixtures expected schedule-list text after an explicit selected-job read. Corrected assertion to the actual saved version; application unchanged."
+    },
+    {
+      "run": ".local/field-work-browser-native-v2/result.json",
+      "outcome": "Both fixtures used UTC for an Indiana DST-gap assertion. Field-only fixture now explicitly sets America/Indiana/Indianapolis; existing fixtures retain UTC. Alert lookup scoped to the form, away from Next route announcer."
+    },
+    {
+      "run": ".local/field-work-browser-native-v3/result.json",
+      "outcome": "Focused Chromium completed field/recovery through version5 but history download refused. Archive incorrectly required the field effective time to equal the later job update stamp. Field-only ordering now retains all exact timestamps and head/state/actor/operation/prefix binding; booking equality remains unchanged. Negative/round-trip regression and actual DB CSV/JSON assertions pass in final4."
+    },
+    {
+      "run": ".local/field-work-full-unit-v1.json",
+      "outcome": "8466/8468; two unchanged offline export cases exceeded5s during parallel execution. Focused offline10 pass unchanged; full sequential8468 pass. Resource contention is a hypothesis, not a proven root-cause fix; no deadlines or assertions changed."
+    }
+  ],
+  "priorSqlSourceRecoveryProof": "planning/proposals/field54-recovery-verification.json",
+  "priorThirteenSqlBodiesAndRecoverySourcesByteExact": true,
+  "priorIntermittentLoginConcern": "field-session-auth-verification.json retains the earlier single fixture login failure; subsequent instrumented14 and both final field browser journeys pass, but no root-cause fix is claimed.",
+  "next": [
+    "Register/adopt reviewed54 and close current-source public integration/release gates before an owner preview upgrade",
+    "Complete remaining field/completion/mileage/support/cancellation controls, manual coupled-time corrections and communication/follow-up tasks",
+    "Preserve full V1 custody/photos, immutable double-entry finance/reporting, complete business exports/recovery/import/cutover and Calendar P20/BR21/ADR35; real Crest acceptance remains unapproved"
+  ]
+}

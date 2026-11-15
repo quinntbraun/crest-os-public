@@ -1,0 +1,83 @@
+{
+  "formatVersion": 1,
+  "verifiedAt": "2026-11-05T10:21:29.920Z",
+  "scope": "Read-only operational completion allocation construction; not End Job or release acceptance",
+  "trackedParent": "bfd2af1df742fae4371cc08167c4040964cd942e",
+  "nativeProof": {
+    "path": ".local/completion-plan-native-v3/result.json",
+    "sha256": "e826d68f33c093ed7534717599ab6ac3f29049b13de04eee49024e2f98e77a27",
+    "passed": 77,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "retainedFieldCases": 61,
+    "privateCompletionPlannerCases": 16,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "exactSourceFiles": [
+    {
+      "path": "src/operations/work-completion.ts",
+      "bytes": 6785,
+      "sha256": "dd6dbb5a3a6e26b075f0dc8c7b5b1f425c97e330da143773cb1ddd3297c55533"
+    },
+    {
+      "path": "planning/proposals/work-completion-plan.sql",
+      "bytes": 12177,
+      "sha256": "5350160e12049a19fc4effcd727743e0ede1dbf92411a80df6e1607996644cfb"
+    },
+    {
+      "path": "tests/unit/work-completion.test.ts",
+      "bytes": 8440,
+      "sha256": "6928599c4e51be79c473c0ad8874c7d7566019f1e84febf0e38aa9981dcde285"
+    },
+    {
+      "path": "tests/integration/work-completion-plan.test.mjs",
+      "bytes": 13868,
+      "sha256": "625a0144d4367e6221acbc95b50ddb7ee9f52d9049da971401702f88ff74c869"
+    },
+    {
+      "path": "tests/support/confirmed-booking-fixture.mjs",
+      "bytes": 11207,
+      "sha256": "479f22896ea5e0715cf8c6e85ef3e89756dcbbe0e9aa3c3109a5e181f8d5dc67"
+    }
+  ],
+  "pureCompletionCases": 18,
+  "typesPassed": true,
+  "focusedLintPassed": true,
+  "proved": [
+    "Independent application/PostgreSQL agreement over real locked current allocations",
+    "Genuine accepted discount and complimentary scope split across two scheduled visits",
+    "Per-original-envelope gross/discount/final preservation, including counterbalanced one-cent refusal",
+    "Full and partial fulfillment, zero-value identity retention and unrelated visit preservation",
+    "Stale plan/job, duplicate/missing/foreign scope, invalid money/description/reason refusal",
+    "Private closed-role routines, copied web-context refusal and unsafe-default installation refusal",
+    "Active/paused source support; planning leaves jobs/times/events/operations/audits/plans unchanged"
+  ],
+  "businessBoundary": "Explicit operational allocation only. Partial work requires later commercial resolution; no reduction of accepted obligations or permission to invoice is inferred. ACCOUNTING5 first-consumption allocation, tax and issuance rules remain required.",
+  "retainedDiagnostics": {
+    "firstRun": ".local/completion-plan-native-v1/result.json",
+    "firstRunPassed": 65,
+    "firstRunFailed": 12,
+    "cause": "The direct native fixture passed a JavaScript array as a PostgreSQL array rather than serialized JSONB; corrected the transport boundary without changing business validation. Two unused test projection bindings were corrected for lint.",
+    "correctedRun": ".local/completion-plan-native-v2/result.json",
+    "correctedCases": 77,
+    "finalRunAdds": "Genuinely accepted5000-cent discount and counterbalanced cross-envelope cent refusal; fixture default remains null and all61 retained field cases pass."
+  },
+  "limits": {
+    "registeredMigrations": 53,
+    "registered54": false,
+    "newGenuineMfaHttpBrowserWorkflow": false,
+    "ordinaryWebWorkerPlannerGrant": false,
+    "completionOutcomeReviewOrFinalizationWrites": false,
+    "ownerDataOrRuntimeChanged": false,
+    "actualWorkConsumptionAndAmendmentSchemaProfilesStillRequireExtension": true,
+    "completeFieldSourceRecoveryOrOriginalRetirement": false,
+    "fieldUiDelivered": false,
+    "financialOrProductionActivation": false,
+    "releaseAcceptance": false
+  },
+  "next": "Persist the validated replacement allocation plans and typed work outcomes atomically with interval closure, terminal job/event, one primary review request and invoice/commercial finalization tasks. Extend pinned source/plan/audit/job/schedule guards and registered53 schema/work-floor checks, then prove source/recovery/original handling and the genuine connected workflow.",
+  "realCrestUseReady": false,
+  "spend": 0
+}
