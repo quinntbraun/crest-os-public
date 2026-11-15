@@ -8,6 +8,7 @@ import {sourceExportBrowserFixture} from '../support/source-export-browser-fixtu
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' posts a reviewed paid expense and recovers the original',async()=>{
  const income=process.env.CREST_TEST_RECORDED_INCOME_STATEMENT==='1';
  const matchStatement=process.env.CREST_TEST_STATEMENT_MATCH_REVIEW==='1';
+ const saveMatchDraft=process.env.CREST_TEST_STATEMENT_MATCH_DRAFTS==='1';
  const f=await sourceExportBrowserFixture({product:true,workspace:true,expenses:true,catalog:true,quotes:true,
   quoteReview:true,quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,
   financeAccounts:true,financeMappings:true,financeCategoryMappings:true,financeTaxProfiles:true,financeMoneyChannels:true,
@@ -120,8 +121,32 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await match.getByLabel('Signed amount to allocate (USD)',{exact:true}).fill('-100.00');
    await match.getByRole('button',{name:'Add proposed match',exact:true}).click();
    await expect(match.getByText('Every statement row is fully allocated in this preview.',{exact:true})).toBeVisible();
+   if(saveMatchDraft){
+    await match.getByLabel('Match draft review note',{exact:true}).fill('Fictional statement expense matched');
+    await match.getByRole('button',{name:'Save match draft',exact:true}).click();
+    await expect(match.getByRole('status')).toHaveText('Match draft saved.');
+    await expect(match.getByText('Saved draft revision 1',{exact:false})).toBeVisible();
+    await staging.getByText('Review statement matches',{exact:true}).click();
+    await staging.getByText('Review statement matches',{exact:true}).click();
+    await match.getByRole('button',{name:'Load posted movements',exact:true}).click();
+    await expect(match.getByRole('status')).toHaveText('Saved match draft loaded.');
+    await expect(match.getByText('Every statement row is fully allocated in this preview.',{exact:true})).toBeVisible();
+   }
    await match.getByRole('button',{name:'Remove match 1',exact:true}).click();
    await expect(match.getByText('1 statement row needs a match.',{exact:true})).toBeVisible();
+   if(saveMatchDraft){
+    await match.getByLabel('Match draft review note',{exact:true}).fill('Fictional match withdrawn for review');
+    await page.route('**/api/business/finance-accounts/statement-match-draft-save',async route=>{
+     const response=await route.fetch();
+     assert.equal(response.status(),200);
+     await route.abort('failed');
+    },{times:1});
+    await match.getByRole('button',{name:'Save match draft',exact:true}).click();
+    await expect(match.getByRole('status')).toContainText('The save could not be confirmed.');
+    await match.getByRole('button',{name:'Retry match draft save',exact:true}).click();
+    await expect(match.getByRole('status')).toHaveText('Match draft saved.');
+    await expect(match.getByText('Saved draft revision 2',{exact:false})).toBeVisible();
+   }
    await staging.getByText('Review statement matches',{exact:true}).click();
   }
   if(income){

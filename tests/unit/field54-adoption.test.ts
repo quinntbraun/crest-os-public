@@ -1,4 +1,5 @@
 import {openingReceivablesSourceCoverage} from '../../src/bookkeeping/opening-receivables-source.ts';
+import {statementMatchDraftSourceCoverage} from '../../src/bookkeeping/statement-match-draft-source.ts';
 import {readFileSync} from 'node:fs';
 import {it,expect} from 'vitest';
 import {sha256,validateMigrationSet} from '../../src/tooling/migrations';
@@ -602,9 +603,13 @@ it('retains refund and tip lineage and adds the recovered payment sources',()=>{
  expect(registered105.migrations).toHaveLength(105);
  expect(registered105.migrations.at(-1)).toMatchObject({version:'20261229180000',file:'20261229180000_fictional_opening_receivables_schedule.sql'});
  expect(()=>validateMigrationSet(registered105,new Map(registered105.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered104)).not.toThrow();
- expect(currentRegistry.migrations).toHaveLength(106);
- expect(currentRegistry.migrations.at(-1)).toMatchObject({version:'20261230180000',file:'20261230180000_fictional_statement_match_review.sql'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered105)).not.toThrow();
+ const registered106=JSON.parse(bytes('tests/support/registered106-migration-checksums.json').toString()) as MigrationRegistry;
+ expect(registered106.migrations).toHaveLength(106);
+ expect(registered106.migrations.at(-1)).toMatchObject({version:'20261230180000',file:'20261230180000_fictional_statement_match_review.sql'});
+ expect(()=>validateMigrationSet(registered106,new Map(registered106.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered105)).not.toThrow();
+ expect(currentRegistry.migrations).toHaveLength(107);
+ expect(currentRegistry.migrations.at(-1)).toMatchObject({version:'20261231180000',file:'20261231180000_fictional_statement_match_drafts.sql'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered106)).not.toThrow();
  expect(registered100.migrations.at(-1)).toMatchObject({version:'20261224180000',file:'20261224180000_fictional_collection_failure_grouped_recredit.sql'});
  expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered100 as MigrationRegistry)).not.toThrow();
  expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered101)).not.toThrow();
@@ -624,8 +629,9 @@ it('retains refund and tip lineage and adds the recovered payment sources',()=>{
  const restoredCoverage=[...recredits,...collectionFailureGroupedRecreditSourceCoverage].map(row=>({
    ...row,required:[...row.required,...restoredTipSourceColumns[row.table.slice('crest.'.length)]??[]],
  }));
- expect(currentCoverage).toEqual({...coverage92,migrationCount:106,tables:[...restoredCoverage,openingWorksheetSourceCoverage,...statementSourceCoverage,openingReceivablesSourceCoverage]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:106});
+ expect(currentCoverage).toEqual({...coverage92,migrationCount:107,tables:[...restoredCoverage,openingWorksheetSourceCoverage,
+  ...statementSourceCoverage,openingReceivablesSourceCoverage,statementMatchDraftSourceCoverage]});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:107});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

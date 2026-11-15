@@ -11,8 +11,8 @@ import { confirmedBookingRequest } from '../fixtures/confirmed-booking.ts';
 import { createConfirmedBookingFixture } from '../support/confirmed-booking-fixture.mjs';
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
 import { installProviderSchema } from '../support/provider-schema.mjs';
-import { backupDatabase, backupIncomeReportDatabase, connect, keyPair, recoveryCluster, restoreDatabase,
-  restoreIncomeReportDatabase } from '../support/recovery-drill.mjs';
+import { backupDatabase, backupIncomeReportDatabase, backupStatementMatchReviewDatabase, connect, keyPair, normalizedSchema, postgresTool, recoveryCluster,
+  restoreDatabase, restoreIncomeReportDatabase, restoreStatementMatchReviewDatabase } from '../support/recovery-drill.mjs';
 import {parseStatementMatchSnapshot,reviewStatementMatches} from '../../src/bookkeeping/statement-match-review.ts';
 
 async function command(connection, name, values) {
@@ -316,27 +316,111 @@ test('registered reports tie exact amounts, reject inconsistent source and survi
     assert.equal(snapshot.statementDifferenceCents,'0');
     assert.deepEqual(snapshot.movements.map(row=>row.signedCents).sort(),['-10000','-1201','10000']);
     const optionsById=new Map(snapshot.movements.map(row=>[row.id,row]));
-    const matching=reviewStatementMatches(snapshot,snapshot.movements.map(row=>({
+    const allocations=snapshot.movements.map(row=>({
       statementRowId:statementRows[row.signedCents.startsWith('-')?0:1].id,movementId:row.id,signedCents:row.signedCents,
-    })),id=>optionsById.get(id));
+    }));
+    const matching=reviewStatementMatches(snapshot,allocations,id=>optionsById.get(id));
     assert.deepEqual(matching,{state:'fully_allocated',outstanding:[]});
     await assert.rejects(matchOptions(foreign),{message:'STATEMENT_MATCH_SOURCE_REQUIRED'});
     await assert.rejects(matchOptions(owner,web),{code:'42501'});
     await assert.rejects(matchOptions(owner,exportReader),{code:'42501'});
     assert.deepEqual((await trial()).totals,complete.totals);
+    const legacyPoint=join(sandbox.workspace,'statement-match-review-106-recovery');
+    await mkdir(legacyPoint,{mode:0o700});
+    const legacy=await backupStatementMatchReviewDatabase(admin,target,legacyPoint,keys.recipient);
+    assert.equal(legacy.manifest.schemaVersion,106);
+    const legacyDestination=await recoveryCluster();
+    try {
+      assert.deepEqual(await restoreStatementMatchReviewDatabase(legacyPoint,keys.path,await legacyDestination.database()),
+        legacy.manifest);
+    } finally {await legacyDestination.close();}
+
+    assert.equal((await sandbox.apply(target,await sandbox.prefix(107))).history.length,107);
+    const readDraft=(revision=null,connection=finance,principal=owner)=>command(connection,'read_fictional_statement_match_draft',
+      [...principal.auth(),stagedStatement,revision]);
+    const args=(revision,items,reason='Fictional allocation review',operation=randomUUID())=>
+      [...owner.auth(),owner.epoch,operation,stagedStatement,revision,JSON.stringify(items),reason,today];
+    assert.deepEqual(await readDraft(),{draft:null});
+    await assert.rejects(readDraft(null,finance,foreign),{message:'STATEMENT_MATCH_DRAFT_SOURCE_REQUIRED'});
+    await assert.rejects(readDraft(null,web),{code:'42501'});
+    await assert.rejects(readDraft(null,exportReader),{code:'42501'});
+    const firstDraftRequest=args('0',allocations);
+    await assert.rejects(command(web,'save_fictional_statement_match_draft',firstDraftRequest),{code:'42501'});
+    await assert.rejects(command(finance,'save_fictional_statement_match_draft',args('0',{})),
+      {message:'STATEMENT_MATCH_DRAFT_INPUT_REQUIRED'});
+    const negative=allocations.find(row=>row.signedCents==='-10000');
+    for(const items of [[{...negative,signedCents:'-10001'}],[{...negative,signedCents:'1000'}],
+      [{...negative,statementRowId:randomUUID()}],[negative,negative]]){
+      await assert.rejects(command(finance,'save_fictional_statement_match_draft',args('0',items)),
+        {message:'STATEMENT_MATCH_DRAFT_SOURCE_REQUIRED'});
+    }
+    assert.deepEqual(await readDraft(),{draft:null});
+    const draft=await committed(finance,'save_fictional_statement_match_draft',firstDraftRequest);
+    assert.equal(draft.state,'draft');
+    assert.equal(draft.revision,'1');
+    assert.deepEqual(draft.allocations,allocations);
+    assert.deepEqual(await committed(finance,'save_fictional_statement_match_draft',firstDraftRequest),draft);
+    assert.deepEqual(await command(finance,'save_fictional_statement_match_draft',[...firstDraftRequest.slice(0,-2),'Different intent',today]),
+      {state:'conflict',reason:'operation'});
+    await assert.rejects(command(finance,'save_fictional_statement_match_draft',args('0',allocations)),
+      {message:'STATEMENT_MATCH_DRAFT_REVISION_CONFLICT'});
+    const cleared=await committed(finance,'save_fictional_statement_match_draft',args('1',[],'Fictional allocations removed'));
+    assert.equal(cleared.revision,'2');
+    assert.deepEqual(cleared.allocations,[]);
+    assert.deepEqual(await readDraft('1'),{draft});
+    assert.deepEqual(await readDraft(),{draft:cleared});
+    const concurrent=await sandbox.connect(target);
+    await concurrent.query('SET ROLE crest_finance_preview');
+    const racers=await Promise.allSettled([finance,concurrent].map((connection,index)=>
+      committed(connection,'save_fictional_statement_match_draft',args('2',[allocations[index]]))));
+    const winners=racers.filter(result=>result.status==='fulfilled');
+    assert.equal(winners.length,1);
+    assert.equal(racers.find(result=>result.status==='rejected').reason.message,'STATEMENT_MATCH_DRAFT_REVISION_CONFLICT');
+    assert.equal(winners[0].value.revision,'3');
+    assert.deepEqual(await readDraft(),{draft:winners[0].value});
+    await assert.rejects(admin.query('DELETE FROM crest.statement_match_draft_revisions'),{code:'55000'});
+    assert.equal((await admin.query("SELECT count(*)::int AS n FROM crest_private.audit_events WHERE entity_kind='statement_match_draft_revisions'")).rows[0].n,3);
+    assert.deepEqual((await trial()).totals,complete.totals);
+    await exportReader.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    try {
+      const capture=await captureFinanceSourceExport(owner.business,exportQuery,{
+        includeCorrections:true,includeFundApplications:true,includeTips:true,includeCredits:true,
+        includePairedCredits:true,includeServiceRefunds:true,includeExcessReceipts:true,includeExcessReturns:true,
+        includeTipReturns:true,includeCollectionFailures:true,includeRefundTransferAdjustments:true,
+        includeDirectReceiptTips:true,includeRefundTransferFees:true,includeCollectionFailureRecredits:true,
+        includeCollectionFailureGroupedRecredits:true,includeRestoredTips:true,includeOpeningWorksheets:true,
+        includeStatementStaging:true,includeOpeningReceivables:true,includeStatementMatchDrafts:true,
+      });
+      const {files,manifest}=capture.forServer();
+      assert.equal(JSON.parse(manifest).schemaVersion,21);
+      assert.equal(verifyFinanceSourceExport(manifest,files,owner.business).balancedJournalEntries,4);
+      const draftFile=files.find(file=>file.name==='statement_match_draft_source.json');
+      assert.deepEqual(JSON.parse(draftFile.content).revisions.map(row=>row.receipt),[draft,cleared,winners[0].value]);
+    } finally {await exportReader.query('ROLLBACK');}
     const matchingPoint=join(sandbox.workspace,'statement-match-recovery');
     await mkdir(matchingPoint,{mode:0o700});
     const savedMatchingSource=await backupDatabase(admin,target,matchingPoint,keys.recipient);
+    assert.equal(savedMatchingSource.manifest.schemaVersion,107);
     const matchingDestination=await recoveryCluster();
     let restoredMatching;
     try{
       const restoredUrl=await matchingDestination.database();
       assert.notEqual(new URL(restoredUrl).port,new URL(target).port);
-      assert.deepEqual(await restoreDatabase(matchingPoint,keys.path,restoredUrl),savedMatchingSource.manifest);
+      try {
+        assert.deepEqual(await restoreDatabase(matchingPoint,keys.path,restoredUrl),savedMatchingSource.manifest);
+      } catch(error) {
+        if(error.message==='SYNTHETIC_RECOVERY_RESTORE_FAILED:schema'){
+          await Promise.all([[target,'original'],[restoredUrl,'restored']].map(async([url,kind])=>
+            writeFile('.local/statement-match-draft-'+kind+'-schema.sql',normalizedSchema(await postgresTool('pg_dump',url,['--schema-only'])))));
+        }
+        throw error;
+      }
       restoredMatching=await connect(restoredUrl);
       await restoredMatching.query('SET ROLE crest_finance_preview');
       const recovered=parseStatementMatchSnapshot(await matchOptions(owner,restoredMatching),owner.business,stagedStatement,null);
       assert.deepEqual({...recovered,observedAt:snapshot.observedAt},snapshot);
+      assert.deepEqual(await readDraft('1',restoredMatching),{draft});
+      assert.deepEqual(await readDraft(null,restoredMatching),{draft:winners[0].value});
     } finally {
       try{await restoredMatching?.end();}finally{await matchingDestination.close();}
     }

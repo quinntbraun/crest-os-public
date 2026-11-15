@@ -530,6 +530,11 @@
       "version": "20261230180000",
       "file": "20261230180000_fictional_statement_match_review.sql",
       "sha256": "e87044b4ccbafef607401e027ef4aaee570c17672ec919bf99f7d3c1dc2d0392"
+    },
+    {
+      "version": "20261231180000",
+      "file": "20261231180000_fictional_statement_match_drafts.sql",
+      "sha256": "13c6254d98ccff631c9a73860b9170b0b87514d040e04da76c962d6f5111efba"
     }
   ]
 }

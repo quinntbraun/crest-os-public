@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 106,
+  "migrationCount": 107,
   "tables": [
     {
       "table": "crest.businesses",
@@ -3723,6 +3723,25 @@
         "recorded_at",
         "evidence",
         "evidence_sha256"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.statement_match_draft_revisions",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "statement_id",
+        "revision",
+        "previous_revision",
+        "operation_id",
+        "audit_id",
+        "recorded_by",
+        "recorded_at",
+        "movement_from_on",
+        "reason",
+        "allocations"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

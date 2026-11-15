@@ -40,13 +40,20 @@ const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8')
 const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8'));
 const currentCoverage=JSON.parse(await readFile(join(root,'planning/SECURITY_EXPORT_COVERAGE.json'),'utf8'));
 const registryHash=hash(await readFile(join(root,'supabase/migration-checksums.json')));
-const priorArCoverage={...currentCoverage,tables:currentCoverage.tables.filter(row=>row.table!=="crest.opening_receivable_schedule_revisions")};
+const priorMatchDraftCoverage={...currentCoverage,tables:currentCoverage.tables.filter(row=>row.table!=='crest.statement_match_draft_revisions')};
+const priorArCoverage={...priorMatchDraftCoverage,tables:priorMatchDraftCoverage.tables.filter(row=>row.table!=="crest.opening_receivable_schedule_revisions")};
 const legacy105Bytes=await readFile(join(root,'tests/support/registered105-migration-checksums.json'));
 const legacy105=JSON.parse(legacy105Bytes);
 assert.equal(hash(legacy105Bytes),'88c657846feac9ac5ee51bc62ca3e11687d76b6f571f3dd949d32dfe853a1f52');
 assert.deepEqual(registry.migrations.slice(0,105),legacy105.migrations);
 const legacy105Profile=Object.freeze({schemaVersion:105,registrySha256:hash(legacy105Bytes)});
-const legacy105Snapshot={profile:legacy105Profile,versions:legacy105.migrations.map(row=>row.version),coverage:{...currentCoverage,migrationCount:105}};
+const legacy105Snapshot={profile:legacy105Profile,versions:legacy105.migrations.map(row=>row.version),coverage:{...priorMatchDraftCoverage,migrationCount:105}};
+const legacy106Bytes=await readFile(join(root,'tests/support/registered106-migration-checksums.json'));
+const legacy106=JSON.parse(legacy106Bytes);
+assert.equal(hash(legacy106Bytes),'db92b9dfb46dc2fa4b215024bca1b815c7afabc1177d9f74c5ec12a0ad97a425');
+assert.deepEqual(registry.migrations.slice(0,106),legacy106.migrations);
+const legacy106Profile=Object.freeze({schemaVersion:106,registrySha256:hash(legacy106Bytes)});
+const legacy106Snapshot={profile:legacy106Profile,versions:legacy106.migrations.map(row=>row.version),coverage:{...priorMatchDraftCoverage,migrationCount:106}};
 const legacy104Bytes=await readFile(join(root,'tests/support/registered104-migration-checksums.json'));
 const legacy104=JSON.parse(legacy104Bytes);
 assert.equal(hash(legacy104Bytes),'8084ff6ebd02d9d416ee4c2d2f38ea4188c16fe2495a8939f9492bda9e5ea757');
@@ -1165,7 +1172,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile===legacy82Profile
       ||profile===legacy92Profile
       ||profile===legacy101Profile
-      ||profile===legacy102Profile||profile===legacy103Profile||profile===legacy104Profile||profile===legacy105Profile
+      ||profile===legacy102Profile||profile===legacy103Profile||profile===legacy104Profile||profile===legacy105Profile||profile===legacy106Profile
       ||profile.schemaVersion===81&&profile.heldUnapplicationMigrationSha256
       ||profile.schemaVersion===82&&profile.heldFundApplicationMigrationSha256
       ||profile.schemaVersion===83&&profile.heldTipMigrationSha256
@@ -1232,6 +1239,10 @@ export async function backupOpeningReceivablesDatabase(client,url,directory,reci
  return backupWithProfile(legacy105Profile,client,url,directory,recipient,undefined,undefined,legacy105Snapshot);
 }
 export async function restoreOpeningReceivablesDatabase(...args){return restoreWithProfile(legacy105Profile,...args);}
+export async function backupStatementMatchReviewDatabase(client,url,directory,recipient){
+ return backupWithProfile(legacy106Profile,client,url,directory,recipient,undefined,undefined,legacy106Snapshot);
+}
+export async function restoreStatementMatchReviewDatabase(...args){return restoreWithProfile(legacy106Profile,...args);}
 export async function backupIncomeReportDatabase(client,url,directory,recipient){
  const versions=legacy104.migrations.map(row=>row.version);
  assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(row=>row.version),versions);
