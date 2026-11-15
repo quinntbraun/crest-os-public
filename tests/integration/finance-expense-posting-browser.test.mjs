@@ -113,7 +113,27 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    assert.deepEqual(audit.violations.map(entry=>entry.id),[]);
    await page.screenshot({path:'.local/review/finance-trial-balance-'+name+'-'+width+'.png'});
   }
-  await report.getByText('Journal entries',{exact:true}).click();
+  await report.getByText('Balance sheet',{exact:true}).click();
+  const sheet=report.getByRole('region',{name:'Recorded balance sheet',exact:true});
+  await expect(sheet.getByRole('row',{name:'Accumulated recorded-book earnings -$100.00',exact:true})).toBeVisible();
+  await expect(sheet.getByRole('row',{name:'Total assets -$100.00',exact:true})).toBeVisible();
+  await expect(sheet.getByRole('row',{name:'Total liabilities and equity -$100.00',exact:true})).toBeVisible();
+  const sheetCsv=page.waitForEvent('download');
+  await sheet.getByRole('button',{name:'Download balance sheet CSV',exact:true}).click();
+  assert.match(await readFile(await (await sheetCsv).path(),'utf8'),/"Equity","","Accumulated recorded-book earnings","","-10000"/);
+  for(const width of [360,390,768,1440]){
+   await page.setViewportSize({width,height:900});
+   await sheet.getByRole('table').scrollIntoViewIfNeeded();
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.deepEqual((await new AxeBuilder({page}).include('[aria-label="Recorded balance sheet"]').withTags(['wcag2a','wcag2aa']).analyze()).violations.map(entry=>entry.id),[]);
+   await page.screenshot({path:'.local/review/finance-balance-sheet-'+name+'-'+width+'.png'});
+  }
+  const bankAccount=sheet.getByRole('button',{name:/Fictional dedicated bank/});
+  await bankAccount.press('Enter');
+  const journalAccount=report.getByLabel('Account (optional)',{exact:true});
+  await expect(journalAccount).toBeFocused();
+  await expect(journalAccount.locator('option:checked')).toContainText('Fictional dedicated bank');
+  await report.getByText('Balance sheet',{exact:true}).click();
   await report.getByLabel('Account (optional)',{exact:true}).selectOption({label:'5005 · Fictional wash supplies'});
   await report.getByRole('button',{name:'Load journal entries',exact:true}).click();
   const journal=report.getByRole('table',{name:'Posted journal page',exact:true});

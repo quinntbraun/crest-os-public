@@ -12,6 +12,7 @@ import type {FictionalJournalV8,FictionalTrialBalanceV8} from '../../../bookkeep
 import type {FictionalJournalV9,FictionalTrialBalanceV9} from '../../../bookkeeping/posted-report-v9-contract';
 import type {FictionalJournalV10,FictionalTrialBalanceV10} from '../../../bookkeeping/posted-report-v10-contract';
 import {downloadFinanceHistory,financeAccounts} from '../../../client/finance-accounts';
+import {RecordedBalanceSheet} from './recorded-balance-sheet';
 import styles from './screen.module.css';
 
 type Balance=Awaited<ReturnType<typeof financeAccounts.readTrialBalance>>|FictionalTrialBalanceV2|FictionalTrialBalanceV3|FictionalTrialBalanceV4|FictionalTrialBalanceV5|FictionalTrialBalanceV6|FictionalTrialBalanceV7|FictionalTrialBalanceV8|FictionalTrialBalanceV9|FictionalTrialBalanceV10;
@@ -74,6 +75,14 @@ export function TrialBalance({businessId}:{businessId:string}){
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
   const active=useRef<AbortController|null>(null);
+  const journalDetails=useRef<HTMLDetailsElement>(null);
+  const journalAccount=useRef<HTMLSelectElement>(null);
+  function selectJournalAccount(id:string){
+    if(active.current || !journalDetails.current)return;
+    journalDetails.current.open=true;
+    setAccount(id);setJournal(null);setJournalMessage('');
+    journalAccount.current?.focus();
+  }
   function clear(){
     active.current?.abort();active.current=null;
     setThrough('');setBalance(null);setJournal(null);setAccount('');setJournalMessage('');setBusy(false);setMessage('');
@@ -260,6 +269,7 @@ export function TrialBalance({businessId}:{businessId:string}){
             <td>{usd(balance.totals.creditBalanceCents)}</td></tr></tfoot>
         </table></div>}
         <button type="button" className="secondary" onClick={download}>Download trial balance CSV</button>
+        <RecordedBalanceSheet balance={balance} journalBusy={busy} selectJournalAccount={selectJournalAccount}/>
         {'refundDue' in balance&&<details className="review-card">
           <summary>Refunds still due · {usd(balance.refundDue.totalCents)}</summary>
           {balance.refundDue.rows.length===0?<p>No recredited refunds are due through this date.</p>:<>
@@ -270,7 +280,7 @@ export function TrialBalance({businessId}:{businessId:string}){
             {balance.refundDue.truncated&&<p className="field-help">Showing the first 100 recorded obligations. The total includes all refunds due.</p>}
           </>}
         </details>}
-        {balance.rows.length>0&&<details className="review-card" onToggle={event=>{
+        {balance.rows.length>0&&<details className="review-card" ref={journalDetails} onToggle={event=>{
           if(!event.currentTarget.open&&event.target===event.currentTarget){
             if(active.current){active.current.abort();active.current=null;setBusy(false);}
             setJournal(null);setAccount('');setJournalMessage('');
@@ -278,7 +288,7 @@ export function TrialBalance({businessId}:{businessId:string}){
         }}>
           <summary>Journal entries</summary>
           <label htmlFor="trial-balance-journal-account">Account (optional)</label>
-          <select id="trial-balance-journal-account" value={account} disabled={busy}
+          <select id="trial-balance-journal-account" ref={journalAccount} value={account} disabled={busy}
             onChange={event=>{setAccount(event.target.value);setJournal(null);setJournalMessage('');}}>
             <option value="">All posted accounts</option>
             {balance.rows.map(row=><option key={row.accountId} value={row.accountId}>{row.code} · {row.name}</option>)}

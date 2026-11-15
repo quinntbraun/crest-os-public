@@ -1493,9 +1493,9 @@ export function clearPendingSameDayExpense(entry:PendingSameDayExpense){
  check(readPendingSameDayExpense()===null);
 }
 
-export function downloadFinanceHistory(filename:string,rows:readonly (readonly string[])[]){
- const csv=(value:string)=>{
-  const escaped=/^[=+\-@']/.test(value.trimStart())?"'"+value:value;
+export function downloadFinanceHistory(filename:string,rows:readonly (readonly (string|bigint)[])[]){
+ const csv=(value:string|bigint)=>{
+  const escaped=typeof value==='bigint'?String(value):/^[=+\-@']/.test(value.trimStart())?"'"+value:value;
   return '"'+escaped.replaceAll('"','""')+'"';
  };
  const data=rows.map(row=>row.map(csv).join(',')).join('\r\n')+'\r\n';
