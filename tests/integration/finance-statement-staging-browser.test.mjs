@@ -12,6 +12,7 @@ import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source
 const route='/api/business/finance-accounts/statement-staging-';
 const matching=process.env.CREST_TEST_STATEMENT_MATCH_REVIEW==='1';
 const savedMatching=process.env.CREST_TEST_STATEMENT_MATCH_DRAFTS==='1';
+const supplierBills=process.env.CREST_TEST_SUPPLIER_BILL_DRAFTS==='1';
 for(const engine of [chromium,webkit]){
  test(engine.name()+' genuine owner stages a fictional statement and recovers an interrupted save',{timeout:300000},async()=>{
   const previous=process.env.CREST_TEST_DATABASE_URL,cluster=previous?null:await recoveryCluster();
@@ -120,8 +121,9 @@ for(const engine of [chromium,webkit]){
    const download=await downloadPromise;
    const {['manifest.json']:manifest,['export_delivery.json']:delivery,...source}=unzipSync(await readFile(await download.path()));
    const verified=verifyFinanceSourceExport(strFromU8(manifest),Object.entries(source).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
-   assert.equal(verified.profile,savedMatching?'crest.posted-finance-source.v21':matching?'crest.posted-finance-source.v20':'crest.posted-finance-source.v19');
-   assert.equal(JSON.parse(strFromU8(delivery)).sourceSchemaVersion,savedMatching?107:matching?106:103);
+   assert.equal(verified.profile,supplierBills?'crest.posted-finance-source.v22':savedMatching?'crest.posted-finance-source.v21':matching?'crest.posted-finance-source.v20':'crest.posted-finance-source.v19');
+   assert.equal(JSON.parse(strFromU8(delivery)).sourceSchemaVersion,supplierBills?108:savedMatching?107:matching?106:103);
+   if(supplierBills)assert.deepEqual(JSON.parse(strFromU8(source['supplier_bill_draft_source.json'])).revisions,[]);
    if(savedMatching)assert.deepEqual(JSON.parse(strFromU8(source['statement_match_draft_source.json'])).revisions,[]);
    const [statement]=JSON.parse(strFromU8(source['statement_staging_source.json'])).batches;
    assert.deepEqual([statement.id,statement.operationId,statement.fileSha256,statement.statementDifferenceCents],

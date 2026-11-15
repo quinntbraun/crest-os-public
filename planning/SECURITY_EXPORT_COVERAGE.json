@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 107,
+  "migrationCount": 108,
   "tables": [
     {
       "table": "crest.businesses",
@@ -3742,6 +3742,22 @@
         "movement_from_on",
         "reason",
         "allocations"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.supplier_bill_draft_revisions",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "bill_id",
+        "revision",
+        "previous_revision",
+        "operation_id",
+        "actor_id",
+        "recorded_at",
+        "payload"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

@@ -535,6 +535,11 @@
       "version": "20261231180000",
       "file": "20261231180000_fictional_statement_match_drafts.sql",
       "sha256": "13c6254d98ccff631c9a73860b9170b0b87514d040e04da76c962d6f5111efba"
+    },
+    {
+      "version": "20270101180000",
+      "file": "20270101180000_fictional_supplier_bill_drafts.sql",
+      "sha256": "83d151f3a866ee33568e534aed594f0160113c92ac31d9da04eda1b7f35b2cc7"
     }
   ]
 }

@@ -3,12 +3,76 @@ import {mkdir,readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {strFromU8,unzipSync} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
+
+async function exerciseSupplierBills(page,date,fixture,engine){
+ const region=page.getByRole('region',{name:'Unpaid supplier bill drafts',exact:true});
+ const summary=region.getByText('Unpaid supplier bills',{exact:true});
+ const form=region.getByRole('form',{name:'Supplier bill draft',exact:true});
+ const status=region.getByRole('status');
+ const save=()=>form.getByRole('button',{name:'Save supplier bill draft',exact:true}).click();
+ const fill=async purpose=>{
+  await form.getByLabel('Incurred date',{exact:true}).fill(date);
+  await form.getByLabel('Due date',{exact:true}).fill(date);
+  await form.getByLabel('Supplier',{exact:true}).fill('Fictional vendor');
+  await form.getByLabel('Bill reference (optional)',{exact:true}).fill('Fictional invoice B-17');
+  await form.getByLabel('Bill total (USD)',{exact:true}).fill('150.25');
+  await form.getByLabel('Purchase tax included in total (USD, if known)',{exact:true}).fill('5.25');
+  await form.getByLabel('Business purpose',{exact:true}).fill(purpose);
+  await form.getByLabel('Original document status',{exact:true}).fill('Fictional original evidence still to be retained');
+  await form.getByLabel('Category for split 1',{exact:true}).selectOption('supplies');
+  await form.getByLabel('Amount for split 1 (USD)',{exact:true}).fill('100.25');
+  await form.getByRole('button',{name:'Add bill split',exact:true}).click();
+  await form.getByLabel('Category for split 2',{exact:true}).selectOption('other');
+  await form.getByLabel('Amount for split 2 (USD)',{exact:true}).fill('50.00');
+ };
+ await summary.click();
+ await fill('Fictional workshop supplies');
+ await page.route('**/api/business/finance-accounts/supplier-bill-draft-save',async route=>{
+  const response=await route.fetch();
+  assert.equal(response.status(),200);
+  await route.abort('failed');
+ },{times:1});
+ await save();
+ await expect(status).toContainText('The save could not be confirmed.');
+ await region.getByRole('button',{name:'Check original supplier bill save',exact:true}).click();
+ await expect(status).toHaveText('Supplier bill draft saved.');
+ await page.reload();
+ await summary.click();
+ await region.getByRole('button',{name:'Load saved supplier bills',exact:true}).click();
+ await region.getByRole('button',{name:'Open supplier bill draft',exact:true}).click();
+ await expect(form.getByLabel('Bill total (USD)',{exact:true})).toHaveValue('150.25');
+ await form.getByLabel('Business purpose',{exact:true}).fill('Fictional supplies reviewed again');
+ await form.getByLabel('Reason for this revision',{exact:true}).fill('Fictional source reviewed');
+ await form.getByRole('button',{name:'Save supplier bill revision',exact:true}).click();
+ await expect(status).toHaveText('Supplier bill draft saved.');
+ await region.getByRole('button',{name:'Enter another supplier bill',exact:true}).click();
+ await fill('Fictional possible duplicate');
+ await save();
+ await expect(status).toHaveText('Supplier bill draft saved.');
+ await region.getByRole('button',{name:'Review saved bill evidence',exact:true}).click();
+ await expect(region.getByText('1 possible duplicate supplier bill.',{exact:true})).toBeVisible();
+ assert.equal((await fixture.client.query('SELECT count(*)::int n FROM crest.financial_events WHERE business_id=$1',[fixture.business])).rows[0].n,0);
+ assert.equal((await fixture.client.query('SELECT count(*)::int n FROM crest.supplier_bill_draft_revisions WHERE business_id=$1',[fixture.business])).rows[0].n,3);
+ await mkdir('.local/review',{recursive:true});
+ for(const width of [360,390,768,1440]){
+  await page.setViewportSize({width,height:900});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa']).analyze();
+  assert.deepEqual(audit.violations.map(entry=>entry.id),[]);
+  await region.getByRole('button',{name:'Review saved bill evidence',exact:true}).scrollIntoViewIfNeeded();
+  await page.screenshot({path:'.local/review/finance-supplier-bill-'+engine+'-'+width+'.png'});
+ }
+ await summary.click();
+}
 
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' posts a reviewed paid expense and recovers the original',async()=>{
  const income=process.env.CREST_TEST_RECORDED_INCOME_STATEMENT==='1';
  const matchStatement=process.env.CREST_TEST_STATEMENT_MATCH_REVIEW==='1';
  const saveMatchDraft=process.env.CREST_TEST_STATEMENT_MATCH_DRAFTS==='1';
+ const supplierBills=process.env.CREST_TEST_SUPPLIER_BILL_DRAFTS==='1';
  const f=await sourceExportBrowserFixture({product:true,workspace:true,expenses:true,catalog:true,quotes:true,
   quoteReview:true,quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,
   financeAccounts:true,financeMappings:true,financeCategoryMappings:true,financeTaxProfiles:true,financeMoneyChannels:true,
@@ -33,6 +97,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const date=(await f.client.query("SELECT (clock_timestamp() AT TIME ZONE 'America/Indiana/Indianapolis')::date::text AS day")).rows[0].day;
   const description='Fictional pH-neutral wash supplies';
   await page.goto(f.origin+'/expenses');
+  if(supplierBills)await exerciseSupplierBills(page,date,f,name);
   await page.getByRole('button',{name:'Load saved expenses',exact:true}).click();
   await page.getByLabel('Payment date',{exact:true}).fill(date);
   await page.getByLabel('Amount paid (USD)',{exact:true}).fill('100.00');
@@ -237,5 +302,19 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await report.getByRole('button',{name:'Load trial balance',exact:true}).click();
   await expect(report.getByRole('status')).toContainText('Crest could not load a verified trial balance');
   await expect(report.getByRole('button',{name:'Download trial balance CSV',exact:true})).toHaveCount(0);
+  if(supplierBills){
+   await page.goto(f.origin+'/export-files');
+   await page.getByRole('button',{name:'Prepare posted finance CSV',exact:true}).click();
+   const financeDownload=page.waitForEvent('download');
+   await page.getByRole('button',{name:'Save ZIP',exact:true}).click();
+   const {'manifest.json':manifest,'export_delivery.json':delivery,...source}=unzipSync(await readFile(await (await financeDownload).path()));
+   assert.equal(verifyFinanceSourceExport(strFromU8(manifest),Object.entries(source).map(([name,bytes])=>
+    ({name,content:strFromU8(bytes)})),f.business).profile,'crest.posted-finance-source.v22');
+   assert.equal(JSON.parse(strFromU8(delivery)).sourceSchemaVersion,108);
+   const retained=JSON.parse(strFromU8(source['supplier_bill_draft_source.json'])).revisions;
+   assert.equal(retained.length,3);
+   assert.equal(retained.find(row=>row.revision==='2').payload.changeReason,'Fictional source reviewed');
+   assert(retained.every(row=>row.businessId===f.business));
+  }
  }finally{await browser?.close();await f.close();}
 },{timeout:240000});

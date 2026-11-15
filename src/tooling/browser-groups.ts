@@ -38,7 +38,7 @@ export const browserScenarios = Object.freeze({
   'payment-recovery': paymentRecovery,
   'restored-tip': restoredTip,
   'opening-worksheet': Object.freeze({...restoredTip,CREST_TEST_OPENING_WORKSHEET_EXPORT:'1'}),
-  'statement-matching': Object.freeze({CREST_TEST_STATEMENT_MATCH_REVIEW:'1',CREST_TEST_STATEMENT_MATCH_DRAFTS:'1'}),
+  'statement-matching': Object.freeze({CREST_TEST_STATEMENT_MATCH_REVIEW:'1',CREST_TEST_STATEMENT_MATCH_DRAFTS:'1',CREST_TEST_SUPPLIER_BILL_DRAFTS:'1'}),
   'opening-receivables': Object.freeze({...restoredTip,CREST_TEST_OPENING_AR_PREVIEW:'1'}),
   'income-statement': Object.freeze({...restoredTip,CREST_TEST_RECORDED_INCOME_STATEMENT:'1'}),
 });

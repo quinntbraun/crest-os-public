@@ -11,8 +11,8 @@ import { confirmedBookingRequest } from '../fixtures/confirmed-booking.ts';
 import { createConfirmedBookingFixture } from '../support/confirmed-booking-fixture.mjs';
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
 import { installProviderSchema } from '../support/provider-schema.mjs';
-import { backupDatabase, backupIncomeReportDatabase, backupStatementMatchReviewDatabase, connect, keyPair, normalizedSchema, postgresTool, recoveryCluster,
-  restoreDatabase, restoreIncomeReportDatabase, restoreStatementMatchReviewDatabase } from '../support/recovery-drill.mjs';
+import { backupIncomeReportDatabase, backupStatementMatchDraftDatabase, backupStatementMatchReviewDatabase, connect, keyPair, normalizedSchema, postgresTool, recoveryCluster,
+  restoreIncomeReportDatabase, restoreStatementMatchDraftDatabase, restoreStatementMatchReviewDatabase } from '../support/recovery-drill.mjs';
 import {parseStatementMatchSnapshot,reviewStatementMatches} from '../../src/bookkeeping/statement-match-review.ts';
 
 async function command(connection, name, values) {
@@ -399,7 +399,7 @@ test('registered reports tie exact amounts, reject inconsistent source and survi
     } finally {await exportReader.query('ROLLBACK');}
     const matchingPoint=join(sandbox.workspace,'statement-match-recovery');
     await mkdir(matchingPoint,{mode:0o700});
-    const savedMatchingSource=await backupDatabase(admin,target,matchingPoint,keys.recipient);
+    const savedMatchingSource=await backupStatementMatchDraftDatabase(admin,target,matchingPoint,keys.recipient);
     assert.equal(savedMatchingSource.manifest.schemaVersion,107);
     const matchingDestination=await recoveryCluster();
     let restoredMatching;
@@ -407,7 +407,7 @@ test('registered reports tie exact amounts, reject inconsistent source and survi
       const restoredUrl=await matchingDestination.database();
       assert.notEqual(new URL(restoredUrl).port,new URL(target).port);
       try {
-        assert.deepEqual(await restoreDatabase(matchingPoint,keys.path,restoredUrl),savedMatchingSource.manifest);
+        assert.deepEqual(await restoreStatementMatchDraftDatabase(matchingPoint,keys.path,restoredUrl),savedMatchingSource.manifest);
       } catch(error) {
         if(error.message==='SYNTHETIC_RECOVERY_RESTORE_FAILED:schema'){
           await Promise.all([[target,'original'],[restoredUrl,'restored']].map(async([url,kind])=>

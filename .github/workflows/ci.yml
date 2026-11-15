@@ -283,8 +283,7 @@ jobs:
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 12
         run: |
-          bash scripts/prepare-ci-ubuntu-apt.sh
-          npx --no-install playwright install --with-deps chromium webkit
+          bash scripts/install-ci-browsers.sh
       - name: Build actual product source
         run: npm run build
       - name: Run required browser group
@@ -438,8 +437,7 @@ jobs:
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 12
         run: |
-          bash scripts/prepare-ci-ubuntu-apt.sh
-          npx --no-install playwright install --with-deps chromium webkit
+          bash scripts/install-ci-browsers.sh
       - name: Production build and focused service workflow
         run: |
           npm run build

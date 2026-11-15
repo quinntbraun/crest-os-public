@@ -40,7 +40,8 @@ const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8')
 const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8'));
 const currentCoverage=JSON.parse(await readFile(join(root,'planning/SECURITY_EXPORT_COVERAGE.json'),'utf8'));
 const registryHash=hash(await readFile(join(root,'supabase/migration-checksums.json')));
-const priorMatchDraftCoverage={...currentCoverage,tables:currentCoverage.tables.filter(row=>row.table!=='crest.statement_match_draft_revisions')};
+const priorSupplierDraftCoverage={...currentCoverage,tables:currentCoverage.tables.filter(row=>row.table!=='crest.supplier_bill_draft_revisions')};
+const priorMatchDraftCoverage={...priorSupplierDraftCoverage,tables:priorSupplierDraftCoverage.tables.filter(row=>row.table!=='crest.statement_match_draft_revisions')};
 const priorArCoverage={...priorMatchDraftCoverage,tables:priorMatchDraftCoverage.tables.filter(row=>row.table!=="crest.opening_receivable_schedule_revisions")};
 const legacy105Bytes=await readFile(join(root,'tests/support/registered105-migration-checksums.json'));
 const legacy105=JSON.parse(legacy105Bytes);
@@ -54,6 +55,12 @@ assert.equal(hash(legacy106Bytes),'db92b9dfb46dc2fa4b215024bca1b815c7afabc1177d9
 assert.deepEqual(registry.migrations.slice(0,106),legacy106.migrations);
 const legacy106Profile=Object.freeze({schemaVersion:106,registrySha256:hash(legacy106Bytes)});
 const legacy106Snapshot={profile:legacy106Profile,versions:legacy106.migrations.map(row=>row.version),coverage:{...priorMatchDraftCoverage,migrationCount:106}};
+const legacy107Bytes=await readFile(join(root,'tests/support/registered107-migration-checksums.json'));
+const legacy107=JSON.parse(legacy107Bytes);
+assert.equal(hash(legacy107Bytes),'86b8ce0d785f156060719eabe716db68214b5533e9e047e0c42f749f708b99fa');
+assert.deepEqual(registry.migrations.slice(0,107),legacy107.migrations);
+const legacy107Profile=Object.freeze({schemaVersion:107,registrySha256:hash(legacy107Bytes)});
+const legacy107Snapshot={profile:legacy107Profile,versions:legacy107.migrations.map(row=>row.version),coverage:{...priorSupplierDraftCoverage,migrationCount:107}};
 const legacy104Bytes=await readFile(join(root,'tests/support/registered104-migration-checksums.json'));
 const legacy104=JSON.parse(legacy104Bytes);
 assert.equal(hash(legacy104Bytes),'8084ff6ebd02d9d416ee4c2d2f38ea4188c16fe2495a8939f9492bda9e5ea757');
@@ -1173,6 +1180,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile===legacy92Profile
       ||profile===legacy101Profile
       ||profile===legacy102Profile||profile===legacy103Profile||profile===legacy104Profile||profile===legacy105Profile||profile===legacy106Profile
+      ||profile===legacy107Profile
       ||profile.schemaVersion===81&&profile.heldUnapplicationMigrationSha256
       ||profile.schemaVersion===82&&profile.heldFundApplicationMigrationSha256
       ||profile.schemaVersion===83&&profile.heldTipMigrationSha256
@@ -1243,6 +1251,10 @@ export async function backupStatementMatchReviewDatabase(client,url,directory,re
  return backupWithProfile(legacy106Profile,client,url,directory,recipient,undefined,undefined,legacy106Snapshot);
 }
 export async function restoreStatementMatchReviewDatabase(...args){return restoreWithProfile(legacy106Profile,...args);}
+export async function backupStatementMatchDraftDatabase(client,url,directory,recipient){
+ return backupWithProfile(legacy107Profile,client,url,directory,recipient,undefined,undefined,legacy107Snapshot);
+}
+export async function restoreStatementMatchDraftDatabase(...args){return restoreWithProfile(legacy107Profile,...args);}
 export async function backupIncomeReportDatabase(client,url,directory,recipient){
  const versions=legacy104.migrations.map(row=>row.version);
  assert.deepEqual((await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows.map(row=>row.version),versions);

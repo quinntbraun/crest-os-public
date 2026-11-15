@@ -19,7 +19,7 @@ import {collectServiceCatalogSources,catalogCollectionContext} from './service-c
 import {captureFinanceSourceExport} from '../bookkeeping/finance-source-export.ts';
 import {verifyFinanceSourceExport} from '../tooling/verify-finance-source-export.ts';
 
-type FinanceSourceVersion=5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21;
+type FinanceSourceVersion=5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22;
 type Configuration=Readonly<{connectionString:string;environment:'production'|'test';businessId:string}>;
 type Group='configuration'|'identity'|'history';
 type Context=Readonly<{schemaVersion:1;scope:string;businessId:string;snapshotToken:string;observedAt:string;recordCounts:Readonly<Record<string,string>>}>;
@@ -129,8 +129,8 @@ export function createBusinessSourceCatalogCollector(config:Configuration){retur
 // This source profile needs the exact credit reader and never falls back to an older ledger.
 export function createPostedFinanceSourceCollector(config:Configuration){return createCollector(config,false,false,false,true);}
 export function createPairedPostedFinanceSourceCollector(config:Configuration){return createCollector(config,false,false,false,true,6);}
-export function createServiceRefundSourceCollector(config:Configuration,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,includeCollectionFailureRecredits=false,includeCollectionFailureGroupedRecredits=false,includeRestoredTips=false,includeOpeningWorksheets=false,includeStatementStaging=false,includeOpeningReceivables=false,includeStatementMatchDrafts=false){
- return createCollector(config,false,false,false,true,includeStatementMatchDrafts?21:includeOpeningReceivables?20:includeStatementStaging?19:includeOpeningWorksheets?18:includeRestoredTips?17:includeCollectionFailureGroupedRecredits?16:includeCollectionFailureRecredits?15:includeRefundTransferFees?14:includeDirectReceiptTips?13:includeRefundTransferAdjustments?12:includeCollectionFailures?11:includeTipReturns?10:includeExcessReturns?9:includeExcessReceipts?8:7);
+export function createServiceRefundSourceCollector(config:Configuration,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,includeCollectionFailureRecredits=false,includeCollectionFailureGroupedRecredits=false,includeRestoredTips=false,includeOpeningWorksheets=false,includeStatementStaging=false,includeOpeningReceivables=false,includeStatementMatchDrafts=false,includeSupplierBillDrafts=false){
+ return createCollector(config,false,false,false,true,includeSupplierBillDrafts?22:includeStatementMatchDrafts?21:includeOpeningReceivables?20:includeStatementStaging?19:includeOpeningWorksheets?18:includeRestoredTips?17:includeCollectionFailureGroupedRecredits?16:includeCollectionFailureRecredits?15:includeRefundTransferFees?14:includeDirectReceiptTips?13:includeRefundTransferAdjustments?12:includeCollectionFailures?11:includeTipReturns?10:includeExcessReturns?9:includeExcessReceipts?8:7);
 }
 function createCollector(config:Configuration,includeCrm:false,includeJournal:false,includeCatalog:false,includeFinance:true,financeProfile?:FinanceSourceVersion):(signal:AbortSignal)=>Promise<PostedFinanceSourceCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal:true,includeCatalog:true):(signal:AbortSignal)=>Promise<BusinessSourceCatalogCapture>;
@@ -171,7 +171,7 @@ function createCollector(config:Configuration,includeCrm:boolean,includeJournal=
      const capture=(await captureFinanceSourceExport(businessId,async(sql,args)=>(await query(sql,args)).rows,{
       includeCorrections:true,includeFundApplications:true,includeTips:true,includeCredits:true,includePairedCredits:financeProfile>=6,
       includeServiceRefunds:financeProfile>=7,includeExcessReceipts:financeProfile>=8,includeExcessReturns:financeProfile>=9,
-      includeTipReturns:financeProfile>=10,includeCollectionFailures:financeProfile>=11,includeRefundTransferAdjustments:financeProfile>=12,includeDirectReceiptTips:financeProfile>=13,includeRefundTransferFees:financeProfile>=14,includeCollectionFailureRecredits:financeProfile>=15,includeCollectionFailureGroupedRecredits:financeProfile>=16,includeRestoredTips:financeProfile>=17,includeOpeningWorksheets:financeProfile>=18,includeStatementStaging:financeProfile>=19,includeOpeningReceivables:financeProfile>=20,includeStatementMatchDrafts:financeProfile>=21,
+      includeTipReturns:financeProfile>=10,includeCollectionFailures:financeProfile>=11,includeRefundTransferAdjustments:financeProfile>=12,includeDirectReceiptTips:financeProfile>=13,includeRefundTransferFees:financeProfile>=14,includeCollectionFailureRecredits:financeProfile>=15,includeCollectionFailureGroupedRecredits:financeProfile>=16,includeRestoredTips:financeProfile>=17,includeOpeningWorksheets:financeProfile>=18,includeStatementStaging:financeProfile>=19,includeOpeningReceivables:financeProfile>=20,includeStatementMatchDrafts:financeProfile>=21,includeSupplierBillDrafts:financeProfile>=22,
      })).forServer();
      const checked=verifyFinanceSourceExport(capture.manifest,capture.files,businessId);
      const profile=`crest.posted-finance-source.v${financeProfile}` as const;

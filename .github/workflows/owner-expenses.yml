@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/owner-expenses.yml'
       - 'scripts/prepare-ci-ubuntu-apt.sh'
+      - 'scripts/install-ci-browsers.sh'
+      - 'scripts/probe-ci-browsers.mjs'
       - 'src/bookkeeping/expenses/**'
       - 'src/server/node-server.ts'
       - 'src/client/expenses.ts'
@@ -87,8 +89,7 @@ jobs:
       - name: Install browser dependencies with bounded Ubuntu downloads
         timeout-minutes: 12
         run: |
-          bash scripts/prepare-ci-ubuntu-apt.sh
-          npx --no-install playwright install --with-deps chromium webkit
+          bash scripts/install-ci-browsers.sh
       - run: node --test tests/integration/owner-expenses-layout.test.mjs tests/integration/owner-expenses-lifecycle.test.mjs tests/integration/owner-expenses-save-review.test.mjs tests/integration/owner-expenses-access.test.mjs
       - name: Build the genuine expense app
         run: npm run build

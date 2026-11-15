@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/quote-commercial-browser.yml'
       - 'scripts/prepare-ci-ubuntu-apt.sh'
+      - 'scripts/install-ci-browsers.sh'
+      - 'scripts/probe-ci-browsers.mjs'
       - 'src/app/quotes/**'
       - 'src/commercial/quote-*'
       - 'src/client/quote-*'
@@ -73,8 +75,7 @@ jobs:
         if: matrix.suite != 'amendment_integrity'
         timeout-minutes: 12
         run: |
-          bash scripts/prepare-ci-ubuntu-apt.sh
-          npx --no-install playwright install --with-deps chromium webkit
+          bash scripts/install-ci-browsers.sh
       - if: matrix.suite != 'amendment_integrity'
         run: npm run build
       # Fast, genuine Auth/PostgreSQL/actual Next feedback. This does not replace
