@@ -6,8 +6,11 @@ import type {SessionDatabaseConfiguration} from './session-database.ts';
 type RequestShape=Pick<Request,'method'|'headers'>;
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 export class SessionRequestGuardError extends Error{constructor(){super('SESSION_REQUEST_GUARD_FAILED');this.name='SessionRequestGuardError';}}
-export function createSessionCsrfVerifier(config:SessionDatabaseConfiguration&{origin:string}){
-  const query=sessionDatabase(config),protect=createRequestProtection(config);
+type Config=SessionDatabaseConfiguration&{origin:string};
+export function createSessionCsrfVerifier(config:Config){return verifier(config,'json');}
+export function createConditionPhotoCsrfVerifier(config:Config){return verifier(config,'condition-photo');}
+function verifier(config:Config,format:'json'|'condition-photo'){
+  const query=sessionDatabase(config),protect=createRequestProtection(config,format);
   return async function requireSessionCsrf(request:RequestShape,credential:string,signal:AbortSignal){
     protect.requireOrigin(request);const hash=sessionCredentialHash(credential);
     try{

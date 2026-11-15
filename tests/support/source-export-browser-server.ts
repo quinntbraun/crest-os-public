@@ -14,5 +14,11 @@ export {createSourceExportDatabaseJournal} from '../../src/security/source-expor
 export {custodyFixture} from './source-export-custody-fixture.mjs';
 
 export {createCrestApplication} from '../../src/server/application.ts';
+export {syntheticGoogleCalendarIdentity} from '../../src/operations/google-calendar-runtime.ts';
 export {createQuoteAmendmentHttp} from '../../src/commercial/quote-amendment-http.ts';
 export {writeQuoteResponse} from '../../src/server/node-server.ts';
+export {custodyPhotoObjects} from './custody-photo-objects.mjs';
+export {createDropoffPhotoDispatcherDirectory} from '../../src/operations/dropoff-photo-directory.ts';
+export {createDropoffPhotoDispatch} from '../../src/operations/dropoff-photo-workflow.ts';
+export {validateImage} from '../../src/files/image-validation.ts';
+export {createLocalSandboxValidator} from '../../src/files/local-sandbox-validator.ts';
