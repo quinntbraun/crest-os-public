@@ -1,0 +1,13 @@
+# Statement reconciliation value review
+
+The dedicated bank and wallet calculation applies ACCOUNTING §10 and §24.7 to a normalized statement draft. It checks each row's statement date and canonical identity within the draft, requires a file hash and review evidence, and reports the difference between the statement's balance change and its signed transactions.
+
+Each outstanding item references a verified ledger movement or approved opening amount. A caller supplies that read from the same authorized snapshot as the ledger balance. The calculation uses clearance entries effective through the statement end. It then reports the exact difference between the ledger balance and the closing statement plus those signed outstanding amounts. Neither imports nor review calculations create postings.
+
+The PostgreSQL command stages a complete normalized interval, file digest, provider date convention, review evidence, and signed rows against its reviewed dedicated channel. It retains mismatches as review evidence and exposes both the exact row total and statement difference. Original operation lookup can recover a committed receipt after an interrupted response. Duplicate normalized row IDs within a batch and repeat file digests for the same account are refused. Adjacent or overlapping batches can stage independently and consume no matching capacity. The staged row ID does not establish canonical provider transaction identity.
+
+Schema 103 registers the fictional staging tables and the closed private source reader. Posted-finance export v19 includes the normalized statement rows and links them to the retained operation and audit. The staged file digest identifies the cited original. Original statement bytes are outside this archive and still need durable private intake and verification before owner use.
+
+In the fictional owner preview, the account screen accepts manually normalized rows and calculates the original file checksum in the browser. The request sends the checksum and normalized fields. The screen displays both the signed row total and the statement difference before stage, and a saved operation reference can reopen the private receipt. The preview works with up to 250 rows per statement and requires a private source-export connection.
+
+Cutover and predecessor continuity, cross-file canonical provider deduplication, complete matching and overlapping capacity, prior-period correction disclosures, and approved generations with invalidation still require implementation. Mixed personal custody follows its separately approved business-only reconciliation contract.

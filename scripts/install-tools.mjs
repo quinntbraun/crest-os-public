@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { sha256 } from "../src/tooling/migrations.ts";
+import { fetchReleaseAsset } from "./fetch-release-asset.mjs";
 
 const pins = JSON.parse(await readFile(new URL("../release/toolchain.json", import.meta.url), "utf8"));
 const windows = process.platform === "win32";
@@ -13,9 +14,7 @@ const downloads = [
   { name: "supabase", version: pins.supabaseCli.version, repository: "supabase/cli", file: `supabase_${pins.supabaseCli.version}_${windows ? "windows_amd64.zip" : "linux_amd64.tar.gz"}`, checksum: windows ? pins.supabaseCli.windowsAmd64ZipSha256 : pins.supabaseCli.linuxAmd64Sha256 }
 ];
 for (const tool of downloads) {
-  const response = await fetch(`https://github.com/${tool.repository}/releases/download/v${tool.version}/${tool.file}`, { signal: AbortSignal.timeout(120_000) });
-  if (!response.ok) throw new Error(`Tool download failed: ${tool.name}: ${response.status}`);
-  const bytes = Buffer.from(await response.arrayBuffer());
+  const bytes = await fetchReleaseAsset(`https://github.com/${tool.repository}/releases/download/v${tool.version}/${tool.file}`, tool.name, 120_000);
   if (sha256(bytes) !== tool.checksum) throw new Error(`Tool checksum mismatch: ${tool.name}`);
   const archive = fileURLToPath(new URL(tool.file, toolRoot));
   const destination = fileURLToPath(new URL(`${tool.name}/`, toolRoot));

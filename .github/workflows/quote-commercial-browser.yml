@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - '.github/workflows/quote-commercial-browser.yml'
+      - 'scripts/prepare-ci-ubuntu-apt.sh'
+      - 'scripts/install-ci-browsers.sh'
+      - 'scripts/probe-ci-browsers.mjs'
       - 'src/app/quotes/**'
       - 'src/commercial/quote-*'
       - 'src/client/quote-*'
@@ -36,7 +39,7 @@ concurrency:
 jobs:
   browser_feedback:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -68,8 +71,11 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-fund
       - run: node scripts/install-tools.mjs
-      - if: matrix.suite != 'amendment_integrity'
-        run: npx --no-install playwright install --with-deps chromium webkit
+      - name: Install browser dependencies with bounded Ubuntu downloads
+        if: matrix.suite != 'amendment_integrity'
+        timeout-minutes: 12
+        run: |
+          bash scripts/install-ci-browsers.sh
       - if: matrix.suite != 'amendment_integrity'
         run: npm run build
       # Fast, genuine Auth/PostgreSQL/actual Next feedback. This does not replace
