@@ -6,10 +6,13 @@ import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' posts a reviewed paid expense and recovers the original',async()=>{
+ const income=process.env.CREST_TEST_RECORDED_INCOME_STATEMENT==='1';
  const f=await sourceExportBrowserFixture({product:true,workspace:true,expenses:true,catalog:true,quotes:true,
   quoteReview:true,quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,
   financeAccounts:true,financeMappings:true,financeCategoryMappings:true,financeTaxProfiles:true,financeMoneyChannels:true,
-  invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,directReceipts:true,sameDayExpenses:true,trialBalance:true});
+  invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,directReceipts:true,sameDayExpenses:true,trialBalance:true,
+  ...(income?{paymentCorrections:true,fundApplications:true,heldTips:true,invoiceCredits:true,paidInvoiceCredits:true,
+   serviceRefunds:true,postedFinanceExport:true}:{})});
  let browser;
  try{
   browser=await engine.launch();
@@ -87,6 +90,28 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const accounting=page.getByRole('navigation',{name:'Accounting sections',exact:true});
   await accounting.getByRole('link',{name:'Reports',exact:true}).press('Enter');
   await expect(page.getByRole('heading',{name:'Reports',exact:true})).toBeFocused();
+  if(income){
+   await page.getByText('Income statement',{exact:true}).click();
+   const statement=page.getByRole('region',{name:'Recorded income statement',exact:true});
+   await statement.getByLabel('From date',{exact:true}).fill(date);
+   await statement.getByLabel('Through date',{exact:true}).fill(date);
+   await statement.getByRole('button',{name:'Load income statement',exact:true}).press('Enter');
+   await expect(statement.getByRole('status')).toHaveText('Recorded income loaded.');
+   await expect(statement.getByRole('row',{name:'Recorded-book net income -$100.00',exact:true})).toBeVisible();
+   const incomeCsv=page.waitForEvent('download');
+   await statement.getByRole('button',{name:'Download income statement CSV',exact:true}).click();
+   assert.match(await readFile(await (await incomeCsv).path(),'utf8'),/"Recorded-book net income","","","","-10000"/);
+   for(const width of [360,390,768,1440]){
+    await page.setViewportSize({width,height:900});
+    await statement.getByRole('table').scrollIntoViewIfNeeded();
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    const audit=await new AxeBuilder({page}).include('[aria-label="Recorded income statement"]').withTags(['wcag2a','wcag2aa']).analyze();
+    assert.deepEqual(audit.violations.map(entry=>entry.id),[]);
+    await page.screenshot({path:'.local/review/finance-income-statement-'+name+'-'+width+'.png'});
+   }
+   await page.getByText('Income statement',{exact:true}).click();
+   await expect(statement.getByRole('table')).toHaveCount(0);
+  }
   await expect(accounting.getByRole('link',{name:'Setup',exact:true})).toBeVisible();
   await expect(accounting.getByRole('link',{name:'Accounts',exact:true})).toBeVisible();
   await page.getByText('Fictional trial balance',{exact:true}).click();

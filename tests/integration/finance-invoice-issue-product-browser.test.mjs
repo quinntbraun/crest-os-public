@@ -41,6 +41,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   }:{}});
  let browser;
  const financeResponses=[];
+ const businessDate=async()=>(await fixture.client.query(
+  'SELECT (statement_timestamp() AT TIME ZONE timezone)::date::text AS today FROM crest.businesses WHERE id=$1',
+  [fixture.business])).rows[0].today;
  try{
   browser=await engine.launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
@@ -505,7 +508,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          const returnTitle='Record a settled tip return';
          const returnPanel=invoice.getByRole('region',{name:returnTitle,exact:true});
          await invoice.getByText(returnTitle,{exact:true}).press('Enter');
-         const actualOn=(await fixture.client.query("SELECT (statement_timestamp() AT TIME ZONE 'UTC')::date::text AS today")).rows[0].today;
+         const actualOn=await businessDate();
          await returnPanel.getByLabel('Settlement date',{exact:true}).fill(actualOn);
          const optionsResponse=page.waitForResponse(response=>response.url().endsWith('/tip-return-options'));
          await returnPanel.getByRole('button',{name:'Load eligible tips',exact:true}).press('Enter');
@@ -733,7 +736,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          const refund=invoice.getByRole('region',{name:'Record a settled refund',exact:true});
          await refund.getByRole('button',{name:'Load available credits',exact:true}).press('Enter');
          await expect(refund.getByRole('status')).toHaveText('Enter the date the refund settled.');
-         const date=(await fixture.client.query("SELECT (statement_timestamp() AT TIME ZONE 'America/Indiana/Indianapolis')::date::text AS date")).rows[0].date;
+         const date=await businessDate();
          await refund.getByLabel('Settlement date',{exact:true}).fill(date);
          await refund.getByRole('button',{name:'Review refund',exact:true}).press('Enter');
          await expect(refund.getByRole('status')).toContainText('Match the settled amount');
@@ -901,7 +904,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          }
          await openPayment();
          if(excessReturnExport){
-          const date=(await fixture.client.query("SELECT (statement_timestamp() AT TIME ZONE 'UTC')::date::text AS today")).rows[0].today;
+          const date=await businessDate();
           await openReturn(date);
           await expect(returnPanel.getByRole('status')).toHaveText('This customer has no unused original payment funds for that date.');
           await expect(returnPanel.getByRole('combobox',{name:'Original payment',exact:true})).toHaveCount(0);

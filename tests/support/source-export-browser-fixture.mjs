@@ -58,10 +58,12 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  const tipReturnExport=process.env.CREST_TEST_TIP_RETURN_EXPORT==='1';
  const collectionFailureExport=process.env.CREST_TEST_COLLECTION_FAILURE_EXPORT==='1';
  const refundTransferExport=process.env.CREST_TEST_REFUND_TRANSFER_EXPORT==='1';
+ const recordedIncomeStatement=process.env.CREST_TEST_RECORDED_INCOME_STATEMENT==='1';
  const directReceiptTipExport=process.env.CREST_TEST_DIRECT_RECEIPT_TIP_EXPORT==='1';
  const refundTransferFeeExport=process.env.CREST_TEST_REFUND_TRANSFER_FEE_EXPORT==='1';
  const collectionFailureRecreditExport=process.env.CREST_TEST_COLLECTION_FAILURE_RECREDIT_EXPORT==='1';
  const restoredTips=process.env.CREST_TEST_RESTORED_TIP_EXPORT==='1';
+ assert(!recordedIncomeStatement||restoredTips&&postedFinanceExport&&trialBalance);
  const collectionFailureGroupedRecreditExport=process.env.CREST_TEST_COLLECTION_FAILURE_GROUPED_RECREDIT_EXPORT==='1';
  assert(!excessReceipts||product&&directReceipts&&customerFundsReport&&postedFinanceExport);
  assert(!excessReturnExport||excessReceipts&&postedFinanceExport);
@@ -177,7 +179,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   if(receivableAging&&!postedFinanceExport)assert.equal((await sandbox.apply(target,await sandbox.prefix(88))).history.length,88);
   let postedFinanceConfiguration;
   if(postedFinanceExport){
-   const schemaVersion=statementStaging?103:openingWorksheet?102:restoredTips?101:collectionFailureGroupedRecreditExport?100:collectionFailureRecreditExport?99:refundTransferFeeExport?98:directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
+   const schemaVersion=recordedIncomeStatement?104:statementStaging?103:openingWorksheet?102:restoredTips?101:collectionFailureGroupedRecreditExport?100:collectionFailureRecreditExport?99:refundTransferFeeExport?98:directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
    const currentRegistry=JSON.parse(await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url),'utf8'));
    const source=excessReturnExport&&currentRegistry.migrations.length===92
     ?await prepareExcessReturnCandidate(sandbox):await sandbox.prefix(schemaVersion);
@@ -233,6 +235,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,taxProfiles:financeTaxProfiles,categoryMappings:financeCategoryMappings,moneyChannels:financeMoneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport,...excessReceipts?{excessReceipts}:{},...excessReturnExport?{excessReturns:true}:{},...tipReturnExport?{tipReturns:true}:{},...collectionFailureExport?{collectionFailures:true}:{},...refundTransferExport?{refundTransfers:true}:{},...directReceiptTipExport?{directReceiptTips:true}:{},...refundTransferFeeExport?{refundTransferFees:true}:{},...collectionFailureRecreditExport?{collectionFailureRecredits:true}:{},...collectionFailureGroupedRecreditExport?{collectionFailureGroupedRecredits:true}:{},...restoredTips?{collectionFailureTipReinstatements:true}:{}};
    if(openingWorksheet)financeConfiguration.openingWorksheet=true;
    if(statementStaging)financeConfiguration.statementStaging=true;
+   if(recordedIncomeStatement)financeConfiguration.recordedIncomeStatement=true;
    await client.query("INSERT INTO crest_private.finance_controls(business_id,recovery_authority_id,created_by,origin) SELECT $1,id,$2,'system' FROM crest_private.business_recovery_authorities WHERE business_id=$1",[business,actor]);
   }
   const authentication={database:config,provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
@@ -382,7 +385,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
      assert.equal((await finance.query(
       'SELECT crest_commands.approve_fixed_finance_mapping($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) AS result',
       [...args,randomUUID(),'customer_funds','0',funds,'2026-01-01','Fictional customer funds approved'])).rows[0].result.state,'committed');
-    }else{
+    }
+    if(!paymentCorrections||recordedIncomeStatement){
      const day=(await client.query("SELECT (clock_timestamp() AT TIME ZONE 'America/Indiana/Indianapolis')::date::text AS day")).rows[0].day;
      assert.equal((await finance.query(
       'SELECT crest_commands.configure_fictional_invoice_setup($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS result',

@@ -11,7 +11,7 @@ import { confirmedBookingRequest } from '../fixtures/confirmed-booking.ts';
 import { createConfirmedBookingFixture } from '../support/confirmed-booking-fixture.mjs';
 import { migrationSandbox } from '../support/migration-sandbox.mjs';
 import { installProviderSchema } from '../support/provider-schema.mjs';
-import { recoveryCluster } from '../support/recovery-drill.mjs';
+import { backupDatabase, connect, keyPair, recoveryCluster, restoreDatabase } from '../support/recovery-drill.mjs';
 
 async function command(connection, name, values) {
   const args=values.map((_,index)=>'$'+(index+1)).join(',');
@@ -60,7 +60,7 @@ async function issueInvoice({admin,web,finance,owner,service,today}) {
   return {invoice,ar};
 }
 
-test('registered posted trial balance and journal tie exact amounts and refuse inconsistent native source', {timeout:120000}, async()=>{
+test('registered reports tie exact amounts, reject inconsistent source and survive independent recovery', {timeout:240000}, async()=>{
   const cluster=await recoveryCluster();
   let sandbox;
   try {
@@ -259,6 +259,46 @@ test('registered posted trial balance and journal tie exact amounts and refuse i
       } finally {await admin.query('ROLLBACK');}
     }
     assert.deepEqual((await trial()).totals,complete.totals);
+
+    // Upgrade the populated fixture through the registered read-only report.
+    const upgraded=await sandbox.apply(target,await sandbox.prefix(104));
+    assert.equal(upgraded.history.length,104);
+    const statement=(from,through,principal=owner,connection=finance)=>
+      command(connection,'read_fictional_recorded_income_statement',[...principal.auth(),from,through]);
+    const income=await statement(today,today);
+    assert.deepEqual(income.rows.map(row=>[row.section,row.accountId,row.debitCents,row.creditCents,row.incomeCents]),
+      [['expense',cost,'11201','0','-11201'],['service_revenue',complete.rows.find(row=>row.code==='4000').accountId,'0','25000','25000']]);
+    assert.equal(income.netIncomeCents,'13799');
+    assert.deepEqual([income.fromOn,income.throughOn,income.businessId,income.currency,income.timeZone,income.coverageStart],
+      [today,today,owner.business,'USD','UTC',today]);
+    assert.equal(income.coverage.openingBalancesIncluded,false);
+    assert.equal(income.coverage.reconciliationVerified,false);
+    assert.equal(income.controls.ledgerBalanced,true);
+    assert.equal((await statement(yesterday,yesterday)).netIncomeCents,'0');
+    assert.deepEqual((await statement(today,today,foreign)).rows,[]);
+    await assert.rejects(statement(today,today,owner,web),{code:'42501'});
+    await assert.rejects(statement(today,today,owner,exportReader),{code:'42501'});
+    await assert.rejects(statement(today,yesterday),{message:'FINANCE_REPORT_DATE_REQUIRED'});
+    await assert.rejects(statement(today,'9999-01-01'),{message:'FINANCE_REPORT_DATE_REQUIRED'});
+    const point=join(sandbox.workspace,'income-report-recovery');
+    await mkdir(point,{mode:0o700});
+    const keys=await keyPair(sandbox.workspace);
+    const {manifest}=await backupDatabase(admin,target,point,keys.recipient);
+    assert.equal(manifest.schemaVersion,104);
+    const destination=await recoveryCluster();
+    let restored;
+    try {
+      const restoredUrl=await destination.database();
+      assert.notEqual(new URL(restoredUrl).port,new URL(target).port);
+      assert.deepEqual(await restoreDatabase(point,keys.path,restoredUrl),manifest);
+      restored=await connect(restoredUrl);
+      await restored.query('SET ROLE crest_finance_preview');
+      const recovered=await statement(today,today,owner,restored);
+      assert(new Date(recovered.observedAt)>=new Date(income.observedAt));
+      assert.deepEqual({...recovered,observedAt:income.observedAt},income);
+    } finally {
+      try {await restored?.end();} finally {await destination.close();}
+    }
   } finally {
     try {await sandbox?.close();} finally {await cluster.close();}
   }

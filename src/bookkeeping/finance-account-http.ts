@@ -91,6 +91,7 @@ import {groupedRecreditMatchesInput, parseGroupedRecreditInput, parseGroupedRecr
 import {parseStatementDraft,parseStatementReference,parseStatementResult} from './statement-staging-contract.ts';
 import {assessStatementRows} from './statement-reconciliation.ts';
 import {parseOpeningDraft,parseOpeningProjection,parseOpeningReference,parseOpeningResult} from './opening-worksheet-contract.ts';
+import {parseRecordedIncomeStatement} from './recorded-income-statement.ts';
 
 export const financeAccountPrefix='/api/business/finance-accounts/';
 const fields={context:[],list:['afterCode','includeArchived'],history:['accountId','afterVersion'],
@@ -122,6 +123,7 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
  'statement-staging-save':['reference','draft'],
  'statement-staging-lookup':['reference'],
  'opening-worksheet-read':['reviewEpoch','requestedOn'],
+ 'recorded-income-statement':['fromOn','throughOn'],
  'opening-worksheet-save':['reference','expectedRevision','draft'],
  'opening-worksheet-lookup':['reviewEpoch','reference'],
  'opening-worksheet-retire':['reviewEpoch','reference','reason'],
@@ -219,8 +221,8 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false,collectionFailureRecredits=false,collectionFailureGroupedRecredits=false,collectionFailureTipReinstatements=false,openingWorksheet=false,statementStaging=false}:Readonly<{
-  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;openingWorksheet?:boolean;statementStaging?:boolean;
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false,collectionFailureRecredits=false,collectionFailureGroupedRecredits=false,collectionFailureTipReinstatements=false,openingWorksheet=false,statementStaging=false,recordedIncomeStatement=false}:Readonly<{
+  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;openingWorksheet?:boolean;statementStaging?:boolean;recordedIncomeStatement?:boolean;
  }>={}){
  check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
  check((!sameDayExpenses||directReceipts&&categoryMappings)&&(!trialBalance||sameDayExpenses));
@@ -244,6 +246,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
  check(typeof collectionFailureTipReinstatements==='boolean'&&(!collectionFailureTipReinstatements||collectionFailureGroupedRecredits));
  check(typeof statementStaging==='boolean'&&(!statementStaging||moneyChannels));
  check(typeof openingWorksheet==='boolean'&&(!openingWorksheet||moneyChannels));
+ check(typeof recordedIncomeStatement==='boolean'&&(!recordedIncomeStatement||trialBalance&&refundTransfers));
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
@@ -266,6 +269,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route.startsWith('invoice-issue-')&&route!=='invoice-issue-tax-review'&&!invoiceIssue)return financeAccountFailure(404);
    if(route.startsWith('invoice-setup-')&&!invoiceIssue)return financeAccountFailure(404);
    if(route.startsWith('statement-staging-')&&!statementStaging)return financeAccountFailure(404);
+   if(route==='recorded-income-statement'&&!recordedIncomeStatement)return financeAccountFailure(404);
    if(route.startsWith('opening-worksheet-')&&!openingWorksheet)return financeAccountFailure(404);
    if(route.startsWith('receipt-')&&!directReceipts)return financeAccountFailure(404);
    if(route.startsWith('receipt-tip-')&&!directReceiptTips)return financeAccountFailure(404);
@@ -310,6 +314,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     if(moneyChannels)response.headers.set('X-Crest-Finance-Money-Channels','1');
     if(statementStaging)response.headers.set('X-Crest-Statement-Staging','1');
     if(openingWorksheet)response.headers.set('X-Crest-Opening-Worksheet','1');
+    if(recordedIncomeStatement)response.headers.set('X-Crest-Recorded-Income-Statement','1');
     if(invoicePreparation)response.headers.set('X-Crest-Invoice-Preparation','1');
     if(invoiceDrafts)response.headers.set('X-Crest-Invoice-Drafts','1');
     if(invoiceIssueTaxReview)response.headers.set('X-Crest-Invoice-Issue-Tax-Review','1');
@@ -369,6 +374,14 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
      return {value:value as object,state:checked.state};
     },signal);
     return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
+   if(route==='recorded-income-statement'){
+    const {fromOn,throughOn}=input;
+    check(customerDate(fromOn)&&customerDate(throughOn)&&fromOn<=throughOn);
+    const value=await database('SELECT crest_commands.read_fictional_recorded_income_statement('+authority+',$9::date,$10::date) AS result',
+     [...args,fromOn,throughOn],signal);
+    parseRecordedIncomeStatement(value,businessId,fromOn,throughOn);
+    return privateJsonResponse(value as object);
    }
    if(route==='opening-worksheet-read'){
     const {reviewEpoch,requestedOn}=input;

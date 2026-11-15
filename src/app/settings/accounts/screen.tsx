@@ -5,6 +5,7 @@ import {InvoiceSetup} from './invoice-setup';
 import {StatementStaging} from './statement-staging';
 import {OpeningWorksheet} from './opening-worksheet';
 import {TrialBalance} from './trial-balance';
+import {RecordedIncomeStatement} from './recorded-income-statement';
 import {CustomerFundsReport} from './customer-funds-report';
 import {ReceivableAging} from './receivable-aging';
 import styles from './screen.module.css';
@@ -245,6 +246,7 @@ export function FinanceAccountsScreen(){
   {context?.trialBalance&&!editor&&<section className={styles.section} aria-labelledby="finance-reports-heading">
    <h2 id="finance-reports-heading" tabIndex={-1}>Reports</h2>
    <TrialBalance businessId={context.businessId}/>
+   {context.recordedIncomeStatement&&<RecordedIncomeStatement key={context.businessId} businessId={context.businessId}/>}
    {context.customerFundsReport&&<CustomerFundsReport key={context.businessId} businessId={context.businessId}
     includesExcess={context.excessReceipts===true} includesRefundTransfers={context.refundTransfers===true}/>}
    {context.receivableAging&&<ReceivableAging key={context.businessId} businessId={context.businessId}/>}
