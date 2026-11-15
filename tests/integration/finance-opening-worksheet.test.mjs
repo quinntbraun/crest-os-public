@@ -6,7 +6,7 @@ import {test} from 'node:test';
 import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixture.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
-import {backupDatabase,connect,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase} from '../support/recovery-drill.mjs';
+import {backupOpeningWorksheetDatabase,connect,inventory,keyPair,privateWorkspace,recoveryCluster,restoreOpeningWorksheetDatabase} from '../support/recovery-drill.mjs';
 import {captureOpeningWorksheetSource,verifyOpeningWorksheetSource} from '../../src/bookkeeping/opening-worksheet-source.ts';
 import {captureFinanceSourceExport} from '../../src/bookkeeping/finance-source-export.ts';
 import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
@@ -43,7 +43,7 @@ test('opening worksheet preserves verified evidence and unknown balances without
   await installProviderSchema(admin,target);
   const baseline=await sandbox.apply(target,await sandbox.prefix(101));
   assert.equal(baseline.history.length,101);
-  const accepted=await sandbox.apply(target);
+  const accepted=await sandbox.apply(target,await sandbox.prefix(102));
   assert.equal(accepted.history.length,102);
   assert.deepEqual(accepted.history.slice(0,101),baseline.history);
   testContext.diagnostic(`Baseline registry SHA-256 ${baseline.registrySha256}, worksheet registry SHA-256 ${accepted.registrySha256}`);
@@ -186,12 +186,12 @@ test('opening worksheet preserves verified evidence and unknown balances without
   try{
    const point=join(workspace,'point'),keys=await keyPair(workspace);
    await mkdir(point,{mode:0o700});
-   const {manifest}=await backupDatabase(admin,target,point,keys.recipient);
+   const {manifest}=await backupOpeningWorksheetDatabase(admin,target,point,keys.recipient);
    assert.equal(manifest.schemaVersion,102);
    destination=await recoveryCluster();
    const restoredUrl=await destination.database();
    assert.notEqual(new URL(restoredUrl).port,new URL(target).port);
-   assert.deepEqual(await restoreDatabase(point,keys.path,restoredUrl),manifest);
+   assert.deepEqual(await restoreOpeningWorksheetDatabase(point,keys.path,restoredUrl),manifest);
    restoredDatabase=await connect(restoredUrl);
    assert.deepEqual(await inventory(restoredDatabase),manifest.rows);
    await restoredDatabase.query('SET ROLE crest_export');

@@ -111,6 +111,7 @@ import currentCoverage from '../../planning/SECURITY_EXPORT_COVERAGE.json';
 import compatibility from '../support/registered54-compatibility.json';
 import {restoredTipSourceColumns} from '../../src/bookkeeping/restored-tip-source.ts';
 import {openingWorksheetSourceCoverage} from '../../src/bookkeeping/opening-worksheet-source.ts';
+import {statementSourceCoverage} from '../../src/bookkeeping/statement-staging-source.ts';
 import registered100 from '../support/registered100-migration-checksums.json';
 import currentCompatibility from '../../release/compatibility.json';
 import registration from '../../planning/FIELD54_REGISTRATION.json';
@@ -585,8 +586,12 @@ it('retains refund and tip lineage and adds the recovered payment sources',()=>{
  const registered101=JSON.parse(bytes('tests/support/registered101-migration-checksums.json').toString()) as MigrationRegistry;
  expect(registered101.migrations).toHaveLength(101);
  expect(registered101.migrations.at(-1)).toMatchObject({version:'20261225180000',file:'20261225180000_fictional_collection_failure_restored_tip.sql'});
- expect(currentRegistry.migrations).toHaveLength(102);
- expect(currentRegistry.migrations.at(-1)).toMatchObject({version:'20261226180000',file:'20261226180000_fictional_opening_worksheet.sql'});
+ const registered102=JSON.parse(bytes('tests/support/registered102-migration-checksums.json').toString()) as MigrationRegistry;
+ expect(registered102.migrations).toHaveLength(102);
+ expect(registered102.migrations.at(-1)).toMatchObject({version:'20261226180000',file:'20261226180000_fictional_opening_worksheet.sql'});
+ expect(currentRegistry.migrations).toHaveLength(103);
+ expect(currentRegistry.migrations.at(-1)).toMatchObject({version:'20261227180000',file:'20261227180000_fictional_statement_staging.sql'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered102)).not.toThrow();
  expect(registered100.migrations.at(-1)).toMatchObject({version:'20261224180000',file:'20261224180000_fictional_collection_failure_grouped_recredit.sql'});
  expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered100 as MigrationRegistry)).not.toThrow();
  expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered101)).not.toThrow();
@@ -606,8 +611,8 @@ it('retains refund and tip lineage and adds the recovered payment sources',()=>{
  const restoredCoverage=[...recredits,...collectionFailureGroupedRecreditSourceCoverage].map(row=>({
    ...row,required:[...row.required,...restoredTipSourceColumns[row.table.slice('crest.'.length)]??[]],
  }));
- expect(currentCoverage).toEqual({...coverage92,migrationCount:102,tables:[...restoredCoverage,openingWorksheetSourceCoverage]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:102});
+ expect(currentCoverage).toEqual({...coverage92,migrationCount:103,tables:[...restoredCoverage,openingWorksheetSourceCoverage,...statementSourceCoverage]});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:103});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

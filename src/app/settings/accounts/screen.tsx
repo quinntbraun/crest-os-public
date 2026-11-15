@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {InvoiceSetup} from './invoice-setup';
+import {StatementStaging} from './statement-staging';
 import {OpeningWorksheet} from './opening-worksheet';
 import {TrialBalance} from './trial-balance';
 import {CustomerFundsReport} from './customer-funds-report';
@@ -257,6 +258,7 @@ export function FinanceAccountsScreen(){
     {context.taxProfiles&&<li><a href="/settings/accounts/tax">Tax profiles</a></li>}
    </ul>}
    {context.invoiceIssue&&<InvoiceSetup businessId={context.businessId}/>}
+   {context.statementStaging&&<StatementStaging key={context.businessId} context={context}/>}
    {context.openingWorksheet&&<OpeningWorksheet businessId={context.businessId}/>}
   </section>}
   {pending&&workspace&&<section className={styles.section} aria-label="Interrupted account save">

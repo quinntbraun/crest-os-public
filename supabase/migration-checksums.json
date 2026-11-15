@@ -510,6 +510,11 @@
       "version": "20261226180000",
       "file": "20261226180000_fictional_opening_worksheet.sql",
       "sha256": "e7a3847ddcf1bbfe586d9618300c405c1f0d0e7de457a92ee041a7538866abed"
+    },
+    {
+      "version": "20261227180000",
+      "file": "20261227180000_fictional_statement_staging.sql",
+      "sha256": "8d195609ea1eb38f1e3e0628d7630e3b6fe47e28c8906ba7de3ff346d107eca9"
     }
   ]
 }

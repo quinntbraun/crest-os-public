@@ -26,7 +26,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  } catch(error) {
   if(error.code!=='ENOENT')throw error;
  }
- const needsScreenshots=['commercial','amendments','schedule','field','custody','records'].includes(selected)||scenario!==undefined;
+ const needsScreenshots=['commercial','amendments','schedule','field','custody','records','statement-staging'].includes(selected)||scenario!==undefined;
  const requiredViewsByGroup={
   records:['workspace-menu','finance-account-settings-recovery','finance-mapping-history','finance-mapping-manage','finance-tax-approval','finance-tax-history','finance-tax-preview','finance-category-approval','finance-category-history','finance-channel-opening','finance-channel-history','finance-invoice-issue-product','finance-direct-receipt','finance-expense-posting','finance-trial-balance','finance-balance-sheet','finance-payment-correction','finance-fund-application','finance-held-tip','finance-invoice-credit','finance-paid-invoice-credit','finance-service-refund','finance-posted-export','settings-calendar-synced','settings-calendar-pending'],
   'receipt-funds':['finance-invoice-issue-product','finance-direct-receipt','finance-apply-received-funds'],
@@ -34,6 +34,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
    'finance-direct-tip','finance-refund-transfer-fee','finance-collection-recredit','finance-grouped-recredit','finance-posted-export'],
   'restored-tip':['finance-restored-tip'],
   'opening-worksheet':['finance-opening-worksheet'],
+  'statement-staging':['finance-statement-staging'],
   field:['field-departure','field-pause','completion-editor','completion-saved','mileage-form','mileage-split','mileage-saved','field-cancellation','field-work-time','field-work-boundary','mileage-departure-correction','completion-outcome','completion-history','field-maintenance-history','completion-invoice-preparation','completion-invoice-draft'],
   custody:['field-dropoff-intake','field-dropoff-work','field-dropoff-cancellation','field-dropoff-completion',
    'field-dropoff-collections','field-dropoff-history','field-dropoff-policy-revision',

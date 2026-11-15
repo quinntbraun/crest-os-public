@@ -6,7 +6,7 @@ const command=(JSON.parse(readFileSync(new URL('../../package.json',import.meta.
 describe('complete required browser grouping',()=>{
  it('partitions every file in the actual retained full command exactly once',()=>{
   const files=Object.keys(browserGroups).flatMap(name=>browserGroupFiles(command,name));
-  expect([...files].sort()).toEqual(command.split(' ').slice(3).sort());expect(new Set(files).size).toBe(files.length);expect(files).toHaveLength(51);
+  expect([...files].sort()).toEqual(command.split(' ').slice(3).sort());expect(new Set(files).size).toBe(files.length);expect(files).toHaveLength(52);
  });
  it('requires the actual workflow matrix to retain every distinct group',()=>{
   const workflow=readFileSync(new URL('../../.github/workflows/ci.yml',import.meta.url),'utf8'),matrix=workflow.match(/browser_workflows:[\s\S]*?matrix:\s*\n\s*suite: \[([^\]]+)\]/);
@@ -27,6 +27,7 @@ describe('complete required browser grouping',()=>{
   expect(browserGroupFiles(command,'payment-recovery')).toEqual([invoice]);
   expect(browserGroupFiles(command,'restored-tip')).toEqual(['tests/integration/finance-restored-tip-product-browser.test.mjs']);
   expect(browserGroupFiles(command,'opening-worksheet')).toEqual(['tests/integration/finance-opening-worksheet-browser.test.mjs']);
+  expect(browserGroupFiles(command,'statement-staging')).toEqual(['tests/integration/finance-statement-staging-browser.test.mjs']);
   expect(browserGroupFiles(command,'records')).toContain(invoice);
   expect(browserScenario('receipt-funds')).toEqual({CREST_TEST_EXCESS_RECEIPTS:'1',CREST_TEST_RECEIPT_FUNDS_APPLICATION:'1'});
   expect(browserScenario('payment-recovery')).toEqual({

@@ -81,10 +81,12 @@ import {collectionFailureRecreditMatchesInput, collectionFailureRecreditRefusal,
 
 import {groupedRecreditMatchesInput, parseGroupedRecreditInput, parseGroupedRecreditOptions, parseGroupedRecreditReference,
  parseGroupedRecreditResult} from '../bookkeeping/collection-failure-grouped-recredit-contract';
+import {parseStatementDraft,parseStatementReference,parseStatementResult,statementStagingRefusals} from '../bookkeeping/statement-staging-contract';
+import type {StatementDraft,StatementReference} from '../bookkeeping/statement-staging-contract';
 import {parseOpeningDraft,parseOpeningProjection,parseOpeningReference,parseOpeningResult} from '../bookkeeping/opening-worksheet-contract';
 import type {OpeningDraft,OpeningReference} from '../bookkeeping/opening-worksheet-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;openingWorksheet?:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;openingWorksheet?:boolean;statementStaging?:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
@@ -141,6 +143,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   taxProfiles:response.headers.get('x-crest-finance-tax-profiles')==='1',
   categoryMappings:response.headers.get('x-crest-finance-category-mappings')==='1',
   moneyChannels:response.headers.get('x-crest-finance-money-channels')==='1',
+  statementStaging:response.headers.get('x-crest-statement-staging')==='1',
   openingWorksheet:response.headers.get('x-crest-opening-worksheet')==='1',
   invoicePreparation:response.headers.get('x-crest-invoice-preparation')==='1',
   invoiceDrafts:response.headers.get('x-crest-invoice-drafts')==='1',
@@ -171,11 +174,12 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
 
 export const financeAccounts={
  async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,openingWorksheet,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,collectionFailureTipReinstatements,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,openingWorksheet,statementStaging,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,collectionFailureTipReinstatements,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
   return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,
+   ...(moneyChannels&&statementStaging?{statementStaging}:{}),
    ...(moneyChannels&&openingWorksheet?{openingWorksheet}:{}),
    ...(invoiceIssue?{invoiceIssue}:{}),...(directReceipts?{directReceipts}:{}),...(directReceipts&&excessReceipts?{excessReceipts}:{}),
    ...(directReceipts&&excessReceipts&&excessReturns?{excessReturns}:{}),
@@ -192,6 +196,23 @@ export const financeAccounts={
    ...(heldTips?{heldTips}:{}),...(invoiceCredits?{invoiceCredits}:{}),...(paidInvoiceCredits?{paidInvoiceCredits}:{}),
    ...(serviceRefunds?{serviceRefunds}:{}),...(receivableAging?{receivableAging}:{}),
    ...(customerFundsReport?{customerFundsReport}:{})}) as FinanceAccountContext;
+ },
+ async stageStatement(context:FinanceAccountContext,reference:StatementReference,draft:StatementDraft,signal:AbortSignal){
+  check(context.statementStaging&&context.writeState==='ready'&&context.recoveryEpoch===reference.recoveryEpoch);
+  parseStatementReference(reference);parseStatementDraft(draft);
+  const {status,value}=await post('statement-staging-save',{reference,draft},signal,context.binding);
+  if(status===409&&exact(value,['error'])){
+   const reason=statementStagingRefusals.find(refusal=>refusal===value.error);
+   if(reason)return {state:'refused',reason} as const;
+  }
+  check(status===200||status===409);
+  return parseStatementResult(value,context.businessId,reference);
+ },
+ async lookupStagedStatement(context:FinanceAccountContext,reference:StatementReference,signal:AbortSignal){
+  check(context.statementStaging);parseStatementReference(reference);
+  const {status,value}=await post('statement-staging-lookup',{reference},signal,context.binding);
+  check(status===200||status===409);
+  return parseStatementResult(value,context.businessId,reference);
  },
  async readOpeningWorksheet(context:FinanceAccountContext,requestedOn:string|null,signal:AbortSignal){
   check(context.openingWorksheet&&context.recoveryEpoch&&(requestedOn===null||customerDate(requestedOn)));

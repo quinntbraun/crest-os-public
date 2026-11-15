@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 102,
+  "migrationCount": 103,
   "tables": [
     {
       "table": "crest.businesses",
@@ -3665,6 +3665,45 @@
         "recorded_at",
         "evidence",
         "evidence_sha256"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.statement_imports",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "account_id",
+        "channel_version_id",
+        "starts_on",
+        "ends_on",
+        "opening_cents",
+        "closing_cents",
+        "file_sha256",
+        "date_convention",
+        "completeness_evidence",
+        "row_count",
+        "signed_rows_cents",
+        "rows_sha256",
+        "statement_difference_cents",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.statement_import_rows",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "statement_id",
+        "id",
+        "statement_on",
+        "signed_cents"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
