@@ -1,0 +1,100 @@
+{
+  "formatVersion": 1,
+  "verifiedAt": "2026-11-05T18:00:49.259Z",
+  "scope": "held included field/commercial/booking/CRM/identity/configuration source and neutral SQL reconstruction",
+  "trackedParent": "69d0ce50ddf4d3a80321709750e5116a46a33b82",
+  "exactSourceFiles": {
+    "src/operations/field-workspace-source.ts": "4258796678729c49f0e440422f84f7b7ddec77a56ebb32aed5353a912907b462",
+    "tests/integration/field-parent-source.test.mjs": "688ab7a4a304fb6e53c4117ff60ff2ea3c7ba77ad723616bfdbe309140fce82f",
+    "tests/support/field-workspace-reimport.mjs": "4da9d1dd2e9d58567bdaf689697d8b60364322953a114a3e346fd7f634163edc"
+  },
+  "nativeProof": {
+    "path": ".local/field-workspace-native-v6/result.json",
+    "sha256": "0861946e676dd96dd140ed71b4c2acc225a598fc67cdad4626700a8dc4db4008",
+    "passed": 19,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "fullUnitProof": {
+    "path": ".local/field-workspace-full-unit-v1.json",
+    "sha256": "ba10d9de1d1301a59c473aac7a12a7b352315e4497b6d5b057252af55d023282",
+    "passed": 8400,
+    "failed": 0,
+    "pending": 0
+  },
+  "retainedFieldCompatibilityProof": {
+    "path": "planning/proposals/field-parent-source-verification.json",
+    "previousCombinedCases": 247,
+    "previousCompleteSuiteRerun": false,
+    "unchangedCoreSources": {
+      "planning/proposals/field-parent-source.sql": "0a1bd9c13d3fa0bc0ebea4f0ef4051b47b7b6c02224f95a86903c4f4b980273c",
+      "src/operations/field-plan-source.ts": "b3cadeec28656d2d3b97fbdc0f042ced5fb9d48996aa3a6c2086851bd1b0bf8f",
+      "src/operations/field-source-collector.ts": "36cd70ed78018e8451ae3d9a76c6fcb12a24f0c90d05058d4f72ef9ecb755ed3",
+      "src/commercial/quote-amendment-accepted-source.ts": "7d6e6f98e8623981666f4c3024f3f161a265e90f608d39efb62be9f98f600c12",
+      "src/commercial/quote-amendment-source-csv.ts": "e1f41f305d594db747bd8b6d1263f100b7f458557c9ee4992fbcc5494784bfe9"
+    },
+    "overlappingPrevious14FieldParentCasesExpandedToCurrent19": true
+  },
+  "typesPassed": true,
+  "focusedLintPassed": true,
+  "productionNextAndServerBuildPassed": true,
+  "canonicalAmendmentsVerified": 12,
+  "registeredMigrationsVerified": 53,
+  "neutralReimport": {
+    "tables": 47,
+    "fieldColumns": 164,
+    "allElevenFieldGroupsPopulated": true,
+    "foreignKeysGreaterThan": 100,
+    "actualPostgreSqlConstraints": true,
+    "maximumFourDecimalMileageAndCorrectionRetained": true,
+    "applicationRestore": false
+  },
+  "implemented": [
+    "Existing unchanged foundation identity/configuration/history verifiers and four mature CRM CSV formatters compose with the field-inclusive accepted commercial/booking formatter. All packets share identical history bytes and one held native export snapshot.",
+    "Booking audit chains require contiguous original versions, exact before/after images, command-specific actions, current-source closure and retained reservation release history. Frozen initial/v2 booking/mode parsers remain in use.",
+    "Current CRM rows bind complete retained before/after chains; historical booked customer/vehicle/location/relationship snapshots bind their original images, including after later customer edits or relationship closure.",
+    "Every declared field foreign key closes against included field, booking, business, membership, operation and vehicle sources; operator/actor membership links retain inactive historical membership without treating it as current authority.",
+    "Field receipts bind the complete original audit identifier set and retained source IDs. Explicit support-trip request/receipt envelopes retain their canonical shape, and embedded leg JSON is compared losslessly. Completion, cancellation, mileage versions and prepared review/finalization references remain exact.",
+    "One flat bounded private file packet contains original evidence, dictionaries, reversible formula maps and SHA256 manifests. Duplicate file names coalesce only with byte-identical content. Original JSON strings and fixed-scale values are never reserialized through Number for export.",
+    "Actual restricted-command tests cover all seven field kinds, partial fulfillment, a trip without a job link, no booked/field work without filler, real linked/closed vehicle relationships and changed current CRM, all eleven populated field groups, and accepted amendments after completion or during a pause.",
+    "Independent CSV reconstruction creates47 empty neutral SQL tables, validates all164 field columns and more than100 actual foreign keys; original maximum-scale mileage and later correction survive. This imports projections only, not application roles/functions/RLS or a recoverable business backup."
+  ],
+  "retainedFailures": [
+    {
+      "path": ".local/field-workspace-native-v1/result.json",
+      "passed": 7,
+      "failed": 7,
+      "reason": "New verifier used association_id instead of canonical customer_vehicle_id. Corrected the binding and added real non-null/closed relationship plus historical CRM tests."
+    },
+    {
+      "path": ".local/field-workspace-native-v2/result.json",
+      "passed": 11,
+      "failed": 3,
+      "reason": "New verifier assumed every operation stored a direct receipt; support trips explicitly store schemaVersion/request/receipt. Added exact envelope binding and lossless original leg comparison, without changing storage."
+    },
+    {
+      "path": ".local/field-workspace-native-v5/result.json",
+      "passed": 17,
+      "failed": 2,
+      "reason": "New joined booking verifier assumed create for amendment plan rows; canonical quote.amendment.accept uses accept. Added the exact command/entity-specific action; unrelated changes retain strict prior actions. Both actual later-amendment cases now pass."
+    }
+  ],
+  "remaining": [
+    "Independent encrypted field-inclusive database restore, exact schema/roles/rows, derived operator occupancy rebuild and recovery authority/epoch fences. Neutral SQL projection reimport is not that gate.",
+    "Reviewed registered54 adoption and genuine field HTTP/MFA controls, Save-review labels, four-width rendered/browser/device/current-source release acceptance before owner-preview activation.",
+    "The flat included47-table packet is not every implemented Crest/provider/journal/catalog/expense/object source or full portability/backup. Preserve separate complete business recovery/import/cutover scope.",
+    "Atomic manual job/coupled Mobile work-site travel corrections; messages/configuration/outcomes/resume/maintenance follow-ups; Phase7 custody/photos, full finance/reporting, Google Calendar and all real-use gates."
+  ],
+  "completePortableExport": false,
+  "completeBackup": false,
+  "encryptedFieldRestoreExecuted": false,
+  "ownerRuntimeChanged": false,
+  "realDataOrFinanceActivated": false,
+  "genuineFieldHttpOrBrowserAcceptance": false,
+  "registeredReleaseClaim": false,
+  "completeCrestAcceptance": false,
+  "spend": 0
+}

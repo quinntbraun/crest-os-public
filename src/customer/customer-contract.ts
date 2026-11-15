@@ -17,9 +17,10 @@ export function customerDate(value:unknown):value is string{
   return y>=1&&m>=1&&m<=12&&d>=1&&d<=[31,y%4===0&&(y%100!==0||y%400===0)?29:28,31,30,31,30,31,31,30,31,30,31][m-1]!;
 }
 export function customerInstant(value:unknown):value is string{return typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\.\d{6}Z$/.test(value)&&customerDate(value.slice(0,10));}
+export const customerDisplayName=(value:unknown):value is string=>text(value,200,false);
 export function parseCustomerDraft(value:unknown):CustomerDraft{
   requireCustomer(exactCustomerObject(value,['displayName','phone','email','contactPreference','outreachOptOut','notes','customerSince','archived','archiveReason']));
-  requireCustomer(text(value.displayName,200,false)&&optionalText(value.phone,512,false)&&optionalText(value.email,512,false)&&optionalText(value.contactPreference,200)&&typeof value.outreachOptOut==='boolean'&&optionalText(value.notes,2000,true,true)&&(value.customerSince===null||customerDate(value.customerSince))&&typeof value.archived==='boolean');
+  requireCustomer(customerDisplayName(value.displayName)&&optionalText(value.phone,512,false)&&optionalText(value.email,512,false)&&optionalText(value.contactPreference,200)&&typeof value.outreachOptOut==='boolean'&&optionalText(value.notes,2000,true,true)&&(value.customerSince===null||customerDate(value.customerSince))&&typeof value.archived==='boolean');
   requireCustomer(value.archived?text(value.archiveReason,1000,false,true):value.archiveReason===null);
   return Object.freeze({...value}) as CustomerDraft;
 }

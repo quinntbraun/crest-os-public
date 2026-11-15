@@ -1,0 +1,303 @@
+{
+  "formatVersion": 1,
+  "verifiedAt": "2026-11-05T13:23:30.230Z",
+  "scope": "Atomic already-en-route Mobile cancellation or confirmed replacement, retaining actual stopped travel/scope/mileage/originals; unregistered construction, not owner delivery",
+  "trackedParent": "f87616277f760fd3565b95c784a0ddfa946d2e16",
+  "nativeProof": {
+    "path": ".local/interruption-joint-native-v4/result.json",
+    "sha256": "3bd4e4686b4678d7cf508afd40224d342d701f10fa34d609642c0abb700b1474",
+    "passed": 142,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "storageCases": 34,
+    "mobileSessionCases": 27,
+    "plannerCases": 16,
+    "completionAndAmendmentCases": 25,
+    "mileageCases": 22,
+    "interruptionCases": 18,
+    "sourceUnchangedDuringExecution": true,
+    "ownedClusterCleaned": true
+  },
+  "focusedProof": {
+    "path": ".local/interruption-native-v3/result.json",
+    "passed": 18,
+    "failed": 0
+  },
+  "exactSourceFiles": [
+    {
+      "path": "planning/proposals/field-time-storage.sql",
+      "bytes": 25481,
+      "sha256": "b372fafad1706241dcbabe66544be7eaa45bd98d34a0e0d702c64168b61d05b4"
+    },
+    {
+      "path": "planning/proposals/field-session-commands.sql",
+      "bytes": 44446,
+      "sha256": "968cbaaed4191f27e4697ba6533d0d41bfece7bf8e99c2fdd7f82ecfdeaa2c5d"
+    },
+    {
+      "path": "planning/proposals/work-completion-plan.sql",
+      "bytes": 13940,
+      "sha256": "ba8dba0e67bae9e8b24c0fd2141b883659ec86fd45cd62210c2a818696c69348"
+    },
+    {
+      "path": "planning/proposals/work-completion-commands.sql",
+      "bytes": 70512,
+      "sha256": "56da6f51ed8eae973bca1674ab1cb1d5f7f25e0f1d00d32c8d5130e3bd8c31e6"
+    },
+    {
+      "path": "planning/proposals/field-scope-floor.sql",
+      "bytes": 14964,
+      "sha256": "ebdc82993fa761dff73a298fab9a6aebae27d74c2a2efff6cec066541d2c2d11"
+    },
+    {
+      "path": "planning/proposals/mileage-evidence.sql",
+      "bytes": 41212,
+      "sha256": "c6f1dad9226eb767e83992fb10b570354e649df4800392b8869628cbeaad1bdd"
+    },
+    {
+      "path": "planning/proposals/mileage-field-profile.sql",
+      "bytes": 3700,
+      "sha256": "88e77205648ace4058946647bacec1acbf9570ae3d2911ebb8c436591196bd04"
+    },
+    {
+      "path": "planning/proposals/mobile-trip-interruption.sql",
+      "bytes": 67851,
+      "sha256": "dbe14dea6e55903090e90772b7da9c6786aaa3dba5bababb1adf4eb4d7e8ee13"
+    },
+    {
+      "path": "src/operations/mileage.ts",
+      "bytes": 4678,
+      "sha256": "3cbba274179ff8c6dc47e639c5b7aee127ad47301dace5ad69a2b524a1f80314"
+    },
+    {
+      "path": "src/operations/mileage-history.ts",
+      "bytes": 7730,
+      "sha256": "5e048d1c6ae9978984b802f0c11ac80ab8cfa080c43f8b46c0309535b88cabbc"
+    },
+    {
+      "path": "src/operations/mileage-csv.ts",
+      "bytes": 3621,
+      "sha256": "e4e739a6a8778d6d85c3feeef2243f7de7ba194bc874759ea25d4a3b16ae7136"
+    },
+    {
+      "path": "src/operations/work-completion.ts",
+      "bytes": 6785,
+      "sha256": "dd6dbb5a3a6e26b075f0dc8c7b5b1f425c97e330da143773cb1ddd3297c55533"
+    },
+    {
+      "path": "tests/unit/mileage.test.ts",
+      "bytes": 4279,
+      "sha256": "d1c8ca770e54182dc2cdd55fa2a209ad6bc8e7eb1161386ac4fcc706e9a14d21"
+    },
+    {
+      "path": "tests/unit/work-completion.test.ts",
+      "bytes": 8440,
+      "sha256": "6928599c4e51be79c473c0ad8874c7d7566019f1e84febf0e38aa9981dcde285"
+    },
+    {
+      "path": "tests/integration/field-time-storage.test.mjs",
+      "bytes": 24942,
+      "sha256": "122436eafdcde1a4504d39b18cc2fed6b5e763c75e2f237290e29852e2f30f8c"
+    },
+    {
+      "path": "tests/integration/field-session-commands.test.mjs",
+      "bytes": 28194,
+      "sha256": "d24039f39dda8dc6804405b9eb1b28ba3434a454e570575667d2a791c8e40a2d"
+    },
+    {
+      "path": "tests/integration/work-completion-plan.test.mjs",
+      "bytes": 13868,
+      "sha256": "625a0144d4367e6221acbc95b50ddb7ee9f52d9049da971401702f88ff74c869"
+    },
+    {
+      "path": "tests/integration/work-completion-commands.test.mjs",
+      "bytes": 30054,
+      "sha256": "4a36d726a5f400f18f1229b30d0bc2abfe2ba2c92ef50094bc584354205f52ef"
+    },
+    {
+      "path": "tests/integration/mileage-evidence.test.mjs",
+      "bytes": 24365,
+      "sha256": "2eccef206b330d3873e0fdf1766d0d9e3e5b84d5c8e1e8ae5c10322c29027932"
+    },
+    {
+      "path": "tests/integration/mobile-trip-interruption.test.mjs",
+      "bytes": 28600,
+      "sha256": "7be88272a892b1a6127b71caa19ce1f8765df2998e5176b2b78082286828c01d"
+    },
+    {
+      "path": "tests/support/confirmed-booking-fixture.mjs",
+      "bytes": 11207,
+      "sha256": "479f22896ea5e0715cf8c6e85ef3e89756dcbbe0e9aa3c3109a5e181f8d5dc67"
+    },
+    {
+      "path": "tests/support/amendment-acceptance-fixture.mjs",
+      "bytes": 6010,
+      "sha256": "a7adfa0a776e39857ac14a83e6cc58efd2d4a644f45b32b9a37cde2bab1146da"
+    }
+  ],
+  "pureCases": 30,
+  "typesPassed": true,
+  "focusedLintPassed": true,
+  "canonicalAmendmentsVerified": 12,
+  "registeredMigrations": 53,
+  "reviewedPredecessors": {
+    "measurement": ".local/interrupt-predecessor-native/result.json",
+    "source": "Fresh coordinator53 plus the seven reviewed field/completion/floor/mileage/profile proposals, never owner runtime",
+    "columnCount": 891,
+    "columnSha256": "6040b02b93bd928108261376362a910f3e0c60dc463eae0a05b3ca2282d6ddc3",
+    "functions": [
+      {
+        "signature": "crest_private.authorize_booking_statement()",
+        "owner": "crest_schema_owner",
+        "security_definer": false,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "883b4149d624796464f80dcf03d20dd5ec94aee462571da962d2e3f3ead63ae6"
+      },
+      {
+        "signature": "crest_private.check_amendment_allocation_binding()",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "5c5a9119e072ab8faa2d4092d5627ccae6df8568c0738565e6a2881c83a72a15"
+      },
+      {
+        "signature": "crest_private.check_booking_job_graph(uuid,uuid,uuid)",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "9cfdbe04d5fc296c66719f7587cdca86c9910685c680424257da1e1b597bf349"
+      },
+      {
+        "signature": "crest_private.check_booking_job_source()",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "5ff80ed99a520c9f51bbcb2744f25feaa2770d28b0195a292c0cb94a442abe7c"
+      },
+      {
+        "signature": "crest_private.check_booking_plan()",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "61d69370164ba5c83806b2b8f471b68797070e150f70e6b63ae25a7f9af0fa64"
+      },
+      {
+        "signature": "crest_private.check_booking_row_audit()",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "e50a92eb0e0713c9ffcc0387d3d5b18384dfc17f62106b139fef6eb3d9cb6f7e"
+      },
+      {
+        "signature": "crest_private.check_booking_schedule_event()",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "760e50cbfd114af1018fdd1f8af8a2c2960abeeb39703afa7204f2c421a440d2"
+      },
+      {
+        "signature": "crest_private.check_quote_amendment_accept_operation()",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "04e500297f016bee15406831c107655b4760c458b5915305ad7bc846aed3d06b"
+      },
+      {
+        "signature": "crest_private.field_source_stamp()",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "a3e53b0bb2d7ee91fb93a4c0f957962bda50176f1acd852b8132a979705b8b2a"
+      },
+      {
+        "signature": "crest_private.stamp_booking_row()",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "73b3f0d38cfb65245ec8b2382025cd4948cb3e91b7e8903e16f77e725bddad04"
+      },
+      {
+        "signature": "crest_private.validate_booking_reservation()",
+        "owner": "crest_booking_integrity_owner",
+        "security_definer": true,
+        "config": [
+          "search_path=pg_catalog, pg_temp",
+          "row_security=on"
+        ],
+        "sha256": "95556ce1f71ced7a22d3192ea524258eb43afcce4b8cf63f4c436e180b3fa27d"
+      }
+    ]
+  },
+  "implemented": [
+    "One genuine restricted-session operations.job.interrupt command atomically cancels or confirms a replacement after actual Mobile departure, with fresh mutation/read authority and epoch/hash/version bindings",
+    "Actual stop, reason, observed trip/appointment/current scope and explicit cancellation communication or replacement customer confirmation are mandatory; no fake arrival or unsupported intermediate work state",
+    "Stopped travel is an appended cancelled leg with the actual destination, retained planned origin/destination/departure/rig and one server instant shared by job/event; mileage remains independent",
+    "Replacement uses the existing time/location/contact/confirmation grammar, fresh customer/operator/vehicle/mode checks, actual schedule conflicts/unknown-travel acknowledgment and explicit override records",
+    "Cancellation retains every explicit scope identity/gross/discount/final value and another completed visit, without changing accepted obligations or creating a fee/refund/posting",
+    "Existing scheduled actions remain intact; exact fixed statement/row/audit/plan/reservation/field/amendment guard branches delegate only the new kind to its own source/result closure",
+    "Original receipts reconstruct immutable sources/audits after later departure/arrival, accepted amendments and completion; replay never retries the physical action",
+    "Native compound tests cover previously amended authorization, another completed visit, later amendment originals and cancellation despite a subsequently archived customer",
+    "Invalid/foreign/stale inputs, started labor, unknown finance schema, two real competing devices, forged actual-stop data and late COMMIT failure refuse with rollback",
+    "Shared real amendment fixture reuses the existing command bodies unchanged; all retained field/completion/mileage paths execute alongside interruption"
+  ],
+  "retainedFailures": [
+    {
+      "path": ".local/interruption-install-v1/result.json",
+      "passed": 1,
+      "failed": 1,
+      "cause": "Schema-owner role could not grant execution on an existing validator owned by another closed role. The migration coordinator now grants those pure validators only to existing closed booking/verifier roles; no ordinary grant or release-gate change."
+    }
+  ],
+  "intermediateProofs": [
+    {
+      "path": ".local/interruption-native-v2/result.json",
+      "passed": 15,
+      "failed": 0,
+      "note": "Initial complete interruption matrix before three compound history/authorization/resource cases."
+    }
+  ],
+  "remaining": [
+    "Manual trip/time corrections and independent supply/between-job/return-trip recording/closure",
+    "Message template/outcome/resume commands and maintenance follow-ups",
+    "Typed field/mileage/interruption original retirement and complete field history/source/export/independent encrypted recovery/neutral round-trip",
+    "Registered54 adoption, genuine HTTP/MFA and connected phone/desktop field controls, actual visual/browser/device and full current-source release gates",
+    "Phase7 custody/photos; full finance/double-entry/reporting/receipts; complete portability/recovery/import/cutover; Google Calendar and real-use gates"
+  ],
+  "businessBoundary": "Work never started on this interruption path. Started/fulfilled work must use its own pause/completion/cancellation rules. Physical travel, commercial obligations, outreach, custody and finance remain independent. No automatic arrival, distance, Sent, fee, refund, payment or posting.",
+  "ownerRuntimeChanged": false,
+  "inPr115": false,
+  "completeCrestAcceptance": false,
+  "registeredReleaseClaim": false,
+  "spend": 0
+}
