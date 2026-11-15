@@ -7,6 +7,9 @@ type Row=Readonly<Record<string,unknown>>;
 type History=Readonly<{operation:readonly Row[];audit_event:readonly Row[]}>;
 const save='finance.opening_ar.save';
 const retire='finance.opening_ar.retire';
+export const openingReceivablesSourceCoverage={table:'crest.opening_receivable_schedule_revisions',scope:'business',
+ required:['id','business_id','worksheet_revision_id','revision','prior_revision','operation_id','audit_event_id','recorded_by',
+  'recorded_at','evidence','evidence_sha256'],excluded:[],partialEvidenceGroup:null} as const;
 export const openingReceivablesFile='opening_receivables_source.json';
 export const isOpeningReceivablesOperation=(row:Row)=>row.command_type===save||row.command_type===retire;
 
