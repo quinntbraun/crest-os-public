@@ -9,6 +9,7 @@ import styles from './screen.module.css';
 type Report=Awaited<ReturnType<typeof financeAccounts.readRecordedIncomeStatement>>;
 const coverage='Fictional posted records only. Opening balances, reconciliations and some costs are incomplete.';
 const basis='Operational books · invoice-issued recognition';
+const supplierBasis='Operational books · revenue at invoice issue and supplier costs when incurred';
 const usd=(cents:bigint)=>cents<0n?'-$'+expenseDollars(String(-cents)):'$'+expenseDollars(String(cents));
 
 export function RecordedIncomeStatement({businessId}:{businessId:string}){
@@ -57,7 +58,7 @@ export function RecordedIncomeStatement({businessId}:{businessId:string}){
   downloadFinanceHistory('crest-fictional-income-'+report.fromOn+'-to-'+report.throughOn+'.csv',[
    ['From','Through','Currency','Timezone','Observed UTC','Report version','Coverage start','Basis','Coverage'],
    [report.fromOn,report.throughOn,report.currency,report.timeZone,report.observedAt,String(report.schemaVersion),
-    report.coverageStart??'',basis,coverage],
+    report.coverageStart??'',report.schemaVersion===2?supplierBasis:basis,coverage],
    [],
    ['Section','Account code','Account','Status','Posted debit cents','Posted credit cents','Net income contribution cents'],
    ...sections.flatMap(({label,rows,total})=>[
@@ -70,7 +71,7 @@ export function RecordedIncomeStatement({businessId}:{businessId:string}){
  return <details className="review-card" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
   <summary>Income statement</summary>
   <section aria-label="Recorded income statement" className="trial-balance">
-   <p>{basis}. {coverage}</p>
+   <p>{report?.schemaVersion===2?supplierBasis:basis}. {coverage}</p>
    <form onSubmit={event=>{event.preventDefault();void load();}}>
     <label>From date<input type="date" required value={from} disabled={busy}
      onChange={event=>{setFrom(event.target.value);setReport(null);setMessage('');}}/></label>

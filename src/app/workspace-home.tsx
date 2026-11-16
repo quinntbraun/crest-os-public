@@ -25,6 +25,13 @@ async function snapshot(signal:AbortSignal):Promise<View>{
     return {phase:'ready',name:context.legalName,paused:context.writeState==='paused',followUps,proposals,schedule,message:'Workspace access verified.',checkedAt:Date.now()};
   }catch(error){return {...initial,phase:error instanceof AuthenticationError&&error.kind==='denied'?'signed-out':'unavailable',message:error instanceof AuthenticationError&&error.kind==='denied'?'Sign in to open your workspace.':'Workspace access could not be verified. Check the local services and try again.'};}
 }
+const shortcuts=[
+  {href:'/customers',name:'Customers',detail:'Contacts and vehicles',glyph:'◎'},
+  {href:'/quotes',name:'Quotes',detail:'Estimates and approvals',glyph:'≡'},
+  {href:'/expenses',name:'Expenses',detail:'Receipts and supplier bills',glyph:'◇'},
+  {href:'/settings/accounts',name:'Accounting',detail:'Reports and reconciliation',glyph:'▤'},
+] as const;
+const shown=(count:number,more:boolean)=>more?count+' shown':String(count);
 const visitStates={scheduled:'Scheduled',en_route:'En route',in_progress:'In progress',paused:'Paused',completed:'Completed',cancelled:'Cancelled'};
 const dateLabel=new Intl.DateTimeFormat('en-US',{weekday:'long',month:'long',day:'numeric',timeZone:'UTC'});
 const shortTime=(value:string,timezone:string)=>new Intl.DateTimeFormat('en-US',{timeZone:timezone,hour:'numeric',minute:'2-digit'}).format(new Date(value));
@@ -48,16 +55,22 @@ export function WorkspaceHome(){
   return <main className="workspace-home" aria-busy={view.phase==='checking'}>
     <div className="today-heading">
       <div>
+        <p className="today-business">{view.phase==='ready'?view.name:'Crest Detailing'}</p>
         <h1>Today</h1>
-        {view.phase==='ready'&&<p>{view.schedule&&<><time dateTime={view.schedule.fromDate}>{dateLabel.format(new Date(view.schedule.fromDate+'T12:00:00Z'))}</time><span aria-hidden="true"> · </span></>}{view.name}</p>}
+        {view.phase==='ready'&&view.schedule&&<p><time dateTime={view.schedule.fromDate}>{dateLabel.format(new Date(view.schedule.fromDate+'T12:00:00Z'))}</time></p>}
       </div>
-      {view.phase==='ready'&&view.schedule&&<a className="primary-action" href="/schedule">Open schedule</a>}
+      {view.phase==='ready'&&view.schedule&&<a className="primary-action" href="/schedule">Open schedule <span aria-hidden="true">↗</span></a>}
     </div>
     <p className={view.phase==='ready'?'visually-hidden':'notice'} role="status" aria-live="polite">{view.message}</p>
     {view.phase==='signed-out'&&<section className="home-panel"><h2>Sign in</h2><p>Use your Crest OS account and authenticator to open your workspace.</p><a className="primary-action" href="/sign-in">Sign in to Crest OS</a></section>}
     {view.phase==='unavailable'&&<div className="notice"><p>No current business information is shown until access is confirmed.</p><a href="/sign-in">Check sign-in</a></div>}
     {view.phase==='ready'&&<>
       {view.paused&&<p className="notice">Changes are paused for recovery review. You can still review available records and history.</p>}
+      <nav className="today-overview" aria-label="Work at a glance">
+        <a href="/schedule"><span>Upcoming visits</span><strong>{view.schedule?.visits?shown(visits.length,view.schedule.visits.hasMore):'Unavailable'}</strong><span>Next seven days</span></a>
+        <a href="/leads"><span>Lead follow-ups</span><strong>{view.followUps?shown(reminders.length,view.followUps.hasMore):'Unavailable'}</strong><span>Leads with a follow-up date</span></a>
+        <a href="/appointment-holds"><span>Proposed times</span><strong>{view.proposals?shown(view.proposals.holds.length,view.proposals.hasMore):'Unavailable'}</strong><span>Saved proposal records</span></a>
+      </nav>
       <div className="today-grid">
       <section className="home-panel" aria-label="Upcoming saved visits"><div className="section-heading"><h2>Upcoming visits</h2></div>
         {view.schedule===null||view.schedule.visits===null?<p>Upcoming visits could not be verified. <a href="/schedule">Check the schedule</a>.</p>:<><p className="field-help">Confirmed appointments over the next seven days.</p>{visits.length===0?<p>{view.schedule.visits.hasMore?'No active visits on this page. Open Schedule to review remaining visits.':'No active saved visits in the next seven days.'}</p>:<ul className="today-visits">{visits.map(job=><li key={job.jobId}>
@@ -94,7 +107,10 @@ export function WorkspaceHome(){
       </section>
       {view.proposals!==null&&<section className="home-panel" aria-label="Unconfirmed appointment proposals"><div className="section-heading"><h2>Proposed times</h2><a href="/appointment-holds">Review proposals</a></div>{view.proposals.holds.length===0?<p>No saved proposals on this page.</p>:<ul className="follow-up-list">{view.proposals.holds.map(hold=><li key={hold.id}><strong>{hold.label}</strong><span>{hold.local_start.slice(0,16).replace('T',' ')} · {hold.timezone}</span><span>{hold.state==='withdrawn'?'Withdrawn':'Unconfirmed · does not reserve time'}</span></li>)}</ul>}<p className="field-help">First page of retained proposals, including withdrawals. {view.proposals.hasMore?'More proposals are available. ':''}These are not confirmed bookings.</p><a className="primary-action" href="/appointment-holds">Propose a time</a></section>}
       </div></div>
-      <nav className="home-shortcuts" aria-label="Quick actions"><a href="/customers" aria-label="Open customers">Customers</a><a href="/quotes" aria-label="Open quotes">Quotes</a><a href="/expenses" aria-label="Open expenses">Expenses</a><a href="/settings/accounts" aria-label="Open accounting">Accounting</a></nav>
+      <nav className="home-shortcuts" aria-label="Quick actions">{shortcuts.map(({href,name,detail,glyph})=>
+        <a href={href} key={href} aria-label={'Open '+name.toLowerCase()}>
+          <span className="shortcut-glyph" aria-hidden="true">{glyph}</span><span><strong>{name}</strong><small>{detail}</small></span><span aria-hidden="true">↗</span>
+        </a>)}</nav>
       <div className="today-footer"><a href="/save-review">Review interrupted saves</a><p className="field-help">Last checked {view.checkedAt===null?'':new Date(view.checkedAt).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}</p></div>
     </>}
     {view.phase!=='checking'&&<button type="button" className="secondary today-refresh" onClick={()=>{setView(initial);void load();}}>Refresh workspace</button>}

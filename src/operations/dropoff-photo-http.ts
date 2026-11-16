@@ -8,6 +8,7 @@ import {createBusinessSettingsContextReader} from '../security/business-settings
 import {createTrustedTransport} from '../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../security/trusted-transport.ts';
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
+import {boundedFileStream} from '../files/bounded-file-stream.ts';
 import {maximumFileBytes} from '../files/private-object-store.ts';
 import type {createPrivateObjectStore} from '../files/private-object-store.ts';
 import {createDropoffPhotoDirectory} from './dropoff-photo-directory.ts';
@@ -34,28 +35,6 @@ export type SyntheticDropoffPhotoRuntime=Readonly<{
 export const dropoffPhotoFailure=(status=400)=>privateJsonResponse({error:'DROPOFF_PHOTO_REQUEST_FAILED'},status);
 const photoTypes=['image/jpeg','image/png','image/heic'];
 function check(ok:unknown):asserts ok{if(!ok)throw Error('DROPOFF_PHOTO_REQUEST_FAILED');}
-
-function boundedFile(body:ReadableStream<Uint8Array>,size:number,signal:AbortSignal){
- const reader=body.getReader();
- let received=0;
- return new ReadableStream<Uint8Array>({
-  async pull(controller){
-   try{
-    signal.throwIfAborted();
-    const chunk=await reader.read();
-    signal.throwIfAborted();
-    if(chunk.done){check(received===size);reader.releaseLock();controller.close();return;}
-    received+=chunk.value.byteLength;
-    check(received<=size);
-    controller.enqueue(chunk.value);
-   }catch{
-    await reader.cancel().catch(()=>undefined);reader.releaseLock();
-    controller.error(Error('DROPOFF_PHOTO_UPLOAD_UNCONFIRMED'));
-   }
-  },
-  async cancel(){try{await reader.cancel();}finally{reader.releaseLock();}}
- });
-}
 
 // The same-origin relay passes the bytes to one server-signed staging PUT.
 // No object capability, worker database login or decoder enters the browser.
@@ -117,7 +96,7 @@ export function createDropoffPhotoHttp(config:Config,provider:Parameters<typeof 
      request.headers.get('content-length')===String(reservation.byte_size)&&bounded.body);
     const capability=(await access.upload(credential,scope,signal)).forUpload(),destination=new URL(capability.url);
     check(destination.origin===storage.origin&&!destination.username&&!destination.password&&!destination.hash);
-    const body=boundedFile(bounded.body,reservation.byte_size,signal);
+    const body=boundedFileStream(bounded.body,reservation.byte_size,signal);
     started=true;
     const reply=await fetch(destination,{method:'PUT',headers:{...capability.headers,'content-length':String(reservation.byte_size)},body,duplex:'half',
      signal,cache:'no-store',redirect:'error'} as RequestInit);

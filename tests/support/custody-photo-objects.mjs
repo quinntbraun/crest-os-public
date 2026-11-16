@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {createServer} from 'node:http';
 import {S3Client} from '@aws-sdk/client-s3';
+import {createReceiptObjectStore} from '../../src/bookkeeping/expenses/receipt-object-store.ts';
 import {createPrivateObjectStore} from '../../src/files/private-object-store.ts';
 
 // Local S3 wire fixture for generated photos. It exercises the real SDK and
@@ -42,7 +43,7 @@ export async function custodyPhotoObjects(){
  const sdk=new S3Client({endpoint:origin,region:'auto',forcePathStyle:true,maxAttempts:1,
   credentials:{accessKeyId:randomBytes(16).toString('hex'),secretAccessKey:randomBytes(32).toString('hex')},
   requestChecksumCalculation:'WHEN_REQUIRED',responseChecksumValidation:'WHEN_REQUIRED'});
- return {store:createPrivateObjectStore(sdk,bucket),origin,objects,requests,loseNextOriginal(){loseOriginal=true;},
+ return {bucket,store:createPrivateObjectStore(sdk,bucket),receipts:createReceiptObjectStore(sdk,bucket),origin,objects,requests,loseNextOriginal(){loseOriginal=true;},
   onRead(callback){assert.equal(typeof callback,'function');afterRead=callback;},
   async close(){sdk.destroy();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}};
 }

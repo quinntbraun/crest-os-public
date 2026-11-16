@@ -1,3 +1,4 @@
+import {captureSupplierPayableSource,isSupplierPayableOperation,supplierPayableFile,verifySupplierPayableSource} from './expenses/supplier-payable-source.ts';
 import {captureOpeningReceivablesSource,isOpeningReceivablesOperation,openingReceivablesFile,verifyOpeningReceivablesSource} from './opening-receivables-source.ts';
 import {captureStatementMatchDraftSource,isStatementMatchDraftOperation,statementMatchDraftFile,verifyStatementMatchDraftSource} from './statement-match-draft-source.ts';
 import {captureSupplierBillDraftSource,isSupplierBillDraftOperation,supplierBillDraftFile,verifySupplierBillDraftSource} from './expenses/supplier-bill-draft-source.ts';
@@ -68,16 +69,16 @@ function rowsOf(value:unknown,table:string):readonly Row[]{
 // A single authorized, read-only repeatable-read export transaction must own
 // query for the entire capture. Every underlying SQL reader checks that mode.
 export async function captureFinanceSourceExport(businessId:string,query:Query,
-  {includeCorrections=false,includeFundApplications=false,includeTips=false,includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,includeCollectionFailureRecredits=false,includeCollectionFailureGroupedRecredits=false,includeRestoredTips=false,includeOpeningWorksheets=false,includeStatementStaging=false,includeOpeningReceivables=false,includeStatementMatchDrafts=false,includeSupplierBillDrafts=false}:Readonly<{
+  {includeCorrections=false,includeFundApplications=false,includeTips=false,includeCredits=false,includePairedCredits=false,includeServiceRefunds=false,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,includeCollectionFailureRecredits=false,includeCollectionFailureGroupedRecredits=false,includeRestoredTips=false,includeOpeningWorksheets=false,includeStatementStaging=false,includeOpeningReceivables=false,includeStatementMatchDrafts=false,includeSupplierBillDrafts=false,includeSupplierPayables=false}:Readonly<{
     includeOpeningWorksheets?:boolean;
-    includeStatementStaging?:boolean;includeOpeningReceivables?:boolean;includeStatementMatchDrafts?:boolean;includeSupplierBillDrafts?:boolean;
+    includeStatementStaging?:boolean;includeOpeningReceivables?:boolean;includeStatementMatchDrafts?:boolean;includeSupplierBillDrafts?:boolean;includeSupplierPayables?:boolean;
     includeCorrections?:boolean;includeFundApplications?:boolean;includeTips?:boolean;includeCredits?:boolean;includePairedCredits?:boolean;
     includeServiceRefunds?:boolean;includeExcessReceipts?:boolean;includeExcessReturns?:boolean;includeTipReturns?:boolean;includeCollectionFailures?:boolean;includeRefundTransferAdjustments?:boolean;includeDirectReceiptTips?:boolean;includeRefundTransferFees?:boolean;includeCollectionFailureRecredits?:boolean;includeCollectionFailureGroupedRecredits?:boolean;includeRestoredTips?:boolean;
   }>={}){
   check(customerUuid(businessId)&&(!includeFundApplications||includeCorrections)&&(!includeTips||includeFundApplications)
     &&(!includeCredits||includeTips)&&(!includePairedCredits||includeCredits)&&(!includeServiceRefunds||includePairedCredits)
     &&(!includeExcessReceipts||includeServiceRefunds)&&(!includeExcessReturns||includeExcessReceipts)&&(!includeTipReturns||includeExcessReturns)&&(!includeCollectionFailures||includeTipReturns)&&(!includeRefundTransferAdjustments||includeCollectionFailures)&&(!includeDirectReceiptTips||includeRefundTransferAdjustments)&&(!includeRefundTransferFees||includeDirectReceiptTips)&&(!includeCollectionFailureRecredits||includeRefundTransferFees)&&(!includeCollectionFailureGroupedRecredits||includeCollectionFailureRecredits)&&(!includeRestoredTips||includeCollectionFailureGroupedRecredits));
-  check((!includeOpeningWorksheets||includeRestoredTips)&&(!includeStatementStaging||includeOpeningWorksheets)&&(!includeOpeningReceivables||includeStatementStaging)&&(!includeStatementMatchDrafts||includeOpeningReceivables)&&(!includeSupplierBillDrafts||includeStatementMatchDrafts));
+  check((!includeOpeningWorksheets||includeRestoredTips)&&(!includeStatementStaging||includeOpeningWorksheets)&&(!includeOpeningReceivables||includeStatementStaging)&&(!includeStatementMatchDrafts||includeOpeningReceivables)&&(!includeSupplierBillDrafts||includeStatementMatchDrafts)&&(!includeSupplierPayables||includeSupplierBillDrafts));
   const one=async(sql:string,parameters:unknown[])=>{
     const result=await query(sql,parameters);
     check(Array.isArray(result)&&result.length===1&&exact(result[0],['result']));
@@ -160,8 +161,10 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
   const matchDrafts=includeStatementMatchDrafts?await captureStatementMatchDraftSource(businessId,query):null;
   if(!includeSupplierBillDrafts)check(receipt.history.operation.every(row=>!isSupplierBillDraftOperation(JSON.parse(row.canonical_evidence).row)));
   const supplierDrafts=includeSupplierBillDrafts?await captureSupplierBillDraftSource(businessId,query):null;
-  const version=includeSupplierBillDrafts?22:includeStatementMatchDrafts?21:includeOpeningReceivables?20:includeStatementStaging?19:opening?18:restored?17:failureGrouped?16:failureRecredit?15:refundFee?14:directTip?13:refundTransfer?12:collectionFailure?11:tipReturn?10:excessReturn?9:includeExcessReceipts?8:refund?7:paired?6:credit?5:tip?4:application?3:correction?2:1;
-  const tables=financeSourceTables(version===18||version===19||version===20||version===21||version===22?17:version);
+  if(!includeSupplierPayables)check(receipt.history.operation.every(row=>!isSupplierPayableOperation(JSON.parse(row.canonical_evidence).row)));
+  const supplierPayables=includeSupplierPayables?await captureSupplierPayableSource(businessId,query):null;
+  const version=includeSupplierPayables?23:includeSupplierBillDrafts?22:includeStatementMatchDrafts?21:includeOpeningReceivables?20:includeStatementStaging?19:opening?18:restored?17:failureGrouped?16:failureRecredit?15:refundFee?14:directTip?13:refundTransfer?12:collectionFailure?11:tipReturn?10:excessReturn?9:includeExcessReceipts?8:refund?7:paired?6:credit?5:tip?4:application?3:correction?2:1;
+  const tables=financeSourceTables(version===18||version===19||version===20||version===21||version===22||version===23?17:version);
   if(opening){
    const history={
     operation:receipt.history.operation.map(row=>JSON.parse(row.canonical_evidence).row),
@@ -300,6 +303,14 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
     if(failureGrouped)verifyCollectionFailureGroupedRecreditSourceClosure(tableRows,parsedHistory,Boolean(restored));
   }
 
+  if(includeSupplierPayables){
+   const history={
+    operation:receipt.history.operation.map(row=>JSON.parse(row.canonical_evidence).row),
+    audit_event:receipt.history.audit_event.map(row=>JSON.parse(row.canonical_evidence).row),
+   };
+   const supplier=verifySupplierPayableSource(supplierPayables,businessId,supplierDrafts,history,table=>[...(combined.get(table)?.values()??[])]);
+   check(count+supplier.rows<=maxRows);
+  }
   const files:File[]=[];
   function add(name:string,content:string){
     bytes+=Buffer.byteLength(content,'utf8');
@@ -336,13 +347,15 @@ export async function captureFinanceSourceExport(businessId:string,query:Query,
   if(includeOpeningReceivables)add(openingReceivablesFile,JSON.stringify(receivables)+'\n');
   if(includeStatementMatchDrafts)add(statementMatchDraftFile,JSON.stringify(matchDrafts)+'\n');
   if(includeSupplierBillDrafts)add(supplierBillDraftFile,JSON.stringify(supplierDrafts)+'\n');
+  if(includeSupplierPayables)add(supplierPayableFile,JSON.stringify(supplierPayables)+'\n');
   add('dictionary.json',JSON.stringify({schemaVersion:1,format:'UTF-8 RFC4180 CRLF',primaryKey:'id',
     null:'\\N',booleans:['accounting_periods.opening_boundary'],
     decode:'Import as text. Remove only the mapped leading apostrophe, then unescape paired backslashes. Retain decimal cents and JSON text exactly.',
     tables})+'\n');
   add('README.txt',[
     'Crest OS posted finance source export',
-    includeSupplierBillDrafts?'Includes supplier bill and statement match drafts, their revision histories, opening receivables, normalized statements, and supported posted finance. Retain original document files separately.'
+    includeSupplierPayables?'Includes supplier bill drafts, posted supplier bills and payments, evidence links and audit history. Verify original and preview files separately using their retained hashes.'
+    :includeSupplierBillDrafts?'Includes supplier bill and statement match drafts, their revision histories, opening receivables, normalized statements, and supported posted finance. Retain original document files separately.'
     :includeStatementMatchDrafts?'Includes statement match drafts and revision history, opening receivables, normalized statements, and supported posted finance. Original bank statements are kept separately.'
     :includeOpeningReceivables?'Includes opening receivables revisions, normalized statements, and supported posted finance. Original bank statement files are kept separately.'
     :includeStatementStaging?'Includes normalized bank statement evidence, original operation and audit records, and supported posted finance. Original statement files are outside this archive.'

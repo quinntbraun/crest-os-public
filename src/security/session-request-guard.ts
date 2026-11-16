@@ -9,7 +9,8 @@ export class SessionRequestGuardError extends Error{constructor(){super('SESSION
 type Config=SessionDatabaseConfiguration&{origin:string};
 export function createSessionCsrfVerifier(config:Config){return verifier(config,'json');}
 export function createConditionPhotoCsrfVerifier(config:Config){return verifier(config,'condition-photo');}
-function verifier(config:Config,format:'json'|'condition-photo'){
+export function createPrivateFileCsrfVerifier(config:Config){return verifier(config,'private-file');}
+function verifier(config:Config,format:'json'|'condition-photo'|'private-file'){
   const query=sessionDatabase(config),protect=createRequestProtection(config,format);
   return async function requireSessionCsrf(request:RequestShape,credential:string,signal:AbortSignal){
     protect.requireOrigin(request);const hash=sessionCredentialHash(credential);

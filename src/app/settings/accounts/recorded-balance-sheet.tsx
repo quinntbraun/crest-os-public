@@ -7,6 +7,7 @@ import styles from './screen.module.css';
 const usd = (cents: bigint) => cents < 0n ? '-$' + expenseDollars(String(-cents)) : '$' + expenseDollars(String(cents));
 const coverage = 'Fictional posted records only. Opening balances, reconciliation and some costs are incomplete.';
 const basis = 'Operational books · invoice-issued recognition';
+const supplierBasis = 'Operational books · revenue at invoice issue and supplier costs when incurred';
 const labels = { assets: 'Assets', liabilities: 'Liabilities', equity: 'Posted equity' } as const;
 
 export function RecordedBalanceSheet({ balance, journalBusy, selectJournalAccount }: {
@@ -15,6 +16,7 @@ export function RecordedBalanceSheet({ balance, journalBusy, selectJournalAccoun
   selectJournalAccount: (id: string) => void;
 }) {
   const sheet = recordedBalanceSheet(balance);
+  const reportBasis = 'schemaVersion' in balance && balance.schemaVersion === 11 ? supplierBasis : basis;
   const sections = (Object.keys(labels) as (keyof typeof labels)[]).map(key => ({
     label: labels[key], ...sheet.sections[key],
   }));
@@ -22,7 +24,7 @@ export function RecordedBalanceSheet({ balance, journalBusy, selectJournalAccoun
     downloadFinanceHistory('crest-fictional-balance-sheet-' + balance.throughOn + '.csv', [
       ['Through date', 'Timezone', 'Currency', 'Observed UTC', 'Report version', 'First posting', 'Posted events', 'Basis', 'Coverage'],
       [balance.throughOn, balance.timeZone, balance.currency, balance.observedAt, String(sheet.schemaVersion),
-        balance.coverageStart ?? '', balance.postedEventCount, basis, coverage],
+        balance.coverageStart ?? '', balance.postedEventCount, reportBasis, coverage],
       [],
       ['Section', 'Account code', 'Account', 'Status', 'Balance cents'],
       ...sections.flatMap(({ label, lines, total }) => [
@@ -39,7 +41,7 @@ export function RecordedBalanceSheet({ balance, journalBusy, selectJournalAccoun
     <section aria-label="Recorded balance sheet">
       <h3>Recorded balance sheet</h3>
       <p>Through {balance.throughOn} · USD · {balance.timeZone}</p>
-      <p>{basis}. {coverage}</p>
+      <p>{reportBasis}. {coverage}</p>
       {balance.coverageStart && <p>First included posting {balance.coverageStart}.</p>}
       <p className="field-help">Same snapshot as the trial balance. Select an account to review its journal entries.</p>
       <div className={styles.balanceScroll} role="region" aria-label="Balance sheet accounts" tabIndex={0}>

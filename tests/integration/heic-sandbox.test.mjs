@@ -5,12 +5,13 @@ import {createHash} from 'node:crypto';
 import sharp from 'sharp';
 import {heicFixtures,boundaryHeic} from '../support/heic-fixtures.mjs';
 const hash=b=>createHash('sha256').update(b).digest('hex');let fixtures;
-before(async()=>{assert.equal(process.platform,'linux');fixtures=await heicFixtures();});
+const candidate=process.env.CREST_IMAGE_ID??'crest-os:ci';
+before(async()=>{assert.equal(process.platform,'linux');assert.match(candidate,/^(?:crest-os:ci|sha256:[a-f0-9]{64})$/);fixtures=await heicFixtures();});
 const docker=(args,options={})=>execFileSync('docker',args,{encoding:'utf8',timeout:60000,maxBuffer:12*1024*1024,...options});
 function create(overrides={},type='image/heic'){
   const profile={network:['--network','none'],readonly:['--read-only'],capabilities:['--cap-drop','ALL'],privileges:['--security-opt','no-new-privileges'],
     memory:['--memory','1g','--memory-swap','1g'],cpu:['--cpus','1'],pids:['--pids-limit','32'],user:['--user','node'],...overrides};
-  const id=docker(['create','--interactive','--tmpfs','/tmp:rw,noexec,nosuid,nodev,size=320m',...Object.values(profile).flat(),'crest-os:ci',
+  const id=docker(['create','--interactive','--tmpfs','/tmp:rw,noexec,nosuid,nodev,size=320m',...Object.values(profile).flat(),candidate,
     'node','--max-old-space-size=128','server/heic-worker.mjs',type]).trim();assert.match(id,/^[a-f0-9]{64}$/);return id;
 }
 function run(bytes,overrides={},type='image/heic'){

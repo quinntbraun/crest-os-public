@@ -424,6 +424,8 @@ jobs:
         run: npm run test:field-registered
       - name: Verify registered finance account configuration and independent restore
         run: npm run test:finance-registered
+      - name: Verify supplier payable integrity and independent schema 109 recovery
+        run: node --conditions=react-server --test --test-concurrency=1 tests/integration/finance-supplier-payable-review.test.mjs
       - name: Verify registered fictional Calendar dispatch, portability and independent restore
         run: npm run test:google-calendar-registered
       - name: Compare booking times, travel intervals and partitions with PostgreSQL
@@ -481,6 +483,23 @@ jobs:
             | tee .local/pickup-isolated-decoder.log
           grep -Fx '# tests 1' .local/pickup-isolated-decoder.log
           grep -Fx '# pass 1' .local/pickup-isolated-decoder.log
+      - name: Signed-in supplier payables with the isolated document worker
+        timeout-minutes: 8
+        shell: bash
+        env:
+          CREST_TEST_STATEMENT_MATCH_REVIEW: "1"
+          CREST_TEST_STATEMENT_MATCH_DRAFTS: "1"
+          CREST_TEST_SUPPLIER_BILL_DRAFTS: "1"
+          CREST_TEST_SUPPLIER_PAYABLE_REVIEW: "1"
+          CREST_TEST_SUPPLIER_PAYABLE_POSTING: "1"
+        run: |
+          CREST_SUPPLIER_DOCUMENT_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
+          test -n "$CREST_SUPPLIER_DOCUMENT_IMAGE_ID"
+          export CREST_SUPPLIER_DOCUMENT_IMAGE_ID
+          node --conditions=react-server --test --test-reporter=tap tests/integration/finance-supplier-payable-browser.test.mjs \
+            | tee .local/supplier-isolated-decoder.log
+          grep -Fx '# tests 2' .local/supplier-isolated-decoder.log
+          grep -Fx '# pass 2' .local/supplier-isolated-decoder.log
       - name: Container diagnostics
         if: failure()
         run: docker logs crest-os-smoke || true

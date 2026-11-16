@@ -1,4 +1,5 @@
 import { customerDate, customerInstant, customerUuid, exactCustomerObject as exact } from '../customer/customer-contract.ts';
+import {projectSupplierReport} from './supplier-payable-report-contract.ts';
 import { financeAccountCode, financeAccountReviewReason, requireFinanceAccount as check } from './finance-account-contract.ts';
 
 export const incomeSections = {
@@ -44,4 +45,9 @@ export function parseRecordedIncomeStatement(value: unknown,businessId:string,fr
     && rows.reduce((sum,row)=>sum+BigInt(row.incomeCents),0n)===BigInt(value.netIncomeCents));
   return {schemaVersion:1 as const,businessId,currency:'USD' as const,timeZone:value.timeZone,observedAt:value.observedAt,
     fromOn,throughOn,coverageStart:value.coverageStart,rows,netIncomeCents:value.netIncomeCents};
+}
+
+export function parseRecordedIncomeStatementV2(value:unknown,businessId:string,fromOn:string,throughOn:string){
+ const report=parseRecordedIncomeStatement(projectSupplierReport(value,2,1),businessId,fromOn,throughOn);
+ return {...report,schemaVersion:2 as const};
 }

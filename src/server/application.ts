@@ -4,6 +4,7 @@ import nextConfig from '../../next.config.ts';
 import {bindApplicationHandler,createBoundedNodeServer} from './node-server.ts';
 import type {NodeConfiguration} from './node-server.ts';
 import {prepareSyntheticGoogleCalendarRunner} from '../operations/google-calendar-worker.ts';
+export {openSyntheticSupplierStore,readSupplierProfile} from './synthetic-supplier-store.ts';
 export {createAuthenticationRuntime} from './authentication-runtime.ts';
 export {createTenantContextReader} from '../security/tenant-read.ts';
 export {createMutationTransaction} from '../security/mutation-transaction.ts';

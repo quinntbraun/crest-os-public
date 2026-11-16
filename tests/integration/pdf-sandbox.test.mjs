@@ -6,12 +6,13 @@ import {createHash} from 'node:crypto';
 import sharp from 'sharp';
 import {pdf,pdfFixtures} from '../support/pdf-fixtures.mjs';
 const hash=b=>createHash('sha256').update(b).digest('hex'),maximum=25*1024*1024;let fixtures;
-before(async()=>{assert.equal(process.platform,'linux');fixtures=await pdfFixtures();});
+const candidate=process.env.CREST_IMAGE_ID??'crest-os:ci';
+before(async()=>{assert.equal(process.platform,'linux');assert.match(candidate,/^(?:crest-os:ci|sha256:[a-f0-9]{64})$/);fixtures=await pdfFixtures();});
 const docker=(args,options={})=>execFileSync('docker',args,{encoding:'utf8',timeout:45000,maxBuffer:12*1024*1024,...options});
 function create(page=1,overrides={}){
   const profile={network:['--network','none'],readonly:['--read-only'],capabilities:['--cap-drop','ALL'],privileges:['--security-opt','no-new-privileges'],
     memory:['--memory','512m','--memory-swap','512m'],cpu:['--cpus','1'],pids:['--pids-limit','32'],user:['--user','node'],...overrides};
-  const id=docker(['create','--interactive','--tmpfs','/tmp:rw,noexec,nosuid,nodev,size=32m',...Object.values(profile).flat(),'crest-os:ci',
+  const id=docker(['create','--interactive','--tmpfs','/tmp:rw,noexec,nosuid,nodev,size=32m',...Object.values(profile).flat(),candidate,
     'node','--max-old-space-size=128','server/pdf-worker.mjs',String(page)]).trim();assert.match(id,/^[a-f0-9]{64}$/);return id;
 }
 function run(bytes,page=1,overrides={}){

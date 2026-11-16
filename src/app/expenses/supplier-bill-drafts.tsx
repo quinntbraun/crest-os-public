@@ -8,6 +8,7 @@ import {parseSupplierBillDraftPayload,supplierBillCategories} from '../../bookke
 import type {SupplierBillDraftPayload,SupplierBillDraftReference,SupplierBillDraftRevision} from '../../bookkeeping/expenses/supplier-bill-draft-contract';
 import {expenseDollars} from '../../bookkeeping/expenses/expense-contract';
 import {moneyChannelCents} from '../../bookkeeping/finance-money-channel-contract';
+import {SupplierPayableEntryReview} from './supplier-payables';
 
 type Split={key:string;category:string;amount:string};
 type Form={incurredOn:string;dueOn:string;unknownDueReason:string;vendor:string;unknownVendorReason:string;
@@ -34,7 +35,7 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
  const [hasMore,setHasMore]=useState(false);
  const [pending,setPending]=useState<Pending|null>(null);
  const [review,setReview]=useState<Review|null>(null);
- const [status,setStatus]=useState(''),[busy,setBusy]=useState(false);
+ const [status,setStatus]=useState(''),[busy,setBusy]=useState(false),[posting,setPosting]=useState(false);
  useEffect(()=>()=>controller.current?.abort(),[]);
 
  function patch(values:Partial<Form>){setForm(previous=>({...previous,...values}));setReview(null);}
@@ -82,7 +83,7 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
  }
  async function submit(event:FormEvent<HTMLFormElement>){
   event.preventDefault();
-  if(!context.recoveryEpoch||context.writeState!=='ready'||pending||busy)return;
+  if(!context.recoveryEpoch||context.writeState!=='ready'||pending||busy||posting)return;
   try{
    const vendor=form.vendor.trim(),dueOn=form.dueOn||null;
    const payload=parseSupplierBillDraftPayload({incurredOn:form.incurredOn,dueOn,
@@ -124,7 +125,7 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
   <details>
    <summary>Unpaid supplier bills</summary>
    <p>Save details for a bill you still owe. Payable posting requires review of the original bill and its cost treatment.</p>
-   <button type="button" className="secondary" disabled={busy||!!pending} onClick={()=>void load()}>Load saved supplier bills</button>
+   <button type="button" className="secondary" disabled={busy||posting||!!pending} onClick={()=>void load()}>Load saved supplier bills</button>
    <p role="status">{status}</p>
    {pending&&<div aria-label="Unconfirmed supplier bill save">
     <button type="button" className="secondary" disabled={busy} onClick={()=>void checkSave()}>Check original supplier bill save</button>
@@ -132,7 +133,7 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
    </div>}
    <div className="expense-layout">
     <form aria-label="Supplier bill draft" onSubmit={submit}>
-     <fieldset className="expense-form" disabled={busy||!!pending||context.writeState!=='ready'}>
+     <fieldset className="expense-form" disabled={busy||posting||!!pending||context.writeState!=='ready'}>
       <legend>{editing?'Edit supplier bill draft, revision '+editing.revision:'New supplier bill draft'}</legend>
       <label>Incurred date <input type="date" min="1900-01-01" value={form.incurredOn} required onChange={e=>patch({incurredOn:e.target.value})}/></label>
       <label>Due date <input type="date" value={form.dueOn} onChange={e=>patch({dueOn:e.target.value})}/></label>
@@ -163,12 +164,12 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
     </form>
     <div className="expense-records">
      {editing&&<>
-      <button type="button" className="secondary" disabled={busy||!!pending} onClick={()=>void checkEvidence()}>Review saved bill evidence</button>
-      <button type="button" className="secondary" disabled={busy||!!pending}
+      <button type="button" className="secondary" disabled={busy||posting||!!pending} onClick={()=>void checkEvidence()}>Review saved bill evidence</button>
+      <button type="button" className="secondary" disabled={busy||posting||!!pending}
        onClick={()=>{setEditing(null);setReview(null);setForm(emptyForm());setStatus('');}}>Enter another supplier bill</button>
      </>}
      {review&&<div aria-label="Supplier bill evidence review">
-      <p>The bill record still needs its original document.</p>
+      {!context.supplierPayableReview&&<p>The bill record still needs its original document.</p>}
       {review.vendorUnknown&&<p>The supplier is unknown.</p>}
       {review.dueTermsUnknown&&<p>The due date is unknown.</p>}
       {review.purchaseTaxUnknown&&<p>Purchase tax is unconfirmed.</p>}
@@ -176,13 +177,15 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
        review.candidates.length?review.candidates.length+' possible duplicate supplier bills.':'No possible duplicates found in saved supplier bills.'}</p>
       {review.moreCandidates&&<p>More saved records need review.</p>}
      </div>}
+     {context.supplierPayableReview&&editing&&!pending&&<SupplierPayableEntryReview
+      key={editing.billId+':'+editing.revision} context={context} bill={editing} lockDraft={setPosting}/>}
      {rows&&<><h3>Saved supplier drafts</h3>
       {rows.map(row=><article key={row.billId} className="review-card">
        <p>{row.payload.vendor??'Supplier unknown'} · {row.payload.incurredOn} · ${expenseDollars(row.payload.grossCents)}</p>
        <p>{row.payload.documentReference??row.payload.purpose}</p>
-       <button type="button" className="secondary" disabled={busy||!!pending} onClick={()=>edit(row)}>Open supplier bill draft</button>
+       <button type="button" className="secondary" disabled={busy||posting||!!pending} onClick={()=>edit(row)}>Open supplier bill draft</button>
       </article>)}
-      {hasMore&&<button type="button" className="secondary" disabled={busy||!!pending} onClick={()=>void load(true)}>Load more supplier bills</button>}
+      {hasMore&&<button type="button" className="secondary" disabled={busy||posting||!!pending} onClick={()=>void load(true)}>Load more supplier bills</button>}
      </>}
     </div>
    </div>

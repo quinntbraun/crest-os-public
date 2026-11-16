@@ -47,8 +47,11 @@ it.each(fieldOriginalKinds)('binds the source-verified minimal %s receipt and ke
 });
 it.each(fieldOriginalKinds)('reconciles %s through the existing authenticated scheduling transport before clearing',async kind=>{
  const p=packet(kind),memory=new Map<string,string>(),storage={getItem:(k:string)=>memory.get(k)??null,setItem:(k:string,v:string)=>{memory.set(k,v);},removeItem:(k:string)=>{memory.delete(k);}};
- const store=createPendingSchedulingStore(storage,kind),binding=randomBytes(32).toString('base64url');store.write({schemaVersion:1,businessId:p.original.businessId,binding,reference:p.original.reference});
- expect(JSON.stringify([...memory])).not.toMatch(/location|reason|odometer|actualMiles|payload|hash/i);
+ const store=createPendingSchedulingStore(storage,kind),binding='hash'+randomBytes(32).toString('base64url').slice(4);
+ const pending={schemaVersion:1 as const,businessId:p.original.businessId,binding,reference:p.original.reference};
+ store.write(pending);
+ expect([...memory.keys()]).toEqual([pendingSchedulingKeys[kind]]);
+ expect(JSON.parse(memory.get(pendingSchedulingKeys[kind])!)).toEqual(pending);
  const fetcher=vi.fn(async()=>new Response(JSON.stringify(p),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));vi.stubGlobal('fetch',fetcher);
  const target=openPendingOriginalOperation(kind,storage,p.original.businessId)!;expect(await target.reconcile(proof(),new AbortController().signal)).toBe('committed');expect(memory.has(pendingSchedulingKeys[kind])).toBe(false);expect(fetcher).toHaveBeenCalledExactlyOnceWith('/api/business/scheduling/original',expect.any(Object));
 });
