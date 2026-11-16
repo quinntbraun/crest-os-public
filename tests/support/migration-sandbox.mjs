@@ -28,6 +28,9 @@ export async function migrationSandbox(testConnection=process.env.CREST_TEST_DAT
   const workspace = await mkdtemp(join(root,".local/session-integration/case-"));
   const sourceCommit = execFileSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).trim();
   const cliPath = join(root,`.local/tools/supabase/supabase${process.platform==="win32"?".exe":""}`);
+  async function rememberCreatedRoles() {
+    for(const row of (await admin.query("SELECT rolname FROM pg_roles WHERE rolname=ANY($1::text[])",[roles])).rows) ownedRoles.add(row.rolname);
+  }
   return {
     root,workspace,admin,
     async database() {
@@ -56,7 +59,21 @@ export async function migrationSandbox(testConnection=process.env.CREST_TEST_DAT
     },
     async apply(url,source=root,bootstrapEmpty=false) {
       try { return await applyTestMigrations({environment:"test",connectionString:url,workspace:source,ledgerRoot:join(workspace,"ledger"),cliPath,sourceCommit,bootstrapEmpty}); }
-      finally { for(const r of (await admin.query("SELECT rolname FROM pg_roles WHERE rolname=ANY($1::text[])",[roles])).rows) ownedRoles.add(r.rolname); }
+      finally { await rememberCreatedRoles(); }
+    },
+    async applyHeldSql(client,sql) {
+      assert(connections.has(client));
+      assert(databases.has((await client.query("SELECT current_database() AS name")).rows[0].name));
+      await client.query("BEGIN");
+      try {
+        await client.query(sql);
+        await client.query("COMMIT");
+      } catch(error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        await rememberCreatedRoles();
+      }
     },
     async close() {
       try {

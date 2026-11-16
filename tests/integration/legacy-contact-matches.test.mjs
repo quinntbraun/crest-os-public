@@ -950,9 +950,7 @@ test('registered legacy matches normalize indexed hints, include archived eviden
     if(process.env.CREST_TEST_LEGACY_APPLY_CAPACITY!=='1'){
      await decisionTests.test('background import survives a rollback and runs only once',async()=>{
       const queueSql=await readFile(new URL('../../planning/proposals/legacy-contact-application-queue.sql',import.meta.url),'utf8');
-      await admin.query('BEGIN');
-      try{await admin.query(queueSql);await admin.query('COMMIT');}
-      catch(error){await admin.query('ROLLBACK');throw error;}
+      await sandbox.applyHeldSql(admin,queueSql);
       const runSql='SELECT crest_commands.run_next_legacy_contact_application() AS result';
       const queue='SELECT crest_commands.request_legacy_contact_application($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS result';
       const status='SELECT crest_commands.read_legacy_contact_apply_request($1,$2,$3,$4,$5,$6,$7,$8,$9) AS result';
