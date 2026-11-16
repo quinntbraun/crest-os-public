@@ -8,7 +8,7 @@ export {createSourceExportHttp} from '../../src/security/source-export-http.ts';
 export {createSourceExportDownloadHttp} from '../../src/security/source-export-download-http.ts';
 export {isSourceExportDownloadResponse,writeSourceExportDownloadResponse} from '../../src/server/source-export-download-response.ts';
 export {createSessionLifecycle} from '../../src/security/session-lifecycle.ts';
-export {sessionDatabase} from '../../src/security/session-database.ts';
+export {sessionDatabase,createLegacyContactImportDispatcher} from '../../src/security/session-database.ts';
 export {sessionCredentialHash} from '../../src/security/session-credential.ts';
 export {createSourceExportDatabaseJournal} from '../../src/security/source-export-database-journal.ts';
 export {custodyFixture} from './source-export-custody-fixture.mjs';

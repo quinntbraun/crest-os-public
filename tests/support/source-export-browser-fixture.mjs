@@ -625,8 +625,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   }:undefined;
   async function dispatchContactImport(){
    assert(contactWorkerConnection);
-   const {createLegacyContactImportDispatcher}=await import('../../src/security/session-database.ts');
-   const dispatch=createLegacyContactImportDispatcher({environment:'test',connectionString:contactWorkerConnection});
+   const dispatch=runtime.createLegacyContactImportDispatcher({environment:'test',connectionString:contactWorkerConnection});
    return dispatch(AbortSignal.timeout(10000));
   }
   return{origin,product,dispatchContactImport,authorizePostedFinance,preparePayable,originalFile,originalMimeType,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
