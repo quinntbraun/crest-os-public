@@ -52,3 +52,17 @@ The pinned CLI classifies local targets using hostname and the configured databa
 A direct privileged rollback probe was rejected by automatic approval review and was not executed. The successful path used read-only diagnostics and the approved coordinator. Never bypass that boundary with direct privileged SQL.
 
 The loopback workspace needs no cloud account or paid service. Optional phone access uses the separately approved free private-network account described above. Public tunnels, real business records and financial activation remain outside this test setup. Full exports, independent recovery and other real-use gates remain required. Installing Docker or starting this test server does not make Crest OS ready for real Crest data.
+
+
+## Background contact imports in the fictional workspace
+
+After the verified fictional workspace has applied schema 116 or later, prepare its dedicated import worker once, then start the workspace with imports enabled.
+
+```powershell
+node scripts/synthetic-workspace.mjs prepare-contact-import-worker
+npm run workspace:start -- --contact-imports
+```
+
+Open **Customers → Review a contact CSV**. Save and approve the reviewed decisions, then choose **Start import**. The loopback workspace processes saved requests after the browser navigates away. Reopen a saved draft to check its status or receipt. Workspace shutdown leaves unfinished attempts available for recovery and retry.
+
+On schema 117, open a completed import and choose **Download import history** if you have an active owner session with bulk export access. The ZIP contains the import receipt, row outcomes, and request history. Crest OS records the handoff along with the archive checksum.

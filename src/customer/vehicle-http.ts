@@ -4,7 +4,8 @@ import {createTrustedTransport} from '../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../security/trusted-transport.ts';
 import {createRequestProtection} from '../security/request-protection.ts';
 import {readBrowserCookies} from '../security/browser-http.ts';
-import {privateJsonResponse,readFlatJsonBody} from '../security/private-http.ts';
+import {legacyMatchBodyLimit,parseLegacyHintRequest} from './legacy-contact-match-contract.ts';
+import {privateJsonResponse,readFlatJsonBody,readNestedJsonBody} from '../security/private-http.ts';
 import {createSessionCsrfVerifier} from '../security/session-request-guard.ts';
 import {createSessionRequestAdmission} from '../security/session-request-admission.ts';
 import {createBusinessSettingsContextReader} from '../security/business-settings-context.ts';
@@ -16,7 +17,7 @@ import {parseVehicleDraft} from './customer-resource-contract.ts';
 type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
 const prefix='/api/business/vehicles/';
 const draftKeys=['label','year','make','model','color','vin','plate','kind','notes','archived','archiveReason'] as const;
-const fields={context:[],list:['search','afterId','includeArchived','pageSize'],history:['vehicleId','afterVersion','pageSize'],operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','vehicleId','expectedVersion',...draftKeys]} as const;
+const fields={'legacy-matches':['kind','hints'],context:[],list:['search','afterId','includeArchived','pageSize'],history:['vehicleId','afterVersion','pageSize'],operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','vehicleId','expectedVersion',...draftKeys]} as const;
 type Route=keyof typeof fields;
 export function vehicleFailureResponse(status:400|404|405|503=400):Response{
   const response=privateJsonResponse({error:'VEHICLE_REQUEST_FAILED'},status);if(status===405)response.headers.set('Allow','POST');return response;
@@ -35,7 +36,9 @@ export function createVehicleHttp(config:Configuration,provider:Parameters<typeo
       if(url.search||url.hash||!url.pathname.startsWith(prefix)||!Object.hasOwn(fields,route))return vehicleFailureResponse(404);
       if(request.method!=='POST')return vehicleFailureResponse(405);
       protect.requireOrigin(request);const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;if(!cookie)throw new Error();
-      const input=await readFlatJsonBody(bounded,fields[route]);
+      const input:Readonly<Record<string,unknown>>=route==='legacy-matches'
+        ?parseLegacyHintRequest(await readNestedJsonBody(bounded,fields[route],legacyMatchBodyLimit),'vehicle')
+        :await readFlatJsonBody(bounded,fields[route]);
       let draft:ReturnType<typeof parseVehicleDraft>|undefined;
       if(route==='save'){
         requireVehicle(input.schemaVersion===1&&vehicleUuid(input.operationId)&&vehicleUuid(input.vehicleId)&&vehicleUuid(input.recoveryEpoch)&&vehicleVersion(input.expectedVersion,true));
@@ -60,7 +63,8 @@ export function createVehicleHttp(config:Configuration,provider:Parameters<typeo
         const value=(await directory.save(cookie,{schemaVersion:1,businessId,operationId:input.operationId as string,vehicleId:input.vehicleId as string,recoveryEpoch:input.recoveryEpoch as string,expectedVersion:input.expectedVersion as string,draft:draft!},signal)).forServer();
         if(signal.aborted)throw new Error();return privateJsonResponse(value,value.state==='conflict'?409:200);
       }
-      if(route==='operation')result=(await directory.lookup(cookie,{businessId,operationId:input.operationId as string},signal)).forServer();
+      if(route==='legacy-matches')result=(await directory.legacyMatches(cookie,businessId,input,signal)).forServer();
+      else if(route==='operation')result=(await directory.lookup(cookie,{businessId,operationId:input.operationId as string},signal)).forServer();
       else if(route==='history')result=(await directory.history(cookie,{businessId,vehicleId:input.vehicleId as string,afterVersion:input.afterVersion as string,pageSize:input.pageSize as number},signal)).forServer();
       else result=(await directory.list(cookie,{businessId,search:input.search as string,afterId:input.afterId as string|null,includeArchived:input.includeArchived as boolean,pageSize:input.pageSize as number},signal)).forServer();
       if(signal.aborted)throw new Error();return privateJsonResponse(result);

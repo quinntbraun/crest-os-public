@@ -1,4 +1,5 @@
 import 'server-only';
+import {parseLegacyHintRequest,summarizeLegacyMatches} from './legacy-contact-match-contract.ts';
 import {sessionDatabase} from '../security/session-database.ts';
 import {sessionCredentialHash} from '../security/session-credential.ts';
 import {createSessionLifecycle} from '../security/session-lifecycle.ts';
@@ -54,6 +55,14 @@ export function createVehicleDirectory(config:SessionDatabaseConfiguration,provi
       try{check(exact(input,['businessId','operationId'])&&vehicleUuid(input.businessId)&&vehicleUuid(input.operationId));const {businessId,operationId}=input;
         return await authorized(credential,businessId,signal,async(args,bounded)=>{const value=await database('SELECT crest_commands.lookup_vehicle_operation($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid) AS result',[...args,operationId],bounded);if(bounded.aborted)throw new Error();return new PrivateValue(exact(value,['state'])&&value.state==='absent'?Object.freeze({state:'absent' as const}):committed(value,businessId,operationId));});
       }catch{throw new VehicleDirectoryError('VEHICLE_REQUEST_FAILED');}
+    },
+    async legacyMatches(credential:string,businessId:string,input:unknown,signal:AbortSignal){
+      const request=parseLegacyHintRequest(input,'vehicle');
+      return authorized(credential,businessId,signal,async(args,bounded)=>{
+        const value=await database('SELECT crest_commands.find_legacy_vehicle_matches($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::text[]) AS result',[...args,...([request.hints])],bounded);
+        if(bounded.aborted)throw new Error();
+        return new PrivateValue(summarizeLegacyMatches(value,businessId,request.kind,request.hints.length));
+      });
     },
     async list(credential:string,input:{businessId:string;search:string;afterId:string|null;includeArchived:boolean;pageSize:number},signal:AbortSignal){
       try{check(exact(input,['businessId','search','afterId','includeArchived','pageSize'])&&vehicleUuid(input.businessId)&&typeof input.search==='string'&&[...input.search].length<=200&&(input.afterId===null||vehicleUuid(input.afterId))&&typeof input.includeArchived==='boolean'&&Number.isSafeInteger(input.pageSize)&&input.pageSize>=1&&input.pageSize<=50);const request=Object.freeze({...input});

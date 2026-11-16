@@ -3,6 +3,10 @@ import next from 'next';
 import nextConfig from '../../next.config.ts';
 import {bindApplicationHandler,createBoundedNodeServer} from './node-server.ts';
 import type {NodeConfiguration} from './node-server.ts';
+import {prepareSyntheticGoogleCalendarRunner} from '../operations/google-calendar-worker.ts';
+import {createLegacyContactImportDispatcher} from '../security/session-database.ts';
+import {startLegacyContactImportRunner} from '../customer/legacy-contact-import-runner.ts';
+export {openSyntheticSupplierStore,readSupplierProfile} from './synthetic-supplier-store.ts';
 export {createAuthenticationRuntime} from './authentication-runtime.ts';
 export {createTenantContextReader} from '../security/tenant-read.ts';
 export {createMutationTransaction} from '../security/mutation-transaction.ts';
@@ -23,7 +27,48 @@ export async function createCrestApplication(config:NodeConfiguration){
   const app=next({dev:false,quiet:true,conf:nextConfig,httpServer:server});
   try{
     await app.prepare();bindApplicationHandler(server,config,app.getRequestHandler());
-    return {server,close:async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await app.close();}};
+    let stopCalendar:(()=>Promise<void>)|undefined;
+    const calendar=config.syntheticGoogleCalendar,worker=calendar?.worker;
+    let startCalendar:(()=>void)|undefined;
+    if(worker!==undefined){
+      if(config.environment!=='test'||!config.business||!config.tls||!calendar||
+        Object.keys(worker).length!==1||typeof worker.connectionString!=='string')throw Error();
+      const begin=await prepareSyntheticGoogleCalendarRunner({environment:'test',origin:config.origin,
+        businessId:config.business.businessId,calendarKeyMaterial:calendar.calendarKeyMaterial,connectionString:worker.connectionString});
+      startCalendar=()=>{
+        const address=server.address();
+        if(address&&typeof address!=='string'&&['127.0.0.1','::1'].includes(address.address)&&
+          address.port===Number(new URL(config.origin).port||443))stopCalendar=begin();
+      };
+      server.once('listening',startCalendar);
+      server.once('close',()=>{void stopCalendar?.();});
+    }
+    let startContactImport:(()=>void)|undefined;
+    let stopContactImport:(()=>Promise<void>)|undefined;
+    const contactWorker=config.syntheticLegacyContactImportWorker;
+    if(contactWorker!==undefined){
+      const target=new URL(config.origin);
+      if(config.environment!=='test'||!config.business||!config.tls||config.syntheticLegacyContactApplications!=='background'||
+       target.protocol!=='https:'||target.origin!==config.origin||!['127.0.0.1','[::1]'].includes(target.hostname)||
+       !contactWorker||Object.keys(contactWorker).length!==1||typeof contactWorker.connectionString!=='string')throw Error();
+      const dispatch=createLegacyContactImportDispatcher({environment:'test',connectionString:contactWorker.connectionString});
+      startContactImport=()=>{
+        const address=server.address();
+        if(address&&typeof address!=='string'&&['127.0.0.1','::1'].includes(address.address)&&
+         address.port===Number(target.port||443))stopContactImport=startLegacyContactImportRunner(dispatch);
+      };
+      server.once('listening',startContactImport);
+      server.once('close',()=>{void stopContactImport?.();});
+    }
+    return {server,close:async()=>{
+      if(startCalendar)server.off('listening',startCalendar);
+      if(startContactImport)server.off('listening',startContactImport);
+      const stopped=Promise.all([stopCalendar?.(),stopContactImport?.()]);
+      server.closeAllConnections();
+      await new Promise<void>(resolve=>server.close(()=>resolve()));
+      await stopped;
+      await app.close();
+    }};
   }catch{await app.close();throw new Error('APPLICATION_START_FAILED');}
 }
 export {createCustomerAddressDirectory} from '../customer/customer-address-directory.ts';

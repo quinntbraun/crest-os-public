@@ -47,6 +47,12 @@ describe('Next request/response policy boundary',()=>{
     expect(response.headers.get('content-security-policy')).toContain("frame-ancestors 'none'");expect(response.headers.get('cache-control')).toBe('private, no-store, max-age=0');
     expect(response.headers.get('cdn-cache-control')).toBe('no-store');expect(response.headers.get('surrogate-control')).toBe('no-store');expect(response.headers.get('pragma')).toBe('no-cache');expect(response.headers.get('expires')).toBe('0');
   });
+  it('permits same-origin workers only on the CSV review page',()=>{
+    for(const [path,expected] of [['/customers/import-review',"'self'"],['/customers',"'none'"],['/customers/import-review/other',"'none'"],['/api/health',"'none'"]]){
+      const result=proxy(new NextRequest('https://crest.example.com'+path));
+      expect(result.headers.get('content-security-policy')).toContain('worker-src '+expected);
+    }
+  });
   it('leaves framework static cache decisions to Next while still supplying a fresh rendering policy',()=>{
     const a=proxy(new NextRequest('https://crest.example.com/_next/static/chunks/page-a.js')),b=proxy(new NextRequest('https://crest.example.com/_next/static/chunks/page-a.js'));
     expect(a.headers.get('cache-control')).toBeNull();expect(a.headers.get('cdn-cache-control')).toBeNull();expect(a.headers.get('content-security-policy')).not.toBe(b.headers.get('content-security-policy'));

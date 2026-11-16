@@ -13,8 +13,16 @@ it.each(schedulingOriginalKinds)('only clears acknowledged %s after a complete m
 });
 it.each(schedulingOriginalKinds)('retains %s when the server envelope changes an opaque original reference',async kind=>{
  const {original,envelope}=schedulingOriginalFixture(kind),memory=new Map<string,string>(),storage={getItem:(k:string)=>memory.get(k)??null,setItem:(k:string,v:string)=>{memory.set(k,v);},removeItem:(k:string)=>{memory.delete(k);}},store=createPendingSchedulingStore(storage,kind);store.write({schemaVersion:1,businessId:original.businessId,binding:randomBytes(32).toString('base64url'),reference:original.reference});
- const changed=structuredClone(envelope);const ref=changed.original.reference;if('expectedModeSequence' in ref)Object.assign(ref,{expectedModeSequence:'2'});else if('latestAppointmentId' in ref)Object.assign(ref,{latestAppointmentId:randomUUID()});else if('expectedJobVersion' in ref)Object.assign(ref,{expectedJobVersion:'99'});else Object.assign(ref,{expectedSequence:kind.endsWith('initialize')?'1':'2'});
+ const changed=structuredClone(envelope);const ref=changed.original.reference;if('priorEventId' in ref)Object.assign(ref,{priorEventId:randomUUID()});else if('policyId' in ref)Object.assign(ref,{policyId:randomUUID()});else if('expectedModeSequence' in ref)Object.assign(ref,{expectedModeSequence:'2'});else if('latestAppointmentId' in ref)Object.assign(ref,{latestAppointmentId:randomUUID()});else if('expectedJobVersion' in ref)Object.assign(ref,{expectedJobVersion:'99'});else Object.assign(ref,{expectedSequence:kind.endsWith('initialize')?'1':'2'});
  vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify(changed),{headers:{'content-type':'application/json','cache-control':'private, no-store'}})));await expect(openPendingOriginalOperation(kind,storage,original.businessId)!.reconcile(proof(),signal())).rejects.toThrow();expect(memory.has(pendingSchedulingKeys[kind])).toBe(true);
+});
+it('refuses policy revisions that look like an initial policy save or lack the second audit record',()=>{
+ const {original,envelope}=schedulingOriginalFixture('operations.custody.policy.revise');
+ const {receipt}=envelope.result;
+ for(const patch of [{sourceVersion:'1'},{sourceAuditIds:[randomUUID()]}]){
+  const incomplete={...envelope,result:{...envelope.result,receipt:{...receipt,...patch}}};
+  expect(()=>parseSchedulingOriginalResult(incomplete,original)).toThrow();
+ }
 });
 it('rejects a recorded observation and rejects impossible receipt version/action without discarding identity',()=>{
  const {original,envelope}=schedulingOriginalFixture('operations.job.reschedule');expect(()=>parseSchedulingOriginalResult({schemaVersion:1,state:'original_recorded',original},original)).toThrow();expect(()=>parseSchedulingOriginalResult({...envelope,result:{...envelope.result,receipt:{...envelope.result.receipt,version:'99'}}},original)).toThrow();expect(()=>parseSchedulingOriginalResult({...envelope,result:{...envelope.result,receipt:{...envelope.result.receipt,action:'confirm'}}},original)).toThrow();

@@ -5,7 +5,8 @@ import {createDocumentPolicy} from './security/document-policy.ts';
 // Header policy only. Authentication, CSRF, admission and authorization belong in routes.
 // Run even on prefetch/error/API requests so caller-controlled headers cannot skip it.
 export function proxy(request:NextRequest){
-  const {nonce,policy}=createDocumentPolicy(process.env.NODE_ENV==='development'?'development':'production');
+  const {nonce,policy}=createDocumentPolicy(process.env.NODE_ENV==='development'?'development':'production',
+    request.nextUrl.pathname==='/customers/import-review');
   const headers=new Headers(request.headers);
   headers.delete('x-nonce');headers.delete('content-security-policy-report-only');
   headers.set('x-crest-nonce',nonce);headers.set('content-security-policy',policy);

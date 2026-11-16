@@ -5,6 +5,11 @@ import {buildConfirmedJobArchive} from '../../src/operations/confirmed-job-archi
 import {confirmedJobRecords} from '../fixtures/confirmed-job-records.ts';
 import {decodeCustomerCsv} from '../support/customer-fixture';
 describe('saved confirmed job display-history archive',()=>{
+ it('retains the distinct field effective, job-update and event-recording stamps and refuses a mixed head',async()=>{
+  const f=confirmedJobRecords(),time=(offset:number)=>new Date(Date.parse(f.event.recordedAt)+offset).toISOString().replace(/\.(\d{3})Z$/,'.$1000Z'),effectiveAt=time(1),updatedAt=time(2),recordedAt=time(3),operationId='99999999-9999-4999-8999-999999999999',field={...f.event,id:'88888888-8888-4888-8888-888888888888',sequence:'2',operationId,recordedAt,effectiveAt,fromState:'scheduled',toState:'en_route',action:'state_change',appointment:null,draft:null,customerCommunication:null},head={...f.head,job:{...f.head.job,version:'2',state:'en_route',updated_at:updatedAt,operation_id:operationId}};
+  const parts=unzipSync(await buildConfirmedJobArchive({head,events:[f.event,field]})),saved=JSON.parse(strFromU8(parts['saved_job_history.json']!));expect(saved.events[1].effectiveAt).toBe(effectiveAt);expect(saved.events[1].recordedAt).toBe(recordedAt);expect(saved.head.job.updated_at).toBe(updatedAt);
+  for(const event of [{...field,effectiveAt:recordedAt},{...field,recordedAt:effectiveAt},{...field,actorId:'77777777-7777-4777-8777-777777777777'},{...field,operationId:'77777777-7777-4777-8777-777777777777'},{...field,toState:'paused'}])await expect(buildConfirmedJobArchive({head,events:[f.event,event]})).rejects.toThrow();
+ });
  it('retains distinct event recording and effective timestamps from one acknowledged command',async()=>{
   const {head,event}=confirmedJobRecords();event.recordedAt=new Date(new Date(event.effectiveAt).getTime()+1000).toISOString().replace(/\.(\d{3})Z$/,'.$1000Z');
   const parts=unzipSync(await buildConfirmedJobArchive({head,events:[event]})),saved=JSON.parse(strFromU8(parts['saved_job_history.json']!));expect(saved.events[0].recordedAt).toBe(event.recordedAt);expect(saved.events[0].effectiveAt).toBe(head.job.created_at);expect(saved.events[0].recordedAt).not.toBe(saved.events[0].effectiveAt);

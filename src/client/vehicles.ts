@@ -1,4 +1,5 @@
 import type {Proof} from './authentication';
+import {legacyMatchBodyLimit,legacyMatchCounts,parseLegacyHintRequest} from '../customer/legacy-contact-match-contract';
 import {exactCustomerObject as exact,customerUuid as uuid,customerVersion as version,customerInstant,requireCustomer as check} from '../customer/customer-contract';
 import {parseVehicle} from '../customer/vehicle-contract';
 import {parseVehicleDraft} from '../customer/customer-resource-contract';
@@ -14,7 +15,7 @@ function committed(value:unknown,businessId:string,ref:VehicleReference){
   const r=value.receipt;check(r.schemaVersion===1&&r.businessId===businessId&&r.vehicleId===ref.vehicleId&&version(r.vehicleVersion)&&BigInt(r.vehicleVersion)===BigInt(ref.expectedVersion)+1n&&uuid(r.auditEventId));
   return Object.freeze({state:'committed' as const,operationId:ref.operationId,recoveryEpoch:ref.recoveryEpoch,receipt:Object.freeze({schemaVersion:1 as const,businessId,vehicleId:ref.vehicleId,vehicleVersion:r.vehicleVersion,auditEventId:r.auditEventId})});
 }
-async function post(route:'context'|'list'|'save'|'history'|'operation',body:object,proof:Proof,external:AbortSignal){
+async function post(route:'legacy-matches'|'context'|'list'|'save'|'history'|'operation',body:object,proof:Proof,external:AbortSignal){
   try{
     check(typeof proof?.csrfToken==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(proof.csrfToken)&&Number.isSafeInteger(proof.expiresAt)&&proof.expiresAt>Date.now());
     const signal=AbortSignal.any([external,AbortSignal.timeout(40000)]);if(signal.aborted)throw new Error();
@@ -34,6 +35,14 @@ async function post(route:'context'|'list'|'save'|'history'|'operation',body:obj
     return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding')};
   }catch(error){throw error instanceof VehicleClientError?error:new VehicleClientError(route==='save'?'unknown':'unavailable');}
 }
+export async function vehicleLegacyMatches(businessId:string,input:unknown,proof:Proof,signal:AbortSignal){
+  const request=parseLegacyHintRequest(input,'vehicle');
+  check(new TextEncoder().encode(JSON.stringify(request)).byteLength<=legacyMatchBodyLimit);
+  const reply=await post('legacy-matches',request,proof,signal);
+  check(reply.status===200);
+  return legacyMatchCounts(reply.value,businessId,request.kind,request.hints.length);
+}
+
 // Stateless browser transport: no local/offline vehicle cache, credentials,
 // authority, retry loop or automatic operation-ID/epoch replacement.
 export const vehicles=Object.freeze({

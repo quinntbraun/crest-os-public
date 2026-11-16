@@ -1,7 +1,7 @@
 import 'server-only';
 import {randomBytes} from 'node:crypto';
 
-export function createDocumentPolicy(mode:'production'|'development'){
+export function createDocumentPolicy(mode:'production'|'development',csvReview=false){
   if(mode!=='production'&&mode!=='development')throw new Error('DOCUMENT_POLICY_CONFIGURATION_REQUIRED');
   const nonce=randomBytes(32).toString('base64');
   const policy=[
@@ -13,7 +13,7 @@ export function createDocumentPolicy(mode:'production'|'development'){
     "img-src 'self' blob:","font-src 'self'",
     `connect-src 'self'${mode==='development'?' ws: wss:':''}`,
     "object-src 'none'","base-uri 'none'","frame-src 'none'","frame-ancestors 'none'",
-    "form-action 'self'","worker-src 'none'","manifest-src 'self'","media-src 'none'"
+    "form-action 'self'",(csvReview?"worker-src 'self'":"worker-src 'none'"),"manifest-src 'self'","media-src 'none'"
   ].join('; ');
   return Object.freeze({nonce,policy});
 }

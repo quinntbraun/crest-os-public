@@ -77,3 +77,41 @@ test('vehicle screen is private, accessible and closed without its explicit runt
  const denied=await request.post('/api/business/vehicles/list',{data:{},headers:{origin:'http://127.0.0.1:3000'}});expect(denied.status()).toBe(503);expect(await denied.json()).toEqual({error:'VEHICLE_REQUEST_FAILED'});expect(denied.headers()['cache-control']).toContain('no-store');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
 });
+
+test('workspace tool search supports keyboard navigation and matching on phone and desktop',async({page})=>{
+  await page.goto('/');
+  await expect(page.getByRole('status')).toContainText('Workspace access could not be verified');
+  const search=page.getByRole('button',{name:'Find a tool',exact:true});
+  const originalViewport=page.viewportSize();
+  for(const width of [320,360,390]){
+    await page.setViewportSize({width,height:900});
+    const target=await search.boundingBox();
+    expect(target?.width).toBeGreaterThanOrEqual(44);
+    expect(target?.height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  }
+  if(originalViewport)await page.setViewportSize(originalViewport);
+  const dialog=page.getByRole('dialog',{name:'Find a tool',exact:true});
+  await search.focus();
+  await page.keyboard.press('Control+k');
+  await expect(dialog).toBeVisible();
+  const input=dialog.getByRole('searchbox',{name:'Search workspace tools',exact:true});
+  await expect(input).toBeFocused();
+  await input.fill('unmatched tool');
+  await expect(dialog.getByText('No tools match that search.',{exact:true})).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(search).toBeFocused();
+  await search.click();
+  await expect(input).toHaveValue('');
+  await input.fill('supplier bills');
+  const result=dialog.getByRole('link',{name:/^Expenses/});
+  await expect(result).toBeVisible();
+  await expect(dialog.getByRole('link')).toHaveCount(1);
+  expect((await new AxeBuilder({page}).include('.workspace-search').analyze()).violations).toEqual([]);
+  await input.press('ArrowDown');
+  await expect(result).toBeFocused();
+  await result.press('Enter');
+  await expect(page.getByRole('heading',{name:'Expenses',exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});

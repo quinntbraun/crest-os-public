@@ -2,28 +2,51 @@ import 'server-only';
 import {spawn} from 'node:child_process';
 import {mkdtemp,rmdir} from 'node:fs/promises';
 import {platform,tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {join,win32} from 'node:path';
 import {fail,fileHash,validInput,readValidationReply,SandboxValidationError} from './validation-reply.ts';
 import type {FileType} from './validation-contract.ts';
 
-// Trusted local operator/CI composition only. Never give the web process a Docker
-// socket or use this adapter to select a production host by implication.
+type DockerHost=Readonly<{platform:'linux'|'win32';executable:string;endpoint:string;environment:NodeJS.ProcessEnv}>;
+const linuxHost:DockerHost=Object.freeze({
+  platform:'linux',executable:'/usr/bin/docker',endpoint:'unix:///var/run/docker.sock',
+  environment:Object.freeze({PATH:'/usr/bin:/bin',LANG:'C',LC_ALL:'C',NODE_ENV:'production'})
+});
+
+// These adapters are for trusted operator processes. The web process receives
+// neither the Docker socket nor any of the operator's Docker configuration.
 export function createLocalSandboxValidator(config:{imageId:string}){
-  if(!/^sha256:[a-f0-9]{64}$/.test(config.imageId))fail('SANDBOX_INPUT_INVALID');
-  const imageId=config.imageId;
+  return createContainerValidator(config.imageId,linuxHost);
+}
+
+export function createSyntheticWindowsSandboxValidator(config:{
+  imageId:string;dockerExecutable:string;systemRoot:string;
+}){
+  const {dockerExecutable,systemRoot}=config;
+  if(!/^[A-Za-z]:[\\/]/.test(dockerExecutable)||win32.basename(dockerExecutable).toLowerCase()!=='docker.exe'
+    ||/\p{Cc}/u.test(dockerExecutable)||!/^[A-Za-z]:\\[^\\/:]+$/.test(systemRoot)||/\p{Cc}/u.test(systemRoot))
+    fail('SANDBOX_INPUT_INVALID');
+  return createContainerValidator(config.imageId,{
+    platform:'win32',executable:win32.normalize(dockerExecutable),endpoint:'npipe:////./pipe/dockerDesktopLinuxEngine',
+    environment:{SystemRoot:systemRoot,NODE_ENV:'production'}
+  });
+}
+
+function createContainerValidator(imageId:string,host:DockerHost){
+  if(!/^sha256:[a-f0-9]{64}$/.test(imageId))fail('SANDBOX_INPUT_INVALID');
   let busy=false,uncertain=false;
   return Object.freeze({async validate(input:Uint8Array,type:FileType,dispatchId:string,signal?:AbortSignal){
-    validInput(input,type);if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(dispatchId))fail('SANDBOX_INPUT_INVALID');if(platform()!=='linux')fail('SANDBOX_UNAVAILABLE');
+    validInput(input,type);if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(dispatchId))fail('SANDBOX_INPUT_INVALID');if(platform()!==host.platform)fail('SANDBOX_UNAVAILABLE');
     if(busy||uncertain)fail('SANDBOX_UNAVAILABLE');if(signal?.aborted)fail('SANDBOX_ABORTED');
     // Seal before any await. The image ID and all execution options are fixed.
     const bytes=Buffer.from(input),expected={type,byteSize:bytes.length,sha256:fileHash(bytes)};
     busy=true;const nonce=dispatchId,ends=performance.now()+60000;
     let directory:string|undefined,id:string|undefined,owned=false,cleanupFailed=false;
-    const environment={PATH:'/usr/bin:/bin',LANG:'C',LC_ALL:'C',NODE_ENV:'production' as const};
     async function command(args:string[],ms:number,limit:number,body?:Buffer,abort?:AbortSignal){
       if(abort?.aborted)fail('SANDBOX_ABORTED');
       return new Promise<{stdout:Buffer;exit:number}>((resolve,reject)=>{
-        const child=spawn('/usr/bin/docker',['--host','unix:///var/run/docker.sock','--config',directory!,...args],{env:environment,stdio:['pipe','pipe','pipe']});
+        const child=spawn(host.executable,['--host',host.endpoint,'--config',directory!,...args],{
+          env:host.environment,stdio:['pipe','pipe','pipe'],windowsHide:true
+        });
         const chunks:Buffer[]=[];let length=0,settled=false;
         const finish=(error?:SandboxValidationError,exit=0)=>{if(settled)return;settled=true;clearTimeout(timer);abort?.removeEventListener('abort',cancel);if(error){child.kill('SIGKILL');reject(error);}else resolve({stdout:Buffer.concat(chunks,length),exit});};
         const cancel=()=>finish(new SandboxValidationError('SANDBOX_ABORTED'));
@@ -53,6 +76,11 @@ export function createLocalSandboxValidator(config:{imageId:string}){
       let state;try{state=JSON.parse(inspected.stdout.toString('utf8'));}catch{return fail('SANDBOX_CREATE_UNCERTAIN');}
       if(inspected.exit!==0||state.Id!==id||state.Image!==imageId||state.Config?.Labels?.['crest.file.dispatch']!==nonce)fail('SANDBOX_CREATE_UNCERTAIN');
       owned=true;
+      // Seccomp:2 can be inherited from an outer Docker Desktop container even
+      // when this worker was created with seccomp=unconfined. Confirm the exact
+      // requested profile before starting; the worker also checks kernel limits.
+      const security=state.HostConfig?.SecurityOpt;
+      if(!Array.isArray(security)||security.length!==1||security[0]!=='no-new-privileges')fail('SANDBOX_PROTOCOL_INVALID');
       // Reserve cleanup time inside the 60-second total. Never start after cancel.
       if(signal?.aborted)fail('SANDBOX_ABORTED');const remaining=ends-performance.now()-10000;if(remaining<1)fail('SANDBOX_TIMEOUT');
       const response=await command(['start','--attach','--interactive',id],Math.min(48000,remaining),12*1024*1024,bytes,signal);

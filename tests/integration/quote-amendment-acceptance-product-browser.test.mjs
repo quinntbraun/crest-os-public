@@ -6,25 +6,14 @@ import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {unzipSync,strFromU8} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
-import {captureQuoteResponse} from '../support/quote-browser-response.mjs';
+import {captureAmendmentCommand,captureDuringAction,captureQuoteResponse} from '../support/quote-browser-response.mjs';
 import {pendingQuoteAmendmentKeys} from '../../src/client/pending-quote-amendment.ts';
 
 const commandPacing=new WeakMap();
 async function command(page,label,path,message){
- const pace=commandPacing.get(page),captures=[];let committed=false;
- const observe=response=>{if(new URL(response.url()).pathname===path&&response.request().method()==='POST')committed=true;};
- page.on('response',observe);
- try{
-  const response=await captureQuoteResponse(page,path,{beforeForward:pace});captures.push(response);
-  const read=await captureQuoteResponse(page,'/api/business/quotes/amendments/read',{matchesRequest:()=>committed,beforeForward:async()=>{assert(committed,'Read must follow the command response');await pace?.();}});captures.push(read);
-  // The helper forwards each real request once and captures its server bytes
-  // before returning them unchanged. No Browser Response body is read here.
-  await page.getByRole('button',{name:label,exact:true}).click();
-  const saved=await response.outcome;assert.equal(saved.status,200);assert.equal(saved.body.state,'committed');
-  const current=await read.outcome;assert.equal(current.status,200);assert(current.body&&typeof current.body==='object');
-  if(message)await expect(page.getByRole('status')).toContainText(message);
-  return saved.body.receipt;
- }finally{page.off('response',observe);await Promise.allSettled(captures.map(capture=>capture.cancel()));}
+ const receipt=await captureAmendmentCommand(page,path,()=>page.getByRole('button',{name:label,exact:true}).click(),commandPacing.get(page));
+ if(message)await expect(page.getByRole('status')).toContainText(message);
+ return receipt;
 }
 
 // A deterministic request lifecycle for the actual observer, with retired
@@ -81,10 +70,19 @@ async function reviewAndShare(page){
 }
 async function confirm(page){
  let scopeLoaded=false;
- const loaded=page.waitForResponse(response=>{const path=new URL(response.url()).pathname;if(path==='/api/business/quotes/amendments/acceptance-scope'){scopeLoaded=true;return false;}return scopeLoaded&&path==='/api/business/quotes/context'&&response.request().method()==='POST';}).then(async response=>{assert.equal(response.status(),200);await response.json();});
- void loaded.catch(()=>undefined);
- const prepare=page.getByRole('button',{name:'Review remaining work for acceptance',exact:true});await prepare.focus();await page.keyboard.press('Enter');
- await loaded;
+ const observe=response=>{
+  if(new URL(response.url()).pathname==='/api/business/quotes/amendments/acceptance-scope'&&response.request().method()==='POST'){
+   scopeLoaded=response.status()===200;
+  }
+ };
+ page.on('response',observe);
+ try{
+  const loaded=await captureDuringAction(page,'/api/business/quotes/context',async()=>{
+   const prepare=page.getByRole('button',{name:'Review remaining work for acceptance',exact:true});
+   await prepare.focus();await page.keyboard.press('Enter');
+  },{matchesRequest:()=>scopeLoaded,beforeForward:commandPacing.get(page)});
+  assert.equal(loaded.status,200);assert(loaded.body&&typeof loaded.body==='object');
+ }finally{page.off('response',observe);}
  await expect(page.getByRole('form',{name:'Customer amendment confirmation',exact:true})).toBeVisible();
  await expect(page.getByText('Save your edits before requesting review, approval or sharing. The comparison above still shows the saved proposal.',{exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Use one unassigned portion per line',exact:true}).click();
@@ -150,7 +148,9 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   assert.equal(accepted.agreementVersion,'2');console.log('SYNTHETIC_AMENDMENT_BROWSER_PHASE '+name+' accepted');await expect(page.getByText('This amendment refers to an earlier accepted agreement. Review the current accepted terms before preparing further changes.',{exact:true})).toHaveCount(0);await page.getByText('Review accepted changes',{exact:true}).click();await expect(page.getByRole('heading',{name:'Accepted change to work',exact:true})).toBeVisible();await page.getByText('Review accepted changes',{exact:true}).click();assert.equal(accepts,1);assert.deepEqual((await f.client.query('SELECT to_jsonb(g)::text AS row FROM crest.agreements g WHERE business_id=$1 AND version_no=1 ORDER BY id',[f.business])).rows,original);
   await expect(page.getByRole('heading',{name:'Customer acceptance recorded',exact:true})).toBeVisible();await capture('accepted',page.getByRole('heading',{name:'Customer acceptance recorded',exact:true}));phase('captured_accepted');
   await selectCurrent();phase('reloaded_accepted');await expect(page.getByRole('heading',{name:'Customer acceptance recorded',exact:true})).toBeVisible();assert.equal(accepts,1);
-  let settingsReads=0;const home=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/business/settings'&&r.request().method()==='POST'&&++settingsReads===2).then(async verified=>{assert.equal(verified.status(),200);await verified.json();});void home.catch(()=>undefined);phase('going_home');await page.goto(f.origin+'/');await bounded('home_read_body',()=>home);phase('home_response');await expect(page.getByRole('status')).toHaveText('Workspace access verified.');
+  let settingsReads=0;phase('going_home');
+  const home=await bounded('home_read_body',()=>captureDuringAction(page,'/api/business/settings',()=>page.goto(f.origin+'/'),{matchesRequest:()=>++settingsReads===2,beforeForward:pace}));
+  assert.equal(home.status,200);assert(home.body&&typeof home.body==='object');phase('home_response');await expect(page.getByRole('status')).toHaveText('Workspace access verified.');
   // Back may restore the intentionally cleared BFCache page. It must not
   // restore private selected terms or silently replay a mutation.
   phase('going_back');await bounded('back_navigation',()=>page.goBack());phase('back_returned');await expect(page.getByRole('heading',{name:'Quote amendments',exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'Selected accepted work',exact:true})).toHaveCount(0);assert.equal(accepts,1);
@@ -165,9 +165,12 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await page.getByText('Travel around this visit',{exact:true}).click();await page.getByLabel('Travel before (minutes)',{exact:true}).fill('0');await page.getByLabel('Travel after (minutes)',{exact:true}).fill('0');await page.getByLabel('Contact method',{exact:true}).selectOption('no_contact');await page.getByLabel('Reason no contact is selected',{exact:true}).fill('Synthetic visit arranged in person.');await page.getByLabel('Visit confirmation channel',{exact:true}).selectOption('in_person');await page.getByLabel('When the customer confirmed this visit',{exact:true}).fill(new Date(Date.now()-1000).toISOString().slice(0,16));await page.getByLabel('Visit confirmation evidence',{exact:true}).fill('Synthetic customer confirmed this exact work and visit window.');
   await page.getByRole('button',{name:/^Review schedule(?: again)?$/,exact:true}).click();await expect(page.getByRole('region',{name:'Schedule conflict review',exact:true})).toContainText('Current schedule review loaded.');
   const allocationReasons=page.getByLabel('Reason for this scope allocation',{exact:true});assert.equal(await allocationReasons.count(),2);for(const field of await allocationReasons.all()){await field.fill('Synthetic current accepted work assigned to this separately confirmed visit.');await expect(allocationReasons).toHaveCount(2);}console.log('SYNTHETIC_AMENDMENT_BROWSER_PHASE '+name+' stable_allocation_labels');
-  const booking=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/business/scheduling/book');await page.getByRole('button',{name:'Confirm and save job',exact:true}).click();const booked=await booking;assert.equal(booked.status(),200);const visit=await booked.json();assert.equal(visit.receipt.schemaVersion,2);assert.equal(visit.state,'committed');console.log('SYNTHETIC_AMENDMENT_BROWSER_PHASE '+name+' booked_current_scope');
-  const jobHistory=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/business/scheduling/history'&&r.request().method()==='POST').then(async loadedHistory=>{assert.equal(loadedHistory.status(),200);await loadedHistory.json();});void jobHistory.catch(()=>undefined);await page.getByRole('link',{name:'Open saved job in Schedule',exact:true}).click();await bounded('saved_job_history_body',()=>jobHistory);await expect(page.getByRole('heading',{name:'Synthetic lifecycle customer',exact:true})).toBeVisible();await page.getByRole('button',{name:'Cancel this job…',exact:true}).click();await page.getByLabel('Cancellation reason',{exact:true}).fill('Synthetic customer separately cancelled this visit before work.');await page.getByLabel('Customer-communication status',{exact:true}).selectOption('not_sent');
-  const cancellation=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/business/scheduling/cancel');await page.getByRole('button',{name:'Cancel this scheduled job',exact:true}).click();const cancelled=await cancellation;assert.equal(cancelled.status(),200);assert.equal((await cancelled.json()).state,'committed');await expect(page.locator('.job-change-status')).toContainText('Job cancellation saved.');console.log('SYNTHETIC_AMENDMENT_BROWSER_PHASE '+name+' cancelled_visit');
+  const booked=await captureDuringAction(page,'/api/business/scheduling/book',()=>page.getByRole('button',{name:'Confirm and save job',exact:true}).click(),{beforeForward:pace});
+  assert.equal(booked.status,200);const visit=booked.body;assert.equal(visit.receipt.schemaVersion,2);assert.equal(visit.state,'committed');console.log('SYNTHETIC_AMENDMENT_BROWSER_PHASE '+name+' booked_current_scope');
+  const jobHistory=await bounded('saved_job_history_body',()=>captureDuringAction(page,'/api/business/scheduling/history',()=>page.getByRole('link',{name:'Open saved job in Schedule',exact:true}).click(),{beforeForward:pace}));
+  assert.equal(jobHistory.status,200);assert(jobHistory.body&&typeof jobHistory.body==='object');await expect(page.getByRole('heading',{name:'Synthetic lifecycle customer',exact:true})).toBeVisible();await page.getByRole('button',{name:'Cancel this job…',exact:true}).click();await page.getByLabel('Cancellation reason',{exact:true}).fill('Synthetic customer separately cancelled this visit before work.');await page.getByLabel('Customer-communication status',{exact:true}).selectOption('not_sent');
+  const cancelled=await captureDuringAction(page,'/api/business/scheduling/cancel',()=>page.getByRole('button',{name:'Cancel this scheduled job',exact:true}).click(),{beforeForward:pace});
+  assert.equal(cancelled.status,200);assert.equal(cancelled.body.state,'committed');await expect(page.locator('.job-change-status')).toContainText('Job cancellation saved.');console.log('SYNTHETIC_AMENDMENT_BROWSER_PHASE '+name+' cancelled_visit');
   assert.equal((await f.client.query('SELECT state FROM crest.jobs WHERE business_id=$1 AND id=$2',[f.business,visit.receipt.jobId])).rows[0].state,'cancelled');assert.equal((await f.client.query('SELECT count(*)::int AS n FROM crest.schedule_reservations WHERE business_id=$1',[f.business])).rows[0].n,0);
   await selectCurrent();await page.getByRole('button',{name:'Prepare cancellation proposal',exact:true}).click();await page.getByLabel('Reason the customer will see',{exact:true}).fill('Synthetic customer separately cancels all remaining commercial work. The visit cancellation is already recorded; no refund or fee is inferred.');
   await command(page,'Save cancellation proposal','/api/business/quotes/amendments/create','saved');await reviewAndShare(page);await confirm(page);

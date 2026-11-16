@@ -6,6 +6,18 @@ const origin='https://crest.example.com',id=randomUUID();
 const protect=createRequestProtection({origin,environment:'production'});
 const request=(token:string,overrides:Record<string,string>={},method='POST')=>({method,headers:new Headers({origin,'content-type':'application/json','sec-fetch-site':'same-origin','x-crest-csrf':token,...overrides})});
 describe('browser mutation prerequisites',()=>{
+  it('requires the same origin and session proof on the explicitly admitted photo upload',()=>{
+    const photo=createRequestProtection({origin,environment:'test'},'condition-photo');
+    const token=createCsrfToken(id),proof=token.tokenForResponse(),stored=token.hashForDatabase();
+    const headers={'content-type':'image/png'};
+    expect(()=>photo(request(proof,headers),id,stored)).not.toThrow();
+    expect(()=>protect(request(proof,headers),id,stored)).toThrow(RequestProtectionError);
+    expect(()=>photo(request(proof),id,stored)).toThrow(RequestProtectionError);
+    expect(()=>photo(request(proof,headers,'PATCH'),id,stored)).toThrow(RequestProtectionError);
+    expect(()=>photo(request(proof,{...headers,origin:'https://evil.example.com'}),id,stored)).toThrow(RequestProtectionError);
+    expect(()=>photo(request(proof,{...headers,'content-type':'image/svg+xml'}),id,stored)).toThrow(RequestProtectionError);
+    expect(()=>photo(request('',headers),id,stored)).toThrow(RequestProtectionError);
+  });
   it('separates anonymous login proofs from authenticated session proofs and checks Origin at bootstrap',()=>{
     const token=createCsrfToken(id,'login'),r=request(token.tokenForResponse());
     expect(()=>protect(r,id,token.hashForDatabase(),'login')).not.toThrow();
@@ -51,4 +63,13 @@ describe('browser mutation prerequisites',()=>{
     const config={origin,environment:'production' as const},guard=createRequestProtection(config),token=createCsrfToken(id);config.origin='https://evil.example.com';
     expect(()=>guard(request(token.tokenForResponse()),id,token.hashForDatabase())).not.toThrow();
   });
+});
+
+it('isolates signed CSV octet-stream requests to the same-origin upload format',()=>{
+ const upload=createRequestProtection({origin,environment:'test'},'legacy-csv');
+ const meta=(type:string,from=origin)=>({method:'POST',headers:new Headers({'content-type':type,origin:from})});
+ expect(()=>upload.requireOrigin(meta('application/octet-stream'))).not.toThrow();
+ expect(()=>protect.requireOrigin(meta('application/octet-stream'))).toThrow(RequestProtectionError);
+ expect(()=>upload.requireOrigin(meta('application/json'))).toThrow(RequestProtectionError);
+ expect(()=>upload.requireOrigin(meta('application/octet-stream','https://other.example.com'))).toThrow(RequestProtectionError);
 });
