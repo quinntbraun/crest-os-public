@@ -190,8 +190,10 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .lead-match-actions button { width:auto; flex:1 1 9rem; max-width:15rem; margin:0; }
 @media (max-width:420px) { .lead-match-actions button { max-width:none; } }
 @media (max-width:600px) {
+  html { --workspace-bottom-clearance:calc(72px + env(safe-area-inset-bottom)); }
+  html:has(.workspace-destinations) { scroll-padding-block-end:var(--workspace-bottom-clearance); }
   main { padding:1.5rem 1rem 2rem; }
-  .workspace:not(.sign-in-workspace) { padding-bottom:calc(72px + env(safe-area-inset-bottom)); }
+  .workspace:not(.sign-in-workspace) { padding-bottom:var(--workspace-bottom-clearance); }
   .workspace-header { min-height:72px; padding:.75rem 1rem; gap:.5rem; }
   .workspace-purpose { display:none; }
   .workspace-destinations { position:fixed; bottom:0; left:0; right:0; z-index:20; padding:.25rem .25rem calc(.25rem + env(safe-area-inset-bottom)); border-top:1px solid var(--line); border-bottom:0; justify-content:space-around; }
@@ -383,6 +385,10 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .schedule-detail address { font-style:normal; }
 .schedule-detail textarea { font-size:1rem; }
 .booking-time-fields { display:grid; gap:1rem; }
+.proposal-fields,.proposal-field { display:grid; min-width:0; }
+.proposal-fields { gap:1rem; }
+.proposal-field { align-content:start; gap:.375rem; }
+.proposal-fields .field-help { margin:0; }
 .field-work-form { gap:.5rem; }
 .mileage-trip-list { display:grid; gap:.75rem; list-style:none; padding:0; }
 .mileage-trip-list button { margin:0; text-align:left; }
