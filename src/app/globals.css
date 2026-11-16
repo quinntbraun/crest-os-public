@@ -145,6 +145,7 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .home-shortcuts a:hover { border-color:var(--gold-ink); background:var(--canvas); }
 .today-grid,.today-secondary { display:grid; align-content:start; gap:1rem; min-width:0; }
 .today-grid { margin-top:1rem; }
+.today-primary { min-width:0; }
 .home-panel { min-width:0; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); padding:1.25rem; }
 .workspace-home > .home-panel { margin-top:1rem; }
 .home-panel .section-heading { flex-wrap:wrap; gap:0 .75rem; }

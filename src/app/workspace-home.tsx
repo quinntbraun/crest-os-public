@@ -52,6 +52,10 @@ export function WorkspaceHome(){
   },[load]);
   const reminders=view.followUps?.leads.filter(lead=>lead.follow_up_at!==null).sort((a,b)=>a.follow_up_at!<b.follow_up_at!?-1:a.follow_up_at!>b.follow_up_at!?1:0)??[];
   const visits=view.schedule?.visits?.jobs.filter(job=>!['cancelled','completed'].includes(job.state))??[],changes=view.schedule?.changes;
+  const quickActions=<nav className="home-shortcuts" aria-label="Quick actions">{shortcuts.map(({href,name,detail,glyph})=>
+        <a href={href} key={href} aria-label={'Open '+name.toLowerCase()}>
+          <span className="shortcut-glyph" aria-hidden="true">{glyph}</span><span><strong>{name}</strong><small>{detail}</small></span><span aria-hidden="true">↗</span>
+        </a>)}</nav>;
   const checking=view.phase==='checking';
   return <main className="workspace-home" aria-busy={checking}>
     <div className="today-heading">
@@ -73,11 +77,9 @@ export function WorkspaceHome(){
         <a href="/leads"><span>Lead follow-ups</span><strong data-unavailable={!view.followUps||undefined}>{view.followUps?shown(reminders.length,view.followUps.hasMore):'Unavailable'}</strong><span>Leads with a follow-up date</span><span className="overview-arrow" aria-hidden="true">↗</span></a>
         <a href="/appointment-holds"><span>Proposed times</span><strong data-unavailable={!view.proposals||undefined}>{view.proposals?shown(view.proposals.holds.length,view.proposals.hasMore):'Unavailable'}</strong><span>Saved proposal records</span><span className="overview-arrow" aria-hidden="true">↗</span></a>
       </nav>
-      <nav className="home-shortcuts" aria-label="Quick actions">{shortcuts.map(({href,name,detail,glyph})=>
-        <a href={href} key={href} aria-label={'Open '+name.toLowerCase()}>
-          <span className="shortcut-glyph" aria-hidden="true">{glyph}</span><span><strong>{name}</strong><small>{detail}</small></span><span aria-hidden="true">↗</span>
-        </a>)}</nav>
+      {visits.length===0&&quickActions}
       <div className="today-grid">
+      <div className="today-primary">
       <section className="home-panel" aria-label="Upcoming saved visits"><div className="section-heading"><h2>Upcoming visits</h2></div>
         {view.schedule===null||view.schedule.visits===null?<p>Upcoming visits could not be verified. <a href="/schedule">Check the schedule</a>.</p>:<><p className="field-help">Confirmed appointments over the next seven days.</p>{visits.length===0?<p>{view.schedule.visits.hasMore?'No active visits on this page. Open Schedule to review remaining visits.':'No active saved visits in the next seven days.'}</p>:<ul className="today-visits">{visits.map(job=><li key={job.jobId}>
           <time dateTime={job.startAt}><strong>{shortTime(job.startAt,job.timezone)}</strong><span>{visitDate(job.startAt,job.timezone)}</span></time>
@@ -87,6 +89,8 @@ export function WorkspaceHome(){
           </div></li>)}</ul>}{view.schedule.visits.hasMore&&<p className="field-help">More saved visits are available. Open Schedule for the remaining records.</p>}</>}
         <details className="home-changes" open={!changes||changes.items.length>0}><summary>Appointment changes to review</summary>{!changes?<p>Proposed changes could not be verified. Open Schedule to check.</p>:<>{changes.items.length===0?<p>No proposed appointment changes recorded.</p>:<ul className="follow-up-list">{changes.items.map(({head})=><li key={head.job.id}><a href={'/schedule?job='+encodeURIComponent(head.job.id)}>Review {head.confirmationDraft?.customerName??'saved job'}</a><span>Proposed: {when(head.latestAppointment.start_at,head.latestAppointment.timezone)}</span><span>Confirmed slot: {when(head.appointment.start_at,head.appointment.timezone)}</span></li>)}</ul>}{changes.hasMore&&<p>More proposed changes are available in Schedule.</p>}<p className="field-help">All dates. Proposals reserve no new time.</p></>}</details>
       </section>
+      {visits.length>0&&quickActions}
+      </div>
       <div className="today-secondary">
       {view.schedule&&'maintenance' in view.schedule&&<section className="home-panel" aria-label="Due maintenance reminders">
         <h2>Maintenance due</h2>
