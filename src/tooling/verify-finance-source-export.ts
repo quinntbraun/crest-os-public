@@ -1,3 +1,4 @@
+import {isSupplierPayableOperation,supplierPayableFile,verifySupplierPayableSource} from '../bookkeeping/expenses/supplier-payable-source.ts';
 import {isOpeningReceivablesOperation,openingReceivablesFile,verifyOpeningReceivablesSource} from '../bookkeeping/opening-receivables-source.ts';
 import {isStatementMatchDraftOperation,statementMatchDraftFile,verifyStatementMatchDraftSource} from '../bookkeeping/statement-match-draft-source.ts';
 import {isSupplierBillDraftOperation,supplierBillDraftFile,verifySupplierBillDraftSource} from '../bookkeeping/expenses/supplier-bill-draft-source.ts';
@@ -49,7 +50,7 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
   const manifest=record(manifestText),version=manifest.schemaVersion;
   require(exact(manifest,['schemaVersion','scope','businessId','currency','observedAt','historySnapshotToken','sourceTokens',
     'rowCounts','historyCounts','completePortableExport','referenceClosureComplete','completeBackup','files'])
-    &&(version===1||version===2||version===3||version===4||version===5||version===6||version===7||version===8||version===9||version===10||version===11||version===12||version===13||version===14||version===15||version===16||version===17||version===18||version===19||version===20||version===21||version===22)
+    &&(version===1||version===2||version===3||version===4||version===5||version===6||version===7||version===8||version===9||version===10||version===11||version===12||version===13||version===14||version===15||version===16||version===17||version===18||version===19||version===20||version===21||version===22||version===23)
     &&manifest.scope==='crest.posted-finance-source.v'+version&&manifest.businessId===businessId
     &&manifest.currency==='USD'&&typeof manifest.observedAt==='string'&&Number.isFinite(Date.parse(manifest.observedAt))
     &&token(manifest.historySnapshotToken)&&manifest.completePortableExport===false&&manifest.referenceClosureComplete===false
@@ -58,8 +59,8 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
     ...(version>=4?['tip']:[]),...(version>=5?['credit']:[]),...(version>=6?['paired']:[]),...(version>=7?['refund']:[]),
     ...(version>=9?['excessReturn']:[]),...(version>=10?['tipReturn']:[]),...(version>=11?['collectionFailure']:[]),...(version>=12?['refundTransfer']:[]),...(version>=13?['directTip']:[]),...(version>=14?['refundFee']:[]),...(version>=15?['failureRecredit']:[]),...(version>=16?['failureGrouped']:[]),...(version>=17?['restored']:[])];
   require(exact(manifest.sourceTokens,sourceNames)&&Object.values(manifest.sourceTokens).every(token));
-  const tables=financeSourceTables(version===18||version===19||version===20||version===21||version===22?17:version),expectedNames=new Set([...names,
-    ...(version>=18?['opening_worksheet_source.json']:[]),...(version>=19?[statementStagingFile]:[]),...(version>=20?[openingReceivablesFile]:[]),...(version>=21?[statementMatchDraftFile]:[]),...(version>=22?[supplierBillDraftFile]:[]),
+  const tables=financeSourceTables(version===18||version===19||version===20||version===21||version===22||version===23?17:version),expectedNames=new Set([...names,
+    ...(version>=18?['opening_worksheet_source.json']:[]),...(version>=19?[statementStagingFile]:[]),...(version>=20?[openingReceivablesFile]:[]),...(version>=21?[statementMatchDraftFile]:[]),...(version>=22?[supplierBillDraftFile]:[]),...(version>=23?[supplierPayableFile]:[]),
     ...tables.flatMap(({name})=>[name+'.csv',name+'_escape_map.json'])]);
   require(exact(manifest.rowCounts,tables.map(table=>table.name))&&Object.values(manifest.rowCounts).every(count)
     &&exact(manifest.historyCounts,['operations','auditEvents'])&&Object.values(manifest.historyCounts).every(count)
@@ -131,6 +132,7 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
       require(version>=20||kind!=='operation'||!isOpeningReceivablesOperation(evidence.row as Row));
       require(version>=21||kind!=='operation'||!isStatementMatchDraftOperation(evidence.row as Row));
       require(version>=22||kind!=='operation'||!isSupplierBillDraftOperation(evidence.row as Row));
+      require(version>=23||kind!=='operation'||!isSupplierPayableOperation(evidence.row as Row));
       if(version>=4)history[kind].push(evidence.row as Row);
     }
   }
@@ -139,6 +141,10 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
   if(version>=20)verifyOpeningReceivablesSource(record(files.get(openingReceivablesFile)!),businessId,record(files.get('opening_worksheet_source.json')!),history);
   if(version>=21)verifyStatementMatchDraftSource(record(files.get(statementMatchDraftFile)!),businessId,record(files.get(statementStagingFile)!),history);
   if(version>=22)verifySupplierBillDraftSource(record(files.get(supplierBillDraftFile)!),businessId,history);
+  const supplier=version===23?verifySupplierPayableSource(record(files.get(supplierPayableFile)!),businessId,
+   record(files.get(supplierBillDraftFile)!),history,table=>decoded.get(table)??[]):null;
+  rows+=supplier?.rows??0;
+  require(rows<=maxRows);
   const events=new Map(decoded.get('financial_events')!.map(row=>[row.id,row]));
   const entries=new Map(decoded.get('journal_entries')!.map(row=>[row.id,row]));
   const balances=new Map<unknown,{debit:bigint;credit:bigint}>();
@@ -250,8 +256,8 @@ export function verifyFinanceSourceExport(manifestText:string,parts:readonly Par
   if(version>=15)verifyCollectionFailureRecreditSourceClosure(table=>version>=16&&table==='customer_fund_lots'
     ?decoded.get(table)!.filter(row=>row.collection_failure_settlement_component_id===null):decoded.get(table)!,history);
   if(version>=16)verifyCollectionFailureGroupedRecreditSourceClosure(table=>decoded.get(table)!,history,version>=17);
-  const totals=[...balances.values()].reduce((sum,balance)=>sum+balance.debit,0n).toString();
+  const totals=[...balances.values()].reduce((sum,balance)=>sum+balance.debit,supplier?.debitCents??0n).toString();
   return Object.freeze({verified:true,profile:manifest.scope,files:files.size,sourceRows:rows,
-    balancedJournalEntries:balances.size,debitCents:totals,creditCents:totals,
+    balancedJournalEntries:balances.size+(supplier?.balancedJournalEntries??0),debitCents:totals,creditCents:totals,
     assurance:'internal_consistency_only',completePortableExport:false,completeBackup:false});
 }

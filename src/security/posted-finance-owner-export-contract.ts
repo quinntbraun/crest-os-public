@@ -15,12 +15,13 @@ export const collectionFailureGroupedRecreditExportProfile='crest.posted-finance
 export const restoredTipExportProfile='crest.posted-finance-source.v17';
 export const openingWorksheetExportProfile='crest.posted-finance-source.v18';
 
+export const supplierPayablesExportProfile='crest.posted-finance-source.v23';
 export const supplierBillDraftsExportProfile='crest.posted-finance-source.v22';
 export const statementMatchDraftsExportProfile='crest.posted-finance-source.v21';
 export const openingReceivablesExportProfile='crest.posted-finance-source.v20';
 export const statementStagingExportProfile='crest.posted-finance-source.v19';
 
 export function postedFinanceProfileForSchema(sourceSchemaVersion:number){
- return sourceSchemaVersion>=108?supplierBillDraftsExportProfile:sourceSchemaVersion>=107?statementMatchDraftsExportProfile:sourceSchemaVersion>=105?openingReceivablesExportProfile:sourceSchemaVersion>=103?statementStagingExportProfile:sourceSchemaVersion>=102?openingWorksheetExportProfile:sourceSchemaVersion>=101?restoredTipExportProfile:sourceSchemaVersion>=100?collectionFailureGroupedRecreditExportProfile:sourceSchemaVersion>=99?collectionFailureRecreditExportProfile:sourceSchemaVersion>=98?refundTransferFeeExportProfile:sourceSchemaVersion>=97?directReceiptTipExportProfile:sourceSchemaVersion>=96?refundTransferExportProfile:sourceSchemaVersion>=95?collectionFailureExportProfile:sourceSchemaVersion>=94?tipReturnExportProfile:sourceSchemaVersion>=93?excessReturnExportProfile
+ return sourceSchemaVersion>=109?supplierPayablesExportProfile:sourceSchemaVersion>=108?supplierBillDraftsExportProfile:sourceSchemaVersion>=107?statementMatchDraftsExportProfile:sourceSchemaVersion>=105?openingReceivablesExportProfile:sourceSchemaVersion>=103?statementStagingExportProfile:sourceSchemaVersion>=102?openingWorksheetExportProfile:sourceSchemaVersion>=101?restoredTipExportProfile:sourceSchemaVersion>=100?collectionFailureGroupedRecreditExportProfile:sourceSchemaVersion>=99?collectionFailureRecreditExportProfile:sourceSchemaVersion>=98?refundTransferFeeExportProfile:sourceSchemaVersion>=97?directReceiptTipExportProfile:sourceSchemaVersion>=96?refundTransferExportProfile:sourceSchemaVersion>=95?collectionFailureExportProfile:sourceSchemaVersion>=94?tipReturnExportProfile:sourceSchemaVersion>=93?excessReturnExportProfile
   :sourceSchemaVersion>=91?excessReceiptExportProfile:postedFinanceExportProfile;
 }

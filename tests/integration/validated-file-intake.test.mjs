@@ -16,9 +16,10 @@ import {pdf} from '../support/pdf-fixtures.mjs';
 const execute=promisify(execFile),hash=b=>createHash('sha256').update(b).digest('hex'),business=randomUUID(),bucket='crest-synthetic-intake';
 let server,client,store,validator,intake,origin,objects,requests,mode,fixtures;
 const xml=(res,status,code)=>{res.writeHead(status,{'content-type':'application/xml'});res.end(`<Error><Code>${code}</Code></Error>`);};
+const candidate=process.env.CREST_IMAGE_ID??'crest-os:ci';
 before(async()=>{
-  assert.equal(process.platform,'linux');
-  const imageId=execFileSync('docker',['image','inspect','--format','{{.Id}}','crest-os:ci'],{encoding:'utf8',timeout:10000}).trim();
+  assert.equal(process.platform,'linux');assert.match(candidate,/^(?:crest-os:ci|sha256:[a-f0-9]{64})$/);
+  const imageId=execFileSync('docker',['image','inspect','--format','{{.Id}}',candidate],{encoding:'utf8',timeout:10000}).trim();
   validator=createLocalSandboxValidator({imageId});
   const png=await sharp({create:{width:96,height:48,channels:3,background:'#224466'}}).withExif({IFD0:{Copyright:'Synthetic only'}}).png().toBuffer();
   fixtures=[{type:'image/png',bytes:png},{type:'image/jpeg',bytes:await sharp(png).jpeg().toBuffer()},{type:'image/heic',bytes:(await heicFixtures()).plain},{type:'application/pdf',bytes:pdf({pages:2})}];

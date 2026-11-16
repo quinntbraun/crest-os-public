@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {authentication} from '../../client/authentication';
-import {postedFinanceExportLimit,postedFinanceExportName,postedFinanceExportPath,postedFinanceExportProfile,excessReceiptExportProfile,excessReturnExportProfile,tipReturnExportProfile,collectionFailureExportProfile,refundTransferExportProfile,directReceiptTipExportProfile,refundTransferFeeExportProfile,collectionFailureRecreditExportProfile,collectionFailureGroupedRecreditExportProfile,restoredTipExportProfile,openingWorksheetExportProfile,statementStagingExportProfile,openingReceivablesExportProfile,statementMatchDraftsExportProfile,supplierBillDraftsExportProfile} from '../../security/posted-finance-owner-export-contract';
+import {postedFinanceExportLimit,postedFinanceExportName,postedFinanceExportPath,postedFinanceExportProfile,excessReceiptExportProfile,excessReturnExportProfile,tipReturnExportProfile,collectionFailureExportProfile,refundTransferExportProfile,directReceiptTipExportProfile,refundTransferFeeExportProfile,collectionFailureRecreditExportProfile,collectionFailureGroupedRecreditExportProfile,restoredTipExportProfile,openingWorksheetExportProfile,statementStagingExportProfile,openingReceivablesExportProfile,statementMatchDraftsExportProfile,supplierBillDraftsExportProfile,supplierPayablesExportProfile} from '../../security/posted-finance-owner-export-contract';
 
 type Phase='initial'|'ready'|'preparing'|'prepared'|'requested'|'failed';
 const messages:Record<Phase,string>={
@@ -48,7 +48,7 @@ async function verifiedArchive(response:Response,signal:AbortSignal){
 }
 
 export function PostedFinanceExport(){
- const [available,setAvailable]=useState(false),[phase,setPhase]=useState<Phase>('initial');
+ const [profile,setProfile]=useState<string|null>(null),[phase,setPhase]=useState<Phase>('initial');
  const operation=useRef<AbortController|null>(null),prepared=useRef<{url:string;timer:ReturnType<typeof setTimeout>}|null>(null);
  function discard(){
   operation.current?.abort();
@@ -68,8 +68,8 @@ export function PostedFinanceExport(){
     if(mounted&&!current.signal.aborted&&result&&typeof result==='object'&&'profile' in result
       &&(result.profile===postedFinanceExportProfile||result.profile===excessReceiptExportProfile
        ||result.profile===excessReturnExportProfile||result.profile===tipReturnExportProfile||result.profile===collectionFailureExportProfile
-       ||result.profile===refundTransferExportProfile||result.profile===directReceiptTipExportProfile||result.profile===refundTransferFeeExportProfile||result.profile===collectionFailureRecreditExportProfile||result.profile===collectionFailureGroupedRecreditExportProfile||result.profile===restoredTipExportProfile||result.profile===openingWorksheetExportProfile||result.profile===statementStagingExportProfile||result.profile===openingReceivablesExportProfile||result.profile===statementMatchDraftsExportProfile||result.profile===supplierBillDraftsExportProfile)){
-     setAvailable(true);
+       ||result.profile===refundTransferExportProfile||result.profile===directReceiptTipExportProfile||result.profile===refundTransferFeeExportProfile||result.profile===collectionFailureRecreditExportProfile||result.profile===collectionFailureGroupedRecreditExportProfile||result.profile===restoredTipExportProfile||result.profile===openingWorksheetExportProfile||result.profile===statementStagingExportProfile||result.profile===openingReceivablesExportProfile||result.profile===statementMatchDraftsExportProfile||result.profile===supplierBillDraftsExportProfile||result.profile===supplierPayablesExportProfile)){
+     setProfile(result.profile);
      setPhase('ready');
     }
    }catch{/* The optional download stays hidden when its private route is unavailable. */}
@@ -77,7 +77,7 @@ export function PostedFinanceExport(){
   }
   function leave(){
    discard();
-   setAvailable(false);
+   setProfile(null);
    setPhase('initial');
   }
   function visibility(){
@@ -127,10 +127,12 @@ export function PostedFinanceExport(){
   catch{discard();setPhase('failed');}
   finally{anchor.remove();}
  }
- if(!available)return null;
+ if(!profile)return null;
  return <section className="export-files" aria-label="Posted finance export" aria-busy={phase==='preparing'}>
   <h2>Posted finance CSV</h2>
-  <p>Download a private ZIP with posted invoice, payment, refund and expense records, journal entries and source history. Receipt files, customer and account directories, and a full business backup are outside this package.</p>
+  <p>{profile===supplierPayablesExportProfile
+   ?'Download a private ZIP with invoice, payment, refund, expense and supplier payable records, journal entries and audit history. The supplier record includes checksums for the original and preview files.'
+   :'Download a private ZIP with posted invoice, payment, refund and expense records, journal entries and source history. Use separate exports or backups for receipt files and business directories.'}</p>
   <button type="button" disabled={phase==='preparing'} onClick={()=>void prepare()}>Prepare posted finance CSV</button>
   {phase==='prepared'&&<button type="button" onClick={save}>Save ZIP</button>}
   {phase==='preparing'&&<button className="secondary" type="button" onClick={()=>{discard();setPhase('ready');}}>Cancel preparation</button>}

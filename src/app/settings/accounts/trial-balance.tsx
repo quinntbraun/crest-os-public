@@ -11,12 +11,17 @@ import type {FictionalJournalV7,FictionalTrialBalanceV7} from '../../../bookkeep
 import type {FictionalJournalV8,FictionalTrialBalanceV8} from '../../../bookkeeping/posted-report-v8-contract';
 import type {FictionalJournalV9,FictionalTrialBalanceV9} from '../../../bookkeeping/posted-report-v9-contract';
 import type {FictionalJournalV10,FictionalTrialBalanceV10} from '../../../bookkeeping/posted-report-v10-contract';
+import type {parseFictionalJournalV16,parseFictionalTrialBalanceV11} from '../../../bookkeeping/supplier-payable-report-contract';
 import {downloadFinanceHistory,financeAccounts} from '../../../client/finance-accounts';
 import {RecordedBalanceSheet} from './recorded-balance-sheet';
 import styles from './screen.module.css';
 
-type Balance=Awaited<ReturnType<typeof financeAccounts.readTrialBalance>>|FictionalTrialBalanceV2|FictionalTrialBalanceV3|FictionalTrialBalanceV4|FictionalTrialBalanceV5|FictionalTrialBalanceV6|FictionalTrialBalanceV7|FictionalTrialBalanceV8|FictionalTrialBalanceV9|FictionalTrialBalanceV10;
+type Balance=Awaited<ReturnType<typeof financeAccounts.readTrialBalance>>|FictionalTrialBalanceV2|FictionalTrialBalanceV3|FictionalTrialBalanceV4|FictionalTrialBalanceV5|FictionalTrialBalanceV6|FictionalTrialBalanceV7|FictionalTrialBalanceV8|FictionalTrialBalanceV9|FictionalTrialBalanceV10|ReturnType<typeof parseFictionalTrialBalanceV11>;
 type Journal=Awaited<ReturnType<typeof financeAccounts.readPostedJournal>>|FictionalJournalV2|FictionalJournalV3|FictionalJournalV4|FictionalJournalV5|FictionalJournalV6|FictionalJournalV7|FictionalJournalV8|FictionalJournalV9|FictionalJournalV10;
+type SupplierJournalRow=Extract<ReturnType<typeof parseFictionalJournalV16>['rows'][number],{supplierPayableId:string}>;
+function isSupplierJournalRow(row:Journal['rows'][number]):row is SupplierJournalRow{
+ return 'supplierPayableId' in row&&typeof row.supplierPayableId==='string';
+}
 type CorrectionJournalRow=FictionalJournalV2['rows'][number]|FictionalJournalV3['rows'][number]|FictionalJournalV4['rows'][number];
 const usd=(cents:string)=>'$'+expenseDollars(cents);
 const adjustmentPurpose={
@@ -25,6 +30,12 @@ const adjustmentPurpose={
  collection_failure_tip_revenue:'Original tip revenue reduced',
  collection_failure_tip_tax:'Original tip tax reduced',
  collection_failure_money:'Money account credited',
+} as const;
+const supplierPurpose={
+ supplier_bill_cost:'Supplier bill · Expense recorded',
+ supplier_bill_payable:'Supplier bill · Payable recorded',
+ supplier_settlement_payable:'Supplier payment · Payable reduced',
+ supplier_settlement_money:'Supplier payment · Verified disbursement',
 } as const;
 const refundDueLabels={service:'Service refund',excess:'Unused payment return',tip_return_due:'Tip return'} as const;
 function isRefundTransfer(row:Journal['rows'][number]):row is Extract<FictionalJournalV10['rows'][number],{refundTransferAdjustmentId:string}>{
@@ -125,7 +136,8 @@ export function TrialBalance({businessId}:{businessId:string}){
       const result=await financeAccounts.readPostedJournal(context,balance.throughOn,account||null,next?journal!.nextAfterLineId:null,signal);
       if(signal.aborted)return;
       const balanceVersion=reportVersion(balance);
-      const expectedJournalVersion=balanceVersion===10&&context.collectionFailureTipReinstatements?15
+      const expectedJournalVersion=balanceVersion===11?16
+        :balanceVersion===10&&context.collectionFailureTipReinstatements?15
         :balanceVersion===10&&context.collectionFailureGroupedRecredits?14
         :balanceVersion===10&&context.collectionFailureRecredits?13
         :balanceVersion===10&&context.refundTransferFees?12
@@ -144,7 +156,9 @@ export function TrialBalance({businessId}:{businessId:string}){
     downloadFinanceHistory('crest-fictional-trial-balance-'+balance.throughOn+'.csv',[
       ['Through date','Timezone','Currency','Observed UTC','Posted events','Coverage'],
       [balance.throughOn,balance.timeZone,balance.currency,balance.observedAt,balance.postedEventCount,
-        reportVersion(balance)===10
+        reportVersion(balance)===11
+          ?'Fictional partial ledger. Includes supplier bills and payments. Opening balances and reconciliation pending.'
+          :reportVersion(balance)===10
           ?'Fictional partial ledger. Includes returned and retried refunds. Opening balances and reconciliation pending.'
           :reportVersion(balance)===9
           ?'Fictional partial ledger. Includes adjustments for incoming payments, refunds, credits and same-day expenses. Opening balances and reconciliation pending.'
@@ -186,6 +200,7 @@ export function TrialBalance({businessId}:{businessId:string}){
     const includesRefundTransfers=reportVersion(journal)>=10;
     const includesCollectionRecredits=reportVersion(journal)>=13;
     const includesGroupedRecoveries=reportVersion(journal)>=14;
+    const includesSupplierPayables=reportVersion(journal)>=16;
     downloadFinanceHistory('crest-fictional-journal-page-'+journal.throughOn+'.csv',[
       ['Through date','Timezone','Currency','Observed UTC','Coverage'],
       [journal.throughOn,journal.timeZone,journal.currency,journal.observedAt,'Current page of the fictional partial ledger.'],
@@ -199,7 +214,8 @@ export function TrialBalance({businessId}:{businessId:string}){
         ...(includesCollectionFailures?['Payment adjustment ID','Payment adjustment component ID','Adjustment type','Original payment ID']:[]),
         ...(includesRefundTransfers?['Refund transfer adjustment ID','Refund transfer type','Prior refund event ID','Original refund event ID']:[]),
         ...(includesCollectionRecredits?['Restored deposit ID','Original failure ID','Original failure component ID','Restored payment ID']:[]),
-        ...(includesGroupedRecoveries?['Grouped deposit ID','Grouped deposit portion ID','Grouped original failure ID','Grouped original failure component ID','Grouped original payment ID']:[])],
+        ...(includesGroupedRecoveries?['Grouped deposit ID','Grouped deposit portion ID','Grouped original failure ID','Grouped original failure component ID','Grouped original payment ID']:[]),
+        ...(includesSupplierPayables?['Supplier bill ID','Supplier payable ID','Supplier settlement ID','Supplier money movement ID']:[])],
       ...journal.rows.map(row=>{
        const recredit=collectionRecredit(row);
        const settlement=groupedRecovery(row);
@@ -220,14 +236,17 @@ export function TrialBalance({businessId}:{businessId:string}){
         ...(includesCollectionRecredits?[recredit?.recreditId??'',recredit?.failureId??'',
           recredit?.componentId??'',recredit?.paymentId??'']:[]),
         ...(includesGroupedRecoveries?[settlement?.settlementId??'',settlement?.componentId??'',settlement?.failureId??'',
-          settlement?.failureComponentId??'',settlement?.paymentId??'']:[])];
+          settlement?.failureComponentId??'',settlement?.paymentId??'']:[]),
+        ...(includesSupplierPayables?(isSupplierJournalRow(row)
+          ?[row.supplierBillId??'',row.supplierPayableId??'',row.supplierSettlementId??'',row.supplierMoneyMovementId??'']
+          :['','','','']):[])];
       }),
     ]);
   }
   return <details className="review-card" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
     <summary>Fictional trial balance</summary>
     <section className="trial-balance" aria-label="Fictional trial balance">
-      <p>Review posted invoices, direct payments and same-day expenses. Opening balances and bank reconciliation are still pending.</p>
+      <p>Review posted balances by account. Opening balances and bank reconciliation are still pending.</p>
       <form onSubmit={event=>{event.preventDefault();void load();}}>
         <label>Through date (optional)<input type="date" value={through} disabled={busy}
           onChange={event=>{setThrough(event.target.value);setBalance(null);setJournal(null);setJournalMessage('');setMessage('');}}/></label>
@@ -238,7 +257,9 @@ export function TrialBalance({businessId}:{businessId:string}){
       {balance&&<>
         <p>Through <time dateTime={balance.throughOn}>{balance.throughOn}</time> · USD · {balance.timeZone}</p>
         {balance.coverageStart&&<p className="field-help">First included posting {balance.coverageStart} · {balance.postedEventCount} posted {balance.postedEventCount==='1'?'event':'events'}</p>}
-        {hasPaymentCorrections(balance)&&<p className="field-help">{reportVersion(balance)===10
+        {hasPaymentCorrections(balance)&&<p className="field-help">{reportVersion(balance)===11
+          ?'Supplier payables, customer funds and tax payable match the ledger through this date.'
+          :reportVersion(balance)===10
           ?'Includes returned and retried refunds. Customer funds and tax payable match the ledger through this date. Refunds still due are a separate customer liability.'
           :reportVersion(balance)===9
           ?'Includes recording errors and settled failures for incoming payments. Customer funds and tax payable match the ledger through this date.'
@@ -316,6 +337,15 @@ export function TrialBalance({businessId}:{businessId:string}){
                 return <tr key={row.lineId}>
                   <th scope="row">
                     <time dateTime={row.effectiveOn}>{row.effectiveOn}</time><small>{row.code} · {row.name}</small>
+                    {isSupplierJournalRow(row)&&<>
+                      <small>{supplierPurpose[row.purpose]}</small>
+                      <details><summary>Source references</summary>
+                        <small>Supplier bill {row.supplierBillId}</small>
+                        <small>Payable {row.supplierPayableId}</small>
+                        {row.supplierSettlementId&&<small>Supplier settlement {row.supplierSettlementId}</small>}
+                        {row.supplierMoneyMovementId&&<small>Money movement {row.supplierMoneyMovementId}</small>}
+                      </details>
+                    </>}
                     {'fundLotId' in row&&row.purpose==='receipt_funds'&&<>
                       <small>Payment received · Customer funds held</small>
                       <details><summary>Source references</summary><small>Payment {row.paymentId}</small>

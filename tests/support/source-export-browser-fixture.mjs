@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import {createConfirmedBookingFixture} from './confirmed-booking-fixture.mjs';
 import {field54Candidate} from './field54-candidate.mjs';
+import {prepareHeldSupplierPayable} from './held-supplier-payables.mjs';
 import {financeHeldTip83Candidate} from './finance-held-tip83-candidate.mjs';
 import {financeInvoiceCredit84Candidate} from './finance-invoice-credit84-candidate.mjs';
 import {financePairedInvoiceCredit85Candidate} from './finance-paired-invoice-credit85-candidate.mjs';
@@ -11,8 +12,9 @@ import {prepareExcessReturnCandidate} from './finance-excess-return-candidate.mj
 import {confirmedBookingRequest} from '../fixtures/confirmed-booking.ts';
 import {randomBytes,randomUUID,createHash} from 'node:crypto';
 import {browserTestTls} from './browser-test-tls.mjs';
-import {readFile,chmod} from 'node:fs/promises';
+import {readFile,chmod,mkdir,writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
+import {join} from 'node:path';
 import {Readable} from 'node:stream';
 import {URI,TOTP} from 'otpauth';
 import {migrationSandbox} from './migration-sandbox.mjs';
@@ -61,6 +63,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  const statementMatchReview=statementStaging&&process.env.CREST_TEST_STATEMENT_MATCH_REVIEW==='1';
  const statementMatchDrafts=statementMatchReview&&process.env.CREST_TEST_STATEMENT_MATCH_DRAFTS==='1';
  const supplierBillDrafts=statementMatchDrafts&&process.env.CREST_TEST_SUPPLIER_BILL_DRAFTS==='1';
+ const supplierPayableReview=supplierBillDrafts&&process.env.CREST_TEST_SUPPLIER_PAYABLE_REVIEW==='1';
+ const supplierPayablePosting=supplierPayableReview&&process.env.CREST_TEST_SUPPLIER_PAYABLE_POSTING==='1';
  const openingArPreview=openingWorksheet&&process.env.CREST_TEST_OPENING_AR_PREVIEW==='1';
  assert(!openingArPreview||postedFinanceExport);
  const recordedIncomeStatement=process.env.CREST_TEST_RECORDED_INCOME_STATEMENT==='1';
@@ -89,8 +93,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  assert.equal(typeof quoteCommercial,'boolean');assert(!quoteCommercial||product&&workspace&&quotes&&quoteReview,'quote commercial journeys require the actual workspace, quotes and review product server');
  assert(["linux","win32"].includes(process.platform),"supported disposable TLS/Auth browser fixture required");process.env.NODE_ENV='production';
  assert(!photoFixture||dropoffCustody&&Buffer.isBuffer(photoFixture));
- let sandbox,client,service,login,owned=false,server,h,app,photoStorage,photoLogin,financeLogin,calendarLogin,calendarWorkerLogin,postedFinanceLogin;
- async function close(){try{if(app){await app.close();app=undefined;server=undefined;}else if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));server=undefined;}}finally{try{await h?.close();h=undefined;}finally{try{await service?.close();service=undefined;}finally{try{if(photoStorage)await photoStorage.close();if(photoLogin)await sandbox.admin.query('DROP ROLE '+photoLogin);if(calendarLogin)await sandbox.admin.query('DROP ROLE '+calendarLogin);if(calendarWorkerLogin)await sandbox.admin.query('DROP ROLE '+calendarWorkerLogin);if(financeLogin)await sandbox.admin.query('DROP ROLE '+financeLogin);if(postedFinanceLogin)await sandbox.admin.query('DROP ROLE '+postedFinanceLogin);if(owned){await sandbox.admin.query('DROP ROLE '+login);owned=false;}}finally{await sandbox?.close();sandbox=undefined;}}}}}
+ let sandbox,client,service,login,owned=false,server,h,app,photoStorage,photoLogin,financeLogin,calendarLogin,calendarWorkerLogin,postedFinanceLogin,supplierStorage,supplierDocuments,supplierWorkerLogin;
+ async function close(){try{if(app){await app.close();app=undefined;server=undefined;}else if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));server=undefined;}}finally{try{await h?.close();h=undefined;}finally{try{await service?.close();service=undefined;}finally{try{if(photoStorage)await photoStorage.close();supplierDocuments?.close();if(supplierStorage)await supplierStorage.close();if(supplierWorkerLogin)await sandbox.admin.query('DROP ROLE '+supplierWorkerLogin);if(photoLogin)await sandbox.admin.query('DROP ROLE '+photoLogin);if(calendarLogin)await sandbox.admin.query('DROP ROLE '+calendarLogin);if(calendarWorkerLogin)await sandbox.admin.query('DROP ROLE '+calendarWorkerLogin);if(financeLogin)await sandbox.admin.query('DROP ROLE '+financeLogin);if(postedFinanceLogin)await sandbox.admin.query('DROP ROLE '+postedFinanceLogin);if(owned){await sandbox.admin.query('DROP ROLE '+login);owned=false;}}finally{await sandbox?.close();sandbox=undefined;}}}}}
  try{
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);const previous=await sandbox.apply(target,await sandbox.prefix(42)),registered=await sandbox.apply(target,await sandbox.prefix(43));assert.equal(registered.history.length,43);assert.deepEqual(registered.history.slice(0,42),previous.history);
   if(catalog){const adopted=await sandbox.apply(target,await sandbox.prefix(44));assert.equal(adopted.history.length,44);assert.deepEqual(adopted.history.slice(0,43),registered.history);}
@@ -184,7 +188,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   if(receivableAging&&!postedFinanceExport)assert.equal((await sandbox.apply(target,await sandbox.prefix(88))).history.length,88);
   let postedFinanceConfiguration;
   if(postedFinanceExport){
-   const schemaVersion=supplierBillDrafts?108:statementMatchDrafts?107:statementMatchReview?106:openingArPreview?105:recordedIncomeStatement?104:statementStaging?103:openingWorksheet?102:restoredTips?101:collectionFailureGroupedRecreditExport?100:collectionFailureRecreditExport?99:refundTransferFeeExport?98:directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
+   const schemaVersion=supplierPayableReview?109:supplierBillDrafts?108:statementMatchDrafts?107:statementMatchReview?106:openingArPreview?105:recordedIncomeStatement?104:statementStaging?103:openingWorksheet?102:restoredTips?101:collectionFailureGroupedRecreditExport?100:collectionFailureRecreditExport?99:refundTransferFeeExport?98:directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
    const currentRegistry=JSON.parse(await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url),'utf8'));
    const source=excessReturnExport&&currentRegistry.migrations.length===92
     ?await prepareExcessReturnCandidate(sandbox):await sandbox.prefix(schemaVersion);
@@ -243,6 +247,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    if(statementMatchReview)financeConfiguration.statementMatchReview=true;
    if(statementMatchDrafts)financeConfiguration.statementMatchDrafts=true;
    if(supplierBillDrafts)financeConfiguration.supplierBillDrafts=true;
+   if(supplierPayableReview)financeConfiguration.supplierPayableReview=true;
+   if(supplierPayablePosting)financeConfiguration.supplierPayablePosting=true;
    if(recordedIncomeStatement)financeConfiguration.recordedIncomeStatement=true;
    if(openingArPreview)financeConfiguration.openingArPreview=true;
    await client.query("INSERT INTO crest_private.finance_controls(business_id,recovery_authority_id,created_by,origin) SELECT $1,id,$2,'system' FROM crest_private.business_recovery_authorities WHERE business_id=$1",[business,actor]);
@@ -470,6 +476,44 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    photoRuntime={objects:photoStorage.store,stagingOrigin:photoStorage.origin,
     dispatch:runtime.createDropoffPhotoDispatch(authority,photoStorage.store,validator)};
   }
+  let supplierOriginalRuntime,originalFile,originalMimeType;
+  if(supplierPayablePosting){
+   const worker='crest_supplier_test_'+randomBytes(8).toString('hex'),secret=randomBytes(32).toString('hex');
+   await sandbox.admin.query('CREATE ROLE '+worker+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+secret+"'");
+   supplierWorkerLogin=worker;
+   await sandbox.admin.query('GRANT crest_supplier_bill_document_worker TO '+worker);
+   const workerUrl=new URL(target);workerUrl.username=worker;workerUrl.password=secret;
+   supplierStorage=await runtime.custodyPhotoObjects();
+   const imageId=process.env.CREST_SUPPLIER_DOCUMENT_IMAGE_ID;
+   if(imageId){
+    originalMimeType='application/pdf';
+    originalFile=(await import('./pdf-fixtures.mjs')).pdf({pages:2});
+    const workspaceId=randomBytes(8).toString('hex'),directory=join(sandbox.workspace,'supplier-documents');
+    const profile=()=>({version:1,workspaceId,origin:supplierStorage.origin,bucket:supplierStorage.bucket,
+     credentials:{accessKeyId:randomBytes(16).toString('hex'),secretAccessKey:randomBytes(32).toString('hex')}});
+    supplierStorage.objects.set('originals/_crest_store_identity',{bytes:Buffer.from('crest synthetic storage '+workspaceId),type:'application/octet-stream'});
+    await mkdir(directory,{mode:0o700});
+    await writeFile(join(directory,'web.json'),JSON.stringify(profile()),{mode:0o600,flag:'wx'});
+    await writeFile(join(directory,'worker.json'),JSON.stringify({environment:'test',businessId:business,storage:profile(),
+     workerConnectionString:workerUrl.href,decoder:{imageId,dockerExecutable:process.env.CREST_TEST_DOCKER_EXECUTABLE},
+     authentication:{...authentication,loginKey:authentication.loginKey.toString('base64url'),
+      keys:authentication.keys.map(({id,key})=>({id,key:key.toString('base64url')}))}}),{mode:0o600,flag:'wx'});
+    const {openSyntheticSupplierDocuments}=await import('../../scripts/synthetic-supplier-documents.mjs');
+    const workspace={id:workspaceId,businessId:business};
+    await assert.rejects(openSyntheticSupplierDocuments(sandbox.workspace,workspace,108));
+    await assert.rejects(openSyntheticSupplierDocuments(sandbox.workspace,{...workspace,id:'0'.repeat(16)},109));
+    supplierDocuments=await openSyntheticSupplierDocuments(sandbox.workspace,workspace,109);
+    supplierOriginalRuntime=supplierDocuments.runtime;
+   }else{
+    const {default:sharp}=await import('sharp');
+    originalMimeType='image/png';
+    originalFile=await sharp({create:{width:80,height:60,channels:3,background:'#6b5340'}}).png().toBuffer();
+    const expected=sha(originalFile);
+    const validator={async validate(bytes,type){assert.equal(type,'image/png');assert.equal(sha(bytes),expected);return runtime.validateImage(bytes,type);}};
+    supplierOriginalRuntime={objects:supplierStorage.receipts,stagingOrigin:supplierStorage.origin,
+     dispatch:runtime.createSupplierOriginalDispatcher({...config,businessId:business},auth.provider,auth.tokens,workerUrl.href,supplierStorage.receipts,validator)};
+   }
+  }
   const claim={formatVersion:1,profile:'crest.business-source-journal-bundle.v1',businessId:business,actorId:actor,exportJobId:jobId,recoveryEpoch:epoch,leaseId},observedAt=(await client.query("SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"+00:00\"') AS value")).rows[0].value,bytes=[product?Buffer.alloc(20000,97):Buffer.from('example'),Buffer.from('{"x":123}')];
   const plan={formatVersion:1,claim,generationId:randomUUID(),observedAt,appReleaseId:release,sourceSchemaVersion:43,manifestSha256:sha(bytes[1]),parts:[{partId:randomUUID(),fileName:'example.csv',contentType:'text/csv; charset=utf-8',bytes:bytes[0].length,sha256:sha(bytes[0])},{partId:randomUUID(),fileName:'source_manifest.json',contentType:'application/json',bytes:9,sha256:sha(bytes[1])}],totalBytes:bytes.reduce((n,value)=>n+value.length,0),referenceClosureComplete:false,completePortableExport:false,completeBackup:false},planSha256=sha(JSON.stringify(plan)),journal=runtime.createSourceExportDatabaseJournal(config,auth.provider,auth.tokens,job,operation),parts=[];
   const stage=async(name,raw)=>{assert.deepEqual(await journal[name](credential,raw,signal()),{formatVersion:1,stage:name,requestSha256:sha(raw)});};h=await runtime.custodyFixture(async()=>{});
@@ -487,7 +531,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     await client.query('INSERT INTO crest_private.google_calendar_credential_key VALUES(true,$1)',[identity.credentialKeyId]);
     if(calendarWorkerLogin)await client.query('INSERT INTO crest_private.google_calendar_worker_principals(business_id,principal) VALUES($1,$2)',[business,calendarWorkerLogin]);
    }
-   app=await runtime.createCrestApplication({origin,environment:'test',tls,authentication:auth,business:{businessId:business},customers:true,...workspace?{vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true}:{},...catalog?{syntheticCatalog:true,operationResolution:true}:{sourceExports:{appReleaseId:release,store:h.store}},...quotes?{syntheticQuotes:true,operationResolution:true}:{},...quoteReview?{syntheticQuoteReview:true}:{},...quoteCommercial?{syntheticQuoteCommercial:true,operationResolution:true}:{},...appointmentHolds?{syntheticAppointmentHolds:true,operationResolution:true}:{},...expenses?{syntheticExpenses:true,operationResolution:true}:{},...calendarConfiguration?{syntheticGoogleCalendar:calendarConfiguration}:{},...postedFinanceConfiguration?{syntheticPostedFinanceExport:postedFinanceConfiguration}:{},...financeConfiguration?{syntheticFinanceAccounts:financeConfiguration}:{},...scheduling?{syntheticScheduling:true}:{},...amendments?{syntheticQuoteAmendments:true}:{},...amendmentAcceptance?{syntheticQuoteAmendmentAcceptance:true}:{},...fieldSessions?{syntheticFieldSessions:true}:{},...jobCompletion?{syntheticJobCompletion:true}:{},...jobMileage?{syntheticJobMileage:true}:{},...supportTrips?{syntheticSupportTrips:true}:{},...unfulfilledCancellation?{syntheticUnfulfilledCancellation:true}:{},...workTime?{syntheticWorkTime:true}:{},...workBoundary?{syntheticWorkBoundary:true}:{},...workStart?{syntheticWorkStart:true}:{},...workEnd?{syntheticWorkEnd:true}:{},...mobileDeparture?{syntheticMobileDeparture:true}:{},...reviewOutcome?{syntheticReviewOutcome:true}:{},...reviewHistory?{syntheticReviewHistory:true}:{},...maintenanceFollowUp?{syntheticMaintenanceFollowUp:true}:{},...dropoffCustody?{syntheticDropoffCustody:true}:{},...dropoffPolicyRevision?{syntheticDropoffPolicyRevision:true}:{},...pickupTrips?{syntheticPickupTrips:true}:{},...pickupCollection?{syntheticPickupCollection:true}:{},...pickupPolicy?{syntheticPickupPolicy:true}:{},...pickupPhotos?{syntheticPickupPhotos:true}:{},...pickupReturnWorkflow?{syntheticPickupWork:true,syntheticPickupRelease:true,syntheticPickupReturnFailure:true}:{},...photoRuntime?{syntheticDropoffPhotos:photoRuntime}:{}});server=app.server;
+   app=await runtime.createCrestApplication({origin,environment:'test',tls,authentication:auth,business:{businessId:business},customers:true,...workspace?{vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true}:{},...catalog?{syntheticCatalog:true,operationResolution:true}:{sourceExports:{appReleaseId:release,store:h.store}},...quotes?{syntheticQuotes:true,operationResolution:true}:{},...quoteReview?{syntheticQuoteReview:true}:{},...quoteCommercial?{syntheticQuoteCommercial:true,operationResolution:true}:{},...appointmentHolds?{syntheticAppointmentHolds:true,operationResolution:true}:{},...expenses?{syntheticExpenses:true,operationResolution:true}:{},...calendarConfiguration?{syntheticGoogleCalendar:calendarConfiguration}:{},...postedFinanceConfiguration?{syntheticPostedFinanceExport:postedFinanceConfiguration}:{},...financeConfiguration?{syntheticFinanceAccounts:financeConfiguration}:{},...scheduling?{syntheticScheduling:true}:{},...amendments?{syntheticQuoteAmendments:true}:{},...amendmentAcceptance?{syntheticQuoteAmendmentAcceptance:true}:{},...fieldSessions?{syntheticFieldSessions:true}:{},...jobCompletion?{syntheticJobCompletion:true}:{},...jobMileage?{syntheticJobMileage:true}:{},...supportTrips?{syntheticSupportTrips:true}:{},...unfulfilledCancellation?{syntheticUnfulfilledCancellation:true}:{},...workTime?{syntheticWorkTime:true}:{},...workBoundary?{syntheticWorkBoundary:true}:{},...workStart?{syntheticWorkStart:true}:{},...workEnd?{syntheticWorkEnd:true}:{},...mobileDeparture?{syntheticMobileDeparture:true}:{},...reviewOutcome?{syntheticReviewOutcome:true}:{},...reviewHistory?{syntheticReviewHistory:true}:{},...maintenanceFollowUp?{syntheticMaintenanceFollowUp:true}:{},...dropoffCustody?{syntheticDropoffCustody:true}:{},...dropoffPolicyRevision?{syntheticDropoffPolicyRevision:true}:{},...pickupTrips?{syntheticPickupTrips:true}:{},...pickupCollection?{syntheticPickupCollection:true}:{},...pickupPolicy?{syntheticPickupPolicy:true}:{},...pickupPhotos?{syntheticPickupPhotos:true}:{},...pickupReturnWorkflow?{syntheticPickupWork:true,syntheticPickupRelease:true,syntheticPickupReturnFailure:true}:{},...photoRuntime?{syntheticDropoffPhotos:photoRuntime}:{},...supplierOriginalRuntime?{syntheticSupplierOriginals:supplierOriginalRuntime}:{}});server=app.server;
    server.prependListener('request',incoming=>requests.push({path:new URL(incoming.url,origin).pathname,method:incoming.method}));
    await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
 
@@ -529,6 +573,15 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     throw error;
    }finally{hashed.fill(0);}
   }
-  return{origin,product,authorizePostedFinance,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
+  const preparePayable=supplierPayablePosting?async(day)=>{
+   const checked=await lifecycle.verify(credential,signal(),'background',true);
+   const hashed=runtime.sessionCredentialHash(credential);
+   const args=[hashed,checked.sessionId,actor,service.issuer,user.id,checked.provider.sessionId,
+    new Date(checked.provider.expiresAt),business,epoch];
+   try{return await prepareHeldSupplierPayable({sandbox,target,financeUrl:financeConfiguration.connectionString,args,
+    day});}
+   finally{hashed.fill(0);}
+  }:undefined;
+  return{origin,product,authorizePostedFinance,preparePayable,originalFile,originalMimeType,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
  }catch(error){await close();throw error;}
 }

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { headers } from "next/headers";
 import { requireDocumentNonce } from "../security/document-policy.ts";
 import "./globals.css";
+import "./workspace-design.css";
 import {WorkspaceFrame} from './workspace-frame';
 
 export const metadata: Metadata = {

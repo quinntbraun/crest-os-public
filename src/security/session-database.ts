@@ -1,5 +1,6 @@
 import 'server-only';
 import pg from 'pg';
+import {supplierPayableReviewRefusals as supplierPayableReadRefusals} from '../bookkeeping/expenses/supplier-payable-review-contract.ts';
 export type SessionDatabaseConfiguration={connectionString:string;environment:'production'|'test'};
 type Query=(text:string,values:unknown[])=>Promise<unknown>;
 type ConnectionProfile='read'|'admission'|'refresh'|'command';
@@ -8,11 +9,15 @@ export function sessionDatabase(config:SessionDatabaseConfiguration){return data
 export function custodyPhotoDispatcherDatabase(config:SessionDatabaseConfiguration){
   return databaseForRole(config,'crest_custody_photo_dispatch');
 }
+export function supplierDocumentWorkerDatabase(config:SessionDatabaseConfiguration){
+  if(config.environment!=='test')throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');
+  return databaseForRole(config,'crest_supplier_bill_document_worker');
+}
 export function financePreviewDatabase(config:SessionDatabaseConfiguration){
   if(config.environment!=='test')throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');
   return databaseForRole(config,'crest_finance_preview');
 }
-function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'crest_custody_photo_dispatch'|'crest_finance_preview'){
+function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'crest_custody_photo_dispatch'|'crest_finance_preview'|'crest_supplier_bill_document_worker'){
   let connectionString:string;
   try{
     const url=new URL(config.connectionString);
@@ -79,7 +84,8 @@ function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'c
         // eslint-disable-next-line preserve-caught-error -- This exact setup marker contains no database detail.
         if(error.code==='P0001'&&error.message==='FINANCE_ACCOUNT_SETUP_REQUIRED')throw new Error('FINANCE_ACCOUNT_SETUP_REQUIRED');
         if(error.code==='40001'&&['FINANCE_MAPPING_VERSION_CONFLICT','FINANCE_TAX_VERSION_CONFLICT','FINANCE_CHANNEL_VERSION_CONFLICT',
-         'OPENING_WORKSHEET_REVISION_CONFLICT','OPENING_AR_REVISION_CONFLICT'].includes(error.message)){
+         'OPENING_WORKSHEET_REVISION_CONFLICT','OPENING_AR_REVISION_CONFLICT','SUPPLIER_PAYABLE_CURRENT_DRAFT_REQUIRED',
+         'SUPPLIER_PAYABLE_REVIEW_CHANGED','SUPPLIER_PAYABLE_DUPLICATE_REVIEW_REQUIRED','SUPPLIER_SETTLEMENT_REMAINING_CHANGED'].includes(error.message)){
           // eslint-disable-next-line preserve-caught-error -- The transaction rolled back and the marker is allowlisted.
           throw new Error(error.message);
         }
@@ -89,7 +95,9 @@ function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'c
          'COLLECTION_RECREDIT_FAILURE_REQUIRED','COLLECTION_RECREDIT_DATE_REQUIRED','COLLECTION_RECREDIT_RANGE_UNAVAILABLE',
          'COLLECTION_RECREDIT_RECEIVABLE_REQUIRED',
          'COLLECTION_RECREDIT_VERIFIED_CHANNEL_REQUIRED','COLLECTION_RECREDIT_FUNDS_MAPPING_REQUIRED',
-         'OPENING_RECEIVABLES_CUSTOMER_REQUIRED','OPENING_AR_BALANCE_REQUIRED'].includes(error.message)){
+         'OPENING_RECEIVABLES_CUSTOMER_REQUIRED','OPENING_AR_BALANCE_REQUIRED',
+         ...supplierPayableReadRefusals,'SUPPLIER_PAYABLE_VERIFIED_ORIGINAL_REQUIRED','SUPPLIER_SETTLEMENT_PAYABLE_REQUIRED',
+         'SUPPLIER_SETTLEMENT_ACTUAL_DATE_REQUIRED','SUPPLIER_SETTLEMENT_VERIFIED_CHANNEL_REQUIRED'].includes(error.message)){
           // eslint-disable-next-line preserve-caught-error -- Only allowlisted outcomes cross after rollback.
           throw new Error(error.message);
         }
@@ -105,13 +113,14 @@ function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'c
       }
       if(role==='crest_finance_preview'&&command&&!combined.aborted&&rollbackConfirmed&&error instanceof Error&&'code' in error
         &&error.code==='23505'&&['COLLECTION_RECREDIT_ALREADY_RECORDED','COLLECTION_RECREDIT_EXTERNAL_ID_ALREADY_RECORDED',
-         'OPENING_AR_DUPLICATE_EVIDENCE'].includes(error.message)){
+         'OPENING_AR_DUPLICATE_EVIDENCE','SUPPLIER_PAYABLE_ALREADY_POSTED','SUPPLIER_SETTLEMENT_EXTERNAL_ID_ALREADY_RECORDED'].includes(error.message)){
         // eslint-disable-next-line preserve-caught-error -- The acknowledged rollback confines this response to exact known markers.
         throw new Error(error.message);
       }
       if(role==='crest_finance_preview'&&!transaction&&!combined.aborted&&error instanceof Error&&'code' in error
         &&(error.code==='54000'&&error.message==='COLLECTION_RECREDIT_OPTIONS_LIMIT'
-          ||error.code==='23514'&&['COLLECTION_RECREDIT_DATE_REQUIRED','OPENING_RECEIVABLES_CUSTOMER_REQUIRED'].includes(error.message)
+          ||error.code==='23514'&&['COLLECTION_RECREDIT_DATE_REQUIRED','OPENING_RECEIVABLES_CUSTOMER_REQUIRED',
+           ...supplierPayableReadRefusals].includes(error.message)
           ||(error.code==='40001'||error.code==='22023')&&error.message==='OPENING_WORKSHEET_REVISION_CONFLICT')){
         // eslint-disable-next-line preserve-caught-error -- The bounded read reports only the exact expected marker.
         throw new Error(error.message);

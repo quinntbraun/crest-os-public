@@ -6,7 +6,7 @@ import {test} from 'node:test';
 import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixture.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
-import {backupDatabase,connect,keyPair,normalizedSchema,postgresTool,recoveryCluster,restoreDatabase} from '../support/recovery-drill.mjs';
+import {backupSupplierBillDraftDatabase,connect,keyPair,normalizedSchema,postgresTool,recoveryCluster,restoreSupplierBillDraftDatabase} from '../support/recovery-drill.mjs';
 
 const save='save_fictional_supplier_bill_draft',lookup='lookup_fictional_supplier_bill_draft';
 async function call(connection,name,values){
@@ -23,7 +23,7 @@ test('supplier bill drafts retain reviewed cost and due-date evidence with zero 
   await sandbox.apply(url,await sandbox.prefix(0),true);
   await installProviderSchema(admin,url);
   assert.equal((await sandbox.apply(url,await sandbox.prefix(107))).history.length,107);
-  assert.equal((await sandbox.apply(url)).history.length,108);
+  assert.equal((await sandbox.apply(url,await sandbox.prefix(108))).history.length,108);
   const finance=await sandbox.connect(url),web=await sandbox.connect(url);
   await finance.query('SET ROLE crest_finance_preview');
   await web.query('SET ROLE crest_web');
@@ -149,13 +149,13 @@ test('supplier bill drafts retain reviewed cost and due-date evidence with zero 
   }finally{await exporter.query('ROLLBACK');}
   const point=join(sandbox.workspace,'supplier-draft-recovery');
   await mkdir(point,{mode:0o700});
-  const keys=await keyPair(sandbox.workspace),backup=await backupDatabase(admin,url,point,keys.recipient);
+  const keys=await keyPair(sandbox.workspace),backup=await backupSupplierBillDraftDatabase(admin,url,point,keys.recipient);
   assert.equal(backup.manifest.schemaVersion,108);
   const restoredCluster=await recoveryCluster();
   let restored;
   try{
    const restoredUrl=await restoredCluster.database();
-   try{assert.deepEqual(await restoreDatabase(point,keys.path,restoredUrl),backup.manifest);}
+   try{assert.deepEqual(await restoreSupplierBillDraftDatabase(point,keys.path,restoredUrl),backup.manifest);}
    catch(error){
     if(error.message==='SYNTHETIC_RECOVERY_RESTORE_FAILED:schema')await Promise.all([[url,'original'],[restoredUrl,'restored']].map(async([target,kind])=>
      writeFile('.local/supplier-draft-'+kind+'-schema.sql',normalizedSchema(await postgresTool('pg_dump',target,['--schema-only'])))));
@@ -164,6 +164,9 @@ test('supplier bill drafts retain reviewed cost and due-date evidence with zero 
    restored=await connect(restoredUrl);
    await restored.query('SET ROLE crest_finance_preview');
    assert.deepEqual(await list(owner,restored),retained);
+   assert.equal((await sandbox.apply(url)).history.length,109);
+   assert.deepEqual(await list(owner,finance),retained);
+   assert.equal((await admin.query('SELECT count(*)::int AS count FROM crest.supplier_payables')).rows[0].count,0);
   }finally{try{await restored?.end();}finally{await restoredCluster.close();}}
  }finally{try{await sandbox?.close();}finally{await cluster.close();}}
 });

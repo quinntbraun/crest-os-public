@@ -62,6 +62,7 @@ import {parseFictionalJournalV11} from '../bookkeeping/posted-report-v11-contrac
 import {parseFictionalJournalV12} from '../bookkeeping/posted-report-v12-contract';
 import {parseFictionalJournalV13} from '../bookkeeping/posted-report-v13-contract';
 import {parseFictionalJournalV14} from '../bookkeeping/posted-report-v14-contract';
+import {parseFictionalJournalV16,parseFictionalTrialBalanceV11} from '../bookkeeping/supplier-payable-report-contract';
 import {parseFictionalJournalV15} from '../bookkeeping/posted-report-v15-contract';
 import {parseFictionalJournalV9,parseFictionalTrialBalanceV9} from '../bookkeeping/posted-report-v9-contract';
 import {parseFictionalJournalV8,parseFictionalTrialBalanceV8} from '../bookkeeping/posted-report-v8-contract';
@@ -89,14 +90,19 @@ import type {StatementMatchDraftInput} from '../bookkeeping/statement-match-draf
 import {parseSupplierBillDraftPage,parseSupplierBillDraftPayload,parseSupplierBillDraftReference,parseSupplierBillDraftResult,
  parseSupplierBillDraftReview,supplierBillDraftRefusals} from '../bookkeeping/expenses/supplier-bill-draft-contract';
 import type {SupplierBillDraftPayload,SupplierBillDraftReference} from '../bookkeeping/expenses/supplier-bill-draft-contract';
+import {parseSupplierAccrualRequest,parseSupplierSettlementRequest,parseSupplierOperationReference,parseSupplierOperationResult,supplierPostingRefusals} from '../bookkeeping/expenses/supplier-payable-posting-contract';
+import {parseSupplierPayableReview,parseSupplierPayableReviewRequest,supplierPayableReviewRefusals} from '../bookkeeping/expenses/supplier-payable-review-contract';
+import type {SupplierPayableReviewRequest} from '../bookkeeping/expenses/supplier-payable-review-contract';
+import {parseSupplierPayableRegister} from '../bookkeeping/expenses/supplier-payable-register-contract';
+import {expenseDate} from '../bookkeeping/expenses/expense-contract';
 import {parseOpeningDraft,parseOpeningProjection,parseOpeningReference,parseOpeningResult} from '../bookkeeping/opening-worksheet-contract';
 import type {OpeningDraft,OpeningReference} from '../bookkeeping/opening-worksheet-contract';
-import {parseRecordedIncomeStatement} from '../bookkeeping/recorded-income-statement';
+import {parseRecordedIncomeStatement,parseRecordedIncomeStatementV2} from '../bookkeeping/recorded-income-statement';
 import {parseOpeningArInput,verifyOpeningArPreview} from '../bookkeeping/opening-receivables-preview';
 import type {OpeningArInput} from '../bookkeeping/opening-receivables-preview';
 import {parseOpeningArOperation,parseOpeningArSave,parseOpeningArStored} from '../bookkeeping/opening-receivables-schedule-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;openingWorksheet?:boolean;openingArPreview?:boolean;statementStaging?:boolean;statementMatchReview?:boolean;statementMatchDrafts?:boolean;supplierBillDrafts?:boolean;recordedIncomeStatement?:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;openingWorksheet?:boolean;openingArPreview?:boolean;statementStaging?:boolean;statementMatchReview?:boolean;statementMatchDrafts?:boolean;supplierBillDrafts?:boolean;supplierPayableReview?:boolean;supplierPayablePosting?:boolean;supplierOriginalUploads?:boolean;supplierPayableReports?:boolean;recordedIncomeStatement?:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
@@ -156,6 +162,10 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   statementMatchReview:response.headers.get('x-crest-statement-match-review')==='1',
   statementMatchDrafts:response.headers.get('x-crest-statement-match-drafts')==='1',
   supplierBillDrafts:response.headers.get('x-crest-supplier-bill-drafts')==='1',
+  supplierOriginalUploads:response.headers.get('x-crest-supplier-original-uploads')==='1',
+  supplierPayablePosting:response.headers.get('x-crest-supplier-payable-posting')==='1',
+  supplierPayableReports:response.headers.get('x-crest-supplier-payable-reports')==='1',
+  supplierPayableReview:response.headers.get('x-crest-supplier-payable-review')==='1',
   statementStaging:response.headers.get('x-crest-statement-staging')==='1',
   openingWorksheet:response.headers.get('x-crest-opening-worksheet')==='1',
   recordedIncomeStatement:response.headers.get('x-crest-recorded-income-statement')==='1',
@@ -187,9 +197,23 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   trialBalance:response.headers.get('x-crest-trial-balance')==='1'};
 }
 
+async function submitSupplierPosting(context:FinanceAccountContext,route:'supplier-payable-accrual'|'supplier-payable-settlement',
+ input:ReturnType<typeof parseSupplierAccrualRequest>|ReturnType<typeof parseSupplierSettlementRequest>,signal:AbortSignal){
+ check(context.supplierPayablePosting&&context.writeState==='ready'&&context.recoveryEpoch===input.reference.recoveryEpoch);
+ const {status,value}=await post(route,input,signal,context.binding);
+ if(status===409&&exact(value,['error'])){
+  const reason=supplierPostingRefusals.find(code=>code===value.error);
+  if(reason)return {state:'refused' as const,reason};
+ }
+ check(status===200||status===409);
+ const result=parseSupplierOperationResult(value,context.businessId,input.reference);
+ check(result.state!=='absent');
+ return result;
+}
+
 export const financeAccounts={
  async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,openingWorksheet,openingArPreview,statementStaging,statementMatchReview,statementMatchDrafts,supplierBillDrafts,recordedIncomeStatement,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,collectionFailureTipReinstatements,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,openingWorksheet,openingArPreview,statementStaging,statementMatchReview,statementMatchDrafts,supplierBillDrafts,supplierPayableReview,supplierPayablePosting,supplierOriginalUploads,supplierPayableReports,recordedIncomeStatement,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,collectionFailureTipReinstatements,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
@@ -197,8 +221,12 @@ export const financeAccounts={
    ...(moneyChannels&&statementStaging?{statementStaging}:{}),
    ...(moneyChannels&&openingWorksheet?{openingWorksheet}:{}),
    ...(trialBalance&&recordedIncomeStatement?{recordedIncomeStatement}:{}),
+   ...(supplierPayableReview&&supplierOriginalUploads?{supplierOriginalUploads}:{}),
+   ...(supplierPayableReview&&supplierPayablePosting?{supplierPayablePosting}:{}),
+   ...(trialBalance&&supplierPayableReports?{supplierPayableReports}:{}),
    ...(statementStaging&&statementMatchReview?{statementMatchReview,statementMatchDrafts}:{}),
    ...(moneyChannels&&supplierBillDrafts?{supplierBillDrafts}:{}),
+   ...(moneyChannels&&supplierBillDrafts&&supplierPayableReview?{supplierPayableReview}:{}),
    ...(openingWorksheet&&openingArPreview?{openingArPreview}:{}),
    ...(invoiceIssue?{invoiceIssue}:{}),...(directReceipts?{directReceipts}:{}),...(directReceipts&&excessReceipts?{excessReceipts}:{}),
    ...(directReceipts&&excessReceipts&&excessReturns?{excessReturns}:{}),
@@ -238,6 +266,38 @@ export const financeAccounts={
   }
   check(status===200||status===409);
   return parseStatementMatchDraftSave(value,context.businessId,draft);
+ },
+ async previewSupplierPayable(context:FinanceAccountContext,input:SupplierPayableReviewRequest,signal:AbortSignal){
+  check(context.supplierPayableReview);
+  const request=parseSupplierPayableReviewRequest(input);
+  const {status,value}=await post('supplier-payable-review',request,signal,context.binding);
+  if(status===409&&exact(value,['error'])){
+   const reason=supplierPayableReviewRefusals.find(code=>code===value.error);
+   if(reason)return {state:'refused',reason} as const;
+  }
+  check(status===200);
+  return parseSupplierPayableReview(value,context.businessId,request);
+ },
+ async postSupplierAccrual(context:FinanceAccountContext,value:unknown,signal:AbortSignal){
+  const input=parseSupplierAccrualRequest(value);
+  return submitSupplierPosting(context,'supplier-payable-accrual',input,signal);
+ },
+ async postSupplierSettlement(context:FinanceAccountContext,value:unknown,signal:AbortSignal){
+  const input=parseSupplierSettlementRequest(value);
+  return submitSupplierPosting(context,'supplier-payable-settlement',input,signal);
+ },
+ async lookupSupplierPosting(context:FinanceAccountContext,value:unknown,signal:AbortSignal){
+  check(context.supplierPayablePosting);
+  const reference=parseSupplierOperationReference(value);
+  const {status,value:result}=await post('supplier-payable-lookup',{reference},signal,context.binding);
+  check(status===200||status===409);
+  return parseSupplierOperationResult(result,context.businessId,reference);
+ },
+ async supplierPayableRegister(context:FinanceAccountContext,throughOn:string|null,afterPayable:string|null,signal:AbortSignal){
+  check(context.supplierPayableReview&&(throughOn===null||expenseDate(throughOn))&&(afterPayable===null||customerUuid(afterPayable)));
+  const {status,value}=await post('supplier-payable-register',{throughOn,afterPayable},signal,context.binding);
+  check(status===200);
+  return parseSupplierPayableRegister(value,context.businessId,throughOn,afterPayable);
  },
  async listSupplierBillDrafts(context:FinanceAccountContext,afterBill:string|null,signal:AbortSignal){
   check(context.supplierBillDrafts&&(afterBill===null||customerUuid(afterBill)));
@@ -366,13 +426,15 @@ export const financeAccounts={
   check(context.recordedIncomeStatement&&customerDate(fromOn)&&customerDate(throughOn)&&fromOn<=throughOn);
   const {status,value}=await post('recorded-income-statement',{fromOn,throughOn},signal,context.binding);
   check(status===200);
-  return parseRecordedIncomeStatement(value,context.businessId,fromOn,throughOn);
+  return context.supplierPayableReports?parseRecordedIncomeStatementV2(value,context.businessId,fromOn,throughOn)
+   :parseRecordedIncomeStatement(value,context.businessId,fromOn,throughOn);
  },
  async readTrialBalance(context:FinanceAccountContext,throughOn:string|null,signal:AbortSignal){
   check(context.trialBalance&&(throughOn===null||customerDate(throughOn)));
   const {status,value}=await post('trial-balance',{throughOn},signal,context.binding);
   check(status===200);
-  return context.refundTransfers?parseFictionalTrialBalanceV10(value,context.businessId,throughOn)
+  return context.supplierPayableReports?parseFictionalTrialBalanceV11(value,context.businessId,throughOn)
+   :context.refundTransfers?parseFictionalTrialBalanceV10(value,context.businessId,throughOn)
    :context.collectionFailures?parseFictionalTrialBalanceV9(value,context.businessId,throughOn)
    :context.tipReturns?parseFictionalTrialBalanceV8(value,context.businessId,throughOn)
    :context.excessReturns?parseFictionalTrialBalanceV7(value,context.businessId,throughOn)
@@ -387,7 +449,8 @@ export const financeAccounts={
   check(context.trialBalance&&customerDate(throughOn)&&(accountId===null||customerUuid(accountId))&&(afterLineId===null||customerUuid(afterLineId)));
   const {status,value}=await post('posted-journal',{throughOn,accountId,afterLineId},signal,context.binding);
   check(status===200);
-  return context.collectionFailureTipReinstatements?parseFictionalJournalV15(value,context.businessId,throughOn,accountId,afterLineId)
+  return context.supplierPayableReports?parseFictionalJournalV16(value,context.businessId,throughOn,accountId,afterLineId)
+   :context.collectionFailureTipReinstatements?parseFictionalJournalV15(value,context.businessId,throughOn,accountId,afterLineId)
    :context.collectionFailureGroupedRecredits?parseFictionalJournalV14(value,context.businessId,throughOn,accountId,afterLineId)
    :context.collectionFailureRecredits?parseFictionalJournalV13(value,context.businessId,throughOn,accountId,afterLineId)
    :context.refundTransferFees?parseFictionalJournalV12(value,context.businessId,throughOn,accountId,afterLineId)

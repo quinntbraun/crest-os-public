@@ -6,6 +6,7 @@ import {financeAccounts} from '../../client/finance-accounts';
 import type {FinanceAccountContext} from '../../client/finance-accounts';
 import {ExpenseEditor} from './expense-editor';
 import {SupplierBillDrafts} from './supplier-bill-drafts';
+import {SupplierPayableRegister} from './supplier-payables';
 export function ExpensesScreen(){
  const client=useMemo(()=>createExpenseClient(authentication.session),[]),active=useRef<AbortController|null>(null),[phase,setPhase]=useState<'checking'|'ready'|'signed-out'|'unavailable'>('checking');
  const [financeContext,setFinanceContext]=useState<FinanceAccountContext|null>(null);
@@ -31,6 +32,7 @@ export function ExpensesScreen(){
   <p>Record paid purchases and keep their corrections and history.</p>
   <p className="field-help">{sameDayExpenses?'Review a saved purchase to post it to the fictional ledger.':'Receipt attachments and full accounting are still in development for this test build.'}</p>
   {financeContext?.supplierBillDrafts&&<SupplierBillDrafts context={financeContext}/>}
+  {financeContext?.supplierPayableReview&&<SupplierPayableRegister context={financeContext}/>}
   <ExpenseEditor client={client} embedded sameDayExpenses={sameDayExpenses}/>
   <nav aria-label="Expense workspace navigation"><a href="/save-review?kind=bookkeeping.expense.save">Review an interrupted expense</a><a href="/sign-in">Check sign-in</a></nav>
  </>;

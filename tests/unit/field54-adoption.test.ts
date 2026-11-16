@@ -1,3 +1,4 @@
+import {supplierPayableSourceColumns} from '../../src/bookkeeping/expenses/supplier-payable-source-columns.ts';
 import {openingReceivablesSourceCoverage} from '../../src/bookkeeping/opening-receivables-source.ts';
 import {statementMatchDraftSourceCoverage} from '../../src/bookkeeping/statement-match-draft-source.ts';
 import {supplierBillDraftSourceCoverage} from '../../src/bookkeeping/expenses/supplier-bill-draft-source.ts';
@@ -612,9 +613,13 @@ it('retains refund and tip lineage and adds the recovered payment sources',()=>{
  expect(registered107.migrations).toHaveLength(107);
  expect(registered107.migrations.at(-1)).toMatchObject({version:'20261231180000',file:'20261231180000_fictional_statement_match_drafts.sql'});
  expect(()=>validateMigrationSet(registered107,new Map(registered107.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered106)).not.toThrow();
- expect(currentRegistry.migrations).toHaveLength(108);
- expect(currentRegistry.migrations.at(-1)).toMatchObject({version:'20270101180000',file:'20270101180000_fictional_supplier_bill_drafts.sql'});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered107)).not.toThrow();
+ const registered108=JSON.parse(bytes('tests/support/registered108-migration-checksums.json').toString()) as MigrationRegistry;
+ expect(registered108.migrations).toHaveLength(108);
+ expect(registered108.migrations.at(-1)).toMatchObject({version:'20270101180000',file:'20270101180000_fictional_supplier_bill_drafts.sql'});
+ expect(()=>validateMigrationSet(registered108,new Map(registered108.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered107)).not.toThrow();
+ expect(currentRegistry.migrations).toHaveLength(109);
+ expect(currentRegistry.migrations.at(-1)).toMatchObject({version:'20270102180000',file:'20270102180000_fictional_supplier_payables.sql'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered108)).not.toThrow();
  expect(registered100.migrations.at(-1)).toMatchObject({version:'20261224180000',file:'20261224180000_fictional_collection_failure_grouped_recredit.sql'});
  expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered100 as MigrationRegistry)).not.toThrow();
  expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered101)).not.toThrow();
@@ -634,9 +639,16 @@ it('retains refund and tip lineage and adds the recovered payment sources',()=>{
  const restoredCoverage=[...recredits,...collectionFailureGroupedRecreditSourceCoverage].map(row=>({
    ...row,required:[...row.required,...restoredTipSourceColumns[row.table.slice('crest.'.length)]??[]],
  }));
- expect(currentCoverage).toEqual({...coverage92,migrationCount:108,tables:[...restoredCoverage,openingWorksheetSourceCoverage,
-  ...statementSourceCoverage,openingReceivablesSourceCoverage,statementMatchDraftSourceCoverage,supplierBillDraftSourceCoverage]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:108});
+ const supplierTables=['supplier_bill_original_intents','supplier_bill_originals','supplier_payables','supplier_payable_settlements'] as const;
+ const previous=[...restoredCoverage,openingWorksheetSourceCoverage,
+  ...statementSourceCoverage,openingReceivablesSourceCoverage,statementMatchDraftSourceCoverage,supplierBillDraftSourceCoverage];
+ expect(currentCoverage).toEqual({...coverage92,migrationCount:109,tables:[
+  ...previous.map(row=>['crest.financial_events','crest.journal_lines'].includes(row.table)
+    ?{...row,required:[...row.required,'supplier_payable_id','supplier_payable_settlement_id']}:row),
+  ...supplierTables.map(table=>({table:'crest.'+table,scope:'business',required:supplierPayableSourceColumns[table],
+   excluded:[],partialEvidenceGroup:null})),
+ ]});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:109});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

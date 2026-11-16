@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 108,
+  "migrationCount": 109,
   "tables": [
     {
       "table": "crest.businesses",
@@ -2590,7 +2590,9 @@
         "collection_failure_id",
         "refund_transfer_adjustment_id",
         "collection_failure_recredit_id",
-        "collection_failure_settlement_id"
+        "collection_failure_settlement_id",
+        "supplier_payable_id",
+        "supplier_payable_settlement_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -2669,7 +2671,9 @@
         "refund_transfer_adjustment_id",
         "collection_failure_recredit_id",
         "collection_failure_settlement_id",
-        "collection_failure_settlement_component_id"
+        "collection_failure_settlement_component_id",
+        "supplier_payable_id",
+        "supplier_payable_settlement_id"
       ],
       "excluded": [],
       "partialEvidenceGroup": null
@@ -3758,6 +3762,89 @@
         "actor_id",
         "recorded_at",
         "payload"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.supplier_bill_original_intents",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "bill_id",
+        "bill_revision",
+        "document_reference",
+        "recovery_epoch",
+        "media_type",
+        "byte_size",
+        "dispatch_id",
+        "operation_id",
+        "created_by",
+        "reserved_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.supplier_bill_originals",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "bill_id",
+        "bill_revision",
+        "document_reference",
+        "file_sha256",
+        "byte_size",
+        "media_type",
+        "object_key",
+        "verified_at",
+        "candidate",
+        "operation_id",
+        "created_by"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.supplier_payables",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "bill_id",
+        "bill_revision",
+        "original_id",
+        "payable_account_id",
+        "payable_mapping_id",
+        "gross_cents",
+        "review",
+        "duplicate_payable_ids",
+        "distinct_reason",
+        "operation_id",
+        "created_by",
+        "recorded_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.supplier_payable_settlements",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "payable_id",
+        "operation_id",
+        "created_by",
+        "channel_version_id",
+        "evidence_id",
+        "actual_on",
+        "paid_cents",
+        "remaining_before_cents",
+        "confirmation",
+        "recorded_at"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

@@ -540,6 +540,11 @@
       "version": "20270101180000",
       "file": "20270101180000_fictional_supplier_bill_drafts.sql",
       "sha256": "83d151f3a866ee33568e534aed594f0160113c92ac31d9da04eda1b7f35b2cc7"
+    },
+    {
+      "version": "20270102180000",
+      "file": "20270102180000_fictional_supplier_payables.sql",
+      "sha256": "756e6644ed8955c05b072203cb34a4b067a2baecb9cb0066453e352273b0904a"
     }
   ]
 }
