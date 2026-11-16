@@ -5,6 +5,9 @@ import {sessionCredentialHash} from '../security/session-credential.ts';
 import {createSessionLifecycle} from '../security/session-lifecycle.ts';
 import {customerUuid as leadUuid,customerVersion as leadVersion,customerInstant as leadInstant,exactCustomerObject as exact,requireCustomer as check} from './customer-contract.ts';
 import {parseLead} from './lead-contract.ts';
+import {parseLeadContactReview,parseLeadContactReviewInput,parseLeadVehicleReview,parseLeadVehicleReviewInput} from './lead-match-review-contract.ts';
+import {parseLeadFollowUpPage,parseLeadFollowUpQuery} from './lead-follow-up-contract.ts';
+import type {LeadFollowUpQuery} from './lead-follow-up-contract.ts';
 import {validateLeadHistoryChange} from './lead-history-contract.ts';
 import {parseLeadDraft} from './lead-contract.ts';
 import type {LeadDraft} from './lead-contract.ts';
@@ -65,6 +68,35 @@ export function createLeadDirectory(config:SessionDatabaseConfiguration,provider
           const leads=Array.from(value.leads,c=>parseLead(c,request.businessId));let previous=request.afterId;for(const c of leads){check(previous===null||c.id>previous);check(request.includeLost||c.state!=='lost');previous=c.id;}check(!value.hasMore||leads.length===request.pageSize);
           return new PrivateValue(Object.freeze({schemaVersion:1 as const,businessId:request.businessId,leads:Object.freeze(leads),hasMore:value.hasMore}));});
       }catch{throw new LeadDirectoryError('LEAD_REQUEST_FAILED');}
+    },
+    async followUps(credential:string,businessId:string,input:LeadFollowUpQuery,signal:AbortSignal){
+      try{
+        const request=parseLeadFollowUpQuery(input);
+        return await authorized(credential,businessId,signal,async(args,bounded)=>{
+          const value=await database('SELECT crest_commands.read_lead_follow_ups($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::timestamptz,$10::uuid,$11::integer) AS result',
+            [...args,request.afterAt,request.afterId,request.pageSize],bounded);
+          bounded.throwIfAborted();
+          return new PrivateValue(parseLeadFollowUpPage(value,businessId,request));
+        });
+      }catch{throw new LeadDirectoryError('LEAD_REQUEST_FAILED');}
+    },
+    async reviewContact(credential:string,businessId:string,input:ReturnType<typeof parseLeadContactReviewInput>,signal:AbortSignal){
+      const request=parseLeadContactReviewInput(input);
+      return authorized(credential,businessId,signal,async(args,bounded)=>{
+        const value=await database('SELECT crest_commands.read_lead_contact_review($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::text,$12::text) AS result',
+          [...args,request.leadId,request.customerId,request.phone,request.email],bounded);
+        bounded.throwIfAborted();
+        return new PrivateValue(parseLeadContactReview(value,businessId,request));
+      });
+    },
+    async reviewVehicle(credential:string,businessId:string,input:ReturnType<typeof parseLeadVehicleReviewInput>,signal:AbortSignal){
+      const request=parseLeadVehicleReviewInput(input);
+      return authorized(credential,businessId,signal,async(args,bounded)=>{
+        const value=await database('SELECT crest_commands.read_lead_vehicle_match_review($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::text,$11::text,$12::integer,$13::text,$14::text) AS result',
+          [...args,request.vehicleId,request.vin,request.plate,request.year,request.make,request.model],bounded);
+        bounded.throwIfAborted();
+        return new PrivateValue(parseLeadVehicleReview(value,businessId,request));
+      });
     },
     async history(credential:string,input:{businessId:string;leadId:string;afterVersion:string;pageSize:number},signal:AbortSignal){
       try{check(exact(input,['businessId','leadId','afterVersion','pageSize'])&&leadUuid(input.businessId)&&leadUuid(input.leadId)&&leadVersion(input.afterVersion,true)&&Number.isSafeInteger(input.pageSize)&&input.pageSize>=1&&input.pageSize<=20);const request=Object.freeze({...input});

@@ -13,8 +13,8 @@ import type {PendingLead,createPendingLeadStore} from './pending-lead-edit';
 
 type Snapshot=Awaited<ReturnType<typeof leads.context>>;
 type History=Extract<Awaited<ReturnType<typeof leads.history>>,{state:'found'}>;
-export type LeadEditorView=Readonly<{businessId:string|null;phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Lead[];hasMore:boolean;search:string;includeLost:boolean;selected:Lead|null;draft:LeadDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean}>;
-export const initialLeadEditorView:LeadEditorView=Object.freeze({businessId:null,phase:'loading',message:'Checking lead access…',busy:true,rows:Object.freeze([]),hasMore:false,search:'',includeLost:false,selected:null,draft:null,draftIssue:'',history:null,canSave:false,canRetry:false,reference:'',writesPaused:true});
+export type LeadEditorView=Readonly<{businessId:string|null;phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Lead[];hasMore:boolean;search:string;includeLost:boolean;selected:Lead|null;draft:LeadDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean;matchReview:boolean}>;
+export const initialLeadEditorView:LeadEditorView=Object.freeze({businessId:null,phase:'loading',message:'Checking lead access…',busy:true,rows:Object.freeze([]),hasMore:false,search:'',includeLost:false,selected:null,draft:null,draftIssue:'',history:null,canSave:false,canRetry:false,reference:'',writesPaused:true,matchReview:false});
 export const emptyLeadDraft:LeadDraft=Object.freeze({label:'',customerId:null,sourceId:null,referralText:null,phone:null,email:null,requestedScope:null,availability:null,estimatedCents:null,followUpAt:null,notes:null});
 
 type Dependencies={store:ReturnType<typeof createPendingLeadStore>;statusStore:Pick<ReturnType<typeof createPendingLeadStateStore>,'read'>;vehicleStore:{read:()=>unknown};addressStore:{read:()=>unknown};conversionStore:{read:()=>unknown};change:(view:LeadEditorView)=>void;api?:typeof leads;session?:typeof authentication.session;id?:()=>string};
@@ -32,7 +32,7 @@ export function createLeadEditorController(deps:Dependencies){
   }
   const view=():LeadEditorView=>Object.freeze({businessId:phase==='ready'?snapshot?.context.businessId??null:null,phase,message,busy:!!active,rows:phase==='ready'?rows:Object.freeze([]),hasMore:phase==='ready'&&hasMore,search:phase==='ready'?search:'',includeLost:phase==='ready'&&includeLost,selected:phase==='ready'?selected:null,draft:phase==='ready'?draft:null,draftIssue:phase==='ready'?draftIssue():'',history:phase==='ready'?history:null,
     canSave:statusClear()&&!active&&phase==='ready'&&snapshot?.context.writeState==='ready'&&draft!==null&&draftIssue()===''&&(!selected||JSON.stringify(draft)!==JSON.stringify(draftFromLead(selected))),canRetry:!active&&canRetry,
-    reference:phase==='pending'&&snapshot?.context.businessId===pending?.businessId?pending?.reference.operationId??'':'',writesPaused:snapshot?.context.writeState!=='ready'});
+    reference:phase==='pending'&&snapshot?.context.businessId===pending?.businessId?pending?.reference.operationId??'':'',writesPaused:snapshot?.context.writeState!=='ready',matchReview:phase==='ready'&&snapshot?.matchReview===true});
   const emit=()=>{if(alive)deps.change(view());};
   const live=(signal:AbortSignal)=>{if(!alive||signal.aborted||active?.signal!==signal)throw new Error();};
   async function fresh(signal:AbortSignal){const nextProof=await session(signal);live(signal);const next=await api.context(nextProof,signal);live(signal);proof=nextProof;snapshot=next;}

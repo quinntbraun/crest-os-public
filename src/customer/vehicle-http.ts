@@ -14,7 +14,7 @@ import {createVehicleDirectory,VehicleDirectoryError} from './vehicle-directory.
 import {customerUuid as vehicleUuid,customerVersion as vehicleVersion,requireCustomer as requireVehicle} from './customer-contract.ts';
 import {parseVehicleDraft} from './customer-resource-contract.ts';
 
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;recordJobHistory?:boolean};
 const prefix='/api/business/vehicles/';
 const draftKeys=['label','year','make','model','color','vin','plate','kind','notes','archived','archiveReason'] as const;
 const fields={'legacy-matches':['kind','hints'],context:[],list:['search','afterId','includeArchived','pageSize'],history:['vehicleId','afterVersion','pageSize'],operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','vehicleId','expectedVersion',...draftKeys]} as const;
@@ -56,6 +56,7 @@ export function createVehicleHttp(config:Configuration,provider:Parameters<typeo
         await directory.list(cookie,{businessId,search:'',afterId:null,includeArchived:false,pageSize:1},signal);
         const value=(await context(cookie,businessId,signal)).forServer();if(signal.aborted)throw new Error();
         const response=privateJsonResponse({schemaVersion:value.schemaVersion,businessId:value.businessId,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});
+        if(config.recordJobHistory===true)response.headers.set('X-Crest-Record-Job-History','1');
         response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.vehicle.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));return response;
       }
       if(route==='save'){

@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {createAssociationEditorController,initialAssociationEditorView} from '../../client/association-editor-controller';
 import type {AssociationDraft} from '../../client/association-editor-controller';
@@ -12,8 +12,14 @@ function LinkDetails({source}:{source:VehicleAssociationRow}){
  const text=(value:string|null)=>value===null?'Not recorded':value===''?'Recorded as empty':value;
  return <dl className="customer-values"><dt>Relationship</dt><dd>{source.relationship==='owner'?'Owner':'Keeper'}</dd><dt>Billing selected</dt><dd>{source.is_billing?'Yes':'No'}</dd><dt>Starts (UTC)</dt><dd>{source.valid_from}</dd><dt>Ends (UTC)</dt><dd>{source.valid_to??'Still open'}</dd><dt>Evidence</dt><dd>{text(source.evidence)}</dd><dt>End reason</dt><dd>{text(source.close_reason)}</dd></dl>;
 }
-export function AssociationPanel({businessId,vehicleId,onEditStateChange}:{businessId:string;vehicleId:string;onEditStateChange?:(state:'clean'|'draft'|'pending')=>void}){
- const [view,setView]=useState(initialAssociationEditorView),current=useRef<ReturnType<typeof createAssociationEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null);
+export function AssociationPanel({businessId,vehicleId,linkCustomerId=null,onEditStateChange}:{businessId:string;vehicleId:string;linkCustomerId?:string|null;onEditStateChange?:(state:'clean'|'draft'|'pending')=>void}){
+ const [view,setView]=useState(initialAssociationEditorView),current=useRef<ReturnType<typeof createAssociationEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null),heading=useRef<HTMLHeadingElement>(null);
+ const focusStart=useRef(false);
+ useLayoutEffect(()=>{
+  if(!focusStart.current||view.busy)return;
+  focusStart.current=false;
+  if(view.draft)heading.current?.focus();else status.current?.focus();
+ },[view]);
  useEffect(()=>{
   const controller=createAssociationEditorController({businessId,vehicleId,store:createPendingAssociationStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});current.current=controller;
   const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
@@ -27,20 +33,30 @@ export function AssociationPanel({businessId,vehicleId,onEditStateChange}:{busin
  function edit<K extends keyof AssociationDraft>(key:K,value:AssociationDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
  function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);void current.current?.searchCustomers(String(form.get('customer-search')??''));}
  function submit(event:FormEvent){event.preventDefault();void action('save');}
+ function startCustomerLink(){
+  const controller=current.current;
+  if(!controller||!linkCustomerId||controller.view().busy||controller.view().draft)return;
+  focusStart.current=true;
+  void controller.load(linkCustomerId);
+ }
+ function switchView(change:()=>void){
+  if(!current.current?.view().draft||window.confirm('Discard your unsaved customer-link changes? Choose Cancel to keep editing.'))change();
+ }
  return <section className="association-panel" aria-label="Customers for this vehicle" aria-busy={view.busy}><h2>Customers for this vehicle</h2>
   <p ref={status} tabIndex={-1} role="status" aria-label="Customer-link status" aria-live="polite" aria-atomic="true">{view.message}</p>
-  {view.phase!=='pending'&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current customer links</button>}
+  {view.phase!=='pending'&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>switchView(()=>void action('load'))}>Load current customer links</button>}
+  {linkCustomerId&&!hasDraft&&!pending&&<button type="button" disabled={view.busy||view.phase==='ready'&&view.writesPaused} onClick={startCustomerLink}>Start customer link</button>}
   {view.phase==='ready'&&<>
    {view.writesPaused&&<p className="notice">Customer-link changes are paused. You can review retained links.</p>}
    <ul className="customer-list">{view.rows.map(({source,customer})=><li key={source.id}><h3>{customer.label}{customer.archived?' (archived customer)':''}</h3><p>{source.relationship==='owner'?'Owner':'Keeper'} · {source.is_billing?'Billing selected':'Billing not selected'} · {source.valid_to===null?'Current link':'Ended link'}</p>
-    <button className="secondary" type="button" disabled={view.busy} onClick={()=>void current.current?.inspect(source.id)}>View link history for {customer.label}</button>
-    {source.valid_to===null&&<><button className="secondary" type="button" disabled={view.busy||view.writesPaused} onClick={()=>void current.current?.begin('close',source.id)}>End link for {customer.label}</button><button type="button" disabled={view.busy||view.writesPaused} onClick={()=>void current.current?.begin('transfer',source.id)}>Transfer link for {customer.label}</button></>}
+    <button className="secondary" type="button" disabled={view.busy} onClick={()=>switchView(()=>void current.current?.inspect(source.id))}>View link history for {customer.label}</button>
+    {source.valid_to===null&&<><button className="secondary" type="button" disabled={view.busy||view.writesPaused} onClick={()=>switchView(()=>void current.current?.begin('close',source.id))}>End link for {customer.label}</button><button type="button" disabled={view.busy||view.writesPaused} onClick={()=>switchView(()=>void current.current?.begin('transfer',source.id))}>Transfer link for {customer.label}</button></>}
    </li>)}</ul>
    {view.rows.length===0&&<p>No retained customer links on this page.</p>}
-   {view.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('more')}>Next customer-link page</button>}
-   <button type="button" disabled={view.busy||view.writesPaused} onClick={()=>void current.current?.begin('open')}>Add customer link</button>
+   {view.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>switchView(()=>void action('more'))}>Next customer-link page</button>}
+   <button type="button" disabled={view.busy||view.writesPaused} onClick={()=>switchView(()=>void current.current?.begin('open'))}>Add customer link</button>
    {view.draft&&<>
-    <h3>{view.draft.action==='open'?'Add a customer link':view.draft.action==='close'?'End the selected link':'Transfer the selected link'}</h3>
+    <h3 ref={heading} tabIndex={-1}>{view.draft.action==='open'?'Add a customer link':view.draft.action==='close'?'End the selected link':'Transfer the selected link'}</h3>
     {view.draft.action!=='close'&&<><form onSubmit={search} aria-label="Find customer for vehicle"><label htmlFor="link-customer-search">Customer name, phone or email</label><input id="link-customer-search" name="customer-search" type="search" maxLength={400} autoComplete="off" defaultValue={view.customerSearch} disabled={view.busy}/><button className="secondary" type="submit" disabled={view.busy}>Find customers</button></form>
      <p className="field-help">Select the exact existing customer. Archived customers remain available for retained history; shared names or contact details do not merge customers.</p>
      <ul className="customer-list">{view.customers.map(customer=><li key={customer.id}><button className="secondary" type="button" disabled={view.busy||view.writesPaused} onClick={()=>current.current?.chooseCustomer(customer.id)}>Use {customer.label}{customer.archived?' (archived)':''}</button></li>)}</ul>

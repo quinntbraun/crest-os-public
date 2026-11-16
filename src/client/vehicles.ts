@@ -32,7 +32,7 @@ async function post(route:'legacy-matches'|'context'|'list'|'save'|'history'|'op
       const codes:Record<string,readonly[number,Kind]>={VEHICLE_SAVE_NOT_SUBMITTED:[503,'not_submitted'],VEHICLE_SAVE_DENIED:[403,'denied'],RECOVERY_REVIEW_REQUIRED:[409,'recovery'],VEHICLE_REQUEST_LIMITED:[429,'limited'],VEHICLE_SAVE_OUTCOME_UNKNOWN:[503,'unknown']},mapped=typeof value.error==='string'&&Object.hasOwn(codes,value.error)?codes[value.error]:undefined;
       if(mapped&&response.status===mapped[0])throw new VehicleClientError(mapped[1]);throw new Error();
     }
-    return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding')};
+    return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding'),recordJobHistoryAvailable:route==='context'&&response.headers.get('x-crest-record-job-history')==='1'};
   }catch(error){throw error instanceof VehicleClientError?error:new VehicleClientError(route==='save'?'unknown':'unavailable');}
 }
 export async function vehicleLegacyMatches(businessId:string,input:unknown,proof:Proof,signal:AbortSignal){
@@ -47,7 +47,7 @@ export async function vehicleLegacyMatches(businessId:string,input:unknown,proof
 // authority, retry loop or automatic operation-ID/epoch replacement.
 export const vehicles=Object.freeze({
   async context(proof:Proof,signal:AbortSignal){
-    try{const r=await post('context',{},proof,signal),v=r.value;check(r.status===200&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding)&&exact(v,['schemaVersion','businessId','writeState','recoveryEpoch'])&&v.schemaVersion===1&&uuid(v.businessId)&&(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null));return Object.freeze({context:Object.freeze({...v}) as VehicleContext,binding:r.binding});}catch(e){throw e instanceof VehicleClientError?e:new VehicleClientError('unavailable');}
+    try{const r=await post('context',{},proof,signal),v=r.value;check(r.status===200&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding)&&exact(v,['schemaVersion','businessId','writeState','recoveryEpoch'])&&v.schemaVersion===1&&uuid(v.businessId)&&(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null));return Object.freeze({context:Object.freeze({...v}) as VehicleContext,binding:r.binding,...r.recordJobHistoryAvailable?{recordJobHistoryAvailable:true as const}:{}});}catch(e){throw e instanceof VehicleClientError?e:new VehicleClientError('unavailable');}
   },
   async save(businessId:string,input:VehicleSave,proof:Proof,signal:AbortSignal){
     let command:VehicleSave;

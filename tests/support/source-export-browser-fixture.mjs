@@ -18,12 +18,16 @@ import {join} from 'node:path';
 import {Readable} from 'node:stream';
 import {URI,TOTP} from 'otpauth';
 import {migrationSandbox} from './migration-sandbox.mjs';
+import {syntheticLeadFollowUpsAvailable,syntheticLeadMatchReviewAvailable,syntheticRecordJobHistoryAvailable} from '../../scripts/synthetic-migrations.mjs';
 import {installProviderSchema} from './provider-schema.mjs';
 import {startRealAuthService,authResult} from './real-auth-service.mjs';
 import {buildSourceExportBrowserFixture} from './source-export-browser-build.mjs';
 const signal=()=>new AbortController().signal,sha=value=>createHash('sha256').update(value).digest('hex'),release='a'.repeat(40);
-export async function sourceExportBrowserFixture({product=false,workspace=false,legacyContactMatches=false,legacyContactBatches=false,legacyContactEffects=false,legacyContactTargets=false,legacyContactDecisions=false,legacyContactApprovals=false,legacyContactApplications=false,automaticContactImport=false,legacyContactDownloads=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,openingWorksheet=false,statementStaging=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,googleCalendar=false,googleCalendarAutomatic=false,postedFinanceExport=false,photoFixture}={}){
+export async function sourceExportBrowserFixture({product=false,workspace=false,leadFollowUps=false,leadMatchReview=false,legacyContactMatches=false,legacyContactBatches=false,legacyContactEffects=false,legacyContactTargets=false,legacyContactDecisions=false,legacyContactApprovals=false,legacyContactApplications=false,automaticContactImport=false,legacyContactDownloads=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,recordJobHistory=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,openingWorksheet=false,statementStaging=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,googleCalendar=false,googleCalendarAutomatic=false,postedFinanceExport=false,photoFixture}={}){
  assert((typeof legacyContactApplications==='boolean'||legacyContactApplications==='background')&&(!legacyContactApplications||legacyContactApprovals));
+ assert(typeof leadFollowUps==='boolean'&&(!leadFollowUps||product&&workspace));
+ assert(typeof recordJobHistory==='boolean'&&(!recordJobHistory||product&&workspace&&scheduling));
+ assert(typeof leadMatchReview==='boolean'&&(!leadMatchReview||product&&workspace));
  assert(typeof legacyContactDownloads==='boolean'&&(!legacyContactDownloads||product&&legacyContactApplications==='background'));
  assert(typeof automaticContactImport==='boolean'&&(!automaticContactImport||product&&legacyContactApplications==='background'));
  assert(typeof legacyContactApprovals==='boolean'&&(!legacyContactApprovals||legacyContactDecisions));
@@ -256,6 +260,24 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     calendarConfiguration.worker={connectionString:workerUrl.href};
    }
   }
+  if(leadFollowUps){
+   const current=await sandbox.apply(target,await sandbox.prefix(118));
+   assert.equal(current.history.length,118);
+   assert.equal(current.history.at(-1).version,'20270111180000');
+   assert.equal(await syntheticLeadFollowUpsAvailable(target),true);
+  }
+  if(leadMatchReview){
+   assert.equal(await syntheticLeadMatchReviewAvailable(target),false);
+   const current=await sandbox.apply(target,await sandbox.prefix(119));
+   assert.equal(current.history.length,119);
+   assert.equal(current.history.at(-1).version,'20270112180000');
+   assert.equal(await syntheticLeadMatchReviewAvailable(target),true);
+  }
+  const recordJobBaseline=recordJobHistory?await sandbox.apply(target,await sandbox.prefix(119)):null;
+  if(recordJobBaseline){
+   assert.equal(recordJobBaseline.history.length,119);
+   assert.equal(await syntheticRecordJobHistoryAvailable(target),false);
+  }
   login='crest_export_browser_'+randomBytes(8).toString('hex');const secret=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+secret+"'");owned=true;await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=secret;const config={connectionString:url.toString(),environment:'test'};
   service=await startRealAuthService(target,{diagnostic:amendmentAcceptance});const email='synthetic-browser-export-'+randomUUID()+'@example.com',password=randomBytes(32).toString('base64url'),user=authResult(await service.admin.admin.createUser({email,password,email_confirm:true}),'export_browser_user').user;assert(user?.id);
   const sdk=service.sdk();await sdk.initialize();authResult(await sdk.signInWithPassword({email,password}),'export_browser_enrollment');const factor=authResult(await sdk.mfa.enroll({factorType:'totp',friendlyName:'Synthetic export browser MFA'}),'export_browser_factor'),totp=URI.parse(factor.totp.uri);assert(totp instanceof TOTP);authResult(await sdk.mfa.challengeAndVerify({factorId:factor.id,code:totp.generate()}),'export_browser_mfa');
@@ -288,8 +310,30 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    keys:[{id:'synthetic-browser',key:randomBytes(32)}]};
   const auth=(await runtime.createAuthenticationRuntime(authentication)).forServer(),
    lifecycle=runtime.createSessionLifecycle(config,auth.provider,auth.tokens),database=runtime.sessionDatabase(config);
+  const seededCodeAt=Date.now();
   const issued=await lifecycle.login({email,password,factorId:factor.id,code:totp.generate()},{subject:user.id},false,signal()),credential=issued.cookieValueForResponse(),verified=await lifecycle.verify(credential,signal(),'background',true),hash=runtime.sessionCredentialHash(credential),jobId=randomUUID(),leaseId=randomUUID(),operation=randomUUID();let job;
   try{const args=[hash,verified.sessionId,actor,service.issuer,user.id,verified.provider.sessionId,new Date(verified.provider.expiresAt),business,epoch];await database.commandTransaction(q=>q('SELECT crest_commands.request_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS result',[...args,randomUUID(),jobId,release]),signal());job=(await database.commandTransaction(q=>q('SELECT crest_commands.claim_source_export($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) AS result',[...args,randomUUID(),jobId,'1',leaseId]),signal())).receipt.job;}finally{hash.fill(0);}
+  const followUpLeads=[];
+  if(leadFollowUps){
+   const seedHash=runtime.sessionCredentialHash(credential);
+   const authArgs=[seedHash,verified.sessionId,actor,service.issuer,user.id,verified.provider.sessionId,new Date(verified.provider.expiresAt),business,epoch];
+   try{
+    for(let i=0;i<9;i++){
+     const id=randomUUID(),label=i===0?'Overdue fictional callback':i===8?'Last fictional callback':'Fictional callback '+i;
+     const followUpAt=i===0?'2022-01-01T12:00:00.123456Z':`2050-01-${String(i+1).padStart(2,'0')}T12:00:00.123456Z`;
+     const draft={label,customerId:null,sourceId:null,referralText:null,phone:null,email:null,requestedScope:null,availability:null,estimatedCents:null,followUpAt,notes:null};
+     const saved=await database.commandTransaction(query=>query('SELECT crest_commands.save_lead($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',
+      [...authArgs,randomUUID(),id,draft]),signal());
+     assert.equal(saved.state,'committed');
+     if(i===0){
+      const lost=await database.commandTransaction(query=>query('SELECT crest_commands.change_lead_state($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,1,$12) AS result',
+       [...authArgs,randomUUID(),id,{fromState:'new',toState:'lost',reason:'Owner scheduled a later callback'}]),signal());
+      assert.equal(lost.state,'committed');
+     }
+     followUpLeads.push({id,label,followUpAt});
+    }
+   }finally{seedHash.fill(0);}
+  }
   if(financeMappings){
    const finance=await sandbox.connect(financeConfiguration.connectionString),seedHash=runtime.sessionCredentialHash(credential);
    try{
@@ -562,6 +606,20 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    assert(prepared.connectionString===loaded.connectionString,'loaded the same private work credential');
    contactWorkerConnection=loaded.connectionString;
   }
+  if(recordJobBaseline){
+   const documents=async()=> (await client.query(`SELECT jsonb_build_object(
+    'customers',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.id) FROM crest.customers c WHERE c.business_id=$1),
+    'vehicles',(SELECT jsonb_agg(to_jsonb(v) ORDER BY v.id) FROM crest.vehicles v WHERE v.business_id=$1)
+   ) AS rows`,[business])).rows[0].rows;
+   const before=await documents();
+   assert(before.customers?.length&&before.vehicles?.length);
+   const upgraded=await sandbox.apply(target,await sandbox.prefix(120));
+   assert.equal(upgraded.history.length,120);
+   assert.equal(upgraded.history.at(-1).version,'20270113180000');
+   assert.deepEqual(upgraded.history.slice(0,119),recordJobBaseline.history);
+   assert.deepEqual(await documents(),before);
+   assert.equal(await syntheticRecordJobHistoryAvailable(target),true);
+  }
   await chmod(sandbox.workspace,0o700);const tls=await browserTestTls();server=runtime.createBoundedNodeServer(tls);await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});const origin='https://127.0.0.1:'+server.address().port,requests=[];
   if(product){
    const port=server.address().port;await new Promise(resolve=>server.close(resolve));server=undefined;
@@ -572,7 +630,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     await client.query('INSERT INTO crest_private.google_calendar_credential_key VALUES(true,$1)',[identity.credentialKeyId]);
     if(calendarWorkerLogin)await client.query('INSERT INTO crest_private.google_calendar_worker_principals(business_id,principal) VALUES($1,$2)',[business,calendarWorkerLogin]);
    }
-   app=await runtime.createCrestApplication({origin,environment:'test',tls,authentication:auth,business:{businessId:business},customers:true,syntheticLegacyContactBatches:legacyContactBatches,syntheticLegacyContactEffects:legacyContactEffects,syntheticLegacyContactTargets:legacyContactTargets,syntheticLegacyContactDecisions:legacyContactDecisions,syntheticLegacyContactApprovals:legacyContactApprovals,syntheticLegacyContactApplications:legacyContactApplications,syntheticLegacyContactDownloads:legacyContactDownloads,...automaticContactImport?{syntheticLegacyContactImportWorker:{connectionString:contactWorkerConnection}}:{},...workspace?{vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true}:{},...catalog?{syntheticCatalog:true,operationResolution:true}:{sourceExports:{appReleaseId:release,store:h.store}},...quotes?{syntheticQuotes:true,operationResolution:true}:{},...quoteReview?{syntheticQuoteReview:true}:{},...quoteCommercial?{syntheticQuoteCommercial:true,operationResolution:true}:{},...appointmentHolds?{syntheticAppointmentHolds:true,operationResolution:true}:{},...expenses?{syntheticExpenses:true,operationResolution:true}:{},...calendarConfiguration?{syntheticGoogleCalendar:calendarConfiguration}:{},...postedFinanceConfiguration?{syntheticPostedFinanceExport:postedFinanceConfiguration}:{},...financeConfiguration?{syntheticFinanceAccounts:financeConfiguration}:{},...scheduling?{syntheticScheduling:true}:{},...amendments?{syntheticQuoteAmendments:true}:{},...amendmentAcceptance?{syntheticQuoteAmendmentAcceptance:true}:{},...fieldSessions?{syntheticFieldSessions:true}:{},...jobCompletion?{syntheticJobCompletion:true}:{},...jobMileage?{syntheticJobMileage:true}:{},...supportTrips?{syntheticSupportTrips:true}:{},...unfulfilledCancellation?{syntheticUnfulfilledCancellation:true}:{},...workTime?{syntheticWorkTime:true}:{},...workBoundary?{syntheticWorkBoundary:true}:{},...workStart?{syntheticWorkStart:true}:{},...workEnd?{syntheticWorkEnd:true}:{},...mobileDeparture?{syntheticMobileDeparture:true}:{},...reviewOutcome?{syntheticReviewOutcome:true}:{},...reviewHistory?{syntheticReviewHistory:true}:{},...maintenanceFollowUp?{syntheticMaintenanceFollowUp:true}:{},...dropoffCustody?{syntheticDropoffCustody:true}:{},...dropoffPolicyRevision?{syntheticDropoffPolicyRevision:true}:{},...pickupTrips?{syntheticPickupTrips:true}:{},...pickupCollection?{syntheticPickupCollection:true}:{},...pickupPolicy?{syntheticPickupPolicy:true}:{},...pickupPhotos?{syntheticPickupPhotos:true}:{},...pickupReturnWorkflow?{syntheticPickupWork:true,syntheticPickupRelease:true,syntheticPickupReturnFailure:true}:{},...photoRuntime?{syntheticDropoffPhotos:photoRuntime}:{},...supplierOriginalRuntime?{syntheticSupplierOriginals:supplierOriginalRuntime}:{}});server=app.server;
+   app=await runtime.createCrestApplication({origin,environment:'test',tls,authentication:auth,business:{businessId:business},customers:true,syntheticLegacyContactBatches:legacyContactBatches,syntheticLegacyContactEffects:legacyContactEffects,syntheticLegacyContactTargets:legacyContactTargets,syntheticLegacyContactDecisions:legacyContactDecisions,syntheticLegacyContactApprovals:legacyContactApprovals,syntheticLegacyContactApplications:legacyContactApplications,syntheticLegacyContactDownloads:legacyContactDownloads,...automaticContactImport?{syntheticLegacyContactImportWorker:{connectionString:contactWorkerConnection}}:{},...workspace?{vehicles:true,associations:true,leads:true,leadFollowUps,leadMatchReview,leadConversions:true,operationResolution:true}:{},...catalog?{syntheticCatalog:true,operationResolution:true}:{sourceExports:{appReleaseId:release,store:h.store}},...quotes?{syntheticQuotes:true,operationResolution:true}:{},...quoteReview?{syntheticQuoteReview:true}:{},...quoteCommercial?{syntheticQuoteCommercial:true,operationResolution:true}:{},...appointmentHolds?{syntheticAppointmentHolds:true,operationResolution:true}:{},...expenses?{syntheticExpenses:true,operationResolution:true}:{},...calendarConfiguration?{syntheticGoogleCalendar:calendarConfiguration}:{},...postedFinanceConfiguration?{syntheticPostedFinanceExport:postedFinanceConfiguration}:{},...financeConfiguration?{syntheticFinanceAccounts:financeConfiguration}:{},...scheduling?{syntheticScheduling:true,syntheticRecordJobHistory:recordJobHistory}:{},...amendments?{syntheticQuoteAmendments:true}:{},...amendmentAcceptance?{syntheticQuoteAmendmentAcceptance:true}:{},...fieldSessions?{syntheticFieldSessions:true}:{},...jobCompletion?{syntheticJobCompletion:true}:{},...jobMileage?{syntheticJobMileage:true}:{},...supportTrips?{syntheticSupportTrips:true}:{},...unfulfilledCancellation?{syntheticUnfulfilledCancellation:true}:{},...workTime?{syntheticWorkTime:true}:{},...workBoundary?{syntheticWorkBoundary:true}:{},...workStart?{syntheticWorkStart:true}:{},...workEnd?{syntheticWorkEnd:true}:{},...mobileDeparture?{syntheticMobileDeparture:true}:{},...reviewOutcome?{syntheticReviewOutcome:true}:{},...reviewHistory?{syntheticReviewHistory:true}:{},...maintenanceFollowUp?{syntheticMaintenanceFollowUp:true}:{},...dropoffCustody?{syntheticDropoffCustody:true}:{},...dropoffPolicyRevision?{syntheticDropoffPolicyRevision:true}:{},...pickupTrips?{syntheticPickupTrips:true}:{},...pickupCollection?{syntheticPickupCollection:true}:{},...pickupPolicy?{syntheticPickupPolicy:true}:{},...pickupPhotos?{syntheticPickupPhotos:true}:{},...pickupReturnWorkflow?{syntheticPickupWork:true,syntheticPickupRelease:true,syntheticPickupReturnFailure:true}:{},...photoRuntime?{syntheticDropoffPhotos:photoRuntime}:{},...supplierOriginalRuntime?{syntheticSupplierOriginals:supplierOriginalRuntime}:{}});server=app.server;
    server.prependListener('request',incoming=>requests.push({path:new URL(incoming.url,origin).pathname,method:incoming.method}));
    await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
 
@@ -628,6 +686,6 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    const dispatch=runtime.createLegacyContactImportDispatcher({environment:'test',connectionString:contactWorkerConnection});
    return dispatch(AbortSignal.timeout(10000));
   }
-  return{origin,product,dispatchContactImport,authorizePostedFinance,preparePayable,originalFile,originalMimeType,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
+  return{origin,product,followUpLeads,dispatchContactImport,authorizePostedFinance,preparePayable,originalFile,originalMimeType,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),nextBrowserCodeAt:(Math.floor(seededCodeAt/(totp.period*1000))+1)*totp.period*1000,credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
  }catch(error){await close();throw error;}
 }

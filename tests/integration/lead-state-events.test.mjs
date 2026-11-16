@@ -1,9 +1,13 @@
 // Actual disposable PostgreSQL/Auth schema; canonical37-to38 upgrade.
 import assert from 'node:assert/strict';
+import {mkdir} from 'node:fs/promises';
+import {join} from 'node:path';
 import {randomUUID,randomBytes} from 'node:crypto';
 import {before,after,test} from 'node:test';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
+import {backupLegacyLeadFollowUpDatabase as backupDatabase,connect,keyPair,recoveryCluster,restoreLegacyLeadFollowUpDatabase as restoreDatabase} from '../support/recovery-drill.mjs';
+import {syntheticLeadFollowUpsAvailable} from '../../scripts/synthetic-migrations.mjs';
 import {leadStates,parseLead} from '../../src/customer/lead-contract.ts';
 import {parseLeadStateDraft,parseLeadEvent} from '../../src/customer/lead-state-contract.ts';
 import {parseLeadStateCommitted,parseLeadStatePage} from '../../src/customer/lead-state-command-contract.ts';
@@ -153,4 +157,82 @@ test('typed original receipts and mixed intake/status history preserve event gap
  const next=(await web.query('SELECT crest_commands.read_lead_state_events($1,$2,$3,$4,$5,$6,$7,$8,$9,2,1) AS value',[...auth(f),id])).rows[0].value;
  const last=parseLeadStatePage(next,f.business,id,'2',1);assert.equal(last.state,'found');assert.equal(last.hasMore,false);assert.deepEqual(last.events.map(e=>e.lead_version),['4']);assert.equal(last.events[0].reason,reopen.body.reason);
  assert.deepEqual(parseLeadStateCommitted(await lookup(f,lostRequest.operation),f.business,lostRequest.operation),accepted);
+});
+
+
+test('lead follow-up queue includes overdue lost leads past the ordinary list and pages exact tied dates',async()=>{
+ const priorFollowUps=await sandbox.apply(target,await sandbox.prefix(117));
+ assert.equal(priorFollowUps.history.length,117);
+ assert.equal(await syntheticLeadFollowUpsAvailable(target),false);
+
+ const owner=await state();
+ const at='2023-05-12T12:30:45.123456Z',future='2050-05-12T12:30:45.123457Z';
+ const ids=['f0000000-0000-4000-8000-000000000001','f0000000-0000-4000-8000-000000000002','f0000000-0000-4000-8000-000000000003'];
+ for(let index=1;index<=51;index++){
+  const id='10000000-0000-4000-8000-'+index.toString(16).padStart(12,'0');
+  assert.equal((await save(owner,id,'0',body({followUpAt:null}))).state,'committed');
+ }
+ for(const [index,id] of ids.entries()){
+  assert.equal((await save(owner,id,'0',body({label:'Follow-up '+index,followUpAt:index===2?future:at}))).state,'committed');
+ }
+ assert.equal((await change(owner,request(ids[0],'new','lost',{body:{fromState:'new',toState:'lost',reason:'Owner scheduled outreach'}}))).state,'committed');
+ const ordinary=(await web.query('SELECT crest_commands.read_lead_directory($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS value',
+  [...auth(owner),'',null,true,50])).rows[0].value;
+ assert.equal(ordinary.hasMore,true);
+ assert(ordinary.leads.every(row=>row.follow_up_at===null));
+
+ const query='SELECT crest_commands.read_lead_follow_ups($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS value';
+ const list=(f,afterAt=null,afterId=null,size=1,connection=web)=>connection.query(query,[...auth(f),afterAt,afterId,size]).then(response=>response.rows[0].value);
+ const initial=await evidence(owner);
+ await assert.rejects(list(owner),{code:'42883'});
+ const adopted=await sandbox.apply(target,await sandbox.prefix(118));
+ assert.equal(adopted.history.length,118);
+ assert.equal(adopted.history.at(-1).version,'20270111180000');
+ assert.deepEqual(adopted.history.slice(0,117),priorFollowUps.history);
+ assert.deepEqual((await sandbox.apply(target,await sandbox.prefix(118))).history,adopted.history);
+ assert.equal(await syntheticLeadFollowUpsAvailable(target),true);
+ assert.deepEqual(await evidence(owner),initial);
+ const page=await list(owner);
+ assert.deepEqual(Object.keys(page).sort(),['businessId','followUps','hasMore','observedAt','schemaVersion']);
+ assert.equal(page.businessId,owner.business);
+ assert.equal(page.schemaVersion,1);
+ assert.match(page.observedAt,/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{6}Z$/);
+ assert(at<page.observedAt&&page.observedAt<future);
+ assert.deepEqual(page.followUps,[{id:ids[0],label:'Follow-up 0',state:'lost',followUpAt:at}]);
+ assert.equal(page.hasMore,true);
+ const next=await list(owner,at,ids[0],2);
+ assert.deepEqual(next.followUps,[
+  {id:ids[1],label:'Follow-up 1',state:'new',followUpAt:at},
+  {id:ids[2],label:'Follow-up 2',state:'new',followUpAt:future},
+ ]);
+ assert.equal(next.hasMore,false);
+ assert.deepEqual((await list(owner,future,ids[2])).followUps,[]);
+ for(const [time,id,size] of [[at,null,1],[null,ids[0],1],['infinity',ids[0],1],[at,ids[0],0],[at,ids[0],51]]){
+  await assert.rejects(list(owner,time,id,size),{code:'22023'});
+ }
+ await assert.rejects(list({...owner,business:b.business}),{code:'42501'});
+ await assert.rejects(list({...owner,hash:randomBytes(32)}),{code:'42501'});
+ await assert.rejects(list(owner,null,null,1,exporter),{code:'42501'});
+ assert((await list(b,null,null,50)).followUps.every(row=>!ids.includes(row.id)));
+ assert.deepEqual(await evidence(owner),initial);
+
+ const checkpointPath=join(sandbox.workspace,'follow-ups-118-recovery');
+ await mkdir(checkpointPath,{mode:0o700});
+ const keys=await keyPair(checkpointPath);
+ const checkpoint=await backupDatabase(client,target,checkpointPath,keys.recipient);
+ assert.equal(checkpoint.manifest.schemaVersion,118);
+ const recovery=await recoveryCluster();
+ let copy;
+ try{
+  const destination=await recovery.database();
+  assert.deepEqual(await restoreDatabase(checkpointPath,keys.path,destination),checkpoint.manifest);
+  copy=await connect(destination);
+  await copy.query('SET ROLE crest_web');
+  const first=await list(owner,null,null,1,copy),later=await list(owner,at,ids[0],2,copy);
+  assert.equal(first.hasMore,true);
+  assert.deepEqual(first.followUps,page.followUps);
+  assert.equal(later.hasMore,false);
+  assert.deepEqual(later.followUps,next.followUps);
+  await assert.rejects(list({...owner,business:b.business},null,null,1,copy),{code:'42501'});
+ }finally{try{await copy?.end();}finally{await recovery.close();}}
 });

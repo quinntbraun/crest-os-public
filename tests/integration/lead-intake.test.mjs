@@ -1,5 +1,9 @@
 // Actual PostgreSQL, registered lead/source commands. Synthetic data only.
 import assert from 'node:assert/strict';
+import {mkdir} from 'node:fs/promises';
+import {join} from 'node:path';
+import {backupLegacyLeadMatchDatabase as backupDatabase,connect,keyPair,recoveryCluster,restoreLegacyLeadMatchDatabase as restoreDatabase} from '../support/recovery-drill.mjs';
+import {syntheticLeadMatchReviewAvailable} from '../../scripts/synthetic-migrations.mjs';
 import {randomUUID,randomBytes} from 'node:crypto';
 import {before,after,test} from 'node:test';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
@@ -94,4 +98,87 @@ test('literal search, bounded UUID pages and inactive source inclusion preserve 
 test('scoped source snapshots retain all26 plus15 columns in one read-only repeatable transaction',async()=>{
  await assert.rejects(web.query('SELECT crest_commands.lead_snapshot_context($1)',[a.business]),e=>e.code==='42501');await assert.rejects(exporter.query('SELECT crest_commands.lead_snapshot_context($1)',[a.business]),e=>e.code==='25001');
  await exporter.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');try{for(const [domain,table,columns,parse,format]of [['lead','leads',leadColumns,parseLead,formatLeadCsv],['lead_source','lead_sources',leadSourceColumns,parseLeadSource,formatLeadSourceCsv]]){const ctx=(await exporter.query('SELECT crest_commands.'+domain+'_snapshot_context($1) AS value',[a.business])).rows[0].value;let after=null,rows=[];for(;;){const page=(await exporter.query('SELECT crest_commands.'+domain+'_snapshot_page($1,$2,$3,2) AS value',[a.business,ctx.snapshotToken,after])).rows[0].value;rows.push(...page[table]);if(page[table].length<2)break;after=page[table].at(-1).id;}assert.equal(rows.length,Number(ctx.rowCount));for(const row of rows){assert.deepEqual(Object.keys(row).sort(),[...columns].sort());parse(row,a.business);}const formatted=format({businessId:a.business,snapshotToken:ctx.snapshotToken,expectedRowCount:ctx.rowCount,rows});assert.equal(readCustomerCsv(formatted.csv)[0].length,columns.length);assert.equal(JSON.parse(formatted.manifest).completeBackup,false);}await exporter.query('COMMIT');}catch(e){await exporter.query('ROLLBACK');throw e;}
+});
+
+
+test('lead contact review reports bounded matching records without merging or revealing raw contact data',async()=>{
+ const previous=await sandbox.apply(target,await sandbox.prefix(118));
+ assert.equal(await syntheticLeadMatchReviewAvailable(target),false);
+ const owner=await state(),other=await state(),customerIds=[],leadIds=[];
+ const phone='(317) 555-0155',email=' Shared@Example.test ';
+ const saveCustomer=async(f,id,label,contactEmail)=>{
+  const body={displayName:label,phone,email:contactEmail,contactPreference:null,outreachOptOut:false,notes:'Private fixture notes',
+   customerSince:null,archived:false,archiveReason:null};
+  const {rows:[row]}=await web.query('SELECT crest_commands.save_customer($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS value',
+   [...auth(f),f.epoch,randomUUID(),id,body]);
+  assert.equal(row.value.state,'committed');
+ };
+ for(let i=1;i<=6;i++){
+  const customer='f0000000-0000-4000-8000-'+String(i).padStart(12,'0');
+  const lead='f0010000-0000-4000-8000-'+String(i).padStart(12,'0');
+  customerIds.push(customer);leadIds.push(lead);
+  await saveCustomer(owner,customer,'Synthetic household '+i,i===1?email:null);
+  assert.equal((await save('lead',owner,request(leadBody({label:'Synthetic inquiry '+i,phone,email:i===1?email:null,notes:'Private lead notes'}),{id:lead}))).state,'committed');
+ }
+ await saveCustomer(other,randomUUID(),'Unrelated synthetic business',email);
+ assert.equal((await save('lead',other,request(leadBody({label:'Foreign inquiry',phone,email})))).state,'committed');
+ const query='SELECT crest_commands.read_lead_contact_review($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS value';
+ const review=(f,{current=null,selected=null,phoneHint='317.555.0155',emailHint='shared@example.test',session=web}={})=>
+  session.query(query,[...auth(f),current,selected,phoneHint,emailHint]).then(result=>result.rows[0].value);
+ const before=await evidence(owner);
+ const customerEvidence=async()=> (await client.query('SELECT to_jsonb(c) AS value FROM crest.customers c ORDER BY id')).rows;
+ const originalCustomers=await customerEvidence();
+ const exact119=await sandbox.prefix(119);
+ const adopted=await sandbox.apply(target,exact119);
+ assert.equal(adopted.history.length,119);
+ assert.deepEqual(adopted.history.slice(0,118),previous.history);
+ assert.equal(adopted.history.at(-1).version,'20270112180000');
+ assert.deepEqual((await sandbox.apply(target,exact119)).history,adopted.history);
+ assert.equal(await syntheticLeadMatchReviewAvailable(target),true);
+ assert.deepEqual(await evidence(owner),before);
+ assert.deepEqual(await customerEvidence(),originalCustomers);
+ const result=await review(owner);
+ assert.deepEqual(Object.keys(result).sort(),['businessId','customers','leads','moreCustomers','moreLeads','schemaVersion']);
+ assert.equal(result.businessId,owner.business);
+ assert.equal(result.schemaVersion,1);
+ assert(result.moreCustomers&&result.moreLeads);
+ assert.deepEqual(result.customers.map(row=>row.id),customerIds.slice(0,5));
+ assert.deepEqual(result.leads.map(row=>row.id),leadIds.slice(0,5));
+ assert.deepEqual(result.customers[0],{id:customerIds[0],label:'Synthetic household 1',archived:false,phone:true,email:true});
+ assert.deepEqual(result.leads[0],{id:leadIds[0],label:'Synthetic inquiry 1',state:'new',phone:true,email:true});
+ assert(result.customers.slice(1).every(row=>row.phone&&!row.email));
+ assert(result.leads.slice(1).every(row=>row.phone&&!row.email));
+ const filtered=await review(owner,{current:leadIds[0],selected:customerIds[0]});
+ assert.deepEqual(filtered.customers.map(row=>row.id),customerIds.slice(1));
+ assert.deepEqual(filtered.leads.map(row=>row.id),leadIds.slice(1));
+ assert(!filtered.moreCustomers&&!filtered.moreLeads);
+ const missing=await review(owner,{phoneHint:'---',emailHint:null});
+ assert.deepEqual([missing.customers,missing.leads,missing.moreCustomers,missing.moreLeads],[[],[],false,false]);
+ await assert.rejects(review(owner,{phoneHint:'1'.repeat(513)}),{code:'22023'});
+ await assert.rejects(review(owner,{emailHint:'bad\nvalue'}),{code:'22023'});
+ await assert.rejects(review({...owner,business:other.business}),{code:'42501'});
+ await assert.rejects(review({...owner,hash:randomBytes(32)}),{code:'42501'});
+ await assert.rejects(review(owner,{session:exporter}),{code:'42501'});
+ assert.equal((await review(other)).customers.length,1);
+ assert.deepEqual(await evidence(owner),before);
+
+ const folder=join(sandbox.workspace,'lead-match-119-recovery');
+ await mkdir(folder,{mode:0o700});
+ const keys=await keyPair(folder),checkpoint=await backupDatabase(client,target,folder,keys.recipient);
+ assert.equal(checkpoint.manifest.schemaVersion,119);
+ const recovery=await recoveryCluster();
+ let copy;
+ try{
+  const destination=await recovery.database();
+  assert.deepEqual(await restoreDatabase(folder,keys.path,destination),checkpoint.manifest);
+  assert.equal(await syntheticLeadMatchReviewAvailable(destination),true);
+  copy=await connect(destination);
+  await copy.query('SET ROLE crest_web');
+  assert.deepEqual(await review(owner,{session:copy}),result);
+  assert.deepEqual(await review(owner,{current:leadIds[0],selected:customerIds[0],session:copy}),filtered);
+  await assert.rejects(review({...owner,business:other.business},{session:copy}),{code:'42501'});
+  await copy.query('RESET ROLE');
+  await copy.query('REVOKE EXECUTE ON FUNCTION crest_commands.read_lead_vehicle_match_review(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,text,text,integer,text,text) FROM crest_web');
+  assert.equal(await syntheticLeadMatchReviewAvailable(destination),false);
+ }finally{try{await copy?.end();}finally{await recovery.close();}}
 });

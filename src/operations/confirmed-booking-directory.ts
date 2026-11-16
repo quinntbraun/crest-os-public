@@ -13,6 +13,7 @@ import {parseChangeJobScheduleSave,parseRescheduledJobCommitted} from './confirm
 import type {ChangeJobScheduleSave} from './confirmed-reschedule-contract.ts';
 import {parseJobListRequest,parseJobListPage,parseJobDetail,parseJobHistoryRequest,parseJobHistoryPage} from './confirmed-job-read-contract.ts';
 import type {JobListRequest,JobHistoryRequest} from './confirmed-job-read-contract.ts';
+import {parseRecordJobHistoryRequest,parseRecordJobHistoryPage} from './record-job-history-contract.ts';
 import {parseSchedulingOriginal,parseSchedulingOriginalResult} from './scheduling-original-contract.ts';
 import {parseBookingWorkspace,parseBookingAgreement,parseJobResources,parsePendingChangesRequest,parsePendingChangesPage} from './booking-context-contract.ts';
 import type {PendingChangesRequest} from './booking-context-contract.ts';
@@ -49,6 +50,17 @@ export function createBookingDirectory(config:SessionDatabaseConfiguration,provi
     if(exact(value,['state','reason'])&&value.state==='conflict'&&value.reason==='operation')return new PrivateValue(Object.freeze({state:'conflict' as const,reason:'operation' as const}));
     const result=parseSchedulingOriginalResult(value,original);return new PrivateValue(result.state==='absent'?result:Object.freeze({schemaVersion:1 as const,original,result}));
    });}catch{throw new BookingDirectoryError('BOOKING_REQUEST_FAILED');}
+  },
+  async recordJobs(credential:string,businessId:string,input:ReturnType<typeof parseRecordJobHistoryRequest>,signal:AbortSignal){
+   try{
+    const request=parseRecordJobHistoryRequest(input);
+    return await authorized(credential,businessId,signal,async(args,bounded)=>{
+     const value=await database('SELECT crest_commands.read_record_jobs($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::text,$10::uuid,$11::timestamptz,$12::uuid,$13::integer) AS result',
+      [...args,request.kind,request.recordId,request.afterRecordedAt,request.afterEntryId,request.pageSize],bounded);
+     bounded.throwIfAborted();
+     return new PrivateValue(parseRecordJobHistoryPage(value,businessId,request));
+    });
+   }catch{throw new BookingDirectoryError('BOOKING_REQUEST_FAILED');}
   },
   async list(credential:string,input:JobListRequest,signal:AbortSignal){
    try{const request=parseJobListRequest(input);return await authorized(credential,request.businessId,signal,async(args,bounded)=>{const value=await database('SELECT crest_commands.read_confirmed_jobs($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::timestamptz,$10::timestamptz,$11::timestamptz,$12::uuid,$13::integer) AS result',[...args,request.from,request.until,request.afterStart,request.afterJob,request.pageSize],bounded);requireBooking(!bounded.aborted);return new PrivateValue(parseJobListPage(value,request));});}catch{throw new BookingDirectoryError('BOOKING_REQUEST_FAILED');}

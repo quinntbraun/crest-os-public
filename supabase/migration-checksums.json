@@ -585,6 +585,21 @@
       "version": "20270110180000",
       "file": "20270110180000_legacy_contact_application_download.sql",
       "sha256": "379eb66a4a764cf47ee1f5a65c7014fd94408e875cabe3ac3737ae072e22980f"
+    },
+    {
+      "version": "20270111180000",
+      "file": "20270111180000_lead_follow_up_queue.sql",
+      "sha256": "ad45787ce783f88e428fbfffdaf66fbe7d4b5c1c36979dcf1488bf014548aaa6"
+    },
+    {
+      "version": "20270112180000",
+      "file": "20270112180000_lead_match_review.sql",
+      "sha256": "273a49b133b9f66e9e062bda426d22058bee9ed1fd6d690e5cad467c99a11424"
+    },
+    {
+      "version": "20270113180000",
+      "file": "20270113180000_record_job_history.sql",
+      "sha256": "8fd6865c260f1b85d1b894e0d5dd51dadf5f802ef24e5a531b21426edf3492e1"
     }
   ]
 }

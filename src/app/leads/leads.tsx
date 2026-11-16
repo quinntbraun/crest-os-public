@@ -18,6 +18,9 @@ import {createPendingLeadVehicleStore} from '../../client/pending-lead-vehicle-e
 import {createPendingLeadStateStore} from '../../client/pending-lead-state-edit';
 import {leadDollars,leadCents} from './intake-input';
 import {FollowUpInput} from './follow-up-input';
+import {LeadMatchNotice,useLeadMatchReview} from './match-review';
+import {leadMatchReview} from '../../client/leads';
+import type {Proof} from '../../client/authentication';
 
 function EstimateInput({value,change}:{value:string|null;change:(value:string|null)=>void}){
  const [text,setText]=useState(()=>value===null?'':leadDollars(value));
@@ -27,15 +30,23 @@ function LeadDetails({lead}:{lead:Lead}){
  const text=(value:string|null)=>value===null?'Not recorded':value===''?'Recorded as empty':value;
  return <dl className="customer-values"><dt>Label</dt><dd>{lead.label}</dd><dt>State</dt><dd>{lead.state.replaceAll('_',' ')}</dd><dt>Linked customer</dt><dd>{lead.customer_id?'Existing customer linked':'Not linked'}</dd><dt>Selected source snapshot</dt><dd>{lead.source_snapshot?lead.source_snapshot.label+' · '+lead.source_snapshot.kind:'Not recorded'}</dd><dt>Referral evidence</dt><dd>{text(lead.referral_text)}</dd><dt>Phone</dt><dd>{text(lead.phone_raw)}</dd><dt>Email</dt><dd>{text(lead.email_raw)}</dd><dt>Requested scope</dt><dd>{text(lead.requested_scope)}</dd><dt>Availability</dt><dd>{text(lead.availability)}</dd><dt>Estimate (USD)</dt><dd>{lead.estimated_cents===null?'Not recorded':leadDollars(lead.estimated_cents)}</dd><dt>Follow-up (UTC)</dt><dd>{text(lead.follow_up_at)}</dd><dt>Notes</dt><dd>{text(lead.notes)}</dd><dt>Lost reason</dt><dd>{text(lead.lost_reason)}</dd></dl>;
 }
-export function LeadScreen({addressAssist}:{addressAssist?:ComponentType<{draft:LeadAddressDraft;change:(draft:LeadAddressDraft)=>void}>}={}){
- const [conversionLocked,setConversionLocked]=useState(false),[conversionGeneration,setConversionGeneration]=useState(0),[statusLocked,setStatusLocked]=useState(false),[vehicleLocked,setVehicleLocked]=useState(false),[addressLocked,setAddressLocked]=useState(false),[view,setView]=useState(initialLeadEditorView),current=useRef<ReturnType<typeof createLeadEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null);
+export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:ComponentType<{draft:LeadAddressDraft;change:(draft:LeadAddressDraft)=>void}>;initialLeadId?:string|null}={}){
+ const [conversionLocked,setConversionLocked]=useState(false),[conversionGeneration,setConversionGeneration]=useState(0),[statusLocked,setStatusLocked]=useState(false),[vehicleLocked,setVehicleLocked]=useState(false),[addressLocked,setAddressLocked]=useState(false),[view,setView]=useState(initialLeadEditorView),current=useRef<ReturnType<typeof createLeadEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null),editHeading=useRef<HTMLHeadingElement>(null);
  useEffect(()=>{
   const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)};
-  const controller=createLeadEditorController({conversionStore:createPendingLeadConversionStore(storage),addressStore:createPendingLeadAddressStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),store:createPendingLeadStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),statusStore:createPendingLeadStateStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),vehicleStore:createPendingLeadVehicleStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});current.current=controller;void controller.load();
+  const controller=createLeadEditorController({conversionStore:createPendingLeadConversionStore(storage),addressStore:createPendingLeadAddressStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),store:createPendingLeadStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),statusStore:createPendingLeadStateStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),vehicleStore:createPendingLeadVehicleStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});current.current=controller;
+  let focusFrame=0;
+  void (async()=>{
+   await controller.load();
+   if(!initialLeadId||current.current!==controller||controller.view().phase!=='ready')return;
+   await controller.open(initialLeadId);
+   if(current.current!==controller||controller.view().selected?.id!==initialLeadId)return;
+   focusFrame=requestAnimationFrame(()=>editHeading.current?.focus());
+  })();
   const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
-  return()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
- },[]);
+  return()=>{cancelAnimationFrame(focusFrame);controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
+ },[initialLeadId]);
  const statusChanged=useCallback((leadId:string)=>{void current.current?.statusChanged(leadId);},[]);
  const conversionCommitted=useCallback((leadId:string)=>{setConversionGeneration(v=>v+1);void current.current?.conversionChanged(leadId);},[]);
  const dirty=view.draft!==null&&JSON.stringify(view.draft)!==JSON.stringify(view.selected?draftFromLead(view.selected):emptyLeadDraft);
@@ -43,8 +54,29 @@ export function LeadScreen({addressAssist}:{addressAssist?:ComponentType<{draft:
  async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory'){const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
  function edit<K extends keyof LeadDraft>(key:K,value:LeadDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
  function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const data=new FormData(event.currentTarget);void current.current?.query(String(data.get('search')??''),data.get('lost')==='on');}
- function submit(event:FormEvent){event.preventDefault();void action('save');}
+
  const key=(view.selected?.id??'new')+':'+(view.selected?.version??'0'),disabled=view.busy||view.writesPaused||statusLocked||vehicleLocked||addressLocked||conversionLocked;
+ const review=useLeadMatchReview(view.draft);
+ const canSave=view.canSave&&!disabled;
+ function reviewAndSave(){
+  const controller=current.current,draft=view.draft,businessId=view.businessId,selected=view.selected;
+  if(!canSave||!controller||!draft||!businessId)return;
+  const changed=!selected||draft.customerId!==selected.customer_id||draft.phone!==selected.phone_raw||draft.email!==selected.email_raw;
+  const lookup=view.matchReview&&changed&&(draft.phone?.trim()||draft.email?.trim())?async(proof:Proof,signal:AbortSignal)=>{
+   const matches=await leadMatchReview.contact(businessId,{leadId:selected?.id??null,customerId:draft.customerId,phone:draft.phone||null,email:draft.email||null},proof,signal);
+   const reasons=(row:{phone:boolean;email:boolean})=>[...row.phone?['Same phone']:[],...row.email?['Same email']:[]];
+   return {rows:matches?[
+    ...matches.customers.map(row=>({id:row.id,label:row.label,kind:'Customer' as const,reasons:reasons(row),detail:row.archived?'Archived':undefined})),
+    ...matches.leads.map(row=>({id:row.id,label:row.label,kind:'Lead' as const,reasons:reasons(row),detail:row.state.replaceAll('_',' ')})),
+   ]:[],more:!!(matches?.moreCustomers||matches?.moreLeads)};
+  }:null;
+  void review.run({lookup,stillCurrent:()=>current.current===controller&&controller.view().draft===draft&&controller.view().canSave,save:()=>void action('save')});
+ }
+ function submit(event:FormEvent){event.preventDefault();if(!review.active)reviewAndSave();}
+ function saveAsEntered(){
+  if(canSave&&current.current?.view().draft===view.draft){review.dismiss();void action('save');}
+ }
+
  return <section aria-label="Lead directory" aria-busy={view.busy}>
   <p ref={status} tabIndex={-1} role="status" aria-label="Lead editor status" aria-live="polite" aria-atomic="true">{view.message}</p>
   {view.phase==='ready'&&<>
@@ -59,7 +91,7 @@ export function LeadScreen({addressAssist}:{addressAssist?:ComponentType<{draft:
    {view.selected&&view.businessId&&<LeadAddressPanel key={'addresses:'+view.businessId+':'+view.selected.id+':'+conversionGeneration} businessId={view.businessId} leadId={view.selected.id} disabled={view.busy||dirty||statusLocked||vehicleLocked||conversionLocked} onLock={setAddressLocked} {...addressAssist?{assist:addressAssist}:{}}/>}
    {view.businessId&&<LeadConversionPanel key={'conversion:'+view.businessId+':'+(view.selected?.id??'none')} businessId={view.businessId} leadId={view.selected?.id??null} disabled={view.busy||dirty||statusLocked||vehicleLocked||addressLocked} onLock={setConversionLocked} onCommitted={conversionCommitted}/>}
    {view.draft&&<>
-    <h2>{view.selected?'Edit lead intake':'New lead'}</h2><p className="field-help">Only a label is required. Unknown details stay unknown. Leaving or hiding this page clears private drafts; closing the tab can also lose its save reference.</p>
+    <h2 ref={editHeading} tabIndex={-1}>{view.selected?'Edit lead intake':'New lead'}</h2><p className="field-help">Only a label is required. Unknown details stay unknown. Leaving or hiding this page clears private drafts; closing the tab can also lose its save reference.</p>
     {view.businessId&&<><ReferencePicker key={key+':customer'} businessId={view.businessId} kind="customer" value={view.draft.customerId} disabled={disabled} change={value=>edit('customerId',value)}/><ReferencePicker key={key+':source'} businessId={view.businessId} kind="source" value={view.draft.sourceId} disabled={disabled} change={value=>edit('sourceId',value)}/></>}
     {view.selected?.source_snapshot&&view.draft.sourceId===view.selected.source_id&&<p>Retained source attribution: {view.selected.source_snapshot.label} · {view.selected.source_snapshot.kind}. Later source edits do not replace this snapshot.</p>}
     <form onSubmit={submit} aria-label="Lead editor"><fieldset disabled={disabled}><legend>Inquiry details</legend>
@@ -70,7 +102,8 @@ export function LeadScreen({addressAssist}:{addressAssist?:ComponentType<{draft:
      <EstimateInput key={key+':estimate'} value={view.draft.estimatedCents} change={value=>edit('estimatedCents',value)}/>
      <FollowUpInput key={key+':follow-up'} value={view.draft.followUpAt} change={value=>edit('followUpAt',value)}/>
      <NullableText name="notes" label="Notes" multiline limit={4000} value={view.draft.notes} disabled={disabled} change={value=>edit('notes',value)}/>
-    </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}<button type="submit" disabled={!view.canSave||statusLocked||vehicleLocked||addressLocked||conversionLocked}>Save lead</button></form>
+    </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}{review.active&&<LeadMatchNotice review={review.active} canSave={canSave} retry={reviewAndSave} edit={()=>{review.dismiss();document.getElementById('phone')?.focus();}} save={saveAsEntered}/>}
+    {(!review.active||review.active.state==='checking')&&<button type="submit" disabled={!canSave||!!review.active}>Save lead</button>}</form>
    </>}
    {view.history&&<section aria-label="Lead history"><h2>Retained history</h2><p>Current version: {view.history.lead.version}</p>{view.history.history.map(event=><details key={event.after.version}><summary>Version {event.after.version} · {event.after.updated_at}</summary>{event.before&&<><h3>Before</h3><LeadDetails lead={event.before}/></>}<h3>After</h3><LeadDetails lead={event.after}/></details>)}{view.history.hasMore&&<button className="secondary" type="button" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void action('moreHistory')}>Next lead history page</button>}</section>}
   </>}

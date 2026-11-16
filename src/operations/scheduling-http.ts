@@ -19,6 +19,7 @@ import {parseBookJobCommand,parseCancelJobCommand} from './amended-booking-contr
 import {parseChangeJobScheduleSave} from './confirmed-reschedule-contract.ts';
 import {parseFulfillmentModeSave} from './fulfillment-mode-contract.ts';
 import {parseJobListRequest,parseJobHistoryRequest} from './confirmed-job-read-contract.ts';
+import {parseRecordJobHistoryRequest,recordJobHistoryFields} from './record-job-history-contract.ts';
 import {parseBookingConflictRequest} from './booking-conflict-review-contract.ts';
 import {parsePendingChangesRequest} from './booking-context-contract.ts';
 import {createFieldDirectory,FieldDirectoryError} from './field-directory.ts';
@@ -47,9 +48,9 @@ import {dropoffCustodyKind,dropoffPolicyKind,dropoffPolicyRevisionKind,parseDrop
 import {maintenanceFollowUpKind,parseMaintenanceFollowUpSave,parseMaintenanceFollowUpListQuery,
  parseMaintenanceFollowUpHistoryQuery} from './maintenance-follow-up-contract.ts';
 
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;recordJobHistory?:boolean};
 const prefix='/api/business/scheduling/';
-const fields={'mileage-trips':['jobId','afterDepartedAt','afterLegId','pageSize'],
+const fields={'record-jobs':recordJobHistoryFields,'mileage-trips':['jobId','afterDepartedAt','afterLegId','pageSize'],
  'support-trips':['afterDepartedAt','afterLegId','pageSize'],
  'support-trip-history':['legId','afterVersion','throughVersion','pageSize'],
  'support-trip-mileage':['legId'],
@@ -128,6 +129,7 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
   try{
    const signal=AbortSignal.any([request.signal,AbortSignal.timeout(40000)]);if(signal.aborted)throw Error();resolve(request,peer);const url=new URL(request.url);
    const route=url.pathname.slice(prefix.length) as Route;if(!url.pathname.startsWith(prefix)||!Object.hasOwn(fields,route)||url.search||url.hash)return failed(404);if(request.method!=='POST')return failed(405);if(route==='field-save'&&!fieldDirectory)return failed(503);if(!directory||!modes||!context)return failed(503);
+   if(route==='record-jobs'&&config.recordJobHistory!==true)return failed(404);
    if((route==='completion-context'||route==='complete')&&!completion)return failed(503);
    if(route.startsWith('mileage-')&&!mileage)return failed(503);
    if(route.startsWith('support-trip')&&!supportTrips)return failed(503);
@@ -210,6 +212,7 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
    const book=route==='book'?parseBookJobCommand({...input,businessId}):undefined,cancel=route==='cancel'?parseCancelJobCommand({...input,businessId}):undefined,reschedule=route==='reschedule'?parseChangeJobScheduleSave({...input,businessId}):undefined,mode=route==='mode-save'?parseFulfillmentModeSave({...input,businessId}):undefined;
    if(!amendedEnabled&&(book?.schemaVersion===2||cancel?.schemaVersion===2))throw Error();
    const slotReview=route==='slot-review'?parseBookingConflictRequest({...input,businessId}):undefined;
+   const recordJobs=route==='record-jobs'?parseRecordJobHistoryRequest(input):undefined;
    const list=route==='list'?parseJobListRequest({...input,businessId}):undefined,history=route==='history'?parseJobHistoryRequest({...input,businessId}):undefined,pending=route==='pending'?parsePendingChangesRequest({...input,businessId}):undefined;
    if(route==='agreement')check(customerUuid(input.familyId));if(route==='resources'||route==='read'||route==='completion-context')check(customerUuid(input.jobId));if(route==='mode-history')check(customerVersion(input.afterSequence,true)&&typeof input.pageSize==='number'&&Number.isInteger(input.pageSize)&&input.pageSize>=1&&input.pageSize<=20);
    const sessionId=await csrf(bounded,cookie,signal);workStarted=true;if(!await admit(cookie,'ordinary',signal)){const r=privateJsonResponse({error:'SCHEDULING_REQUEST_LIMITED'},429);r.headers.set('Retry-After','60');return r;}check(!signal.aborted);
@@ -265,6 +268,7 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
    else if(route==='agreement')result=(await directory.agreement(cookie,{businessId,familyId:input.familyId as string},signal)).forServer();
    else if(route==='resources')result=(await directory.resources(cookie,{businessId,jobId:input.jobId as string},signal)).forServer();
    else if(route==='pending')result=(await directory.pending(cookie,pending!,signal)).forServer();
+   else if(recordJobs)result=(await directory.recordJobs(cookie,businessId,recordJobs,signal)).forServer();
    else if(route==='list')result=(await directory.list(cookie,list!,signal)).forServer();
    else if(route==='read')result=(await directory.read(cookie,{businessId,jobId:input.jobId as string},signal)).forServer();
    else if(route==='history')result=(await directory.history(cookie,history!,signal)).forServer();

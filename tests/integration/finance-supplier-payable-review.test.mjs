@@ -499,11 +499,11 @@ test('held supplier accounting verifies originals, accrues once, and settles exa
   `;
   const financeBefore=await admin.query(financeBeforeQuery);
   const registered=await sandbox.apply(url);
-  assert.equal(registered.history.length,117);
+  assert.equal(registered.history.length,120);
   assert.deepEqual(registered.history.slice(0,109),beforeContactMigration.history);
   assert.deepEqual((await admin.query(financeBeforeQuery)).rows,financeBefore.rows);
 
-  const combinedDirectory=join(sandbox.workspace,'registered117-recovery');
+  const combinedDirectory=join(sandbox.workspace,'registered120-recovery');
   await mkdir(combinedDirectory,{mode:0o700});
   const backupKey=await keyPair(combinedDirectory);
   const archiveVault=await objectDirectory(join(combinedDirectory,'vault'));
@@ -531,7 +531,7 @@ test('held supplier accounting verifies originals, accrues once, and settles exa
    });},
   };
   const combined=await backupDatabase(admin,url,combinedDirectory,backupKey.recipient,async()=>{},objectCapture);
-  assert.equal(combined.manifest.schemaVersion,117);
+  assert.equal(combined.manifest.schemaVersion,120);
   const independent=await recoveryCluster();
   let recoveredConnection;
   try{
@@ -543,7 +543,7 @@ test('held supplier accounting verifies originals, accrues once, and settles exa
     });
    }).catch(async error=>{
     if(error.message==='SYNTHETIC_RECOVERY_RESTORE_FAILED:schema')await Promise.all([[url,'before'],[copiedUrl,'after']]
-     .map(async([target,kind])=>writeFile('.local/supplier-117-'+kind+'-schema.sql',normalizedSchema(await postgresTool('pg_dump',target,['--schema-only'])))));
+     .map(async([target,kind])=>writeFile('.local/supplier-120-'+kind+'-schema.sql',normalizedSchema(await postgresTool('pg_dump',target,['--schema-only'])))));
     throw error;
    });
    assert.deepEqual(copied,combined.manifest);

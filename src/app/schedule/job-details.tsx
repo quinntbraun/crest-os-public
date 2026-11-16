@@ -26,11 +26,11 @@ function WorkLocation({value}:{value:BookingLocation}){
  return <><address>{[address.line1,address.line2,[address.city,address.region,address.postal_code].filter(Boolean).join(', '),address.country].filter(Boolean).map((line,index)=><div key={index}>{line}</div>)}</address>{address.exact_location_text&&<p>{address.exact_location_text}</p>}{address.instructions&&<p className="field-help">{address.instructions}</p>}</>;
 }
 type Props=Readonly<{
- resources:SavedJobResources;initialJobVehicleId?:string;history:readonly JobHistoryEvent[];historyComplete:boolean;busy:boolean;canChange:boolean;
+ resources:SavedJobResources;initialJobVehicleId?:string;visitsSource?:'customer'|'vehicle';history:readonly JobHistoryEvent[];historyComplete:boolean;busy:boolean;canChange:boolean;
  onWorkStatus?:(()=>void)|undefined;completionAvailable?:boolean;invoiceDraftsAvailable?:boolean;googleCalendarAvailable?:boolean;mileageAvailable?:boolean;workTimeAvailable?:boolean;dropoffCustodyAvailable?:boolean;pickupTripsAvailable?:boolean;pickupWorkAvailable?:boolean;pickupCollectionAvailable?:boolean;pickupPhotosAvailable?:boolean;pickupReleaseAvailable?:boolean;onChangeAppointment?:()=>void;onCancel?:()=>void;onDownload?:()=>void;onMoreHistory?:()=>void;
 }>;
 export function SavedJobDetails(props:Props){return <SavedJobDetailsContent key={props.resources.head.job.id+':'+props.resources.head.job.version} {...props}/>;}
-function SavedJobDetailsContent({resources,initialJobVehicleId,history,historyComplete,busy,canChange,onWorkStatus,completionAvailable,invoiceDraftsAvailable,googleCalendarAvailable,mileageAvailable,workTimeAvailable,dropoffCustodyAvailable,pickupTripsAvailable,pickupWorkAvailable,pickupCollectionAvailable,pickupPhotosAvailable,pickupReleaseAvailable,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
+function SavedJobDetailsContent({resources,initialJobVehicleId,visitsSource,history,historyComplete,busy,canChange,onWorkStatus,completionAvailable,invoiceDraftsAvailable,googleCalendarAvailable,mileageAvailable,workTimeAvailable,dropoffCustodyAvailable,pickupTripsAvailable,pickupWorkAvailable,pickupCollectionAvailable,pickupPhotosAvailable,pickupReleaseAvailable,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
  const {head}=resources,{job,appointment,latestAppointment}=head;
  const customer=parseCustomer(resources.vehicles[0]!.customer_snapshot,resources.businessId);
  const location=parseBookingLocation(job.work_location_snapshot,resources.businessId,job.customer_id),contact=parseBookingContact(appointment.contact_snapshot);
@@ -53,6 +53,7 @@ function SavedJobDetailsContent({resources,initialJobVehicleId,history,historyCo
   <header className="schedule-job-heading">
    <p className="schedule-job-state"><strong>{states[job.state]}</strong><span>{' · '}{modes[job.fulfillment_mode]}</span></p>
    <h2>{customer.display_name}</h2>
+   <a className="schedule-job-record-link" href={'/customers?customer='+encodeURIComponent(job.customer_id)+'&job='+encodeURIComponent(job.id)+(visitsSource==='customer'?'&view=visits':'')}>{visitsSource==='customer'?'Back to customer visits':'Open customer record'}</a>
   </header>
   <dl className="customer-values">
    <dt>{job.state==='cancelled'?'Retained appointment':'Confirmed appointment'}</dt>
@@ -69,8 +70,10 @@ function SavedJobDetailsContent({resources,initialJobVehicleId,history,historyCo
   <section aria-label="Vehicles for this job"><h3>Vehicles</h3>{resources.vehicles.map(row=>{
    const vehicle=parseVehicle(row.vehicle_snapshot,resources.businessId);
    const pickup=row.pickup_location_snapshot===null?null:parseBookingLocation(row.pickup_location_snapshot,resources.businessId,job.customer_id),returned=row.return_location_snapshot===null?null:parseBookingLocation(row.return_location_snapshot,resources.businessId,job.customer_id);
-   const selected=row.id===initialJobVehicleId;
+   const selected=row.id===initialJobVehicleId,returnToVisits=selected&&visitsSource==='vehicle';
+   const vehicleLinkLabel=returnToVisits?'Back to vehicle visits':'Open vehicle record';
    return <details key={row.id} open={selected||undefined}><summary ref={selected?target:undefined}>{vehicle.label}</summary><dl className="customer-values"><dt>Vehicle</dt><dd>{[vehicle.year,vehicle.make,vehicle.model,vehicle.color].filter(v=>v!==null&&v!=='').join(' · ')||vehicle.label}</dd>{vehicle.plate&&<><dt>Plate</dt><dd>{vehicle.plate}</dd></>}{vehicle.vin_raw&&<><dt>VIN</dt><dd>{vehicle.vin_raw}</dd></>}{pickup&&<><dt>Pickup</dt><dd><WorkLocation value={pickup}/></dd></>}{returned&&<><dt>Return</dt><dd><WorkLocation value={returned}/></dd></>}</dl>
+    <a className="schedule-job-record-link" href={'/vehicles?vehicle='+encodeURIComponent(row.vehicle_id)+'&job='+encodeURIComponent(job.id)+'&jobVehicle='+encodeURIComponent(row.id)+(returnToVisits?'&view=visits':'')} aria-label={vehicleLinkLabel+' for '+vehicle.label}>{vehicleLinkLabel}</a>
     {pickupCollectionAvailable&&job.fulfillment_mode==='pickup_return'&&<PickupCollection businessId={resources.businessId} jobId={job.id} jobVehicleId={row.id} jobVersion={job.version} timezone={appointment.timezone} canChange={canChange&&!busy} photosAvailable={pickupPhotosAvailable===true} releaseAvailable={pickupReleaseAvailable===true}/>}
     {dropoffCustodyAvailable&&job.fulfillment_mode==='dropoff'&&<DropoffCustodyHistory businessId={resources.businessId} jobId={job.id} jobVehicleId={row.id} vehicleId={vehicle.id} timezone={appointment.timezone} canChange={canChange}/>}
    </details>;

@@ -36,7 +36,7 @@ async function post(route:LegacyBatchRoute|'legacy-matches'|'context'|'list'|'sa
       const codes:Record<string,readonly[number,Kind]>={CUSTOMER_SAVE_NOT_SUBMITTED:[503,'not_submitted'],CUSTOMER_SAVE_DENIED:[403,'denied'],RECOVERY_REVIEW_REQUIRED:[409,'recovery'],CUSTOMER_REQUEST_LIMITED:[429,'limited'],CUSTOMER_SAVE_OUTCOME_UNKNOWN:[503,'unknown']},mapped=typeof value.error==='string'&&Object.hasOwn(codes,value.error)?codes[value.error]:undefined;
       if(mapped&&response.status===mapped[0])throw new CustomerClientError(mapped[1]);throw new Error();
     }
-    return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding'),reviewHistoryAvailable:route==='context'&&response.headers.get('x-crest-review-history')==='1',
+    return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding'),recordJobHistoryAvailable:route==='context'&&response.headers.get('x-crest-record-job-history')==='1',reviewHistoryAvailable:route==='context'&&response.headers.get('x-crest-review-history')==='1',
       maintenanceFollowUpAvailable:route==='context'&&response.headers.get('x-crest-maintenance-follow-up')==='1',
       legacyContactBatchesAvailable:route==='context'&&response.headers.get('x-crest-legacy-contact-batches')==='1',
       legacyContactEffectsAvailable:route==='context'&&response.headers.get('x-crest-legacy-contact-effects')==='1',
@@ -159,7 +159,7 @@ export async function customerLegacyMatches(businessId:string,input:unknown,proo
 // authority, retry loop or automatic operation-ID/epoch replacement.
 export const customers=Object.freeze({
   async context(proof:Proof,signal:AbortSignal){
-    try{const r=await post('context',{},proof,signal),v=r.value;check(r.status===200&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding)&&exact(v,['schemaVersion','businessId','writeState','recoveryEpoch'])&&v.schemaVersion===1&&uuid(v.businessId)&&(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null));return Object.freeze({context:Object.freeze({...v}) as CustomerContext,binding:r.binding,...r.reviewHistoryAvailable?{reviewHistoryAvailable:true as const}:{},
+    try{const r=await post('context',{},proof,signal),v=r.value;check(r.status===200&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding)&&exact(v,['schemaVersion','businessId','writeState','recoveryEpoch'])&&v.schemaVersion===1&&uuid(v.businessId)&&(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null));return Object.freeze({context:Object.freeze({...v}) as CustomerContext,binding:r.binding,...r.recordJobHistoryAvailable?{recordJobHistoryAvailable:true as const}:{},...r.reviewHistoryAvailable?{reviewHistoryAvailable:true as const}:{},
       ...r.maintenanceFollowUpAvailable?{maintenanceFollowUpAvailable:true as const}:{},
       ...r.legacyContactBatchesAvailable?{legacyContactBatchesAvailable:true as const}:{},
       ...r.legacyContactEffectsAvailable?{legacyContactEffectsAvailable:true as const}:{},

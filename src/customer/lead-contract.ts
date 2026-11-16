@@ -26,6 +26,7 @@ function text(value:unknown,limit:number,meaningful=false,multiline=false):value
     return !(n>=0xd800&&n<=0xdfff)&&(!(n<32||n===127)||multiline&&(n===9||n===10||n===13));
   });
 }
+export const isLeadLabel=(value:unknown):value is string=>text(value,200,true);
 const optional=(value:unknown,limit:number,meaningful=false,multiline=false):value is string|null=>value===null||text(value,limit,meaningful,multiline);
 
 // PostgreSQL bigint cents stay decimal strings throughout intake and transport.
@@ -36,7 +37,7 @@ export function leadEstimate(value:unknown):value is string{
 
 export function parseLeadDraft(value:unknown):LeadDraft{
   requireCustomer(exactCustomerObject(value,keys));
-  requireCustomer(text(value.label,200,true)
+  requireCustomer(isLeadLabel(value.label)
     &&(value.customerId===null||customerUuid(value.customerId))
     &&(value.sourceId===null||customerUuid(value.sourceId))
     &&optional(value.referralText,2000,false,true)
