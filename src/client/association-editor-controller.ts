@@ -62,10 +62,24 @@ export function createAssociationEditorController(deps:Dependencies){
  const retain=(text:string)=>{phase='pending';message=text;canRetry=false;rows=[];hasMore=false;choices=[];customerHasMore=false;customerSearch='';selectedCustomer=null;selected=null;draft=null;history=null;};
  const reference=(c:AssociationCommand)=>associationReference({operationId:c.operationId,recoveryEpoch:c.recoveryEpoch,expectedVersion:c.expectedVersion,action:c.body.action,associationId:c.body.associationId,vehicleId:c.body.vehicleId,nextAssociationId:c.body.nextAssociationId});
  const eligible=()=>!!pending&&!!original&&!!snapshot&&pending.businessId===businessId&&pending.reference.vehicleId===vehicleId&&snapshot.binding===pending.binding&&snapshot.context.writeState==='ready'&&snapshot.context.recoveryEpoch===pending.reference.recoveryEpoch&&(['operationId','recoveryEpoch','expectedVersion','action','associationId','vehicleId','nextAssociationId'] as const).every(k=>reference(original!)[k]===pending!.reference[k]);
- const load=()=>run(async signal=>{
+ const openDraft=(customerId=''):AssociationDraft=>Object.freeze({action:'open',customerId,effectiveAt:'',relationship:null,isBilling:null,evidence:null,reason:null});
+ const load=(customerId?:string)=>run(async signal=>{
   clearPrivate();phase='loading';message='Checking customer-link access…';emit();pending=deps.store.read();await fresh(signal);
   if(pending){if(pending.businessId!==businessId){phase='blocked';message='A pending customer-link save belongs to a different business. Its reference has been kept for review.';return;}retain(pending.reference.vehicleId===vehicleId?'A pending customer-link save was found. Check its original outcome before another change.':'A pending customer-link save belongs to another vehicle. Check its original outcome before another change.');return;}
-  await list(signal);phase='ready';message=snapshot!.context.writeState==='ready'?'Review the retained customer links or start an explicit change.':'Customer-link changes are paused. Retained records remain available for review.';
+  await list(signal);
+  const before=snapshot!;
+  if(before.context.writeState==='ready'&&uuid(customerId)){
+   const choice=await customerLabel(customerId,signal);
+   await fresh(signal);
+   requireValue(snapshot!.binding===before.binding&&snapshot!.context.recoveryEpoch===before.context.recoveryEpoch&&snapshot!.context.writeState==='ready');
+   if(choice.archived)message='This customer is archived. Review the retained links before starting a change.';
+   else{
+    selectedCustomer=choice;
+    draft=openDraft(choice.id);
+    message='Customer selected. Choose the relationship, billing selection and effective time.';
+   }
+  }else message=before.context.writeState==='ready'?'Review the retained customer links or start an explicit change.':'Customer-link changes are paused. Retained records remain available for review.';
+  phase='ready';
  },error=>{clearPrivate();phase=error instanceof PendingAssociationError?'blocked':'unavailable';message=error instanceof PendingAssociationError?'The pending-link reference cannot be read. Changes are blocked to protect it.':'Customer links or names could not be verified. Load current links again; any pending reference has been kept.';});
  const more=()=>{if(phase!=='ready'||!hasMore||!proof||!snapshot)return Promise.resolve();const after=rows.at(-1)?.source.id??null;return run(async signal=>{selected=null;selectedCustomer=null;draft=null;history=null;rows=[];hasMore=false;emit();await list(signal,after);message='Showing the next retained customer-link page.';},()=>{clearPrivate();phase='unavailable';message='The next link page could not be verified. Load current links again.';});};
  const searchCustomers=(text:string,more=false)=>{
@@ -77,7 +91,7 @@ export function createAssociationEditorController(deps:Dependencies){
   if(phase!=='ready'||!snapshot||!proof||!['open','close','transfer'].includes(action))return Promise.resolve();
   return run(async signal=>{
    draft=null;selected=null;selectedCustomer=null;history=null;choices=[];customerHasMore=false;emit();
-   if(action==='open'){draft=Object.freeze({action,customerId:'',effectiveAt:'',relationship:null,isBilling:null,evidence:null,reason:null});message='Choose a customer, relationship, billing selection and effective time.';return;}
+   if(action==='open'){draft=openDraft();message='Choose a customer, relationship, billing selection and effective time.';return;}
    requireValue(uuid(associationId));const result=await api.history(businessId,{associationId,afterVersion:'0',pageSize:20},proof!,signal);live(signal);
    if(result.state==='absent'||result.association.vehicle_id!==vehicleId||result.association.valid_to!==null||result.association.version!=='1'){message='The link changed or has ended. Load current links before changing it.';return;}
    history=result;selected=result.association;

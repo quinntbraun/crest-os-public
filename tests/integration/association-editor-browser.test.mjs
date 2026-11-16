@@ -3,14 +3,12 @@
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
-import {execFileSync} from 'node:child_process';
-import {readFile,chmod} from 'node:fs/promises';
-import {join} from 'node:path';
 import {createServer} from 'node:net';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {setTimeout as delay} from 'node:timers/promises';
 import {URI,TOTP} from 'otpauth';
+import {browserTestTls} from '../support/browser-test-tls.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {startRealAuthService,authResult} from '../support/real-auth-service.mjs';
@@ -18,7 +16,7 @@ import {startRealAuthService,authResult} from '../support/real-auth-service.mjs'
 let sandbox,client,service,app,origin,fixture,actor,business,login,loginOwned=false;
 const sessionName='__Host-crest_session';
 before(async()=>{
-  assert.equal(process.platform,'linux','the disposable container/HTTPS fixture requires Linux CI');
+  assert(['linux','win32'].includes(process.platform),'supported disposable HTTPS/Auth fixture required');
   process.env.NODE_ENV='production';
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);
   await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
@@ -32,7 +30,8 @@ before(async()=>{
   const sdk=service.sdk();await sdk.initialize();authResult(await sdk.signInWithPassword({email,password:secret}),'browser_enrollment_password');
   const factor=authResult(await sdk.mfa.enroll({factorType:'totp',friendlyName:'Synthetic browser fixture'}),'browser_enroll');
   const totp=URI.parse(factor.totp.uri);assert(totp instanceof TOTP,'synthetic TOTP required');
-  authResult(await sdk.mfa.challengeAndVerify({factorId:factor.id,code:totp.generate()}),'browser_enrollment_verify');fixture={email,password:secret,totp};
+  const nextCodeAt=(Math.floor(Date.now()/(totp.period*1000))+1)*totp.period*1000;
+  authResult(await sdk.mfa.challengeAndVerify({factorId:factor.id,code:totp.generate()}),'browser_enrollment_verify');fixture={email,password:secret,totp,nextCodeAt};
   const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
   await client.query('BEGIN');try{
     actor=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic browser owner',$1,$2,$3,$3,'manual') RETURNING id",[service.issuer,user.id,bootstrap])).rows[0].id;
@@ -40,18 +39,14 @@ before(async()=>{
     await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,actor]);
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,actor]);await client.query('COMMIT');
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_BROWSER_OWNER_FAILED');}
-  const keyPath=join(sandbox.workspace,'ephemeral.key'),certPath=join(sandbox.workspace,'ephemeral.pem');
-  await chmod(sandbox.workspace,0o700);
-  try{execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-noenc','-keyout',keyPath,'-out',certPath,'-days','1','-subj','/CN=localhost','-addext','subjectAltName=IP:127.0.0.1,DNS:localhost'],{stdio:'ignore',timeout:15000});}
-  catch{throw new Error('SYNTHETIC_TLS_FIXTURE_FAILED');}
-  await chmod(keyPath,0o600);
+  const tls=await browserTestTls();
   const reservation=createServer();await new Promise(resolve=>reservation.listen(0,'127.0.0.1',resolve));const port=reservation.address().port;await new Promise(resolve=>reservation.close(resolve));origin=`https://127.0.0.1:${port}`;
   // Normal Node resolution: react-server is only a build-time marker condition.
   const {createCrestApplication,createAuthenticationRuntime}=await import('../../.local/server/application.mjs');
   const runtime=await createAuthenticationRuntime({database:{connectionString:database.toString(),environment:'test'},provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
     owner:{subject:user.id,factorId:factor.id},loginKey:randomBytes(32),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:randomBytes(32)}]});
   assert.throws(()=>JSON.stringify(runtime),/AUTHENTICATION_RUNTIME_PRIVATE/);
-  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},customers:true,vehicles:true,associations:true});
+  app=await createCrestApplication({origin,environment:'test',tls,authentication:runtime.forServer(),business:{businessId:business},customers:true,vehicles:true,associations:true});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);
 });
@@ -59,6 +54,10 @@ after(async()=>{try{await app?.close();}finally{try{await service?.close();}fina
 
 async function fill(page,{trusted=false,password=fixture.password}={}){
   await page.getByLabel('Email',{exact:true}).fill(fixture.email);await page.getByLabel('Password',{exact:true}).fill(password);
+  const period=fixture.totp.period*1000,now=Date.now(),remaining=period-now%period;
+  const readyAt=Math.max(fixture.nextCodeAt,remaining<6000?now+remaining:0);
+  if(readyAt>now)await delay(readyAt-now+250);
+  fixture.nextCodeAt=(Math.floor(Date.now()/period)+1)*period;
   await page.getByLabel('Authenticator code',{exact:true}).fill(fixture.totp.generate());if(trusted)await page.getByText('Personal device options',{exact:true}).click();await page.getByLabel('Trust this personal device').setChecked(trusted);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
 }
@@ -120,8 +119,28 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     for(const [route,value]of [['business/customers/save',one],['business/customers/save',two],['business/vehicles/save',car]])assert.equal((await send(page,route,value,proof)).status,200);
    });
    await caseTest('mobile forms preserve explicit billing, exact periods, conflict review and complete ownership history',async()=>{
-    await openPanel(page,car);const box=panel(page);await expect(box.getByRole('status')).toContainText('Review the retained customer links');
-    await box.getByRole('button',{name:'Add customer link',exact:true}).click();await expect(box.getByRole('button',{name:'Save customer link',exact:true})).toBeDisabled();await choose(page,one.displayName);
+    await page.bringToFront();await page.goto(origin+'/customers?customer='+one.customerId);
+    await expect(page.getByRole('form',{name:'Customer editor',exact:true}).getByLabel('Customer name',{exact:true})).toHaveValue(one.displayName);
+    const shortcut=page.getByRole('link',{name:'Link a vehicle',exact:true});
+    await expect(shortcut).toHaveAttribute('href','/vehicles?linkCustomer='+one.customerId);
+    await shortcut.focus();await page.keyboard.press('Enter');
+    await expect(page.getByRole('button',{name:'Add vehicle',exact:true})).toBeVisible();
+    await page.getByRole('button',{name:car.label,exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Edit vehicle',exact:true})).toBeFocused();
+    const box=panel(page),start=box.getByRole('button',{name:'Start customer link',exact:true});
+    await start.press('Enter');
+    await expect(box.getByRole('status')).toContainText('Customer selected',{timeout:20000});
+    await expect(box.getByRole('heading',{name:'Add a customer link',exact:true})).toBeFocused();
+    await expect(box.getByText('Selected customer:',{exact:false})).toContainText(one.displayName);
+    await expect(box.getByLabel('Relationship',{exact:true})).toHaveValue('');
+    await expect(box.getByLabel('Billing selection',{exact:true})).toHaveValue('');
+    await expect(box.getByLabel('Effective time (UTC)',{exact:true})).toHaveValue('');
+    await expect(box.getByRole('button',{name:'Save customer link',exact:true})).toBeDisabled();
+    assert.equal((await client.query('SELECT count(*)::int AS n FROM crest.customer_vehicles WHERE business_id=$1 AND vehicle_id=$2',[business,car.vehicleId])).rows[0].n,0);
+    await box.getByLabel('Link evidence',{exact:true}).fill('Keep this unsaved field');
+    page.once('dialog',dialog=>dialog.dismiss());
+    await box.getByRole('button',{name:'Load current customer links',exact:true}).click();
+    await expect(box.getByLabel('Link evidence',{exact:true})).toHaveValue('Keep this unsaved field');
     await box.getByLabel('Relationship',{exact:true}).selectOption('keeper');await expect(box.getByRole('button',{name:'Save customer link',exact:true})).toBeDisabled();await box.getByLabel('Billing selection',{exact:true}).selectOption('no');await box.getByRole('button',{name:'Use current time',exact:true}).click();assert.match(await box.getByLabel('Effective time (UTC)',{exact:true}).inputValue(),/\.[0-9]{6}Z$/);
     await box.getByLabel('Effective time (UTC)',{exact:true}).fill('2026-10-01T00:00:00.123456Z');await box.getByLabel('Link evidence',{exact:true}).fill('Synthetic screen retained é 😀');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);assert(await box.getByRole('button',{name:'Save customer link',exact:true}).evaluate(el=>el.getBoundingClientRect().height>=44));

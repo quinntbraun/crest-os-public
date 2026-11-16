@@ -13,6 +13,9 @@ import type {LeadVehicleDraft,ReportedLeadVehicle} from '../../customer/lead-res
 import {NullableText} from '../customers/nullable-text';
 import {ReferencePicker} from './reference-picker';
 import {vehicleYearInput} from '../vehicles/year-input';
+import {LeadMatchNotice,useLeadMatchReview} from './match-review';
+import {leadMatchReview} from '../../client/leads';
+import type {Proof} from '../../client/authentication';
 function YearInput({value,change}:{value:number|null;change:(value:number|null)=>void}){
  const [text,setText]=useState(Number.isFinite(value)?String(value):'');
  return <><label htmlFor="lead-vehicle-year">Reported year</label><input id="lead-vehicle-year" type="text" inputMode="numeric" autoComplete="off" maxLength={16} pattern="-?[0-9]+" value={text} onChange={event=>{setText(event.target.value);change(event.target.value.length?vehicleYearInput(event.target.value):null);}}/><p className="field-help">Optional. Enter a whole year, or leave blank. Unusual reported years are retained.</p></>;
@@ -36,8 +39,28 @@ export function LeadVehiclePanel({businessId,leadId,disabled,onLock}:{businessId
  async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory'){const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
  function edit<K extends keyof LeadVehicleDraft>(key:K,value:LeadVehicleDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
  function report<K extends keyof ReportedLeadVehicle>(key:K,value:ReportedLeadVehicle[K]){if(view.draft)edit('reportedVehicle',{...view.draft.reportedVehicle,[key]:value});}
- function submit(event:FormEvent){event.preventDefault();if(!disabled)void action('save');}
+
  const writeDisabled=disabled||view.busy||view.writesPaused,key=(view.selected?.id??'new')+':'+(view.selected?.version??'0');
+ const review=useLeadMatchReview(view.draft);
+ const canSave=view.canSave&&!writeDisabled;
+ function reviewAndSave(){
+  const controller=current.current,draft=view.draft,selected=view.selected;
+  if(!canSave||!controller||!draft)return;
+  const {vin,plate,year,make,model}=draft.reportedVehicle;
+  const previous=selected?.reported_vehicle;
+  const changed=!previous||selected.vehicle_id!==draft.vehicleId||vin!==previous.vin||plate!==previous.plate||year!==previous.year||make!==previous.make||model!==previous.model;
+  const lookup=view.matchReview&&changed&&(vin?.trim()||plate?.trim()||year!==null&&make?.trim()&&model?.trim())?async(proof:Proof,signal:AbortSignal)=>{
+   const matches=await leadMatchReview.vehicle(businessId,{vehicleId:draft.vehicleId,vin:vin||null,plate:plate||null,year,make:make||null,model:model||null},proof,signal);
+   return {rows:matches?.vehicles.map(row=>({id:row.id,label:row.label,kind:'Vehicle' as const,detail:row.archived?'Archived':undefined,
+    reasons:[...row.vin?['Same VIN']:[],...row.plate?['Same plate text']:[],...row.description?['Same year, make and model']:[]]}))??[],more:!!matches?.hasMore};
+  }:null;
+  void review.run({lookup,stillCurrent:()=>current.current===controller&&controller.view().draft===draft&&controller.view().canSave,save:()=>void action('save')});
+ }
+ function submit(event:FormEvent){event.preventDefault();if(!review.active)reviewAndSave();}
+ function saveAsEntered(){
+  if(canSave&&current.current?.view().draft===view.draft){review.dismiss();void action('save');}
+ }
+
  return <section aria-label="Lead vehicles" aria-busy={view.busy}><h2>Reported vehicles</h2>
   <p ref={status} tabIndex={-1} role="status" aria-label="Lead vehicle editor status" aria-live="polite" aria-atomic="true">{view.message}</p>
   {disabled&&<p className="field-help">Save or reload the intake, status or address draft before editing vehicle reports.</p>}
@@ -60,7 +83,8 @@ export function LeadVehiclePanel({businessId,leadId,disabled,onLock}:{businessId
      <NullableText name="lead-vehicle-condition" label="Reported condition" limit={4000} multiline value={view.draft.conditionNotes} disabled={writeDisabled} change={value=>edit('conditionNotes',value)}/>
      <label className="trust"><input type="checkbox" checked={view.draft.archived} onChange={event=>{if(view.draft)current.current?.edit({...view.draft,archived:event.target.checked,archiveReason:event.target.checked?view.draft.archiveReason??'':null});}}/>Archive vehicle report</label>
      {view.draft.archived&&<><label htmlFor="lead-vehicle-archive">Vehicle report archive reason</label><textarea id="lead-vehicle-archive" required maxLength={2000} value={view.draft.archiveReason??''} onChange={event=>edit('archiveReason',event.target.value)}/><p className="field-help">{[...(view.draft.archiveReason??'')].length}/1,000 characters.</p></>}
-    </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}<button type="submit" disabled={writeDisabled||!view.canSave}>Save vehicle report</button></form>
+    </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}{review.active&&<LeadMatchNotice review={review.active} canSave={canSave} retry={reviewAndSave} edit={()=>{review.dismiss();document.getElementById('lead-vehicle-vin')?.focus();}} save={saveAsEntered}/>}
+    {(!review.active||review.active.state==='checking')&&<button type="submit" disabled={!canSave||!!review.active}>Save vehicle report</button>}</form>
     <button type="button" className="secondary" disabled={view.busy||disabled} onClick={()=>void action('load')}>Discard vehicle draft and reload</button>
    </>}
    {view.history&&<section aria-label="Lead vehicle history"><h3>Retained vehicle report history</h3><p>Current report version: {view.history.leadVehicle.version}</p>{view.history.history.map(event=><details key={event.eventId}><summary>Report version {event.version} · {event.action}</summary><p>Recorded (UTC): {event.at}</p>{event.before&&<><h4>Before report</h4><ReportDetails row={event.before}/></>}<h4>After report</h4><ReportDetails row={event.after}/></details>)}{view.history.hasMore&&<button type="button" className="secondary" disabled={disabled||view.busy||hasDraft} onClick={()=>void action('moreHistory')}>Next vehicle history page</button>}</section>}

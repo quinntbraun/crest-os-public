@@ -18,12 +18,69 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
  const f=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,appointmentHolds:true});let browser;
  try{
   browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:844},timezoneId:'America/Indianapolis'}),page=await context.newPage();await page.goto(f.origin+'/sign-in');const credentials=f.credentials();await page.getByLabel('Email',{exact:true}).fill(credentials.email);await page.getByLabel('Password',{exact:true}).fill(credentials.password);await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();const customer='Synthetic appointment customer '+name;await seedCustomer(page,f.business,customer);await page.goto(f.origin+'/appointment-holds');await expect(status(page)).toContainText('Recorded proposals loaded');
-  const label='Synthetic unconfirmed wash '+name;await createDraft(page,customer,label);assert.equal((await f.client.query('SELECT count(*)::int AS n FROM crest.appointment_hold_versions WHERE business_id=$1',[f.business])).rows[0].n,0);await page.getByRole('button',{name:'Save unconfirmed proposal',exact:true}).click();await expect(status(page)).toContainText('version 1 saved');const original=(await f.client.query('SELECT crest_private.appointment_hold_projection(h) AS value FROM crest.appointment_hold_versions h WHERE business_id=$1',[f.business])).rows[0].value;assert.equal(original.state,'proposed');assert.equal(original.start_at,'2026-10-29T14:00:00.000000Z');assert.equal(original.customer_id,(await f.client.query('SELECT id FROM crest.customers WHERE business_id=$1',[f.business])).rows[0].id);
+  const label='Synthetic unconfirmed wash '+name;
+  await createDraft(page,customer,label);
+  const draftLabel=page.getByLabel('Proposal label',{exact:true});
+  const originalScroll=await draftLabel.evaluate(input=>{
+   input.focus();
+   input.setSelectionRange(2,8);
+   return window.scrollY;
+  });
+  await page.keyboard.press('Control+k');
+  const toolSearch=page.getByRole('dialog',{name:'Find a tool',exact:true});
+  const toolQuery=toolSearch.getByRole('searchbox');
+  await expect(toolQuery).toBeFocused();
+  await toolQuery.fill('  Appointment  ');
+  const bestMatch=toolSearch.getByRole('link').first();
+  await expect(bestMatch).toHaveAttribute('href','/appointment-holds');
+  await toolQuery.press('ArrowDown');
+  await expect(bestMatch).toBeFocused();
+  await toolSearch.evaluate(dialog=>{
+   dialog.addEventListener('close',()=>requestAnimationFrame(()=>dialog.setAttribute('data-test-close-observed','true')),{once:true});
+  });
+  await page.keyboard.press('Escape');
+  await expect(page.locator('dialog.workspace-search')).toHaveAttribute('data-test-close-observed','true');
+  await expect(toolSearch).toBeHidden();
+  await expect(draftLabel).toBeFocused();
+  await expect(draftLabel).toHaveValue(label);
+  assert.deepEqual(await draftLabel.evaluate(input=>[input.selectionStart,input.selectionEnd,window.scrollY]),[2,8,originalScroll]);
+  assert.equal((await f.client.query('SELECT count(*)::int AS n FROM crest.appointment_hold_versions WHERE business_id=$1',[f.business])).rows[0].n,0);await page.getByRole('button',{name:'Save unconfirmed proposal',exact:true}).click();await expect(status(page)).toContainText('version 1 saved');const original=(await f.client.query('SELECT crest_private.appointment_hold_projection(h) AS value FROM crest.appointment_hold_versions h WHERE business_id=$1',[f.business])).rows[0].value;assert.equal(original.state,'proposed');assert.equal(original.start_at,'2026-10-29T14:00:00.000000Z');assert.equal(original.customer_id,(await f.client.query('SELECT id FROM crest.customers WHERE business_id=$1',[f.business])).rows[0].id);
   await page.reload();await expect(status(page)).toContainText('Recorded proposals loaded');await page.getByRole('button',{name:label+' · Unconfirmed',exact:true}).click();await expect(page.getByLabel('Proposal label',{exact:true})).toHaveValue(label);await expect(page.getByLabel('Proposed start',{exact:true})).toHaveValue('2026-10-29T10:00');await page.getByLabel('Proposed end',{exact:true}).fill('2026-10-29T11:30');await page.getByLabel('Reason for this revision or withdrawal',{exact:true}).fill('Owner revised an unconfirmed time');await page.getByRole('button',{name:'Save unconfirmed proposal',exact:true}).click();await expect(status(page)).toContainText('version 2 saved');await load(page);await page.getByRole('button',{name:label+' · Unconfirmed',exact:true}).click();await expect(page.getByRole('region',{name:'Proposal history',exact:true})).toContainText('Version 2');await expect(page.getByLabel('Proposed end',{exact:true})).toHaveValue('2026-10-29T11:30');
   await page.getByLabel('Withdraw this unconfirmed proposal',{exact:true}).check();await page.getByLabel('Reason for this revision or withdrawal',{exact:true}).fill('Customer chose another day; no booking confirmed');await page.getByRole('button',{name:'Save unconfirmed proposal',exact:true}).click();await expect(status(page)).toContainText('version 3 saved');await load(page);await page.getByRole('button',{name:label+' · Withdrawn',exact:true}).click();await expect(page.getByRole('button',{name:'Save unconfirmed proposal',exact:true})).toBeDisabled();assert.deepEqual((await f.client.query('SELECT crest_private.appointment_hold_projection(h) AS value FROM crest.appointment_hold_versions h WHERE id=$1',[original.id])).rows[0].value,original);
   const downloadEvent=page.waitForEvent('download');await page.getByRole('button',{name:'Download saved proposal history',exact:true}).click();const download=await downloadEvent;assert.equal(download.suggestedFilename(),'crest-proposal-history.zip');assert.equal(await download.failure(),null);const path=await download.path();assert(path);const parts=unzipSync(await readFile(path)),manifest=JSON.parse(strFromU8(parts['appointment_hold_manifest.json']));assert.equal(manifest.throughSequence,'3');assert.equal(manifest.completeBackup,false);assert.equal(manifest.unsavedDraftIncluded,false);for(const part of manifest.parts){assert.equal(parts[part.name].length,part.bytes);assert.equal(createHash('sha256').update(parts[part.name]).digest('hex'),part.sha256);}const source=(await f.client.query('SELECT crest_private.appointment_hold_projection(h) AS value FROM crest.appointment_hold_versions h WHERE business_id=$1 AND hold_id=$2 ORDER BY sequence',[f.business,original.hold_id])).rows.map(r=>r.value),decoded=decodeCustomerCsv(strFromU8(parts['appointment_hold_versions.csv']),strFromU8(parts['appointment_hold_escape_map.json'])).map(row=>({...row,start_offset_minutes:Number(row.start_offset_minutes),end_offset_minutes:Number(row.end_offset_minutes)}));assert.deepEqual(decoded,source);assert.deepEqual(JSON.parse(strFromU8(parts['appointment_hold_original.json'])).versions,source);
   let refusedFiles=0;const refused=()=>refusedFiles++;page.on('download',refused);await page.route('**/api/business/appointment-holds/history',route=>route.abort('failed'));await page.getByRole('button',{name:'Download saved proposal history',exact:true}).click();await expect(status(page)).toContainText('No file was requested');assert.equal(refusedFiles,0);page.off('download',refused);await page.unroute('**/api/business/appointment-holds/history');await load(page);await page.getByRole('button',{name:label+' · Withdrawn',exact:true}).click();
-  await mkdir('.local/review',{recursive:true});for(const width of [360,390,768,1440]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);await page.screenshot({path:'.local/review/appointment-proposals-'+name+'-'+width+'.png',fullPage:true});await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement!==document.body),true);}
+  await mkdir('.local/review',{recursive:true});
+  for(const width of [360,390,768,1440]){
+   await page.setViewportSize({width,height:900});
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+   const start=await page.getByLabel('Proposed start',{exact:true}).boundingBox();
+   const end=await page.getByLabel('Proposed end',{exact:true}).boundingBox();
+   assert(start&&end);
+   if(width<640)assert(end.y>start.y+start.height&&Math.abs(end.x-start.x)<1);
+   else assert(end.x>start.x+start.width&&Math.abs(end.y-start.y)<1);
+   assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+   await page.screenshot({path:'.local/review/appointment-proposals-'+name+'-'+width+'.png',fullPage:true});
+   await page.keyboard.press('Tab');
+   assert.equal(await page.evaluate(()=>document.activeElement!==document.body),true);
+   if(width<=600){
+    const control=page.getByRole('button',{name:'Download saved proposal history',exact:true});
+    const aboveNavigation=()=>control.evaluate(button=>{
+     const navigation=document.querySelector('.workspace-destinations');
+     const bounds=button.getBoundingClientRect();
+     return !!navigation&&bounds.bottom<navigation.getBoundingClientRect().top&&
+      button.contains(document.elementFromPoint(bounds.x+bounds.width/2,bounds.y+bounds.height/2));
+    });
+    await control.evaluate(button=>button.scrollIntoView({block:'end'}));
+    assert.equal(await aboveNavigation(),true,'A scrolled-to control must remain above the fixed navigation');
+
+    await control.evaluate(button=>window.scrollBy(0,button.getBoundingClientRect().bottom-innerHeight+4));
+    await page.getByRole('button',{name:'New unconfirmed proposal',exact:true})
+     .evaluate(button=>button.focus({preventScroll:true}));
+    await page.keyboard.press('Tab');
+    await expect(control).toBeFocused();
+    await expect.poll(aboveNavigation).toBe(true);
+   }
+  }
   await page.getByRole('button',{name:'New unconfirmed proposal',exact:true}).click();await createDraft(page,customer,'Synthetic interrupted proposal '+name);let saved=0;
   let interceptDone,interceptFailed;const intercepted=new Promise((resolve,reject)=>{interceptDone=resolve;interceptFailed=reject;});void intercepted.catch(()=>{});
   await page.route('**/api/business/appointment-holds/save',async route=>{try{const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:40000});assert.equal(response.status(),200);saved++;const raw=await page.evaluate(()=>sessionStorage.getItem('crest.appointment-hold.pending-reference.v1'));assert(raw);assert(!raw.includes('Synthetic'));assert(!raw.includes('payload'));await route.abort('failed');interceptDone();}catch{interceptFailed(new Error('SYNTHETIC_HOLD_INTERCEPT_FAILED'));await route.abort('failed').catch(()=>{});}});

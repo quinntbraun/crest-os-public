@@ -1,10 +1,12 @@
 'use client';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent,ComponentType} from 'react';
-import {createAddressEditorController,initialAddressEditorView} from '../../client/address-editor-controller';
+import {createAddressEditorController,emptyAddressDraft,initialAddressEditorView} from '../../client/address-editor-controller';
 import {createPendingAddressStore} from '../../client/pending-address-edit';
 import {NullableText} from '../customers/nullable-text';
+import {draftFromAddress} from '../../customer/customer-address-contract';
 import type {CustomerAddress} from '../../customer/customer-address-contract';
+import {draftChanged} from '../../client/draft-changed';
 import type {AddressDraft} from '../../customer/customer-resource-contract';
 
 const optionalFields=[
@@ -19,30 +21,44 @@ function AddressDetails({row}:{row:CustomerAddress}){
  return <dl className="customer-values">{fields.map(([name,value])=><div key={name}><dt>{name}</dt><dd>{unknown(value)}</dd></div>)}</dl>;
 }
 export function AddressScreen({customerId,assist:Assist}:{customerId:string|null;assist?:ComponentType<{draft:AddressDraft;change:(draft:AddressDraft)=>void}>}){
- const [view,setView]=useState(initialAddressEditorView),current=useRef<ReturnType<typeof createAddressEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null);
+ const [view,setView]=useState(initialAddressEditorView),current=useRef<ReturnType<typeof createAddressEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null),heading=useRef<HTMLHeadingElement>(null);
+ const selectedId=view.selected?.id??null,dirty=draftChanged(view.draft,view.selected?draftFromAddress(view.selected):emptyAddressDraft);
+ const focusRequest=useRef<{controller:NonNullable<typeof current.current>;id:string|null}|null>(null);
+ useLayoutEffect(()=>{
+  const requested=focusRequest.current;if(!requested||view.busy)return;
+  if(current.current===requested.controller&&view.phase==='ready'&&view.draft&&requested.id===selectedId)heading.current?.focus();
+  focusRequest.current=null;
+ },[view,selectedId]);
  useEffect(()=>{
   const c=createAddressEditorController({customerId,store:createPendingAddressStore({getItem:k=>sessionStorage.getItem(k),setItem:(k,v)=>sessionStorage.setItem(k,v),removeItem:k=>sessionStorage.removeItem(k)}),change:setView});current.current=c;void c.load();
   const hidden=()=>{if(document.visibilityState==='hidden')c.suspend();},leave=()=>c.suspend(),restore=(e:PageTransitionEvent)=>{if(e.persisted)c.suspend();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restore);
   return ()=>{c.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restore);};
  },[customerId]);
- useEffect(()=>{if(!view.canSave&&view.phase!=='pending'&&!view.busy)return;const leaving=(e:BeforeUnloadEvent)=>e.preventDefault();window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[view.canSave,view.phase,view.busy]);
+ useEffect(()=>{if(!dirty&&view.phase!=='pending'&&!view.busy)return;const leaving=(e:BeforeUnloadEvent)=>e.preventDefault();window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[dirty,view.phase,view.busy]);
  async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory'){const c=current.current;if(!c)return;await c[kind]();if(current.current===c)status.current?.focus();}
  function edit<K extends keyof AddressDraft>(key:K,value:AddressDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
  function save(e:FormEvent){e.preventDefault();void action('save');}
- function search(e:FormEvent<HTMLFormElement>){e.preventDefault();const data=new FormData(e.currentTarget);void current.current?.query(String(data.get('search')??''),data.get('archived')==='on');}
+ function discardAllowed(){
+  const state=current.current?.view();
+  return !state||!draftChanged(state.draft,state.selected?draftFromAddress(state.selected):emptyAddressDraft)||window.confirm('Discard your unsaved address changes? Choose Cancel to keep editing.');
+ }
+ async function open(id:string){const controller=current.current;if(!controller||!discardAllowed())return;focusRequest.current={controller,id};await controller.open(id);}
+ function create(){const controller=current.current;if(!controller||!discardAllowed())return;focusRequest.current={controller,id:null};controller.create();}
+ function query(text:string,archived:boolean,more=false){if(discardAllowed())void current.current?.query(text,archived,more);}
+ function search(e:FormEvent<HTMLFormElement>){e.preventDefault();const data=new FormData(e.currentTarget);query(String(data.get('search')??''),data.get('archived')==='on');}
  return <section aria-label="Customer address directory" aria-busy={view.busy}>
   <p ref={status} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
   {view.phase==='ready'&&<>
-   {view.parent&&<p className="current-name">Addresses for <strong>{view.parent.display_name}</strong></p>}
+   {view.parent&&<div className="current-name">Addresses for <strong>{view.parent.display_name}</strong><br/><a className="record-return-link" href={'/customers?customer='+encodeURIComponent(view.parent.id)}>Back to customer record</a></div>}
    {view.writesPaused&&<p className="notice">Address changes are paused. Current records and history remain available.</p>}
    <form onSubmit={search} aria-label="Search addresses"><label htmlFor="address-search">Address search</label><input id="address-search" name="search" type="search" autoComplete="off" maxLength={400} defaultValue={view.search} disabled={view.busy}/><label className="trust"><input name="archived" type="checkbox" defaultChecked={view.includeArchived} disabled={view.busy}/>Include archived addresses</label><button className="secondary" type="submit" disabled={view.busy}>Search addresses</button></form>
-   <p className="field-help">Search this customer's recorded location text. Searching or opening another record discards an unsaved draft. Shared locations are kept as separate records.</p>
-   <ul className="customer-list">{view.rows.map(row=><li key={row.id}><button type="button" className="secondary" disabled={view.busy} onClick={()=>void current.current?.open(row.id)}>{label(row)}{row.archived_at!==null?' — archived':''}</button></li>)}</ul>
+   <p className="field-help">Search this customer’s recorded location text. Shared locations are kept as separate records.</p>
+   <ul className="customer-list">{view.rows.map(row=><li key={row.id}><button type="button" className="secondary" disabled={view.busy} onClick={()=>void open(row.id)}>{label(row)}{row.archived_at!==null?' — archived':''}</button></li>)}</ul>
    {view.rows.length===0&&<p>No addresses found on this page.</p>}
-   {view.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void current.current?.query(view.search,view.includeArchived,true)}>Next address page</button>}
-   <button type="button" disabled={view.busy||view.writesPaused} onClick={()=>current.current?.create()}>Add address</button>
-   {view.draft&&<form onSubmit={save} aria-label="Address editor"><h2>{view.selected?'Edit address':'New address'}</h2>
+   {view.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>query(view.search,view.includeArchived,true)}>Next address page</button>}
+   <button type="button" disabled={view.busy||view.writesPaused} onClick={create}>Add address</button>
+   {view.draft&&<form onSubmit={save} aria-label="Address editor"><h2 ref={heading} tabIndex={-1}>{view.selected?'Edit address':'New address'}</h2>
     <p className="field-help">Record what you know; leave optional fields blank. This record does not confirm a job location. Leaving or hiding the page clears private drafts; closing the tab may also lose its save reference.</p>
     <fieldset disabled={view.busy||view.writesPaused}><legend>Location details</legend>
      {Assist&&<Assist draft={view.draft} change={next=>current.current?.edit(next)}/>}

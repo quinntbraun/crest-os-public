@@ -144,7 +144,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    assert(lookup&&editor&&(width>=768?lookup.x+lookup.width<editor.x:lookup.y+lookup.height<editor.y));
    await page.screenshot({path:join('.local/review',`workspace-customers-${name}-${width}.png`),fullPage:true});
   }
-  await page.getByRole('link',{name:'Manage vehicles',exact:true}).click();await page.getByRole('button',{name:'Add vehicle',exact:true}).click();const vehicle='Synthetic workshop van '+name;await page.getByLabel('Vehicle label',{exact:true}).fill(vehicle);await page.getByRole('button',{name:'Save vehicle',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
+  await page.getByRole('link',{name:'Link a vehicle',exact:true}).click();await page.getByRole('button',{name:'Add vehicle',exact:true}).click();const vehicle='Synthetic workshop van '+name;await page.getByLabel('Vehicle label',{exact:true}).fill(vehicle);await page.getByRole('button',{name:'Save vehicle',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
   await page.reload();await page.getByRole('button',{name:vehicle,exact:true}).click();await expect(page.getByLabel('Vehicle label',{exact:true})).toHaveValue(vehicle);await expect(page.getByRole('heading',{name:'Edit vehicle',exact:true})).toBeFocused();
   await page.getByLabel('Year',{exact:true}).fill('not-a-year');await expect(page.getByRole('button',{name:'Save vehicle',exact:true})).toBeDisabled();page.once('dialog',dialog=>{assert.equal(dialog.type(),'confirm');void dialog.dismiss();});await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await expect(page.getByLabel('Year',{exact:true})).toHaveValue('not-a-year');await page.getByLabel('Year',{exact:true}).fill('');
   await page.getByRole('button',{name:'Load current customer links',exact:true}).click();await page.getByRole('button',{name:'Add customer link',exact:true}).click();await page.getByLabel('Customer name, phone or email',{exact:true}).fill(label);await page.getByRole('button',{name:'Find customers',exact:true}).click();await page.getByRole('button',{name:'Use '+label+' retained edit',exact:true}).click();await page.getByLabel('Relationship',{exact:true}).selectOption('owner');await page.getByLabel('Billing selection',{exact:true}).selectOption('yes');page.once('dialog',dialog=>{assert.equal(dialog.type(),'confirm');void dialog.dismiss();});await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await expect(page.getByRole('form',{name:'Customer link editor',exact:true})).toBeVisible();await expect(page.getByLabel('Relationship',{exact:true})).toHaveValue('owner');await page.getByRole('button',{name:'Use current time',exact:true}).click();await page.getByRole('button',{name:'Save customer link',exact:true}).click();
@@ -153,4 +153,58 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('link',{name:'Today',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Workspace access verified.');await page.goBack();await expect(page.getByRole('heading',{name:'Vehicles',exact:true})).toBeVisible();
   await context.close();
  }finally{await browser?.close();await f.close();}
+});
+
+
+for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' reviews scheduled lead follow-ups from the dashboard',async()=>{
+ const f=await sourceExportBrowserFixture({product:true,workspace:true,leadFollowUps:true});let browser;
+ try{
+  browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:360,height:844}}),page=await context.newPage();
+  await page.goto(f.origin+'/sign-in');
+  const credentials=f.credentials();
+  await page.getByLabel('Email',{exact:true}).fill(credentials.email);
+  await page.getByLabel('Password',{exact:true}).fill(credentials.password);
+  const remainingCodeTime=30_000-Date.now()%30_000;
+  if(remainingCodeTime<5_000)await delay(remainingCodeTime+100);
+  await page.getByLabel('Authenticator code',{exact:true}).fill(f.credentials().code);
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
+  const firstPage=page.waitForResponse(response=>response.url().endsWith('/api/business/leads/follow-ups')&&response.status()===200);
+  await page.getByRole('link',{name:'Open workspace',exact:true}).click();
+  const response=await firstPage;
+  assert.match(response.headers()['cache-control'],/no-store/i);
+  const data=await response.json();
+  assert.equal(data.followUps.length,8);
+  assert.equal(data.hasMore,true);
+  assert.deepEqual(Object.keys(data.followUps[0]).sort(),['followUpAt','id','label','state']);
+  const section=page.getByRole('region',{name:'Lead follow-ups',exact:true}),first=f.followUpLeads[0],last=f.followUpLeads.at(-1);
+  const firstLead=section.getByRole('link',{name:first.label,exact:true});
+  await expect(firstLead).toHaveAttribute('href','/leads?lead='+first.id);
+  await expect(section.getByText('Overdue',{exact:true})).toHaveCount(1);
+  await expect(section.getByText('Lost lead',{exact:true})).toBeVisible();
+  await expect(section.locator('time').first()).toHaveAttribute('datetime',first.followUpAt);
+  await expect(section.getByRole('link',{name:last.label,exact:true})).toHaveCount(0);
+
+  await mkdir('.local/review',{recursive:true});
+  for(const width of [320,390,1440]){
+   await page.setViewportSize({width,height:900});
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   const touchTarget=await firstLead.boundingBox();assert(touchTarget&&touchTarget.height>=44);
+   assert.deepEqual((await new AxeBuilder({page}).include('#lead-follow-ups').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+   await section.screenshot({path:join('.local/review',`lead-follow-ups-${name}-${width}.png`)});
+  }
+  await section.getByRole('button',{name:'More follow-ups',exact:true}).click();
+  await expect(section.getByRole('link',{name:last.label,exact:true})).toBeVisible();
+  await expect(firstLead).toHaveCount(0);
+  await expect(section.getByRole('heading',{name:'Lead follow-ups',exact:true})).toBeFocused();
+  await section.getByRole('button',{name:'First reminders',exact:true}).click();
+  await expect(firstLead).toBeVisible();
+  await firstLead.click();
+  await expect(page).toHaveURL(f.origin+'/leads?lead='+first.id);
+  await expect(page.getByRole('heading',{name:'Edit lead intake',exact:true})).toBeFocused();
+  await expect(page.getByRole('textbox',{name:'Lead label',exact:true})).toHaveValue(first.label);
+  const latest=page.getByRole('region',{name:'Lead history',exact:true}).locator('details').filter({hasText:/Version 2 ·/});
+  await latest.locator('summary').click();
+  await expect(latest.getByText('lost',{exact:true})).toBeVisible();
+ }finally{try{await browser?.close();}finally{await f.close();}}
 });

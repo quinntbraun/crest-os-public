@@ -28,6 +28,44 @@ const context=()=>({context:{schemaVersion:1 as const,businessId:f.business,writ
 const reference=()=>pendingQuote({schemaVersion:1,businessId:f.business,binding,reference:{operationId:f.operation,recoveryEpoch:f.recovery,familyId:f.family.id,revisionId:f.revision.id,expectedFamilyVersion:'0',expectedRevisionVersion:'0'}});
 const history=()=>({schemaVersion:1,businessId:f.business,family:f.family,revision:f.revision,items:f.items,history:[{eventId:f.committed.receipt.revisionAuditEventId,revision:'1',action:'create',at:f.revision.updated_at,actorId:f.actor,operationId:f.operation,before:null,after:f.revision}],hasMore:false});
 const controller=()=>createQuoteEditorController({store,change:vi.fn(),api,session,id,timezone:()=>f.input.timezone});
+it('opens a clean unsaved quote from the exact current customer and copies only recipient fields',async()=>{
+ const customer=customerFixture({id:f.input.recipient.customerId!,business_id:f.business,display_name:'Current synthetic customer',phone_raw:'(317) 555-0101',email_raw:'customer@example.test',notes:'PRIVATE customer notes'});
+ const customerApi={...customers,history:vi.fn<typeof customers.history>().mockResolvedValue({state:'found',customer,history:[],hasMore:false})};
+ api.context.mockResolvedValue({...context(),reviewAvailable:true});
+ const c=createQuoteEditorController({store,change:vi.fn(),api,session,id,customerApi,timezone:()=>f.input.timezone});
+ await c.load(customer.id);
+ expect(customerApi.history.mock.calls[0]!.slice(0,2)).toEqual([f.business,{customerId:customer.id,afterVersion:'0',pageSize:1}]);
+ expect(c.view()).toMatchObject({phase:'ready',dirty:false,canSave:false,draft:{contentSchemaVersion:2,customerId:customer.id,leadId:null,
+  recipientName:customer.display_name,phone:customer.phone_raw,email:customer.email_raw,title:'',workLocation:'',internalNotes:'',lines:[]}});
+ expect(JSON.stringify(c.view().draft)).not.toContain(customer.notes);
+ expect(api.context).toHaveBeenCalledTimes(2);
+ expect(api.save).not.toHaveBeenCalled();
+ expect(store.read()).toBeNull();
+ const draft=c.view().draft!;
+ c.edit({...draft,title:'Changed quote'});expect(c.view().dirty).toBe(true);
+ c.edit(draft);expect(c.view().dirty).toBe(false);
+ c.suspend();expect(c.view()).toMatchObject({draft:null,dirty:false});
+});
+it.each(['wrong record','wrong business','archived','missing','changed authority'] as const)('does not seed a quote from %s',async scenario=>{
+ const customerId=randomUUID(),customer=customerFixture({id:scenario==='wrong record'?randomUUID():customerId,
+  business_id:scenario==='wrong business'?randomUUID():f.business,archived_at:scenario==='archived'?'2026-10-24T01:02:03.123456Z':null});
+ const customerApi={...customers,history:vi.fn<typeof customers.history>().mockResolvedValue(scenario==='missing'?{state:'absent'}:{state:'found',customer,history:[],hasMore:false})};
+ if(scenario==='changed authority')api.context.mockResolvedValueOnce(context()).mockResolvedValueOnce({...context(),binding:randomBytes(32).toString('base64url')});
+ const c=createQuoteEditorController({store,change:vi.fn(),api,session,id,customerApi});
+ await c.load(customerId);
+ expect(c.view()).toMatchObject({phase:scenario==='changed authority'?'unavailable':'ready',draft:null,dirty:false,canSave:false});
+ expect(api.save).not.toHaveBeenCalled();
+});
+it.each(['pending save','pending action','paused','invalid id'] as const)('skips the shortcut lookup for %s',async scenario=>{
+ const customerApi={...customers,history:vi.fn<typeof customers.history>()};
+ if(scenario==='pending save')store.write(reference());
+ if(scenario==='paused')api.context.mockResolvedValue({...context(),context:{schemaVersion:1,businessId:f.business,writeState:'paused',recoveryEpoch:null}});
+ const c=createQuoteEditorController({store,change:vi.fn(),api,session,id,customerApi,blocked:()=>scenario==='pending action'});
+ await c.load(scenario==='invalid id'?'untrusted':randomUUID());
+ expect(c.view()).toMatchObject({phase:scenario==='pending save'?'pending':'ready',draft:null,dirty:false});
+ expect(customerApi.history).not.toHaveBeenCalled();
+ expect(api.save).not.toHaveBeenCalled();
+});
 it('keeps a cancellation edit original for Save review instead of treating receipt4 as an initial quote save',async()=>{
  const pinned=pendingQuote({...reference(),reference:{...reference().reference,expectedFamilyVersion:'1',expectedRevisionVersion:'1'}});store.write(pinned);api.lookup.mockResolvedValue(parseQuoteCancellationEditCommitted({...f.committed,receipt:{...f.committed.receipt,schemaVersion:4,familyVersion:'2',revisionVersion:'2',contentVersion:'2',itemAuditEventIds:[],assessmentAuditEventIds:[]}},f.business,f.operation));const c=controller();await c.load();await c.check();expect(store.read()).toEqual(pinned);expect(c.view()).toMatchObject({phase:'pending',canRetry:false});expect(c.view().message).toContain('cancellation edit');expect(api.save).not.toHaveBeenCalled();
 });

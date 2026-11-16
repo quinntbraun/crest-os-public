@@ -108,9 +108,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const rows=loaded.value.assignments;
   assert(rows.length>=2);
 
-  await page.getByRole('button',{name:'Mark all items fulfilled',exact:true}).click();
-  await page.getByLabel('Walkthrough outcome',{exact:true}).selectOption('done');
   const partial=name==='webkit';
+  if(!partial)await page.getByRole('button',{name:'Mark all items fulfilled',exact:true}).click();
+  await page.getByLabel('Walkthrough outcome',{exact:true}).selectOption('done');
   let split=null,firstGross=0n;
   if(partial){
    const index=rows.findIndex(row=>BigInt(row.grossInclusiveCents)>1n);
@@ -128,7 +128,20 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await split.getByLabel('Discount in dollars',{exact:true}).fill(dollars(firstDiscount));
    await deferred.getByLabel('Gross amount in dollars',{exact:true}).fill(dollars(gross-firstGross));
    await deferred.getByLabel('Discount in dollars',{exact:true}).fill(dollars(discount-firstDiscount));
-   await deferred.getByLabel('Reason for unfinished portion',{exact:true}).fill('Synthetic weather interruption.');
+   const reason=deferred.getByLabel('Reason for unfinished portion',{exact:true});
+   await reason.fill('Synthetic weather interruption.');
+   const outcomes=page.getByRole('group',{name:'Scope outcomes',exact:true});
+   await expect(outcomes.getByRole('status')).toContainText(`${rows.length-1} of ${rows.length}`);
+   const fillRemaining=outcomes.getByRole('button',{name:'Mark remaining items fulfilled',exact:true});
+   await fillRemaining.click();
+   await expect(fillRemaining).toBeDisabled();
+   await expect(outcomes.getByRole('status')).toHaveText('Every item has an outcome selected.');
+   await expect(group.getByLabel('Outcome for item '+(index+1),{exact:true})).toHaveValue('split');
+   await expect(reason).toHaveValue('Synthetic weather interruption.');
+   await expect(split.getByLabel('Gross amount in dollars',{exact:true})).toHaveValue(dollars(firstGross));
+   for(let position=0;position<rows.length;position++){
+    if(position!==index)await expect(page.getByLabel('Outcome for item '+(position+1),{exact:true})).toHaveValue('completed');
+   }
    await page.getByLabel('Walkthrough outcome',{exact:true}).selectOption('unavailable');
    await page.getByLabel('Why was the walkthrough unavailable?',{exact:true}).fill('Synthetic customer departed.');
   }

@@ -17,7 +17,7 @@ import type {SessionDatabaseConfiguration} from '../security/session-database.ts
 import {createCustomerDirectory,CustomerDirectoryError} from './customer-directory.ts';
 import {parseCustomerDraft,customerUuid,customerVersion,requireCustomer} from './customer-contract.ts';
 
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;recordJobHistory?:boolean};
 const prefix='/api/business/customers/';
 const draftKeys=['displayName','phone','email','contactPreference','outreachOptOut','notes','customerSince','archived','archiveReason'] as const;
 const fields={'legacy-matches':['kind','hints'],context:[],list:['search','afterId','includeArchived','pageSize'],history:['customerId','afterVersion','pageSize'],operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','customerId','expectedVersion',...draftKeys]} as const;
@@ -81,6 +81,7 @@ export function createCustomerHttp(config:Configuration,provider:Parameters<type
         const value=(await context(cookie,businessId,signal)).forServer();if(signal.aborted)throw new Error();
         const response=privateJsonResponse({schemaVersion:value.schemaVersion,businessId:value.businessId,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});
         response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.customer.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));
+        if(config.recordJobHistory===true)response.headers.set('X-Crest-Record-Job-History','1');
         if(reviewHistoryEnabled)response.headers.set('X-Crest-Review-History','1');
         if(legacyBatchesEnabled)response.headers.set('X-Crest-Legacy-Contact-Batches','1');
         if(legacyEffectsEnabled)response.headers.set('X-Crest-Legacy-Contact-Effects','1');

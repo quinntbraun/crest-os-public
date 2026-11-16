@@ -12,6 +12,8 @@ import type {SessionDatabaseConfiguration} from '../security/session-database.ts
 import {createLeadDirectory,LeadDirectoryError} from './lead-directory.ts';
 import {customerUuid as leadUuid,customerVersion as leadVersion,requireCustomer as requireLead} from './customer-contract.ts';
 import {parseLeadDraft} from './lead-contract.ts';
+import {parseLeadFollowUpQuery} from './lead-follow-up-contract.ts';
+import {leadContactReviewFields,leadVehicleReviewFields,parseLeadContactReviewInput,parseLeadVehicleReviewInput} from './lead-match-review-contract.ts';
 import {parseLeadStateDraft} from './lead-state-contract.ts';
 import {createLeadStateDirectory,LeadStateDirectoryError} from './lead-state-directory.ts';
 import {createLeadVehicleDirectory,LeadVehicleDirectoryError} from './lead-vehicle-directory.ts';
@@ -22,10 +24,10 @@ import {leadAddressWireDraftKeys,parseLeadAddressWireDraft} from './lead-address
 import {createLeadConversionDirectory,LeadConversionDirectoryError} from './lead-conversion-directory.ts';
 import {leadConversionWireKeys,parseLeadConversionWire} from './lead-conversion-command-contract.ts';
 
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;leadFollowUps?:boolean;leadMatchReview?:boolean};
 const prefix='/api/business/leads/';
 const draftKeys=['label','customerId','sourceId','referralText','phone','email','requestedScope','availability','estimatedCents','followUpAt','notes'] as const;
-const fields={convert:leadConversionWireKeys,'conversion-operation':['operationId'],conversion:['leadId'],'conversion-links':['leadId','conversionId','afterId','pageSize'],context:[],list:['search','afterId','includeLost','pageSize'],history:['leadId','afterVersion','pageSize'],operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','leadId','expectedVersion',...draftKeys],state:['schemaVersion','operationId','recoveryEpoch','leadId','expectedVersion','fromState','toState','reason'],'state-operation':['operationId'],'state-events':['leadId','afterVersion','pageSize'],
+const fields={convert:leadConversionWireKeys,'conversion-operation':['operationId'],conversion:['leadId'],'conversion-links':['leadId','conversionId','afterId','pageSize'],context:[],'contact-review':leadContactReviewFields,'vehicle-review':leadVehicleReviewFields,'follow-ups':['afterAt','afterId','pageSize'],list:['search','afterId','includeLost','pageSize'],history:['leadId','afterVersion','pageSize'],operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','leadId','expectedVersion',...draftKeys],state:['schemaVersion','operationId','recoveryEpoch','leadId','expectedVersion','fromState','toState','reason'],'state-operation':['operationId'],'state-events':['leadId','afterVersion','pageSize'],
   'address-save':['schemaVersion','operationId','recoveryEpoch','leadId','leadAddressId','expectedVersion',...leadAddressWireDraftKeys],
   'address-operation':['operationId'],'address-list':['leadId','afterId','includeArchived','pageSize'],'address-history':['leadId','leadAddressId','afterVersion','pageSize'],
   'vehicle-save':['schemaVersion','operationId','recoveryEpoch','leadId','leadVehicleId','expectedVersion',...leadVehicleWireDraftKeys],
@@ -48,9 +50,14 @@ export function createLeadHttp(config:Configuration,provider:Parameters<typeof c
       const url=new URL(request.url),route=url.pathname.slice(prefix.length) as Route;
       if(url.search||url.hash||!url.pathname.startsWith(prefix)||!Object.hasOwn(fields,route))return leadFailureResponse(404);
       if(['convert','conversion-operation','conversion','conversion-links'].includes(route)&&!conversions)return leadFailureResponse(404);
+      if((route==='contact-review'||route==='vehicle-review')&&config.leadMatchReview!==true)return leadFailureResponse(404);
+      if(route==='follow-ups'&&config.leadFollowUps!==true)return leadFailureResponse(404);
       if(request.method!=='POST')return leadFailureResponse(405);
       protect.requireOrigin(request);const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;if(!cookie)throw new Error();
       const input=await readFlatJsonBody(bounded,fields[route],131072);
+      const contactReview=route==='contact-review'?parseLeadContactReviewInput(input):undefined;
+      const vehicleReview=route==='vehicle-review'?parseLeadVehicleReviewInput(input):undefined;
+      const followUps=route==='follow-ups'?parseLeadFollowUpQuery(input):undefined;
       const conversion=route==='convert'?parseLeadConversionWire(input,businessId):undefined;
       if(route==='conversion-operation')requireLead(leadUuid(input.operationId));
       if(route==='conversion')requireLead(leadUuid(input.leadId));
@@ -142,6 +149,7 @@ export function createLeadHttp(config:Configuration,provider:Parameters<typeof c
         await directory.list(cookie,{businessId,search:'',afterId:null,includeLost:false,pageSize:1},signal);
         const value=(await context(cookie,businessId,signal)).forServer();if(signal.aborted)throw new Error();
         const response=privateJsonResponse({schemaVersion:value.schemaVersion,businessId:value.businessId,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});
+        if(config.leadMatchReview===true)response.headers.set('X-Crest-Lead-Match-Review','1');
         response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.lead.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));return response;
       }
       if(route==='state'){
@@ -160,6 +168,9 @@ export function createLeadHttp(config:Configuration,provider:Parameters<typeof c
         result=value.state==='absent'?value:{schemaVersion:value.schemaVersion,businessId:value.businessId,leadId:value.leadId,leadVersion:value.leadVersion,events:value.events,hasMore:value.hasMore};
       }
       else if(route==='operation')result=(await directory.lookup(cookie,{businessId,operationId:input.operationId as string},signal)).forServer();
+      else if(contactReview)result=(await directory.reviewContact(cookie,businessId,contactReview,signal)).forServer();
+      else if(vehicleReview)result=(await directory.reviewVehicle(cookie,businessId,vehicleReview,signal)).forServer();
+      else if(followUps)result=(await directory.followUps(cookie,businessId,followUps,signal)).forServer();
       else if(route==='history')result=(await directory.history(cookie,{businessId,leadId:input.leadId as string,afterVersion:input.afterVersion as string,pageSize:input.pageSize as number},signal)).forServer();
       else result=(await directory.list(cookie,{businessId,search:input.search as string,afterId:input.afterId as string|null,includeLost:input.includeLost as boolean,pageSize:input.pageSize as number},signal)).forServer();
       if(signal.aborted)throw new Error();return privateJsonResponse(result);

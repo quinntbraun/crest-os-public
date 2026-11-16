@@ -1,5 +1,6 @@
 // Actual registered38-to39 upgrade, RLS and fresh-session authority.
 import assert from 'node:assert/strict';
+import {syntheticLeadMatchReviewAvailable} from '../../scripts/synthetic-migrations.mjs';
 import {randomUUID,randomBytes} from 'node:crypto';
 import {before,after,test} from 'node:test';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
@@ -33,8 +34,8 @@ async function lead(f){
  const id=randomUUID(),draft={label:'Synthetic incomplete lead',customerId:null,sourceId:null,referralText:null,phone:null,email:null,requestedScope:null,availability:null,estimatedCents:null,followUpAt:null,notes:null};
  const result=(await web.query('SELECT crest_commands.save_lead($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS value',[...auth(f),f.epoch,randomUUID(),id,draft])).rows[0].value;assert.equal(result.state,'committed');return id;
 }
-async function directoryVehicle(f){
- const id=randomUUID(),draft={label:'Synthetic chosen directory vehicle',year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'customer_vehicle',notes:null,archived:false,archiveReason:null};
+async function directoryVehicle(f,patch={}){
+ const id=randomUUID(),draft={label:'Synthetic chosen directory vehicle',year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'customer_vehicle',notes:null,archived:false,archiveReason:null,...patch};
  const result=(await web.query('SELECT crest_commands.save_vehicle($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS value',[...auth(f),f.epoch,randomUUID(),id,draft])).rows[0].value;assert.equal(result.state,'committed');return id;
 }
 before(async()=>{
@@ -117,4 +118,60 @@ test('privileged source extraction stays in one read-only repeatable-read snapsh
   assert.equal((await exporter.query('SELECT crest_commands.lead_vehicle_snapshot_context($1) AS value',[f.business])).rows[0].value.rowCount,'2');
  }finally{await exporter.query('ROLLBACK');}
  assert.equal((await source(one.id)).condition_notes,'After snapshot');
+});
+
+
+test('lead vehicle review distinguishes exact identifiers from a similar description without changing records',async()=>{
+ const previous=await sandbox.apply(target,await sandbox.prefix(118));
+ assert.equal(await syntheticLeadMatchReviewAvailable(target),false);
+ const owner=await state(),foreign=await state();
+ const description={year:2022,make:'Fictional Motors',model:'Example'};
+ const reported={...description,vin:'xy-1234',plate:'ABC-321'};
+ const all=await directoryVehicle(owner,{label:'Fictional vehicle with all clues',...reported});
+ const similar=await directoryVehicle(owner,{label:'Fictional similar model',...description});
+ const sharedPlate=await directoryVehicle(owner,{label:'Fictional shared plate',plate:'abc-321'});
+ await directoryVehicle(owner,{label:'Unrelated business rig',...reported,kind:'business_rig'});
+ await directoryVehicle(foreign,{label:'Foreign vehicle',...reported});
+ const query='SELECT crest_commands.read_lead_vehicle_match_review($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) AS value';
+ const review=(f,{selected=null,vin='XY 1234',plate=' AbC-321 ',year=2022,make='fictional motors',model=' Example ',connection=web}={})=>
+  connection.query(query,[...auth(f),selected,vin,plate,year,make,model]).then(result=>result.rows[0].value);
+ const before=await evidence(owner);
+ const vehicleEvidence=async()=> (await client.query('SELECT to_jsonb(v) AS value FROM crest.vehicles v ORDER BY id')).rows;
+ const originalVehicles=await vehicleEvidence();
+ const adopted=await sandbox.apply(target,await sandbox.prefix(119));
+ assert.equal(adopted.history.length,119);
+ assert.deepEqual(adopted.history.slice(0,118),previous.history);
+ assert.equal(await syntheticLeadMatchReviewAvailable(target),true);
+ assert.deepEqual(await evidence(owner),before);
+ assert.deepEqual(await vehicleEvidence(),originalVehicles);
+ const result=await review(owner);
+ assert.equal(result.businessId,owner.business);
+ assert.equal(result.schemaVersion,1);
+ assert.equal(result.hasMore,false);
+ assert.deepEqual(result.vehicles,[
+  {id:all,label:'Fictional vehicle with all clues',archived:false,vin:true,plate:true,description:true},
+  {id:similar,label:'Fictional similar model',archived:false,vin:false,plate:false,description:true},
+  {id:sharedPlate,label:'Fictional shared plate',archived:false,vin:false,plate:true,description:false},
+ ].sort((a,b)=>a.id<b.id?-1:1));
+ const excluded=await review(owner,{selected:all});
+ assert(!excluded.vehicles.some(row=>row.id===all));
+ const incomplete=await review(owner,{vin:null,plate:null,year:2022,make:'fictional motors',model:null});
+ assert.deepEqual(incomplete.vehicles,[]);
+ const archivedUpdate={label:'Fictional vehicle with all clues',...reported,color:null,kind:'customer_vehicle',notes:null,archived:true,archiveReason:'Fixture retention'};
+ const changed=await web.query('SELECT crest_commands.save_vehicle($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,1,$12) AS value',
+  [...auth(owner),owner.epoch,randomUUID(),all,archivedUpdate]);
+ assert.equal(changed.rows[0].value.state,'committed');
+ assert.equal((await review(owner)).vehicles.find(row=>row.id===all).archived,true);
+ for(let i=0;i<5;i++)await directoryVehicle(owner,{label:'Extra similar model '+i,...description});
+ const page=await review(owner);
+ assert.equal(page.hasMore,true);
+ assert.equal(page.vehicles.length,5);
+ assert(page.vehicles.every((row,index)=>index===0||row.id>page.vehicles[index-1].id));
+ await assert.rejects(review({...owner,business:foreign.business}),{code:'42501'});
+ await assert.rejects(review(owner,{connection:exporter}),{code:'42501'});
+ await assert.rejects(review(owner,{model:'x'.repeat(201)}),{code:'22023'});
+ const afterSetup=await evidence(owner);
+ await review(owner);
+ assert.deepEqual(await evidence(owner),afterSetup);
+ assert.deepEqual(afterSetup.sources,before.sources);
 });

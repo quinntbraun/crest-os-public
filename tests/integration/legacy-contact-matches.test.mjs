@@ -14,7 +14,7 @@ import {syntheticLegacyContactBatchesAvailable,syntheticLegacyContactEffectsAvai
 import {prepareLegacyContactBatch} from '../../src/customer/legacy-contact-batch-stage.ts';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
-import {backupDatabase,backupContactApplicationCandidateDatabase,backupContactQueueCandidateDatabase,backupLegacyContactApplicationDatabase,backupLegacyContactApprovalDatabase,backupLegacyContactReviewDatabase,backupLegacyContactDecisionDatabase,connect,keyPair,recoveryCluster,restoreDatabase,restoreContactApplicationCandidateDatabase,restoreContactQueueCandidateDatabase,restoreLegacyContactApplicationDatabase,restoreLegacyContactApprovalDatabase,restoreLegacyContactReviewDatabase,normalizedSchema,postgresTool,restoreLegacyContactDecisionDatabase} from '../support/recovery-drill.mjs';
+import {backupLegacyContactHistoryDatabase,backupContactApplicationCandidateDatabase,backupContactQueueCandidateDatabase,backupLegacyContactApplicationDatabase,backupLegacyContactApprovalDatabase,backupLegacyContactReviewDatabase,backupLegacyContactDecisionDatabase,connect,keyPair,recoveryCluster,restoreLegacyContactHistoryDatabase,restoreContactApplicationCandidateDatabase,restoreContactQueueCandidateDatabase,restoreLegacyContactApplicationDatabase,restoreLegacyContactApprovalDatabase,restoreLegacyContactReviewDatabase,normalizedSchema,postgresTool,restoreLegacyContactDecisionDatabase} from '../support/recovery-drill.mjs';
 
 const issuer='https://auth.example.com/auth/v1';
 const credential=f=>[f.hash,f.session,f.actor,issuer,f.subject,f.provider,new Date(Date.now()+300000),f.business];
@@ -667,11 +667,12 @@ test('registered legacy matches normalize indexed hints, include archived eviden
       assert.deepEqual(await value(copy116,result,[...credential(owner),batch,1]),registeredResult);
       assert.deepEqual(await value(copy116,request,parameters),{state:'committed',operationId:operation});
      }finally{try{await copy116?.end();}finally{await recovery116.close();}}
-     const downloadUpgrade=await sandbox.apply(target);
+     const downloadPrefix=await sandbox.prefix(117);
+     const downloadUpgrade=await sandbox.apply(target,downloadPrefix);
      assert.equal(downloadUpgrade.history.length,117);
      assert.deepEqual(downloadUpgrade.history.slice(0,116),upgraded.history);
      assert.equal(downloadUpgrade.history.at(-1).version,'20270110180000');
-     assert.deepEqual((await sandbox.apply(target)).history,downloadUpgrade.history);
+     assert.deepEqual((await sandbox.apply(target,downloadPrefix)).history,downloadUpgrade.history);
      const source='SELECT crest_commands.read_legacy_contact_download($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS result';
      const handoff='SELECT crest_commands.record_legacy_contact_download($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) AS result';
      const downloadParameters=[...credential(owner),owner.epoch,batch,operation];
@@ -708,13 +709,13 @@ test('registered legacy matches normalize indexed hints, include archived eviden
      const historyPoint=join(sandbox.workspace,'registered117-import-history-backup');
      await mkdir(historyPoint,{mode:0o700});
      const historyKeys=await keyPair(historyPoint);
-     const checkpoint117=await backupDatabase(upgradedSession,target,historyPoint,historyKeys.recipient);
+     const checkpoint117=await backupLegacyContactHistoryDatabase(upgradedSession,target,historyPoint,historyKeys.recipient);
      assert.equal(checkpoint117.manifest.schemaVersion,117);
      const recovery117=await recoveryCluster();
      let copy117;
      try{
       const target117=await recovery117.database();
-      assert.deepEqual(await restoreDatabase(historyPoint,historyKeys.path,target117),checkpoint117.manifest);
+      assert.deepEqual(await restoreLegacyContactHistoryDatabase(historyPoint,historyKeys.path,target117),checkpoint117.manifest);
       copy117=await connect(target117);
       assert.deepEqual(await value(copy117,auditQuery,auditParameters),audit);
       await copy117.query('SET ROLE crest_web');

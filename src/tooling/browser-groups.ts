@@ -3,7 +3,7 @@
 const group = (...files: string[]) => Object.freeze(files.map(file => `tests/integration/${file}.test.mjs`));
 export const browserGroups = Object.freeze({
   crm: group('sign-in-browser','customer-address-browser','legacy-contact-csv-review-browser','vehicle-http-browser','association-http-browser','association-editor-browser'),
-  intake: group('lead-http-browser','lead-editor-browser','lead-address-editor-browser','lead-conversion-http-browser','lead-conversion-editor-browser'),
+  intake: group('lead-http-browser','lead-editor-browser','lead-match-review-browser','lead-address-editor-browser','lead-conversion-http-browser','lead-conversion-editor-browser'),
   commercial: group('quote-draft-editor-browser','quote-review-browser','quote-commercial-browser','quote-browser-response'),
   amendments: group('quote-amendment-workspace-browser','quote-amendment-acceptance-product-browser'),
   schedule: group('appointment-holds-browser','appointment-holds-product-browser','confirmed-bookings-product-browser','book-job-product-browser','job-change-product-browser','booking-divisions-product-browser','combined-booking-product-browser','fulfillment-modes-product-browser','booking-conflict-review-product-browser'),

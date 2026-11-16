@@ -28,6 +28,38 @@ beforeEach(()=>{
  session=vi.fn<typeof authentication.session>().mockResolvedValue({csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000});id=vi.fn<()=>string>().mockReturnValueOnce(operationId).mockReturnValue(newAssociationId);
 });
 it('keeps an idle private panel until an explicit load and bounds label reads to the link page',async()=>{const c=controller();expect(c.view().phase).toBe('idle');expect(session).not.toHaveBeenCalled();await c.load();expect(api.list.mock.calls[0]![1]).toEqual({vehicleId,afterId:null,pageSize:10});expect(customerApi.history.mock.calls[0]![1]).toEqual({customerId:row.customer_id,afterVersion:'0',pageSize:1});expect(c.view().rows[0]!.customer).toEqual({id:customer.id,label:customer.display_name,archived:false});expect(JSON.stringify(c.view())).not.toContain('phone');expect(JSON.stringify(c.view())).not.toContain('csrfToken');expect(memory.size).toBe(0);});
+it('prepares a link for the exact authorized customer while keeping commercial selections and the first write explicit',async()=>{
+ api.list.mockResolvedValue({associations:[],hasMore:false});
+ const c=controller();
+ await c.load(other.id);
+ expect(customerApi.history.mock.calls[0]!.slice(0,2)).toEqual([businessId,{customerId:other.id,afterVersion:'0',pageSize:1}]);
+ expect(api.context).toHaveBeenCalledTimes(2);
+ expect(c.view()).toMatchObject({phase:'ready',selectedCustomer:{id:other.id,label:other.display_name,archived:false},
+  draft:{action:'open',customerId:other.id,relationship:null,isBilling:null,effectiveAt:'',evidence:null},canSave:false});
+ expect(api.save).not.toHaveBeenCalled();
+ expect(id).not.toHaveBeenCalled();
+ expect(store.read()).toBeNull();
+});
+it.each(['archived','missing','mismatch','recovery changed'] as const)('rejects the shortcut when the customer is %s',async scenario=>{
+ api.list.mockResolvedValue({associations:[],hasMore:false});
+ customerApi.history.mockResolvedValue(scenario==='missing'?{state:'absent'}:{state:'found',
+  customer:{...other,id:scenario==='mismatch'?customer.id:other.id,archived_at:scenario==='archived'?'2026-10-25T00:00:00.000000Z':null},history:[],hasMore:false});
+ if(scenario==='recovery changed')api.context.mockResolvedValueOnce(context()).mockResolvedValueOnce({...context(),context:{...context().context,recoveryEpoch:randomUUID()}});
+ const c=controller();
+ await c.load(other.id);
+ expect(c.view()).toMatchObject({phase:scenario==='archived'?'ready':'unavailable',selectedCustomer:null,draft:null,canSave:false});
+ expect(api.save).not.toHaveBeenCalled();
+});
+it.each(['pending','paused'] as const)('does not prefill an association with %s authority',async condition=>{
+ api.list.mockResolvedValue({associations:[],hasMore:false});
+ if(condition==='pending')store.write(reference());
+ else api.context.mockResolvedValue({...context(),context:{...context().context,writeState:'paused',recoveryEpoch:null}});
+ const c=controller();
+ await c.load(other.id);
+ expect(c.view()).toMatchObject({phase:condition==='pending'?'pending':'ready',draft:null,canSave:false});
+ expect(customerApi.history).not.toHaveBeenCalled();
+ expect(api.save).not.toHaveBeenCalled();
+});
 it.each(['open','close','transfer'] as const)('secures only opaque metadata before explicit %s and pins the exact original draft',async action=>{
  const c=await prepared(action);expect(c.view().canSave).toBe(true);
  api.save.mockImplementation(async(_,input)=>{expect(input).toEqual(command(action));expect(store.read()).toEqual(reference(input));expect(JSON.stringify([...memory.values()])).not.toContain('Synthetic evidence');expect(c.view().draft).toBeNull();expect(Object.isFrozen(input.body)).toBe(true);return result(input);});

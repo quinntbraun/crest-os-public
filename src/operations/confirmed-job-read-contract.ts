@@ -13,6 +13,7 @@ type Pending=Readonly<{appointmentId:string;sequence:string;startAt:string;endAt
 export type JobSummary=Readonly<{jobId:string;version:string;state:typeof jobStates[number];customerId:string;customerName:string;operatorId:string;fulfillmentMode:'mobile'|'dropoff'|'pickup_return';appointmentId:string;appointmentSequence:string;startAt:string;endAt:string;timezone:string;confirmationState:typeof appointmentStates[number];unknownTravel:boolean|null;workLocation:BookingLocation;vehicleCount:number;pendingAppointment:Pending|null;vehicleLabels:readonly string[]}>;
 function text(v:unknown,max:number):v is string{return typeof v==='string'&&v.trim().length>0&&[...v].length<=max&&[...v].every(c=>{const n=c.codePointAt(0)!;return !(n>=0xd800&&n<=0xdfff)&&(!(n<32||n===127)||[9,10,13].includes(n));});}
 function zone(v:unknown):v is string{if(typeof v!=='string'||v.length>100)return false;try{new Intl.DateTimeFormat('en-US',{timeZone:v});return true;}catch{return false;}}
+export {zone as isSavedJobTimezone};
 function count(v:unknown,minimum=0):v is number{return typeof v==='number'&&Number.isSafeInteger(v)&&v>=minimum&&v<=2147483647;}
 export function parseJobListRequest(v:unknown):JobListRequest{
  requireBooking(exact(v,['businessId','from','until','afterStart','afterJob','pageSize'])&&customerUuid(v.businessId)&&customerInstant(v.from)&&customerInstant(v.until)&&(v.afterStart===null)===(v.afterJob===null)&&(v.afterStart===null||customerInstant(v.afterStart)&&customerUuid(v.afterJob))&&count(v.pageSize,1)&&v.pageSize<=50);

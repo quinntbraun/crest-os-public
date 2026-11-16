@@ -65,4 +65,10 @@ npm run workspace:start -- --contact-imports
 
 Open **Customers → Review a contact CSV**. Save and approve the reviewed decisions, then choose **Start import**. The loopback workspace processes saved requests after the browser navigates away. Reopen a saved draft to check its status or receipt. Workspace shutdown leaves unfinished attempts available for recovery and retry.
 
-On schema 117, open a completed import and choose **Download import history** if you have an active owner session with bulk export access. The ZIP contains the import receipt, row outcomes, and request history. Crest OS records the handoff along with the archive checksum.
+On schema 117 or later, open a completed import and choose **Download import history** if you have an active owner session with bulk export access. The ZIP contains the import receipt, row outcomes, and request history. Crest OS records the handoff along with the archive checksum.
+
+On schema 118 or later, open **Today → Lead follow-ups** to see scheduled reminders in order, including overdue reminders for lost leads. Select a reminder to open the saved lead. Both fictional launchers verify that the registered reader is available.
+
+On schema 119 or later, lead intake and reported vehicle forms show possible matches before saving when you add or change matching details. You can edit the draft, retry a failed lookup, or save the draft as entered. Phone and email matches show related customer and lead labels. Vehicle results distinguish VIN, plate text, and year, make and model. The review never links or merges records automatically. Both fictional launchers verify the migration and both reader permissions before enabling it.
+
+On schema 120 or later, open a saved customer or vehicle and expand **Saved visits**. Choose **Open saved job** to review the booked visit. A vehicle link opens the matching vehicle details within that job. The lists preserve the names recorded at booking and show the current confirmed time and saved job status. Both fictional launchers verify the migration and read permission before enabling the panel.

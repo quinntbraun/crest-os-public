@@ -12,22 +12,29 @@ import {MaintenanceReminders} from '../maintenance-reminders';
 import {draftFromCustomer} from '../../customer/customer-contract';
 import {draftChanged} from '../../client/draft-changed';
 import {CustomerPayments} from './customer-payments';
+import {RecordJobHistory} from '../schedule/record-job-history';
 
 function CustomerDetails({customer}:{customer:Customer}){
   const unknown=(value:string|null)=>value===null?'Not recorded':value===''?'Recorded as empty':value;
   return <dl className="customer-values"><dt>Name</dt><dd>{customer.display_name}</dd><dt>Phone</dt><dd>{unknown(customer.phone_raw)}</dd><dt>Email</dt><dd>{unknown(customer.email_raw)}</dd><dt>Contact preference</dt><dd>{unknown(customer.contact_preference)}</dd><dt>Outreach</dt><dd>{customer.outreach_opt_out?'Opted out':'Not opted out'}</dd><dt>Customer since</dt><dd>{unknown(customer.customer_since)}</dd><dt>Notes</dt><dd>{unknown(customer.notes)}</dd><dt>Status</dt><dd>{customer.archived_at===null?'Active':'Archived: '+customer.archived_reason}</dd></dl>;
 }
-export function CustomerScreen({related:Related}:{related?:ComponentType<{customerId:string}>}={}){
+export function CustomerScreen({related:Related,initialCustomerId=null,initialVisits=false}:{related?:ComponentType<{customerId:string}>;initialCustomerId?:string|null;initialVisits?:boolean}={}){
   const [view,setView]=useState(initialCustomerEditorView),current=useRef<ReturnType<typeof createCustomerEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null),heading=useRef<HTMLHeadingElement>(null);
   const dirty=draftChanged(view.draft,view.selected?draftFromCustomer(view.selected):emptyCustomerDraft);
   const focusRequest=useRef<{controller:NonNullable<typeof current.current>;id:string|null}|null>(null),editorVisible=view.draft!==null,selectedId=view.selected?.id??null;
   useLayoutEffect(()=>{const requested=focusRequest.current;if(!requested||view.busy)return;if(current.current===requested.controller&&view.phase==='ready'&&editorVisible&&selectedId===requested.id)heading.current?.focus();focusRequest.current=null;},[view,editorVisible,selectedId]);
   useEffect(()=>{
-    const controller=createCustomerEditorController({store:createPendingCustomerStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});current.current=controller;void controller.load();
+    const controller=createCustomerEditorController({store:createPendingCustomerStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});current.current=controller;
+    void (async()=>{
+      await controller.load();
+      if(!initialCustomerId||current.current!==controller||controller.view().phase!=='ready')return;
+      if(!initialVisits||!controller.view().recordJobHistoryAvailable)focusRequest.current={controller,id:initialCustomerId};
+      await controller.open(initialCustomerId);
+    })();
     const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
     document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
     return ()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
-  },[]);
+  },[initialCustomerId,initialVisits]);
   useEffect(()=>{if(!dirty&&view.phase!=='pending'&&!view.busy)return;const leaving=(event:BeforeUnloadEvent)=>{event.preventDefault();};window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[dirty,view.phase,view.busy]);
   function discardAllowed(){const state=current.current?.view();return !state||!draftChanged(state.draft,state.selected?draftFromCustomer(state.selected):emptyCustomerDraft)||window.confirm('Discard your unsaved customer changes? Choose Cancel to keep editing.');}
   async function open(id:string){const controller=current.current;if(!controller||!discardAllowed())return;focusRequest.current={controller,id};await controller.open(id);}
@@ -62,6 +69,7 @@ export function CustomerScreen({related:Related}:{related?:ComponentType<{custom
       </section>
       <div className="customer-record">
       {view.draft&&<form className="customer-record-editor" onSubmit={submit} aria-label="Customer editor"><h2 ref={heading} tabIndex={-1} className="editor-heading">{view.selected?'Edit customer':'New customer'}</h2>
+        {view.selected?.archived_at===null&&!view.writesPaused&&<a className="record-return-link" href={'/quotes?customer='+encodeURIComponent(view.selected.id)}>Start a quote</a>}
         <p className="field-help">Unsaved changes clear when you leave or hide this page.</p>
         <fieldset disabled={view.busy||view.writesPaused}><legend className="visually-hidden">Customer details</legend><label htmlFor="customer-name">Customer name</label><input id="customer-name" name="customer-name" autoComplete="off" maxLength={400} value={view.draft.displayName} onChange={event=>edit('displayName',event.target.value)} required/>
           {[...view.draft.displayName].length>160&&<p className="field-help">{[...view.draft.displayName].length}/200 characters.</p>}
@@ -78,7 +86,8 @@ export function CustomerScreen({related:Related}:{related?:ComponentType<{custom
           </details>
         </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}<button type="submit" disabled={!view.canSave}>Save customer</button>
       </form>}
-      {view.selected&&<section className="home-panel"><h2>Vehicles and addresses</h2><p>Save vehicles in the vehicle directory, then add a customer link to record their relationship and billing selection.</p><a className="primary-action" href="/vehicles">Manage vehicles</a><a className="text-action" href={"/addresses?customer="+view.selected.id}>Manage customer addresses</a></section>}
+      {view.selected&&<section className="home-panel"><h2>Vehicles and addresses</h2><p>Save vehicles in the vehicle directory, then add a customer link to record their relationship and billing selection.</p><a className="primary-action" href={view.selected.archived_at===null&&!view.writesPaused?'/vehicles?linkCustomer='+encodeURIComponent(view.selected.id):'/vehicles'}>{view.selected.archived_at===null&&!view.writesPaused?'Link a vehicle':'Manage vehicles'}</a><a className="text-action" href={"/addresses?customer="+view.selected.id}>Manage customer addresses</a></section>}
+      {view.selected&&view.recordJobHistoryAvailable&&<RecordJobHistory key={'jobs:'+view.selected.id} businessId={view.selected.business_id} recordId={view.selected.id} kind="customer" initiallyOpen={initialVisits&&selectedId===initialCustomerId}/>}
       {view.selected&&Related&&<Related key={view.selected.id} customerId={view.selected.id}/>}
       {view.selected&&view.selected.archived_at===null&&<CustomerPayments key={'payments:'+view.selected.id}
         businessId={view.selected.business_id} customerId={view.selected.id}/>}

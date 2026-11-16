@@ -3,13 +3,12 @@
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
-import {execFileSync} from 'node:child_process';
-import {readFile,chmod} from 'node:fs/promises';
-import {join} from 'node:path';
+import {setTimeout as delay} from 'node:timers/promises';
 import {createServer} from 'node:net';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {URI,TOTP} from 'otpauth';
+import {browserTestTls} from '../support/browser-test-tls.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {startRealAuthService,authResult} from '../support/real-auth-service.mjs';
@@ -17,7 +16,7 @@ import {startRealAuthService,authResult} from '../support/real-auth-service.mjs'
 let sandbox,client,service,app,origin,fixture,actor,business,login,loginOwned=false;
 const sessionName='__Host-crest_session';
 before(async()=>{
-  assert.equal(process.platform,'linux','the disposable container/HTTPS fixture requires Linux CI');
+  assert(['linux','win32'].includes(process.platform),'supported disposable HTTPS/Auth fixture required');
   process.env.NODE_ENV='production';
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);
   await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
@@ -31,7 +30,8 @@ before(async()=>{
   const sdk=service.sdk();await sdk.initialize();authResult(await sdk.signInWithPassword({email,password:secret}),'browser_enrollment_password');
   const factor=authResult(await sdk.mfa.enroll({factorType:'totp',friendlyName:'Synthetic browser fixture'}),'browser_enroll');
   const totp=URI.parse(factor.totp.uri);assert(totp instanceof TOTP,'synthetic TOTP required');
-  authResult(await sdk.mfa.challengeAndVerify({factorId:factor.id,code:totp.generate()}),'browser_enrollment_verify');fixture={email,password:secret,totp};
+  const nextCodeAt=(Math.floor(Date.now()/(totp.period*1000))+1)*totp.period*1000;
+  authResult(await sdk.mfa.challengeAndVerify({factorId:factor.id,code:totp.generate()}),'browser_enrollment_verify');fixture={email,password:secret,totp,nextCodeAt};
   const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
   await client.query('BEGIN');try{
     actor=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic browser owner',$1,$2,$3,$3,'manual') RETURNING id",[service.issuer,user.id,bootstrap])).rows[0].id;
@@ -39,18 +39,14 @@ before(async()=>{
     await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,actor]);
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,actor]);await client.query('COMMIT');
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_BROWSER_OWNER_FAILED');}
-  const keyPath=join(sandbox.workspace,'ephemeral.key'),certPath=join(sandbox.workspace,'ephemeral.pem');
-  await chmod(sandbox.workspace,0o700);
-  try{execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-noenc','-keyout',keyPath,'-out',certPath,'-days','1','-subj','/CN=localhost','-addext','subjectAltName=IP:127.0.0.1,DNS:localhost'],{stdio:'ignore',timeout:15000});}
-  catch{throw new Error('SYNTHETIC_TLS_FIXTURE_FAILED');}
-  await chmod(keyPath,0o600);
+  const tls=await browserTestTls();
   const reservation=createServer();await new Promise(resolve=>reservation.listen(0,'127.0.0.1',resolve));const port=reservation.address().port;await new Promise(resolve=>reservation.close(resolve));origin=`https://127.0.0.1:${port}`;
   // Normal Node resolution: react-server is only a build-time marker condition.
   const {createCrestApplication,createAuthenticationRuntime}=await import('../../.local/server/application.mjs');
   const runtime=await createAuthenticationRuntime({database:{connectionString:database.toString(),environment:'test'},provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
     owner:{subject:user.id,factorId:factor.id},loginKey:randomBytes(32),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:randomBytes(32)}]});
   assert.throws(()=>JSON.stringify(runtime),/AUTHENTICATION_RUNTIME_PRIVATE/);
-  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},customers:true});
+  app=await createCrestApplication({origin,environment:'test',tls,authentication:runtime.forServer(),business:{businessId:business},customers:true});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);
 });
@@ -58,6 +54,10 @@ after(async()=>{try{await app?.close();}finally{try{await service?.close();}fina
 
 async function fill(page,{trusted=false,password=fixture.password}={}){
   await page.getByLabel('Email',{exact:true}).fill(fixture.email);await page.getByLabel('Password',{exact:true}).fill(password);
+  const period=fixture.totp.period*1000,now=Date.now(),remaining=period-now%period;
+  const readyAt=Math.max(fixture.nextCodeAt,remaining<6000?now+remaining:0);
+  if(readyAt>now)await delay(readyAt-now+250);
+  fixture.nextCodeAt=(Math.floor(Date.now()/period)+1)*period;
   await page.getByLabel('Authenticator code',{exact:true}).fill(fixture.totp.generate());if(trusted)await page.getByText('Personal device options',{exact:true}).click();await page.getByLabel('Trust this personal device').setChecked(trusted);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
 }
@@ -89,23 +89,46 @@ async function openAddresses(page,customerId){
  await page.bringToFront();await page.goto(origin+'/addresses?customer='+customerId);await expect(page.getByRole('button',{name:'Add address',exact:true})).toBeVisible();
 }
 async function findAddress(page,label,archived=false){
- await page.getByLabel('Address search',{exact:true}).fill(label);await page.getByLabel('Include archived addresses',{exact:true}).setChecked(archived);await page.getByRole('button',{name:'Search addresses',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Address search complete.');await page.getByRole('button',{name:label+(archived?' — archived':''),exact:true}).click();await expect(page.getByRole('form',{name:'Address editor',exact:true})).toBeVisible();
+ await page.getByLabel('Address search',{exact:true}).fill(label);await page.getByLabel('Include archived addresses',{exact:true}).setChecked(archived);await page.getByRole('button',{name:'Search addresses',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Address search complete.');await page.getByRole('button',{name:label+(archived?' — archived':''),exact:true}).click();await expect(page.getByRole('heading',{name:'Edit address',exact:true})).toBeFocused();
 }
 async function addressEditorFlow(page,other,name){
  const parentName='Synthetic address parent '+name,label='Synthetic address form '+name;
  await openCustomers(page);await findCustomer(page,parentName);await page.getByRole('link',{name:'Manage customer addresses',exact:true}).click();await expect(page.getByRole('button',{name:'Add address',exact:true})).toBeVisible();await expect(page.getByText(parentName,{exact:true})).toBeVisible();
- await page.getByRole('button',{name:'Add address',exact:true}).click();await page.getByLabel('Street / address line 1',{exact:true}).fill(label);await page.getByLabel('Postal code',{exact:true}).fill('00123');
+ await page.getByRole('button',{name:'Add address',exact:true}).focus();await page.keyboard.press('Enter');await expect(page.getByRole('heading',{name:'New address',exact:true})).toBeFocused();await page.getByLabel('Street / address line 1',{exact:true}).fill(label);await page.getByLabel('Postal code',{exact:true}).fill('00123');
  await page.getByText('Coordinates and verification',{exact:true}).click();await expect(page.getByRole('button',{name:'Save address',exact:true})).toBeEnabled();await page.getByLabel('Latitude',{exact:true}).fill('39.1234567890123456789');await expect(page.getByRole('button',{name:'Save address',exact:true})).toBeDisabled();await page.getByLabel('Longitude',{exact:true}).fill('-86.000000000000000001');await page.getByRole('button',{name:'Mark location verified now',exact:true}).click();await expect(page.getByLabel('Verified at UTC',{exact:true})).not.toHaveValue('');assert.match(await page.getByLabel('Verified at UTC',{exact:true}).inputValue(),/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z$/);await page.getByLabel('Verified at UTC',{exact:true}).fill('2026-10-25T00:00:00.123456Z');
  assert.equal((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.length,0,'accessible address editor');assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'address editor fits mobile');assert((await page.getByLabel('Street / address line 1',{exact:true}).boundingBox()).height>=44);
  const firstRequest=page.waitForRequest(r=>r.url().endsWith('/api/business/customers/addresses/save'));await page.getByRole('button',{name:'Save address',exact:true}).click();const input=(await firstRequest).postDataJSON();await expect(page.getByRole('status')).toContainText('Address saved');await page.getByRole('button',{name:'Load current addresses',exact:true}).click();await findAddress(page,label);
  await expect(page.getByLabel('Address line 2',{exact:true})).toHaveValue('');await expect(page.getByLabel('City',{exact:true})).toHaveValue('');await expect(page.getByLabel('Postal code',{exact:true})).toHaveValue('00123');await page.getByText('Coordinates and verification',{exact:true}).click();await expect(page.getByLabel('Latitude',{exact:true})).toHaveValue(input.latitude);await expect(page.getByLabel('Longitude',{exact:true})).toHaveValue(input.longitude);await expect(page.getByLabel('Verified at UTC',{exact:true})).toHaveValue(input.verifiedAt);
  await page.getByLabel('Archive address',{exact:true}).check();await expect(page.getByRole('button',{name:'Save address',exact:true})).toBeDisabled();await page.getByLabel('Address archive reason',{exact:true}).fill('Synthetic retained location');await page.getByRole('button',{name:'Save address',exact:true}).click();await expect(page.getByRole('status')).toContainText('Address saved');await page.getByRole('button',{name:'Load current addresses',exact:true}).click();await findAddress(page,label,true);
  await expect(page.getByLabel('Address archive reason',{exact:true})).toHaveValue('Synthetic retained location');await page.getByLabel('Archive address',{exact:true}).uncheck();await page.getByRole('button',{name:'Save address',exact:true}).click();await expect(page.getByRole('status')).toContainText('Address saved');await page.getByRole('button',{name:'Load current addresses',exact:true}).click();await findAddress(page,label);await expect(page.getByLabel('Address history',{exact:true}).locator('details')).toHaveCount(3);
+ const latitude=page.getByLabel('Latitude',{exact:true});
+ await page.getByText('Coordinates and verification',{exact:true}).click();
+ await latitude.fill('91');
+ await expect(page.getByRole('button',{name:'Save address',exact:true})).toBeDisabled();
+ for(const action of [page.getByRole('button',{name:'Search addresses',exact:true}),page.getByRole('button',{name:'Add address',exact:true}),page.getByRole('button',{name:label,exact:true})]){
+  let warned=false;
+  page.once('dialog',async dialog=>{warned=dialog.type()==='confirm'&&dialog.message().includes('unsaved address changes');await dialog.dismiss();});
+  await action.click();
+  assert(warned,'Navigation asks before losing an invalid draft');
+  await expect(latitude).toHaveValue('91');
+ }
+ page.once('dialog',dialog=>dialog.accept());
+ await page.getByRole('button',{name:label,exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Edit address',exact:true})).toBeFocused();
+ await page.getByText('Coordinates and verification',{exact:true}).click();
+ await expect(latitude).toHaveValue(input.latitude);
  await page.getByLabel('Street / address line 1',{exact:true}).fill(label+' stale draft');
  await other.evaluate(async input=>{const post=async(path,body,csrf)=>{const r=await fetch('/api/'+path,{method:'POST',headers:{'content-type':'application/json',...(csrf?{'x-crest-csrf':csrf}:{})},body:JSON.stringify(body)});if(r.status!==200)throw new Error('SYNTHETIC_ADDRESS_CONCURRENT_EDIT_FAILED');return r.json();};const p=await post('auth/session',{},null),c=await post('business/customers/addresses/context',{customerId:input.customerId},p.csrfToken);await post('business/customers/addresses/save',{...input,operationId:crypto.randomUUID(),expectedVersion:'3',recoveryEpoch:c.recoveryEpoch,instructions:'Concurrent synthetic address change'},p.csrfToken);},input);
  const staleRequest=page.waitForRequest(r=>r.url().endsWith('/api/business/customers/addresses/save'));await page.getByRole('button',{name:'Save address',exact:true}).click();const stale=(await staleRequest).postDataJSON();await expect(page.getByRole('status')).toContainText('record, address ID or customer link changed');await expect(page.getByRole('form',{name:'Address editor',exact:true})).toHaveCount(0);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,stale.operationId])).rows[0].n,0);
  await page.getByRole('button',{name:'Load current addresses',exact:true}).click();await findAddress(page,label);await expect(page.getByLabel('Location instructions',{exact:true})).toHaveValue('Concurrent synthetic address change');await expect(page.getByLabel('Street / address line 1',{exact:true})).toHaveValue(label);await expect(page.getByLabel('Address history',{exact:true}).locator('details')).toHaveCount(4);
  const result=await client.query("SELECT customer_id,line1,line2,city,postal_code,latitude::text,longitude::text,to_char(verified_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS verified,version::text FROM crest.addresses WHERE business_id=$1 AND id=$2",[business,input.addressId]);assert.equal(result.rows[0].customer_id,input.customerId);assert.equal(result.rows[0].line2,null);assert.equal(result.rows[0].city,null);assert.equal(result.rows[0].postal_code,'00123');assert.equal(result.rows[0].latitude,input.latitude);assert.equal(result.rows[0].longitude,input.longitude);assert.equal(result.rows[0].verified,input.verifiedAt);assert.equal(result.rows[0].version,'4');assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.address.pending-reference.v1')),null);
+ const back=page.getByRole('link',{name:'Back to customer record',exact:true});
+ await expect(back).toHaveAttribute('href','/customers?customer='+input.customerId);
+ assert((await back.boundingBox()).height>=44);
+ await back.focus();await page.keyboard.press('Enter');
+ const customerEditor=page.getByRole('form',{name:'Customer editor',exact:true});
+ await expect(customerEditor.getByRole('heading',{name:'Edit customer',exact:true})).toBeFocused();
+ await expect(customerEditor.getByLabel('Customer name',{exact:true})).toHaveValue(parentName);
 }
 async function addressInterruptedFlow(page,name){
  const parent=(await client.query('SELECT id FROM crest.customers WHERE business_id=$1 AND display_name=$2',[business,'Synthetic address parent '+name])).rows[0].id,key='crest.address.pending-reference.v1',read=()=>page.evaluate(k=>JSON.parse(sessionStorage.getItem(k)),key),save=()=>page.getByRole('button',{name:'Save address',exact:true}),load=()=>page.getByRole('button',{name:'Load current addresses',exact:true});

@@ -1,7 +1,10 @@
 import type {Proof} from './authentication';
+import {parseLeadContactReview,parseLeadContactReviewInput,parseLeadVehicleReview,parseLeadVehicleReviewInput} from '../customer/lead-match-review-contract';
 import {exactCustomerObject as exact,customerUuid as uuid,customerVersion as version,customerInstant,requireCustomer as check} from '../customer/customer-contract';
 import {parseLead} from '../customer/lead-contract';
 import {parseLeadDraft} from '../customer/lead-contract';
+import {parseLeadFollowUpPage,parseLeadFollowUpQuery} from '../customer/lead-follow-up-contract';
+import type {LeadFollowUpQuery} from '../customer/lead-follow-up-contract';
 import {sameLead,validateLeadHistoryChange} from '../customer/lead-history-contract';
 import type {LeadDraft} from '../customer/lead-contract';
 export type LeadReference=Readonly<{operationId:string;leadId:string;expectedVersion:string;recoveryEpoch:string}>;
@@ -15,7 +18,7 @@ function committed(value:unknown,businessId:string,ref:LeadReference){
   const r=value.receipt;check(r.schemaVersion===1&&r.businessId===businessId&&r.leadId===ref.leadId&&version(r.leadVersion)&&BigInt(r.leadVersion)===BigInt(ref.expectedVersion)+1n&&uuid(r.auditEventId));
   return Object.freeze({state:'committed' as const,operationId:ref.operationId,recoveryEpoch:ref.recoveryEpoch,receipt:Object.freeze({schemaVersion:1 as const,businessId,leadId:ref.leadId,leadVersion:r.leadVersion,auditEventId:r.auditEventId})});
 }
-async function post(route:'context'|'list'|'save'|'history'|'operation',body:object,proof:Proof,external:AbortSignal){
+async function post(route:'context'|'follow-ups'|'contact-review'|'vehicle-review'|'list'|'save'|'history'|'operation',body:object,proof:Proof,external:AbortSignal){
   try{
     check(typeof proof?.csrfToken==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(proof.csrfToken)&&Number.isSafeInteger(proof.expiresAt)&&proof.expiresAt>Date.now());
     const signal=AbortSignal.any([external,AbortSignal.timeout(40000)]);if(signal.aborted)throw new Error();
@@ -28,18 +31,34 @@ async function post(route:'context'|'list'|'save'|'history'|'operation',body:obj
     const text=new TextDecoder('utf-8',{fatal:true}).decode(bytes),value:unknown=JSON.parse(text),nodes:unknown[]=[value];let fields=0,visited=0;
     while(nodes.length){check(++visited<=10000);const node=nodes.pop();if(node&&typeof node==='object'){if(!Array.isArray(node))fields+=Object.keys(node).length;nodes.push(...Object.values(node));}}
     check((text.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(t=>t===':').length===fields);
+    if((route==='follow-ups'||route==='contact-review'||route==='vehicle-review')&&response.status===404&&exact(value,['error'])&&value.error==='LEAD_REQUEST_FAILED')return {value,status:404,binding:null};
     if(exact(value,['error'])){
       const codes:Record<string,readonly[number,Kind]>={LEAD_SAVE_NOT_SUBMITTED:[503,'not_submitted'],LEAD_SAVE_DENIED:[403,'denied'],RECOVERY_REVIEW_REQUIRED:[409,'recovery'],LEAD_REQUEST_LIMITED:[429,'limited'],LEAD_SAVE_OUTCOME_UNKNOWN:[503,'unknown']},mapped=typeof value.error==='string'&&Object.hasOwn(codes,value.error)?codes[value.error]:undefined;
       if(mapped&&response.status===mapped[0])throw new LeadClientError(mapped[1]);throw new Error();
     }
-    return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding')};
+    return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding'),matchReview:route==='context'&&response.headers.get('x-crest-lead-match-review')==='1'};
   }catch(error){throw error instanceof LeadClientError?error:new LeadClientError(route==='save'?'unknown':'unavailable');}
 }
 // Stateless browser transport: no local/offline lead cache, credentials,
 // authority, retry loop or automatic operation-ID/epoch replacement.
+export const leadMatchReview=Object.freeze({
+  async contact(businessId:string,input:ReturnType<typeof parseLeadContactReviewInput>,proof:Proof,signal:AbortSignal){
+    const query=parseLeadContactReviewInput(input),response=await post('contact-review',query,proof,signal);
+    if(response.status===404)return null;
+    check(response.status===200);
+    return parseLeadContactReview(response.value,businessId,query);
+  },
+  async vehicle(businessId:string,input:ReturnType<typeof parseLeadVehicleReviewInput>,proof:Proof,signal:AbortSignal){
+    const query=parseLeadVehicleReviewInput(input),response=await post('vehicle-review',query,proof,signal);
+    if(response.status===404)return null;
+    check(response.status===200);
+    return parseLeadVehicleReview(response.value,businessId,query);
+  },
+});
+
 export const leads=Object.freeze({
   async context(proof:Proof,signal:AbortSignal){
-    try{const r=await post('context',{},proof,signal),v=r.value;check(r.status===200&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding)&&exact(v,['schemaVersion','businessId','writeState','recoveryEpoch'])&&v.schemaVersion===1&&uuid(v.businessId)&&(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null));return Object.freeze({context:Object.freeze({...v}) as LeadContext,binding:r.binding});}catch(e){throw e instanceof LeadClientError?e:new LeadClientError('unavailable');}
+    try{const r=await post('context',{},proof,signal),v=r.value;check(r.status===200&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding)&&exact(v,['schemaVersion','businessId','writeState','recoveryEpoch'])&&v.schemaVersion===1&&uuid(v.businessId)&&(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null));return Object.freeze({context:Object.freeze({...v}) as LeadContext,binding:r.binding,...r.matchReview?{matchReview:true as const}:{}});}catch(e){throw e instanceof LeadClientError?e:new LeadClientError('unavailable');}
   },
   async save(businessId:string,input:LeadSave,proof:Proof,signal:AbortSignal){
     let command:LeadSave;
@@ -61,6 +80,15 @@ export const leads=Object.freeze({
       check(r.status===200&&exact(v,['schemaVersion','businessId','leads','hasMore'])&&v.schemaVersion===1&&v.businessId===businessId&&Array.isArray(v.leads)&&v.leads.length<=pinned.pageSize&&typeof v.hasMore==='boolean');
       const rows=Array.from(v.leads,c=>parseLead(c,businessId));let previous=pinned.afterId;for(const row of rows){check((previous===null||row.id>previous)&&(pinned.includeLost||row.state!=='lost'));previous=row.id;}check(!v.hasMore||rows.length===pinned.pageSize);return Object.freeze({leads:Object.freeze(rows),hasMore:v.hasMore});
     }catch(e){throw e instanceof LeadClientError?e:new LeadClientError('unavailable');}
+  },
+  async followUps(businessId:string,input:LeadFollowUpQuery,proof:Proof,signal:AbortSignal){
+    try{
+      check(uuid(businessId));
+      const pinned=parseLeadFollowUpQuery(input),response=await post('follow-ups',pinned,proof,signal);
+      if(response.status===404)return null;
+      check(response.status===200);
+      return parseLeadFollowUpPage(response.value,businessId,pinned);
+    }catch(error){throw error instanceof LeadClientError?error:new LeadClientError('unavailable');}
   },
   async history(businessId:string,input:{leadId:string;afterVersion:string;pageSize:number},proof:Proof,signal:AbortSignal){
     try{check(uuid(businessId)&&exact(input,['leadId','afterVersion','pageSize'])&&uuid(input.leadId)&&version(input.afterVersion,true)&&Number.isSafeInteger(input.pageSize)&&input.pageSize>=1&&input.pageSize<=20);const pinned=Object.freeze({...input}),r=await post('history',pinned,proof,signal),v=r.value;check(r.status===200);if(exact(v,['state'])&&v.state==='absent')return Object.freeze({state:'absent' as const});

@@ -98,10 +98,37 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
   assert.deepEqual(mismatch.value,{state:'absent'});
   assert.match(mismatch.cache,/no-store/);
 
-  await page.goto(fixture.origin+jobPath);
   const collectionList=page.getByRole('region',{name:'Vehicle collections',exact:true});
+  const collectionSummary=page.locator('summary').filter({hasText:/^Vehicle collections$/});
+  const review=page.getByRole('region',{name:'Job review',exact:true});
+  async function verifyQueueWaitsForLinkedJob(openJob){
+   let releaseHistory;
+   const historyReady=new Promise(resolve=>{releaseHistory=resolve;});
+   await page.route('**/api/business/scheduling/history',async route=>{
+    await historyReady;
+    await route.continue();
+   },{times:1});
+   try{
+    await openJob();
+    await expect(page.locator('.schedule-status')).toContainText('Saved schedule loaded.');
+    await expect(collectionSummary).toHaveCount(0);
+   }finally{releaseHistory();}
+   await expect(review).toBeFocused();
+  }
+  if(name==='webkit'&&!startWork){
+   await verifyQueueWaitsForLinkedJob(()=>page.goto(fixture.origin+jobPath));
+   await page.route('**/api/business/scheduling/resources',route=>route.abort(),{times:1});
+   await page.reload();
+   const retry=page.getByRole('button',{name:'Check schedule access',exact:true});
+   await expect(retry).toBeVisible();
+   await verifyQueueWaitsForLinkedJob(()=>retry.click());
+  }else{
+   await page.goto(fixture.origin+jobPath);
+   await expect(review).toBeFocused();
+  }
   async function loadCollections(){
-   await page.locator('summary').filter({hasText:/^Vehicle collections$/}).click();
+   await collectionSummary.click();
+   await expect(collectionSummary.locator('..')).toHaveAttribute('open','');
    await collectionList.getByRole('button',{name:'Load vehicle collections',exact:true}).click();
   }
   await loadCollections();

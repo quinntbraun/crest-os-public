@@ -307,6 +307,24 @@ assert.equal(hash(legacy116Bytes),'cb46eed71c1d1b50db650f684e7fdaab80eb1f81fe856
 assert.deepEqual(registry.migrations.slice(0,116),legacy116.migrations);
 const legacy116Profile=Object.freeze({schemaVersion:116,registrySha256:hash(legacy116Bytes)});
 const legacy116Snapshot={profile:legacy116Profile,versions:legacy116.migrations.map(row=>row.version),coverage:{...currentCoverage,migrationCount:116}};
+const legacy117Bytes=await readFile(join(root,'tests/support/registered117-migration-checksums.json'));
+const legacy117=JSON.parse(legacy117Bytes);
+assert.equal(hash(legacy117Bytes),'d8588c86ea2d74580c12c1fe9b71aa0701eae9ca9dd50513d8939518d07f8cd4');
+assert.deepEqual(registry.migrations.slice(0,117),legacy117.migrations);
+const legacy117Profile=Object.freeze({schemaVersion:117,registrySha256:hash(legacy117Bytes)});
+const legacy117Snapshot={profile:legacy117Profile,versions:legacy117.migrations.map(row=>row.version),coverage:{...currentCoverage,migrationCount:117}};
+const legacy118Bytes=await readFile(join(root,'tests/support/registered118-migration-checksums.json'));
+const legacy118=JSON.parse(legacy118Bytes);
+assert.equal(hash(legacy118Bytes),'6d0b8b6a8d3b98a24b43f2335296c4de5b3e937ade3c972e1a2b80716ae55197');
+assert.deepEqual(registry.migrations.slice(0,118),legacy118.migrations);
+const legacy118Profile=Object.freeze({schemaVersion:118,registrySha256:hash(legacy118Bytes)});
+const legacy118Snapshot={profile:legacy118Profile,versions:legacy118.migrations.map(row=>row.version),coverage:{...currentCoverage,migrationCount:118}};
+const legacy119Bytes=await readFile(join(root,'tests/support/registered119-migration-checksums.json'));
+const legacy119=JSON.parse(legacy119Bytes);
+assert.equal(hash(legacy119Bytes),'cda4700579ee103af4a8e5664d885ae5b392d2570c1359975562223f48aaeff0');
+assert.deepEqual(registry.migrations.slice(0,119),legacy119.migrations);
+const legacy119Profile=Object.freeze({schemaVersion:119,registrySha256:hash(legacy119Bytes)});
+const legacy119Snapshot={profile:legacy119Profile,versions:legacy119.migrations.map(row=>row.version),coverage:{...currentCoverage,migrationCount:119}};
 const contactCandidateFiles=['legacy-contact-external-identities.sql','legacy-contact-application.sql','legacy-contact-application-source.sql'];
 const contactCandidateSources=await Promise.all(contactCandidateFiles.map(async file=>({file,sha256:hash(await readFile(join(root,'planning/proposals',file)))})));
 const contactCandidateTables={
@@ -1250,7 +1268,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile===legacy101Profile
       ||profile===legacy102Profile||profile===legacy103Profile||profile===legacy104Profile||profile===legacy105Profile||profile===legacy106Profile
       ||profile===legacy107Profile||profile===legacy108Profile||profile===legacy113Profile||profile===legacy114Profile
-      ||profile===legacy115Profile||profile===legacy116Profile||profile===contactApplicationCandidate.profile||profile===contactQueueCandidate.profile
+      ||profile===legacy115Profile||profile===legacy116Profile||profile===legacy117Profile||profile===legacy118Profile||profile===legacy119Profile||profile===contactApplicationCandidate.profile||profile===contactQueueCandidate.profile
       ||profile.schemaVersion===81&&profile.heldUnapplicationMigrationSha256
       ||profile.schemaVersion===82&&profile.heldFundApplicationMigrationSha256
       ||profile.schemaVersion===83&&profile.heldTipMigrationSha256
@@ -1313,6 +1331,18 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_RECOVERY_BACKUP_FAILED:'+stage);}
 }
 export async function restoreDatabase(...args){return restoreWithProfile(currentProfile,...args);}
+export async function backupLegacyLeadMatchDatabase(client,url,directory,recipient){
+ return backupWithProfile(legacy119Profile,client,url,directory,recipient,undefined,undefined,legacy119Snapshot);
+}
+export async function restoreLegacyLeadMatchDatabase(...args){return restoreWithProfile(legacy119Profile,...args);}
+export async function backupLegacyLeadFollowUpDatabase(client,url,directory,recipient){
+ return backupWithProfile(legacy118Profile,client,url,directory,recipient,undefined,undefined,legacy118Snapshot);
+}
+export async function restoreLegacyLeadFollowUpDatabase(...args){return restoreWithProfile(legacy118Profile,...args);}
+export async function backupLegacyContactHistoryDatabase(client,url,directory,recipient){
+ return backupWithProfile(legacy117Profile,client,url,directory,recipient,undefined,undefined,legacy117Snapshot);
+}
+export async function restoreLegacyContactHistoryDatabase(...args){return restoreWithProfile(legacy117Profile,...args);}
 export async function backupLegacyContactApplicationDatabase(client,url,directory,recipient){
  return backupWithProfile(legacy116Profile,client,url,directory,recipient,undefined,undefined,legacy116Snapshot);
 }

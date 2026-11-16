@@ -5,6 +5,8 @@ vi.mock('../../src/commercial/quote-amendment-http.ts',async importOriginal=>({.
 vi.mock('../../src/operations/scheduling-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/operations/scheduling-http.ts')>(),createSchedulingHttp:()=>flow.scheduling}));
 const flow=vi.hoisted(()=>({beginLogin:vi.fn(),business:vi.fn(),customers:vi.fn(),addresses:vi.fn(),vehicles:vi.fn(),associations:vi.fn(),leads:vi.fn(),leadSources:vi.fn(),originalOperations:vi.fn(),services:vi.fn(),quotes:vi.fn(),quoteReview:vi.fn(),quoteCommercial:vi.fn(),quoteAmendments:vi.fn(),holds:vi.fn(),expenses:vi.fn(),scheduling:vi.fn()}));
 vi.mock('../../src/security/browser-session-flow.ts',()=>({createBrowserSessionFlow:()=>flow}));
+vi.mock('../../src/bookkeeping/finance-account-http.ts',async original=>({...await original<typeof import('../../src/bookkeeping/finance-account-http.ts')>(),createFinanceAccountHttp:()=>vi.fn()}));
+vi.mock('../../src/security/posted-finance-owner-export-http.ts',async original=>({...await original<typeof import('../../src/security/posted-finance-owner-export-http.ts')>(),createPostedFinanceOwnerExportHttp:()=>vi.fn()}));
 vi.mock('../../src/security/business-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/security/business-http.ts')>(),createBusinessHttp:()=>flow.business}));
 vi.mock('../../src/customer/customer-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-http.ts')>(),createCustomerHttp:()=>flow.customers}));
 vi.mock('../../src/customer/customer-address-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/customer/customer-address-http.ts')>(),createCustomerAddressHttp:()=>flow.addresses}));
@@ -23,6 +25,23 @@ import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../.
 import type {NodeConfiguration} from '../../src/server/node-server.ts';
 
 const origin='https://crest.example.com';
+it.each([117,118,119,120,121])('requires a reviewed supplier finance source when launching schema %i',sourceSchemaVersion=>{
+ const server=createBoundedNodeServer();
+ const config:NodeConfiguration={origin,environment:'test',business:{businessId:'11111111-1111-4111-8111-111111111111'},
+  authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never},
+  syntheticFinanceAccounts:{connectionString:'postgres://crest_finance@127.0.0.1/crest_fixture',moneyChannels:true,statementStaging:true,statementMatchReview:true,statementMatchDrafts:true,supplierBillDrafts:true,supplierPayableReview:true,supplierPayablePosting:true},
+  syntheticPostedFinanceExport:{connectionString:'postgres://crest_export@127.0.0.1/crest_fixture',appReleaseId:'a'.repeat(40),sourceSchemaVersion}};
+ try{
+  const bind=()=>bindApplicationHandler(server,config,async()=>{});
+  if(sourceSchemaVersion===121){
+   expect(bind).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
+   expect(server.listenerCount('request')).toBe(0);
+  }else{
+   expect(bind).not.toThrow();
+   expect(server.listenerCount('request')).toBe(1);
+  }
+ }finally{server.close();}
+});
 it('amendment preparation requires explicit synthetic CRM/commercial/original recovery composition',()=>{
  const base={origin,environment:'test',syntheticQuoteAmendments:true,customers:true,vehicles:true,operationResolution:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticQuoteCommercial:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}},provider:{},tokens:{}}};
  for(const patch of [{environment:'production'},{syntheticQuoteAmendments:'yes'},{authentication:undefined},{business:undefined},{customers:false},{vehicles:false},{operationResolution:false},{syntheticQuotes:false},{syntheticQuoteReview:false},{syntheticQuoteCommercial:false}]){const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,{...base,...patch} as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();}

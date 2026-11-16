@@ -410,6 +410,25 @@ export async function syntheticLegacyContactDownloadsAvailable(connectionString)
  ],'SYNTHETIC_LEGACY_CONTACT_DOWNLOADS_REQUIRED','20270110180000');
 }
 
+export async function syntheticLeadFollowUpsAvailable(connectionString){
+ return optionalSyntheticReader(connectionString,
+  'crest_commands.read_lead_follow_ups(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,timestamptz,uuid,integer)',
+  'SYNTHETIC_LEAD_FOLLOW_UPS_REQUIRED','20270111180000');
+}
+
+export async function syntheticLeadMatchReviewAvailable(connectionString){
+ return optionalSyntheticReader(connectionString,[
+  'crest_commands.read_lead_contact_review(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,text,text)',
+  'crest_commands.read_lead_vehicle_match_review(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,text,text,integer,text,text)',
+ ],'SYNTHETIC_LEAD_MATCH_REVIEW_REQUIRED','20270112180000');
+}
+
+export async function syntheticRecordJobHistoryAvailable(connectionString){
+ return optionalSyntheticReader(connectionString,
+  'crest_commands.read_record_jobs(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,text,uuid,timestamptz,uuid,integer)',
+  'SYNTHETIC_RECORD_JOB_HISTORY_REQUIRED','20270113180000');
+}
+
 async function optionalSyntheticReader(connectionString,signatures,missing,version){
  try{await requireSyntheticReader(connectionString,signatures,missing,version);return true;}
  catch(error){if(error instanceof assert.AssertionError&&error.message===missing)return false;throw error;}
