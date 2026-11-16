@@ -1,15 +1,44 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-mirror_list=/etc/apt/apt-mirrors.txt
-test -s "$mirror_list"
-grep -qF "mirror+file:$mirror_list" /etc/apt/sources.list.d/ubuntu.sources
+runner_sources=/etc/apt/sources.list.d/ubuntu.sources
+mirror_uri='URIs: mirror+file:/etc/apt/apt-mirrors.txt'
+grep -qFx 'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' "$runner_sources"
+grep -qFx "$mirror_uri" "$runner_sources"
 
-# GitHub runner Ubuntu archive DNS has failed across multiple jobs.
-# Prefer the official MIT mirror while retaining the runner fallbacks
-# and the Ubuntu archive keyring configured in ubuntu.sources.
-mit_mirror=https://mirrors.mit.edu/ubuntu/
-if ! grep -qF "$mit_mirror" "$mirror_list"; then
-  printf '%s\tpriority:0\n' "$mit_mirror" | sudo tee -a "$mirror_list" > /dev/null
-fi
-printf '%s\n' 'Acquire::Retries "1";' 'Acquire::http::Timeout "15";' 'Acquire::https::Timeout "15";' | sudo tee /etc/apt/apt.conf.d/zz-crest-ci-downloads > /dev/null
+node_bin=$(command -v node)
+playwright_cli=$(realpath node_modules/playwright/cli.js)
+test -x "$node_bin"
+test -f "$playwright_cli"
+
+# Playwright chooses the browser libraries. Give its APT subprocesses the
+# runner's signed repositories, with one direct archive per bounded attempt.
+directory=$(mktemp -d /tmp/crest-browser-ubuntu.XXXXXXXX)
+sources="$directory/ubuntu.sources"
+config="$directory/apt.conf"
+trap 'rm -f -- "$sources" "$config"; rmdir -- "$directory"' EXIT
+chmod 755 "$directory"
+cat > "$config" <<EOF
+Dir::Etc::SourceList "$sources";
+Dir::Etc::SourceParts "-";
+APT::Update::Error-Mode "any";
+Acquire::Retries "0";
+Acquire::http::Timeout "20";
+Acquire::https::Timeout "20";
+DPkg::Lock::Timeout "30";
+EOF
+chmod 644 "$config"
+for archive in https://archive.ubuntu.com/ubuntu https://us.archive.ubuntu.com/ubuntu; do
+  sed "s|^$mirror_uri$|URIs: $archive|" "$runner_sources" > "$sources"
+  chmod 644 "$sources"
+  if grep -q 'mirror+file:' "$sources"; then
+    echo 'Unresolved Ubuntu archive mirror' >&2
+    exit 1
+  fi
+  if sudo timeout --kill-after=10s 210s env APT_CONFIG="$config" \
+    "$node_bin" "$playwright_cli" install-deps chromium webkit; then
+    exit 0
+  fi
+  echo "Browser dependencies could not be installed from $archive" >&2
+done
+exit 1

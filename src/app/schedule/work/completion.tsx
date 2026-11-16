@@ -102,6 +102,21 @@ export function CompletionEditor({context,disabled,save}:{context:CompletionCont
  const [reviewUrl,setReviewUrl]=useState(''),[skipReason,setSkipReason]=useState('');
  const [additional,setAdditional]=useState(''),[contactReview,setContactReview]=useState('');
  const [error,setError]=useState('');
+ const unanswered=context.assignments.filter(row=>!scope[row.assignedPartId]?.selection);
+ const hasSelectedOutcome=unanswered.length<context.assignments.length;
+
+ function markRemainingFulfilled(){
+  setScope(current=>{
+   const next={...current};
+   for(const {assignedPartId} of context.assignments){
+    if(!current[assignedPartId]?.selection){
+     next[assignedPartId]={selection:'completed',reason:'',pieces:[]};
+    }
+   }
+   return next;
+  });
+ }
+
  return <form className="field-work-form completion-work-form" onSubmit={event=>{
   event.preventDefault();
   if(disabled)return;
@@ -121,7 +136,13 @@ export function CompletionEditor({context,disabled,save}:{context:CompletionCont
   <p>End the current work interval and record what was done. Unfinished work will be flagged for review.</p>
   <fieldset disabled={disabled}>
    <legend>Scope outcomes</legend>
-   <button type="button" className="secondary" onClick={()=>setScope(Object.fromEntries(context.assignments.map(row=>[row.assignedPartId,{selection:'completed',reason:'',pieces:[]}])))}>Mark all items fulfilled</button>
+   <p role="status" className="field-help">
+    {unanswered.length===0?'Every item has an outcome selected.':
+     `${unanswered.length} of ${context.assignments.length} ${context.assignments.length===1?'item':'items'} still ${unanswered.length===1?'needs':'need'} an outcome.`}
+   </p>
+   <button type="button" className="secondary" disabled={unanswered.length===0} onClick={markRemainingFulfilled}>
+    {hasSelectedOutcome?'Mark remaining items fulfilled':'Mark all items fulfilled'}
+   </button>
    {context.assignments.map((row,index)=><AssignedScope key={row.assignedPartId} row={row} index={index} draft={scope[row.assignedPartId]??blank}
     change={next=>setScope(current=>({...current,[row.assignedPartId]:next}))}/>)}
   </fieldset>
