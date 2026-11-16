@@ -367,6 +367,54 @@ export async function requireSyntheticFinanceAccountConfiguration(connectionStri
  }finally{await client.end();}
 }
 
+export async function syntheticLegacyContactBatchesAvailable(connectionString){
+ const signatures=[
+  'stage_legacy_contact_batch(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,text,text,jsonb,jsonb)',
+  'list_legacy_contact_batches(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,integer)',
+  'read_legacy_contact_batch(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,integer,integer)',
+ ].map(signature=>'crest_commands.'+signature);
+ const missing='SYNTHETIC_LEGACY_CONTACT_BATCH_MIGRATION_REQUIRED';
+ return optionalSyntheticReader(connectionString,signatures,missing,'20270104180000');
+}
+
+export async function syntheticLegacyContactEffectsAvailable(connectionString){
+ return optionalSyntheticReader(connectionString,
+  'crest_commands.review_legacy_contact_effects(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,integer)',
+  'SYNTHETIC_LEGACY_CONTACT_EFFECT_REVIEW_REQUIRED','20270105180000');
+}
+
+export async function syntheticLegacyContactTargetsAvailable(connectionString){
+ return optionalSyntheticReader(connectionString,
+  'crest_commands.find_legacy_import_targets(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,integer,text,uuid)',
+  'SYNTHETIC_LEGACY_CONTACT_TARGET_REVIEW_REQUIRED','20270106180000');
+}
+
+export async function syntheticLegacyContactDecisionsAvailable(connectionString){
+ return optionalSyntheticReader(connectionString,[
+  'crest_commands.read_legacy_contact_decision(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,integer)',
+  'crest_commands.save_legacy_contact_decision(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,integer,text,integer,text,text,uuid,bigint,text,uuid,bigint)',
+ ],'SYNTHETIC_LEGACY_CONTACT_DECISIONS_REQUIRED','20270107180000');
+}
+
+export async function syntheticLegacyContactApprovalsAvailable(connectionString){
+ return optionalSyntheticReader(connectionString,[
+  'crest_commands.review_legacy_contact_approval(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid)',
+  'crest_commands.approve_legacy_contact_batch(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,text)',
+ ],'SYNTHETIC_LEGACY_CONTACT_APPROVALS_REQUIRED','20270108180000');
+}
+
+export async function syntheticLegacyContactDownloadsAvailable(connectionString){
+ return optionalSyntheticReader(connectionString,[
+  'crest_commands.read_legacy_contact_download(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid)',
+  'crest_commands.record_legacy_contact_download(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,uuid,text,integer)',
+ ],'SYNTHETIC_LEGACY_CONTACT_DOWNLOADS_REQUIRED','20270110180000');
+}
+
+async function optionalSyntheticReader(connectionString,signatures,missing,version){
+ try{await requireSyntheticReader(connectionString,signatures,missing,version);return true;}
+ catch(error){if(error instanceof assert.AssertionError&&error.message===missing)return false;throw error;}
+}
+
 async function requireSyntheticReader(connectionString,signature,missing,version){
  const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
  try{

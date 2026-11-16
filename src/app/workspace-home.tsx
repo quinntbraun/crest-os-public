@@ -52,7 +52,8 @@ export function WorkspaceHome(){
   },[load]);
   const reminders=view.followUps?.leads.filter(lead=>lead.follow_up_at!==null).sort((a,b)=>a.follow_up_at!<b.follow_up_at!?-1:a.follow_up_at!>b.follow_up_at!?1:0)??[];
   const visits=view.schedule?.visits?.jobs.filter(job=>!['cancelled','completed'].includes(job.state))??[],changes=view.schedule?.changes;
-  return <main className="workspace-home" aria-busy={view.phase==='checking'}>
+  const checking=view.phase==='checking';
+  return <main className="workspace-home" aria-busy={checking}>
     <div className="today-heading">
       <div>
         <p className="today-business">{view.phase==='ready'?view.name:'Crest Detailing'}</p>
@@ -64,13 +65,18 @@ export function WorkspaceHome(){
     <p className={view.phase==='ready'?'visually-hidden':'notice'} role="status" aria-live="polite">{view.message}</p>
     {view.phase==='signed-out'&&<section className="home-panel"><h2>Sign in</h2><p>Use your Crest OS account and authenticator to open your workspace.</p><a className="primary-action" href="/sign-in">Sign in to Crest OS</a></section>}
     {view.phase==='unavailable'&&<div className="notice"><p>No current business information is shown until access is confirmed.</p><a href="/sign-in">Check sign-in</a></div>}
-    {view.phase==='ready'&&<>
+    {checking&&<div className="today-loading" aria-hidden="true"><span/><span/><span/></div>}
+    {view.phase==='ready'&&<div className="today-content">
       {view.paused&&<p className="notice">Changes are paused for recovery review. You can still review available records and history.</p>}
       <nav className="today-overview" aria-label="Work at a glance">
-        <a href="/schedule"><span>Upcoming visits</span><strong>{view.schedule?.visits?shown(visits.length,view.schedule.visits.hasMore):'Unavailable'}</strong><span>Next seven days</span></a>
-        <a href="/leads"><span>Lead follow-ups</span><strong>{view.followUps?shown(reminders.length,view.followUps.hasMore):'Unavailable'}</strong><span>Leads with a follow-up date</span></a>
-        <a href="/appointment-holds"><span>Proposed times</span><strong>{view.proposals?shown(view.proposals.holds.length,view.proposals.hasMore):'Unavailable'}</strong><span>Saved proposal records</span></a>
+        <a href="/schedule"><span>Upcoming visits</span><strong data-unavailable={!view.schedule?.visits||undefined}>{view.schedule?.visits?shown(visits.length,view.schedule.visits.hasMore):'Unavailable'}</strong><span>Next seven days</span><span className="overview-arrow" aria-hidden="true">↗</span></a>
+        <a href="/leads"><span>Lead follow-ups</span><strong data-unavailable={!view.followUps||undefined}>{view.followUps?shown(reminders.length,view.followUps.hasMore):'Unavailable'}</strong><span>Leads with a follow-up date</span><span className="overview-arrow" aria-hidden="true">↗</span></a>
+        <a href="/appointment-holds"><span>Proposed times</span><strong data-unavailable={!view.proposals||undefined}>{view.proposals?shown(view.proposals.holds.length,view.proposals.hasMore):'Unavailable'}</strong><span>Saved proposal records</span><span className="overview-arrow" aria-hidden="true">↗</span></a>
       </nav>
+      <nav className="home-shortcuts" aria-label="Quick actions">{shortcuts.map(({href,name,detail,glyph})=>
+        <a href={href} key={href} aria-label={'Open '+name.toLowerCase()}>
+          <span className="shortcut-glyph" aria-hidden="true">{glyph}</span><span><strong>{name}</strong><small>{detail}</small></span><span aria-hidden="true">↗</span>
+        </a>)}</nav>
       <div className="today-grid">
       <section className="home-panel" aria-label="Upcoming saved visits"><div className="section-heading"><h2>Upcoming visits</h2></div>
         {view.schedule===null||view.schedule.visits===null?<p>Upcoming visits could not be verified. <a href="/schedule">Check the schedule</a>.</p>:<><p className="field-help">Confirmed appointments over the next seven days.</p>{visits.length===0?<p>{view.schedule.visits.hasMore?'No active visits on this page. Open Schedule to review remaining visits.':'No active saved visits in the next seven days.'}</p>:<ul className="today-visits">{visits.map(job=><li key={job.jobId}>
@@ -107,12 +113,8 @@ export function WorkspaceHome(){
       </section>
       {view.proposals!==null&&<section className="home-panel" aria-label="Unconfirmed appointment proposals"><div className="section-heading"><h2>Proposed times</h2><a href="/appointment-holds">Review proposals</a></div>{view.proposals.holds.length===0?<p>No saved proposals on this page.</p>:<ul className="follow-up-list">{view.proposals.holds.map(hold=><li key={hold.id}><strong>{hold.label}</strong><span>{hold.local_start.slice(0,16).replace('T',' ')} · {hold.timezone}</span><span>{hold.state==='withdrawn'?'Withdrawn':'Unconfirmed · does not reserve time'}</span></li>)}</ul>}<p className="field-help">First page of retained proposals, including withdrawals. {view.proposals.hasMore?'More proposals are available. ':''}These are not confirmed bookings.</p><a className="primary-action" href="/appointment-holds">Propose a time</a></section>}
       </div></div>
-      <nav className="home-shortcuts" aria-label="Quick actions">{shortcuts.map(({href,name,detail,glyph})=>
-        <a href={href} key={href} aria-label={'Open '+name.toLowerCase()}>
-          <span className="shortcut-glyph" aria-hidden="true">{glyph}</span><span><strong>{name}</strong><small>{detail}</small></span><span aria-hidden="true">↗</span>
-        </a>)}</nav>
       <div className="today-footer"><a href="/save-review">Review interrupted saves</a><p className="field-help">Last checked {view.checkedAt===null?'':new Date(view.checkedAt).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}</p></div>
-    </>}
-    {view.phase!=='checking'&&<button type="button" className="secondary today-refresh" onClick={()=>{setView(initial);void load();}}>Refresh workspace</button>}
+    </div>}
+    <button type="button" className="secondary today-refresh" aria-disabled={checking} onClick={()=>{if(!checking){setView(initial);void load();}}}>Refresh workspace</button>
   </main>;
 }

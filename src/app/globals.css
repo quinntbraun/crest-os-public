@@ -134,8 +134,8 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .workspace-destinations { display:flex; gap:.25rem; background:var(--paper); border-bottom:1px solid var(--line); padding:.25rem 1.5rem; }
 .workspace-destinations a { color:var(--muted); text-decoration:none; padding:.5rem 1rem; border-bottom:3px solid transparent; font-weight:600; }
 .workspace-destinations a[aria-current] { color:var(--ink); border-bottom-color:var(--gold-ink); }
-.skip-link { position:fixed; top:-100px; left:1rem; background:#fff; color:var(--ink); z-index:100; padding:1rem; }
-.skip-link:focus { top:1rem; }
+.skip-link { position:fixed; top:1rem; clip-path:inset(50%); left:1rem; background:#fff; color:var(--ink); z-index:100; padding:1rem; }
+.skip-link:focus { clip-path:none; }
 .workspace-home { max-width:75rem; }
 .today-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem 1.5rem; border-bottom:1px solid var(--line); padding-bottom:1.25rem; }
 .today-heading h1 { margin:0; }

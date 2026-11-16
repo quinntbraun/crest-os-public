@@ -19,18 +19,19 @@ class CsrfToken{
   toJSON():never{throw new RequestProtectionError();}
 }
 export function createCsrfToken(sessionId:string,purpose:'session'|'login'='session'){return new CsrfToken(sessionId,purpose);}
-export function createRequestProtection(config:{origin:string;environment:'production'|'test'},format:'json'|'condition-photo'|'private-file'='json'){
+export function createRequestProtection(config:{origin:string;environment:'production'|'test'},format:'json'|'condition-photo'|'private-file'|'legacy-csv'='json'){
   let origin:string;
   try{
     const url=new URL(config.origin);
-    if(!['production','test'].includes(config.environment)||!['json','condition-photo','private-file'].includes(format)||url.origin!==config.origin||url.username||url.password
+    if(!['production','test'].includes(config.environment)||!['json','condition-photo','private-file','legacy-csv'].includes(format)||url.origin!==config.origin||url.username||url.password
       ||!(url.protocol==='https:'||config.environment==='test'&&url.protocol==='http:'&&['127.0.0.1','[::1]'].includes(url.hostname)))throw new Error();
     origin=url.origin;
   }catch{throw new Error('REQUEST_ORIGIN_CONFIGURATION_REQUIRED');}
   const requireOrigin=(request:Pick<Request,'method'|'headers'>):void=>{
     try{
       const type=request.headers.get('content-type')??'';
-      const validBody=format==='private-file'?request.method==='POST'&&fileTypes.some(allowed=>allowed===type):
+      const validBody=format==='legacy-csv'?request.method==='POST'&&type==='application/octet-stream':
+        format==='private-file'?request.method==='POST'&&fileTypes.some(allowed=>allowed===type):
         format==='condition-photo'?request.method==='POST'&&['image/jpeg','image/png','image/heic'].includes(type):
         ['POST','PATCH'].includes(request.method)&&/^application\/json(?:;\s*charset=utf-8)?$/i.test(type);
       if(!validBody||request.headers.get('origin')!==origin

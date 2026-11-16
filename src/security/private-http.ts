@@ -15,16 +15,16 @@ export function privateJsonResponse(body:object,status=200,cookies:string[]=[]):
   return new Response(JSON.stringify(body),{status,headers});
 }
 
-async function boundedBody(request:Request,signal:AbortSignal,bodyLimit:number):Promise<string>{
+export async function readPrivateBytes(request:Request,signal:AbortSignal,bodyLimit:number):Promise<Uint8Array<ArrayBuffer>>{
   let reader:ReadableStreamDefaultReader<Uint8Array>|undefined;
   try{
-    if(signal.aborted||request.bodyUsed||request.headers.has('content-encoding'))throw new PrivateHttpError();
+    if(!Number.isSafeInteger(bodyLimit)||bodyLimit<1||signal.aborted||request.bodyUsed||request.headers.has('content-encoding'))throw new PrivateHttpError();
     const length=request.headers.get('content-length');
     if(length!==null&&(!/^(0|[1-9]\d*)$/.test(length)||!Number.isSafeInteger(Number(length))||Number(length)>bodyLimit))throw new PrivateHttpError();
     if(!request.body)throw new PrivateHttpError();
     reader=request.body.getReader();
-    const decoder=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true});
-    let size=0,text='';
+    const chunks:Uint8Array[]=[];
+    let size=0;
     while(true){
       // A stalled stream must not outlive the overall deadline or client cancellation.
       const part=await new Promise<ReadableStreamReadResult<Uint8Array>>((resolve,reject)=>{
@@ -36,16 +36,21 @@ async function boundedBody(request:Request,signal:AbortSignal,bodyLimit:number):
       if(signal.aborted)throw new PrivateHttpError();
       if(part.done)break;
       if(!(part.value instanceof Uint8Array)||part.value.byteLength===0||(size+=part.value.byteLength)>bodyLimit)throw new PrivateHttpError();
-      text+=decoder.decode(part.value,{stream:true});
+      chunks.push(part.value);
     }
-    text+=decoder.decode();
     if(length!==null&&Number(length)!==size)throw new PrivateHttpError();
-    return text;
+    const result=new Uint8Array(size);let offset=0;
+    for(const chunk of chunks){result.set(chunk,offset);offset+=chunk.byteLength;}
+    return result;
   }catch{
     // Do not wait for a hostile source's cancellation promise to settle.
     if(reader)void reader.cancel().catch(()=>{});
     throw new PrivateHttpError();
   }finally{reader?.releaseLock();}
+}
+
+async function boundedBody(request:Request,signal:AbortSignal,bodyLimit:number){
+  return new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await readPrivateBytes(request,signal,bodyLimit));
 }
 
 export async function readFlatJsonBody(request:Request,keys:readonly string[],bodyLimit=8192):Promise<Readonly<Record<string,unknown>>>{

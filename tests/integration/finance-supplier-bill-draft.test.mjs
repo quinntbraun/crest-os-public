@@ -164,7 +164,7 @@ test('supplier bill drafts retain reviewed cost and due-date evidence with zero 
    restored=await connect(restoredUrl);
    await restored.query('SET ROLE crest_finance_preview');
    assert.deepEqual(await list(owner,restored),retained);
-   assert.equal((await sandbox.apply(url)).history.length,109);
+   assert.equal((await sandbox.apply(url,await sandbox.prefix(109))).history.length,109);
    assert.deepEqual(await list(owner,finance),retained);
    assert.equal((await admin.query('SELECT count(*)::int AS count FROM crest.supplier_payables')).rows[0].count,0);
   }finally{try{await restored?.end();}finally{await restoredCluster.close();}}

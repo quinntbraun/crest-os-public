@@ -4,6 +4,8 @@ import nextConfig from '../../next.config.ts';
 import {bindApplicationHandler,createBoundedNodeServer} from './node-server.ts';
 import type {NodeConfiguration} from './node-server.ts';
 import {prepareSyntheticGoogleCalendarRunner} from '../operations/google-calendar-worker.ts';
+import {createLegacyContactImportDispatcher} from '../security/session-database.ts';
+import {startLegacyContactImportRunner} from '../customer/legacy-contact-import-runner.ts';
 export {openSyntheticSupplierStore,readSupplierProfile} from './synthetic-supplier-store.ts';
 export {createAuthenticationRuntime} from './authentication-runtime.ts';
 export {createTenantContextReader} from '../security/tenant-read.ts';
@@ -41,9 +43,27 @@ export async function createCrestApplication(config:NodeConfiguration){
       server.once('listening',startCalendar);
       server.once('close',()=>{void stopCalendar?.();});
     }
+    let startContactImport:(()=>void)|undefined;
+    let stopContactImport:(()=>Promise<void>)|undefined;
+    const contactWorker=config.syntheticLegacyContactImportWorker;
+    if(contactWorker!==undefined){
+      const target=new URL(config.origin);
+      if(config.environment!=='test'||!config.business||!config.tls||config.syntheticLegacyContactApplications!=='background'||
+       target.protocol!=='https:'||target.origin!==config.origin||!['127.0.0.1','[::1]'].includes(target.hostname)||
+       !contactWorker||Object.keys(contactWorker).length!==1||typeof contactWorker.connectionString!=='string')throw Error();
+      const dispatch=createLegacyContactImportDispatcher({environment:'test',connectionString:contactWorker.connectionString});
+      startContactImport=()=>{
+        const address=server.address();
+        if(address&&typeof address!=='string'&&['127.0.0.1','::1'].includes(address.address)&&
+         address.port===Number(target.port||443))stopContactImport=startLegacyContactImportRunner(dispatch);
+      };
+      server.once('listening',startContactImport);
+      server.once('close',()=>{void stopContactImport?.();});
+    }
     return {server,close:async()=>{
       if(startCalendar)server.off('listening',startCalendar);
-      const stopped=stopCalendar?.();
+      if(startContactImport)server.off('listening',startContactImport);
+      const stopped=Promise.all([stopCalendar?.(),stopContactImport?.()]);
       server.closeAllConnections();
       await new Promise<void>(resolve=>server.close(()=>resolve()));
       await stopped;

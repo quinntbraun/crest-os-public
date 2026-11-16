@@ -1,6 +1,6 @@
 import {it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-import {readFlatJsonBody,readNestedJsonBody} from '../../src/security/private-http.ts';
+import {readFlatJsonBody,readNestedJsonBody,readPrivateBytes} from '../../src/security/private-http.ts';
 const request=(text:string,headers:Record<string,string>={})=>new Request('https://crest.example.com/private',{method:'POST',headers,body:text});
 it('default8KiB and explicitly bounded larger bodies count exact UTF8 bytes',async()=>{
  const text=JSON.stringify({notes:'😀'.repeat(4000)}),bytes=Buffer.byteLength(text);
@@ -24,4 +24,15 @@ it('only admits the named optional nested field when enabled and still rejects d
  await expect(readNestedJsonBody(request(input),['amount'])).rejects.toThrow('PRIVATE_HTTP_FAILED');
  await expect(readNestedJsonBody(request('{"amount":"4500","unknown":"x"}'),['amount'],8192,'fundsMappingId')).rejects.toThrow('PRIVATE_HTTP_FAILED');
  await expect(readNestedJsonBody(request('{"amount":"4500","fundsMappingId":"first","fundsMappin\\u0067Id":"second"}'),['amount'],8192,'fundsMappingId')).rejects.toThrow('PRIVATE_HTTP_FAILED');
+});
+
+it('binary envelopes preserve raw byte order and apply the same Content-Length bound',async()=>{
+ const bytes=new Uint8Array([239,187,191,10,0,255]);
+ const input=(headers:Record<string,string>={})=>new Request('https://crest.example.com/private',{
+  method:'POST',body:bytes,headers});
+ const signal=new AbortController().signal;
+ expect(await readPrivateBytes(input({'content-length':'6'}),signal,6)).toEqual(bytes);
+ await expect(readPrivateBytes(input(),signal,5)).rejects.toThrow('PRIVATE_HTTP_FAILED');
+ await expect(readPrivateBytes(input({'content-length':'7'}),signal,8)).rejects.toThrow('PRIVATE_HTTP_FAILED');
+ await expect(readPrivateBytes(input({'content-encoding':'gzip'}),signal,8)).rejects.toThrow('PRIVATE_HTTP_FAILED');
 });

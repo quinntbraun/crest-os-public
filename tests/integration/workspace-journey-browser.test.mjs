@@ -2,6 +2,7 @@
 // history. Synthetic TLS exceptions are confined to this disposable test.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
+import {setTimeout as delay} from 'node:timers/promises';
 import {mkdir,readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -35,7 +36,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await expect(email).toHaveValue(credentials.email);
    await expect(password).toHaveValue('');await expect(code).toHaveValue('');
   }
-  const current=f.credentials();await password.fill(current.password);await code.fill(current.code);await signIn.click();
+  await password.fill(credentials.password);
+  // Keep the test submission away from the provider's 30-second code rollover.
+  const remainingCodeTime=30_000-Date.now()%30_000;
+  if(remainingCodeTime<5_000)await delay(remainingCodeTime+100);
+  await code.fill(f.credentials().code);await signIn.click();
   await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();await expect(page.getByLabel('Password',{exact:true})).toHaveCount(0);
   const cookie=(await context.cookies()).find(c=>c.name==='__Host-crest_session');assert(cookie?.secure&&cookie.httpOnly);
   await page.getByRole('link',{name:'Open workspace',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Workspace access verified.');
@@ -46,6 +51,38 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.keyboard.press('Enter');
   await expect(page.locator('#workspace-content')).toBeFocused();
   await expect(page.getByRole('navigation',{name:'Quick actions',exact:true}).getByRole('link',{name:'Open accounting',exact:true})).toHaveAttribute('href','/settings/accounts');
+  const searchButton=page.getByRole('button',{name:'Find a tool',exact:true});
+  await page.keyboard.press('Control+k');
+  const toolSearch=page.getByRole('dialog',{name:'Find a tool',exact:true});
+  const toolQuery=toolSearch.getByRole('searchbox',{name:'Search workspace tools',exact:true});
+  const firstTool=toolSearch.getByRole('link',{name:/^Today(?: Main navigation)?$/});
+  const secondTool=toolSearch.getByRole('link',{name:/^Customers(?: Main navigation)?$/});
+  await expect(toolQuery).toBeFocused();
+  await toolQuery.press('ArrowDown');await expect(firstTool).toBeFocused();
+  await firstTool.press('ArrowDown');await expect(secondTool).toBeFocused();
+  await secondTool.press('Home');await expect(firstTool).toBeFocused();
+  await firstTool.press('ArrowUp');await expect(toolQuery).toBeFocused();
+  await toolQuery.fill('receipt');await expect(toolSearch.getByRole('link',{name:/^Expenses(?: Money)?$/})).toBeVisible();
+  await toolQuery.fill('fictionalunmatchedtool');await expect(toolSearch.getByText('No tools match that search.')).toBeVisible();
+  await toolQuery.press('Escape');await expect(toolSearch).toBeHidden();await expect(searchButton).toBeFocused();
+  await searchButton.evaluate(button=>button.blur());
+  for(const width of [360,768,1440]){
+   await page.setViewportSize({width,height:950});
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   const shortcuts=await page.getByRole('navigation',{name:'Quick actions',exact:true}).boundingBox();
+   const visits=await page.getByRole('region',{name:'Upcoming saved visits',exact:true}).boundingBox();
+   assert(shortcuts&&visits&&shortcuts.y+shortcuts.height<=visits.y);
+   assert(await page.locator('.today-overview strong[data-unavailable]').evaluateAll(values=>values.every(value=>{
+    const text=document.createRange();text.selectNodeContents(value);
+    return text.getClientRects().length===1;
+   })));
+   assert.deepEqual((await new AxeBuilder({page}).include('.workspace-home').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+   await page.screenshot({path:join('.local/review',`working-today-${name}-${width}.png`),fullPage:true});
+  }
+  await page.emulateMedia({reducedMotion:'reduce'});
+  assert.equal(await page.locator('.today-content').evaluate(element=>getComputedStyle(element).animationName),'none');
+  await page.emulateMedia({reducedMotion:null});
+  await page.setViewportSize({width:390,height:844});
   const workspaceMenu=page.locator('.workspace-menu summary');
   const tools=page.getByRole('navigation',{name:'Workspace tools',exact:true});
   await workspaceMenu.press('Enter');

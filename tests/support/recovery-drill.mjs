@@ -41,7 +41,12 @@ const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums
 const currentCoverage=JSON.parse(await readFile(join(root,'planning/SECURITY_EXPORT_COVERAGE.json'),'utf8'));
 const registryHash=hash(await readFile(join(root,'supabase/migration-checksums.json')));
 const supplierPayableTables=new Set(['crest.supplier_bill_original_intents','crest.supplier_bill_originals','crest.supplier_payables','crest.supplier_payable_settlements']);
-const priorPayableCoverage={...currentCoverage,migrationCount:108,tables:currentCoverage.tables.filter(row=>!supplierPayableTables.has(row.table))
+const draftDecisionTables=new Set(['crest.legacy_contact_decision_sources','crest.legacy_contact_decisions']);
+const draftApprovalTable='crest.legacy_contact_approvals';
+const currentDraftTables=new Set(['crest.legacy_contact_batches','crest.legacy_contact_batch_rows',...draftDecisionTables,draftApprovalTable]);
+const registeredApplicationTables=new Set(["crest.legacy_contact_external_identities","crest.legacy_contact_applications","crest.legacy_contact_application_rows","crest_private.legacy_contact_apply_requests"]);
+const coverage115={...currentCoverage,migrationCount:115,tables:currentCoverage.tables.filter(row=>!registeredApplicationTables.has(row.table))};
+const priorPayableCoverage={...coverage115,migrationCount:108,tables:coverage115.tables.filter(row=>!supplierPayableTables.has(row.table)&&!currentDraftTables.has(row.table))
  .map(row=>({...row,required:row.required.filter(column=>column!=='supplier_payable_id'&&column!=='supplier_payable_settlement_id')}))};
 const priorSupplierDraftCoverage={...priorPayableCoverage,tables:priorPayableCoverage.tables.filter(row=>row.table!=='crest.supplier_bill_draft_revisions')};
 const priorMatchDraftCoverage={...priorSupplierDraftCoverage,tables:priorSupplierDraftCoverage.tables.filter(row=>row.table!=='crest.statement_match_draft_revisions')};
@@ -70,6 +75,20 @@ assert.equal(hash(legacy108Bytes),'4db5688874be8181e49e00e28fde2af33f3e33b213c5f
 assert.deepEqual(registry.migrations.slice(0,108),legacy108.migrations);
 const legacy108Profile=Object.freeze({schemaVersion:108,registrySha256:hash(legacy108Bytes)});
 const legacy108Snapshot={profile:legacy108Profile,versions:legacy108.migrations.map(row=>row.version),coverage:priorPayableCoverage};
+const legacy113Bytes=await readFile(join(root,'tests/support/registered113-migration-checksums.json'));
+const legacy113=JSON.parse(legacy113Bytes);
+assert.equal(hash(legacy113Bytes),'636c8554f06001790da3780b301144e0cd49e54b6aa6de8f2c067f9824fb936b');
+assert.deepEqual(registry.migrations.slice(0,113),legacy113.migrations);
+const legacy113Profile=Object.freeze({schemaVersion:113,registrySha256:hash(legacy113Bytes)});
+const legacy113Snapshot={profile:legacy113Profile,versions:legacy113.migrations.map(row=>row.version),
+ coverage:{...currentCoverage,migrationCount:113,tables:coverage115.tables.filter(row=>!draftDecisionTables.has(row.table)&&row.table!==draftApprovalTable)}};
+const legacy114Bytes=await readFile(join(root,'tests/support/registered114-migration-checksums.json'));
+const legacy114=JSON.parse(legacy114Bytes);
+assert.equal(hash(legacy114Bytes),'ff3313b1854b6b4c6b71446499f857a9302f805e9662d9b277efac4d38b885cf');
+assert.deepEqual(registry.migrations.slice(0,114),legacy114.migrations);
+const legacy114Profile=Object.freeze({schemaVersion:114,registrySha256:hash(legacy114Bytes)});
+const legacy114Snapshot={profile:legacy114Profile,versions:legacy114.migrations.map(row=>row.version),
+ coverage:{...currentCoverage,migrationCount:114,tables:coverage115.tables.filter(row=>row.table!==draftApprovalTable)}};
 const legacy104Bytes=await readFile(join(root,'tests/support/registered104-migration-checksums.json'));
 const legacy104=JSON.parse(legacy104Bytes);
 assert.equal(hash(legacy104Bytes),'8084ff6ebd02d9d416ee4c2d2f38ea4188c16fe2495a8939f9492bda9e5ea757');
@@ -276,6 +295,47 @@ const legacy44Bytes=await readFile(join(root,'tests/support/registered44-migrati
 assert.equal(legacy44.migrations.length,44);assert.deepEqual(registry.migrations.slice(0,44),legacy44.migrations);
 const legacy44Profile=Object.freeze({schemaVersion:44,registrySha256:hash(legacy44Bytes)});
 const legacy43Profile=Object.freeze({schemaVersion:43,registrySha256:hash(legacy43Bytes)});
+const legacy115Bytes=await readFile(join(root,'tests/support/registered115-migration-checksums.json'));
+const legacy115=JSON.parse(legacy115Bytes);
+assert.equal(hash(legacy115Bytes),'4da5d29192f67824eaa31480d693e731640f42f2cc789196cc5df9cd78753495');
+assert.deepEqual(registry.migrations.slice(0,115),legacy115.migrations);
+const legacy115Profile=Object.freeze({schemaVersion:115,registrySha256:hash(legacy115Bytes)});
+const legacy115Snapshot={profile:legacy115Profile,versions:legacy115.migrations.map(row=>row.version),coverage:coverage115};
+const legacy116Bytes=await readFile(join(root,'tests/support/registered116-migration-checksums.json'));
+const legacy116=JSON.parse(legacy116Bytes);
+assert.equal(hash(legacy116Bytes),'cb46eed71c1d1b50db650f684e7fdaab80eb1f81fe856ca89778be98cf15e82b');
+assert.deepEqual(registry.migrations.slice(0,116),legacy116.migrations);
+const legacy116Profile=Object.freeze({schemaVersion:116,registrySha256:hash(legacy116Bytes)});
+const legacy116Snapshot={profile:legacy116Profile,versions:legacy116.migrations.map(row=>row.version),coverage:{...currentCoverage,migrationCount:116}};
+const contactCandidateFiles=['legacy-contact-external-identities.sql','legacy-contact-application.sql','legacy-contact-application-source.sql'];
+const contactCandidateSources=await Promise.all(contactCandidateFiles.map(async file=>({file,sha256:hash(await readFile(join(root,'planning/proposals',file)))})));
+const contactCandidateTables={
+ legacy_contact_external_identities:['business_id','source_namespace','entity_kind','external_id','customer_id','vehicle_id','first_batch_id','first_evidence_sha256',
+  'first_source_row','first_decision_revision','first_apply_operation_id','created_by','created_at'],
+ legacy_contact_applications:['business_id','batch_id','evidence_sha256','operation_id','applied_by'],
+ legacy_contact_application_rows:['business_id','batch_id','source_row','decision_revision','customer_action','customer_id','customer_version',
+  'vehicle_action','vehicle_id','vehicle_version'],
+};
+const contactApplicationCandidate={
+ profile:Object.freeze({...legacy115Profile,heldContactApplicationSources:contactCandidateSources}),
+ versions:legacy115Snapshot.versions,
+ coverage:{...coverage115,tables:[...coverage115.tables,...Object.entries(contactCandidateTables).map(([table,required])=>({
+  table:'crest.'+table,scope:'business',required,excluded:[],partialEvidenceGroup:null,
+ }))]},
+};
+const contactQueueSources=[...contactCandidateSources,...await Promise.all([
+ 'legacy-contact-application-queue.sql','legacy-contact-application-retries.sql','legacy-contact-application-queue-source.sql',
+].map(async file=>({file,sha256:hash(await readFile(join(root,'planning/proposals',file)))})))];
+const contactQueueCandidate={
+ ...contactApplicationCandidate,
+ profile:Object.freeze({...contactApplicationCandidate.profile,heldContactApplicationSources:contactQueueSources}),
+ coverage:{...contactApplicationCandidate.coverage,tables:[...contactApplicationCandidate.coverage.tables,{
+  table:'crest_private.legacy_contact_apply_requests',scope:'business',
+  required:['business_id','operation_id','batch_id','evidence_sha256','requested_by','security_epoch','recovery_epoch','requested_at',
+   'outcome','completed_at','attempt_count','next_attempt_at','lease_id','lease_expires_at'],
+  excluded:[],partialEvidenceGroup:null,
+ }]},
+};
 const currentProfile=Object.freeze({schemaVersion:registry.migrations.length,registrySha256:registryHash}),legacy42Profile=Object.freeze({schemaVersion:42,registrySha256:hash(legacy42Bytes)});
 const tool=name=>join(root,`.local/tools/recovery/age/${name}${process.platform==='win32'?'.exe':''}`);
 const maxBytes=32*1024*1024;
@@ -1189,7 +1249,8 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile===legacy92Profile
       ||profile===legacy101Profile
       ||profile===legacy102Profile||profile===legacy103Profile||profile===legacy104Profile||profile===legacy105Profile||profile===legacy106Profile
-      ||profile===legacy107Profile||profile===legacy108Profile
+      ||profile===legacy107Profile||profile===legacy108Profile||profile===legacy113Profile||profile===legacy114Profile
+      ||profile===legacy115Profile||profile===legacy116Profile||profile===contactApplicationCandidate.profile||profile===contactQueueCandidate.profile
       ||profile.schemaVersion===81&&profile.heldUnapplicationMigrationSha256
       ||profile.schemaVersion===82&&profile.heldFundApplicationMigrationSha256
       ||profile.schemaVersion===83&&profile.heldTipMigrationSha256
@@ -1252,6 +1313,30 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_RECOVERY_BACKUP_FAILED:'+stage);}
 }
 export async function restoreDatabase(...args){return restoreWithProfile(currentProfile,...args);}
+export async function backupLegacyContactApplicationDatabase(client,url,directory,recipient){
+ return backupWithProfile(legacy116Profile,client,url,directory,recipient,undefined,undefined,legacy116Snapshot);
+}
+export async function restoreLegacyContactApplicationDatabase(...args){return restoreWithProfile(legacy116Profile,...args);}
+export async function backupLegacyContactApprovalDatabase(client,url,directory,recipient){
+ return backupWithProfile(legacy115Profile,client,url,directory,recipient,undefined,undefined,legacy115Snapshot);
+}
+export async function restoreLegacyContactApprovalDatabase(...args){return restoreWithProfile(legacy115Profile,...args);}
+export async function backupContactApplicationCandidateDatabase(client,url,directory,recipient){
+ return backupWithProfile(contactApplicationCandidate.profile,client,url,directory,recipient,undefined,undefined,contactApplicationCandidate);
+}
+export async function restoreContactApplicationCandidateDatabase(...args){return restoreWithProfile(contactApplicationCandidate.profile,...args);}
+export async function backupContactQueueCandidateDatabase(client,url,directory,recipient){
+ return backupWithProfile(contactQueueCandidate.profile,client,url,directory,recipient,undefined,undefined,contactQueueCandidate);
+}
+export async function restoreContactQueueCandidateDatabase(...args){return restoreWithProfile(contactQueueCandidate.profile,...args);}
+export async function backupLegacyContactReviewDatabase(client,url,directory,recipient){
+ return backupWithProfile(legacy113Profile,client,url,directory,recipient,undefined,undefined,legacy113Snapshot);
+}
+export async function restoreLegacyContactReviewDatabase(...args){return restoreWithProfile(legacy113Profile,...args);}
+export async function backupLegacyContactDecisionDatabase(client,url,directory,recipient){
+ return backupWithProfile(legacy114Profile,client,url,directory,recipient,undefined,undefined,legacy114Snapshot);
+}
+export async function restoreLegacyContactDecisionDatabase(...args){return restoreWithProfile(legacy114Profile,...args);}
 export async function backupOpeningReceivablesDatabase(client,url,directory,recipient){
  return backupWithProfile(legacy105Profile,client,url,directory,recipient,undefined,undefined,legacy105Snapshot);
 }
@@ -1309,6 +1394,7 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     stage='manifest';const manifest=JSON.parse((await unseal(join(directory,'manifest.age'),receipt.manifest,identity)).toString());
     assert.equal(manifest.formatVersion,1);assert.equal(manifest.scope,'synthetic_database_drill');assert.equal(manifest.completeBackup,false);
     assert.equal(manifest.schemaVersion,profile.schemaVersion);assert.equal(manifest.registrySha256,profile.registrySha256);assert.equal(manifest.databaseImage,pins.testDatabaseImage);
+    assert.deepEqual(manifest.heldContactApplicationSources,profile.heldContactApplicationSources);
     assert.equal(manifest.heldDropoffProposalSha256,profile.heldDropoffProposalSha256);
     assert.equal(manifest.heldDropoffCommandsSha256,profile.heldDropoffCommandsSha256);
     assert.equal(manifest.heldDropoffPhotosSha256,profile.heldDropoffPhotosSha256);

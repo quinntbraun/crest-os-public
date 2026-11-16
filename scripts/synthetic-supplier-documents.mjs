@@ -7,7 +7,7 @@ const unavailable=()=>Error('SYNTHETIC_SUPPLIER_DISPATCH_UNCONFIRMED');
 const worker=fileURLToPath(new URL('../.local/server/synthetic-supplier-document-worker.mjs',import.meta.url));
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 export async function openSyntheticSupplierDocuments(directory,{id,businessId},sourceSchemaVersion){
- if(!['linux','win32'].includes(process.platform)||sourceSchemaVersion!==109||!uuid.test(businessId)||! /^[a-f0-9]{16}$/.test(id))throw unavailable();
+ if(!['linux','win32'].includes(process.platform)||![109,110,111,112,113,114,115,116,117].includes(sourceSchemaVersion)||!uuid.test(businessId)||! /^[a-f0-9]{16}$/.test(id))throw unavailable();
  const profileDirectory=join(directory,'supplier-documents'),workerProfile=join(profileDirectory,'worker.json');
  const [root,profile,program]=await Promise.all([lstat(profileDirectory),lstat(workerProfile),lstat(worker)]);
  if(!root.isDirectory()||root.isSymbolicLink()||!profile.isFile()||profile.isSymbolicLink()||profile.size<1||profile.size>16384||!program.isFile()||program.isSymbolicLink())

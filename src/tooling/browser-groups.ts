@@ -2,7 +2,7 @@
 // owns a separate PostgreSQL cluster; files stay serial within that cluster.
 const group = (...files: string[]) => Object.freeze(files.map(file => `tests/integration/${file}.test.mjs`));
 export const browserGroups = Object.freeze({
-  crm: group('sign-in-browser','customer-address-browser','vehicle-http-browser','association-http-browser','association-editor-browser'),
+  crm: group('sign-in-browser','customer-address-browser','legacy-contact-csv-review-browser','vehicle-http-browser','association-http-browser','association-editor-browser'),
   intake: group('lead-http-browser','lead-editor-browser','lead-address-editor-browser','lead-conversion-http-browser','lead-conversion-editor-browser'),
   commercial: group('quote-draft-editor-browser','quote-review-browser','quote-commercial-browser','quote-browser-response'),
   amendments: group('quote-amendment-workspace-browser','quote-amendment-acceptance-product-browser'),

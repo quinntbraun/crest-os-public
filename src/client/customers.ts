@@ -1,4 +1,10 @@
+import {legacyBatchEffects,legacyBatchMetadataLimit,legacyBatchReceipt,legacyTargetPage,parseLegacyBatchHeader,parseLegacyTargetRequest} from '../customer/legacy-contact-batch-contract';
+import {legacyDecisionOutcome,legacyDecisionState,parseLegacyDecisionReference,parseLegacyDecisionSave} from '../customer/legacy-contact-decision-contract';
+import {legacyApprovalEvidence,legacyApprovalOutcome,parseLegacyApprovalReference,parseLegacyApprovalRequest} from '../customer/legacy-contact-approval-contract';
+import {legacyApplicationPage,legacyApplicationOutcome,legacyApplyAdmission,legacyApplyRequestStatus,legacyIdentityResult,parseLegacyApplicationPage,parseLegacyIdentityReference} from '../customer/legacy-contact-application-contract';
+import type {LegacyBatchRoute} from '../customer/legacy-contact-batch-contract';
 import type {Proof} from './authentication';
+import {legacyMatchBodyLimit,legacyMatchCounts,parseLegacyHintRequest} from '../customer/legacy-contact-match-contract';
 import {exactCustomerObject as exact,customerUuid as uuid,customerVersion as version,customerInstant,parseCustomerDraft,parseCustomer,requireCustomer as check} from '../customer/customer-contract';
 import type {CustomerDraft} from '../customer/customer-contract';
 export type CustomerReference=Readonly<{operationId:string;customerId:string;expectedVersion:string;recoveryEpoch:string}>;
@@ -12,11 +18,12 @@ function committed(value:unknown,businessId:string,ref:CustomerReference){
   const r=value.receipt;check(r.schemaVersion===1&&r.businessId===businessId&&r.customerId===ref.customerId&&version(r.customerVersion)&&BigInt(r.customerVersion)===BigInt(ref.expectedVersion)+1n&&uuid(r.auditEventId));
   return Object.freeze({state:'committed' as const,operationId:ref.operationId,recoveryEpoch:ref.recoveryEpoch,receipt:Object.freeze({schemaVersion:1 as const,businessId,customerId:ref.customerId,customerVersion:r.customerVersion,auditEventId:r.auditEventId})});
 }
-async function post(route:'context'|'list'|'save'|'history'|'operation',body:object,proof:Proof,external:AbortSignal){
+async function post(route:LegacyBatchRoute|'legacy-matches'|'context'|'list'|'save'|'history'|'operation',body:object,proof:Proof,external:AbortSignal){
   try{
     check(typeof proof?.csrfToken==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(proof.csrfToken)&&Number.isSafeInteger(proof.expiresAt)&&proof.expiresAt>Date.now());
     const signal=AbortSignal.any([external,AbortSignal.timeout(40000)]);if(signal.aborted)throw new Error();
-    const response=await fetch('/api/business/customers/'+route,{method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer',headers:{'content-type':'application/json','x-crest-csrf':proof.csrfToken},body:JSON.stringify(body),signal});
+    const fileBody=body instanceof Blob;
+    const response=await fetch('/api/business/customers/'+route,{method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer',headers:{'content-type':fileBody?body.type:'application/json','x-crest-csrf':proof.csrfToken},body:fileBody?body:JSON.stringify(body),signal});
     check(/^application\/json(?:;\s*charset=utf-8)?$/i.test(response.headers.get('content-type')??'')&&!!response.headers.get('cache-control')?.includes('no-store'));
     const reader=response.body?.getReader();check(reader);let size=0;const parts:Uint8Array[]=[];
     try{for(;;){const part=await new Promise<ReadableStreamReadResult<Uint8Array>>((resolve,reject)=>{const abort=()=>reject(new Error());if(signal.aborted){abort();return;}signal.addEventListener('abort',abort,{once:true});reader.read().then(resolve,reject).finally(()=>signal.removeEventListener('abort',abort));});if(part.done)break;check(part.value instanceof Uint8Array&&part.value.byteLength>0&&(size+=part.value.byteLength)<=1048576);parts.push(part.value);}}
@@ -30,15 +37,138 @@ async function post(route:'context'|'list'|'save'|'history'|'operation',body:obj
       if(mapped&&response.status===mapped[0])throw new CustomerClientError(mapped[1]);throw new Error();
     }
     return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding'),reviewHistoryAvailable:route==='context'&&response.headers.get('x-crest-review-history')==='1',
-      maintenanceFollowUpAvailable:route==='context'&&response.headers.get('x-crest-maintenance-follow-up')==='1'};
+      maintenanceFollowUpAvailable:route==='context'&&response.headers.get('x-crest-maintenance-follow-up')==='1',
+      legacyContactBatchesAvailable:route==='context'&&response.headers.get('x-crest-legacy-contact-batches')==='1',
+      legacyContactEffectsAvailable:route==='context'&&response.headers.get('x-crest-legacy-contact-effects')==='1',
+      legacyContactTargetsAvailable:route==='context'&&response.headers.get('x-crest-legacy-contact-targets')==='1',
+      legacyContactDecisionsAvailable:route==='context'&&response.headers.get('x-crest-legacy-contact-decisions')==='1',
+      legacyContactApprovalsAvailable:route==='context'&&response.headers.get('x-crest-legacy-contact-approvals')==='1',
+      legacyContactBackgroundApplications:route==='context'&&response.headers.get('x-crest-legacy-contact-applications')==='background',
+      legacyContactDownloadsAvailable:route==='context'&&response.headers.get('x-crest-legacy-contact-downloads')==='1',
+      legacyContactApplicationsAvailable:route==='context'&&['1','background'].includes(response.headers.get('x-crest-legacy-contact-applications')??'')};
   }catch(error){throw error instanceof CustomerClientError?error:new CustomerClientError(route==='save'?'unknown':'unavailable');}
 }
+export const legacyBatches=Object.freeze({
+ async stage(businessId:string,header:ReturnType<typeof parseLegacyBatchHeader>,file:File,proof:Proof,signal:AbortSignal){
+  const metadata=JSON.stringify(parseLegacyBatchHeader(header));
+  check(new TextEncoder().encode(metadata).byteLength<=legacyBatchMetadataLimit);
+  const body=new Blob([metadata,'\n',file],{type:'application/octet-stream'});
+  const reply=await post('legacy-batches/stage',body,proof,signal);
+  const value=reply.value;
+  if(reply.status===409&&exact(value,['state','reason'])&&value.state==='conflict')return {state:'conflict' as const};
+  check(reply.status===200&&exact(value,['state','receipt'])&&(value.state==='committed'||value.state==='already_staged'));
+  return {state:value.state,receipt:legacyBatchReceipt(value.receipt,businessId)};
+ },
+ async list(businessId:string,beforeBatch:string|null,proof:Proof,signal:AbortSignal){
+  const {value,status}=await post('legacy-batches/list',{beforeBatch},proof,signal);
+  check(status===200&&exact(value,['state','businessId','batches','hasMore'])&&value.state==='present'&&
+    value.businessId===businessId&&Array.isArray(value.batches)&&value.batches.length<=20&&typeof value.hasMore==='boolean');
+  return {batches:value.batches.map(batch=>legacyBatchReceipt(batch,businessId)),hasMore:value.hasMore};
+ },
+ async effects(businessId:string,batchId:string,afterRow:number,proof:Proof,signal:AbortSignal){
+  const {value,status}=await post('legacy-batches/effects',{batchId,afterRow},proof,signal);
+  check(status===200);
+  return legacyBatchEffects(value,businessId,batchId,afterRow);
+ },
+ async targets(businessId:string,request:ReturnType<typeof parseLegacyTargetRequest>,proof:Proof,signal:AbortSignal){
+  const checked=parseLegacyTargetRequest(request);
+  const {value,status}=await post('legacy-batches/targets',checked,proof,signal);
+  check(status===200);
+  return legacyTargetPage(value,businessId,checked);
+ },
+ async readDecision(businessId:string,request:ReturnType<typeof parseLegacyDecisionReference>,proof:Proof,signal:AbortSignal){
+  const input=parseLegacyDecisionReference(request);
+  const {value,status}=await post('legacy-batches/read-decision',input,proof,signal);
+  check(status===200);
+  return legacyDecisionState(value,businessId,input);
+ },
+ async saveDecision(businessId:string,request:ReturnType<typeof parseLegacyDecisionSave>,proof:Proof,signal:AbortSignal){
+  const input=parseLegacyDecisionSave(request);
+  const {value,status}=await post('legacy-batches/save-decision',input,proof,signal);
+  const result=legacyDecisionOutcome(value,businessId,input);
+  check(status===(result.state==='conflict'?409:200));
+  return result;
+ },
+ async reviewApproval(businessId:string,batchId:string,proof:Proof,signal:AbortSignal){
+  const {value,status}=await post('legacy-batches/review-approval',parseLegacyApprovalReference({batchId}),proof,signal);
+  check(status===200);
+  return legacyApprovalEvidence(value,businessId,batchId);
+ },
+ async approve(businessId:string,request:ReturnType<typeof parseLegacyApprovalRequest>,proof:Proof,signal:AbortSignal){
+  const input=parseLegacyApprovalRequest(request);
+  const {value,status}=await post('legacy-batches/approve',input,proof,signal);
+  const result=legacyApprovalOutcome(value,businessId,input);
+  check(status===(result.state==='conflict'?409:200));
+  return result;
+ },
+ async identity(businessId:string,request:ReturnType<typeof parseLegacyIdentityReference>,proof:Proof,signal:AbortSignal){
+  const input=parseLegacyIdentityReference(request);
+  const {value,status}=await post('legacy-batches/identity',input,proof,signal);
+  check(status===200);
+  return legacyIdentityResult(value,businessId,input);
+ },
+ async apply(businessId:string,request:ReturnType<typeof parseLegacyApprovalRequest>,proof:Proof,signal:AbortSignal){
+  const input=parseLegacyApprovalRequest(request);
+  const {value,status}=await post('legacy-batches/apply',input,proof,signal);
+  const result=legacyApplicationOutcome(value,businessId,input);
+  check(status===(result.state==='conflict'?409:200));
+  return result;
+ },
+ async requestApplication(request:ReturnType<typeof parseLegacyApprovalRequest>,proof:Proof,signal:AbortSignal){
+  const {value,status}=await post('legacy-batches/apply',parseLegacyApprovalRequest(request),proof,signal);
+  const result=legacyApplyAdmission(value);
+  check(status===(result.state==='conflict'?409:result.state==='queued'?202:200));
+  return result;
+ },
+ async applyStatus(batchId:string,proof:Proof,signal:AbortSignal){
+  const {value,status}=await post('legacy-batches/apply-status',parseLegacyApprovalReference({batchId}),proof,signal);
+  check(status===200);
+  return legacyApplyRequestStatus(value);
+ },
+ async application(businessId:string,batchId:string,afterRow:number,proof:Proof,signal:AbortSignal){
+  const input=parseLegacyApplicationPage({batchId,afterRow});
+  const {value,status}=await post('legacy-batches/application',input,proof,signal);
+  check(status===200);
+  return legacyApplicationPage(value,businessId,input);
+ },
+ async read(businessId:string,batchId:string,afterRow:number,proof:Proof,signal:AbortSignal){
+  const {value,status}=await post('legacy-batches/read',{batchId,afterRow},proof,signal);
+  check(status===200&&exact(value,['state','receipt','rows','hasMore'])&&value.state==='present'&&
+    typeof value.hasMore==='boolean'&&Array.isArray(value.rows)&&value.rows.length<=25);
+  const batch=legacyBatchReceipt(value.receipt,businessId);
+  check(batch.batchId===batchId&&value.hasMore===(afterRow+value.rows.length<batch.rowCount+1));
+  const rows=value.rows.map((row,index)=>{
+   check(exact(row,['row','customer','vehicle','issues'])&&row.row===afterRow+index+1&&
+    (row.customer===null||typeof row.customer==='string')&&(row.vehicle===null||typeof row.vehicle==='string')&&
+    Array.isArray(row.issues)&&row.issues.length<=3&&row.issues.every(issue=>typeof issue==='string'));
+   return {row:afterRow+index+1,customer:row.customer,vehicle:row.vehicle,issues:row.issues as string[]};
+  });
+  return {batch,rows,hasMore:value.hasMore};
+ },
+});
+
+export async function customerLegacyMatches(businessId:string,input:unknown,proof:Proof,signal:AbortSignal){
+  const request=parseLegacyHintRequest(input,'customer');
+  check(new TextEncoder().encode(JSON.stringify(request)).byteLength<=legacyMatchBodyLimit);
+  const reply=await post('legacy-matches',request,proof,signal);
+  check(reply.status===200);
+  return legacyMatchCounts(reply.value,businessId,request.kind,request.hints.length);
+}
+
 // Stateless browser transport: no local/offline customer cache, credentials,
 // authority, retry loop or automatic operation-ID/epoch replacement.
 export const customers=Object.freeze({
   async context(proof:Proof,signal:AbortSignal){
     try{const r=await post('context',{},proof,signal),v=r.value;check(r.status===200&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding)&&exact(v,['schemaVersion','businessId','writeState','recoveryEpoch'])&&v.schemaVersion===1&&uuid(v.businessId)&&(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null));return Object.freeze({context:Object.freeze({...v}) as CustomerContext,binding:r.binding,...r.reviewHistoryAvailable?{reviewHistoryAvailable:true as const}:{},
-      ...r.maintenanceFollowUpAvailable?{maintenanceFollowUpAvailable:true as const}:{}});}catch(e){throw e instanceof CustomerClientError?e:new CustomerClientError('unavailable');}
+      ...r.maintenanceFollowUpAvailable?{maintenanceFollowUpAvailable:true as const}:{},
+      ...r.legacyContactBatchesAvailable?{legacyContactBatchesAvailable:true as const}:{},
+      ...r.legacyContactEffectsAvailable?{legacyContactEffectsAvailable:true as const}:{},
+      ...r.legacyContactTargetsAvailable?{legacyContactTargetsAvailable:true as const}:{},
+      ...r.legacyContactDecisionsAvailable?{legacyContactDecisionsAvailable:true as const}:{},
+      ...r.legacyContactApprovalsAvailable?{legacyContactApprovalsAvailable:true as const}:{},
+      ...r.legacyContactApplicationsAvailable?{legacyContactApplicationsAvailable:true as const}:{},
+      ...r.legacyContactBackgroundApplications?{legacyContactBackgroundApplications:true as const}:{},
+      ...r.legacyContactDownloadsAvailable?{legacyContactDownloadsAvailable:true as const}:{}});}catch(e){throw e instanceof CustomerClientError?e:new CustomerClientError('unavailable');}
   },
   async save(businessId:string,input:CustomerSave,proof:Proof,signal:AbortSignal){
     let command:CustomerSave;

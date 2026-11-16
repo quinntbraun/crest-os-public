@@ -10,7 +10,8 @@ type Config=SessionDatabaseConfiguration&{origin:string};
 export function createSessionCsrfVerifier(config:Config){return verifier(config,'json');}
 export function createConditionPhotoCsrfVerifier(config:Config){return verifier(config,'condition-photo');}
 export function createPrivateFileCsrfVerifier(config:Config){return verifier(config,'private-file');}
-function verifier(config:Config,format:'json'|'condition-photo'|'private-file'){
+export function createLegacyCsvCsrfVerifier(config:Config){return verifier(config,'legacy-csv');}
+function verifier(config:Config,format:'json'|'condition-photo'|'private-file'|'legacy-csv'){
   const query=sessionDatabase(config),protect=createRequestProtection(config,format);
   return async function requireSessionCsrf(request:RequestShape,credential:string,signal:AbortSignal){
     protect.requireOrigin(request);const hash=sessionCredentialHash(credential);

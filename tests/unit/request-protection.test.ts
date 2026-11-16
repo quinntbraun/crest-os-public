@@ -64,3 +64,12 @@ describe('browser mutation prerequisites',()=>{
     expect(()=>guard(request(token.tokenForResponse()),id,token.hashForDatabase())).not.toThrow();
   });
 });
+
+it('isolates signed CSV octet-stream requests to the same-origin upload format',()=>{
+ const upload=createRequestProtection({origin,environment:'test'},'legacy-csv');
+ const meta=(type:string,from=origin)=>({method:'POST',headers:new Headers({'content-type':type,origin:from})});
+ expect(()=>upload.requireOrigin(meta('application/octet-stream'))).not.toThrow();
+ expect(()=>protect.requireOrigin(meta('application/octet-stream'))).toThrow(RequestProtectionError);
+ expect(()=>upload.requireOrigin(meta('application/json'))).toThrow(RequestProtectionError);
+ expect(()=>upload.requireOrigin(meta('application/octet-stream','https://other.example.com'))).toThrow(RequestProtectionError);
+});

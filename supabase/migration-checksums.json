@@ -545,6 +545,46 @@
       "version": "20270102180000",
       "file": "20270102180000_fictional_supplier_payables.sql",
       "sha256": "756e6644ed8955c05b072203cb34a4b067a2baecb9cb0066453e352273b0904a"
+    },
+    {
+      "version": "20270103180000",
+      "file": "20270103180000_legacy_contact_saved_matches.sql",
+      "sha256": "7ee448d49ff56a41e7bf69f5bdf08db36d31ba1c1a76180e23c5b516a6b18a38"
+    },
+    {
+      "version": "20270104180000",
+      "file": "20270104180000_legacy_contact_import_batches.sql",
+      "sha256": "a1645bec52bcd4ef6297a8016321cd43d3e9cc3b3fa582fa6caea347f9eb028f"
+    },
+    {
+      "version": "20270105180000",
+      "file": "20270105180000_legacy_contact_effect_review.sql",
+      "sha256": "df50170450e10205881a5abddd89179cb37e23db319d2aef776d9a1a1c073093"
+    },
+    {
+      "version": "20270106180000",
+      "file": "20270106180000_legacy_contact_target_review.sql",
+      "sha256": "74b13b52a8bd4652f686bc750981e2b97d10c939bf8d7c379cc44ddc86541f56"
+    },
+    {
+      "version": "20270107180000",
+      "file": "20270107180000_legacy_contact_decisions.sql",
+      "sha256": "61b39afe5d1ce1bcbabc45d0b0d3b915e7b1dd8de58d9e9a17b64164ff2c9add"
+    },
+    {
+      "version": "20270108180000",
+      "file": "20270108180000_legacy_contact_approvals.sql",
+      "sha256": "aea31c73f8bea7461a72228586d7f006dadc80687920021cce23f9b5a8f9a8a0"
+    },
+    {
+      "version": "20270109180000",
+      "file": "20270109180000_legacy_contact_background_application.sql",
+      "sha256": "03ae76878e76618d8e95ea7dc68aaea4f338944edd05259a6f6c3217111710c0"
+    },
+    {
+      "version": "20270110180000",
+      "file": "20270110180000_legacy_contact_application_download.sql",
+      "sha256": "379eb66a4a764cf47ee1f5a65c7014fd94408e875cabe3ac3737ae072e22980f"
     }
   ]
 }

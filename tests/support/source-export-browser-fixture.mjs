@@ -22,7 +22,16 @@ import {installProviderSchema} from './provider-schema.mjs';
 import {startRealAuthService,authResult} from './real-auth-service.mjs';
 import {buildSourceExportBrowserFixture} from './source-export-browser-build.mjs';
 const signal=()=>new AbortController().signal,sha=value=>createHash('sha256').update(value).digest('hex'),release='a'.repeat(40);
-export async function sourceExportBrowserFixture({product=false,workspace=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,openingWorksheet=false,statementStaging=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,googleCalendar=false,googleCalendarAutomatic=false,postedFinanceExport=false,photoFixture}={}){
+export async function sourceExportBrowserFixture({product=false,workspace=false,legacyContactMatches=false,legacyContactBatches=false,legacyContactEffects=false,legacyContactTargets=false,legacyContactDecisions=false,legacyContactApprovals=false,legacyContactApplications=false,automaticContactImport=false,legacyContactDownloads=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,openingWorksheet=false,statementStaging=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,googleCalendar=false,googleCalendarAutomatic=false,postedFinanceExport=false,photoFixture}={}){
+ assert((typeof legacyContactApplications==='boolean'||legacyContactApplications==='background')&&(!legacyContactApplications||legacyContactApprovals));
+ assert(typeof legacyContactDownloads==='boolean'&&(!legacyContactDownloads||product&&legacyContactApplications==='background'));
+ assert(typeof automaticContactImport==='boolean'&&(!automaticContactImport||product&&legacyContactApplications==='background'));
+ assert(typeof legacyContactApprovals==='boolean'&&(!legacyContactApprovals||legacyContactDecisions));
+ assert(typeof legacyContactDecisions==='boolean'&&(!legacyContactDecisions||legacyContactTargets));
+ assert(typeof legacyContactTargets==='boolean'&&(!legacyContactTargets||legacyContactEffects));
+ assert(typeof legacyContactEffects==='boolean'&&(!legacyContactEffects||legacyContactBatches));
+ assert(typeof legacyContactBatches==='boolean'&&(!legacyContactBatches||legacyContactMatches));
+ assert(typeof legacyContactMatches==='boolean'&&(!legacyContactMatches||product&&workspace));
  assert.equal(typeof jobCompletion,'boolean');assert(!jobCompletion||fieldSessions,'completion requires registered field sessions');
  assert.equal(typeof fieldSessions,'boolean');assert(!fieldSessions||amendmentAcceptance,'field sessions require the genuine held54 product fixture');
  assert.equal(typeof amendmentAcceptance,'boolean');assert(!amendmentAcceptance||amendments&&product,'accepted amendments require the genuine registered53 product fixture');
@@ -93,8 +102,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  assert.equal(typeof quoteCommercial,'boolean');assert(!quoteCommercial||product&&workspace&&quotes&&quoteReview,'quote commercial journeys require the actual workspace, quotes and review product server');
  assert(["linux","win32"].includes(process.platform),"supported disposable TLS/Auth browser fixture required");process.env.NODE_ENV='production';
  assert(!photoFixture||dropoffCustody&&Buffer.isBuffer(photoFixture));
- let sandbox,client,service,login,owned=false,server,h,app,photoStorage,photoLogin,financeLogin,calendarLogin,calendarWorkerLogin,postedFinanceLogin,supplierStorage,supplierDocuments,supplierWorkerLogin;
- async function close(){try{if(app){await app.close();app=undefined;server=undefined;}else if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));server=undefined;}}finally{try{await h?.close();h=undefined;}finally{try{await service?.close();service=undefined;}finally{try{if(photoStorage)await photoStorage.close();supplierDocuments?.close();if(supplierStorage)await supplierStorage.close();if(supplierWorkerLogin)await sandbox.admin.query('DROP ROLE '+supplierWorkerLogin);if(photoLogin)await sandbox.admin.query('DROP ROLE '+photoLogin);if(calendarLogin)await sandbox.admin.query('DROP ROLE '+calendarLogin);if(calendarWorkerLogin)await sandbox.admin.query('DROP ROLE '+calendarWorkerLogin);if(financeLogin)await sandbox.admin.query('DROP ROLE '+financeLogin);if(postedFinanceLogin)await sandbox.admin.query('DROP ROLE '+postedFinanceLogin);if(owned){await sandbox.admin.query('DROP ROLE '+login);owned=false;}}finally{await sandbox?.close();sandbox=undefined;}}}}}
+ let sandbox,client,service,login,contactWorkerLogin,contactWorkerConnection,owned=false,server,h,app,photoStorage,photoLogin,financeLogin,calendarLogin,calendarWorkerLogin,postedFinanceLogin,supplierStorage,supplierDocuments,supplierWorkerLogin;
+ async function close(){try{if(app){await app.close();app=undefined;server=undefined;}else if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));server=undefined;}}finally{try{await h?.close();h=undefined;}finally{try{await service?.close();service=undefined;}finally{try{if(photoStorage)await photoStorage.close();supplierDocuments?.close();if(supplierStorage)await supplierStorage.close();if(supplierWorkerLogin)await sandbox.admin.query('DROP ROLE '+supplierWorkerLogin);if(contactWorkerLogin)await sandbox.admin.query('DROP ROLE IF EXISTS '+contactWorkerLogin);if(photoLogin)await sandbox.admin.query('DROP ROLE '+photoLogin);if(calendarLogin)await sandbox.admin.query('DROP ROLE '+calendarLogin);if(calendarWorkerLogin)await sandbox.admin.query('DROP ROLE '+calendarWorkerLogin);if(financeLogin)await sandbox.admin.query('DROP ROLE '+financeLogin);if(postedFinanceLogin)await sandbox.admin.query('DROP ROLE '+postedFinanceLogin);if(owned){await sandbox.admin.query('DROP ROLE '+login);owned=false;}}finally{await sandbox?.close();sandbox=undefined;}}}}}
  try{
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);const previous=await sandbox.apply(target,await sandbox.prefix(42)),registered=await sandbox.apply(target,await sandbox.prefix(43));assert.equal(registered.history.length,43);assert.deepEqual(registered.history.slice(0,42),previous.history);
   if(catalog){const adopted=await sandbox.apply(target,await sandbox.prefix(44));assert.equal(adopted.history.length,44);assert.deepEqual(adopted.history.slice(0,43),registered.history);}
@@ -188,7 +197,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   if(receivableAging&&!postedFinanceExport)assert.equal((await sandbox.apply(target,await sandbox.prefix(88))).history.length,88);
   let postedFinanceConfiguration;
   if(postedFinanceExport){
-   const schemaVersion=supplierPayableReview?109:supplierBillDrafts?108:statementMatchDrafts?107:statementMatchReview?106:openingArPreview?105:recordedIncomeStatement?104:statementStaging?103:openingWorksheet?102:restoredTips?101:collectionFailureGroupedRecreditExport?100:collectionFailureRecreditExport?99:refundTransferFeeExport?98:directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
+   assert(!legacyContactMatches||supplierPayableReview,'combined CRM and finance proof needs the supplier baseline');
+   const schemaVersion=legacyContactApprovals?115:legacyContactDecisions?114:legacyContactTargets?113:legacyContactEffects?112:legacyContactBatches?111:legacyContactMatches?110:supplierPayableReview?109:supplierBillDrafts?108:statementMatchDrafts?107:statementMatchReview?106:openingArPreview?105:recordedIncomeStatement?104:statementStaging?103:openingWorksheet?102:restoredTips?101:collectionFailureGroupedRecreditExport?100:collectionFailureRecreditExport?99:refundTransferFeeExport?98:directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
    const currentRegistry=JSON.parse(await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url),'utf8'));
    const source=excessReturnExport&&currentRegistry.migrations.length===92
     ?await prepareExcessReturnCandidate(sandbox):await sandbox.prefix(schemaVersion);
@@ -203,6 +213,26 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   }
   if(openingWorksheet&&!postedFinanceExport)assert.equal((await sandbox.apply(target,await sandbox.prefix(102))).history.length,102);
   else if(customerFundsReport&&!postedFinanceExport)assert.equal((await sandbox.apply(target,await sandbox.prefix(90))).history.length,90);
+  if(legacyContactMatches&&!postedFinanceExport){
+   const schema=legacyContactApprovals?115:legacyContactDecisions?114:legacyContactTargets?113:legacyContactEffects?112:legacyContactBatches?111:110;
+   assert.equal((await sandbox.apply(target,await sandbox.prefix(schema))).history.length,schema);
+  }
+  if(legacyContactApplications){
+   if(legacyContactApplications==='background'){
+    const version=legacyContactDownloads?117:116;
+    const registered=await sandbox.apply(target,await sandbox.prefix(version));
+    assert.equal(registered.history.length,version);
+    assert.equal(registered.history.at(-1).version,legacyContactDownloads?'20270110180000':'20270109180000');
+   }else{
+    await client.query('BEGIN');
+    try{
+     for(const file of ['legacy-contact-external-identities.sql','legacy-contact-application.sql'])
+      await client.query(await readFile(new URL('../../planning/proposals/'+file,import.meta.url),'utf8'));
+     await client.query('COMMIT');
+    }catch(error){await client.query('ROLLBACK');throw error;}
+    assert.equal((await sandbox.apply(target,await sandbox.prefix(115))).history.length,115);
+   }
+  }
   const compiled=await buildSourceExportBrowserFixture(sandbox.workspace),runtime=await import(pathToFileURL(compiled.server).href);
   assert(typeof googleCalendar==='boolean'&&(!googleCalendar||product&&workspace&&!paidInvoiceCredits));
   assert(typeof googleCalendarAutomatic==='boolean'&&(!googleCalendarAutomatic||googleCalendar&&scheduling));
@@ -501,8 +531,9 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     const {openSyntheticSupplierDocuments}=await import('../../scripts/synthetic-supplier-documents.mjs');
     const workspace={id:workspaceId,businessId:business};
     await assert.rejects(openSyntheticSupplierDocuments(sandbox.workspace,workspace,108));
-    await assert.rejects(openSyntheticSupplierDocuments(sandbox.workspace,{...workspace,id:'0'.repeat(16)},109));
-    supplierDocuments=await openSyntheticSupplierDocuments(sandbox.workspace,workspace,109);
+    const supplierSchema=postedFinanceConfiguration.sourceSchemaVersion;
+    await assert.rejects(openSyntheticSupplierDocuments(sandbox.workspace,{...workspace,id:'0'.repeat(16)},supplierSchema));
+    supplierDocuments=await openSyntheticSupplierDocuments(sandbox.workspace,workspace,supplierSchema);
     supplierOriginalRuntime=supplierDocuments.runtime;
    }else{
     const {default:sharp}=await import('sharp');
@@ -521,6 +552,16 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    const binding={businessId:business,actorId:actor,exportJobId:jobId,generationId:plan.generationId,recoveryEpoch:epoch,partId:p.partId,fileName:p.fileName,contentType:p.contentType},prepared=await h.store.prepare(bytes[i],binding,signal()),payload={claim,generationId:plan.generationId,planSha256,partId:p.partId,intent:prepared.intentForServer()},raw=JSON.stringify(payload);await stage('intent',raw);const intent=await h.store.writeCandidate(prepared,signal());await h.store.verifyCandidate(intent,binding,signal());await stage('verified',raw);parts.push(payload);
   }
   await stage('ready',JSON.stringify({plan,planSha256,parts}));const setupGets=h.requests.filter(r=>r.method==='GET').length;assert.equal(setupGets,4);assert.equal(h.requests.filter(r=>r.method==='PUT').length,2);
+  if(legacyContactApplications==='background'){
+   const {prepareSyntheticContactImportWorker,readSyntheticContactImportWorker}=await import('../../scripts/synthetic-contact-import-worker.mjs');
+   const databaseName=new URL(target).pathname.slice(1),id=databaseName.slice('crest_migrate_'.length);
+   const state={schemaVersion:1,id,databaseName,businessId:business};
+   contactWorkerLogin='crest_contact_local_'+id;
+   const prepared=await prepareSyntheticContactImportWorker(sandbox.workspace,state,target);
+   const loaded=await readSyntheticContactImportWorker(sandbox.workspace,state,target);
+   assert(prepared.connectionString===loaded.connectionString,'loaded the same private work credential');
+   contactWorkerConnection=loaded.connectionString;
+  }
   await chmod(sandbox.workspace,0o700);const tls=await browserTestTls();server=runtime.createBoundedNodeServer(tls);await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});const origin='https://127.0.0.1:'+server.address().port,requests=[];
   if(product){
    const port=server.address().port;await new Promise(resolve=>server.close(resolve));server=undefined;
@@ -531,7 +572,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     await client.query('INSERT INTO crest_private.google_calendar_credential_key VALUES(true,$1)',[identity.credentialKeyId]);
     if(calendarWorkerLogin)await client.query('INSERT INTO crest_private.google_calendar_worker_principals(business_id,principal) VALUES($1,$2)',[business,calendarWorkerLogin]);
    }
-   app=await runtime.createCrestApplication({origin,environment:'test',tls,authentication:auth,business:{businessId:business},customers:true,...workspace?{vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true}:{},...catalog?{syntheticCatalog:true,operationResolution:true}:{sourceExports:{appReleaseId:release,store:h.store}},...quotes?{syntheticQuotes:true,operationResolution:true}:{},...quoteReview?{syntheticQuoteReview:true}:{},...quoteCommercial?{syntheticQuoteCommercial:true,operationResolution:true}:{},...appointmentHolds?{syntheticAppointmentHolds:true,operationResolution:true}:{},...expenses?{syntheticExpenses:true,operationResolution:true}:{},...calendarConfiguration?{syntheticGoogleCalendar:calendarConfiguration}:{},...postedFinanceConfiguration?{syntheticPostedFinanceExport:postedFinanceConfiguration}:{},...financeConfiguration?{syntheticFinanceAccounts:financeConfiguration}:{},...scheduling?{syntheticScheduling:true}:{},...amendments?{syntheticQuoteAmendments:true}:{},...amendmentAcceptance?{syntheticQuoteAmendmentAcceptance:true}:{},...fieldSessions?{syntheticFieldSessions:true}:{},...jobCompletion?{syntheticJobCompletion:true}:{},...jobMileage?{syntheticJobMileage:true}:{},...supportTrips?{syntheticSupportTrips:true}:{},...unfulfilledCancellation?{syntheticUnfulfilledCancellation:true}:{},...workTime?{syntheticWorkTime:true}:{},...workBoundary?{syntheticWorkBoundary:true}:{},...workStart?{syntheticWorkStart:true}:{},...workEnd?{syntheticWorkEnd:true}:{},...mobileDeparture?{syntheticMobileDeparture:true}:{},...reviewOutcome?{syntheticReviewOutcome:true}:{},...reviewHistory?{syntheticReviewHistory:true}:{},...maintenanceFollowUp?{syntheticMaintenanceFollowUp:true}:{},...dropoffCustody?{syntheticDropoffCustody:true}:{},...dropoffPolicyRevision?{syntheticDropoffPolicyRevision:true}:{},...pickupTrips?{syntheticPickupTrips:true}:{},...pickupCollection?{syntheticPickupCollection:true}:{},...pickupPolicy?{syntheticPickupPolicy:true}:{},...pickupPhotos?{syntheticPickupPhotos:true}:{},...pickupReturnWorkflow?{syntheticPickupWork:true,syntheticPickupRelease:true,syntheticPickupReturnFailure:true}:{},...photoRuntime?{syntheticDropoffPhotos:photoRuntime}:{},...supplierOriginalRuntime?{syntheticSupplierOriginals:supplierOriginalRuntime}:{}});server=app.server;
+   app=await runtime.createCrestApplication({origin,environment:'test',tls,authentication:auth,business:{businessId:business},customers:true,syntheticLegacyContactBatches:legacyContactBatches,syntheticLegacyContactEffects:legacyContactEffects,syntheticLegacyContactTargets:legacyContactTargets,syntheticLegacyContactDecisions:legacyContactDecisions,syntheticLegacyContactApprovals:legacyContactApprovals,syntheticLegacyContactApplications:legacyContactApplications,syntheticLegacyContactDownloads:legacyContactDownloads,...automaticContactImport?{syntheticLegacyContactImportWorker:{connectionString:contactWorkerConnection}}:{},...workspace?{vehicles:true,associations:true,leads:true,leadConversions:true,operationResolution:true}:{},...catalog?{syntheticCatalog:true,operationResolution:true}:{sourceExports:{appReleaseId:release,store:h.store}},...quotes?{syntheticQuotes:true,operationResolution:true}:{},...quoteReview?{syntheticQuoteReview:true}:{},...quoteCommercial?{syntheticQuoteCommercial:true,operationResolution:true}:{},...appointmentHolds?{syntheticAppointmentHolds:true,operationResolution:true}:{},...expenses?{syntheticExpenses:true,operationResolution:true}:{},...calendarConfiguration?{syntheticGoogleCalendar:calendarConfiguration}:{},...postedFinanceConfiguration?{syntheticPostedFinanceExport:postedFinanceConfiguration}:{},...financeConfiguration?{syntheticFinanceAccounts:financeConfiguration}:{},...scheduling?{syntheticScheduling:true}:{},...amendments?{syntheticQuoteAmendments:true}:{},...amendmentAcceptance?{syntheticQuoteAmendmentAcceptance:true}:{},...fieldSessions?{syntheticFieldSessions:true}:{},...jobCompletion?{syntheticJobCompletion:true}:{},...jobMileage?{syntheticJobMileage:true}:{},...supportTrips?{syntheticSupportTrips:true}:{},...unfulfilledCancellation?{syntheticUnfulfilledCancellation:true}:{},...workTime?{syntheticWorkTime:true}:{},...workBoundary?{syntheticWorkBoundary:true}:{},...workStart?{syntheticWorkStart:true}:{},...workEnd?{syntheticWorkEnd:true}:{},...mobileDeparture?{syntheticMobileDeparture:true}:{},...reviewOutcome?{syntheticReviewOutcome:true}:{},...reviewHistory?{syntheticReviewHistory:true}:{},...maintenanceFollowUp?{syntheticMaintenanceFollowUp:true}:{},...dropoffCustody?{syntheticDropoffCustody:true}:{},...dropoffPolicyRevision?{syntheticDropoffPolicyRevision:true}:{},...pickupTrips?{syntheticPickupTrips:true}:{},...pickupCollection?{syntheticPickupCollection:true}:{},...pickupPolicy?{syntheticPickupPolicy:true}:{},...pickupPhotos?{syntheticPickupPhotos:true}:{},...pickupReturnWorkflow?{syntheticPickupWork:true,syntheticPickupRelease:true,syntheticPickupReturnFailure:true}:{},...photoRuntime?{syntheticDropoffPhotos:photoRuntime}:{},...supplierOriginalRuntime?{syntheticSupplierOriginals:supplierOriginalRuntime}:{}});server=app.server;
    server.prependListener('request',incoming=>requests.push({path:new URL(incoming.url,origin).pathname,method:incoming.method}));
    await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
 
@@ -582,6 +623,12 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     day});}
    finally{hashed.fill(0);}
   }:undefined;
-  return{origin,product,authorizePostedFinance,preparePayable,originalFile,originalMimeType,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
+  async function dispatchContactImport(){
+   assert(contactWorkerConnection);
+   const {createLegacyContactImportDispatcher}=await import('../../src/security/session-database.ts');
+   const dispatch=createLegacyContactImportDispatcher({environment:'test',connectionString:contactWorkerConnection});
+   return dispatch(AbortSignal.timeout(10000));
+  }
+  return{origin,product,dispatchContactImport,authorizePostedFinance,preparePayable,originalFile,originalMimeType,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
  }catch(error){await close();throw error;}
 }

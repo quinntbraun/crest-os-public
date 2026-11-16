@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 109,
+  "migrationCount": 117,
   "tables": [
     {
       "table": "crest.businesses",
@@ -3845,6 +3845,173 @@
         "remaining_before_cents",
         "confirmation",
         "recorded_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.legacy_contact_batches",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "source_label",
+        "original_sha256",
+        "mapping_version",
+        "mapping",
+        "mapping_sha256",
+        "rows_sha256",
+        "row_count",
+        "rejected_count",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.legacy_contact_batch_rows",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "batch_id",
+        "source_row",
+        "candidate",
+        "fingerprint"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.legacy_contact_decision_sources",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "batch_id",
+        "source_namespace",
+        "first_operation_id",
+        "created_by"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.legacy_contact_decisions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "batch_id",
+        "source_row",
+        "source_namespace",
+        "row_fingerprint",
+        "revision",
+        "customer_action",
+        "customer_id",
+        "customer_version",
+        "vehicle_action",
+        "vehicle_id",
+        "vehicle_version",
+        "operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.legacy_contact_approvals",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "batch_id",
+        "source_namespace",
+        "evidence_sha256",
+        "original_sha256",
+        "mapping_sha256",
+        "rows_sha256",
+        "decisions_sha256",
+        "row_count",
+        "skipped_rows",
+        "operation_id",
+        "approved_by",
+        "approved_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.legacy_contact_external_identities",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "source_namespace",
+        "entity_kind",
+        "external_id",
+        "customer_id",
+        "vehicle_id",
+        "first_batch_id",
+        "first_evidence_sha256",
+        "first_source_row",
+        "first_decision_revision",
+        "first_apply_operation_id",
+        "created_by",
+        "created_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.legacy_contact_applications",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "batch_id",
+        "evidence_sha256",
+        "operation_id",
+        "applied_by"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.legacy_contact_application_rows",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "batch_id",
+        "source_row",
+        "decision_revision",
+        "customer_action",
+        "customer_id",
+        "customer_version",
+        "vehicle_action",
+        "vehicle_id",
+        "vehicle_version"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.legacy_contact_apply_requests",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "operation_id",
+        "batch_id",
+        "evidence_sha256",
+        "requested_by",
+        "security_epoch",
+        "recovery_epoch",
+        "requested_at",
+        "outcome",
+        "completed_at",
+        "attempt_count",
+        "next_attempt_at",
+        "lease_id",
+        "lease_expires_at"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

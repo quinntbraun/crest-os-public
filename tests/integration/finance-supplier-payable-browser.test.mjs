@@ -37,7 +37,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   process.env.CREST_TEST_DATABASE_URL=cluster.testDatabaseUrl;
   let fixture,browser;
   try{
-   fixture=await sourceExportBrowserFixture({product:true,workspace:true,expenses:true,financeAccounts:true,
+   fixture=await sourceExportBrowserFixture({product:true,workspace:true,legacyContactMatches:true,legacyContactBatches:true,legacyContactEffects:true,legacyContactTargets:true,legacyContactDecisions:true,legacyContactApprovals:true,expenses:true,financeAccounts:true,
     financeMoneyChannels:true,postedFinanceExport:true,statementStaging:true});
    browser=await engine.launch();
    const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:900}});
@@ -227,7 +227,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     const verified=verifyFinanceSourceExport(strFromU8(manifest),Object.entries(files).map(([name,bytes])=>
      ({name,content:strFromU8(bytes)})),fixture.business);
     assert.equal(verified.profile,'crest.posted-finance-source.v23');
-    assert.equal(JSON.parse(strFromU8(delivery)).sourceSchemaVersion,109);
+    assert.equal(JSON.parse(strFromU8(delivery)).sourceSchemaVersion,115);
     const supplier=JSON.parse(strFromU8(files['supplier_payable_source.json'])).tables;
     assert.equal(supplier.supplier_bill_originals[0].id,originalId);
     assert.equal(supplier.supplier_payable_settlements[0].id,paymentEvidence.settlement_id);

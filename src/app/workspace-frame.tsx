@@ -61,7 +61,18 @@ function WorkspaceSearch(){
       <span className="workspace-search-icon" aria-hidden="true"/><span className="workspace-search-text">Find a tool</span><kbd aria-hidden="true">Ctrl K</kbd>
     </button>
     <dialog className="workspace-search" ref={dialog} aria-labelledby="workspace-search-title" onClose={()=>trigger.current?.focus()}
-      onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.currentTarget.close();}}}
+      onKeyDown={event=>{
+        if(event.key==='Escape'){event.preventDefault();event.currentTarget.close();return;}
+        if(!(event.target instanceof HTMLAnchorElement)||!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;
+        const links=Array.from(event.currentTarget.querySelectorAll<HTMLAnchorElement>('li a'));
+        const index=links.indexOf(event.target);
+        if(index===-1)return;
+        event.preventDefault();
+        if(event.key==='Home'){links[0]?.focus();return;}
+        if(event.key==='End'){links.at(-1)?.focus();return;}
+        if(event.key==='ArrowUp'&&index===0){input.current?.focus();return;}
+        links[index+(event.key==='ArrowDown'?1:-1)]?.focus();
+      }}
       onClick={event=>{if(event.target===event.currentTarget)event.currentTarget.close();}}>
       <div className="workspace-search-inner">
         <div className="workspace-search-heading"><h2 id="workspace-search-title">Find a tool</h2>
