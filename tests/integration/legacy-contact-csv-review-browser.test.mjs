@@ -17,6 +17,34 @@ const csv=[
  ...Array.from({length:25},(_,i)=>'c'+i+',Fictional contact '+i+',,,,,'+(i===0?' SAVED@EXAMPLE.TEST ':'')+','),
 ].join('\n');
 
+// Read the reply while the browser still owns the fetch, before the UI can
+// replace the request context. Playwright response bodies can be evicted.
+async function captureJsonReply(page,path){
+ await page.evaluate(path=>{
+  const send=window.fetch;
+  delete window.syntheticCapturedReply;
+  window.fetch=async(input,init)=>{
+   const response=await send.call(window,input,init);
+   if(input===path){
+    window.fetch=send;
+    try{window.syntheticCapturedReply={body:await response.clone().json()};}
+    catch{window.syntheticCapturedReply={failed:true};}
+   }
+   return response;
+  };
+ },path);
+ return async()=>{
+  await page.waitForFunction(()=>window.syntheticCapturedReply!==undefined);
+  const captured=await page.evaluate(()=>{
+   const result=window.syntheticCapturedReply;
+   delete window.syntheticCapturedReply;
+   return result;
+  });
+  assert(captured&&!captured.failed&&Object.hasOwn(captured,'body'),'The actual browser reply could not be captured');
+  return captured.body;
+ };
+}
+
 async function recordCounts(fixture){
  const {rows:[counts]}=await fixture.client.query(
   'SELECT (SELECT count(*) FROM crest.customers WHERE business_id=$1) AS customers, '+
@@ -291,12 +319,13 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    const committed=await firstDecision;
    assert.equal(committed.status(),200);
    await expect(decisionStatus).toContainText('The save could not be confirmed.');
+   const readDecision=await captureJsonReply(page,decisionPath);
    const recoveredDecision=page.waitForResponse(reply=>reply.url().endsWith(decisionPath));
    await saveDecision.click();
    const repeated=await recoveredDecision;
    assert.equal(repeated.status(),200);
    assert.deepEqual(repeated.request().postDataJSON(),committed.request().postDataJSON());
-   const storedDecision=await repeated.json();
+   const storedDecision=await readDecision();
    const {legacyDecisionOutcome}=await import('../../src/customer/legacy-contact-decision-contract.ts');
    assert.equal(legacyDecisionOutcome(storedDecision,fixture.business,repeated.request().postDataJSON()).state,'committed');
    await expect(decisionStatus).toContainText('Decision saved.');
@@ -485,11 +514,12 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    const firstReply=page.waitForResponse(reply=>reply.url().endsWith(path));await approve.click();
    const first=await firstReply;assert.equal(first.status(),200);
    await expect(status).toContainText('Approval could not be confirmed.');
+   const readApproval=await captureJsonReply(page,path);
    const retryReply=page.waitForResponse(reply=>reply.url().endsWith(path));
    await panel.getByRole('button',{name:'Retry approval',exact:true}).click();
    const retry=await retryReply;assert.equal(retry.status(),200);
    assert.deepEqual(retry.request().postDataJSON(),first.request().postDataJSON());
-   const retried=await retry.json();
+   const retried=await readApproval();
    const original=await page.evaluate(()=>{const value=window.syntheticApprovalReceipt;delete window.syntheticApprovalReceipt;return value;});
    assert.deepEqual(retried,original);
    await expect(status).toHaveText('Approval recorded.');
@@ -632,11 +662,12 @@ for(const [name,engine,background,automatic] of [['Chromium',chromium,false,fals
    const firstReply=page.waitForResponse(reply=>reply.url().endsWith(path));await apply.click();
    const applied=await firstReply;assert.equal(applied.status(),background?202:200);
    await expect(status).toContainText('The import outcome could not be confirmed.');
+   const readImport=await captureJsonReply(page,path);
    const reply=page.waitForResponse(response=>response.url().endsWith(path));
    await panel.getByRole('button',{name:'Retry import',exact:true}).click();
    const retry=await reply;assert.equal(retry.status(),background?202:200);
    assert.deepEqual(retry.request().postDataJSON(),applied.request().postDataJSON());
-   const recovered=await retry.json();
+   const recovered=await readImport();
    assert.deepEqual(recovered,await page.evaluate(()=>{
     const prior=window.syntheticImportReceipt;delete window.syntheticImportReceipt;return prior;
    }));
