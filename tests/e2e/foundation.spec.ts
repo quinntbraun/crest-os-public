@@ -82,6 +82,15 @@ test('workspace tool search supports keyboard navigation and matching on phone a
   await page.goto('/');
   await expect(page.getByRole('status')).toContainText('Workspace access could not be verified');
   const search=page.getByRole('button',{name:'Find a tool',exact:true});
+  const originalViewport=page.viewportSize();
+  for(const width of [320,360,390]){
+    await page.setViewportSize({width,height:900});
+    const target=await search.boundingBox();
+    expect(target?.width).toBeGreaterThanOrEqual(44);
+    expect(target?.height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  }
+  if(originalViewport)await page.setViewportSize(originalViewport);
   const dialog=page.getByRole('dialog',{name:'Find a tool',exact:true});
   await search.focus();
   await page.keyboard.press('Control+k');
