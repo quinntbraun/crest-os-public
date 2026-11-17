@@ -142,7 +142,7 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
      await page.setViewportSize({width,height:900});
      await expect(page.getByRole('region',{name:'Lead source directory',exact:true}))[width<976?'toBeHidden':'toBeVisible']();
      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-     assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(v=>v.id),[]);
+     assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa']).analyze()).violations.map(v=>v.id),[]);
      if(width===390||width===1440){
       await page.evaluate(()=>window.scrollTo(0,0));
       await page.screenshot({path:directory+'/lead-source-history-'+name+'-'+width+'.png',fullPage:true});
@@ -159,6 +159,15 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     await expect(page.getByRole('button',{name:sourceLabel,exact:true})).toBeFocused();
     await expect(page.getByLabel('Lead source search',{exact:true})).toHaveValue(sourceLabel);
     await page.setViewportSize({width:390,height:900});
+    const sourceRow=page.getByRole('list',{name:'Saved lead sources',exact:true}).locator('li').filter({has:page.getByRole('button',{name:sourceLabel,exact:true})});
+    await expect(sourceRow.getByRole('button')).toHaveAccessibleDescription('Synthetic owner classification Active');
+    assert.deepEqual((await new AxeBuilder({page}).include('.lead-source-directory').withRules(['label-content-name-mismatch']).analyze()).violations,[]);
+    await sourceRow.scrollIntoViewIfNeeded();
+    const hit=await sourceRow.locator('.crest-record-meta').evaluate(meta=>{
+     const rect=meta.getBoundingClientRect();
+     return document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2)?.closest('button')?.textContent?.trim();
+    });
+    assert.equal(hit,sourceLabel,'source status remains part of the row tap target');
     await page.screenshot({path:directory+'/lead-source-directory-'+name+'-390.png'});
     await page.setViewportSize(viewport);
     assert.deepEqual((await client.query("SELECT action FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='lead_sources' AND entity_id=$2 ORDER BY entity_version",[business,source.id])).rows.map(r=>r.action),['create','deactivate','activate']);

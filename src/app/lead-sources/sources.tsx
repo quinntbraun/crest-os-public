@@ -126,14 +126,16 @@ export function LeadSourceScreen(){
       <label className="checkbox"><input name="inactive" type="checkbox" defaultChecked={view.includeInactive} disabled={view.busy}/>Include inactive sources</label>
      </form>
      <ul className="customer-list crest-record-list" aria-label="Saved lead sources">
-      {view.rows.map(row=><li key={row.id}>
-       <button type="button" className="secondary crest-record-row lead-source-row" aria-label={row.label+(row.active?'':' — inactive')} aria-current={selected?.id===row.id?'true':undefined} disabled={view.busy} onClick={event=>{
+      {view.rows.map(row=><li key={row.id} className="crest-lead-row crest-source-row">
+       <button type="button" className="secondary crest-record-row lead-source-row" aria-describedby={'source-summary-'+row.id} aria-current={selected?.id===row.id?'true':undefined} disabled={view.busy} onClick={event=>{
         if(!canLeave())return;
         returnFocus.current=event.currentTarget;void current.current?.open(row.id);
        }}>
-        <span className="crest-record-identity"><strong>{row.label}</strong><span>{row.kind}</span></span>
-        <span className="crest-record-state" data-active={row.active}>{row.active?'Active':'Inactive'}</span>
+        <strong>{row.label}{!row.active&&<span className="visually-hidden"> — inactive</span>}</strong>
        </button>
+       <span id={'source-summary-'+row.id} className="crest-record-meta"><span>{row.kind}</span>
+        <span className="crest-record-state" data-active={row.active}>{row.active?'Active':'Inactive'}</span>
+       </span>
       </li>)}
      </ul>
      {view.rows.length===0&&!view.busy&&<p className="lead-source-empty">{view.search||view.includeInactive?'No sources match this search.':'No active sources yet.'}</p>}

@@ -908,8 +908,8 @@ main.export-workspace { max-width:68rem; }
 .lead-source-search > :is(input,button) { margin:0; }
 .lead-source-search > .checkbox { grid-column:1/-1; }
 .lead-source-search .checkbox input,.lead-source-editor .checkbox input { margin:0; }
-.lead-source-directory .lead-source-row { grid-template-columns:minmax(0,1fr) auto; }
-.lead-source-row[aria-current="true"] { box-shadow:inset 3px 0 var(--gold-ink); background:var(--canvas); }
+.lead-source-directory .lead-source-row { grid-template-columns:minmax(0,1fr); }
+.crest-source-row > .crest-record-meta { justify-content:space-between; }
 .lead-sources-workspace .crest-record-state[data-active="true"] { background:#e7f1eb; color:#21513e; }
 .lead-source-empty { padding:1rem .75rem; margin:.75rem 0 0; border-radius:var(--radius); background:var(--canvas); color:var(--muted); }
 .customers .lead-source-editor fieldset { margin:.9rem 0 0; padding:0; border:0; background:transparent; }
