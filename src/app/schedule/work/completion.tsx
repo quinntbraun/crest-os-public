@@ -18,17 +18,25 @@ const optional=(value:string)=>value.trim()||null;
 function pieceDraft(id:string,outcome:OutcomeChoice='',complimentary=false):PieceDraft{
  return {id,outcome,description:'',gross:complimentary?'0.00':'',discount:complimentary?'0.00':'',reason:''};
 }
+class CompletionInputError extends Error{
+ readonly field:string;
+ constructor(message:string,field='-outcome'){super(message);this.field=field;}
+}
 function savedAllocation(row:CompletionAssignment,draft:ScopeDraft):CompletionAllocation{
- if(!draft.selection)throw Error('Choose an outcome for every assigned item.');
+ if(!draft.selection)throw new CompletionInputError('Choose an outcome for every assigned item.');
  let pieces:CompletionPiece[];
  if(draft.selection==='split'){
-  pieces=draft.pieces.map(piece=>{
-   if(!piece.outcome||!piece.description.trim())throw Error('Describe and choose an outcome for every portion.');
-   if(piece.outcome!=='completed'&&!piece.reason.trim())throw Error('Explain each unfinished or cancelled portion.');
+  pieces=draft.pieces.map((piece,index)=>{
+   const field='-portion-'+index;
+   if(!piece.outcome)throw new CompletionInputError('Describe and choose an outcome for every portion.',field+'-outcome');
+   if(!piece.description.trim())throw new CompletionInputError('Describe and choose an outcome for every portion.',field+'-description');
+   if(piece.outcome!=='completed'&&!piece.reason.trim())throw new CompletionInputError('Explain each unfinished or cancelled portion.',field+'-reason');
    let gross:bigint,discount:bigint;
-   try{gross=BigInt(quoteDollarsInput(piece.gross));discount=BigInt(quoteDollarsInput(piece.discount));}
-   catch{throw Error('Enter a dollar amount for gross and discount on each portion.');}
-   if(discount>gross)throw Error('A portion’s discount cannot exceed its gross amount.');
+   try{gross=BigInt(quoteDollarsInput(piece.gross));}
+   catch{throw new CompletionInputError('Enter a dollar amount for gross and discount on each portion.',field+'-gross');}
+   try{discount=BigInt(quoteDollarsInput(piece.discount));}
+   catch{throw new CompletionInputError('Enter a dollar amount for gross and discount on each portion.',field+'-discount');}
+   if(discount>gross)throw new CompletionInputError('A portion’s discount cannot exceed its gross amount.',field+'-discount');
    return {partitionId:piece.id,outcome:piece.outcome,scopeDescription:piece.description.trim(),
     grossInclusiveCents:gross.toString(),discountInclusiveCents:discount.toString(),amountCents:(gross-discount).toString(),
     reason:piece.outcome==='completed'?null:piece.reason.trim()};
@@ -36,10 +44,11 @@ function savedAllocation(row:CompletionAssignment,draft:ScopeDraft):CompletionAl
   const total=(key:'grossInclusiveCents'|'discountInclusiveCents')=>pieces.reduce((sum,piece)=>sum+BigInt(piece[key]),0n);
   if(pieces.length<2||total('grossInclusiveCents')!==BigInt(row.grossInclusiveCents)
     ||total('discountInclusiveCents')!==BigInt(row.discountInclusiveCents)){
-   throw Error('Portion amounts must add up to the saved gross amount and discount.');
+   throw new CompletionInputError('Portion amounts must add up to the saved gross amount and discount.',
+    '-portion-0-'+(total('grossInclusiveCents')!==BigInt(row.grossInclusiveCents)?'gross':'discount'));
   }
  }else{
-  if(draft.selection!=='completed'&&!draft.reason.trim())throw Error('Explain each unfinished or cancelled item.');
+  if(draft.selection!=='completed'&&!draft.reason.trim())throw new CompletionInputError('Explain each unfinished or cancelled item.','-reason');
   pieces=[{partitionId:row.partitionId,outcome:draft.selection,scopeDescription:row.scopeDescription,
    grossInclusiveCents:row.grossInclusiveCents,discountInclusiveCents:row.discountInclusiveCents,amountCents:row.amountCents,
    reason:draft.selection==='completed'?null:draft.reason.trim()}];
@@ -50,18 +59,19 @@ function savedAllocation(row:CompletionAssignment,draft:ScopeDraft):CompletionAl
 function OutcomeOptions({split=false}:{split?:boolean}){
  return <><option value="">Choose an outcome</option>{Object.entries(labels).map(([value,label])=><option key={value} value={value}>{label}</option>)}{split&&<option value="split">Divide into portions</option>}</>;
 }
-function Portion({piece,index,change,remove}:{piece:PieceDraft;index:number;change:(next:PieceDraft)=>void;remove?:(()=>void)|undefined}){
- const id=useId();
- return <fieldset>
+function Portion({id,piece,index,change,remove}:{id:string;piece:PieceDraft;index:number;change:(next:PieceDraft)=>void;remove?:(()=>void)|undefined}){
+ return <fieldset className="completion-portion">
   <legend>Portion {index+1}</legend>
   <label htmlFor={id+'-outcome'}>Portion outcome</label>
   <select id={id+'-outcome'} value={piece.outcome} required onChange={event=>change({...piece,outcome:event.target.value as OutcomeChoice})}><OutcomeOptions/></select>
   <label htmlFor={id+'-description'}>Work in this portion</label>
   <textarea id={id+'-description'} rows={2} maxLength={2000} required value={piece.description} onChange={event=>change({...piece,description:event.target.value})}/>
-  <label htmlFor={id+'-gross'}>Gross amount in dollars</label>
-  <input id={id+'-gross'} inputMode="decimal" value={piece.gross} maxLength={22} required onChange={event=>change({...piece,gross:event.target.value})}/>
-  <label htmlFor={id+'-discount'}>Discount in dollars</label>
-  <input id={id+'-discount'} inputMode="decimal" value={piece.discount} maxLength={22} required onChange={event=>change({...piece,discount:event.target.value})}/>
+  <div className="completion-portion-amounts">
+   <div><label htmlFor={id+'-gross'}>Gross amount in dollars</label>
+    <input id={id+'-gross'} inputMode="decimal" value={piece.gross} maxLength={22} required onChange={event=>change({...piece,gross:event.target.value})}/></div>
+   <div><label htmlFor={id+'-discount'}>Discount in dollars</label>
+    <input id={id+'-discount'} inputMode="decimal" value={piece.discount} maxLength={22} required onChange={event=>change({...piece,discount:event.target.value})}/></div>
+  </div>
   {piece.outcome&&piece.outcome!=='completed'&&<>
    <label htmlFor={id+'-reason'}>Reason for unfinished portion</label>
    <textarea id={id+'-reason'} rows={2} maxLength={1000} required value={piece.reason} onChange={event=>change({...piece,reason:event.target.value})}/>
@@ -86,7 +96,7 @@ function AssignedScope({id,row,index,draft,ready,change}:{id:string;row:Completi
   }}><OutcomeOptions split/></select>
   {draft.selection==='split'&&<>
    <p className="field-help">Saved gross {quoteMoney(row.grossInclusiveCents)} and discount {quoteMoney(row.discountInclusiveCents)}. Divide these amounts across the portions. This records fulfillment against the accepted scope.</p>
-   {draft.pieces.map((piece,position)=><Portion key={piece.id} piece={piece} index={position}
+   {draft.pieces.map((piece,position)=><Portion key={piece.id} id={id+'-portion-'+position} piece={piece} index={position}
     change={next=>change({...draft,pieces:draft.pieces.map(item=>item.id===next.id?next:item)})}
     remove={position>0&&draft.pieces.length>2?()=>change({...draft,pieces:draft.pieces.filter(item=>item.id!==piece.id)}):undefined}/>)}
    <button type="button" className="secondary" onClick={()=>change({...draft,pieces:[...draft.pieces,pieceDraft(crypto.randomUUID(),'',complimentary)]})}>Add a portion</button>
@@ -116,8 +126,9 @@ function assignmentGroups(assignments:readonly CompletionAssignment[],visit:Visi
  return [...groups];
 }
 function reviewAllocation(row:CompletionAssignment,draft:ScopeDraft){
- try{return {allocation:savedAllocation(row,draft),error:null};}
- catch(problem){return {allocation:null,error:problem instanceof Error?problem.message:'Review the assigned item.'};}
+ try{return {allocation:savedAllocation(row,draft),error:null,field:null};}
+ catch(problem){return {allocation:null,error:problem instanceof Error?problem.message:'Review the assigned item.',
+  field:problem instanceof CompletionInputError?problem.field:'-outcome'};}
 }
 
 export function CompletionEditor({context,visit,disabled,save}:{context:CompletionContext;visit:VisitIdentity|undefined;disabled:boolean;save:(body:CompletionBody)=>Promise<void>}){
@@ -139,7 +150,7 @@ export function CompletionEditor({context,visit,disabled,save}:{context:Completi
  const walkthroughReady=walkthrough==='done'||walkthrough==='unavailable'&&walkthroughReason.trim().length>0;
  const itemField=(index:number)=>id+'-assignment-'+index;
  const focusField=(field:string)=>document.getElementById(field)?.focus();
- const nextField=firstUnresolved>=0?itemField(firstUnresolved)+'-outcome':!hasFulfilled?itemField(displayOrder[0]!)+'-outcome':
+ const nextField=firstUnresolved>=0?itemField(firstUnresolved)+(reviewed[firstUnresolved]!.field??'-outcome'):!hasFulfilled?itemField(displayOrder[0]!)+'-outcome':
   !walkthroughReady?id+(walkthrough==='unavailable'?'-walkthrough-reason':'-walkthrough'):null;
 
  function markRemainingFulfilled(){

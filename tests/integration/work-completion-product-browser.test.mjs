@@ -6,6 +6,7 @@ import {test} from 'node:test';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
 
 const invoiceDrafts=true;
 const dollars=cents=>(cents/100n).toString()+'.'+(cents%100n).toString().padStart(2,'0');
@@ -14,7 +15,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
   financeAccounts:true,invoicePreparation:true,invoiceDrafts});
  let browser;
- const financeResponses=[];
+ const financeResponses=[],schedulingResponses=[];
  try{
   browser=await engine.launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
@@ -22,6 +23,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   page.on('response',response=>{
    const path=new URL(response.url()).pathname;
    if(path.startsWith('/api/business/finance-accounts/'))financeResponses.push([path,response.status()]);
+   if(path.startsWith('/api/business/scheduling/'))schedulingResponses.push([path,response.status()]);
   });
   page.setDefaultTimeout(20000);
   const jobId=fixture.bookingRequest.jobId,job='/schedule?job='+jobId;
@@ -159,6 +161,15 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await expect(group.getByLabel('Outcome for item '+(index+1),{exact:true})).toHaveValue('split');
    await expect(reason).toHaveValue('Synthetic weather interruption.');
    await expect(split.getByLabel('Gross amount in dollars',{exact:true})).toHaveValue(dollars(firstGross));
+   const description=split.getByLabel('Work in this portion',{exact:true});
+   await description.fill(' ');
+   await review.getByRole('button',{name:'Review next required field',exact:true}).press('Enter');
+   await expect(description).toBeFocused();
+   await description.fill('Synthetic interior surfaces fulfilled');
+   await reason.fill(' ');
+   await review.getByRole('button',{name:'Review next required field',exact:true}).press('Enter');
+   await expect(reason).toBeFocused();
+   await reason.fill('Synthetic weather interruption.');
    for(let position=0;position<rows.length;position++){
     if(position!==index)await expect(page.getByLabel('Outcome for item '+(position+1),{exact:true})).toHaveValue('completed');
    }
@@ -176,6 +187,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await page.setViewportSize({width,height:900});
     await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    if(split&&width>=360&&stage==='editor'){
+     const amountInputs=split.locator('.completion-portion-amounts input');
+     const grossBox=await amountInputs.nth(0).boundingBox(),discountBox=await amountInputs.nth(1).boundingBox();
+     assert(grossBox&&discountBox&&Math.abs(grossBox.y-discountBox.y)<1,'Portion amounts align below wrapped labels');
+    }
     const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
     assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
     await page.screenshot({path:'.local/review/completion-'+stage+'-'+name+'-'+width+'.png',fullPage:true});
@@ -196,6 +212,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await expect(page.locator('form').getByRole('alert')).toContainText('Portion amounts must add up');
    await expect(review).toContainText('1 item needs review');
    assert.equal(submissions,0);
+   await review.getByRole('button',{name:'Review next required field',exact:true}).press('Enter');
+   await expect(split.getByLabel('Gross amount in dollars',{exact:true})).toBeFocused();
    await split.getByLabel('Gross amount in dollars',{exact:true}).fill(dollars(firstGross));
   }
   await page.getByRole('button',{name:'End job',exact:true}).click();
@@ -448,7 +466,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await expect(drafts.getByRole('region',{name:'Saved draft',exact:true})).toHaveCount(0);
   }
  }catch(error){
-  if(error instanceof Error)error.message+='\nRecent finance responses '+JSON.stringify(financeResponses.slice(-15));
+  if(error instanceof Error)error.message+='\nRecent finance responses '+JSON.stringify(financeResponses.slice(-15))
+   +'\nRecent scheduling responses '+JSON.stringify(schedulingResponses.slice(-12))
+   +'\nSession admission '+JSON.stringify(await sessionAdmissionDiagnostic(fixture));
   throw error;
  }finally{
   await browser?.close();
