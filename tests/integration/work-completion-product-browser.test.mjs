@@ -172,7 +172,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
 
   async function capture(stage){
    await mkdir('.local/review',{recursive:true});
-   for(const width of [320,390,768,1440]){
+   for(const width of [320,360,390,768,1440]){
     await page.setViewportSize({width,height:900});
     await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));

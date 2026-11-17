@@ -35,10 +35,9 @@ export function ScheduleAgenda({dates,mode,timezone,rows,hasMore,busy,selectedId
      <h3><time dateTime={day}>{agendaDay.format(new Date(day+'T12:00:00Z'))}</time></h3>}
     <ul className="customer-list schedule-job-list">{jobs.map(job=><li key={job.jobId} aria-current={selectedId===job.jobId?'true':undefined}>
      <button type="button" className="secondary" disabled={busy}
-      aria-label={job.customerName+' · '+(job.state==='cancelled'?'Cancelled':'View job')}
-      aria-describedby={'schedule-state-'+job.jobId}
+      aria-label={job.customerName+' · '+states[job.state]+(job.state==='cancelled'?'':' · View job')}
       onClick={event=>open(job.jobId,event.currentTarget)}>
-      {job.customerName}<span id={'schedule-state-'+job.jobId} className="schedule-visit-state" data-state={job.state}>{states[job.state]}</span>
+      {job.customerName}{' '}<span id={'schedule-state-'+job.jobId} className="schedule-visit-state" data-state={job.state}>{states[job.state]}</span>
      </button>
      <p><time dateTime={job.startAt}>{visitTime(job)}</time>{job.timezone!==timezone?' · '+job.timezone:''}</p>
      <p className="field-help">{job.vehicleLabels.join(' · ')}{job.pendingAppointment?' · Time change proposed':''}{job.unknownTravel?' · Travel needs review':''}</p>

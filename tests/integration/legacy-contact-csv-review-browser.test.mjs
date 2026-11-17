@@ -233,12 +233,23 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    await page.route(effectRoute,route=>route.abort(),{times:1});
    await effectPanel.getByRole('button',{name:'Check this draft'}).click();
    await expect(page.getByRole('status',{name:'Saved drafts status'})).toHaveText('The draft could not be checked. Try again.');
+   // Retain the real response bytes before releasing them to the page.
+   // Chromium may discard its response resource when the review changes.
+   let retainedEffects;
+   const retainEffects=async route=>{
+    const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:45000});
+    const bytes=await response.body();
+    retainedEffects=JSON.parse(bytes.toString('utf8'));
+    await route.fulfill({response,body:bytes});
+   };
+   await page.route(effectRoute,retainEffects);
    const effectResponse=page.waitForResponse(response=>response.url().endsWith('/legacy-batches/effects'));
    await effectPanel.getByRole('button',{name:'Check this draft'}).click();
    const verifiedEffects=await effectResponse;
    assert.equal(verifiedEffects.status(),200);
    assert.deepEqual(verifiedEffects.request().postDataJSON(),{batchId:draft.id,afterRow:1});
-   const stats=await verifiedEffects.json();
+   await page.unroute(effectRoute,retainEffects);
+   const stats=retainedEffects;assert(stats);
    assert.deepEqual([stats.candidateCustomers,stats.candidateVehicles,stats.candidateLinks,stats.reviewRows,stats.rejectedRows],[27,1,1,3,1]);
    await expect(effectPanel).toContainText('3 rows need review · 1 rejected');
    await expect(effectPanel.getByRole('listitem').filter({hasText:'Possible saved customer matches'})).toContainText('3');

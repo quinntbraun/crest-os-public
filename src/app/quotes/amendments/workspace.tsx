@@ -47,11 +47,11 @@ export function QuoteAmendmentWorkspace(){
      <button type="button" className="secondary crest-record-row amendment-record-row" disabled={view.busy}
       aria-label={[accepted.recipient.displayName,accepted.title,version,state,amount].join(', ')}
       onClick={()=>void controller.current?.open(row.family.id)}>
-      <span className="crest-record-identity"><strong>{accepted.recipient.displayName}</strong><span>{accepted.title}</span></span>
+      <span className="crest-record-identity"><strong>{accepted.recipient.displayName}</strong>{' '}<span>{accepted.title}</span></span>{' '}
       <span className="crest-record-meta">
-       <span>{version}</span>
+       <span>{version}</span>{' '}
        <span className="crest-record-state">{state}</span>
-      </span>
+      </span>{' '}
       <strong className="amendment-record-amount">{amount}</strong>
      </button>
     </li>;

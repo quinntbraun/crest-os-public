@@ -270,6 +270,10 @@ details[open] > .amendment-change-summary::before { content:"−"; }
 }
 .calendar-days { border-collapse:separate; border-spacing:2px; }
 .calendar-days button { border-radius:8px; }
+.calendar-day { position:relative; }
+.calendar-days .calendar-day-has-visits { padding-bottom:1.25rem; }
+.calendar-day > .calendar-visit-count { position:absolute; inset-inline:.2rem; bottom:.4rem; text-align:center; pointer-events:none; }
+.calendar-day:has(button[aria-pressed='true']) > .calendar-visit-count { color:#fff; }
 .calendar-days button,.calendar-toolbar button { transition:border-color 160ms ease, box-shadow 160ms ease; }
 .calendar-days button[aria-pressed='true'],.calendar-toolbar button[aria-pressed='true'] {
   background:#293c9e; border-color:#293c9e; color:#fff;
