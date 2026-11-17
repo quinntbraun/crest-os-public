@@ -48,6 +48,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
    await page.getByRole('button',{name:'Pause work',exact:true}).click();
    await expect(page.getByText('Confirmed saved version 3.',{exact:true})).toBeVisible();
    await page.goto(f.origin+'/schedule/travel');
+   await page.getByRole('button',{name:'Start a trip',exact:true}).click();
    const trip=page.getByRole('form',{name:'Start a trip',exact:true});
    await trip.getByLabel('Purpose').selectOption('supply');
    await trip.getByLabel('Vehicle you are driving').selectOption(f.fieldVehicleId);

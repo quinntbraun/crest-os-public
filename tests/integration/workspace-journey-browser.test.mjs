@@ -255,6 +255,19 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(queue.locator('time')).toHaveCount(8);
   assert.deepEqual(await queue.locator('time').evaluateAll(times=>times.map(time=>time.dateTime)),data.followUps.map(lead=>lead.followUpAt));
   await expect(queue.getByText('Overdue',{exact:true})).toHaveCount(1);
+  for(const width of [320,390,1440]){
+   await page.setViewportSize({width,height:900});
+   assert.deepEqual((await new AxeBuilder({page}).include('.crest-record-list').withRules(['label-content-name-mismatch']).analyze()).violations,[]);
+   const row=queue.locator('li').first(),button=row.getByRole('button');
+   await expect(button).toHaveAccessibleName(first.label);
+   await expect(button).toHaveAccessibleDescription(/Follow-up/);
+   await row.scrollIntoViewIfNeeded();
+   const hit=await row.locator('.crest-record-meta').evaluate(meta=>{
+    const rect=meta.getBoundingClientRect();
+    return document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2)?.closest('button')?.textContent?.trim();
+   });
+   assert.equal(hit,first.label,'status details remain part of the row tap target');
+  }
   await page.screenshot({path:join('.local/review',`lead-queue-${name}-1440.png`)});
   await page.setViewportSize({width:390,height:900});
   await page.screenshot({path:join('.local/review',`lead-queue-${name}-390.png`)});
@@ -276,7 +289,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const listed=data.followUps.find(lead=>lead.state==='new');
   assert(listed,'fixture includes an open lead with a follow-up');
   const leadRow=directory.getByRole('button',{name:listed.label,exact:true});
-  const time=leadRow.locator('time');
+  const time=leadRow.locator('..').locator('time');
   await expect(time).toHaveAttribute('datetime',listed.followUpAt);
   await expect(time).toHaveAttribute('title',listed.followUpAt);
   await expect(time).not.toHaveText(listed.followUpAt);

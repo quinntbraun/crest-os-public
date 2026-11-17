@@ -144,6 +144,13 @@ button.secondary:not(:disabled):not([aria-pressed='true']):hover { background:va
 .crest-record-row:hover,.crest-record-list .crest-record-row[aria-current] { background:var(--accent-soft); }
 .crest-record-list .crest-record-row[aria-current] { border-inline-start-color:var(--accent); }
 .crest-record-meta { display:flex; align-items:center; gap:.35rem .65rem; flex-wrap:wrap; color:var(--muted); font-size:.85rem; font-weight:400; }
+.crest-lead-row { position:relative; border-inline-start:3px solid transparent; border-radius:var(--radius); }
+.crest-record-list .crest-lead-row .crest-record-row { border-inline-start:0; border-radius:var(--radius); }
+.crest-lead-row .crest-record-row::after { content:""; position:absolute; inset:0; border-radius:var(--radius); }
+.crest-lead-row > .crest-record-meta { padding:0 .85rem .7rem; margin-top:-.35rem; pointer-events:none; }
+.crest-record-list .crest-lead-row:has(.crest-record-row[aria-current]) { background:var(--accent-soft); border-inline-start-color:var(--accent); }
+.crest-lead-row:has(.crest-record-row:not(:disabled):hover) { background:var(--accent-soft); }
+.crest-lead-row .crest-record-row:focus-visible::after { outline:3px solid #285cc4; outline-offset:2px; }
 .crest-record-meta time,.amendment-record-amount { font-variant-numeric:tabular-nums; }
 .crest-record-state { padding:.16rem .42rem; border-radius:.35rem; background:#eef1f5; color:#414d61; font-size:.8rem; }
 .crest-record-state::first-letter { text-transform:uppercase; }

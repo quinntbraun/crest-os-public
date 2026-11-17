@@ -129,16 +129,16 @@ export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:Co
     <h2 tabIndex={-1} ref={queueHeading}>Scheduled follow-ups</h2>
     <p className="field-help">{dirty?'Opening another record discards this unsaved draft.':'Earliest reminders first.'}</p>
    </div>}
-   {visibleRows.length>0&&<ul className="customer-list crest-record-list" aria-label={showQueue?'Lead follow-up queue':'Saved leads'}>{visibleRows.map(row=><li key={row.id}>
+   {visibleRows.length>0&&<ul className="customer-list crest-record-list" aria-label={showQueue?'Lead follow-up queue':'Saved leads'}>{visibleRows.map(row=><li key={row.id} className="crest-lead-row">
     <button type="button" className="secondary crest-record-row" aria-current={view.selected?.id===row.id?'true':undefined}
-     aria-label={row.label} aria-describedby={'lead-summary-'+row.id}
+     aria-describedby={'lead-summary-'+row.id}
      disabled={readLocked} onClick={()=>void openLead(row.id)}>
-     <strong>{row.label}</strong><span id={'lead-summary-'+row.id} className="crest-record-meta">
+     <strong>{row.label}</strong>
+    </button><span id={'lead-summary-'+row.id} className="crest-record-meta">
       <span className="crest-record-state">{row.state.replaceAll('_',' ')}</span>
       {row.followUpAt&&<span>Follow-up <FollowUpTime instant={row.followUpAt}/></span>}
       {showQueue&&row.followUpAt&&page&&row.followUpAt<=page.observedAt&&<span className="follow-up-overdue">Overdue</span>}
      </span>
-    </button>
    </li>)}</ul>}
    {showQueue?<div className="lead-follow-up-pagination">
     {page===null&&<><p>Follow-ups could not be verified.</p><button type="button" className="secondary" disabled={readLocked} onClick={()=>void pageQueue()}>Check follow-ups</button></>}
