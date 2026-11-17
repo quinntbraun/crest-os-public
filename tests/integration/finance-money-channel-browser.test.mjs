@@ -29,7 +29,7 @@ for(const engine of [chromium,webkit]){
    await expect(page.getByRole('status')).toContainText('Signed in');
    await page.goto(fixture.origin+'/settings');
    await page.getByRole('link',{name:'Fictional account setup',exact:true}).click();
-   await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+   await page.getByRole('button',{name:'Setup',exact:true}).click();
    await page.getByRole('link',{name:'Money channels',exact:true}).click();
 
    const panel=page.getByRole('region',{name:'Money channel reviews',exact:true}),status=panel.getByRole('status');
@@ -59,8 +59,9 @@ for(const engine of [chromium,webkit]){
    await save.press('Enter');
    await expect(status).toHaveText('Channel review saved.');
    await expect(panel.getByText('Opening unknown',{exact:true})).toBeVisible();
-   await expect(panel.getByText('Bank account · Business funds held by owner · fictional-bank •••• 9A76 · Account 1070',{exact:true})).toBeVisible();
+   await expect(panel.getByText('Bank account · Business funds held by owner · fictional-bank •••• 9A76',{exact:true})).toBeVisible();
    await expect(panel.getByText('Latest review · Open from Jan 1, 2026',{exact:true})).toBeVisible();
+   await expect(panel.locator('.channel-directory').getByText('Account 1070',{exact:true})).toBeVisible();
 
    await panel.getByRole('button',{name:'Edit review',exact:true}).click();
    await expect(panel.getByLabel('Linked account',{exact:true})).toHaveCount(0);
@@ -86,6 +87,14 @@ for(const engine of [chromium,webkit]){
     }
    }
    await capture('opening',panel.getByLabel('Opening date',{exact:true}));
+   const savedReview=panel.getByRole('region',{name:'Latest saved channel',exact:true});
+   const proposedReview=panel.getByRole('region',{name:'Proposed channel review',exact:true});
+   await expect(savedReview.getByText('Open from Jan 1, 2026',{exact:true})).toBeVisible();
+   await expect(savedReview.getByText('Opening unknown',{exact:true})).toBeVisible();
+   await expect(proposedReview.getByText('Open from Feb 1, 2026',{exact:true})).toBeVisible();
+   await expect(proposedReview.getByText('1070',{exact:true})).toBeVisible();
+   await expect(proposedReview.getByText('Verified opening amount',{exact:true})).toBeVisible();
+   await capture('comparison',panel.getByRole('region',{name:'Review effective channel settings',exact:true}));
    await page.setViewportSize({width:390,height:900});
    // An opaque operation ID can contain the same digits as the opening amount.
    const operationId='10250000-0000-4000-8000-000000000001';

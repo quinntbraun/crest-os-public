@@ -18,14 +18,15 @@ import {join} from 'node:path';
 import {Readable} from 'node:stream';
 import {URI,TOTP} from 'otpauth';
 import {migrationSandbox} from './migration-sandbox.mjs';
-import {syntheticLeadFollowUpsAvailable,syntheticLeadMatchReviewAvailable,syntheticRecordJobHistoryAvailable} from '../../scripts/synthetic-migrations.mjs';
+import {syntheticLeadFollowUpsAvailable,syntheticLeadMatchReviewAvailable,syntheticRecordJobHistoryAvailable,syntheticCustomerProfileAvailable} from '../../scripts/synthetic-migrations.mjs';
 import {installProviderSchema} from './provider-schema.mjs';
 import {startRealAuthService,authResult} from './real-auth-service.mjs';
 import {buildSourceExportBrowserFixture} from './source-export-browser-build.mjs';
 const signal=()=>new AbortController().signal,sha=value=>createHash('sha256').update(value).digest('hex'),release='a'.repeat(40);
-export async function sourceExportBrowserFixture({product=false,workspace=false,leadFollowUps=false,leadMatchReview=false,legacyContactMatches=false,legacyContactBatches=false,legacyContactEffects=false,legacyContactTargets=false,legacyContactDecisions=false,legacyContactApprovals=false,legacyContactApplications=false,automaticContactImport=false,legacyContactDownloads=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,recordJobHistory=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,openingWorksheet=false,statementStaging=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,googleCalendar=false,googleCalendarAutomatic=false,postedFinanceExport=false,photoFixture}={}){
+export async function sourceExportBrowserFixture({product=false,workspace=false,leadFollowUps=false,leadMatchReview=false,legacyContactMatches=false,legacyContactBatches=false,legacyContactEffects=false,legacyContactTargets=false,legacyContactDecisions=false,legacyContactApprovals=false,legacyContactApplications=false,automaticContactImport=false,legacyContactDownloads=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,expenseReceipts=false,scheduling=false,recordJobHistory=false,customerProfileFixture=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,openingWorksheet=false,statementStaging=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,googleCalendar=false,googleCalendarAutomatic=false,postedFinanceExport=false,photoFixture}={}){
  assert((typeof legacyContactApplications==='boolean'||legacyContactApplications==='background')&&(!legacyContactApplications||legacyContactApprovals));
  assert(typeof leadFollowUps==='boolean'&&(!leadFollowUps||product&&workspace));
+ assert(typeof customerProfileFixture==='boolean'&&(!customerProfileFixture||recordJobHistory));
  assert(typeof recordJobHistory==='boolean'&&(!recordJobHistory||product&&workspace&&scheduling));
  assert(typeof leadMatchReview==='boolean'&&(!leadMatchReview||product&&workspace));
  assert(typeof legacyContactDownloads==='boolean'&&(!legacyContactDownloads||product&&legacyContactApplications==='background'));
@@ -45,6 +46,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  assert.equal(typeof bookingConflictReview,'boolean');assert(!bookingConflictReview||scheduling,'conflict reads require the registered scheduling fixture');
  assert.equal(typeof scheduling,'boolean');assert(!scheduling||product&&workspace&&quotes&&quoteReview&&quoteCommercial,'scheduling requires the genuine accepted-quote product server');
  assert.equal(typeof expenses,'boolean');assert(!expenses||product&&workspace,'expenses require the genuine workspace product server');
+ assert(!expenseReceipts||expenses,'receipt uploads require the authenticated Expenses workspace');
  assert.equal(typeof appointmentHolds,'boolean');assert(!appointmentHolds||product&&workspace,'appointment proposals require the actual workspace product server');
  assert.equal(typeof financeAccounts,'boolean');assert(!financeAccounts||product&&workspace);
  assert.equal(typeof financeMappings,'boolean');assert(!financeMappings||financeAccounts);
@@ -106,8 +108,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  assert.equal(typeof quoteCommercial,'boolean');assert(!quoteCommercial||product&&workspace&&quotes&&quoteReview,'quote commercial journeys require the actual workspace, quotes and review product server');
  assert(["linux","win32"].includes(process.platform),"supported disposable TLS/Auth browser fixture required");process.env.NODE_ENV='production';
  assert(!photoFixture||dropoffCustody&&Buffer.isBuffer(photoFixture));
- let sandbox,client,service,login,contactWorkerLogin,contactWorkerConnection,owned=false,server,h,app,photoStorage,photoLogin,financeLogin,calendarLogin,calendarWorkerLogin,postedFinanceLogin,supplierStorage,supplierDocuments,supplierWorkerLogin;
- async function close(){try{if(app){await app.close();app=undefined;server=undefined;}else if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));server=undefined;}}finally{try{await h?.close();h=undefined;}finally{try{await service?.close();service=undefined;}finally{try{if(photoStorage)await photoStorage.close();supplierDocuments?.close();if(supplierStorage)await supplierStorage.close();if(supplierWorkerLogin)await sandbox.admin.query('DROP ROLE '+supplierWorkerLogin);if(contactWorkerLogin)await sandbox.admin.query('DROP ROLE IF EXISTS '+contactWorkerLogin);if(photoLogin)await sandbox.admin.query('DROP ROLE '+photoLogin);if(calendarLogin)await sandbox.admin.query('DROP ROLE '+calendarLogin);if(calendarWorkerLogin)await sandbox.admin.query('DROP ROLE '+calendarWorkerLogin);if(financeLogin)await sandbox.admin.query('DROP ROLE '+financeLogin);if(postedFinanceLogin)await sandbox.admin.query('DROP ROLE '+postedFinanceLogin);if(owned){await sandbox.admin.query('DROP ROLE '+login);owned=false;}}finally{await sandbox?.close();sandbox=undefined;}}}}}
+ let sandbox,client,service,login,contactWorkerLogin,contactWorkerConnection,owned=false,server,h,app,photoStorage,photoLogin,financeLogin,calendarLogin,calendarWorkerLogin,postedFinanceLogin,expenseReceiptStorage,supplierStorage,supplierDocuments,supplierWorkerLogin;
+ async function close(){try{if(app){await app.close();app=undefined;server=undefined;}else if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));server=undefined;}}finally{try{await h?.close();h=undefined;}finally{try{await service?.close();service=undefined;}finally{try{if(photoStorage)await photoStorage.close();if(expenseReceiptStorage)await expenseReceiptStorage.close();supplierDocuments?.close();if(supplierStorage)await supplierStorage.close();if(supplierWorkerLogin)await sandbox.admin.query('DROP ROLE '+supplierWorkerLogin);if(contactWorkerLogin)await sandbox.admin.query('DROP ROLE IF EXISTS '+contactWorkerLogin);if(photoLogin)await sandbox.admin.query('DROP ROLE '+photoLogin);if(calendarLogin)await sandbox.admin.query('DROP ROLE '+calendarLogin);if(calendarWorkerLogin)await sandbox.admin.query('DROP ROLE '+calendarWorkerLogin);if(financeLogin)await sandbox.admin.query('DROP ROLE '+financeLogin);if(postedFinanceLogin)await sandbox.admin.query('DROP ROLE '+postedFinanceLogin);if(owned){await sandbox.admin.query('DROP ROLE '+login);owned=false;}}finally{await sandbox?.close();sandbox=undefined;}}}}}
  try{
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);const previous=await sandbox.apply(target,await sandbox.prefix(42)),registered=await sandbox.apply(target,await sandbox.prefix(43));assert.equal(registered.history.length,43);assert.deepEqual(registered.history.slice(0,42),previous.history);
   if(catalog){const adopted=await sandbox.apply(target,await sandbox.prefix(44));assert.equal(adopted.history.length,44);assert.deepEqual(adopted.history.slice(0,43),registered.history);}
@@ -274,6 +276,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    assert.equal(await syntheticLeadMatchReviewAvailable(target),true);
   }
   const recordJobBaseline=recordJobHistory?await sandbox.apply(target,await sandbox.prefix(119)):null;
+  let customerProfile=false;
   if(recordJobBaseline){
    assert.equal(recordJobBaseline.history.length,119);
    assert.equal(await syntheticRecordJobHistoryAvailable(target),false);
@@ -550,6 +553,16 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    photoRuntime={objects:photoStorage.store,stagingOrigin:photoStorage.origin,
     dispatch:runtime.createDropoffPhotoDispatch(authority,photoStorage.store,validator)};
   }
+  let expenseReceiptRuntime;
+  if(expenseReceipts){
+   expenseReceiptStorage=await runtime.custodyPhotoObjects();
+   const objects=expenseReceiptStorage.receipts;
+   const directory=runtime.createReceiptDirectory(config,auth.provider,auth.tokens);
+   const validator={async validate(bytes,type){return runtime.validateImage(bytes,type);}};
+   const workflow=runtime.createReceiptWorkflow(directory,objects,validator);
+   expenseReceiptRuntime={objects,stagingOrigin:expenseReceiptStorage.origin,
+    async dispatch(...args){await workflow.prepareAndPublish(...args);}};
+  }
   let supplierOriginalRuntime,originalFile,originalMimeType;
   if(supplierPayablePosting){
    const worker='crest_supplier_test_'+randomBytes(8).toString('hex'),secret=randomBytes(32).toString('hex');
@@ -609,8 +622,22 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   if(recordJobBaseline){
    const documents=async()=> (await client.query(`SELECT jsonb_build_object(
     'customers',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.id) FROM crest.customers c WHERE c.business_id=$1),
-    'vehicles',(SELECT jsonb_agg(to_jsonb(v) ORDER BY v.id) FROM crest.vehicles v WHERE v.business_id=$1)
+    'vehicles',(SELECT jsonb_agg(to_jsonb(v) ORDER BY v.id) FROM crest.vehicles v WHERE v.business_id=$1),
+    'links',(SELECT jsonb_agg(to_jsonb(r) ORDER BY r.id) FROM crest.customer_vehicles r WHERE r.business_id=$1)
    ) AS rows`,[business])).rows[0].rows;
+   if(customerProfileFixture){
+    const web=await sandbox.connect(url.toString()),seedHash=runtime.sessionCredentialHash(credential);
+    try{
+     await web.query('SET ROLE crest_web');
+     const session=await lifecycle.verify(credential,signal(),'background',true);
+     const association={action:'open',associationId:randomUUID(),customerId:bookingRequest.payload.customerId,
+      vehicleId:bookingRequest.payload.vehicles[0].vehicleId,effectiveAt:new Date(Date.now()-10000).toISOString().replace(/\.(\d{3})Z$/,'.$1000Z'),
+      relationship:'owner',isBilling:true,evidence:null,reason:null,nextAssociationId:null};
+     const saved=await web.query('SELECT crest_commands.change_vehicle_association($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,0,$11) AS result',
+      [seedHash,session.sessionId,actor,service.issuer,user.id,session.provider.sessionId,new Date(session.provider.expiresAt),business,epoch,randomUUID(),association]);
+     assert.equal(saved.rows[0].result.state,'committed');
+    }finally{seedHash.fill(0);await web.end();}
+   }
    const before=await documents();
    assert(before.customers?.length&&before.vehicles?.length);
    const upgraded=await sandbox.apply(target,await sandbox.prefix(120));
@@ -619,6 +646,15 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    assert.deepEqual(upgraded.history.slice(0,119),recordJobBaseline.history);
    assert.deepEqual(await documents(),before);
    assert.equal(await syntheticRecordJobHistoryAvailable(target),true);
+   assert.equal(await syntheticCustomerProfileAvailable(target),false);
+   if(customerProfileFixture){
+    const profileUpgrade=await sandbox.apply(target,await sandbox.prefix(121));
+    assert.deepEqual(profileUpgrade.history.slice(0,120),upgraded.history);
+    assert.equal(profileUpgrade.history.at(-1).version,'20270114180000');
+    assert.deepEqual(await documents(),before);
+    customerProfile=await syntheticCustomerProfileAvailable(target);
+    assert.equal(customerProfile,true);
+   }
   }
   await chmod(sandbox.workspace,0o700);const tls=await browserTestTls();server=runtime.createBoundedNodeServer(tls);await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});const origin='https://127.0.0.1:'+server.address().port,requests=[];
   if(product){
@@ -630,7 +666,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     await client.query('INSERT INTO crest_private.google_calendar_credential_key VALUES(true,$1)',[identity.credentialKeyId]);
     if(calendarWorkerLogin)await client.query('INSERT INTO crest_private.google_calendar_worker_principals(business_id,principal) VALUES($1,$2)',[business,calendarWorkerLogin]);
    }
-   app=await runtime.createCrestApplication({origin,environment:'test',tls,authentication:auth,business:{businessId:business},customers:true,syntheticLegacyContactBatches:legacyContactBatches,syntheticLegacyContactEffects:legacyContactEffects,syntheticLegacyContactTargets:legacyContactTargets,syntheticLegacyContactDecisions:legacyContactDecisions,syntheticLegacyContactApprovals:legacyContactApprovals,syntheticLegacyContactApplications:legacyContactApplications,syntheticLegacyContactDownloads:legacyContactDownloads,...automaticContactImport?{syntheticLegacyContactImportWorker:{connectionString:contactWorkerConnection}}:{},...workspace?{vehicles:true,associations:true,leads:true,leadFollowUps,leadMatchReview,leadConversions:true,operationResolution:true}:{},...catalog?{syntheticCatalog:true,operationResolution:true}:{sourceExports:{appReleaseId:release,store:h.store}},...quotes?{syntheticQuotes:true,operationResolution:true}:{},...quoteReview?{syntheticQuoteReview:true}:{},...quoteCommercial?{syntheticQuoteCommercial:true,operationResolution:true}:{},...appointmentHolds?{syntheticAppointmentHolds:true,operationResolution:true}:{},...expenses?{syntheticExpenses:true,operationResolution:true}:{},...calendarConfiguration?{syntheticGoogleCalendar:calendarConfiguration}:{},...postedFinanceConfiguration?{syntheticPostedFinanceExport:postedFinanceConfiguration}:{},...financeConfiguration?{syntheticFinanceAccounts:financeConfiguration}:{},...scheduling?{syntheticScheduling:true,syntheticRecordJobHistory:recordJobHistory}:{},...amendments?{syntheticQuoteAmendments:true}:{},...amendmentAcceptance?{syntheticQuoteAmendmentAcceptance:true}:{},...fieldSessions?{syntheticFieldSessions:true}:{},...jobCompletion?{syntheticJobCompletion:true}:{},...jobMileage?{syntheticJobMileage:true}:{},...supportTrips?{syntheticSupportTrips:true}:{},...unfulfilledCancellation?{syntheticUnfulfilledCancellation:true}:{},...workTime?{syntheticWorkTime:true}:{},...workBoundary?{syntheticWorkBoundary:true}:{},...workStart?{syntheticWorkStart:true}:{},...workEnd?{syntheticWorkEnd:true}:{},...mobileDeparture?{syntheticMobileDeparture:true}:{},...reviewOutcome?{syntheticReviewOutcome:true}:{},...reviewHistory?{syntheticReviewHistory:true}:{},...maintenanceFollowUp?{syntheticMaintenanceFollowUp:true}:{},...dropoffCustody?{syntheticDropoffCustody:true}:{},...dropoffPolicyRevision?{syntheticDropoffPolicyRevision:true}:{},...pickupTrips?{syntheticPickupTrips:true}:{},...pickupCollection?{syntheticPickupCollection:true}:{},...pickupPolicy?{syntheticPickupPolicy:true}:{},...pickupPhotos?{syntheticPickupPhotos:true}:{},...pickupReturnWorkflow?{syntheticPickupWork:true,syntheticPickupRelease:true,syntheticPickupReturnFailure:true}:{},...photoRuntime?{syntheticDropoffPhotos:photoRuntime}:{},...supplierOriginalRuntime?{syntheticSupplierOriginals:supplierOriginalRuntime}:{}});server=app.server;
+   app=await runtime.createCrestApplication({origin,environment:'test',tls,authentication:auth,business:{businessId:business},customers:true,syntheticLegacyContactBatches:legacyContactBatches,syntheticLegacyContactEffects:legacyContactEffects,syntheticLegacyContactTargets:legacyContactTargets,syntheticLegacyContactDecisions:legacyContactDecisions,syntheticLegacyContactApprovals:legacyContactApprovals,syntheticLegacyContactApplications:legacyContactApplications,syntheticLegacyContactDownloads:legacyContactDownloads,...automaticContactImport?{syntheticLegacyContactImportWorker:{connectionString:contactWorkerConnection}}:{},...workspace?{vehicles:true,associations:true,leads:true,leadFollowUps,leadMatchReview,leadConversions:true,operationResolution:true}:{},...catalog?{syntheticCatalog:true,operationResolution:true}:{sourceExports:{appReleaseId:release,store:h.store}},...quotes?{syntheticQuotes:true,operationResolution:true}:{},...quoteReview?{syntheticQuoteReview:true}:{},...quoteCommercial?{syntheticQuoteCommercial:true,operationResolution:true}:{},...appointmentHolds?{syntheticAppointmentHolds:true,operationResolution:true}:{},...expenses?{syntheticExpenses:true,operationResolution:true}:{},...expenseReceiptRuntime?{syntheticExpenseReceipts:expenseReceiptRuntime}:{},...calendarConfiguration?{syntheticGoogleCalendar:calendarConfiguration}:{},...postedFinanceConfiguration?{syntheticPostedFinanceExport:postedFinanceConfiguration}:{},...financeConfiguration?{syntheticFinanceAccounts:financeConfiguration}:{},...scheduling?{syntheticScheduling:true,syntheticRecordJobHistory:recordJobHistory,syntheticCustomerProfile:customerProfile}:{},...amendments?{syntheticQuoteAmendments:true}:{},...amendmentAcceptance?{syntheticQuoteAmendmentAcceptance:true}:{},...fieldSessions?{syntheticFieldSessions:true}:{},...jobCompletion?{syntheticJobCompletion:true}:{},...jobMileage?{syntheticJobMileage:true}:{},...supportTrips?{syntheticSupportTrips:true}:{},...unfulfilledCancellation?{syntheticUnfulfilledCancellation:true}:{},...workTime?{syntheticWorkTime:true}:{},...workBoundary?{syntheticWorkBoundary:true}:{},...workStart?{syntheticWorkStart:true}:{},...workEnd?{syntheticWorkEnd:true}:{},...mobileDeparture?{syntheticMobileDeparture:true}:{},...reviewOutcome?{syntheticReviewOutcome:true}:{},...reviewHistory?{syntheticReviewHistory:true}:{},...maintenanceFollowUp?{syntheticMaintenanceFollowUp:true}:{},...dropoffCustody?{syntheticDropoffCustody:true}:{},...dropoffPolicyRevision?{syntheticDropoffPolicyRevision:true}:{},...pickupTrips?{syntheticPickupTrips:true}:{},...pickupCollection?{syntheticPickupCollection:true}:{},...pickupPolicy?{syntheticPickupPolicy:true}:{},...pickupPhotos?{syntheticPickupPhotos:true}:{},...pickupReturnWorkflow?{syntheticPickupWork:true,syntheticPickupRelease:true,syntheticPickupReturnFailure:true}:{},...photoRuntime?{syntheticDropoffPhotos:photoRuntime}:{},...supplierOriginalRuntime?{syntheticSupplierOriginals:supplierOriginalRuntime}:{}});server=app.server;
    server.prependListener('request',incoming=>requests.push({path:new URL(incoming.url,origin).pathname,method:incoming.method}));
    await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
 

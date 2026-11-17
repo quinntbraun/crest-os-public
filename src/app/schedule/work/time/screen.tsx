@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useId,useRef,useState} from 'react';
+import type {ReactNode} from 'react';
 import {authentication,AuthenticationError} from '../../../../client/authentication';
 import {scheduling,SchedulingClientError} from '../../../../client/scheduling';
 import {lookupSchedulingOriginal} from '../../../../client/scheduling-original';
@@ -7,6 +8,7 @@ import {createPendingSchedulingStore,pendingSchedulingKeys} from '../../../../cl
 import type {PendingScheduling} from '../../../../client/pending-scheduling';
 import {formatJobWorkTimeCsv} from '../../../../operations/job-work-time-export';
 import type {LoadedJobWorkTime} from '../../../../operations/job-work-time-contract';
+import {scheduleInstantMicroseconds} from '../../../../operations/schedule-time';
 import {parseWorkBoundarySave,workBoundaries,workBoundaryKind,workBoundaryOriginal} from '../../../../operations/job-work-boundary-contract';
 import type {WorkBoundarySave} from '../../../../operations/job-work-boundary-contract';
 import {parseWorkStartSave,workStartKind,workStartOriginal} from '../../../../operations/job-work-start-contract';
@@ -29,7 +31,8 @@ function available(workspace:Workspace,kind:CorrectionKind){
  return workspace.workBoundaryAvailable===true;
 }
 function duration(microseconds:string){
- const seconds=BigInt(microseconds)/1000000n;
+ const exact=BigInt(microseconds),seconds=exact/1000000n;
+ if(exact>0n&&seconds===0n)return '<1s';
  const hours=seconds/3600n,minutes=(seconds/60n)%60n;
  return [hours?hours+'h':'',hours||minutes?minutes+'m':'',seconds%60n+'s'].filter(Boolean).join(' ');
 }
@@ -117,7 +120,7 @@ export function WorkTimeScreen({jobId}:{jobId:string}){
      catch{message='The download could not be prepared. Try again.';}
     }
     setState({phase:'ready',message,data,timezone:workspace.context.timezone,
-     correction:workspace.workBoundaryAvailable&&workspace.context.writeState==='ready'?workspace:null,start,end});
+     correction:workspace.context.writeState==='ready'?workspace:null,start,end});
    }catch(error){
     if(!signal.aborted){
      const denied=error instanceof AuthenticationError&&error.kind==='denied';
@@ -187,7 +190,7 @@ export function WorkTimeScreen({jobId}:{jobId:string}){
  },[jobId]);
  const format=state.phase==='ready'?new Intl.DateTimeFormat('en-US',{timeZone:state.timezone,dateStyle:'medium',timeStyle:'medium'}):null;
  const when=(value:string)=>format!.format(new Date(value));
- return <section aria-label="Saved work time" aria-busy={state.phase==='loading'} className="field-work-form">
+ return <section aria-label="Saved work time" aria-busy={state.phase==='loading'} className="field-work-form work-time-screen">
   <p role="status">{state.message}</p>
   {state.phase==='signed-out'&&<a href="/sign-in">Sign in to view work time</a>}
   {state.phase==='unavailable'&&jobId&&<button type="button" className="secondary work-time-refresh" onClick={()=>void refresh.current?.()}>Refresh totals</button>}
@@ -198,141 +201,177 @@ export function WorkTimeScreen({jobId}:{jobId:string}){
    const earlier=record.intervalVersions.filter(row=>!currentIds.has(row.versionId))
     .sort((a,b)=>a.recordedAt.localeCompare(b.recordedAt));
    return <>
-    <p>Saved version {record.jobVersion} · Measured <time dateTime={record.observedAt}>{when(record.observedAt)}</time> · {state.timezone}</p>
-    {intervals.length===0?<p>No work intervals have been recorded for this job.</p>:<>
-     <dl className="schedule-work-totals">
-      <div><dt>Active work</dt><dd>{duration(summary.observedActiveMicroseconds)}</dd></div>
-      <div><dt>Paused</dt><dd>{duration(summary.observedPauseMicroseconds)}</dd></div>
-      {!summary.continuous&&<div><dt>Unrecorded gap</dt><dd>{duration(summary.unrecordedMicroseconds)}</dd></div>}
-     </dl>
-     {summary.openInterval&&<p>{summary.openInterval.kind==='active'?'Work is in progress.':'Work is paused.'}</p>}
-    </>}
-    <button type="button" className="secondary work-time-refresh" onClick={()=>void refresh.current?.()}>Refresh totals</button>
-    {intervals.length>0&&<details><summary>Saved intervals ({intervals.length})</summary>
-      <ol>{intervals.map(row=><li key={row.intervalId}>
-       <p><strong>{row.kind==='active'?'Active work':'Pause'}</strong> · <time dateTime={row.startedAt}>{when(row.startedAt)}</time>
-        {row.endedAt?<> to <time dateTime={row.endedAt}>{when(row.endedAt)}</time></>:' · Still open'}</p>
-       {row.pauseReason&&<p>{row.pauseReason}</p>}{row.recordReason&&<p>{row.recordReason}</p>}
-      </li>)}</ol>
-    </details>}
-    {earlier.length>0&&<details><summary>Earlier versions ({earlier.length})</summary>
+    <section className="home-panel work-time-overview" aria-label="Work totals">
+     <div className="work-time-overview-heading">
+      <div>
+       <h2>{summary.openInterval?summary.openInterval.kind==='active'?'Work is in progress.':'Work is paused.':'Work totals'}</h2>
+       <p>As of <time dateTime={record.observedAt}>{when(record.observedAt)}</time> · {state.timezone}</p>
+      </div>
+      <button type="button" className="secondary work-time-refresh" onClick={()=>void refresh.current?.()}>Refresh totals</button>
+     </div>
+     {intervals.length===0?<p>No work intervals have been recorded for this job.</p>:
+      <dl className="schedule-work-totals">
+       <div><dt>Active work</dt><dd>{duration(summary.observedActiveMicroseconds)}</dd></div>
+       <div><dt>Paused</dt><dd>{duration(summary.observedPauseMicroseconds)}</dd></div>
+       {!summary.continuous&&<div><dt>Unrecorded gap</dt><dd>{duration(summary.unrecordedMicroseconds)}</dd></div>}
+      </dl>}
+    </section>
+    {intervals.length>0&&<WorkTimeLedger data={state.data} timezone={state.timezone} workspace={state.correction}
+     start={state.start} end={state.end} when={when} save={(input,workspace)=>void correct.current?.(input,workspace)}/>}
+    {earlier.length>0&&<details className="home-panel work-time-earlier"><summary>Earlier versions ({earlier.length})</summary>
      <ol>{earlier.map(row=><li key={row.versionId}>
       <p><strong>{row.kind==='active'?'Active work':'Pause'}</strong> · Version {row.sequence} · Recorded <time dateTime={row.recordedAt}>{when(row.recordedAt)}</time></p>
       <p><time dateTime={row.startedAt}>{when(row.startedAt)}</time>{row.endedAt?<> to <time dateTime={row.endedAt}>{when(row.endedAt)}</time></>:' · Open when recorded'}</p>
       {row.pauseReason&&<p>{row.pauseReason}</p>}{row.recordReason&&<p>{row.recordReason}</p>}
      </li>)}</ol>
     </details>}
-    {state.correction&&<WorkBoundaryForm data={state.data} workspace={state.correction} when={when}
-     save={(input,workspace)=>void correct.current?.(input,workspace)}/>}
-    {state.correction&&state.start&&<WorkStartForm start={state.start} observedAt={record.observedAt} workspace={state.correction} when={when}
-     save={(input,workspace)=>void correct.current?.(input,workspace)}/>}
-    {state.correction&&state.end&&<WorkEndForm end={state.end} observedAt={record.observedAt} workspace={state.correction} when={when}
-     save={(input,workspace)=>void correct.current?.(input,workspace)}/>}
-    <div className="work-time-downloads">
+    <div className="work-time-downloads" aria-label="Work-time downloads">
+     <span className="field-help">Saved job version {record.jobVersion}</span>
      <button type="button" className="secondary" onClick={()=>void refresh.current?.('csv')}>Download CSV</button>
      <button type="button" className="secondary" onClick={()=>void refresh.current?.('json')}>Download JSON</button>
     </div>
    </>;
   })()}
-  <nav aria-label="Work time navigation"><a href={jobId?'/schedule?job='+encodeURIComponent(jobId):'/schedule'}>Saved job and history</a><a href="/schedule">Schedule</a></nav>
+  {!jobId&&<a href="/schedule">Open Schedule</a>}
  </section>;
 }
 
-function WorkEndForm({end,observedAt,workspace,when,save}:{end:LoadedWorkEnd;observedAt:string;workspace:Workspace;
- when:(time:string)=>string;save:(input:WorkEndSave,workspace:Workspace)=>void}){
- const id=useId(),[correctedAt,setCorrectedAt]=useState(''),[issue,setIssue]=useState('');
- return <details>
-  <summary>Correct the completion time</summary>
-  <form onSubmit={event=>{
-   event.preventDefault();
-   const reason=String(new FormData(event.currentTarget).get('reason')??'');
-   try{
-    if(!correctedAt||correctedAt===end.completedAt||correctedAt<end.finalIntervalStartedAt||correctedAt>observedAt)throw Error();
-    const input=parseWorkEndSave({schemaVersion:1,businessId:end.businessId,operationId:crypto.randomUUID(),
-     recoveryEpoch:workspace.context.recoveryEpoch,jobId:end.jobId,expectedJobVersion:end.jobVersion,
-     workVersionId:end.workVersionId,completionEventId:end.completionEventId,body:{correctedAt,reason}});
-    setIssue('');save(input,workspace);
-   }catch{setIssue('Enter a different time within the saved limits and give a reason.');}
-  }}>
-   <p>Saved completion <time dateTime={end.completedAt}>{when(end.completedAt)}</time>.</p>
-   {end.originalCompletedAt!==end.completedAt&&<p>First recorded as <time dateTime={end.originalCompletedAt}>{when(end.originalCompletedAt)}</time>.</p>}
-   <p>The final {end.finalIntervalKind==='active'?'work interval':'pause'} began at <time dateTime={end.finalIntervalStartedAt}>
-    {when(end.finalIntervalStartedAt)}</time>. The job stays completed and Crest keeps its original completion in history.</p>
-   <BookingInstantInput label="Corrected completion time" value={correctedAt} zone={workspace.context.timezone} change={setCorrectedAt} seconds/>
-   <label htmlFor={id+'-reason'}>Completion correction reason</label>
-   <textarea name="reason" id={id+'-reason'} rows={2} maxLength={1000} required/>
-   <button type="submit">Save completion correction</button>
-   {issue&&<p role="alert">{issue}</p>}
-  </form>
- </details>;
+type WorkClock=(time:string)=>string;
+type SaveCorrection=(input:Correction,workspace:Workspace)=>void;
+
+function WorkTimeLedger({data,timezone,workspace,start,end,when,save}:{
+ data:LoadedJobWorkTime;timezone:string;workspace:Workspace|null;start:LoadedWorkStart|null;
+ end:LoadedWorkEnd|null;when:WorkClock;save:SaveCorrection;
+}){
+ const day=new Intl.DateTimeFormat('en-US',{timeZone:timezone,weekday:'long',month:'long',day:'numeric',year:'numeric'});
+ const clock=new Intl.DateTimeFormat('en-US',{timeZone:timezone,hour:'numeric',minute:'2-digit',second:'2-digit',timeZoneName:'short'});
+ const {record,intervals}=data;
+ const transitions=new Map(workspace?.workBoundaryAvailable?workBoundaries(data).map(row=>[row.leftVersionId,row]):[]);
+ const groups:{label:string;rows:(typeof intervals)[number][]}[]=[];
+ for(const row of intervals){
+  const label=day.format(new Date(row.startedAt)),previous=groups.at(-1);
+  if(previous?.label===label)previous.rows.push(row);
+  else groups.push({label,rows:[row]});
+ }
+ return <section className="home-panel work-time-ledger" aria-label="Saved intervals">
+  <h2>Saved intervals ({intervals.length})</h2>
+  {groups.map(group=><section key={group.rows[0]!.intervalId} className="work-time-day">
+   <h3>{group.label}</h3>
+   <ol className="work-time-rows">
+    {group.rows.map(row=>{
+     const boundary=transitions.get(row.versionId);
+     const elapsed=scheduleInstantMicroseconds(row.endedAt??record.observedAt)-scheduleInstantMicroseconds(row.startedAt);
+     const sameDay=row.endedAt&&day.format(new Date(row.endedAt))===group.label;
+     return <li className="work-time-interval" key={row.versionId} data-kind={row.kind}>
+      <div className="work-time-interval-head">
+       <h4>{row.kind==='active'?'Active work':'Pause'}</h4>
+       <strong>{duration(elapsed.toString())}{row.endedAt===null&&<small>So far</small>}</strong>
+      </div>
+      <dl className="work-time-interval-times">
+       <div><dt>Start</dt><dd><time dateTime={row.startedAt}>{clock.format(new Date(row.startedAt))}</time></dd></div>
+       <div><dt>End</dt><dd>{row.endedAt?<time dateTime={row.endedAt}>{sameDay?clock.format(new Date(row.endedAt)):when(row.endedAt)}</time>:'Still open'}</dd></div>
+      </dl>
+      {row.pauseReason&&<p className="work-time-reason">{row.pauseReason}</p>}
+      {row.recordReason&&<p className="work-time-reason"><span>Record note</span>{row.recordReason}</p>}
+      {workspace&&start?.workVersionId===row.versionId&&<WorkStartForm start={start} observedAt={record.observedAt} workspace={workspace} when={when} save={save}/>}
+      {workspace&&boundary&&<WorkBoundaryForm data={data} boundary={boundary} workspace={workspace} when={when} save={save}/>}
+      {workspace&&end?.workVersionId===row.versionId&&<WorkEndForm end={end} observedAt={record.observedAt} workspace={workspace} when={when} save={save}/>}
+     </li>;
+    })}
+   </ol>
+  </section>)}
+ </section>;
 }
 
-function WorkStartForm({start,observedAt,workspace,when,save}:{start:LoadedWorkStart;observedAt:string;workspace:Workspace;
- when:(time:string)=>string;save:(input:WorkStartSave,workspace:Workspace)=>void}){
+function CorrectionForm({summary,savedAt,originalAt,description,impact,timeLabel,reasonLabel,saveLabel,workspace,when,build,save}:{
+ summary:string;savedAt:string;originalAt?:string;description:ReactNode;impact?:string;timeLabel:string;reasonLabel:string;saveLabel:string;
+ workspace:Workspace;when:WorkClock;build:(correctedAt:string,reason:string)=>Correction;save:SaveCorrection;
+}){
  const id=useId(),[correctedAt,setCorrectedAt]=useState(''),[issue,setIssue]=useState('');
- return <details>
-  <summary>Correct the first work start</summary>
+ const [proposal,setProposal]=useState<Correction|null>(null);
+ const reviewHeading=useRef<HTMLHeadingElement>(null),reviewButton=useRef<HTMLButtonElement>(null);
+
+ return <details className="work-time-correction">
+  <summary>{summary}</summary>
   <form onSubmit={event=>{
    event.preventDefault();
+   if(proposal)return;
    const reason=String(new FormData(event.currentTarget).get('reason')??'');
    try{
-    if(!correctedAt||correctedAt===start.startedAt||correctedAt>(start.workEndedAt??observedAt)||
-     (start.arrival&&correctedAt<start.arrival.departedAt))throw Error();
-    const input=parseWorkStartSave({schemaVersion:1,businessId:start.businessId,operationId:crypto.randomUUID(),
-     recoveryEpoch:workspace.context.recoveryEpoch,jobId:start.jobId,expectedJobVersion:start.jobVersion,
-     workVersionId:start.workVersionId,arrivalVersionId:start.arrival?.versionId??null,body:{correctedAt,reason}});
-    setIssue('');save(input,workspace);
+    setProposal(build(correctedAt,reason));setIssue('');
+    requestAnimationFrame(()=>reviewHeading.current?.focus());
    }catch{setIssue('Enter a different time within the saved limits and give a reason.');}
   }}>
-   <p>Saved start <time dateTime={start.startedAt}>{when(start.startedAt)}</time>.</p>
-   {start.originalStartedAt!==start.startedAt&&<p>First recorded as <time dateTime={start.originalStartedAt}>{when(start.originalStartedAt)}</time>.</p>}
-   {start.arrival&&<p>This also changes the linked arrival. Its departure at <time dateTime={start.arrival.departedAt}>{when(start.arrival.departedAt)}</time> stays in the trip record.</p>}
-   {start.workEndedAt&&<p>The first active interval ends at <time dateTime={start.workEndedAt}>{when(start.workEndedAt)}</time>.</p>}
-   <BookingInstantInput label="Corrected first start" value={correctedAt} zone={workspace.context.timezone} change={setCorrectedAt} seconds/>
-   <label htmlFor={id+'-reason'}>First-start correction reason</label>
-   <textarea name="reason" id={id+'-reason'} rows={2} maxLength={1000} required/>
-   <button type="submit">Save first-start correction</button>
-   {issue&&<p role="alert">{issue}</p>}
-  </form>
- </details>;
-}
-
-function WorkBoundaryForm({data,workspace,when,save}:{data:LoadedJobWorkTime;workspace:Workspace;
- when:(time:string)=>string;save:(input:WorkBoundarySave,workspace:Workspace)=>void}){
- const id=useId(),[selection,setSelection]=useState(''),[correctedAt,setCorrectedAt]=useState(''),[issue,setIssue]=useState('');
- const boundaries=workBoundaries(data);
- const boundary=boundaries.find(row=>row.leftVersionId===selection);
- const optionTime=new Intl.DateTimeFormat('en-US',{timeZone:workspace.context.timezone,month:'numeric',day:'numeric',
-  hour:'numeric',minute:'2-digit',second:'2-digit'});
- if(boundaries.length===0)return null;
- return <details>
-  <summary>Correct a pause or resume time</summary>
-  <form onSubmit={event=>{
-   event.preventDefault();
-   const reason=String(new FormData(event.currentTarget).get('reason')??'');
-   try{
-    if(!boundary||correctedAt<=boundary.after||correctedAt>=boundary.before||correctedAt===boundary.at)throw Error();
-    const input=parseWorkBoundarySave({schemaVersion:1,businessId:data.record.businessId,operationId:crypto.randomUUID(),
-     recoveryEpoch:workspace.context.recoveryEpoch,jobId:data.record.jobId,expectedJobVersion:data.record.jobVersion,
-     leftVersionId:boundary.leftVersionId,rightVersionId:boundary.rightVersionId,body:{correctedAt,reason}});
-    setIssue('');save(input,workspace);
-   }catch{setIssue('Choose a different time between the adjacent interval limits and enter the reason.');}
-  }}>
-   <p>Change the time that work paused or resumed. Crest keeps both original intervals in history.</p>
-   <label htmlFor={id+'-transition'}>Recorded transition</label>
-   <select id={id+'-transition'} required value={selection} onChange={event=>{setSelection(event.target.value);setCorrectedAt('');setIssue('');}}>
-    <option value="">Choose a saved pause or resume</option>
-    {boundaries.map(row=><option value={row.leftVersionId} key={row.leftVersionId}>{row.action} · {optionTime.format(new Date(row.at))}</option>)}
-   </select>
-   {boundary&&<div key={boundary.leftVersionId}>
-    <p>Saved {boundary.action.toLowerCase()} <time dateTime={boundary.at}>{when(boundary.at)}</time>.</p>
-    <p>Enter a time after {when(boundary.after)} and before {when(boundary.before)}.</p>
-    <BookingInstantInput label="Corrected local time" value={correctedAt} zone={workspace.context.timezone} change={setCorrectedAt} seconds/>
-    <label htmlFor={id+'-reason'}>Correction reason</label>
+   <div className="work-time-correction-fields" hidden={proposal!==null}>
+    <p>Saved time <time dateTime={savedAt}>{when(savedAt)}</time>.</p>
+    {originalAt&&originalAt!==savedAt&&<p>First recorded as <time dateTime={originalAt}>{when(originalAt)}</time>.</p>}
+    <div className="work-time-correction-help">{description}</div>
+    <BookingInstantInput label={timeLabel} value={correctedAt} zone={workspace.context.timezone} change={setCorrectedAt} seconds/>
+    <label htmlFor={id+'-reason'}>{reasonLabel}</label>
     <textarea name="reason" id={id+'-reason'} rows={2} maxLength={1000} required/>
-    <button type="submit">Save work-time correction</button>
-   </div>}
-   {issue&&<p role="alert">{issue}</p>}
+    {issue&&<p role="alert">{issue}</p>}
+    <button ref={reviewButton} type="submit">Review correction</button>
+   </div>
+   {proposal&&<section aria-label="Work-time correction review" className="work-time-correction-review">
+    <h5 ref={reviewHeading} tabIndex={-1}>Review correction</h5>
+    <dl className="work-time-comparison">
+     <div><dt>Saved</dt><dd><time dateTime={savedAt}>{when(savedAt)}</time><small>{savedAt}</small></dd></div>
+     <div><dt>Proposed</dt><dd><time dateTime={proposal.body.correctedAt}>{when(proposal.body.correctedAt)}</time><small>{proposal.body.correctedAt}</small></dd></div>
+    </dl>
+    <p className="work-time-reason"><span>Reason</span>{proposal.body.reason}</p>
+    {impact&&<p className="field-help">{impact}</p>}
+    <div className="work-time-actions">
+     <button type="button" onClick={()=>save(proposal,workspace)}>{saveLabel}</button>
+     <button type="button" className="secondary" onClick={()=>{
+      setProposal(null);requestAnimationFrame(()=>reviewButton.current?.focus());
+     }}>Back to correction</button>
+    </div>
+   </section>}
   </form>
  </details>;
+}
+
+function WorkEndForm({end,observedAt,workspace,when,save}:{end:LoadedWorkEnd;observedAt:string;workspace:Workspace;when:WorkClock;save:SaveCorrection}){
+ return <CorrectionForm summary="Correct the completion time" savedAt={end.completedAt} originalAt={end.originalCompletedAt}
+  description={<p>The final {end.finalIntervalKind==='active'?'work interval':'pause'} began at <time dateTime={end.finalIntervalStartedAt}>{when(end.finalIntervalStartedAt)}</time>. Crest retains the original completion in history.</p>}
+  impact="The job stays completed. The prior completion time is kept in history."
+  timeLabel="Corrected completion time" reasonLabel="Completion correction reason" saveLabel="Save completion correction"
+  workspace={workspace} when={when} save={save} build={(correctedAt,reason)=>{
+   if(!correctedAt||correctedAt===end.completedAt||correctedAt<end.finalIntervalStartedAt||correctedAt>observedAt)throw Error();
+   return parseWorkEndSave({schemaVersion:1,businessId:end.businessId,operationId:crypto.randomUUID(),
+    recoveryEpoch:workspace.context.recoveryEpoch,jobId:end.jobId,expectedJobVersion:end.jobVersion,
+    workVersionId:end.workVersionId,completionEventId:end.completionEventId,body:{correctedAt,reason}});
+  }}/>;
+}
+
+function WorkStartForm({start,observedAt,workspace,when,save}:{start:LoadedWorkStart;observedAt:string;workspace:Workspace;when:WorkClock;save:SaveCorrection}){
+ return <CorrectionForm summary="Correct the first work start" savedAt={start.startedAt} originalAt={start.originalStartedAt}
+  description={<>
+   {start.arrival&&<p>This also changes the linked arrival. The trip keeps its departure at <time dateTime={start.arrival.departedAt}>{when(start.arrival.departedAt)}</time>.</p>}
+   {start.workEndedAt&&<p>The first active interval ends at <time dateTime={start.workEndedAt}>{when(start.workEndedAt)}</time>.</p>}
+  </>}
+  impact={start.arrival?'The linked arrival moves to this time as well.':''}
+  timeLabel="Corrected first start" reasonLabel="First-start correction reason" saveLabel="Save first-start correction"
+  workspace={workspace} when={when} save={save} build={(correctedAt,reason)=>{
+   if(!correctedAt||correctedAt===start.startedAt||correctedAt>(start.workEndedAt??observedAt)||
+    (start.arrival&&correctedAt<start.arrival.departedAt))throw Error();
+   return parseWorkStartSave({schemaVersion:1,businessId:start.businessId,operationId:crypto.randomUUID(),
+    recoveryEpoch:workspace.context.recoveryEpoch,jobId:start.jobId,expectedJobVersion:start.jobVersion,
+    workVersionId:start.workVersionId,arrivalVersionId:start.arrival?.versionId??null,body:{correctedAt,reason}});
+  }}/>;
+}
+
+function WorkBoundaryForm({data,boundary,workspace,when,save}:{
+ data:LoadedJobWorkTime;boundary:ReturnType<typeof workBoundaries>[number];workspace:Workspace;when:WorkClock;save:SaveCorrection;
+}){
+ return <CorrectionForm summary={boundary.action==='Pause'?'Correct this pause time':'Correct this resume time'} savedAt={boundary.at}
+  description={<p>Choose a time after <time dateTime={boundary.after}>{when(boundary.after)}</time> and before <time dateTime={boundary.before}>{when(boundary.before)}</time>. Crest retains both original intervals in history.</p>}
+  impact={boundary.action==='Pause'?'This moves the end of work and the start of the pause.':'This moves the end of the pause and the start of work.'}
+  timeLabel="Corrected local time" reasonLabel="Correction reason" saveLabel="Save work-time correction"
+  workspace={workspace} when={when} save={save} build={(correctedAt,reason)=>{
+   if(correctedAt<=boundary.after||correctedAt>=boundary.before||correctedAt===boundary.at)throw Error();
+   return parseWorkBoundarySave({schemaVersion:1,businessId:data.record.businessId,operationId:crypto.randomUUID(),
+    recoveryEpoch:workspace.context.recoveryEpoch,jobId:data.record.jobId,expectedJobVersion:data.record.jobVersion,
+    leftVersionId:boundary.leftVersionId,rightVersionId:boundary.rightVersionId,body:{correctedAt,reason}});
+  }}/>;
 }

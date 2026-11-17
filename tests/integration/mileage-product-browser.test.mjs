@@ -40,13 +40,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    return (await fetch('/api/business/scheduling/book',{...init,headers:{...init.headers,'x-crest-csrf':csrfToken},body:JSON.stringify(body)})).status;
   },fixture.bookingRequest),200);
   await page.goto(fixture.origin+job);
-  await page.getByRole('button',{name:'Record work status…',exact:true}).click();
+  await page.getByRole('button',{name:'Record departure…',exact:true}).click();
   await page.getByLabel('Vehicle you are driving',{exact:true}).selectOption(fixture.fieldVehicleId);
   await page.getByLabel('Where are you leaving from?',{exact:true}).fill('Synthetic equipment base');
   await page.getByRole('button',{name:'Record departure',exact:true}).click();
   await expect(status).toContainText('Work status saved.');
   await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
-  await page.getByRole('button',{name:'Record work status…',exact:true}).click();
+  await page.getByRole('button',{name:'Record arrival and start work…',exact:true}).click();
   await page.getByRole('button',{name:'Record arrival and start work',exact:true}).click();
   await expect(status).toContainText('Work status saved.');
   await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
@@ -55,6 +55,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(status).toHaveText('Saved mileage history loaded.');
   await page.getByLabel('Actual miles',{exact:true}).fill('7.125');
   await page.getByLabel('Type of travel',{exact:true}).selectOption('business_rig');
+  await page.getByRole('button',{name:'Review mileage',exact:true}).click();
   await page.getByRole('button',{name:'Save mileage',exact:true}).click();
   await expect(status).toHaveText('Mileage saved.');
   const history=page.getByRole('region',{name:'Saved mileage history',exact:true});
@@ -141,13 +142,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.getByRole('link',{name:'Review trip mileage',exact:true}).click();
   await expect(status).toHaveText('No trips are recorded for this job.');
   await page.getByRole('link',{name:'Saved job',exact:true}).click();
-  await page.getByRole('button',{name:'Record work status…',exact:true}).click();
+  await page.getByRole('button',{name:'Record departure…',exact:true}).click();
   await page.getByLabel('Vehicle you are driving',{exact:true}).selectOption(fixture.fieldVehicleId);
   await page.getByLabel('Where are you leaving from?',{exact:true}).fill('Synthetic equipment base');
   await page.getByRole('button',{name:'Record departure',exact:true}).click();
   await expect(status).toContainText('Work status saved.');
   await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
-  await page.getByRole('button',{name:'Record work status…',exact:true}).click();
+  await page.getByRole('button',{name:'Record arrival and start work…',exact:true}).click();
   await page.getByRole('button',{name:'Record arrival and start work',exact:true}).click();
   await expect(status).toContainText('Work status saved.');
   await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
@@ -170,6 +171,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
     assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
     await page.screenshot({path:'.local/review/mileage-'+stage+'-'+name+'-'+width+'.png',fullPage:true});
+    if(stage==='saved')await page.screenshot({path:'.local/review/mileage-saved-viewport-'+name+'-'+width+'.png'});
+    if(stage==='split')await page.getByRole('region',{name:'Business attribution'}).screenshot({path:'.local/review/mileage-attribution-'+name+'-'+width+'.png'});
    }
   }
   await capture('form');
@@ -199,15 +202,46 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    if(name==='webkit')await route.abort('failed');
    else await route.fulfill({response});
   });
-  const save=page.getByRole('button',{name:'Save mileage',exact:true});
-  await save.click();
+  const reviewButton=page.getByRole('button',{name:'Review mileage',exact:true});
+  const totals=page.getByRole('region',{name:'Business attribution'}).getByRole('region',{name:'Allocation totals'});
+  await expect(totals).toContainText('85.123456%');
+  await expect(totals).toContainText('14.876544%');
+  await expect(totals).toContainText('≈ 2.1943 mi');
+  await page.getByLabel(/Nov 4.*share \(%\)/).fill('50');
+  await expect(totals).toContainText('Over allocated');
+  await expect(totals).toContainText('10.123456%');
+  await page.getByLabel(/Nov 4.*share \(%\)/).fill('25');
+  await reviewButton.click();
   await expect(page.getByRole('group',{name:'Record mileage',exact:true}).getByRole('alert')).toContainText('totaling exactly 100%');
   assert.equal(submissions,0);
   await page.getByLabel(/Nov 4.*share \(%\)/).fill('39.876544');
   await capture('split');
   await page.setViewportSize({width:390,height:844});
-  await save.focus();
-  await page.keyboard.press('Enter');
+  await expect(totals).toContainText('100%');
+  await expect(totals).toContainText('14.75 mi');
+  await expect(totals).toContainText('0 mi');
+  await reviewButton.press('Enter');
+  const review=page.getByRole('region',{name:'Mileage review',exact:true});
+  await expect(review.getByRole('heading')).toBeFocused();
+  await expect(review).toContainText('60.123456%');
+  await expect(review).toContainText('14.75 mi');
+  assert.equal(submissions,0);
+  await review.getByRole('button',{name:'Back to mileage details',exact:true}).press('Enter');
+  await expect(reviewButton).toBeFocused();
+  await expect(page.getByLabel('This job share (%)',{exact:true})).toHaveValue('60.123456');
+  await reviewButton.press('Enter');
+  for(const width of [360,390]){
+   await page.setViewportSize({width,height:844});
+   assert(await review.locator('.mileage-review-jobs strong').evaluateAll(values=>values.length===2&&values.every(value=>{
+    const range=document.createRange();
+    range.selectNodeContents(value);
+    const lines=new Set(Array.from(range.getClientRects(),rect=>rect.top));
+    return lines.size===1;
+   })));
+   assert.deepEqual((await new AxeBuilder({page}).include('.mileage-review').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+  }
+  await review.screenshot({path:'.local/review/mileage-review-'+name+'.png',animations:'disabled'});
+  await review.getByRole('button',{name:'Save mileage',exact:true}).press('Enter');
   if(name==='webkit'){
    await expect(status).toContainText('The save outcome is unknown');
    const saved=await page.evaluate(()=>sessionStorage.getItem('crest.mileage.pending-reference.v1'));
@@ -226,7 +260,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.getByLabel('This job share (%)',{exact:true}).fill('80');
   await page.getByLabel(/Previously allocated job \d+ share/).fill('20');
   await page.getByLabel('Reason for correction',{exact:true}).fill('Synthetic odometer correction');
-  await page.getByRole('button',{name:'Save correction',exact:true}).click();
+  await reviewButton.click();
+  await expect(review).toContainText('14.7500 mi');
+  await expect(review).toContainText('15.125 mi');
+  await review.getByRole('button',{name:'Save correction',exact:true}).click();
   await expect(status).toHaveText('Mileage saved.');
   await expect(history).toContainText('15.1250 actual miles');
   await expect(history).toContainText('14.7500 actual miles');
@@ -237,8 +274,40 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await split.locator('summary').click();
   await expect(split).toContainText('80% · This job');
   await expect(split).toContainText('20% · Open allocated job');
-  await expect(split.getByRole('link',{name:/Open allocated job/})).toHaveAttribute('href','/schedule?job='+other.jobId);
+  const allocatedJob=split.getByRole('link',{name:/Open allocated job/});
+  const href=new URL(await allocatedJob.getAttribute('href'),fixture.origin);
+  assert.equal(href.searchParams.get('job'),other.jobId);
+  assert.equal(href.searchParams.get('mileageJob'),jobId);
+  assert.equal(href.searchParams.get('from'),'mileage');
   await capture('saved');
+  await page.setViewportSize({width:390,height:844});
+  await allocatedJob.press('Enter');
+  const returnLink=page.getByRole('link',{name:'Back to trip mileage',exact:true});
+  await expect(returnLink).toBeVisible();
+  const returnHref=new URL(await returnLink.getAttribute('href'),fixture.origin);
+  assert.equal(returnHref.searchParams.get('trip'),href.searchParams.get('mileageLeg'));
+  assert.equal(returnHref.searchParams.get('at'),href.searchParams.get('mileageAt'));
+  const listRoute='**/api/business/scheduling/mileage-trips';
+  let anchoredReads=0;
+  await page.route(listRoute,async route=>{
+   const query=route.request().postDataJSON(),response=await route.fetch();
+   assert.equal(response.status(),200);
+   if(query.afterLegId){
+    anchoredReads++;
+    assert.equal(query.afterDepartedAt,returnHref.searchParams.get('at'));
+    await route.fulfill({response});
+   }else{
+    // Model a first page that no longer contains the selected trip. The actual
+    // cursor request and subsequent history must still use the authorized reads.
+    const payload=await response.json();
+    await route.fulfill({response,json:{...payload,hasMore:false,trips:[]}});
+   }
+  });
+  await returnLink.press('Enter');
+  await expect(page.getByRole('heading',{name:'Travel to job',exact:true})).toBeFocused();
+  assert.equal(anchoredReads,1);
+  await page.unroute(listRoute);
+  await expect(page.getByRole('region',{name:'Current saved mileage',exact:true})).toContainText('15.125 mi');
   const button=page.getByRole('button',{name:'Download loaded history (CSV + JSON)',exact:true});
   const [download]=await Promise.all([page.waitForEvent('download'),button.click()]);
   assert.equal(download.suggestedFilename(),'crest-mileage-history-page.zip');

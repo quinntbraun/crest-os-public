@@ -6,14 +6,24 @@ import {SourceExportDownloadScreen} from './export-downloads';
 type ExportAction='load'|'older'|'request'|'checkOriginal'|'checkResolution'|'retire'|'checkJob';
 
 export function SourceExportControls({view,action,editReason,selectJob,statusRef}:{view:SourceExportView;action:(kind:ExportAction)=>void;editReason:(value:string)=>void;selectJob:(id:string)=>void;statusRef?:React.Ref<HTMLParagraphElement>}){
- return <section className="export-files" aria-label="Business data exports" aria-busy={view.busy}>
-  <h2>Business export requests</h2>
-  <p ref={statusRef} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
-  <p>Exports contain private business records. Keep downloaded copies somewhere only you can access. Continue keeping separate database backups.</p>
-  <button type="button" disabled={view.busy} onClick={()=>action('load')}>Check sign-in and load exports</button>
-  {view.phase==='ready'&&<button type="button" disabled={!view.canRequest} onClick={()=>action('request')}>Request business export</button>}
-  {view.jobs.length>0&&<><h2>Export history</h2><p>Up to five exports per page. Times are shown in UTC.</p><ul aria-label="Export history">{view.jobs.map(job=><li key={job.id}><button className="secondary" type="button" disabled={view.busy} aria-pressed={view.jobId===job.id} onClick={()=>selectJob(job.id)}><time dateTime={job.createdAt}>{new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'}).format(new Date(job.createdAt))} UTC</time> · {job.state}</button></li>)}</ul></>}
-  {view.hasOlder&&<button type="button" disabled={!view.canLoadOlder} onClick={()=>action('older')}>Older exports</button>}
+ return <section className="export-files export-source" aria-label="Business data exports" aria-busy={view.busy}>
+  <header className="export-collection-header">
+   <h2>Business export requests</h2>
+   <p>Request a package of business records or download the files from a saved export.</p>
+  </header>
+  <p className="export-status" ref={statusRef} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
+  <div className="export-actions">
+   {view.phase==='ready'&&<button type="button" disabled={!view.canRequest} onClick={()=>action('request')}>Request business export</button>}
+   <button className={view.phase==='ready'?'secondary':undefined} type="button" disabled={view.busy} onClick={()=>action('load')}>Check sign-in and load exports</button>
+  </div>
+  {view.jobs.length>0&&<section className="export-history">
+   <h3>Export history</h3><p className="field-help">Times shown in UTC</p>
+   <ul aria-label="Export history">{view.jobs.map(job=><li key={job.id}><button className="secondary" type="button" disabled={view.busy} aria-pressed={view.jobId===job.id} onClick={()=>selectJob(job.id)}>
+    <time dateTime={job.createdAt}>{new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'}).format(new Date(job.createdAt))}</time>
+    <span className="export-state">{job.state}</span>
+   </button></li>)}</ul>
+  </section>}
+  {view.hasOlder&&<button className="secondary export-inline-action" type="button" disabled={!view.canLoadOlder} onClick={()=>action('older')}>Older exports</button>}
   {view.phase==='pending'&&<>
    <p>Keep this tab’s saved request until its outcome is confirmed. Closing the tab or clearing browser data may remove the reference.</p>
    {view.reference&&<p>Request reference: <code>{view.reference}</code></p>}
@@ -26,8 +36,11 @@ export function SourceExportControls({view,action,editReason,selectJob,statusRef
     <button type="submit" disabled={!view.canRetire}>Close this interrupted request</button>
    </form>
   </>}
-  {view.jobId&&<p>Export reference: <code>{view.jobId}</code>{view.jobState&&<> · Status: {view.jobState}</>}</p>}
-  {view.canCheckJob&&<button type="button" disabled={view.busy} onClick={()=>action('checkJob')}>Check export status</button>}
+  {view.jobId&&<div className="export-selection">
+   <p><strong>Selected export</strong>{view.jobState&&<span className="export-state">{view.jobState}</span>}</p>
+   <details><summary>Export reference</summary><code>{view.jobId}</code></details>
+   {view.canCheckJob&&<button className="secondary export-inline-action" type="button" disabled={view.busy} onClick={()=>action('checkJob')}>Check export status</button>}
+  </div>}
  </section>;
 }
 // Not registered as a product page. Adoption and verified download
@@ -40,5 +53,8 @@ export function SourceExportScreen(){
   return()=>{controller.dispose();current.current=null;window.removeEventListener('pagehide',review);window.removeEventListener('pageshow',restore);document.removeEventListener('visibilitychange',review);};
  },[]);
  async function action(kind:ExportAction){const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
- return <><SourceExportControls view={view} statusRef={status} action={kind=>{void action(kind);}} editReason={value=>current.current?.editReason(value)} selectJob={value=>current.current?.selectJob(value)}/>{!view.busy&&view.jobId&&view.jobState==='Ready'&&['ready','confirmed'].includes(view.phase)&&<SourceExportDownloadScreen key={view.jobId} jobId={view.jobId}/>}</>;
+ return <div className="export-collection">
+  <SourceExportControls view={view} statusRef={status} action={kind=>{void action(kind);}} editReason={value=>current.current?.editReason(value)} selectJob={value=>current.current?.selectJob(value)}/>
+  {!view.busy&&view.jobId&&view.jobState==='Ready'&&['ready','confirmed'].includes(view.phase)&&<SourceExportDownloadScreen key={view.jobId} jobId={view.jobId}/>}
+ </div>;
 }

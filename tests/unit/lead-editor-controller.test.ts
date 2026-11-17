@@ -21,6 +21,18 @@ const result=(c=command())=>({state:'committed' as const,operationId:c.operation
 const reference=()=>pendingLead({schemaVersion:1,businessId:leadBusiness,binding,reference:{operationId,leadId:newLeadId,expectedVersion:'0',recoveryEpoch:epoch}});
 let memory:Map<string,string>,storage:{getItem:Mock<(key:string)=>string|null>;setItem:Mock<(key:string,value:string)=>void>;removeItem:Mock<(key:string)=>void>},store:ReturnType<typeof createPendingLeadStore>,api:{[K in keyof typeof leads]:Mock<(typeof leads)[K]>},session:Mock<typeof authentication.session>,id:Mock<()=>string>;
 const controller=()=>createLeadEditorController({conversionStore:{read:conversionRead},addressStore:createPendingLeadAddressStore(storage),vehicleStore:createPendingLeadVehicleStore(storage),store,statusStore:createPendingLeadStateStore(storage),api,session,id,change:vi.fn()});
+it('clears the directory and queue when the follow-up cursor belongs to a prior sign-in binding',async()=>{
+ const lead=leadFixture();
+ api.followUps.mockResolvedValue({schemaVersion:1,businessId:leadBusiness,observedAt:'2026-11-01T02:00:00.000000Z',hasMore:false,
+  followUps:[{id:lead.id,label:lead.label,state:lead.state,followUpAt:'2026-11-01T01:00:00.000000Z'}]});
+ const c=controller();
+ await c.load();
+ expect(c.view().followUps?.page?.followUps).toHaveLength(1);
+ api.context.mockResolvedValueOnce({...context(),binding:randomBytes(32).toString('base64url')});
+ await c.pageFollowUps();
+ expect(c.view()).toMatchObject({phase:'unavailable',rows:[],followUps:null});
+ expect(api.followUps).toHaveBeenCalledTimes(1);
+});
 it('a vehicle report reference appearing during fresh intake authority blocks a new operation and also blocks uncertain retry',async()=>{
  const vehicle=createPendingLeadVehicleStore(storage),value=pendingLeadVehicle({schemaVersion:1,businessId:leadBusiness,binding,reference:{operationId:randomUUID(),leadId:newLeadId,leadVehicleId:randomUUID(),expectedVersion:'0',recoveryEpoch:epoch}}),c=await prepared();
  api.context.mockImplementation(async()=>{vehicle.write(value);return context();});await c.save();expect(api.save).not.toHaveBeenCalled();expect(id).not.toHaveBeenCalled();expect(c.view().phase).toBe('blocked');vehicle.clear(value);api.context.mockResolvedValue(context());

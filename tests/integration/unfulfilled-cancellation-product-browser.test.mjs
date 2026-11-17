@@ -38,7 +38,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await page.goto(cancel);
   await expect(status).toContainText('no longer eligible');
   await page.goto(work);
-  await page.getByLabel('What is happening?').selectOption('direct_arrive');
+  await page.getByText('Other ways to start',{exact:true}).click();await page.getByRole('button',{name:'Already here — start without recorded travel',exact:true}).click();
   await page.getByLabel('Why was travel not recorded?').fill('Synthetic arrival without trip');
   await page.getByRole('button',{name:'Start work without recorded travel'}).click();
   await expect(page.getByText('Confirmed saved version 2.',{exact:true})).toBeVisible();
@@ -57,7 +57,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
    await expect(status).toHaveText('Trip saved.');
   }
   await page.goto(work);
-  await page.getByRole('link',{name:'Cancel if no work was completed'}).click();
+  await page.getByText('More actions',{exact:true}).click();await page.getByRole('link',{name:'Cancel if no work was completed'}).click();
   await expect(status).toHaveText('Review the saved work before cancelling.');
   await expect(page.getByRole('link',{name:'Review and end job',exact:true})).toHaveCount(0);
   const assignments=page.getByText(/^Assigned work \([1-9]\d*\)$/);

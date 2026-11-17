@@ -40,7 +40,7 @@ for(const engine of [chromium,webkit]){
 
    const load=async()=>{
     await page.goto(fixture.origin+'/settings/accounts');
-    await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+    await page.getByRole('button',{name:'Setup',exact:true}).click();
     await page.getByText('Opening worksheet',{exact:true}).click();
     const worksheet=page.getByRole('region',{name:'Fictional opening worksheet'});
     await worksheet.getByRole('button',{name:'Load opening worksheet'}).click();

@@ -61,7 +61,7 @@ export function ReceivableAging({businessId}:{businessId:string}){
     }
   }
 
-  return <details className="review-card" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
+  return <details className="review-card" open onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
     <summary onClick={event=>{if(event.currentTarget.closest('details')?.open)clear();}}>Outstanding invoices by due date</summary>
     <section aria-label="Outstanding invoices by due date" aria-busy={busy}>
       <p className="field-help">Fictional posted invoices. Opening receivables and legacy balances are outside this report’s coverage.</p>
@@ -73,7 +73,7 @@ export function ReceivableAging({businessId}:{businessId:string}){
       </form>
       <p role="status">{message}</p>
       {report&&<>
-        <p>As of <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></p>
+        <p className={styles.reportPeriod}>Receivables · As of <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></p>
         <dl className={styles.amountBreakdown}>
           <dt>Total outstanding</dt><dd>{usd(report.totalCents)}</dd>
           {receivableAgingBuckets.map(key=><Fragment key={key}>

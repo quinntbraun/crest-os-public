@@ -28,7 +28,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await page.getByRole('button',{name:'Sign in',exact:true}).click();
    await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
     await page.goto(fixture.origin+'/settings/accounts');
-    await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+    await page.getByRole('button',{name:'Setup',exact:true}).click();
     await page.getByText('Invoice numbering and periods',{exact:true}).click();
     const setup=page.getByRole('region',{name:'Fictional invoice setup',exact:true});
     await setup.getByRole('button',{name:'Load invoice setup',exact:true}).click();
@@ -50,7 +50,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await expect(page.getByRole('region',{name:'Customer directory',exact:true})
     .locator(':scope > [role="status"]')).toContainText('Customer saved');
    await page.getByRole('button',{name:'Load current customers',exact:true}).press('Enter');
-   await page.getByRole('button',{name:customerName,exact:true}).press('Enter');
+   await page.getByRole('button',{name:customerName,exact:true}).press('Enter');await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Payments',exact:true}).click();
    const payment=page.getByRole('region',{name:'Record a fictional payment',exact:true});
    await page.getByText('Record a fictional payment',{exact:true}).press('Enter');
    await payment.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
@@ -149,7 +149,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    const reload=page.getByRole('button',{name:'Load current customers',exact:true});
    await expect(entries.or(reload).first()).toBeVisible();
    if(!await entries.isVisible())await reload.press('Enter');
-   await entries.press('Enter');
+   await entries.press('Enter');await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Payments',exact:true}).click();
    await disclosure.press('Enter');
    await region.getByRole('button',{name:'Check original save',exact:true}).press('Enter');
    await expect(region.locator(':scope > [role="status"]')).toHaveText('Crest found the original recovered deposit.');
@@ -160,8 +160,6 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    assert((await readFile(await (await receipt).path(),'utf8')).includes(restoredTip.components[0].tip.tipRealizationId));
 
    await page.goto(fixture.origin+'/settings/accounts');
-   await page.getByRole('button',{name:'Load accounts',exact:true}).click();
-   await page.getByText('Fictional trial balance',{exact:true}).press('Enter');
    const trial=page.getByRole('region',{name:'Fictional trial balance',exact:true});
    await trial.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
    await expect(trial.getByRole('status')).toHaveText('Posted balances loaded.');

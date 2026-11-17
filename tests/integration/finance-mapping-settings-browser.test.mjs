@@ -30,7 +30,7 @@ for(const engine of [chromium,webkit]){
    await expect(page.getByRole('status')).toContainText('Signed in');
    await page.goto(fixture.origin+'/settings');
    await page.getByRole('link',{name:'Fictional account setup',exact:true}).click();
-   await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+   await page.getByRole('button',{name:'Setup',exact:true}).click();
    await expect(page.getByRole('link',{name:'Expense category mappings',exact:true})).toHaveCount(0);
    await page.getByRole('link',{name:'Dated account mappings',exact:true}).click();
 
@@ -45,7 +45,9 @@ for(const engine of [chromium,webkit]){
    await check.press('Enter');
    await expect(status).toHaveText('Approved mapping found.');
    await expect(view.getByRole('heading',{name:'Account on Mar 31, 2026',exact:true})).toBeVisible();
-   await expect(view.getByText('4000 · Detailing service revenue',{exact:true})).toBeVisible();
+   const approved=view.getByRole('region',{name:'Approved account',exact:true});
+   await expect(approved.getByText('Detailing service revenue',{exact:true})).toBeVisible();
+   await expect(approved.getByText('4000',{exact:true})).toBeVisible();
    await expect(view.getByText('Version 1 · Effective Jan 1, 2026. Next version starts Apr 1, 2026.',{exact:true})).toBeVisible();
    await mkdir('.local/review',{recursive:true});
    await page.screenshot({path:'.local/review/finance-mapping-lookup-'+engine.name()+'-390.png',animations:'disabled'});
@@ -63,6 +65,7 @@ for(const engine of [chromium,webkit]){
    await approvals.click();
    await expect(status).toHaveText('Saved mapping history loaded.');
    await expect(history.getByText('Version 3 · Closed',{exact:true})).toBeVisible();
+   await history.getByText('Version 1 · Account 4000',{exact:true}).click();
    await expect(history.getByText('=Fictional initial approval',{exact:true})).toBeVisible();
    const download=page.waitForEvent('download');
    await history.getByRole('button',{name:'Download loaded approvals (CSV)',exact:true}).click();
@@ -149,6 +152,11 @@ for(const engine of [chromium,webkit]){
    const effective=editor.getByLabel('Effective from',{exact:true}),saveClosure=editor.getByRole('button',{name:'Save closure',exact:true});
    await effective.fill('2026-11-01');
    await editor.getByLabel('Closure reason',{exact:true}).fill('Fictional owner closed this mapping');
+   const savedRule=editor.getByRole('region',{name:'Latest saved rule',exact:true});
+   const proposed=editor.getByRole('region',{name:'Proposed rule',exact:true});
+   await expect(savedRule).toContainText('4000');
+   await expect(proposed).toContainText('No posting account from this date');
+   await expect(proposed).toContainText('Fictional owner closed this mapping');
    await expect(saveClosure).toBeDisabled();
    await effective.fill('2026-12-01');
    for(const width of [360,390,768,1440]){
@@ -157,6 +165,7 @@ for(const engine of [chromium,webkit]){
     assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
     await page.evaluate(()=>window.scrollTo(0,0));
     await page.screenshot({path:'.local/review/finance-mapping-manage-'+engine.name()+'-'+width+'.png',animations:'disabled'});
+    if(width===390||width===1440)await editor.locator('.mapping-rule-comparison').screenshot({path:'.local/review/finance-mapping-comparison-'+engine.name()+'-'+width+'.png'});
    }
    let closureStatus;
    await page.route('**/api/business/finance-accounts/mapping-approve',async route=>{
@@ -172,6 +181,7 @@ for(const engine of [chromium,webkit]){
    await review.click();
    await expect(editorStatus).toHaveText('The original approval was confirmed.');
    await expect(editor.getByText('Version 5 · Closed · Effective Dec 1, 2026',{exact:true})).toBeVisible();
+   await expect(editor.getByRole('region',{name:'Saved mapping change',exact:true})).toContainText('Mapping closure recorded');
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
 
    const approveButton=editor.getByRole('button',{name:'Approve mapping',exact:true});

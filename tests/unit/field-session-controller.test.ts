@@ -10,6 +10,7 @@ import {fieldSessionOriginal} from '../../src/operations/field-session-contract'
 import type {FieldSessionSave} from '../../src/operations/field-session-contract';
 import {jobChangeFixture} from '../fixtures/job-change';
 import {vehicleFixture} from '../support/vehicle-fixture';
+import {parseCustomer} from '../../src/customer/customer-contract';
 function committed(q:FieldSessionSave){return {schemaVersion:1 as const,original:fieldSessionOriginal(q),result:{state:'committed' as const,receipt:{schemaVersion:1 as const,commandType:'operations.job.field' as const,businessId:q.businessId,actorId:randomUUID(),operationId:q.operationId,recoveryEpoch:q.recoveryEpoch,subjectId:q.jobId,sourceRecordId:q.jobId,sourceVersion:(BigInt(q.expectedJobVersion)+1n).toString(),sourceAuditIds:[randomUUID()]}}};}
 function setup(state='scheduled'){
  const f=jobChangeFixture(),resources={...f.resources,head:{...f.resources.head,job:{...f.resources.head.job,state}}},context={fieldSessionAvailable:true as boolean,binding:randomBytes(32).toString('base64url'),context:{schemaVersion:1 as const,businessId:f.q.businessId,operatorId:f.q.payload.operatorId,timezone:'UTC',modeVersion:f.mode,writeState:'ready' as 'ready'|'paused',recoveryEpoch:randomUUID() as string|null}},map=new Map<string,string>(),storage={getItem:(key:string)=>map.get(key)??null,setItem:(key:string,value:string)=>{map.set(key,value);},removeItem:(key:string)=>{map.delete(key);}},store=createPendingSchedulingStore(storage,'operations.job.field'),rig=vehicleFixture({business_id:f.q.businessId,kind:'business_rig'}),proof={csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000};
@@ -50,3 +51,45 @@ it('keeps a known non-submission explicit if reference cleanup fails',async()=>{
 it('hides pending identity from a different signed-in binding',async()=>{const f=setup();await f.controller.load(f.f.q.jobId);f.api.saveFieldSession.mockRejectedValueOnce(new SchedulingClientError('unknown'));await f.controller.save(f.depart);f.context.binding=randomBytes(32).toString('base64url');await f.controller.check();expect(f.controller.view()).toMatchObject({phase:'pending',reference:'',savedJobId:'',resources:null});expect(f.lookup).not.toHaveBeenCalled();});
 it('refuses blank pause reason, wrong action and a vehicle outside the loaded list',async()=>{const f=setup();await f.controller.load(f.f.q.jobId);for(const body of [{action:'pause' as const,reason:' '},{action:'arrive' as const,reason:null},{...f.depart,trip:{...f.depart.trip,drivenVehicleId:randomUUID()}}])await f.controller.save(body);expect(f.api.saveFieldSession).not.toHaveBeenCalled();expect(f.store.read()).toBeNull();});
 it('clears private data on permission failure and keeps writes paused without submitting',async()=>{const f=setup();await f.controller.load(f.f.q.jobId);f.session.mockRejectedValueOnce(new AuthenticationError('denied'));await f.controller.save(f.depart);expect(f.controller.view()).toMatchObject({phase:'signed-out',resources:null,vehicles:[]});const paused=setup();paused.context.context.writeState='paused';paused.context.context.recoveryEpoch=null;await paused.controller.load(paused.f.q.jobId);await paused.controller.save(paused.depart);expect(paused.api.saveFieldSession).not.toHaveBeenCalled();});
+
+it('groups completion scope only when the saved booking and agreement share the same plan',async()=>{
+ const f=setup('in_progress');
+ const firstVehicle=f.resources.vehicles[0]!;
+ const secondVehicle={...firstVehicle,id:randomUUID(),vehicle_id:randomUUID()};
+ const template=f.resources.scopeParts[0]!;
+ const parts=Array.from({length:4},()=>({...template,sourceAllocationId:randomUUID(),partitionId:randomUUID(),
+  entitlementId:randomUUID(),entitlementVersionId:randomUUID(),planId:randomUUID(),state:'assigned' as const}));
+ const assignments=parts.map(part=>({assignedPartId:randomUUID(),partitionId:part.partitionId,planId:part.planId,
+  planSequence:part.planSequence,scopeDescription:part.scopeDescription,grossInclusiveCents:part.grossInclusiveCents,
+  discountInclusiveCents:part.discountInclusiveCents,amountCents:part.amountCents}));
+ const vehicleIds=[firstVehicle.vehicle_id,secondVehicle.vehicle_id,null,firstVehicle.vehicle_id];
+ const sources=parts.map((part,index)=>({...part,sourcePartitionId:part.partitionId,
+  vehicleId:vehicleIds[index]!,jobWide:index===2,parts:[part],
+  entitlementVersionId:index===3?randomUUID():part.entitlementVersionId}));
+ const api={...f.api,
+  workspace:vi.fn<typeof scheduling.workspace>().mockImplementation(async(proof,signal)=>({
+   ...await f.api.workspace(proof,signal),jobCompletionAvailable:true as const,
+  })),
+  resources:vi.fn<typeof scheduling.resources>().mockResolvedValue({...f.resources,schemaVersion:1,vehicles:[firstVehicle,secondVehicle],scopeParts:parts}),
+  completionContext:vi.fn<typeof scheduling.completionContext>().mockResolvedValue({
+   schemaVersion:1,businessId:f.f.q.businessId,jobId:f.f.q.jobId,jobVersion:f.resources.head.job.version,
+   jobState:'in_progress',customerVersion:'1',assignments,duplicateRequestIds:[],contactReviewRequired:false,
+  }),
+  agreement:vi.fn<typeof scheduling.agreement>().mockResolvedValue({
+   schemaVersion:1,businessId:f.f.q.businessId,familyId:f.resources.encounters[0]!.family_id,
+   familyVersion:'1',agreementId:template.agreementId,agreementVersion:'1',customer:parseCustomer(firstVehicle.customer_snapshot,f.f.q.businessId),
+   vehicles:[],sources,
+  }),
+ };
+ const store=createPendingSchedulingStore(f.storage,'operations.job.complete');
+ const controller=createFieldSessionController({mode:'completion',store,api,session:f.session,change:vi.fn()});
+ await controller.load(f.f.q.jobId);
+ expect(api.agreement).toHaveBeenCalledOnce();
+ expect(controller.view().completionVehicles).toEqual({
+  [assignments[0]!.assignedPartId]:firstVehicle.vehicle_id,
+  [assignments[1]!.assignedPartId]:secondVehicle.vehicle_id,
+  [assignments[2]!.assignedPartId]:null,
+ });
+ controller.suspend();
+ expect(controller.view().completionVehicles).toBeUndefined();
+});

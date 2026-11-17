@@ -31,7 +31,7 @@ for(const engine of [chromium,webkit]){
     await expect(page.getByRole('status')).toContainText('Signed in');
     await page.goto(fixture.origin+'/settings');
     await page.getByRole('link',{name:'Fictional account setup',exact:true}).click();
-    await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+    await page.getByRole('button',{name:'Setup',exact:true}).click();
     await page.getByRole('link',{name:'Expense category mappings',exact:true}).click();
     await page.getByRole('link',{name:'Manage category approvals',exact:true}).click();
 
@@ -102,12 +102,32 @@ for(const engine of [chromium,webkit]){
     const effective=lookup.getByLabel('Effective date',{exact:true});
     await effective.fill('2026-02-28');
     await lookup.getByRole('button',{name:'Check account',exact:true}).click();
-    await expect(lookup.getByText('5100 · Fuel',{exact:true})).toBeVisible();
+    const approved=lookup.getByRole('region',{name:'Approved account',exact:true});
+    await expect(approved.getByText('Fuel',{exact:true})).toBeVisible();
+    await expect(approved.getByText('5100',{exact:true})).toBeVisible();
     await expect(lookup.getByRole('heading',{name:'Account on Feb 28, 2026',exact:true})).toBeFocused();
+    const directory=lookup.getByRole('region',{name:'Expense category directory',exact:true});
+    await directory.getByRole('button',{name:'Check categories for selected date',exact:true}).click();
+    await expect(lookup.getByRole('status')).toHaveText('Category mappings checked for Feb 28, 2026.',{timeout:15000});
+    await expect(directory).toContainText('Posting accounts on Feb 28, 2026');
+    await directory.getByLabel('Find a category',{exact:true}).fill('fuel');
+    await expect(directory.getByRole('listitem')).toHaveCount(1);
+    await expect(directory.getByRole('listitem')).toContainText('Account 5100');
+    await directory.getByLabel('Show categories needing attention',{exact:true}).check();
+    await expect(directory.getByText('No categories match these filters.',{exact:true})).toBeVisible();
+    await directory.getByLabel('Show categories needing attention',{exact:true}).uncheck();
+    await directory.screenshot({path:'.local/review/finance-category-directory-'+engine.name()+'-390.png'});
+    await directory.getByLabel('Find a category',{exact:true}).fill('insurance');
+    await directory.getByRole('button',{name:'History for Insurance',exact:true}).click();
+    const emptyHistory=lookup.getByRole('region',{name:'Saved mapping history',exact:true});
+    await expect(emptyHistory.getByText('No approved versions for this category.',{exact:true})).toBeVisible();
+    await expect(emptyHistory.getByRole('link',{name:'Manage approvals for Insurance',exact:true})).toHaveAttribute('href','/settings/accounts/mappings/categories/manage?purpose=category_insurance');
+    await directory.getByLabel('Find a category',{exact:true}).fill('fuel');
+    await lookup.getByLabel('Expense category',{exact:true}).selectOption('category_fuel');
     await effective.fill('2026-03-01');
     await lookup.getByRole('button',{name:'Check account',exact:true}).click();
     await expect(lookup.getByRole('status')).toHaveText('No usable account mapping applies on that date.');
-    await lookup.getByRole('button',{name:'View approval history',exact:true}).click();
+    await lookup.getByRole('button',{name:'History for Fuel',exact:true}).click();
     await expect(lookup.getByText('Version 2 · Closed',{exact:true})).toBeVisible();
     await expect(lookup.getByRole('heading',{name:'Approval history',exact:true})).toBeFocused();
     await expect(lookup.getByText('Version 2 · Closed',{exact:true})).toBeInViewport();
@@ -119,8 +139,9 @@ for(const engine of [chromium,webkit]){
     const csv=await readFile(await download.path(),'utf8');
     assert.match(csv,/"Fuel","1","2026-02-01","Approved","5100","'=Fictional review selected the fuel account"/);
     await capture('history');
-    await page.goBack();
+    await lookup.getByRole('link',{name:'Manage approvals for Fuel',exact:true}).click();
     await expect(page.getByRole('heading',{name:'Manage expense category approvals',exact:true})).toBeVisible();
+    await expect(page.getByLabel('Expense category',{exact:true})).toHaveValue('category_fuel');
    }finally{
     try{await browser?.close();}finally{
      try{await fixture?.close();}finally{

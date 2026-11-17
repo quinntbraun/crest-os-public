@@ -46,7 +46,7 @@ it('ignores a late successful private response after the page is hidden',async()
 it('refuses to mix loaded records with a changed authenticated workspace binding',async()=>{
  const {reader,api,context}=setup();await reader.load();api.workspace.mockResolvedValueOnce({...context,binding:randomBytes(32).toString('base64url')});await reader.open(reader.view().rows[0]!.jobId);expect(reader.view()).toMatchObject({phase:'unavailable',rows:[],pending:[],selected:null});expect(api.workspace).toHaveBeenCalledTimes(2);reader.dispose();
 });
-it('loads a saved job deep link and history with the schedule’s one fresh proof',async()=>{
+it('loads the linked job and history with one fresh proof and no calendar reads',async()=>{
  const {session,context,api:base}=setup(),{q,resources}=jobChangeFixture();
  const api={...base,
   workspace:vi.fn(async()=>({...context,context:{...context.context,businessId:q.businessId}})),
@@ -58,7 +58,9 @@ it('loads a saved job deep link and history with the schedule’s one fresh proo
  };
  const reader=createScheduleReader({api,session,change:()=>{},now:()=>new Date('2026-11-01T12:00:00Z')});
  await reader.load(undefined,q.jobId);
- expect(reader.view()).toMatchObject({phase:'ready',loaded:true,selected:{jobId:q.jobId},historyComplete:true});
+ expect(reader.view()).toMatchObject({phase:'ready',loaded:false,selected:{jobId:q.jobId},historyComplete:true});
+ expect(api.list).not.toHaveBeenCalled();
+ expect(api.pending).not.toHaveBeenCalled();
  expect(session).toHaveBeenCalledTimes(1);
  expect(api.workspace).toHaveBeenCalledTimes(1);
  const [, ,proof,signal]=api.resources.mock.calls[0]!;

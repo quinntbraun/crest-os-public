@@ -4,7 +4,7 @@ import {before,after,test} from 'node:test';
 import {mkdir,readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {backupDatabase,connect,keyPair,recoveryCluster,restoreDatabase} from '../support/recovery-drill.mjs';
-import {syntheticLeadFollowUpsAvailable,syntheticLeadMatchReviewAvailable,syntheticRecordJobHistoryAvailable} from '../../scripts/synthetic-migrations.mjs';
+import {syntheticCustomerProfileAvailable,syntheticLeadFollowUpsAvailable,syntheticLeadMatchReviewAvailable,syntheticRecordJobHistoryAvailable} from '../../scripts/synthetic-migrations.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
@@ -12,6 +12,7 @@ import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixtur
 import {confirmedBookingRequest} from '../fixtures/confirmed-booking.ts';
 import {parseBookingWorkspace,parseBookingAgreement,parseJobResources,parsePendingChangesPage} from '../../src/operations/booking-context-contract.ts';
 import {parseRecordJobHistoryPage} from '../../src/operations/record-job-history-contract.ts';
+import {parseCustomerProfile} from '../../src/customer/customer-profile-contract.ts';
 import {quoteInputFromSnapshots} from '../../src/commercial/quote-storage-contract.ts';
 import {prepareQuoteReviewContent} from '../../src/commercial/quote-review-content.ts';
 const source=await readFile(new URL('../../planning/proposals/confirmed-bookings-context.sql',import.meta.url),'utf8');
@@ -127,7 +128,7 @@ test('saved-job history reads bounded customer and vehicle pages from retained s
  assert.deepEqual(await evidence(),beforeRead);
 });
 
-test('upgrade from schema 117 to 120 preserves an existing booking and restores its history',{timeout:240000},async()=>{
+test('upgrade from schema 117 to 121 preserves an existing booking and restores its customer profile',{timeout:240000},async()=>{
  const originalCluster=await recoveryCluster();
  let source,snapshotReader,restoredCluster;
  try{
@@ -144,9 +145,43 @@ test('upgrade from schema 117 to 120 preserves an existing booking and restores 
   await reader.query('SET ROLE crest_web');
   const seed=createConfirmedBookingFixture({client:admin,web:reader,bootstrap:await value(admin,"SELECT id AS value FROM crest_private.actors WHERE system_key='security_bootstrap'")});
   const owner=await seed(),request=confirmedBookingRequest(owner);
+  const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
+  Object.assign(request.payload.appointment,{start_at:tomorrow+'T14:00:00.000000Z',end_at:tomorrow+'T15:00:00.000000Z',local_start:tomorrow+'T14:00:00.000000',local_end:tomorrow+'T15:00:00.000000'});
   assert.equal((await transaction(reader,()=>value(reader,
    'SELECT crest_commands.book_job($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13) AS value',
    [...owner.auth(),owner.epoch,request.operationId,request.jobId,request.expectedModeSequence,request.payload]))).state,'committed');
+  const addLink=(relationship,isBilling,effectiveAt)=>value(reader,
+   'SELECT crest_commands.change_vehicle_association($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,0,$11) AS value',
+   [...owner.auth(),owner.epoch,randomUUID(),{action:'open',associationId:randomUUID(),customerId:owner.customer,vehicleId:owner.vehicle,effectiveAt,relationship,isBilling,evidence:null,reason:null,nextAssociationId:null}]);
+  const currentLink=await addLink('owner',true,'2026-10-01T00:00:00.000000Z');
+  assert.equal(currentLink.state,'committed');
+  assert.equal((await addLink('keeper',false,'2026-10-01T00:00:00.000000Z')).state,'committed');
+  const anotherOwner=await seed();
+  const earlier=confirmedBookingRequest(await seed(owner,{customerId:owner.customer}));
+  earlier.expectedModeSequence='1';
+  assert.equal((await transaction(reader,()=>value(reader,
+   'SELECT crest_commands.book_job($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13) AS value',
+   [...owner.auth(),owner.epoch,earlier.operationId,earlier.jobId,earlier.expectedModeSequence,earlier.payload]))).state,'committed');
+  const arrived=await transaction(reader,()=>value(reader,
+   'SELECT crest_commands.change_field_session($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13) AS value',
+   [...owner.auth(),owner.epoch,randomUUID(),earlier.jobId,'1',{action:'direct_arrive',reason:'Synthetic work started without travel'}]));
+  assert.equal(arrived.state,'committed');
+  const plans=await transaction(admin,async()=>{
+   await admin.query("SELECT set_config('crest.business_id',$1,true),set_config('crest.actor_id',$2,true)",[owner.business,owner.actor]);
+   return value(admin,'SELECT crest_private.load_completion_plans($1,$2) AS value',[owner.business,earlier.jobId]);
+  });
+  const scope=plans.flatMap(plan=>plan.parts.filter(part=>part.jobId===earlier.jobId&&part.state==='assigned').map(part=>({
+   assignedPartId:part.id,expectedPlanId:plan.planId,expectedPlanSequence:plan.planSequence,
+   pieces:[{partitionId:part.partitionId,outcome:'completed',scopeDescription:part.scopeDescription,grossInclusiveCents:part.grossInclusiveCents,
+    discountInclusiveCents:part.discountInclusiveCents,amountCents:part.amountCents,reason:null}],
+  })));
+  const completed=await transaction(reader,()=>value(reader,
+   'SELECT crest_commands.complete_job($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13) AS value',
+   [...owner.auth(),owner.epoch,randomUUID(),earlier.jobId,arrived.receipt.jobVersion,{scope,reason:null,walkthrough:{state:'done',reason:null},
+    review:{reviewUrl:null,skipReason:null,additionalRequestReason:null,expectedDuplicateRequestIds:[],expectedCustomerVersion:'1',contactReviewReason:null}}]));
+  assert.equal(completed.state,'committed');
+  const completionTime=await value(admin,`SELECT to_char(completed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS value
+   FROM crest.jobs WHERE (business_id,id)=($1,$2)`,[owner.business,earlier.jobId]);
 
   const evidence=async()=>value(admin,`SELECT jsonb_build_object(
    'jobs',(SELECT jsonb_agg(to_jsonb(j) ORDER BY j.id) FROM crest.jobs j WHERE j.business_id=$1),
@@ -156,15 +191,16 @@ test('upgrade from schema 117 to 120 preserves an existing booking and restores 
    'audit',(SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id) FROM crest_private.audit_events e WHERE e.business_id=$1)
   ) AS value`,[owner.business]);
   const retained=await evidence();
-  assert.equal(retained.jobs[0].id,request.jobId);
+  assert.equal(retained.jobs.length,2);
   const adopted=await source.apply(database);
-  assert.equal(adopted.history.length,120);
+  assert.equal(adopted.history.length,121);
   assert.deepEqual(adopted.history.slice(0,117),before.history);
-  assert.deepEqual(adopted.history.slice(117).map(row=>row.version),['20270111180000','20270112180000','20270113180000']);
+  assert.deepEqual(adopted.history.slice(117).map(row=>row.version),['20270111180000','20270112180000','20270113180000','20270114180000']);
   assert.deepEqual((await source.apply(database)).history,adopted.history);
   assert(await syntheticLeadFollowUpsAvailable(database));
   assert(await syntheticLeadMatchReviewAvailable(database));
   assert(await syntheticRecordJobHistoryAvailable(database));
+  assert(await syntheticCustomerProfileAvailable(database));
   assert.deepEqual(await evidence(),retained);
 
   const read=async(kind,recordId,connection=reader)=>{
@@ -174,23 +210,44 @@ test('upgrade from schema 117 to 120 preserves an existing booking and restores 
    return parseRecordJobHistoryPage(result,owner.business,input);
   };
   const customerPage=await read('customer',owner.customer),vehiclePage=await read('vehicle',owner.vehicle);
-  assert.deepEqual(customerPage.jobs.map(row=>row.jobId),[request.jobId]);
-  assert.deepEqual(vehiclePage.jobs.map(row=>row.jobVehicleId),[retained.vehicles[0].id]);
+  assert.deepEqual(customerPage.jobs.map(row=>row.jobId),[earlier.jobId,request.jobId]);
+  assert.deepEqual(vehiclePage.jobs.map(row=>row.jobVehicleId),[retained.vehicles.find(vehicle=>vehicle.job_id===request.jobId).id]);
 
-  const folder=join(source.workspace,'record-job-history-120-recovery');
+  const profile=async(customerId,afterAssociationId=null,connection=reader)=>{
+   const pageSize=1;
+   const result=await value(connection,'SELECT crest_commands.read_customer_profile($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS value',
+    [...owner.auth(),customerId,afterAssociationId,pageSize]);
+   return parseCustomerProfile(result,owner.business,{customerId,afterAssociationId,pageSize});
+  };
+  const first=await profile(owner.customer);
+  assert.deepEqual(first.lastVisit,{jobId:earlier.jobId,at:completionTime,timezone:'UTC'});
+  assert.deepEqual(first.nextVisit,{jobId:request.jobId,at:request.payload.appointment.start_at,timezone:'UTC'});
+  assert.equal(first.hasMore,true);
+  const second=await profile(owner.customer,first.vehicles[0].associationId);
+  assert.equal(second.hasMore,false);
+  assert.deepEqual([first.vehicles[0],second.vehicles[0]].map(vehicle=>[vehicle.vehicleId,vehicle.relationship,vehicle.billing]).sort(),
+   [[owner.vehicle,'keeper',false],[owner.vehicle,'owner',true]]);
+  await assert.rejects(profile(anotherOwner.customer),{code:'42501'});
+
+  const folder=join(source.workspace,'customer-profile-121-recovery');
   await mkdir(folder,{mode:0o700});
   const keys=await keyPair(folder),checkpoint=await backupDatabase(admin,database,folder,keys.recipient);
-  assert.equal(checkpoint.manifest.schemaVersion,120);
+  assert.equal(checkpoint.manifest.schemaVersion,121);
   restoredCluster=await recoveryCluster();
   const destination=await restoredCluster.database();
   assert.deepEqual(await restoreDatabase(folder,keys.path,destination),checkpoint.manifest);
   assert(await syntheticLeadFollowUpsAvailable(destination));
   assert(await syntheticLeadMatchReviewAvailable(destination));
   assert(await syntheticRecordJobHistoryAvailable(destination));
+  assert(await syntheticCustomerProfileAvailable(destination));
   snapshotReader=await connect(destination);
   await snapshotReader.query('SET ROLE crest_web');
   assert.deepEqual(await read('customer',owner.customer,snapshotReader),customerPage);
   assert.deepEqual(await read('vehicle',owner.vehicle,snapshotReader),vehiclePage);
+  const {asOf:restoredObserved,...restoredProfile}=await profile(owner.customer,null,snapshotReader);
+  const {asOf:initialObserved,...initialProfile}=first;
+  assert(restoredObserved>=initialObserved);
+  assert.deepEqual(restoredProfile,initialProfile);
   await assert.rejects(snapshotReader.query('SELECT id FROM crest.jobs'),{code:'42501'});
   await snapshotReader.query('RESET ROLE');
   await snapshotReader.query('REVOKE EXECUTE ON FUNCTION crest_commands.read_record_jobs(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,text,uuid,timestamptz,uuid,integer) FROM crest_web');

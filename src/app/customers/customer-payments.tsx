@@ -10,6 +10,7 @@ export function CustomerPayments({businessId,customerId}:{businessId:string;cust
   const [payments,setPayments]=useState(false);
   const [recredits,setRecredits]=useState(false);
   const [groupedRecredits,setGroupedRecredits]=useState(false);
+  const [access,setAccess]=useState<'loading'|'ready'|'unavailable'>('loading');
 
   useEffect(()=>{
     let controller:AbortController|undefined;
@@ -19,6 +20,7 @@ export function CustomerPayments({businessId,customerId}:{businessId:string;cust
       setPayments(false);
       setRecredits(false);
       setGroupedRecredits(false);
+      setAccess('loading');
     }
     function inspect(){
       if(document.visibilityState!=='visible'){clear();return;}
@@ -30,7 +32,8 @@ export function CustomerPayments({businessId,customerId}:{businessId:string;cust
         setPayments(context.businessId===businessId&&context.directReceiptTips===true);
         setRecredits(context.businessId===businessId&&context.collectionFailureRecredits===true);
         setGroupedRecredits(context.businessId===businessId&&context.collectionFailureGroupedRecredits===true);
-      }).catch(()=>{if(!signal.aborted){setPayments(false);setRecredits(false);setGroupedRecredits(false);}});
+        setAccess(context.businessId===businessId?'ready':'unavailable');
+      }).catch(()=>{if(!signal.aborted)setAccess('unavailable');});
     }
     function restore(event:PageTransitionEvent){if(event.persisted)inspect();}
     inspect();
@@ -46,6 +49,9 @@ export function CustomerPayments({businessId,customerId}:{businessId:string;cust
   },[businessId]);
 
   return <>
+    {access==='loading'&&<p role="status">Checking payment access…</p>}
+    {access==='unavailable'&&<p role="status">Customer payment access could not be verified.</p>}
+    {access==='ready'&&!payments&&!recredits&&!groupedRecredits&&<p>No payment actions are available for this customer.</p>}
     {payments&&<DirectReceipt businessId={businessId} customerId={customerId}/>}
     {groupedRecredits&&<GroupedPaymentRecredit businessId={businessId} customerId={customerId}/>}
     {recredits&&<CollectionFailureRecredit businessId={businessId} customerId={customerId} recoveryOnly={groupedRecredits}/>}

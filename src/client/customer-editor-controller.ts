@@ -9,11 +9,11 @@ import type {PendingCustomer,createPendingCustomerStore} from './pending-custome
 
 type Snapshot=Awaited<ReturnType<typeof customers.context>>;
 type History=Extract<Awaited<ReturnType<typeof customers.history>>,{state:'found'}>;
-export type CustomerEditorView=Readonly<{phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Customer[];hasMore:boolean;search:string;includeArchived:boolean;selected:Customer|null;draft:CustomerDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean;reviewHistoryAvailable?:true;recordJobHistoryAvailable?:true;maintenanceFollowUpAvailable?:true}>;
+export type CustomerEditorView=Readonly<{phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Customer[];hasMore:boolean;search:string;includeArchived:boolean;selected:Customer|null;draft:CustomerDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean;reviewHistoryAvailable?:true;recordJobHistoryAvailable?:true;customerProfileAvailable?:true;maintenanceFollowUpAvailable?:true}>;
 export const initialCustomerEditorView:CustomerEditorView=Object.freeze({phase:'loading',message:'Checking customer access…',busy:true,rows:Object.freeze([]),hasMore:false,search:'',includeArchived:false,selected:null,draft:null,draftIssue:'',history:null,canSave:false,canRetry:false,reference:'',writesPaused:true});
 export const emptyCustomerDraft:CustomerDraft=Object.freeze({displayName:'',phone:null,email:null,contactPreference:null,outreachOptOut:false,notes:null,customerSince:null,archived:false,archiveReason:null});
 
-type Dependencies={store:ReturnType<typeof createPendingCustomerStore>;change:(view:CustomerEditorView)=>void;api?:typeof customers;session?:typeof authentication.session;id?:()=>string};
+type Dependencies={store:ReturnType<typeof createPendingCustomerStore>;change:(view:CustomerEditorView)=>void;api?:Pick<typeof customers,'context'|'list'|'history'|'lookup'|'save'>;session?:typeof authentication.session;id?:()=>string};
 export function createCustomerEditorController(deps:Dependencies){
   const api=deps.api??customers,session=deps.session??authentication.session,id=deps.id??(()=>crypto.randomUUID());
   let alive=true,active:AbortController|null=null,proof:Proof|null=null,snapshot:Snapshot|null=null,pending:PendingCustomer|null=null,original:CustomerSave|null=null;
@@ -28,6 +28,7 @@ export function createCustomerEditorController(deps:Dependencies){
   const view=():CustomerEditorView=>Object.freeze({phase,message,busy:!!active,rows:phase==='ready'?rows:Object.freeze([]),hasMore:phase==='ready'&&hasMore,search:phase==='ready'?search:'',includeArchived:phase==='ready'&&includeArchived,selected:phase==='ready'?selected:null,draft:phase==='ready'?draft:null,draftIssue:phase==='ready'?draftIssue():'',history:phase==='ready'?history:null,
     canSave:!active&&phase==='ready'&&snapshot?.context.writeState==='ready'&&draft!==null&&draftIssue()===''&&(!selected||JSON.stringify(draft)!==JSON.stringify(draftFromCustomer(selected))),canRetry:!active&&canRetry,
     reference:phase==='pending'&&snapshot?.context.businessId===pending?.businessId?pending?.reference.operationId??'':'',writesPaused:snapshot?.context.writeState!=='ready',...phase==='ready'&&snapshot?.reviewHistoryAvailable?{reviewHistoryAvailable:true as const}:{},
+    ...phase==='ready'&&snapshot?.customerProfileAvailable?{customerProfileAvailable:true as const}:{},
     ...phase==='ready'&&snapshot?.recordJobHistoryAvailable?{recordJobHistoryAvailable:true as const}:{},
     ...phase==='ready'&&snapshot?.maintenanceFollowUpAvailable?{maintenanceFollowUpAvailable:true as const}:{}});
   const emit=()=>{if(alive)deps.change(view());};

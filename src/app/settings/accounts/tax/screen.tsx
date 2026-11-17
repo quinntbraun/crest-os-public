@@ -128,7 +128,7 @@ export function FinanceTaxProfilesScreen(){
  function checkAmount(event:FormEvent){
   event.preventDefault();
   if(!scope||!amount||!customerDate(date)||active.current)return;
-  setHistory(null);setPreview(null);
+  setPreview(null);
   void run(async(context,signal)=>{
    const result=await financeAccounts.taxPreview(context,scope,date,amount.grossCents,amount.discountCents,signal);
    if(signal.aborted)return;
@@ -148,6 +148,7 @@ export function FinanceTaxProfilesScreen(){
   ]);
  }
 
+ const applicabilityLabel=applicability==='tip'?'Tip':servicePage?.services.find(({service})=>service.id===serviceId)?.content.name??'Service';
  return <section className={styles.workspace} aria-label="Tax profile review" aria-busy={busy}>
   <p role="status" ref={status} tabIndex={-1}>{message}</p>
   {signedOut&&<a href="/sign-in">Sign in again</a>}
@@ -196,7 +197,7 @@ export function FinanceTaxProfilesScreen(){
   </div>
   <details>
    <summary>Manage fictional approvals</summary>
-   <TaxApprovalEditor key={JSON.stringify(scope)} scope={scope} disabled={controlsDisabled} onSaved={resetResults}/>
+   <TaxApprovalEditor key={JSON.stringify(scope)} scope={scope} applicabilityLabel={applicabilityLabel} disabled={controlsDisabled} onSaved={resetResults}/>
   </details>
   <details>
    <summary>Check an amount</summary>
@@ -215,8 +216,13 @@ export function FinanceTaxProfilesScreen(){
     </div>
    </form>
   </details>
-  {preview?.profile&&<section aria-label="Tax calculation result">
+  {preview?.profile&&<section className="mapping-summary-card" aria-label="Tax calculation result">
    <h2 ref={resultHeading} className="editor-heading" tabIndex={-1}>{financeTaxTreatmentLabels[preview.profile.treatment]}</h2>
+   <dl className="mapping-rule-lookup">
+    <div><dt>Jurisdiction</dt><dd>{preview.profile.jurisdiction}</dd></div>
+    <div><dt>Applies to</dt><dd>{applicabilityLabel}</dd></div>
+    <div><dt>Preview on</dt><dd><time dateTime={date}>{dateLabel(date)}</time></dd></div>
+   </dl>
    <p>Version {preview.profile.version} · Effective {dateLabel(preview.profile.effectiveFrom)}</p>
    {preview.state==='ready'&&<dl className={styles.amountBreakdown}>
     <dt>Total after discount</dt><dd>{quoteMoney(preview.components.inclusiveCents)}</dd>
@@ -224,17 +230,26 @@ export function FinanceTaxProfilesScreen(){
     <dt>Tax included</dt><dd>{quoteMoney(preview.components.taxCents)}</dd>
    </dl>}
   </section>}
-  {!!history?.rows.length&&<section aria-label="Saved tax profile history">
+  {preview&&!preview.profile&&<section className="mapping-summary-card" aria-label="No tax treatment on this date">
+   <h2>No verified treatment for this date</h2>
+   <p>{jurisdiction.trim()} · {applicabilityLabel} · {dateLabel(date)}</p>
+  </section>}
+  {!!history?.rows.length&&<section className="mapping-summary-card" aria-label="Saved tax profile history">
    <h2 ref={historyHeading} className="editor-heading" tabIndex={-1}>Approval history</h2>
+   <p>{history.rows[0]!.jurisdiction} · {applicabilityLabel}</p>
    <div className={styles.actions}>
     <button type="button" className="secondary" disabled={controlsDisabled} onClick={download}>Download loaded history (CSV)</button>
    </div>
-   <ol className="service-list">
-    {history.rows.map(row=><li key={row.id}>
-     <strong>Version {row.version} · {financeTaxTreatmentLabels[row.treatment]}</strong>
-     <p>Effective {dateLabel(row.effectiveFrom)}{row.rate===null?'':' · Decimal rate '+row.rate}</p>
+   <ol className="mapping-history-list">
+    {history.rows.map((row,index)=><li key={row.id}>
+     <details><summary>
+      <strong>Version {row.version} · {financeTaxTreatmentLabels[row.treatment]}</strong>
+      <span>Effective {dateLabel(row.effectiveFrom)}{row.rate===null?'':' · Decimal rate '+row.rate}</span>
+      <span>{index>0?'Next version starts '+dateLabel(history.rows[index-1]!.effectiveFrom):'Latest saved approval'}</span>
+     </summary>
      <p>{row.reason}</p>
-     {row.verificationEvidence&&<details><summary>Verification evidence</summary><p>{row.verificationEvidence}</p></details>}
+     {row.verificationEvidence&&<><p><strong>Verification evidence</strong></p><p>{row.verificationEvidence}</p></>}
+     </details>
     </li>)}
    </ol>
    {history.hasMore&&<button type="button" className="secondary" disabled={controlsDisabled} onClick={()=>readHistory(true)}>Load earlier approvals</button>}

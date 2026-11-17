@@ -14,7 +14,7 @@ import type {PendingAddress,createPendingAddressStore} from './pending-address-e
 
 type Snapshot=Awaited<ReturnType<typeof addresses.context>>;
 type History=Extract<Awaited<ReturnType<typeof addresses.history>>,{state:'found'}>;
-export type AddressEditorView=Readonly<{phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly CustomerAddress[];hasMore:boolean;search:string;includeArchived:boolean;selected:CustomerAddress|null;draft:AddressDraft|null;draftIssue:string;history:History|null;parent:Customer|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean}>;
+export type AddressEditorView=Readonly<{phase:'loading'|'choose-customer'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly CustomerAddress[];hasMore:boolean;search:string;includeArchived:boolean;selected:CustomerAddress|null;draft:AddressDraft|null;draftIssue:string;history:History|null;parent:Customer|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean}>;
 export const initialAddressEditorView:AddressEditorView=Object.freeze({phase:'loading',message:'Checking address access…',busy:true,rows:Object.freeze([]),hasMore:false,search:'',includeArchived:false,selected:null,draft:null,draftIssue:'',history:null,parent:null,canSave:false,canRetry:false,reference:'',writesPaused:true});
 export const emptyAddressDraft:AddressDraft=Object.freeze({line1:null,line2:null,city:null,region:null,postalCode:null,country:null,exactLocationText:null,instructions:null,latitude:null,longitude:null,geocodeSource:null,geocodeAccuracy:null,verifiedAt:null,archived:false,archiveReason:null});
 
@@ -44,9 +44,9 @@ export function createAddressEditorController(deps:Dependencies){
     try{await work(controller.signal);}catch(error){if(alive&&active===controller&&!controller.signal.aborted)failure(error);}finally{if(active===controller){active=null;emit();}}
   }
   const load=()=>run(async signal=>{
-    clearPrivate();phase='loading';message='Checking address access…';emit();pending=deps.store.read();customerId=pending?.reference.customerId??deps.customerId;if(!customerUuid(customerId)){phase='unavailable';message='Choose a customer in the customer directory to manage addresses. Any pending reference has been kept.';return;}await fresh(signal);
+    clearPrivate();phase='loading';message='Checking address access…';emit();pending=deps.store.read();customerId=pending?.reference.customerId??deps.customerId;if(!customerUuid(customerId)){phase='choose-customer';message='Choose a customer to view or manage their saved addresses.';return;}await fresh(signal);
     if(pending){if(pending.businessId!==snapshot!.context.businessId){phase='blocked';message='A pending save belongs to a different business. Its reference has been kept for review.';return;}retain('A pending address save was found. Check its status before another edit.');return;}
-    const customer=await parentHistory(snapshot!.context.businessId,{customerId:customerId!,afterVersion:'0',pageSize:1},proof!,signal);live(signal);if(customer.state==='absent'){clearPrivate();phase='unavailable';message='This customer was not found. Choose a current customer before managing addresses.';return;}parent=customer.customer;
+    const customer=await parentHistory(snapshot!.context.businessId,{customerId:customerId!,afterVersion:'0',pageSize:1},proof!,signal);live(signal);if(customer.state==='absent'){clearPrivate();phase='choose-customer';message='This customer was not found. Choose a current customer to manage addresses.';return;}parent=customer.customer;
     const result=await api.list(snapshot!.context.businessId,{customerId:customerId!,search:'',afterId:null,includeArchived:false,pageSize:25},proof!,signal);live(signal);rows=result.addresses;hasMore=result.hasMore;phase='ready';message=snapshot!.context.writeState==='ready'?'Choose an address or add a new address.':'Address changes are paused. Current records remain available for review.';
   },error=>{clearPrivate();phase=error instanceof PendingAddressError?'blocked':'unavailable';message=error instanceof PendingAddressError?'The pending-save reference cannot be read. Editing is blocked to protect it.':'Address access could not be verified. Sign in or check again; any pending reference has been kept.';});
   const query=(text:string,archived:boolean,more=false)=>{
@@ -96,7 +96,15 @@ export function createAddressEditorController(deps:Dependencies){
     if(!view().canRetry||!pending||!original)return Promise.resolve();const record=pending,command=original;let dispatched=false;
     return run(async signal=>{retain('Rechecking before retrying the original address change…');emit();deps.store.require(record);await fresh(signal);if(!eligible()){retain('The original sign-in or recovery context is no longer eligible. Nothing was retried.');return;}deps.store.require(record);dispatched=true;const result=await api.save(record.businessId,command,proof!,signal);live(signal);finish(result);},error=>{if(dispatched)failedWrite(error,false,true);else retain('The original reference could not be verified. Check save status again; nothing was retried.');});
   };
-  function suspend(){if(!alive)return;active?.abort();active=null;clearPrivate();phase='review';message='Private address details were cleared. Load current addresses before continuing; any pending reference has been kept.';emit();}
+  function suspend(){
+    if(!alive)return;
+    active?.abort();active=null;clearPrivate();
+    if(phase!=='choose-customer'){
+      phase='review';
+      message='Private address details were cleared. Load current addresses before continuing; any pending reference has been kept.';
+    }
+    emit();
+  }
   return Object.freeze({load,query,open,moreHistory,save,check,retry,view,suspend,
     create(){if(alive&&!active&&phase==='ready'){selected=null;history=null;draft=emptyAddressDraft;message='Add only the location details you know. Postal fields, coordinates and verification can remain unknown.';emit();}},
     edit(value:AddressDraft){if(alive&&!active&&phase==='ready'&&draft){draft=Object.freeze({...value});emit();}},

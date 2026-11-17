@@ -45,8 +45,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   },booking);
   assert.equal(booked.status,200);assert.equal(booked.value.state,'committed');
   await page.goto(origin+'/schedule?job='+jobId);
-  await page.getByRole('button',{name:'Record work status…',exact:true}).click();
-  await page.getByLabel('What is happening?',{exact:true}).selectOption('direct_arrive');
+  await page.getByRole('button',{name:'Record departure…',exact:true}).click();
+  await page.getByText('Other ways to start',{exact:true}).click();await page.getByRole('button',{name:'Already here — start without recorded travel',exact:true}).click();
   await page.getByLabel('Why was travel not recorded?',{exact:true}).fill('Synthetic maintenance appointment.');
   await page.getByRole('button',{name:'Start work without recorded travel',exact:true}).click();
   await expect(page.locator('.job-change-status')).toContainText('Work status saved.');
@@ -90,9 +90,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   }
 
   await page.goto(origin+'/');
-  const due=page.getByRole('region',{name:'Due maintenance reminders'});
-  await expect(due.getByRole('heading',{name:'Maintenance due'})).toBeVisible();
-  await expect(due.getByRole('link',{name:'Open saved job'})).toHaveAttribute('href','/schedule?job='+jobId);
+  const due=page.getByRole('region',{name:'Next due item',exact:true});
+  await expect(due.getByText('Maintenance due',{exact:true})).toBeVisible();
+  await expect(due.getByRole('link',{name:'Open saved job'})).toHaveAttribute('href','/schedule?job='+jobId+'&from=today');
+  await expect(due.getByRole('link',{name:'Open schedule'})).toHaveAttribute('href','/schedule');
+  await expect(page.getByRole('region',{name:'Due maintenance reminders'}).getByRole('link',{name:'Open saved job'})).toHaveCount(0);
   const {rows:[customer]}=await fixture.client.query('SELECT display_name FROM crest.customers WHERE business_id=$1 AND id=$2',[fixture.business,customerId]);
   await page.goto(origin+'/customers');
   await page.getByRole('button',{name:customer.display_name,exact:true}).click();

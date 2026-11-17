@@ -128,14 +128,22 @@ export function PostedFinanceExport(){
   finally{anchor.remove();}
  }
  if(!profile)return null;
- return <section className="export-files" aria-label="Posted finance export" aria-busy={phase==='preparing'}>
-  <h2>Posted finance CSV</h2>
-  <p>{profile===supplierPayablesExportProfile
-   ?'Download a private ZIP with invoice, payment, refund, expense and supplier payable records, journal entries and audit history. The supplier record includes checksums for the original and preview files.'
-   :'Download a private ZIP with posted invoice, payment, refund and expense records, journal entries and source history. Use separate exports or backups for receipt files and business directories.'}</p>
-  <button type="button" disabled={phase==='preparing'} onClick={()=>void prepare()}>Prepare posted finance CSV</button>
-  {phase==='prepared'&&<button type="button" onClick={save}>Save ZIP</button>}
-  {phase==='preparing'&&<button className="secondary" type="button" onClick={()=>{discard();setPhase('ready');}}>Cancel preparation</button>}
-  <p role="status" aria-live="polite">{messages[phase]}</p>
+ return <section className="export-files export-collection export-finance" aria-label="Posted finance export" aria-busy={phase==='preparing'}>
+  <header className="export-collection-header">
+   <h2>Posted finance CSV</h2>
+   <p>{profile===supplierPayablesExportProfile
+    ?'Invoices, payments, refunds, expenses and supplier payables with journal entries and audit history. Supplier file checksums are included.'
+    :'Posted invoices, payments, refunds and expenses with journal entries and source history.'}</p>
+  </header>
+  <dl className="export-attributes"><div><dt>Format</dt><dd>CSV files in one ZIP</dd></div><div><dt>Scope</dt><dd>Available posted records</dd></div></dl>
+  <div className="export-save-row" data-prepared={phase==='prepared'}>
+   <div>
+    {phase==='prepared'&&<strong>{postedFinanceExportName}</strong>}
+    <p className="export-status" role="status" aria-live="polite">{messages[phase]}</p>
+   </div>
+   {phase==='prepared'?<button type="button" onClick={save}>Save ZIP</button>:
+    <button type="button" disabled={phase==='preparing'} onClick={()=>void prepare()}>Prepare posted finance CSV</button>}
+   {phase==='preparing'&&<button className="secondary" type="button" onClick={()=>{discard();setPhase('ready');}}>Cancel preparation</button>}
+  </div>
  </section>;
 }

@@ -38,7 +38,7 @@ for(const engine of [chromium,webkit]){
 
    async function load(){
     await page.goto(fixture.origin+'/settings/accounts');
-    await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+    await page.getByRole('button',{name:'Setup',exact:true}).click();
     return page.getByRole('region',{name:'Fictional bank statement staging'});
    }
    const form=await load();
@@ -92,7 +92,7 @@ for(const engine of [chromium,webkit]){
    const reference=[saved.operationId,saved.recoveryEpoch,saved.statementId].join('.');
    await expect(reopened.getByText(reference,{exact:true})).toBeVisible();
    await page.reload();
-   await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+   await page.getByRole('button',{name:'Setup',exact:true}).click();
    await reopened.getByText('Check a saved statement',{exact:true}).click();
    await reopened.getByLabel('Statement save reference',{exact:true}).fill(reference);
    await reopened.getByRole('button',{name:'Check saved statement'}).click();

@@ -9,6 +9,8 @@ import type {MileageHistoryPage} from '../operations/mileage-history';
 import {buildMileageHistoryArchive} from '../operations/mileage-history-archive';
 import type {PendingScheduling,createPendingSchedulingStore} from './pending-scheduling';
 import {customerUuid} from '../customer/customer-contract';
+import {tripCursorBefore} from '../operations/support-trip';
+import type {SupportTripCursor} from '../operations/support-trip';
 import {scheduleDateWindow} from './schedule-reader';
 import type {JobSummary} from '../operations/confirmed-job-read-contract';
 
@@ -30,7 +32,7 @@ export const initialMileageView: MileageView=Object.freeze({
  history:null,canSave:false,timezone:'',reference:'',departure:null,pendingKind:null
 });
 
-export function createMileageController(deps:{jobId:string;legId?:string;store:Store;departureStore:Store;blockers:readonly Store[];change:(view:MileageView)=>void}){
+export function createMileageController(deps:{jobId:string;legId?:string;initialTrip?:SupportTripCursor;store:Store;departureStore:Store;blockers:readonly Store[];change:(view:MileageView)=>void}){
  let alive=true,active:AbortController|null=null,workspace:Workspace|null=null;
  let pending:{kind:SaveKind;entry:PendingScheduling}|null=null;
  let state:MileageView=initialMileageView;
@@ -73,7 +75,7 @@ export function createMileageController(deps:{jobId:string;legId?:string;store:S
   workspace=next;
   return {proof,context:next.context};
  }
- async function loadTrips(businessId:string,proof:Proof,signal:AbortSignal,selection?:string){
+ async function loadTrips(businessId:string,proof:Proof,signal:AbortSignal,selection?:string,anchor?:SupportTripCursor){
   if(deps.legId){
    const result=await scheduling.supportTripMileage(businessId,deps.legId,proof,signal);
    live(signal);
@@ -89,7 +91,16 @@ export function createMileageController(deps:{jobId:string;legId?:string;store:S
   update({phase:'ready',trips:result.trips,hasMore:result.hasMore,selected:null,history:null,departure:null,
    timezone:workspace!.context.timezone,canSave:workspace!.context.writeState==='ready',
    message:result.trips.length?'Choose a saved trip.':'No trips are recorded for this job.'});
-  const selected=selection&&result.trips.find(trip=>trip.legId===selection);
+  let selected=result.trips.find(trip=>trip.legId===selection);
+  if(!selected&&anchor&&anchor.legId===selection){
+   const after=tripCursorBefore(anchor);
+   if(after){
+    const page=await scheduling.mileageTrips({businessId,jobId:deps.jobId,after,pageSize:1},proof,signal);
+    live(signal);
+    if(page.state==='loaded'&&page.trips[0]?.legId===selection)selected=page.trips[0];
+   }
+   if(!selected)update({message:'The linked trip could not be reopened. Choose a saved trip.'});
+  }
   if(selected)await readHistory(selected,businessId,proof,signal);
  }
  async function readHistory(trip:MileageTrip,businessId:string,proof:Proof,signal:AbortSignal,through=trip.evidenceVersion){
@@ -121,7 +132,7 @@ export function createMileageController(deps:{jobId:string;legId?:string;store:S
   const {proof,context}=await fresh(signal,false);
   if(pending){clear('pending','Check the original '+subject(pending.kind)+' save before recording another.');return;}
   if(deps.legId?(!customerUuid(deps.legId)||deps.jobId!==''):!customerUuid(deps.jobId))throw Error();
-  await loadTrips(context.businessId,proof,signal);
+  await loadTrips(context.businessId,proof,signal,deps.initialTrip?.legId,deps.initialTrip);
  },unavailable);
  const moreTrips=()=>run(async signal=>{
   const last=state.trips.at(-1);if(state.phase!=='ready'||!state.hasMore||!last)return;
@@ -181,10 +192,10 @@ export function createMileageController(deps:{jobId:string;legId?:string;store:S
   },unavailable);
   return bytes;
  }
- async function confirmed(legId:string,kind:SaveKind,proof:Proof,signal:AbortSignal){
+ async function confirmed(legId:string,kind:SaveKind,proof:Proof,signal:AbortSignal,anchor?:SupportTripCursor){
   const message=kind===mobileDepartureKind?'Departure time corrected.':'Mileage saved.';
   try{
-   await loadTrips(workspace!.context.businessId,proof,signal,legId);
+   await loadTrips(workspace!.context.businessId,proof,signal,legId,anchor??deps.initialTrip);
    update({message});
   }catch{
    if(alive&&!signal.aborted&&active?.signal===signal)
@@ -193,7 +204,7 @@ export function createMileageController(deps:{jobId:string;legId?:string;store:S
  }
  function hasPending(){return deps.store.read()!==null||deps.departureStore.read()!==null||deps.blockers.some(store=>store.read()!==null);}
  async function persist(kind:SaveKind,reference:PendingScheduling['reference'],legId:string,proof:Proof,signal:AbortSignal,
-  submit:()=>Promise<Readonly<{state:'conflict';reason:string}>|Readonly<{result:unknown}>>){
+  submit:()=>Promise<Readonly<{state:'conflict';reason:string}>|Readonly<{result:unknown}>>,anchor:SupportTripCursor){
   if(!workspace)throw Error();
   const store=storeFor(kind),departure=kind===mobileDepartureKind;
   const entry:PendingScheduling={schemaVersion:1,businessId:workspace.context.businessId,binding:workspace.binding,reference};
@@ -224,7 +235,7 @@ export function createMileageController(deps:{jobId:string;legId?:string;store:S
      :'The trip or its saved times changed. No departure correction was saved. Reload before continuing.'
     :'The trip or its mileage changed. No mileage was saved. Reload before continuing.');return;
   }
-  await confirmed(legId,kind,proof,signal);
+  await confirmed(legId,kind,proof,signal,anchor);
  }
  const save=(body:MileageBody)=>run(async signal=>{
   const trip=state.selected,history=state.history;
@@ -240,7 +251,7 @@ export function createMileageController(deps:{jobId:string;legId?:string;store:S
     operationId:crypto.randomUUID(),legId:trip.legId,expectedLegVersionId:trip.legVersionId,
     expectedEvidenceVersion:trip.evidenceVersion,body});
   }catch{update({message:'Review the mileage fields. No request was submitted.'});return;}
-  await persist(mileageKind,mileageOriginal(request).reference,trip.legId,proof,signal,()=>scheduling.saveMileage(request,proof,signal));
+  await persist(mileageKind,mileageOriginal(request).reference,trip.legId,proof,signal,()=>scheduling.saveMileage(request,proof,signal),trip);
  },unavailable);
  const correctDeparture=(body:MobileDepartureSave['body'])=>run(async signal=>{
   const departure=state.departure;
@@ -255,7 +266,7 @@ export function createMileageController(deps:{jobId:string;legId?:string;store:S
     legId:departure.legId,legVersionId:departure.legVersionId,departureEventId:departure.departureEventId,body});
   }catch{update({message:'Review the departure time and reason. No request was submitted.'});return;}
   await persist(mobileDepartureKind,mobileDepartureOriginal(request).reference,departure.legId,proof,signal,
-   ()=>scheduling.correctMobileDeparture(request,proof,signal));
+   ()=>scheduling.correctMobileDeparture(request,proof,signal),{legId:departure.legId,departedAt:body.correctedAt});
  },unavailable);
  const check=()=>run(async signal=>{
   if(!pending)return;

@@ -70,14 +70,16 @@ export function SyntheticCalendarJobStatus({ jobId, recoveryEpoch }: { jobId: st
     };
   }, [check]);
 
-  return <section aria-label="Saved appointment sync" aria-busy={busy}>
+  return <section className="settings-card calendar-job-summary" aria-label="Saved appointment sync" aria-busy={busy}>
     <h2>Saved appointment sync</h2>
     <p role="status">{message}</p>
-    {status?.lastConfirmedAt && <p className="field-help">
-      Last confirmed version {status.lastConfirmedVersion} of {status.appointmentVersion} ·{' '}
-      <time dateTime={status.lastConfirmedAt}>{timestamp.format(new Date(status.lastConfirmedAt))} UTC</time>
-    </p>}
-    <button className="secondary" type="button" disabled={busy} onClick={() => void check()}>Check Calendar status</button>
-    {' '}<a href={'/schedule?job=' + jobId}>Open saved job</a>
+    {status?.lastConfirmedAt && <dl className="calendar-setup-facts">
+      <div><dt>Last successful sync</dt><dd><time dateTime={status.lastConfirmedAt}>{timestamp.format(new Date(status.lastConfirmedAt))} UTC</time></dd></div>
+      <div><dt>Confirmed appointment version</dt><dd>{status.lastConfirmedVersion} of {status.appointmentVersion}</dd></div>
+    </dl>}
+    <div className="calendar-settings-actions">
+      <button className="secondary" type="button" disabled={busy} onClick={() => void check()}>Check Calendar status</button>
+      <a href={'/schedule?job=' + jobId}>Open saved job</a>
+    </div>
   </section>;
 }

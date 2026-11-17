@@ -9,6 +9,7 @@ import type {BookingConfirmation} from '../../../operations/confirmed-booking-co
 import type {InterruptionDraft} from '../../../operations/trip-interruption-contract';
 import {BookingInstantInput} from '../booking-fields';
 import {BookingSlotReview} from '../slot-review';
+import {FieldVisitHeader} from './visit-header';
 
 export function TripInterruptionForm({view,save}:{view:FieldSessionView;save:(draft:InterruptionDraft)=>Promise<void>}){
  const id=useId(),context=view.context!,{job,appointment}=view.resources!.head,trip=view.openTrip!;
@@ -24,7 +25,6 @@ export function TripInterruptionForm({view,save}:{view:FieldSessionView;save:(dr
  const reviewInput=bookingSlotInput(context,slot,job.id);
  const customerConfirmed=action==='reschedule';
  const hasEvidence=customerConfirmed||communication==='sent';
- const format=new Intl.DateTimeFormat('en-US',{timeZone:zone,dateStyle:'medium',timeStyle:'short'});
  return <form className="field-work-form trip-interruption-form" onSubmit={event=>{
   event.preventDefault();
   if(disabled)return;
@@ -51,8 +51,7 @@ export function TripInterruptionForm({view,save}:{view:FieldSessionView;save:(dr
     unknown_travel_reviewed:unknownTravelReviewed}});
   }catch{setError('Enter the confirmed replacement and actual customer confirmation, then review the schedule for this time.');}
  }}>
-  <p>Departed <time dateTime={trip.departedAt}>{format.format(new Date(trip.departedAt))}</time>.</p>
-  <p>Confirmed visit <time dateTime={appointment.start_at}>{format.format(new Date(appointment.start_at))}</time> · {zone}</p>
+  <FieldVisitHeader resources={view.resources!} departure={trip.departedAt}/>
   <fieldset disabled={disabled}>
    <legend>End travel and change the visit</legend>
    <p>The save records when the trip ends and keeps the departure in history.</p>

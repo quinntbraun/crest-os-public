@@ -40,6 +40,7 @@ async function exerciseSupplierBills(page,date,fixture,engine){
  await region.getByRole('button',{name:'Check original supplier bill save',exact:true}).click();
  await expect(status).toHaveText('Supplier bill draft saved.');
  await page.reload();
+ await page.getByRole('button',{name:'Suppliers',exact:true}).click();
  await summary.click();
  await region.getByRole('button',{name:'Load saved supplier bills',exact:true}).click();
  await region.getByRole('button',{name:'Open supplier bill draft',exact:true}).click();
@@ -97,8 +98,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const date=(await f.client.query("SELECT (clock_timestamp() AT TIME ZONE 'America/Indiana/Indianapolis')::date::text AS day")).rows[0].day;
   const description='Fictional pH-neutral wash supplies';
   await page.goto(f.origin+'/expenses');
-  if(supplierBills)await exerciseSupplierBills(page,date,f,name);
-  await page.getByRole('button',{name:'Load saved expenses',exact:true}).click();
+  if(supplierBills){await page.getByRole('button',{name:'Suppliers',exact:true}).click();await exerciseSupplierBills(page,date,f,name);await page.getByRole('button',{name:'Purchases',exact:true}).click();}
+
+  await page.getByRole('button',{name:'Record expense',exact:true}).click();
   await page.getByLabel('Payment date',{exact:true}).fill(date);
   await page.getByLabel('Amount paid (USD)',{exact:true}).fill('100.00');
   await page.getByLabel('Category',{exact:true}).selectOption('supplies');
@@ -108,6 +110,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.getByLabel('Vendor (optional)',{exact:true}).fill('Fictional detailing warehouse');
   await page.getByRole('button',{name:'Save expense',exact:true}).click();
   const row=page.getByRole('article').filter({has:page.getByRole('heading',{name:description,exact:true})});
+  await expect(row.getByText('Receipts',{exact:true})).toHaveCount(0);
+  const denied=await page.request.post(f.origin+'/api/business/expense-receipts/list',{data:{}});
+  assert.equal(denied.status(),404);
   const posting=row.getByRole('region',{name:'Accounting entry',exact:true});
   await posting.getByRole('button',{name:'Load accounting review',exact:true}).press('Enter');
   await expect(posting.getByRole('status')).toHaveText('Review the original purchase and how you paid.');
@@ -143,7 +148,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert.deepEqual(Object.keys(JSON.parse(original)).sort(),['binding','businessId','expenseId','reference']);
   assert(!original.includes('Fictional'));
   await page.reload();
-  await page.getByRole('button',{name:'Load saved expenses',exact:true}).click();
+
   await posting.getByRole('button',{name:'Load accounting review',exact:true}).click();
   await expect(posting.getByRole('status')).toContainText('Posted to the ledger');
   await expect(row.getByRole('button',{name:'Correct or void',exact:true})).toHaveCount(0);
@@ -154,11 +159,27 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert.deepEqual((await f.client.query('SELECT gross_cents::text,purchase_tax_cents::text FROM crest.posted_expenses WHERE business_id=$1',
    [f.business])).rows,[{gross_cents:'10000',purchase_tax_cents:'650'}]);
   await page.goto(f.origin+'/settings/accounts');
-  await page.getByRole('button',{name:'Load accounts',exact:true}).click();
   const accounting=page.getByRole('navigation',{name:'Accounting sections',exact:true});
-  await accounting.getByRole('link',{name:'Reports',exact:true}).press('Enter');
+  const reports=accounting.getByRole('button',{name:'Reports',exact:true});
+  const setupView=accounting.getByRole('button',{name:'Setup',exact:true});
+  const accountsView=accounting.getByRole('button',{name:'Accounts',exact:true});
+  const report=page.getByRole('region',{name:'Fictional trial balance',exact:true});
+  await expect(reports).toHaveAttribute('aria-current','true');
+  await expect(report.getByLabel('Through date (optional)',{exact:true})).toBeVisible();
+  await expect(report.getByRole('table')).toHaveCount(0);
+  await expect(page.getByRole('heading',{name:'Chart of accounts',exact:true})).toBeHidden();
+  await mkdir('.local/review',{recursive:true});
+  for(const width of [390,1440]){
+   await page.setViewportSize({width,height:900});
+   await page.evaluate(()=>window.scrollTo(0,0));
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   await page.screenshot({path:'.local/review/accounting-landing-'+name+'-'+width+'.png'});
+  }
+  await reports.press('Enter');
   await expect(page.getByRole('heading',{name:'Reports',exact:true})).toBeFocused();
+  await page.setViewportSize({width:390,height:900});
   if(matchStatement){
+   await setupView.click();
    const staging=page.getByRole('region',{name:'Fictional bank statement staging',exact:true});
    await staging.getByLabel('Dedicated money account').selectOption({label:'Fictional checking (1234)'});
    await staging.getByLabel('Fictional source file for checksum').setInputFiles({
@@ -213,38 +234,59 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await expect(match.getByText('Saved draft revision 2',{exact:false})).toBeVisible();
    }
    await staging.getByText('Review statement matches',{exact:true}).click();
+   await reports.click();
   }
   if(income){
-   await page.getByText('Income statement',{exact:true}).click();
+   const reportPicker=page.getByRole('group',{name:'Choose a report',exact:true});
+   const ledgerView=reportPicker.getByRole('button',{name:'Ledger',exact:true});
+   const incomeView=reportPicker.getByRole('button',{name:'Income',exact:true});
+   await expect(ledgerView).toHaveAttribute('aria-pressed','true');
+   await incomeView.press('Enter');
+   await expect(incomeView).toHaveAttribute('aria-pressed','true');
+   await expect(report).toHaveCount(0);
    const statement=page.getByRole('region',{name:'Recorded income statement',exact:true});
    await statement.getByLabel('From date',{exact:true}).fill(date);
    await statement.getByLabel('Through date',{exact:true}).fill(date);
    await statement.getByRole('button',{name:'Load income statement',exact:true}).press('Enter');
    await expect(statement.getByRole('status')).toHaveText('Recorded income loaded.');
+   const period=statement.locator('p').filter({hasText:'Income statement ·'});
+   await expect(period.locator('time[datetime="'+date+'"]')).toHaveCount(1);
    await expect(statement.getByRole('row',{name:'Recorded-book net income -$100.00',exact:true})).toBeVisible();
    const incomeCsv=page.waitForEvent('download');
    await statement.getByRole('button',{name:'Download income statement CSV',exact:true}).click();
    assert.match(await readFile(await (await incomeCsv).path(),'utf8'),/"Recorded-book net income","","","","-10000"/);
    for(const width of [360,390,768,1440]){
     await page.setViewportSize({width,height:900});
-    await statement.getByRole('table').scrollIntoViewIfNeeded();
+    await period.scrollIntoViewIfNeeded();
+    assert.equal(await period.evaluate(element=>getComputedStyle(element).position),'sticky');
+    if(width===1440){
+     const dates=await statement.locator('input[type="date"]').evaluateAll(inputs=>inputs.map(input=>input.getBoundingClientRect().bottom));
+     const loadBottom=await statement.getByRole('button',{name:'Load income statement',exact:true}).evaluate(button=>button.getBoundingClientRect().bottom);
+     assert(dates.every(bottom=>Math.abs(bottom-loadBottom)<2));
+    }
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     const audit=await new AxeBuilder({page}).include('[aria-label="Recorded income statement"]').withTags(['wcag2a','wcag2aa']).analyze();
     assert.deepEqual(audit.violations.map(entry=>entry.id),[]);
     await page.screenshot({path:'.local/review/finance-income-statement-'+name+'-'+width+'.png'});
    }
-   await page.getByText('Income statement',{exact:true}).click();
+   await ledgerView.press('Enter');
+   await expect(statement).toHaveCount(0);
+   await incomeView.press('Enter');
    await expect(statement.getByRole('table')).toHaveCount(0);
+   await ledgerView.press('Enter');
   }
-  await expect(accounting.getByRole('link',{name:'Setup',exact:true})).toBeVisible();
-  await expect(accounting.getByRole('link',{name:'Accounts',exact:true})).toBeVisible();
-  await page.getByText('Fictional trial balance',{exact:true}).click();
-  const report=page.getByRole('region',{name:'Fictional trial balance',exact:true});
+  await expect(setupView).toBeVisible();
+  await expect(accountsView).toBeVisible();
   await report.getByLabel('Through date (optional)',{exact:true}).fill(date);
   await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
   await expect(report.getByRole('status')).toHaveText('Posted balances loaded.');
   await expect(report.getByRole('row').filter({hasText:'Fictional wash supplies'})).toContainText('$100.00');
   await expect(report.getByRole('row').filter({hasText:'Fictional dedicated bank'})).toContainText('$100.00');
+  await accountsView.press('Enter');
+  await expect(page.getByRole('heading',{name:'Chart of accounts',exact:true})).toBeFocused();
+  await expect(report).toBeHidden();
+  await reports.press('Enter');
+  await expect(report.getByRole('status')).toHaveText('Posted balances loaded.');
   const csv=page.waitForEvent('download');
   await report.getByRole('button',{name:'Download trial balance CSV',exact:true}).click();
   assert.match(await readFile(await (await csv).path(),'utf8'),/"10000","10000","10000","10000"/);
@@ -318,3 +360,96 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   }
  }finally{await browser?.close();await f.close();}
 },{timeout:240000});
+
+if(process.env.CREST_TEST_RECORDED_INCOME_STATEMENT!=='1')
+for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' attaches and previews a private receipt from Expenses',async()=>{
+ const f=await sourceExportBrowserFixture({product:true,workspace:true,expenses:true,expenseReceipts:true});
+ let browser;
+ try{
+  browser=await engine.launch();
+  const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
+  const page=await context.newPage();
+  const accessGate=Promise.withResolvers();
+  await page.route('**/api/auth/session',async route=>{await accessGate.promise;await route.continue();},{times:1});
+  await page.goto(f.origin+'/expenses');
+  const placeholder=page.locator('.expense-record-placeholder');
+  await expect(page.locator('.expenses-page').getByRole('status')).toHaveText('Checking expense access…');
+  await expect(placeholder.locator('.workspace-skeleton').first()).toHaveCSS('animation-name','workspace-skeleton-pass');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await expect(placeholder.locator('.workspace-skeleton').first()).toHaveCSS('animation-name','none');
+  await expect(page.getByRole('button',{name:'Record expense',exact:true})).toHaveCount(0);
+  accessGate.resolve();
+  await page.getByRole('link',{name:'Sign in to view expenses',exact:true}).click();
+  const credentials=f.credentials();
+  await page.getByLabel('Email',{exact:true}).fill(credentials.email);
+  await page.getByLabel('Password',{exact:true}).fill(credentials.password);
+  await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
+  const historyGate=Promise.withResolvers();
+  await page.route('**/api/business/expenses/history',async route=>{await historyGate.promise;await route.continue();},{times:1});
+  await page.goto(f.origin+'/expenses');
+  await expect(page.locator('.expenses-page').getByRole('status')).toHaveText('Loading saved expenses…');
+  await expect(placeholder).toBeVisible();
+  const record=page.getByRole('button',{name:'Record expense',exact:true});
+  await expect(record).toBeDisabled();
+  await page.evaluate(()=>document.fonts.ready);
+  const heading=page.getByRole('heading',{name:'Saved expenses',exact:true});
+  const loadingHeading=await heading.boundingBox();
+  await page.screenshot({path:'.local/review/expenses-loading-'+name+'.png'});
+  historyGate.resolve();
+  await expect(placeholder).toHaveCount(0);
+  await expect(record).toBeEnabled();
+  const loadedHeading=await heading.boundingBox();
+  assert(loadingHeading&&loadedHeading&&Math.abs(loadingHeading.y-loadedHeading.y)<=1);
+  await record.click();
+  const date=(await f.client.query('SELECT current_date::text AS day')).rows[0].day;
+  await page.getByLabel('Payment date',{exact:true}).fill(date);
+  await page.getByLabel('Amount paid (USD)',{exact:true}).fill('12.99');
+  await page.getByLabel('Category',{exact:true}).selectOption('supplies');
+  await page.getByLabel('Description',{exact:true}).fill('Fictional towel purchase');
+  await page.getByLabel('Payment method',{exact:true}).selectOption('bank');
+  await page.getByRole('button',{name:'Save expense',exact:true}).click();
+  const expense=page.getByRole('article').filter({has:page.getByRole('heading',{name:'Fictional towel purchase',exact:true})});
+  await expense.getByText('Receipts',{exact:true}).click();
+  const sharp=(await import('sharp')).default;
+  const receipt=await sharp({create:{width:180,height:230,channels:3,background:'#eee4d2'}}).png().toBuffer();
+  await expense.getByLabel('Receipt file',{exact:true}).setInputFiles({name:'fictional-receipt.png',mimeType:'image/png',buffer:receipt});
+  let publicationStatus;
+  await page.route('**/api/business/expense-receipts/publish',async route=>{
+   const response=await route.fetch();
+   publicationStatus=response.status();
+   await route.abort('failed');
+  },{times:1});
+  const upload=page.waitForResponse(response=>response.url()===f.origin+'/api/business/expense-receipts/upload-file');
+  await expense.getByRole('button',{name:'Attach receipt',exact:true}).click();
+  assert.equal((await upload).status(),200);
+  await expect(expense.getByRole('status')).toContainText('Receipt outcome is unknown');
+  assert.equal(publicationStatus,200);
+  await expense.getByRole('button',{name:'Check interrupted receipt',exact:true}).click();
+  await expect(expense.getByRole('status')).toHaveText('Original receipt publication confirmed.');
+  await expense.getByRole('button',{name:'View preview for receipt 1',exact:true}).click();
+  const preview=expense.getByRole('img',{name:'Verified receipt preview',exact:true});
+  await expect(preview).toBeVisible();
+  await page.waitForFunction(()=>document.querySelector('.receipt-preview img')?.naturalWidth>0);
+  await expect(expense.getByRole('button',{name:'Close preview',exact:true})).toBeFocused();
+  await mkdir('.local/review',{recursive:true});
+  for(const width of [390,1440]){
+   await page.setViewportSize({width,height:900});
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.deepEqual((await new AxeBuilder({page}).include('.expense-receipts').withTags(['wcag2a','wcag2aa']).analyze()).violations,[]);
+   await page.screenshot({path:'.local/review/expenses-verified-receipt-'+name+'-'+width+'.png',animations:'disabled'});
+  }
+  const download=page.waitForEvent('download');
+  await expense.getByRole('button',{name:'Download receipt 1',exact:true}).click();
+  assert.deepEqual(await readFile(await (await download).path()),receipt);
+  await page.getByRole('button',{name:'Exports',exact:true}).click();
+  await expect(preview).toHaveCount(0);
+  await page.getByRole('button',{name:'Purchases',exact:true}).click();
+  await expect(preview).toHaveCount(0);
+  const rows=await f.client.query("SELECT revision,payload->>'amountCents' AS amount FROM crest.expense_revisions WHERE business_id=$1",[f.business]);
+  assert.equal(rows.rowCount,1,'attaching a receipt must not revise the expense');
+  assert.equal(rows.rows[0].amount,'1299');
+  assert.equal((await f.client.query('SELECT count(*)::int AS count FROM crest.expense_receipt_revisions WHERE business_id=$1',[f.business])).rows[0].count,2);
+ }finally{await browser?.close();await f.close();}
+},{timeout:180000});

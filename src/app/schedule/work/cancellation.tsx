@@ -2,13 +2,12 @@
 import {useId,useState} from 'react';
 import type {FieldSessionView} from '../../../client/field-session-controller';
 import {parseBookingCommunication} from '../../../operations/confirmed-booking-contract';
-import {parseCustomer} from '../../../customer/customer-contract';
 import type {UnfulfilledCancellationDraft} from '../../../operations/unfulfilled-cancellation-contract';
 import {BookingInstantInput} from '../booking-fields';
+import {FieldVisitHeader} from './visit-header';
 
 export function UnfulfilledCancellationForm({view,save}:{view:FieldSessionView;save:(draft:UnfulfilledCancellationDraft)=>Promise<void>}){
  const id=useId(),context=view.context!,job=view.cancellation!,resources=view.resources!;
- const customer=parseCustomer(resources.vehicles[0]!.customer_snapshot,resources.businessId);
  const assignments=resources.scopeParts.filter(part=>part.state==='assigned');
  const [communication,setCommunication]=useState(''),[effectiveAt,setEffectiveAt]=useState(''),[issue,setIssue]=useState('');
  const disabled=view.busy||context.context.writeState!=='ready';
@@ -26,9 +25,11 @@ export function UnfulfilledCancellationForm({view,save}:{view:FieldSessionView;s
    void save({reason,noFulfilledScopeConfirmed:true,customerCommunication});
   }catch{setIssue('Confirm that no work was completed and record what happened with the customer.');}
  }}>
-  <h2>{customer.display_name}</h2>
-  <p>{job.jobState==='paused'?'Paused':'In progress'} · Saved version {job.jobVersion}</p>
-  <p>Cancelling closes the current work interval, releases the appointment and keeps the reason in history.</p>
+  <FieldVisitHeader resources={resources}/>
+  <section className="appointment-cancellation-notice" aria-label="Cancellation consequences">
+   <strong>Cancellation releases this visit</strong>
+   <p>The current work interval closes and Crest keeps the reason in the job history.</p>
+  </section>
   {resources.head.job.fulfillment_mode==='dropoff'&&<p className="notice">Any vehicle in your custody still needs a separate recorded handoff. Cancellation keeps it in the return queue.</p>}
   <details><summary>Assigned work ({assignments.length})</summary>
    <ul>{assignments.map(part=><li key={part.sourceAllocationId+'/'+part.partitionId}>{part.scopeDescription}</li>)}</ul>
@@ -69,7 +70,7 @@ export function UnfulfilledCancellationForm({view,save}:{view:FieldSessionView;s
    </div>
    <p className="field-help">Enter communication that has already happened.</p>
    {issue&&<p role="alert">{issue}</p>}
-   <button type="submit">Cancel job and close work time</button>
+   <button className="field-cancel-submit" type="submit">Cancel job and close work time</button>
   </fieldset>
  </form>;
 }

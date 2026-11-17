@@ -666,9 +666,13 @@ it('retains refund and tip lineage and adds the recovered payment sources',()=>{
  expect(()=>validateMigrationSet(registered119,new Map(registered119.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered118)).not.toThrow();
  const jobHistoryFile='20270113180000_record_job_history.sql';
  expect(bytes('supabase/migrations/'+jobHistoryFile).equals(bytes('planning/proposals/record-job-history.sql'))).toBe(true);
- expect(currentRegistry.migrations).toHaveLength(120);
- expect(currentRegistry.migrations.at(-1)).toMatchObject({version:'20270113180000',file:jobHistoryFile});
- expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered119)).not.toThrow();
+ const registered120=JSON.parse(bytes('tests/support/registered120-migration-checksums.json').toString()) as MigrationRegistry;
+ expect(registered120.migrations).toHaveLength(120);
+ expect(registered120.migrations.at(-1)).toMatchObject({version:'20270113180000',file:jobHistoryFile});
+ expect(()=>validateMigrationSet(registered120,new Map(registered120.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered119)).not.toThrow();
+ expect(currentRegistry.migrations).toHaveLength(121);
+ expect(currentRegistry.migrations.at(-1)).toMatchObject({version:'20270114180000',file:'20270114180000_customer_profile.sql'});
+ expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered120)).not.toThrow();
  expect(registered100.migrations.at(-1)).toMatchObject({version:'20261224180000',file:'20261224180000_fictional_collection_failure_grouped_recredit.sql'});
  expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered100 as MigrationRegistry)).not.toThrow();
  expect(()=>validateMigrationSet(currentRegistry as MigrationRegistry,new Map(currentRegistry.migrations.map(m=>[m.file,bytes('supabase/migrations/'+m.file)])),registered101)).not.toThrow();
@@ -691,7 +695,7 @@ it('retains refund and tip lineage and adds the recovered payment sources',()=>{
  const supplierTables=['supplier_bill_original_intents','supplier_bill_originals','supplier_payables','supplier_payable_settlements'] as const;
  const previous=[...restoredCoverage,openingWorksheetSourceCoverage,
   ...statementSourceCoverage,openingReceivablesSourceCoverage,statementMatchDraftSourceCoverage,supplierBillDraftSourceCoverage];
- expect(currentCoverage).toEqual({...coverage92,migrationCount:120,tables:[
+ expect(currentCoverage).toEqual({...coverage92,migrationCount:121,tables:[
   ...previous.map(row=>['crest.financial_events','crest.journal_lines'].includes(row.table)
     ?{...row,required:[...row.required,'supplier_payable_id','supplier_payable_settlement_id']}:row),
   ...supplierTables.map(table=>({table:'crest.'+table,scope:'business',required:supplierPayableSourceColumns[table],
@@ -708,7 +712,7 @@ it('retains refund and tip lineage and adds the recovered payment sources',()=>{
   {table:'crest.legacy_contact_application_rows',scope:'business',required:['business_id','batch_id','source_row','decision_revision','customer_action','customer_id','customer_version','vehicle_action','vehicle_id','vehicle_version'],excluded:[],partialEvidenceGroup:null},
   {table:'crest_private.legacy_contact_apply_requests',scope:'business',required:['business_id','operation_id','batch_id','evidence_sha256','requested_by','security_epoch','recovery_epoch','requested_at','outcome','completed_at','attempt_count','next_attempt_at','lease_id','lease_expires_at'],excluded:[],partialEvidenceGroup:null},
  ]});
- expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:120});
+ expect(currentCompatibility).toEqual({...compatibility,schemaMaximum:121});
 });
 it('freezes accepted53 coverage and compatibility without production or finance activation',()=>{
  expect(compatibility).toEqual({...previousCompatibility,schemaMaximum:54});for(const prior of [registration.previousCoverage,registration.previousCompatibility])expect(sha256(bytes(prior.frozenFixture))).toBe(prior.sha256);expect(registration).toMatchObject({schemaVersion:54,ownerApplied:false,completeCrestExport:false,completeBackup:false,productionActivation:false,runtimeFinancePostingEnabled:false,originalRowsAndHistoryRewritten:false,candidateHeaderRetainedByteExact:true});expect(compatibility.productionActivation).toBe('blocked');

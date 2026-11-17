@@ -50,7 +50,15 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const booked=await post('book',booking);
   assert.equal(booked.status,200);
   assert.equal(booked.value.state,'committed');
-  await page.goto(fixture.origin+job);
+  await page.goto(fixture.origin+end);
+  await expect(status).toContainText('Open a supported active job');
+  const returnToJob=page.getByRole('link',{name:'Open saved job',exact:true});
+  await expect(returnToJob).toHaveAttribute('href',job);
+  await expect(page.getByRole('button',{name:'Reload saved work',exact:true})).toHaveClass('secondary');
+  await returnToJob.click();
+  await expect(page).toHaveURL(fixture.origin+job);
+  await expect(page.getByRole('heading',{name:'Job',exact:true})).toBeVisible();
+  await expect(page.getByRole('region',{name:'Saved visit',exact:true}).locator('.schedule-status')).toContainText('Saved job');
   const drafts=page.getByRole('region',{name:'Invoice drafts',exact:true});
   const draftStatus=drafts.getByRole('status');
   if(invoiceDrafts){
@@ -87,7 +95,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
    await expect(drafts.getByRole('button',{name:'Open invoice draft',exact:true})).toHaveCount(1);
   }
-  const recordWorkStatus=page.getByRole('button',{name:'Record work status…',exact:true});
+  const recordWorkStatus=page.getByRole('button',{name:'Record departure…',exact:true});
   const jobVehicles=page.getByRole('region',{name:'Vehicles for this job',exact:true});
   const workActionPosition=await recordWorkStatus.boundingBox(),vehiclesPosition=await jobVehicles.boundingBox();
   assert(workActionPosition&&vehiclesPosition&&workActionPosition.height>=44&&workActionPosition.y<vehiclesPosition.y);
@@ -95,7 +103,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await recordWorkStatus.scrollIntoViewIfNeeded();
   await page.screenshot({path:'.local/review/schedule-work-action-'+name+'-390.png'});
   await recordWorkStatus.click();
-  await page.getByLabel('What is happening?',{exact:true}).selectOption('direct_arrive');
+  await page.getByText('Other ways to start',{exact:true}).click();await page.getByRole('button',{name:'Already here — start without recorded travel',exact:true}).click();
   await page.getByLabel('Why was travel not recorded?',{exact:true}).fill('Synthetic arrival without travel.');
   await page.getByRole('button',{name:'Start work without recorded travel',exact:true}).click();
   await expect(status).toContainText('Work status saved.');
@@ -107,6 +115,18 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert.equal(loaded.status,200);
   const rows=loaded.value.assignments;
   assert(rows.length>=2);
+  const visit=page.locator('.completion-visit-heading');
+  await expect(visit.getByRole('heading')).toBeVisible();
+  const vehicleScope=page.getByRole('group',{name:'Synthetic lifecycle sedan',exact:true});
+  const visitScope=page.getByRole('group',{name:'Entire visit',exact:true});
+  await expect(vehicleScope.getByRole('group',{name:/Assigned item/})).toHaveCount(1);
+  await expect(visitScope.getByRole('group',{name:/Assigned item/})).toHaveCount(1);
+  await expect(vehicleScope).toContainText('0 of 1 ready');
+  await expect(visitScope).toContainText('0 of 1 ready');
+  const review=page.getByRole('complementary',{name:'Completion review',exact:true});
+  await expect(review).toContainText(rows.length+' items need review');
+  await review.getByRole('button',{name:'Review next required field',exact:true}).press('Enter');
+  await expect(page.getByLabel('Outcome for item 1',{exact:true})).toBeFocused();
 
   const partial=name==='webkit';
   if(!partial)await page.getByRole('button',{name:'Mark all items fulfilled',exact:true}).click();
@@ -145,12 +165,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await page.getByLabel('Walkthrough outcome',{exact:true}).selectOption('unavailable');
    await page.getByLabel('Why was the walkthrough unavailable?',{exact:true}).fill('Synthetic customer departed.');
   }
+  await expect(vehicleScope).toContainText('1 of 1 ready');
+  await expect(visitScope).toContainText('1 of 1 ready');
   await page.getByText('Completion note and review request',{exact:true}).click();
   await page.getByLabel('HTTPS review link',{exact:true}).fill('https://example.invalid/crest-review');
 
   async function capture(stage){
    await mkdir('.local/review',{recursive:true});
-   for(const width of [360,390,768,1440]){
+   for(const width of [320,390,768,1440]){
     await page.setViewportSize({width,height:900});
     await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
@@ -172,6 +194,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await split.getByLabel('Gross amount in dollars',{exact:true}).fill(dollars(firstGross+1n));
    await page.getByRole('button',{name:'End job',exact:true}).click();
    await expect(page.locator('form').getByRole('alert')).toContainText('Portion amounts must add up');
+   await expect(review).toContainText('1 item needs review');
    assert.equal(submissions,0);
    await split.getByLabel('Gross amount in dollars',{exact:true}).fill(dollars(firstGross));
   }
@@ -328,7 +351,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(status).toHaveText('Saved completion loaded.');
   await expect(summary.locator('details[open]').filter({has:page.getByText('Review message history',{exact:true})})).toHaveCount(0);
   await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
-  const scheduleStatus=page.getByRole('region',{name:'Saved schedule',exact:true}).getByRole('status').first();
+  const scheduleStatus=page.getByRole('region',{name:'Saved visit',exact:true}).getByRole('status').first();
   const requestOutcomes=[];
   const scheduleResponse=response=>{
    const path=new URL(response.url()).pathname;

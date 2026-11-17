@@ -5,6 +5,7 @@ import type {FormEvent} from 'react';
 import {AuthenticationError,authentication} from '../../../client/authentication';
 import {customers} from '../../../client/customers';
 import {SaveLegacyDraft,SavedLegacyDrafts} from './saved-drafts';
+import {ImportStages} from './stages';
 import {businessSettings} from '../../../client/business-settings';
 import {findSavedLegacyMatches,legacyRowsHaveSavedMatchHints} from '../../../client/legacy-contact-matches';
 import {LegacyContactImportError,maximumLegacyCsvBytes} from '../../../customer/legacy-contact-import-preview';
@@ -105,9 +106,10 @@ function ReviewResults({review,saved,busy,checkSaved}:{review:LegacyCsvReview;sa
     <option value="all">All records</option><option value="flagged">Needs review</option>
    </select>
   </div>
-  {visible.length>0?<ul className="legacy-records">{visible.map(row=><li key={row.number}>
+  {visible.length>0?<ul className="legacy-records">{visible.map(row=><li key={row.number} data-severity={row.issues.length?'rejected':row.matches.length?'match':'clear'}>
    <span className="legacy-record-number">Record {row.number}</span>
    <div><strong>{row.customer??'Check the mapped values'}</strong>{row.vehicle&&<p>{row.vehicle}</p>}
+   <span className="legacy-row-state">{row.issues.length?'Check values':row.matches.length?'Possible match':'No flags in this preview'}</span>
    {[...row.issues,...row.matches].map(reason=><p className="legacy-flag" key={reason}>{reason}</p>)}</div>
   </li>)}</ul>:<p>{filter==='flagged'?'No records have review flags.':'The CSV contains no contact records.'}</p>}
   {shown.length>pageSize&&<nav className="legacy-pagination" aria-label="CSV review pages">
@@ -270,12 +272,14 @@ export function LegacyContactReview(){
  }
  return <div aria-busy={busy}>
   <p className="notice" role="status" aria-label="CSV review status">{message}</p>
-  {!access&&!busy&&(signedOut?<a href="/sign-in">Sign in to Crest OS</a>:
+  {!access&&!busy&&(signedOut?<a href="/sign-in?returnTo=contact-import">Sign in to Crest OS</a>:
    <button className="secondary" type="button" onClick={recheckAccess}>Check workspace access</button>)}
   {access&&<>
    {draftsAvailable&&<SavedLegacyDrafts businessId={access.context.businessId} authorize={authorizeDraft} effectsAvailable={effectsAvailable} targetsAvailable={targetsAvailable}
     decisionsAvailable={decisionsAvailable} approvalsAvailable={approvalsAvailable} applicationsAvailable={applicationsAvailable} backgroundApplications={backgroundApplications} downloadsAvailable={downloadsAvailable} recoveryEpoch={access.context.recoveryEpoch}
     issueText={issue=>issueMessage[issue]??'Check the mapped data.'}/>}
+   <div className="legacy-source-workspace">
+   <ImportStages stage={review?'review':'source'}/>
    <section className="legacy-panel" aria-label="Choose a CSV">
     <label htmlFor={fileId}>Contact CSV</label>
     <input id={fileId} ref={fileInput} type="file" accept=".csv,text/csv" disabled={busy} aria-describedby={fileId+'-help'}
@@ -302,6 +306,7 @@ export function LegacyContactReview(){
    {draftsAvailable&&source&&review&&<SaveLegacyDraft key={review.previewSha256} businessId={access.context.businessId}
     recoveryEpoch={access.context.recoveryEpoch} sourceSha256={review.sourceSha256} headers={source.headers} mapping={mapping}
     file={()=>fileInput.current?.files?.[0]} authorize={authorizeDraft}/>}
+   </div>
   </>}
  </div>;
 }

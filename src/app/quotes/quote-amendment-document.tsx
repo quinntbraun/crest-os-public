@@ -46,6 +46,17 @@ function validate(supplied:unknown):asserts supplied is Comparison{
  requireSafe(delta===BigInt(supplied.signedDeltaCents));
 }
 function moneyChange(value:string){return value==='0'?'No price change':(value.startsWith('-')?'Decrease of ':'Increase of ')+quoteMoney(value.startsWith('-')?value.slice(1):value);}
+type Totals=Pick<Comparison,'schemaVersion'|'previousAgreementVersion'|'proposedAgreementVersion'|'previousTotalCents'|'revisedTotalCents'|'signedDeltaCents'>;
+export function AmendmentTotals({comparison,accepted=false}:{comparison:Totals;accepted?:boolean}){
+ const cancellation=comparison.schemaVersion!==1;
+ return <section className="amendment-totals" aria-label={accepted?'Accepted price change':'Proposed price change'}>
+  <h3>{moneyChange(comparison.signedDeltaCents)}</h3>
+  <dl>
+   <div><dt>{accepted?'Earlier accepted total':'Accepted total'}</dt><dd>{quoteMoney(comparison.previousTotalCents)}</dd><dd className="amendment-total-version">Version {comparison.previousAgreementVersion}</dd></div>
+   <div><dt>{accepted?(cancellation?'Accepted remaining total':'Accepted total'):(cancellation?'Proposed remaining total':'Proposed total')}</dt><dd>{quoteMoney(comparison.revisedTotalCents)}</dd><dd className="amendment-total-version">Version {comparison.proposedAgreementVersion}</dd></div>
+  </dl>
+ </section>;
+}
 function discountText(value:Line['lineDiscount']){return value===null?'No discount':value.kind==='fixed'?quoteMoney(value.cents):value.rate+'%';}
 function HeaderValue({field,value}:{field:keyof typeof headerLabels;value:unknown}){
  if(field==='recipient'){const recipient=value as {displayName:string;phone:string|null;email:string|null};return <><p className="service-scope">{recipient.displayName}</p>{recipient.phone!==null&&<p>{phonePresentation(recipient.phone)}</p>}{recipient.email!==null&&<p className="service-scope">{recipient.email}</p>}</>;}
@@ -67,10 +78,23 @@ export function QuoteAmendmentDocument({comparison,accepted=false}:{comparison:C
  return <article className="quote-worksheet quote-amendment" aria-labelledby={title}>
   <header><p className="eyebrow">Crest Detailing</p><h2 id={title}>{accepted?(comparison.schemaVersion!==1?'Accepted cancellation of remaining work':'Accepted change to work'):comparison.schemaVersion!==1?'Proposed cancellation of remaining work':'Proposed change to accepted work'}</h2><p>{accepted?'This change is accepted. The earlier agreement and its recorded history remain available.':'Your accepted agreement remains in effect until this change is separately accepted.'}</p></header>
   {comparison.schemaVersion!==1&&<section aria-label="Cancellation reason"><h3>Reason</h3><p className="service-scope">{comparison.cancellationReason}</p></section>}
-  <section aria-label={accepted?'Accepted price change':'Proposed price change'}><h3>{moneyChange(comparison.signedDeltaCents)}</h3><dl className="customer-values"><dt>{accepted?'Earlier accepted total · version ':'Accepted total · version '}{comparison.previousAgreementVersion}</dt><dd>{quoteMoney(comparison.previousTotalCents)}</dd><dt>{accepted?(comparison.schemaVersion!==1?'Accepted remaining total · version ':'Accepted total · version '):'Proposed total · version '}{comparison.proposedAgreementVersion}</dt><dd><strong>{quoteMoney(comparison.revisedTotalCents)}</strong></dd></dl><p className="field-help">USD · All-in quoted amounts. This comparison records no invoice, payment or refund.</p></section>
+  <AmendmentTotals comparison={comparison} accepted={accepted}/>
+  <p className="field-help">USD · All-in quoted amounts. This comparison records no invoice, payment or refund.</p>
   {comparison.lineChanges.length===0&&comparison.headerChanges.length===0?<p>No customer-facing scope, terms or price changes.</p>:<>
    {comparison.headerChanges.length>0&&<section aria-label="Changed quote details"><h3>Details and terms</h3>{comparison.headerChanges.map(change=><details key={change.field}><summary>{headerLabels[change.field]} changed</summary><div className="amendment-comparison"><section aria-label={(accepted?'Earlier accepted ':'Accepted ')+headerLabels[change.field]}><h4>{accepted?'Earlier accepted':'Accepted'}</h4><HeaderValue field={change.field} value={change.before}/></section><section aria-label={(accepted?'Accepted ':'Proposed ')+headerLabels[change.field]}><h4>{accepted?'Accepted':'Proposed'}</h4><HeaderValue field={change.field} value={change.after}/></section></div></details>)}</section>}
-   {comparison.lineChanges.length>0&&<section aria-label="Changed work"><h3>Work changes</h3><ol className="quote-preview-lines">{comparison.lineChanges.map((change,index)=><li key={index}><details><summary>{change.kind==='added'?'Added':change.kind==='removed'?'Removed':change.kind==='moved'?'Reordered':'Changed'} · {change.after?.description??change.before!.description}</summary>{change.kind==='moved'&&<p>Line {change.beforePosition} → {change.afterPosition}. Price and scope stay the same.</p>}<div className="amendment-comparison"><section aria-label={accepted?'Earlier accepted work':'Accepted work'}><h4>{accepted?'Earlier accepted':'Accepted'}</h4><Scope value={change.before}/></section><section aria-label={accepted?'Accepted work':'Proposed work'}><h4>{accepted?'Accepted':'Proposed'}</h4><Scope value={change.after}/></section></div></details></li>)}</ol></section>}
+   {comparison.lineChanges.length>0&&<section aria-label="Changed work"><h3>Work changes</h3><ol className="amendment-change-list">{comparison.lineChanges.map((change,index)=>{
+    const service=change.after??change.before!;
+    const label={added:'Added',removed:comparison.schemaVersion===1?'Removed':accepted?'Authorization withdrawn':'Proposed withdrawal',moved:'Reordered',changed:'Changed'}[change.kind];
+    const vehicle=change.before&&change.after&&change.before.vehicle!==change.after.vehicle
+     ?(change.before.vehicle??'Job-wide')+' → '+(change.after.vehicle??'Job-wide')
+     :service.vehicle??'Job-wide scope';
+    return <li key={index}><details><summary className="amendment-change-summary" data-change={change.kind}>
+     <span className="amendment-change-tag">{label}</span>
+     <strong>{service.description}</strong>
+     <span>{vehicle}</span>
+     <span className="amendment-change-amount"><span className="visually-hidden">Before </span>{change.before?quoteMoney(change.before.finalCents):<><span aria-hidden="true">—</span><span className="visually-hidden">Not included</span></>} <span aria-hidden="true">→</span> <span className="visually-hidden">After </span>{change.after?quoteMoney(change.after.finalCents):<><span aria-hidden="true">—</span><span className="visually-hidden">Not included</span></>}</span>
+    </summary>{change.kind==='moved'&&<p>Line {change.beforePosition} → {change.afterPosition}. Price and scope stay the same.</p>}<div className="amendment-comparison"><section aria-label={accepted?'Earlier accepted work':'Accepted work'}><h4>{accepted?'Earlier accepted':'Accepted'}</h4><Scope value={change.before}/></section><section aria-label={accepted?'Accepted work':'Proposed work'}><h4>{accepted?'Accepted':'Proposed'}</h4><Scope value={change.after}/></section></div></details></li>;
+   })}</ol></section>}
   </>}
  </article>;
 }

@@ -15,9 +15,9 @@ const referenceKey = 'crest.calendar-consent.pending.v1';
 for (const automatic of [false,true]) test('signed-in Calendar preserves consent and ' + (automatic ? 'shares selected details automatically' : 'leaves a booking pending by default'), { timeout: 240000 }, async () => {
   const optional=automatic;
   const expectedStatus=automatic ? 'The current appointment is synced to the fictional calendar.' : 'A Calendar update is waiting.';
-  const cluster = await recoveryCluster();
   const previous = process.env.CREST_TEST_DATABASE_URL;
-  process.env.CREST_TEST_DATABASE_URL = cluster.testDatabaseUrl;
+  const cluster = previous ? null : await recoveryCluster();
+  if (cluster) process.env.CREST_TEST_DATABASE_URL = cluster.testDatabaseUrl;
   let fixture;
   try {
     fixture = await sourceExportBrowserFixture({ product: true, workspace: true, catalog: true, quotes: true, quoteReview: true,
@@ -51,16 +51,22 @@ for (const automatic of [false,true]) test('signed-in Calendar preserves consent
         await page.getByRole('link', { name: 'Google Calendar setup' }).press('Enter');
         await expect(page).toHaveURL(fixture.origin + settings);
         const setup = page.getByRole('region', { name: 'Fictional Calendar setup' });
-        await expect(setup.getByText('This workspace uses a simulated Google account', { exact: false })).toBeVisible();
+        const overview = setup.getByRole('region', { name: 'Setup overview' });
+        await expect(overview.getByText('Simulated account', { exact: true })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Back to Settings', exact: true })).toHaveAttribute('href','/settings');
+        await expect(page.getByRole('link', { name: 'Open Schedule', exact: true })).toHaveAttribute('href','/schedule');
         if (engine === chromium) {
           const prepare = setup.getByRole('button', { name: 'Prepare fictional calendar' });
           const stateCount = () => fixture.client.query('SELECT count(*)::int AS n FROM crest.google_calendar_destinations WHERE business_id=$1',
             [fixture.business]).then(result => result.rows[0].n);
           await expect(prepare).toBeEnabled();
+          await expect(overview.getByText('Waiting for preparation', { exact: true })).toBeVisible();
           assert.equal(await stateCount(), 0);
           await prepare.press('Enter');
           const panel = page.getByRole('region', { name: 'Google Calendar', exact: true });
           await expect(panel.getByRole('button', { name: 'Review shared event' })).toBeEnabled();
+          await expect(overview.getByText('Crest Jobs', { exact: true })).toBeVisible();
+          await expect(overview.getByText('Review required', { exact: true })).toBeVisible();
           assert.equal(await stateCount(), 1);
           await page.reload();
           if (optional) {
@@ -72,6 +78,7 @@ for (const automatic of [false,true]) test('signed-in Calendar preserves consent
             }
           }
           await panel.getByRole('button', { name: 'Review shared event' }).press('Enter');
+          await expect(panel.getByRole('heading', { name: 'Review what Google receives', exact: true })).toBeFocused();
           await expect(panel.getByText(optional ? 'Crest job · Sample Detail · Sample Client' : 'Crest job', { exact: true })).toBeVisible();
           await expect(panel.getByText('calendar-owner@example.test', { exact: true })).toBeVisible();
           await expect(panel.getByText('Example location')).toHaveCount(optional ? 1 : 0);
@@ -97,6 +104,7 @@ for (const automatic of [false,true]) test('signed-in Calendar preserves consent
           await page.reload();
           await panel.getByRole('button', { name: 'Check save status' }).press('Enter');
           await expect(panel.getByRole('status')).toContainText('consent was saved');
+          await expect(overview.getByText('Consent saved', { exact: true })).toBeVisible();
           assert.equal(await page.evaluate(key => sessionStorage.getItem(key), referenceKey), null);
           const consent = await fixture.client.query('SELECT state,client_name,service_label,work_address FROM crest.google_calendar_consents WHERE business_id=$1',
             [fixture.business]);
@@ -130,7 +138,11 @@ for (const automatic of [false,true]) test('signed-in Calendar preserves consent
         const sync = page.getByRole('region', { name: 'Saved appointment sync' });
         await expect(sync.getByRole('status')).toHaveText(expectedStatus,{timeout:15000});
         await expect(sync.getByRole('link', { name: 'Open saved job' })).toHaveAttribute('href', '/schedule?job=' + job);
-        await expect(sync.getByText(/Last confirmed version 1 of 1/)).toHaveCount(automatic ? 1 : 0);
+        await expect(sync.getByText('Last successful sync', { exact: true })).toHaveCount(automatic ? 1 : 0);
+        if (automatic) {
+          await expect(sync.locator('time')).toHaveAttribute('datetime', /^\d{4}-\d{2}-\d{2}T/);
+          await expect(sync.getByText('1 of 1', { exact: true })).toBeVisible();
+        }
         for (const width of [360, 390, 768, 1440]) {
           await page.setViewportSize({ width, height: 900 });
           const axe = await new AxeBuilder({ page }).analyze();
@@ -167,7 +179,7 @@ for (const automatic of [false,true]) test('signed-in Calendar preserves consent
     finally {
       if (previous === undefined) delete process.env.CREST_TEST_DATABASE_URL;
       else process.env.CREST_TEST_DATABASE_URL = previous;
-      await cluster.close();
+      await cluster?.close();
     }
   }
 });

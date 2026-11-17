@@ -20,7 +20,7 @@ const storageKey = 'crest.calendar-consent.pending.v1';
 const csrfToken = 'A'.repeat(43);
 const minimal = { clientName: false, serviceLabel: false, workAddress: false };
 const longAccount = 'fictional-owner-'.repeat(10) + '@example.test';
-const panels = ['panel', 'options', 'preview', 'checks', 'actions'];
+const panels = ['panel', 'options', 'preview', 'reviewHeading', 'checks', 'actions'];
 
 async function browserFixture() {
   const globalCss = await readFile(new URL('../../src/app/globals.css', import.meta.url), 'utf8');
@@ -116,12 +116,14 @@ for (const engine of [chromium, webkit]) {
       await expect(status).toContainText('could not load the preview');
       await preview.press('Enter');
       await expect(status).toHaveText('Event preview ready.');
+      await expect(panel.getByRole('heading',{name:'Review what Google receives',exact:true})).toBeFocused();
       assert.deepEqual(latestSelection, minimal);
       await expect(panel.getByText('Crest job', { exact: true })).toBeVisible();
       await expect(panel.getByText('Example location')).toHaveCount(0);
       const approve = panel.getByRole('button', { name: 'Save Calendar consent' });
       await expect(approve).toBeDisabled();
       await panel.getByRole('button', { name: 'Change shared details' }).click();
+      await expect(preview).toBeFocused();
       await open.press('Enter');
       await panel.getByLabel('Service label').press('Space');
       await panel.getByLabel('Work address').check();

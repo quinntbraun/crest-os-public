@@ -243,7 +243,7 @@ export function TrialBalance({businessId}:{businessId:string}){
       }),
     ]);
   }
-  return <details className="review-card" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
+  return <details className="review-card" open onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
     <summary>Fictional trial balance</summary>
     <section className="trial-balance" aria-label="Fictional trial balance">
       <p>Review posted balances by account. Opening balances and bank reconciliation are still pending.</p>
@@ -255,8 +255,13 @@ export function TrialBalance({businessId}:{businessId:string}){
       </form>
       <p role="status">{message}</p>
       {balance&&<>
-        <p>Through <time dateTime={balance.throughOn}>{balance.throughOn}</time> · USD · {balance.timeZone}</p>
-        {balance.coverageStart&&<p className="field-help">First included posting {balance.coverageStart} · {balance.postedEventCount} posted {balance.postedEventCount==='1'?'event':'events'}</p>}
+        <p className={styles.reportPeriod}>Trial balance · Through <time dateTime={balance.throughOn}>{balance.throughOn}</time></p>
+        <div className={styles.reportSnapshot}>
+          <div><p>USD · {balance.timeZone}</p>
+            {balance.coverageStart&&<p className="field-help">First included posting {balance.coverageStart} · {balance.postedEventCount} posted {balance.postedEventCount==='1'?'event':'events'}</p>}
+          </div>
+          <button type="button" className="secondary" onClick={download}>Download trial balance CSV</button>
+        </div>
         {hasPaymentCorrections(balance)&&<p className="field-help">{reportVersion(balance)===11
           ?'Supplier payables, customer funds and tax payable match the ledger through this date.'
           :reportVersion(balance)===10
@@ -289,7 +294,6 @@ export function TrialBalance({businessId}:{businessId:string}){
           <tfoot><tr><th scope="row">Total</th><td>{usd(balance.totals.debitBalanceCents)}</td>
             <td>{usd(balance.totals.creditBalanceCents)}</td></tr></tfoot>
         </table></div>}
-        <button type="button" className="secondary" onClick={download}>Download trial balance CSV</button>
         <RecordedBalanceSheet balance={balance} journalBusy={busy} selectJournalAccount={selectJournalAccount}/>
         {'refundDue' in balance&&<details className="review-card">
           <summary>Refunds still due · {usd(balance.refundDue.totalCents)}</summary>

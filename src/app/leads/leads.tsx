@@ -22,6 +22,12 @@ import {LeadMatchNotice,useLeadMatchReview} from './match-review';
 import {leadMatchReview} from '../../client/leads';
 import type {Proof} from '../../client/authentication';
 
+const followUpDisplay=new Intl.DateTimeFormat('en-US',{
+ month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short',
+});
+function FollowUpTime({instant}:{instant:string}){
+ return <time dateTime={instant} title={instant}>{followUpDisplay.format(new Date(instant))}</time>;
+}
 function EstimateInput({value,change}:{value:string|null;change:(value:string|null)=>void}){
  const [text,setText]=useState(()=>value===null?'':leadDollars(value));
  return <><label htmlFor="lead-estimate">Estimated value (USD)</label><input id="lead-estimate" name="estimate" inputMode="decimal" autoComplete="off" maxLength={24} value={text} onChange={event=>{setText(event.target.value);change(event.target.value.length?leadCents(event.target.value):null);}}/><p className="field-help">Optional. Enter dollars, such as 125.50, or leave blank. Zero is an explicit estimate. This is not a quote or invoice.</p></>;
@@ -32,20 +38,27 @@ function LeadDetails({lead}:{lead:Lead}){
 }
 export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:ComponentType<{draft:LeadAddressDraft;change:(draft:LeadAddressDraft)=>void}>;initialLeadId?:string|null}={}){
  const [conversionLocked,setConversionLocked]=useState(false),[conversionGeneration,setConversionGeneration]=useState(0),[statusLocked,setStatusLocked]=useState(false),[vehicleLocked,setVehicleLocked]=useState(false),[addressLocked,setAddressLocked]=useState(false),[view,setView]=useState(initialLeadEditorView),current=useRef<ReturnType<typeof createLeadEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null),editHeading=useRef<HTMLHeadingElement>(null);
+ const [directory,setDirectory]=useState(false),queueHeading=useRef<HTMLHeadingElement>(null);
+ const focusLead=useRef<string|null>(null);
+ useEffect(()=>{
+  if(view.busy||!view.selected||focusLead.current!==view.selected.id||!editHeading.current)return;
+  focusLead.current=null;
+  editHeading.current.focus();
+ },[view.busy,view.selected]);
  useEffect(()=>{
   const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)};
   const controller=createLeadEditorController({conversionStore:createPendingLeadConversionStore(storage),addressStore:createPendingLeadAddressStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),store:createPendingLeadStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),statusStore:createPendingLeadStateStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),vehicleStore:createPendingLeadVehicleStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});current.current=controller;
-  let focusFrame=0;
   void (async()=>{
    await controller.load();
    if(!initialLeadId||current.current!==controller||controller.view().phase!=='ready')return;
+   focusLead.current=initialLeadId;
    await controller.open(initialLeadId);
-   if(current.current!==controller||controller.view().selected?.id!==initialLeadId)return;
-   focusFrame=requestAnimationFrame(()=>editHeading.current?.focus());
+   if(current.current===controller&&controller.view().selected?.id!==initialLeadId)focusLead.current=null;
   })();
-  const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
+  const leave=()=>{focusLead.current=null;controller.suspend();};
+  const hidden=()=>{if(document.visibilityState==='hidden')leave();},restored=(event:PageTransitionEvent)=>{if(event.persisted)leave();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
-  return()=>{cancelAnimationFrame(focusFrame);controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
+  return()=>{focusLead.current=null;controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
  },[initialLeadId]);
  const statusChanged=useCallback((leadId:string)=>{void current.current?.statusChanged(leadId);},[]);
  const conversionCommitted=useCallback((leadId:string)=>{setConversionGeneration(v=>v+1);void current.current?.conversionChanged(leadId);},[]);
@@ -56,6 +69,10 @@ export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:Co
  function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const data=new FormData(event.currentTarget);void current.current?.query(String(data.get('search')??''),data.get('lost')==='on');}
 
  const key=(view.selected?.id??'new')+':'+(view.selected?.version??'0'),disabled=view.busy||view.writesPaused||statusLocked||vehicleLocked||addressLocked||conversionLocked;
+ const readLocked=view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked;
+ const queue=view.followUps,showQueue=!!queue&&!directory;
+ const page=queue?.page,reminders=page?.followUps??[];
+ const visibleRows=showQueue?reminders:view.rows.map(row=>({id:row.id,label:row.label,state:row.state,followUpAt:row.follow_up_at}));
  const review=useLeadMatchReview(view.draft);
  const canSave=view.canSave&&!disabled;
  function reviewAndSave(){
@@ -64,15 +81,27 @@ export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:Co
   const changed=!selected||draft.customerId!==selected.customer_id||draft.phone!==selected.phone_raw||draft.email!==selected.email_raw;
   const lookup=view.matchReview&&changed&&(draft.phone?.trim()||draft.email?.trim())?async(proof:Proof,signal:AbortSignal)=>{
    const matches=await leadMatchReview.contact(businessId,{leadId:selected?.id??null,customerId:draft.customerId,phone:draft.phone||null,email:draft.email||null},proof,signal);
-   const reasons=(row:{phone:boolean;email:boolean})=>[...row.phone?['Same phone']:[],...row.email?['Same email']:[]];
    return {rows:matches?[
-    ...matches.customers.map(row=>({id:row.id,label:row.label,kind:'Customer' as const,reasons:reasons(row),detail:row.archived?'Archived':undefined})),
-    ...matches.leads.map(row=>({id:row.id,label:row.label,kind:'Lead' as const,reasons:reasons(row),detail:row.state.replaceAll('_',' ')})),
+    ...matches.customers.map(row=>({id:row.id,label:row.label,kind:'Customer' as const,matches:{phone:row.phone,email:row.email},detail:row.archived?'Archived':undefined})),
+    ...matches.leads.map(row=>({id:row.id,label:row.label,kind:'Lead' as const,matches:{phone:row.phone,email:row.email},detail:row.state.replaceAll('_',' ')})),
    ]:[],more:!!(matches?.moreCustomers||matches?.moreLeads)};
   }:null;
   void review.run({lookup,stillCurrent:()=>current.current===controller&&controller.view().draft===draft&&controller.view().canSave,save:()=>void action('save')});
  }
  function submit(event:FormEvent){event.preventDefault();if(!review.active)reviewAndSave();}
+ async function openLead(id:string){
+  const controller=current.current;
+  if(!controller||controller.view().busy)return;
+  focusLead.current=id;
+  await controller.open(id);
+  if(current.current===controller&&controller.view().selected?.id!==id)focusLead.current=null;
+ }
+ async function pageQueue(next=false){
+  const controller=current.current;
+  if(!controller)return;
+  await controller.pageFollowUps(next);
+  if(current.current===controller)queueHeading.current?.focus();
+ }
  function saveAsEntered(){
   if(canSave&&current.current?.view().draft===view.draft){review.dismiss();void action('save');}
  }
@@ -81,11 +110,45 @@ export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:Co
   <p ref={status} tabIndex={-1} role="status" aria-label="Lead editor status" aria-live="polite" aria-atomic="true">{view.message}</p>
   {view.phase==='ready'&&<>
    {view.writesPaused&&<p className="notice">Lead changes are paused. You can review current records and retained history.</p>}
-   <form onSubmit={search} aria-label="Search leads"><label htmlFor="lead-search">Lead search</label><input id="lead-search" name="search" type="search" maxLength={400} autoComplete="off" defaultValue={view.search} disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked}/><label className="trust"><input name="lost" type="checkbox" defaultChecked={view.includeLost} disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked}/>Include lost leads</label><button className="secondary" type="submit" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked}>Search leads</button></form>
-   <p className="field-help">Search label, phone or email text. Shared contact details do not merge people. Searching or opening another record discards an unsaved draft.</p>
-   <ul className="customer-list">{view.rows.map(row=><li key={row.id}><button type="button" className="secondary" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void current.current?.open(row.id)}>{row.label}</button><p>{row.state.replaceAll('_',' ')}{row.follow_up_at?' · Follow-up (UTC): '+row.follow_up_at:''}</p></li>)}</ul>
-   {view.rows.length===0&&<p>No leads found on this page.</p>}{view.hasMore&&<button type="button" className="secondary" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void current.current?.query(view.search,view.includeLost,true)}>Next lead page</button>}
-   <button type="button" disabled={disabled} onClick={()=>current.current?.create()}>Add lead</button>
+   <div className="lead-directory-toolbar">
+    {queue&&<nav aria-label="Lead views" className="lead-view-switch">
+     <button type="button" className="secondary" aria-current={showQueue?'true':undefined} disabled={readLocked} onClick={()=>setDirectory(false)}>Follow-ups</button>
+     <button type="button" className="secondary" aria-current={showQueue?undefined:'true'} disabled={readLocked} onClick={()=>setDirectory(true)}>All leads</button>
+    </nav>}
+    <button type="button" disabled={disabled} onClick={()=>current.current?.create()}>Add lead</button>
+   </div>
+   {!showQueue&&<>
+   <form className="service-search lead-directory-search" onSubmit={search} aria-label="Search leads">
+    <label htmlFor="lead-search">Lead search<input id="lead-search" name="search" type="search" maxLength={400} autoComplete="off" defaultValue={view.search} disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked}/></label>
+    <button className="secondary" type="submit" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked}>Search leads</button>
+    <label className="trust"><input name="lost" type="checkbox" defaultChecked={view.includeLost} disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked}/>Include lost leads</label>
+   </form>
+   <p className="field-help">{dirty?'Searching or opening another record discards this unsaved draft.':'Search by name, phone or email.'}</p>
+   </>}
+   {showQueue&&<div className="lead-queue-heading">
+    <h2 tabIndex={-1} ref={queueHeading}>Scheduled follow-ups</h2>
+    <p className="field-help">{dirty?'Opening another record discards this unsaved draft.':'Earliest reminders first.'}</p>
+   </div>}
+   {visibleRows.length>0&&<ul className="customer-list crest-record-list" aria-label={showQueue?'Lead follow-up queue':'Saved leads'}>{visibleRows.map(row=><li key={row.id}>
+    <button type="button" className="secondary crest-record-row" aria-current={view.selected?.id===row.id?'true':undefined}
+     aria-label={row.label} aria-describedby={'lead-summary-'+row.id}
+     disabled={readLocked} onClick={()=>void openLead(row.id)}>
+     <strong>{row.label}</strong><span id={'lead-summary-'+row.id} className="crest-record-meta">
+      <span className="crest-record-state">{row.state.replaceAll('_',' ')}</span>
+      {row.followUpAt&&<span>Follow-up <FollowUpTime instant={row.followUpAt}/></span>}
+      {showQueue&&row.followUpAt&&page&&row.followUpAt<=page.observedAt&&<span className="follow-up-overdue">Overdue</span>}
+     </span>
+    </button>
+   </li>)}</ul>}
+   {showQueue?<div className="lead-follow-up-pagination">
+    {page===null&&<><p>Follow-ups could not be verified.</p><button type="button" className="secondary" disabled={readLocked} onClick={()=>void pageQueue()}>Check follow-ups</button></>}
+    {page&&reminders.length===0&&<p>{queue?.later?'No later follow-ups.':'No follow-up dates recorded.'}</p>}
+    {queue?.later&&<button type="button" className="secondary" disabled={readLocked} onClick={()=>void pageQueue()}>First reminders</button>}
+    {page?.hasMore&&<button type="button" className="secondary" disabled={readLocked} onClick={()=>void pageQueue(true)}>More follow-ups</button>}
+   </div>:<>
+    {view.rows.length===0&&<p>No leads found on this page.</p>}
+    {view.hasMore&&<button type="button" className="secondary" disabled={readLocked} onClick={()=>void current.current?.query(view.search,view.includeLost,true)}>Next lead page</button>}
+   </>}
    {view.selected&&view.businessId&&<LeadStatusPanel key={'status:'+view.businessId+':'+view.selected.id+':'+conversionGeneration} businessId={view.businessId} leadId={view.selected.id} disabled={view.busy||dirty||vehicleLocked||addressLocked||conversionLocked} onLock={setStatusLocked} onCommitted={statusChanged}/>}
    {view.selected&&view.businessId&&<LeadVehiclePanel key={'vehicles:'+view.businessId+':'+view.selected.id+':'+conversionGeneration} businessId={view.businessId} leadId={view.selected.id} disabled={view.busy||dirty||statusLocked||addressLocked||conversionLocked} onLock={setVehicleLocked}/>}
    {view.selected&&view.businessId&&<LeadAddressPanel key={'addresses:'+view.businessId+':'+view.selected.id+':'+conversionGeneration} businessId={view.businessId} leadId={view.selected.id} disabled={view.busy||dirty||statusLocked||vehicleLocked||conversionLocked} onLock={setAddressLocked} {...addressAssist?{assist:addressAssist}:{}}/>}
@@ -102,14 +165,15 @@ export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:Co
      <EstimateInput key={key+':estimate'} value={view.draft.estimatedCents} change={value=>edit('estimatedCents',value)}/>
      <FollowUpInput key={key+':follow-up'} value={view.draft.followUpAt} change={value=>edit('followUpAt',value)}/>
      <NullableText name="notes" label="Notes" multiline limit={4000} value={view.draft.notes} disabled={disabled} change={value=>edit('notes',value)}/>
-    </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}{review.active&&<LeadMatchNotice review={review.active} canSave={canSave} retry={reviewAndSave} edit={()=>{review.dismiss();document.getElementById('phone')?.focus();}} save={saveAsEntered}/>}
+    </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}{review.active&&<LeadMatchNotice review={review.active}
+     fields={[...(view.draft.phone?.trim()?['phone' as const]:[]),...(view.draft.email?.trim()?['email' as const]:[])]} canSave={canSave} retry={reviewAndSave} edit={()=>{review.dismiss();document.getElementById('phone')?.focus();}} save={saveAsEntered}/>}
     {(!review.active||review.active.state==='checking')&&<button type="submit" disabled={!canSave||!!review.active}>Save lead</button>}</form>
    </>}
    {view.history&&<section aria-label="Lead history"><h2>Retained history</h2><p>Current version: {view.history.lead.version}</p>{view.history.history.map(event=><details key={event.after.version}><summary>Version {event.after.version} · {event.after.updated_at}</summary>{event.before&&<><h3>Before</h3><LeadDetails lead={event.before}/></>}<h3>After</h3><LeadDetails lead={event.after}/></details>)}{view.history.hasMore&&<button className="secondary" type="button" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void action('moreHistory')}>Next lead history page</button>}</section>}
   </>}
   {view.phase==='pending'&&<><p className="field-help">Keep the original save reference until the outcome is confirmed. No retry runs automatically.</p>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void action('check')}>Check lead save status</button>{view.canRetry&&<button type="button" className="secondary" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void action('retry')}>Retry original lead change</button>}</>}
   {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void action('load')}>Load current leads</button>}
-<nav aria-label="Lead navigation"><a href="/save-review">Review interrupted save</a><a href="/lead-sources">Lead sources</a><a href="/customers">Customers</a><a href="/vehicles">Vehicles</a><a href="/sign-in">Device sign-in and sign-out</a><a href="/">Crest OS home</a></nav>
+<nav aria-label="Lead navigation"><a href="/save-review">Review interrupted save</a><a href="/lead-sources">Lead sources</a><a href="/customers">Customers</a><a href="/vehicles">Vehicles</a><a href="/sign-in?returnTo=leads">Device sign-in and sign-out</a><a href="/">Crest OS home</a></nav>
   <p className="field-help">Synthetic testing is in progress. Intake, manual status changes and explicitly enabled conversion are under synthetic testing. Real-data use remains unavailable.</p>
  </section>;
 }

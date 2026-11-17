@@ -23,10 +23,35 @@ type Vehicle=Awaited<ReturnType<typeof vehicles.list>>['vehicles'][number];
 type Store=ReturnType<typeof createPendingSchedulingStore>;
 type Proof=Awaited<ReturnType<typeof authentication.session>>;
 type FieldResult=Awaited<ReturnType<typeof scheduling.saveFieldSession>>;
+type CompletionVehicles=Readonly<Record<string,string|null>>;
+
+async function completionVehicleLinks(api:typeof scheduling,detail:Resources,completion:CompletionContext,proof:Proof,signal:AbortSignal):Promise<CompletionVehicles>{
+ const families=[...new Set(detail.encounters.map(row=>row.family_id))];
+ const agreements=await Promise.all(families.map(family=>api.agreement(detail.businessId,family,proof,signal).catch(()=>null)));
+ type Agreement=Exclude<NonNullable<(typeof agreements)[number]>,{state:'absent'}>;
+ const sources=new Map<string,Agreement['sources'][number]>();
+ for(const agreement of agreements){
+  if(agreement&&!("state" in agreement))for(const source of agreement.sources)sources.set(source.sourceAllocationId,source);
+ }
+ const links:Record<string,string|null>={};
+ for(const assignment of completion.assignments){
+  const part=detail.scopeParts.find(row=>row.partitionId===assignment.partitionId&&row.planId===assignment.planId
+   &&row.planSequence===assignment.planSequence&&row.state==='assigned'&&row.amountCents===assignment.amountCents
+   &&row.grossInclusiveCents===assignment.grossInclusiveCents&&row.discountInclusiveCents===assignment.discountInclusiveCents
+   &&row.scopeDescription===assignment.scopeDescription);
+  if(!part)continue;
+  const source=sources.get(part.sourceAllocationId);
+  if(source&&source.entitlementId===part.entitlementId&&source.entitlementVersionId===part.entitlementVersionId
+   &&source.planId===part.planId&&source.planSequence===part.planSequence
+   &&source.parts.some(row=>row.partitionId===part.partitionId&&row.jobId===detail.jobId&&row.state==='assigned')
+   &&(source.jobWide||detail.vehicles.some(row=>row.vehicle_id===source.vehicleId)))links[assignment.assignedPartId]=source.vehicleId;
+ }
+ return Object.freeze(links);
+}
 export type FieldSessionMode='work'|'completion'|'interruption'|'cancellation';
 export const fieldSessionKind={work:'operations.job.field',completion:'operations.job.complete',
  interruption:'operations.job.interrupt',cancellation:'operations.job.cancel_unfulfilled'} as const;
-export type FieldSessionView=Readonly<{phase:'loading'|'ready'|'pending'|'review'|'blocked'|'signed-out'|'unavailable'|'committed';busy:boolean;message:string;context:Context|null;resources:Resources|null;vehicles:readonly Vehicle[];moreVehicles:boolean;reference:string;savedJobId:string;savedVersion:string;completion?:CompletionContext;summary?:CompletionSummary;reviewOutcome?:ReviewOutcomeContext;reviewOutcomeEnabled?:boolean;reviewHistoryAvailable?:true;maintenanceFollowUpAvailable?:true;invoicePreparationAvailable?:true;canRecordReviewOutcome?:boolean;pendingKind?:FieldOriginalKind;openTrip?:MileageTrip;cancellation?:UnfulfilledCancellationContext}>;
+export type FieldSessionView=Readonly<{phase:'loading'|'ready'|'pending'|'review'|'blocked'|'signed-out'|'unavailable'|'committed';busy:boolean;message:string;context:Context|null;resources:Resources|null;vehicles:readonly Vehicle[];moreVehicles:boolean;reference:string;savedJobId:string;savedVersion:string;completion?:CompletionContext;completionVehicles?:CompletionVehicles;summary?:CompletionSummary;reviewOutcome?:ReviewOutcomeContext;reviewOutcomeEnabled?:boolean;reviewHistoryAvailable?:true;maintenanceFollowUpAvailable?:true;invoicePreparationAvailable?:true;canRecordReviewOutcome?:boolean;pendingKind?:FieldOriginalKind;openTrip?:MileageTrip;cancellation?:UnfulfilledCancellationContext}>;
 export const initialFieldSessionView:FieldSessionView=Object.freeze({phase:'loading',busy:true,message:'Checking current work and access…',context:null,resources:null,vehicles:[],moreVehicles:false,reference:'',savedJobId:'',savedVersion:''});
 // Keep only the existing opaque pending identity between navigations. Private
 // work/location drafts remain in memory and are cleared on suspension.
@@ -39,11 +64,12 @@ export function createFieldSessionController(deps:{mode?:FieldSessionMode;store:
  const pendingStore=()=>pendingKind===reviewOutcomeKind?deps.outcomeStore!:deps.store;
  let reviewOutcome:ReviewOutcomeContext|null=null,reviewOutcomeEnabled=false;
  let openTrip:MileageTrip|null=null;
+ let completionVehicles:CompletionVehicles|undefined;
  let completion:CompletionContext|null=null,summary:CompletionSummary|null=null,cancellation:UnfulfilledCancellationContext|null=null;
  const eligible=()=>!!pending&&!!context&&pending.businessId===context.context.businessId&&pending.binding===context.binding;
- const view=():FieldSessionView=>Object.freeze({phase,busy:!!active,message,context:phase==='ready'?context:null,resources:phase==='ready'?resources:null,vehicles:phase==='ready'?rows:[],moreVehicles:phase==='ready'&&hasMore,reference:phase==='pending'&&eligible()?pending!.reference.operationId:'',savedJobId:(phase==='committed'||phase==='pending'&&eligible())?savedJobId:'',savedVersion:(phase==='committed'||phase==='pending'&&eligible())?savedVersion:'',...(phase==='ready'&&completion?{completion}:{}),...(phase==='ready'&&openTrip?{openTrip}:{}),...(phase==='ready'&&cancellation?{cancellation}:{}),...(phase==='committed'&&summary?{summary,reviewOutcomeEnabled,...context?.reviewHistoryAvailable?{reviewHistoryAvailable:true as const}:{},...context?.maintenanceFollowUpAvailable?{maintenanceFollowUpAvailable:true as const}:{},...context?.invoicePreparationAvailable?{invoicePreparationAvailable:true as const}:{},...reviewOutcome?{reviewOutcome,canRecordReviewOutcome:context?.context.writeState==='ready'&&reviewOutcome.kind!=='owner_confirmed_sent'}:{}}:{}),...(phase==='pending'?{pendingKind}:{})});
+ const view=():FieldSessionView=>Object.freeze({phase,busy:!!active,message,context:phase==='ready'?context:null,resources:phase==='ready'?resources:null,vehicles:phase==='ready'?rows:[],moreVehicles:phase==='ready'&&hasMore,reference:phase==='pending'&&eligible()?pending!.reference.operationId:'',savedJobId:(phase==='committed'||phase==='pending'&&eligible())?savedJobId:'',savedVersion:(phase==='committed'||phase==='pending'&&eligible())?savedVersion:'',...(phase==='ready'&&completion?{completion,...completionVehicles?{completionVehicles}:{}}:{}),...(phase==='ready'&&openTrip?{openTrip}:{}),...(phase==='ready'&&cancellation?{cancellation}:{}),...(phase==='committed'&&summary?{summary,reviewOutcomeEnabled,...context?.reviewHistoryAvailable?{reviewHistoryAvailable:true as const}:{},...context?.maintenanceFollowUpAvailable?{maintenanceFollowUpAvailable:true as const}:{},...context?.invoicePreparationAvailable?{invoicePreparationAvailable:true as const}:{},...reviewOutcome?{reviewOutcome,canRecordReviewOutcome:context?.context.writeState==='ready'&&reviewOutcome.kind!=='owner_confirmed_sent'}:{}}:{}),...(phase==='pending'?{pendingKind}:{})});
  const emit=()=>{if(alive)deps.change(view());};
- const clear=()=>{resources=null;completion=null;summary=null;reviewOutcome=null;reviewOutcomeEnabled=false;openTrip=null;cancellation=null;rows=[];hasMore=false;savedJobId='';savedVersion='';};
+ const clear=()=>{resources=null;completion=null;completionVehicles=undefined;summary=null;reviewOutcome=null;reviewOutcomeEnabled=false;openTrip=null;cancellation=null;rows=[];hasMore=false;savedJobId='';savedVersion='';};
  const live=(signal:AbortSignal)=>{if(!alive||signal.aborted||active?.signal!==signal)throw Error();};
  const same=(a:Context,b:Context)=>a.binding===b.binding&&a.context.businessId===b.context.businessId&&a.context.operatorId===b.context.operatorId&&a.context.writeState===b.context.writeState&&a.context.recoveryEpoch===b.context.recoveryEpoch&&a.fieldSessionAvailable===b.fieldSessionAvailable&&a.dropoffCustodyAvailable===b.dropoffCustodyAvailable&&a.pickupWorkAvailable===b.pickupWorkAvailable&&(!completing||a.jobCompletionAvailable===b.jobCompletionAvailable&&a.reviewOutcomeAvailable===b.reviewOutcomeAvailable)&&(!interrupting||a.jobMileageAvailable===b.jobMileageAvailable)&&(!cancelling||a.unfulfilledCancellationAvailable===b.unfulfilledCancellationAvailable);
  async function fresh(signal:AbortSignal){const proof=await session(signal);live(signal);const next=await api.workspace(proof,signal);live(signal);return {proof,next};}
@@ -119,6 +145,12 @@ export function createFieldSessionController(deps:{mode?:FieldSessionMode;store:
    const saved=await api.completionContext(next.context.businessId,jobId,proof,signal);live(signal);
    if('state'in saved){phase='blocked';message='Open a supported active job to record completion.';return;}
    if(saved.jobState==='completed'){summary=saved;savedJobId=saved.jobId;savedVersion=saved.jobVersion;phase='committed';message='Saved completion loaded.';await loadReviewOutcome(next,proof,signal);return;}
+   const detail=await api.resources(next.context.businessId,jobId,proof,signal).catch(()=>null);live(signal);
+   if(detail&&!("state" in detail)&&detail.head.job.version===saved.jobVersion&&detail.head.job.state===saved.jobState){
+    resources=detail;
+    completionVehicles=await completionVehicleLinks(api,detail,saved,proof,signal);
+    live(signal);
+   }
    completion=saved;phase='ready';
    message=next.context.writeState==='ready'?'Review the assigned work before ending this job.':'Changes are paused. Assigned work is available for review.';
    return;

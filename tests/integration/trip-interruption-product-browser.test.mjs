@@ -40,7 +40,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
    await page.getByRole('button',{name:'Record departure',exact:true}).click();
    await expect(page.getByText('Confirmed saved version 2.',{exact:true})).toBeVisible();
    await page.goto(work(input.jobId));
-   await page.getByRole('link',{name:'Interrupt this trip'}).click();
+   await page.getByText('More actions',{exact:true}).click();await page.getByRole('link',{name:'Interrupt this trip'}).click();
    await expect(status).toHaveText('Saved open trip loaded.');
   }
   async function capture(stage){

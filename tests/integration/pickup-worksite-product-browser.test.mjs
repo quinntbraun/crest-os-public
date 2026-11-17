@@ -158,8 +158,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
    await page.getByRole('button',{name:'Check original work action',exact:true}).click();
    await expect(status).toContainText('Work status saved.');
    await page.reload();
-   await expect(work.getByText('In progress · Saved version 2',{exact:true})).toBeVisible();
-   await expect(work.getByRole('link',{name:'Cancel if no work was completed'})).toBeVisible();
+   await expect(work.locator('.field-visit-state strong')).toHaveText('In progress');await expect(work.locator('.field-visit-state')).toContainText('Version 2');
+   await work.getByText('More actions',{exact:true}).click();await expect(work.getByRole('link',{name:'Cancel if no work was completed'})).toBeVisible();
    await work.getByRole('link',{name:'Review and end job',exact:true}).click();
    const completion=page.getByRole('region',{name:'Job completion',exact:true});
    await completion.getByRole('button',{name:'Mark all items fulfilled',exact:true}).click();

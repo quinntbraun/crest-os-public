@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {readFile} from 'node:fs/promises';
+import {mkdir,readFile} from 'node:fs/promises';
 import {strFromU8,unzipSync} from 'fflate';
 import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
 import {test} from 'node:test';
@@ -59,6 +59,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await page.getByRole('button',{name:'Sign in',exact:true}).click();
    await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
    await page.goto(fixture.origin+'/expenses');
+   await page.getByRole('button',{name:'Suppliers',exact:true}).click();
    await page.getByText('Unpaid supplier bills',{exact:true}).click();
    const draft=page.getByRole('form',{name:'Supplier bill draft',exact:true});
    const {rows:[{day}]}=await fixture.client.query("SELECT (clock_timestamp() AT TIME ZONE 'America/Indiana/Indianapolis')::date::text AS day");
@@ -188,8 +189,6 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     assert.deepEqual(totals,[{template:'P14',count:1},{template:'P15',count:1}]);
 
     await page.goto(fixture.origin+'/settings/accounts');
-    await page.getByRole('button',{name:'Load accounts',exact:true}).click();
-    await page.getByText('Fictional trial balance',{exact:true}).first().click();
     const trial=page.getByRole('region',{name:'Fictional trial balance',exact:true});
     await trial.getByLabel('Through date (optional)',{exact:true}).fill(day);
     const trialReply=page.waitForResponse(response=>response.url().endsWith('/api/business/finance-accounts/trial-balance'));
@@ -211,16 +210,23 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      assert(journalCsv.includes(expected));
     }
 
-    await page.getByText('Income statement',{exact:true}).click();
+    await page.getByRole('group',{name:'Choose a report',exact:true}).getByRole('button',{name:'Income',exact:true}).click();
     const income=page.getByRole('region',{name:'Recorded income statement',exact:true});
     await income.getByLabel('From date',{exact:true}).fill(day);
     await income.getByLabel('Through date',{exact:true}).fill(day);
     await income.getByRole('button',{name:'Load income statement',exact:true}).click();
     await expect(income.getByRole('row',{name:/Recorded-book net income/})).toContainText('-$150.25');
     await page.goto(fixture.origin+'/export-files');
-    await page.getByRole('button',{name:'Prepare posted finance CSV',exact:true}).click();
-    const save=page.getByRole('button',{name:'Save ZIP',exact:true});
+    const financeExport=page.getByRole('region',{name:'Posted finance export',exact:true});
+    await expect(financeExport).toContainText('CSV files in one ZIP');
+    await financeExport.getByRole('button',{name:'Prepare posted finance CSV',exact:true}).click();
+    const save=financeExport.getByRole('button',{name:'Save ZIP',exact:true});
     await expect(save).toBeVisible();
+    await expect(financeExport.locator('.export-save-row[data-prepared="true"]')).toContainText('crest-posted-finance.zip');
+    await expect(save).toBeInViewport();
+    assert.deepEqual((await new AxeBuilder({page}).include('.export-finance').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+    await mkdir('.local/review',{recursive:true});
+    await page.screenshot({path:'.local/review/export-finance-ready-'+name+'.png'});
     const [download]=await Promise.all([page.waitForEvent('download'),save.click()]);
     assert.equal(download.suggestedFilename(),'crest-posted-finance.zip');
     const {['manifest.json']:manifest,['export_delivery.json']:delivery,...files}=unzipSync(await readFile(await download.path()));

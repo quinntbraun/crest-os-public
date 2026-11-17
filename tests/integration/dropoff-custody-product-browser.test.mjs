@@ -100,7 +100,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
 
   const collectionList=page.getByRole('region',{name:'Vehicle collections',exact:true});
   const collectionSummary=page.locator('summary').filter({hasText:/^Vehicle collections$/});
-  const review=page.getByRole('region',{name:'Job review',exact:true});
+  const review=page.getByRole('region',{name:'Job review',exact:true}).locator('.schedule-job-heading h2');
   async function verifyQueueWaitsForLinkedJob(openJob){
    let releaseHistory;
    const historyReady=new Promise(resolve=>{releaseHistory=resolve;});
@@ -110,7 +110,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
    },{times:1});
    try{
     await openJob();
-    await expect(page.locator('.schedule-status')).toContainText('Saved schedule loaded.');
+    await expect(page.locator('.schedule-status')).toHaveText('Loading saved job…');
     await expect(collectionSummary).toHaveCount(0);
    }finally{releaseHistory();}
    await expect(review).toBeFocused();
@@ -143,8 +143,8 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
   await expect(panel.getByText('A handoff policy needs to be configured for this booking.',{exact:true})).toBeVisible();
 
   const workStatus=page.locator('.job-change-status');
-  const openWork=async()=>{
-   await page.getByRole('button',{name:'Record work status…',exact:true}).click();
+  const openWork=async(name='Review work start…')=>{
+   await page.getByRole('button',{name,exact:true}).click();
    await expect(page.getByRole('region',{name:'Drop-Off work status'})).toBeVisible();
   };
   if(startWork){
@@ -231,7 +231,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
   if(startWork){
    await openWork();
    const work=page.getByRole('region',{name:'Drop-Off work status'});
-   await expect(work.getByText('Scheduled · Saved version 1',{exact:true})).toBeVisible();
+   await expect(work.locator('.field-visit-state strong')).toHaveText('Scheduled');await expect(work.locator('.field-visit-state')).toContainText('Version 1');
    await expect(work.getByLabel('Vehicle you are driving',{exact:true})).toHaveCount(0);
    for(const width of [360,390,768,1440]){
     await page.setViewportSize({width,height:900});
@@ -254,16 +254,16 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
    await page.getByRole('button',{name:'Check original work action',exact:true}).click();
    await expect(workStatus).toContainText('Work status saved.');
    await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
-   await openWork();
-   await expect(work.getByText('In progress · Saved version 2',{exact:true})).toBeVisible();
+   await openWork('Pause work…');
+   await expect(work.locator('.field-visit-state strong')).toHaveText('In progress');await expect(work.locator('.field-visit-state')).toContainText('Version 2');
    await work.getByLabel('Reason for pause',{exact:true}).fill('Synthetic break');
    await work.getByRole('button',{name:'Pause work',exact:true}).click();
    await expect(workStatus).toContainText('Work status saved.');
    await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
-   await openWork();
-   await expect(work.getByText('Paused · Saved version 3',{exact:true})).toBeVisible();
+   await openWork('Resume work…');
+   await expect(work.locator('.field-visit-state strong')).toHaveText('Paused');await expect(work.locator('.field-visit-state')).toContainText('Version 3');
    if(cancelWork){
-    await work.getByRole('link',{name:'Cancel if no work was completed',exact:true}).click();
+    await work.getByText('More actions',{exact:true}).click();await work.getByRole('link',{name:'Cancel if no work was completed',exact:true}).click();
     const cancellation=page.getByRole('region',{name:'Drop-Off job cancellation',exact:true});
     await expect(cancellation.getByRole('status')).toHaveText('Review the saved work before cancelling.');
     await expect(cancellation.getByText('Any vehicle in your custody still needs a separate recorded handoff. Cancellation keeps it in the return queue.',{exact:true})).toBeVisible();
@@ -315,7 +315,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
    await work.getByRole('button',{name:'Resume work',exact:true}).click();
    await expect(workStatus).toContainText('Work status saved.');
    await page.reload();
-   await expect(work.getByText('In progress · Saved version 4',{exact:true})).toBeVisible();
+   await expect(work.locator('.field-visit-state strong')).toHaveText('In progress');await expect(work.locator('.field-visit-state')).toContainText('Version 4');
    await work.getByRole('link',{name:'Review and end job',exact:true}).click();
    const completion=page.getByRole('region',{name:'Job completion',exact:true});
    await completion.getByRole('button',{name:'Mark all items fulfilled',exact:true}).click();

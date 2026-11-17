@@ -1176,9 +1176,9 @@ export const financeAccounts={
    ||result.state==='retired'&&result.receipt.reviewEpoch===context.recoveryEpoch));
   return result;
  },
- async mappingAt(context:FinanceAccountContext,purpose:FinanceMappingPurpose,date:string,signal:AbortSignal){
+ async mappingAt(context:FinanceAccountContext,purpose:FinanceMappingPurpose,date:string,signal:AbortSignal,proof?:Proof){
   check(context.fixedMappings&&(!expenseCategoryMappingPurpose(purpose)||context.categoryMappings));
-  const {status,value}=await post('mapping-at',{purpose,date},signal,context.binding);
+  const {status,value}=await post('mapping-at',{purpose,date},signal,context.binding,proof);
   check(status===200);return parseFinanceMappingAt(value,purpose,date);
  },
  async mappingHistory(context:FinanceAccountContext,purpose:FinanceMappingPurpose,beforeVersion:string|null,signal:AbortSignal){

@@ -245,11 +245,12 @@ export function MoneyChannelsScreen(){
   </div>}
   {workspace&&!editor&&!pending&&<>
    {!workspace.page.rows.length&&<p>No money channels have been saved.</p>}
-   <ul className="service-list">{workspace.page.rows.map(row=><li key={row.channelId}>
-    <strong>{row.label}</strong>
-    <p>{description(row)} · Account {row.accountCode}</p>
-    <p>Latest review · {row.active?'Open':'Closed'} from <time dateTime={row.effectiveFrom}>{dateLabel(row.effectiveFrom)}</time></p>
-    <p>{moneyChannelOpeningStates[row.openingState]}{row.openingCents===null?'':' · '+dollars(row.openingCents,true)}</p>
+   <ul className="channel-directory">{workspace.page.rows.map(row=><li key={row.channelId} className="mapping-summary-card">
+    <h2>{row.label}</h2>
+    <p className="channel-effective" data-active={row.active}>Latest review · {row.active?'Open':'Closed'} from <time dateTime={row.effectiveFrom}>{dateLabel(row.effectiveFrom)}</time></p>
+    <p className="channel-destination"><span>Destination</span><strong>Account {row.accountCode}</strong></p>
+    <p className="field-help">{description(row)}</p>
+    <p className="channel-opening" data-incomplete={row.openingState==='unknown'}>{moneyChannelOpeningStates[row.openingState]}{row.openingCents===null?'':' · '+dollars(row.openingCents,true)}</p>
     <div className={styles.actions}>
      <button type="button" className="secondary" disabled={disabled} onClick={()=>loadHistory(row)}>View history</button>
      {workspace.context.writeState==='ready'&&<button type="button" className="secondary" disabled={disabled}
@@ -269,12 +270,13 @@ export function MoneyChannelsScreen(){
     onChange={event=>setReason(event.target.value)}/>
    <button type="submit" disabled={disabled||!financeAccountReviewReason(reason.trim())}>Close interrupted review</button>
   </form>}
-  {!!history?.page.rows.length&&<section aria-label="Saved channel history">
+  {!!history?.page.rows.length&&<section className="mapping-summary-card" aria-label="Saved channel history">
    <h2>{history.record.label} history</h2>
    <div className={styles.actions}><button type="button" className="secondary" disabled={disabled} onClick={download}>Download loaded history (CSV)</button></div>
-   <ol className="service-list">{history.page.rows.map(row=><li key={row.version}>
+   <ol className="mapping-history-list">{history.page.rows.map((row,index)=><li key={row.version} className="channel-timeline-row">
     <strong>Version {row.version} · {row.active?'Open':'Closed'}</strong>
-    <p>Effective {row.effectiveFrom} · {moneyChannelOpeningStates[row.openingState]}
+    <p>Effective <time dateTime={row.effectiveFrom}>{dateLabel(row.effectiveFrom)}</time>{index>0?' · Next review starts '+dateLabel(history.page.rows[index-1]!.effectiveFrom):' · Latest saved version'}</p>
+    <p>Account {history.record.accountCode} · {moneyChannelOpeningStates[row.openingState]}
      {row.openingCents===null?'':' · '+dollars(row.openingCents,true)}</p>
     <p>{row.reason}</p>
     {(row.ownershipEvidence||row.openingEvidence)&&<details>

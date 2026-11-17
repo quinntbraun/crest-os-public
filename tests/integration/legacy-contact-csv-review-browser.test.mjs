@@ -141,6 +141,7 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    await expect(reviewStatus).toHaveText('CSV review is ready.');
    const results=page.getByRole('region',{name:'CSV review results'});
    await expect(results.getByRole('heading',{name:'Review results'})).toBeFocused();
+   await expect(page.locator('.legacy-source-workspace [aria-current="step"]')).toContainText('Review');
    await expect(results).toContainText('28 CSV records · 3 to review');
    await expect(results.getByText('Shared phone',{exact:true})).toHaveCount(2);
    await expect(results).toContainText('A customer or vehicle ID is missing or invalid.');
@@ -247,6 +248,8 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    await expect(findingRows.getByText('VIN matches a saved vehicle',{exact:true})).toBeVisible();
    await expect(findingRows.getByText('Rejected record',{exact:true})).toBeVisible();
    const firstFinding=findingRows.locator('.legacy-records > li').filter({hasText:'Record 2'});
+   await findingRows.getByRole('button',{name:'Next row',exact:true}).click();
+   await expect(firstFinding.locator('.legacy-finding-name')).toBeFocused();
    const compareCustomers=firstFinding.getByRole('button',{name:'Compare saved customers'});
    const matchRoute='**/api/business/customers/legacy-batches/targets';
    await page.route(matchRoute,route=>route.abort(),{times:1});
@@ -258,7 +261,8 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    assert.equal(targetReply.status(),200);
    assert.deepEqual(targetReply.request().postDataJSON(),{batchId:draft.id,row:2,kind:'customer',afterTarget:null});
    const matchedContact=firstFinding.getByRole('region',{name:'Saved customer matches'});
-   await expect(matchedContact.getByRole('heading')).toBeFocused();
+   await expect(matchedContact.getByRole('heading',{name:'Saved customer matches',exact:true})).toBeFocused();
+   await expect(matchedContact.getByRole('region',{name:'Incoming CSV value',exact:true})).toContainText(await firstFinding.locator('.legacy-finding-name').innerText());
    await expect(matchedContact).toContainText('Fictional saved contact');
    await expect(matchedContact).toContainText('Same phone');
    await expect(matchedContact).not.toContainText('saved@example.test');
@@ -270,7 +274,7 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    await page.setViewportSize({width:360,height:850});
    const targetAudit=await new AxeBuilder({page}).include('.legacy-target-comparison').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
    assert.deepEqual(targetAudit.violations.map(issue=>issue.id),[]);
-   await matchedVehicle.getByRole('heading').evaluate(heading=>heading.scrollIntoView({block:'center'}));
+   await matchedVehicle.getByRole('heading',{name:'Saved vehicle matches',exact:true}).evaluate(heading=>heading.scrollIntoView({block:'center'}));
    await page.screenshot({path:'.local/review/workspace-contact-targets-'+name.toLowerCase()+'-360.png'});
    await firstFinding.getByRole('button',{name:'Hide saved vehicles'}).click();
    await expect(matchedVehicle).toHaveCount(0);
@@ -465,6 +469,11 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    await open();
    await checkDecisions.click();
    await expect(panel.getByText('Rows awaiting a saved decision')).toContainText('2');
+   await expect(page.locator('.legacy-saved-drafts [aria-current="step"]')).toContainText('Review');
+   const progress=page.locator('.legacy-review-progress');
+   await expect(progress).toContainText('2 awaiting decision');
+   await expect(progress).toHaveCSS('position','sticky');
+   await expect(progress.getByRole('link',{name:'Review approval',exact:true})).toHaveAttribute('href','#legacy-import-approval');
    await expect(approve).toHaveCount(0);
 
    async function decide(row,action){
@@ -480,6 +489,7 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    }
    await decide(2,'create');
    await expect(panel.getByText('A row decision may have changed. Check saved decisions again.')).toBeVisible();
+   await expect(progress).toContainText('Check saved decisions for the current count.');
    await decide(3,'skip');
 
    // Separate owner visits exercise the real ordinary request budget.
@@ -487,6 +497,7 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    await open();
    await checkDecisions.click();
    await expect(status).toHaveText('Saved decisions checked.');
+   await expect(page.locator('.legacy-saved-drafts [aria-current="step"]')).toContainText('Approve');
    const plan=panel.getByRole('table',{name:'Planned import changes',exact:true});
    await expect(plan.getByRole('row').filter({hasText:'Customers'}).getByRole('cell')).toHaveText(['1','0']);
    await expect(plan.getByRole('row').filter({hasText:'Vehicles'}).getByRole('cell')).toHaveText(['0','0']);
@@ -674,6 +685,7 @@ for(const [name,engine,background,automatic] of [['Chromium',chromium,false,fals
    const results=panel.getByRole('region',{name:'Import results',exact:true});
    if(background){
     await expect(status).toContainText('You can leave this page');
+    await expect(page.locator('.legacy-review-progress')).toContainText('Import queued');
     await expect(results).toHaveCount(0);
     assert.deepEqual(await recordCounts(fixture),baseline);
     await page.goto(fixture.origin+'/customers');
@@ -702,6 +714,7 @@ for(const [name,engine,background,automatic] of [['Chromium',chromium,false,fals
    if(!automatic)await expect(results.getByRole('heading',{name:'Import completed'})).toBeFocused();
    await expect(results.getByRole('link',{name:'Created vehicle from record 2'})).toHaveAttribute('href',/vehicle=[0-9a-f-]+$/);
    await expect(results.getByRole('cell',{name:'Skipped',exact:true})).toBeVisible();
+   await expect(page.locator('.legacy-saved-drafts [aria-current="step"]')).toContainText('Results');
    await expect(page.getByRole('button',{name:'Edit decision for record 2'})).toHaveCount(0);
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
    const audit=await new AxeBuilder({page}).include('.legacy-approval').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();

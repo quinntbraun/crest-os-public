@@ -3,13 +3,12 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
-import {execFileSync} from 'node:child_process';
-import {readFile,chmod} from 'node:fs/promises';
-import {join} from 'node:path';
+import {mkdir} from 'node:fs/promises';
 import {createServer} from 'node:net';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {URI,TOTP} from 'otpauth';
+import {browserTestTls} from '../support/browser-test-tls.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {startRealAuthService,authResult} from '../support/real-auth-service.mjs';
@@ -38,7 +37,7 @@ async function failureDiagnostics(page,stage){
 // business/Auth/database/application. Ten logins against one identifier would
 // correctly hit the unchanged five-attempt/15-minute production admission.
 async function startFixture(){
-  assert.equal(process.platform,'linux','the disposable container/HTTPS fixture requires Linux CI');
+  assert(['linux','win32'].includes(process.platform),'supported disposable TLS/Auth browser fixture required');
   process.env.NODE_ENV='production';
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);
   await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
@@ -60,18 +59,14 @@ async function startFixture(){
     await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,actor]);
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,actor]);await client.query('COMMIT');
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_BROWSER_OWNER_FAILED');}
-  const keyPath=join(sandbox.workspace,'ephemeral.key'),certPath=join(sandbox.workspace,'ephemeral.pem');
-  await chmod(sandbox.workspace,0o700);
-  try{execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-noenc','-keyout',keyPath,'-out',certPath,'-days','1','-subj','/CN=localhost','-addext','subjectAltName=IP:127.0.0.1,DNS:localhost'],{stdio:'ignore',timeout:15000});}
-  catch{throw new Error('SYNTHETIC_TLS_FIXTURE_FAILED');}
-  await chmod(keyPath,0o600);
+  const tls=await browserTestTls();
   const reservation=createServer();await new Promise(resolve=>reservation.listen(0,'127.0.0.1',resolve));const port=reservation.address().port;await new Promise(resolve=>reservation.close(resolve));origin=`https://127.0.0.1:${port}`;
   // Normal Node resolution: react-server is only a build-time marker condition.
   const {createCrestApplication,createAuthenticationRuntime}=await import('../../.local/server/application.mjs');
   const runtime=await createAuthenticationRuntime({database:{connectionString:database.toString(),environment:'test'},provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
     owner:{subject:user.id,factorId:factor.id},loginKey:randomBytes(32),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:randomBytes(32)}]});
   assert.throws(()=>JSON.stringify(runtime),/AUTHENTICATION_RUNTIME_PRIVATE/);
-  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},leads:true,customers:true,vehicles:true});
+  app=await createCrestApplication({origin,environment:'test',tls,authentication:runtime.forServer(),business:{businessId:business},leads:true,customers:true,vehicles:true});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);
 }
@@ -129,12 +124,59 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     const proof=await fresh();epoch=(await send(other,'business/customers/context',{},proof)).body.recoveryEpoch;one=customer(epoch,'Synthetic selected customer '+name);two=customer(epoch,'Synthetic shared-contact customer '+name);for(const input of [one,two])assert.equal((await send(other,'business/customers/save',input,proof)).status,200);assert.notEqual(one.customerId,two.customerId);
    });
    await t.test('source forms explicitly select a referring customer and retain deactivation/reactivation history',async()=>{
-    await openScreen(page,true);await page.getByRole('button',{name:'Add lead source',exact:true}).click();await page.getByLabel('Source label',{exact:true}).fill(sourceLabel);await expect(saveButton(page,true)).toBeDisabled();await page.getByLabel('Source kind',{exact:true}).fill('Synthetic owner classification');await choose(page,'customer','5550100',one.displayName);
+    await openScreen(page,true);await page.getByRole('button',{name:'Add lead source',exact:true}).click();await page.getByLabel('Source label',{exact:true}).fill(sourceLabel);await expect(saveButton(page,true)).toBeDisabled();await page.getByLabel('Source kind',{exact:true}).fill('Synthetic owner classification');
+    await page.locator('.lead-source-referral > summary').click();await choose(page,'customer','5550100',one.displayName);
     assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert(await saveButton(page,true).evaluate(el=>el.getBoundingClientRect().height>=44));
     await saveButton(page,true).click();await expect(editorStatus(page,true)).toContainText('Lead source saved');source=(await client.query('SELECT id,referral_customer_id,version::text FROM crest.lead_sources WHERE business_id=$1 AND label=$2',[business,sourceLabel])).rows[0];assert.equal(source.referral_customer_id,one.customerId);assert.equal(source.version,'1');
     await loadButton(page,true).click();await find(page,sourceLabel,true);await page.getByLabel('Source active',{exact:true}).uncheck();await saveButton(page,true).click();await expect(editorStatus(page,true)).toContainText('Lead source saved');
     await loadButton(page,true).click();await find(page,sourceLabel,true,true);await page.getByLabel('Source active',{exact:true}).check();await saveButton(page,true).click();await expect(editorStatus(page,true)).toContainText('Lead source saved');
-    await loadButton(page,true).click();await find(page,sourceLabel,true);await expect(page.getByRole('region',{name:'Lead source history',exact:true})).toContainText('Current version: 3');assert.deepEqual((await client.query("SELECT action FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='lead_sources' AND entity_id=$2 ORDER BY entity_version",[business,source.id])).rows.map(r=>r.action),['create','deactivate','activate']);
+    await loadButton(page,true).click();
+    await find(page,sourceLabel,true);const history=page.getByRole('region',{name:'Lead source history',exact:true});
+    await expect(history).toContainText('Current version: 3');
+    await history.locator('details > summary').first().click();
+    await history.getByText('Source deactivated',{exact:true}).click();
+    await expect(history.getByRole('region',{name:'Before',exact:true}).getByText('Active',{exact:true})).toBeVisible();
+    await expect(history.getByRole('region',{name:'After',exact:true}).getByText('Inactive',{exact:true})).toBeVisible();
+    const directory='.local/review';await mkdir(directory,{recursive:true});
+    for(const width of [360,390,768,1280,1440]){
+     await page.setViewportSize({width,height:900});
+     await expect(page.getByRole('region',{name:'Lead source directory',exact:true}))[width<976?'toBeHidden':'toBeVisible']();
+     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+     assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(v=>v.id),[]);
+     if(width===390||width===1440){
+      await page.evaluate(()=>window.scrollTo(0,0));
+      await page.screenshot({path:directory+'/lead-source-history-'+name+'-'+width+'.png',fullPage:true});
+      if(width===390)await page.screenshot({path:directory+'/lead-source-editor-'+name+'-390.png'});
+     }
+    }
+    await page.setViewportSize(viewport);
+    await page.getByLabel('Source label',{exact:true}).fill('Unsaved source label');
+    page.once('dialog',dialog=>void dialog.dismiss());
+    await page.getByRole('button',{name:'Back to sources',exact:true}).click();
+    await expect(page.getByLabel('Source label',{exact:true})).toHaveValue('Unsaved source label');
+    page.once('dialog',dialog=>void dialog.accept());
+    await page.getByRole('button',{name:'Back to sources',exact:true}).click();
+    await expect(page.getByRole('button',{name:sourceLabel,exact:true})).toBeFocused();
+    await expect(page.getByLabel('Lead source search',{exact:true})).toHaveValue(sourceLabel);
+    await page.setViewportSize({width:390,height:900});
+    await page.screenshot({path:directory+'/lead-source-directory-'+name+'-390.png'});
+    await page.setViewportSize(viewport);
+    assert.deepEqual((await client.query("SELECT action FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='lead_sources' AND entity_id=$2 ORDER BY entity_version",[business,source.id])).rows.map(r=>r.action),['create','deactivate','activate']);
+
+    // Create a real second history page without changing the earlier source.
+    const pagedLabel='Synthetic paged source '+name,pagedId=randomUUID(),proof=await fresh();
+    for(let version=0;version<21;version++){
+     const result=await send(other,sourceRoot+'save',{schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,leadSourceId:pagedId,expectedVersion:String(version),label:pagedLabel,kind:'Synthetic category '+version,active:true,referralCustomerId:null},proof);
+     assert.equal(result.status,200);
+    }
+    await find(page,pagedLabel,true);
+    await history.locator('details > summary').first().click();
+    await expect(history).toContainText('Current version: 21');
+    await history.getByRole('button',{name:'Next source history page',exact:true}).click();
+    await expect(history.getByText('Source kind changed',{exact:true})).toBeVisible();
+    await expect(history.getByText(/Version 21 ·/)).toBeVisible();
+    await expect(history.locator('details > summary').first()).toBeFocused();
+    await expect(history.getByText(/Version 20 ·/)).toHaveCount(0);
    });
    await t.test('lead forms preserve nullable/empty evidence, exact dollars/UTC and genuine customer/source choices on mobile',async()=>{
     await openScreen(page);await page.getByRole('button',{name:'Add lead',exact:true}).click();await page.getByLabel('Lead label',{exact:true}).fill(leadLabel);await choose(page,'customer','5550100',two.displayName);await choose(page,'source',sourceLabel,sourceLabel);

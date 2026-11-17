@@ -30,7 +30,7 @@ for(const engine of [chromium,webkit]){
    await expect(page.getByRole('status')).toContainText('Signed in');
    await page.goto(fixture.origin+'/settings');
    await page.getByRole('link',{name:'Fictional account setup',exact:true}).click();
-   await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+   await page.getByRole('button',{name:'Setup',exact:true}).click();
    await page.getByRole('link',{name:'Tax profiles',exact:true}).click();
 
    const panel=page.getByRole('region',{name:'Tax profile review',exact:true});
@@ -61,7 +61,7 @@ for(const engine of [chromium,webkit]){
    await expect(history.getByRole('heading',{name:'Approval history',exact:true})).toBeFocused();
    await expect(history.getByText('Version 2 · Verified exemption policy',{exact:true})).toBeVisible();
    await expect(history.getByText('Version 1 · Verified inclusive rate',{exact:true})).toBeVisible();
-   await history.getByText('Verification evidence',{exact:true}).last().click();
+   await history.getByText('Version 1 · Verified inclusive rate',{exact:true}).click();
    await expect(history.getByText('=Fictional rate evidence',{exact:true})).toBeVisible();
    const pendingDownload=page.waitForEvent('download');
    await history.getByRole('button',{name:'Download loaded history (CSV)',exact:true}).click();
@@ -76,7 +76,7 @@ for(const engine of [chromium,webkit]){
      await page.setViewportSize({width,height:900});
      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
      assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
-     const anchor=view==='history'?history:view==='approval'?panel.getByRole('region',{name:'Manage tax approvals',exact:true}):calculation;
+     const anchor=view==='history'?history:view==='approval'?panel.getByRole('region',{name:'Review tax approval',exact:true}):calculation;
      await anchor.scrollIntoViewIfNeeded();
      await page.screenshot({path:'.local/review/finance-tax-'+view+'-'+engine.name()+'-'+width+'.png',animations:'disabled'});
     }
@@ -107,6 +107,9 @@ for(const engine of [chromium,webkit]){
    await check.press('Enter');
    await expect(status).toHaveText('Fictional tax calculation loaded.');
    await expect(calculation.getByText('$10.00',{exact:true})).toBeVisible();
+   await expect(calculation.locator('time[datetime="2026-05-31"]')).toBeVisible();
+   await expect(calculation.getByText('Fictional district',{exact:true})).toBeVisible();
+   await expect(calculation.getByText('Fictional interior detail',{exact:true})).toBeVisible();
    await discount.fill('111.00');
    await expect(check).toBeDisabled();
    await discount.fill('11.00');
@@ -153,6 +156,11 @@ for(const engine of [chromium,webkit]){
    await manager.getByLabel('Decimal rate',{exact:true}).fill('0.0800');
    await manager.getByLabel('Verification evidence',{exact:true}).fill('Fictional supporting evidence for the rate');
    await expect(save).toBeEnabled();
+   const savedProfile=manager.getByRole('region',{name:'Latest saved tax profile',exact:true});
+   const proposedProfile=manager.getByRole('region',{name:'Proposed tax profile',exact:true});
+   await expect(savedProfile.getByText('Verified non-taxable',{exact:true})).toBeVisible();
+   await expect(proposedProfile.getByText('0.08',{exact:true})).toBeVisible();
+   await expect(proposedProfile.locator('time[datetime="2026-07-01"]')).toBeVisible();
    await renders('approval');
    await page.setViewportSize({width:390,height:900});
    await save.press('Enter');

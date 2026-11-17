@@ -69,7 +69,7 @@ export function CustomerFundsReport({businessId,includesExcess=false,includesRef
     ]);
   }
 
-  return <details className="review-card" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
+  return <details className="review-card" open onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
     <summary onClick={event=>{if(event.currentTarget.closest('details')?.open)clear();}}>{includesRefundTransfers?'Available customer funds':'Customer funds held'}</summary>
     <section aria-label="Customer funds held" aria-busy={busy}>
       <p className="field-help">Fictional funds held from {includesExcess?'payments and payment corrections':'payment corrections'}, checked against account 2000.
@@ -82,8 +82,11 @@ export function CustomerFundsReport({businessId,includesExcess=false,includesRef
       </form>
       <p role="status">{status}</p>
       {report&&<>
-        <p>As of <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></p>
-        <dl className={styles.amountBreakdown}><dt>Total held</dt><dd>{usd(report.totalCents)}</dd></dl>
+        <p className={styles.reportPeriod}>Customer funds · As of <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></p>
+        <div className={styles.reportSnapshot}>
+          <p><span>Total held</span> <strong>{usd(report.totalCents)}</strong></p>
+          {report.rows.length>0&&<button className="secondary" type="button" onClick={download}>Download listed funds (CSV)</button>}
+        </div>
         {report.rows.length>0&&<details>
           <summary>Held funds by customer ({report.rows.length} of {report.lotCount} entries)</summary>
           {report.truncated&&<p className="field-help">Showing the first 100 entries by date. The total includes all posted customer funds.</p>}
@@ -93,7 +96,6 @@ export function CustomerFundsReport({businessId,includesExcess=false,includesRef
               <strong>{usd(row.heldCents)}</strong>
             </li>)}
           </ul>
-          <button className="secondary" type="button" onClick={download}>Download listed funds (CSV)</button>
         </details>}
       </>}
     </section>

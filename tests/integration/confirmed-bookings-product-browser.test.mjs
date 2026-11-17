@@ -33,9 +33,54 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
    const response=await fetch('/api/business/scheduling/book',{method:'POST',headers:{'content-type':'application/json','x-crest-csrf':proof.csrfToken},body:JSON.stringify(body)});return{status:response.status,value:await response.json()};
   },f.bookingRequest);assert.equal(booked.status,200);assert.equal(booked.value.state,'committed');
   await page.goto(f.origin+'/schedule');await expect(page.locator('.schedule-status')).toContainText('Saved schedule loaded.');
-  async function capture(prefix){if(prefix==='schedule-month'&&name==='chromium'){const audit=await context.newCDPSession(page);try{await audit.send('DOM.enable');await audit.send('CSS.enable');const {root}=await audit.send('DOM.getDocument');const fonts=[];for(const selector of ['.calendar-heading h2','.calendar-days button span']){const {nodeId}=await audit.send('DOM.querySelector',{nodeId:root.nodeId,selector});const result=await audit.send('CSS.getPlatformFontsForNode',{nodeId});fonts.push(...result.fonts.map(font=>({family:font.familyName,name:font.postScriptName,custom:font.isCustomFont})));}console.log('Synthetic calendar rendered fonts '+JSON.stringify(fonts));assert(fonts.length>0&&fonts.every(font=>font.custom&&/^IBMPlexSans/.test(font.name)));}finally{await audit.detach();}}await mkdir('.local/review',{recursive:true});for(const width of [360,390,768,1440]){await page.setViewportSize({width,height:900});await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(v=>({id:v.id,targets:v.nodes.map(node=>node.target)})),[]);for(const button of await calendar.locator('.calendar-days button').all()){const box=await button.boundingBox();assert(box&&box.width>=44&&box.height>=44,'phone calendar dates need44px targets');}await page.screenshot({path:'.local/review/'+prefix+'-'+name+'-'+width+'.png',fullPage:true});await page.screenshot({path:'.local/review/'+prefix+'-viewport-'+name+'-'+width+'.png'});}}
+  async function capture(prefix){if(prefix==='schedule-month'&&name==='chromium'){const audit=await context.newCDPSession(page);try{await audit.send('DOM.enable');await audit.send('CSS.enable');const {root}=await audit.send('DOM.getDocument');const fonts=[];for(const selector of ['.calendar-heading h2','.calendar-days button span']){const {nodeId}=await audit.send('DOM.querySelector',{nodeId:root.nodeId,selector});const result=await audit.send('CSS.getPlatformFontsForNode',{nodeId});fonts.push(...result.fonts.map(font=>({family:font.familyName,name:font.postScriptName,custom:font.isCustomFont})));}console.log('Synthetic calendar rendered fonts '+JSON.stringify(fonts));assert(fonts.length>0&&fonts.every(font=>font.custom&&/^IBMPlexSans/.test(font.name)));}finally{await audit.detach();}}await mkdir('.local/review',{recursive:true});for(const width of [360,390,768,1440]){await page.setViewportSize({width,height:900});await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(v=>({id:v.id,targets:v.nodes.map(node=>node.target)})),[]);if(await calendar.isVisible())for(const button of await calendar.locator('.calendar-days button').all()){const box=await button.boundingBox();assert(box&&box.width>=44&&box.height>=44,'phone calendar dates need44px targets');}await page.screenshot({path:'.local/review/'+prefix+'-'+name+'-'+width+'.png',fullPage:true});await page.screenshot({path:'.local/review/'+prefix+'-viewport-'+name+'-'+width+'.png'});}}
   async function search(pageToSearch=page){const custom=pageToSearch.locator('.schedule-custom-range');if(await custom.getAttribute('open')===null)await custom.locator('summary').click();await pageToSearch.getByLabel('From date',{exact:true}).fill('2026-11-03');await pageToSearch.getByLabel('Through date',{exact:true}).fill('2026-11-03');await pageToSearch.getByRole('button',{name:'Load saved schedule',exact:true}).click();await expect(pageToSearch.locator('.schedule-status')).toContainText('Saved schedule loaded.');}
-  await search();const calendar=page.getByRole('region',{name:'Saved work calendar',exact:true});await calendar.getByRole('button',{name:'Month',exact:true}).click();await expect(page.locator('.schedule-status')).toContainText('Saved schedule loaded.');await expect(calendar.getByRole('heading',{name:'November 2026',exact:true})).toBeVisible();const savedDay=calendar.getByRole('button',{name:'View Tuesday, November 3, 2026, 1 loaded visit',exact:true});await expect(savedDay).toBeVisible();await capture('schedule-month');await savedDay.click();await expect(page.locator('.schedule-status')).toContainText('Saved schedule loaded.');await expect(calendar.getByRole('button',{name:'Day',exact:true})).toHaveAttribute('aria-pressed','true');await calendar.getByRole('button',{name:'Next day',exact:true}).click();await expect(page.getByText('No saved jobs in this range.',{exact:true})).toBeVisible();await calendar.getByRole('button',{name:'Previous day',exact:true}).click();await expect(page.getByRole('button',{name:'Synthetic lifecycle customer · View job',exact:true})).toBeVisible();await page.getByRole('button',{name:'Synthetic lifecycle customer · View job',exact:true}).click();await expect(page.getByRole('heading',{name:'Synthetic lifecycle customer',exact:true})).toBeVisible();await expect(page.getByRole("region",{name:"Job review",exact:true})).toBeFocused();await expect(page.getByRole('listitem').filter({has:page.getByRole('button',{name:'Synthetic lifecycle customer · View job',exact:true})})).toHaveAttribute('aria-current','true');await expect(page.getByText('Synthetic workshop, 123 Example Lane, Indianapolis',{exact:true})).toBeVisible();await expect(page.getByText('No proposed time changes recorded.',{exact:true})).toBeVisible();
+  const calendar=page.getByRole('region',{name:'Saved work calendar',exact:true});
+  const agenda=page.getByRole('region',{name:'Jobs in selected dates',exact:true});
+  const calendarToggle=page.getByRole('button',{name:'Calendar',exact:true});
+  await expect(agenda).toBeVisible();
+  await expect(calendar).toBeHidden();
+  await expect(calendarToggle).toHaveAttribute('aria-expanded','false');
+  await search();
+  await calendarToggle.press('Enter');
+  await expect(calendar).toBeVisible();
+  await calendar.getByRole('button',{name:'Month',exact:true}).click();await expect(page.locator('.schedule-status')).toContainText('Saved schedule loaded.');await expect(calendar.getByRole('heading',{name:'November 2026',exact:true})).toBeVisible();const savedDay=calendar.getByRole('button',{name:'View Tuesday, November 3, 2026, 1 loaded visit',exact:true});await expect(savedDay).toBeVisible();await capture('schedule-month');
+  await page.setViewportSize({width:390,height:844});
+  await savedDay.click();
+  await expect(agenda).toContainText('Tuesday, November 3, 2026');
+  await expect(calendar).toBeHidden();
+  await expect(agenda.getByRole('heading',{name:'Scheduled work',exact:true})).toBeFocused();
+  await page.getByRole('button',{name:'Next agenda period',exact:true}).click();
+  await expect(agenda).toContainText('Wednesday, November 4, 2026');
+  await expect(agenda).toContainText('No saved jobs in this range.');
+  await page.getByRole('button',{name:'Previous agenda period',exact:true}).click();
+  await expect(agenda).toContainText('Tuesday, November 3, 2026');
+  await page.setViewportSize({width:1440,height:900});
+  await expect(calendar.getByRole('button',{name:'Day',exact:true})).toHaveAttribute('aria-pressed','true');await calendar.getByRole('button',{name:'Next day',exact:true}).click();await expect(page.getByText('No saved jobs in this range.',{exact:true})).toBeVisible();await calendar.getByRole('button',{name:'Previous day',exact:true}).click();await expect(page.getByRole('button',{name:'Synthetic lifecycle customer · View job',exact:true})).toBeVisible();await page.getByRole('button',{name:'Synthetic lifecycle customer · View job',exact:true}).click();await expect(page.getByRole('heading',{name:'Synthetic lifecycle customer',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'Synthetic lifecycle customer',exact:true})).toBeFocused();await expect(page.getByRole('listitem').filter({has:page.getByRole('button',{name:'Synthetic lifecycle customer · View job',exact:true})})).toHaveAttribute('aria-current','true');await expect(page.getByText('Synthetic workshop, 123 Example Lane, Indianapolis',{exact:true})).toBeVisible();await expect(page.getByText('No proposed time changes recorded.',{exact:true})).toBeVisible();
+  await page.setViewportSize({width:390,height:844});
+  const backToAgenda=page.getByRole('button',{name:'Back to agenda',exact:true});
+  const visitRow=agenda.getByRole('button',{name:'Synthetic lifecycle customer · View job',exact:true});
+  await expect(agenda).toBeHidden();
+  await expect(backToAgenda).toBeVisible();
+  await backToAgenda.press('Enter');
+  await expect(agenda).toContainText('Tuesday, November 3, 2026');
+  await expect(visitRow).toBeFocused();
+  await expect(visitRow).toHaveAccessibleDescription('Scheduled');
+  await expect(calendar).toBeHidden();
+  await page.screenshot({path:'.local/review/schedule-agenda-'+name+'-390.png'});
+  await page.evaluate(()=>window.scrollTo({top:110,behavior:'instant'}));
+  const agendaScroll=await page.evaluate(()=>window.scrollY);
+  assert(agendaScroll>0);
+  await visitRow.press('Enter');
+  await expect(backToAgenda).toBeFocused();
+  await expect(agenda).toBeHidden();
+  await expect(page.getByRole('heading',{name:'Synthetic lifecycle customer',exact:true})).toBeInViewport();
+  await page.screenshot({path:'.local/review/schedule-agenda-job-'+name+'-390.png'});
+  await backToAgenda.press('Enter');
+  await expect(visitRow).toBeFocused();
+  await expect.poll(()=>page.evaluate(()=>window.scrollY)).toBe(agendaScroll);
+  await visitRow.press('Enter');
+  await expect(backToAgenda).toBeFocused();
   await page.getByText('Saved history · version 1',{exact:true}).click();await expect(page.getByText('Job booked',{exact:true})).toBeVisible();
   const downloadEvent=page.waitForEvent('download');await page.getByRole('button',{name:'Download saved history',exact:true}).focus();await page.keyboard.press('Enter');const download=await downloadEvent;assert.equal(await download.failure(),null);const files=unzipSync(await readFile(await download.path()));assert(Object.keys(files).some(file=>file.endsWith('.csv')));assert(Object.values(files).some(bytes=>strFromU8(bytes).includes('crest.confirmed-job-history.v1')));
   await capture('schedule');
@@ -52,7 +97,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   const visitsRoute='**/api/business/scheduling/record-jobs';
   const interruptVisits=route=>route.abort('failed');
   await page.route(visitsRoute,interruptVisits);
-  await savedVisits.locator('summary').click();
+  await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Visits',exact:true}).click();
   await expect(savedVisits.getByRole('status')).toHaveText('Saved visits couldn’t be loaded.');
   await page.unroute(visitsRoute,interruptVisits);
   await savedVisits.getByRole('button',{name:'Retry saved visits',exact:true}).click();
@@ -66,11 +111,13 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await customerVisitsLink.focus();await page.keyboard.press('Enter');
   await expect(savedVisits.locator('summary')).toBeFocused();
   await expect(savedVisit).toBeVisible();
+  await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Overview',exact:true}).click();
   const revisedName='Synthetic current customer name';
   await editor.getByLabel('Customer name',{exact:true}).fill(revisedName);
   await editor.getByRole('button',{name:'Save customer',exact:true}).click();
   await expect(page.locator('.customer-directory-status')).toContainText('Customer saved');
   await page.reload();
+  await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Overview',exact:true}).click();
   await expect(editor.getByLabel('Customer name',{exact:true})).toHaveValue(revisedName);
   const returnToJob=page.getByRole('link',{name:'Back to saved job',exact:true});
   await expect(returnToJob).toHaveAttribute('href','/schedule?job='+jobId);
@@ -100,8 +147,8 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   assert(await vehicleLink.evaluate(el=>el.getBoundingClientRect().height>=44&&document.documentElement.scrollWidth<=innerWidth));
   await vehicleLink.focus();await page.keyboard.press('Enter');
   const vehicleEditor=page.getByRole('form',{name:'Vehicle editor',exact:true});
-  await expect(vehicleEditor.getByRole('heading',{name:'Edit vehicle',exact:true})).toBeFocused();
-  await expect(vehicleEditor.getByLabel('Vehicle label',{exact:true})).toHaveValue(originalVehicle);
+  await expect(page.getByRole('heading',{name:originalVehicle,exact:true})).toBeFocused();
+  await expect(vehicleEditor).toHaveCount(0);
   await savedVisits.locator('summary').click();
   await expect(savedVisit).toHaveAttribute('href','/schedule?job='+jobId+'&vehicle='+jobVehicle.id+'&from=vehicle');
   await expect(savedVisits).toContainText('Synthetic lifecycle customer');
@@ -116,12 +163,16 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await vehicleVisitsLink.focus();await page.keyboard.press('Enter');
   await expect(savedVisits.locator('summary')).toBeFocused();
   await expect(savedVisit).toBeVisible();
+  await capture('vehicle-profile');
+  await page.setViewportSize({width:390,height:844});
+  await page.getByRole('button',{name:'Edit vehicle',exact:true}).click();
+  await expect(vehicleEditor.getByRole('heading',{name:'Edit vehicle',exact:true})).toBeFocused();
   const revisedVehicle='Synthetic current vehicle label';
   await vehicleEditor.getByLabel('Vehicle label',{exact:true}).fill(revisedVehicle);
   await vehicleEditor.getByRole('button',{name:'Save vehicle',exact:true}).click();
   await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
   await page.reload();
-  await expect(vehicleEditor.getByLabel('Vehicle label',{exact:true})).toHaveValue(revisedVehicle);
+  await expect(page.getByRole('heading',{name:revisedVehicle,exact:true})).toBeVisible();
   await expect(returnToJob).toHaveAttribute('href','/schedule?job='+jobId+'&vehicle='+jobVehicle.id);
   await returnToJob.focus();await page.keyboard.press('Enter');
   await expect(bookedVehicleSummary).toHaveText(originalVehicle);
@@ -159,3 +210,60 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await probePage.goto(f.origin+'/');await probePage.goBack();const check=probePage.getByRole('button',{name:'Check schedule access',exact:true});if(await check.isVisible())await check.click();await expect(probePage.locator('.schedule-status')).toContainText('Saved schedule loaded.');assert.equal((await f.client.query('SELECT count(*)::int AS count FROM supabase_migrations.schema_migrations')).rows[0].count,120);
  }finally{await browser?.close();await f.close();}
 },{timeout:240000});
+
+for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' customer profile shows verified upcoming visits and active vehicle links',{timeout:150000},async()=>{
+ const fixture=await sourceExportBrowserFixture({product:true,workspace:true,quotes:true,quoteReview:true,quoteCommercial:true,
+  scheduling:true,recordJobHistory:true,customerProfileFixture:true});
+ let browser;
+ try{
+  browser=await engine.launch();
+  const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:844}});
+  const page=await context.newPage();
+  await signIn(page,fixture);
+  const request=fixture.bookingRequest;
+  const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
+  const visitStart=tomorrow+'T14:00:00.000000Z';
+  Object.assign(request.payload.appointment,{start_at:visitStart,end_at:tomorrow+'T15:00:00.000000Z',
+   local_start:tomorrow+'T14:00:00.000000',local_end:tomorrow+'T15:00:00.000000'});
+  const status=await page.evaluate(async input=>{
+   const session=await fetch('/api/auth/session',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+   const {csrfToken}=await session.json();
+   const {businessId,...body}=input;
+   void businessId;
+   return (await fetch('/api/business/scheduling/book',{method:'POST',headers:{'content-type':'application/json','x-crest-csrf':csrfToken},
+    body:JSON.stringify(body)})).status;
+  },request);
+  assert.equal(status,200);
+  const profileEndpoint='**/api/business/customers/profile';
+  const stopProfile=route=>route.abort('failed');
+  await page.route(profileEndpoint,stopProfile);
+  await page.goto(fixture.origin+'/customers?customer='+request.payload.customerId);
+  const summary=page.getByRole('region',{name:'Visit summary',exact:true});
+  await expect(summary).toContainText('Visits and vehicle links couldn’t be verified.');
+  await expect(summary.getByRole('link')).toHaveCount(0);
+  await page.unroute(profileEndpoint,stopProfile);
+  await summary.getByRole('button',{name:'Retry customer summary',exact:true}).press('Enter');
+  await expect(summary).toContainText('No completed visit');
+  const upcoming=summary.getByRole('link');
+  await expect(upcoming).toHaveAttribute('href','/schedule?job='+request.jobId+'&from=customer');
+  await expect(upcoming.locator('time')).toHaveAttribute('datetime',visitStart);
+  const sections=page.getByRole('navigation',{name:'Customer record sections',exact:true});
+  await sections.getByRole('button',{name:'Vehicles',exact:true}).click();
+  const linkedVehicles=page.getByRole('region',{name:'Linked vehicles',exact:true});
+  const linkedVehicle=linkedVehicles.getByRole('link',{name:'Synthetic lifecycle sedan',exact:true});
+  await expect(linkedVehicle).toHaveAttribute('href','/vehicles?vehicle='+request.payload.vehicles[0].vehicleId+'&customer='+request.payload.customerId);
+  await expect(linkedVehicles).toContainText('Owner · Billing contact');
+  await mkdir('.local/review',{recursive:true});
+  for(const width of [360,390,768,1440]){
+   await page.setViewportSize({width,height:900});
+   await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.deepEqual((await new AxeBuilder({page}).include('.customer-record').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+   await page.screenshot({path:'.local/review/customer-profile-vehicles-'+name+'-'+width+'.png',fullPage:true});
+  }
+  await linkedVehicle.press('Enter');
+  await expect(page.getByRole('heading',{name:'Synthetic lifecycle sedan',exact:true})).toBeFocused();
+  await page.getByRole('link',{name:'Back to customer vehicles',exact:true}).press('Enter');
+  await expect(linkedVehicle).toBeFocused();
+ }finally{await browser?.close();await fixture.close();}
+});

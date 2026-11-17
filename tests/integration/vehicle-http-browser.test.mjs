@@ -3,13 +3,12 @@
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
-import {execFileSync} from 'node:child_process';
-import {readFile,chmod} from 'node:fs/promises';
-import {join} from 'node:path';
+import {setTimeout as delay} from 'node:timers/promises';
 import {createServer} from 'node:net';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {URI,TOTP} from 'otpauth';
+import {browserTestTls} from '../support/browser-test-tls.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {startRealAuthService,authResult} from '../support/real-auth-service.mjs';
@@ -17,7 +16,7 @@ import {startRealAuthService,authResult} from '../support/real-auth-service.mjs'
 let sandbox,client,service,app,origin,fixture,actor,business,login,loginOwned=false;
 const sessionName='__Host-crest_session';
 before(async()=>{
-  assert.equal(process.platform,'linux','the disposable container/HTTPS fixture requires Linux CI');
+  assert(['linux','win32'].includes(process.platform),'supported disposable HTTPS/Auth fixture required');
   process.env.NODE_ENV='production';
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);
   await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
@@ -31,7 +30,8 @@ before(async()=>{
   const sdk=service.sdk();await sdk.initialize();authResult(await sdk.signInWithPassword({email,password:secret}),'browser_enrollment_password');
   const factor=authResult(await sdk.mfa.enroll({factorType:'totp',friendlyName:'Synthetic browser fixture'}),'browser_enroll');
   const totp=URI.parse(factor.totp.uri);assert(totp instanceof TOTP,'synthetic TOTP required');
-  authResult(await sdk.mfa.challengeAndVerify({factorId:factor.id,code:totp.generate()}),'browser_enrollment_verify');fixture={email,password:secret,totp};
+  const nextCodeAt=(Math.floor(Date.now()/(totp.period*1000))+1)*totp.period*1000;
+  authResult(await sdk.mfa.challengeAndVerify({factorId:factor.id,code:totp.generate()}),'browser_enrollment_verify');fixture={email,password:secret,totp,nextCodeAt};
   const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
   await client.query('BEGIN');try{
     actor=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic browser owner',$1,$2,$3,$3,'manual') RETURNING id",[service.issuer,user.id,bootstrap])).rows[0].id;
@@ -39,18 +39,14 @@ before(async()=>{
     await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,actor]);
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,actor]);await client.query('COMMIT');
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_BROWSER_OWNER_FAILED');}
-  const keyPath=join(sandbox.workspace,'ephemeral.key'),certPath=join(sandbox.workspace,'ephemeral.pem');
-  await chmod(sandbox.workspace,0o700);
-  try{execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-noenc','-keyout',keyPath,'-out',certPath,'-days','1','-subj','/CN=localhost','-addext','subjectAltName=IP:127.0.0.1,DNS:localhost'],{stdio:'ignore',timeout:15000});}
-  catch{throw new Error('SYNTHETIC_TLS_FIXTURE_FAILED');}
-  await chmod(keyPath,0o600);
+  const tls=await browserTestTls();
   const reservation=createServer();await new Promise(resolve=>reservation.listen(0,'127.0.0.1',resolve));const port=reservation.address().port;await new Promise(resolve=>reservation.close(resolve));origin=`https://127.0.0.1:${port}`;
   // Normal Node resolution: react-server is only a build-time marker condition.
   const {createCrestApplication,createAuthenticationRuntime}=await import('../../.local/server/application.mjs');
   const runtime=await createAuthenticationRuntime({database:{connectionString:database.toString(),environment:'test'},provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
     owner:{subject:user.id,factorId:factor.id},loginKey:randomBytes(32),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:randomBytes(32)}]});
   assert.throws(()=>JSON.stringify(runtime),/AUTHENTICATION_RUNTIME_PRIVATE/);
-  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},vehicles:true});
+  app=await createCrestApplication({origin,environment:'test',tls,authentication:runtime.forServer(),business:{businessId:business},vehicles:true});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);
 });
@@ -58,6 +54,10 @@ after(async()=>{try{await app?.close();}finally{try{await service?.close();}fina
 
 async function fill(page,{trusted=false,password=fixture.password}={}){
   await page.getByLabel('Email',{exact:true}).fill(fixture.email);await page.getByLabel('Password',{exact:true}).fill(password);
+  const period=fixture.totp.period*1000,now=Date.now(),remaining=period-now%period;
+  const readyAt=Math.max(fixture.nextCodeAt,remaining<6000?now+remaining:0);
+  if(readyAt>now)await delay(readyAt-now+250);
+  fixture.nextCodeAt=(Math.floor(Date.now()/period)+1)*period;
   await page.getByLabel('Authenticator code',{exact:true}).fill(fixture.totp.generate());if(trusted)await page.getByText('Personal device options',{exact:true}).click();await page.getByLabel('Trust this personal device').setChecked(trusted);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
 }
@@ -70,7 +70,7 @@ async function send(page,route,body={},proof=null){
 const root='business/vehicles/';
 const draft=(epoch,name)=>({schemaVersion:1,operationId:randomUUID(),vehicleId:randomUUID(),expectedVersion:'0',recoveryEpoch:epoch,label:'Synthetic vehicle %_ '+name,year:-500,make:null,model:null,color:null,vin:' Raw-vin / é 001 ',plate:'00123',kind:'customer_vehicle',notes:'Synthetic \\N =evidence é 😀',archived:false,archiveReason:null});
 async function openVehicles(page){await page.bringToFront();await page.goto(origin+'/vehicles');await expect(page.getByRole('button',{name:'Add vehicle',exact:true})).toBeVisible();}
-async function findVehicle(page,label,archived=false){await page.getByLabel('Vehicle search',{exact:true}).fill(label);await page.getByLabel('Include archived vehicles',{exact:true}).setChecked(archived);await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toHaveText('Vehicle search complete.');await page.getByRole('button',{name:label+(archived?' — archived':''),exact:true}).click();await expect(page.getByRole('form',{name:'Vehicle editor',exact:true})).toBeVisible();}
+async function findVehicle(page,label,archived=false){await page.getByLabel('Vehicle search',{exact:true}).fill(label);await page.getByLabel('Include archived vehicles',{exact:true}).setChecked(archived);await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toHaveText('Vehicle search complete.');await page.getByRole('button',{name:label+(archived?' — archived':''),exact:true}).click();await page.getByRole('button',{name:'Edit vehicle',exact:true}).click();await expect(page.getByRole('form',{name:'Vehicle editor',exact:true})).toBeVisible();}
 async function vehicleEditorFlow(page,other,proof,name){
  const label='Synthetic editor vehicle '+name,save=()=>page.getByRole('button',{name:'Save vehicle',exact:true}),load=()=>page.getByRole('button',{name:'Load current vehicles',exact:true});
  await openVehicles(page);await page.getByRole('button',{name:'Add vehicle',exact:true}).click();await page.getByLabel('Vehicle label',{exact:true}).fill(label);await expect(save()).toBeEnabled();
@@ -84,7 +84,7 @@ async function vehicleEditorFlow(page,other,proof,name){
  await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('record changed');assert.equal((await client.query('SELECT notes FROM crest.vehicles WHERE id=$1',[row.id])).rows[0].notes,changed.notes);
  await load().click();await findVehicle(page,label);await page.getByLabel('Archive vehicle',{exact:true}).check();await expect(save()).toBeDisabled();await page.getByLabel('Archive reason',{exact:true}).fill('Synthetic retained vehicle');await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
  await load().click();await findVehicle(page,label,true);await page.getByLabel('Archive vehicle',{exact:true}).uncheck();await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
- await load().click();await findVehicle(page,label);await expect(page.getByRole('region',{name:'Vehicle history',exact:true})).toContainText('Current version: 4');const actions=(await client.query("SELECT action FROM crest_private.audit_events WHERE business_id=$1 AND entity_id=$2 AND entity_kind='vehicles' ORDER BY entity_version",[business,row.id])).rows;assert.deepEqual(actions.map(r=>r.action),['create','edit','archive','reopen']);
+ await load().click();await findVehicle(page,label);await page.getByText('Record history and download',{exact:true}).click();await expect(page.locator('.vehicle-history')).toContainText('Current version 4');const actions=(await client.query("SELECT action FROM crest_private.audit_events WHERE business_id=$1 AND entity_id=$2 AND entity_kind='vehicles' ORDER BY entity_version",[business,row.id])).rows;assert.deepEqual(actions.map(r=>r.action),['create','edit','archive','reopen']);
 }
 async function interruptedVehicleFlow(page,name){
  const key='crest.vehicle.pending-reference.v1',read=()=>page.evaluate(k=>JSON.parse(sessionStorage.getItem(k)),key),save=()=>page.getByRole('button',{name:'Save vehicle',exact:true}),load=()=>page.getByRole('button',{name:'Load current vehicles',exact:true});

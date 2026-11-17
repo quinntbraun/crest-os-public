@@ -14,7 +14,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
  const f=await sourceExportBrowserFixture({product:true,workspace:true});let browser;
  try{
   browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:844}}),page=await context.newPage();
-  await page.goto(f.origin+'/');await expect(page.getByRole('status')).toHaveText('Sign in to open your workspace.');await expect(page.getByRole('link',{name:'Open customers',exact:true})).toHaveCount(0);
+  await page.goto(f.origin+'/');await expect(page.getByRole('status')).toHaveText('Sign in to open your workspace.');await expect(page.locator('.today-content')).toHaveCount(0);
   await page.getByRole('link',{name:'Sign in to Crest OS',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Sign in to continue.');
   const credentials=f.credentials(),email=page.getByLabel('Email',{exact:true}),password=page.getByLabel('Password',{exact:true}),code=page.getByLabel('Authenticator code',{exact:true});
   const signIn=page.getByRole('button',{name:'Sign in',exact:true}),deviceOptions=page.getByText('Personal device options',{exact:true});
@@ -50,7 +50,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(skip).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('#workspace-content')).toBeFocused();
-  await expect(page.getByRole('navigation',{name:'Quick actions',exact:true}).getByRole('link',{name:'Open accounting',exact:true})).toHaveAttribute('href','/settings/accounts');
+  await expect(page.getByRole('region',{name:'Upcoming visit status'}).getByRole('link',{name:'Open schedule',exact:true})).toHaveAttribute('href','/schedule');
   const searchButton=page.getByRole('button',{name:'Find a tool',exact:true});
   await page.keyboard.press('Control+k');
   const toolSearch=page.getByRole('dialog',{name:'Find a tool',exact:true});
@@ -66,16 +66,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await toolQuery.fill('fictionalunmatchedtool');await expect(toolSearch.getByText('No tools match that search.')).toBeVisible();
   await toolQuery.press('Escape');await expect(toolSearch).toBeHidden();await expect(searchButton).toBeFocused();
   await searchButton.evaluate(button=>button.blur());
-  for(const width of [360,768,1440]){
+  for(const width of [320,360,768,1440]){
    await page.setViewportSize({width,height:950});
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-   const shortcuts=await page.getByRole('navigation',{name:'Quick actions',exact:true}).boundingBox();
-   const visits=await page.getByRole('region',{name:'Upcoming saved visits',exact:true}).boundingBox();
-   assert(shortcuts&&visits&&shortcuts.y+shortcuts.height<=visits.y);
-   assert(await page.locator('.today-overview strong[data-unavailable]').evaluateAll(values=>values.every(value=>{
-    const text=document.createRange();text.selectNodeContents(value);
-    return text.getClientRects().length===1;
-   })));
+   const [action,review]=await Promise.all([
+    page.getByRole('region',{name:'Upcoming visit status'}).getByRole('link',{name:'Open schedule',exact:true}).boundingBox(),
+    page.getByRole('region',{name:'Schedule review',exact:true}).boundingBox(),
+   ]);
+   assert(action&&review&&action.height>=44&&action.y+action.height<review.y);
    assert.deepEqual((await new AxeBuilder({page}).include('.workspace-home').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
    await page.screenshot({path:join('.local/review',`working-today-${name}-${width}.png`),fullPage:true});
   }
@@ -103,19 +101,36 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await workspaceMenu.press('Escape');
   }
   await page.setViewportSize({width:390,height:844});
-  await page.route('**/api/business/settings',route=>route.abort('failed'));await page.getByRole('button',{name:'Refresh workspace',exact:true}).click();await expect(page.getByRole('status')).toContainText('Workspace access could not be verified');await expect(page.getByRole('link',{name:'Open customers',exact:true})).toHaveCount(0);await page.unroute('**/api/business/settings');await page.getByRole('button',{name:'Refresh workspace',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Workspace access verified.');
+  await page.route('**/api/business/settings',route=>route.abort('failed'));await page.getByRole('button',{name:'Refresh workspace',exact:true}).click();await expect(page.getByRole('status')).toContainText('Workspace access could not be verified');await expect(page.locator('.today-content')).toHaveCount(0);await page.unroute('**/api/business/settings');await page.getByRole('button',{name:'Refresh workspace',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Workspace access verified.');
   await expect(page.getByText('No follow-up dates recorded.',{exact:true})).toBeVisible();
-  await page.getByRole('link',{name:'Open customers',exact:true}).click();
+  await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('link',{name:'Customers',exact:true}).click();
   const addCustomer=page.getByRole('button',{name:'Add customer',exact:true});
   await expect(page.getByText('No customers yet. Use Add customer to create a record.',{exact:true})).toBeVisible();
   const addPosition=await addCustomer.boundingBox(),searchPosition=await page.getByRole('searchbox',{name:'Customer search',exact:true}).boundingBox();
   assert(addPosition&&searchPosition&&addPosition.height>=44&&addPosition.y<searchPosition.y);
   await addCustomer.press('Enter');await expect(page.getByRole('heading',{name:'New customer',exact:true})).toBeFocused();
   const label='Synthetic workshop customer '+name;await page.getByLabel('Customer name',{exact:true}).fill(label);await page.getByLabel('Phone value',{exact:true}).fill('5555550123');await page.getByRole('button',{name:'Save customer',exact:true}).click();await expect(page.getByRole('status')).toContainText('Customer saved');
-  await page.reload();await page.getByRole('button',{name:label,exact:true}).click();await expect(page.getByLabel('Customer name',{exact:true})).toHaveValue(label);await expect(page.getByRole('region',{name:'Customer history',exact:true})).toContainText('Current version: 1');
+  await page.reload();
+  await page.getByRole('searchbox',{name:'Customer search',exact:true}).fill(label);
+  await page.getByRole('button',{name:'Search customers',exact:true}).click();
+  await expect(page.getByRole('status').first()).toHaveText('Customer search complete.');
+  await page.getByRole('button',{name:label,exact:true}).click();
+  await expect(page.getByLabel('Customer name',{exact:true})).toHaveValue(label);
+  await expect(page.locator('.customer-record-header')).toContainText('(555) 555-0123');
+  await expect(page.getByRole('region',{name:'Customer lookup',exact:true})).toBeHidden();
+  await page.getByLabel('Customer name',{exact:true}).fill('Synthetic unsaved draft');
+  await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'History',exact:true}).click();await expect(page.getByRole('region',{name:'Customer history',exact:true})).toContainText('Current version: 1');
+  await page.getByRole('button',{name:/Back to customers/}).click();
+  await expect(page.getByRole('button',{name:label,exact:true})).toBeFocused();
+  await expect(page.getByRole('searchbox',{name:'Customer search',exact:true})).toHaveValue(label);
+  await expect(page.getByRole('form',{name:'Customer editor',exact:true})).toBeHidden();
+  await page.getByRole('button',{name:label,exact:true}).click();
+  await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Overview',exact:true}).click();
+  await expect(page.getByLabel('Customer name',{exact:true})).toHaveValue('Synthetic unsaved draft');
+  await page.getByLabel('Customer name',{exact:true}).fill(label);
+  await page.setViewportSize({width:1440,height:900});
   await expect(page.getByRole('button',{name:label,exact:true})).toHaveAttribute('aria-current','true');
   await expect(page.getByRole('button',{name:label,exact:true})).toHaveAccessibleDescription('(555) 555-0123');
-  await expect(page.getByRole('heading',{name:'Edit customer',exact:true})).toBeFocused();
   // Disabled Save is not proof of a clean draft: clearing a required name is
   // still an edit. Canceling a search/record switch must keep it in memory.
   await page.getByLabel('Customer name',{exact:true}).fill('');await expect(page.getByRole('button',{name:'Save customer',exact:true})).toBeDisabled();
@@ -123,10 +138,16 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   page.once('dialog',dialog=>{assert.equal(dialog.type(),'confirm');void dialog.dismiss();});await page.getByRole('button',{name:'Search customers',exact:true}).click();await expect(page.getByLabel('Customer name',{exact:true})).toHaveValue('');assert.equal(searches,0);page.off('request',searched);
   page.once('dialog',dialog=>{assert.equal(dialog.type(),'confirm');void dialog.dismiss();});await page.getByRole('button',{name:label,exact:true}).click();await expect(page.getByLabel('Customer name',{exact:true})).toHaveValue('');
   page.once('dialog',dialog=>{assert.equal(dialog.type(),'confirm');void dialog.accept();});await page.getByRole('button',{name:label,exact:true}).click();await expect(page.getByLabel('Customer name',{exact:true})).toHaveValue(label);await expect(page.getByRole('heading',{name:'Edit customer',exact:true})).toBeFocused();
-  const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Download saved customer (JSON)',exact:true}).click();const download=await downloadPromise,downloaded=JSON.parse(await readFile(await download.path(),'utf8'));assert.equal(downloaded.record.display_name,label);assert.equal(downloaded.record.phone_raw,'5555550123');assert.equal(downloaded.record.email_raw,null);assert.equal(downloaded.completeCrestExport,false);assert.equal(downloaded.unsavedDraftIncluded,false);assert.equal(downloaded.history.length,1);
+  await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'History',exact:true}).click();
+  const [download]=await Promise.all([
+   page.waitForEvent('download'),
+   (async()=>{await page.getByRole('button',{name:'Download saved customer (JSON)',exact:true}).click();await expect(page.getByRole('status',{name:'Record download status',exact:true})).toContainText('Download requested.');})(),
+  ]);
+  const downloaded=JSON.parse(await readFile(await download.path(),'utf8'));assert.equal(downloaded.record.display_name,label);assert.equal(downloaded.record.phone_raw,'5555550123');assert.equal(downloaded.record.email_raw,null);assert.equal(downloaded.completeCrestExport,false);assert.equal(downloaded.unsavedDraftIncluded,false);assert.equal(downloaded.history.length,1);
   let refusedDownloads=0;page.on('download',()=>refusedDownloads++);await page.route('**/api/business/customers/history',route=>route.abort('failed'));await page.getByRole('button',{name:'Download saved customer (JSON)',exact:true}).click();await expect(page.getByRole('status',{name:'Record download status',exact:true})).toContainText('No file was requested');assert.equal(refusedDownloads,0);await page.unroute('**/api/business/customers/history');
   await page.evaluate(()=>{const original=HTMLAnchorElement.prototype.click;window.restoreSyntheticDownload=()=>{HTMLAnchorElement.prototype.click=original;delete window.restoreSyntheticDownload;};HTMLAnchorElement.prototype.click=function(){original.call(this);if(this.download==='crest-customer-record.json')throw Error('SYNTHETIC_DOWNLOAD_AFTER_DISPATCH');};});
   try{const uncertain=page.waitForEvent('download');await page.getByRole('button',{name:'Download saved customer (JSON)',exact:true}).click();await uncertain;await expect(page.getByRole('status',{name:'Record download status',exact:true})).toContainText('Check your browser’s downloads before requesting another file');}finally{await page.evaluate(()=>window.restoreSyntheticDownload());}
+  await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Overview',exact:true}).click();
   // Concurrent real command advances this record. The original UI must recover
   // through its existing conflict behavior, without replacing retained history.
   await page.getByLabel('Customer name',{exact:true}).fill(label+' stale draft');
@@ -135,19 +156,26 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    const proof=(await post('auth/session',{})).body,ctx=(await post('business/customers/context',{},proof.csrfToken)).body;
    return (await post('business/customers/save',{schemaVersion:1,operationId,customerId:id,expectedVersion:'1',recoveryEpoch:ctx.recoveryEpoch,displayName:label+' retained edit',phone:'5555550123',email:null,contactPreference:null,outreachOptOut:false,notes:null,customerSince:null,archived:false,archiveReason:null},proof.csrfToken)).status;
   },{id:downloaded.record.id,operationId:randomUUID(),label});assert.equal(changed,200);
-  await page.getByRole('button',{name:'Save customer',exact:true}).click();await expect(page.getByRole('status').first()).toContainText('record changed');await page.getByRole('button',{name:'Load current customers',exact:true}).click();await page.getByRole('button',{name:label+' retained edit',exact:true}).click();await expect(page.getByRole('region',{name:'Customer history',exact:true})).toContainText('Current version: 2');
+  await page.getByRole('button',{name:'Save customer',exact:true}).click();await expect(page.getByRole('status').first()).toContainText('record changed');await page.getByRole('button',{name:'Load current customers',exact:true}).click();await page.getByRole('button',{name:label+' retained edit',exact:true}).click();await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'History',exact:true}).click();await expect(page.getByRole('region',{name:'Customer history',exact:true})).toContainText('Current version: 2');
+  await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Overview',exact:true}).click();
   await mkdir('.local/review',{recursive:true});
   for(const width of [360,390,768,1440]){
    await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
-   const lookup=await page.getByRole('region',{name:'Customer lookup',exact:true}).boundingBox();
+   const lookup=await page.locator('.customer-lookup').boundingBox();
    const editor=await page.getByRole('form',{name:'Customer editor',exact:true}).boundingBox();
-   assert(lookup&&editor&&(width>=768?lookup.x+lookup.width<editor.x:lookup.y+lookup.height<editor.y));
+   assert(editor&&(width>=768?lookup&&lookup.x+lookup.width<editor.x:lookup===null));
+   const sectionButtons=await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button').all();
+   const boxes=await Promise.all(sectionButtons.map(button=>button.boundingBox()));
+   assert(boxes.every(box=>box&&box.height>=44));
+   assert(new Set(boxes.map(box=>box.y)).size<=(width>=768?1:2));
    await page.screenshot({path:join('.local/review',`workspace-customers-${name}-${width}.png`),fullPage:true});
   }
+  await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Vehicles',exact:true}).click();
+  await page.setViewportSize({width:390,height:844});
   await page.getByRole('link',{name:'Link a vehicle',exact:true}).click();await page.getByRole('button',{name:'Add vehicle',exact:true}).click();const vehicle='Synthetic workshop van '+name;await page.getByLabel('Vehicle label',{exact:true}).fill(vehicle);await page.getByRole('button',{name:'Save vehicle',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
-  await page.reload();await page.getByRole('button',{name:vehicle,exact:true}).click();await expect(page.getByLabel('Vehicle label',{exact:true})).toHaveValue(vehicle);await expect(page.getByRole('heading',{name:'Edit vehicle',exact:true})).toBeFocused();
-  await page.getByLabel('Year',{exact:true}).fill('not-a-year');await expect(page.getByRole('button',{name:'Save vehicle',exact:true})).toBeDisabled();page.once('dialog',dialog=>{assert.equal(dialog.type(),'confirm');void dialog.dismiss();});await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await expect(page.getByLabel('Year',{exact:true})).toHaveValue('not-a-year');await page.getByLabel('Year',{exact:true}).fill('');
-  await page.getByRole('button',{name:'Load current customer links',exact:true}).click();await page.getByRole('button',{name:'Add customer link',exact:true}).click();await page.getByLabel('Customer name, phone or email',{exact:true}).fill(label);await page.getByRole('button',{name:'Find customers',exact:true}).click();await page.getByRole('button',{name:'Use '+label+' retained edit',exact:true}).click();await page.getByLabel('Relationship',{exact:true}).selectOption('owner');await page.getByLabel('Billing selection',{exact:true}).selectOption('yes');page.once('dialog',dialog=>{assert.equal(dialog.type(),'confirm');void dialog.dismiss();});await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await expect(page.getByRole('form',{name:'Customer link editor',exact:true})).toBeVisible();await expect(page.getByLabel('Relationship',{exact:true})).toHaveValue('owner');await page.getByRole('button',{name:'Use current time',exact:true}).click();await page.getByRole('button',{name:'Save customer link',exact:true}).click();
+  await page.reload();await page.getByRole('button',{name:vehicle,exact:true}).click();await page.getByRole('button',{name:'Edit vehicle',exact:true}).click();await expect(page.getByLabel('Vehicle label',{exact:true})).toHaveValue(vehicle);await expect(page.getByRole('heading',{name:'Edit vehicle',exact:true})).toBeFocused();
+  await page.getByLabel('Year',{exact:true}).fill('not-a-year');await expect(page.getByRole('button',{name:'Save vehicle',exact:true})).toBeDisabled();page.once('dialog',dialog=>{assert.equal(dialog.type(),'confirm');void dialog.dismiss();});await page.getByRole('button',{name:'Back to vehicle list',exact:true}).click();await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await page.getByRole('button',{name:vehicle,exact:true}).click();await expect(page.getByLabel('Year',{exact:true})).toHaveValue('not-a-year');await page.getByLabel('Year',{exact:true}).fill('');
+  await page.getByRole('button',{name:'Load current customer links',exact:true}).click();await page.getByRole('button',{name:'Add customer link',exact:true}).click();await page.getByLabel('Customer name, phone or email',{exact:true}).fill(label);await page.getByRole('button',{name:'Find customers',exact:true}).click();await page.getByRole('button',{name:'Use '+label+' retained edit',exact:true}).click();await page.getByLabel('Relationship',{exact:true}).selectOption('owner');await page.getByLabel('Billing selection',{exact:true}).selectOption('yes');page.once('dialog',dialog=>{assert.equal(dialog.type(),'confirm');void dialog.dismiss();});await page.getByRole('button',{name:'Back to vehicle list',exact:true}).click();await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await page.getByRole('button',{name:vehicle,exact:true}).click();await expect(page.getByRole('form',{name:'Customer link editor',exact:true})).toBeVisible();await expect(page.getByLabel('Relationship',{exact:true})).toHaveValue('owner');await page.getByRole('button',{name:'Use current time',exact:true}).click();await page.getByRole('button',{name:'Review customer-link change',exact:true}).click();await page.getByRole('button',{name:'Save customer link',exact:true}).click();
   await expect(page.getByRole('status',{name:'Customer-link status',exact:true})).toContainText('saved');
   const rows=(await f.client.query('SELECT count(*)::int AS n FROM crest.customer_vehicles WHERE business_id=$1',[f.business])).rows;assert.equal(rows[0].n,1);
   await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('link',{name:'Today',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Workspace access verified.');await page.goBack();await expect(page.getByRole('heading',{name:'Vehicles',exact:true})).toBeVisible();
@@ -157,7 +185,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
 
 
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' reviews scheduled lead follow-ups from the dashboard',async()=>{
- const f=await sourceExportBrowserFixture({product:true,workspace:true,leadFollowUps:true});let browser;
+ const f=await sourceExportBrowserFixture({product:true,workspace:true,leadFollowUps:true,catalog:true,quotes:true,quoteReview:true,quoteCommercial:true,scheduling:true});let browser;
  try{
   browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:360,height:844}}),page=await context.newPage();
   await page.goto(f.origin+'/sign-in');
@@ -178,11 +206,15 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert.equal(data.hasMore,true);
   assert.deepEqual(Object.keys(data.followUps[0]).sort(),['followUpAt','id','label','state']);
   const section=page.getByRole('region',{name:'Lead follow-ups',exact:true}),first=f.followUpLeads[0],last=f.followUpLeads.at(-1);
-  const firstLead=section.getByRole('link',{name:first.label,exact:true});
+  const featured=page.getByRole('region',{name:'Next due item',exact:true});
+  const firstLead=featured.getByRole('link',{name:'Open follow-up',exact:true});
   await expect(firstLead).toHaveAttribute('href','/leads?lead='+first.id);
-  await expect(section.getByText('Overdue',{exact:true})).toHaveCount(1);
-  await expect(section.getByText('Lost lead',{exact:true})).toBeVisible();
-  await expect(section.locator('time').first()).toHaveAttribute('datetime',first.followUpAt);
+  await expect(featured.getByRole('heading',{name:first.label,exact:true})).toBeVisible();
+  await expect(featured.getByText('Overdue follow-up',{exact:true})).toBeVisible();
+  await expect(featured.getByText('Lost lead',{exact:true})).toBeVisible();
+  await expect(featured.locator('time')).toHaveAttribute('datetime',first.followUpAt);
+  await expect(featured.getByRole('link',{name:'Open schedule',exact:true})).toHaveAttribute('href','/schedule');
+  await expect(section.getByRole('link',{name:first.label,exact:true})).toHaveCount(0);
   await expect(section.getByRole('link',{name:last.label,exact:true})).toHaveCount(0);
 
   await mkdir('.local/review',{recursive:true});
@@ -190,15 +222,25 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await page.setViewportSize({width,height:900});
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
    const touchTarget=await firstLead.boundingBox();assert(touchTarget&&touchTarget.height>=44);
-   assert.deepEqual((await new AxeBuilder({page}).include('#lead-follow-ups').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+   const due=await featured.boundingBox(),queued=await section.boundingBox();
+   assert(due&&queued&&due.y+due.height<queued.y);
+   assert.deepEqual((await new AxeBuilder({page}).include('.workspace-home').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+   await page.screenshot({path:join('.local/review',`today-due-${name}-${width}.png`)});
    await section.screenshot({path:join('.local/review',`lead-follow-ups-${name}-${width}.png`)});
   }
   await section.getByRole('button',{name:'More follow-ups',exact:true}).click();
   await expect(section.getByRole('link',{name:last.label,exact:true})).toBeVisible();
-  await expect(firstLead).toHaveCount(0);
+  await expect(firstLead).toBeVisible();
   await expect(section.getByRole('heading',{name:'Lead follow-ups',exact:true})).toBeFocused();
   await section.getByRole('button',{name:'First reminders',exact:true}).click();
   await expect(firstLead).toBeVisible();
+  await page.route('**/api/business/scheduling/list',route=>route.abort('failed'));
+  await page.reload();
+  await expect(page.getByRole('region',{name:'Upcoming visit status'})).toContainText('Upcoming visits could not be verified.');
+  await expect(featured).toHaveCount(0);
+  await expect(section.getByRole('link',{name:first.label,exact:true})).toBeVisible();
+  await page.unroute('**/api/business/scheduling/list');
+  await page.reload();
   await firstLead.click();
   await expect(page).toHaveURL(f.origin+'/leads?lead='+first.id);
   await expect(page.getByRole('heading',{name:'Edit lead intake',exact:true})).toBeFocused();
@@ -206,5 +248,52 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const latest=page.getByRole('region',{name:'Lead history',exact:true}).locator('details').filter({hasText:/Version 2 ·/});
   await latest.locator('summary').click();
   await expect(latest.getByText('lost',{exact:true})).toBeVisible();
+  await page.goto(f.origin+'/leads');
+  const leadViews=page.getByRole('navigation',{name:'Lead views',exact:true});
+  await expect(leadViews.getByRole('button',{name:'Follow-ups',exact:true})).toHaveAttribute('aria-current','true');
+  const queue=page.getByRole('list',{name:'Lead follow-up queue',exact:true});
+  await expect(queue.locator('time')).toHaveCount(8);
+  assert.deepEqual(await queue.locator('time').evaluateAll(times=>times.map(time=>time.dateTime)),data.followUps.map(lead=>lead.followUpAt));
+  await expect(queue.getByText('Overdue',{exact:true})).toHaveCount(1);
+  await page.screenshot({path:join('.local/review',`lead-queue-${name}-1440.png`)});
+  await page.setViewportSize({width:390,height:900});
+  await page.screenshot({path:join('.local/review',`lead-queue-${name}-390.png`)});
+  await page.getByRole('button',{name:'More follow-ups',exact:true}).click();
+  await expect(queue.getByRole('button',{name:last.label,exact:true})).toBeVisible();
+  await expect(queue.getByRole('button',{name:first.label,exact:true})).toHaveCount(0);
+  await expect(page.getByRole('heading',{name:'Scheduled follow-ups',exact:true})).toBeFocused();
+  await page.route('**/api/business/leads/follow-ups',route=>route.abort('failed'),{times:1});
+  await page.getByRole('button',{name:'First reminders',exact:true}).click();
+  await expect(queue).toHaveCount(0);
+  await expect(page.getByText('Follow-ups could not be verified.',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Check follow-ups',exact:true}).click();
+  await expect(queue.getByRole('button',{name:first.label,exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Scheduled follow-ups',exact:true})).toBeFocused();
+  await queue.getByRole('button',{name:first.label,exact:true}).press('Enter');
+  await expect(page.getByRole('heading',{name:'Edit lead intake',exact:true})).toBeFocused();
+  await leadViews.getByRole('button',{name:'All leads',exact:true}).click();
+  const directory=page.getByRole('list',{name:'Saved leads',exact:true});
+  const listed=data.followUps.find(lead=>lead.state==='new');
+  assert(listed,'fixture includes an open lead with a follow-up');
+  const leadRow=directory.getByRole('button',{name:listed.label,exact:true});
+  const time=leadRow.locator('time');
+  await expect(time).toHaveAttribute('datetime',listed.followUpAt);
+  await expect(time).toHaveAttribute('title',listed.followUpAt);
+  await expect(time).not.toHaveText(listed.followUpAt);
+  for(const width of [320,390,1440]){
+   await page.setViewportSize({width,height:900});
+   const [add,search,record]=await Promise.all([
+    page.getByRole('button',{name:'Add lead',exact:true}).boundingBox(),
+    page.getByRole('searchbox',{name:'Lead search',exact:true}).boundingBox(),
+    leadRow.boundingBox(),
+   ]);
+   assert(add&&search&&record&&add.y<search.y&&record.height>=44);
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.deepEqual((await new AxeBuilder({page}).include('[aria-label="Lead directory"]').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+   await page.screenshot({path:join('.local/review',`lead-directory-${name}-${width}.png`)});
+  }
+  await leadRow.press('Enter');
+  await expect(page.getByRole('heading',{name:'Edit lead intake',exact:true})).toBeFocused();
+  await expect(leadRow).toHaveAttribute('aria-current','true');
  }finally{try{await browser?.close();}finally{await f.close();}}
 });

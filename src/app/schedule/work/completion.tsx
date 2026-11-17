@@ -69,11 +69,15 @@ function Portion({piece,index,change,remove}:{piece:PieceDraft;index:number;chan
   {remove&&<button type="button" className="secondary" onClick={remove}>Remove portion {index+1}</button>}
  </fieldset>;
 }
-function AssignedScope({row,index,draft,change}:{row:CompletionAssignment;index:number;draft:ScopeDraft;change:(next:ScopeDraft)=>void}){
- const id=useId(),complimentary=row.grossInclusiveCents==='0';
- return <fieldset>
+function AssignedScope({id,row,index,draft,ready,change}:{id:string;row:CompletionAssignment;index:number;draft:ScopeDraft;ready:boolean;change:(next:ScopeDraft)=>void}){
+ const complimentary=row.grossInclusiveCents==='0';
+ const state=ready?(draft.selection==='split'?'Portions ready':labels[draft.selection as WorkOutcome]):draft.selection?'Needs details':'Needs outcome';
+ return <fieldset className="completion-assignment">
   <legend>Assigned item {index+1}</legend>
-  <p className="completion-text">{row.scopeDescription}</p>
+  <div className="completion-assignment-heading">
+   <p className="completion-text">{row.scopeDescription}</p>
+   <span className="completion-item-state" data-ready={ready}>{state}</span>
+  </div>
   <label htmlFor={id+'-outcome'}>Outcome for item {index+1}</label>
   <select id={id+'-outcome'} value={draft.selection} required onChange={event=>{
    const selection=event.target.value as Selection;
@@ -94,7 +98,29 @@ function AssignedScope({row,index,draft,change}:{row:CompletionAssignment;index:
  </fieldset>;
 }
 
-export function CompletionEditor({context,disabled,save}:{context:CompletionContext;disabled:boolean;save:(body:CompletionBody)=>Promise<void>}){
+type VisitIdentity={
+ customer:string;
+ vehicles:readonly {id:string;label:string}[];
+ assignments?:Readonly<Record<string,string|null>>|undefined;
+};
+function assignmentGroups(assignments:readonly CompletionAssignment[],visit:VisitIdentity|undefined){
+ const groups=new Map<string,{label:string;items:number[]}>();
+ assignments.forEach((assignment,index)=>{
+  const vehicleId=visit?.assignments?.[assignment.assignedPartId];
+  const vehicle=visit?.vehicles.find(row=>row.id===vehicleId);
+  const key=vehicle?.id??(vehicleId===null?'visit':'other');
+  const group=groups.get(key)??{label:vehicle?.label??(key==='visit'?'Entire visit':'Assigned work'),items:[]};
+  group.items.push(index);
+  groups.set(key,group);
+ });
+ return [...groups];
+}
+function reviewAllocation(row:CompletionAssignment,draft:ScopeDraft){
+ try{return {allocation:savedAllocation(row,draft),error:null};}
+ catch(problem){return {allocation:null,error:problem instanceof Error?problem.message:'Review the assigned item.'};}
+}
+
+export function CompletionEditor({context,visit,disabled,save}:{context:CompletionContext;visit:VisitIdentity|undefined;disabled:boolean;save:(body:CompletionBody)=>Promise<void>}){
  const id=useId();
  const [scope,setScope]=useState<Record<string,ScopeDraft>>({});
  const [walkthrough,setWalkthrough]=useState<''|'done'|'unavailable'>('');
@@ -104,8 +130,20 @@ export function CompletionEditor({context,disabled,save}:{context:CompletionCont
  const [error,setError]=useState('');
  const unanswered=context.assignments.filter(row=>!scope[row.assignedPartId]?.selection);
  const hasSelectedOutcome=unanswered.length<context.assignments.length;
+ const reviewed=context.assignments.map(row=>reviewAllocation(row,scope[row.assignedPartId]??blank));
+ const groups=assignmentGroups(context.assignments,visit);
+ const displayOrder=groups.flatMap(([,group])=>group.items);
+ const firstUnresolved=displayOrder.find(index=>!reviewed[index]!.allocation)??-1;
+ const unresolved=reviewed.filter(row=>!row.allocation).length;
+ const hasFulfilled=reviewed.some(row=>row.allocation?.pieces.some(piece=>piece.outcome==='completed'));
+ const walkthroughReady=walkthrough==='done'||walkthrough==='unavailable'&&walkthroughReason.trim().length>0;
+ const itemField=(index:number)=>id+'-assignment-'+index;
+ const focusField=(field:string)=>document.getElementById(field)?.focus();
+ const nextField=firstUnresolved>=0?itemField(firstUnresolved)+'-outcome':!hasFulfilled?itemField(displayOrder[0]!)+'-outcome':
+  !walkthroughReady?id+(walkthrough==='unavailable'?'-walkthrough-reason':'-walkthrough'):null;
 
  function markRemainingFulfilled(){
+  setError('');
   setScope(current=>{
    const next={...current};
    for(const {assignedPartId} of context.assignments){
@@ -117,23 +155,28 @@ export function CompletionEditor({context,disabled,save}:{context:CompletionCont
   });
  }
 
- return <form className="field-work-form completion-work-form" onSubmit={event=>{
+ return <form className="field-work-form completion-work-form" onChange={()=>setError('')} onSubmit={event=>{
   event.preventDefault();
   if(disabled)return;
   setError('');
-  let body:CompletionBody;
-  try{
-   const allocations=context.assignments.map(row=>savedAllocation(row,scope[row.assignedPartId]??blank));
-   if(!allocations.some(row=>row.pieces.some(piece=>piece.outcome==='completed')))throw Error('Record at least one fulfilled portion to end this job.');
-   if(!walkthrough||walkthrough==='unavailable'&&!walkthroughReason.trim())throw Error('Record the walkthrough outcome and any required reason.');
-   body={scope:allocations,reason:optional(reason),walkthrough:{state:walkthrough,reason:walkthrough==='done'?null:walkthroughReason.trim()},
+  if(nextField){
+   setError(reviewed[firstUnresolved]?.error??(!hasFulfilled?'Record at least one fulfilled portion to end this job.':'Record the walkthrough outcome and any required reason.'));
+   focusField(nextField);
+   return;
+  }
+  if(walkthrough==='')return;
+  const allocations=reviewed.flatMap(row=>row.allocation?[row.allocation]:[]);
+  const body:CompletionBody={scope:allocations,reason:optional(reason),walkthrough:{state:walkthrough,reason:walkthrough==='done'?null:walkthroughReason.trim()},
     review:{reviewUrl:optional(reviewUrl),skipReason:optional(skipReason),additionalRequestReason:optional(additional),
      expectedDuplicateRequestIds:context.duplicateRequestIds,expectedCustomerVersion:context.customerVersion,contactReviewReason:optional(contactReview)}};
-  }catch(problem){setError(problem instanceof Error?problem.message:'Review the completion details.');return;}
   void save(body);
  }}>
-  <p className="eyebrow">{context.jobState==='paused'?'Paused':'In progress'} · Saved version {context.jobVersion}</p>
-  <p>End the current work interval and record what was done. Unfinished work will be flagged for review.</p>
+  <header className="completion-visit-heading">
+   <p className="completion-visit-state">{context.jobState==='paused'?'Paused':'In progress'} <span>· Saved version {context.jobVersion}</span></p>
+   {visit&&<><h2>{visit.customer}</h2><p>{visit.vehicles.map(row=>row.label).join(' · ')}</p></>}
+   <p className="field-help">Record what was done. Unfinished work will be flagged for review.</p>
+  </header>
+  <div className="completion-checklist">
   <fieldset disabled={disabled}>
    <legend>Scope outcomes</legend>
    <p role="status" className="field-help">
@@ -143,8 +186,17 @@ export function CompletionEditor({context,disabled,save}:{context:CompletionCont
    <button type="button" className="secondary" disabled={unanswered.length===0} onClick={markRemainingFulfilled}>
     {hasSelectedOutcome?'Mark remaining items fulfilled':'Mark all items fulfilled'}
    </button>
-   {context.assignments.map((row,index)=><AssignedScope key={row.assignedPartId} row={row} index={index} draft={scope[row.assignedPartId]??blank}
-    change={next=>setScope(current=>({...current,[row.assignedPartId]:next}))}/>)}
+   {groups.map(([key,group])=><div key={key} className="completion-scope-group" role="group" aria-label={group.label}>
+    <div className="completion-scope-heading">
+     <strong>{group.label}</strong>
+     <span>{group.items.filter(index=>reviewed[index]!.allocation!==null).length} of {group.items.length} ready</span>
+    </div>
+    {group.items.map(index=>{
+     const row=context.assignments[index]!;
+     return <AssignedScope key={row.assignedPartId} id={itemField(index)} row={row} index={index} draft={scope[row.assignedPartId]??blank} ready={reviewed[index]!.allocation!==null}
+      change={next=>setScope(current=>({...current,[row.assignedPartId]:next}))}/>;
+    })}
+   </div>)}
   </fieldset>
   <fieldset disabled={disabled}>
    <legend>Walkthrough</legend>
@@ -172,8 +224,15 @@ export function CompletionEditor({context,disabled,save}:{context:CompletionCont
     </>}
    </details>
   </fieldset>
-  {error&&<p role="alert">{error}</p>}
-  <button type="submit" disabled={disabled}>End job</button>
+  </div>
+  <aside className="completion-review" aria-label="Completion review">
+   <h2>Completion review</h2>
+   <p aria-live="polite">{unresolved>0?`${unresolved} ${unresolved===1?'item needs':'items need'} review`:
+    !hasFulfilled?'A fulfilled portion is required':!walkthroughReady?'Walkthrough outcome required':'Ready to end the job'}</p>
+   {nextField&&<button type="button" className="secondary" disabled={disabled} onClick={()=>focusField(nextField)}>Review next required field</button>}
+   {error&&<p role="alert">{error}</p>}
+   <button type="submit" disabled={disabled}>End job</button>
+  </aside>
  </form>;
 }
 

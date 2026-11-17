@@ -7,6 +7,7 @@ import {downloadLegacyContactImport} from '../../../client/legacy-contact-downlo
 import type {Proof} from '../../../client/authentication';
 import {ApplicationResults} from './application-results';
 import type {ApplicationPage,ApplicationReceipt} from './application-results';
+import type {ImportReviewState} from './stages';
 
 type Evidence=Exclude<Awaited<ReturnType<typeof legacyBatches.reviewApproval>>,{state:'absent'}>;
 type Request=Parameters<typeof legacyBatches.approve>[1];
@@ -23,9 +24,10 @@ const queueMessages={
 };
 
 
-export function LegacyApprovalPanel({businessId,batch,recoveryEpoch,revision,authorize,applicationsAvailable,backgroundApplications,downloadsAvailable,onApplied}:{
+export function LegacyApprovalPanel({businessId,batch,recoveryEpoch,revision,authorize,applicationsAvailable,backgroundApplications,downloadsAvailable,onApplied,onReviewState}:{
  businessId:string;batch:{batchId:string;rowCount:number;rowsSha256:string};recoveryEpoch:string|null;revision:number;
  authorize:(signal:AbortSignal)=>Promise<Proof>;applicationsAvailable:boolean;backgroundApplications:boolean;downloadsAvailable:boolean;onApplied:()=>void;
+ onReviewState:(state:ImportReviewState)=>void;
 }){
  const [review,setReview]=useState<{evidence:Evidence;revision:number}|null>(null);
  const [confirmation,setConfirmation]=useState<string|null>(null);
@@ -55,6 +57,10 @@ export function LegacyApprovalPanel({businessId,batch,recoveryEpoch,revision,aut
  const current=review?.revision===revision?review.evidence:null;
  const evidenceKey=current?current.evidenceSha256+':'+revision:null;
  const {batchId,rowCount,rowsSha256}=batch;
+ const stage=receipt||queued?'results':current?.state==='ready'?'approve':'review';
+ const undecided=receipt||queued?null:current?.undecidedRows??null;
+ const applicationPending=queued&&!receipt;
+ useEffect(()=>onReviewState({batchId,revision,stage,undecided,applicationPending}),[onReviewState,batchId,revision,stage,undecided,applicationPending]);
  async function latest(proof:Proof,signal:AbortSignal){
   const value=await legacyBatches.reviewApproval(businessId,batchId,proof,signal);
   await authorize(signal);
@@ -209,7 +215,7 @@ export function LegacyApprovalPanel({businessId,batch,recoveryEpoch,revision,aut
     'The approval receipt was recorded for an earlier version. Review the current decisions.');
   },'Recording approval…','Approval could not be confirmed. Retry this approval or check the current decisions. Approval requires a recent sign-in.');
  }
- return <section className="legacy-effect-review legacy-approval" aria-labelledby={headingId} aria-busy={busy}>
+ return <section id="legacy-import-approval" tabIndex={-1} className="legacy-effect-review legacy-approval" aria-labelledby={headingId} aria-busy={busy}>
   <div className="legacy-effect-heading">
    <h3 id={headingId}>Review and approve import</h3>
    {!receipt&&<button className="secondary" type="button" disabled={busy} onClick={load}>{applicationsAvailable?'Check import status':review?'Check decisions again':'Check saved decisions'}</button>}
@@ -236,8 +242,9 @@ export function LegacyApprovalPanel({businessId,batch,recoveryEpoch,revision,aut
      <tr><th scope="row">Vehicles</th><td>{number.format(current.vehicleCreates)}</td><td>{number.format(current.vehicleLinks)}</td></tr>
     </tbody>
    </table>
-   <p className="field-help">Rows to skip <strong>{number.format(current.skippedRows)}</strong></p>
-   {current.approval?<><p className="legacy-approval-receipt"><strong>Approved</strong> <span>Receipt {current.approval.approvalId}</span></p>
+   <p className="legacy-skipped-count">Rows to skip <strong>{number.format(current.skippedRows)}</strong></p>
+   {current.approval?<><p className="legacy-approval-receipt"><strong>Approved</strong> {applicationsAvailable&&recoveryEpoch&&<span>Ready to apply</span>}</p>
+    <details className="legacy-approval-reference"><summary>Approval receipt</summary><p>{current.approval.approvalId}</p></details>
     {applicationsAvailable&&(recoveryEpoch?<form onSubmit={apply}>
      <p className="field-help">Apply the approved customer and vehicle decisions. Review any vehicle relationships in Vehicles after import.</p>
      <label className="trust"><input type="checkbox" checked={applyConfirmation===evidenceKey} disabled={busy}

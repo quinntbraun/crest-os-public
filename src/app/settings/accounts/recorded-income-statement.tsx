@@ -10,6 +10,8 @@ type Report=Awaited<ReturnType<typeof financeAccounts.readRecordedIncomeStatemen
 const coverage='Fictional posted records only. Opening balances, reconciliations and some costs are incomplete.';
 const basis='Operational books · invoice-issued recognition';
 const supplierBasis='Operational books · revenue at invoice issue and supplier costs when incurred';
+const dateFormat=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'UTC'});
+const displayDate=(date:string)=>dateFormat.format(new Date(date+'T12:00:00Z'));
 const usd=(cents:bigint)=>cents<0n?'-$'+expenseDollars(String(-cents)):'$'+expenseDollars(String(cents));
 
 export function RecordedIncomeStatement({businessId}:{businessId:string}){
@@ -68,11 +70,11 @@ export function RecordedIncomeStatement({businessId}:{businessId:string}){
    ['','','Recorded-book net income','','','',BigInt(report.netIncomeCents)],
   ]);
  }
- return <details className="review-card" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
+ return <details className="review-card" open onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
   <summary>Income statement</summary>
   <section aria-label="Recorded income statement" className="trial-balance">
    <p>{report?.schemaVersion===2?supplierBasis:basis}. {coverage}</p>
-   <form onSubmit={event=>{event.preventDefault();void load();}}>
+   <form className={styles.incomeForm} onSubmit={event=>{event.preventDefault();void load();}}>
     <label>From date<input type="date" required value={from} disabled={busy}
      onChange={event=>{setFrom(event.target.value);setReport(null);setMessage('');}}/></label>
     <label>Through date<input type="date" required value={through} min={from||undefined} disabled={busy}
@@ -81,8 +83,15 @@ export function RecordedIncomeStatement({businessId}:{businessId:string}){
    </form>
    <p role="status">{message}</p>
    {report&&<>
-    <p>{report.fromOn} to {report.throughOn} · USD · {report.timeZone}</p>
-    {report.coverageStart&&<p>First recorded posting {report.coverageStart}.</p>}
+    <p className={styles.reportPeriod}>Income statement · <time dateTime={report.fromOn}>{displayDate(report.fromOn)}</time>
+     {report.fromOn!==report.throughOn&&<> to <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></>}
+    </p>
+    <div className={styles.reportSnapshot}>
+     <div><p>USD · {report.timeZone}</p>
+      {report.coverageStart&&<p className="field-help">First recorded posting {report.coverageStart}.</p>}
+     </div>
+     <button type="button" className="secondary" onClick={download}>Download income statement CSV</button>
+    </div>
     <div className={styles.balanceScroll} tabIndex={0} role="region" aria-label="Income and expense totals">
      <table className={styles.balanceTable}>
       <thead><tr><th scope="col">Category</th><th scope="col">Amount</th></tr></thead>
@@ -91,7 +100,6 @@ export function RecordedIncomeStatement({businessId}:{businessId:string}){
      </table>
     </div>
     <p className="field-help">Account detail is in the CSV. Open Journal entries in the trial balance to review postings.</p>
-    <button type="button" className="secondary" onClick={download}>Download income statement CSV</button>
    </>}
   </section>
  </details>;

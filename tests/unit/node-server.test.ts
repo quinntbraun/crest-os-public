@@ -25,7 +25,7 @@ import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../.
 import type {NodeConfiguration} from '../../src/server/node-server.ts';
 
 const origin='https://crest.example.com';
-it.each([117,118,119,120,121])('requires a reviewed supplier finance source when launching schema %i',sourceSchemaVersion=>{
+it.each([117,118,119,120,121,122])('requires a reviewed supplier finance source when launching schema %i',sourceSchemaVersion=>{
  const server=createBoundedNodeServer();
  const config:NodeConfiguration={origin,environment:'test',business:{businessId:'11111111-1111-4111-8111-111111111111'},
   authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never},
@@ -33,7 +33,7 @@ it.each([117,118,119,120,121])('requires a reviewed supplier finance source when
   syntheticPostedFinanceExport:{connectionString:'postgres://crest_export@127.0.0.1/crest_fixture',appReleaseId:'a'.repeat(40),sourceSchemaVersion}};
  try{
   const bind=()=>bindApplicationHandler(server,config,async()=>{});
-  if(sourceSchemaVersion===121){
+  if(sourceSchemaVersion===122){
    expect(bind).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
    expect(server.listenerCount('request')).toBe(0);
   }else{

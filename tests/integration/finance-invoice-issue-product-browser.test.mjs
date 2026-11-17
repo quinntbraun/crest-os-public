@@ -84,8 +84,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.goto(fixture.origin+job);
   const drafts=page.getByRole('region',{name:'Invoice drafts',exact:true});
   const draftStatus=drafts.locator(':scope > [role="status"]');
-  await page.getByRole('button',{name:'Record work status…',exact:true}).click();
-  await page.getByLabel('What is happening?',{exact:true}).selectOption('direct_arrive');
+  await page.getByRole('button',{name:'Record departure…',exact:true}).click();
+  await page.getByText('Other ways to start',{exact:true}).click();await page.getByRole('button',{name:'Already here — start without recorded travel',exact:true}).click();
   await page.getByLabel('Why was travel not recorded?',{exact:true}).fill('Synthetic arrival without travel.');
   await page.getByRole('button',{name:'Start work without recorded travel',exact:true}).click();
   await expect(status).toContainText('Work status saved.');
@@ -98,7 +98,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.getByRole('button',{name:'End job',exact:true}).click();
   await expect(status).toHaveText('Job completion saved.');
     await page.goto(fixture.origin+'/settings/accounts');
-    await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+    await page.getByRole('button',{name:'Setup',exact:true}).click();
     await page.getByText('Invoice numbering and periods',{exact:true}).click();
     const setup=page.getByRole('region',{name:'Fictional invoice setup',exact:true});
     await setup.getByRole('button',{name:'Load invoice setup',exact:true}).click();
@@ -415,9 +415,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        if(customerFundsReport){
         await allowInvoiceReadWindow();
         await page.goto(fixture.origin+'/settings/accounts');
-        await page.getByRole('button',{name:'Load accounts',exact:true}).press('Enter');
+        await page.getByRole('group',{name:'Choose a report',exact:true}).getByRole('button',{name:'Customer funds',exact:true}).press('Enter');
         const disclosure=page.getByText(refundTransferExport?'Available customer funds':'Customer funds held',{exact:true});
-        await disclosure.press('Enter');
         const report=page.getByRole('region',{name:'Customer funds held',exact:true});
         const reportDate=report.getByLabel('Through date (optional)');
         const load=report.getByRole('button',{name:'Load customer funds',exact:true});
@@ -647,8 +646,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          await allowInvoiceReadWindow();
          await page.setViewportSize({width:390,height:900});
          await page.goto(fixture.origin+'/settings/accounts');
-         await page.getByRole('button',{name:'Load accounts',exact:true}).press('Enter');
-         await page.getByText('Outstanding invoices by due date',{exact:true}).press('Enter');
+         await page.getByRole('group',{name:'Choose a report',exact:true}).getByRole('button',{name:'Receivables',exact:true}).press('Enter');
          const aging=page.getByRole('region',{name:'Outstanding invoices by due date',exact:true});
          await aging.getByRole('button',{name:'Load outstanding invoices',exact:true}).press('Enter');
          await expect(aging.getByRole('status')).toHaveText('Outstanding invoices loaded.');
@@ -776,8 +774,6 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         }
        }
        await page.goto(fixture.origin+'/settings/accounts');
-       await page.getByRole('button',{name:'Load accounts',exact:true}).click();
-       await page.getByText('Fictional trial balance',{exact:true}).click();
        const report=page.getByRole('region',{name:'Fictional trial balance',exact:true});
        await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
        await expect(report.getByRole('status')).toHaveText('Posted balances loaded.');
@@ -795,7 +791,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        }
        if(receivableAging){
         await allowInvoiceReadWindow();
-        await page.getByText('Outstanding invoices by due date',{exact:true}).press('Enter');
+        await page.getByRole('group',{name:'Choose a report',exact:true}).getByRole('button',{name:'Receivables',exact:true}).press('Enter');
         const aging=page.getByRole('region',{name:'Outstanding invoices by due date',exact:true});
         const load=aging.getByRole('button',{name:'Load outstanding invoices',exact:true});
         await page.route('**/api/business/finance-accounts/receivable-aging',route=>route.abort(),{times:1});
@@ -1229,7 +1225,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
             const reload=page.getByRole('button',{name:'Load current customers',exact:true});
             await expect(entries.or(reload).first()).toBeVisible();
             if(!await entries.isVisible())await reload.press('Enter');
-            await entries.press('Enter');
+            await entries.press('Enter');await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Payments',exact:true}).click();
             const restore=page.getByRole('region',{name:'Restore a failed payment',exact:true});
             await page.locator('summary').filter({hasText:'Restore a failed payment'}).press('Enter');
             await expect(restore).toBeVisible();
@@ -1311,7 +1307,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
             .locator(':scope > [role="status"]')).toContainText('Customer saved');
            await page.getByRole('button',{name:'Load current customers',exact:true}).press('Enter');
            await allowInvoiceReadWindow();
-           await page.getByRole('button',{name:customerName,exact:true}).press('Enter');
+           await page.getByRole('button',{name:customerName,exact:true}).press('Enter');await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Payments',exact:true}).click();
            const customerPayment=page.getByRole('region',{name:'Record a fictional payment',exact:true});
            await page.getByText('Record a fictional payment',{exact:true}).press('Enter');
            await customerPayment.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
@@ -1355,7 +1351,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            assert.equal(storedTip.customerId,directTip.customerId);
            await allowInvoiceReadWindow();
            await page.reload();
-           await page.getByRole('button',{name:customerName,exact:true}).press('Enter');
+           await page.getByRole('button',{name:customerName,exact:true}).press('Enter');await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Payments',exact:true}).click();
            await page.getByText('Record a fictional payment',{exact:true}).press('Enter');
            await customerPayment.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
            await expect(paymentStatus).toHaveText('The original payment was saved.');
@@ -1367,14 +1363,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           }
           await allowInvoiceReadWindow();
           await page.goto(fixture.origin+'/settings/accounts');
-          await page.getByRole('button',{name:'Load accounts',exact:true}).click();
-          await page.getByText(refundTransferExport?'Available customer funds':'Customer funds held',{exact:true}).press('Enter');
+          const reportPicker=page.getByRole('group',{name:'Choose a report',exact:true});
+          await reportPicker.getByRole('button',{name:'Customer funds',exact:true}).press('Enter');
           const heldReport=page.getByRole('region',{name:'Customer funds held',exact:true});
           await heldReport.getByRole('button',{name:'Load customer funds',exact:true}).press('Enter');
           await expect(heldReport.getByRole('status')).toHaveText('Customer funds matched the ledger.');
           await heldReport.getByText(/^Held funds by customer/).press('Enter');
           await expect(heldReport.getByText(collectionFailureExport?'$11.09':'$11.34',{exact:true}).first()).toBeVisible();
-          await page.getByText('Fictional trial balance',{exact:true}).press('Enter');
+          await reportPicker.getByRole('button',{name:'Ledger',exact:true}).press('Enter');
           const trial=page.getByRole('region',{name:'Fictional trial balance',exact:true});
           await trial.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
           await expect(trial.getByRole('status')).toHaveText('Posted balances loaded.');

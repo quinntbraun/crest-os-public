@@ -429,6 +429,12 @@ export async function syntheticRecordJobHistoryAvailable(connectionString){
   'SYNTHETIC_RECORD_JOB_HISTORY_REQUIRED','20270113180000');
 }
 
+export async function syntheticCustomerProfileAvailable(connectionString){
+ return optionalSyntheticReader(connectionString,
+  'crest_commands.read_customer_profile(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid,integer)',
+  'SYNTHETIC_CUSTOMER_PROFILE_REQUIRED','20270114180000');
+}
+
 async function optionalSyntheticReader(connectionString,signatures,missing,version){
  try{await requireSyntheticReader(connectionString,signatures,missing,version);return true;}
  catch(error){if(error instanceof assert.AssertionError&&error.message===missing)return false;throw error;}

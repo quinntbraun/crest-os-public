@@ -1,7 +1,8 @@
 'use client';
+import Image from 'next/image';
 import {usePathname} from 'next/navigation';
-import {useCallback,useEffect,useRef,useState} from 'react';
-import type {FocusEvent,ReactNode} from 'react';
+import {createContext,useCallback,useContext,useEffect,useImperativeHandle,useRef,useState} from 'react';
+import type {FocusEvent,ReactNode,Ref} from 'react';
 
 const destinations=[
   ['/','Today','◈'],['/customers','Customers','◎'],['/schedule','Schedule','▦'],['/leads','Leads','◇'],['/quotes','Quotes','≡'],
@@ -32,9 +33,26 @@ const searchTerms:Record<string,string>={
   '/expenses':'receipts supplier bills payables purchases', '/export-files':'csv downloads portability',
   '/save-review':'recovery pending failed saves', '/vehicles':'cars trucks',
 };
-const isCurrent=(path:string,href:string)=>path===href||href!=='/'&&href!=='/settings'&&path.startsWith(href+'/');
+const navigationParents:Readonly<Record<string,string>>={
+ '/addresses':'/customers',
+ '/appointment-holds':'/schedule',
+ '/lead-sources':'/leads',
+ '/settings/google-calendar':'/settings',
+};
+function navigationState(path:string,href:string){
+ if(path===href)return 'page';
+ if(navigationParents[path]===href||href!=='/'&&href!=='/settings'&&path.startsWith(href+'/'))return 'location';
+}
 
-function WorkspaceSearch(){
+type OpenToolSearch=(opener?:HTMLElement)=>void;
+const WorkspaceToolSearchContext=createContext<OpenToolSearch|null>(null);
+
+export function WorkspaceToolSearchButton({className}:{className?:string}){
+ const open=useContext(WorkspaceToolSearchContext);
+ return <button className={className} type="button" aria-haspopup="dialog" onClick={event=>open?.(event.currentTarget)}>Find a tool</button>;
+}
+
+function WorkspaceSearch({searchRef}:{searchRef:Ref<OpenToolSearch>}){
   const dialog=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement>(null),input=useRef<HTMLInputElement>(null);
   const returnFocus=useRef<HTMLElement|null>(null);
   const [query,setQuery]=useState('');
@@ -46,6 +64,7 @@ function WorkspaceSearch(){
     dialog.current.showModal();
     input.current?.focus();
   },[]);
+  useImperativeHandle(searchRef,()=>open,[open]);
   useEffect(()=>{
     const shortcut=(event:KeyboardEvent)=>{
       if(event.defaultPrevented||event.repeat||event.altKey||event.shiftKey||event.key.toLowerCase()!=='k'||!(event.ctrlKey||event.metaKey))return;
@@ -120,6 +139,8 @@ function WorkspaceSearch(){
 export function WorkspaceFrame({children}:{children:ReactNode}){
   const path=usePathname(),signIn=path==='/sign-in';
   const navigation=useRef<HTMLElement>(null);
+  const search=useRef<OpenToolSearch>(null);
+  const openSearch=useCallback<OpenToolSearch>(opener=>search.current?.(opener),[]);
 
   function keepFocusAboveNavigation(event:FocusEvent<HTMLDivElement>){
     const element=event.target,nav=navigation.current;
@@ -135,9 +156,11 @@ export function WorkspaceFrame({children}:{children:ReactNode}){
   return <div className={signIn?'workspace sign-in-workspace':'workspace'}>
     <a className="skip-link" href="#workspace-content">Skip to content</a>
     <header className="workspace-masthead"><div className="workspace-header">
-      <a className="crest-wordmark" href="/" aria-label="Crest OS home"><i className="crest-symbol" aria-hidden="true"/>CREST <span>OS</span></a>
-      <p className="workspace-purpose">Crest Detailing</p>
-      {!signIn&&<WorkspaceSearch/>}
+      <a className="crest-wordmark" href="/" aria-label="Crest OS home">
+        <Image src="/brand/crest-detailing.png" alt="" width={36} height={36} className="crest-workspace-logo"/>
+        <span>Crest OS</span>
+      </a>
+      {!signIn&&<WorkspaceSearch searchRef={search}/>}
       <details className="workspace-menu" onKeyDown={event=>{
         if(event.key!=='Escape'||!event.currentTarget.open)return;
         event.preventDefault();
@@ -149,7 +172,7 @@ export function WorkspaceFrame({children}:{children:ReactNode}){
           {tools.map(({label,links})=><div className="workspace-menu-group" key={label}>
             <p>{label}</p>
             <ul>{links.map(([href,name])=><li key={href}>
-              <a href={href} aria-current={isCurrent(path,href)?'page':undefined}>{name}</a>
+              <a href={href} aria-current={navigationState(path,href)}>{name}</a>
             </li>)}</ul>
           </div>)}
         </nav>
@@ -158,7 +181,22 @@ export function WorkspaceFrame({children}:{children:ReactNode}){
     <p className="workspace-test-notice"><i aria-hidden="true"/>Test workspace · Use fictional records only</p>
     </header>
     {!signIn&&<nav ref={navigation} className="workspace-destinations" aria-label="Main navigation">{destinations.map(([href,label,icon])=>
-      <a key={href} href={href} aria-current={isCurrent(path,href)?'page':undefined}><span className="destination-glyph" aria-hidden="true">{icon}</span>{label}</a>)}</nav>}
-    <div id="workspace-content" className="workspace-content" tabIndex={-1} onFocus={keepFocusAboveNavigation}>{children}</div>
+      <a key={href} href={href} aria-current={navigationState(path,href)}><span className="destination-glyph" aria-hidden="true">{icon}</span>{label}</a>)}
+      <div className="workspace-sidebar-tools">
+        <div className="workspace-sidebar-group">
+          <h2>Operations</h2>
+          <a href="/vehicles" aria-current={navigationState(path,'/vehicles')}>Vehicles</a>
+          <a href="/services" aria-current={navigationState(path,'/services')}>Services</a>
+        </div>
+        <div className="workspace-sidebar-group">
+          <h2>Money</h2>
+          <a href="/expenses" aria-current={navigationState(path,'/expenses')}>Expenses</a>
+          <a href="/settings/accounts" aria-current={navigationState(path,'/settings/accounts')}>Accounting</a>
+        </div>
+      </div>
+    </nav>}
+    <div id="workspace-content" className="workspace-content" tabIndex={-1} onFocus={keepFocusAboveNavigation}>
+      <WorkspaceToolSearchContext value={openSearch}>{children}</WorkspaceToolSearchContext>
+    </div>
   </div>;
 }

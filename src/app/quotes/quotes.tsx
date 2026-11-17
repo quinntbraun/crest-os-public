@@ -25,6 +25,8 @@ import {QuoteRecordDownload} from './saved-quote-download';
 
 export function QuoteScreen({initialCustomerId=null}:{initialCustomerId?:string|null}={}){
  const [view,setView]=useState(initialQuoteEditorView),current=useRef<ReturnType<typeof createQuoteEditorController>|null>(null),heading=useRef<HTMLHeadingElement>(null),focus=useRef<string|null|undefined>(undefined),[formSequence,setFormSequence]=useState(0);
+ const [mode,setMode]=useState<'edit'|'preview'>('edit');
+ const toolbar=useRef<HTMLDivElement>(null),compose=useRef<HTMLDivElement>(null);
  const reviewBusy=useRef(false),[reviewWorking,setReviewWorking]=useState(false),commercialBusy=useRef(false),[commercialWorking,setCommercialWorking]=useState(false),[pendingNotice,setPendingNotice]=useState(''),replacementBusy=useRef(false),[replacementWorking,setReplacementWorking]=useState(false),acceptedFamilies=useRef(new Set<string>()),verifiedCommercial=useRef<string|null>(null),selectedIdentity=useRef<Readonly<{key:string;familyId:string}>|null>(null),commercialRequired=useRef(false),[commercialAccess,setCommercialAccess]=useState<Readonly<{key:string|null;acceptedIds:readonly string[]}>>({key:null,acceptedIds:[]});
  const quoteNavigationBlocked=reviewWorking||commercialWorking||replacementWorking;
  const quoteWorking=quoteNavigationBlocked||pendingNotice.length>0;
@@ -42,36 +44,73 @@ export function QuoteScreen({initialCustomerId=null}:{initialCustomerId?:string|
  useLayoutEffect(()=>{if(focus.current===undefined||view.busy)return;if(view.phase==='ready'&&view.draft&&(view.selected?.family.id??null)===focus.current)heading.current?.focus();focus.current=undefined;},[view]);
  useEffect(()=>{if(!dirty&&view.phase!=='pending'&&!view.busy)return;const leave=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener('beforeunload',leave);return ()=>window.removeEventListener('beforeunload',leave);},[dirty,view.phase,view.busy]);
  function discard(){if(reviewBusy.current||commercialBusy.current||replacementBusy.current)return false;return !current.current?.view().dirty||window.confirm('Discard your unsaved quote changes? Choose Cancel to keep editing.');}
- function create(){if(discard()){focus.current=null;setFormSequence(value=>value+1);current.current?.create();}}
- async function open(familyId:string){if(discard()){focus.current=familyId;await current.current?.open(familyId);}}
+ function create(){if(discard()){setMode('edit');focus.current=null;setFormSequence(value=>value+1);current.current?.create();}}
+ async function open(familyId:string){if(discard()){setMode('edit');focus.current=familyId;await current.current?.open(familyId);}}
+ function switchMode(next:typeof mode){
+  if(next===mode)return;
+  setMode(next);
+  if(compose.current&&toolbar.current&&compose.current.getBoundingClientRect().top<toolbar.current.getBoundingClientRect().bottom){
+   compose.current.scrollIntoView({block:'start'});
+  }
+ }
  const selectedKey=view.selected?[view.selected.family.id,view.selected.family.version,view.selected.revision.id,view.selected.revision.version].join(':'):null;
  const commercialUnverified=view.commercialAvailable&&selectedKey!==null&&commercialAccess.key!==selectedKey;
  const acceptedDraft=!!view.selected&&commercialAccess.acceptedIds.includes(view.selected.family.id)&&['Draft','Ready for Review'].includes(view.selected.revision.state);
  const retained=!!view.selected&&!['Draft','Ready for Review'].includes(view.selected.revision.state);
  const DraftFields=retained?'details':'div';
  const draft=view.draft,edit=(patch:Partial<QuoteDraft>)=>{if(draft)current.current?.edit({...draft,...patch});},editLine=(id:string,patch:Partial<QuoteLineDraft>)=>{if(draft)edit({lines:draft.lines.map(line=>line.id===id?{...line,...patch}:line)});};
- let preview:ReturnType<typeof prepareQuoteContent>['customer']|null=null;if(draft)try{preview=prepareQuoteContent(parseQuoteDraft(draft)).customer;}catch{/* Validation is shown beside Save; no partial total is invented. */}
+ const saved=view.selected?.revision;
+ const unsaved=dirty||!saved;
+ const state=saved?.state==='Sent'?'Shared':saved?.state??'Draft';
+ const stage=unsaved?'draft':saved.state==='Sent'?'sent':saved.state==='Accepted'?'accepted':saved.state==='Superseded'?'superseded':saved.state==='Ready for Review'?'review':'draft';
+ let preview:ReturnType<typeof prepareQuoteContent>['customer']|null=null;
+ if(!unsaved)preview=saved.customer_safe_snapshot;
+ else if(draft)try{preview=prepareQuoteContent(parseQuoteDraft(draft)).customer;}catch{/* The preview requires complete, valid content. */}
+ const reviewAvailable=view.reviewAvailable&&!retained&&!acceptedDraft&&!commercialUnverified&&view.selected;
+ const commercialAvailable=view.commercialAvailable&&view.selected;
  return <>
   <p role="status" aria-label="Quote status" className={view.phase==='ready'?'quote-directory-status':'notice'}>{view.message}</p>
   {pendingNotice&&<p role="status" className="notice">{pendingNotice} <a href="/save-review">Review interrupted quote actions</a></p>}
-  {view.phase==='unavailable'&&<p><a href="/sign-in">Sign in to view quotes</a></p>}
+  {view.phase==='unavailable'&&<p><a href="/sign-in?returnTo=quotes">Sign in to view quotes</a></p>}
   {view.phase!=='ready'&&view.phase!=='loading'&&<div className="actions">{view.phase==='pending'?<><button type="button" disabled={view.busy||quoteWorking} onClick={()=>void current.current?.check()}>Check original quote save</button>{view.canRetry&&<button type="button" disabled={view.busy||quoteWorking} onClick={()=>void current.current?.retry()}>Retry unchanged original quote</button>}<a href="/save-review">Review interrupted saves</a>{view.reference&&<p className="field-help">Original operation: <span className="record-reference">{view.reference}</span></p>}</>:<button type="button" disabled={view.busy||quoteNavigationBlocked} onClick={()=>{const customerId=view.phase==='unavailable'?initialCustomerId:null;if(customerId)focus.current=null;void current.current?.load(customerId??undefined);}}>Load saved quotes</button>}</div>}
-  {view.phase==='ready'&&<div className="service-layout quote-layout"><section className="service-directory-panel" aria-labelledby="quote-directory-heading"><h2 id="quote-directory-heading">Saved quotes</h2>
+  {view.phase==='ready'&&<div className="service-layout quote-layout"><section className="service-directory-panel" aria-labelledby="quote-directory-heading"><h2 id="quote-directory-heading" tabIndex={-1}>Saved quotes</h2>
    <div className="service-toolbar"><button type="button" className="quote-add" disabled={view.busy||view.writesPaused||quoteWorking} onClick={create}>New quote</button><button type="button" className="secondary" disabled={view.busy||quoteNavigationBlocked} onClick={()=>{if(discard())void current.current?.load();}}>Reload saved quotes</button></div>
    <form className="service-search" onSubmit={event=>{event.preventDefault();if(discard())void current.current?.query(String(new FormData(event.currentTarget).get('search')??''));}}><label>Find a quote<input name="search" type="search" maxLength={200} defaultValue={view.search} key={view.search} disabled={view.busy||quoteNavigationBlocked}/></label><button type="submit" className="secondary" disabled={view.busy||quoteNavigationBlocked}>Search quotes</button></form>
    <ul className="customer-list" aria-label="Saved quotes">{view.rows.map(row=><li key={row.family.id}>{row.revision.kind==='amendment'?<><strong>{row.revision.customer_safe_snapshot.title}</strong><p>{row.revision.customer_safe_snapshot.recipient.displayName} · Amendment {row.revision.state} · {quoteMoney(row.revision.total_cents)}</p><a href="/quotes/amendments">Open amendment workspace</a></>:<button type="button" className="secondary" aria-current={view.selected?.family.id===row.family.id?'true':undefined} disabled={view.busy||quoteNavigationBlocked} onClick={()=>void open(row.family.id)}><strong>{row.revision.customer_safe_snapshot.title}</strong><span>{row.revision.customer_safe_snapshot.recipient.displayName} · {quoteMoney(row.revision.total_cents)} · {row.revision.state==='Ready for Review'?'Review':row.revision.state} version {row.revision.version}</span></button>}</li>)}</ul>
    {!view.rows.length&&<p>No saved quotes match this search. Start a quote or change the search.</p>}{view.hasMore&&<button type="button" className="secondary" disabled={view.busy||quoteNavigationBlocked} onClick={()=>{if(discard())void current.current?.query(view.search,true);}}>Next quote page</button>}
-  </section>{draft?<section className="service-definition-panel" aria-labelledby="quote-editor-heading"><h2 id="quote-editor-heading" ref={heading} tabIndex={-1}>{retained?'Retained quote':view.selected?'Edit saved draft':'New quote'}</h2>
-   {retained&&view.selected?<div className="quote-retained-summary">
-    <h3>{view.selected.revision.customer_safe_snapshot.title}</h3>
-    <p>{view.selected.revision.customer_safe_snapshot.recipient.displayName}</p>
-    <p><strong>{quoteMoney(view.selected.revision.total_cents)}</strong> · {view.selected.revision.state} · Version {view.selected.revision.version}</p>
-   </div>:<p className="field-help">Unsaved changes clear when you leave or hide this page.</p>}
+  </section>{draft?<section className="service-definition-panel quote-record" aria-labelledby="quote-editor-heading">
+   <header className="quote-record-header">
+    <div className="quote-record-heading">
+     <h2 id="quote-editor-heading" ref={heading} tabIndex={-1}>{retained?'Retained quote':saved?'Edit saved draft':'New quote'}</h2>
+     <a href="#quote-directory-heading">Back to saved quotes</a>
+    </div>
+    {saved&&<p className="quote-record-title">{saved.customer_safe_snapshot.title}</p>}
+    {(saved||draft.recipientName.trim())&&<p className="quote-record-recipient">{saved?saved.customer_safe_snapshot.recipient.displayName:draft.recipientName}</p>}
+    <p className="quote-record-state"><strong>{state}</strong>{saved&&<> · Version {saved.version}</>}{dirty&&<> · Unsaved changes</>}</p>
+    {saved&&<p className="quote-record-date">Saved <time dateTime={saved.updated_at}>{new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:saved.timezone}).format(new Date(saved.updated_at))}</time></p>}
+   </header>
+   <div className="quote-record-toolbar" ref={toolbar}>
+    <div className="quote-record-total"><span>{unsaved?'Draft total':'Saved quote total'}</span><strong>{preview?quoteMoney(preview.totalCents):'Pending'}</strong></div>
+    <div className="quote-mode-controls" role="group" aria-label="Quote view">
+     <button type="button" className="secondary" aria-pressed={mode==='edit'} aria-controls="quote-edit" onClick={()=>switchMode('edit')}>{retained?'Details':'Edit'}</button>
+     <button type="button" className="secondary" aria-pressed={mode==='preview'} aria-controls="quote-preview" onClick={()=>switchMode('preview')}>Preview</button>
+    </div>
+    {!retained&&<button className="quote-save" type="submit" form="quote-draft-form" disabled={!view.canSave||quoteWorking||acceptedDraft||commercialUnverified}>Save quote draft</button>}
+   </div>
+   {(reviewAvailable||commercialAvailable||view.history)&&<nav className="quote-record-links" aria-label="Quote actions">
+    {reviewAvailable&&<a href="#quote-review-heading">Review &amp; approval</a>}
+    {commercialAvailable&&<a href="#quote-commercial-heading">Sharing &amp; acceptance</a>}
+    {commercialAvailable&&saved?.state==='Sent'&&<a href="#quote-replacement">Replacement</a>}
+    {view.history&&<a href="#quote-history-heading">History</a>}
+   </nav>}
    {commercialUnverified&&<p role="status" className="notice">Saved sharing and acceptance facts must be verified before editing. Reload sharing status below if the check fails.</p>}
    {acceptedDraft&&<p className="notice">An earlier offer in this quote family was accepted. This remaining draft is retained for history and cannot change that agreement. Open the accepted quote below.</p>}
+   <div id="quote-compose" className="quote-compose" data-mode={mode} ref={compose}>
+   <div id="quote-edit" className="quote-edit">
+   {!retained&&<p className="field-help">Unsaved changes clear when you leave or hide this page.</p>}
    <DraftFields key={retained?selectedKey:undefined}>
    {retained&&<summary>Saved draft fields</summary>}
-   <form aria-label="Quote draft" onSubmit={event=>{event.preventDefault();void current.current?.save();}}><fieldset disabled={view.busy||view.writesPaused||quoteWorking||retained||acceptedDraft||commercialUnverified}>
+   <form id="quote-draft-form" aria-label="Quote draft" onSubmit={event=>{event.preventDefault();void current.current?.save();}}><fieldset disabled={view.busy||view.writesPaused||quoteWorking||retained||acceptedDraft||commercialUnverified}>
     <label>Quote title<input value={draft.title} maxLength={200} onChange={event=>edit({title:event.target.value})} required/></label>
     <section aria-label="Quote recipient selection"><h3>Customer or lead</h3>{!view.selected&&<details open={draft.customerId===null&&draft.leadId===null}><summary>{draft.customerId===null?'Choose a saved customer':'Choose a different customer'}</summary><SearchSaved label="Find saved customers" busy={view.busy} find={value=>void current.current?.findCustomers(value)}/><ul className="customer-list">{view.customerRows.map(customer=><li key={customer.id}><button type="button" className="secondary" onClick={()=>current.current?.chooseCustomer(customer.id)}>{customer.display_name}{customer.phone_raw?' · '+customer.phone_raw:''}</button></li>)}</ul>{view.moreCustomers&&<button type="button" className="secondary" onClick={()=>void current.current?.findCustomers(view.customerSearch,true)}>Next customer page</button>}<p className="field-help">Only saved active customers appear. <a href="/customers">Manage customers</a> before starting a quote if needed.</p></details>}
      {!view.selected&&<details open={draft.leadId!==null}><summary>{draft.leadId===null?'Choose a saved lead instead':'Choose a different lead'}</summary><SearchSaved label="Find saved leads" busy={view.busy} find={value=>void current.current?.findLeads(value)}/><ul className="customer-list">{view.leadRows.map(lead=><li key={lead.id}><button type="button" className="secondary" onClick={()=>current.current?.chooseLead(lead.id)}>{lead.label}{lead.phone_raw?' · '+lead.phone_raw:''}<span>{lead.state.replaceAll('_',' ')}{lead.customer_id!==null?' · Already linked to a customer':''}</span></button></li>)}</ul>{view.moreLeads&&<button type="button" className="secondary" onClick={()=>void current.current?.findLeads(view.leadSearch,true)}>Next lead page</button>}<p className="field-help">Choose a saved lead to copy its name and contact details. Its existing customer link is kept; this does not convert the lead. Lost leads are excluded. <a href="/leads">Manage leads</a>.</p></details>}
@@ -97,15 +136,24 @@ export function QuoteScreen({initialCustomerId=null}:{initialCustomerId?:string|
     <details><summary>Quote-wide discount (optional)</summary><DiscountFields label="Quote-wide discount" kind={draft.discountKind} value={draft.discount} change={(discountKind,discount)=>edit({discountKind,discount})}/></details>
     <details><summary>Terms, proposed timing and expiry (optional)</summary><label>Terms<textarea value={draft.terms} rows={3} maxLength={8000} onChange={event=>edit({terms:event.target.value})}/></label><label>Proposed timing<textarea value={draft.proposedSchedule} rows={2} maxLength={2000} onChange={event=>edit({proposedSchedule:event.target.value})}/></label><p className="field-help">A proposal is not a confirmed appointment.</p><label>Quote time zone<input value={draft.timezone} maxLength={100} onChange={event=>edit({timezone:event.target.value})}/></label><p className="field-help">Initially uses this device’s named time zone. Review it before setting an expiry.</p><QuoteExpiry key={(view.selected?.revision.id??'new')+':'+formSequence+':'+draft.timezone} value={draft.expiryAt} zone={draft.timezone} change={expiryAt=>edit({expiryAt})}/></details>
     <details><summary>Internal notes (never in the customer preview)</summary><label>Internal notes<textarea value={draft.internalNotes} rows={3} maxLength={8000} onChange={event=>edit({internalNotes:event.target.value})}/></label></details>
-    {view.draftIssue&&<p role="alert">{view.draftIssue}</p>}<button type="submit" disabled={!view.canSave}>Save quote draft</button>
+    {view.draftIssue&&<p role="alert">{view.draftIssue}</p>}
    </fieldset></form>
    </DraftFields>
-   {view.reviewAvailable&&view.selected&&!retained&&!acceptedDraft&&!commercialUnverified&&<QuoteReviewPanel key={view.selected.revision.id+':'+view.selected.revision.version} row={view.selected} dirty={dirty} blocked={commercialWorking||replacementWorking} commercialAvailable={view.commercialAvailable} onLock={onReviewLock} onCommitted={onReviewCommitted} onPrepare={()=>edit(enableQuoteReviewDraft(draft))}/>}
-   {view.commercialAvailable&&view.selected&&<QuoteCommercialPanel key={'commercial:'+view.selected.revision.id+':'+view.selected.revision.version} row={view.selected} dirty={dirty} blocked={reviewWorking||replacementWorking} onFamilyAccepted={onFamilyAccepted} onLock={onCommercialLock} onCommitted={onCommercialCommitted} onOpenRevision={onOpenRevision}/>}
-   {view.commercialAvailable&&view.selected&&<QuoteReplacementPanel key={'replacement:'+view.selected.revision.id+':'+view.selected.revision.version} row={view.selected} dirty={dirty} blocked={reviewWorking||commercialWorking} onLock={onReplacementLock} onCommitted={onReplacementCommitted}/>}
-   {view.selected&&<QuoteRecordDownload row={view.selected} disabled={view.busy||dirty||quoteWorking}/>}
-   {preview&&<details><summary>{dirty||!view.selected?'Review unsaved customer preview':'Review saved customer preview'}</summary><QuoteDocument quote={preview} stage={!dirty&&view.selected?.revision.state==='Sent'?'sent':!dirty&&view.selected?.revision.state==='Accepted'?'accepted':!dirty&&view.selected?.revision.state==='Superseded'?'superseded':!dirty&&view.selected?.revision.state==='Ready for Review'?'review':'draft'}/></details>}
-   {view.history&&<section aria-labelledby="quote-history-heading"><h3 id="quote-history-heading">Saved quote history</h3><ol className="customer-history">{view.history.history.map(event=><li key={event.eventId}><strong>Version {event.revision} · {event.action}</strong><p><time dateTime={event.at}>{event.at}</time></p><details><summary>Customer preview at this version</summary><QuoteDocument quote={event.after.customer_safe_snapshot} stage={event.action==='approve'?'approved':event.after.state==='Sent'?'sent':event.after.state==='Accepted'?'accepted':event.after.state==='Superseded'?'superseded':event.after.state==='Ready for Review'?'review':'draft'}/></details></li>)}</ol>{view.history.hasMore&&<button type="button" className="secondary" disabled={view.busy||quoteWorking} onClick={()=>void current.current?.moreHistory()}>Next quote history page</button>}</section>}
+   </div>
+   <section id="quote-preview" className="quote-preview" aria-labelledby="quote-preview-heading">
+    <h3 id="quote-preview-heading">Customer preview</h3>
+    {preview?<QuoteDocument quote={preview} stage={stage}/>:<p className="field-help">Complete the required quote fields to see the customer document and calculated total.</p>}
+   </section>
+   </div>
+   <div className="quote-record-flow">
+    {reviewAvailable&&<QuoteReviewPanel key={reviewAvailable.revision.id+':'+reviewAvailable.revision.version} row={reviewAvailable} dirty={dirty} blocked={commercialWorking||replacementWorking} commercialAvailable={view.commercialAvailable} onLock={onReviewLock} onCommitted={onReviewCommitted} onPrepare={()=>edit(enableQuoteReviewDraft(draft))}/>}
+    {commercialAvailable&&<QuoteCommercialPanel key={'commercial:'+commercialAvailable.revision.id+':'+commercialAvailable.revision.version} row={commercialAvailable} dirty={dirty} blocked={reviewWorking||replacementWorking} onFamilyAccepted={onFamilyAccepted} onLock={onCommercialLock} onCommitted={onCommercialCommitted} onOpenRevision={onOpenRevision}/>}
+    {commercialAvailable&&<div id="quote-replacement"><QuoteReplacementPanel key={'replacement:'+commercialAvailable.revision.id+':'+commercialAvailable.revision.version} row={commercialAvailable} dirty={dirty} blocked={reviewWorking||commercialWorking} onLock={onReplacementLock} onCommitted={onReplacementCommitted}/></div>}
+    {view.history&&<section aria-labelledby="quote-history-heading"><h3 id="quote-history-heading">Saved quote history</h3>
+     {view.selected&&<QuoteRecordDownload row={view.selected} disabled={view.busy||dirty||quoteWorking}/>}
+     <ol className="customer-history">{view.history.history.map(event=><li key={event.eventId}><strong>Version {event.revision} · {event.action}</strong><p><time dateTime={event.at}>{event.at}</time></p><details><summary>Customer preview at this version</summary><QuoteDocument quote={event.after.customer_safe_snapshot} stage={event.action==='approve'?'approved':event.after.state==='Sent'?'sent':event.after.state==='Accepted'?'accepted':event.after.state==='Superseded'?'superseded':event.after.state==='Ready for Review'?'review':'draft'}/></details></li>)}</ol>{view.history.hasMore&&<button type="button" className="secondary" disabled={view.busy||quoteWorking} onClick={()=>void current.current?.moreHistory()}>Next quote history page</button>}</section>}
+    {!view.history&&view.selected&&<QuoteRecordDownload row={view.selected} disabled={view.busy||dirty||quoteWorking}/>}
+   </div>
   </section>:<section className="service-choice"><h2>Open a quote</h2><p>Choose a saved quote to review its price, status and history.</p></section>}</div>}
   {view.phase==='ready'&&!view.commercialAvailable&&<p className="field-help">{view.reviewAvailable?'This workspace supports draft review and owner approval.':'This workspace supports draft preparation.'}</p>}
  </>;

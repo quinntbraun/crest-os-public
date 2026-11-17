@@ -498,7 +498,7 @@ test('held supplier accounting verifies originals, accrues once, and settles exa
     (SELECT jsonb_agg(to_jsonb(j) ORDER BY id) FROM crest.journal_lines j) AS journal
   `;
   const financeBefore=await admin.query(financeBeforeQuery);
-  const registered=await sandbox.apply(url);
+  const registered=await sandbox.apply(url,await sandbox.prefix(120));
   assert.equal(registered.history.length,120);
   assert.deepEqual(registered.history.slice(0,109),beforeContactMigration.history);
   assert.deepEqual((await admin.query(financeBeforeQuery)).rows,financeBefore.rows);

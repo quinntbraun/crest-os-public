@@ -5,6 +5,7 @@ import type {createQuoteAmendmentWorkspace,QuoteAmendmentWorkspaceView} from '..
 import {quoteMoney} from '../../../commercial/quote-pricing';
 import type {QuoteConfirmationChannel} from '../../../commercial/quote-commercial-contract';
 import {customerInstant} from '../../../customer/customer-contract';
+import {AmendmentTotals} from '../quote-amendment-document';
 import {PhoneInput} from '../../customers/phone-input';
 import {followUpCandidates,followUpWall} from '../../leads/follow-up-time';
 import {leadUtc} from '../../leads/intake-input';
@@ -35,6 +36,7 @@ export function AmendmentAcceptance({view,controller}:{view:QuoteAmendmentWorksp
     {wall&&matches.length===0&&<p role="alert">This local time does not exist in the quote’s time zone.</p>}{matches.length>1&&<><label htmlFor="amendment-confirmation-occurrence">Confirmation time occurrence</label><select id="amendment-confirmation-occurrence" value={matches.includes(instant)?instant:''} onChange={event=>time(event.target.value)}><option value="">Choose the occurrence</option>{matches.map((v,i)=><option key={v} value={v}>{i===0?'First':'Later'} occurrence · {v} UTC</option>)}</select></>}
     <details><summary>Precise confirmation time (UTC)</summary><label>Exact confirmation time in UTC<input maxLength={35} value={exact} placeholder="2026-11-04 15:30:00.000000" onChange={event=>{const v=event.target.value?leadUtc(event.target.value):'';setExact(event.target.value);setInstant(v);setWall(followUpWall(v,zone));}}/></label></details>{exact&&!validTime&&<p role="alert">Enter a valid UTC date and time, or use the local time field.</p>}
     <label>Acceptance evidence<textarea required rows={3} maxLength={8000} value={evidence} onChange={event=>setEvidence(event.target.value)}/></label><p className="field-help">Describe the customer’s actual confirmation and how it can be substantiated. This form records an acceptance; it does not send a message.</p>
+    <AmendmentTotals comparison={amendment.comparison.customer}/>
     <label className="checkbox"><input type="checkbox" checked={confirmed} onChange={event=>setConfirmed(event.target.checked)}/>The customer separately confirmed this exact sent amendment, and I reviewed its remaining work portions.</label><button type="submit" disabled={!view.canRecordAcceptance||!confirmed||!channel||!name.trim()||!evidence.trim()||!validTime}>Record customer amendment acceptance</button>
    </fieldset></form>
   </>}

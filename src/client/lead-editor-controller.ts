@@ -8,13 +8,19 @@ import {draftFromLead} from '../customer/lead-contract';
 import type {Lead} from '../customer/lead-contract';
 import {parseLeadDraft} from '../customer/lead-contract';
 import type {LeadDraft} from '../customer/lead-contract';
+import type {LeadFollowUpQuery} from '../customer/lead-follow-up-contract';
 import {pendingLead,PendingLeadError} from './pending-lead-edit';
 import type {PendingLead,createPendingLeadStore} from './pending-lead-edit';
 
 type Snapshot=Awaited<ReturnType<typeof leads.context>>;
 type History=Extract<Awaited<ReturnType<typeof leads.history>>,{state:'found'}>;
-export type LeadEditorView=Readonly<{businessId:string|null;phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Lead[];hasMore:boolean;search:string;includeLost:boolean;selected:Lead|null;draft:LeadDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean;matchReview:boolean}>;
-export const initialLeadEditorView:LeadEditorView=Object.freeze({businessId:null,phase:'loading',message:'Checking lead access…',busy:true,rows:Object.freeze([]),hasMore:false,search:'',includeLost:false,selected:null,draft:null,draftIssue:'',history:null,canSave:false,canRetry:false,reference:'',writesPaused:true,matchReview:false});
+type FollowUps=NonNullable<Awaited<ReturnType<typeof leads.followUps>>>;
+type FollowUpView=Readonly<{page:FollowUps|null;later:boolean}>;
+const firstFollowUps:LeadFollowUpQuery={afterAt:null,afterId:null,pageSize:8};
+const sameReadContext=(a:Snapshot,b:Snapshot)=>a.binding===b.binding&&a.context.businessId===b.context.businessId&&
+ a.context.recoveryEpoch===b.context.recoveryEpoch&&a.context.writeState===b.context.writeState;
+export type LeadEditorView=Readonly<{businessId:string|null;phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Lead[];hasMore:boolean;followUps:FollowUpView|null;search:string;includeLost:boolean;selected:Lead|null;draft:LeadDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean;matchReview:boolean}>;
+export const initialLeadEditorView:LeadEditorView=Object.freeze({businessId:null,phase:'loading',message:'Checking lead access…',busy:true,rows:Object.freeze([]),hasMore:false,followUps:null,search:'',includeLost:false,selected:null,draft:null,draftIssue:'',history:null,canSave:false,canRetry:false,reference:'',writesPaused:true,matchReview:false});
 export const emptyLeadDraft:LeadDraft=Object.freeze({label:'',customerId:null,sourceId:null,referralText:null,phone:null,email:null,requestedScope:null,availability:null,estimatedCents:null,followUpAt:null,notes:null});
 
 type Dependencies={store:ReturnType<typeof createPendingLeadStore>;statusStore:Pick<ReturnType<typeof createPendingLeadStateStore>,'read'>;vehicleStore:{read:()=>unknown};addressStore:{read:()=>unknown};conversionStore:{read:()=>unknown};change:(view:LeadEditorView)=>void;api?:typeof leads;session?:typeof authentication.session;id?:()=>string};
@@ -22,31 +28,62 @@ export function createLeadEditorController(deps:Dependencies){
   const api=deps.api??leads,session=deps.session??authentication.session,id=deps.id??(()=>crypto.randomUUID());
   let alive=true,active:AbortController|null=null,proof:Proof|null=null,snapshot:Snapshot|null=null,pending:PendingLead|null=null,original:LeadSave|null=null;
   let phase:LeadEditorView['phase']='loading',message=initialLeadEditorView.message,rows:readonly Lead[]=[],hasMore=false,search='',includeLost=false,selected:Lead|null=null,draft:LeadDraft|null=null,history:History|null=null,canRetry=false;
+  let followUps:FollowUpView|null=null,followUpQuery=firstFollowUps;
   const statusClear=()=>{try{return deps.conversionStore.read()===null&&deps.statusStore.read()===null&&deps.vehicleStore.read()===null&&deps.addressStore.read()===null;}catch{return false;}};
-  const clearPrivate=()=>{proof=null;snapshot=null;rows=[];hasMore=false;search='';includeLost=false;selected=null;draft=null;history=null;original=null;canRetry=false;};
+  const clearPrivate=()=>{proof=null;snapshot=null;rows=[];hasMore=false;followUps=null;followUpQuery=firstFollowUps;search='';includeLost=false;selected=null;draft=null;history=null;original=null;canRetry=false;};
   function draftIssue(){if(draft===null)return '';try{parseLeadDraft(draft);}catch{return 'Review the label, field lengths, estimate, follow-up time and selected references before saving.';}
     // UUIDs have a fixed wire length. Match the actual flat JSON input and
     // exact current version before creating IDs, a reference or a request.
     const placeholder='00000000-0000-0000-0000-000000000000',body={schemaVersion:1,operationId:placeholder,leadId:placeholder,expectedVersion:selected?.version??'0',recoveryEpoch:placeholder,...draft};
     return new TextEncoder().encode(JSON.stringify(body)).byteLength>131072?'This draft is too large to send. Shorten the lead details or notes before saving.':'';
   }
-  const view=():LeadEditorView=>Object.freeze({businessId:phase==='ready'?snapshot?.context.businessId??null:null,phase,message,busy:!!active,rows:phase==='ready'?rows:Object.freeze([]),hasMore:phase==='ready'&&hasMore,search:phase==='ready'?search:'',includeLost:phase==='ready'&&includeLost,selected:phase==='ready'?selected:null,draft:phase==='ready'?draft:null,draftIssue:phase==='ready'?draftIssue():'',history:phase==='ready'?history:null,
+  const view=():LeadEditorView=>Object.freeze({businessId:phase==='ready'?snapshot?.context.businessId??null:null,phase,message,busy:!!active,rows:phase==='ready'?rows:Object.freeze([]),hasMore:phase==='ready'&&hasMore,followUps:phase==='ready'?followUps:null,search:phase==='ready'?search:'',includeLost:phase==='ready'&&includeLost,selected:phase==='ready'?selected:null,draft:phase==='ready'?draft:null,draftIssue:phase==='ready'?draftIssue():'',history:phase==='ready'?history:null,
     canSave:statusClear()&&!active&&phase==='ready'&&snapshot?.context.writeState==='ready'&&draft!==null&&draftIssue()===''&&(!selected||JSON.stringify(draft)!==JSON.stringify(draftFromLead(selected))),canRetry:!active&&canRetry,
     reference:phase==='pending'&&snapshot?.context.businessId===pending?.businessId?pending?.reference.operationId??'':'',writesPaused:snapshot?.context.writeState!=='ready',matchReview:phase==='ready'&&snapshot?.matchReview===true});
   const emit=()=>{if(alive)deps.change(view());};
   const live=(signal:AbortSignal)=>{if(!alive||signal.aborted||active?.signal!==signal)throw new Error();};
   async function fresh(signal:AbortSignal){const nextProof=await session(signal);live(signal);const next=await api.context(nextProof,signal);live(signal);proof=nextProof;snapshot=next;}
-  const retain=(text:string)=>{phase='pending';message=text;canRetry=false;rows=[];selected=null;draft=null;history=null;search='';hasMore=false;};
+  const retain=(text:string)=>{phase='pending';message=text;canRetry=false;rows=[];followUps=null;followUpQuery=firstFollowUps;selected=null;draft=null;history=null;search='';hasMore=false;};
   const eligible=()=>statusClear()&&!!pending&&!!original&&!!snapshot&&snapshot.context.businessId===pending.businessId&&snapshot.binding===pending.binding&&snapshot.context.writeState==='ready'&&snapshot.context.recoveryEpoch===pending.reference.recoveryEpoch&&(['operationId','leadId','expectedVersion','recoveryEpoch'] as const).every(key=>original![key]===pending!.reference[key]);
   async function run(work:(signal:AbortSignal)=>Promise<void>,failure:(error:unknown)=>void){
     if(!alive||active)return;const controller=new AbortController();active=controller;emit();
     try{await work(controller.signal);}catch(error){if(alive&&active===controller&&!controller.signal.aborted)failure(error);}finally{if(active===controller){active=null;emit();}}
   }
+  async function readFollowUps(context:Snapshot,authorization:Proof,query:LeadFollowUpQuery,signal:AbortSignal){
+    let page:FollowUps|null;
+    try{page=await api.followUps(context.context.businessId,query,authorization,signal);}
+    catch{
+      live(signal);
+      followUps={page:null,later:false};
+      followUpQuery=firstFollowUps;
+      return;
+    }
+    live(signal);
+    followUpQuery=page?query:firstFollowUps;
+    followUps=page?{page,later:query.afterId!==null}:null;
+  }
   const load=()=>run(async signal=>{
     clearPrivate();phase='loading';message='Checking lead access…';emit();pending=deps.store.read();await fresh(signal);
     if(pending){if(pending.businessId!==snapshot!.context.businessId){phase='blocked';message='A pending save belongs to a different business. Its reference has been kept for review.';return;}retain('A pending lead save was found. Check its status before another edit.');return;}
-    const result=await api.list(snapshot!.context.businessId,{search:'',afterId:null,includeLost:false,pageSize:10},proof!,signal);live(signal);rows=result.leads;hasMore=result.hasMore;phase='ready';message=snapshot!.context.writeState==='ready'?'Choose a lead or add a new lead.':'Lead changes are paused. Current records remain available for review.';
+    const context=snapshot!,authorization=proof!;
+    const [result]=await Promise.all([
+      api.list(context.context.businessId,{search:'',afterId:null,includeLost:false,pageSize:10},authorization,signal),
+      readFollowUps(context,authorization,firstFollowUps,signal),
+    ]);
+    live(signal);rows=result.leads;hasMore=result.hasMore;phase='ready';message=context.context.writeState==='ready'?'Choose a lead or add a new lead.':'Lead changes are paused. Current records remain available for review.';
   },error=>{clearPrivate();phase=error instanceof PendingLeadError?'blocked':'unavailable';message=error instanceof PendingLeadError?'The pending-save reference cannot be read. Editing is blocked to protect it.':'Lead access could not be verified. Sign in or check again; any pending reference has been kept.';});
+  const pageFollowUps=(next=false)=>{
+    if(phase!=='ready'||!snapshot||!proof||!followUps)return Promise.resolve();
+    const page=followUps.page,last=page?.followUps.at(-1);
+    if(next&&(!last||!page?.hasMore))return Promise.resolve();
+    const context=snapshot;
+    const query=next&&last?{...firstFollowUps,afterAt:last.followUpAt,afterId:last.id}:firstFollowUps;
+    return run(async signal=>{
+      await fresh(signal);
+      if(!sameReadContext(snapshot!,context))throw new LeadClientError('unavailable');
+      await readFollowUps(context,proof!,query,signal);
+    },()=>{clearPrivate();phase='unavailable';message='Lead access could not be verified. Load current leads again.';});
+  };
   const query=(text:string,archived:boolean,more=false)=>{
     if(phase!=='ready'||!snapshot||!proof||typeof text!=='string'||[...text].length>200||typeof archived!=='boolean'||more&&(!hasMore||text!==search||archived!==includeLost))return Promise.resolve();
     const context=snapshot,authorization=proof,after=more?rows.at(-1)?.id??null:null;
@@ -54,7 +91,29 @@ export function createLeadEditorController(deps:Dependencies){
   };
   const open=(leadId:string,confirmed:'status'|'conversion'|false=false)=>{
     if(phase!=='ready'||!snapshot||!proof||!leadUuid(leadId))return Promise.resolve();const context=snapshot;let authorization=proof;
-    return run(async signal=>{selected=null;draft=null;history=null;emit();if(confirmed){await fresh(signal);if(snapshot!.context.businessId!==context.context.businessId||snapshot!.binding!==context.binding||snapshot!.context.recoveryEpoch!==context.context.recoveryEpoch||snapshot!.context.writeState!==context.context.writeState)throw new LeadClientError('unavailable');authorization=proof!;}const result=await api.history(context.context.businessId,{leadId,afterVersion:'0',pageSize:5},authorization,signal);live(signal);if(result.state==='absent'){message='This lead was not found. Load the current directory before editing.';return;}selected=result.lead;rows=rows.map(row=>row.id===selected!.id?selected!:row);draft=draftFromLead(selected);history=result;message=confirmed?(confirmed==='status'?'Status change confirmed.':'Conversion confirmed.')+' Review current lead details and retained history.':'Review lead details and retained history before saving.';},()=>{clearPrivate();phase='unavailable';message='Lead details could not be verified. Load current records again.';});
+    return run(async signal=>{
+      selected=null;draft=null;history=null;emit();
+      if(confirmed){
+        await fresh(signal);
+        if(!sameReadContext(snapshot!,context))throw new LeadClientError('unavailable');
+        authorization=proof!;
+      }
+      const result=await api.history(context.context.businessId,{leadId,afterVersion:'0',pageSize:5},authorization,signal);
+      live(signal);
+      const reminder=followUps?.page?.followUps.find(row=>row.id===leadId);
+      if(result.state==='absent'){
+        if(reminder)await readFollowUps(context,authorization,followUpQuery,signal);
+        message='This lead was not found. Load the current directory before editing.';
+        return;
+      }
+      const lead=result.lead;
+      if(reminder&&(reminder.label!==lead.label||reminder.state!==lead.state||reminder.followUpAt!==lead.follow_up_at)){
+        await readFollowUps(context,authorization,followUpQuery,signal);
+      }
+      live(signal);
+      selected=lead;rows=rows.map(row=>row.id===lead.id?lead:row);draft=draftFromLead(lead);history=result;
+      message=confirmed?(confirmed==='status'?'Status change confirmed.':'Conversion confirmed.')+' Review current lead details and retained history.':'Review lead details and retained history before saving.';
+    },()=>{clearPrivate();phase='unavailable';message='Lead details could not be verified. Load current records again.';});
   };
   const moreHistory=()=>{
     if(phase!=='ready'||!snapshot||!proof||!history?.hasMore||!selected)return Promise.resolve();const context=snapshot,authorization=proof,source=selected,after=history.history.at(-1)?.after.version;if(!after)return Promise.resolve();
@@ -98,7 +157,7 @@ export function createLeadEditorController(deps:Dependencies){
     return run(async signal=>{retain('Rechecking before retrying the original lead change…');emit();deps.store.require(record);await fresh(signal);if(!eligible()){retain('The original sign-in or recovery context is no longer eligible. Nothing was retried.');return;}deps.store.require(record);dispatched=true;const result=await api.save(record.businessId,command,proof!,signal);live(signal);finish(result);},error=>{if(dispatched)failedWrite(error,false,true);else retain('The original reference could not be verified. Check save status again; nothing was retried.');});
   };
   function suspend(){if(!alive)return;active?.abort();active=null;clearPrivate();phase='review';message='Private lead details were cleared. Load current leads before continuing; any pending reference has been kept.';emit();}
-  return Object.freeze({load,query,open,moreHistory,save,check,retry,view,suspend,
+  return Object.freeze({load,query,open,pageFollowUps,moreHistory,save,check,retry,view,suspend,
     statusChanged(leadId:string){return selected?.id===leadId&&phase==='ready'?open(leadId,'status'):Promise.resolve();},
     conversionChanged(leadId:string){return selected?.id===leadId&&phase==='ready'?open(leadId,'conversion'):Promise.resolve();},
     create(){if(alive&&!active&&phase==='ready'&&statusClear()){selected=null;history=null;draft=emptyLeadDraft;message='Add only the inquiry details you know. Contact, source, estimate and follow-up can remain unknown.';emit();}},

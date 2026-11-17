@@ -151,6 +151,7 @@ export function PickupPolicySettings({businessId,timezone,canWrite}:{businessId:
     <button type="button" disabled={view.busy} onClick={()=>setEditing(true)}>{current?'Edit pickup policy':'Create pickup policy'}</button>)}
    {current&&<dl className="customer-values">
     <dt>Current policy</dt><dd>Version {current.sequence}</dd>
+    <dt>Recorded</dt><dd><time dateTime={current.recordedAt}>{format.format(new Date(current.recordedAt))}</time></dd>
     <dt>Condition photos</dt><dd>{current.conditionPhotoRequired?'Verified photo required':'Missing photo requires a reason'}</dd>
     <dt>Acknowledgement</dt><dd>{current.acknowledgementText??'None configured'}</dd>
    </dl>}
