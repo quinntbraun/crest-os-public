@@ -501,6 +501,22 @@ jobs:
             | tee .local/supplier-isolated-decoder.log
           grep -Fx '# tests 2' .local/supplier-isolated-decoder.log
           grep -Fx '# pass 2' .local/supplier-isolated-decoder.log
+      - name: Private expense receipts through the isolated document worker
+        timeout-minutes: 12
+        shell: bash
+        run: |
+          CREST_EXPENSE_RECEIPT_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
+          test -n "$CREST_EXPENSE_RECEIPT_IMAGE_ID"
+          export CREST_EXPENSE_RECEIPT_IMAGE_ID
+          node --test --test-reporter=tap --test-concurrency=1 --test-name-pattern='attaches and previews' tests/integration/finance-expense-posting-browser.test.mjs \
+            | tee .local/receipt-isolated-decoder.log
+          grep -Fx '# tests 2' .local/receipt-isolated-decoder.log
+          grep -Fx '# pass 2' .local/receipt-isolated-decoder.log
+          grep -Fx '# fail 0' .local/receipt-isolated-decoder.log
+          grep -Fx '# skipped 0' .local/receipt-isolated-decoder.log
+          grep -Fx '# SYNTHETIC_RECEIPT_WORKER_FORMATS chromium image/png,image/jpeg,application/pdf,image/heic' .local/receipt-isolated-decoder.log
+          grep -Fx '# SYNTHETIC_RECEIPT_WORKER_FORMATS webkit image/png,image/jpeg,application/pdf,image/heic' .local/receipt-isolated-decoder.log
+          cp .local/receipt-isolated-decoder.log .local/release/receipt-isolated-decoder.log
       - name: Container diagnostics
         if: failure()
         run: docker logs crest-os-smoke || true
@@ -532,5 +548,7 @@ jobs:
           path: |
             playwright-report/
             test-results/
+            .local/receipt-isolated-decoder.log
+            .local/supplier-isolated-decoder.log
           retention-days: 3
           if-no-files-found: ignore

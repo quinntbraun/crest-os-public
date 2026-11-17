@@ -86,7 +86,8 @@ button.secondary:not(:disabled):not([aria-pressed='true']):hover { background:va
   gap:.7rem; border:0; border-radius:10px; color:#536079;
 }
 :is(.workspace-menu,.workspace-destinations) a:is(:hover,[aria-current]) { color:#243594; background:var(--accent-soft); }
-.destination-glyph { display:grid; place-items:center; width:1.35rem; color:inherit; font-size:1.23rem; line-height:1.1; }
+.destination-glyph { display:grid; place-items:center; width:1.35rem; color:inherit; line-height:1; }
+.destination-glyph svg { display:block; width:20px; height:20px; flex:none; }
 .workspace-home { max-width:85rem; }
 .today-heading { align-items:center; padding:0 0 1rem; overflow-wrap:anywhere; }
 .today-heading h1 { font-size:clamp(1.9rem,3vw,2.55rem); line-height:1.1; letter-spacing:-.04em; }
@@ -791,6 +792,15 @@ main.expenses-page { max-width:68rem; }
 }
 /* Quote editing and the customer document share a workspace on wide screens. */
 .quote-record { container:quote-workspace / inline-size; }
+.quote-resume { display:none; }
+.quote-record-heading .quote-directory-back { width:auto; min-height:44px; padding:.375rem .625rem; margin:0; font-size:.875rem; }
+@media (max-width:759px) {
+ .quote-layout[data-mobile-record="true"] > .service-directory-panel,
+ .quote-layout[data-mobile-record="false"] > .quote-record,
+ .quote-layout > .quote-unselected { display:none; }
+ .quote-layout .quote-resume { display:block; margin:.5rem 0 1rem; }
+ .quote-layout > .service-directory-panel { padding:0; border:0; }
+}
 .quote-record-header,.quote-edit,.quote-preview,.quote-record-flow > section,.quote-record-flow > #quote-replacement > section {
   min-width:0;
   padding:clamp(.875rem,2vw,1.25rem);

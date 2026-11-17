@@ -26,6 +26,8 @@ import {QuoteRecordDownload} from './saved-quote-download';
 export function QuoteScreen({initialCustomerId=null}:{initialCustomerId?:string|null}={}){
  const [view,setView]=useState(initialQuoteEditorView),current=useRef<ReturnType<typeof createQuoteEditorController>|null>(null),heading=useRef<HTMLHeadingElement>(null),focus=useRef<string|null|undefined>(undefined),[formSequence,setFormSequence]=useState(0);
  const [mode,setMode]=useState<'edit'|'preview'>('edit');
+ const [showRecord,setShowRecord]=useState(Boolean(initialCustomerId));
+ const directoryTrigger=useRef<HTMLElement|null>(null),directoryHeading=useRef<HTMLHeadingElement>(null),returnToDirectory=useRef(false);
  const toolbar=useRef<HTMLDivElement>(null),compose=useRef<HTMLDivElement>(null);
  const reviewBusy=useRef(false),[reviewWorking,setReviewWorking]=useState(false),commercialBusy=useRef(false),[commercialWorking,setCommercialWorking]=useState(false),[pendingNotice,setPendingNotice]=useState(''),replacementBusy=useRef(false),[replacementWorking,setReplacementWorking]=useState(false),acceptedFamilies=useRef(new Set<string>()),verifiedCommercial=useRef<string|null>(null),selectedIdentity=useRef<Readonly<{key:string;familyId:string}>|null>(null),commercialRequired=useRef(false),[commercialAccess,setCommercialAccess]=useState<Readonly<{key:string|null;acceptedIds:readonly string[]}>>({key:null,acceptedIds:[]});
  const quoteNavigationBlocked=reviewWorking||commercialWorking||replacementWorking;
@@ -41,11 +43,26 @@ export function QuoteScreen({initialCustomerId=null}:{initialCustomerId?:string|
  const onReviewCommitted=useCallback(async(result:QuoteReviewCommitted)=>{await current.current?.openAfterReview(result);},[]);
  const {dirty}=view;
  useEffect(()=>{const controller=createQuoteEditorController({store:createPendingQuoteStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:value=>{commercialRequired.current=value.commercialAvailable;const selected=value.selected;selectedIdentity.current=selected?{key:[selected.family.id,selected.family.version,selected.revision.id,selected.revision.version].join(':'),familyId:selected.family.id}:null;setView(value);},readOnly:()=>{const selected=selectedIdentity.current;return selected!==null&&commercialRequired.current&&(acceptedFamilies.current.has(selected.familyId)||verifiedCommercial.current!==selected.key);},blocked:()=>{try{return reviewBusy.current||commercialBusy.current||replacementBusy.current||createPendingQuoteReviewStore(sessionStorage).read()!==null||createPendingQuoteCommercialStore(sessionStorage).read()!==null||createPendingQuoteReplacementStore(sessionStorage).read()!==null||createPendingQuoteAmendmentStore(sessionStorage,'quote.amendment.create').read()!==null||createPendingQuoteAmendmentStore(sessionStorage,'quote.amendment.send').read()!==null;}catch{return true;}}});current.current=controller;queueMicrotask(()=>{if(current.current===controller)refreshPendingNotice();});if(initialCustomerId)focus.current=null;void controller.load(initialCustomerId??undefined);const clearFamilyFacts=()=>{acceptedFamilies.current.clear();verifiedCommercial.current=null;setCommercialAccess({key:null,acceptedIds:[]});},hidden=()=>{if(document.visibilityState==='hidden'){clearFamilyFacts();controller.suspend();}},leave=()=>{clearFamilyFacts();controller.suspend();},restore=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restore);return ()=>{current.current=null;controller.dispose();document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restore);};},[initialCustomerId,refreshPendingNotice]);
- useLayoutEffect(()=>{if(focus.current===undefined||view.busy)return;if(view.phase==='ready'&&view.draft&&(view.selected?.family.id??null)===focus.current)heading.current?.focus();focus.current=undefined;},[view]);
+ useLayoutEffect(()=>{
+  if(returnToDirectory.current&&!showRecord&&view.phase==='ready'){
+   returnToDirectory.current=false;
+   const trigger=directoryTrigger.current;
+   (trigger?.isConnected&&!trigger.matches(':disabled')?trigger:directoryHeading.current)?.focus();
+  }
+  if(focus.current===undefined||view.busy)return;
+  if(showRecord&&view.phase==='ready'&&view.draft&&(view.selected?.family.id??null)===focus.current)heading.current?.focus();
+  focus.current=undefined;
+ },[showRecord,view]);
  useEffect(()=>{if(!dirty&&view.phase!=='pending'&&!view.busy)return;const leave=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener('beforeunload',leave);return ()=>window.removeEventListener('beforeunload',leave);},[dirty,view.phase,view.busy]);
  function discard(){if(reviewBusy.current||commercialBusy.current||replacementBusy.current)return false;return !current.current?.view().dirty||window.confirm('Discard your unsaved quote changes? Choose Cancel to keep editing.');}
- function create(){if(discard()){setMode('edit');focus.current=null;setFormSequence(value=>value+1);current.current?.create();}}
- async function open(familyId:string){if(discard()){setMode('edit');focus.current=familyId;await current.current?.open(familyId);}}
+ function create(trigger:HTMLElement){if(discard()){directoryTrigger.current=trigger;setShowRecord(true);setMode('edit');focus.current=null;setFormSequence(value=>value+1);current.current?.create();}}
+ function resume(){focus.current=view.selected?.family.id??null;setShowRecord(true);}
+ function backToDirectory(){returnToDirectory.current=true;setShowRecord(false);}
+ async function open(familyId:string,trigger:HTMLElement){
+  directoryTrigger.current=trigger;
+  if(!showRecord&&view.selected?.family.id===familyId&&view.draft&&view.dirty){resume();return;}
+  if(discard()){setShowRecord(true);setMode('edit');focus.current=familyId;await current.current?.open(familyId);}
+ }
  function switchMode(next:typeof mode){
   if(next===mode)return;
   setMode(next);
@@ -73,16 +90,17 @@ export function QuoteScreen({initialCustomerId=null}:{initialCustomerId?:string|
   {pendingNotice&&<p role="status" className="notice">{pendingNotice} <a href="/save-review">Review interrupted quote actions</a></p>}
   {view.phase==='unavailable'&&<p><a href="/sign-in?returnTo=quotes">Sign in to view quotes</a></p>}
   {view.phase!=='ready'&&view.phase!=='loading'&&<div className="actions">{view.phase==='pending'?<><button type="button" disabled={view.busy||quoteWorking} onClick={()=>void current.current?.check()}>Check original quote save</button>{view.canRetry&&<button type="button" disabled={view.busy||quoteWorking} onClick={()=>void current.current?.retry()}>Retry unchanged original quote</button>}<a href="/save-review">Review interrupted saves</a>{view.reference&&<p className="field-help">Original operation: <span className="record-reference">{view.reference}</span></p>}</>:<button type="button" disabled={view.busy||quoteNavigationBlocked} onClick={()=>{const customerId=view.phase==='unavailable'?initialCustomerId:null;if(customerId)focus.current=null;void current.current?.load(customerId??undefined);}}>Load saved quotes</button>}</div>}
-  {view.phase==='ready'&&<div className="service-layout quote-layout"><section className="service-directory-panel" aria-labelledby="quote-directory-heading"><h2 id="quote-directory-heading" tabIndex={-1}>Saved quotes</h2>
-   <div className="service-toolbar"><button type="button" className="quote-add" disabled={view.busy||view.writesPaused||quoteWorking} onClick={create}>New quote</button><button type="button" className="secondary" disabled={view.busy||quoteNavigationBlocked} onClick={()=>{if(discard())void current.current?.load();}}>Reload saved quotes</button></div>
+  {view.phase==='ready'&&<div className="service-layout quote-layout" data-mobile-record={showRecord&&draft!==null}><section id="quote-saved-directory" className="service-directory-panel" aria-labelledby="quote-directory-heading"><h2 id="quote-directory-heading" ref={directoryHeading} tabIndex={-1}>Saved quotes</h2>
+   {draft&&!showRecord&&<button type="button" className="secondary quote-resume" onClick={resume}>{dirty||!view.selected?'Continue unsaved quote':'Return to open quote'}</button>}
+   <div className="service-toolbar"><button type="button" className="quote-add" disabled={view.busy||view.writesPaused||quoteWorking} onClick={event=>create(event.currentTarget)}>New quote</button><button type="button" className="secondary" disabled={view.busy||quoteNavigationBlocked} onClick={()=>{if(discard())void current.current?.load();}}>Reload saved quotes</button></div>
    <form className="service-search" onSubmit={event=>{event.preventDefault();if(discard())void current.current?.query(String(new FormData(event.currentTarget).get('search')??''));}}><label>Find a quote<input name="search" type="search" maxLength={200} defaultValue={view.search} key={view.search} disabled={view.busy||quoteNavigationBlocked}/></label><button type="submit" className="secondary" disabled={view.busy||quoteNavigationBlocked}>Search quotes</button></form>
-   <ul className="customer-list" aria-label="Saved quotes">{view.rows.map(row=><li key={row.family.id}>{row.revision.kind==='amendment'?<><strong>{row.revision.customer_safe_snapshot.title}</strong><p>{row.revision.customer_safe_snapshot.recipient.displayName} · Amendment {row.revision.state} · {quoteMoney(row.revision.total_cents)}</p><a href="/quotes/amendments">Open amendment workspace</a></>:<button type="button" className="secondary" aria-current={view.selected?.family.id===row.family.id?'true':undefined} disabled={view.busy||quoteNavigationBlocked} onClick={()=>void open(row.family.id)}><strong>{row.revision.customer_safe_snapshot.title}</strong><span>{row.revision.customer_safe_snapshot.recipient.displayName} · {quoteMoney(row.revision.total_cents)} · {row.revision.state==='Ready for Review'?'Review':row.revision.state} version {row.revision.version}</span></button>}</li>)}</ul>
+   <ul className="customer-list" aria-label="Saved quotes">{view.rows.map(row=><li key={row.family.id}>{row.revision.kind==='amendment'?<><strong>{row.revision.customer_safe_snapshot.title}</strong><p>{row.revision.customer_safe_snapshot.recipient.displayName} · Amendment {row.revision.state} · {quoteMoney(row.revision.total_cents)}</p><a href="/quotes/amendments">Open amendment workspace</a></>:<button type="button" className="secondary" aria-current={view.selected?.family.id===row.family.id?'true':undefined} disabled={view.busy||quoteNavigationBlocked} onClick={event=>void open(row.family.id,event.currentTarget)}><strong>{row.revision.customer_safe_snapshot.title}</strong><span>{row.revision.customer_safe_snapshot.recipient.displayName} · {quoteMoney(row.revision.total_cents)} · {row.revision.state==='Ready for Review'?'Review':row.revision.state} version {row.revision.version}</span></button>}</li>)}</ul>
    {!view.rows.length&&<p>No saved quotes match this search. Start a quote or change the search.</p>}{view.hasMore&&<button type="button" className="secondary" disabled={view.busy||quoteNavigationBlocked} onClick={()=>{if(discard())void current.current?.query(view.search,true);}}>Next quote page</button>}
-  </section>{draft?<section className="service-definition-panel quote-record" aria-labelledby="quote-editor-heading">
+  </section>{draft?<section id="quote-current-record" className="service-definition-panel quote-record" aria-labelledby="quote-editor-heading">
    <header className="quote-record-header">
     <div className="quote-record-heading">
      <h2 id="quote-editor-heading" ref={heading} tabIndex={-1}>{retained?'Retained quote':saved?'Edit saved draft':'New quote'}</h2>
-     <a href="#quote-directory-heading">Back to saved quotes</a>
+     <button type="button" className="secondary quote-directory-back" onClick={backToDirectory}>Back to saved quotes</button>
     </div>
     {saved&&<p className="quote-record-title">{saved.customer_safe_snapshot.title}</p>}
     {(saved||draft.recipientName.trim())&&<p className="quote-record-recipient">{saved?saved.customer_safe_snapshot.recipient.displayName:draft.recipientName}</p>}
@@ -154,7 +172,7 @@ export function QuoteScreen({initialCustomerId=null}:{initialCustomerId?:string|
      <ol className="customer-history">{view.history.history.map(event=><li key={event.eventId}><strong>Version {event.revision} · {event.action}</strong><p><time dateTime={event.at}>{event.at}</time></p><details><summary>Customer preview at this version</summary><QuoteDocument quote={event.after.customer_safe_snapshot} stage={event.action==='approve'?'approved':event.after.state==='Sent'?'sent':event.after.state==='Accepted'?'accepted':event.after.state==='Superseded'?'superseded':event.after.state==='Ready for Review'?'review':'draft'}/></details></li>)}</ol>{view.history.hasMore&&<button type="button" className="secondary" disabled={view.busy||quoteWorking} onClick={()=>void current.current?.moreHistory()}>Next quote history page</button>}</section>}
     {!view.history&&view.selected&&<QuoteRecordDownload row={view.selected} disabled={view.busy||dirty||quoteWorking}/>}
    </div>
-  </section>:<section className="service-choice"><h2>Open a quote</h2><p>Choose a saved quote to review its price, status and history.</p></section>}</div>}
+  </section>:<section className="service-choice quote-unselected"><h2>Open a quote</h2><p>Choose a saved quote to review its price, status and history.</p></section>}</div>}
   {view.phase==='ready'&&!view.commercialAvailable&&<p className="field-help">{view.reviewAvailable?'This workspace supports draft review and owner approval.':'This workspace supports draft preparation.'}</p>}
  </>;
 }

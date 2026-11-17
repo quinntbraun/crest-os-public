@@ -1,11 +1,12 @@
 'use client';
 import Image from 'next/image';
+import {WorkspaceIcon} from './workspace-icon';
 import {usePathname} from 'next/navigation';
 import {createContext,useCallback,useContext,useEffect,useImperativeHandle,useRef,useState} from 'react';
 import type {FocusEvent,ReactNode,Ref} from 'react';
 
 const destinations=[
-  ['/','Today','◈'],['/customers','Customers','◎'],['/schedule','Schedule','▦'],['/leads','Leads','◇'],['/quotes','Quotes','≡'],
+  ['/','Today','today'],['/customers','Customers','customers'],['/schedule','Schedule','schedule'],['/leads','Leads','leads'],['/quotes','Quotes','quotes'],
 ] as const;
 const tools=[
   {label:'Jobs and customers',links:[
@@ -181,7 +182,7 @@ export function WorkspaceFrame({children}:{children:ReactNode}){
     <p className="workspace-test-notice"><i aria-hidden="true"/>Test workspace · Use fictional records only</p>
     </header>
     {!signIn&&<nav ref={navigation} className="workspace-destinations" aria-label="Main navigation">{destinations.map(([href,label,icon])=>
-      <a key={href} href={href} aria-current={navigationState(path,href)}><span className="destination-glyph" aria-hidden="true">{icon}</span>{label}</a>)}
+      <a key={href} href={href} aria-current={navigationState(path,href)}><span className="destination-glyph" aria-hidden="true"><WorkspaceIcon name={icon}/></span>{label}</a>)}
       <div className="workspace-sidebar-tools">
         <div className="workspace-sidebar-group">
           <h2>Operations</h2>

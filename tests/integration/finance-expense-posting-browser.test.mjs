@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import {mkdir,readFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
+import {join} from 'node:path';
 import {test} from 'node:test';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
@@ -447,9 +448,45 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(preview).toHaveCount(0);
   await page.getByRole('button',{name:'Purchases',exact:true}).click();
   await expect(preview).toHaveCount(0);
+  let receiptCount=1,rejectedReceiptReservations=0;
+  if(process.env.CREST_EXPENSE_RECEIPT_IMAGE_ID){
+   const receipts=expense.locator('.expense-receipts');
+   if(await receipts.getAttribute('open')===null)await receipts.locator('summary').click();
+   await expense.getByRole('button',{name:'Load saved receipts',exact:true}).click();
+   await expect(expense.getByRole('status')).toHaveText('Saved receipt list refreshed.');
+   const {pdf}=await import('../support/pdf-fixtures.mjs');
+   const {encodeHeic}=await import('../support/heic-fixtures.mjs');
+   const formats=[
+    {name:'fictional-receipt.jpg',type:'image/jpeg',bytes:await sharp(receipt).jpeg().toBuffer()},
+    {name:'fictional-receipt.pdf',type:'application/pdf',bytes:pdf({pages:1})},
+    {name:'fictional-receipt.heic',type:'image/heic',bytes:await encodeHeic([receipt])},
+   ];
+   for(const file of formats){
+    await expense.getByLabel('Receipt file',{exact:true}).setInputFiles({name:file.name,mimeType:file.type,buffer:file.bytes});
+    await expense.getByRole('button',{name:'Attach receipt',exact:true}).click();
+    await expect(expense.getByRole('status')).toHaveText('Receipt saved and checked.',{timeout:85000});
+    receiptCount++;
+    const saved=page.waitForEvent('download');
+    await expense.getByRole('button',{name:'Download receipt '+receiptCount,exact:true}).click();
+    assert.deepEqual(await readFile(await(await saved).path()),file.bytes);
+   }
+   console.log('SYNTHETIC_RECEIPT_WORKER_FORMATS '+name+' image/png,image/jpeg,application/pdf,image/heic');
+   const workerPath=join(f.workspace,'expense-receipts','worker.json'),originalProfile=await readFile(workerPath);
+   try{
+    const profile=JSON.parse(originalProfile);profile.documentKind='supplier-original';
+    await writeFile(workerPath,JSON.stringify(profile));
+    await expense.getByLabel('Receipt file',{exact:true}).setInputFiles({name:'fictional-wrong-profile.png',mimeType:'image/png',buffer:receipt});
+    const refused=page.waitForResponse(response=>response.url()===f.origin+'/api/business/expense-receipts/publish');
+    await expense.getByRole('button',{name:'Attach receipt',exact:true}).click();
+    assert.equal((await refused).status(),503);
+    await expect(expense.getByRole('status')).toContainText('Receipt outcome is unknown');
+    await expect(expense.getByRole('link',{name:'Review interrupted receipt request',exact:true})).toBeVisible();
+    rejectedReceiptReservations=1;
+   }finally{await writeFile(workerPath,originalProfile);}
+  }
   const rows=await f.client.query("SELECT revision,payload->>'amountCents' AS amount FROM crest.expense_revisions WHERE business_id=$1",[f.business]);
   assert.equal(rows.rowCount,1,'attaching a receipt must not revise the expense');
   assert.equal(rows.rows[0].amount,'1299');
-  assert.equal((await f.client.query('SELECT count(*)::int AS count FROM crest.expense_receipt_revisions WHERE business_id=$1',[f.business])).rows[0].count,2);
+  assert.equal((await f.client.query('SELECT count(*)::int AS count FROM crest.expense_receipt_revisions WHERE business_id=$1',[f.business])).rows[0].count,2*receiptCount+rejectedReceiptReservations);
  }finally{await browser?.close();await f.close();}
-},{timeout:180000});
+},{timeout:process.env.CREST_EXPENSE_RECEIPT_IMAGE_ID?360000:180000});

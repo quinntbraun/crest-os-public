@@ -108,8 +108,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  assert.equal(typeof quoteCommercial,'boolean');assert(!quoteCommercial||product&&workspace&&quotes&&quoteReview,'quote commercial journeys require the actual workspace, quotes and review product server');
  assert(["linux","win32"].includes(process.platform),"supported disposable TLS/Auth browser fixture required");process.env.NODE_ENV='production';
  assert(!photoFixture||dropoffCustody&&Buffer.isBuffer(photoFixture));
- let sandbox,client,service,login,contactWorkerLogin,contactWorkerConnection,owned=false,server,h,app,photoStorage,photoLogin,financeLogin,calendarLogin,calendarWorkerLogin,postedFinanceLogin,expenseReceiptStorage,supplierStorage,supplierDocuments,supplierWorkerLogin;
- async function close(){try{if(app){await app.close();app=undefined;server=undefined;}else if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));server=undefined;}}finally{try{await h?.close();h=undefined;}finally{try{await service?.close();service=undefined;}finally{try{if(photoStorage)await photoStorage.close();if(expenseReceiptStorage)await expenseReceiptStorage.close();supplierDocuments?.close();if(supplierStorage)await supplierStorage.close();if(supplierWorkerLogin)await sandbox.admin.query('DROP ROLE '+supplierWorkerLogin);if(contactWorkerLogin)await sandbox.admin.query('DROP ROLE IF EXISTS '+contactWorkerLogin);if(photoLogin)await sandbox.admin.query('DROP ROLE '+photoLogin);if(calendarLogin)await sandbox.admin.query('DROP ROLE '+calendarLogin);if(calendarWorkerLogin)await sandbox.admin.query('DROP ROLE '+calendarWorkerLogin);if(financeLogin)await sandbox.admin.query('DROP ROLE '+financeLogin);if(postedFinanceLogin)await sandbox.admin.query('DROP ROLE '+postedFinanceLogin);if(owned){await sandbox.admin.query('DROP ROLE '+login);owned=false;}}finally{await sandbox?.close();sandbox=undefined;}}}}}
+ let sandbox,client,service,login,contactWorkerLogin,contactWorkerConnection,owned=false,server,h,app,photoStorage,photoLogin,financeLogin,calendarLogin,calendarWorkerLogin,postedFinanceLogin,expenseReceiptStorage,expenseReceiptDocuments,supplierStorage,supplierDocuments,supplierWorkerLogin;
+ async function close(){try{if(app){await app.close();app=undefined;server=undefined;}else if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));server=undefined;}}finally{try{await h?.close();h=undefined;}finally{try{await service?.close();service=undefined;}finally{try{if(photoStorage)await photoStorage.close();expenseReceiptDocuments?.close();if(expenseReceiptStorage)await expenseReceiptStorage.close();supplierDocuments?.close();if(supplierStorage)await supplierStorage.close();if(supplierWorkerLogin)await sandbox.admin.query('DROP ROLE '+supplierWorkerLogin);if(contactWorkerLogin)await sandbox.admin.query('DROP ROLE IF EXISTS '+contactWorkerLogin);if(photoLogin)await sandbox.admin.query('DROP ROLE '+photoLogin);if(calendarLogin)await sandbox.admin.query('DROP ROLE '+calendarLogin);if(calendarWorkerLogin)await sandbox.admin.query('DROP ROLE '+calendarWorkerLogin);if(financeLogin)await sandbox.admin.query('DROP ROLE '+financeLogin);if(postedFinanceLogin)await sandbox.admin.query('DROP ROLE '+postedFinanceLogin);if(owned){await sandbox.admin.query('DROP ROLE '+login);owned=false;}}finally{await sandbox?.close();sandbox=undefined;}}}}}
  try{
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);const previous=await sandbox.apply(target,await sandbox.prefix(42)),registered=await sandbox.apply(target,await sandbox.prefix(43));assert.equal(registered.history.length,43);assert.deepEqual(registered.history.slice(0,42),previous.history);
   if(catalog){const adopted=await sandbox.apply(target,await sandbox.prefix(44));assert.equal(adopted.history.length,44);assert.deepEqual(adopted.history.slice(0,43),registered.history);}
@@ -282,7 +282,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    assert.equal(await syntheticRecordJobHistoryAvailable(target),false);
   }
   login='crest_export_browser_'+randomBytes(8).toString('hex');const secret=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+secret+"'");owned=true;await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=secret;const config={connectionString:url.toString(),environment:'test'};
-  service=await startRealAuthService(target,{diagnostic:amendmentAcceptance});const email='synthetic-browser-export-'+randomUUID()+'@example.com',password=randomBytes(32).toString('base64url'),user=authResult(await service.admin.admin.createUser({email,password,email_confirm:true}),'export_browser_user').user;assert(user?.id);
+  service=await startRealAuthService(target,{diagnostic:amendmentAcceptance||quotes});const email='synthetic-browser-export-'+randomUUID()+'@example.com',password=randomBytes(32).toString('base64url'),user=authResult(await service.admin.admin.createUser({email,password,email_confirm:true}),'export_browser_user').user;assert(user?.id);
   const sdk=service.sdk();await sdk.initialize();authResult(await sdk.signInWithPassword({email,password}),'export_browser_enrollment');const factor=authResult(await sdk.mfa.enroll({factorType:'totp',friendlyName:'Synthetic export browser MFA'}),'export_browser_factor'),totp=URI.parse(factor.totp.uri);assert(totp instanceof TOTP);authResult(await sdk.mfa.challengeAndVerify({factorId:factor.id,code:totp.generate()}),'export_browser_mfa');
   const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;let actor,business,epoch;
   await client.query('BEGIN');try{
@@ -555,13 +555,36 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   }
   let expenseReceiptRuntime;
   if(expenseReceipts){
-   expenseReceiptStorage=await runtime.custodyPhotoObjects();
-   const objects=expenseReceiptStorage.receipts;
-   const directory=runtime.createReceiptDirectory(config,auth.provider,auth.tokens);
-   const validator={async validate(bytes,type){return runtime.validateImage(bytes,type);}};
-   const workflow=runtime.createReceiptWorkflow(directory,objects,validator);
-   expenseReceiptRuntime={objects,stagingOrigin:expenseReceiptStorage.origin,
-    async dispatch(...args){await workflow.prepareAndPublish(...args);}};
+   const imageId=process.env.CREST_EXPENSE_RECEIPT_IMAGE_ID;
+   const workspaceId=randomBytes(8).toString('hex');
+   expenseReceiptStorage=await runtime.custodyPhotoObjects(imageId?{bucket:'crest-fictional-receipts-'+workspaceId}:{});
+   if(imageId){
+    const directory=join(sandbox.workspace,'expense-receipts');
+    const profile=()=>({version:1,workspaceId,origin:expenseReceiptStorage.origin,bucket:expenseReceiptStorage.bucket,
+     credentials:{accessKeyId:randomBytes(16).toString('hex'),secretAccessKey:randomBytes(32).toString('hex')}});
+    expenseReceiptStorage.objects.set('originals/_crest_store_identity',{bytes:Buffer.from('crest synthetic storage '+workspaceId),type:'application/octet-stream'});
+    await mkdir(directory,{mode:0o700});
+    await writeFile(join(directory,'web.json'),JSON.stringify(profile()),{mode:0o600,flag:'wx'});
+    await writeFile(join(directory,'worker.json'),JSON.stringify({environment:'test',documentKind:'expense-receipt',businessId:business,storage:profile(),
+     decoder:{imageId,dockerExecutable:process.env.CREST_TEST_DOCKER_EXECUTABLE},
+     authentication:{...authentication,loginKey:authentication.loginKey.toString('base64url'),
+      keys:authentication.keys.map(({id,key})=>({id,key:key.toString('base64url')}))}}),{mode:0o600,flag:'wx'});
+    const {openSyntheticExpenseReceipts}=await import('../../scripts/synthetic-expense-receipts.mjs');
+    const workspace={id:workspaceId,businessId:business};
+    await assert.rejects(openSyntheticExpenseReceipts(sandbox.workspace,workspace,48));
+    await assert.rejects(openSyntheticExpenseReceipts(sandbox.workspace,workspace,122));
+    await assert.rejects(openSyntheticExpenseReceipts(sandbox.workspace,{...workspace,id:'0'.repeat(16)},49));
+    const schema=Number((await client.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n);
+    expenseReceiptDocuments=await openSyntheticExpenseReceipts(sandbox.workspace,workspace,schema);
+    expenseReceiptRuntime=expenseReceiptDocuments.runtime;
+   }else{
+    const objects=expenseReceiptStorage.receipts;
+    const directory=runtime.createReceiptDirectory(config,auth.provider,auth.tokens);
+    const validator={async validate(bytes,type){return runtime.validateImage(bytes,type);}};
+    const workflow=runtime.createReceiptWorkflow(directory,objects,validator);
+    expenseReceiptRuntime={objects,stagingOrigin:expenseReceiptStorage.origin,
+     async dispatch(...args){await workflow.prepareAndPublish(...args);}};
+   }
   }
   let supplierOriginalRuntime,originalFile,originalMimeType;
   if(supplierPayablePosting){
