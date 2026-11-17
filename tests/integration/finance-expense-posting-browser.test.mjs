@@ -248,8 +248,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    const statement=page.getByRole('region',{name:'Recorded income statement',exact:true});
    await statement.getByLabel('From date',{exact:true}).fill(date);
    await statement.getByLabel('Through date',{exact:true}).fill(date);
+   const incomeSnapshot=page.waitForResponse(response=>response.url().endsWith('/api/business/finance-accounts/recorded-income-statement'));
    await statement.getByRole('button',{name:'Load income statement',exact:true}).press('Enter');
+   const incomeReply=await incomeSnapshot;assert.equal(incomeReply.status(),200);const incomeMetadata=await incomeReply.json();
    await expect(statement.getByRole('status')).toHaveText('Recorded income loaded.');
+   await expect(statement.locator('time[title]')).toHaveAttribute('datetime',incomeMetadata.observedAt);
+   await expect(statement.locator('time[title]')).toHaveAttribute('title',incomeMetadata.observedAt);
+   await expect(statement).toContainText(incomeMetadata.timeZone);
+   await expect(statement.getByText('Coverage incomplete',{exact:true})).toBeVisible();
    const period=statement.locator('p').filter({hasText:'Income statement ·'});
    await expect(period.locator('time[datetime="'+date+'"]')).toHaveCount(1);
    await expect(statement.getByRole('row',{name:'Recorded-book net income -$100.00',exact:true})).toBeVisible();
@@ -259,7 +265,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    for(const width of [360,390,768,1440]){
     await page.setViewportSize({width,height:900});
     await period.scrollIntoViewIfNeeded();
-    assert.equal(await period.evaluate(element=>getComputedStyle(element).position),'sticky');
+    assert.equal(await period.locator('..').evaluate(element=>getComputedStyle(element).position),'sticky');
+    await expect(period.locator('..').getByText('Coverage incomplete',{exact:true})).toBeVisible();
     if(width===1440){
      const dates=await statement.locator('input[type="date"]').evaluateAll(inputs=>inputs.map(input=>input.getBoundingClientRect().bottom));
      const loadBottom=await statement.getByRole('button',{name:'Load income statement',exact:true}).evaluate(button=>button.getBoundingClientRect().bottom);
@@ -316,6 +323,12 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   for(const width of [360,390,768,1440]){
    await page.setViewportSize({width,height:900});
    await sheet.getByRole('table').scrollIntoViewIfNeeded();
+   const headingsOverlap=await report.evaluate(section=>{
+    const outer=section.querySelector(':scope > header')?.getBoundingClientRect(),nested=section.querySelector('section[aria-label="Recorded balance sheet"] > header')?.getBoundingClientRect();
+    if(!outer||!nested)throw Error('Both report scope headings are required');
+    return outer.bottom>Math.max(0,nested.top)&&nested.bottom>Math.max(0,outer.top)&&outer.top<innerHeight&&nested.top<innerHeight;
+   });
+   assert.equal(headingsOverlap,false,'Opening the balance sheet must not stack two scope headings over each other.');
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
    assert.deepEqual((await new AxeBuilder({page}).include('[aria-label="Recorded balance sheet"]').withTags(['wcag2a','wcag2aa']).analyze()).violations.map(entry=>entry.id),[]);
    await page.screenshot({path:'.local/review/finance-balance-sheet-'+name+'-'+width+'.png'});
@@ -325,7 +338,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const journalAccount=report.getByLabel('Account (optional)',{exact:true});
   await expect(journalAccount).toBeFocused();
   await expect(journalAccount.locator('option:checked')).toContainText('Fictional dedicated bank');
-  await report.getByText('Balance sheet',{exact:true}).click();
+  await expect(sheet).toBeHidden();
   await report.getByLabel('Account (optional)',{exact:true}).selectOption({label:'5005 · Fictional wash supplies'});
   await report.getByRole('button',{name:'Load journal entries',exact:true}).click();
   const journal=report.getByRole('table',{name:'Posted journal page',exact:true});

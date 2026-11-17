@@ -5,6 +5,7 @@ import {expenseDollars} from '../../../bookkeeping/expenses/expense-contract';
 import {incomeSections} from '../../../bookkeeping/recorded-income-statement';
 import {downloadFinanceHistory,financeAccounts} from '../../../client/finance-accounts';
 import styles from './screen.module.css';
+import {FinancialReportHeader} from './financial-report-header';
 
 type Report=Awaited<ReturnType<typeof financeAccounts.readRecordedIncomeStatement>>;
 const coverage='Fictional posted records only. Opening balances, reconciliations and some costs are incomplete.';
@@ -83,15 +84,12 @@ export function RecordedIncomeStatement({businessId}:{businessId:string}){
    </form>
    <p role="status">{message}</p>
    {report&&<>
-    <p className={styles.reportPeriod}>Income statement · <time dateTime={report.fromOn}>{displayDate(report.fromOn)}</time>
-     {report.fromOn!==report.throughOn&&<> to <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></>}
-    </p>
-    <div className={styles.reportSnapshot}>
-     <div><p>USD · {report.timeZone}</p>
-      {report.coverageStart&&<p className="field-help">First recorded posting {report.coverageStart}.</p>}
-     </div>
-     <button type="button" className="secondary" onClick={download}>Download income statement CSV</button>
-    </div>
+    <FinancialReportHeader period={<>Income statement · <time dateTime={report.fromOn}>{displayDate(report.fromOn)}</time>
+      {report.fromOn!==report.throughOn&&<> to <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></>}</>}
+      timeZone={report.timeZone} observedAt={report.observedAt} scopeLabel="Coverage incomplete"
+      coverage={coverage} basis={report.schemaVersion===2?supplierBasis:basis}
+      details={report.coverageStart&&<p className="field-help">First recorded posting {report.coverageStart}.</p>}
+      action={<button type="button" className="secondary" onClick={download}>Download income statement CSV</button>}/>
     <div className={styles.balanceScroll} tabIndex={0} role="region" aria-label="Income and expense totals">
      <table className={styles.balanceTable}>
       <thead><tr><th scope="col">Category</th><th scope="col">Amount</th></tr></thead>

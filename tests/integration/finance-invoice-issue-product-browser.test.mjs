@@ -427,8 +427,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await page.route('**/api/business/finance-accounts/customer-funds-report',route=>route.abort(),{times:1});
         await load.press('Enter');
         await expect(report.getByRole('status')).toContainText('Crest could not verify customer funds.');
+        const fundsSnapshot=page.waitForResponse(response=>response.url().endsWith('/api/business/finance-accounts/customer-funds-report'));
         await load.press('Enter');
+        const fundsReply=await fundsSnapshot;assert.equal(fundsReply.status(),200);const fundsMetadata=await fundsReply.json();
         await expect(report.getByRole('status')).toHaveText('Customer funds matched the ledger.');
+        await expect(report.locator('time[title]')).toHaveAttribute('datetime',fundsMetadata.observedAt);
+        await expect(report).toContainText(fundsMetadata.timeZone);
+        await expect(report.getByText('Posted customer funds',{exact:true})).toBeVisible();
         await report.getByText('Held funds by customer (1 of 1 entries)',{exact:true}).press('Enter');
         await expect(report.getByText('$10.00',{exact:true})).toHaveCount(2);
         const download=page.waitForEvent('download');
@@ -648,8 +653,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          await page.goto(fixture.origin+'/settings/accounts');
          await page.getByRole('group',{name:'Choose a report',exact:true}).getByRole('button',{name:'Receivables',exact:true}).press('Enter');
          const aging=page.getByRole('region',{name:'Outstanding invoices by due date',exact:true});
+         const agingSnapshot=page.waitForResponse(response=>response.url().endsWith('/api/business/finance-accounts/receivable-aging'));
          await aging.getByRole('button',{name:'Load outstanding invoices',exact:true}).press('Enter');
+         const agingReply=await agingSnapshot;assert.equal(agingReply.status(),200);const agingMetadata=await agingReply.json();
          await expect(aging.getByRole('status')).toHaveText('Outstanding invoices loaded.');
+         await expect(aging.locator('time[title]')).toHaveAttribute('datetime',agingMetadata.observedAt);
+         await expect(aging).toContainText(agingMetadata.timeZone);
+         await expect(aging.getByText('Posted invoices',{exact:true})).toBeVisible();
          await aging.getByText('Invoice details (1 of 1)',{exact:true}).press('Enter');
          await expect(aging).toContainText('Invoice TEST-1');
          await expect(aging).toContainText('$149.00');

@@ -6,6 +6,7 @@ import {receivableAgingBuckets} from '../../../bookkeeping/receivable-aging-cont
 import type {parseReceivableAging} from '../../../bookkeeping/receivable-aging-contract';
 import {financeAccounts} from '../../../client/finance-accounts';
 import styles from './screen.module.css';
+import {FinancialReportHeader} from './financial-report-header';
 
 const labels={current:'Current',days1To30:'1–30 days',days31To60:'31–60 days',days61To90:'61–90 days',days91Plus:'91+ days'};
 const dateFormat=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'UTC'});
@@ -73,7 +74,10 @@ export function ReceivableAging({businessId}:{businessId:string}){
       </form>
       <p role="status">{message}</p>
       {report&&<>
-        <p className={styles.reportPeriod}>Receivables · As of <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></p>
+        <FinancialReportHeader period={<>Receivables · As of <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></>}
+          timeZone={report.timeZone} observedAt={report.observedAt} scopeLabel="Posted invoices"
+          coverage="Fictional posted invoices. Opening receivables and legacy balances are outside this report’s coverage."
+          details={report.truncated&&<p className="field-help">Showing the first 100 by due date. Totals include all outstanding posted invoices.</p>}/>
         <dl className={styles.amountBreakdown}>
           <dt>Total outstanding</dt><dd>{usd(report.totalCents)}</dd>
           {receivableAgingBuckets.map(key=><Fragment key={key}>

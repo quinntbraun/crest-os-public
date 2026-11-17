@@ -10,7 +10,7 @@ const report={schemaVersion:1,businessId:business,throughOn:date,observedAt:'202
 
 describe('customer funds report',()=>{
   it('retains held cents and funding lineage',()=>{
-    expect(parseCustomerFundsReport(report,business,date)).toMatchObject({totalCents:'2500',rows:[lot],truncated:false});
+    expect(parseCustomerFundsReport(report,business,date)).toMatchObject({totalCents:'2500',rows:[lot],truncated:false,observedAt:report.observedAt,timeZone:report.timeZone});
     expect(parseCustomerFundsReport({...report,lotCount:'0',totalCents:'0',rows:[]},business,null).rows).toEqual([]);
   });
 

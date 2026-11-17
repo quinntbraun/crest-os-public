@@ -15,6 +15,7 @@ import type {parseFictionalJournalV16,parseFictionalTrialBalanceV11} from '../..
 import {downloadFinanceHistory,financeAccounts} from '../../../client/finance-accounts';
 import {RecordedBalanceSheet} from './recorded-balance-sheet';
 import styles from './screen.module.css';
+import {FinancialReportHeader} from './financial-report-header';
 
 type Balance=Awaited<ReturnType<typeof financeAccounts.readTrialBalance>>|FictionalTrialBalanceV2|FictionalTrialBalanceV3|FictionalTrialBalanceV4|FictionalTrialBalanceV5|FictionalTrialBalanceV6|FictionalTrialBalanceV7|FictionalTrialBalanceV8|FictionalTrialBalanceV9|FictionalTrialBalanceV10|ReturnType<typeof parseFictionalTrialBalanceV11>;
 type Journal=Awaited<ReturnType<typeof financeAccounts.readPostedJournal>>|FictionalJournalV2|FictionalJournalV3|FictionalJournalV4|FictionalJournalV5|FictionalJournalV6|FictionalJournalV7|FictionalJournalV8|FictionalJournalV9|FictionalJournalV10;
@@ -255,13 +256,11 @@ export function TrialBalance({businessId}:{businessId:string}){
       </form>
       <p role="status">{message}</p>
       {balance&&<>
-        <p className={styles.reportPeriod}>Trial balance · Through <time dateTime={balance.throughOn}>{balance.throughOn}</time></p>
-        <div className={styles.reportSnapshot}>
-          <div><p>USD · {balance.timeZone}</p>
-            {balance.coverageStart&&<p className="field-help">First included posting {balance.coverageStart} · {balance.postedEventCount} posted {balance.postedEventCount==='1'?'event':'events'}</p>}
-          </div>
-          <button type="button" className="secondary" onClick={download}>Download trial balance CSV</button>
-        </div>
+        <FinancialReportHeader period={<>Trial balance · Through <time dateTime={balance.throughOn}>{balance.throughOn}</time></>}
+          timeZone={balance.timeZone} observedAt={balance.observedAt} scopeLabel="Coverage incomplete"
+          coverage="Recorded posted balances only. Opening balances and bank reconciliation are still pending."
+          details={balance.coverageStart&&<p className="field-help">First included posting {balance.coverageStart} · {balance.postedEventCount} posted {balance.postedEventCount==='1'?'event':'events'}</p>}
+          action={<button type="button" className="secondary" onClick={download}>Download trial balance CSV</button>}/>
         {hasPaymentCorrections(balance)&&<p className="field-help">{reportVersion(balance)===11
           ?'Supplier payables, customer funds and tax payable match the ledger through this date.'
           :reportVersion(balance)===10

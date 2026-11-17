@@ -33,5 +33,5 @@ export function parseCustomerFundsReport(value:unknown,businessId:string,through
   const truncated=count>shown;
   const total=BigInt(value.totalCents);
   check(truncated?total>=shownCents+count-shown:total===shownCents);
-  return {throughOn:date,lotCount:value.lotCount,totalCents:value.totalCents,rows,truncated};
+  return {throughOn:date,observedAt:value.observedAt,timeZone:value.timeZone,lotCount:value.lotCount,totalCents:value.totalCents,rows,truncated};
 }
