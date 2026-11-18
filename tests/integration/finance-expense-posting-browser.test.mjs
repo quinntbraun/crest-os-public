@@ -250,9 +250,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    const statement=page.getByRole('region',{name:'Recorded income statement',exact:true});
    await statement.getByLabel('From date',{exact:true}).fill(date);
    await statement.getByLabel('Through date',{exact:true}).fill(date);
-   const incomeSnapshot=page.waitForResponse(response=>response.url().endsWith('/api/business/finance-accounts/recorded-income-statement'));
-   await statement.getByRole('button',{name:'Load income statement',exact:true}).press('Enter');
-   const incomeReply=await incomeSnapshot;assert.equal(incomeReply.status(),200);const incomeMetadata=await incomeReply.json();
+   const incomeSnapshot=page.waitForResponse(response=>response.url().endsWith('/api/business/finance-accounts/recorded-income-statement'))
+    .then(async response=>{assert.equal(response.status(),200);return response.json();});
+   const [incomeMetadata]=await Promise.all([incomeSnapshot,statement.getByRole('button',{name:'Load income statement',exact:true}).press('Enter')]);
    await expect(statement.getByRole('status')).toHaveText('Recorded income loaded.');
    await expect(statement.locator('time[title]')).toHaveAttribute('datetime',incomeMetadata.observedAt);
    await expect(statement.locator('time[title]')).toHaveAttribute('title',incomeMetadata.observedAt);

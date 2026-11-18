@@ -3,12 +3,13 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {setTimeout as delay} from 'node:timers/promises';
-import {mkdir,readFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {gateEditorFocusFrames,releaseEditorFocusFrames} from '../support/editor-focus-frame.mjs';
 import {reviewDirectoryIntroduction} from '../support/directory-introduction.mjs';
 import {reviewAddressCustomerChooser} from '../support/address-customer-chooser.mjs';
 
@@ -262,6 +263,42 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(queue.locator('time')).toHaveCount(8);
   assert.deepEqual(await queue.locator('time').evaluateAll(times=>times.map(time=>time.dateTime)),data.followUps.map(lead=>lead.followUpAt));
   await expect(queue.getByText('Overdue',{exact:true})).toHaveCount(1);
+  const reminderScope=page.getByRole('region',{name:'Loaded follow-up views',exact:true});
+  const leadFacts=async()=>({leads:(await f.client.query('SELECT to_jsonb(l) AS value FROM crest.leads l WHERE business_id=$1 ORDER BY id',[f.business])).rows,audits:(await f.client.query("SELECT to_jsonb(a) AS value FROM crest_private.audit_events a WHERE business_id=$1 AND entity_kind='leads' ORDER BY entity_id,entity_version",[f.business])).rows});
+  const businessRequests=()=>f.requests.filter(row=>row.path.startsWith('/api/business/')).length;
+  async function captureLead(stage){
+   for(const width of [360,390,768,1100,1440]){
+    await page.setViewportSize({width,height:900});await page.evaluate(async()=>{await document.fonts.ready;scrollTo(0,0);});
+    if(stage==='all'&&width===1440){
+     const fonts=await page.evaluate(()=>({root:getComputedStyle(document.documentElement).fontFamily,body:getComputedStyle(document.body).fontFamily,faces:[...document.fonts].filter(face=>face.family.includes('IBM Plex')).map(face=>({family:face.family,weight:face.weight,status:face.status}))}));
+     if(name==='chromium'){
+      const session=await page.context().newCDPSession(page);
+      try{await session.send('DOM.enable');await session.send('CSS.enable');const {root}=await session.send('DOM.getDocument');fonts.platform=[];for(const selector of ['h1','main p']){const {nodeId}=await session.send('DOM.querySelector',{nodeId:root.nodeId,selector});assert(nodeId);const result=await session.send('CSS.getPlatformFontsForNode',{nodeId});fonts.platform.push({selector,fonts:result.fonts});}}finally{await session.detach();}
+     }
+     await writeFile(join('.local/review','lead-workbench-font-'+name+'.json'),JSON.stringify(fonts,null,2)+'\n');
+    }
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(row=>row.id),[]);
+    if(stage==='record'){await expect(page.getByRole('region',{name:'Lead record',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'Edit lead intake',exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'Browse leads',exact:true}))[width<1100?'toBeHidden':'toBeVisible']();}else{await expect(page.getByRole('region',{name:'Browse leads',exact:true})).toBeVisible();await expect(reminderScope).toBeVisible();}
+    await page.screenshot({path:join('.local/review','lead-workbench-'+stage+'-'+name+'-'+width+'.png'),fullPage:true});
+    await page.screenshot({path:join('.local/review','lead-workbench-viewport-'+stage+'-'+name+'-'+width+'.png')});
+   }
+  }
+  const beforeFilter=await leadFacts(),filterRequests=businessRequests();
+  await reminderScope.getByRole('button',{name:'Due (1)',exact:true}).click();
+  await expect(queue.getByRole('button')).toHaveCount(1);
+  await expect(queue.getByRole('button',{name:first.label,exact:true})).toBeVisible();
+  await expect(queue.getByText('lost',{exact:true})).toBeVisible();
+  await expect(reminderScope).toContainText('Showing 1 of 8 reminders on this loaded page.');
+  await captureLead('due');
+  await reminderScope.getByRole('button',{name:'Upcoming (7)',exact:true}).click();
+  await expect(queue.getByRole('button')).toHaveCount(7);
+  await expect(queue.getByRole('button',{name:first.label,exact:true})).toHaveCount(0);
+  await captureLead('upcoming');
+  await reminderScope.getByRole('button',{name:'All (8)',exact:true}).click();
+  assert.equal(businessRequests(),filterRequests,'Loaded reminder views do not request new business data');
+  assert.deepEqual(await leadFacts(),beforeFilter);
+  await captureLead('all');
   for(const width of [320,390,1440]){
    await page.setViewportSize({width,height:900});
    assert.deepEqual((await new AxeBuilder({page}).include('.crest-record-list').withRules(['label-content-name-mismatch']).analyze()).violations,[]);
@@ -282,6 +319,12 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(queue.getByRole('button',{name:last.label,exact:true})).toBeVisible();
   await expect(queue.getByRole('button',{name:first.label,exact:true})).toHaveCount(0);
   await expect(page.getByRole('heading',{name:'Scheduled follow-ups',exact:true})).toBeFocused();
+  const laterFacts=await leadFacts(),laterRequests=businessRequests();
+  await reminderScope.getByRole('button',{name:'Due (0)',exact:true}).click();
+  await expect(page.getByText('No due reminders on this loaded page.',{exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'First reminders',exact:true})).toBeEnabled();
+  await reminderScope.getByRole('button',{name:/^All \(/}).click();
+  assert.equal(businessRequests(),laterRequests);assert.deepEqual(await leadFacts(),laterFacts);
   await page.route('**/api/business/leads/follow-ups',route=>route.abort('failed'),{times:1});
   await page.getByRole('button',{name:'First reminders',exact:true}).click();
   await expect(queue).toHaveCount(0);
@@ -289,6 +332,37 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.getByRole('button',{name:'Check follow-ups',exact:true}).click();
   await expect(queue.getByRole('button',{name:first.label,exact:true})).toBeVisible();
   await expect(page.getByRole('heading',{name:'Scheduled follow-ups',exact:true})).toBeFocused();
+  await queue.getByRole('button',{name:first.label,exact:true}).press('Enter');
+  await expect(page.getByRole('heading',{name:'Edit lead intake',exact:true})).toBeFocused();
+  await captureLead('record');
+  const beforeJumps=await leadFacts(),jumpRequests=businessRequests(),jumps=page.getByRole('navigation',{name:'Lead record sections',exact:true});
+  await jumps.getByRole('link',{name:'Status',exact:true}).press('Enter');
+  await expect(page.locator('#lead-status')).toBeFocused();
+  await jumps.getByRole('link',{name:'Intake',exact:true}).press('Enter');
+  await expect(page.locator('#lead-intake')).toBeFocused();
+  assert.equal(businessRequests(),jumpRequests);assert.deepEqual(await leadFacts(),beforeJumps);
+  const originalNotes=await page.getByLabel('Notes',{exact:true}).inputValue();
+  await page.getByLabel('Notes',{exact:true}).fill('Synthetic preserved reminder intake');
+  const draftFacts=await leadFacts(),draftRequests=businessRequests();
+  await gateEditorFocusFrames(page,'Back to follow-ups');
+  await page.getByRole('button',{name:'Back to follow-ups',exact:true}).click();
+  await expect(queue.getByRole('button',{name:first.label,exact:true})).toBeFocused();
+  await reminderScope.getByRole('button',{name:'Upcoming (7)',exact:true}).focus();
+  await releaseEditorFocusFrames(page);
+  await expect(reminderScope.getByRole('button',{name:'Upcoming (7)',exact:true})).toBeFocused();
+  await reminderScope.getByRole('button',{name:'Upcoming (7)',exact:true}).click();
+  const future=data.followUps.find(row=>row.followUpAt>data.observedAt);assert(future);
+  page.once('dialog',dialog=>dialog.dismiss());
+  await queue.getByRole('button',{name:future.label,exact:true}).click();
+  await expect(page.getByRole('button',{name:'Return to lead record',exact:true})).toBeVisible();
+  assert.equal(businessRequests(),draftRequests);assert.deepEqual(await leadFacts(),draftFacts);
+  await captureLead('retained-draft');
+  await page.getByRole('button',{name:'Return to lead record',exact:true}).click();
+  await expect(page.getByLabel('Notes',{exact:true})).toHaveValue('Synthetic preserved reminder intake');
+  await page.getByLabel('Notes',{exact:true}).fill(originalNotes);
+  await page.getByRole('button',{name:'Back to follow-ups',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Scheduled follow-ups',exact:true})).toBeFocused();
+  await reminderScope.getByRole('button',{name:'All (8)',exact:true}).click();
   await queue.getByRole('button',{name:first.label,exact:true}).press('Enter');
   await expect(page.getByRole('heading',{name:'Edit lead intake',exact:true})).toBeFocused();
   await leadViews.getByRole('button',{name:'All leads',exact:true}).click();

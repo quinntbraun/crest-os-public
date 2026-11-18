@@ -22,13 +22,17 @@ for(const [name,engine,width] of [['chromium',chromium,1280],['webkit',webkit,36
   const previous=process.env.CREST_TEST_DATABASE_URL;
   const cluster=previous===undefined?await recoveryCluster():null;
   if(cluster)process.env.CREST_TEST_DATABASE_URL=cluster.testDatabaseUrl;
-  let fixture,browser;
+  let fixture,browser;const observed=[];
   try{
    fixture=await sourceExportBrowserFixture({product:true,workspace:true,leadMatchReview:true});
    browser=await engine.launch();
    const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width,height:860}});
    const page=await context.newPage();
    page.setDefaultTimeout(12000);
+   const diagnosticPaths=new Set(['/api/auth/session','/api/business/leads/context','/api/business/leads/save','/api/business/leads/vehicle-context','/api/business/leads/vehicle-review','/api/business/leads/vehicle-save']);
+   const retain=event=>{observed.push(event);if(observed.length>48)observed.shift();};
+   page.on('response',response=>{try{const path=new URL(response.url()).pathname;if(diagnosticPaths.has(path))retain({path,status:response.status()});}catch{/* Disposed unrelated response. */}});
+   page.on('requestfailed',request=>{try{const path=new URL(request.url()).pathname;if(diagnosticPaths.has(path))retain({path,transportFailed:true});}catch{/* Disposed unrelated request. */}});
    await page.goto(fixture.origin+'/sign-in');
    const credentials=fixture.credentials();
    await page.getByLabel('Email',{exact:true}).fill(credentials.email);
@@ -157,7 +161,7 @@ for(const [name,engine,width] of [['chromium',chromium,1280],['webkit',webkit,36
    await report.getByRole('button',{name:'Save vehicle report',exact:true}).click();
    await expect(panel.getByRole('status',{name:'Lead vehicle editor status',exact:true})).toContainText('Vehicle report saved');
    assert.deepEqual(reviewRequests,[]);
-  }finally{
+  }catch(error){console.error('LEAD_MATCH_BROWSER_DIAGNOSTIC '+JSON.stringify({events:observed,provider:fixture?.authDiagnostics?.()??[]}));throw error;}finally{
    await browser?.close();
    await fixture?.close();
    if(previous===undefined)delete process.env.CREST_TEST_DATABASE_URL;
