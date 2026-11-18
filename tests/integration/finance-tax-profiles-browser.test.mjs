@@ -72,15 +72,30 @@ for(const engine of [chromium,webkit]){
    assert.match(csv,/"2026-06-01","Verified exemption policy","","Fictional exemption policy"/);
    await mkdir('.local/review',{recursive:true});
    async function renders(view){
-    for(const width of [360,390,768,1440]){
+    for(const width of [360,390,768,1100,1440]){
      await page.setViewportSize({width,height:900});
      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
      assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
      const anchor=view==='history'?history:view==='approval'?panel.getByRole('region',{name:'Review tax approval',exact:true}):calculation;
+     if(width>=1100&&view==='history'){
+      const selection=await panel.getByRole('region',{name:'Choose what to review',exact:true}).boundingBox();
+      const retained=await history.boundingBox();
+      assert(selection&&retained&&retained.x>=selection.x+selection.width,'Desktop history must sit beside the selection');
+     }
+     if(view==='preview'){
+      const facts=calculation.locator('dl.mapping-rule-lookup'),available=await facts.boundingBox();
+      for(const cell of await facts.locator(':scope > div').all()){
+       const box=await cell.boundingBox();
+       assert(box&&available&&box.width>=Math.min(180,available.width),'Tax context must remain readable in a narrow desktop pane');
+      }
+     }
      await anchor.scrollIntoViewIfNeeded();
      await page.screenshot({path:'.local/review/finance-tax-'+view+'-'+engine.name()+'-'+width+'.png',animations:'disabled'});
     }
    }
+   await expect(history.getByText('Before Jun 1, 2026 (exclusive)',{exact:true})).toBeVisible();
+   await expect(history.getByText('Newest loaded approval',{exact:true})).toBeVisible();
+   await expect(history).toContainText('All earlier approvals loaded.');
    await renders('history');
 
    await panel.getByText('Check an amount',{exact:true}).click();
@@ -118,6 +133,9 @@ for(const engine of [chromium,webkit]){
    await expect(calculation.getByText('$90.00',{exact:true})).toBeVisible();
    await expect(calculation.getByText('$9.00',{exact:true})).toBeVisible();
    await expect(calculation.getByRole('heading',{name:'Verified inclusive rate',exact:true})).toBeFocused();
+   await calculation.getByText('Calculation method',{exact:true}).click();
+   await expect(calculation).toContainText('Net amount is rounded to the nearest cent, with half cents rounded up.');
+   await expect(calculation.getByText('Discount entered',{exact:true})).toBeVisible();
    await renders('preview');
    await date.fill('2026-06-01');
    await check.click();
@@ -163,6 +181,29 @@ for(const engine of [chromium,webkit]){
    await expect(proposedProfile.locator('time[datetime="2026-07-01"]')).toBeVisible();
    await renders('approval');
    await page.setViewportSize({width:390,height:900});
+   await expect(jurisdiction).toBeDisabled();
+   await expect(applies).toBeDisabled();
+   const retainedFacts=async()=>({
+    profiles:(await fixture.client.query('SELECT to_jsonb(v) AS value FROM crest.tax_profiles v WHERE business_id=$1 ORDER BY to_jsonb(v)::text',[fixture.business])).rows,
+    audits:(await fixture.client.query('SELECT to_jsonb(v) AS value FROM crest_private.audit_events v WHERE business_id=$1 ORDER BY to_jsonb(v)::text',[fixture.business])).rows
+   });
+   const beforeCancel=await retainedFacts(),requestsBeforeCancel=fixture.requests.length;
+   const cancel=manager.getByRole('button',{name:'Cancel approval draft',exact:true});
+   page.once('dialog',dialog=>dialog.dismiss());
+   await cancel.click();
+   await expect(manager.getByLabel('Approval reason',{exact:true})).toHaveValue('Fictional dated tip rate approval');
+   await expect(manager.getByLabel('Verification evidence',{exact:true})).toHaveValue('Fictional supporting evidence for the rate');
+   await expect(jurisdiction).toBeDisabled();
+   page.once('dialog',dialog=>dialog.accept());
+   await cancel.click();
+   await expect(approvalStatus).toHaveText('Approval draft cleared.');
+   await expect(jurisdiction).toBeEnabled();
+   await expect(applies).toBeEnabled();
+   assert.equal(fixture.requests.length,requestsBeforeCancel,'Draft cancellation makes no API request');
+   assert.deepEqual(await retainedFacts(),beforeCancel,'Draft cancellation preserves profiles and audit history');
+   await prepareApproval('2026-07-01','inclusive_single','Fictional dated tip rate approval');
+   await manager.getByLabel('Decimal rate',{exact:true}).fill('0.0800');
+   await manager.getByLabel('Verification evidence',{exact:true}).fill('Fictional supporting evidence for the rate');
    await save.press('Enter');
    await expect(approvalStatus).toHaveText('Tax approval saved.');
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
@@ -179,6 +220,8 @@ for(const engine of [chromium,webkit]){
    },{times:1});
    await save.click();
    await expect(approvalStatus).toContainText('The approval could not be confirmed.');
+   await expect(jurisdiction).toBeDisabled();
+   await expect(applies).toBeDisabled();
    const pending=await page.evaluate(key=>sessionStorage.getItem(key),pendingKey);
    assert(pending);
    assert.deepEqual(Object.keys(JSON.parse(pending)).sort(),['binding','businessId','reference']);

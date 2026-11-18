@@ -15,6 +15,7 @@ import styles from '../screen.module.css';
 
 type Latest=Awaited<ReturnType<typeof financeAccounts.taxHistory>>['rows'][number];
 type Pending=NonNullable<ReturnType<typeof readPendingFinanceTax>>;
+export type TaxApprovalTaskState='idle'|'editing'|'pending'|'busy';
 type Reviewed={context:FinanceAccountContext;latest:Latest|null};
 const blankDraft={date:'',treatment:'',rate:'',evidence:'',reason:''};
 const dateFormat=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'UTC'});
@@ -29,14 +30,17 @@ function approvalFrom(scope:FinanceTaxScope,draft:typeof blankDraft,latest:Lates
  }catch{return null;}
 }
 
-export function TaxApprovalEditor({scope,applicabilityLabel,disabled,onSaved}:{
- scope:FinanceTaxScope|null;applicabilityLabel:string;disabled:boolean;onSaved:()=>void;
+export function TaxApprovalEditor({scope,applicabilityLabel,disabled,onSaved,onTaskStateChange}:{
+ scope:FinanceTaxScope|null;applicabilityLabel:string;disabled:boolean;onSaved:()=>void;onTaskStateChange?:(state:TaxApprovalTaskState)=>void;
 }){
  const [reviewed,setReviewed]=useState<Reviewed|null>(null),[draft,setDraft]=useState(blankDraft);
  const [pending,setPending]=useState<Pending|null>(null),[canClose,setCanClose]=useState(false);
  const [closeReason,setCloseReason]=useState(''),[message,setMessage]=useState('');
  const [busy,setBusy]=useState(false),[signedOut,setSignedOut]=useState(false);
  const active=useRef<AbortController|null>(null),status=useRef<HTMLParagraphElement>(null);
+ const taskState:TaxApprovalTaskState=busy?'busy':pending?'pending':reviewed?'editing':'idle';
+ useEffect(()=>{onTaskStateChange?.(taskState);},[onTaskStateChange,taskState]);
+ useEffect(()=>()=>onTaskStateChange?.('idle'),[onTaskStateChange]);
  const latest=reviewed?.latest;
  const approval=scope&&reviewed?approvalFrom(scope,draft,reviewed.latest):null;
  const clear=useCallback(()=>{
@@ -207,8 +211,10 @@ export function TaxApprovalEditor({scope,applicabilityLabel,disabled,onSaved}:{
     <div className={styles.actions}>
      <button type="submit" disabled={locked||!approval}>Save tax approval</button>
      <button type="button" className="secondary" disabled={locked} onClick={()=>{
+      if(Object.entries(blankDraft).some(([field,value])=>draft[field as keyof typeof blankDraft]!==value)
+       &&!window.confirm('Discard this unsaved tax approval draft?'))return;
       setReviewed(null);setDraft(blankDraft);setMessage('Approval draft cleared.');status.current?.focus();
-     }}>Cancel</button>
+     }}>Cancel approval draft</button>
     </div>
    </form>}
    {pending&&canClose&&<form onSubmit={retire}>
