@@ -13,6 +13,7 @@ import {browserTestTls} from '../support/browser-test-tls.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {startRealAuthService,authResult} from '../support/real-auth-service.mjs';
+import {gateEditorFocusFrames,releaseEditorFocusFrames} from '../support/editor-focus-frame.mjs';
 
 let sandbox,client,service,app,origin,fixture,actor,business,login,loginOwned=false;
 const sessionName='__Host-crest_session';
@@ -187,7 +188,8 @@ async function addressEditorFlow(page,other,name){
   await page.screenshot({path:'.local/review/address-profile-'+name+'-'+width+'.png',animations:'disabled'});
  }
  await page.setViewportSize({width:390,height:844});
- await editAddress(page).click();
+ await gateEditorFocusFrames(page,'Edit address');
+ try{await editAddress(page).click();await expect(page.getByRole('heading',{name:'Edit address',exact:true})).toBeFocused();await page.getByLabel('Location instructions',{exact:true}).focus();await releaseEditorFocusFrames(page);await expect(page.getByLabel('Location instructions',{exact:true})).toBeFocused();}finally{await releaseEditorFocusFrames(page);}
  await page.getByLabel('Location instructions',{exact:true}).fill('Temporary draft after returning to the list');
  await page.getByRole('button',{name:'Back to addresses',exact:true}).click();
  await expect(page.getByRole('button',{name:label,exact:true})).toBeFocused();

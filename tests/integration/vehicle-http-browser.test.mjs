@@ -13,7 +13,8 @@ import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {startRealAuthService,authResult} from '../support/real-auth-service.mjs';
 import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
-import {installVehicleInputDiagnostic,vehicleInputDiagnostic} from '../support/vehicle-input-diagnostic.mjs';
+import {dispatchVehicleInputBurst,installVehicleInputDiagnostic,observeVehicleRequests,vehicleInputDiagnostic} from '../support/vehicle-input-diagnostic.mjs';
+import {gateEditorFocusFrames,releaseEditorFocusFrames} from '../support/editor-focus-frame.mjs';
 
 let sandbox,client,service,app,origin,fixture,actor,business,login,loginOwned=false;
 const sessionName='__Host-crest_session';
@@ -101,7 +102,11 @@ async function vehicleEditorFlow(page,other,proof,name){
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);assert(await save().evaluate(el=>el.getBoundingClientRect().height>=44));
  await saveWithEvidence();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
  const row=(await client.query('SELECT id,year,make,vin_raw,vin_normalized,plate,kind,notes,version::text FROM crest.vehicles WHERE business_id=$1 AND label=$2',[business,label])).rows[0];assert(row);assert.equal(row.year,-500);assert.equal(row.make,null);assert.equal(row.vin_raw,' Raw-VIN / é 001 ');assert.equal(row.vin_normalized,'RAWVIN001');assert.equal(row.plate,'00123');assert.equal(row.kind,'other');assert.equal(row.notes,null);assert.equal(row.version,'1');
- await load().click();await findVehicle(page,label);await page.getByLabel('Notes',{exact:true}).fill('Stale original edit');await captureStage('after_stale_fill');
+ await load().click();await gateEditorFocusFrames(page,'Edit vehicle');
+ try{await findVehicle(page,label);await expect(page.getByRole('heading',{name:'Edit vehicle',exact:true})).toBeFocused();await page.getByLabel('Notes',{exact:true}).focus();await releaseEditorFocusFrames(page);await expect(page.getByLabel('Notes',{exact:true})).toBeFocused();}finally{await releaseEditorFocusFrames(page);}
+ let draftRequests=0;const observeDraft=request=>{if(new URL(request.url()).pathname.startsWith('/api/'))draftRequests++;};page.on('request',observeDraft);
+ try{await dispatchVehicleInputBurst(page);await captureStage('after_input_burst');await expect(page.getByLabel('Notes',{exact:true})).toHaveValue('Synthetic same-task note');await expect(page.getByLabel('Plate',{exact:true})).toHaveValue('00123-BURST');await expect(save()).toBeEnabled();assert.equal(draftRequests,0,'same-task field changes do not save or fetch');}finally{page.off('request',observeDraft);}
+ await page.getByLabel('Plate',{exact:true}).fill('00123');await page.getByLabel('Notes',{exact:true}).fill('Stale original edit');await captureStage('after_stale_fill');
  const context=await send(other,root+'context',{},proof);await captureStage('after_other_context');
  const changed={...draft(context.body.recoveryEpoch,name),vehicleId:row.id,expectedVersion:'1',label,notes:'Other device retained edit'};assert.equal((await send(other,root+'save',changed,proof)).status,200);await captureStage('after_other_save');
  await saveWithEvidence();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('record changed');assert.equal((await client.query('SELECT notes FROM crest.vehicles WHERE id=$1',[row.id])).rows[0].notes,changed.notes);
@@ -123,9 +128,11 @@ async function interruptedVehicleFlow(page,name){
 // allowance, recovery fence or genuine provider authority is bypassed/reset.
 for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900}],['webkit',webkit,{width:360,height:800}]]){
  test('genuine private vehicle HTTP '+name,async t=>{
-  const browser=await engine.launch();let first,second,proof,otherProof,input,created;
+  const browser=await engine.launch();let first,second,proof,otherProof,input,created,requestDiagnostics=[];
   try{
    first=await browser.newContext({ignoreHTTPSErrors:true,viewport});second=await browser.newContext({ignoreHTTPSErrors:true,viewport});const page=await first.newPage(),other=await second.newPage();
+   requestDiagnostics=[observeVehicleRequests(page),observeVehicleRequests(other)];
+   const diagnose=async work=>{try{await work();}catch(error){if(error instanceof Error)error.message+='\nVehicle request evidence '+JSON.stringify({editor:requestDiagnostics[0].report(),other:requestDiagnostics[1].report()})+'\nSession admission '+JSON.stringify(await sessionAdmissionDiagnostic({client,actor,authDiagnostics:()=>service.diagnostics()}));throw error;}};
    await t.test('independent devices establish genuine MFA and separate durable sessions',async()=>{
     for(const [p,trusted] of [[page,false],[other,true]]){await p.goto(origin+'/sign-in');await expect(p.getByRole('status')).toHaveText('Sign in to continue.');await fill(p,{trusted});await expect(p.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();}
     const a=(await first.cookies()).find(c=>c.name===sessionName),b=(await second.cookies()).find(c=>c.name===sessionName);assert(a?.httpOnly&&a.secure&&b?.httpOnly&&b.secure&&a.value!==b.value);
@@ -148,8 +155,8 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     assert.equal(results.filter(r=>r.status===200&&r.body.state==='committed').length,1);assert.equal(results.filter(r=>r.status===409&&r.body.reason==='version'&&r.body.currentVersion==='5').length,1);
     const loser=results[0].status===409?changes[0]:changes[1];assert.deepEqual((await send(page,root+'operation',{operationId:loser.operationId},proof)).body,{state:'absent'});
    });
-   await t.test('mobile vehicle editor retains nullable evidence, unusual years, conflicts and archive history',async()=>{await vehicleEditorFlow(page,other,otherProof,name);});
-   await t.test('interrupted editor saves resolve original receipts and retain unchanged retries or blocked lost drafts',async()=>{await interruptedVehicleFlow(page,name);});
+   await t.test('mobile vehicle editor retains nullable evidence, unusual years, conflicts and archive history',async()=>{await diagnose(()=>vehicleEditorFlow(page,other,otherProof,name));});
+   await t.test('interrupted editor saves resolve original receipts and retain unchanged retries or blocked lost drafts',async()=>{await diagnose(()=>interruptedVehicleFlow(page,name));});
    await t.test('a dropped committed response resolves only the original receipt and fresh revocation blocks later reads',async()=>{
     const original={...input,operationId:randomUUID(),vehicleId:randomUUID(),expectedVersion:'0'},route='**/api/business/vehicles/save';let calls=0,droppedStatus;
     // The intervening screen loads/first saves issue fresh proofs and evict
@@ -165,6 +172,6 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     const cookie=(await second.cookies()).find(c=>c.name===sessionName);await client.query('UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),version=version+1 WHERE token_hash=$1',[createHash('sha256').update(cookie.value,'ascii').digest()]);
     const denied=await send(other,root+'history',{vehicleId:input.vehicleId,afterVersion:'0',pageSize:20},otherProof);assert.notEqual(denied.status,200);assert(!JSON.stringify(denied.body).includes(input.label));
    });
-  }finally{await first?.close();await second?.close();await browser.close();}
+  }finally{for(const diagnostic of requestDiagnostics)diagnostic.stop();await first?.close();await second?.close();await browser.close();}
  });
 }

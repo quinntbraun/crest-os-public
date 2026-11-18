@@ -88,12 +88,15 @@ export function AddressScreen({customerId,assist:Assist}:{customerId:string|null
  const profileHeading=useRef<HTMLHeadingElement>(null),reviewHeading=useRef<HTMLHeadingElement>(null),reviewButton=useRef<HTMLButtonElement>(null);
  const searchInput=useRef<HTMLInputElement>(null),listTrigger=useRef<HTMLButtonElement>(null);
  const selectedId=view.selected?.id??null,dirty=draftChanged(view.draft,view.selected?draftFromAddress(view.selected):emptyAddressDraft);
- const focusRequest=useRef<{controller:NonNullable<typeof current.current>;id:string|null}|null>(null);
+ const focusRequest=useRef<{controller:NonNullable<typeof current.current>;id:string|null;target?:'record'|'directory'|'review-button'}|null>(null);
  useLayoutEffect(()=>{
   const requested=focusRequest.current;if(!requested||view.busy)return;
-  if(current.current===requested.controller&&view.phase==='ready'&&view.draft&&requested.id===selectedId)(mode==='profile'?profileHeading:heading).current?.focus();
+  if(current.current===requested.controller&&view.phase==='ready'&&view.draft&&requested.id===selectedId){
+   const target=requested.target==='directory'?(listTrigger.current?.isConnected?listTrigger.current:searchInput.current):requested.target==='review-button'?reviewButton.current:(mode==='profile'?profileHeading:mode==='review'?reviewHeading:heading).current;
+   target?.focus();
+  }
   focusRequest.current=null;
- },[view,selectedId,mode]);
+ },[view,selectedId,mode,showRecord]);
  useEffect(()=>{
   const c=createAddressEditorController({customerId,store:createPendingAddressStore({getItem:k=>sessionStorage.getItem(k),setItem:(k,v)=>sessionStorage.setItem(k,v),removeItem:k=>sessionStorage.removeItem(k)}),change:setView});current.current=c;void c.load();
   function suspend(){setMode('profile');setShowRecord(false);c.suspend();}
@@ -104,15 +107,16 @@ export function AddressScreen({customerId,assist:Assist}:{customerId:string|null
  useEffect(()=>{if(!dirty&&view.phase!=='pending'&&!view.busy)return;const leaving=(e:BeforeUnloadEvent)=>e.preventDefault();window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[dirty,view.phase,view.busy]);
  async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory'){const c=current.current;if(!c)return;await c[kind]();if(current.current===c)status.current?.focus();}
  function edit<K extends keyof AddressDraft>(key:K,value:AddressDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
+ function focusOnCommit(target:'record'|'directory'|'review-button'='record'){const controller=current.current;if(controller)focusRequest.current={controller,id:selectedId,target};}
  function review(e:FormEvent){
   e.preventDefault();
   if(!current.current?.view().canSave)return;
+  focusOnCommit();
   setMode('review');
-  requestAnimationFrame(()=>reviewHeading.current?.focus());
  }
  function backToEdit(){
+  focusOnCommit('review-button');
   setMode('edit');
-  requestAnimationFrame(()=>reviewButton.current?.focus());
  }
  function save(){
   if(mode!=='review'||!current.current?.view().canSave)return;
@@ -136,23 +140,21 @@ export function AddressScreen({customerId,assist:Assist}:{customerId:string|null
   setMode('edit');setShowRecord(true);
   focusRequest.current={controller,id:null};controller.create();
  }
- function startEdit(){setMode('edit');requestAnimationFrame(()=>heading.current?.focus());}
+ function startEdit(){focusOnCommit();setMode('edit');}
  function closeEditor(){
   if(!view.selected||!discardAllowed())return;
+  focusOnCommit();
   current.current?.edit(draftFromAddress(view.selected));
   setMode('profile');
-  requestAnimationFrame(()=>profileHeading.current?.focus());
  }
  function backToList(){
+  if(!showRecord){focusRequest.current=null;(listTrigger.current?.isConnected?listTrigger.current:searchInput.current)?.focus();return;}
+  focusOnCommit('directory');
   setShowRecord(false);
-  requestAnimationFrame(()=>{
-   const trigger=listTrigger.current;
-   (trigger?.isConnected?trigger:searchInput.current)?.focus();
-  });
  }
  function returnToRecord(){
+  focusOnCommit();
   setShowRecord(true);
-  requestAnimationFrame(()=>(mode==='profile'?profileHeading:mode==='review'?reviewHeading:heading).current?.focus());
  }
  function query(text:string,archived:boolean,more=false){if(discardAllowed()){setMode('profile');setShowRecord(false);void current.current?.query(text,archived,more);}}
  function search(e:FormEvent<HTMLFormElement>){e.preventDefault();const data=new FormData(e.currentTarget);query(String(data.get('search')??''),data.get('archived')==='on');}

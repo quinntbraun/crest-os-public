@@ -50,8 +50,15 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
   const [editing,setEditing]=useState(false),[showRecord,setShowRecord]=useState(initialVehicleId!==null);
   const profileHeading=useRef<HTMLHeadingElement>(null),searchInput=useRef<HTMLInputElement>(null),directoryTrigger=useRef<HTMLButtonElement>(null);
   const dirty=draftChanged(view.draft,view.selected?draftFromVehicle(view.selected):emptyVehicleDraft);
-  const focusRequest=useRef<{controller:NonNullable<typeof current.current>;id:string|null}|null>(null),editorVisible=view.draft!==null&&editing,selectedId=view.selected?.id??null;
-  useLayoutEffect(()=>{const requested=focusRequest.current;if(!requested||view.busy)return;if(current.current===requested.controller&&view.phase==='ready'&&selectedId===requested.id)(editorVisible?heading:profileHeading).current?.focus();focusRequest.current=null;},[view,editorVisible,selectedId,showRecord]);
+  const focusRequest=useRef<{controller:NonNullable<typeof current.current>;id:string|null;target?:'record'|'directory'}|null>(null),editorVisible=view.draft!==null&&editing,selectedId=view.selected?.id??null;
+  useLayoutEffect(()=>{
+    const requested=focusRequest.current;if(!requested||view.busy)return;
+    if(current.current===requested.controller&&view.phase==='ready'&&selectedId===requested.id){
+      const target=requested.target==='directory'?(directoryTrigger.current?.isConnected?directoryTrigger.current:searchInput.current):(editorVisible?heading:profileHeading).current;
+      target?.focus();
+    }
+    focusRequest.current=null;
+  },[view,editorVisible,selectedId,showRecord]);
   const linkEdit=useRef<'clean'|'draft'|'pending'>('clean'),reportLinkEdit=useCallback((state:'clean'|'draft'|'pending')=>{linkEdit.current=state;},[]);
   useEffect(()=>{
     const controller=createVehicleEditorController({store:createPendingVehicleStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});current.current=controller;
@@ -94,22 +101,21 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
   function query(search:string,archived:boolean,more=false){if(discardAllowed()){setEditing(false);void current.current?.query(search,archived,more);}}
   async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory'){const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
   function edit<K extends keyof VehicleDraft>(key:K,value:VehicleDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
+  function focusOnCommit(target:'record'|'directory'='record'){const controller=current.current;if(controller)focusRequest.current={controller,id:selectedId,target};}
   function backToDirectory(){
+    if(!showRecord){focusRequest.current=null;(directoryTrigger.current?.isConnected?directoryTrigger.current:searchInput.current)?.focus();return;}
+    focusOnCommit('directory');
     setShowRecord(false);
-    requestAnimationFrame(()=>{
-      const trigger=directoryTrigger.current;
-      (trigger?.isConnected?trigger:searchInput.current)?.focus();
-    });
   }
   function startEditing(){
+    focusOnCommit();
     setEditing(true);
-    requestAnimationFrame(()=>heading.current?.focus());
   }
   function closeEditor(){
     if(dirty&&!window.confirm('Discard your unsaved vehicle changes?'))return;
+    focusOnCommit();
     if(view.selected)current.current?.edit(draftFromVehicle(view.selected));
     setEditing(false);
-    requestAnimationFrame(()=>profileHeading.current?.focus());
   }
   function submit(event:FormEvent){event.preventDefault();void action('save');}
   function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const data=new FormData(event.currentTarget);query(String(data.get('search')??''),data.get('archived')==='on');}

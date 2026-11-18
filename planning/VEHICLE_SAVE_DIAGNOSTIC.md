@@ -1,5 +1,8 @@
 # Vehicle conflict-save investigation
 
+Follow-through: an independent delayed-frame reproduction now demonstrates editor focus stealing in both browsers. Vehicle/address focus transitions are fixed through guarded layout effects; final four genuine journeys pass all24 reported cases. Historical hosted causes and the separate first local access failure remain qualified. See EDITOR_FOCUS_RACE.md for negative/positive evidence and exact limits.
+
+
 ## November17 repeated hosted failure and bounded input-stage trace
 
 Publicafb4544c run44229977333 CRM job134552336460 again failed WebKit's mobile vehicle editor before the intended version-conflict submit. Save vehicle remained disabled. Existing diagnostics show a visible, nonbusy valid editor with editable notes; the expected synthetic stale note is absent, the year is retained/valid, status is record_loaded,73 ordinary admissions and no provider error category. These facts do not establish whether input was not accepted, later replaced, or affected by another lifecycle event.
