@@ -1421,3 +1421,70 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 @media (min-width:768px) { .custody-handoff-facts { grid-template-columns:minmax(0,1fr) minmax(0,1.4fr); } }
 .receipt-saved-row .receipt-actions { margin-bottom:0; }
 .receipt-saved-row button { min-height:44px; padding-inline:.65rem; }
+
+/* Saved travel keeps the journey and its retained changes together. */
+.travel-history[hidden] { display:none; }
+.travel-history .travel-back { width:auto; margin:0 0 .75rem; }
+.travel-history-layout .travel-versions { border:0; padding:0; }
+.travel-version-timeline > li { padding:1rem 0; }
+.travel-version-timeline header > div { display:flex; gap:.75rem; flex-wrap:wrap; align-items:baseline; }
+.travel-version-timeline header span,.travel-version-timeline header p { color:var(--muted); font-size:.85rem; }
+.travel-version-timeline header p { margin:.3rem 0 .75rem; }
+.travel-version-reason { display:grid; gap:.3rem; white-space:pre-wrap; }
+.travel-version-changes { margin:.75rem 0; }
+.travel-version-changes > div { display:grid; gap:.35rem .75rem; padding:.75rem 0; border-top:1px solid var(--line); min-width:0; }
+.travel-version-changes dt { font-weight:600; }
+.travel-version-changes dd { margin:0; min-width:0; }
+.travel-version-changes dd > span { color:var(--muted); font-size:.8rem; }
+.travel-version-changes dd p { margin:.25rem 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.travel-version-changes small { display:block; color:var(--muted); font-size:.75rem; overflow-wrap:anywhere; }
+.travel-version-evidence { margin-top:.75rem; }
+.travel-version-evidence dl > div { margin-block:.75rem; }
+.travel-version-evidence dd { margin:.3rem 0 0; overflow-wrap:anywhere; }
+.travel-draft-notice { padding:.85rem 1rem; border:1px solid var(--line); border-inline-start:3px solid var(--gold-ink); border-radius:var(--radius); }
+.travel-draft-notice p { margin-top:0; }
+@media(min-width:1100px) {
+ .travel-history-layout { grid-template-columns:minmax(17rem,1fr) minmax(0,2fr); }
+ .travel-version-changes > div { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+ .travel-version-changes dt { grid-column:1/-1; }
+}
+@media(min-width:1100px) and (min-height:40rem) {
+ .travel-recent { position:sticky; top:1rem; max-height:calc(100dvh - 2rem); overflow:auto; scrollbar-gutter:stable; }
+}
+@media(max-width:1099px) {
+ .travel-history-layout[data-selected='true'] { grid-template-columns:minmax(0,1fr); }
+ .travel-history-layout[data-selected='true'] .travel-recent,.travel-history-guide { display:none; }
+}
+
+.travel-original-route { overflow-wrap:anywhere; white-space:pre-wrap; }
+
+.work-time-workbench { display:grid; gap:1.25rem; align-items:start; min-width:0; }
+.work-time-workbench > * { min-width:0; margin:0; }
+.work-time-overview .work-time-downloads { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--line); }
+.work-interval-history { margin-top:.75rem; }
+.work-interval-history > summary { font-weight:600; }
+.work-interval-history > ol { list-style:none; margin:0; padding:0; }
+.work-interval-history > ol > li { padding-block:.85rem; border-top:1px solid var(--line); overflow-wrap:anywhere; }
+.work-interval-history header > span { display:block; color:var(--muted); font-size:.8rem; }
+.work-interval-history header p { margin:.35rem 0; color:var(--muted); font-size:.85rem; }
+.work-history-facts { display:grid; gap:.65rem; margin:.75rem 0; }
+.work-history-facts dt,.work-history-changes dd > span { color:var(--muted); font-size:.8rem; }
+.work-history-facts dd,.work-history-exact dd { margin:.25rem 0 0; overflow-wrap:anywhere; }
+.work-history-facts small,.work-history-changes small { display:block; color:var(--muted); font-size:.75rem; }
+.work-history-changes > div { display:grid; gap:.4rem .75rem; padding-block:.75rem; border-top:1px solid var(--line); min-width:0; }
+.work-history-changes dt { font-weight:600; }
+.work-history-changes dd { margin:0; min-width:0; }
+.work-history-changes p { margin:.25rem 0; overflow-wrap:anywhere; white-space:pre-wrap; }
+.work-history-exact dl > div { margin-block:.65rem; }
+@media(min-width:1100px) {
+ .work-time-workbench { grid-template-columns:minmax(17rem,.8fr) minmax(0,1.6fr); gap:1.5rem; }
+ .work-history-changes > div { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .work-history-changes dt { grid-column:1/-1; }
+}
+@media(min-width:1100px) and (min-height:45rem) {
+ .work-time-workbench > .work-time-overview { position:sticky; top:1rem; }
+}
+
+.work-time-ledger .work-interval-history,.work-time-ledger .work-history-exact { border:0; padding:0; background:transparent; }
+.work-time-correction-review .work-time-comparison { grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr)); }
+.work-time-draft-state { padding:.65rem; border-inline-start:3px solid var(--gold-ink); background:var(--canvas); font-size:.875rem; }

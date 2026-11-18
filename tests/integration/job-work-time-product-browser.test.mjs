@@ -4,6 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {mkdir,readFile} from 'node:fs/promises';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {workTimeFailureDiagnostic} from '../support/work-time-diagnostic.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
 for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' reloads and exports saved active and paused work time',{timeout:300000},async()=>{
@@ -53,18 +54,24 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   const ledger=view.getByRole('region',{name:'Saved intervals',exact:true});
   await expect(ledger.getByRole('heading',{name:'Saved intervals (2)',exact:true})).toBeVisible();
   await expect(ledger.locator('.work-time-interval')).toHaveCount(2);
-  await expect(ledger.getByText('So far',{exact:true})).toBeVisible();
+  await expect(ledger.getByText('At last read',{exact:true})).toBeVisible();
   await expect(ledger.getByText('Still open',{exact:true})).toBeVisible();
   await expect(page.getByRole('link',{name:'Saved job and history',exact:true})).toHaveAttribute('href','/schedule?job='+job);
-  await expect(view.getByText(reason,{exact:true})).toBeVisible();
-  await view.getByText('Earlier versions (1)',{exact:true}).click();
-  await expect(view.getByText(/Open when recorded/)).toBeVisible();
+  await expect(ledger.locator('.work-time-interval > .work-time-reason').filter({hasText:reason})).toBeVisible();
+  const retained=ledger.locator('.work-time-interval').first().locator('.work-interval-history');
+  const inspectionRequests=fixture.requests.length;
+  await retained.getByText('Retained versions (2)',{exact:true}).click();
+  await expect(retained.locator('.work-history-facts').getByText('Open when recorded',{exact:true})).toBeVisible();
+  await expect(retained.getByText('Not closed in this version',{exact:true})).toBeVisible();
+  await expect(retained.getByRole('region',{name:'Changes in interval version 2',exact:true})).toContainText('Not recorded');
+  await expect(view.getByRole('region',{name:'Work totals',exact:true})).toContainText('Open durations are measured only to the read time above.');
+  assert.equal(fixture.requests.length,inspectionRequests,'Inspecting interval history makes no API request');
   await mkdir('.local/review',{recursive:true});
-  for(const width of [360,390,768,1440]){
+  for(const width of [360,390,768,1100,1440]){
    await page.setViewportSize({width,height:900});
    await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-   assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(row=>row.id),[]);
+   assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(row=>row.id),[]);
    await page.screenshot({path:'.local/review/field-work-time-'+name+'-'+width+'.png',fullPage:true});
    await page.screenshot({path:'.local/review/work-time-ledger-'+name+'-'+width+'.png',animations:'disabled'});
   }
@@ -119,5 +126,5 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await expect(ledger.locator('.work-time-interval').last().locator('.work-time-interval-head strong')).toHaveText('20s');
   await expect(view.getByLabel('Work totals')).toContainText('Unrecorded gap');
   await page.unroute(midnightRoute);
- }finally{await browser?.close();await fixture.close();}
+ }catch(error){await workTimeFailureDiagnostic(fixture,name,null);throw error;}finally{await browser?.close();await fixture.close();}
 });
