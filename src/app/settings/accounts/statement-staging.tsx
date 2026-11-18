@@ -9,6 +9,7 @@ import type {MoneyChannel} from '../../../bookkeeping/finance-money-channel-cont
 import {financeAccounts} from '../../../client/finance-accounts';
 import type {FinanceAccountContext} from '../../../client/finance-accounts';
 import {StatementMatchReview} from './statement-match-review';
+import {StatementComparison,StatementEvidence} from './statement-comparison';
 import styles from './screen.module.css';
 
 type Preview={reference:StatementReference;draft:StatementDraft};
@@ -54,6 +55,8 @@ export function StatementStaging({context}:{context:FinanceAccountContext}){
  const [notice,setNotice]=useState('');
  const [channelError,setChannelError]=useState(false);
  const request=useRef<AbortController|null>(null);
+ const savedStatus=useRef<HTMLParagraphElement>(null);
+ useEffect(()=>{if(saved)savedStatus.current?.focus();},[saved]);
  const key=storageKey(context.businessId);
  useEffect(()=>{
   const controller=new AbortController();
@@ -162,7 +165,16 @@ export function StatementStaging({context}:{context:FinanceAccountContext}){
   {channelError&&<p role="alert">Dedicated accounts could not be loaded.</p>}
   {channels?.length===0&&<p>No active dedicated bank or wallet account is available.</p>}
   {context.writeState!=='ready'&&<p>Statement staging is paused.</p>}
-  {channels&&channels.length>0&&!pending&&!preview&&context.writeState==='ready'&&<form onSubmit={review} className={styles.openingGroup}>
+  {saved&&<div className={styles.openingGroup}>
+   <p ref={savedStatus} role="status" tabIndex={-1}>Statement staged. {saved.receipt.rowCount} rows retained with a statement difference of {dollars(saved.receipt.statementDifferenceCents)}.</p>
+   <StatementComparison values={saved.receipt} format={dollars} saved/>
+   <StatementEvidence values={saved.receipt} rowsSha256={saved.receipt.rowsSha256} reference={displayReference(saved.reference)}/>
+  </div>}
+  {saved&&context.statementMatchReview&&<StatementMatchReview key={saved.reference.statementId} context={context}
+   statementId={saved.reference.statementId} format={dollars} parse={cents}/>}
+  {channels&&channels.length>0&&!pending&&!preview&&context.writeState==='ready'&&<details className="statement-entry" open={!saved}>
+   <summary>{saved?'Review another statement':'Enter statement details'}</summary>
+   <form onSubmit={review} className={styles.openingGroup}>
    <label htmlFor="statement-channel">Dedicated money account</label>
    <select id="statement-channel" name="channel" required><option value="">Choose an account</option>
     {channels.map(channel=><option key={channel.channelId} value={channel.channelId}>{channel.label} ({channel.maskedSuffix})</option>)}
@@ -186,12 +198,11 @@ export function StatementStaging({context}:{context:FinanceAccountContext}){
     {' '}<code>2026-01-30, -12.50</code>. For a statement with no activity, leave the rows empty.</p>
    <textarea id="statement-rows" name="rows" aria-describedby="statement-rows-help" rows={5} maxLength={10000}/>
    <button type="submit" disabled={busy}>Review statement</button>
-  </form>}
+  </form></details>}
   {preview&&values&&<div className={styles.openingGroup}>
-   <p>{preview.draft.rows.length} rows for {preview.draft.startsOn} through {preview.draft.endsOn}.</p>
-   <p>Opening balance {dollars(preview.draft.openingCents)}. Closing balance {dollars(preview.draft.closingCents)}.</p>
-   <p>Signed row total {dollars(String(values.rowTotal))}. Statement difference {dollars(String(values.difference))}.</p>
-   <p>File checksum <code>{preview.draft.fileSha256}</code></p>
+   <StatementComparison values={{...preview.draft,rowCount:preview.draft.rows.length,
+     signedRowsCents:String(values.rowTotal),statementDifferenceCents:String(values.difference)}} format={dollars}/>
+   <StatementEvidence values={preview.draft}/>
    {preview.draft.rows.length>0&&<details><summary>Review entered rows</summary>
     <ul>{preview.draft.rows.map(row=><li key={row.id}>{row.statementOn} {dollars(row.signedCents)}</li>)}</ul>
    </details>}
@@ -212,13 +223,5 @@ export function StatementStaging({context}:{context:FinanceAccountContext}){
    </form>
   </details>}
   {notice&&<p role="status">{notice}</p>}
-  {saved&&<div role="status" className={styles.openingGroup}>
-   <p>Statement staged. {saved.receipt.rowCount} rows retained with a statement difference of {dollars(saved.receipt.statementDifferenceCents)}.</p>
-   <p>Statement dates {saved.receipt.startsOn} through {saved.receipt.endsOn}.</p>
-   <p>File checksum <code>{saved.receipt.fileSha256}</code></p>
-   <p>Save reference <code>{displayReference(saved.reference)}</code></p>
-  </div>}
-  {saved&&context.statementMatchReview&&<StatementMatchReview key={saved.reference.statementId} context={context}
-   statementId={saved.reference.statementId} format={dollars} parse={cents}/>}
  </section>;
 }

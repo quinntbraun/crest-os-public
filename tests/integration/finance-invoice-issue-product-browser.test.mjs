@@ -83,6 +83,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert.equal(booked.value.state,'committed');
   await page.goto(fixture.origin+job);
   const drafts=page.getByRole('region',{name:'Invoice drafts',exact:true});
+  const openOriginalDraft=drafts.getByRole('list',{name:'Saved drafts',exact:true}).getByRole('listitem').filter({hasText:'2 completed portions'}).getByRole('button',{name:'Open invoice draft',exact:true});
   const draftStatus=drafts.locator(':scope > [role="status"]');
   await page.getByRole('button',{name:'Record departure…',exact:true}).click();
   await page.getByText('Other ways to start',{exact:true}).click();await page.getByRole('button',{name:'Already here — start without recorded travel',exact:true}).click();
@@ -212,7 +213,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      await draftDisclosure.click();
      await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
      await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-     await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+     await openOriginalDraft.click();
      await expect(draftStatus).toHaveText('Saved invoice draft loaded.');
      await expand.click();
      await allowInvoiceReadWindow();
@@ -228,7 +229,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      const receipt=await retrieving;
      assert.equal(receipt.suggestedFilename(),'crest-invoice-TEST-1.csv');
      assert.match(await readFile(await receipt.path(),'utf8'),/"TEST-1","Synthetic lifecycle customer"/);
-     await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+     await openOriginalDraft.click();
      await expect(draftStatus).toHaveText('Issued invoice loaded.');
      await expect(invoice.getByRole('heading',{name:'Invoice TEST-1'})).toBeVisible();
      await expect(saved.getByRole('button',{name:'Edit draft',exact:true})).toHaveCount(0);
@@ -371,7 +372,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        await page.reload();
        await draftDisclosure.click();
        await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).press('Enter');
-       await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).press('Enter');
+       await openOriginalDraft.press('Enter');
        await expect(draftStatus).toHaveText('Issued invoice loaded.');
        await invoice.getByText('Record a fictional payment',{exact:true}).press('Enter');
        await payments.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
@@ -389,13 +390,37 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        await expect(correction).toContainText('$100.00');
        await correction.getByLabel('Amount to move',{exact:true}).fill('25.00');
        await correction.getByLabel('Reason for correcting payment',{exact:true}).fill('Fictional amount held for another invoice');
-       for(const width of [360,390,768,1440]){
+       await expect(correction.getByRole('button',{name:'Load applied payments',exact:true})).toBeEnabled();
+       const comparison=correction.getByRole('region',{name:'Payment correction preview',exact:true});
+       const comparisonValue=label=>comparison.locator('dl > div').filter({has:page.getByText(label,{exact:true})}).locator('dd');
+       await expect(comparisonValue('Applied before')).toHaveText('$100.00');
+       await expect(comparisonValue('Applied after')).toHaveText('$75.00');
+       await expect(comparisonValue('Move to customer funds')).toHaveText('$25.00');
+       await expect(comparisonValue('Invoice balance increase')).toHaveText('$25.00');
+       await expect(comparison.locator('time')).toHaveCount(2);
+       for(const date of await comparison.locator('time').all()){
+        const value=await date.getAttribute('datetime');assert.match(value,/^\d{4}-\d{2}-\d{2}$/);
+        await expect(date).toHaveText(new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}).format(new Date(value+'T12:00:00Z')));
+       }
+       const beforeCorrectionPreview=await financialFacts();let correctionPreviewRequests=0;
+       const trackCorrectionPreview=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))correctionPreviewRequests++;};page.on('request',trackCorrectionPreview);
+       try{
+        await correction.getByLabel('Amount to move',{exact:true}).fill('100.01');await expect(comparison).toHaveCount(0);
+        await correction.getByLabel('Amount to move',{exact:true}).fill('25.01');await expect(comparisonValue('Applied after')).toHaveText('$74.99');
+        await correction.getByLabel('Amount to move',{exact:true}).fill('25.00');await expect(comparisonValue('Applied after')).toHaveText('$75.00');
+        await comparison.getByText('Payment references',{exact:true}).press('Enter');
+        await expect(comparison.locator('details dd')).toHaveCount(2);await expect(comparison.locator('details dd').first()).toHaveText(/^[a-f0-9-]{36}$/);
+        await comparison.getByText('Payment references',{exact:true}).press('Enter');
+        assert.equal(correctionPreviewRequests,0);assert.deepEqual(await financialFacts(),beforeCorrectionPreview);
+       }finally{page.off('request',trackCorrectionPreview);}
+       for(const width of [360,390,768,1100,1440]){
         await page.setViewportSize({width,height:900});
         await correction.getByRole('button',{name:'Move to customer funds',exact:true}).scrollIntoViewIfNeeded();
         assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-        const audit=await new AxeBuilder({page}).include('.direct-receipt').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+        const audit=await new AxeBuilder({page}).analyze();
         assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
         await page.screenshot({path:'.local/review/finance-payment-correction-'+name+'-'+width+'.png'});
+        await comparison.screenshot({path:'.local/review/finance-payment-correction-preview-'+name+'-'+width+'.png'});
        }
        let committedResponse=false;
        await page.route('**/api/business/finance-accounts/payment-correction-submit',async route=>{
@@ -414,7 +439,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        await draftDisclosure.click();
        await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
        await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-       await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+       await openOriginalDraft.click();
        await expect(draftStatus).toHaveText('Issued invoice loaded.');
        await invoice.getByText('Correct an applied payment',{exact:true}).press('Enter');
        await correction.getByRole('button',{name:'Load applied payments',exact:true}).press('Enter');
@@ -497,7 +522,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await page.goto(fixture.origin+job);
         await draftDisclosure.click();
         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
-        await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+        await openOriginalDraft.click();
         await expect(draftStatus).toHaveText('Issued invoice loaded.');
        }
        if(heldTips){
@@ -540,7 +565,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await draftDisclosure.click();
         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
         await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-        await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+        await openOriginalDraft.click();
         await expect(draftStatus).toHaveText('Issued invoice loaded.');
         await invoice.getByText('Record a tip from held funds',{exact:true}).press('Enter');
         await tip.getByRole('button',{name:'Load held funds',exact:true}).press('Enter');
@@ -604,7 +629,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          await draftDisclosure.click();
          await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
          await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-         await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+         await openOriginalDraft.click();
          await expect(draftStatus).toHaveText('Issued invoice loaded.');
          await invoice.getByText(returnTitle,{exact:true}).press('Enter');
          await returnPanel.getByRole('button',{name:'Check original return',exact:true}).press('Enter');
@@ -673,7 +698,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
         await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
         await allowInvoiceReadWindow();
-        await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+        await openOriginalDraft.click();
         await expect(draftStatus).toHaveText('Issued invoice loaded.');
         await invoice.getByText('Credit an invoice line',{exact:true}).press('Enter');
         await allowInvoiceReadWindow();
@@ -716,7 +741,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          await draftDisclosure.click();
          await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
          await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-         await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+         await openOriginalDraft.click();
          await expect(draftStatus).toHaveText('Issued invoice loaded.');
         }
         await allowInvoiceReadWindow();
@@ -766,7 +791,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await draftDisclosure.click();
         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
         await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-        await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+        await openOriginalDraft.click();
         await expect(draftStatus).toHaveText('Issued invoice loaded.');
         await invoice.getByText('Credit a paid or partly paid invoice',{exact:true}).press('Enter');
         await credit.getByRole('button',{name:'Load applied payments',exact:true}).press('Enter');
@@ -946,7 +971,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           await draftDisclosure.click();
           await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
           await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-          await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+          await openOriginalDraft.click();
           await expect(draftStatus).toHaveText('Issued invoice loaded.');
           await invoice.getByText('Record a fictional payment',{exact:true}).press('Enter');
          }
@@ -1169,7 +1194,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await draftDisclosure.click();
            await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
            await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-           await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+           await openOriginalDraft.click();
            await expect(draftStatus).toHaveText('Issued invoice loaded.');
            await invoice.getByText(title,{exact:true}).press('Enter');
            await panel.getByRole('button',{name:'Check original adjustment',exact:true}).press('Enter');
@@ -1243,7 +1268,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await draftDisclosure.click();
            await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
            await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-           await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+           await openOriginalDraft.click();
            await expect(draftStatus).toHaveText('Issued invoice loaded.');
            await invoice.getByText(title,{exact:true}).press('Enter');
            await transfer.getByRole('button',{name:'Check original refund transfer',exact:true}).press('Enter');

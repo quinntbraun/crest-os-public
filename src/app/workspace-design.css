@@ -1631,3 +1631,45 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 .issued-invoice-document > button { margin-top:1rem; }
 .customers details.invoice-draft-evidence { margin:1rem 0; padding:0; border:0; border-top:1px solid var(--line); border-radius:0; background:transparent; box-shadow:none; }
 .invoice-draft-evidence > summary { min-height:44px; padding:.65rem 0; cursor:pointer; font-weight:600; }
+
+/* A correction compares the reviewed payment before the existing explicit save. */
+.payment-correction-preview { min-width:0; margin:1rem 0; padding:1rem; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); }
+.payment-correction-preview > h6 { margin:0 0 .4rem; font-size:1rem; line-height:1.4; }
+.payment-correction-preview .correction-context { display:flex; flex-wrap:wrap; gap:.25rem 1rem; }
+.correction-context > span:first-child { flex-basis:100%; color:var(--ink); font-weight:600; }
+.correction-context time { white-space:nowrap; }
+.payment-correction-preview .correction-before-after { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin:1rem 0; padding-block:1rem; border-block:1px solid var(--line); }
+.correction-before-after > div { min-width:0; }
+.correction-before-after dt { color:var(--muted); font-size:.875rem; }
+.correction-before-after dd { margin:.35rem 0 0; font-size:clamp(1.125rem,3vw,1.5rem); font-weight:600; overflow-wrap:anywhere; }
+.payment-correction-preview .correction-consequences { margin:0; }
+.correction-consequences > div { display:flex; justify-content:space-between; align-items:baseline; gap:.5rem 1rem; margin:.65rem 0; }
+.correction-consequences dt { min-width:0; }
+.correction-consequences dd { margin:0; flex:none; font-weight:600; }
+.customers details.correction-payment-evidence { margin:.75rem 0 0; padding:0; border:0; border-top:1px solid var(--line); border-radius:0; background:transparent; box-shadow:none; }
+.correction-payment-evidence > summary { min-height:44px; padding:.65rem 0; cursor:pointer; }
+.correction-payment-evidence dl { margin:.5rem 0; }
+.correction-payment-evidence dd { margin:.25rem 0 .75rem; overflow-wrap:anywhere; font-size:.875rem; }
+
+/* Statement arithmetic is distinct from account reconciliation and file evidence. */
+.statement-comparison { min-width:0; padding:1rem; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); }
+.statement-comparison > h4 { margin:0 0 .5rem; font-size:1.125rem; }
+.statement-review-scope time { white-space:nowrap; }
+.statement-balance-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1.25rem 1rem; margin:1.25rem 0 1rem; }
+.statement-balance-grid > div { min-width:0; }
+.statement-balance-grid dt { font-size:.875rem; color:var(--muted); }
+.statement-balance-grid dd { margin:.35rem 0 0; font-size:1.25rem; font-weight:600; overflow-wrap:anywhere; }
+.statement-difference { margin-top:1rem; padding:1rem 0 0; border-top:1px solid var(--line); }
+.statement-difference[data-unresolved="true"] { border-top-color:var(--gold-ink); }
+.statement-difference dl { margin:0; }
+.statement-difference dl > div { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:.5rem 1rem; }
+.statement-difference dd { margin:0; font-size:1.25rem; font-weight:600; overflow-wrap:anywhere; }
+.statement-difference > p { margin:.5rem 0 0; }
+.customers details.statement-evidence { margin:.25rem 0; padding:0; border:0; border-block:1px solid var(--line); border-radius:0; background:transparent; box-shadow:none; }
+.statement-evidence > summary { min-height:44px; padding:.7rem 0; cursor:pointer; font-weight:600; }
+.statement-evidence dl { margin:.5rem 0; }
+.statement-evidence dt { color:var(--muted); font-size:.875rem; }
+.statement-evidence dd { margin:.25rem 0 1rem; overflow-wrap:anywhere; }
+@media (min-width:1100px) { .statement-balance-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+.customers details.statement-entry { margin:.75rem 0; padding:0; border:0; border-block:1px solid var(--line); border-radius:0; background:transparent; box-shadow:none; }
+.statement-entry > summary { min-height:44px; padding:.7rem 0; cursor:pointer; font-weight:600; }

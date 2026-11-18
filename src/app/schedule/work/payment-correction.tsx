@@ -5,11 +5,14 @@ import {clearPendingPaymentCorrection,downloadFinanceHistory,financeAccounts,rea
   retainPendingPaymentCorrection} from '../../../client/finance-accounts';
 import type {FinanceAccountContext} from '../../../client/finance-accounts';
 import {parseAllocationUnapplicationInput} from '../../../bookkeeping/allocation-unapplication-contract';
+import {previewPaymentCorrection} from '../../../bookkeeping/payment-correction-preview';
 import {quoteDollarsInput,quoteMoney} from '../../../commercial/quote-pricing';
 
 type Allocations=Extract<Awaited<ReturnType<typeof financeAccounts.invoicePaymentAllocations>>,{state:'ready'}>['allocations'];
 type Options=Extract<Awaited<ReturnType<typeof financeAccounts.paymentCorrectionOptions>>,{state:'review'}>;
 type Receipt=Extract<Awaited<ReturnType<typeof financeAccounts.lookupPaymentCorrection>>,{state:'committed'}>['receipt'];
+const correctionDateFormat=new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});
+const correctionDate=(date:string)=>correctionDateFormat.format(new Date(date+'T12:00:00Z'));
 
 export function PaymentCorrection({businessId,customerId,invoiceId}: {businessId:string;customerId:string;invoiceId:string}){
   const [allocations,setAllocations]=useState<Allocations|null>(null);
@@ -153,6 +156,7 @@ export function PaymentCorrection({businessId,customerId,invoiceId}: {businessId
   const selectedPayment=allocations?.find(row=>row.allocationId===allocationId);
   const first=options?.availableRanges.find(item=>item.firstCent===firstCent);
   const maximum=first?String(BigInt(first.lastCent)-BigInt(first.firstCent)+1n):null;
+  const preview=options?previewPaymentCorrection(options.availableRanges,firstCent,amount):null;
   return <details className="direct-receipt" onToggle={event=>{if(!event.currentTarget.open)suspend();}}>
     <summary>Correct an applied payment</summary>
     <section aria-label="Correct an applied payment" aria-busy={busy}>
@@ -192,6 +196,25 @@ export function PaymentCorrection({businessId,customerId,invoiceId}: {businessId
           disabled={busy} onChange={event=>setAmount(event.target.value)}/></label>
         <label>Reason for correcting payment<textarea required maxLength={1000} rows={2} value={reason}
           disabled={busy} onChange={event=>setReason(event.target.value)}/></label>
+        {preview?<section className="payment-correction-preview" aria-label="Payment correction preview">
+          <h6>Review the change</h6>
+          <p className="field-help correction-context"><span>Invoice {options.invoiceNumber}</span>
+            <span>Payment applied <time dateTime={options.paidOn}>{correctionDate(options.paidOn)}</time></span>
+            <span>Correction <time dateTime={options.effectiveOn}>{correctionDate(options.effectiveOn)}</time></span>
+          </p>
+          <dl className="correction-before-after">
+            <div><dt>Applied before</dt><dd>{quoteMoney(preview.appliedBeforeCents)}</dd></div>
+            <div><dt>Applied after</dt><dd>{quoteMoney(preview.appliedAfterCents)}</dd></div>
+          </dl>
+          <dl className="correction-consequences">
+            <div><dt>Move to customer funds</dt><dd>{quoteMoney(preview.movedCents)}</dd></div>
+            <div><dt>Invoice balance increase</dt><dd>{quoteMoney(preview.movedCents)}</dd></div>
+          </dl>
+          <p className="field-help">No cash moves. These are proposed changes until the correction is saved.</p>
+          <details className="correction-payment-evidence"><summary>Payment references</summary>
+            <dl><dt>Payment</dt><dd>{options.paymentId}</dd><dt>Application</dt><dd>{allocationId}</dd></dl>
+          </details>
+        </section>:<p className="field-help">{amount.trim()?'Enter a positive amount within the selected available portion to preview the change.':'Enter an amount to preview the change before saving.'}</p>}
         <button type="submit" className="primary-action" disabled={busy||!amount.trim()||!reason.trim()}>Move to customer funds</button>
       </form>}
       {receipt&&<>
