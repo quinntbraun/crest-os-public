@@ -249,9 +249,20 @@ details[open] > .amendment-change-summary::before { content:"−"; }
 .amendment-change-amount { font-variant-numeric:tabular-nums; font-weight:650; }
 .amendment-activity { padding:.85rem; border:1px solid var(--line); border-radius:var(--radius); background:var(--canvas); }
 .amendment-timeline { margin-block:1rem; }
-.amendment-timeline > li { padding:0 0 .875rem .65rem; border-inline-start:2px solid var(--line); overflow-wrap:anywhere; }
-.amendment-timeline > li:last-child { padding-bottom:0; }
-.amendment-timeline > li > time { display:block; font-size:.8125rem; color:var(--muted); }
+.amendment-timeline > li { padding:1rem 0; border-top:1px solid var(--line); overflow-wrap:anywhere; }
+.amendment-timeline > li:first-child { border-top:0; padding-top:0; }
+.amendment-timeline header > strong,.amendment-timeline header > span { display:block; }
+.amendment-timeline header > span { margin-top:.2rem; font-size:.8125rem; color:var(--muted); }
+.amendment-timeline .amendment-event-time { margin:.4rem 0; font-size:.8125rem; color:var(--muted); }
+.amendment-event-total { margin:.5rem 0; font-size:.875rem; }
+.amendment-event-total strong { display:block; font-size:1rem; }
+.amendment-event-amounts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; margin:.65rem 0; }
+.amendment-event-amounts dt,.amendment-event-evidence dt { font-size:.8125rem; color:var(--muted); }
+.amendment-event-amounts dd { margin:.2rem 0 0; font-weight:600; }
+.customers .amendment-timeline > li > details { margin:.2rem 0; border:0; border-radius:0; padding:0; background:transparent; box-shadow:none; }
+.amendment-timeline > li > details > summary { display:list-item; min-height:44px; padding:.5rem 0; align-content:center; cursor:pointer; }
+.amendment-timeline .amendment-event-evidence summary { font-size:.8125rem; color:var(--muted); }
+.amendment-event-evidence dd { margin:.15rem 0 .6rem; overflow-wrap:anywhere; }
 .amendment-activity .amendment-actions > button { width:100%; }
 @media (min-width:75rem) {
  .amendment-workspace-grid { grid-template-columns:minmax(0,1fr) minmax(17rem,26%); align-items:start; }

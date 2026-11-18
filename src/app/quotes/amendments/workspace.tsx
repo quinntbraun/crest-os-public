@@ -11,6 +11,7 @@ import {SavedAmendmentDownload} from './saved-record-download';
 import {AmendmentAllocationReview} from './allocation-review';
 import {AmendmentCancellationCreator} from './cancellation-creator';
 import {AmendmentCancellationEditor} from './cancellation-editor';
+import {AmendmentHistoryEvents} from './history';
 
 /** Construction view. Amendment APIs remain closed by default; the complete
  * amendment feature, source/recovery adoption and release gates are pending. */
@@ -26,7 +27,6 @@ export function QuoteAmendmentWorkspace(){
  useEffect(()=>{const identity=view.selected?view.selected.revision.id+':'+view.selected.revision.version:'';if(view.phase==='ready'&&identity&&!view.busy&&identity!==focused.current){focused.current=identity;heading.current?.focus();}else if(!identity)focused.current='';},[view.phase,view.selected,view.busy]);
  const discard=()=>!view.dirty||window.confirm('Discard the unsaved amendment changes? They are kept only on this page.');
  const selected=view.selected,amendment=view.amendment;
- const historyTime=amendment?new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short',timeZone:amendment.revision.timezone}):null;
  return <>
   {!selected&&<p className="intro">Choose an accepted quote to review or prepare changes.</p>}
   <p role="status" aria-live="polite" className={view.status==='Saved accepted quotes loaded.'?'visually-hidden':'notice amendment-status'}>{view.status}</p>
@@ -95,14 +95,8 @@ export function QuoteAmendmentWorkspace(){
     <details>
      <summary>Saved amendment history</summary>
      <p className="field-help">{amendment.history.length?'Showing retained versions '+amendment.history[0]!.revision+'–'+amendment.history.at(-1)!.revision+' of '+amendment.revision.version+'.':'No later history events.'} These are saved events.</p>
-     <ol className="amendment-timeline">{amendment.history.map(event=><li key={event.eventId}>
-      <strong>{event.action} · Version {event.revision}</strong>
-      <time dateTime={event.at}>{historyTime?.format(new Date(event.at))}</time>
-      <details>
-       <summary>Customer content at version {event.revision}</summary>
-       <QuoteDocument quote={event.after.customer_safe_snapshot} stage={event.after.state==='Accepted'?'accepted':event.action==='approve'?'approved':event.after.state==='Sent'?'sent':event.after.state==='Superseded'?'superseded':event.after.state==='Ready for Review'?'review':'draft'}/>
-      </details>
-     </li>)}</ol>
+     <p className="field-help">Times show when each version was recorded, in that version’s saved time zone. Sharing is an owner record, not delivery confirmation.</p>
+     <AmendmentHistoryEvents events={amendment.history}/>
      <div className="amendment-actions">
       <button type="button" className="secondary" disabled={!view.canReadHistory} onClick={()=>void controller.current?.historyPage(true)}>First amendment history page</button>
       {amendment.hasMore&&<button type="button" className="secondary" disabled={!view.canReadHistory} onClick={()=>void controller.current?.historyPage()}>Next amendment history page</button>}
