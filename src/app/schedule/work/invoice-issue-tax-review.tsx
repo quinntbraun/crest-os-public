@@ -69,9 +69,10 @@ export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrecti
   const showAdjustments=paymentCorrections||collectionFailures||invoiceCredits||paidInvoiceCredits;
   const showRefunds=serviceRefunds||excessReturns||tipReturns||refundTransfers;
   return <div className="issued-invoice-details">
+    <article className="issued-invoice-document" aria-labelledby={actionsId+'-document'}>
     <header className="issued-invoice-heading">
-      <h4>Invoice {invoice.invoiceNumber}</h4>
-      <p><span>Total</span> <strong>{quoteMoney(invoice.totalCents)}</strong></p>
+      <div><p className="invoice-document-state">Issued · {invoice.currency}</p><h4 id={actionsId+'-document'}>Invoice {invoice.invoiceNumber}</h4></div>
+      <p className="invoice-document-amount"><span>Original total</span> <strong>{quoteMoney(invoice.totalCents)}</strong></p>
     </header>
     <dl className="customer-values">
       <dt>Customer</dt><dd>{invoice.customer.displayName}</dd>
@@ -86,12 +87,13 @@ export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrecti
       ...invoice.lines.map(line=>[invoice.invoiceNumber,invoice.customer.displayName,invoice.issuedOn,invoice.dueOn,invoice.currency,
         line.description,line.grossInclusiveCents,line.discountInclusiveCents,line.netCents,line.taxCents,line.inclusiveCents]),
     ])}>Download invoice (CSV)</button>
+    </article>
     {receiptBusinessId&&<>
-      {(showAdjustments||showRefunds)&&<nav className="invoice-action-links" aria-label="Invoice actions">
+      <nav className="invoice-action-links" aria-label="Invoice actions">
         <a href={'#'+actionsId+'-payments'}>Payments</a>
         {showAdjustments&&<a href={'#'+actionsId+'-adjustments'}>Corrections and credits</a>}
         {showRefunds&&<a href={'#'+actionsId+'-refunds'}>Refunds</a>}
-      </nav>}
+      </nav>
       <section className="invoice-action-section" aria-labelledby={actionsId+'-payments'}>
         <h5 id={actionsId+'-payments'} tabIndex={-1}>Payments</h5>
         <DirectReceipt key={invoice.invoiceId} businessId={receiptBusinessId} customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>

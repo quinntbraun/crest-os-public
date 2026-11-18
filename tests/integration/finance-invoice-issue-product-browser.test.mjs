@@ -232,14 +232,56 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      await expect(draftStatus).toHaveText('Issued invoice loaded.');
      await expect(invoice.getByRole('heading',{name:'Invoice TEST-1'})).toBeVisible();
      await expect(saved.getByRole('button',{name:'Edit draft',exact:true})).toHaveCount(0);
-     for(const width of [360,390,768,1440]){
+     const document=invoice.getByRole('article',{name:'Invoice TEST-1',exact:true});
+     await expect(document.getByText('Issued · USD',{exact:true})).toBeVisible();await expect(document.getByText('Original total',{exact:true})).toBeVisible();
+     const draftEvidence=saved.locator('details.invoice-draft-evidence');await expect(draftEvidence).toHaveCount(1);assert.equal(await draftEvidence.evaluate(element=>element.open),false);
+     await expect(drafts.getByRole('button',{name:'Load saved drafts',exact:true})).toBeEnabled();
+     const financialFacts=async()=>{const result={};for(const table of ['invoices','journal_entries','journal_lines'])result[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM crest.'+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;result.audit=(await fixture.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[fixture.business])).rows;return result;};
+     const beforeInvoiceNavigation=await financialFacts();let navigationRequests=0;const trackInvoiceNavigation=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))navigationRequests++;};page.on('request',trackInvoiceNavigation);
+     try{
+      await draftEvidence.locator(':scope > summary').press('Enter');await expect(draftEvidence.getByRole('button',{name:'Download draft (CSV)',exact:true})).toBeVisible();
+      await draftEvidence.screenshot({path:'.local/review/finance-issued-draft-history-'+name+'-390.png'});
+      await draftEvidence.locator(':scope > summary').press('Enter');
+      await invoice.getByRole('navigation',{name:'Invoice actions',exact:true}).getByRole('link',{name:'Payments',exact:true}).press('Enter');
+      await expect(invoice.getByRole('heading',{name:'Payments',exact:true})).toBeFocused();
+      assert.equal(navigationRequests,0);assert.deepEqual(await financialFacts(),beforeInvoiceNavigation);
+     }finally{page.off('request',trackInvoiceNavigation);}
+     for(const width of [360,390,768,1100,1440]){
       await page.setViewportSize({width,height:900});
       await invoice.evaluate(element=>element.scrollIntoView({block:'center'}));
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-      const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+      const audit=await new AxeBuilder({page}).analyze();
       assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
       await page.screenshot({path:'.local/review/finance-invoice-issue-product-'+name+'-'+width+'.png'});
+      await document.screenshot({path:'.local/review/finance-issued-document-'+name+'-'+width+'.png'});
      }
+     // Starting another draft must not attach the previously opened issued document.
+     // Empty drafts are nonposting; compare the actual posted records across the save.
+     const postedBeforeNewDraft=await financialFacts();delete postedBeforeNewDraft.audit;
+     await allowInvoiceReadWindow();
+     await drafts.getByRole('button',{name:'New invoice draft',exact:true}).click();
+     await drafts.getByRole('button',{name:'Save invoice draft',exact:true}).click();
+     await expect(draftStatus).toHaveText('Invoice draft saved.');
+     await expect(drafts.getByRole('button',{name:'Load saved drafts',exact:true})).toBeEnabled();
+     await expect(saved.getByRole('region',{name:'Issued invoice',exact:true})).toHaveCount(0);
+     await expect(saved.getByText('No completed portions saved yet.',{exact:true})).toBeVisible();
+     await expect(saved.getByRole('button',{name:'Edit draft',exact:true})).toBeVisible();
+     for(const width of [390,1440]){
+      await page.setViewportSize({width,height:900});
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(issue=>issue.id),[]);
+      await saved.screenshot({path:'.local/review/finance-new-empty-draft-'+name+'-'+width+'.png'});
+     }
+     const postedAfterNewDraft=await financialFacts();delete postedAfterNewDraft.audit;
+     assert.deepEqual(postedAfterNewDraft,postedBeforeNewDraft);
+     await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+     await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
+     await drafts.getByRole('list',{name:'Saved drafts',exact:true}).getByRole('listitem')
+      .filter({hasText:'2 completed portions'}).getByRole('button',{name:'Open invoice draft',exact:true}).click();
+     await expect(draftStatus).toHaveText('Issued invoice loaded.');
+     await expect(document).toBeVisible();
+     const postedAfterReopen=await financialFacts();delete postedAfterReopen.audit;
+     assert.deepEqual(postedAfterReopen,postedBeforeNewDraft);
      if(directReceipts){
       await page.setViewportSize({width:390,height:844});
       if(paymentCorrections){

@@ -1617,3 +1617,17 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 @media (min-width:768px) { .lead-history-values { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (prefers-reduced-motion:reduce) { .lead-history-event > summary::after { transition:none; } }
 @media (max-width:1099px) { [aria-label="Lead directory"][data-record-open="true"] > .lead-directory-toolbar { display:none; } }
+
+/* Issued amounts live on one reading surface; payment tasks stay separate. */
+.issued-invoice-details { border-top:0; padding-top:0; }
+.issued-invoice-document { min-width:0; padding:clamp(1rem,2.5vw,1.75rem); border:1px solid var(--line); border-top:3px solid var(--gold-ink); border-radius:var(--radius); background:var(--paper); }
+.issued-invoice-document .issued-invoice-heading { gap:1rem 1.5rem; padding-bottom:1rem; border-bottom:1px solid var(--line); }
+.issued-invoice-heading > div { min-width:0; flex:1 1 14rem; }
+.issued-invoice-heading .invoice-document-state { margin:0 0 .35rem; color:var(--muted); font-size:.75rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; }
+.issued-invoice-document .issued-invoice-heading h4 { margin:0; font-size:clamp(1.125rem,2vw,1.5rem); line-height:1.3; overflow-wrap:anywhere; }
+.invoice-document-amount > span,.invoice-document-amount > strong { display:block; }
+.issued-invoice-heading .invoice-document-amount strong { margin-top:.2rem; font-size:1.5rem; line-height:1.2; }
+.issued-invoice-document > .customer-values { margin-block:1.25rem; }
+.issued-invoice-document > button { margin-top:1rem; }
+.customers details.invoice-draft-evidence { margin:1rem 0; padding:0; border:0; border-top:1px solid var(--line); border-radius:0; background:transparent; box-shadow:none; }
+.invoice-draft-evidence > summary { min-height:44px; padding:.65rem 0; cursor:pointer; font-weight:600; }
