@@ -23,6 +23,7 @@ const safeResponses=new WeakMap(),diagnosticPaths=new Set(['/api/auth/session','
 function observeContext(context){
  const events=[];safeResponses.set(context,events);
  context.on('response',response=>{try{const path=new URL(response.url()).pathname;if(diagnosticPaths.has(path)){events.push({path,status:response.status()});if(events.length>48)events.shift();}}catch{/* Ignore disposed unrelated responses. */}});
+ context.on('requestfailed',request=>{try{const path=new URL(request.url()).pathname;if(diagnosticPaths.has(path)){events.push({path,transportFailed:true});if(events.length>48)events.shift();}}catch{/* Ignore disposed unrelated requests. */}});
  return context;
 }
 async function failureDiagnostics(page,stage){
@@ -50,7 +51,7 @@ async function startFixture(){
   assert.match(login,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
   await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;
   await sandbox.admin.query(`GRANT crest_web TO ${login}`);const database=new URL(target);database.username=login;database.password=password;
-  service=await startRealAuthService(target);
+  service=await startRealAuthService(target,{diagnostic:true});
   const email=`synthetic-${randomUUID()}@example.com`,secret=randomBytes(32).toString('base64url');
   const user=authResult(await service.admin.admin.createUser({email,password:secret,email_confirm:true}),'browser_provision').user;assert(user?.id,'synthetic subject required');
   const sdk=service.sdk();await sdk.initialize();authResult(await sdk.signInWithPassword({email,password:secret}),'browser_enrollment_password');
@@ -237,7 +238,28 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     for(let version=2;version<10;version++){const body={...base,operationId:randomUUID(),expectedVersion:String(version),phone:'😀'.repeat(512),email:'😀'.repeat(512),referralText:'😀'.repeat(2000),requestedScope:'😀'.repeat(4000),availability:'😀'.repeat(4000),notes:'😀'.repeat(4000)};assert.equal((await send(other,leadRoot+'save',body,proof)).status,200);}
     assert.equal((await send(other,sourceRoot+'save',{schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,leadSourceId:source.id,expectedVersion:'3',label:sourceLabel+' renamed',kind:'Changed classification',active:false,referralCustomerId:one.customerId},proof)).status,200);
     assert.equal((await send(other,leadRoot+'history',{leadId:lead.id,afterVersion:'0',pageSize:20},proof)).status,503,'oversized history stays closed');
-    await loadButton(page).click();await find(page,leadLabel);const history=page.getByRole('region',{name:'Lead history',exact:true});await expect(history).toContainText('Current version: 10');await expect(page.getByText('Retained source attribution: '+sourceLabel+' · Synthetic owner classification. Later source edits do not replace this snapshot.',{exact:true})).toBeVisible();assert.equal(await history.locator('details').count(),5);await page.getByRole('button',{name:'Next lead history page',exact:true}).click();await expect(editorStatus(page)).toContainText('Showing the next retained history page');assert.equal(await history.locator('details').count(),5);await expect(history).toContainText('Version 10');
+    await loadButton(page).click();await find(page,leadLabel);const history=page.getByRole('region',{name:'Lead history',exact:true});await expect(history).toContainText('Current version: 10');await expect(page.getByText('Retained source attribution: '+sourceLabel+' · Synthetic owner classification. Later source edits do not replace this snapshot.',{exact:true})).toBeVisible();assert.equal(await history.locator('.lead-history-event').count(),5);
+    await expect(history).toContainText('Loaded versions 1–5. Later versions are available.');
+    const facts=async()=>createHash('sha256').update(JSON.stringify({lead:(await client.query('SELECT to_jsonb(l) AS value FROM crest.leads l WHERE id=$1',[lead.id])).rows,audits:(await client.query("SELECT to_jsonb(a) AS value FROM crest_private.audit_events a WHERE business_id=$1 AND entity_kind='leads' AND entity_id=$2 ORDER BY entity_version",[business,lead.id])).rows})).digest('hex');
+    const unchanged=await facts();let historyRequests=0;const observeHistory=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))historyRequests++;};page.on('request',observeHistory);
+    try{
+     const second=history.locator('.lead-history-event').nth(1),summary=second.locator(':scope > summary');
+     await summary.focus();await summary.press('Enter');await expect(summary).toBeFocused();
+     const changed=second.getByRole('group',{name:'Changed lead facts',exact:true});await expect(changed).toContainText('Notes');await expect(changed.getByRole('group',{name:'After',exact:true})).toContainText(base.notes);
+     for(const width of [360,390,768,1100,1440]){
+      await page.setViewportSize({width,height:900});await page.evaluate(async()=>document.fonts.ready);await history.evaluate(el=>el.scrollIntoView({block:'start'}));
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(v=>v.id),[]);
+      const columns=await changed.evaluate(el=>{const [a,b]=el.children;return {sameRow:Math.abs(a.getBoundingClientRect().top-b.getBoundingClientRect().top)<2,width:el.getBoundingClientRect().width};});assert.equal(columns.sameRow,width>=768);assert(columns.width>100);
+      await page.screenshot({path:'.local/review/lead-history-changes-'+name+'-'+width+'.png'});
+     }
+     await second.getByText('Retained lead details at version 2',{exact:true}).click();const resulting=second.getByRole('group',{name:'Retained resulting lead',exact:true});await expect(resulting).toContainText(sourceLabel);await expect(resulting).not.toContainText(sourceLabel+' renamed');await expect(resulting).toContainText(source.id);
+     for(const width of [360,390,768,1100,1440]){await page.setViewportSize({width,height:900});await resulting.evaluate(el=>el.scrollIntoView({block:'start'}));assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(v=>v.id),[]);await page.screenshot({path:'.local/review/lead-history-snapshot-'+name+'-'+width+'.png'});}
+
+     const third=history.locator('.lead-history-event').nth(2);await third.locator(':scope > summary').click();const notes=third.getByRole('region',{name:'After changes at version 3: Notes',exact:true});await expect(notes).toHaveText('😀'.repeat(4000));await notes.focus();await notes.press('ArrowDown');await expect(notes).toBeFocused();assert(await notes.evaluate(el=>el.scrollHeight>el.clientHeight));
+     assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(v=>v.id),[]);await third.locator(':scope > summary').click();await second.getByText('Retained lead details at version 2',{exact:true}).click();await summary.click();
+     assert.equal(historyRequests,0);assert.equal(await facts(),unchanged);
+    }finally{page.off('request',observeHistory);await page.setViewportSize(viewport);}
+    await page.getByRole('button',{name:'Next lead history page',exact:true}).click();await expect(editorStatus(page)).toContainText('Showing the next retained history page');assert.equal(await history.locator('.lead-history-event').count(),5);await expect(history).toContainText('Version 10');await expect(history).toContainText('Loaded versions 6–10. No later versions in this loaded history. Reopen this lead to return to its first history page.');
    }));
    await t.test('status controls record original Lost/reopen reasons with accessible mobile controls and refreshed intake',async()=>{
     statusContext=observeContext(await browser.newContext({ignoreHTTPSErrors:true,viewport}));statusPage=await statusContext.newPage();await statusPage.goto(origin+'/sign-in');await fill(statusPage);await expect(statusPage.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();

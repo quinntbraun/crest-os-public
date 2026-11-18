@@ -250,9 +250,18 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    const statement=page.getByRole('region',{name:'Recorded income statement',exact:true});
    await statement.getByLabel('From date',{exact:true}).fill(date);
    await statement.getByLabel('Through date',{exact:true}).fill(date);
-   const incomeSnapshot=page.waitForResponse(response=>response.url().endsWith('/api/business/finance-accounts/recorded-income-statement'))
-    .then(async response=>{assert.equal(response.status(),200);return response.json();});
-   const [incomeMetadata]=await Promise.all([incomeSnapshot,statement.getByRole('button',{name:'Load income statement',exact:true}).press('Enter')]);
+   // Retain the genuine server body before forwarding it unchanged. Chromium
+   // can discard its protocol body handle even in the response-event callback.
+   // One real POST, no redirects/retries, fabricated payload or changed headers.
+   const incomeBody=Promise.withResolvers(),incomePattern='**/api/business/finance-accounts/recorded-income-statement';let incomeCalls=0,incomeMetadata;
+   void incomeBody.promise.catch(()=>undefined);
+   const retainIncome=async route=>{try{incomeCalls++;assert.equal(route.request().method(),'POST');const response=await route.fetch({maxRedirects:0,maxRetries:0});assert.equal(response.status(),200);const body=await response.json();await route.fulfill({response});incomeBody.resolve(body);}catch(error){incomeBody.reject(error);await route.abort('failed').catch(()=>undefined);}};
+   await page.route(incomePattern,retainIncome);
+   try{
+    const browserIncome=page.waitForResponse(response=>response.url().endsWith('/api/business/finance-accounts/recorded-income-statement'));
+    const [body,response]=await Promise.all([incomeBody.promise,browserIncome,statement.getByRole('button',{name:'Load income statement',exact:true}).press('Enter')]);
+    incomeMetadata=body;assert.equal(response.status(),200);assert.equal(incomeCalls,1);
+   }finally{await page.unroute(incomePattern,retainIncome);}
    await expect(statement.getByRole('status')).toHaveText('Recorded income loaded.');
    await expect(statement.locator('time[title]')).toHaveAttribute('datetime',incomeMetadata.observedAt);
    await expect(statement.locator('time[title]')).toHaveAttribute('title',incomeMetadata.observedAt);

@@ -1569,4 +1569,27 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 .lead-reference-links { margin-top:1rem; }
 .lead-reference-links > summary { min-height:44px; }
 .lead-reference-links > summary .field-help { margin-inline-start:.4rem; }
+.lead-history { margin-top:1.5rem; }
+.lead-history-events { list-style:none; padding:0; margin:1rem 0; }
+.lead-history-events > li { border-top:1px solid var(--line); }
+.customers .lead-history details.lead-history-event { border:0; border-radius:0; padding:0; margin:0; background:transparent; }
+.lead-history-event > summary { position:relative; display:flex; flex-direction:column; gap:.35rem; min-height:64px; padding:.85rem 2rem .85rem .25rem; cursor:pointer; }
+.lead-history-event > summary::after { content:''; position:absolute; right:.5rem; top:1.3rem; width:.45rem; height:.45rem; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(-45deg); transition:transform 140ms var(--workspace-ease); }
+.lead-history-event[open] > summary::after { transform:rotate(45deg); }
+.lead-history-event > summary > span { color:var(--muted); font-size:.85rem; font-variant-numeric:tabular-nums; }
+.lead-history-event[open] > summary { border-bottom:1px solid var(--line); margin-bottom:1rem; }
+.lead-history-values { display:grid; gap:1rem; min-width:0; }
+.lead-history-values > section { min-width:0; }
+.lead-history-values h3 { margin:.35rem 0 .75rem; }
+.lead-history-facts,.lead-history-evidence,.lead-source-snapshot { margin:.5rem 0 1rem; min-width:0; }
+.lead-history-facts > div { border-top:1px solid var(--line); padding:.65rem 0; }
+.lead-history :is(dt,dd) { overflow-wrap:anywhere; }
+.lead-history dt { color:var(--muted); font-size:.825rem; }
+.lead-history dd { margin:.25rem 0 .75rem; white-space:pre-wrap; }
+.lead-history-long-value { max-height:16rem; overflow:auto; scrollbar-gutter:stable; }
+.lead-history-evidence { padding-top:.75rem; border-top:1px solid var(--line); font-variant-numeric:tabular-nums; }
+.customers .lead-history details.lead-history-retained { border:0; border-top:1px solid var(--line); border-radius:0; padding:.5rem 0; margin:1rem 0; background:transparent; }
+.lead-history-retained > summary { min-height:44px; align-content:center; cursor:pointer; }
+@media (min-width:768px) { .lead-history-values { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (prefers-reduced-motion:reduce) { .lead-history-event > summary::after { transition:none; } }
 @media (max-width:1099px) { [aria-label="Lead directory"][data-record-open="true"] > .lead-directory-toolbar { display:none; } }

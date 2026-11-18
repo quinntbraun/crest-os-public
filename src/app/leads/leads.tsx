@@ -6,7 +6,7 @@ import type {FormEvent,ComponentType} from 'react';
 import type {LeadAddressDraft} from '../../customer/lead-resource-contract';
 import {createLeadEditorController,initialLeadEditorView,emptyLeadDraft} from '../../client/lead-editor-controller';
 import {createPendingLeadStore} from '../../client/pending-lead-edit';
-import type {Lead,LeadDraft} from '../../customer/lead-contract';
+import type {LeadDraft} from '../../customer/lead-contract';
 import {draftFromLead} from '../../customer/lead-contract';
 import {NullableText} from '../customers/nullable-text';
 import {ReferencePicker} from './reference-picker';
@@ -23,6 +23,7 @@ import {leadMatchReview} from '../../client/leads';
 import type {Proof} from '../../client/authentication';
 import {loadedFollowUpGroups} from './follow-up-presentation';
 import type {FollowUpFilter} from './follow-up-presentation';
+import {LeadHistory} from './history';
 
 const followUpDisplay=new Intl.DateTimeFormat('en-US',{
  month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short',
@@ -33,10 +34,6 @@ function FollowUpTime({instant}:{instant:string}){
 function EstimateInput({value,change}:{value:string|null;change:(value:string|null)=>void}){
  const [text,setText]=useState(()=>value===null?'':leadDollars(value));
  return <><label htmlFor="lead-estimate">Estimated value (USD)</label><input id="lead-estimate" name="estimate" inputMode="decimal" autoComplete="off" maxLength={24} value={text} onChange={event=>{setText(event.target.value);change(event.target.value.length?leadCents(event.target.value):null);}}/><p className="field-help">Optional. Enter dollars, such as 125.50, or leave blank. Zero is an explicit estimate. This is not a quote or invoice.</p></>;
-}
-function LeadDetails({lead}:{lead:Lead}){
- const text=(value:string|null)=>value===null?'Not recorded':value===''?'Recorded as empty':value;
- return <dl className="customer-values"><dt>Label</dt><dd>{lead.label}</dd><dt>State</dt><dd>{lead.state.replaceAll('_',' ')}</dd><dt>Linked customer</dt><dd>{lead.customer_id?'Existing customer linked':'Not linked'}</dd><dt>Selected source snapshot</dt><dd>{lead.source_snapshot?lead.source_snapshot.label+' · '+lead.source_snapshot.kind:'Not recorded'}</dd><dt>Referral evidence</dt><dd>{text(lead.referral_text)}</dd><dt>Phone</dt><dd>{text(lead.phone_raw)}</dd><dt>Email</dt><dd>{text(lead.email_raw)}</dd><dt>Requested scope</dt><dd>{text(lead.requested_scope)}</dd><dt>Availability</dt><dd>{text(lead.availability)}</dd><dt>Estimate (USD)</dt><dd>{lead.estimated_cents===null?'Not recorded':leadDollars(lead.estimated_cents)}</dd><dt>Follow-up (UTC)</dt><dd>{text(lead.follow_up_at)}</dd><dt>Notes</dt><dd>{text(lead.notes)}</dd><dt>Lost reason</dt><dd>{text(lead.lost_reason)}</dd></dl>;
 }
 export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:ComponentType<{draft:LeadAddressDraft;change:(draft:LeadAddressDraft)=>void}>;initialLeadId?:string|null}={}){
  const [conversionLocked,setConversionLocked]=useState(false),[conversionGeneration,setConversionGeneration]=useState(0),[statusLocked,setStatusLocked]=useState(false),[vehicleLocked,setVehicleLocked]=useState(false),[addressLocked,setAddressLocked]=useState(false),[view,setView]=useState(initialLeadEditorView),current=useRef<ReturnType<typeof createLeadEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null),editHeading=useRef<HTMLHeadingElement>(null);
@@ -206,7 +203,7 @@ export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:Co
    {view.selected&&view.businessId&&<div id="lead-status" tabIndex={-1} className="lead-record-task"><LeadStatusPanel key={'status:'+view.businessId+':'+view.selected.id+':'+conversionGeneration} businessId={view.businessId} leadId={view.selected.id} disabled={view.busy||dirty||vehicleLocked||addressLocked||conversionLocked} onLock={setStatusLocked} onCommitted={statusChanged}/></div>}
    {view.selected&&view.businessId&&<div id="lead-vehicles" tabIndex={-1} className="lead-record-task"><LeadVehiclePanel key={'vehicles:'+view.businessId+':'+view.selected.id+':'+conversionGeneration} businessId={view.businessId} leadId={view.selected.id} disabled={view.busy||dirty||statusLocked||addressLocked||conversionLocked} onLock={setVehicleLocked}/></div>}
    {view.selected&&view.businessId&&<div id="lead-addresses" tabIndex={-1} className="lead-record-task"><LeadAddressPanel key={'addresses:'+view.businessId+':'+view.selected.id+':'+conversionGeneration} businessId={view.businessId} leadId={view.selected.id} disabled={view.busy||dirty||statusLocked||vehicleLocked||conversionLocked} onLock={setAddressLocked} {...addressAssist?{assist:addressAssist}:{}}/></div>}
-   {view.history&&<section id="lead-history" tabIndex={-1} aria-label="Lead history"><h2>Retained history</h2><p>Current version: {view.history.lead.version}</p>{view.history.history.map(event=><details key={event.after.version}><summary>Version {event.after.version} · {event.after.updated_at}</summary>{event.before&&<><h3>Before</h3><LeadDetails lead={event.before}/></>}<h3>After</h3><LeadDetails lead={event.after}/></details>)}{view.history.hasMore&&<button className="secondary" type="button" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void action('moreHistory')}>Next lead history page</button>}</section>}
+   {view.history&&<LeadHistory history={view.history} busy={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onMore={()=>void action('moreHistory')}/>}
    </section>
    {view.businessId&&<div id="lead-conversion" tabIndex={-1} className="lead-record-task lead-conversion-outlet" hidden={view.draft!==null&&!showingRecord}><LeadConversionPanel key={'conversion:'+view.businessId+':'+(view.selected?.id??'none')} businessId={view.businessId} leadId={view.selected?.id??null} disabled={view.busy||dirty||statusLocked||vehicleLocked||addressLocked} onLock={setConversionLocked} onCommitted={conversionCommitted}/></div>}
    </div>

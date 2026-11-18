@@ -98,7 +98,7 @@ export const leads=Object.freeze({
         check(exact(e,['version','eventId','actorId','operationId','at','action','before','after'])&&version(e.version)&&uuid(e.eventId)&&uuid(e.actorId)&&uuid(e.operationId)&&customerInstant(e.at));
         const after=parseLead(e.after,businessId),before=e.before===null?null:parseLead(e.before,businessId);
         check(after.id===lead.id&&after.version===e.version&&after.operation_id===e.operationId&&after.updated_by===e.actorId&&BigInt(e.version)===previous+1n&&BigInt(e.version)<=BigInt(lead.version)&&(before===null?e.version==='1'&&e.action==='create':before.id===lead.id&&BigInt(before.version)+1n===BigInt(e.version)));
-        validateLeadHistoryChange(e.action,before,after);check(last===null||before!==null&&sameLead(last,before));last=after;previous=BigInt(e.version);return Object.freeze({...e,before,after});
+        validateLeadHistoryChange(e.action,before,after);check(last===null||before!==null&&sameLead(last,before));last=after;previous=BigInt(e.version);return Object.freeze({version:e.version,eventId:e.eventId,actorId:e.actorId,operationId:e.operationId,at:e.at,action:e.action,before,after});
       });
       const remaining=BigInt(lead.version)>BigInt(pinned.afterVersion)?BigInt(lead.version)-BigInt(pinned.afterVersion):0n;
       check(BigInt(history.length)===(remaining>BigInt(pinned.pageSize)?BigInt(pinned.pageSize):remaining)&&v.hasMore===(remaining>BigInt(pinned.pageSize))&&(last===null||previous!==BigInt(lead.version)||sameLead(last,lead)));
