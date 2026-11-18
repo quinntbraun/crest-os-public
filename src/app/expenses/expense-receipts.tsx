@@ -6,9 +6,11 @@ import type {ExpenseContext} from '../../client/expenses';
 import type {PendingReceipt} from '../../client/pending-receipt';
 import type {createReceiptClient,ReceiptAttempt} from '../../client/expense-receipts';
 import {ReceiptDocumentViewer} from './receipt-document-viewer';
+export type ReceiptDirectoryState=Readonly<{active:boolean;status:'unchecked'|'available'|'pending'|'empty'}>;
 type Resume=Readonly<{context:ExpenseContext;receipt:ReceiptView;operationId:string;file?:File}>;
-export function ExpenseReceipts({expense,context,client,visible=true}:{expense:ExpenseRevision;context:ExpenseContext;client:ReturnType<typeof createReceiptClient>;visible?:boolean}){
+export function ExpenseReceipts({expense,context,client,visible=true,onDirectoryStateChange}:{expense:ExpenseRevision;context:ExpenseContext;client:ReturnType<typeof createReceiptClient>;visible?:boolean;onDirectoryStateChange?:(expenseId:string,state:ReceiptDirectoryState)=>void}){
  const [rows,setRows]=useState<readonly ReceiptView[]>([]),[file,setFile]=useState<File|null>(null),[pending,setPending]=useState<ReceiptAttempt|null>(null),[resuming,setResuming]=useState<Resume|null>(null),[original,setOriginal]=useState<PendingReceipt|null>(null),[storageBlocked,setStorageBlocked]=useState(true),[canRetry,setCanRetry]=useState(false),[busy,setBusy]=useState(false),[status,setStatus]=useState(''),[inputKey,setInputKey]=useState(0);
+ const [listLoaded,setListLoaded]=useState(false);
  const [preview,setPreview]=useState<{receiptId:string;url:string}|null>(null);
  const previewFigure=useRef<HTMLElement|null>(null),closeButton=useRef<HTMLButtonElement|null>(null);
  const previewUrl=useRef<string|null>(null),previewGeneration=useRef(0),previewTrigger=useRef<HTMLButtonElement|null>(null);
@@ -25,10 +27,10 @@ export function ExpenseReceipts({expense,context,client,visible=true}:{expense:E
   previewFigure.current?.scrollIntoView({block:'nearest'});
   closeButton.current?.focus({preventScroll:true});
  },[visible,preview]);
- useEffect(()=>{const warn=(event:BeforeUnloadEvent)=>{if(pending||resuming){event.preventDefault();event.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[pending,resuming]);
+ useEffect(()=>{const warn=(event:BeforeUnloadEvent)=>{if(file||pending||resuming){event.preventDefault();event.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[file,pending,resuming]);
  useEffect(()=>{
   mounted.current=true;const token=++generation.current;lock.current=false;
-  const reset=()=>{closePreview();setRows([]);setFile(null);setPending(null);setResuming(null);setCanRetry(false);setBusy(false);setInputKey(k=>k+1);try{const saved=client.pending();setOriginal(saved);setStorageBlocked(false);setStatus(saved?'An interrupted receipt request needs confirmation before another upload.':'');}catch{setOriginal(null);setStorageBlocked(true);setStatus('Receipt recovery storage needs review. New uploads are blocked.');}};
+  const reset=()=>{closePreview();setRows([]);setListLoaded(false);setFile(null);setPending(null);setResuming(null);setCanRetry(false);setBusy(false);setInputKey(k=>k+1);try{const saved=client.pending();setOriginal(saved);setStorageBlocked(false);setStatus(saved?'An interrupted receipt request needs confirmation before another upload.':'');}catch{setOriginal(null);setStorageBlocked(true);setStatus('Receipt recovery storage needs review. New uploads are blocked.');}};
   queueMicrotask(()=>{if(mounted.current&&generation.current===token)reset();});
   const invalidate=()=>{generation.current++;active.current?.abort();active.current=null;},hide=()=>{invalidate();lock.current=false;reset();},visibility=()=>{if(document.visibilityState==='hidden')hide();};
   window.addEventListener('pagehide',hide);document.addEventListener('visibilitychange',visibility);
@@ -65,6 +67,10 @@ export function ExpenseReceipts({expense,context,client,visible=true}:{expense:E
    }
   });
  }
+ const receiptActive=busy||!!file||!!pending||!!resuming||originalHere;
+ const directoryStatus:ReceiptDirectoryState['status']=rows.some(row=>row.status==='available')?'available':rows.length?'pending':listLoaded?'empty':'unchecked';
+ useEffect(()=>{onDirectoryStateChange?.(expense.expenseId,{active:receiptActive,status:directoryStatus});},[onDirectoryStateChange,expense.expenseId,receiptActive,directoryStatus]);
+ useEffect(()=>()=>{onDirectoryStateChange?.(expense.expenseId,{active:false,status:'unchecked'});},[onDirectoryStateChange,expense.expenseId]);
  const fileDisabled=busy||storageBlocked||!!pending||!!resuming?.file||!!original&&!canRetry||expense.payload.voided||context.writeState!=='ready';
  return <details className="expense-receipts" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)closePreview();}}>
   <summary>Receipts</summary>
@@ -77,7 +83,7 @@ export function ExpenseReceipts({expense,context,client,visible=true}:{expense:E
    <button type="button" disabled={!file||writesBlocked} onClick={()=>void begin()}>Attach receipt</button>
    {file&&!fileDisabled&&<button type="button" className="secondary" onClick={()=>{setFile(null);setInputKey(key=>key+1);}}>Clear selected file</button>}
   </div>
-  <button type="button" className="secondary" disabled={busy} onClick={()=>void run(async(current,signal)=>{const saved=await client.list(context,expense.expenseId,current,signal);if(!current())return;setRows(saved);if(preview&&!saved.some(row=>row.receiptId===preview.receiptId))closePreview();setStatus('Saved receipt list refreshed.');})}>Load saved receipts</button>
+  <button type="button" className="secondary" disabled={busy} onClick={()=>void run(async(current,signal)=>{const saved=await client.list(context,expense.expenseId,current,signal);if(!current())return;setRows(saved);setListLoaded(true);if(preview&&!saved.some(row=>row.receiptId===preview.receiptId))closePreview();setStatus('Saved receipt list refreshed.');})}>Load saved receipts</button>
   {rows.map((receipt,index)=><section key={receipt.receiptId} className="receipt-saved-row" aria-label={'Receipt '+(index+1)}>
    <p><strong>Receipt {index+1}</strong> · {receipt.status==='available'?'Available':'Upload awaiting validation'} · {receipt.declaredType==='application/pdf'?'PDF':'Image'} · {Math.ceil(receipt.byteSize/1024)} KB</p>
    <div className="receipt-actions">

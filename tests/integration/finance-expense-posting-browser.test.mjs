@@ -72,7 +72,7 @@ async function exerciseSupplierBills(page,date,fixture,engine){
  await summary.click();
 }
 
-for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' posts a reviewed paid expense and recovers the original',async()=>{
+for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' posts a reviewed paid expense and recovers the original',async t=>{
  const income=process.env.CREST_TEST_RECORDED_INCOME_STATEMENT==='1';
  const matchStatement=process.env.CREST_TEST_STATEMENT_MATCH_REVIEW==='1';
  const saveMatchDraft=process.env.CREST_TEST_STATEMENT_MATCH_DRAFTS==='1';
@@ -84,11 +84,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   ...(income?{paymentCorrections:true,fundApplications:true,heldTips:true,invoiceCredits:true,paidInvoiceCredits:true,
    serviceRefunds:true,postedFinanceExport:true}:{}),
   ...(matchStatement?{postedFinanceExport:true,statementStaging:true}:{})});
- let browser;
+ let browser,accessDiagnostic;
  try{
   browser=await engine.launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
-  const page=await context.newPage();
+  const page=await context.newPage();accessDiagnostic=observeExpenseAccess(page,f);
   page.setDefaultTimeout(20000);
   await page.goto(f.origin+'/expenses');
   await page.getByRole('link',{name:'Sign in to view expenses',exact:true}).click();
@@ -151,7 +151,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert.deepEqual(Object.keys(JSON.parse(original)).sort(),['binding','businessId','expenseId','reference']);
   assert(!original.includes('Fictional'));
   await page.reload();
-
+  await page.getByRole('button',{name:'Open expense: '+description,exact:true}).click();
   await posting.getByRole('button',{name:'Load accounting review',exact:true}).click();
   await expect(posting.getByRole('status')).toContainText('Posted to the ledger');
   await expect(row.getByRole('button',{name:'Correct or void',exact:true})).toHaveCount(0);
@@ -374,7 +374,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    assert.equal(retained.find(row=>row.revision==='2').payload.changeReason,'Fictional source reviewed');
    assert(retained.every(row=>row.businessId===f.business));
   }
- }finally{await browser?.close();await f.close();}
+ }catch(error){t.diagnostic(JSON.stringify((await accessDiagnostic?.report())??{diagnosticUnavailable:true}));throw error;}finally{accessDiagnostic?.stop();await browser?.close();await f.close();}
 },{timeout:240000});
 
 if(process.env.CREST_TEST_RECORDED_INCOME_STATEMENT!=='1')

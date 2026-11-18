@@ -859,6 +859,39 @@ main.expenses-page { max-width:68rem; }
 .expense-records h2,.expense-supplier-panel > h2,.expense-export-panel h2 { margin:0 0 .75rem; }
 .expense-record-search { margin-bottom:1rem; }
 .expense-record { overflow-wrap:anywhere; }
+.expense-workbench-grid.expense-directory-layout { grid-template-columns:minmax(0,1fr); }
+.expense-directory-container { display:grid; gap:1.25rem; align-items:start; }
+.expense-directory-panel,.expense-inspector-host { min-width:0; }
+.expense-directory-panel { padding:1rem; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); }
+.expense-directory-list { list-style:none; margin:0; padding:0; }
+.expense-directory-list > li { border-top:1px solid var(--line); }
+.expense-directory-list button { display:block; width:100%; margin:0; padding:.85rem .35rem; border:0; border-radius:0; background:transparent; text-align:start; font-weight:400; color:var(--ink); }
+.expense-directory-list button[aria-current='true'] { background:var(--accent-soft); box-shadow:inset 3px 0 var(--accent); padding-inline-start:.75rem; }
+.expense-directory-title { display:flex; align-items:baseline; justify-content:space-between; gap:.5rem; }
+.expense-directory-title > span { font-weight:600; overflow-wrap:anywhere; }
+.expense-directory-title strong { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.expense-directory-meta { display:flex; flex-wrap:wrap; gap:.2rem .65rem; margin-top:.35rem; font-size:.82rem; color:var(--muted); }
+.expense-directory-back { width:auto; min-height:44px; margin:0 0 .75rem; }
+.expense-inspector-host > form[hidden],.expense-inspector-host > .expense-record[hidden] { display:none; }
+.expense-inspector-host > .expense-record { margin:0; padding:clamp(1rem,2vw,1.5rem); }
+.expense-inspector-host .expense-record-title h3 { font-size:1.3rem; letter-spacing:-.015em; }
+.expense-inspector-host .expense-record-title > strong { font-size:1.15rem; }
+.expense-inspector-host > .expense-record > button { width:auto; min-height:44px; }
+.expense-profile-facts { display:grid; gap:.75rem; margin:1rem 0; padding-block:1rem; border-block:1px solid var(--line); }
+.expense-profile-facts dt { font-size:.8rem; color:var(--muted); }
+.expense-profile-facts dd { margin:.25rem 0 0; overflow-wrap:anywhere; }
+.expense-profile-notes h4 { margin:0 0 .35rem; font-size:.9rem; }
+.expense-profile-notes p { margin:.35rem 0 1rem; white-space:pre-wrap; }
+.expense-directory-introduction { display:none; }
+@media (max-width:1099px) { .expense-directory-container[data-selected='true'] > .expense-directory-panel { display:none; } }
+@media (min-width:1100px) {
+ .expense-directory-container { grid-template-columns:minmax(18rem,.9fr) minmax(0,1.6fr); }
+ .expense-directory-list { max-height:calc(100svh - 22rem); min-height:8rem; overflow-y:auto; overscroll-behavior:contain; }
+ .expense-profile-facts { grid-template-columns:repeat(3,minmax(0,1fr)); }
+ .expense-directory-introduction { display:block; max-width:29rem; margin:2rem auto; padding:1.25rem; color:var(--muted); }
+ .expense-directory-introduction h2 { color:var(--ink); font-size:1.4rem; letter-spacing:-.02em; }
+ .expense-directory-introduction p { line-height:1.6; }
+}
 .expense-record-title { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:.2rem .75rem; }
 .expense-record-title h3 { margin:0; }
 .expense-placeholder-controls > span { height:44px; max-width:100%; }
