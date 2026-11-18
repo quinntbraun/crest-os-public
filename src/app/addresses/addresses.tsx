@@ -3,6 +3,7 @@ import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent,ComponentType} from 'react';
 import {createAddressEditorController,emptyAddressDraft,initialAddressEditorView} from '../../client/address-editor-controller';
 import {createPendingAddressStore} from '../../client/pending-address-edit';
+import {AddressCustomerChooser} from './customer-chooser';
 import {NullableText} from '../customers/nullable-text';
 import {draftFromAddress} from '../../customer/customer-address-contract';
 import type {CustomerAddress} from '../../customer/customer-address-contract';
@@ -156,7 +157,7 @@ export function AddressScreen({customerId,assist:Assist}:{customerId:string|null
  function query(text:string,archived:boolean,more=false){if(discardAllowed()){setMode('profile');setShowRecord(false);void current.current?.query(text,archived,more);}}
  function search(e:FormEvent<HTMLFormElement>){e.preventDefault();const data=new FormData(e.currentTarget);query(String(data.get('search')??''),data.get('archived')==='on');}
  return <section aria-label="Customer address directory" aria-busy={view.busy}>
-  <p className="customer-directory-status" ref={status} tabIndex={-1} role="status" aria-label="Address editor status" aria-live="polite" aria-atomic="true">{view.message}</p>
+  <p className={view.phase==='choose-customer'&&view.message==='Choose a customer to view or manage their saved addresses.'?'visually-hidden':'customer-directory-status'} ref={status} tabIndex={-1} role="status" aria-label="Address editor status" aria-live="polite" aria-atomic="true">{view.message}</p>
   {view.phase==='ready'&&<>
    {view.parent&&<header className="address-customer">
     <h2>{view.parent.display_name}</h2>
@@ -223,7 +224,7 @@ export function AddressScreen({customerId,assist:Assist}:{customerId:string|null
    </div>
   </>}
   {view.phase==='pending'&&<><p className="field-help">An earlier address save is awaiting review. Its original customer is used even if you opened a different customer link. No retry runs automatically.</p>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check address save status</button>{view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('retry')}>Retry original address change</button>}</>}
-  {view.phase==='choose-customer'&&<a className="primary-action" href="/customers">Open Customers</a>}
+  {view.phase==='choose-customer'&&<AddressCustomerChooser/>}
   {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current addresses</button>}
   {view.phase!=='ready'&&view.phase!=='loading'&&<nav aria-label="Address help">{view.phase!=='choose-customer'&&<a href="/customers">Customer directory</a>}<a href="/save-review">Review interrupted save</a><a href="/sign-in">Device sign-in</a></nav>}
  </section>;

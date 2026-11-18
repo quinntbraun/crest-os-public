@@ -25,11 +25,15 @@ The original local `Crest OS Design Audit` and `Crest OS Second Design Audit` re
 
 ## Route coverage retained
 
+Address direct-route prerequisite: inline customer lookup is implemented using existing authorized reads. Final genuine Chromium/WebKit workspace journeys pass all four cases, with retained five-width screenshots, actual no-write customer/address/audit snapshots, refused-read recovery and phone first-result reach. Existing pending-save precedence is unchanged; see ADDRESS_CUSTOMER_CHOOSER_DESIGN.md. This completes the local address-entry refinement, not every prerequisite screen or delivered/device acceptance.
+
 All35 normal destinations and the missing-page state remain in scope: sign-in; Today; customers; customer CSV review; addresses; vehicles; leads; lead sources; services; quotes; quote amendments; appointment proposals; schedule/saved job; booking; change appointment; service arrangements; standalone travel; mileage; work status; completion; interruption; cancellation; work-time; expenses; exports; settings; accounting; money channels; dated mappings; mapping approvals; category mappings; category approvals; tax; Calendar; missing page.
 
 Embedded flows remain in scope even without a dedicated route: customer/vehicle profiles and links; planner views; quote editing, preview, sharing and acceptance; amendments; partial multi-vehicle completion; completion follow-up; custody/photos; work-time corrections; receipt validation/view/download; trial balance, balance sheet, income, funds and aging; invoice issuance, payment/correction/credit/refund; statement staging/matching; supplier original/payable review; opening worksheet/receivables; dated approvals/history; Calendar waiting/failure/confirmed states; export request/download/recovery.
 
 ## Current release dependency
+
+Public2154a04d run44211803043 completed all19 prerequisites successfully, including amendment, records, CRM and scheduling; both ancillary workflows passed. Foundation job134502812744 then failed the unchanged dependency security gate on GHSA-fc5q-39xc-vjpf. No current full-release acceptance is established, and the later address chooser does not inherit it. The hosted amendment success does not isolate the earlier local WebKit lifecycle cause.
 
 Private receipt preview composition is documented in SYNTHETIC_RECEIPT_PREVIEW.md. Existing screens must be backed by their real tested transport before they count as ready. All19 prerequisite jobs passed for preceding public head8a1682294db14af975e56adf3d5245ae2db3a6c2, but Foundation checks failed its unchanged dependency-audit gate on GHSA-fc5q-39xc-vjpf. No patched registry release was available when checked November17. The full gate remains required; do not install this candidate as accepted.
 

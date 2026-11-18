@@ -10,6 +10,7 @@ import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 import {reviewDirectoryIntroduction} from '../support/directory-introduction.mjs';
+import {reviewAddressCustomerChooser} from '../support/address-customer-chooser.mjs';
 
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' complete signed-in customer / vehicle workspace journey',async()=>{
  const f=await sourceExportBrowserFixture({product:true,workspace:true});let browser;
@@ -182,6 +183,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(page.getByRole('status',{name:'Customer-link status',exact:true})).toContainText('saved');
   const rows=(await f.client.query('SELECT count(*)::int AS n FROM crest.customer_vehicles WHERE business_id=$1',[f.business])).rows;assert.equal(rows[0].n,1);
   await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('link',{name:'Today',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Workspace access verified.');await page.goBack();await expect(page.getByRole('heading',{name:'Vehicles',exact:true})).toBeVisible();
+  await reviewAddressCustomerChooser(page,{fixture:f,engine:name,customerName:label+' retained edit'});
   await context.close();
  }finally{await browser?.close();await f.close();}
 });
