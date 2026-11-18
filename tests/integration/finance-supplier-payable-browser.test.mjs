@@ -75,12 +75,54 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await draft.getByLabel('Amount for split 1 (USD)',{exact:true}).fill('150.25');
    await draft.getByRole('button',{name:'Save supplier bill draft',exact:true}).click();
    await expect(page.getByText('Supplier bill draft saved.',{exact:true})).toBeVisible();
+   const bills=page.getByRole('region',{name:'Unpaid supplier bill drafts',exact:true});
+   const editor=bills.locator('details.supplier-bill-editor');
+   if(await editor.count())await editor.locator(':scope > summary').press('Enter');
+   await draft.getByLabel('Business purpose',{exact:true}).fill('Unsaved supplier bill change');
+   const facts=async()=>{const result={};for(const table of ['supplier_bill_draft_revisions','financial_events','journal_entries','journal_lines'])
+    result[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM crest.'+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;
+    result.audit=(await fixture.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[fixture.business])).rows;return result;};
+   const beforeDirtyReview=await facts();let dirtyReviewRequests=0;const trackDirtyReview=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))dirtyReviewRequests++;};page.on('request',trackDirtyReview);
+   try{
+    await expect(page.getByText('Preview the payable entry',{exact:true})).toHaveAttribute('aria-disabled','true');
+    await page.getByText('Preview the payable entry',{exact:true}).press('Enter');
+    await expect(page.getByRole('form',{name:'Supplier payable entry preview'})).toBeHidden();
+    await expect(bills.getByText('Unsaved edits are separate from the saved bill. Save or discard them before reviewing the payable.',{exact:true})).toBeVisible();
+    assert.equal(dirtyReviewRequests,0);assert.deepEqual(await facts(),beforeDirtyReview);
+   }finally{page.off('request',trackDirtyReview);}
+   await bills.getByRole('button',{name:'Discard draft edits',exact:true}).click();
+   await expect(draft.getByLabel('Business purpose',{exact:true})).toHaveValue('Fictional workshop supplies');
+   await expect(draft.getByLabel('Incurred date',{exact:true})).toBeFocused();
+   await editor.locator(':scope > summary').press('Enter');
+   const selected=bills.getByRole('region',{name:'Selected supplier bill',exact:true});
+   await expect(selected.getByRole('heading',{name:'Fictional workshop supplier',exact:true})).toBeVisible();
+   await expect(selected.getByText('Saved bill record · Revision 1',{exact:true})).toBeVisible();
+   await expect(selected.getByText('$150.25',{exact:true})).toBeVisible();
+   for(const width of [360,390,768,1100,1440]){
+    await page.setViewportSize({width,height:900});
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(issue=>issue.id),[]);
+    await mkdir('.local/review',{recursive:true});
+    await selected.screenshot({path:'.local/review/finance-supplier-selected-'+name+'-'+width+'.png'});
+    await bills.screenshot({path:'.local/review/finance-supplier-workspace-'+name+'-'+width+'.png'});
+   }
    await page.getByText('Preview the payable entry',{exact:true}).click();
    const review=page.getByRole('form',{name:'Supplier payable entry preview'});
+   await editor.locator(':scope > summary').press('Enter');
+   await expect(draft.getByLabel('Business purpose',{exact:true})).toBeDisabled();
+   await expect(bills.getByRole('button',{name:'Enter another supplier bill',exact:true})).toBeDisabled();
+   await editor.locator(':scope > summary').press('Enter');
    await review.getByLabel('Purchase tax treatment').selectOption('none');
    await review.getByLabel('Reason for the review').fill('Fictional purchase tax review');
    await review.getByRole('button',{name:'Review expense and payable amounts'}).click();
    await expect(page.getByText('A verified original is required for this revision.',{exact:true})).toBeVisible();
+   await page.getByText('Preview the payable entry',{exact:true}).click();
+   await editor.locator(':scope > summary').press('Enter');
+   await expect(draft.getByLabel('Business purpose',{exact:true})).toBeEnabled();
+   await editor.locator(':scope > summary').press('Enter');
+   await page.getByText('Preview the payable entry',{exact:true}).click();
+   await expect(review.getByLabel('Purchase tax treatment')).toHaveValue('none');
+   await expect(review.getByLabel('Reason for the review')).toHaveValue('Fictional purchase tax review');
    const register=page.getByRole('region',{name:'Recorded supplier payables',exact:true});
    await register.getByText('Recorded supplier payables',{exact:true}).click();
    await register.getByRole('button',{name:'Load supplier payables',exact:true}).click();

@@ -49,6 +49,20 @@ async function exerciseSupplierBills(page,date,fixture,engine){
  await region.getByRole('button',{name:'Open supplier bill draft',exact:true}).click();
  await expect(form.getByLabel('Bill total (USD)',{exact:true})).toHaveValue('150.25');
  await form.getByLabel('Business purpose',{exact:true}).fill('Fictional supplies reviewed again');
+ const beforeNavigation=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM crest.supplier_bill_draft_revisions r WHERE business_id=$1 ORDER BY revision',[fixture.business])).rows;
+ let navigationRequests=0;const trackNavigation=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))navigationRequests++;};page.on('request',trackNavigation);
+ try{
+  const editor=region.locator('details.supplier-bill-editor');
+  await editor.locator(':scope > summary').press('Enter');await editor.locator(':scope > summary').press('Enter');
+  await expect(form.getByLabel('Business purpose',{exact:true})).toHaveValue('Fictional supplies reviewed again');
+  await region.getByRole('button',{name:'Open supplier bill draft',exact:true}).click();
+  await expect(form.getByLabel('Business purpose',{exact:true})).toHaveValue('Fictional supplies reviewed again');
+  page.once('dialog',dialog=>dialog.dismiss());
+  await region.getByRole('button',{name:'Enter another supplier bill',exact:true}).click();
+  await expect(form.getByLabel('Business purpose',{exact:true})).toHaveValue('Fictional supplies reviewed again');
+  assert.equal(navigationRequests,0);
+  assert.deepEqual((await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM crest.supplier_bill_draft_revisions r WHERE business_id=$1 ORDER BY revision',[fixture.business])).rows,beforeNavigation);
+ }finally{page.off('request',trackNavigation);}
  await form.getByLabel('Reason for this revision',{exact:true}).fill('Fictional source reviewed');
  await form.getByRole('button',{name:'Save supplier bill revision',exact:true}).click();
  await expect(status).toHaveText('Supplier bill draft saved.');
@@ -61,13 +75,14 @@ async function exerciseSupplierBills(page,date,fixture,engine){
  assert.equal((await fixture.client.query('SELECT count(*)::int n FROM crest.financial_events WHERE business_id=$1',[fixture.business])).rows[0].n,0);
  assert.equal((await fixture.client.query('SELECT count(*)::int n FROM crest.supplier_bill_draft_revisions WHERE business_id=$1',[fixture.business])).rows[0].n,3);
  await mkdir('.local/review',{recursive:true});
- for(const width of [360,390,768,1440]){
+ for(const width of [360,390,768,1100,1440]){
   await page.setViewportSize({width,height:900});
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-  const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa']).analyze();
+  const audit=await new AxeBuilder({page}).analyze();
   assert.deepEqual(audit.violations.map(entry=>entry.id),[]);
   await region.getByRole('button',{name:'Review saved bill evidence',exact:true}).scrollIntoViewIfNeeded();
   await page.screenshot({path:'.local/review/finance-supplier-bill-'+engine+'-'+width+'.png'});
+  await region.getByRole('region',{name:'Selected supplier bill',exact:true}).screenshot({path:'.local/review/finance-supplier-draft-selected-'+engine+'-'+width+'.png'});
  }
  await summary.click();
 }

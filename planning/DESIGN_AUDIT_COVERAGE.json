@@ -1,0 +1,1694 @@
+{
+  "formatVersion": 1,
+  "assessedAt": "2026-11-18T16:09:11.559Z",
+  "auditSource": {
+    "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
+    "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
+  },
+  "assessmentSource": {
+    "localCommit": "f7ea3377ac2badc0d9755650479c791f8f72751c",
+    "publishedCommit": "94779993f42ae0c2107c95bced2397528bef5de8",
+    "publishedTree": "8cffcb4980c7b4386663d121e01f59615f136690",
+    "localTree": "9050d849368f82feed786a95354dc2a8c27611ef"
+  },
+  "method": {
+    "unit": "one original audit group, not estimated hours, screens or individual assertions",
+    "locallyAddressed": "The main local change is present and supported by source/retained scoped evidence. This is not final acceptance of every stated variant.",
+    "partial": "Some work exists, but a specified implementation or required review is unfinished.",
+    "open": "The specific audit work remains open; the underlying application feature may already exist.",
+    "reviewNeeded": "The audit explicitly lacks adequate baseline review; review first rather than inventing a rewrite.",
+    "completionRule": "Do not use implementation coverage as audit completion or reuse the roughly80% V1 coding estimate. Full goal completion additionally requires unfinished approved V1 functionality outside this audit.",
+    "validatorLimit": "Coverage/link validation checks this inventory; it does not prove visual correctness or completed requirements.",
+    "evidenceFingerprint": "SHA-256 of UTF-8 text with CRLF normalized to LF; no other whitespace normalization. The original audit hash uses original bytes."
+  },
+  "summary": {
+    "originalGroups": 70,
+    "shared": 14,
+    "destinations": 36,
+    "deeperWorkflows": 20,
+    "counts": {
+      "locally_addressed": 28,
+      "partial": 39,
+      "open": 2,
+      "review_needed": 1
+    },
+    "mainLocalChangesAddressedPercent": 40,
+    "auditComplete": false,
+    "finalSignOffClaimed": false
+  },
+  "globalAcceptance": "## Sequence and acceptance\n\n1. Standardize shared controls, record headers and responsive list/detail navigation.\n2. Finish Today, planner, saved jobs and per-vehicle field tasks.\n3. Finish quote modes, scoped accounting, documents and evidence timelines.\n4. Verify every important loading, empty, invalid, denied, stale, uncertain and successful state on the exact release; include a physical iPhone.\n\nDo not hide incomplete accounting coverage, change accepted/posted history, imply messaging or calendar success, or default unfinished work to completed. Full view-specific acceptance details and four illustrative concepts are in index.html.\n\nReview gaps: fresh signed-in planner; eligible cancel/interruption; full loaded/denied expense states; real file handling; accounting opening/setup flows; integration failure states; physical iPhone. All are still required for product sign-off.",
+  "groups": [
+    {
+      "id": "S01",
+      "section": "Shared findings",
+      "title": "P1 · One visual system, delivered consistently",
+      "requirements": "The installed logged-out preview still uses a large dark car hero and a different shell from the newer captured build. First align the version being evaluated and delivered. Then use shared page headers, toolbars, record summaries, inspectors, notices and confirmations throughout.\n\nFinish standard: The same destination and state should have the same hierarchy on laptop and phone; release identity must be verifiable.",
+      "implementationStatus": "open",
+      "implementedOrPresent": "New source has a shared shell; installed schema109 remains a different build.",
+      "remainingWork": "Deliver an accepted matching release, preserve the populated upgrade and compare installed states.",
+      "evidence": [
+        {
+          "path": "src/app/workspace-frame.tsx",
+          "sha256": "7ec19f3e014d5496edeeee01e965c4707a5201ebf5c6223411e2db2937fde05e"
+        },
+        {
+          "path": "planning/WORKING_STATE.md",
+          "sha256": "c87aa2fb7d6a3e92f71f77c5a082eabe7c28a73de0807645bc362f8a31624f90"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "S02",
+      "section": "Shared findings",
+      "title": "P1 · Desktop layouts need purpose, not more cards",
+      "requirements": "Customer, vehicle, service and prerequisite pages often leave the majority of the canvas unused. White space is valuable when it frames a task; here it often reflects missing layout composition.\n\nFinish standard: Use stable list/detail layouts, purposeful unselected inspectors and max-width forms. Never auto-open sensitive records merely to fill space.",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Purposeful directory introductions and several workbenches are implemented.",
+      "remainingWork": "Finish remaining prerequisite, supplier and configured-page compositions; review all wide layouts.",
+      "evidence": [
+        {
+          "path": "src/app/directory-introduction.tsx",
+          "sha256": "5204eba12092dcadf6d32adb5acbf752d3097d34826e16e86de304d4f40302da"
+        },
+        {
+          "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
+          "sha256": "113852aca5ed2def91c3f2372595a86aabb6776fcc5aeecb8ed0224465909606"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "S03",
+      "section": "Shared findings",
+      "title": "P1 · Phone record detail should replace the directory",
+      "requirements": "Long quote and completion captures show how a desktop composition becomes a long stacked phone document. Opening a record should put the record first and preserve the list for a clean return.\n\nFinish standard: At 360–430 px, open a selected record, reach its main action, return to the exact list position and continue without re-searching.",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Focused phone records cover directories, quotes, leads, expenses and several accounting/travel tasks.",
+      "remainingWork": "Reconcile every selected-record workflow, especially remaining commercial/supplier states, and exact return position.",
+      "evidence": [
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "c45a71a0fe4b3d69b753d31e16d2d34695bc923f9ae8aa039daa5df459a539fd"
+        },
+        {
+          "path": "planning/QUOTE_PHONE_NAVIGATION.md",
+          "sha256": "4150ca8a1cbc2ef9e5cd074a3f0ae76bd9a5f978e5254fd27dae2097ce56b68b"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "S04",
+      "section": "Shared findings",
+      "title": "P1 · Make action priority predictable",
+      "requirements": "Create, load, refresh, search, download and commit controls sometimes have similar dimensions or color. The eye should immediately distinguish the task from maintenance controls.\n\nFinish standard: One primary action per task region; normal secondary controls for refresh/download; destructive styling only for a genuinely destructive consequence.",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Primary/secondary controls and export transition contrast were improved.",
+      "remainingWork": "Review commit/refresh/recovery priority in every configured task; one narrow success is not global coverage.",
+      "evidence": [
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "c45a71a0fe4b3d69b753d31e16d2d34695bc923f9ae8aa039daa5df459a539fd"
+        },
+        {
+          "path": "planning/ACTION_PRIORITY_CONTRAST.md",
+          "sha256": "ce67c18b2086875bae8b68d134453c80baeae98243bf3b62e5c8bb91bd9364be"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "S05",
+      "section": "Shared findings",
+      "title": "P1 · Reduce visual nesting",
+      "requirements": "Fieldsets inside cards inside disclosures create a boxed, generated feel, especially in completion, receipts, quotes and approvals.\n\nFinish standard: Keep one main surface, use spacing and headings for groups, and reserve inner borders for meaningful objects such as a separate work item or document.",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Receipt, completion, history and statement surfaces remove substantial nesting.",
+      "remainingWork": "Finish accepted-document, supplier and remaining approval/completion nesting.",
+      "evidence": [
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "c45a71a0fe4b3d69b753d31e16d2d34695bc923f9ae8aa039daa5df459a539fd"
+        },
+        {
+          "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
+          "sha256": "b729fc3fe6ba0c1d74fb9acf50ddcc4c7d180d6fbaf09a1f0661a71f8f16a6d3"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "S06",
+      "section": "Shared findings",
+      "title": "P1 · Treat every state as a designed screen",
+      "requirements": "Some baseline captures are loading or unavailable. A clean screenshot with no overflow does not establish a completed workflow.\n\nFinish standard: Every important workflow needs loaded, empty, loading, validation, denied, stale, uncertain-save and successful variants with clear next steps.",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Many actual loaded, empty, pending and error states exist and have scoped tests.",
+      "remainingWork": "Complete the eight-state cross-workflow inventory and exact-source visual verification;72 baseline captures do not cover it.",
+      "evidence": [
+        {
+          "path": "src/app/workspace-frame.tsx",
+          "sha256": "7ec19f3e014d5496edeeee01e965c4707a5201ebf5c6223411e2db2937fde05e"
+        },
+        {
+          "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
+          "sha256": "d4eaf0d82ca6a2b834d76fbc320e494f31766a9a31b7eed977d4ff79551e98f5"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "S07",
+      "section": "Shared findings",
+      "title": "P1 · Keep financial scope attached to the number",
+      "requirements": "Reports have useful totals and export controls, but date, currency, coverage limitations and load status are distributed across blocks.\n\nFinish standard: Report title, date scope, currency, coverage, as-of time and export scope remain together. Missing opening balances or costs stay visible.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Shared report headers group period, currency, coverage, observed snapshot and CSV scope; incomplete coverage remains explicit.",
+      "remainingWork": "Fresh full-head and delivered acceptance remain separate gates.",
+      "evidence": [
+        {
+          "path": "src/app/settings/accounts/financial-report-header.tsx",
+          "sha256": "9ba8b0ba32729f022fc7c371e73b8fbe5b1abc2bd6ded3a638e7a16c9692d70b"
+        },
+        {
+          "path": "planning/REPORT_SCOPE_DESIGN.md",
+          "sha256": "3ccf5a44bb251ea8624bec4b6e9398df12ab1d6d20180731503b3c65e1db1cf6"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "S08",
+      "section": "Shared findings",
+      "title": "P2 · Make Crest recognizable through restraint",
+      "requirements": "The supplied crest is present in the newer build, but intricate badge lettering becomes tiny at navigation size. Navy, blue, gold, border treatments and historical button variants compete across evidence sets.\n\nFinish standard: Use the original crest prominently on sign-in and documents; use an approved legible small-size mark in navigation. Set one accent role and one neutral control system. No invented replacement logo.",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Original supplied Crest asset is used; shared restrained controls exist.",
+      "remainingWork": "Resolve a legible approved small-size asset and confirm brand consistency on delivered documents/sign-in/navigation.",
+      "evidence": [
+        {
+          "path": "src/app/workspace-frame.tsx",
+          "sha256": "7ec19f3e014d5496edeeee01e965c4707a5201ebf5c6223411e2db2937fde05e"
+        },
+        {
+          "path": "planning/CREST_DESIGN_SYSTEM.md",
+          "sha256": "234bda2413b4a708c941b3e962e9bba7189359798478d641ab49f9769b5d5129"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "S09",
+      "section": "Shared findings",
+      "title": "P2 · Replace Unicode navigation symbols",
+      "requirements": "The source uses typographic symbols for the primary navigation. Their weight and rendering can vary by font and platform.\n\nFinish standard: Adopt a small consistent SVG icon set with matched stroke, optical size and selected state. Keep visible text labels and accessible names.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Five primary destinations use one matched SVG set, visible labels and aria-current selection.",
+      "remainingWork": "Physical-device and installed verification remain separate.",
+      "evidence": [
+        {
+          "path": "src/app/workspace-icon.tsx",
+          "sha256": "33030e36bbd1061833bfbdc8a70a72cd051783b2d3813701a27b25f295803aec"
+        },
+        {
+          "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
+          "sha256": "d4eaf0d82ca6a2b834d76fbc320e494f31766a9a31b7eed977d4ff79551e98f5"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "S10",
+      "section": "Shared findings",
+      "title": "P2 · Refine type, spacing and numeric rhythm",
+      "requirements": "Heading scale is broadly consistent, but dense labels, helper text and record facts need stronger role separation. Some test captures and installed screens have different visual typography; verify the served font before diagnosing a font bug.\n\nFinish standard: Use one reliable font stack, 16 px editable inputs on phones, tabular money, aligned totals and a small spacing scale. Check real font loading, zoom and long names.",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Self-hosted fonts, tabular figures and scoped spacing/readability refinements are present.",
+      "remainingWork": "Complete all-view16px input, zoom, long-name and served-font checks; do not diagnose by a screenshot alone.",
+      "evidence": [
+        {
+          "path": "src/app/globals.css",
+          "sha256": "5d8273ce2345c988041cf954c1418b8a9e834c586823a8b6b0154b351a101a51"
+        },
+        {
+          "path": "planning/CREST_DESIGN_SYSTEM.md",
+          "sha256": "234bda2413b4a708c941b3e962e9bba7189359798478d641ab49f9769b5d5129"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "S11",
+      "section": "Shared findings",
+      "title": "P2 · Motion should explain changes",
+      "requirements": "Source already includes short menu/panel transitions, skeleton shimmer and reduced-motion support. Recommending animations as if absent would be misleading.\n\nFinish standard: Extend the existing system: 120–180 ms control feedback, 180–240 ms panel entry, stable skeleton geometry and a quiet confirmed-save response. No fake progress, delayed access to controls or animated financial totals.",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Transitions/skeletons/reduced-motion rules exist; Today first-frame contrast was fixed.",
+      "remainingWork": "Finish state-specific motion duration, stable geometry, focus and quiet save-response review.",
+      "evidence": [
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "c45a71a0fe4b3d69b753d31e16d2d34695bc923f9ae8aa039daa5df459a539fd"
+        },
+        {
+          "path": "planning/TODAY_ENTRY_CONTRAST.md",
+          "sha256": "ad92f40a6611688a661bfd46e6b0ec596b5f380e4854390cdf8b1cfb2fccf779"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "S12",
+      "section": "Shared findings",
+      "title": "P2 · Turn history into a readable evidence trail",
+      "requirements": "Several histories are version lists, prose and repeated timestamps. The underlying retained evidence deserves a much clearer presentation.\n\nFinish standard: Use dated event rows with action, actual event time, recorded time where different, actor if known, status and an expand-to-compare detail. Keep exact timestamps and exports available.",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Lead, amendment, expense, custody, travel, mileage and time histories now have readable retained evidence.",
+      "remainingWork": "Finish remaining agreement, proposal, approval and integration histories and their missing/stale variants.",
+      "evidence": [
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "c45a71a0fe4b3d69b753d31e16d2d34695bc923f9ae8aa039daa5df459a539fd"
+        },
+        {
+          "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
+          "sha256": "43d223170aca73ff3e8b10d4982d466279662dce006ff35beeb9b52836bfe7f2"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "S13",
+      "section": "Shared findings",
+      "title": "P2 · Protect context through every transition",
+      "requirements": "Back links now exist on many deeper routes. Their wording and destinations still vary, and an opened task can lose the visible customer/job context.\n\nFinish standard: Use a common breadcrumb or contextual return row, preserve selected record/date/filter where safe, restore focus and avoid retaining private detail after sign-out.",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Several directory/task transitions preserve selection, drafts and committed-DOM focus.",
+      "remainingWork": "Verify planner date/view and all remaining contextual returns plus sign-out/private clearing on the exact release.",
+      "evidence": [
+        {
+          "path": "src/app/workspace-frame.tsx",
+          "sha256": "7ec19f3e014d5496edeeee01e965c4707a5201ebf5c6223411e2db2937fde05e"
+        },
+        {
+          "path": "planning/QUOTE_PHONE_NAVIGATION.md",
+          "sha256": "4150ca8a1cbc2ef9e5cd074a3f0ae76bd9a5f978e5254fd27dae2097ce56b68b"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "S14",
+      "section": "Shared findings",
+      "title": "P2 · Phone finishing is physical-device work",
+      "requirements": "390 px WebKit captures are useful but cannot prove keyboard, safe-area, thumb reach, camera upload or download behavior on a physical iPhone.\n\nFinish standard: Check short screens, landscape, keyboard-open states, 200% zoom, safe areas and reduced motion. Sticky task actions and bottom navigation must never overlap.",
+      "implementationStatus": "open",
+      "implementedOrPresent": "Responsive browser captures and some short/landscape checks exist.",
+      "remainingWork": "Complete the required physical iPhone, keyboard, safe-area, camera/download, zoom and reduced-motion acceptance.",
+      "evidence": [
+        {
+          "path": "src/app/workspace-frame.tsx",
+          "sha256": "7ec19f3e014d5496edeeee01e965c4707a5201ebf5c6223411e2db2937fde05e"
+        },
+        {
+          "path": "planning/WORKING_STATE.md",
+          "sha256": "c87aa2fb7d6a3e92f71f77c5a082eabe7c28a73de0807645bc362f8a31624f90"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R01",
+      "section": "Every page",
+      "title": "P2 · Sign in (/sign-in)",
+      "requirements": "Observed: The compact form is clearer than the installed preview’s large automotive hero. The crest appears in both the shell and form, while the supporting text has little visual hierarchy.\n\nDirection: Use a generous but restrained sign-in composition: one prominent crest, a short welcome, clearly grouped password and authenticator fields, and quiet device options. Keep security explanations beside the relevant control.\n\nDesktop: Use a centered 400–440 px form; do not stretch inputs across the desktop.\n\nPhone: Support password managers, numeric code entry, zoom and the keyboard without hiding Sign in.\n\nAcceptance: A wrong code, expired session and successful sign-in each have a distinct readable response; never clear unrelated entered fields unnecessarily.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/sign-in-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Compact sign-in, password-manager fields, numeric code, distinct feedback and device disclosure exist.",
+      "remainingWork": "Finish single-brand composition and wrong-code/expired/success/keyboard/zoom review with security clearing preserved.",
+      "evidence": [
+        {
+          "path": "src/app/sign-in/sign-in.tsx",
+          "sha256": "84292f34ffea67e78f0e4d1272465f89571ab98dd6fb228b71be7bb243d3d8ad"
+        },
+        {
+          "path": "planning/CREST_DESIGN_SYSTEM.md",
+          "sha256": "234bda2413b4a708c941b3e962e9bba7189359798478d641ab49f9769b5d5129"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R02",
+      "section": "Every page",
+      "title": "P1 · Today (/)",
+      "requirements": "Observed: The next-action card is useful, but empty schedule and maintenance panels still occupy substantial space. The wide hero card has more area than its content needs.\n\nDirection: Make the active visit or due follow-up the first task, followed by a compact agenda. Collapse genuinely empty secondary queues into concise rows. Keep unknown or failed queues visible as unknown.\n\nDesktop: Use a wide agenda plus a narrower attention column. Make the next action align with the record it affects.\n\nPhone: Keep the next valid action visible in the first viewport for a representative one-vehicle job.\n\nAcceptance: Test scheduled, in-progress, overdue-follow-up-only, empty and partial-load states; never turn a failed read into “nothing due.”\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/today-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Agenda/follow-up actions and accessible entry contrast have been refined.",
+      "remainingWork": "Reconcile compact empty queues and wide agenda/attention composition for scheduled, active, overdue-only and partial reads.",
+      "evidence": [
+        {
+          "path": "src/app/page.tsx",
+          "sha256": "8cd2c93a05f849f3f99563461d9d9acc13520d1096eebaf2fdd64dd2f5061d77"
+        },
+        {
+          "path": "planning/TODAY_ENTRY_CONTRAST.md",
+          "sha256": "ad92f40a6611688a661bfd46e6b0ec596b5f380e4854390cdf8b1cfb2fccf779"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R03",
+      "section": "Every page",
+      "title": "P2 · Customer addresses (/addresses)",
+      "requirements": "Observed: The direct route is a small prerequisite message in a large empty canvas. It sends the owner elsewhere to choose a customer.\n\nDirection: Add an inline customer picker and clear selected-customer context if the existing authorized lookup supports it. Otherwise make the prerequisite a designed task card with one obvious return path.\n\nDesktop: Keep address list and selected address side by side once a customer is chosen.\n\nPhone: Show the customer identity above the address fields and restore the referring record on Back.\n\nAcceptance: Opening from a quote must preserve the quote’s saved address snapshot; editing a customer address must not silently rewrite it.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/addresses-{desktop,phone}.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Direct-route authorized customer chooser joins the existing address list/detail and focused phone context.",
+      "remainingWork": "Fresh release/device and broader state review remain; saved quote address snapshots must stay immutable.",
+      "evidence": [
+        {
+          "path": "src/app/addresses/customer-chooser.tsx",
+          "sha256": "cf8d9f42fb5f0b4759a232027943b1c9ce2293b10893f86ab70d459b0cc692cb"
+        },
+        {
+          "path": "planning/ADDRESS_CUSTOMER_CHOOSER_DESIGN.md",
+          "sha256": "85c9f8ec6416dda9ab4ad3d21dd10a69c42601e3175ea7a3693977438851436e"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R04",
+      "section": "Every page",
+      "title": "P2 · Appointment proposals (/appointment-holds)",
+      "requirements": "Observed: The reservation warning is prominent, but the empty list and unconfirmed/withdrawn filters feel like an administrative form.\n\nDirection: Give proposals clear time, customer and outcome rows. Use a concise “time is not reserved” badge plus an explanation at confirmation. Add a useful empty state linked to the existing proposal workflow.\n\nDesktop: Use aligned columns for customer, proposed time and status.\n\nPhone: Stack time first, then customer and one next action.\n\nAcceptance: Unconfirmed, withdrawn and confirmed appointments remain visually and behaviorally distinct.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/appointment-holds-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Proposal time/customer/state rows, explicit unreserved warning, filters and recovery exist.",
+      "remainingWork": "Reconcile empty-state hierarchy and configured unconfirmed/withdrawn/confirmed phone/desktop presentations.",
+      "evidence": [
+        {
+          "path": "src/app/appointment-holds/screen.tsx",
+          "sha256": "63293a89ad603e1308948c015bd73447ee93f8188e4dabe7732c9c0216b52f3c"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R05",
+      "section": "Every page",
+      "title": "P1 · Customer directory (/customers)",
+      "requirements": "Observed: The unselected directory occupies a narrow panel and leaves most of the desktop blank. Search, creation and archived filtering compete in the same box.\n\nDirection: Separate a compact directory toolbar from the results. Give the empty inspector a purposeful introduction and safe existing actions. Standardize the selected customer profile across overview, vehicles, visits, payments and history.\n\nDesktop: Use a stable list/inspector split; keep the selected row and search position when closing a record.\n\nPhone: The current source already switches to a focused phone profile with Back to customers. Preserve that behavior and verify search, selection and focus restoration.\n\nAcceptance: Search, archive visibility, selection and Back survive navigation without exposing records after sign-out.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/customers-{desktop,phone}.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Directory toolbar, purposeful unselected inspector, stable selected-record layout and phone Back are present.",
+      "remainingWork": "Revalidate all profile sections, sign-out and navigation states at the final release.",
+      "evidence": [
+        {
+          "path": "src/app/customers/customers.tsx",
+          "sha256": "d47e44d7b116ca7441de06d3ad0163560711d6b0f054df85fa4b4fa48e300e22"
+        },
+        {
+          "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
+          "sha256": "113852aca5ed2def91c3f2372595a86aabb6776fcc5aeecb8ed0224465909606"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R06",
+      "section": "Every page",
+      "title": "P2 · Contact CSV review (/customers/import-review)",
+      "requirements": "Observed: The four-stage indicator is a good start. The native file input carries nearly all of the first-step experience.\n\nDirection: Add an accessible choose-file surface, format guidance, a sample-column explanation and a compact preview of the next step. Preserve the existing staged review and explicit approval.\n\nDesktop: Use a preview table with a persistent mapping summary and a restrained issues column.\n\nPhone: Turn each issue into a labeled row with source row number and a direct way to inspect it.\n\nAcceptance: A large or invalid file, duplicate matches, approval interruption and result review remain navigable without accidental import.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/customers-import-review-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Staged CSV worker, mapping, approval/results and format limits exist.",
+      "remainingWork": "Complete choose-file/sample-column/next-step presentation and large-file issue navigation as specified.",
+      "evidence": [
+        {
+          "path": "src/app/customers/import-review/review.tsx",
+          "sha256": "56b8abcd16971cdcea36e5db3a1b18acec8f86fd4f9123525f081a88c485b63c"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R07",
+      "section": "Every page",
+      "title": "P1 · Expenses (/expenses)",
+      "requirements": "Observed: The baseline capture is still loading, so it cannot establish the quality of the populated page. The configured receipt view shows nested cards and several competing controls.\n\nDirection: Make purchases a browsable list with merchant, date, category, amount and receipt state. Put the selected expense in an inspector. Keep interrupted-save recovery separate from ordinary receipt actions.\n\nDesktop: Pair the expense inspector with its document preview where space allows.\n\nPhone: Offer one compact receipt row and a full-width viewer; keep the expense amount and save state nearby.\n\nAcceptance: Verify loaded, empty, loading, denied, uncertain-save and invalid-file states. A checked receipt is never shown before validation completes.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/expenses-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Expense directory/inspector, focused phone record, revision history and private viewer are implemented.",
+      "remainingWork": "Finish every loaded/empty/loading/denied/uncertain/invalid-file variant and real format/device acceptance.",
+      "evidence": [
+        {
+          "path": "src/app/expenses/expenses.tsx",
+          "sha256": "a7145720abb46182f017fcf1777ad665d8c18c14d5c262758d01792a98e8938b"
+        },
+        {
+          "path": "planning/EXPENSE_DIRECTORY_DESIGN.md",
+          "sha256": "01d577a99a9577fbd177f58fd35caf9c2bfcdca749b43471b42d4d4ff244e6dd"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R08",
+      "section": "Every page",
+      "title": "P1 · Business data exports (/export-files)",
+      "requirements": "Observed: The desktop capture offers posted-finance CSV while the phone capture shows an unavailable export-request state. These are different capabilities/states, not proof of a responsive defect.\n\nDirection: Use a clear export center with export type, included records, date scope, format, status and expiry. Separate downloadable reports, full business exports and recoverable backups.\n\nDesktop: Display requests as a readable table with a selected-request detail panel.\n\nPhone: Use status cards with one primary action and a compact file inventory.\n\nAcceptance: Same capability and data must produce equivalent choices at every width; partial exports must never look complete.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/export-files-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Export request/download/recovery and scoped posted-finance inventory exist; contrast was corrected.",
+      "remainingWork": "Finish export-center distinctions, selected request composition and equivalent capability/data states; never imply partial equals complete.",
+      "evidence": [
+        {
+          "path": "src/app/export-files/export-files.tsx",
+          "sha256": "2c7a5b06fefbec11446b9c60280724ed7b8fae0e0e0b88fac2cb5b4ac3417ab4"
+        },
+        {
+          "path": "planning/ACTION_PRIORITY_CONTRAST.md",
+          "sha256": "ce67c18b2086875bae8b68d134453c80baeae98243bf3b62e5c8bb91bd9364be"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R09",
+      "section": "Every page",
+      "title": "P2 · Lead sources (/lead-sources)",
+      "requirements": "Observed: The search-and-create form feels oversized for a small source directory. The route belongs to Leads but has a separate visual rhythm.\n\nDirection: Use the shared directory toolbar and record inspector. Give source name, active state and retained history clear roles.\n\nDesktop: Use a compact list with a selected-source editor.\n\nPhone: Put source details ahead of history; keep archive controls away from creation.\n\nAcceptance: Inactive-source filtering and history remain discoverable without relying on color alone.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/lead-sources-{desktop,phone}.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Compact source directory/inspector, readable selected details and exact retained source history are implemented.",
+      "remainingWork": "Remaining source state/pagination and final release/device verification stay open.",
+      "evidence": [
+        {
+          "path": "src/app/lead-sources/sources.tsx",
+          "sha256": "cbcca3a5a67c8c23e037e922e6e2cc51f36e91834b6208711e398c5614dd4d44"
+        },
+        {
+          "path": "planning/LEAD_SOURCE_HISTORY_DESIGN.md",
+          "sha256": "dc1acf0373ee3bec5847e1610a1ca3cb1bec51df22420d0481ed1c583bd49b66"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R10",
+      "section": "Every page",
+      "title": "P1 · Leads and follow-ups (/leads)",
+      "requirements": "Observed: Follow-up rows are compact and useful, but the captured queue mixes an overdue lost lead with future reminders. Fixture dates are extreme and should not be treated as business defects.\n\nDirection: Make urgency, lead state and next action separate visual facts. Add clearly labeled due and upcoming views only over the existing authorized data. Keep follow-up eligibility governed by documented rules.\n\nDesktop: Use aligned due time, lead and status columns with an inspector.\n\nPhone: Show name, next due time and action before secondary source details.\n\nAcceptance: Review the treatment of lost or closed leads with due reminders; do not silently change their eligibility rule during visual work.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/leads-{desktop,phone}.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Loaded-page due/upcoming views, independent urgency/state, focused phone records and next actions are implemented.",
+      "remainingWork": "Complete remaining state variants and final release; do not alter follow-up eligibility.",
+      "evidence": [
+        {
+          "path": "src/app/leads/leads.tsx",
+          "sha256": "59062e54b986ea45afbf23bc180047a0cd64b7aa42f76c41a14907e5affc59e8"
+        },
+        {
+          "path": "planning/LEAD_REMINDER_WORKBENCH_DESIGN.md",
+          "sha256": "794886f9d73f330fdc1bee5830ae0aa92b6bad3678cafcb9b33aad503ba04b5b"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R11",
+      "section": "Every page",
+      "title": "P1 · Quotes (/quotes)",
+      "requirements": "Observed: The list/preview pattern is promising. The directory can remain above the selected quote on phones, and very long preview text creates a lengthy document column.\n\nDirection: Make list, editing and customer preview distinct modes. Keep saved total, draft status and unsaved changes visible. Give document preview its own reading surface and preserve all accepted content.\n\nDesktop: Allow a wider editor/preview split, with a compact directory that can collapse.\n\nPhone: Open the selected quote as the main screen; use Edit and Preview switches with preserved draft state.\n\nAcceptance: Long text, many lines, discounts and zero-price reasons remain readable; preview must never reveal internal notes.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/quotes-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Selected phone quote modes and preserved unsaved draft/list return are implemented.",
+      "remainingWork": "Finish/reconcile desktop directory collapse, long editor/preview layout and all stress-state acceptance.",
+      "evidence": [
+        {
+          "path": "src/app/quotes/quotes.tsx",
+          "sha256": "b4188e3e0fe564f3b4469989b396d38f9bbf97ad3b4c789569180f888b1a46c1"
+        },
+        {
+          "path": "planning/QUOTE_PHONE_NAVIGATION.md",
+          "sha256": "4150ca8a1cbc2ef9e5cd074a3f0ae76bd9a5f978e5254fd27dae2097ce56b68b"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R12",
+      "section": "Every page",
+      "title": "P1 · Quote amendments (/quotes/amendments)",
+      "requirements": "Observed: The accepted-work selector exposes useful status and amount facts, but amendment work needs a stronger comparison hierarchy.\n\nDirection: Show accepted scope beside proposed changes, with a clear amount delta and labeled added, changed and retained items. Keep the original agreement accessible.\n\nDesktop: Use a two-column comparison with a single review summary.\n\nPhone: Use stacked Original/Proposed blocks and a compact change summary.\n\nAcceptance: No animation or editing interaction may imply that an accepted agreement was overwritten.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/quotes-amendments-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Accepted/proposed comparison, amount deltas and versioned amendment history exist.",
+      "remainingWork": "Reconcile complete retained/changed-item comparison hierarchy and configured modes; current hosted timeout remains unexplained.",
+      "evidence": [
+        {
+          "path": "src/app/quotes/amendments/workspace.tsx",
+          "sha256": "1e4ea3e9957d10fd6c87aaad6efa852ec37586e43936099abc5c23cbc249a857"
+        },
+        {
+          "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
+          "sha256": "43d223170aca73ff3e8b10d4982d466279662dce006ff35beeb9b52836bfe7f2"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R13",
+      "section": "Every page",
+      "title": "P1 · Interrupted save review (/save-review)",
+      "requirements": "Observed: The desktop no-reference state and phone checking state differ. A save-type selector and repeated loading language make an exceptional workflow feel like a general tool.\n\nDirection: Explain which original action is being checked, what is known and the next safe step. Give no-reference, recorded, unresolved and access-lost outcomes separate compositions.\n\nDesktop: Use one outcome panel with a narrow evidence/details column.\n\nPhone: Keep record identity and safe return action above technical references.\n\nAcceptance: Never show an optimistic success or suggest repeating a write while its original outcome is uncertain.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/save-review-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Outcome-specific review, original-save reference disclosure and separate retirement confirmation exist.",
+      "remainingWork": "Finish all no-reference/recorded/unresolved/access-lost identity, safe-return and phone compositions.",
+      "evidence": [
+        {
+          "path": "src/app/save-review/review.tsx",
+          "sha256": "87c9db63a5e515a642f97289bee9885cf97b720cc5f0793a015979e76b1cd1dc"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R14",
+      "section": "Every page",
+      "title": "P1 · Schedule / saved job (/schedule)",
+      "requirements": "Observed: The captured route is a saved job rather than the schedule planner. The job header, location block and section buttons consume much of the phone viewport before the work details.\n\nDirection: Give planning and active-job review distinct page identities. Compress the saved-job header into customer, vehicle, time, status and next valid action; preserve the selected date on return.\n\nDesktop: Use a planning canvas with selected-visit detail, and a separate focused job layout when executing work.\n\nPhone: Prioritize the current job action; make customer contact and location easy to reach.\n\nAcceptance: Browser Back restores date, view and selected visit. Verify planning separately from this saved-job capture.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Saved-job actions, contextual prerequisites and schedule navigation exist.",
+      "remainingWork": "Dedicated planner review, compact loaded job header, first-action reach and date/view/visit restoration remain.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/screen.tsx",
+          "sha256": "19df196e39e3d4045f2a057405ebf41267a3506678f34b1910566cc093068ce8"
+        },
+        {
+          "path": "planning/TASK_PREREQUISITE_DESIGN.md",
+          "sha256": "c070fd223a799e24f1084e7166c9623974e2596a98ef126020ded65f1a8694de"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R15",
+      "section": "Every page",
+      "title": "P1 · Change appointment (/schedule/change)",
+      "requirements": "Observed: The old time and proposed-time form are separated well on desktop, but the phone stacks substantial context ahead of the action.\n\nDirection: Use an explicit Current → Proposed time comparison with timezone, reason and reservation effect. Put communication status beside confirmation.\n\nDesktop: Keep the comparison beside the form instead of repeating the same facts in prose.\n\nPhone: Use one compact current-time card followed by the proposed time fields.\n\nAcceptance: A proposal must never visually release the original reservation or imply that a customer was automatically messaged.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-change-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Existing current/proposed appointment and reservation workflow is retained.",
+      "remainingWork": "Review compact phone comparison, timezone/reason/reservation effect and adjacent communication status across actual outcomes.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/change/page.tsx",
+          "sha256": "4e731c2434c2b3bf0b3307bf079e2320955ad210f8be6e72da9de4530916a07f"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R16",
+      "section": "Every page",
+      "title": "P2 · Trip mileage (/schedule/mileage)",
+      "requirements": "Observed: The empty route contains only a sentence and a saved-job link. It lacks the customer, trip or vehicle context needed to understand the page.\n\nDirection: Use a compact job/trip header, followed by recorded miles, attribution status and the existing next step. Explain the empty state with a contextual return action.\n\nDesktop: Align trip, vehicle, distance and source in a table when records exist.\n\nPhone: Use one readable trip card per journey with attribution details behind disclosure.\n\nAcceptance: Keep measured, entered, missing and corrected mileage visibly distinct; never invent distance.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-mileage-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Focused mileage history, source/actual/estimate distinctions, retained corrections and contextual returns are implemented.",
+      "remainingWork": "Finish full job/trip/vehicle context, desktop aligned density and remaining empty/long-list/state review.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/mileage/screen.tsx",
+          "sha256": "15bdc7d4fbdb495ca4360ae022044ea77e61c9f848cfddaa915d00dbe0d750e9"
+        },
+        {
+          "path": "planning/MILEAGE_HISTORY_DESIGN.md",
+          "sha256": "fb553570ab638e6905d486302f77932671663b72388dad757f39ef988880da13"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R17",
+      "section": "Every page",
+      "title": "P2 · Service arrangements (/schedule/modes)",
+      "requirements": "Observed: Current availability and edit controls are separate, but equal-looking status badges and selects make it slow to scan what is enabled.\n\nDirection: Present Mobile, Drop-off and Pickup/return as three consistent setting rows with current state, eligibility explanation and proposed change.\n\nDesktop: Use a small comparison table of saved and proposed states.\n\nPhone: Use labeled rows rather than a horizontal row of badges.\n\nAcceptance: Changing future availability must not appear to change existing booked jobs.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-modes-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Saved availability, future-booking explanation, selectors and retained version history exist.",
+      "remainingWork": "Unify each mode into current/eligibility/proposed comparison rows instead of separate availability and edit blocks.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/modes/screen.tsx",
+          "sha256": "260a65c35348143151983ccf615ee5c874eeb9e7cf37e44214923172be79bc0f"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R18",
+      "section": "Every page",
+      "title": "P1 · Book a visit (/schedule/new)",
+      "requirements": "Observed: Opening the route without an accepted quote produces an almost empty page and sends the owner back to quotes.\n\nDirection: Offer a contextual accepted-quote chooser if the existing data contract permits it. Otherwise show a deliberate prerequisite card explaining the exact path and expected result.\n\nDesktop: Use a guided booking layout with quote summary, time selection and final reservation review.\n\nPhone: Show a short step sequence with the customer and selected work retained throughout.\n\nAcceptance: Booking reserves only after explicit successful confirmation; loading and unavailable slots are not treated as empty availability.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-new-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Deliberate accepted-quote prerequisite guidance and original reservation/recovery rules exist.",
+      "remainingWork": "Reconcile the configured booking stages, persistent customer/work context and unavailable/loading slot presentations.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/new/page.tsx",
+          "sha256": "d6a852e1d6e16616c8347f253e95a1d8cd59ec02541811f436851b8cf8edf834"
+        },
+        {
+          "path": "planning/TASK_PREREQUISITE_DESIGN.md",
+          "sha256": "c070fd223a799e24f1084e7166c9623974e2596a98ef126020ded65f1a8694de"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R19",
+      "section": "Every page",
+      "title": "P2 · Standalone travel (/schedule/travel)",
+      "requirements": "Observed: The active-trip callout is clear. Recent trips and history benefit from a split view, but the top-level empty state is visually sparse.\n\nDirection: Keep Start a trip dominant, group previous journeys by date and show a compact departure/arrival timeline for the selected trip.\n\nDesktop: Use the existing list/detail pattern consistently with jobs.\n\nPhone: Keep active trip and its next safe action above past trips.\n\nAcceptance: A trip correction retains original facts and never starts or ends work on an unrelated job.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-travel-{desktop,phone}.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Standalone trips use selected-record desktop context and focused phone history with retained corrections.",
+      "remainingWork": "Remaining long-page/state and delivered/device acceptance stay open; no inferred business classification.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/travel/screen.tsx",
+          "sha256": "48d3e48723a6ad8fcbec118e3fbd210e1c23be69497047aaa121f426094f1839"
+        },
+        {
+          "path": "planning/TRAVEL_HISTORY_DESIGN.md",
+          "sha256": "ebec45207df26c3bed3aa553019748deb8dd3ec3790c7f3521a04c7bd9252a43"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R20",
+      "section": "Every page",
+      "title": "P1 · Work status (/schedule/work)",
+      "requirements": "Observed: Desktop places context beside the form, but the phone puts a sizable context card ahead of departure fields. Repeated “saved” messages add reading cost.\n\nDirection: Use a compact persistent job strip, an unmistakable current state and a single next-action form. Secondary ways to start, notes and exceptions stay disclosed.\n\nDesktop: Keep summary and action aligned without stretching every input.\n\nPhone: Place the next field and action within reach; reserve space for keyboard and navigation.\n\nAcceptance: Departure, arrival, pause and resume labels reflect the real recorded state; avoid success feedback before the server confirms.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-work-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Task-specific entry guidance and real departure/arrival/pause/resume workflows exist.",
+      "remainingWork": "Finish compact loaded job strip, single next-action hierarchy and keyboard/phone reach for every actual state.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/work/page.tsx",
+          "sha256": "0ad764472492dbab8bd856545643b8908e513772f432e02bcabe4df961d6b5b8"
+        },
+        {
+          "path": "planning/TASK_PREREQUISITE_DESIGN.md",
+          "sha256": "c070fd223a799e24f1084e7166c9623974e2596a98ef126020ded65f1a8694de"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R21",
+      "section": "Every page",
+      "title": "P1 · Cancel started job (/schedule/work/cancel)",
+      "requirements": "Observed: The captured state is ineligible, offering Open saved job and Reload saved work at similar prominence. It does not show an eligible cancellation form.\n\nDirection: Design the ineligible state as a calm explanation with a single return action. For eligible cancellation, show affected scope, retained history and a clear final confirmation.\n\nDesktop: Keep the reason and consequence summary together.\n\nPhone: Use full-width confirmation only at the deliberate final step.\n\nAcceptance: Cancellation never resembles deletion, and must preserve work already recorded. Eligible-state visual sign-off remains needed.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-work-cancel-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Missing-selection/ineligible guidance and original cancellation/history rules exist.",
+      "remainingWork": "Complete eligible affected-scope/reason/final-confirmation visual review and prove retained work at all relevant states.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/work/cancel/page.tsx",
+          "sha256": "2d401c59d86103587fd360149804b11f180e2f681f62088dd0b8f77125bc9895"
+        },
+        {
+          "path": "planning/TASK_PREREQUISITE_DESIGN.md",
+          "sha256": "c070fd223a799e24f1084e7166c9623974e2596a98ef126020ded65f1a8694de"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R22",
+      "section": "Every page",
+      "title": "P1 · End job (/schedule/work/complete)",
+      "requirements": "Observed: The populated completion evidence is a very long phone form with nested scope, portions, walkthrough and review-request controls. This is one of the largest usability opportunities.\n\nDirection: Group by vehicle and work item, show completed/needs-review counts, and reveal portion editors only when needed. Finish with one clear completion summary and explicit next step.\n\nDesktop: Use a checklist area plus a persistent summary of outcomes and unresolved items.\n\nPhone: Use sequential expandable sections; keep unfinished items visible and scroll to the first issue.\n\nAcceptance: Partial completion, many vehicles, skipped walkthrough and interrupted saves must remain explicit; visual simplification must not default unfinished work to fulfilled.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-work-complete-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Completion nesting/amount alignment and review-to-invalid-field focus were improved.",
+      "remainingWork": "Finish vehicle/item progress, persistent unresolved summary and progressive portion editors without losing drafts or defaulting fulfillment.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/work/completion.tsx",
+          "sha256": "a4d7ec994e3e633abb46b64500c294d3c1e5917c0394f552ab01b01de6eb9e6f"
+        },
+        {
+          "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
+          "sha256": "b729fc3fe6ba0c1d74fb9acf50ddcc4c7d180d6fbaf09a1f0661a71f8f16a6d3"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R23",
+      "section": "Every page",
+      "title": "P1 · Interrupt trip (/schedule/work/interrupt)",
+      "requirements": "Observed: The captured prerequisite state is sparse. A genuine interruption needs strong context so it cannot be mistaken for pausing work or cancelling the job.\n\nDirection: Show the active trip, what the interruption records and the exact next available choices. Use action-specific wording and a concise reason field.\n\nDesktop: Keep trip and job consequences in a small summary beside the form.\n\nPhone: Use a focused single-task screen with a direct return to the saved job.\n\nAcceptance: Verify en-route, already-arrived and uncertain-result variants; do not change job or trip state through navigation.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-work-interrupt-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Trip-specific prerequisite and existing interruption/uncertainty handling are retained.",
+      "remainingWork": "Finish configured trip/job consequence hierarchy and en-route/arrived/uncertain visual acceptance.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/work/interrupt/page.tsx",
+          "sha256": "abf5c1cf43b633677ffaf8901349b7a18dd62264ad49b0b135c493efd4f8136e"
+        },
+        {
+          "path": "planning/TASK_PREREQUISITE_DESIGN.md",
+          "sha256": "c070fd223a799e24f1084e7166c9623974e2596a98ef126020ded65f1a8694de"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R24",
+      "section": "Every page",
+      "title": "P2 · Recorded work time (/schedule/work/time)",
+      "requirements": "Observed: The empty state is simple; populated evidence has useful active/paused totals but repeated timestamp labels and separate version disclosures.\n\nDirection: Keep active, paused and as-of facts together. Use a chronological interval ledger with clear corrections and expandable earlier versions.\n\nDesktop: Align start, end, duration and reason in a table or timeline.\n\nPhone: Use interval cards with duration as the strongest secondary fact.\n\nAcceptance: An open interval must be labeled as open/as of the last read; no decorative live timer should imply unsaved server evidence.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-work-time-{desktop,phone}.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Observed totals/as-of context, interval ledger and replacement-linked exact correction history are implemented.",
+      "remainingWork": "Remaining history/pagination/state and final device/release acceptance stay open.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/work/time/screen.tsx",
+          "sha256": "fdc9dd393705194ce4d67b18b6e7023d64cf69af076d8627d1d775ff615bfe59"
+        },
+        {
+          "path": "planning/WORK_TIME_HISTORY_DESIGN.md",
+          "sha256": "5d6ec41ada23551cbc29dfc4723bdc2c1736a7d2230806b38dd16a271c83b5c3"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R25",
+      "section": "Every page",
+      "title": "P2 · Services (/services)",
+      "requirements": "Observed: The compact directory leaves a large unused desktop area. “No price guidance” and availability appear as small metadata.\n\nDirection: Use a reusable catalog list with scope, availability and price-guidance state. Give the selected service a structured inspector and a readable scope preview.\n\nDesktop: Use list/detail width deliberately; separate creation from reload and search.\n\nPhone: Preserve the existing focused service-detail mode and verify the result list and focus on Back.\n\nAcceptance: Catalog changes must not visually imply repricing an accepted quote or historical job.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/services-{desktop,phone}.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Catalog list/inspector, explicit price-guidance/availability and focused phone Back are present.",
+      "remainingWork": "Final stress/denied/history/device verification remains; accepted quote/job prices must not change.",
+      "evidence": [
+        {
+          "path": "src/app/services/services.tsx",
+          "sha256": "21fbea9c97980739d936a02c72fa87eaf818a799676b88e3502c7c6124302945"
+        },
+        {
+          "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
+          "sha256": "113852aca5ed2def91c3f2372595a86aabb6776fcc5aeecb8ed0224465909606"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R26",
+      "section": "Every page",
+      "title": "P2 · Business settings (/settings)",
+      "requirements": "Observed: Business identity editing and workspace tool directories share the page but lack a strong task-oriented grouping.\n\nDirection: Group Business, Finance, Connections, Data & recovery and Device access. Show setup readiness honestly; keep editing legal identity separate from ordinary navigation.\n\nDesktop: Use a settings index and selected section rather than a collection of unrelated form cards.\n\nPhone: Use simple destination rows with a short state description.\n\nAcceptance: Do not display “ready” from a saved name alone; blocked setup needs its actual next step.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-{desktop,phone}.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Five settings groups, separate legal identity editor and honest capability/state descriptions are implemented.",
+      "remainingWork": "Remaining child setup states and delivered/device acceptance stay open.",
+      "evidence": [
+        {
+          "path": "src/app/settings/settings.tsx",
+          "sha256": "2d8baba5c2e6e387cba3185045c763f0b2ec742173d61d7e3b878a02be603613"
+        },
+        {
+          "path": "planning/SETTINGS_INDEX_DESIGN.md",
+          "sha256": "ab87f7b96de1962dea55d37a3f31af4f9e5b0b2b7837dea41e1c5b27e98316de"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R27",
+      "section": "Every page",
+      "title": "P1 · Accounting home (/settings/accounts)",
+      "requirements": "Observed: Reports, Accounts and Setup are a good separation, but the baseline opens a trial-balance form rather than a strong financial overview.\n\nDirection: Create a report workspace with a persistent report picker, date scope, coverage notice, loaded-as-of timestamp and export action. Make posted figures, incomplete coverage and setup status distinct.\n\nDesktop: Use available width for aligned figures and drill-in details.\n\nPhone: Put scope and key verified total before long filters or nested tables.\n\nAcceptance: Do not label incomplete recorded profit as business profit; no attractive summary may hide missing opening balances or costs.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Report picker and shared financial scope headers retain totals, coverage, snapshots and CSV actions.",
+      "remainingWork": "Complete persistent overview/picker and configured phone hierarchy beyond the individual report-header refinement.",
+      "evidence": [
+        {
+          "path": "src/app/settings/accounts/accounting-reports.tsx",
+          "sha256": "694c18fb57e61a89f3620fd44c1bce1d3a326018bc605b0d83909bfb6383fe53"
+        },
+        {
+          "path": "planning/REPORT_SCOPE_DESIGN.md",
+          "sha256": "3ccf5a44bb251ea8624bec4b6e9398df12ab1d6d20180731503b3c65e1db1cf6"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R28",
+      "section": "Every page",
+      "title": "P2 · Money channels (/settings/accounts/channels)",
+      "requirements": "Observed: The empty-load state reads like a utility page, with Load channels and interrupted-review controls as the main content.\n\nDirection: Show the channel directory with held-at location, enabled state and opening-evidence status. Move recovery into contextual exceptions.\n\nDesktop: Use a compact directory and selected-channel panel.\n\nPhone: Use clear channel cards with currency and status; keep setup explanation nearby.\n\nAcceptance: Money channel state is never presented as a verified bank balance or live bank connection.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-channels-{desktop,phone}.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Money-channel directory/inspector, phone record, current status and actual opening evidence are implemented.",
+      "remainingWork": "Remaining channel/history/pagination/setup states and delivered/device checks remain.",
+      "evidence": [
+        {
+          "path": "src/app/settings/accounts/channels/screen.tsx",
+          "sha256": "16ed1947eb186980a17ae1ddc9d1b2ee18370c93b38156d484396bc3749802b9"
+        },
+        {
+          "path": "planning/MONEY_CHANNEL_DIRECTORY_DESIGN.md",
+          "sha256": "f677d717e80e93c23bbd07768123ece7005767100e49aa0e6afa1211a9b504c1"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R29",
+      "section": "Every page",
+      "title": "P2 · Dated account mappings (/settings/accounts/mappings)",
+      "requirements": "Observed: The purpose/date lookup is clear, but a large lookup card and separate approval history require repeated scanning.\n\nDirection: Use a compact date lookup followed by an effective-period timeline and clear current match or gap. Keep lookup and approval editing separate.\n\nDesktop: Show purpose, effective interval, account and approval state in aligned rows.\n\nPhone: Stack period and account, with detailed evidence disclosed.\n\nAcceptance: A date without approved coverage must remain visibly unresolved; never fall back silently.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-mappings-{desktop,phone}.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Compact purpose/date lookup, explicit match/gap and dated retained approval rows are implemented.",
+      "remainingWork": "Remaining state and final release/device verification remain; never silently fall back across gaps.",
+      "evidence": [
+        {
+          "path": "src/app/settings/accounts/mappings/screen.tsx",
+          "sha256": "c731c668a4a53290015d7f5f00ec2dbc0fda5fbf2a5946ebcbdd2fbf2db882ed"
+        },
+        {
+          "path": "planning/MAPPING_HISTORY_DESIGN.md",
+          "sha256": "dd69f23b08f79e614704df3ce073f49a907ca56b2fd5286a0634b40e8a759f46"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R30",
+      "section": "Every page",
+      "title": "P2 · Expense category mappings (/settings/accounts/mappings/categories)",
+      "requirements": "Observed: The page combines category lookup, date controls and a directory, creating two paths into similar information.\n\nDirection: Unify selection into one directory with an effective-date toolbar and selected-category detail. Distinguish category availability from approved posting treatment.\n\nDesktop: Use a searchable category list plus mapping detail.\n\nPhone: Show the selected category above the lookup results and preserve search when returning.\n\nAcceptance: No category should appear posting-ready merely because it exists in the directory.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-mappings-categories-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Selected-date mapping result, history and searchable category directory exist.",
+      "remainingWork": "Unify the top lookup and separate lower directory into one selection/effective-date workflow.",
+      "evidence": [
+        {
+          "path": "src/app/settings/accounts/mappings/screen.tsx",
+          "sha256": "c731c668a4a53290015d7f5f00ec2dbc0fda5fbf2a5946ebcbdd2fbf2db882ed"
+        },
+        {
+          "path": "planning/MAPPING_HISTORY_DESIGN.md",
+          "sha256": "dd69f23b08f79e614704df3ce073f49a907ca56b2fd5286a0634b40e8a759f46"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R31",
+      "section": "Every page",
+      "title": "P2 · Category approvals (/settings/accounts/mappings/categories/manage)",
+      "requirements": "Observed: The initial screen has only a select and disabled load button, leaving the approval workflow undiscoverable.\n\nDirection: Explain what selecting a category reveals; use a chosen-category header and a clear saved/proposed approval comparison.\n\nDesktop: Place existing approval history beside proposed effective dates.\n\nPhone: Guide selection → proposed setting → review; keep the selected category visible.\n\nAcceptance: Retained historical approvals remain accessible and new effective periods cannot look like silent edits.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-mappings-categories-manage-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Chosen category entry and shared saved/proposed approval comparison exist.",
+      "remainingWork": "Integrate retained approval history with proposed editing and finish staged phone selection/review acceptance.",
+      "evidence": [
+        {
+          "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
+          "sha256": "e5e73345c4cdbeb00e32fdd761b2c51445b647e4cd50bd4679a0d37101a9db7d"
+        },
+        {
+          "path": "planning/MAPPING_HISTORY_DESIGN.md",
+          "sha256": "dd69f23b08f79e614704df3ce073f49a907ca56b2fd5286a0634b40e8a759f46"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R32",
+      "section": "Every page",
+      "title": "P2 · Mapping approvals (/settings/accounts/mappings/manage)",
+      "requirements": "Observed: The screen repeats the sparse selector/load/recovery arrangement used by category approvals.\n\nDirection: Reuse the same approval-workbench component and terminology, while keeping each purpose’s actual rules. Show current coverage and proposed change before confirmation.\n\nDesktop: Use current/proposed comparison with effective intervals.\n\nPhone: Use a compact review summary and a separate evidence disclosure.\n\nAcceptance: A pending or interrupted approval remains distinct from an approved mapping.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-mappings-manage-{desktop,phone}.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Shared approval workbench shows saved/proposed accounts, exclusive effective periods and separate original-attempt evidence.",
+      "remainingWork": "Remaining full state and final release/device verification stay open.",
+      "evidence": [
+        {
+          "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
+          "sha256": "e5e73345c4cdbeb00e32fdd761b2c51445b647e4cd50bd4679a0d37101a9db7d"
+        },
+        {
+          "path": "planning/MAPPING_HISTORY_DESIGN.md",
+          "sha256": "dd69f23b08f79e614704df3ce073f49a907ca56b2fd5286a0634b40e8a759f46"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R33",
+      "section": "Every page",
+      "title": "P1 · Tax profiles (/settings/accounts/tax)",
+      "requirements": "Observed: Jurisdiction is a blank text field and the main workflow is spread across multiple disclosures. This needs careful hierarchy because tax treatment affects posted amounts.\n\nDirection: Put jurisdiction, applies-to scope, effective date and approved status together. Offer searchable known profiles only where an authoritative directory exists. Keep calculation preview separate from approval.\n\nDesktop: Show selected-profile details and sample calculation beside the lookup.\n\nPhone: Use a staged profile/amount/review flow with all calculation assumptions visible.\n\nAcceptance: No location-based tax inference or invented default rate; the approved rule and rounding evidence must remain accessible.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-tax-{desktop,phone}.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Jurisdiction/scope/history workbench and separate exact USD calculation/approval are implemented without rate inference.",
+      "remainingWork": "Remaining long/history/state and final release/device verification stay open; no unsupported jurisdiction directory is invented.",
+      "evidence": [
+        {
+          "path": "src/app/settings/accounts/tax/screen.tsx",
+          "sha256": "2d0fcd1b35b620f0b4995849f62aa536ee7ded8e4c8205aec4fbee90d981a015"
+        },
+        {
+          "path": "planning/TAX_PROFILE_WORKBENCH_DESIGN.md",
+          "sha256": "7158d03f1ce63227c5b940f833178878e59d88736fe8c4a1a1a648e1a16c9817"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R34",
+      "section": "Every page",
+      "title": "P1 · Calendar setup (/settings/google-calendar)",
+      "requirements": "Observed: The route baseline is unavailable; configured supplemental evidence shows multiple stacked status cards and a waiting update.\n\nDirection: Use one connection summary and an appointment-sync activity list. Distinguish account consent, target calendar, pending update, failure and confirmed sync.\n\nDesktop: Use status plus recent activity, with details in an inspector.\n\nPhone: Keep account/calendar and the next safe action above the event history.\n\nAcceptance: Simulated consent or saved consent must never look like a verified live Google connection or successful event delivery.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-google-calendar-{desktop,phone}.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Setup summary consolidates account/calendar/consent and clearly labels simulated/no-event mode.",
+      "remainingWork": "Finish compact selected-appointment/activity states for waiting/failure/confirmed and integration-state visual review.",
+      "evidence": [
+        {
+          "path": "src/app/settings/google-calendar/setup.tsx",
+          "sha256": "c7cc715f7f3f97e3655590cdd187532400f54534e29f5694bf6a9e0f2a44343f"
+        },
+        {
+          "path": "planning/GOOGLE_CALENDAR_V1.md",
+          "sha256": "29b763b56f7f41112498cd2e85fd2098f51f0134cb1060f28940280c8be08f17"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R35",
+      "section": "Every page",
+      "title": "P2 · Vehicle directory (/vehicles)",
+      "requirements": "Observed: The list is compact and functional, but selected vehicle context is absent until opened. The generic empty desktop region repeats the customer directory problem.\n\nDirection: Use a consistent vehicle inspector: identity, linked customers, visits and retained relationship history. Show a real authorized vehicle photo only when available.\n\nDesktop: Use list/detail with recognizable make/model/year and a quiet plate reference.\n\nPhone: Preserve the existing focused vehicle-detail mode; keep linked customers and next visit easy to reach.\n\nAcceptance: A stock image must never appear to be evidence of a customer’s vehicle condition.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/vehicles-{desktop,phone}.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Vehicle identity/list/inspector, linked customers and existing focused phone record remain with purposeful desktop context.",
+      "remainingWork": "Final profile/history/photo, sign-out and device/state verification remain; no stock evidence image.",
+      "evidence": [
+        {
+          "path": "src/app/vehicles/vehicles.tsx",
+          "sha256": "79d8e482f5699ad81707ce3f65a77ef4338d200a5ac92af442ade26545ffea75"
+        },
+        {
+          "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
+          "sha256": "113852aca5ed2def91c3f2372595a86aabb6776fcc5aeecb8ed0224465909606"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "R36",
+      "section": "Every page",
+      "title": "P2 · Page not found (/audit-page-does-not-exist)",
+      "requirements": "Observed: The small branded recovery card is appropriately restrained and offers Today and Find a tool.\n\nDirection: Preserve this simplicity. Add safe return-to-previous-context only where it is known, and distinguish a missing page from missing access to a record.\n\nDesktop: Keep a centered, readable card.\n\nPhone: Keep recovery actions large enough without adding extra navigation clutter.\n\nAcceptance: Do not reveal whether a private record exists through a different missing/denied presentation.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/audit-page-does-not-exist-{desktop,phone}.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Existing restrained branded missing-page card preserves Today and Find a tool without reading a private record.",
+      "remainingWork": "Retained baseline plus source inspection is not a fresh final-release/device run.",
+      "evidence": [
+        {
+          "path": "src/app/not-found.tsx",
+          "sha256": "294e30b60886f011166143dffc08621d7ea75f39ea232cfd2928c8d259b8be38"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "retained baseline plus current source inspection",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D01",
+      "section": "Deeper workflows",
+      "title": "Customer profile",
+      "requirements": "Use a compact identity header, clear last/next visit facts and the existing section navigation. Keep record creation secondary while inspecting an existing customer. The historical supplemental capture predates some footer/button refinements; those are not reopened as new defects.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/customer-profile-vehicles-viewport-chromium-1440.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Customer identity, linked sections and phone profile exist.",
+      "remainingWork": "Reconcile compact last/next-visit facts and action hierarchy consistently across all profile sections.",
+      "evidence": [
+        {
+          "path": "src/app/customers/customers.tsx",
+          "sha256": "d47e44d7b116ca7441de06d3ad0163560711d6b0f054df85fa4b4fa48e300e22"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D02",
+      "section": "Deeper workflows",
+      "title": "Schedule planner",
+      "requirements": "The supplemental image is Today’s upcoming-visit state, not a full calendar. Planner day/week/month, selected date, dense days and appointment overlap need a fresh dedicated visual review before sign-off. Keep planning distinct from active-job execution.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/agenda-upcoming-chromium-1440.png",
+      "implementationStatus": "review_needed",
+      "implementedOrPresent": "Day/week/month navigation exists; the supplemental audit image was not the planner.",
+      "remainingWork": "Perform fresh signed-in dense/overlapping planner review before deciding what implementation changes are required.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/calendar-navigation.tsx",
+          "sha256": "41a2188c53582e9d6e7a4c6edaf90a3d3cd177e4616e72e10470a8ef9e8e9d2e"
+        },
+        {
+          "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
+          "sha256": "d4eaf0d82ca6a2b834d76fbc320e494f31766a9a31b7eed977d4ff79551e98f5"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D03",
+      "section": "Deeper workflows",
+      "title": "Quote editor and preview",
+      "requirements": "Long-address and long-scope stress data demonstrates why the editor and preview need independent reading modes. Keep totals and saved/unsaved status visible, collapse the directory on demand, and allow a full-width document preview without truncating retained content.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/quote-editor-chromium-1440.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Quote Edit/Preview modes and retained phone drafts exist.",
+      "remainingWork": "Finish/reconcile desktop directory collapse, full-width long preview and persistent saved/unsaved totals.",
+      "evidence": [
+        {
+          "path": "src/app/quotes/quotes.tsx",
+          "sha256": "b4188e3e0fe564f3b4469989b396d38f9bbf97ad3b4c789569180f888b1a46c1"
+        },
+        {
+          "path": "planning/QUOTE_PHONE_NAVIGATION.md",
+          "sha256": "4150ca8a1cbc2ef9e5cd074a3f0ae76bd9a5f978e5254fd27dae2097ce56b68b"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D04",
+      "section": "Deeper workflows",
+      "title": "Sharing and acceptance",
+      "requirements": "The long accepted-quote evidence stacks directory, agreement, document and history. Open the selected agreement directly on phones; keep Accepted, the exact retained content and a compact event timeline distinct. A prepared document is not evidence of delivery.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/quote-commercial-chromium-390.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Phone quote record separation and actual acceptance/content retention exist.",
+      "remainingWork": "Finish compact accepted-agreement/event hierarchy with all retained content and honest delivery evidence.",
+      "evidence": [
+        {
+          "path": "src/app/quotes/quote-commercial-panel.tsx",
+          "sha256": "42f014ed78f096f7cb4cfe666bf8b707e24e553854c8c1e55395386169205670"
+        },
+        {
+          "path": "planning/QUOTE_PHONE_NAVIGATION.md",
+          "sha256": "4150ca8a1cbc2ef9e5cd074a3f0ae76bd9a5f978e5254fd27dae2097ce56b68b"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D05",
+      "section": "Deeper workflows",
+      "title": "Receipt viewer",
+      "requirements": "The compact file action card is an improvement already made. The next opportunity is a dedicated viewer with a close action, sensible fit-to-width and accessible zoom when supported. The solid-color fixture is not evidence of a broken preview.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/expenses-verified-receipt-chromium-390.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Dedicated verified private viewer has close/fit/zoom, failure display and focus/privacy handling.",
+      "remainingWork": "Original-file formats, full release and physical iPhone remain separate required acceptance.",
+      "evidence": [
+        {
+          "path": "src/app/expenses/receipt-document-viewer.tsx",
+          "sha256": "01fcc67958163a4efdd77df3231db8530a144a1f96447aaa9efd255dd6a2057d"
+        },
+        {
+          "path": "planning/RECEIPT_DOCUMENT_VIEWER_DESIGN.md",
+          "sha256": "2aa85727fbada839b9e2c99f81a5a5001da64f05b83390fb7b20d3cb51bdb666"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D06",
+      "section": "Deeper workflows",
+      "title": "Partial completion",
+      "requirements": "The multi-portion form is long and heavily nested. Use per-vehicle progress and a compact unresolved-items summary. Only expand the item being edited; preserve all draft entries and explicit outcomes when changing sections.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/completion-editor-webkit-390.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Vehicle/portion surfaces and invalid-field-directed review are improved.",
+      "remainingWork": "Implement/reconcile per-vehicle progress, unresolved summary and selective editors preserving every draft entry.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/work/completion.tsx",
+          "sha256": "a4d7ec994e3e633abb46b64500c294d3c1e5917c0394f552ab01b01de6eb9e6f"
+        },
+        {
+          "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
+          "sha256": "b729fc3fe6ba0c1d74fb9acf50ddcc4c7d180d6fbaf09a1f0661a71f8f16a6d3"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D07",
+      "section": "Deeper workflows",
+      "title": "Saved completion and follow-up",
+      "requirements": "Saved outcomes, message history and invoice preparation read as a long text document. Lead with the saved outcome and next task, then show scope, message events and invoice preparation as distinct sections. Keep owner-confirmed sending separate from provider-confirmed delivery.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/completion-history-chromium-1440.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Saved outcomes/next tasks lead; scope, review messages and invoice preparation are distinct with exact message evidence.",
+      "remainingWork": "Other outcome/message/delivery states and final release/device acceptance remain.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/work/completion.tsx",
+          "sha256": "a4d7ec994e3e633abb46b64500c294d3c1e5917c0394f552ab01b01de6eb9e6f"
+        },
+        {
+          "path": "planning/COMPLETION_HISTORY_DESIGN.md",
+          "sha256": "faed214dbaa109503626972e53ad9afa692656eff90fcb80a5a6493deae8066e"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D08",
+      "section": "Deeper workflows",
+      "title": "Work-time ledger",
+      "requirements": "The active/paused summary is useful. Standardize interval rows, human-readable time and as-of freshness. Present corrections as new retained events with original evidence still reachable.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/work-time-ledger-chromium-1440.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Observed totals and chronological interval versions show exact replacement-linked corrections and read-time scope.",
+      "remainingWork": "Other large/stale/denied histories and final source/device acceptance remain.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/work/time/screen.tsx",
+          "sha256": "fdc9dd393705194ce4d67b18b6e7023d64cf69af076d8627d1d775ff615bfe59"
+        },
+        {
+          "path": "planning/WORK_TIME_HISTORY_DESIGN.md",
+          "sha256": "5d6ec41ada23551cbc29dfc4723bdc2c1736a7d2230806b38dd16a271c83b5c3"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D09",
+      "section": "Deeper workflows",
+      "title": "Trial balance",
+      "requirements": "Right-aligned debit/credit columns and totals work well. Bring report identity, through-date, coverage and CSV scope into one compact header. Keep totals readable under text zoom and do not collapse financial differences into a chart.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-trial-balance-chromium-390.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Trial balance retains aligned figures and one scope/date/coverage/CSV header without hiding differences in a chart.",
+      "remainingWork": "Complete specific text-zoom/final-source and delivered verification; implementation presence is not that sign-off.",
+      "evidence": [
+        {
+          "path": "src/app/settings/accounts/trial-balance.tsx",
+          "sha256": "a5fd3f041db1e1352349f5374ed3ab213899b89c9fab7478807344616be92ee0"
+        },
+        {
+          "path": "planning/REPORT_SCOPE_DESIGN.md",
+          "sha256": "3ccf5a44bb251ea8624bec4b6e9398df12ab1d6d20180731503b3c65e1db1cf6"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D10",
+      "section": "Deeper workflows",
+      "title": "Income statement",
+      "requirements": "Scope, currency, first posting and download are split across several boxes. Combine these facts into a report header, give section totals clear weight and retain the incomplete-cost warning close to the result.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-income-statement-chromium-390.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Income report groups period/currency/posting coverage/export and keeps incomplete-cost warnings beside results.",
+      "remainingWork": "Fresh full-head/all relevant state and delivered/device verification remain.",
+      "evidence": [
+        {
+          "path": "src/app/settings/accounts/recorded-income-statement.tsx",
+          "sha256": "1d9aa4ec36582fded56030f23a4dd6a0036253a6b4211c9183023d83c0b6dd64"
+        },
+        {
+          "path": "planning/REPORT_SCOPE_DESIGN.md",
+          "sha256": "3ccf5a44bb251ea8624bec4b6e9398df12ab1d6d20180731503b3c65e1db1cf6"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D11",
+      "section": "Deeper workflows",
+      "title": "Receivables aging",
+      "requirements": "The aging summary has useful exact totals but a lot of vertical distance before invoice detail. Use compact aging buckets and invoice rows with customer, due date, amount and status. Label the excluded opening/legacy scope prominently.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-receivable-aging-populated-chromium-1440.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Receivables have scoped posted totals and preserved opening/legacy exclusions.",
+      "remainingWork": "Finish/reconcile compact aging buckets and customer/due/amount/status detail density, long lists and filters.",
+      "evidence": [
+        {
+          "path": "src/app/settings/accounts/receivable-aging.tsx",
+          "sha256": "84f6c17f49516bcba6138c82d5b9aab9b86933aa97cb90705e1f9aa5f486fe40"
+        },
+        {
+          "path": "planning/REPORT_SCOPE_DESIGN.md",
+          "sha256": "3ccf5a44bb251ea8624bec4b6e9398df12ab1d6d20180731503b3c65e1db1cf6"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D12",
+      "section": "Deeper workflows",
+      "title": "Customer funds",
+      "requirements": "Held total and customer detail are accurate-looking but visually fragmented. Put total held, as-of date, ledger-match status and export scope in one summary. Never present held funds as revenue.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-customer-funds-chromium-1440.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Held total, as-of snapshot, coverage/export and actual ledger-match status are grouped; held money is not labeled revenue.",
+      "remainingWork": "Fresh full-head and long/truncated/delivery/device variants remain.",
+      "evidence": [
+        {
+          "path": "src/app/settings/accounts/customer-funds-report.tsx",
+          "sha256": "605ad264b22c7ea9b60a07154c6d600baeda09cec26ef01b2b9b7d38b4cbde3f"
+        },
+        {
+          "path": "planning/REPORT_SCOPE_DESIGN.md",
+          "sha256": "3ccf5a44bb251ea8624bec4b6e9398df12ab1d6d20180731503b3c65e1db1cf6"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D13",
+      "section": "Deeper workflows",
+      "title": "Issued invoice",
+      "requirements": "The issued document, new-draft action, payment disclosure and draft history need clearer separation. Lead with invoice number, status, due date and outstanding amount, using only verified values. Give the immutable document its own reading surface.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-invoice-issue-product-chromium-390.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Immutable issued document, number/dates/original total, distinct payment tasks and disclosed draft history are implemented.",
+      "remainingWork": "A verified live outstanding header remains to implement/review; the original total must not be used as a guessed balance.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/work/invoice-issue-tax-review.tsx",
+          "sha256": "063001bd08815e8c0bdc6dbc9bf07b62af6704db1d11a633fc1446d0f4582d35"
+        },
+        {
+          "path": "planning/ISSUED_INVOICE_DESIGN.md",
+          "sha256": "a3524689ed408fce6c4e3586630d2f2960db5217d08d892b3c2ed82467957aa2"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D14",
+      "section": "Deeper workflows",
+      "title": "Payment correction",
+      "requirements": "The selected payment, available amount, correction date, review and amount-to-move fields form a long chain. Add a before/after review showing the specific payment, corrected amount and held-funds consequence. Keep the reason and audit trail compulsory.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-payment-correction-chromium-390.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Specific payment/date and exact before/after application/funds consequences appear before original explicit save with mandatory reason.",
+      "remainingWork": "Other correction/history/stale states and fresh full-head acceptance remain; no invented cash or total balance.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/work/payment-correction.tsx",
+          "sha256": "213d7acf766cabf4503e1b6a95dccd0432b2db414de2c199c4d130fa951dff48"
+        },
+        {
+          "path": "planning/PAYMENT_CORRECTION_PREVIEW_DESIGN.md",
+          "sha256": "9316f5e3f8acc91f50092d73be6cd28815d0e1a6821e6cae05bd258a0745c450"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D15",
+      "section": "Deeper workflows",
+      "title": "Statement staging",
+      "requirements": "Opening/closing balances, row totals and difference are buried in prose, while the checksum occupies prime space. Use a numeric comparison block, a distinct unresolved-difference state and a disclosed evidence section. Staging must never look like reconciliation.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-statement-staging-chromium-390.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Preview/saved balance comparisons, explicit unresolved/zero arithmetic and disclosed file/review evidence are implemented.",
+      "remainingWork": "Other account-identity/long-value/state and installed/device acceptance remain; staging never means reconciliation.",
+      "evidence": [
+        {
+          "path": "src/app/settings/accounts/statement-comparison.tsx",
+          "sha256": "f86460a595dc3c42480b6d77fbb2f0cb60fd59c04ef77e5572b79124ac5e54b6"
+        },
+        {
+          "path": "planning/STATEMENT_COMPARISON_DESIGN.md",
+          "sha256": "2b33fa8f24690698a5d3727560115daeb0bb2f6fdde6aaca9f34ff767c2c4120"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D16",
+      "section": "Deeper workflows",
+      "title": "Supplier bills",
+      "requirements": "The bill editor and saved-draft evidence use desktop width well, but load/open/new controls compete. Give the selected bill a clear identity and original-document requirement; separate draft editing from payable review and posting.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-supplier-bill-chromium-1440.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Selected bill identity, saved amount/dates, original-document requirement, separated editor/review/posting and dirty/pending-task guards have complete scoped browser evidence.",
+      "remainingWork": "Complete remaining state/long-value/native-original-format variants and fresh release/installed/physical-device acceptance.",
+      "evidence": [
+        {
+          "path": "src/app/expenses/supplier-bill-drafts.tsx",
+          "sha256": "2772b8986b02d3f836c506ea01b8fbc3d8efd5da2cdd89798c818d7ed27b1de2"
+        },
+        {
+          "path": "planning/SUPPLIER_BILL_DESIGN.md",
+          "sha256": "4cb405f36dce2cc30c1f3ea5d1abd50d2a44f7355c19aa5cd1241ecbf4fb4654"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D17",
+      "section": "Deeper workflows",
+      "title": "Dated approval history",
+      "requirements": "Lookup, gap result and history are separated into large cards. Add an effective-period timeline or compact interval table; label gaps and superseded approvals in words. Keep original versions and original downloaded evidence intact.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-mapping-history-chromium-1440.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Dated fixed/category histories show effective intervals, closed revisions, honest loaded boundaries and retained reasons/exports.",
+      "remainingWork": "Remaining large/gap/state and final release/device review remain.",
+      "evidence": [
+        {
+          "path": "src/app/settings/accounts/mappings/history.tsx",
+          "sha256": "18bac8e7996f459df41807640dd9cf206fb22736e3f60b92f4db23765f912419"
+        },
+        {
+          "path": "planning/MAPPING_HISTORY_DESIGN.md",
+          "sha256": "dd69f23b08f79e614704df3ce073f49a907ca56b2fd5286a0634b40e8a759f46"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D18",
+      "section": "Deeper workflows",
+      "title": "Travel history",
+      "requirements": "The date-grouped trip list and departure/arrival detail are a good pattern to reuse. Tighten spacing, keep the selected trip visible and group corrections beneath the original event rather than hiding their relationship.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/travel-history-viewport-chromium-1440.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Selected trip context persists; exact correction changes group under the original journey with retained evidence.",
+      "remainingWork": "Remaining long pagination/failure states and final source/device verification remain.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/travel/trip-history-presentation.ts",
+          "sha256": "b8920a8e8e40b7c417ca6291d11de6c819349856841513d0f87566ae8d4cf47e"
+        },
+        {
+          "path": "planning/TRAVEL_HISTORY_DESIGN.md",
+          "sha256": "ebec45207df26c3bed3aa553019748deb8dd3ec3790c7f3521a04c7bd9252a43"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D19",
+      "section": "Deeper workflows",
+      "title": "Calendar waiting state",
+      "requirements": "Account, consent and queued event are presented in three substantial cards. Consolidate connection identity and give each appointment an explicit waiting/failed/confirmed row. Preserve the prominent simulated/no-events disclaimer in fictional mode.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/settings-calendar-pending-chromium-390.png",
+      "implementationStatus": "partial",
+      "implementedOrPresent": "Calendar identity summary and truthful simulated/waiting status handling exist.",
+      "remainingWork": "Finish compact appointment waiting/failed/confirmed activity and evidence hierarchy; do not claim live delivery.",
+      "evidence": [
+        {
+          "path": "src/app/settings/google-calendar/job-status.tsx",
+          "sha256": "b9b9a3de999c958f14a98386a690d125447262a69a30639ca3ea6d8929e165a1"
+        },
+        {
+          "path": "planning/GOOGLE_CALENDAR_V1.md",
+          "sha256": "29b763b56f7f41112498cd2e85fd2098f51f0134cb1060f28940280c8be08f17"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "incomplete scope or review",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    },
+    {
+      "id": "D20",
+      "section": "Deeper workflows",
+      "title": "Drop-off custody history",
+      "requirements": "The received/released event list is long and repeated metadata makes the handoff hard to scan. Use a two-stage custody timeline with person, actual handoff time and evidence availability. Missing photos remain explicitly missing; no decorative photo placeholders should imply evidence.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/field-dropoff-history-chromium-390.png",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Actual received/released timeline groups people/location/handoff/recorded time and missing/verified photo evidence.",
+      "remainingWork": "Other custody editor/state, native original-format and physical-device/full release acceptance remain.",
+      "evidence": [
+        {
+          "path": "src/app/schedule/custody-event-timeline.tsx",
+          "sha256": "39ee6c55f9674e42048fe214f3c91756b0267af7dc24b89facb9b9bec28ae43a"
+        },
+        {
+          "path": "planning/CUSTODY_TIMELINE_DESIGN.md",
+          "sha256": "92e77bca8b2707cb36465fc8a8ebf84011465aca17baa86bbfe873678b5788a7"
+        }
+      ],
+      "verification": {
+        "finalSignOff": false,
+        "scope": "current source inspection plus retained scoped local workflow evidence",
+        "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
+      }
+    }
+  ]
+}
