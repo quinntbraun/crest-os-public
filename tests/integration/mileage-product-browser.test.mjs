@@ -7,6 +7,7 @@ import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {strFromU8,unzipSync} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {reviewTaskPrerequisites} from '../support/task-prerequisites.mjs';
 
 function departureLocalTime(milliseconds){
  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Indiana/Indianapolis',year:'numeric',month:'2-digit',
@@ -33,6 +34,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
+  await reviewTaskPrerequisites(page,{fixture,engine:name});
   assert.equal(await page.evaluate(async input=>{
    const init={method:'POST',headers:{'content-type':'application/json'},body:'{}'};
    const {csrfToken}=await (await fetch('/api/auth/session',init)).json();

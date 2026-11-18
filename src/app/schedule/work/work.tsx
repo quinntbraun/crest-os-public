@@ -1,4 +1,5 @@
 'use client';
+import {TaskPrerequisite} from '../../task-prerequisite';
 import {useEffect,useId,useLayoutEffect,useRef,useState} from 'react';
 import {createFieldSessionController,fieldSessionKind,initialFieldSessionView} from '../../../client/field-session-controller';
 import type {FieldSessionMode,FieldSessionView} from '../../../client/field-session-controller';
@@ -92,7 +93,7 @@ export function FieldSessionScreen({jobId,mode='work'}:{jobId:string;mode?:Field
   vehicles:view.resources.vehicles.map(row=>({id:row.vehicle_id,label:parseVehicle(row.vehicle_snapshot,view.resources!.businessId).label})),
   assignments:view.completionVehicles,
  }:undefined;
- return <section aria-label={completing?'Job completion':interrupting?'Mobile trip interruption':cancelling?pickup?'Pickup job cancellation':dropoff?'Drop-Off job cancellation':'Mobile job cancellation':pickup?'Pickup work status':dropoff?'Drop-Off work status':'Mobile work status'} aria-busy={view.busy}><p className="job-change-status" ref={status} role="status" tabIndex={-1}>{view.message}</p>
+ return <section aria-label={completing?'Job completion':interrupting?'Mobile trip interruption':cancelling?pickup?'Pickup job cancellation':dropoff?'Drop-Off job cancellation':'Mobile job cancellation':pickup?'Pickup work status':dropoff?'Drop-Off work status':'Mobile work status'} aria-busy={view.busy}><p className={view.selectionNeeded?'visually-hidden':'job-change-status'} ref={status} role="status" tabIndex={-1}>{view.message}</p>
   {view.phase==='loading'&&<div className="workspace-skeleton appointment-change-loading" aria-hidden="true"/>}
   {view.phase==='signed-out'&&<a className="primary-action" href="/sign-in">{completing?'Sign in to review completion':'Sign in to review work status'}</a>}
   {mode==='work'&&view.phase==='ready'&&view.resources&&view.context&&workAction&&<WorkForm initialAction={workAction} key={view.resources.head.job.id+':'+view.resources.head.job.version} view={view} more={()=>action('moreVehicles')} save={async body=>{const controller=current.current;if(!controller)return;await controller.save(body);if(current.current===controller)status.current?.focus();}}/>}
@@ -117,7 +118,8 @@ export function FieldSessionScreen({jobId,mode='work'}:{jobId:string;mode?:Field
   {view.savedJobId&&<>{!view.summary&&<p>Confirmed saved version {view.savedVersion}.</p>}<a className="primary-action" href={'/schedule?job='+encodeURIComponent(view.savedJobId)}>Open updated job in Schedule</a></>}
   {completing&&view.phase==='committed'&&!view.summary&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload saved completion</button>}
   {view.phase==='pending'&&<><p>No request retries automatically. Keep its reference until the original outcome is verified.</p>{view.reference&&<p className="save-reference">Original work reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>{view.pendingKind===reviewOutcomeKind?'Check original message outcome':completing?'Check original completion':interrupting?'Check original trip interruption':cancelling?'Check original cancellation':'Check original work action'}</button><a href={'/save-review?kind='+(view.pendingKind??kind)}>Open Save review</a></>}
-  {blocked&&<div className="field-unavailable-actions">
+  {view.selectionNeeded&&<TaskPrerequisite kind={mode}/>}
+  {blocked&&!view.selectionNeeded&&<div className="field-unavailable-actions">
    <a className="primary-action" href={returnHref}>{jobId?'Open saved job':'Open Schedule'}</a>
    {jobId&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload saved work</button>}
   </div>}

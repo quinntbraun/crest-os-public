@@ -243,7 +243,9 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
    <p>{financeMappingLabels[result.purpose]} · Version {result.version} · Effective {dateLabel(result.effectiveFrom)}</p>
    <details><summary>Save reference</summary><p className="save-reference"><code>{result.operationId}</code></p></details>
   </section>}
-  {!pending&&!draft&&<>
+  {!pending&&!draft&&<section className={!workspace?'mapping-approval-start':'mapping-approval-selector'} aria-label="Choose an approval setting">
+   {!workspace&&<div className="mapping-approval-introduction"><h2>Review an approval setting</h2><p>Choose a {categories?'category':'purpose'} to see its saved setting and the accounts eligible for a new approval.</p><p>Review the saved and proposed rules before confirming a change. Earlier approvals stay in history.</p></div>}
+   <div className="mapping-approval-fields">
    <div className={styles.lookupFields}>
     <div>
      <label htmlFor="approval-purpose">{categories?'Expense category':'Purpose'}</label>
@@ -260,7 +262,8 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
     <button type="button" disabled={controlsDisabled||!purpose} onClick={()=>load()}>Load approval settings</button>
     <button type="button" className="secondary" disabled={controlsDisabled} onClick={()=>load(true)}>Review interrupted approval</button>
    </div>
-  </>}
+   </div>
+  </section>}
   {workspace&&!pending&&<section className="mapping-summary-card" aria-label="Saved approval settings">
    <h2>{financeMappingLabels[workspace.data.purpose]}</h2>
    {expenseCategoryMappingPurpose(workspace.data.purpose)&&<p className="field-help">{expenseExamples[workspace.data.purpose]}</p>}
@@ -301,7 +304,7 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
       <h4>Latest saved rule</h4>
       <dl>
        <dt>Posting account</dt><dd>{workspace.saved?.accountCode??(latest?'Mapping closed':'No approved rule')}</dd>
-       <dt>Effective period</dt><dd>{latest?<>From {dateLabel(latest.effectiveFrom)}{customerDate(draft.date)&&draft.date>latest.effectiveFrom&&<> · Ends {dateLabel(draft.date)} if saved</>}</>:'No saved effective period'}</dd>
+       <dt>Effective period</dt><dd>{latest?<>From {dateLabel(latest.effectiveFrom)}{customerDate(draft.date)&&draft.date>latest.effectiveFrom&&<> · Before {dateLabel(draft.date)} if saved</>}</>:'No saved effective period'}</dd>
        <dt>Reason</dt><dd>{workspace.saved?.reason??'No saved reason'}</dd>
       </dl>
      </section>

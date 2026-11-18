@@ -7,6 +7,7 @@ import {customerDate} from '../../../../customer/customer-contract';
 import {expenseCategoryMappingLabels,expenseCategoryMappingPurpose,financeMappingLabels,fixedFinanceMappingLabels,fixedFinanceMappingPurpose} from '../../../../bookkeeping/finance-mapping-contract';
 import type {ExpenseCategoryMappingPurpose,FinanceMappingPurpose} from '../../../../bookkeeping/finance-mapping-contract';
 import styles from '../screen.module.css';
+import {MappingApprovalHistory} from './history';
 
 type Result=Awaited<ReturnType<typeof financeAccounts.mappingAt>>;
 type History=Awaited<ReturnType<typeof financeAccounts.mappingHistory>>;
@@ -118,6 +119,7 @@ export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
  return <section className={styles.workspace} aria-label="Account mapping lookup" aria-busy={busy}>
   <p ref={status} tabIndex={-1} role="status">{message}</p>
   {signedOut&&<a href="/sign-in">Sign in again</a>}
+  <div className="mapping-workbench"><div className="mapping-lookup-pane">
   <form className="mapping-lookup-form" onSubmit={submit}>
    <div className={styles.lookupFields}>
     <div>
@@ -157,25 +159,9 @@ export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
    <h2>{purpose&&financeMappingLabels[purpose]}</h2>
    <p>No usable approved account covers <strong>{dateLabel(date)}</strong>. Check the approval history for the saved effective dates.</p>
   </section>}
-  {history&&(history.rows.length>0||categories)&&<section className="mapping-summary-card" aria-label="Saved mapping history">
-   <h2 ref={historyHeading} className="editor-heading" tabIndex={-1}>Approval history</h2>
-   {purpose&&<p>{financeMappingLabels[purpose]}</p>}
-   {categories&&purpose&&<a href={'/settings/accounts/mappings/categories/manage?purpose='+encodeURIComponent(purpose)}>Manage approvals for {financeMappingLabels[purpose]}</a>}
-   {history.rows.length===0?<p>No approved versions for this category.</p>:<>
-   <div className={styles.actions}>
-    <button type="button" className="secondary" disabled={controlsDisabled} onClick={download}>Download loaded approvals (CSV)</button>
-   </div>
-   <ul className="mapping-history-list">{history.rows.map((row,index)=><li key={row.id}>
-    <details>
-     <summary><strong>Version {row.version} · {row.accountCode===null?'Closed':`Account ${row.accountCode}`}</strong>
-      <span>From {dateLabel(row.effectiveFrom)}{index>0?' · Next version starts '+dateLabel(history.rows[index-1]!.effectiveFrom):' · Latest saved version'}</span>
-     </summary>
-     <p>{row.reason}</p>
-    </details>
-   </li>)}</ul>
-   {history.hasMore&&<button type="button" className="secondary" disabled={controlsDisabled} onClick={()=>void load('more')}>Load older approvals</button>}
-   </>}
-  </section>}
+  </div>
+  {history?<MappingApprovalHistory history={history} purpose={purpose} categories={categories} heading={historyHeading} disabled={controlsDisabled} download={download} more={()=>void load('more')}/>:<section className="mapping-history-introduction" aria-label="Approval history introduction"><h2>Review approved changes</h2><p>Choose a {categories?'category':'purpose'}, then view its approval history to compare accounts and effective periods.</p><p>The date lookup checks which approved account is usable on a specific date.</p></section>}
+  </div>
   {categories&&<section className="mapping-summary-card" aria-labelledby="category-directory-title">
    <h2 id="category-directory-title">Expense category directory</h2>
    <p className="field-help">{directory?'Posting accounts on '+dateLabel(date):'Select an effective date to check posting accounts.'}</p>

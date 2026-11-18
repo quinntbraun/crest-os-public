@@ -6,6 +6,7 @@ import AxeBuilder from '@axe-core/playwright';
 import {chromium,expect,webkit} from '@playwright/test';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {mappingBusinessSource,reviewApprovalEntry,assertMappingLayout} from '../support/mapping-workbench.mjs';
 
 for(const engine of [chromium,webkit]){
  test(engine.name()+' reopens the account mapping applicable on a date and its approved history',{timeout:240000},async()=>{
@@ -39,6 +40,7 @@ for(const engine of [chromium,webkit]){
    const check=view.getByRole('button',{name:'Check account',exact:true});
    const approvals=view.getByRole('button',{name:'View approval history',exact:true});
    const history=view.getByRole('region',{name:'Saved mapping history',exact:true});
+   const sourceBeforeLookup=await mappingBusinessSource(fixture);
    await expect(check).toBeDisabled();
    await purpose.selectOption('service_revenue');
    await date.fill('2026-03-31');
@@ -65,6 +67,9 @@ for(const engine of [chromium,webkit]){
    await approvals.click();
    await expect(status).toHaveText('Saved mapping history loaded.');
    await expect(history.getByText('Version 3 · Closed',{exact:true})).toBeVisible();
+   await expect(history.locator('.mapping-history-coverage')).toContainText('Versions 3 through 1 loaded.');
+   await expect(history.locator('.mapping-history-boundary')).toContainText('before Jan 1, 2026');
+   await expect(history.getByText('No posting account assigned by this version',{exact:true})).toBeVisible();
    await history.getByText('Version 1 · Account 4000',{exact:true}).click();
    await expect(history.getByText('=Fictional initial approval',{exact:true})).toBeVisible();
    const download=page.waitForEvent('download');
@@ -74,13 +79,15 @@ for(const engine of [chromium,webkit]){
    const csv=await readFile(await file.path(),'utf8');
    assert.match(csv,/"3","2026-10-01","Closed","","Fictional mapping closed"/);
    assert.match(csv,/"1","2026-01-01","Approved","4000","'=Fictional initial approval"/);
-   for(const width of [360,390,768,1440]){
+   for(const width of [360,390,768,1100,1440]){
     await page.setViewportSize({width,height:900});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
     await page.evaluate(()=>window.scrollTo(0,0));
-    await page.screenshot({path:'.local/review/finance-mapping-history-'+engine.name()+'-'+width+'.png',animations:'disabled'});
+    await assertMappingLayout(page,width);
+    await page.screenshot({path:'.local/review/finance-mapping-history-'+engine.name()+'-'+width+'.png',animations:'disabled',fullPage:true});
    }
+   assert.deepEqual(await mappingBusinessSource(fixture),sourceBeforeLookup,'lookup/history/CSV must not change retained financial source');
    await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
    await expect(history).toHaveCount(0);
    await expect(purpose).toHaveValue('');
@@ -139,6 +146,7 @@ for(const engine of [chromium,webkit]){
    const loadSettings=editor.getByRole('button',{name:'Load approval settings',exact:true});
    const review=editor.getByRole('button',{name:'Review interrupted approval',exact:true});
    const pendingKey='crest.finance-mapping.pending-reference.v1';
+   await reviewApprovalEntry(page,engine.name(),'mapping');
    await review.click();
    await expect(editorStatus).toHaveText('There is no interrupted approval in this tab.');
    await selectPurpose.selectOption('service_revenue');
@@ -159,6 +167,7 @@ for(const engine of [chromium,webkit]){
    await expect(proposed).toContainText('Fictional owner closed this mapping');
    await expect(saveClosure).toBeDisabled();
    await effective.fill('2026-12-01');
+   await expect(savedRule).toContainText('Before Dec 1, 2026 if saved');
    for(const width of [360,390,768,1440]){
     await page.setViewportSize({width,height:900});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);

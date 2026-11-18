@@ -23,7 +23,7 @@ export type MileageJobChoice=Pick<JobSummary,'jobId'|'customerName'|'startAt'|'v
 export type MileageJobCursor=Readonly<{startAt:string;jobId:string}>;
 export type MileageJobChoices=Readonly<{jobs:readonly MileageJobChoice[];next:MileageJobCursor|null}>;
 export type MileageView=Readonly<{
- phase:'loading'|'ready'|'pending'|'review'|'signed-out'|'unavailable';busy:boolean;message:string;
+ phase:'loading'|'ready'|'pending'|'review'|'signed-out'|'unavailable';busy:boolean;message:string;selectionNeeded?:boolean;
  trips:readonly MileageTrip[];hasMore:boolean;selected:MileageTrip|null;history:MileageHistoryPage|null;
  canSave:boolean;timezone:string;reference:string;departure:LoadedMobileDeparture|null;pendingKind:SaveKind|null;
 }>;
@@ -46,7 +46,7 @@ export function createMileageController(deps:{jobId:string;legId?:string;initial
   const entry=pending?.entry;
   const reference=entry&&workspace&&entry.businessId===workspace.context.businessId&&entry.binding===workspace.binding
    ?entry.reference.operationId:'';
-  update({...initialMileageView,phase,message,reference,pendingKind:pending?.kind??null});
+  update({...initialMileageView,selectionNeeded:false,phase,message,reference,pendingKind:pending?.kind??null});
  };
  const live=(signal:AbortSignal)=>{if(!alive||signal.aborted||active?.signal!==signal)throw Error();};
  async function run(work:(signal:AbortSignal)=>Promise<void>,failed:(error:unknown)=>void){
@@ -131,7 +131,7 @@ export function createMileageController(deps:{jobId:string;legId?:string;initial
   clear('loading','Checking access to saved trips…');
   const {proof,context}=await fresh(signal,false);
   if(pending){clear('pending','Check the original '+subject(pending.kind)+' save before recording another.');return;}
-  if(deps.legId?(!customerUuid(deps.legId)||deps.jobId!==''):!customerUuid(deps.jobId))throw Error();
+  if(deps.legId?(!customerUuid(deps.legId)||deps.jobId!==''):!customerUuid(deps.jobId)){clear('unavailable','Open a saved job or standalone trip to review mileage.');update({selectionNeeded:true});return;}
   await loadTrips(context.businessId,proof,signal,deps.initialTrip?.legId,deps.initialTrip);
  },unavailable);
  const moreTrips=()=>run(async signal=>{

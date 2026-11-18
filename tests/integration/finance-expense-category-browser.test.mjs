@@ -5,6 +5,7 @@ import AxeBuilder from '@axe-core/playwright';
 import {chromium,expect,webkit} from '@playwright/test';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {reviewApprovalEntry,assertMappingLayout} from '../support/mapping-workbench.mjs';
 
 for(const engine of [chromium,webkit]){
  test(engine.name()+' approves a fictional expense category account, recovers an interrupted save and exports history',
@@ -36,6 +37,7 @@ for(const engine of [chromium,webkit]){
     await page.getByRole('link',{name:'Manage category approvals',exact:true}).click();
 
     const editor=page.getByRole('region',{name:'Mapping approvals',exact:true}),status=editor.getByRole('status');
+    await reviewApprovalEntry(page,engine.name(),'category');
     const category=editor.getByLabel('Expense category',{exact:true}),date=editor.getByLabel('Effective from',{exact:true});
     const load=editor.getByRole('button',{name:'Load approval settings',exact:true});
     const save=editor.getByRole('button',{name:'Save approval',exact:true});
@@ -60,13 +62,14 @@ for(const engine of [chromium,webkit]){
 
     await mkdir('.local/review',{recursive:true});
     async function capture(view){
-     for(const width of [360,390,768,1440]){
+     for(const width of [360,390,768,1100,1440]){
       await page.setViewportSize({width,height:900});
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
       assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
       if(view==='approval')await page.evaluate(()=>window.scrollTo(0,0));
       else await page.getByRole('heading',{name:'Approval history',exact:true}).scrollIntoViewIfNeeded();
-      await page.screenshot({path:'.local/review/finance-category-'+view+'-'+engine.name()+'-'+width+'.png',animations:'disabled'});
+      if(view==='history')await assertMappingLayout(page,width);
+      await page.screenshot({path:'.local/review/finance-category-'+view+'-'+engine.name()+'-'+width+'.png',animations:'disabled',fullPage:true});
      }
     }
     await capture('approval');
@@ -129,6 +132,8 @@ for(const engine of [chromium,webkit]){
     await expect(lookup.getByRole('status')).toHaveText('No usable account mapping applies on that date.');
     await lookup.getByRole('button',{name:'History for Fuel',exact:true}).click();
     await expect(lookup.getByText('Version 2 · Closed',{exact:true})).toBeVisible();
+    await expect(lookup.locator('.mapping-history-coverage')).toContainText('Versions 2 through 1 loaded.');
+    await expect(lookup.locator('.mapping-history-boundary')).toContainText('before Feb 1, 2026');
     await expect(lookup.getByRole('heading',{name:'Approval history',exact:true})).toBeFocused();
     await expect(lookup.getByText('Version 2 · Closed',{exact:true})).toBeInViewport();
     await expect(lookup.getByText('Version 1 · Account 5100',{exact:true})).toBeVisible();

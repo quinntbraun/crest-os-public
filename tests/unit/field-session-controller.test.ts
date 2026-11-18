@@ -18,6 +18,12 @@ function setup(state='scheduled'){
  const depart={action:'depart' as const,reason:null,trip:{drivenVehicleId:rig.id,origin:{schemaVersion:1 as const,kind:'manual' as const,locationText:'Synthetic private origin',instructions:null},etaAt:null,notes:null}};
  return {f,resources,context,map,storage,store,rig,api,vehicleApi,session,lookup,blocker,change,controller,depart};
 }
+it('shows job selection only for a missing job after access, feature and interrupted-save checks',async()=>{
+ const f=setup();await f.controller.load('');expect(f.controller.view()).toMatchObject({phase:'blocked',selectionNeeded:true});expect(f.api.resources).not.toHaveBeenCalled();expect(f.api.saveFieldSession).not.toHaveBeenCalled();
+ f.context.fieldSessionAvailable=false;await f.controller.load('');expect(f.controller.view().selectionNeeded).toBeUndefined();f.context.fieldSessionAvailable=true;
+ f.session.mockRejectedValueOnce(new AuthenticationError('denied'));await f.controller.load('');expect(f.controller.view().phase).toBe('signed-out');expect(f.controller.view().selectionNeeded).toBeUndefined();
+ await f.controller.load(f.f.q.jobId);f.api.saveFieldSession.mockRejectedValueOnce(new SchedulingClientError('unknown'));await f.controller.save(f.depart);await f.controller.load('');expect(f.controller.view().phase).toBe('pending');expect(f.controller.view().selectionNeeded).toBeUndefined();expect(f.store.read()).not.toBeNull();expect(f.api.saveFieldSession).toHaveBeenCalledTimes(1);
+});
 it('pins an opaque reference before delivery, confirms the exact receipt and clears private data',async()=>{
  const f=setup();await f.controller.load(f.f.q.jobId);expect(f.controller.view()).toMatchObject({phase:'ready',vehicles:[f.rig]});f.api.saveFieldSession.mockImplementationOnce(async q=>{expect(f.store.read()?.reference).toEqual(fieldSessionOriginal(q).reference);expect([...f.map.values()].join()).not.toContain('Synthetic private origin');return committed(q);});await f.controller.save(f.depart);expect(f.controller.view()).toMatchObject({phase:'committed',savedJobId:f.f.q.jobId,savedVersion:'2',resources:null,vehicles:[]});expect(f.store.read()).toBeNull();
 });

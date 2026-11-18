@@ -1,4 +1,5 @@
 'use client';
+import {TaskPrerequisite} from '../../../task-prerequisite';
 import {useEffect,useId,useRef,useState} from 'react';
 import type {ReactNode} from 'react';
 import {authentication,AuthenticationError} from '../../../../client/authentication';
@@ -232,7 +233,7 @@ export function WorkTimeScreen({jobId}:{jobId:string}){
     </div>
    </>;
   })()}
-  {!jobId&&<a href="/schedule">Open Schedule</a>}
+  {!jobId&&state.phase==='unavailable'&&<TaskPrerequisite kind="workTime"/>}
  </section>;
 }
 

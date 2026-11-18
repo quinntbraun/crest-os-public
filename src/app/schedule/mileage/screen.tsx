@@ -1,4 +1,5 @@
 'use client';
+import {TaskPrerequisite} from '../../task-prerequisite';
 import {useCallback,useEffect,useId,useRef,useState} from 'react';
 import {createMileageController,initialMileageView} from '../../../client/mileage-controller';
 import {createPendingSchedulingStore,pendingSchedulingKeys} from '../../../client/pending-scheduling';
@@ -276,9 +277,10 @@ export function MileageScreen({jobId,legId,initialTrip}:{jobId:string;legId:stri
   </article>;
  }
  return <section className="mileage-screen" aria-label="Saved trip mileage" aria-busy={view.busy}>
-  <p className="job-change-status" ref={status} role="status" tabIndex={-1}>{view.message}</p>
+  <p className={view.selectionNeeded?'visually-hidden':'job-change-status'} ref={status} role="status" tabIndex={-1}>{view.message}</p>
   {view.phase==='signed-out'&&<a className="primary-action" href="/sign-in">Sign in to view mileage</a>}
-  {(view.phase==='review'||view.phase==='unavailable')&&<button type="button" disabled={view.busy} onClick={()=>void action(current=>current.load())}>Reload saved trips</button>}
+  {view.selectionNeeded&&<TaskPrerequisite kind="mileage"/>}
+  {!view.selectionNeeded&&(view.phase==='review'||view.phase==='unavailable')&&<button type="button" disabled={view.busy} onClick={()=>void action(current=>current.load())}>Reload saved trips</button>}
   {view.phase==='pending'&&<>
    {view.reference&&<p className="save-reference">Original {pendingDeparture?'departure correction':'mileage'} reference <code>{view.reference}</code></p>}
    <button type="button" disabled={view.busy} onClick={()=>void action(current=>current.check())}>{pendingDeparture?'Check original departure correction':'Check original mileage'}</button>
