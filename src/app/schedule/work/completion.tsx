@@ -1,5 +1,5 @@
 'use client';
-import {useId,useState} from 'react';
+import {useId,useLayoutEffect,useState} from 'react';
 import {quoteDollarsInput,quoteMoney} from '../../../commercial/quote-pricing';
 import type {CompletionAssignment,CompletionBody,CompletionContext,CompletionSummary} from '../../../operations/work-completion-contract';
 import type {CompletionAllocation,CompletionPiece,WorkOutcome} from '../../../operations/work-completion';
@@ -79,7 +79,7 @@ function Portion({id,piece,index,change,remove}:{id:string;piece:PieceDraft;inde
   {remove&&<button type="button" className="secondary" onClick={remove}>Remove portion {index+1}</button>}
  </fieldset>;
 }
-function AssignedScope({id,row,index,draft,ready,change}:{id:string;row:CompletionAssignment;index:number;draft:ScopeDraft;ready:boolean;change:(next:ScopeDraft)=>void}){
+function AssignedScope({id,row,index,draft,ready,open,toggle,change}:{id:string;row:CompletionAssignment;index:number;draft:ScopeDraft;ready:boolean;open:boolean;toggle:(open:boolean)=>void;change:(next:ScopeDraft)=>void}){
  const complimentary=row.grossInclusiveCents==='0';
  const state=ready?(draft.selection==='split'?'Portions ready':labels[draft.selection as WorkOutcome]):draft.selection?'Needs details':'Needs outcome';
  return <fieldset className="completion-assignment">
@@ -88,6 +88,8 @@ function AssignedScope({id,row,index,draft,ready,change}:{id:string;row:Completi
    <p className="completion-text">{row.scopeDescription}</p>
    <span className="completion-item-state" data-ready={ready}>{state}</span>
   </div>
+  <details className="completion-item-editor" open={open}>
+  <summary onClick={event=>{event.preventDefault();toggle(!open);}}>Item {index+1} outcome details</summary>
   <label htmlFor={id+'-outcome'}>Outcome for item {index+1}</label>
   <select id={id+'-outcome'} value={draft.selection} required onChange={event=>{
    const selection=event.target.value as Selection;
@@ -105,6 +107,7 @@ function AssignedScope({id,row,index,draft,ready,change}:{id:string;row:Completi
    <label htmlFor={id+'-reason'}>Reason for unfinished item</label>
    <textarea id={id+'-reason'} rows={2} maxLength={1000} required value={draft.reason} onChange={event=>change({...draft,reason:event.target.value})}/>
   </>}
+  </details>
  </fieldset>;
 }
 
@@ -139,6 +142,13 @@ export function CompletionEditor({context,visit,disabled,save}:{context:Completi
  const [reviewUrl,setReviewUrl]=useState(''),[skipReason,setSkipReason]=useState('');
  const [additional,setAdditional]=useState(''),[contactReview,setContactReview]=useState('');
  const [error,setError]=useState('');
+ const [activeItem,setActiveItem]=useState<number|null>(0);
+ const [focusRequest,setFocusRequest]=useState<{field:string}|null>(null);
+ useLayoutEffect(()=>{
+  if(!focusRequest)return;
+  const target=document.getElementById(focusRequest.field);
+  if(target){target.focus();target.scrollIntoView({block:'center',behavior:'instant'});}
+ },[focusRequest]);
  const unanswered=context.assignments.filter(row=>!scope[row.assignedPartId]?.selection);
  const hasSelectedOutcome=unanswered.length<context.assignments.length;
  const reviewed=context.assignments.map(row=>reviewAllocation(row,scope[row.assignedPartId]??blank));
@@ -149,9 +159,15 @@ export function CompletionEditor({context,visit,disabled,save}:{context:Completi
  const hasFulfilled=reviewed.some(row=>row.allocation?.pieces.some(piece=>piece.outcome==='completed'));
  const walkthroughReady=walkthrough==='done'||walkthrough==='unavailable'&&walkthroughReason.trim().length>0;
  const itemField=(index:number)=>id+'-assignment-'+index;
- const focusField=(field:string)=>document.getElementById(field)?.focus();
+ const focusField=(field:string)=>{
+  const index=context.assignments.findIndex((_,position)=>field.startsWith(itemField(position)+'-'));
+  if(index>=0)setActiveItem(index);
+  setFocusRequest({field});
+ };
  const nextField=firstUnresolved>=0?itemField(firstUnresolved)+(reviewed[firstUnresolved]!.field??'-outcome'):!hasFulfilled?itemField(displayOrder[0]!)+'-outcome':
   !walkthroughReady?id+(walkthrough==='unavailable'?'-walkthrough-reason':'-walkthrough'):null;
+ const requiredMessage=()=>reviewed[firstUnresolved]?.error??(!hasFulfilled?'Record at least one fulfilled portion to end this job.':'Record the walkthrough outcome and any required reason.');
+ const reviewedPieces=reviewed.flatMap(row=>row.allocation?.pieces??[]);
 
  function markRemainingFulfilled(){
   setError('');
@@ -166,12 +182,15 @@ export function CompletionEditor({context,visit,disabled,save}:{context:Completi
   });
  }
 
- return <form className="field-work-form completion-work-form" onChange={()=>setError('')} onSubmit={event=>{
+ return <form className="field-work-form completion-work-form" onChange={()=>setError('')} onInvalidCapture={event=>{
+  if(disabled||!nextField)return;
+  event.preventDefault();setError(requiredMessage());focusField(nextField);
+ }} onSubmit={event=>{
   event.preventDefault();
   if(disabled)return;
   setError('');
   if(nextField){
-   setError(reviewed[firstUnresolved]?.error??(!hasFulfilled?'Record at least one fulfilled portion to end this job.':'Record the walkthrough outcome and any required reason.'));
+   setError(requiredMessage());
    focusField(nextField);
    return;
   }
@@ -200,11 +219,12 @@ export function CompletionEditor({context,visit,disabled,save}:{context:Completi
    {groups.map(([key,group])=><div key={key} className="completion-scope-group" role="group" aria-label={group.label}>
     <div className="completion-scope-heading">
      <strong>{group.label}</strong>
-     <span>{group.items.filter(index=>reviewed[index]!.allocation!==null).length} of {group.items.length} ready</span>
+     <span>{group.items.filter(index=>reviewed[index]!.allocation!==null).length} of {group.items.length} ready · {group.items.filter(index=>!reviewed[index]!.allocation).length} to review</span>
     </div>
     {group.items.map(index=>{
      const row=context.assignments[index]!;
      return <AssignedScope key={row.assignedPartId} id={itemField(index)} row={row} index={index} draft={scope[row.assignedPartId]??blank} ready={reviewed[index]!.allocation!==null}
+      open={activeItem===index} toggle={open=>setActiveItem(current=>open?index:current===index?null:current)}
       change={next=>setScope(current=>({...current,[row.assignedPartId]:next}))}/>;
     })}
    </div>)}
@@ -238,8 +258,23 @@ export function CompletionEditor({context,visit,disabled,save}:{context:Completi
   </div>
   <aside className="completion-review" aria-label="Completion review">
    <h2>Completion review</h2>
+   <p className="field-help">These outcomes are proposed until End job is saved. Counts include items with complete outcome details.</p>
+   <dl className="completion-progress-facts">
+    <div><dt>Ready items</dt><dd>{context.assignments.length-unresolved} of {context.assignments.length}</dd></div>
+    <div><dt>Fulfilled portions</dt><dd>{reviewedPieces.filter(piece=>piece.outcome==='completed').length}</dd></div>
+    <div><dt>Unfinished / cancelled</dt><dd>{reviewedPieces.filter(piece=>piece.outcome!=='completed').length}</dd></div>
+    <div><dt>Walkthrough</dt><dd>{walkthroughReady?(walkthrough==='done'?'Done':'Unavailable with reason'):walkthrough==='unavailable'?'Reason needed':'Outcome needed'}</dd></div>
+   </dl>
    <p aria-live="polite">{unresolved>0?`${unresolved} ${unresolved===1?'item needs':'items need'} review`:
     !hasFulfilled?'A fulfilled portion is required':!walkthroughReady?'Walkthrough outcome required':'Ready to end the job'}</p>
+   {unresolved>0&&<div className="completion-unresolved" role="region" aria-label="Items needing review" tabIndex={0}>
+    <ol>{displayOrder.filter(index=>!reviewed[index]!.allocation).map(index=><li key={context.assignments[index]!.assignedPartId}>
+     <button type="button" className="secondary" disabled={disabled} onClick={()=>focusField(itemField(index)+(reviewed[index]!.field??'-outcome'))}>
+      Item {index+1}: {scope[context.assignments[index]!.assignedPartId]?.selection?'Needs details':'Needs outcome'}
+     </button>
+     <p>{context.assignments[index]!.scopeDescription}</p>
+    </li>)}</ol>
+   </div>}
    {nextField&&<button type="button" className="secondary" disabled={disabled} onClick={()=>focusField(nextField)}>Review next required field</button>}
    {error&&<p role="alert">{error}</p>}
    <button type="submit" disabled={disabled}>End job</button>

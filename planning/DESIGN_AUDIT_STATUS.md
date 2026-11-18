@@ -6,13 +6,13 @@ This inventory reconciles all 70 original groups: 14 shared findings, 36 destina
 
 | Local implementation review | Groups |
 |---|---:|
-| Main change locally addressed | 29 |
-| Partial implementation or required review | 38 |
+| Main change locally addressed | 32 |
+| Partial implementation or required review | 35 |
 | Open audit work | 2 |
 | Review required before choosing changes | 1 |
 | Total | 70 |
 
-29/70, or 41.4%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 41.4% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 38 groups have partial work; three groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
+32/70, or 45.7%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 45.7% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 35 groups have partial work; three groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
 
 The audit is **not finished**. Each row has remaining implementation or verification. Full current-source/state, delivered-build and physical iPhone acceptance is not established. The earlier roughly 80% figure is a low-confidence V1 coding estimate and is not the audit percentage. This inventory does not reduce the broader goal: complete this audit and then all unfinished approved V1 functionality, including P16/P17, native files, recoverable backups, preserved upgrades and owner/device readiness.
 
@@ -56,12 +56,12 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | R14 | Schedule / saved job (/schedule) | Partial | Dedicated planner review, compact loaded job header, first-action reach and date/view/visit restoration remain. |
 | R15 | Change appointment (/schedule/change) | Partial | Review compact phone comparison, timezone/reason/reservation effect and adjacent communication status across actual outcomes. |
 | R16 | Trip mileage (/schedule/mileage) | Partial | Finish full job/trip/vehicle context, desktop aligned density and remaining empty/long-list/state review. |
-| R17 | Service arrangements (/schedule/modes) | Partial | Unify each mode into current/eligibility/proposed comparison rows instead of separate availability and edit blocks. |
+| R17 | Service arrangements (/schedule/modes) | Main change addressed | Complete populated-existing-job/policy-dependent and remaining state variants plus fresh current-head release/installed/physical-device acceptance. |
 | R18 | Book a visit (/schedule/new) | Partial | Reconcile the configured booking stages, persistent customer/work context and unavailable/loading slot presentations. |
 | R19 | Standalone travel (/schedule/travel) | Main change addressed | Remaining long-page/state and delivered/device acceptance stay open; no inferred business classification. |
 | R20 | Work status (/schedule/work) | Partial | Finish compact loaded job strip, single next-action hierarchy and keyboard/phone reach for every actual state. |
 | R21 | Cancel started job (/schedule/work/cancel) | Partial | Complete eligible affected-scope/reason/final-confirmation visual review and prove retained work at all relevant states. |
-| R22 | End job (/schedule/work/complete) | Partial | Finish vehicle/item progress, persistent unresolved summary and progressive portion editors without losing drafts or defaulting fulfillment. |
+| R22 | End job (/schedule/work/complete) | Main change addressed | Complete many-vehicle/long-value/context-specific and remaining state variants plus exact-head release/upgrade/installed/physical-device acceptance. |
 | R23 | Interrupt trip (/schedule/work/interrupt) | Partial | Finish configured trip/job consequence hierarchy and en-route/arrived/uncertain visual acceptance. |
 | R24 | Recorded work time (/schedule/work/time) | Main change addressed | Remaining history/pagination/state and final device/release acceptance stay open. |
 | R25 | Services (/services) | Main change addressed | Final stress/denied/history/device verification remains; accepted quote/job prices must not change. |
@@ -81,7 +81,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | D03 | Quote editor and preview | Partial | Finish/reconcile desktop directory collapse, full-width long preview and persistent saved/unsaved totals. |
 | D04 | Sharing and acceptance | Partial | Finish compact accepted-agreement/event hierarchy with all retained content and honest delivery evidence. |
 | D05 | Receipt viewer | Main change addressed | Original-file formats, full release and physical iPhone remain separate required acceptance. |
-| D06 | Partial completion | Partial | Implement/reconcile per-vehicle progress, unresolved summary and selective editors preserving every draft entry. |
+| D06 | Partial completion | Main change addressed | Finish additional stress, policy/context, access/stale/pending and device/release variants without treating local coverage as final sign-off. |
 | D07 | Saved completion and follow-up | Main change addressed | Other outcome/message/delivery states and final release/device acceptance remain. |
 | D08 | Work-time ledger | Main change addressed | Other large/stale/denied histories and final source/device acceptance remain. |
 | D09 | Trial balance | Main change addressed | Complete specific text-zoom/final-source and delivered verification; implementation presence is not that sign-off. |
@@ -100,7 +100,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 ## Next sequence
 
 1. Investigate the retained amendment CI deadline using bounded phase/cleanup evidence; do not raise timeouts or suppress errors. Preserve live current-head verification.
-2. Finish explicit implementation gaps: progressive completion, quote desktop/document context, arrangement comparisons and Calendar activity.
+2. Finish explicit implementation gaps: quote desktop/document context, Calendar activity.
 3. Perform the fresh signed-in dense planner review; use actual findings rather than assuming a replacement is needed.
 4. Complete state/zoom/long-value/privacy verification and the unchanged full-release, upgrade, restore and physical-device gates. Reconcile every row before claiming audit completion.
 

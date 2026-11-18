@@ -1,9 +1,20 @@
 import {readFileSync} from 'node:fs';
 import {describe,it,expect} from 'vitest';
-import {browserGroups,browserGroupNames,browserGroupFiles,browserScenario} from '../../src/tooling/browser-groups';
+import {browserGroups,browserGroupNames,browserGroupFiles,browserScenario,recordBrowserGroupNames,recordBrowserViews} from '../../src/tooling/browser-groups';
 
 const command=(JSON.parse(readFileSync(new URL('../../package.json',import.meta.url),'utf8')) as {scripts:Record<string,string>}).scripts['test:sign-in-browser']!;
 describe('complete required browser grouping',()=>{
+ it('retains every original records file exactly once across the three required jobs',()=>{
+  const retained=['source-export-browser','source-export-product-browser','workspace-journey-browser','owner-expenses-product-browser','finance-account-settings-browser','finance-mapping-settings-browser','finance-tax-profiles-browser','finance-expense-category-browser','finance-money-channel-browser','finance-invoice-issue-product-browser','finance-expense-posting-browser','google-calendar-settings-product-browser'].map(name=>'tests/integration/'+name+'.test.mjs');
+  const actual=recordBrowserGroupNames.flatMap(name=>browserGroupFiles(command,name));
+  expect(actual.sort()).toEqual(retained.sort());expect(new Set(actual).size).toBe(retained.length);
+  expect(browserGroupFiles(command,'workspace-records')).toHaveLength(4);expect(browserGroupFiles(command,'accounting-settings')).toHaveLength(5);expect(browserGroupFiles(command,'records')).toHaveLength(3);
+ });
+ it('retains all original records screenshot requirements without omitting or duplicating a view',()=>{
+  const retained=['workspace-menu','finance-account-settings-recovery','finance-mapping-history','finance-mapping-manage','finance-tax-approval','finance-tax-history','finance-tax-preview','finance-category-approval','finance-category-history','finance-channel-opening','finance-channel-history','finance-invoice-issue-product','finance-direct-receipt','finance-expense-posting','finance-trial-balance','finance-balance-sheet','finance-payment-correction','finance-fund-application','finance-held-tip','finance-invoice-credit','finance-paid-invoice-credit','finance-service-refund','finance-posted-export','settings-calendar-synced','settings-calendar-pending'];
+  const actual=Object.values(recordBrowserViews).flat();expect(actual.sort()).toEqual(retained.sort());expect(new Set(actual).size).toBe(retained.length);
+  const runner=readFileSync(new URL('../../scripts/run-browser-group.mjs',import.meta.url),'utf8');expect(runner).toContain("if(selected==='records')for(const view of ['settings-calendar-default-disclosure','settings-calendar-disclosure'])");
+ });
  it('partitions every file in the actual retained full command exactly once',()=>{
   const files=Object.keys(browserGroups).flatMap(name=>browserGroupFiles(command,name));
   expect([...files].sort()).toEqual(command.split(' ').slice(3).sort());expect(new Set(files).size).toBe(files.length);expect(files).toHaveLength(54);
@@ -49,7 +60,7 @@ describe('complete required browser grouping',()=>{
   expect(browserGroupFiles(command,'amendments')).toContain('tests/integration/quote-amendment-acceptance-product-browser.test.mjs');
   expect(browserGroupFiles(command,'commercial')).toContain('tests/integration/quote-commercial-browser.test.mjs');
   expect(browserGroupFiles(command,'schedule')).toContain('tests/integration/job-change-product-browser.test.mjs');
-  expect(browserGroupFiles(command,'records')).toEqual(expect.arrayContaining([
+  expect(recordBrowserGroupNames.flatMap(group=>browserGroupFiles(command,group))).toEqual(expect.arrayContaining([
    'tests/integration/finance-account-settings-browser.test.mjs','tests/integration/finance-mapping-settings-browser.test.mjs',
    'tests/integration/finance-tax-profiles-browser.test.mjs','tests/integration/finance-expense-category-browser.test.mjs',
    'tests/integration/finance-money-channel-browser.test.mjs','tests/integration/finance-invoice-issue-product-browser.test.mjs'

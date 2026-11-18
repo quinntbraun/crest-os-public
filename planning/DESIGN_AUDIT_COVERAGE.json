@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-18T21:40:17.212Z",
+  "assessedAt": "2026-11-18T22:58:18.818Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "0f8054feb7a4fcc5a5874b7d22ebd34b12887116",
-    "publishedCommit": "5c0f79f708d662115c4fdab0ce253910f6ad3e19",
-    "publishedTree": "e785d13ec75915b24c8f3e69c5044fe4217ce92a",
-    "localTree": "479681ca76621ea002735fd08a52f6c8aa5c3c98"
+    "localCommit": "88093613c66de34a656e9b40d1a2aaec1fdef653",
+    "publishedCommit": "412a46cf66ca14d7e812abd835bdbdf80f56cb93",
+    "publishedTree": "556c5b8b3adac0d015eb3726d8cb94ff69aa6509",
+    "localTree": "27c55af61b8129bfa28af4acd72361b59434d5a9"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -27,12 +27,12 @@
     "destinations": 36,
     "deeperWorkflows": 20,
     "counts": {
-      "locally_addressed": 29,
-      "partial": 38,
+      "locally_addressed": 32,
+      "partial": 35,
       "open": 2,
       "review_needed": 1
     },
-    "mainLocalChangesAddressedPercent": 41.4,
+    "mainLocalChangesAddressedPercent": 45.7,
     "auditComplete": false,
     "finalSignOffClaimed": false
   },
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "87aca95a5a975dfa717db99c7cac6d34358c6174acce0d56611da44ea9196d3e"
+          "sha256": "9697ab11b7592ed0fd535e924adcf5e92f512b11d1e8bea02063e339a17a87f4"
         }
       ],
       "verification": {
@@ -97,7 +97,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "a2ab9372694201ae1a74066719ffdd9f5ffb34c3cd71ff8f6629148cf3799c49"
+          "sha256": "c67f7bd9c125756e0e2f0faaf158def45e4c37fbe3230f2b2bd95aa74a32deca"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -121,7 +121,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "a2ab9372694201ae1a74066719ffdd9f5ffb34c3cd71ff8f6629148cf3799c49"
+          "sha256": "c67f7bd9c125756e0e2f0faaf158def45e4c37fbe3230f2b2bd95aa74a32deca"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
@@ -145,7 +145,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "a2ab9372694201ae1a74066719ffdd9f5ffb34c3cd71ff8f6629148cf3799c49"
+          "sha256": "c67f7bd9c125756e0e2f0faaf158def45e4c37fbe3230f2b2bd95aa74a32deca"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -173,7 +173,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "942206c63a2dfc525c54362c0f5cdf4b7036c8e80b718b56037332a009e6363c"
+          "sha256": "e8da2d90f8afa394b4454b7879bad1f1a7cb98dc32df8b404459c028c472f5b3"
         }
       ],
       "verification": {
@@ -245,7 +245,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "942206c63a2dfc525c54362c0f5cdf4b7036c8e80b718b56037332a009e6363c"
+          "sha256": "e8da2d90f8afa394b4454b7879bad1f1a7cb98dc32df8b404459c028c472f5b3"
         }
       ],
       "verification": {
@@ -289,7 +289,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "a2ab9372694201ae1a74066719ffdd9f5ffb34c3cd71ff8f6629148cf3799c49"
+          "sha256": "c67f7bd9c125756e0e2f0faaf158def45e4c37fbe3230f2b2bd95aa74a32deca"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
@@ -313,7 +313,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "a2ab9372694201ae1a74066719ffdd9f5ffb34c3cd71ff8f6629148cf3799c49"
+          "sha256": "c67f7bd9c125756e0e2f0faaf158def45e4c37fbe3230f2b2bd95aa74a32deca"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
@@ -365,7 +365,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "87aca95a5a975dfa717db99c7cac6d34358c6174acce0d56611da44ea9196d3e"
+          "sha256": "9697ab11b7592ed0fd535e924adcf5e92f512b11d1e8bea02063e339a17a87f4"
         }
       ],
       "verification": {
@@ -747,18 +747,22 @@
       "section": "Every page",
       "title": "P2 · Service arrangements (/schedule/modes)",
       "requirements": "Observed: Current availability and edit controls are separate, but equal-looking status badges and selects make it slow to scan what is enabled.\n\nDirection: Present Mobile, Drop-off and Pickup/return as three consistent setting rows with current state, eligibility explanation and proposed change.\n\nDesktop: Use a small comparison table of saved and proposed states.\n\nPhone: Use labeled rows rather than a horizontal row of badges.\n\nAcceptance: Changing future availability must not appear to change existing booked jobs.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-modes-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Saved availability, future-booking explanation, selectors and retained version history exist.",
-      "remainingWork": "Unify each mode into current/eligibility/proposed comparison rows instead of separate availability and edit blocks.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Per-mode saved/default and proposed states, change markers and booking/policy explanations now share one responsive comparison with complete original browser workflow evidence.",
+      "remainingWork": "Complete populated-existing-job/policy-dependent and remaining state variants plus fresh current-head release/installed/physical-device acceptance.",
       "evidence": [
         {
           "path": "src/app/schedule/modes/screen.tsx",
-          "sha256": "260a65c35348143151983ccf615ee5c874eeb9e7cf37e44214923172be79bc0f"
+          "sha256": "3a2a02f4d9433bb50711a96b96df8018998e80c63e8b0bb3e310f87a8124f9ef"
+        },
+        {
+          "path": "planning/ARRANGEMENT_COMPARISON_DESIGN.md",
+          "sha256": "ec26fd2a63747255b1825827a82232892b7810709ed5c7f8c9f8741aeb783ec5"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -863,22 +867,22 @@
       "section": "Every page",
       "title": "P1 · End job (/schedule/work/complete)",
       "requirements": "Observed: The populated completion evidence is a very long phone form with nested scope, portions, walkthrough and review-request controls. This is one of the largest usability opportunities.\n\nDirection: Group by vehicle and work item, show completed/needs-review counts, and reveal portion editors only when needed. Finish with one clear completion summary and explicit next step.\n\nDesktop: Use a checklist area plus a persistent summary of outcomes and unresolved items.\n\nPhone: Use sequential expandable sections; keep unfinished items visible and scroll to the first issue.\n\nAcceptance: Partial completion, many vehicles, skipped walkthrough and interrupted saves must remain explicit; visual simplification must not default unfinished work to fulfilled.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-work-complete-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Completion nesting/amount alignment and review-to-invalid-field focus were improved.",
-      "remainingWork": "Finish vehicle/item progress, persistent unresolved summary and progressive portion editors without losing drafts or defaulting fulfillment.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Mounted selective item editors, vehicle/visit ready and to-review counts, proposed outcome facts and first-unresolved navigation preserve native constraints and original completion commands.",
+      "remainingWork": "Complete many-vehicle/long-value/context-specific and remaining state variants plus exact-head release/upgrade/installed/physical-device acceptance.",
       "evidence": [
         {
           "path": "src/app/schedule/work/completion.tsx",
-          "sha256": "a4d7ec994e3e633abb46b64500c294d3c1e5917c0394f552ab01b01de6eb9e6f"
+          "sha256": "a01f9bd9eb2968ab01f6c39ddb26d1258a7d85e9781553504384ac6558912f35"
         },
         {
-          "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
-          "sha256": "b729fc3fe6ba0c1d74fb9acf50ddcc4c7d180d6fbaf09a1f0661a71f8f16a6d3"
+          "path": "planning/COMPLETION_PROGRESS_DESIGN.md",
+          "sha256": "197ed314f49da2cd0bd9833b97713f59c6c6d57500391518309f09f46fc91c24"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1249,7 +1253,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "942206c63a2dfc525c54362c0f5cdf4b7036c8e80b718b56037332a009e6363c"
+          "sha256": "e8da2d90f8afa394b4454b7879bad1f1a7cb98dc32df8b404459c028c472f5b3"
         }
       ],
       "verification": {
@@ -1335,22 +1339,22 @@
       "section": "Deeper workflows",
       "title": "Partial completion",
       "requirements": "The multi-portion form is long and heavily nested. Use per-vehicle progress and a compact unresolved-items summary. Only expand the item being edited; preserve all draft entries and explicit outcomes when changing sections.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/completion-editor-webkit-390.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Vehicle/portion surfaces and invalid-field-directed review are improved.",
-      "remainingWork": "Implement/reconcile per-vehicle progress, unresolved summary and selective editors preserving every draft entry.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Single-open item editors keep every outcome/portion control mounted; unresolved review and committed-DOM focus have genuine complete/partial recovery and no-write workflow evidence.",
+      "remainingWork": "Finish additional stress, policy/context, access/stale/pending and device/release variants without treating local coverage as final sign-off.",
       "evidence": [
         {
           "path": "src/app/schedule/work/completion.tsx",
-          "sha256": "a4d7ec994e3e633abb46b64500c294d3c1e5917c0394f552ab01b01de6eb9e6f"
+          "sha256": "a01f9bd9eb2968ab01f6c39ddb26d1258a7d85e9781553504384ac6558912f35"
         },
         {
-          "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
-          "sha256": "b729fc3fe6ba0c1d74fb9acf50ddcc4c7d180d6fbaf09a1f0661a71f8f16a6d3"
+          "path": "planning/COMPLETION_PROGRESS_DESIGN.md",
+          "sha256": "197ed314f49da2cd0bd9833b97713f59c6c6d57500391518309f09f46fc91c24"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1365,7 +1369,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/work/completion.tsx",
-          "sha256": "a4d7ec994e3e633abb46b64500c294d3c1e5917c0394f552ab01b01de6eb9e6f"
+          "sha256": "a01f9bd9eb2968ab01f6c39ddb26d1258a7d85e9781553504384ac6558912f35"
         },
         {
           "path": "planning/COMPLETION_HISTORY_DESIGN.md",

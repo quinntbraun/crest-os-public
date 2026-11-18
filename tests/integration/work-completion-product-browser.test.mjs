@@ -127,6 +127,32 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(visitScope).toContainText('0 of 1 ready');
   const review=page.getByRole('complementary',{name:'Completion review',exact:true});
   await expect(review).toContainText(rows.length+' items need review');
+  const firstEditor=page.getByRole('group',{name:'Assigned item 1',exact:true}).locator('details.completion-item-editor');
+  const previewFacts=async()=>({jobs:(await fixture.client.query('SELECT to_jsonb(j)::text AS value FROM crest.jobs j WHERE business_id=$1 ORDER BY to_jsonb(j)::text COLLATE "C"',[fixture.business])).rows,audit:(await fixture.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[fixture.business])).rows});
+  const beforeJump=await previewFacts(),jumpRequests=[];const observeJump=request=>{const path=new URL(request.url()).pathname;if(path.startsWith('/api/business/'))jumpRequests.push(request.method()+' '+path);};page.on('request',observeJump);
+  try{
+   await expect(firstEditor).toHaveJSProperty('open',true);
+   await firstEditor.locator(':scope > summary').press('Enter');await expect(page.getByLabel('Outcome for item 1',{exact:true})).toBeHidden();
+   await review.getByRole('button',{name:'End job',exact:true}).click();
+   await expect(page.getByLabel('Outcome for item 1',{exact:true})).toBeFocused();await expect(firstEditor).toHaveJSProperty('open',true);
+   await firstEditor.locator(':scope > summary').press('Enter');
+   await review.getByRole('region',{name:'Items needing review',exact:true}).getByRole('button',{name:'Item 1: Needs outcome',exact:true}).press('Enter');
+   await expect(page.getByLabel('Outcome for item 1',{exact:true})).toBeFocused();
+   await firstEditor.locator(':scope > summary').press('Enter');
+   await review.getByRole('button',{name:'Review next required field',exact:true}).press('Enter');
+   await expect(page.getByLabel('Outcome for item 1',{exact:true})).toBeFocused();
+   for(let index=0;index<rows.length;index++)await expect(page.getByLabel('Outcome for item '+(index+1),{exact:true})).toHaveValue('');
+   await expect(page.locator('details.completion-item-editor[open]')).toHaveCount(1);
+   await mkdir('.local/review',{recursive:true});
+   for(const width of [360,390,768,1100,1440]){
+    await page.setViewportSize({width,height:900});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(issue=>issue.id),[]);
+    await review.screenshot({path:'.local/review/completion-unresolved-'+name+'-'+width+'.png'});
+   }
+   await page.setViewportSize({width:1100,height:600});await review.getByRole('button',{name:'End job',exact:true}).scrollIntoViewIfNeeded();
+   await expect(review.getByRole('button',{name:'End job',exact:true})).toBeInViewport({ratio:1});
+   assert.deepEqual(await previewFacts(),beforeJump);assert.deepEqual(jumpRequests,[]);
+  }finally{page.off('request',observeJump);await page.setViewportSize({width:390,height:844});}
   await review.getByRole('button',{name:'Review next required field',exact:true}).press('Enter');
   await expect(page.getByLabel('Outcome for item 1',{exact:true})).toBeFocused();
 
@@ -141,9 +167,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    firstGross=gross/2n;
    const firstDiscount=discount/2n;
    const group=page.getByRole('group',{name:'Assigned item '+(index+1),exact:true});
+   const editor=group.locator('details.completion-item-editor');if(!await editor.evaluate(element=>element.open))await editor.locator(':scope > summary').press('Enter');
    await group.getByLabel('Outcome for item '+(index+1),{exact:true}).selectOption('split');
-   split=group.getByRole('group',{name:'Portion 1',exact:true});
-   const deferred=group.getByRole('group',{name:'Portion 2',exact:true});
+   split=group.getByRole('group',{name:'Portion 1',exact:true,includeHidden:true});
+   const deferred=group.getByRole('group',{name:'Portion 2',exact:true,includeHidden:true});
    await split.getByLabel('Work in this portion',{exact:true}).fill('Synthetic interior surfaces fulfilled');
    await deferred.getByLabel('Work in this portion',{exact:true}).fill('Synthetic final pass deferred');
    await split.getByLabel('Gross amount in dollars',{exact:true}).fill(dollars(firstGross));
@@ -152,6 +179,16 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await deferred.getByLabel('Discount in dollars',{exact:true}).fill(dollars(discount-firstDiscount));
    const reason=deferred.getByLabel('Reason for unfinished portion',{exact:true});
    await reason.fill('Synthetic weather interruption.');
+   const beforeSwitch=await previewFacts(),switchRequests=[];const observeSwitch=request=>{const path=new URL(request.url()).pathname;if(path.startsWith('/api/business/'))switchRequests.push(request.method()+' '+path);};page.on('request',observeSwitch);
+   try{
+    const otherIndex=index===0?1:0,otherEditor=page.getByRole('group',{name:'Assigned item '+(otherIndex+1),exact:true}).locator('details.completion-item-editor');
+    await otherEditor.locator(':scope > summary').press('Enter');await expect(editor).toHaveJSProperty('open',false);await expect(otherEditor).toHaveJSProperty('open',true);
+    await expect(reason).toHaveValue('Synthetic weather interruption.');await expect(split.getByLabel('Gross amount in dollars',{exact:true})).toHaveValue(dollars(firstGross));
+    await editor.locator(':scope > summary').press('Enter');await expect(editor).toHaveJSProperty('open',true);await expect(otherEditor).toHaveJSProperty('open',false);
+    await expect(reason).toBeVisible();await expect(reason).toHaveValue('Synthetic weather interruption.');await expect(split.getByLabel('Work in this portion',{exact:true})).toHaveValue('Synthetic interior surfaces fulfilled');
+    await expect(page.locator('details.completion-item-editor[open]')).toHaveCount(1);
+    assert.deepEqual(await previewFacts(),beforeSwitch);assert.deepEqual(switchRequests,[]);
+   }finally{page.off('request',observeSwitch);}
    const outcomes=page.getByRole('group',{name:'Scope outcomes',exact:true});
    await expect(outcomes.getByRole('status')).toContainText(`${rows.length-1} of ${rows.length}`);
    const fillRemaining=outcomes.getByRole('button',{name:'Mark remaining items fulfilled',exact:true});
