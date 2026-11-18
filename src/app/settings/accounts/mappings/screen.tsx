@@ -1,5 +1,5 @@
 'use client';
-import {useCallback,useEffect,useRef,useState,useSyncExternalStore} from 'react';
+import {useCallback,useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
 import type {FormEvent} from 'react';
 import {authentication,AuthenticationError} from '../../../../client/authentication';
 import {downloadFinanceHistory,financeAccounts,readPendingFinanceMapping} from '../../../../client/finance-accounts';
@@ -17,7 +17,7 @@ const displayDate=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'
 const dateLabel=(value:string)=>displayDate.format(new Date(value+'T00:00:00Z'));
 
 export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
- const initialMessage=categories?'Choose an expense category to look up.':'Choose a purpose to look up.';
+ const initialMessage=categories?'Select a category to review its posting account and approval history.':'Choose a purpose to look up.';
  const labels=categories?expenseCategoryMappingLabels:fixedFinanceMappingLabels;
  const acceptsPurpose=categories?expenseCategoryMappingPurpose:fixedFinanceMappingPurpose;
  const [purpose,setPurpose]=useState<FinanceMappingPurpose|''>('');
@@ -31,6 +31,13 @@ export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
  const active=useRef<AbortController|null>(null),status=useRef<HTMLParagraphElement>(null);
  const historyHeading=useRef<HTMLHeadingElement>(null),accountHeading=useRef<HTMLHeadingElement>(null);
  const resultFocus=useRef<'history'|'account'|null>(null);
+ const categoryHeading=useRef<HTMLHeadingElement>(null),categorySearch=useRef<HTMLInputElement>(null);
+ const categoryFocus=useRef<'selected'|'directory'|null>(null);
+ useLayoutEffect(()=>{
+  if(!categoryFocus.current)return;
+  const target=categoryFocus.current==='selected'?categoryHeading.current:categorySearch.current;
+  if(target){categoryFocus.current=null;target.focus();target.scrollIntoView({block:'nearest'});}
+ });
  useEffect(()=>{
   if(busy||!resultFocus.current)return;
   const heading=resultFocus.current==='history'?historyHeading:accountHeading;
@@ -39,7 +46,7 @@ export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
   resultFocus.current=null;
  },[busy]);
  const clearPrivate=useCallback(()=>{
-  active.current?.abort();active.current=null;resultFocus.current=null;
+  active.current?.abort();active.current=null;resultFocus.current=null;categoryFocus.current=null;
   setMapping(null);setHistory(null);setPurpose('');setDate('');setChecked(false);setDirectory(null);setQuery('');setExceptions(false);setBusy(false);setSignedOut(false);setMessage(initialMessage);
  },[initialMessage]);
  useEffect(()=>{
@@ -55,6 +62,11 @@ export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
  function resetResults(){
   setMapping(null);setHistory(null);setChecked(false);setMessage(initialMessage);
  }
+ function chooseCategory(selected:ExpenseCategoryMappingPurpose){
+  if(purpose===selected){categoryHeading.current?.focus();categoryHeading.current?.scrollIntoView({block:'nearest'});return;}
+  categoryFocus.current='selected';setPurpose(selected);resetResults();
+ }
+ function backToCategories(){categoryFocus.current='directory';setPurpose('');resetResults();}
  async function load(kind:'date'|'history'|'more'|'directory',selected=purpose){
   const needsDate=kind==='date'||kind==='directory';
   if(active.current||kind!=='directory'&&!selected||needsDate&&!customerDate(date))return;
@@ -116,29 +128,56 @@ export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
  }
  const matchingCategories=categoryEntries.filter(([key,label])=>
   label.toLowerCase().includes(query.trim().toLowerCase())&&(!exceptions||!directory?.rows[key]||directory.pending===key));
+ const approvalHistory=history?<MappingApprovalHistory history={history} purpose={purpose} categories={categories} heading={historyHeading} disabled={controlsDisabled} download={download} more={()=>void load('more')}/>:<section className="mapping-history-introduction" aria-label="Approval history introduction"><h2>Review approved changes</h2><p>Choose a {categories?'category':'purpose'}, then view its approval history to compare accounts and effective periods.</p><p>The date lookup checks which approved account is usable on a specific date.</p></section>;
+ const effectiveDate=<div><label htmlFor="mapping-date">Effective date</label><input id="mapping-date" type="date" required disabled={controlsDisabled} value={date} onChange={event=>{
+  setDate(event.target.value);setDirectory(null);setExceptions(false);resetResults();
+ }}/></div>;
  return <section className={styles.workspace} aria-label="Account mapping lookup" aria-busy={busy}>
   <p ref={status} tabIndex={-1} role="status">{message}</p>
   {signedOut&&<a href="/sign-in">Sign in again</a>}
-  <div className="mapping-workbench"><div className="mapping-lookup-pane">
+  {categories&&<form className="category-mapping-date" aria-label="Category mapping date" onSubmit={event=>{event.preventDefault();void load('directory');}}>
+   {effectiveDate}<button type="submit" className="secondary" disabled={controlsDisabled||!customerDate(date)}>Check categories for selected date</button>
+   <p className="field-help">A category is available for classification. Only a reviewed mapping supplies its posting account for a date.</p>
+  </form>}
+  <div className={categories?'category-mapping-workbench':'mapping-workbench'} data-selected={categories&&!!purpose}>
+  {categories&&<section className="mapping-summary-card category-mapping-directory" aria-labelledby="category-directory-title">
+   <h2 id="category-directory-title">Expense category directory</h2>
+   <p className="field-help">{directory?'Posting accounts on '+dateLabel(date):'Posting accounts have not been checked for this date.'}</p>
+   <label htmlFor="category-directory-search">Find a category</label>
+   <input ref={categorySearch} id="category-directory-search" type="search" value={query} disabled={controlsDisabled} onChange={event=>setQuery(event.target.value)}/>
+   {directory&&<label className="checkbox"><input type="checkbox" checked={exceptions} disabled={controlsDisabled} onChange={event=>setExceptions(event.target.checked)}/>Show categories needing attention</label>}
+   {matchingCategories.length===0&&<p>No categories match these filters.</p>}
+   <ul className="mapping-category-list">
+    {matchingCategories.map(([key,label])=>{
+     const row=directory?.rows[key];
+     return <li key={key}>
+      <div><strong>{label}</strong><p>{directory?(row?'Approved account '+row.accountCode:'No usable mapping'):'Posting account not checked'}</p>
+       {directory?.pending===key&&<span className="mapping-tag">Interrupted approval in this tab</span>}</div>
+      <button className="secondary" type="button" aria-current={purpose===key?'true':undefined} disabled={controlsDisabled} onClick={()=>chooseCategory(key)}>Select {label}</button>
+     </li>;
+    })}
+   </ul>
+  </section>}
+  <div className={categories?'category-mapping-detail':'mapping-lookup-pane'}>
+  {categories&&purpose&&<header className="category-mapping-selected">
+   <button type="button" className="secondary category-mapping-back" disabled={controlsDisabled} onClick={backToCategories}>Back to categories</button>
+   <p className="mapping-tag">Selected category</p><h2 ref={categoryHeading} tabIndex={-1}>{financeMappingLabels[purpose]}</h2>
+   <p className="field-help">Check its posting account for the effective date, or read the saved approval history.</p>
+  </header>}
+  {(!categories||purpose)&&<>
   <form className="mapping-lookup-form" onSubmit={submit}>
-   <div className={styles.lookupFields}>
+   {!categories&&<div className={styles.lookupFields}>
     <div>
-     <label htmlFor="mapping-purpose">{categories?'Expense category':'Purpose'}</label>
+     <label htmlFor="mapping-purpose">Purpose</label>
      <select id="mapping-purpose" required disabled={controlsDisabled} value={purpose} onChange={event=>{
-      const value=event.target.value;
-      setPurpose(acceptsPurpose(value)?value:'');resetResults();
+      const value=event.target.value;setPurpose(acceptsPurpose(value)?value:'');resetResults();
      }}>
-      <option value="">{categories?'Choose a category':'Select a purpose'}</option>
+      <option value="">Select a purpose</option>
       {Object.entries(labels).map(([value,label])=><option value={value} key={value}>{label}</option>)}
      </select>
-    </div>
-    <div>
-     <label htmlFor="mapping-date">Effective date</label>
-     <input id="mapping-date" type="date" required disabled={controlsDisabled} value={date} onChange={event=>{
-      setDate(event.target.value);setDirectory(null);setExceptions(false);resetResults();
-     }}/>
-    </div>
-   </div>
+    </div>{effectiveDate}
+   </div>}
+   {categories&&<p className="field-help">{customerDate(date)?'Lookup date: '+dateLabel(date):'Choose an effective date above before checking the posting account.'}</p>}
    <div className={styles.actions}>
     <button type="submit" disabled={controlsDisabled||!purpose||!customerDate(date)}>Check account</button>
     <button type="button" className="secondary" disabled={controlsDisabled||!purpose} onClick={()=>void load('history')}>View approval history</button>
@@ -159,32 +198,11 @@ export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
    <h2>{purpose&&financeMappingLabels[purpose]}</h2>
    <p>No usable approved account covers <strong>{dateLabel(date)}</strong>. Check the approval history for the saved effective dates.</p>
   </section>}
+  {categories&&approvalHistory}
+  </>}
+  {categories&&!purpose&&<section className="mapping-history-introduction category-mapping-introduction" aria-label="Category selection introduction"><h2>Review a category</h2><p>Find a category in the directory, then select it to check the dated posting account and read its approval history.</p><p>Being listed here does not mean a posting account has been approved.</p></section>}
   </div>
-  {history?<MappingApprovalHistory history={history} purpose={purpose} categories={categories} heading={historyHeading} disabled={controlsDisabled} download={download} more={()=>void load('more')}/>:<section className="mapping-history-introduction" aria-label="Approval history introduction"><h2>Review approved changes</h2><p>Choose a {categories?'category':'purpose'}, then view its approval history to compare accounts and effective periods.</p><p>The date lookup checks which approved account is usable on a specific date.</p></section>}
+  {!categories&&approvalHistory}
   </div>
-  {categories&&<section className="mapping-summary-card" aria-labelledby="category-directory-title">
-   <h2 id="category-directory-title">Expense category directory</h2>
-   <p className="field-help">{directory?'Posting accounts on '+dateLabel(date):'Select an effective date to check posting accounts.'}</p>
-   <div className="mapping-directory-controls">
-    <div><label htmlFor="category-directory-search">Find a category</label>
-     <input id="category-directory-search" type="search" value={query} disabled={controlsDisabled} onChange={event=>setQuery(event.target.value)}/></div>
-    <button type="button" className="secondary" disabled={controlsDisabled||!customerDate(date)} onClick={()=>void load('directory')}>Check categories for selected date</button>
-   </div>
-   {directory&&<label className="checkbox"><input type="checkbox" checked={exceptions} disabled={controlsDisabled} onChange={event=>setExceptions(event.target.checked)}/>Show categories needing attention</label>}
-   {matchingCategories.length===0&&<p>No categories match these filters.</p>}
-   <ul className="mapping-category-list">
-    {matchingCategories.map(([key,label])=>{
-     const row=directory?.rows[key];
-     return <li key={key}>
-      <div><strong>{label}</strong>{directory&&<p>{row?'Account '+row.accountCode:'No usable mapping'}</p>}
-       {directory?.pending===key&&<span className="mapping-tag">Interrupted approval in this tab</span>}</div>
-      <button className="secondary" type="button" disabled={controlsDisabled} onClick={()=>{
-       if(purpose!==key){setPurpose(key);resetResults();}
-       void load('history',key);
-      }}>History for {label}</button>
-     </li>;
-    })}
-   </ul>
-  </section>}
  </section>;
 }

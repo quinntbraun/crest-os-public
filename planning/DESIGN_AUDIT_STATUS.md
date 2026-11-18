@@ -6,13 +6,13 @@ This inventory reconciles all 70 original groups: 14 shared findings, 36 destina
 
 | Local implementation review | Groups |
 |---|---:|
-| Main change locally addressed | 28 |
-| Partial implementation or required review | 39 |
+| Main change locally addressed | 29 |
+| Partial implementation or required review | 38 |
 | Open audit work | 2 |
 | Review required before choosing changes | 1 |
 | Total | 70 |
 
-28/70, or 40%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 40% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 39 groups have partial work; three groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
+29/70, or 41.4%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 41.4% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 38 groups have partial work; three groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
 
 The audit is **not finished**. Each row has remaining implementation or verification. Full current-source/state, delivered-build and physical iPhone acceptance is not established. The earlier roughly 80% figure is a low-confidence V1 coding estimate and is not the audit percentage. This inventory does not reduce the broader goal: complete this audit and then all unfinished approved V1 functionality, including P16/P17, native files, recoverable backups, preserved upgrades and owner/device readiness.
 
@@ -69,7 +69,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | R27 | Accounting home (/settings/accounts) | Partial | Complete persistent overview/picker and configured phone hierarchy beyond the individual report-header refinement. |
 | R28 | Money channels (/settings/accounts/channels) | Main change addressed | Remaining channel/history/pagination/setup states and delivered/device checks remain. |
 | R29 | Dated account mappings (/settings/accounts/mappings) | Main change addressed | Remaining state and final release/device verification remain; never silently fall back across gaps. |
-| R30 | Expense category mappings (/settings/accounts/mappings/categories) | Partial | Unify the top lookup and separate lower directory into one selection/effective-date workflow. |
+| R30 | Expense category mappings (/settings/accounts/mappings/categories) | Main change addressed | Complete remaining loading/error/denied/stale/long-value variants and fresh exact-head release/installed/physical-device acceptance. |
 | R31 | Category approvals (/settings/accounts/mappings/categories/manage) | Partial | Integrate retained approval history with proposed editing and finish staged phone selection/review acceptance. |
 | R32 | Mapping approvals (/settings/accounts/mappings/manage) | Main change addressed | Remaining full state and final release/device verification stay open. |
 | R33 | Tax profiles (/settings/accounts/tax) | Main change addressed | Remaining long/history/state and final release/device verification stay open; no unsupported jurisdiction directory is invented. |
@@ -100,7 +100,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 ## Next sequence
 
 1. Investigate the retained amendment CI deadline using bounded phase/cleanup evidence; do not raise timeouts or suppress errors. Preserve live current-head verification.
-2. Finish explicit implementation gaps: progressive completion, category selection unification, quote desktop/document context, arrangement comparisons and Calendar activity.
+2. Finish explicit implementation gaps: progressive completion, quote desktop/document context, arrangement comparisons and Calendar activity.
 3. Perform the fresh signed-in dense planner review; use actual findings rather than assuming a replacement is needed.
 4. Complete state/zoom/long-value/privacy verification and the unchanged full-release, upgrade, restore and physical-device gates. Reconcile every row before claiming audit completion.
 

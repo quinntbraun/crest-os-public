@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-18T16:09:11.559Z",
+  "assessedAt": "2026-11-18T21:40:17.212Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "f7ea3377ac2badc0d9755650479c791f8f72751c",
-    "publishedCommit": "94779993f42ae0c2107c95bced2397528bef5de8",
-    "publishedTree": "8cffcb4980c7b4386663d121e01f59615f136690",
-    "localTree": "9050d849368f82feed786a95354dc2a8c27611ef"
+    "localCommit": "0f8054feb7a4fcc5a5874b7d22ebd34b12887116",
+    "publishedCommit": "5c0f79f708d662115c4fdab0ce253910f6ad3e19",
+    "publishedTree": "e785d13ec75915b24c8f3e69c5044fe4217ce92a",
+    "localTree": "479681ca76621ea002735fd08a52f6c8aa5c3c98"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -27,12 +27,12 @@
     "destinations": 36,
     "deeperWorkflows": 20,
     "counts": {
-      "locally_addressed": 28,
-      "partial": 39,
+      "locally_addressed": 29,
+      "partial": 38,
       "open": 2,
       "review_needed": 1
     },
-    "mainLocalChangesAddressedPercent": 40,
+    "mainLocalChangesAddressedPercent": 41.4,
     "auditComplete": false,
     "finalSignOffClaimed": false
   },
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "c87aa2fb7d6a3e92f71f77c5a082eabe7c28a73de0807645bc362f8a31624f90"
+          "sha256": "87aca95a5a975dfa717db99c7cac6d34358c6174acce0d56611da44ea9196d3e"
         }
       ],
       "verification": {
@@ -97,7 +97,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "c45a71a0fe4b3d69b753d31e16d2d34695bc923f9ae8aa039daa5df459a539fd"
+          "sha256": "a2ab9372694201ae1a74066719ffdd9f5ffb34c3cd71ff8f6629148cf3799c49"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -121,7 +121,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "c45a71a0fe4b3d69b753d31e16d2d34695bc923f9ae8aa039daa5df459a539fd"
+          "sha256": "a2ab9372694201ae1a74066719ffdd9f5ffb34c3cd71ff8f6629148cf3799c49"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
@@ -145,7 +145,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "c45a71a0fe4b3d69b753d31e16d2d34695bc923f9ae8aa039daa5df459a539fd"
+          "sha256": "a2ab9372694201ae1a74066719ffdd9f5ffb34c3cd71ff8f6629148cf3799c49"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -173,7 +173,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "d4eaf0d82ca6a2b834d76fbc320e494f31766a9a31b7eed977d4ff79551e98f5"
+          "sha256": "942206c63a2dfc525c54362c0f5cdf4b7036c8e80b718b56037332a009e6363c"
         }
       ],
       "verification": {
@@ -245,7 +245,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "d4eaf0d82ca6a2b834d76fbc320e494f31766a9a31b7eed977d4ff79551e98f5"
+          "sha256": "942206c63a2dfc525c54362c0f5cdf4b7036c8e80b718b56037332a009e6363c"
         }
       ],
       "verification": {
@@ -289,7 +289,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "c45a71a0fe4b3d69b753d31e16d2d34695bc923f9ae8aa039daa5df459a539fd"
+          "sha256": "a2ab9372694201ae1a74066719ffdd9f5ffb34c3cd71ff8f6629148cf3799c49"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
@@ -313,7 +313,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "c45a71a0fe4b3d69b753d31e16d2d34695bc923f9ae8aa039daa5df459a539fd"
+          "sha256": "a2ab9372694201ae1a74066719ffdd9f5ffb34c3cd71ff8f6629148cf3799c49"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
@@ -365,7 +365,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "c87aa2fb7d6a3e92f71f77c5a082eabe7c28a73de0807645bc362f8a31624f90"
+          "sha256": "87aca95a5a975dfa717db99c7cac6d34358c6174acce0d56611da44ea9196d3e"
         }
       ],
       "verification": {
@@ -1037,7 +1037,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/screen.tsx",
-          "sha256": "c731c668a4a53290015d7f5f00ec2dbc0fda5fbf2a5946ebcbdd2fbf2db882ed"
+          "sha256": "63a369327af4bc895d0284fc3c111c5c5876893581e64baf25827631a31094c6"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
@@ -1055,22 +1055,22 @@
       "section": "Every page",
       "title": "P2 · Expense category mappings (/settings/accounts/mappings/categories)",
       "requirements": "Observed: The page combines category lookup, date controls and a directory, creating two paths into similar information.\n\nDirection: Unify selection into one directory with an effective-date toolbar and selected-category detail. Distinguish category availability from approved posting treatment.\n\nDesktop: Use a searchable category list plus mapping detail.\n\nPhone: Show the selected category above the lookup results and preserve search when returning.\n\nAcceptance: No category should appear posting-ready merely because it exists in the directory.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-mappings-categories-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Selected-date mapping result, history and searchable category directory exist.",
-      "remainingWork": "Unify the top lookup and separate lower directory into one selection/effective-date workflow.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "One searchable category directory and effective-date toolbar lead to selected detail; phone return preserves search/date, and actual approved mapping treatment remains distinct from category availability.",
+      "remainingWork": "Complete remaining loading/error/denied/stale/long-value variants and fresh exact-head release/installed/physical-device acceptance.",
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/screen.tsx",
-          "sha256": "c731c668a4a53290015d7f5f00ec2dbc0fda5fbf2a5946ebcbdd2fbf2db882ed"
+          "sha256": "63a369327af4bc895d0284fc3c111c5c5876893581e64baf25827631a31094c6"
         },
         {
-          "path": "planning/MAPPING_HISTORY_DESIGN.md",
-          "sha256": "dd69f23b08f79e614704df3ce073f49a907ca56b2fd5286a0634b40e8a759f46"
+          "path": "planning/CATEGORY_MAPPING_SELECTION_DESIGN.md",
+          "sha256": "75f43d36bf0ed81520c50061af4986258013d63db95812a21efa082f06b84d21"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1249,7 +1249,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "d4eaf0d82ca6a2b834d76fbc320e494f31766a9a31b7eed977d4ff79551e98f5"
+          "sha256": "942206c63a2dfc525c54362c0f5cdf4b7036c8e80b718b56037332a009e6363c"
         }
       ],
       "verification": {

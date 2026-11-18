@@ -5,7 +5,7 @@ import AxeBuilder from '@axe-core/playwright';
 import {chromium,expect,webkit} from '@playwright/test';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
-import {reviewApprovalEntry,assertMappingLayout} from '../support/mapping-workbench.mjs';
+import {reviewApprovalEntry,assertMappingLayout,mappingBusinessSource} from '../support/mapping-workbench.mjs';
 
 for(const engine of [chromium,webkit]){
  test(engine.name()+' approves a fictional expense category account, recovers an interrupted save and exports history',
@@ -101,7 +101,9 @@ for(const engine of [chromium,webkit]){
     await page.getByRole('link',{name:'Expense category mappings',exact:true}).click();
 
     const lookup=page.getByRole('region',{name:'Account mapping lookup',exact:true});
-    await lookup.getByLabel('Expense category',{exact:true}).selectOption('category_fuel');
+    await expect(lookup.getByLabel('Expense category',{exact:true})).toHaveCount(0);
+    await lookup.getByRole('button',{name:'Select Fuel',exact:true}).click();
+    await expect(lookup.getByRole('heading',{name:'Fuel',exact:true})).toBeFocused();
     const effective=lookup.getByLabel('Effective date',{exact:true});
     await effective.fill('2026-02-28');
     await lookup.getByRole('button',{name:'Check account',exact:true}).click();
@@ -110,27 +112,43 @@ for(const engine of [chromium,webkit]){
     await expect(approved.getByText('5100',{exact:true})).toBeVisible();
     await expect(lookup.getByRole('heading',{name:'Account on Feb 28, 2026',exact:true})).toBeFocused();
     const directory=lookup.getByRole('region',{name:'Expense category directory',exact:true});
-    await directory.getByRole('button',{name:'Check categories for selected date',exact:true}).click();
+    await lookup.getByRole('button',{name:'Back to categories',exact:true}).click();
+    await lookup.getByRole('button',{name:'Check categories for selected date',exact:true}).click();
     await expect(lookup.getByRole('status')).toHaveText('Category mappings checked for Feb 28, 2026.',{timeout:15000});
     await expect(directory).toContainText('Posting accounts on Feb 28, 2026');
     await directory.getByLabel('Find a category',{exact:true}).fill('fuel');
     await expect(directory.getByRole('listitem')).toHaveCount(1);
-    await expect(directory.getByRole('listitem')).toContainText('Account 5100');
+    await expect(directory.getByRole('listitem')).toContainText('Approved account 5100');
     await directory.getByLabel('Show categories needing attention',{exact:true}).check();
     await expect(directory.getByText('No categories match these filters.',{exact:true})).toBeVisible();
     await directory.getByLabel('Show categories needing attention',{exact:true}).uncheck();
     await directory.screenshot({path:'.local/review/finance-category-directory-'+engine.name()+'-390.png'});
     await directory.getByLabel('Find a category',{exact:true}).fill('insurance');
-    await directory.getByRole('button',{name:'History for Insurance',exact:true}).click();
+    const beforeSelection=await mappingBusinessSource(fixture);let selectionRequests=0;
+    const observeSelection=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))selectionRequests++;};page.on('request',observeSelection);
+    try{
+     await expect(directory.getByRole('listitem')).toContainText('No usable mapping');
+     await directory.getByRole('button',{name:'Select Insurance',exact:true}).click();
+     await expect(lookup.getByRole('heading',{name:'Insurance',exact:true})).toBeFocused();
+     await expect(directory).toBeHidden();
+     await lookup.getByRole('button',{name:'Back to categories',exact:true}).click();
+     await expect(directory.getByLabel('Find a category',{exact:true})).toHaveValue('insurance');
+     await expect(directory.getByLabel('Find a category',{exact:true})).toBeFocused();
+     await expect(effective).toHaveValue('2026-02-28');
+     await directory.getByRole('button',{name:'Select Insurance',exact:true}).click();
+     assert.equal(selectionRequests,0);assert.deepEqual(await mappingBusinessSource(fixture),beforeSelection);
+    }finally{page.off('request',observeSelection);}
+    await lookup.getByRole('button',{name:'View approval history',exact:true}).click();
     const emptyHistory=lookup.getByRole('region',{name:'Saved mapping history',exact:true});
     await expect(emptyHistory.getByText('No approved versions for this category.',{exact:true})).toBeVisible();
     await expect(emptyHistory.getByRole('link',{name:'Manage approvals for Insurance',exact:true})).toHaveAttribute('href','/settings/accounts/mappings/categories/manage?purpose=category_insurance');
+    await lookup.getByRole('button',{name:'Back to categories',exact:true}).click();
     await directory.getByLabel('Find a category',{exact:true}).fill('fuel');
-    await lookup.getByLabel('Expense category',{exact:true}).selectOption('category_fuel');
+    await directory.getByRole('button',{name:'Select Fuel',exact:true}).click();
     await effective.fill('2026-03-01');
     await lookup.getByRole('button',{name:'Check account',exact:true}).click();
     await expect(lookup.getByRole('status')).toHaveText('No usable account mapping applies on that date.');
-    await lookup.getByRole('button',{name:'History for Fuel',exact:true}).click();
+    await lookup.getByRole('button',{name:'View approval history',exact:true}).click();
     await expect(lookup.getByText('Version 2 · Closed',{exact:true})).toBeVisible();
     await expect(lookup.locator('.mapping-history-coverage')).toContainText('Versions 2 through 1 loaded.');
     await expect(lookup.locator('.mapping-history-boundary')).toContainText('before Feb 1, 2026');

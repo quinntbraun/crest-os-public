@@ -8,10 +8,21 @@ export async function mappingBusinessSource(f){return (await f.client.query(`SEL
 export async function reviewApprovalEntry(page,engine,kind){
  await mkdir('.local/review',{recursive:true});const original=page.viewportSize(),entry=page.getByRole('region',{name:'Choose an approval setting',exact:true});let reads=0;
  const observed=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/finance-accounts/'))reads++;};page.on('request',observed);
- try{for(const width of [360,390,768,1100,1440]){await page.setViewportSize({width,height:900});await page.evaluate(async()=>{await document.fonts.ready;scrollTo(0,0);});await expect(entry.getByRole('heading',{name:'Review an approval setting',exact:true})).toBeVisible();await entry.getByRole('combobox').focus();await expect(entry.getByRole('combobox')).toBeFocused();await expect(entry.getByRole('button',{name:'Load approval settings',exact:true})).toBeDisabled();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);await page.screenshot({path:'.local/review/finance-'+kind+'-entry-'+engine+'-'+width+'.png',fullPage:true});}assert.equal(reads,0,'entry layout and focus make no financial request');}
+ try{for(const width of [360,390,768,1100,1440]){await page.setViewportSize({width,height:900});await page.evaluate(async()=>{await document.fonts.ready;scrollTo(0,0);});await expect(entry.getByRole('heading',{name:'Review an approval setting',exact:true})).toBeVisible();
+  const selector=entry.getByRole('combobox');
+  if(!await selector.isEnabled())console.info('Approval entry awaiting enabled control: '+engine+'/'+kind+'/'+width);
+  await expect(selector).toBeEnabled();await selector.focus();await expect(selector).toBeFocused();
+  await expect(entry.getByRole('button',{name:'Load approval settings',exact:true})).toBeDisabled();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);await page.screenshot({path:'.local/review/finance-'+kind+'-entry-'+engine+'-'+width+'.png',fullPage:true});}assert.equal(reads,0,'entry layout and focus make no financial request');}
  finally{page.off('request',observed);if(original)await page.setViewportSize(original);}
 }
 export async function assertMappingLayout(page,width){
+ if(await page.locator('.category-mapping-workbench').count()){
+  const detail=await page.locator('.category-mapping-detail').boundingBox(),form=await page.locator('.mapping-lookup-form').boundingBox(),history=await page.getByRole('region',{name:'Saved mapping history',exact:true}).boundingBox();assert(detail&&form&&history);
+  assert(form.y+form.height<=history.y,'selected category actions precede its retained history');
+  if(width>=1100){const directory=await page.locator('.category-mapping-directory').boundingBox();assert(directory&&directory.x+directory.width<=detail.x,'desktop category directory and detail remain side by side');}
+  else await expect(page.locator('.category-mapping-directory')).toBeHidden();
+  return;
+ }
  const lookup=await page.locator('.mapping-lookup-pane').boundingBox(),history=await page.getByRole('region',{name:'Saved mapping history',exact:true}).boundingBox();assert(lookup&&history);
  if(width>=1100){const form=await page.locator('.mapping-lookup-form').boundingBox();assert(form&&Math.abs(form.y-history.y)<1,'desktop lookup and history align at the top');assert(lookup.x+lookup.width<=history.x,'desktop lookup and history remain side by side');}else assert(lookup.y+lookup.height<=history.y,'phone/tablet lookup and result precede history');
 }
