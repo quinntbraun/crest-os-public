@@ -1,6 +1,7 @@
 'use client';
+import {mileageEvidenceChanges} from './mileage-evidence-presentation';
 import {TaskPrerequisite} from '../../task-prerequisite';
-import {useCallback,useEffect,useId,useRef,useState} from 'react';
+import {useCallback,useEffect,useId,useLayoutEffect,useRef,useState} from 'react';
 import {createMileageController,initialMileageView} from '../../../client/mileage-controller';
 import {createPendingSchedulingStore,pendingSchedulingKeys} from '../../../client/pending-scheduling';
 import type {SchedulingOriginalKind} from '../../../operations/scheduling-original-contract';
@@ -29,9 +30,9 @@ const movementLabels:Record<MileageBody['movementKind'],string>={
 const kind='operations.mileage.record';
 const value=(row:Readonly<Record<string,unknown>>|undefined,key:string)=>typeof row?.[key]==='string'?row[key]:'';
 
-function MileageForm({trip,history,jobId,timezone,disabled,findJobs,save}:{
+function MileageForm({trip,history,jobId,timezone,disabled,findJobs,save,draftChanged}:{
  trip:MileageTrip;history:MileageHistoryPage;jobId:string;timezone:string;disabled:boolean;
- findJobs:FindMileageJobs;save:(body:MileageBody)=>void;
+ findJobs:FindMileageJobs;save:(body:MileageBody,id:string)=>void;draftChanged:(id:string,dirty:boolean)=>void;
 }){
  const id=useId(),latest=history.evidence.at(-1),recorded=history.allocations.filter(row=>row.evidence_id===latest?.id);
  const [source,setSource]=useState<MileageBody['source']>(trip.state==='open'?'route_estimate':(latest?.source as MileageBody['source']??'manual_actual'));
@@ -41,7 +42,14 @@ function MileageForm({trip,history,jobId,timezone,disabled,findJobs,save}:{
   actual:value(latest,'actual_miles'),estimate:value(latest,'estimate_miles'),
   start:value(latest,'odometer_start'),end:value(latest,'odometer_end')
  }));
+ const reviewFocus=useRef<'review'|'form'|null>(null);
  const reviewHeading=useRef<HTMLHeadingElement>(null),reviewButton=useRef<HTMLButtonElement>(null);
+ useLayoutEffect(()=>{
+  if(reviewFocus.current==='review'&&proposal)reviewHeading.current?.focus();
+  if(reviewFocus.current==='form'&&!proposal)reviewButton.current?.focus();
+  reviewFocus.current=null;
+ },[proposal]);
+ useEffect(()=>()=>draftChanged(id,false),[draftChanged,id]);
  const start=mileageDistanceUnits(readings.start),end=mileageDistanceUnits(readings.end);
  const preview=source==='odometer'?(start!==null&&end!==null&&end>=start?end-start:null):
   mileageDistanceUnits(source==='manual_actual'?readings.actual:readings.estimate);
@@ -52,7 +60,7 @@ function MileageForm({trip,history,jobId,timezone,disabled,findJobs,save}:{
   percent:mileageSharePercent(String(row.fraction))
  })));
  const correction=trip.evidenceVersion!=='0';
- return <form className="field-work-form" onSubmit={event=>{
+ return <form className="field-work-form" onChange={()=>draftChanged(id,true)} onSubmit={event=>{
   event.preventDefault();
   if(proposal)return;
   const form=new FormData(event.currentTarget),raw=(key:string)=>String(form.get(key)??''),
@@ -72,8 +80,7 @@ function MileageForm({trip,history,jobId,timezone,disabled,findJobs,save}:{
     odometerStart:source==='route_estimate'?null:text('start'),odometerEnd:source==='route_estimate'?null:text('end'),
     notes:optional('notes'),reason:optional('reason'),allocationState:allocation==='preserve'?latest?.allocation_state:allocation==='none'?'unallocated':'allocated',
     allocations:allocation==='preserve'?recorded.map(row=>({jobId:row.job_id,fraction:row.fraction})):allocation==='job'?[{jobId,fraction:'1'}]:split});
-   setError('');setProposal(body);
-   requestAnimationFrame(()=>reviewHeading.current?.focus());
+   reviewFocus.current='review';setError('');setProposal(body);
   }catch{setError('Use up to four decimal places, enter both odometer readings, or give the source of an estimate. Check the fields shown above.');}
  }}>
   <fieldset disabled={disabled} hidden={proposal!==null} className="mileage-form-body">
@@ -119,7 +126,7 @@ function MileageForm({trip,history,jobId,timezone,disabled,findJobs,save}:{
     <option value="split">{jobId?'Split across jobs':'Allocate to saved jobs'}</option>
    </select>
    {allocation==='split'&&<MileageAttribution jobId={jobId} day={calendarToday(timezone,new Date(trip.departedAt))}
-    timezone={timezone} shares={shares} distance={preview} change={next=>{setShares(next);setError('');}} findJobs={findJobs}/>}
+    timezone={timezone} shares={shares} distance={preview} change={next=>{setShares(next);setError('');draftChanged(id,true);}} findJobs={findJobs}/>}
    {allocation!=='split'&&<MileageAllocationTotals shares={allocation==='preserve'?recorded.map(row=>mileageSharePercent(String(row.fraction))):allocation==='job'?['100']:[]} distance={preview}/>}
    </section>
    <section className="mileage-form-panel" aria-label="Mileage notes">
@@ -131,8 +138,8 @@ function MileageForm({trip,history,jobId,timezone,disabled,findJobs,save}:{
    </section>
   </fieldset>
   {proposal&&<MileageReview proposal={proposal} latest={latest} shares={shares} jobId={jobId} disabled={disabled}
-   heading={reviewHeading} onSave={()=>save(proposal)} onBack={()=>{
-    setProposal(null);requestAnimationFrame(()=>reviewButton.current?.focus());
+   heading={reviewHeading} onSave={()=>save(proposal,id)} onBack={()=>{
+    reviewFocus.current='form';setProposal(null);
    }}/>}
  </form>;
 }
@@ -174,6 +181,25 @@ export function MileageScreen({jobId,legId,initialTrip}:{jobId:string;legId:stri
  const [downloadMessage,setDownloadMessage]=useState('');
  const downloadUrl=useRef<string|null>(null);
  const status=useRef<HTMLParagraphElement>(null),tripHeading=useRef<HTMLHeadingElement>(null);
+ const [dirtyDrafts,setDirtyDrafts]=useState<ReadonlySet<string>>(()=>new Set()),[editorRevision,setEditorRevision]=useState(0);
+ const [dismissedRecord,setDismissedRecord]=useState<string|null>(null),[focusRequest,setFocusRequest]=useState<{target:'record'|'picker'}|null>(null);
+ const handledFocus=useRef<typeof focusRequest>(null),tripOrigin=useRef<HTMLButtonElement|null>(null),pickerHeading=useRef<HTMLHeadingElement>(null);
+ const draftChanged=useCallback((id:string,dirty:boolean)=>setDirtyDrafts(previous=>{if(previous.has(id)===dirty)return previous;const next=new Set(previous);if(dirty)next.add(id);else next.delete(id);return next;}),[]);
+ const recordKey=view.selected&&view.history?view.selected.legVersionId+':'+view.history.afterVersion+':'+view.history.throughVersion:null;
+ const showingRecord=recordKey!==null&&recordKey!==dismissedRecord;
+ useLayoutEffect(()=>{
+  if(!focusRequest||handledFocus.current===focusRequest||view.busy||view.phase!=='ready')return;
+  if(focusRequest.target==='record'){if(!showingRecord)return;tripHeading.current?.focus();}
+  else if(tripOrigin.current?.isConnected)tripOrigin.current.focus();
+  else pickerHeading.current?.focus();
+  handledFocus.current=focusRequest;
+ },[focusRequest,view.busy,view.phase,showingRecord]);
+ useEffect(()=>{if(!dirtyDrafts.size)return;const warn=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirtyDrafts]);
+ function mayReplaceDrafts(exceptId?:string){
+  if(!Array.from(dirtyDrafts).some(id=>id!==exceptId))return true;
+  if(!window.confirm('Discard unfinished mileage or departure correction drafts before continuing?'))return false;
+  setEditorRevision(value=>value+1);return true;
+ }
  const awaitingReturnFocus=useRef(initialTrip!==null);
  const revoke=useCallback(()=>{
   if(downloadUrl.current)URL.revokeObjectURL(downloadUrl.current);
@@ -186,7 +212,7 @@ export function MileageScreen({jobId,legId,initialTrip}:{jobId:string;legId:stri
    blockers:(Object.keys(pendingSchedulingKeys) as SchedulingOriginalKind[]).filter(key=>key!==kind&&key!==mobileDepartureKind)
     .map(key=>createPendingSchedulingStore(storage,key)),change:setView});
   controller.current=current;void current.load();
-  const leave=()=>{current.suspend();revoke();setDownloadMessage('');};
+  const leave=()=>{current.suspend();revoke();setDownloadMessage('');setDismissedRecord(null);setFocusRequest(null);tripOrigin.current=null;};
   const hidden=()=>{if(document.visibilityState==='hidden')leave();};
   const restored=(event:PageTransitionEvent)=>{if(event.persisted)leave();};
   window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);document.addEventListener('visibilitychange',hidden);
@@ -198,13 +224,13 @@ export function MileageScreen({jobId,legId,initialTrip}:{jobId:string;legId:stri
   await run(current);if(controller.current===current)status.current?.focus();
  }
  const {selected,history}=view;
- useEffect(()=>{
+ useLayoutEffect(()=>{
   if(awaitingReturnFocus.current&&selected?.legId===initialTrip?.legId){
    awaitingReturnFocus.current=false;tripHeading.current?.focus();
   }
  },[initialTrip,selected]);
  const pendingDeparture=view.pendingKind===mobileDepartureKind;
- const format=(instant:string)=>new Intl.DateTimeFormat('en-US',{timeZone:view.timezone,dateStyle:'medium',timeStyle:'short'}).format(new Date(instant));
+ const format=(instant:string)=>new Intl.DateTimeFormat('en-US',{timeZone:view.timezone,dateStyle:'medium',timeStyle:'medium'}).format(new Date(instant));
  async function downloadHistory(){
   const current=controller.current;
   if(!current||!history||current.view().busy)return;
@@ -231,19 +257,25 @@ export function MileageScreen({jobId,legId,initialTrip}:{jobId:string;legId:stri
   }catch{if(isCurrent())setDownloadMessage('No file could be prepared. Try downloading this history page again.');}
   finally{bytes?.fill(0);}
  }
+ function handleEarlierVersions(){if(!mayReplaceDrafts())return;void action(current=>current.older());}
+ function handleMileageSave(body:MileageBody,id:string){if(!mayReplaceDrafts(id))return;void action(current=>current.save(body));}
+ function handleDepartureSave(body:MobileDepartureSave['body'],id:string){if(!mayReplaceDrafts(id))return;void action(current=>current.correctDeparture(body));}
  function renderTrip(trip:MileageTrip,saved:MileageHistoryPage){
   const latest=saved.evidence.find(row=>row.sequence===trip.evidenceVersion);
   const shareRows=latest?saved.allocations.filter(row=>row.evidence_id===latest.id):[];
   const amount=mileageDistanceUnits(String(latest?.actual_miles??latest?.estimate_miles??''));
-  return <article className="mileage-selected">
+  return <article className="mileage-selected" hidden={!showingRecord}>
+   {!!jobId&&view.trips.length>0&&<button type="button" className="secondary mileage-back" disabled={view.busy} onClick={()=>{setDismissedRecord(recordKey);setFocusRequest({target:'picker'});}}>Back to trips</button>}
    <header className="customer-record-header mileage-trip-summary">
     <p>{trip.state==='open'?'In progress':trip.state==='cancelled'?'Cancelled':'Ended'} · {distance[trip.distanceStatus]}</p>
+    <p className="field-help">Time zone: {view.timezone}</p>
     <h2 ref={tripHeading} tabIndex={-1}>{labels[trip.purpose]}</h2>
     <dl>
      <div><dt>Departure</dt><dd><time dateTime={trip.departedAt}>{format(trip.departedAt)}</time></dd></div>
      {trip.arrivedAt&&<div><dt>{trip.state==='cancelled'?'Stopped':'Arrival'}</dt><dd><time dateTime={trip.arrivedAt}>{format(trip.arrivedAt)}</time></dd></div>}
     </dl>
    </header>
+   {!latest&&trip.evidenceVersion!=='0'&&<p className="field-help">This page contains earlier mileage evidence. {jobId?'Choose this trip again to review current saved mileage.':'Reload this page to review current saved mileage.'}</p>}
    {latest&&<section className="home-panel mileage-result" aria-label="Current saved mileage">
     <div className="mileage-result-heading"><h2>Current saved mileage</h2><strong>{amount!==null&&mileageDisplay(amount)}</strong></div>
     <p>{sources[latest.source as MileageBody['source']]} · {movementLabels[latest.movement_kind as MileageBody['movementKind']]}</p>
@@ -252,28 +284,39 @@ export function MileageScreen({jobId,legId,initialTrip}:{jobId:string;legId:stri
     <SavedAttribution history={saved} evidenceId={String(latest.id)} currentJob={jobId} trip={trip} state={String(latest.allocation_state)}/>
    </section>}
    {view.canSave&&saved.throughVersion===trip.evidenceVersion&&
-    <MileageEditor trip={trip} history={saved} jobId={jobId} timezone={view.timezone} disabled={view.busy}
+    <MileageEditor key={editorRevision} trip={trip} history={saved} jobId={jobId} timezone={view.timezone} disabled={view.busy}
      findJobs={async(day,after)=>controller.current?.findJobs(day,after)}
-     save={body=>void action(current=>current.save(body))}/>}
+     draftChanged={draftChanged} save={handleMileageSave}/>}
    <section className="home-panel mileage-history" aria-label="Saved mileage history">
     <h2>Saved mileage history</h2>
-    {saved.evidence.length===0?<p>No mileage has been saved for this trip.</p>:<ol className="mileage-versions">{[...saved.evidence].reverse().map(row=><li key={String(row.id)}>
-     <strong>Version {String(row.sequence)}</strong> · {sources[row.source as MileageBody['source']]}
-     {row.actual_miles!==null&&<> · {String(row.actual_miles)} actual miles</>}
-     {row.estimate_miles!==null&&<> · {String(row.estimate_miles)} estimated miles</>}
-     {row.reason!==null&&<p>{String(row.reason)}</p>}
-     <SavedAttribution history={saved} evidenceId={String(row.id)} currentJob={jobId} trip={trip} state={String(row.allocation_state)}/>
-    </li>)}</ol>}
+    {saved.evidence.length===0?<p>No mileage has been saved for this trip.</p>:<>
+     <p className="field-help">Loaded versions {String(saved.evidence[0]!.sequence)}–{String(saved.evidence.at(-1)!.sequence)}. {saved.afterVersion==='0'?'No earlier versions for this trip.':'Earlier versions are available.'}</p>
+     <ol className="mileage-versions">{saved.evidence.map((row,index)=>{
+      const previous=saved.evidence[index-1],changes=mileageEvidenceChanges(saved,previous,row);
+      const fieldValue=(key:string,raw:string|null)=>raw===null?'Not recorded':key==='source'?sources[raw as MileageBody['source']]:key==='movement_kind'?movementLabels[raw as MileageBody['movementKind']]:key==='allocations'?<SavedAttribution history={saved} evidenceId={raw} currentJob={jobId} trip={trip} state={String(saved.evidence.find(entry=>entry.id===raw)?.allocation_state)}/>:raw;
+      return <li key={String(row.id)}>
+       <header><strong>Version {String(row.sequence)}</strong><span>{row.sequence==='1'?'First entry':'Correction'} · {sources[row.source as MileageBody['source']]}</span><p>Recorded <time dateTime={String(row.created_at)} title={String(row.created_at)}>{format(String(row.created_at))}</time></p></header>
+       <p className="mileage-history-distance">{row.actual_miles!==null&&<strong>{String(row.actual_miles)} actual miles</strong>}{row.estimate_miles!==null&&<span>{String(row.estimate_miles)} estimated miles</span>}</p>
+       <p>{movementLabels[row.movement_kind as MileageBody['movementKind']]}</p>
+       {row.reason!==null&&<p className="mileage-history-reason"><strong>Reason recorded</strong><span>{String(row.reason)}</span></p>}
+       {changes?.length?<details className="mileage-history-changes"><summary>Changes from version {String(previous!.sequence)}</summary><dl>{changes.map(change=><div key={change.key}><dt>{change.label}</dt><dd><span>Before</span><div>{fieldValue(change.key,change.before)}</div></dd><dd><span>This version</span><div>{fieldValue(change.key,change.after)}</div></dd></div>)}</dl></details>:row.sequence!=='1'&&<p className="field-help">{changes===null?'The preceding version is not on this loaded page.':'Distance, source and allocations unchanged; the retained reason is shown above.'}</p>}
+       <SavedAttribution history={saved} evidenceId={String(row.id)} currentJob={jobId} trip={trip} state={String(row.allocation_state)}/>
+       <details className="mileage-history-evidence"><summary>Saved evidence for mileage version {String(row.sequence)}</summary><dl>
+        <div><dt>Actual miles</dt><dd>{row.actual_miles===null?'Not recorded':String(row.actual_miles)}</dd></div><div><dt>Estimated miles</dt><dd>{row.estimate_miles===null?'Not recorded':String(row.estimate_miles)}</dd></div><div><dt>Estimate source</dt><dd>{row.estimate_source===null?'Not recorded':String(row.estimate_source)}</dd></div><div><dt>Odometer (mi)</dt><dd>{row.odometer_start===null?'Not recorded':String(row.odometer_start)+' → '+String(row.odometer_end)}</dd></div><div><dt>Notes</dt><dd>{row.notes===null?'Not recorded':String(row.notes)}</dd></div><div><dt>Recorded (UTC)</dt><dd>{String(row.created_at)}</dd></div><div><dt>Evidence reference</dt><dd>{String(row.id)}</dd></div><div><dt>Trip version reference</dt><dd>{String(row.leg_version_id)}</dd></div><div><dt>Operation reference</dt><dd>{String(row.operation_id)}</dd></div>
+       </dl></details>
+      </li>;
+     }).reverse()}</ol>
+    </>}
     <div className="mileage-history-actions">
-     {saved.afterVersion!=='0'&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action(current=>current.older())}>Load earlier versions</button>}
+     {saved.afterVersion!=='0'&&<button className="secondary" type="button" disabled={view.busy} onClick={handleEarlierVersions}>Load earlier versions</button>}
      {saved.evidence.length>0&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void downloadHistory()}>Download loaded history (CSV + JSON)</button>}
     </div>
     {saved.evidence.length>0&&<p className="field-help">Includes the versions shown here, with their allocation and audit records.</p>}
     {downloadMessage&&<p role="status" aria-label="Mileage download status">{downloadMessage}</p>}
    </section>
-   {view.canSave&&view.departure&&<DepartureEditor key={view.departure.legVersionId} departure={view.departure}
+   {view.canSave&&view.departure&&<DepartureEditor key={view.departure.legVersionId+':'+editorRevision} departure={view.departure}
     timezone={view.timezone} disabled={view.busy} hasMileage={trip.evidenceVersion!=='0'}
-    save={body=>void action(current=>current.correctDeparture(body))}/>}
+    draftChanged={draftChanged} save={handleDepartureSave}/>}
   </article>;
  }
  return <section className="mileage-screen" aria-label="Saved trip mileage" aria-busy={view.busy}>
@@ -287,19 +330,21 @@ export function MileageScreen({jobId,legId,initialTrip}:{jobId:string;legId:stri
   </>}
   {view.phase==='ready'&&<>
    {!view.canSave&&<p className="notice">Changes are paused. Saved mileage is available for review.</p>}
-   {!!jobId&&(view.trips.length>0||selected)&&<div className="mileage-layout" data-picker={view.trips.length>0}>
+   {dirtyDrafts.size>0&&!showingRecord&&selected&&<aside className="mileage-draft-notice" aria-label="Unfinished mileage draft"><p>Your unfinished mileage or departure draft is still open.</p><button type="button" className="secondary" onClick={()=>{setDismissedRecord(null);setFocusRequest({target:'record'});}}>Return to mileage draft</button></aside>}
+   {!!jobId&&(view.trips.length>0||selected)&&<div className="mileage-layout" data-picker={view.trips.length>0} data-selected={showingRecord}>
     {view.trips.length>0&&<section className="home-panel mileage-picker" aria-label="Find a trip">
-     <h2>Trips for this job</h2>
+     <h2 ref={pickerHeading} tabIndex={-1}>Trips for this job</h2>
      <ul className="mileage-trip-list" role="list" aria-label="Trips for this job">{view.trips.map(trip=><li key={trip.legId}>
       <button type="button" className="secondary" aria-pressed={selected?.legId===trip.legId} disabled={view.busy}
-       onClick={()=>void action(async current=>{
-        await current.select(trip.legId);
-        if(current.view().selected?.legId===trip.legId)requestAnimationFrame(()=>tripHeading.current?.focus());
-       })}>{labels[trip.purpose]} · {format(trip.departedAt)}</button>
+       onClick={async event=>{
+        if(!mayReplaceDrafts())return;tripOrigin.current=event.currentTarget;setDismissedRecord(null);
+        await action(current=>current.select(trip.legId));setFocusRequest({target:'record'});
+       }}>{labels[trip.purpose]} · {format(trip.departedAt)}</button>
       <p>{trip.state==='open'?'In progress':trip.state==='cancelled'?'Cancelled':'Ended'} · {distance[trip.distanceStatus]}</p>
      </li>)}</ul>
      {view.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action(current=>current.moreTrips())}>Load more trips</button>}
     </section>}
+    {!showingRecord&&<section className="home-panel mileage-guide" aria-label="Mileage selection guidance"><h2>Review one journey</h2><p>Choose a trip to review its recorded distance, source and job attribution.</p><p className="field-help">Missing mileage stays unresolved until evidence is saved.</p></section>}
     {selected&&history&&renderTrip(selected,history)}
    </div>}
    {!!legId&&selected&&history&&renderTrip(selected,history)}
@@ -313,21 +358,22 @@ export function MileageScreen({jobId,legId,initialTrip}:{jobId:string;legId:stri
  </section>;
 }
 
-function DepartureEditor({departure,timezone,disabled,hasMileage,save}:{
- departure:LoadedMobileDeparture;timezone:string;disabled:boolean;hasMileage:boolean;save:(body:MobileDepartureSave['body'])=>void;
+function DepartureEditor({departure,timezone,disabled,hasMileage,save,draftChanged}:{
+ departure:LoadedMobileDeparture;timezone:string;disabled:boolean;hasMileage:boolean;save:(body:MobileDepartureSave['body'],id:string)=>void;draftChanged:(id:string,dirty:boolean)=>void;
 }){
  const id=useId(),[correctedAt,setCorrectedAt]=useState(''),[issue,setIssue]=useState('');
  const format=new Intl.DateTimeFormat('en-US',{timeZone:timezone,dateStyle:'medium',timeStyle:'medium'});
  const when=(instant:string)=>format.format(new Date(instant));
+ useEffect(()=>()=>draftChanged(id,false),[draftChanged,id]);
  return <details className="mileage-correction">
   <summary>Correct departure time</summary>
-  <form className="field-work-form" onSubmit={event=>{
+  <form className="field-work-form" onChange={()=>draftChanged(id,true)} onSubmit={event=>{
    event.preventDefault();
    try{
     const reason=String(new FormData(event.currentTarget).get('reason')??'');
     if(!correctedAt||correctedAt===departure.departedAt||departure.arrivedAt&&correctedAt>departure.arrivedAt)throw Error();
     const body=parseWorkCorrectionBody({correctedAt,reason});
-    setIssue('');save(body);
+    setIssue('');save(body,id);
    }catch{setIssue('Enter a different departure time within the saved trip and give a reason.');}
   }}>
    <fieldset disabled={disabled}>

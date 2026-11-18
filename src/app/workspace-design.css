@@ -1488,3 +1488,29 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 .work-time-ledger .work-interval-history,.work-time-ledger .work-history-exact { border:0; padding:0; background:transparent; }
 .work-time-correction-review .work-time-comparison { grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr)); }
 .work-time-draft-state { padding:.65rem; border-inline-start:3px solid var(--gold-ink); background:var(--canvas); font-size:.875rem; }
+
+.mileage-selected[hidden] { display:none; }
+.mileage-selected .mileage-back { width:auto; margin:0; }
+.mileage-draft-notice { padding:1rem; border:1px solid var(--line); border-inline-start:3px solid var(--gold-ink); border-radius:var(--radius); }
+.mileage-versions header > span,.mileage-versions header p { display:block; color:var(--muted); font-size:.85rem; }
+.mileage-history-distance { display:grid; gap:.3rem; }
+.mileage-history-distance > strong { font-size:1.1rem; }
+.mileage-history-reason { display:grid; gap:.3rem; }
+.mileage-history .mileage-history-changes,.mileage-history .mileage-history-evidence { border:0; padding:0; background:transparent; }
+.mileage-history-changes dl > div { display:grid; gap:.4rem .75rem; padding-block:.75rem; border-top:1px solid var(--line); min-width:0; }
+.mileage-history-changes dd { margin:0; min-width:0; overflow-wrap:anywhere; }
+.mileage-history-changes dd > span { color:var(--muted); font-size:.8rem; }
+.mileage-history-evidence dl > div { margin-block:.7rem; }
+.mileage-history-evidence dd { margin:.3rem 0 0; overflow-wrap:anywhere; white-space:pre-wrap; }
+@media(min-width:1100px) {
+ .mileage-layout[data-picker='true'] { grid-template-columns:minmax(17rem,1fr) minmax(0,2fr); }
+ .mileage-history-changes dl > div { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .mileage-history-changes dt { grid-column:1/-1; }
+}
+@media(min-width:1100px) and (min-height:40rem) { .mileage-picker { position:sticky; top:1rem; max-height:calc(100dvh - 2rem); overflow:auto; scrollbar-gutter:stable; } }
+@media(max-width:1099px) {
+ .mileage-layout[data-selected='true'] { grid-template-columns:minmax(0,1fr); }
+ .mileage-layout[data-selected='true'] .mileage-picker,.mileage-guide { display:none; }
+}
+
+.mileage-history-changes dd > div { margin:.25rem 0; white-space:pre-wrap; overflow-wrap:anywhere; }
