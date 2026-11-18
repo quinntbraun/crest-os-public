@@ -1,3 +1,4 @@
+import {observeExpenseAccess,prepareExpenseBrowserCode} from '../support/expense-access-diagnostic.mjs';
 import assert from 'node:assert/strict';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
@@ -7,6 +8,7 @@ import AxeBuilder from '@axe-core/playwright';
 import {strFromU8,unzipSync} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
+import {reviewReceiptDocumentViewer} from '../support/receipt-document-viewer.mjs';
 
 async function exerciseSupplierBills(page,date,fixture,engine){
  const region=page.getByRole('region',{name:'Unpaid supplier bill drafts',exact:true});
@@ -376,13 +378,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
 },{timeout:240000});
 
 if(process.env.CREST_TEST_RECORDED_INCOME_STATEMENT!=='1')
-for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' attaches and previews a private receipt from Expenses',async()=>{
+for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' attaches and previews a private receipt from Expenses',async t=>{
  const f=await sourceExportBrowserFixture({product:true,workspace:true,expenses:true,expenseReceipts:true});
- let browser;
+ let browser,accessDiagnostic;
  try{
   browser=await engine.launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
-  const page=await context.newPage();
+  const page=await context.newPage();accessDiagnostic=observeExpenseAccess(page,f);
   const accessGate=Promise.withResolvers();
   await page.route('**/api/auth/session',async route=>{await accessGate.promise;await route.continue();},{times:1});
   await page.goto(f.origin+'/expenses');
@@ -394,6 +396,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(page.getByRole('button',{name:'Record expense',exact:true})).toHaveCount(0);
   accessGate.resolve();
   await page.getByRole('link',{name:'Sign in to view expenses',exact:true}).click();
+  await prepareExpenseBrowserCode(f);
   const credentials=f.credentials();
   await page.getByLabel('Email',{exact:true}).fill(credentials.email);
   await page.getByLabel('Password',{exact:true}).fill(credentials.password);
@@ -427,7 +430,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const expense=page.getByRole('article').filter({has:page.getByRole('heading',{name:'Fictional towel purchase',exact:true})});
   await expense.getByText('Receipts',{exact:true}).click();
   const sharp=(await import('sharp')).default;
-  const receipt=await sharp({create:{width:180,height:230,channels:3,background:'#eee4d2'}}).png().toBuffer();
+  const receipt=await sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="480" height="720" viewBox="0 0 480 720"><rect width="480" height="720" fill="#fffdf7"/><g fill="#20232b" font-family="sans-serif"><text x="40" y="65" font-size="21" font-weight="bold">FICTIONAL TEST RECEIPT</text><text x="40" y="110" font-size="18">Demo supply store</text><text x="40" y="145" font-size="16">${date}</text><path d="M40 180H440" stroke="#9a9a94"/><text x="40" y="230" font-size="18">Test towel supplies</text><text x="440" y="230" text-anchor="end" font-size="18">$12.99</text><path d="M40 280H440" stroke="#9a9a94"/><text x="40" y="330" font-size="23" font-weight="bold">TOTAL</text><text x="440" y="330" text-anchor="end" font-size="23" font-weight="bold">$12.99</text><text x="40" y="390" font-size="16">Payment: fictional bank entry</text><text x="40" y="540" font-size="16">Synthetic development fixture.</text><text x="40" y="575" font-size="16">Not a real purchase or tax document.</text><text x="40" y="640" font-size="16">Preview and zoom verification only.</text></g></svg>`)).png().toBuffer();
   await expense.getByLabel('Receipt file',{exact:true}).setInputFiles({name:'fictional-receipt.png',mimeType:'image/png',buffer:receipt});
   let publicationStatus;
   await page.route('**/api/business/expense-receipts/publish',async route=>{
@@ -454,6 +457,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    assert.deepEqual((await new AxeBuilder({page}).include('.expense-receipts').withTags(['wcag2a','wcag2aa']).analyze()).violations,[]);
    await page.screenshot({path:'.local/review/expenses-verified-receipt-'+name+'-'+width+'.png',animations:'disabled'});
   }
+  await reviewReceiptDocumentViewer(page,{fixture:f,expense,engine:name});
   const download=page.waitForEvent('download');
   await expense.getByRole('button',{name:'Download receipt 1',exact:true}).click();
   assert.deepEqual(await readFile(await (await download).path()),receipt);
@@ -501,5 +505,5 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert.equal(rows.rowCount,1,'attaching a receipt must not revise the expense');
   assert.equal(rows.rows[0].amount,'1299');
   assert.equal((await f.client.query('SELECT count(*)::int AS count FROM crest.expense_receipt_revisions WHERE business_id=$1',[f.business])).rows[0].count,2*receiptCount+rejectedReceiptReservations);
- }finally{await browser?.close();await f.close();}
+ }catch(error){t.diagnostic(JSON.stringify((await accessDiagnostic?.report())??{diagnosticUnavailable:true}));throw error;}finally{accessDiagnostic?.stop();await browser?.close();await f.close();}
 },{timeout:process.env.CREST_EXPENSE_RECEIPT_IMAGE_ID?360000:180000});

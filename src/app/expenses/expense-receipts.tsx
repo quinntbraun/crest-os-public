@@ -5,6 +5,7 @@ import type {ReceiptView} from '../../bookkeeping/expenses/receipt-contract';
 import type {ExpenseContext} from '../../client/expenses';
 import type {PendingReceipt} from '../../client/pending-receipt';
 import type {createReceiptClient,ReceiptAttempt} from '../../client/expense-receipts';
+import {ReceiptDocumentViewer} from './receipt-document-viewer';
 type Resume=Readonly<{context:ExpenseContext;receipt:ReceiptView;operationId:string;file?:File}>;
 export function ExpenseReceipts({expense,context,client,visible=true}:{expense:ExpenseRevision;context:ExpenseContext;client:ReturnType<typeof createReceiptClient>;visible?:boolean}){
  const [rows,setRows]=useState<readonly ReceiptView[]>([]),[file,setFile]=useState<File|null>(null),[pending,setPending]=useState<ReceiptAttempt|null>(null),[resuming,setResuming]=useState<Resume|null>(null),[original,setOriginal]=useState<PendingReceipt|null>(null),[storageBlocked,setStorageBlocked]=useState(true),[canRetry,setCanRetry]=useState(false),[busy,setBusy]=useState(false),[status,setStatus]=useState(''),[inputKey,setInputKey]=useState(0);
@@ -98,7 +99,7 @@ export function ExpenseReceipts({expense,context,client,visible=true}:{expense:E
    {visible&&preview&&<figure ref={previewFigure} className="receipt-preview" aria-label="Receipt preview">
     {/* Preview bytes come from the private receipt download, verified before creating the URL. */}
     <img src={preview.url} alt="Verified receipt preview"/>
-    <figcaption><button ref={closeButton} type="button" className="secondary" onClick={()=>{closePreview();previewTrigger.current?.focus();}}>Close preview</button></figcaption>
+    <figcaption><button ref={closeButton} type="button" className="secondary" onClick={()=>{closePreview();previewTrigger.current?.focus();}}>Close preview</button><ReceiptDocumentViewer key={preview.url} url={preview.url} expense={expense}/></figcaption>
    </figure>}
   </div>
  </details>;
