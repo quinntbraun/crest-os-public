@@ -8,6 +8,7 @@ import AxeBuilder from '@axe-core/playwright';
 import sharp from 'sharp';
 import {strFromU8,unzipSync} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {reviewCustodyEventTimeline} from '../support/custody-event-timeline.mjs';
 
 async function downloadCustodyHistory(page,panel){
  const started=page.waitForEvent('download');
@@ -419,6 +420,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
   assert.equal(downloaded.events[1].person.displayName,collectedBy);
   assert.equal(downloaded.events[0].notes,null);
   assert.equal(downloaded.policy.acknowledgementText,acknowledgement);
+  await reviewCustodyEventTimeline(page,panel,{fixture,expected:downloaded,engine:name,scenario:'missing-photo'});
   await mkdir('.local/review',{recursive:true});
   for(const width of [360,390,768,1440]){
    await page.setViewportSize({width,height:900});
@@ -557,6 +559,7 @@ test(photoEngine[0]+' signed-in condition photo survives interrupted upload conf
   const exported=await downloadCustodyHistory(page,panel);
   assert.equal(exported.state,'in_custody');
   assert.equal(exported.events[0].conditionPhotoId,scope.photoId);
+  await reviewCustodyEventTimeline(page,panel,{fixture,expected:exported,engine:photoEngine[0],scenario:'verified-photo'});
   const show=panel.getByRole('button',{name:'View condition photo',exact:true});
   await show.focus();await page.keyboard.press('Enter');
   const image=panel.getByRole('img',{name:'Saved vehicle condition photo'});

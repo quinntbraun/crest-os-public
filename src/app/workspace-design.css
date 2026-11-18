@@ -1383,5 +1383,41 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
  border-radius:.5rem; background:var(--paper);
 }
 .receipt-saved-row p { margin:0; }
+.expense-revision-history { list-style:none; padding:0; margin:1rem 0 0; }
+.expense-revision-history > li { padding:1rem 0 1rem 1rem; margin:0; border-left:2px solid var(--line); border-bottom:1px solid var(--line); }
+.expense-revision-history > li:last-child { border-bottom:0; }
+.expense-revision-history header strong { display:block; font-variant-numeric:tabular-nums; }
+.expense-revision-kind { display:inline-block; margin-top:.35rem; font-size:.8rem; color:var(--muted); }
+.expense-revision-history header p,.expense-revision-paid { font-size:.85rem; color:var(--muted); margin:.4rem 0; }
+.expense-revision-reason { margin:.8rem 0; }
+.expense-revision-reason h4 { margin:0; font-size:.8rem; color:var(--muted); }
+.expense-revision-reason p { white-space:pre-wrap; margin:.25rem 0; }
+.expense-record .expense-revision-history details { border:0; border-radius:0; margin:.5rem 0 0; padding:0; background:transparent; }
+.expense-revision-history summary { min-height:44px; align-content:center; }
+.expense-revision-history dl { margin:.5rem 0; }
+.expense-revision-comparison dl > div { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.35rem .75rem; padding:.75rem 0; border-top:1px solid var(--line); }
+.expense-revision-comparison dt { grid-column:1/-1; font-weight:600; }
+.expense-revision-history dd { margin:0; min-width:0; overflow-wrap:anywhere; white-space:pre-wrap; }
+.expense-revision-comparison dd span,.expense-revision-evidence dt { color:var(--muted); font-size:.8rem; }
+.expense-revision-comparison dd p { margin:.25rem 0 0; }
+.expense-revision-evidence dl > div { margin:.65rem 0; }
+.custody-history-workspace > button.secondary { width:auto; min-height:44px; }
+.custody-event-history { margin-top:1.5rem; }
+.custody-event-history > h5 { margin:0 0 .35rem; font-size:1rem; }
+.custody-event-timeline { list-style:none; padding:0; margin:1rem 0; }
+.custody-event-timeline > li { margin:0; padding:1rem 0 1rem 1rem; border-left:2px solid var(--line); border-bottom:1px solid var(--line); min-width:0; }
+.custody-event-timeline > li:last-child { border-bottom:0; }
+.custody-event-timeline header strong { font-size:1.05rem; }
+.custody-event-timeline header p { margin:.35rem 0 1rem; }
+.custody-handoff-facts { display:grid; gap:.75rem 1rem; margin:1rem 0; }
+.custody-event-timeline dt,.custody-handoff-photo h6,.custody-handoff-notes h6 { font-size:.8rem; color:var(--muted); margin:0; }
+.custody-event-timeline dd { margin:.25rem 0 0; min-width:0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.custody-handoff-photo,.custody-handoff-notes { margin:1rem 0; }
+.custody-handoff-photo > p,.custody-handoff-notes > p { margin:.35rem 0; white-space:pre-wrap; }
+.custody-handoff-recorded,.custody-handoff-acknowledgement { font-size:.85rem; color:var(--muted); margin:.5rem 0; }
+.custody-event-timeline .custody-handoff-evidence { padding:0; margin:.5rem 0 0; border:0; background:transparent; border-radius:0; }
+.custody-handoff-evidence summary { min-height:44px; align-content:center; }
+.custody-handoff-evidence dl > div { margin:.65rem 0; }
+@media (min-width:768px) { .custody-handoff-facts { grid-template-columns:minmax(0,1fr) minmax(0,1.4fr); } }
 .receipt-saved-row .receipt-actions { margin-bottom:0; }
 .receipt-saved-row button { min-height:44px; padding-inline:.65rem; }

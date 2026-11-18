@@ -5,6 +5,7 @@ import type {ExpenseRevision,ExpenseSave} from '../../bookkeeping/expenses/expen
 import {ExpenseReceipts} from './expense-receipts';
 import type {ReceiptDirectoryState} from './expense-receipts';
 import {SameDayExpense} from './same-day-expense';
+import {ExpenseRevisionHistory} from './expense-revision-history';
 import type {createReceiptClient} from '../../client/expense-receipts';
 import {exportExpenses} from '../../bookkeeping/expenses/expense-export';
 import type {createExpenseClient,ExpenseContext} from '../../client/expenses';
@@ -169,7 +170,7 @@ export function ExpenseEditor({client,receiptClient,receiptService,embedded=fals
    <p className="expense-record-meta"><time dateTime={row.payload.paidOn}>{embedded?expenseDay.format(new Date(row.payload.paidOn+'T00:00:00Z')):row.payload.paidOn}</time><span>{row.payload.category}</span>{row.payload.vendor&&<span>{row.payload.vendor}</span>}<span className="expense-record-state" data-void={row.payload.voided}>{row.payload.voided?'Void':posted.has(row.expenseId)?'Posted to ledger':'Recorded'}</span></p>
    {!row.payload.voided&&!posted.has(row.expenseId)&&<button type="button" className="secondary" disabled={busy||!!pending||context?.writeState!=='ready'||embedded&&receiptStates.get(row.expenseId)?.active} onClick={()=>open(row)}>Correct or void</button>}
    {embedded&&<><dl className="expense-profile-facts"><div><dt>Vendor</dt><dd>{row.payload.vendor??'Not recorded'}</dd></div><div><dt>Payment method</dt><dd>{row.payload.paymentMethod}</dd></div><div><dt>Reference</dt><dd>{row.payload.reference??'Not recorded'}</dd></div></dl>{row.payload.notes&&<section className="expense-profile-notes" aria-label="Saved expense notes"><h4>Notes</h4><p>{row.payload.notes}</p></section>}{receiptStates.get(row.expenseId)?.active&&<p className="field-help">Finish or clear the receipt task before correcting this expense. Switching records keeps its selected file and original request.</p>}</>}
-   <details><summary>History ({row.revision} {row.revision==='1'?'revision':'revisions'})</summary>{rows.filter(r=>r.expenseId===row.expenseId).map(r=><p key={r.revision}>Revision {r.revision}: ${expenseDollars(r.payload.amountCents)} · {r.payload.paidOn} · {r.payload.voided?'Void':'Recorded'} · {r.payload.changeReason??'Initial entry'}</p>)}</details>
+   <details><summary>History ({row.revision} {row.revision==='1'?'revision':'revisions'})</summary><ExpenseRevisionHistory revisions={rows.filter(r=>r.expenseId===row.expenseId)}/></details>
    {activeReceiptClient&&context&&<ExpenseReceipts expense={row} context={context} client={activeReceiptClient} visible={!embedded||pane==='purchases'&&!formOpen&&selectedId===row.expenseId} {...embedded?{onDirectoryStateChange:reportReceiptState}:{}}/>}
    {sameDayExpenses&&context&&!row.payload.voided&&<SameDayExpense businessId={context.businessId} expenseId={row.expenseId} onPosted={markPosted}/>}
   </article>)}

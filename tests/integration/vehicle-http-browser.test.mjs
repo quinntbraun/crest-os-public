@@ -13,6 +13,7 @@ import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {startRealAuthService,authResult} from '../support/real-auth-service.mjs';
 import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
+import {installVehicleInputDiagnostic,vehicleInputDiagnostic} from '../support/vehicle-input-diagnostic.mjs';
 
 let sandbox,client,service,app,origin,fixture,actor,business,login,loginOwned=false;
 const sessionName='__Host-crest_session';
@@ -73,6 +74,8 @@ const draft=(epoch,name)=>({schemaVersion:1,operationId:randomUUID(),vehicleId:r
 async function openVehicles(page){await page.bringToFront();await page.goto(origin+'/vehicles');await expect(page.getByRole('button',{name:'Add vehicle',exact:true})).toBeVisible();}
 async function findVehicle(page,label,archived=false){await page.getByLabel('Vehicle search',{exact:true}).fill(label);await page.getByLabel('Include archived vehicles',{exact:true}).setChecked(archived);await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toHaveText('Vehicle search complete.');await page.getByRole('button',{name:label+(archived?' — archived':''),exact:true}).click();await page.getByRole('button',{name:'Edit vehicle',exact:true}).click();await expect(page.getByRole('form',{name:'Vehicle editor',exact:true})).toBeVisible();}
 async function vehicleEditorFlow(page,other,proof,name){
+ await installVehicleInputDiagnostic(page);const stages=[];
+ const captureStage=async stage=>{stages.push({stage,...await vehicleInputDiagnostic(page)});};
  const label='Synthetic editor vehicle '+name,save=()=>page.getByRole('button',{name:'Save vehicle',exact:true}),load=()=>page.getByRole('button',{name:'Load current vehicles',exact:true});
  async function saveWithEvidence(){
   try{await expect(save()).toBeEnabled();await save().click();}
@@ -87,7 +90,7 @@ async function vehicleEditorFlow(page,other,proof,name){
       invalidFields:editor?.querySelectorAll(':invalid').length??null,validationNotice:editor?.textContent?.includes('Review the label, year, field lengths and archive reason')??false,
       status:status.includes('cleared')?'cleared':status.includes('paused')?'paused':status.includes('could not')?'unavailable':status.includes('Review vehicle details')?'record_loaded':'other'};
     });
-    error.message+='\nVehicle editor flags '+JSON.stringify(state)+'\nSession admission '+JSON.stringify(await sessionAdmissionDiagnostic({client,actor,authDiagnostics:()=>service.diagnostics()}));
+    error.message+='\nVehicle editor flags '+JSON.stringify(state)+'\nVehicle input stages '+JSON.stringify(stages)+'\nVehicle input latest '+JSON.stringify(await vehicleInputDiagnostic(page))+'\nSession admission '+JSON.stringify(await sessionAdmissionDiagnostic({client,actor,authDiagnostics:()=>service.diagnostics()}));
    }
    throw error;
   }
@@ -98,8 +101,9 @@ async function vehicleEditorFlow(page,other,proof,name){
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);assert(await save().evaluate(el=>el.getBoundingClientRect().height>=44));
  await saveWithEvidence();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
  const row=(await client.query('SELECT id,year,make,vin_raw,vin_normalized,plate,kind,notes,version::text FROM crest.vehicles WHERE business_id=$1 AND label=$2',[business,label])).rows[0];assert(row);assert.equal(row.year,-500);assert.equal(row.make,null);assert.equal(row.vin_raw,' Raw-VIN / é 001 ');assert.equal(row.vin_normalized,'RAWVIN001');assert.equal(row.plate,'00123');assert.equal(row.kind,'other');assert.equal(row.notes,null);assert.equal(row.version,'1');
- await load().click();await findVehicle(page,label);await page.getByLabel('Notes',{exact:true}).fill('Stale original edit');
- const context=await send(other,root+'context',{},proof),changed={...draft(context.body.recoveryEpoch,name),vehicleId:row.id,expectedVersion:'1',label,notes:'Other device retained edit'};assert.equal((await send(other,root+'save',changed,proof)).status,200);
+ await load().click();await findVehicle(page,label);await page.getByLabel('Notes',{exact:true}).fill('Stale original edit');await captureStage('after_stale_fill');
+ const context=await send(other,root+'context',{},proof);await captureStage('after_other_context');
+ const changed={...draft(context.body.recoveryEpoch,name),vehicleId:row.id,expectedVersion:'1',label,notes:'Other device retained edit'};assert.equal((await send(other,root+'save',changed,proof)).status,200);await captureStage('after_other_save');
  await saveWithEvidence();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('record changed');assert.equal((await client.query('SELECT notes FROM crest.vehicles WHERE id=$1',[row.id])).rows[0].notes,changed.notes);
  await load().click();await findVehicle(page,label);await page.getByLabel('Archive vehicle',{exact:true}).check();await expect(save()).toBeDisabled();await page.getByLabel('Archive reason',{exact:true}).fill('Synthetic retained vehicle');await saveWithEvidence();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
  await load().click();await findVehicle(page,label,true);await page.getByLabel('Archive vehicle',{exact:true}).uncheck();await saveWithEvidence();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
