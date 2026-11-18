@@ -4,6 +4,7 @@ import type {FormEvent} from 'react';
 import {createVehicleEditorController,initialVehicleEditorView,emptyVehicleDraft} from '../../client/vehicle-editor-controller';
 import {createPendingVehicleStore} from '../../client/pending-vehicle-edit';
 import {NullableText} from '../customers/nullable-text';
+import {DirectoryIntroduction} from '../directory-introduction';
 import type {Vehicle} from '../../customer/vehicle-contract';
 import type {VehicleDraft} from '../../customer/customer-resource-contract';
 import {vehicleYearInput} from './year-input';
@@ -133,6 +134,7 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
       {view.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>query(view.search,view.includeArchived,true)}>Next vehicle page</button>}
         </section>
         <div className="vehicle-record">
+          {!view.draft&&!view.selected&&!view.busy&&<DirectoryIntroduction kind="vehicle" onSearch={()=>searchInput.current?.focus()}/>}
           {view.draft&&<button className="secondary vehicle-directory-back" type="button" onClick={backToDirectory}>Back to vehicle list</button>}
           {view.selected&&<>
             <VehicleSummary vehicle={view.selected} heading={profileHeading} canEdit={!view.busy&&!view.writesPaused&&!editing} onEdit={startEditing}/>

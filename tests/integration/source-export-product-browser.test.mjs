@@ -35,7 +35,28 @@ for(const [name,engine,mobile]of [['chromium',chromium,false],['webkit',webkit,t
     assert.equal(gets(f),0);assert.equal(downloads.length,0);assert.equal(await page.evaluate(()=>typeof window.crestExportFixture),'undefined');assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
    });
    await t.test('actual Next binary dispatch saves a file above the metadata cap and compares both real disk copies',async()=>{
-    await load(page);const before=await f.facts();
+    const priorityButton=region(page).getByRole('button',{name:'Check sign-in and load file list',exact:true});
+    await priorityButton.evaluate(element=>{
+     const observer=new MutationObserver(()=>{
+      if(!element.classList.contains('secondary'))return;
+      void getComputedStyle(element).backgroundColor;
+      for(const animation of element.getAnimations()){
+       if('transitionProperty'in animation&&animation.transitionProperty==='background-color'){
+        const duration=Number(animation.effect?.getTiming().duration);
+        if(Number.isFinite(duration)&&duration>0){animation.pause();animation.currentTime=0;}
+       }
+      }
+      element.dataset.priorityTransition='observed';observer.disconnect();
+     });
+     observer.observe(element,{attributes:true,attributeFilter:['class']});
+    });
+    await load(page);
+    await expect(priorityButton).toHaveAttribute('data-priority-transition','observed');
+    try{
+     const contrast=await new AxeBuilder({page}).analyze();
+     assert.deepEqual(contrast.violations.map(issue=>issue.id),[],JSON.stringify(contrast.violations.map(({id,nodes})=>({id,nodes:nodes.map(node=>({target:node.target,summary:node.failureSummary}))}))));
+    }finally{await priorityButton.evaluate(element=>{for(const animation of element.getAnimations())if('transitionProperty'in animation&&animation.transitionProperty==='background-color')animation.play();});}
+    const before=await f.facts();
     for(const [index,part]of f.plan.parts.entries()){
      if(index===0){
       await mkdir('.local/review',{recursive:true});

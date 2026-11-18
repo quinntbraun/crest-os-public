@@ -6,6 +6,7 @@ import {draftFromService,emptyServiceDraft,serviceDraftChanged} from '../../clie
 import {quoteMoney} from '../../commercial/quote-pricing';
 import type {StoredServiceContent} from '../../commercial/service-storage-contract';
 import {ServiceRecordDownload} from './saved-service-download';
+import {DirectoryIntroduction} from '../directory-introduction';
 
 const revisionDate=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'UTC'});
 const actionLabels={create:'Created',edit:'Updated',archive:'Made inactive',reopen:'Reactivated'};
@@ -155,6 +156,7 @@ export function ServiceScreen(){
     {!view.busy&&!view.rows.length&&<p className="customer-directory-empty">No services match this search. Add a service or change the search.</p>}
     {view.hasMore&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>query(view.search,view.includeInactive,true)}>Next service page</button>}
    </section>
+   {!draft&&!view.busy&&<div className="service-record directory-introduction-slot"><DirectoryIntroduction kind="service" onSearch={()=>searchInput.current?.focus()}/></div>}
    {draft&&<div className="service-record">
     <button type="button" className="secondary service-mobile-control" onClick={backToCatalog}>Back to services</button>
     {selected&&<header className="customer-record-header service-profile">

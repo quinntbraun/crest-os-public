@@ -51,9 +51,9 @@ export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{
  useEffect(()=>{
   const current=createScheduleReader({change:next=>{setView(next);if(next.dates){setFrom(next.dates.fromDate);setThrough(next.dates.throughDate);}}});
   reader.current=current;
-  void current.load(undefined,initialJobId);
   const clear=()=>{focusPlanner.current=false;current.suspend();revoke();setDownloadMessage('');setReviewing(false);agendaSource.current=null;restoreAgendaFocus.current=false;},hidden=()=>{if(document.visibilityState==='hidden')clear();},restored=(event:PageTransitionEvent)=>{if(event.persisted)clear();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',clear);window.addEventListener('pageshow',restored);
+  if(document.visibilityState==='hidden')clear();else void current.load(undefined,initialJobId);
   return()=>{reader.current=null;current.dispose();revoke();document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',clear);window.removeEventListener('pageshow',restored);};
  },[initialJobId]);
  async function action(kind:'load'|'more'|'morePending'|'moreHistory',dates?:{fromDate:string;throughDate:string}){

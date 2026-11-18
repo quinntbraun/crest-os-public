@@ -70,7 +70,7 @@ export function InvoicePreparation({ businessId, jobId }: { businessId: string; 
   }
 
   return <section aria-label="Invoice preparation" aria-busy={busy}>
-    <h3>Invoice preparation</h3>
+    <h3 id="completed-work-invoice-review" tabIndex={-1}>Invoice preparation</h3>
     <p className="field-help">Review completed portions of the accepted work. Amounts are before invoice tax review. No invoice is issued here.</p>
     <button type="button" className="secondary" disabled={busy} onClick={() => void load()}>
       {result ? 'Reload completed work' : 'Load completed work'}

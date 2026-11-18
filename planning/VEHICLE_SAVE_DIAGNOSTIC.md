@@ -1,0 +1,7 @@
+# Vehicle conflict-save investigation
+
+Report source960312e9 run44197656572 CRM job134443215493 failed WebKit vehicleEditorFlow at line84: the original device's Save vehicle control remained disabled after the second authorized device saved a competing edit. This was before the intended stale-version submission. The source controller's validation, current-access snapshot and dirty-draft requirements remain intact.
+
+The browser journey now checks that saving is enabled before clicking. On failure only, it retains fixed boolean editor flags (visibility, busy, editable notes, expected synthetic stale-note presence, preserved/valid year, invalid-field count and validation-notice presence), a fixed status category, numeric admission counts and existing bounded provider categories. It records no actual form text, credentials, identifiers or raw provider responses. The unchanged local tests still require actual two-device version conflict and original retained source, complete archive/reopen audit history, pending-save handling and revocation.
+
+Current-source .local/design-vehicle-save-diagnostic/result.json passed all14 cases in Chromium/WebKit, zero failures/skips, stable source and owned-cluster cleanup. Test lint passed. This does not establish a cause for the hosted failure and is not a claimed application fix. Complete current-source hosted verification remains required. No save, visibility clearing, access, CSRF, admission or validation guard changed.

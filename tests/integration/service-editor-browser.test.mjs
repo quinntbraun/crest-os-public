@@ -7,6 +7,7 @@ import {randomUUID} from 'node:crypto';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {reviewDirectoryIntroduction} from '../support/directory-introduction.mjs';
 
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine retained service editor journey',async t=>{
  const f=await sourceExportBrowserFixture({product:true,catalog:true});let browser;
@@ -21,6 +22,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await page.getByRole('link',{name:'Sign in to view services',exact:true}).click();const credentials=f.credentials();await page.getByLabel('Email',{exact:true}).fill(credentials.email);await page.getByLabel('Password',{exact:true}).fill(credentials.password);await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
    const cookie=(await context.cookies()).find(c=>c.name==='__Host-crest_session');assert(cookie?.secure&&cookie.httpOnly);
    await page.goto(f.origin+'/services');await expect(status()).toContainText('Choose a service');await expect(page.getByText('No services match this search.',{exact:false})).toBeVisible();
+   await reviewDirectoryIntroduction(page,{kind:'service',engine:name,state:'empty'});
    await page.getByRole('button',{name:'Add service',exact:true}).click();await expect(page.getByRole('heading',{name:'New service',exact:true})).toBeFocused();
   });
   await t.test('validated scope, exact cents and duration persist through save and refresh',async()=>{
@@ -28,6 +30,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await reopen();
    await page.reload();
    await expect(status()).toContainText('Choose a service');
+   await reviewDirectoryIntroduction(page,{kind:'service',engine:name,state:'unselected'});
    const row=page.getByRole('button',{name:/Synthetic scope/});
    await expect(row).toContainText('$123.45–$234.56');
    await expect(row).toContainText('Available on new quotes');

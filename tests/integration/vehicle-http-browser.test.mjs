@@ -12,6 +12,7 @@ import {browserTestTls} from '../support/browser-test-tls.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {startRealAuthService,authResult} from '../support/real-auth-service.mjs';
+import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
 
 let sandbox,client,service,app,origin,fixture,actor,business,login,loginOwned=false;
 const sessionName='__Host-crest_session';
@@ -24,7 +25,7 @@ before(async()=>{
   assert.match(login,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
   await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;
   await sandbox.admin.query(`GRANT crest_web TO ${login}`);const database=new URL(target);database.username=login;database.password=password;
-  service=await startRealAuthService(target);
+  service=await startRealAuthService(target,{diagnostic:true});
   const email=`synthetic-${randomUUID()}@example.com`,secret=randomBytes(32).toString('base64url');
   const user=authResult(await service.admin.admin.createUser({email,password:secret,email_confirm:true}),'browser_provision').user;assert(user?.id,'synthetic subject required');
   const sdk=service.sdk();await sdk.initialize();authResult(await sdk.signInWithPassword({email,password:secret}),'browser_enrollment_password');
@@ -73,17 +74,35 @@ async function openVehicles(page){await page.bringToFront();await page.goto(orig
 async function findVehicle(page,label,archived=false){await page.getByLabel('Vehicle search',{exact:true}).fill(label);await page.getByLabel('Include archived vehicles',{exact:true}).setChecked(archived);await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toHaveText('Vehicle search complete.');await page.getByRole('button',{name:label+(archived?' — archived':''),exact:true}).click();await page.getByRole('button',{name:'Edit vehicle',exact:true}).click();await expect(page.getByRole('form',{name:'Vehicle editor',exact:true})).toBeVisible();}
 async function vehicleEditorFlow(page,other,proof,name){
  const label='Synthetic editor vehicle '+name,save=()=>page.getByRole('button',{name:'Save vehicle',exact:true}),load=()=>page.getByRole('button',{name:'Load current vehicles',exact:true});
+ async function saveWithEvidence(){
+  try{await expect(save()).toBeEnabled();await save().click();}
+  catch(error){
+   if(error instanceof Error){
+    const state=await page.evaluate(()=>{
+     const editor=document.querySelector('form[aria-label="Vehicle editor"]'),notes=editor?.querySelector('textarea[name="notes"]'),year=editor?.querySelector('input[name="year"]');
+     const status=document.querySelector('[aria-label="Vehicle editor status"]')?.textContent??'';
+     return {visible:document.visibilityState==='visible',editorPresent:!!editor,busy:document.querySelector('[aria-label="Vehicle directory"]')?.getAttribute('aria-busy')==='true',
+      notesEditable:notes instanceof HTMLTextAreaElement&&!notes.disabled,staleNotePresent:notes instanceof HTMLTextAreaElement&&notes.value==='Stale original edit',
+      yearPreserved:year instanceof HTMLInputElement&&year.value==='-500',yearValid:year instanceof HTMLInputElement&&year.validity.valid,
+      invalidFields:editor?.querySelectorAll(':invalid').length??null,validationNotice:editor?.textContent?.includes('Review the label, year, field lengths and archive reason')??false,
+      status:status.includes('cleared')?'cleared':status.includes('paused')?'paused':status.includes('could not')?'unavailable':status.includes('Review vehicle details')?'record_loaded':'other'};
+    });
+    error.message+='\nVehicle editor flags '+JSON.stringify(state)+'\nSession admission '+JSON.stringify(await sessionAdmissionDiagnostic({client,actor,authDiagnostics:()=>service.diagnostics()}));
+   }
+   throw error;
+  }
+ }
  await openVehicles(page);await page.getByRole('button',{name:'Add vehicle',exact:true}).click();await page.getByLabel('Vehicle label',{exact:true}).fill(label);await expect(save()).toBeEnabled();
  await expect(page.getByLabel('Year',{exact:true})).toHaveValue('');await expect(page.getByLabel('Record year',{exact:true})).toHaveCount(0);await page.getByLabel('Year',{exact:true}).fill('not-a-year');await expect(save()).toBeDisabled();await page.getByLabel('Year',{exact:true}).fill('1.5');await expect(save()).toBeDisabled();await page.getByLabel('Year',{exact:true}).fill('-500');
  await page.getByLabel('VIN',{exact:true}).fill(' Raw-VIN / é 001 ');await page.getByLabel('Plate',{exact:true}).fill('00123');await page.getByLabel('Vehicle kind',{exact:true}).selectOption('other');await page.getByLabel('Notes',{exact:true}).fill('Synthetic field to clear');await page.getByLabel('Notes',{exact:true}).fill('');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);assert(await save().evaluate(el=>el.getBoundingClientRect().height>=44));
- await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
+ await saveWithEvidence();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
  const row=(await client.query('SELECT id,year,make,vin_raw,vin_normalized,plate,kind,notes,version::text FROM crest.vehicles WHERE business_id=$1 AND label=$2',[business,label])).rows[0];assert(row);assert.equal(row.year,-500);assert.equal(row.make,null);assert.equal(row.vin_raw,' Raw-VIN / é 001 ');assert.equal(row.vin_normalized,'RAWVIN001');assert.equal(row.plate,'00123');assert.equal(row.kind,'other');assert.equal(row.notes,null);assert.equal(row.version,'1');
  await load().click();await findVehicle(page,label);await page.getByLabel('Notes',{exact:true}).fill('Stale original edit');
  const context=await send(other,root+'context',{},proof),changed={...draft(context.body.recoveryEpoch,name),vehicleId:row.id,expectedVersion:'1',label,notes:'Other device retained edit'};assert.equal((await send(other,root+'save',changed,proof)).status,200);
- await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('record changed');assert.equal((await client.query('SELECT notes FROM crest.vehicles WHERE id=$1',[row.id])).rows[0].notes,changed.notes);
- await load().click();await findVehicle(page,label);await page.getByLabel('Archive vehicle',{exact:true}).check();await expect(save()).toBeDisabled();await page.getByLabel('Archive reason',{exact:true}).fill('Synthetic retained vehicle');await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
- await load().click();await findVehicle(page,label,true);await page.getByLabel('Archive vehicle',{exact:true}).uncheck();await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
+ await saveWithEvidence();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('record changed');assert.equal((await client.query('SELECT notes FROM crest.vehicles WHERE id=$1',[row.id])).rows[0].notes,changed.notes);
+ await load().click();await findVehicle(page,label);await page.getByLabel('Archive vehicle',{exact:true}).check();await expect(save()).toBeDisabled();await page.getByLabel('Archive reason',{exact:true}).fill('Synthetic retained vehicle');await saveWithEvidence();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
+ await load().click();await findVehicle(page,label,true);await page.getByLabel('Archive vehicle',{exact:true}).uncheck();await saveWithEvidence();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
  await load().click();await findVehicle(page,label);await page.getByText('Record history and download',{exact:true}).click();await expect(page.locator('.vehicle-history')).toContainText('Current version 4');const actions=(await client.query("SELECT action FROM crest_private.audit_events WHERE business_id=$1 AND entity_id=$2 AND entity_kind='vehicles' ORDER BY entity_version",[business,row.id])).rows;assert.deepEqual(actions.map(r=>r.action),['create','edit','archive','reopen']);
 }
 async function interruptedVehicleFlow(page,name){

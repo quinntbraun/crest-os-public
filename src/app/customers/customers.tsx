@@ -4,6 +4,7 @@ import type {FormEvent,ComponentType} from 'react';
 import {createCustomerEditorController,initialCustomerEditorView,emptyCustomerDraft} from '../../client/customer-editor-controller';
 import {createPendingCustomerStore} from '../../client/pending-customer-edit';
 import {NullableText} from './nullable-text';
+import {DirectoryIntroduction} from '../directory-introduction';
 import {phonePresentation} from '../../client/phone-presentation';
 import type {Customer,CustomerDraft} from '../../customer/customer-contract';
 import {SavedRecordDownload} from '../saved-record-download';
@@ -141,6 +142,7 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
       {view.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>query(view.search,view.includeArchived,true)}>Next customer page</button>}
       </section>
       <div className="customer-record">
+      {!view.draft&&!view.selected&&!view.busy&&<DirectoryIntroduction kind="customer" onSearch={()=>document.getElementById('customer-search')?.focus()}/>}
       {editorVisible&&<button type="button" className="secondary customer-directory-back" onClick={backToDirectory}>← Back to customers</button>}
       {view.selected&&<header className="customer-record-header">
         <div className="customer-record-title">

@@ -15,6 +15,7 @@ function proof(value:unknown):Proof{
 }
 async function post(path:'bootstrap'|'login'|'session'|'logout',body:LoginInput|Record<string,never>,signal:AbortSignal,csrf?:string):Promise<unknown>{
   try{
+    if(signal.aborted)throw new AuthenticationError('uncertain');
     const response=await fetch('/api/auth/'+path,{method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer',
       headers:{'content-type':'application/json',...csrf?{'x-crest-csrf':csrf}:{}},body:JSON.stringify(body),signal:AbortSignal.any([signal,AbortSignal.timeout(40000)])});
     if(!response.ok)throw new AuthenticationError(response.status===400?'denied':response.status===503?'unavailable':'uncertain');

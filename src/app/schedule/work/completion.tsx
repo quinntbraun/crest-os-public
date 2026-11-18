@@ -295,28 +295,45 @@ function ReviewOutcomeForm({disabled,save}:{disabled:boolean;save:(body:ReviewOu
  </details>;
 }
 
-export function SavedCompletion({summary,outcome,outcomeEnabled,historyAvailable,canRecordOutcome,disabled,saveOutcome}:{
+export function SavedCompletion({summary,outcome,outcomeEnabled,historyAvailable,invoicePreparationAvailable,canRecordOutcome,disabled,saveOutcome}:{
  summary:CompletionSummary;outcome:ReviewOutcomeContext|undefined;outcomeEnabled:boolean;canRecordOutcome:boolean;disabled:boolean;
- historyAvailable:boolean;
+ historyAvailable:boolean;invoicePreparationAvailable:boolean;
  saveOutcome:(body:ReviewOutcomeBody)=>Promise<void>
 }){
  const reviewLabel=outcome?reviewLabels[outcome.kind]:outcomeEnabled?'Saved status unavailable':'Prepared';
- return <section aria-label="Saved completion">
-  <h2>{summary.completionOutcome==='full'?'Full completion':'Partial completion'}</h2>
-  <p>Saved version {summary.jobVersion} · <time dateTime={summary.completedAt}>{new Date(summary.completedAt).toLocaleString()}</time></p>
-  <p>Walkthrough {summary.walkthrough.state==='done'?'done':'unavailable'}{summary.walkthrough.reason?': '+summary.walkthrough.reason:''}</p>
-  {summary.reason&&<p className="completion-text">{summary.reason}</p>}
-  <h3>Recorded scope</h3>
-  <ul>{summary.outcomes.map(row=><li key={row.id} className="completion-text"><strong>{labels[row.outcome]}</strong> · {row.scopeDescription}{row.reason?' · '+row.reason:''}</li>)}</ul>
+ return <section className="saved-completion" aria-label="Saved completion">
+  <header className="saved-completion-heading">
+   <p className="saved-completion-label">Recorded job outcome</p>
+   <h2>{summary.completionOutcome==='full'?'Full completion':'Partial completion'}</h2>
+   <p className="field-help">Saved version {summary.jobVersion} · <time dateTime={summary.completedAt} title={summary.completedAt}>{new Date(summary.completedAt).toLocaleString()}</time></p>
+   <p>Walkthrough {summary.walkthrough.state==='done'?'done':'unavailable'}{summary.walkthrough.reason?': '+summary.walkthrough.reason:''}</p>
+   {summary.reason&&<p className="completion-text">{summary.reason}</p>}
+  </header>
+  <section className="completion-next-steps" aria-label="Completion follow-up tasks">
+   <div><h3>Follow-up tasks</h3>
+    <ul>{summary.tasks.map(task=><li key={task.kind}>{task.kind==='invoice_finalization'?'Invoice review':'Commercial resolution'} · Open</li>)}</ul>
+   </div>
+   {invoicePreparationAvailable&&summary.tasks.some(task=>task.kind==='invoice_finalization')&&<button type="button" className="secondary" onClick={()=>document.getElementById('completed-work-invoice-review')?.focus()}>Review completed work</button>}
+  </section>
+  <div className="saved-completion-body">
+  <section className="completion-recorded-scope" aria-label="Recorded completion scope">
+   <h3>Recorded scope</h3>
+   <ul role="list">{summary.outcomes.map(row=><li key={row.id} data-outcome={row.outcome}>
+    <strong className="completion-saved-outcome">{labels[row.outcome]}</strong>
+    <p className="completion-text">{row.scopeDescription}</p>
+    {row.reason&&<p className="completion-text completion-outcome-reason">{row.reason}</p>}
+   </li>)}</ul>
+  </section>
+  <section className="completion-review-request" aria-label="Completion review request">
   <h3>Review request</h3>
   {summary.review.message?<PreparedReviewMessage key={'draft:'+summary.jobId+':'+(outcome?.eventId??summary.jobVersion)}
    message={summary.review.message} label={reviewLabel} canCopy={outcomeEnabled?!!outcome&&outcome.kind!=='owner_confirmed_sent':true}/>:
    <p>{summary.review.state==='pending'?'Pending':'Skipped'}{summary.review.reason?' · '+summary.review.reason:''}</p>}
-  {outcome&&outcome.kind!=='prepared'&&<p>Recorded <time dateTime={outcome.effectiveAt}>{new Date(outcome.effectiveAt).toLocaleString()}</time>{outcome.reason?' · '+outcome.reason:''}</p>}
+  {outcome&&outcome.kind!=='prepared'&&<p>Event time <time dateTime={outcome.effectiveAt} title={outcome.effectiveAt}>{new Date(outcome.effectiveAt).toLocaleString()}</time>{outcome.reason?' · '+outcome.reason:''}</p>}
   {outcome&&canRecordOutcome&&<ReviewOutcomeForm key={outcome.eventId} disabled={disabled} save={saveOutcome}/>}
   {historyAvailable&&<ReviewMessageHistory key={'history:'+summary.jobId+':'+(outcome?.eventId??summary.jobVersion)}
    businessId={summary.businessId} scope={{kind:'job',id:summary.jobId}}/>}
-  <h3>Follow-up tasks</h3>
-  <ul>{summary.tasks.map(task=><li key={task.kind}>{task.kind==='invoice_finalization'?'Invoice review':'Commercial resolution'} · Open</li>)}</ul>
+  </section>
+  </div>
  </section>;
 }

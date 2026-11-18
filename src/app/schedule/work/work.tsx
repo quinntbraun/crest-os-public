@@ -108,7 +108,7 @@ export function FieldSessionScreen({jobId,mode='work'}:{jobId:string;mode?:Field
    const controller=current.current;if(!controller)return;await controller.complete(body);if(current.current===controller)status.current?.focus();
   }}/>}
   {view.summary&&<SavedCompletion summary={view.summary} outcome={view.reviewOutcome} outcomeEnabled={view.reviewOutcomeEnabled===true}
-   historyAvailable={view.reviewHistoryAvailable===true} canRecordOutcome={view.canRecordReviewOutcome===true} disabled={view.busy} saveOutcome={async body=>{
+   historyAvailable={view.reviewHistoryAvailable===true} invoicePreparationAvailable={view.invoicePreparationAvailable===true} canRecordOutcome={view.canRecordReviewOutcome===true} disabled={view.busy} saveOutcome={async body=>{
     const controller=current.current;if(!controller)return;await controller.recordReviewOutcome(body);if(current.current===controller)status.current?.focus();
    }}/>}
   {view.summary&&view.maintenanceFollowUpAvailable&&<MaintenanceReminders key={view.summary.jobId}

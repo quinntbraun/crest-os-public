@@ -9,6 +9,7 @@ import {randomUUID} from 'node:crypto';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {reviewDirectoryIntroduction} from '../support/directory-introduction.mjs';
 
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' complete signed-in customer / vehicle workspace journey',async()=>{
  const f=await sourceExportBrowserFixture({product:true,workspace:true});let browser;
@@ -106,11 +107,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('link',{name:'Customers',exact:true}).click();
   const addCustomer=page.getByRole('button',{name:'Add customer',exact:true});
   await expect(page.getByText('No customers yet. Use Add customer to create a record.',{exact:true})).toBeVisible();
+  await reviewDirectoryIntroduction(page,{kind:'customer',engine:name,state:'empty'});
   const addPosition=await addCustomer.boundingBox(),searchPosition=await page.getByRole('searchbox',{name:'Customer search',exact:true}).boundingBox();
   assert(addPosition&&searchPosition&&addPosition.height>=44&&addPosition.y<searchPosition.y);
   await addCustomer.press('Enter');await expect(page.getByRole('heading',{name:'New customer',exact:true})).toBeFocused();
   const label='Synthetic workshop customer '+name;await page.getByLabel('Customer name',{exact:true}).fill(label);await page.getByLabel('Phone value',{exact:true}).fill('5555550123');await page.getByRole('button',{name:'Save customer',exact:true}).click();await expect(page.getByRole('status')).toContainText('Customer saved');
   await page.reload();
+  await reviewDirectoryIntroduction(page,{kind:'customer',engine:name,state:'unselected'});
   await page.getByRole('searchbox',{name:'Customer search',exact:true}).fill(label);
   await page.getByRole('button',{name:'Search customers',exact:true}).click();
   await expect(page.getByRole('status').first()).toHaveText('Customer search complete.');
@@ -172,8 +175,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   }
   await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Vehicles',exact:true}).click();
   await page.setViewportSize({width:390,height:844});
-  await page.getByRole('link',{name:'Link a vehicle',exact:true}).click();await page.getByRole('button',{name:'Add vehicle',exact:true}).click();const vehicle='Synthetic workshop van '+name;await page.getByLabel('Vehicle label',{exact:true}).fill(vehicle);await page.getByRole('button',{name:'Save vehicle',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
-  await page.reload();await page.getByRole('button',{name:vehicle,exact:true}).click();await page.getByRole('button',{name:'Edit vehicle',exact:true}).click();await expect(page.getByLabel('Vehicle label',{exact:true})).toHaveValue(vehicle);await expect(page.getByRole('heading',{name:'Edit vehicle',exact:true})).toBeFocused();
+  await page.getByRole('link',{name:'Link a vehicle',exact:true}).click();await reviewDirectoryIntroduction(page,{kind:'vehicle',engine:name,state:'empty'});await page.getByRole('button',{name:'Add vehicle',exact:true}).click();const vehicle='Synthetic workshop van '+name;await page.getByLabel('Vehicle label',{exact:true}).fill(vehicle);await page.getByRole('button',{name:'Save vehicle',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
+  await page.reload();await reviewDirectoryIntroduction(page,{kind:'vehicle',engine:name,state:'unselected'});await page.getByRole('button',{name:vehicle,exact:true}).click();await page.getByRole('button',{name:'Edit vehicle',exact:true}).click();await expect(page.getByLabel('Vehicle label',{exact:true})).toHaveValue(vehicle);await expect(page.getByRole('heading',{name:'Edit vehicle',exact:true})).toBeFocused();
   await page.getByLabel('Year',{exact:true}).fill('not-a-year');await expect(page.getByRole('button',{name:'Save vehicle',exact:true})).toBeDisabled();page.once('dialog',dialog=>{assert.equal(dialog.type(),'confirm');void dialog.dismiss();});await page.getByRole('button',{name:'Back to vehicle list',exact:true}).click();await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await page.getByRole('button',{name:vehicle,exact:true}).click();await expect(page.getByLabel('Year',{exact:true})).toHaveValue('not-a-year');await page.getByLabel('Year',{exact:true}).fill('');
   await page.getByRole('button',{name:'Load current customer links',exact:true}).click();await page.getByRole('button',{name:'Add customer link',exact:true}).click();await page.getByLabel('Customer name, phone or email',{exact:true}).fill(label);await page.getByRole('button',{name:'Find customers',exact:true}).click();await page.getByRole('button',{name:'Use '+label+' retained edit',exact:true}).click();await page.getByLabel('Relationship',{exact:true}).selectOption('owner');await page.getByLabel('Billing selection',{exact:true}).selectOption('yes');page.once('dialog',dialog=>{assert.equal(dialog.type(),'confirm');void dialog.dismiss();});await page.getByRole('button',{name:'Back to vehicle list',exact:true}).click();await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await page.getByRole('button',{name:vehicle,exact:true}).click();await expect(page.getByRole('form',{name:'Customer link editor',exact:true})).toBeVisible();await expect(page.getByLabel('Relationship',{exact:true})).toHaveValue('owner');await page.getByRole('button',{name:'Use current time',exact:true}).click();await page.getByRole('button',{name:'Review customer-link change',exact:true}).click();await page.getByRole('button',{name:'Save customer link',exact:true}).click();
   await expect(page.getByRole('status',{name:'Customer-link status',exact:true})).toContainText('saved');

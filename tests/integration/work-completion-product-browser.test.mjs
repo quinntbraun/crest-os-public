@@ -227,6 +227,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const summary=page.getByRole('region',{name:'Saved completion',exact:true});
   await expect(summary.getByRole('heading',{name:partial?'Partial completion':'Full completion',exact:true})).toBeVisible();
   await expect(summary).toContainText('Invoice review · Open');
+  const preparationReadCount=()=>fixture.requests.filter(request=>request.path==='/api/business/finance-accounts/invoice-preparation').length;
+  const beforePreparationJump=preparationReadCount();
+  await summary.getByRole('button',{name:'Review completed work',exact:true}).press('Enter');
+  await expect(page.getByRole('heading',{name:'Invoice preparation',exact:true})).toBeFocused();
+  assert.equal(preparationReadCount(),beforePreparationJump,'The follow-up jump only changes focus; it does not load or write financial records');
   await expect(summary).toContainText('Text draft · Prepared');
   const reviewDraft=summary.getByRole('textbox',{name:'Prepared review draft',exact:true});
   await expect(reviewDraft).toHaveValue(/https:\/\/example\.invalid\/crest-review/);
@@ -307,7 +312,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(reviewDraft).toHaveValue(draftText);
   await capture('outcome');
   const historyDisclosure=summary.locator('details').filter({has:page.getByText('Review message history',{exact:true})});
-  const historyButton=historyDisclosure.locator('summary');
+  const historyButton=historyDisclosure.locator(':scope > summary');
   await expect(historyDisclosure.getByRole('listitem')).toHaveCount(0);
   let historyReads=0;
   await page.route('**/api/business/scheduling/review-history',async route=>{
@@ -319,12 +324,30 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await historyButton.press('Enter');
   await expect(historyDisclosure.getByRole('alert')).toHaveText('Couldn’t load saved message history.');
   assert.equal(historyReads,1);
+  const historyResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/business/scheduling/review-history'&&response.status()===200);
   await historyDisclosure.getByRole('button',{name:'Retry history',exact:true}).click();
+  const historySource=await (await historyResponse).json();
   const historyRows=historyDisclosure.getByRole('listitem');
   await expect(historyRows).toHaveCount(3);
   await expect(historyRows.nth(0)).toContainText('Owner-confirmed sent');
   await expect(historyRows.nth(1)).toContainText('Synthetic messaging app unavailable');
   await expect(historyRows.nth(2)).toContainText('Prepared');
+  for(let index=0;index<historySource.entries.length;index++){
+   const source=historySource.entries[index],row=historyRows.nth(index),times=row.locator('.review-history-time time');
+   await expect(times.nth(0)).toHaveAttribute('datetime',source.effectiveAt);
+   await expect(times.nth(0)).toHaveAttribute('title',source.effectiveAt);
+   const visibleTimes=await times.allTextContents();
+   assert.equal(new Set(visibleTimes).size,visibleTimes.length,'The event summary does not repeat an indistinguishable timestamp');
+   if(await times.count()===2){
+    await expect(times.nth(1)).toHaveAttribute('datetime',source.recordedAt);
+    await expect(times.nth(1)).toHaveAttribute('title',source.recordedAt);
+   }
+   const exact=row.locator('details.review-history-evidence');
+   await exact.locator('summary').press('Enter');
+   await expect(exact.locator('time').nth(0)).toHaveText(source.effectiveAt);
+   await expect(exact.locator('time').nth(1)).toHaveText(source.recordedAt);
+   await exact.locator('summary').press('Enter');
+  }
   await expect(historyDisclosure).not.toContainText('https://example.invalid/crest-review');
   assert.equal(historyReads,2);
   await capture('history');
@@ -343,7 +366,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.goto(fixture.origin+'/customers');
   await page.getByRole('button',{name:customer.display_name,exact:true}).click();
   const customerHistory=page.locator('details').filter({has:page.getByText('Review message history',{exact:true})});
-  await customerHistory.locator('summary').click();
+  await customerHistory.locator(':scope > summary').click();
   await expect(customerHistory.getByRole('listitem')).toHaveCount(3);
   await expect(customerHistory.getByRole('listitem').nth(1)).toContainText('Synthetic messaging app unavailable');
   async function renewBrowserSession(){
