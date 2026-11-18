@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {createLeadSourceEditorController,initialLeadSourceEditorView,emptyLeadSourceDraft} from '../../client/lead-source-editor-controller';
 import type {LeadSourceEditorView} from '../../client/lead-source-editor-controller';
@@ -7,11 +7,14 @@ import {createPendingLeadSourceStore} from '../../client/pending-lead-source-edi
 import type {LeadSource,LeadSourceDraft} from '../../customer/lead-contract';
 import {draftFromLeadSource} from '../../customer/lead-contract';
 import {ReferencePicker} from '../leads/reference-picker';
+import {DirectoryIntroduction} from '../directory-introduction';
+import {leadSourceChanges} from './source-history-presentation';
 
-const eventTime=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'});
+const eventTime=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'medium',timeZone:'UTC'});
 
 function changeLabel(before:LeadSource|null,after:LeadSource){
  if(!before)return 'Source created';
+ if((leadSourceChanges(before,after)?.length??0)>1)return 'Source updated';
  if(before.active!==after.active)return after.active?'Source reactivated':'Source deactivated';
  if(before.label!==after.label)return 'Source renamed';
  if(before.kind!==after.kind)return 'Source kind changed';
@@ -25,7 +28,16 @@ function SourceDetails({source}:{source:LeadSource}){
   <dt>Kind</dt><dd>{source.kind}</dd>
   <dt>Status</dt><dd>{source.active?'Active':'Inactive'}</dd>
   <dt>Referral customer</dt><dd>{source.referral_customer_id?'Existing customer linked':'No customer linked'}</dd>
+  {source.referral_customer_id&&<><dt>Customer reference</dt><dd className="source-history-reference">{source.referral_customer_id}</dd></>}
+  <dt>Source reference</dt><dd className="source-history-reference">{source.id}</dd>
+  <dt>Recorded (UTC)</dt><dd className="source-history-reference"><time dateTime={source.updated_at}>{source.updated_at}</time></dd>
  </dl>;
+}
+
+function ChangedSourceValues({changes,side}:{changes:NonNullable<ReturnType<typeof leadSourceChanges>>;side:'before'|'after'}){
+ return <dl className="source-history-change-values">{changes.map(change=><div key={change.key}>
+  <dt>{change.label}</dt><dd>{change.key==='active'?(change[side]?'Active':'Inactive'):change.key==='referral_customer_id'?(change[side]===null?'No customer linked':<><a href={'/customers?customer='+encodeURIComponent(String(change[side]))}>Open linked customer</a><span className="source-history-reference">{String(change[side])}</span></>):String(change[side])}</dd>
+ </div>)}</dl>;
 }
 
 function SourceHistory({history,version,busy,onMore}:{history:LeadSourceEditorView['history'];version:string;busy:boolean;onMore:()=>void}){
@@ -35,15 +47,23 @@ function SourceHistory({history,version,busy,onMore}:{history:LeadSourceEditorVi
   <details>
    <summary ref={summary}>Source history <span>Current version: {version}</span></summary>
    {!history&&<p className="field-help">Loading the next history page…</p>}
-   {history&&<ol>{history.history.map(({before,after})=><li key={after.version}>
+   {history&&<>
+    <p className="field-help">{history.history.length?'Loaded versions '+history.history[0]!.after.version+'–'+history.history.at(-1)!.after.version+'.':'No versions on this loaded page.'} {history.hasMore?'Later versions are available.':'No later versions in this loaded history.'} {history.history[0]?.after.version!=='1'&&history.history.length>0?'Reopen this source to return to its first history page.':''}</p>
+    <ol>{history.history.map(({before,after})=>{const changes=leadSourceChanges(before,after);return <li key={after.version}>
     <details>
      <summary><strong>{changeLabel(before,after)}</strong><span>Version {after.version} · <time dateTime={after.updated_at}>{eventTime.format(new Date(after.updated_at))} UTC</time></span></summary>
-     <div className="lead-source-history-values">
-      {before&&<section aria-label="Before"><h4>Before</h4><SourceDetails source={before}/></section>}
-      <section aria-label="After"><h4>After</h4><SourceDetails source={after}/></section>
-     </div>
+     {!before?<section aria-label="After"><h4>Created source</h4><SourceDetails source={after}/></section>:<>
+      {changes?.length?<div className="lead-source-history-values" role="group" aria-label="Changed source facts">
+       <section aria-label="Before"><h4>Before</h4><ChangedSourceValues changes={changes} side="before"/></section>
+       <section aria-label="After"><h4>After</h4><ChangedSourceValues changes={changes} side="after"/></section>
+      </div>:<p className="field-help">{changes===null?'A change summary is unavailable for this retained version.':'No source fields changed in this version.'}</p>}
+      <details className="source-history-evidence"><summary>Retained source details at version {after.version}</summary><div className="lead-source-history-values">
+       <section aria-label="Retained earlier source"><h4>Before</h4><SourceDetails source={before}/></section>
+       <section aria-label="Retained resulting source"><h4>After</h4><SourceDetails source={after}/></section>
+      </div></details>
+     </>}
     </details>
-   </li>)}</ol>}
+   </li>;})}</ol></>}
    {history?.hasMore&&<button type="button" className="secondary" disabled={busy} onClick={()=>{
     summary.current?.focus();onMore();
    }}>Next source history page</button>}
@@ -56,6 +76,7 @@ export function LeadSourceScreen(){
  const current=useRef<ReturnType<typeof createLeadSourceEditorController>|null>(null);
  const status=useRef<HTMLParagraphElement>(null),heading=useRef<HTMLHeadingElement>(null);
  const returnFocus=useRef<HTMLButtonElement|null>(null),add=useRef<HTMLButtonElement>(null);
+ const sourceSearch=useRef<HTMLInputElement>(null),restoreDirectoryFocus=useRef(false);
  const editor=view.draft?view.selected?.id??'new':null;
  const {draft,selected}=view;
  const dirty=draft!==null&&JSON.stringify(draft)!==JSON.stringify(selected?draftFromLeadSource(selected):emptyLeadSourceDraft);
@@ -64,9 +85,9 @@ export function LeadSourceScreen(){
  useEffect(()=>{
   const controller=createLeadSourceEditorController({store:createPendingLeadSourceStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});
   current.current=controller;void controller.load();
-  const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();};
-  const leave=()=>controller.suspend();
-  const restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
+  const leave=()=>{restoreDirectoryFocus.current=false;controller.suspend();};
+  const hidden=()=>{if(document.visibilityState==='hidden')leave();};
+  const restored=(event:PageTransitionEvent)=>{if(event.persisted)leave();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
   return()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
  },[]);
@@ -76,7 +97,13 @@ export function LeadSourceScreen(){
   window.addEventListener('beforeunload',leave);
   return()=>window.removeEventListener('beforeunload',leave);
  },[dirty,view.phase,view.busy]);
- useEffect(()=>{if(editor)heading.current?.focus();},[editor]);
+ useLayoutEffect(()=>{if(editor)heading.current?.focus();},[editor]);
+ useLayoutEffect(()=>{
+  if(editor||view.busy||view.phase!=='ready'||!restoreDirectoryFocus.current)return;
+  restoreDirectoryFocus.current=false;
+  const target=returnFocus.current;
+  if(target?.isConnected&&!target.disabled)target.focus();else add.current?.focus();
+ },[editor,view.busy,view.phase]);
 
  async function action(kind:'load'|'save'|'check'|'retry'){
   const controller=current.current;if(!controller)return;
@@ -95,12 +122,8 @@ export function LeadSourceScreen(){
  }
  function close(){
   if(!canLeave())return;
+  restoreDirectoryFocus.current=true;
   current.current?.close();
-  requestAnimationFrame(()=>{
-   const target=returnFocus.current;
-   if(target?.isConnected&&!target.disabled)target.focus();
-   else add.current?.focus();
-  });
  }
 
  return <div className="lead-source-screen">
@@ -121,8 +144,8 @@ export function LeadSourceScreen(){
      </div>
      <form onSubmit={search} aria-label="Search lead sources" className="lead-source-search">
       <label htmlFor="source-search">Lead source search</label>
-      <input id="source-search" name="search" type="search" maxLength={400} autoComplete="off" defaultValue={view.search} disabled={view.busy}/>
-      <button type="submit" className="secondary" disabled={view.busy}>Search lead sources</button>
+      <input ref={sourceSearch} id="source-search" name="search" type="search" maxLength={400} autoComplete="off" defaultValue={view.search} disabled={view.busy}/>
+      <button type="submit" className="secondary" aria-label="Search lead sources" disabled={view.busy}>Search</button>
       <label className="checkbox"><input name="inactive" type="checkbox" defaultChecked={view.includeInactive} disabled={view.busy}/>Include inactive sources</label>
      </form>
      <ul className="customer-list crest-record-list" aria-label="Saved lead sources">
@@ -141,6 +164,7 @@ export function LeadSourceScreen(){
      {view.rows.length===0&&!view.busy&&<p className="lead-source-empty">{view.search||view.includeInactive?'No sources match this search.':'No active sources yet.'}</p>}
      {view.hasMore&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>{if(canLeave())void current.current?.query(view.search,view.includeInactive,true);}}>Next lead source page</button>}
     </section>
+    {!draft&&!view.busy&&<div className="directory-introduction-slot"><DirectoryIntroduction kind="source" onSearch={()=>sourceSearch.current?.focus()}/></div>}
     {draft&&<section className="lead-source-editor" aria-labelledby="lead-source-edit-heading" aria-busy={view.busy}>
      <button type="button" className="secondary lead-source-back" disabled={view.busy} onClick={close}>Back to sources</button>
      <div className="lead-source-editor-heading">

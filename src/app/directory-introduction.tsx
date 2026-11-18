@@ -2,6 +2,7 @@ const introductions={
  customer:{title:'Choose a customer',description:'Open a saved customer to review contact details, linked vehicles and retained history.',action:'Find a customer',label:'Customer directory introduction'},
  vehicle:{title:'Choose a vehicle',description:'Open a saved vehicle to review its details, customer links and retained history.',action:'Find a vehicle',label:'Vehicle directory introduction'},
  service:{title:'Choose a service',description:'Open a saved service to review included work, price guidance and revision history.',action:'Find a service',label:'Service directory introduction'},
+ source:{title:'Choose a lead source',description:'Review how a source is classified, its referring customer link and retained changes.',action:'Find a lead source',label:'Lead source directory introduction'},
 } as const;
 
 export function DirectoryIntroduction({kind,onSearch}:{kind:keyof typeof introductions;onSearch:()=>void}){

@@ -1514,3 +1514,16 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 }
 
 .mileage-history-changes dd > div { margin:.25rem 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+
+/* Lead-source record context and exact changed facts. */
+.lead-source-history ol > li { border-top:1px solid var(--line); }
+.customers .lead-source-history li > details { margin:0; padding:.35rem 0; border:0; border-radius:0; background:transparent; }
+.source-history-change-values { display:grid; gap:.75rem; margin:.4rem 0; }
+.source-history-change-values dt { color:var(--muted); font-size:.825rem; }
+.source-history-change-values dd { margin:.2rem 0 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.source-history-reference { display:block; min-width:0; overflow-wrap:anywhere; font-size:.825rem; color:var(--muted); }
+.customers .source-history-evidence { margin:.75rem 0 0; padding:0; border:0; background:transparent; }
+@media (min-width:1100px) {
+ .lead-source-layout[data-editing="false"] { grid-template-columns:minmax(21rem,2fr) minmax(0,3fr); }
+ .lead-source-layout[data-editing="false"] .lead-source-directory { max-width:none; }
+}
