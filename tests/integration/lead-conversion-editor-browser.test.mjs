@@ -49,7 +49,7 @@ async function startFixture(){
   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);
 }
 
-async function stopFixture(){try{await app?.close();}finally{try{await service?.close();}finally{try{if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);}finally{await sandbox?.close();sandbox=client=service=app=origin=fixture=actor=business=login=undefined;loginOwned=false;}}}}
+async function stopFixture(){const providerErrors=service?.diagnostics?.()??[];if(providerErrors.length)process.stderr.write('CONVERSION_AUTH_PROVIDER_DIAGNOSTIC '+JSON.stringify({stage:'fixture_before_close',provider:providerErrors})+'\n');try{await app?.close();}finally{try{await service?.close();}finally{try{if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);}finally{await sandbox?.close();sandbox=client=service=app=origin=fixture=actor=business=login=undefined;loginOwned=false;}}}}
 
 async function fill(page,{trusted=false,password=fixture.password}={}){
   await page.getByLabel('Email',{exact:true}).fill(fixture.email);await page.getByLabel('Password',{exact:true}).fill(password);

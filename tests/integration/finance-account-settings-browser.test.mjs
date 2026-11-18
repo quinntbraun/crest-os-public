@@ -3,6 +3,7 @@ import {mkdir,readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
 import {chromium,expect,webkit} from '@playwright/test';
+import {reviewBusinessSettingsIndex} from '../support/business-settings-index.mjs';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
@@ -33,20 +34,12 @@ for(const engine of [chromium,webkit]){
 
    await page.goto(fixture.origin+'/settings');
    const directory=page.getByRole('navigation',{name:'Settings navigation',exact:true});
-   await expect(directory.getByRole('heading',{name:'Business tools',exact:true})).toBeVisible();
+   await expect(directory.getByRole('heading',{name:'Finance',exact:true})).toBeVisible();
    await expect(directory.getByRole('heading',{name:'Data and recovery',exact:true})).toBeVisible();
    await expect(directory.getByRole('heading',{name:'Device access',exact:true})).toBeVisible();
    await expect(directory.getByRole('link',{name:'Business data exports',exact:true})).toHaveAttribute('href','/export-files');
    await expect(directory.getByRole('link',{name:'Google Calendar setup',exact:true})).toHaveCount(0);
-   await mkdir('.local/review',{recursive:true});
-   for(const width of [360,390,768,1440]){
-    await page.setViewportSize({width,height:900});
-    await expect(page.getByRole('heading',{name:'Business identity',exact:true})).toBeVisible();
-    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-    assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(issue=>issue.id),[]);
-    if(width===390||width===1440)await page.screenshot({path:'.local/review/business-settings-'+engine.name()+'-'+width+'.png'});
-   }
-   await page.setViewportSize({width:390,height:900});
+   await reviewBusinessSettingsIndex(page,{label:'finance-'+engine.name(),finance:true,calendar:false});
    if(engine.name()==='chromium')await page.route('**/api/business/finance-accounts/context',route=>route.abort('failed'),{times:1});
    await page.getByRole('link',{name:'Fictional account setup',exact:true}).click();
    const settings=page.getByRole('region',{name:'Account settings',exact:true}),status=settings.getByRole('status');

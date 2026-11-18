@@ -1169,6 +1169,19 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 }
 .settings-links p,.settings-card .settings-links p:last-child { margin:.15rem 0 0; color:var(--muted); font-size:.875rem; }
 .settings-links a:focus-visible::before { outline:2px solid var(--gold-ink); outline-offset:-2px; }
+
+/* Settings keeps legal identity editing separate from the destination index. */
+.settings .settings-directory { gap:0; padding:clamp(.9rem,2vw,1.4rem); border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); }
+.settings-index-heading h2 { margin:0; font-size:1.125rem; }
+.settings-index-heading p,.settings-section-description { margin:.4rem 0 1rem; color:var(--muted); font-size:.875rem; line-height:1.6; }
+.settings-directory > .settings-card { padding:.8rem 0; border:0; border-radius:0; background:transparent; }
+.settings-directory > .settings-card + .settings-card { border-top:1px solid var(--line); }
+.settings-directory h3 { margin:0 0 .2rem; color:var(--muted); font-size:.75rem; font-weight:600; letter-spacing:.055em; text-transform:uppercase; }
+.settings-links .settings-current-destination { padding-inline-start:.75rem; border-inline-start:2px solid var(--gold-ink); background:var(--canvas); }
+.settings-current-destination a::after { display:none; }
+.settings-identity > .eyebrow { margin-top:0; }
+.settings-identity h2:focus { outline-offset:.3rem; }
+
 .settings-loading { display:grid; gap:.55rem; }
 .settings-loading .workspace-skeleton { height:2rem; }
 .settings-loading .workspace-skeleton:first-child { width:70%; }
@@ -1186,7 +1199,7 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 .calendar-settings-actions { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .75rem; }
 .calendar-settings-actions button { width:auto; margin:0; }
 @media (min-width:61rem) {
- .settings-layout { grid-template-columns:minmax(19rem,1fr) minmax(0,1fr); }
+ .settings-layout { grid-template-columns:minmax(0,1.4fr) minmax(18rem,1fr); gap:1.5rem; }
  .calendar-settings-layout:has(.calendar-setup-summary) { grid-template-columns:minmax(15rem,1fr) minmax(0,2fr); }
  .settings-identity button,.calendar-prepare button,.calendar-settings-detail > button,.address-directory-page > section > button { width:auto; }
 }

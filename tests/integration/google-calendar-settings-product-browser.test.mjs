@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { chromium, expect, webkit } from '@playwright/test';
+import { reviewBusinessSettingsIndex } from '../support/business-settings-index.mjs';
 import { recoveryCluster } from '../support/recovery-drill.mjs';
 import { sourceExportBrowserFixture } from '../support/source-export-browser-fixture.mjs';
 
@@ -48,6 +49,7 @@ for (const automatic of [false,true]) test('signed-in Calendar preserves consent
         await page.getByRole('button', { name: 'Sign in', exact: true }).press('Enter');
         await expect(page.getByRole('status')).toContainText('Signed in');
         await page.goto(fixture.origin + '/settings');
+        await reviewBusinessSettingsIndex(page,{label:'calendar-'+(automatic?'automatic':'default')+'-'+engine.name(),finance:false,calendar:true});
         await page.getByRole('link', { name: 'Google Calendar setup' }).press('Enter');
         await expect(page).toHaveURL(fixture.origin + settings);
         const setup = page.getByRole('region', { name: 'Fictional Calendar setup' });

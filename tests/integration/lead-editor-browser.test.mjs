@@ -76,7 +76,7 @@ async function startFixture(){
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);
 }
-async function stopFixture(){try{await app?.close();}finally{try{await service?.close();}finally{if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();}}app=undefined;service=undefined;sandbox=undefined;loginOwned=false;}
+async function stopFixture(){const providerErrors=service?.diagnostics?.()??[];if(providerErrors.length)process.stderr.write('LEAD_AUTH_PROVIDER_DIAGNOSTIC '+JSON.stringify({stage:'fixture_before_close',provider:providerErrors})+'\n');try{await app?.close();}finally{try{await service?.close();}finally{if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();}}app=undefined;service=undefined;sandbox=undefined;loginOwned=false;}
 
 async function fill(page,{trusted=false,password=fixture.password}={}){
   await page.getByLabel('Email',{exact:true}).fill(fixture.email);await page.getByLabel('Password',{exact:true}).fill(password);

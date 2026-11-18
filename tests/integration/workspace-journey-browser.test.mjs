@@ -253,9 +253,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(page).toHaveURL(f.origin+'/leads?lead='+first.id);
   await expect(page.getByRole('heading',{name:'Edit lead intake',exact:true})).toBeFocused();
   await expect(page.getByRole('textbox',{name:'Lead label',exact:true})).toHaveValue(first.label);
-  const latest=page.getByRole('region',{name:'Lead history',exact:true}).locator('details').filter({hasText:/Version 2 ·/});
-  await latest.locator('summary').click();
-  await expect(latest.getByText('lost',{exact:true})).toBeVisible();
+  const latest=page.getByRole('region',{name:'Lead history',exact:true}).locator('.lead-history-event').filter({hasText:/Version 2 ·/});
+  await expect(latest).toHaveCount(1);
+  await latest.locator(':scope > summary').click();
+  await latest.getByText('Retained lead details at version 2',{exact:true}).click();
+  await expect(latest.getByRole('group',{name:'Retained resulting lead',exact:true}).getByText('lost',{exact:true})).toBeVisible();
   await page.goto(f.origin+'/leads');
   const leadViews=page.getByRole('navigation',{name:'Lead views',exact:true});
   await expect(leadViews.getByRole('button',{name:'Follow-ups',exact:true})).toHaveAttribute('aria-current','true');
