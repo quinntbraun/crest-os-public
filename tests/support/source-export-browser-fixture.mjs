@@ -23,7 +23,7 @@ import {installProviderSchema} from './provider-schema.mjs';
 import {startRealAuthService,authResult} from './real-auth-service.mjs';
 import {buildSourceExportBrowserFixture} from './source-export-browser-build.mjs';
 const signal=()=>new AbortController().signal,sha=value=>createHash('sha256').update(value).digest('hex'),release='a'.repeat(40);
-export async function sourceExportBrowserFixture({product=false,workspace=false,leadFollowUps=false,leadMatchReview=false,legacyContactMatches=false,legacyContactBatches=false,legacyContactEffects=false,legacyContactTargets=false,legacyContactDecisions=false,legacyContactApprovals=false,legacyContactApplications=false,automaticContactImport=false,legacyContactDownloads=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,expenseReceipts=false,scheduling=false,recordJobHistory=false,customerProfileFixture=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,openingWorksheet=false,statementStaging=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,googleCalendar=false,googleCalendarAutomatic=false,postedFinanceExport=false,photoFixture}={}){
+export async function sourceExportBrowserFixture({product=false,workspace=false,leadFollowUps=false,leadMatchReview=false,legacyContactMatches=false,legacyContactBatches=false,legacyContactEffects=false,legacyContactTargets=false,legacyContactDecisions=false,legacyContactApprovals=false,legacyContactApplications=false,automaticContactImport=false,legacyContactDownloads=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,expenseReceipts=false,scheduling=false,recordJobHistory=false,customerProfileFixture=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,openingWorksheet=false,statementStaging=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,googleCalendar=false,googleCalendarAutomatic=false,calendarActivityBookings=0,calendarActivityOverlap=false,postedFinanceExport=false,photoFixture}={}){
  assert((typeof legacyContactApplications==='boolean'||legacyContactApplications==='background')&&(!legacyContactApplications||legacyContactApprovals));
  assert(typeof leadFollowUps==='boolean'&&(!leadFollowUps||product&&workspace));
  assert(typeof customerProfileFixture==='boolean'&&(!customerProfileFixture||recordJobHistory));
@@ -242,6 +242,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   const compiled=await buildSourceExportBrowserFixture(sandbox.workspace),runtime=await import(pathToFileURL(compiled.server).href);
   assert(typeof googleCalendar==='boolean'&&(!googleCalendar||product&&workspace&&!paidInvoiceCredits));
   assert(typeof googleCalendarAutomatic==='boolean'&&(!googleCalendarAutomatic||googleCalendar&&scheduling));
+  assert(Number.isInteger(calendarActivityBookings)&&calendarActivityBookings>=0&&calendarActivityBookings<=6&&(!calendarActivityBookings||googleCalendar&&scheduling));
   assert(typeof postedFinanceExport==='boolean'&&(!postedFinanceExport||product&&(serviceRefunds||statementStaging)&&!googleCalendar));
   let calendarConfiguration;
   if(googleCalendar){
@@ -516,6 +517,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
       'Fictional exemption policy','Fictional exempt profile approval'])).rows[0].result.state,'committed');
    }finally{seedHash.fill(0);await finance.end();}
   }
+  assert(typeof calendarActivityOverlap==='boolean'&&(!calendarActivityOverlap||calendarActivityBookings===6));
+  const calendarActivityJobIds=[];
   let bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,fieldVehicleId;
   if(scheduling){
    const web=await sandbox.connect(url.toString()),seedHash=runtime.sessionCredentialHash(credential);
@@ -528,7 +531,29 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
      assert.equal(saved.state,'committed');
      return (await client.query('SELECT id FROM crest.service_versions WHERE (business_id,service_id)=($1,$2)',[business,serviceId])).rows[0].id;
     }
-   }:{});bookingRequest=confirmedBookingRequest(parent);bookingFamilyId=parent.familyId;if(fieldSessions){fieldVehicleId=randomUUID();const payload={label:'Synthetic field equipment rig',year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'business_rig',notes:null,archived:false,archiveReason:null};assert.equal((await web.query('SELECT crest_commands.save_vehicle($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',[...parent.auth(),epoch,randomUUID(),fieldVehicleId,payload])).rows[0].result.state,'committed');}if(additionalSchedulingAgreement||combinedSchedulingAgreements){const other=await createConfirmedBookingFixture({client,web,bootstrap})({hash:seedHash,session:principal.sessionId,actor,issuer:service.issuer,subject:user.id,provider:principal.provider.sessionId,deadline:new Date(principal.provider.expiresAt),business,epoch},combinedSchedulingAgreements?{customerId:parent.customer}:{});additionalBookingRequest=confirmedBookingRequest(other);additionalBookingFamilyId=other.familyId;}}
+   }:{});bookingRequest=confirmedBookingRequest(parent);bookingFamilyId=parent.familyId;
+   // Optional dense Calendar fixture: real retained parents and protected native
+   // booking commands. No browser login or provider-delivery claim is made here.
+   for(let index=0;index<calendarActivityBookings;index++){
+    const owner=index===0?parent:await createConfirmedBookingFixture({client,web,bootstrap})({hash:seedHash,session:principal.sessionId,actor,issuer:service.issuer,subject:user.id,provider:principal.provider.sessionId,deadline:new Date(principal.provider.expiresAt),business,epoch});
+    const request=index===0?bookingRequest:confirmedBookingRequest(owner);
+    const workspace=(await web.query('SELECT crest_commands.read_booking_workspace($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid) AS result',owner.auth())).rows[0].result;
+    request.expectedModeSequence=workspace.modeVersion?.sequence??'0';
+    const start=new Date(Date.parse(bookingRequest.payload.appointment.start_at)+(calendarActivityOverlap&&index===1?30*60000:index*2*3600000)).toISOString().replace('.123Z','.123456Z');
+    const end=new Date(Date.parse(start)+3600000).toISOString().replace('.123Z','.123456Z');
+    request.payload.appointment={...request.payload.appointment,start_at:start,end_at:end,local_start:start.slice(0,-1),local_end:end.slice(0,-1)};
+    if(calendarActivityOverlap){
+     // Explicit synthetic override only after the real protected slot review.
+     const review=(await web.query('SELECT crest_commands.review_booking_slot($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::timestamptz,$12::timestamptz,$13::integer,$14::integer) AS result',[...owner.auth(),actor,null,start,end,0,0])).rows[0].result;
+     assert(Array.isArray(review.conflictingAppointmentIds)&&typeof review.unknownTravel==='boolean');
+     if(index===1)assert.equal(review.conflictingAppointmentIds.length,1);
+     request.payload.conflictReview={expectedAppointmentIds:review.conflictingAppointmentIds,expectedUnknownTravel:review.unknownTravel,overrideReason:review.conflictingAppointmentIds.length?'Explicit synthetic owner override for populated planner visual review.':null};
+     request.payload.appointment.unknown_travel_reviewed=review.unknownTravel;
+    }
+    const result=(await web.query('SELECT crest_commands.book_job($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::integer,$12::uuid,$13::bigint,$14::jsonb) AS result',[...owner.auth(),epoch,request.operationId,request.schemaVersion,request.jobId,request.expectedModeSequence,request.payload])).rows[0].result;
+    assert.equal(result.state,'committed',JSON.stringify({index,result}));calendarActivityJobIds.push(request.jobId);
+   }
+   if(fieldSessions){fieldVehicleId=randomUUID();const payload={label:'Synthetic field equipment rig',year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'business_rig',notes:null,archived:false,archiveReason:null};assert.equal((await web.query('SELECT crest_commands.save_vehicle($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',[...parent.auth(),epoch,randomUUID(),fieldVehicleId,payload])).rows[0].result.state,'committed');}if(additionalSchedulingAgreement||combinedSchedulingAgreements){const other=await createConfirmedBookingFixture({client,web,bootstrap})({hash:seedHash,session:principal.sessionId,actor,issuer:service.issuer,subject:user.id,provider:principal.provider.sessionId,deadline:new Date(principal.provider.expiresAt),business,epoch},combinedSchedulingAgreements?{customerId:parent.customer}:{});additionalBookingRequest=confirmedBookingRequest(other);additionalBookingFamilyId=other.familyId;}}
    finally{seedHash.fill(0);await web.end();}
   }
   let photoRuntime;
@@ -745,6 +770,6 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    const dispatch=runtime.createLegacyContactImportDispatcher({environment:'test',connectionString:contactWorkerConnection});
    return dispatch(AbortSignal.timeout(10000));
   }
-  return{origin,product,followUpLeads,dispatchContactImport,authorizePostedFinance,preparePayable,originalFile,originalMimeType,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),nextBrowserCodeAt:(Math.floor(seededCodeAt/(totp.period*1000))+1)*totp.period*1000,credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
+  return{origin,product,followUpLeads,dispatchContactImport,authorizePostedFinance,preparePayable,originalFile,originalMimeType,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,calendarActivityJobIds,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),nextBrowserCodeAt:(Math.floor(seededCodeAt/(totp.period*1000))+1)*totp.period*1000,credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
  }catch(error){await close();throw error;}
 }

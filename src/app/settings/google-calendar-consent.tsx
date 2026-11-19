@@ -196,7 +196,7 @@ function StagedCalendarConsent({ context, saved, simulated, onConsentSaved }: { 
     }, () => setState({ step: 'pending', reference, message: 'Crest could not check the original consent. Keep this tab open and try the status check again.' }));
   }
 
-  return <section className={'notice ' + styles.panel} aria-labelledby={id + '-heading'} aria-busy={busy}>
+  return <section className={'notice ' + styles.panel} aria-labelledby={id + '-heading'} aria-busy={busy} data-calendar-consent-state={state.step}>
     <h2 id={id + '-heading'}>Google Calendar</h2>
     <p className="field-help">{simulated ? 'Review how confirmed appointments would appear in Crest Jobs.' :
       'Send confirmed appointments to Crest Jobs. Your Crest schedule stays the source of truth.'}</p>

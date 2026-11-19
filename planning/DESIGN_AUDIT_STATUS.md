@@ -6,13 +6,13 @@ This inventory reconciles all 70 original groups: 14 shared findings, 36 destina
 
 | Local implementation review | Groups |
 |---|---:|
-| Main change locally addressed | 34 |
-| Partial implementation or required review | 33 |
+| Main change locally addressed | 37 |
+| Partial implementation or required review | 31 |
 | Open audit work | 2 |
-| Review required before choosing changes | 1 |
+| Review required before choosing changes | 0 |
 | Total | 70 |
 
-34/70, or 48.6%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 48.6% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 33 groups have partial work; three groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
+37/70, or 52.9%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 52.9% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 31 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
 
 The audit is **not finished**. Each row has remaining implementation or verification. Full current-source/state, delivered-build and physical iPhone acceptance is not established. The earlier roughly 80% figure is a low-confidence V1 coding estimate and is not the audit percentage. This inventory does not reduce the broader goal: complete this audit and then all unfinished approved V1 functionality, including P16/P17, native files, recoverable backups, preserved upgrades and owner/device readiness.
 
@@ -53,7 +53,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | R11 | Quotes (/quotes) | Main change addressed | Complete additional many-line/long-value/state variants, retained access-failure investigation and final exact-source release/installed/physical-device acceptance. |
 | R12 | Quote amendments (/quotes/amendments) | Partial | Reconcile complete retained/changed-item comparison hierarchy and configured modes; current hosted timeout remains unexplained. |
 | R13 | Interrupted save review (/save-review) | Partial | Finish all no-reference/recorded/unresolved/access-lost identity, safe-return and phone compositions. |
-| R14 | Schedule / saved job (/schedule) | Partial | Dedicated planner review, compact loaded job header, first-action reach and date/view/visit restoration remain. |
+| R14 | Schedule / saved job (/schedule) | Partial | Finish compact loaded-job/header/action reach and contextual returns for remaining actual states/linked workflows, wider stress/zoom/privacy and exact release/installed/physical-device acceptance. |
 | R15 | Change appointment (/schedule/change) | Partial | Review compact phone comparison, timezone/reason/reservation effect and adjacent communication status across actual outcomes. |
 | R16 | Trip mileage (/schedule/mileage) | Partial | Finish full job/trip/vehicle context, desktop aligned density and remaining empty/long-list/state review. |
 | R17 | Service arrangements (/schedule/modes) | Main change addressed | Complete populated-existing-job/policy-dependent and remaining state variants plus fresh current-head release/installed/physical-device acceptance. |
@@ -73,11 +73,11 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | R31 | Category approvals (/settings/accounts/mappings/categories/manage) | Partial | Integrate retained approval history with proposed editing and finish staged phone selection/review acceptance. |
 | R32 | Mapping approvals (/settings/accounts/mappings/manage) | Main change addressed | Remaining full state and final release/device verification stay open. |
 | R33 | Tax profiles (/settings/accounts/tax) | Main change addressed | Remaining long/history/state and final release/device verification stay open; no unsupported jurisdiction directory is invented. |
-| R34 | Calendar setup (/settings/google-calendar) | Partial | Implement the original bounded recent-appointment/activity directory; finish other actual integration/state variants and exact release/installed/physical-device acceptance. |
+| R34 | Calendar setup (/settings/google-calendar) | Main change addressed | Investigate retained session/held-request failures; complete selected-inspector changes, recovery/access-loss and remaining state/privacy variants plus full exact-source release/installed/physical-device acceptance. |
 | R35 | Vehicle directory (/vehicles) | Main change addressed | Final profile/history/photo, sign-out and device/state verification remain; no stock evidence image. |
 | R36 | Page not found (/audit-page-does-not-exist) | Main change addressed | Retained baseline plus source inspection is not a fresh final-release/device run. |
 | D01 | Customer profile | Partial | Reconcile compact last/next-visit facts and action hierarchy consistently across all profile sections. |
-| D02 | Schedule planner | Review first | Perform fresh signed-in dense/overlapping planner review before deciding what implementation changes are required. |
+| D02 | Schedule planner | Main change addressed | Complete additional empty/error/recovery/long-value/zoom/selected-change variants and fresh full release/installed/physical-device acceptance. Planning stays distinct from active execution; loaded-time cues do not infer availability or override approval. |
 | D03 | Quote editor and preview | Main change addressed | Other long/many-line/retained/denied/stale/pending states and access-failure investigation remain; exact-head release, installed and physical-device acceptance are separate gates. |
 | D04 | Sharing and acceptance | Partial | Finish compact accepted-agreement/event hierarchy with all retained content and honest delivery evidence. |
 | D05 | Receipt viewer | Main change addressed | Original-file formats, full release and physical iPhone remain separate required acceptance. |
@@ -94,14 +94,14 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | D16 | Supplier bills | Main change addressed | Complete remaining state/long-value/native-original-format variants and fresh release/installed/physical-device acceptance. |
 | D17 | Dated approval history | Main change addressed | Remaining large/gap/state and final release/device review remain. |
 | D18 | Travel history | Main change addressed | Remaining long pagination/failure states and final source/device verification remain. |
-| D19 | Calendar waiting state | Partial | Complete the original broader appointment/activity list and additional actual states; retain truthful simulation labels and final release/device/privacy acceptance. |
+| D19 | Calendar waiting state | Main change addressed | Complete selected-inspector change, recovery/access-loss and other missing state/privacy variants; investigate retained session/held-request failures and preserve truthful simulation labels through final release/device acceptance. |
 | D20 | Drop-off custody history | Main change addressed | Other custody editor/state, native original-format and physical-device/full release acceptance remain. |
 
 ## Next sequence
 
-1. Publish and verify the signed-package-index optimization after preserving both terminal40481a attempts; retain every failed/skipped result and all original deadlines/signatures/required checks.
-2. Wire the existing-API bounded Calendar page reader into the original activity directory and verify navigation/multiple appointments; preserve the selected-status row and quote reading modes.
-3. Perform the fresh signed-in dense planner review; use actual findings rather than assuming a replacement is needed.
+1. Publish the locally verified Calendar/planner/UI-policy corrections after preserved terminalfcf1cae21/22; require fresh full verification without weakening deadlines/signatures/required checks.
+2. Finish remaining Calendar selected-change/recovery/access-loss/privacy states and investigate retained session/held-request failures; preserve actual reschedule refusal, bounded directory, pagination/return and quote reading modes.
+3. Complete remaining planner/selected-job state and stress variants; preserve the now-reviewed populated day/week/month and exact phone-return behavior.
 4. Complete state/zoom/long-value/privacy verification and the unchanged full-release, upgrade, restore and physical-device gates. Reconcile every row before claiming audit completion.
 
 The JSON embeds the original sequence/acceptance and review-gap text. The source register and per-domain notes remain evidence; neither this table nor green narrow checks replace required verification.

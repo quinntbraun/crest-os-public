@@ -7,6 +7,7 @@ import { readSyntheticCalendarSetup } from '../../../client/google-calendar-cons
 import type { CalendarSetupState } from '../../../client/google-calendar-consent';
 import { GoogleCalendarConsentPanel } from '../google-calendar-consent';
 import { SyntheticCalendarJobStatus } from './job-status';
+import { CalendarAppointmentActivity } from './activity';
 
 type State = { status: CalendarSetupState; recoveryEpoch: string } | null;
 
@@ -96,9 +97,11 @@ export function SyntheticGoogleCalendarSettings({ jobId }: { jobId: string | nul
   const calendarPrepared = Boolean(context || consentSaved);
 
   function confirmSavedConsent() {
+    if (!context) return;
     setLoaded(current => current && context && current.status.context === context
       ? { ...current, status: { state: 'active', context } }
       : current);
+    setMessage('');
   }
 
   return <section aria-label="Fictional Calendar setup" aria-busy={busy} className="calendar-settings-layout">
@@ -123,9 +126,10 @@ export function SyntheticGoogleCalendarSettings({ jobId }: { jobId: string | nul
     </form>}
     {context && <GoogleCalendarConsentPanel context={context} saved={consentSaved} simulated onConsentSaved={confirmSavedConsent}/>}
     {loaded?.status.state === 'active' && !loaded.status.context && <p>Calendar consent is saved.</p>}
-    {jobId && loaded && <SyntheticCalendarJobStatus key={jobId + loaded.recoveryEpoch} jobId={jobId} recoveryEpoch={loaded.recoveryEpoch}/>}
+    {jobId && loaded && !consentSaved && <SyntheticCalendarJobStatus key={jobId + loaded.recoveryEpoch} jobId={jobId} recoveryEpoch={loaded.recoveryEpoch}/>}
     {(!loaded || loaded.status.state === 'review') && !busy && <button className="secondary" type="button"
       onClick={() => void loadState(undefined, true)}>Check setup status</button>}
     </div>
+    {loaded&&consentSaved&&<CalendarAppointmentActivity key={loaded.recoveryEpoch} initialJobId={jobId} recoveryEpoch={loaded.recoveryEpoch}/>}
   </section>;
 }

@@ -2,6 +2,7 @@ import {calendarRangeLabel,calendarToday} from '../../client/schedule-calendar';
 import type {CalendarMode,CalendarRange} from '../../client/schedule-calendar';
 import type {JobSummary} from '../../operations/confirmed-job-read-contract';
 import type {Ref} from 'react';
+import {loadedAppointmentOverlaps} from '../../client/schedule-agenda-overlaps';
 
 const states={
  scheduled:'Scheduled',en_route:'En route',in_progress:'In progress',paused:'Paused',
@@ -20,6 +21,7 @@ export function ScheduleAgenda({dates,mode,timezone,rows,hasMore,busy,selectedId
  headingRef:Ref<HTMLHeadingElement>;
 }){
  const days=new Map<string,JobSummary[]>();
+ const overlapping=loadedAppointmentOverlaps(rows);
  for(const job of rows){
   const day=calendarToday(timezone,new Date(job.startAt));
   const group=days.get(day);
@@ -29,6 +31,7 @@ export function ScheduleAgenda({dates,mode,timezone,rows,hasMore,busy,selectedId
  return <section aria-label="Jobs in selected dates" className="schedule-agenda">
   <h2 ref={headingRef} tabIndex={-1}>Scheduled work</h2>
   <p className="schedule-agenda-range">{calendarRangeLabel(dates,mode)}</p>
+  {overlapping.size>0&&<p className="schedule-overlap-note">{overlapping.size} loaded visits have overlapping appointment times. Open a saved job to review its scheduling history.</p>}
   {rows.length===0?<p>No saved jobs in this range.</p>:<div className="schedule-agenda-days">
    {[...days].map(([day,jobs])=><div key={day}>
     {(dates.fromDate!==dates.throughDate||day!==dates.fromDate)&&
@@ -39,7 +42,7 @@ export function ScheduleAgenda({dates,mode,timezone,rows,hasMore,busy,selectedId
       onClick={event=>open(job.jobId,event.currentTarget)}>
       {job.customerName}{' '}<span id={'schedule-state-'+job.jobId} className="schedule-visit-state" data-state={job.state}>{states[job.state]}</span>
      </button>
-     <p><time dateTime={job.startAt}>{visitTime(job)}</time>{job.timezone!==timezone?' · '+job.timezone:''}</p>
+     <p className="schedule-agenda-time"><time dateTime={job.startAt}>{visitTime(job)}</time>{job.timezone!==timezone?' · '+job.timezone:''}{overlapping.has(job.jobId)&&<span className="schedule-time-overlap">Time overlap</span>}</p>
      <p className="field-help">{job.vehicleLabels.join(' · ')}{job.pendingAppointment?' · Time change proposed':''}{job.unknownTravel?' · Travel needs review':''}</p>
     </li>)}</ul>
    </div>)}

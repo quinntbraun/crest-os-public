@@ -16,6 +16,7 @@ export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{
  const agendaSource=useRef<{button:HTMLButtonElement;scrollY:number;width:number}|null>(null),restoreAgendaFocus=useRef(false);
  const mobileBack=useRef<HTMLButtonElement>(null),jobHeading=useRef<HTMLHeadingElement>(null);
  const calendarToggle=useRef<HTMLButtonElement>(null),agendaHeading=useRef<HTMLHeadingElement>(null);
+ const calendarPanel=useRef<HTMLDivElement>(null);
  const focusPlanner=useRef(false);
  const linkedJob=initialJobId!==undefined;
  const selected=linkedJob&&view.selected?.jobId!==initialJobId?null:view.selected;
@@ -45,6 +46,9 @@ export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{
   focusPlanner.current=false;
   if(view.phase==='ready'&&view.loaded&&calendarToggle.current?.getClientRects().length){
    (calendarOpen?calendarToggle.current:agendaHeading.current)?.focus();
+  }else if(view.phase==='ready'&&view.loaded){
+   const mode=calendarPanel.current?.querySelector<HTMLButtonElement>('.calendar-toolbar button[aria-pressed="true"]');
+   (mode??agendaHeading.current??status.current)?.focus();
   }else status.current?.focus();
  },[calendarOpen,view.busy,view.loaded,view.phase]);
  function revoke(){if(url.current){URL.revokeObjectURL(url.current);url.current=null;}}
@@ -132,6 +136,7 @@ export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{
   {view.phase==='ready'&&linkedJob&&jobReview}
   {view.phase==='ready'&&!linkedJob&&<>
    <div className="schedule-intro"><p className="field-help">Business time zone: {view.timezone}.</p>{view.supportTripsAvailable&&<a href="/schedule/travel">Standalone travel</a>}</div>
+   <div className="schedule-planner"><div className="schedule-planner-nav">
    {view.loaded&&view.dates&&<>
     <div className="schedule-mobile-controls" role="group" aria-label="Agenda navigation">
      <button type="button" className="secondary" aria-label="Previous agenda period" disabled={view.busy||!previous} onClick={()=>{if(previous)selectCalendar(previous,calendarMode);}}>Previous</button>
@@ -139,17 +144,17 @@ export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{
      <button type="button" className="secondary" aria-label="Next agenda period" disabled={view.busy||!next} onClick={()=>{if(next)selectCalendar(next,calendarMode);}}>Next</button>
      <button type="button" className="secondary schedule-calendar-toggle" ref={calendarToggle} aria-expanded={calendarOpen} aria-controls="schedule-calendar-panel" onClick={()=>setCalendarOpen(!calendarOpen)}>{calendarOpen?'Hide calendar':'Calendar'}</button>
     </div>
-    <div id="schedule-calendar-panel" className="schedule-calendar-panel" data-open={calendarOpen}>
+    <div id="schedule-calendar-panel" ref={calendarPanel} className="schedule-calendar-panel" data-open={calendarOpen}>
      <CalendarNavigation range={view.dates} mode={calendarMode} timezone={view.timezone} jobs={view.rows} incomplete={view.hasMore}
       busy={view.busy} select={selectCalendar} showDay={range=>{setCalendarOpen(false);selectCalendar(range,'day');}}/>
     </div>
    </>}
    <details className="schedule-custom-range" open={calendarMode==='custom'||!view.loaded}><summary>Custom date range</summary><form aria-label="Schedule date range" onSubmit={event=>{event.preventDefault();selectCalendar({fromDate,throughDate},'custom');}}><div className="schedule-date-fields"><div><label htmlFor="schedule-from">From date</label><input id="schedule-from" type="date" value={fromDate} required disabled={view.busy} onChange={event=>setFrom(event.target.value)}/></div><div><label htmlFor="schedule-through">Through date</label><input id="schedule-through" type="date" value={throughDate} min={fromDate} required disabled={view.busy} onChange={event=>setThrough(event.target.value)}/></div></div><button type="submit" disabled={view.busy}>Load saved schedule</button></form></details>
-   {view.loaded&&view.dates&&<div className="schedule-layout"><div className="schedule-list-pane">
+   </div>{view.loaded&&view.dates&&<div className="schedule-layout"><div className="schedule-list-pane">
     <ScheduleAgenda dates={view.dates} mode={calendarMode} timezone={view.timezone} rows={view.rows} hasMore={view.hasMore}
      busy={view.busy} selectedId={selected?.jobId} open={(id,source)=>void open(id,source)} more={()=>void action('more')} headingRef={agendaHeading}/>
     <section className="schedule-proposals" aria-label="Proposed time changes"><h2>Changes to review</h2><p className="field-help">All dates. A proposed change does not replace the confirmed reservation.</p>{view.pending.length===0?<p>No proposed time changes recorded.</p>:<ul className="customer-list">{view.pending.map(item=><li key={item.head.job.id}><button type="button" className="secondary" disabled={view.busy} onClick={event=>void open(item.head.job.id,event.currentTarget)}>Review proposed change · {item.head.confirmationDraft?.customerName??'Saved job'}</button><p>Proposed {when(item.head.latestAppointment.start_at,item.head.latestAppointment.timezone)}</p><p className="field-help">Confirmed {when(item.head.appointment.start_at,item.head.appointment.timezone)}</p></li>)}</ul>}{view.pendingHasMore&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>void action('morePending')}>Load more proposed changes</button>}</section>
-   </div>{jobReview}</div>}
+   </div>{selected&&jobReview}</div>}</div>
   </>}
   {view.phase==='ready'&&(!linkedJob||!!selected)&&(view.dropoffCustodyAvailable||view.pickupReturnsAvailable)&&<div className="schedule-custody-tools">
     {view.dropoffCustodyAvailable&&<VehicleCustodyQueue key="dropoff" kind="dropoff" timezone={view.timezone}/>}

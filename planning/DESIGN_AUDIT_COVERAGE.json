@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-19T08:07:20.162Z",
+  "assessedAt": "2026-11-19T10:05:34.558Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "f9651c12cfad965d516095185ddc8cc477749a6d",
-    "publishedCommit": "40481a44463b250b30eb07a1768c7f0be83b5539",
-    "publishedTree": "08e0060129bac80aaa170a183a95ba426a3459d2",
-    "localTree": "4643a361cd75249125079f7b967747e0d516d501"
+    "localCommit": "e481cc84965a80ccde6e8e74bfffbcbd6fae5e06",
+    "publishedCommit": "fcf1caecd252c9cabf9941528e164d8d7b02b885",
+    "publishedTree": "80e21d4108ee62c40878fe10b001a315d1d4aaf2",
+    "localTree": "ce9047fd58cda10d2fc16e7f7706f4c6f8832325"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -27,12 +27,12 @@
     "destinations": 36,
     "deeperWorkflows": 20,
     "counts": {
-      "locally_addressed": 34,
-      "partial": 33,
+      "locally_addressed": 37,
+      "partial": 31,
       "open": 2,
-      "review_needed": 1
+      "review_needed": 0
     },
-    "mainLocalChangesAddressedPercent": 48.6,
+    "mainLocalChangesAddressedPercent": 52.9,
     "auditComplete": false,
     "finalSignOffClaimed": false
   },
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "50bfb2170e45f6779e52b2adc2c66482fbe7ade6f3e517c3773ce6b6f77075a0"
+          "sha256": "28d60182d8bfac39c0543ec0b0f8a5e53c782e20765e1806e9bea0c88c38a7c3"
         }
       ],
       "verification": {
@@ -97,7 +97,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "52089ddd924b8d11696f7330f5dfe64aa0aefe145ff93f0665c0ed187e48ead9"
+          "sha256": "be537182a534d8ad9e66a07ac8081607f3695a04ee7d5db70939c958a99f0a56"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -121,7 +121,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "52089ddd924b8d11696f7330f5dfe64aa0aefe145ff93f0665c0ed187e48ead9"
+          "sha256": "be537182a534d8ad9e66a07ac8081607f3695a04ee7d5db70939c958a99f0a56"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
@@ -145,7 +145,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "52089ddd924b8d11696f7330f5dfe64aa0aefe145ff93f0665c0ed187e48ead9"
+          "sha256": "be537182a534d8ad9e66a07ac8081607f3695a04ee7d5db70939c958a99f0a56"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -173,7 +173,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "6e2c26457c16b8866ffb4daf042ef2a946c1b3287cb9ce9acaa142f6c3a486e8"
+          "sha256": "b82d423e58addbbe17e517f96c5d03d2d7327bf7965652f42132964f249d2719"
         }
       ],
       "verification": {
@@ -245,7 +245,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "6e2c26457c16b8866ffb4daf042ef2a946c1b3287cb9ce9acaa142f6c3a486e8"
+          "sha256": "b82d423e58addbbe17e517f96c5d03d2d7327bf7965652f42132964f249d2719"
         }
       ],
       "verification": {
@@ -289,7 +289,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "52089ddd924b8d11696f7330f5dfe64aa0aefe145ff93f0665c0ed187e48ead9"
+          "sha256": "be537182a534d8ad9e66a07ac8081607f3695a04ee7d5db70939c958a99f0a56"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
@@ -313,7 +313,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "52089ddd924b8d11696f7330f5dfe64aa0aefe145ff93f0665c0ed187e48ead9"
+          "sha256": "be537182a534d8ad9e66a07ac8081607f3695a04ee7d5db70939c958a99f0a56"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
@@ -365,7 +365,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "50bfb2170e45f6779e52b2adc2c66482fbe7ade6f3e517c3773ce6b6f77075a0"
+          "sha256": "28d60182d8bfac39c0543ec0b0f8a5e53c782e20765e1806e9bea0c88c38a7c3"
         }
       ],
       "verification": {
@@ -680,16 +680,16 @@
       "title": "P1 · Schedule / saved job (/schedule)",
       "requirements": "Observed: The captured route is a saved job rather than the schedule planner. The job header, location block and section buttons consume much of the phone viewport before the work details.\n\nDirection: Give planning and active-job review distinct page identities. Compress the saved-job header into customer, vehicle, time, status and next valid action; preserve the selected date on return.\n\nDesktop: Use a planning canvas with selected-visit detail, and a separate focused job layout when executing work.\n\nPhone: Prioritize the current job action; make customer contact and location easy to reach.\n\nAcceptance: Browser Back restores date, view and selected visit. Verify planning separately from this saved-job capture.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-{desktop,phone}.png",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Saved-job actions, contextual prerequisites and schedule navigation exist.",
-      "remainingWork": "Dedicated planner review, compact loaded job header, first-action reach and date/view/visit restoration remain.",
+      "implementedOrPresent": "Populated planner review and compact wide calendar/agenda/inspector composition now keep actual work/action context near the top; exact phone date/view/visit/scroll/focus return is verified with six saved visits and an actual reviewed overlap.",
+      "remainingWork": "Finish compact loaded-job/header/action reach and contextual returns for remaining actual states/linked workflows, wider stress/zoom/privacy and exact release/installed/physical-device acceptance.",
       "evidence": [
         {
           "path": "src/app/schedule/screen.tsx",
-          "sha256": "19df196e39e3d4045f2a057405ebf41267a3506678f34b1910566cc093068ce8"
+          "sha256": "7e3adf2f53711240285e8f6f9a64f07b67d096ab43dc186cd6610207edfe00c7"
         },
         {
-          "path": "planning/TASK_PREREQUISITE_DESIGN.md",
-          "sha256": "c070fd223a799e24f1084e7166c9623974e2596a98ef126020ded65f1a8694de"
+          "path": "planning/PLANNER_POPULATED_REVIEW.md",
+          "sha256": "0c7c04a8b49c956f8f9c28511cfd570b3ff72618e8762485ac8865a12fdb2144"
         }
       ],
       "verification": {
@@ -1155,22 +1155,22 @@
       "section": "Every page",
       "title": "P1 · Calendar setup (/settings/google-calendar)",
       "requirements": "Observed: The route baseline is unavailable; configured supplemental evidence shows multiple stacked status cards and a waiting update.\n\nDirection: Use one connection summary and an appointment-sync activity list. Distinguish account consent, target calendar, pending update, failure and confirmed sync.\n\nDesktop: Use status plus recent activity, with details in an inspector.\n\nPhone: Keep account/calendar and the next safe action above the event history.\n\nAcceptance: Simulated consent or saved consent must never look like a verified live Google connection or successful event delivery.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-google-calendar-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Connection identity summary and a compact selected-appointment row distinguish current status, fictional confirmation, checking and failed reads, with keyboard-expandable sync evidence and safe actions.",
-      "remainingWork": "Implement the original bounded recent-appointment/activity directory; finish other actual integration/state variants and exact release/installed/physical-device acceptance.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "A bounded five-row appointment directory now provides real date/time-zone context, explicit filters, current sync states and a phone/desktop inspector with retained list/history focus. Six protected native bookings support actual 5+1 signed-in pagination and no-write recovery evidence.",
+      "remainingWork": "Investigate retained session/held-request failures; complete selected-inspector changes, recovery/access-loss and remaining state/privacy variants plus full exact-source release/installed/physical-device acceptance.",
       "evidence": [
         {
-          "path": "src/app/settings/google-calendar/setup.tsx",
-          "sha256": "c7cc715f7f3f97e3655590cdd187532400f54534e29f5694bf6a9e0f2a44343f"
+          "path": "src/app/settings/google-calendar/activity.tsx",
+          "sha256": "7ec6f859b24f1d667c059b2c91bb6ba28dda61f04493ecbf718122b94ffb165e"
         },
         {
-          "path": "planning/CALENDAR_APPOINTMENT_ACTIVITY_DESIGN.md",
-          "sha256": "b3b9589c349b86273ab21833dd08c0fc0be3565e3a515ff05262564a126b437b"
+          "path": "planning/CALENDAR_ACTIVITY_DIRECTORY_IMPLEMENTATION.md",
+          "sha256": "ec6064311f92496b24e17806456f3ffb00fd5f0b1a038cba7f6f1bbfc05270a4"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1243,22 +1243,22 @@
       "section": "Deeper workflows",
       "title": "Schedule planner",
       "requirements": "The supplemental image is Today’s upcoming-visit state, not a full calendar. Planner day/week/month, selected date, dense days and appointment overlap need a fresh dedicated visual review before sign-off. Keep planning distinct from active-job execution.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/agenda-upcoming-chromium-1440.png",
-      "implementationStatus": "review_needed",
-      "implementedOrPresent": "Day/week/month navigation exists; the supplemental audit image was not the planner.",
-      "remainingWork": "Perform fresh signed-in dense/overlapping planner review before deciding what implementation changes are required.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Fresh genuine signed-in six-visit day/week/month, selected-date and overlapping-appointment review now covers five widths in both engines. The resulting compact calendar/agenda/inspector composition, exact-time loaded overlap cues, desktop mode focus and exact phone return pass the complete six-case saved-job file.",
+      "remainingWork": "Complete additional empty/error/recovery/long-value/zoom/selected-change variants and fresh full release/installed/physical-device acceptance. Planning stays distinct from active execution; loaded-time cues do not infer availability or override approval.",
       "evidence": [
         {
-          "path": "src/app/schedule/calendar-navigation.tsx",
-          "sha256": "41a2188c53582e9d6e7a4c6edaf90a3d3cd177e4616e72e10470a8ef9e8e9d2e"
+          "path": "src/app/schedule/screen.tsx",
+          "sha256": "7e3adf2f53711240285e8f6f9a64f07b67d096ab43dc186cd6610207edfe00c7"
         },
         {
-          "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "6e2c26457c16b8866ffb4daf042ef2a946c1b3287cb9ce9acaa142f6c3a486e8"
+          "path": "planning/PLANNER_POPULATED_REVIEW.md",
+          "sha256": "0c7c04a8b49c956f8f9c28511cfd570b3ff72618e8762485ac8865a12fdb2144"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1651,22 +1651,22 @@
       "section": "Deeper workflows",
       "title": "Calendar waiting state",
       "requirements": "Account, consent and queued event are presented in three substantial cards. Consolidate connection identity and give each appointment an explicit waiting/failed/confirmed row. Preserve the prominent simulated/no-events disclaimer in fictional mode.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/settings-calendar-pending-chromium-390.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Selected appointment waiting/fictional-confirmed/checking/failed rows replace the substantial status card; native evidence disclosure preserves focus and makes no business requests or record changes.",
-      "remainingWork": "Complete the original broader appointment/activity list and additional actual states; retain truthful simulation labels and final release/device/privacy acceptance.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Real appointment rows and selected status distinguish unqueued/waiting/fictional-confirmed/checking/failed states; the mounted directory preserves dates/page/focus through selection and native history. Cursors remain in memory; failed/cancelled loads clear private rows.",
+      "remainingWork": "Complete selected-inspector change, recovery/access-loss and other missing state/privacy variants; investigate retained session/held-request failures and preserve truthful simulation labels through final release/device acceptance.",
       "evidence": [
         {
-          "path": "src/app/settings/google-calendar/job-status.tsx",
-          "sha256": "5d836f19fcf9f8e489b1ee5adfa9e2f85a63382a3c6e1dd20b5634f78721db83"
+          "path": "src/app/settings/google-calendar/activity.tsx",
+          "sha256": "7ec6f859b24f1d667c059b2c91bb6ba28dda61f04493ecbf718122b94ffb165e"
         },
         {
-          "path": "planning/CALENDAR_APPOINTMENT_ACTIVITY_DESIGN.md",
-          "sha256": "b3b9589c349b86273ab21833dd08c0fc0be3565e3a515ff05262564a126b437b"
+          "path": "planning/CALENDAR_ACTIVITY_DIRECTORY_IMPLEMENTATION.md",
+          "sha256": "ec6064311f92496b24e17806456f3ffb00fd5f0b1a038cba7f6f1bbfc05270a4"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
