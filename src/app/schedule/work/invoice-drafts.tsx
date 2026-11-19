@@ -292,7 +292,9 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
         {page.hasMore && <button type="button" className="secondary" disabled={busy} onClick={()=>load(page.rows.at(-1)?.draftId)}>
           Load more drafts
         </button>}
-        {canPrepare && canChange && !editing && !pending && <button type="button" className="primary-action" disabled={busy} onClick={()=>edit(null)}>New invoice draft</button>}
+        {canPrepare && canChange && !editing && !pending && <button type="button"
+          className={openedInvoice||issuedDraft!==null&&issuedDraft===draft?.receipt.draftId?'secondary invoice-new-draft':'primary-action'}
+          disabled={busy} onClick={()=>edit(null)}>New invoice draft</button>}
       </>}
       {editing && !pending && <form onSubmit={event=>{
         event.preventDefault();save({dueOn:due || null,outcomes,cancelReason:null});
@@ -313,7 +315,7 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
         <button type="button" className="secondary" disabled={busy} onClick={()=>{setEditing(false);setScope(null);}}>Close editor</button>
       </form>}
       {!editing && draft && <section aria-label="Saved draft">
-        {openedInvoice && <section aria-label="Issued invoice"><IssuedInvoiceDetails invoice={openedInvoice}
+        {openedInvoice && <section aria-label="Issued invoice"><IssuedInvoiceDetails invoice={openedInvoice} businessId={businessId}
           receiptBusinessId={directReceipts?businessId:undefined} paymentCorrections={paymentCorrections}
           fundApplications={fundApplications} heldTips={heldTips} invoiceCredits={invoiceCredits} paidInvoiceCredits={paidInvoiceCredits} serviceRefunds={serviceRefunds}
           excessReturns={excessReturns} tipReturns={tipReturns} collectionFailures={collectionFailures} refundTransfers={refundTransfers}/></section>}

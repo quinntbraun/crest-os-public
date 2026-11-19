@@ -168,7 +168,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
    const lookup=await page.locator('.customer-lookup').boundingBox();
    const editor=await page.getByRole('form',{name:'Customer editor',exact:true}).boundingBox();
-   assert(editor&&(width>=768?lookup&&lookup.x+lookup.width<editor.x:lookup===null));
+   assert(editor);
+   if(lookup)assert(lookup.x+lookup.width<editor.x);
+   if(width<768)assert.equal(lookup,null);
+   if(width===768)assert(editor.width>=320,'The tablet record must retain readable content width.');
+   if(width===1440)assert(lookup,'A wide workspace keeps the directory beside the record.');
    const sectionButtons=await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button').all();
    const boxes=await Promise.all(sectionButtons.map(button=>button.boundingBox()));
    assert(boxes.every(box=>box&&box.height>=44));

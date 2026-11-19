@@ -605,6 +605,11 @@
       "version": "20270114180000",
       "file": "20270114180000_customer_profile.sql",
       "sha256": "4c9c3ac08e5c121f0af03bb9bbb9322501839f78af8ceaa65fee31c8efaa99c9"
+    },
+    {
+      "version": "20270115180000",
+      "file": "20270115180000_invoice_outstanding.sql",
+      "sha256": "a31c29b9e597c130ef8d14831b0edf6473e920e45aa024ba15caecaefeb91f30"
     }
   ]
 }

@@ -32,6 +32,8 @@ import {invoiceTaxJurisdiction,parseInvoiceTaxMappingApproval,parseInvoiceTaxMap
 import {parseInvoiceExemptionApproval,parseInvoiceExemptionEditor,parseInvoiceExemptionResult,parseInvoiceExemptionTarget}
  from '../bookkeeping/invoice-exemption-contract';
 import {parseInvoiceSetupRead,parseInvoiceSetupResult,parseInvoiceSetupWrite} from '../bookkeeping/invoice-setup-contract';
+import {parseInvoiceOutstanding} from '../bookkeeping/invoice-outstanding-contract';
+import {startFinanceActivity} from './finance-activity';
 import {directReceiptMatchesInput,parseDirectReceiptInput,parseDirectReceiptOptions,parseDirectReceiptTipOptions,parseDirectReceiptReference,
  parseDirectReceiptResult} from '../bookkeeping/direct-receipt-contract';
 import {parseServiceRefundCredits,parseServiceRefundInput,parseServiceRefundOptions,parseServiceRefundReference,parseServiceRefundResult,
@@ -102,7 +104,7 @@ import {parseOpeningArInput,verifyOpeningArPreview} from '../bookkeeping/opening
 import type {OpeningArInput} from '../bookkeeping/opening-receivables-preview';
 import {parseOpeningArOperation,parseOpeningArSave,parseOpeningArStored} from '../bookkeeping/opening-receivables-schedule-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;openingWorksheet?:boolean;openingArPreview?:boolean;statementStaging?:boolean;statementMatchReview?:boolean;statementMatchDrafts?:boolean;supplierBillDrafts?:boolean;supplierPayableReview?:boolean;supplierPayablePosting?:boolean;supplierOriginalUploads?:boolean;supplierPayableReports?:boolean;recordedIncomeStatement?:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;openingWorksheet?:boolean;openingArPreview?:boolean;statementStaging?:boolean;statementMatchReview?:boolean;statementMatchDrafts?:boolean;supplierBillDrafts?:boolean;supplierPayableReview?:boolean;supplierPayablePosting?:boolean;supplierOriginalUploads?:boolean;supplierPayableReports?:boolean;recordedIncomeStatement?:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;invoiceOutstanding?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
@@ -132,6 +134,8 @@ const channelFailure=[...knownFailure,'FINANCE_CHANNEL_VERSION_CONFLICT','FINANC
  'FINANCE_CHANNEL_ACCOUNT_REQUIRED','FINANCE_CHANNEL_ACCOUNT_PINNED','FINANCE_CHANNEL_IDENTITY_RETAINED'] as const;
 
 async function post(route:string,body:object,signal:AbortSignal,binding?:string,existingProof?:Proof){
+ const finish=route==='context'||route==='invoice-outstanding'?()=>{}:startFinanceActivity();
+ try{
  const bounded=AbortSignal.any([signal,AbortSignal.timeout(40000)]),proof=existingProof??await authentication.session(bounded);
  check(!bounded.aborted&&bindingPattern.test(proof.csrfToken)&&proof.expiresAt>Date.now());
  const response=await fetch('/api/business/finance-accounts/'+route,{
@@ -174,6 +178,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   invoiceDrafts:response.headers.get('x-crest-invoice-drafts')==='1',
   invoiceIssueTaxReview:response.headers.get('x-crest-invoice-issue-tax-review')==='1',
   invoiceIssue:response.headers.get('x-crest-invoice-issue')==='1',
+  invoiceOutstanding:response.headers.get('x-crest-invoice-outstanding')==='1',
   directReceipts:response.headers.get('x-crest-direct-receipts')==='1',
   excessReceipts:response.headers.get('x-crest-excess-receipts')==='1',
   excessReturns:response.headers.get('x-crest-excess-returns')==='1',
@@ -195,6 +200,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   customerFundsReport:response.headers.get('x-crest-customer-funds-report')==='1',
   sameDayExpenses:response.headers.get('x-crest-same-day-expenses')==='1',
   trialBalance:response.headers.get('x-crest-trial-balance')==='1'};
+ }finally{finish();}
 }
 
 async function submitSupplierPosting(context:FinanceAccountContext,route:'supplier-payable-accrual'|'supplier-payable-settlement',
@@ -213,7 +219,7 @@ async function submitSupplierPosting(context:FinanceAccountContext,route:'suppli
 
 export const financeAccounts={
  async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,openingWorksheet,openingArPreview,statementStaging,statementMatchReview,statementMatchDrafts,supplierBillDrafts,supplierPayableReview,supplierPayablePosting,supplierOriginalUploads,supplierPayableReports,recordedIncomeStatement,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,collectionFailureTipReinstatements,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
+  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,openingWorksheet,openingArPreview,statementStaging,statementMatchReview,statementMatchDrafts,supplierBillDrafts,supplierPayableReview,supplierPayablePosting,supplierOriginalUploads,supplierPayableReports,recordedIncomeStatement,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,invoiceOutstanding,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,collectionFailureTipReinstatements,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
@@ -228,7 +234,7 @@ export const financeAccounts={
    ...(moneyChannels&&supplierBillDrafts?{supplierBillDrafts}:{}),
    ...(moneyChannels&&supplierBillDrafts&&supplierPayableReview?{supplierPayableReview}:{}),
    ...(openingWorksheet&&openingArPreview?{openingArPreview}:{}),
-   ...(invoiceIssue?{invoiceIssue}:{}),...(directReceipts?{directReceipts}:{}),...(directReceipts&&excessReceipts?{excessReceipts}:{}),
+   ...(invoiceIssue?{invoiceIssue}:{}),...(invoiceIssue&&invoiceOutstanding?{invoiceOutstanding}:{}),...(directReceipts?{directReceipts}:{}),...(directReceipts&&excessReceipts?{excessReceipts}:{}),
    ...(directReceipts&&excessReceipts&&excessReturns?{excessReturns}:{}),
    ...(excessReturns&&tipReturns?{tipReturns}:{}),
    ...(tipReturns&&trialBalance&&collectionFailures?{collectionFailures}:{}),
@@ -493,6 +499,12 @@ export const financeAccounts={
   const {status,value}=await post('expense-post-retire',{reference:parseSameDayExpenseReference(reference),reviewEpoch:context.recoveryEpoch,reason},signal,context.binding);
   check(status===200||status===409);
   return parseSameDayExpenseResult(value,context.businessId,reference);
+ },
+ async invoiceOutstanding(context:FinanceAccountContext,customerId:string,invoiceId:string,signal:AbortSignal){
+  check(context.invoiceOutstanding&&customerUuid(customerId)&&customerUuid(invoiceId));
+  const {status,value}=await post('invoice-outstanding',{customerId,invoiceId},signal,context.binding);
+  check(status===200);
+  return parseInvoiceOutstanding(value,context.businessId,customerId,invoiceId);
  },
  async directReceiptOptions(context:FinanceAccountContext,customerId:string,actualOn:string|null,signal:AbortSignal){
   check(context.directReceipts&&customerUuid(customerId)&&(actualOn===null||customerDate(actualOn)));

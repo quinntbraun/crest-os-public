@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-19T14:08:44.783Z",
+  "assessedAt": "2026-11-19T16:52:40.589Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "371f39c5b1603e285901243a5e86656f469df7a2",
-    "publishedCommit": "7b8d20d2c79767938a5c391acaa776f524a83a61",
-    "publishedTree": "c59806707487860d0d1804de8f58f7b6bd306a79",
-    "localTree": "17d08dd6a56e07e43da979372b2e7ceb6b2d2dda"
+    "localCommit": "482964dec65cef90f295c912cf938ddc50d4930c",
+    "publishedCommit": "153aee67fb4105b979a6fa4e976c1ce74639dbe1",
+    "publishedTree": "bac0e641a70311152d185efbd7f12f4aa314e6b8",
+    "localTree": "117e3a6ac810bbfede9f534f4518bacb3b32f38f"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -27,12 +27,12 @@
     "destinations": 36,
     "deeperWorkflows": 20,
     "counts": {
-      "locally_addressed": 39,
-      "partial": 29,
+      "locally_addressed": 40,
+      "partial": 28,
       "open": 2,
       "review_needed": 0
     },
-    "mainLocalChangesAddressedPercent": 55.7,
+    "mainLocalChangesAddressedPercent": 57.1,
     "auditComplete": false,
     "finalSignOffClaimed": false
   },
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "2a978ecb6e62c43375803cb088cc884a8496953489b5d9ad16a6bce1e204e79d"
+          "sha256": "e80e3e54c205d09b8f1d45c21f7ed57c63df6ab917ea8f584e2d993795646eb3"
         }
       ],
       "verification": {
@@ -77,7 +77,7 @@
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
-          "sha256": "113852aca5ed2def91c3f2372595a86aabb6776fcc5aeecb8ed0224465909606"
+          "sha256": "77ea9cd1fb215797e89166bea87d6a02b085c3dd9575c7371ad4b44f3ec46863"
         }
       ],
       "verification": {
@@ -173,7 +173,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "085a1899bbe778d1558429ad3d13aab791245c9a23da896570481bb1bc90737c"
+          "sha256": "c7b271849aadeef05d6ed70744edd33ae754f6b543dbf0de4469aa6550cf984f"
         }
       ],
       "verification": {
@@ -245,7 +245,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "085a1899bbe778d1558429ad3d13aab791245c9a23da896570481bb1bc90737c"
+          "sha256": "c7b271849aadeef05d6ed70744edd33ae754f6b543dbf0de4469aa6550cf984f"
         }
       ],
       "verification": {
@@ -265,7 +265,7 @@
       "evidence": [
         {
           "path": "src/app/globals.css",
-          "sha256": "5d8273ce2345c988041cf954c1418b8a9e834c586823a8b6b0154b351a101a51"
+          "sha256": "1c002a2ebb11f74a8d6780796520ba82cc7cf5575954071750859acf6f7eaaad"
         },
         {
           "path": "planning/CREST_DESIGN_SYSTEM.md",
@@ -365,7 +365,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "2a978ecb6e62c43375803cb088cc884a8496953489b5d9ad16a6bce1e204e79d"
+          "sha256": "e80e3e54c205d09b8f1d45c21f7ed57c63df6ab917ea8f584e2d993795646eb3"
         }
       ],
       "verification": {
@@ -472,8 +472,8 @@
       "title": "P1 · Customer directory (/customers)",
       "requirements": "Observed: The unselected directory occupies a narrow panel and leaves most of the desktop blank. Search, creation and archived filtering compete in the same box.\n\nDirection: Separate a compact directory toolbar from the results. Give the empty inspector a purposeful introduction and safe existing actions. Standardize the selected customer profile across overview, vehicles, visits, payments and history.\n\nDesktop: Use a stable list/inspector split; keep the selected row and search position when closing a record.\n\nPhone: The current source already switches to a focused phone profile with Back to customers. Preserve that behavior and verify search, selection and focus restoration.\n\nAcceptance: Search, archive visibility, selection and Back survive navigation without exposing records after sign-out.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/customers-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Directory toolbar, purposeful unselected inspector, stable selected-record layout and phone Back are present.",
-      "remainingWork": "Revalidate all profile sections, sign-out and navigation states at the final release.",
+      "implementedOrPresent": "The directory, focused record, Back navigation and available-width tablet layout are implemented. Actual five-width long-content history stress passes2/2 and complete genuine customer/vehicle/dashboard roots pass4/4 in Chromium/WebKit, with204 fresh captures, unchanged-source comparison and owned cleanup.",
+      "remainingWork": "Revalidate remaining profile sections, state/zoom/sign-out/navigation variants and matching hosted, installed and physical-device acceptance on the final release.",
       "evidence": [
         {
           "path": "src/app/customers/customers.tsx",
@@ -481,7 +481,19 @@
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
-          "sha256": "113852aca5ed2def91c3f2372595a86aabb6776fcc5aeecb8ed0224465909606"
+          "sha256": "77ea9cd1fb215797e89166bea87d6a02b085c3dd9575c7371ad4b44f3ec46863"
+        },
+        {
+          "path": "src/app/globals.css",
+          "sha256": "1c002a2ebb11f74a8d6780796520ba82cc7cf5575954071750859acf6f7eaaad"
+        },
+        {
+          "path": "tests/integration/review-browser.test.mjs",
+          "sha256": "0f8edf5637302612ae3ce4a64e82c10a55122444410e5c24ec0fd31cd9d59a0c"
+        },
+        {
+          "path": "tests/integration/workspace-journey-browser.test.mjs",
+          "sha256": "ea50ddce28eecc4b47642759a823355b5c5353500e36fc87272b1e887a9a7185"
         }
       ],
       "verification": {
@@ -953,7 +965,7 @@
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
-          "sha256": "113852aca5ed2def91c3f2372595a86aabb6776fcc5aeecb8ed0224465909606"
+          "sha256": "77ea9cd1fb215797e89166bea87d6a02b085c3dd9575c7371ad4b44f3ec46863"
         }
       ],
       "verification": {
@@ -1193,7 +1205,7 @@
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
-          "sha256": "113852aca5ed2def91c3f2372595a86aabb6776fcc5aeecb8ed0224465909606"
+          "sha256": "77ea9cd1fb215797e89166bea87d6a02b085c3dd9575c7371ad4b44f3ec46863"
         }
       ],
       "verification": {
@@ -1511,22 +1523,130 @@
       "section": "Deeper workflows",
       "title": "Issued invoice",
       "requirements": "The issued document, new-draft action, payment disclosure and draft history need clearer separation. Lead with invoice number, status, due date and outstanding amount, using only verified values. Give the immutable document its own reading surface.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-invoice-issue-product-chromium-390.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Immutable issued document, number/dates/original total, distinct payment tasks and disclosed draft history are implemented.",
-      "remainingWork": "A verified invoice-scoped outstanding header remains to implement/review; payment choices are date-scoped and are not a typed zero-balance result. The original total must not be used as a guessed balance.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "The private checked outstanding header, original issued document and financial task hierarchy are implemented. Registered122/populated121/restored capability and grant proof passes10/10. Basic invoice2/2 and complete adjustment/export2/2 are separate genuine Chromium/WebKit runs. Desktop/phone launchers derive availability from the adopted private reader; reviewed schema122 retains109 posting vocabulary and unknown123 is rejected. No installed or full-row acceptance is claimed.",
+      "remainingWork": "Complete remaining supplier-posting overlap and state/zoom/privacy coverage, matching hosted and installed release, complete business recovery and physical-device acceptance. Main local implementation is addressed; full audit-row sign-off remains false.",
       "evidence": [
         {
           "path": "src/app/schedule/work/invoice-issue-tax-review.tsx",
-          "sha256": "063001bd08815e8c0bdc6dbc9bf07b62af6704db1d11a633fc1446d0f4582d35"
+          "sha256": "06db47224a82c4b21b3cd9714f779a3653104df698a3e3aab0709195f704e23b"
+        },
+        {
+          "path": "planning/INVOICE_OUTSTANDING_HEADER.md",
+          "sha256": "5a1129288a4ac48712669997ac8bfdb75e701aa929d23269a53885a833176e8b"
         },
         {
           "path": "planning/ISSUED_INVOICE_DESIGN.md",
           "sha256": "c6905f8c0d764fda0568313be5fd8727608429ec06655dacd074a6b0a49c07ed"
+        },
+        {
+          "path": "planning/proposals/invoice-outstanding-read.sql",
+          "sha256": "a31c29b9e597c130ef8d14831b0edf6473e920e45aa024ba15caecaefeb91f30"
+        },
+        {
+          "path": "src/bookkeeping/invoice-outstanding-contract.ts",
+          "sha256": "dbece9c521270bd54d1a620773fa964c65ee51bd72a2f441d23464b619d5d2b3"
+        },
+        {
+          "path": "src/bookkeeping/finance-account-http.ts",
+          "sha256": "a42c55e5d08d12dff8989b6f7e6540446a403e46a030eaed683ff6806aec626f"
+        },
+        {
+          "path": "src/client/finance-accounts.ts",
+          "sha256": "5953d1f8d8ec21ccd0b9e62e42a0e4d1bf175a78f41154ab1f56d7d4639701aa"
+        },
+        {
+          "path": "src/client/finance-activity.ts",
+          "sha256": "3c9f7fb53f706a8e3b36df684900f8ea9f98a8ac03bcf4dfe24cc8107f195e8d"
+        },
+        {
+          "path": "src/app/schedule/work/invoice-outstanding.tsx",
+          "sha256": "d348e0c860aea277160772c7b8590d66442c182058258ec67fa1b8a0f8a48e19"
+        },
+        {
+          "path": "src/app/schedule/work/invoice-drafts.tsx",
+          "sha256": "cc8c4964d123b313b795d3baecfd48ed9865062a603743de483c49176b859acc"
+        },
+        {
+          "path": "src/app/globals.css",
+          "sha256": "1c002a2ebb11f74a8d6780796520ba82cc7cf5575954071750859acf6f7eaaad"
+        },
+        {
+          "path": "supabase/migrations/20270115180000_invoice_outstanding.sql",
+          "sha256": "a31c29b9e597c130ef8d14831b0edf6473e920e45aa024ba15caecaefeb91f30"
+        },
+        {
+          "path": "tests/integration/invoice-outstanding.test.mjs",
+          "sha256": "b30f97ee264e234c4949e1d5a54c01a42b3bf80a7376d7217a622df0a9702190"
+        },
+        {
+          "path": "tests/integration/invoice-outstanding-recovery.test.mjs",
+          "sha256": "f39d4aa7b38b5b44fabe6392a9933f4514cb6f10a29c8b8c9b205509d55e88e7"
+        },
+        {
+          "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
+          "sha256": "3b2a1c7164902b49397b26cff7bf9aaf711bea3db2f028554499c455973530cc"
+        },
+        {
+          "path": "tests/unit/invoice-outstanding-contract.test.ts",
+          "sha256": "39e333ea1ed4b52f731246db0200fa74630dca71660853c80b488326aff3d7bc"
+        },
+        {
+          "path": "tests/unit/invoice-outstanding-client.test.ts",
+          "sha256": "7962234199468bc214a5c8cb9242f228274a189cd2386eccd454d2f1ef8e4b5a"
+        },
+        {
+          "path": "tests/unit/invoice-outstanding-http.test.ts",
+          "sha256": "b13922995b83c30e1ae6b3a750ba98519a7eaf2f83b47de2a173ff7c0b6d753e"
+        },
+        {
+          "path": "tests/unit/finance-activity.test.ts",
+          "sha256": "bfed0bffacfd0735d2d38185e91a550d89d6c4c6a22348bff23b027106f620a5"
+        },
+        {
+          "path": "tests/unit/invoice-outstanding-adoption.test.ts",
+          "sha256": "9038f5de36860bd88991036d98d95897e1285296255403bf5bfc20b5bc8a416e"
+        },
+        {
+          "path": "tests/support/confirmed-booking-fixture.mjs",
+          "sha256": "a8cf66e5fe75db5d14878525ac29fcd8c7a05381011fa2767697adbe613ceea8"
+        },
+        {
+          "path": "tests/support/invoice-outstanding-fixture.mjs",
+          "sha256": "63e7b3ade5b00a1098fd15dd1451584991b52c0bc9ce514e32368c63b1e2e041"
+        },
+        {
+          "path": "tests/support/recovery-drill.mjs",
+          "sha256": "6a2cab7a405bf88bcb1bb5f0fb49a451e3cb37ca8e90bd3e38339f921ae58588"
+        },
+        {
+          "path": "scripts/synthetic-migrations.mjs",
+          "sha256": "a46579522f76cf1b6e1cc2ccc391f5edaed430ffc06781f7169cfc80a39a4c86"
+        },
+        {
+          "path": "scripts/synthetic-workspace.mjs",
+          "sha256": "754b508d622aff8b056a298c9264263194bb2d98e24418ba5fd5ca60352df815"
+        },
+        {
+          "path": "scripts/synthetic-phone-preview.mjs",
+          "sha256": "f2927f3543ae43d1366f234752b56ad0d6c7cc6ce080647fba7b87e70f87389c"
+        },
+        {
+          "path": "src/bookkeeping/finance-posting-schema.ts",
+          "sha256": "1512810b73d8fd78a39d6f015e808f23b77082d7a02f2f54f9b87d215a489789"
+        },
+        {
+          "path": "src/server/node-server.ts",
+          "sha256": "8bdf44d1d500267804c89d4d1da29f95651a02f2aebb098c1864c827a0e3a346"
+        },
+        {
+          "path": "tests/unit/node-server.test.ts",
+          "sha256": "7dfa9eb6a2e60e3da0ff23bb75ffb7045b19e5bcd125f8d252fcc148cdfe4aa1"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },

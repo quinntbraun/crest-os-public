@@ -6,15 +6,15 @@ This inventory reconciles all 70 original groups: 14 shared findings, 36 destina
 
 | Local implementation review | Groups |
 |---|---:|
-| Main change locally addressed | 39 |
-| Partial implementation or required review | 29 |
+| Main change locally addressed | 40 |
+| Partial implementation or required review | 28 |
 | Open audit work | 2 |
 | Review required before choosing changes | 0 |
 | Total | 70 |
 
-39/70, or 55.7%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 55.7% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 29 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
+40/70, or 57.1%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 57.1% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 28 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
 
-The audit is **not finished**. Each row has remaining implementation or verification. Full current-source/state, delivered-build and physical iPhone acceptance is not established. The earlier roughly 80% figure is a low-confidence V1 coding estimate and is not the audit percentage. This inventory does not reduce the broader goal: complete this audit and then all unfinished approved V1 functionality, including P16/P17, native files, recoverable backups, preserved upgrades and owner/device readiness.
+The audit is **not finished**. Each row has remaining implementation or verification. Full current-source/state, delivered-build and physical iPhone acceptance is not established. The earlier roughly 80% figure is a low-confidence V1 coding estimate and is not the audit percentage. The active objective is to complete all 70 original audit groups. Approved V1 business-use, recovery, upgrade, release and owner/device gates remain separate requirements and are not waived by this inventory.
 
 ## How to read the rows
 
@@ -44,7 +44,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | R02 | Today (/) | Partial | Reconcile compact empty queues and wide agenda/attention composition for scheduled, active, overdue-only and partial reads. |
 | R03 | Customer addresses (/addresses) | Main change addressed | Fresh release/device and broader state review remain; saved quote address snapshots must stay immutable. |
 | R04 | Appointment proposals (/appointment-holds) | Partial | Reconcile empty-state hierarchy and configured unconfirmed/withdrawn/confirmed phone/desktop presentations. |
-| R05 | Customer directory (/customers) | Main change addressed | Revalidate all profile sections, sign-out and navigation states at the final release. |
+| R05 | Customer directory (/customers) | Main change addressed | Revalidate remaining profile sections, state/zoom/sign-out/navigation variants and matching hosted, installed and physical-device acceptance on the final release. |
 | R06 | Contact CSV review (/customers/import-review) | Partial | Investigate retained provider verification failures using safe actual error categories without retries or relaxed security/deadlines; complete remaining state/zoom/private/device/release review. Loaded faces and actual Chromium glyph fonts are verified on inspected CSV content. |
 | R07 | Expenses (/expenses) | Partial | Finish every loaded/empty/loading/denied/uncertain/invalid-file variant and real format/device acceptance. |
 | R08 | Business data exports (/export-files) | Partial | Finish export-center distinctions, selected request composition and equivalent capability/data states; never imply partial equals complete. |
@@ -88,7 +88,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | D10 | Income statement | Main change addressed | Fresh full-head/all relevant state and delivered/device verification remain. |
 | D11 | Receivables aging | Main change addressed | Finish long/truncated/empty/error/private-clearing/zoom variants and fresh full-release/installed/physical-device acceptance. |
 | D12 | Customer funds | Main change addressed | Fresh full-head and long/truncated/delivery/device variants remain. |
-| D13 | Issued invoice | Partial | A verified invoice-scoped outstanding header remains to implement/review; payment choices are date-scoped and are not a typed zero-balance result. The original total must not be used as a guessed balance. |
+| D13 | Issued invoice | Main change addressed | Complete remaining supplier-posting overlap and state/zoom/privacy coverage, matching hosted and installed release, complete business recovery and physical-device acceptance. Main local implementation is addressed; full audit-row sign-off remains false. |
 | D14 | Payment correction | Main change addressed | Other correction/history/stale states and fresh full-head acceptance remain; no invented cash or total balance. |
 | D15 | Statement staging | Main change addressed | Other account-identity/long-value/state and installed/device acceptance remain; staging never means reconciliation. |
 | D16 | Supplier bills | Main change addressed | Complete remaining state/long-value/native-original-format variants and fresh release/installed/physical-device acceptance. |
@@ -99,7 +99,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 ## Next sequence
 
-1. Investigate the retained CSV user-verification HTTP500 with safe actual error categories; complete remaining state review; actual Chromium glyph-font evidence is retained for inspected CSV content. Final-width seven-parent browser acceptance passes, but is not a cause/cure for earlier failures. Preserve the original failed historical54 CI schema comparison; focused25/25 and observed369/369 local passes do not prove a cause/cure or release acceptance. No login retry, deadline/freshness weakening or blind CI retry.
+1. D13 main implementation has10/10 native launcher/upgrade/recovery proof, separate2/2 basic and2/2 complete adjustment/export pairs, and4/4 genuine customer/vehicle/dashboard regression. Publish the exact verified source after all PR/run/privacy guards, then apply and verify R31 approval history beside proposed dates on desktop and sequentially on phones. Continue all 70 groups and every remaining acceptance gate. Investigate the retained CSV user-verification HTTP500 with safe actual error categories; complete remaining state review; actual Chromium glyph-font evidence is retained for inspected CSV content. Final-width seven-parent browser acceptance passes, but is not a cause/cure for earlier failures. Preserve the original failed historical54 CI schema comparison; focused25/25 and observed369/369 local passes do not prove a cause/cure or release acceptance. No login retry, deadline/freshness weakening or blind CI retry.
 2. Finish remaining Calendar paused/recovery/privacy states and investigate original session/held-request failures; actual selected-change and cookie-loss recovery journeys pass in both engines; preserve actual reschedule refusal, bounded directory, pagination/return and quote reading modes.
 3. Complete remaining report/state/stress variants; the wide receivables date/load width is verified in both complete configured invoice journeys; preserve completed four-report and planner/context-return evidence. Continue every remaining original page/workflow refinement.
 4. Complete state/zoom/long-value/privacy verification and the unchanged full-release, upgrade, restore and physical-device gates. Reconcile every row before claiming audit completion.

@@ -435,6 +435,21 @@ export async function syntheticCustomerProfileAvailable(connectionString){
   'SYNTHETIC_CUSTOMER_PROFILE_REQUIRED','20270114180000');
 }
 
+export async function syntheticInvoiceOutstandingAvailable(connectionString){
+ const client=new pg.Client({connectionString,connectionTimeoutMillis:5000,statement_timeout:5000});
+ const signature='crest_commands.read_fictional_invoice_outstanding(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid)';
+ try{
+  await client.connect();
+  const {rows:[capability]}=await client.query(`SELECT
+   EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version=$1) AS adopted,
+   coalesce(has_function_privilege('crest_finance_preview',to_regprocedure($2),'EXECUTE')
+    AND NOT has_function_privilege('crest_web',to_regprocedure($2),'EXECUTE')
+    AND NOT has_function_privilege('crest_export',to_regprocedure($2),'EXECUTE'),false) AS granted`,
+   ['20270115180000',signature]);
+  return capability?.adopted===true&&capability.granted===true;
+ }finally{await client.end();}
+}
+
 async function optionalSyntheticReader(connectionString,signatures,missing,version){
  try{await requireSyntheticReader(connectionString,signatures,missing,version);return true;}
  catch(error){if(error instanceof assert.AssertionError&&error.message===missing)return false;throw error;}

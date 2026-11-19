@@ -14,6 +14,7 @@ import {reviewAccountingReportWorkspace} from '../support/accounting-report-work
 import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
 
 const directReceipts=true;
+const invoiceOutstanding=true;
 const paymentCorrections=process.env.CREST_TEST_PAYMENT_CORRECTIONS==='1';
 const fundApplications=process.env.CREST_TEST_FUND_APPLICATIONS==='1';
 const heldTips=process.env.CREST_TEST_HELD_TIPS==='1';
@@ -37,7 +38,7 @@ const postedFinanceSchemaVersion=collectionFailureGroupedRecreditExport?100:coll
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async t=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
-  financeAccounts:true,financeMappings:true,financeTaxProfiles:true,invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,
+  financeAccounts:true,financeMappings:true,financeTaxProfiles:true,invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,invoiceOutstanding,
   financeMoneyChannels:directReceipts,directReceipts,...paymentCorrections?{
    expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,postedFinanceExport,
   }:{}});
@@ -230,7 +231,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      await check.press('Enter');
      const invoice=saved.getByRole('region',{name:'Issued invoice',exact:true});
      await expect(invoice.getByRole('heading',{name:'Invoice TEST-1'})).toBeVisible();
-     await expect(invoice.getByRole('status')).toHaveText('Issued invoice loaded.');
+     await expect(invoice.locator(':scope > [role="status"]')).toHaveText('Issued invoice loaded.');
      await expect(invoice).toContainText('Included tax');
      assert.equal(submitCount,1);
      await expect(saved.getByRole('button',{name:'Edit draft',exact:true})).toHaveCount(0);
@@ -248,6 +249,57 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      const draftEvidence=saved.locator('details.invoice-draft-evidence');await expect(draftEvidence).toHaveCount(1);assert.equal(await draftEvidence.evaluate(element=>element.open),false);
      await expect(drafts.getByRole('button',{name:'Load saved drafts',exact:true})).toBeEnabled();
      const financialFacts=async()=>{const result={};for(const table of ['invoices','journal_entries','journal_lines'])result[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM crest.'+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;result.audit=(await fixture.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[fixture.business])).rows;return result;};
+     const outstanding=invoice.getByRole('region',{name:'Invoice outstanding balance',exact:true});
+     async function checkOutstanding(cents){
+      await allowInvoiceReadWindow();
+      await outstanding.getByRole('button',{name:/^Check balance(?: again)?$/}).press('Enter');
+      await expect(outstanding.getByRole('status')).toHaveText('Balance checked. Check again after payments or adjustments.');
+      await expect(outstanding.locator('strong')).toHaveText(new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(cents)/100));
+      await expect(outstanding.locator('.invoice-outstanding-value > span')).toHaveText(cents==='0'?'Nothing due':'Outstanding');
+      await expect(outstanding.locator('.invoice-outstanding-checked')).toContainText('Through ');
+      await expect(outstanding.locator('.invoice-outstanding-checked')).toContainText('Checked ');
+     }
+     if(invoiceOutstanding){
+      const beforeBalance=await financialFacts();
+      await expect(outstanding).toContainText('Outstanding not checked');await expect(outstanding.locator('strong')).toHaveCount(0);
+      await checkOutstanding('25000');assert.deepEqual(await financialFacts(),beforeBalance);
+      const changedInvoice=async route=>{const response=await route.fetch();const value=await response.json();await route.fulfill({response,json:{...value,invoiceNumber:'CHANGED-1'}});};
+      await page.route('**/api/business/finance-accounts/invoice-outstanding',changedInvoice);
+      try{await outstanding.getByRole('button',{name:'Check balance again',exact:true}).click();
+       await expect(outstanding.getByRole('status')).toHaveText('The balance could not be verified. Try checking again.');
+       await expect(outstanding.locator('strong')).toHaveCount(0);
+      }finally{await page.unroute('**/api/business/finance-accounts/invoice-outstanding',changedInvoice);}
+      await checkOutstanding('25000');
+      for(const width of [360,390,768,1440,1920]){
+       await page.setViewportSize({width,height:900});await outstanding.scrollIntoViewIfNeeded();
+       if(width===1440){
+        await page.evaluate(async()=>{await document.fonts.ready;});
+        const fonts=await page.evaluate(()=>({faces:[...document.fonts].filter(face=>face.family.includes('IBM Plex')).map(face=>({family:face.family,weight:face.weight,status:face.status}))}));
+        if(name==='chromium'){
+         const session=await context.newCDPSession(page);
+         try{await session.send('DOM.enable');await session.send('CSS.enable');const {root}=await session.send('DOM.getDocument');fonts.platform=[];
+          for(const selector of ['.issued-invoice-heading h4','.invoice-outstanding-value > strong','.invoice-outstanding > button']){
+           const {nodeId}=await session.send('DOM.querySelector',{nodeId:root.nodeId,selector});assert(nodeId);
+           const result=await session.send('CSS.getPlatformFontsForNode',{nodeId});fonts.platform.push({selector,fonts:result.fonts.map(font=>({family:font.familyName,name:font.postScriptName,custom:font.isCustomFont,glyphs:font.glyphCount}))});
+          }
+         }finally{await session.detach();}
+        }
+        await writeFile('.local/review/invoice-outstanding-fonts-'+name+'.json',JSON.stringify(fonts,null,2)+'\n');
+        assert(fonts.faces.length>=2&&fonts.faces.every(face=>face.status==='loaded'));
+        if(fonts.platform)assert(fonts.platform.every(row=>row.fonts.length&&row.fonts.every(font=>font.custom&&/^IBMPlexSans/.test(font.name))),'Invoice heading, amount and action use the bundled workspace font.');
+       }
+       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+       assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(issue=>issue.id),[]);
+       await page.screenshot({path:'.local/review/invoice-outstanding-unpaid-'+name+'-'+width+'.png'});
+      }
+      await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
+      await expect(outstanding).toHaveCount(0);
+      await allowInvoiceReadWindow();await page.reload();await draftDisclosure.click();
+      await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+      await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');await openOriginalDraft.click();
+      await expect(draftStatus).toHaveText('Issued invoice loaded.');await expect(outstanding).toContainText('Outstanding not checked');
+      await checkOutstanding('25000');
+     }
      const beforeInvoiceNavigation=await financialFacts();let navigationRequests=0;const trackInvoiceNavigation=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))navigationRequests++;};page.on('request',trackInvoiceNavigation);
      try{
       await draftEvidence.locator(':scope > summary').press('Enter');await expect(draftEvidence.getByRole('button',{name:'Download draft (CSV)',exact:true})).toBeVisible();
@@ -329,6 +381,22 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
       await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
       await expect(payments.getByLabel(/Invoice TEST-1/)).toBeVisible();
       await expect(payments).toContainText('$150.00 due');
+      if(invoiceOutstanding){
+       await expect(outstanding.locator('strong')).toHaveCount(0);
+       await checkOutstanding('15000');
+       const beforeFailedRead=await financialFacts();
+       const failedBalance=route=>route.abort('failed');await page.route('**/api/business/finance-accounts/invoice-outstanding',failedBalance);
+       try{await outstanding.getByRole('button',{name:'Check balance again',exact:true}).click();
+        await expect(outstanding.getByRole('status')).toHaveText('The balance could not be verified. Try checking again.');
+        await expect(outstanding.locator('strong')).toHaveCount(0);
+       }finally{await page.unroute('**/api/business/finance-accounts/invoice-outstanding',failedBalance);}
+       assert.deepEqual(await financialFacts(),beforeFailedRead);await checkOutstanding('15000');
+       for(const width of [360,390,768,1440,1920]){await page.setViewportSize({width,height:900});await outstanding.scrollIntoViewIfNeeded();
+        assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+        assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(issue=>issue.id),[]);
+        await page.screenshot({path:'.local/review/invoice-outstanding-partial-'+name+'-'+width+'.png'});
+       }
+      }
       for(const width of [360,390,768,1440]){
        await page.setViewportSize({width,height:900});
        await payments.evaluate(element=>element.scrollIntoView({block:'center'}));
@@ -336,6 +404,23 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
        assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
        await page.screenshot({path:'.local/review/finance-direct-receipt-'+name+'-'+width+'.png'});
+      }
+      if(invoiceOutstanding&&!paymentCorrections&&!applyReceiptFunds){
+       await allowInvoiceReadWindow();
+       await payments.getByLabel(/Invoice TEST-1/).fill('150.00');
+       await payments.getByLabel('How you verified the payment').fill('Fictional final settlement verified');
+       await payments.getByRole('button',{name:'Record payment',exact:true}).press('Enter');
+       await expect(payments.getByRole('status')).toHaveText('Payment recorded.');
+       await expect(outstanding.locator('strong')).toHaveCount(0);await checkOutstanding('0');
+       await expect(outstanding).not.toContainText('Paid');
+       for(const width of [360,390,768,1440,1920]){await page.setViewportSize({width,height:900});await outstanding.scrollIntoViewIfNeeded();
+        assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+        assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(issue=>issue.id),[]);
+        await page.screenshot({path:'.local/review/invoice-outstanding-nothing-due-'+name+'-'+width+'.png'});
+       }
+       await context.clearCookies();await outstanding.getByRole('button',{name:'Check balance again',exact:true}).press('Enter');
+       await expect(outstanding.getByRole('link',{name:'Sign in again',exact:true})).toBeVisible();
+       await expect(outstanding.locator('strong')).toHaveCount(0);
       }
       if(applyReceiptFunds){
        await allowInvoiceReadWindow();
@@ -462,6 +547,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        await invoice.getByText('Record a fictional payment',{exact:true}).click();
        await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
        await expect(payments).toContainText('$175.00 due');
+       if(invoiceOutstanding)await checkOutstanding('17500');
        if(fundApplications){
         await allowInvoiceReadWindow();
         await invoice.getByText('Apply customer funds',{exact:true}).press('Enter');
@@ -723,6 +809,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await invoice.getByText('Record a fictional payment',{exact:true}).click();
         await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
         await expect(payments).toContainText('$149.00 due');
+        if(invoiceOutstanding)await checkOutstanding('14900');
        }
        if(paidInvoiceCredits){
         if(receivableAging){
@@ -833,6 +920,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
         await expect(payments.getByRole('status')).toHaveText('This customer has no outstanding invoices for that date.');
         await expect(payments).not.toContainText('TEST-1 ·');
+        if(invoiceOutstanding){
+         await checkOutstanding('0');await expect(outstanding).not.toContainText('Paid');
+         for(const width of [360,390,768,1440,1920]){await page.setViewportSize({width,height:900});await outstanding.scrollIntoViewIfNeeded();
+          assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+          assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(issue=>issue.id),[]);
+          await page.screenshot({path:'.local/review/invoice-outstanding-credited-'+name+'-'+width+'.png'});
+         }
+        }
         if(serviceRefunds){
          await allowInvoiceReadWindow();
          await invoice.getByText('Record a settled refund',{exact:true}).press('Enter');
@@ -876,6 +971,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          const refundDownload=page.waitForEvent('download');
          await refund.getByRole('button',{name:'Download refund record (CSV)',exact:true}).click();
          assert.match(await readFile(await (await refundDownload).path(),'utf8'),/"500","Fictional bank debit settled","Fictional service refund confirmed"/);
+         if(invoiceOutstanding)await checkOutstanding('0');
         }
        }
        await page.goto(fixture.origin+'/settings/accounts');
