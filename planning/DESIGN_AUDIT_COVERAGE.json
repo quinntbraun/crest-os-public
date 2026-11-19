@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-18T22:58:18.818Z",
+  "assessedAt": "2026-11-19T07:08:55.771Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "88093613c66de34a656e9b40d1a2aaec1fdef653",
-    "publishedCommit": "412a46cf66ca14d7e812abd835bdbdf80f56cb93",
-    "publishedTree": "556c5b8b3adac0d015eb3726d8cb94ff69aa6509",
-    "localTree": "27c55af61b8129bfa28af4acd72361b59434d5a9"
+    "localCommit": "16dad74356533f78b00c7e9eb49953d7601885e3",
+    "publishedCommit": "d553bd028ec7220b6fa2c223aab7a6f5eb024e39",
+    "publishedTree": "aa60f4a1006a5eb92e02f07ef55306cec992bf96",
+    "localTree": "0b37eaffddf4be6b69fdc27163202a15ac60b3cf"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -27,12 +27,12 @@
     "destinations": 36,
     "deeperWorkflows": 20,
     "counts": {
-      "locally_addressed": 32,
-      "partial": 35,
+      "locally_addressed": 34,
+      "partial": 33,
       "open": 2,
       "review_needed": 1
     },
-    "mainLocalChangesAddressedPercent": 45.7,
+    "mainLocalChangesAddressedPercent": 48.6,
     "auditComplete": false,
     "finalSignOffClaimed": false
   },
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "9697ab11b7592ed0fd535e924adcf5e92f512b11d1e8bea02063e339a17a87f4"
+          "sha256": "fbadfa0134555262ed269e190a283c5dd61beafc6598c0d325c5e946490acc3c"
         }
       ],
       "verification": {
@@ -97,7 +97,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "c67f7bd9c125756e0e2f0faaf158def45e4c37fbe3230f2b2bd95aa74a32deca"
+          "sha256": "ddb374b8ebf7ce933514a9760de1218fed4b2306ab65f5bd483ac7d0a34d8064"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -121,7 +121,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "c67f7bd9c125756e0e2f0faaf158def45e4c37fbe3230f2b2bd95aa74a32deca"
+          "sha256": "ddb374b8ebf7ce933514a9760de1218fed4b2306ab65f5bd483ac7d0a34d8064"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
@@ -145,7 +145,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "c67f7bd9c125756e0e2f0faaf158def45e4c37fbe3230f2b2bd95aa74a32deca"
+          "sha256": "ddb374b8ebf7ce933514a9760de1218fed4b2306ab65f5bd483ac7d0a34d8064"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -173,7 +173,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "e8da2d90f8afa394b4454b7879bad1f1a7cb98dc32df8b404459c028c472f5b3"
+          "sha256": "0d13e9d27bc8dd1a5f1de43e590c6dd053f3ed817153c9e37ba35aea1be0fa6b"
         }
       ],
       "verification": {
@@ -245,7 +245,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "e8da2d90f8afa394b4454b7879bad1f1a7cb98dc32df8b404459c028c472f5b3"
+          "sha256": "0d13e9d27bc8dd1a5f1de43e590c6dd053f3ed817153c9e37ba35aea1be0fa6b"
         }
       ],
       "verification": {
@@ -289,7 +289,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "c67f7bd9c125756e0e2f0faaf158def45e4c37fbe3230f2b2bd95aa74a32deca"
+          "sha256": "ddb374b8ebf7ce933514a9760de1218fed4b2306ab65f5bd483ac7d0a34d8064"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
@@ -313,7 +313,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "c67f7bd9c125756e0e2f0faaf158def45e4c37fbe3230f2b2bd95aa74a32deca"
+          "sha256": "ddb374b8ebf7ce933514a9760de1218fed4b2306ab65f5bd483ac7d0a34d8064"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
@@ -365,7 +365,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "9697ab11b7592ed0fd535e924adcf5e92f512b11d1e8bea02063e339a17a87f4"
+          "sha256": "fbadfa0134555262ed269e190a283c5dd61beafc6598c0d325c5e946490acc3c"
         }
       ],
       "verification": {
@@ -611,22 +611,22 @@
       "section": "Every page",
       "title": "P1 · Quotes (/quotes)",
       "requirements": "Observed: The list/preview pattern is promising. The directory can remain above the selected quote on phones, and very long preview text creates a lengthy document column.\n\nDirection: Make list, editing and customer preview distinct modes. Keep saved total, draft status and unsaved changes visible. Give document preview its own reading surface and preserve all accepted content.\n\nDesktop: Allow a wider editor/preview split, with a compact directory that can collapse.\n\nPhone: Open the selected quote as the main screen; use Edit and Preview switches with preserved draft state.\n\nAcceptance: Long text, many lines, discounts and zero-price reasons remain readable; preview must never reveal internal notes.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/quotes-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Selected phone quote modes and preserved unsaved draft/list return are implemented.",
-      "remainingWork": "Finish/reconcile desktop directory collapse, long editor/preview layout and all stress-state acceptance.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Desktop directory collapse/show, wide Edit comparison and independent full-width Preview preserve selected-record context, private drafts and explicit saved/draft totals.",
+      "remainingWork": "Complete additional many-line/long-value/state variants, retained access-failure investigation and final exact-source release/installed/physical-device acceptance.",
       "evidence": [
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "b4188e3e0fe564f3b4469989b396d38f9bbf97ad3b4c789569180f888b1a46c1"
+          "sha256": "621a6fc2ac59818837f98161c4c3372166558d0b30d757aa880305c09f578a2c"
         },
         {
-          "path": "planning/QUOTE_PHONE_NAVIGATION.md",
-          "sha256": "4150ca8a1cbc2ef9e5cd074a3f0ae76bd9a5f978e5254fd27dae2097ce56b68b"
+          "path": "planning/QUOTE_READING_MODES_DESIGN.md",
+          "sha256": "15d60218983368eaae51038ec3694013847eac7b36472eaa8db4758506dd2027"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1253,7 +1253,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "e8da2d90f8afa394b4454b7879bad1f1a7cb98dc32df8b404459c028c472f5b3"
+          "sha256": "0d13e9d27bc8dd1a5f1de43e590c6dd053f3ed817153c9e37ba35aea1be0fa6b"
         }
       ],
       "verification": {
@@ -1267,22 +1267,22 @@
       "section": "Deeper workflows",
       "title": "Quote editor and preview",
       "requirements": "Long-address and long-scope stress data demonstrates why the editor and preview need independent reading modes. Keep totals and saved/unsaved status visible, collapse the directory on demand, and allow a full-width document preview without truncating retained content.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/quote-editor-chromium-1440.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Quote Edit/Preview modes and retained phone drafts exist.",
-      "remainingWork": "Finish/reconcile desktop directory collapse, full-width long preview and persistent saved/unsaved totals.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Independent quote reading uses the whole workspace; desktop directory collapse, preserved mounted edits, saved identity/status/totals and long customer-safe content have complete passing draft journeys in both engines across identical source.",
+      "remainingWork": "Other long/many-line/retained/denied/stale/pending states and access-failure investigation remain; exact-head release, installed and physical-device acceptance are separate gates.",
       "evidence": [
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "b4188e3e0fe564f3b4469989b396d38f9bbf97ad3b4c789569180f888b1a46c1"
+          "sha256": "621a6fc2ac59818837f98161c4c3372166558d0b30d757aa880305c09f578a2c"
         },
         {
-          "path": "planning/QUOTE_PHONE_NAVIGATION.md",
-          "sha256": "4150ca8a1cbc2ef9e5cd074a3f0ae76bd9a5f978e5254fd27dae2097ce56b68b"
+          "path": "planning/QUOTE_READING_MODES_DESIGN.md",
+          "sha256": "15d60218983368eaae51038ec3694013847eac7b36472eaa8db4758506dd2027"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },

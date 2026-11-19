@@ -27,6 +27,7 @@ export function QuoteScreen({initialCustomerId=null}:{initialCustomerId?:string|
  const [view,setView]=useState(initialQuoteEditorView),current=useRef<ReturnType<typeof createQuoteEditorController>|null>(null),heading=useRef<HTMLHeadingElement>(null),focus=useRef<string|null|undefined>(undefined),[formSequence,setFormSequence]=useState(0);
  const [mode,setMode]=useState<'edit'|'preview'>('edit');
  const [showRecord,setShowRecord]=useState(Boolean(initialCustomerId));
+ const [directoryCollapsed,setDirectoryCollapsed]=useState(false),revealDirectory=useRef(false);
  const directoryTrigger=useRef<HTMLElement|null>(null),directoryHeading=useRef<HTMLHeadingElement>(null),returnToDirectory=useRef(false);
  const toolbar=useRef<HTMLDivElement>(null),compose=useRef<HTMLDivElement>(null);
  const reviewBusy=useRef(false),[reviewWorking,setReviewWorking]=useState(false),commercialBusy=useRef(false),[commercialWorking,setCommercialWorking]=useState(false),[pendingNotice,setPendingNotice]=useState(''),replacementBusy=useRef(false),[replacementWorking,setReplacementWorking]=useState(false),acceptedFamilies=useRef(new Set<string>()),verifiedCommercial=useRef<string|null>(null),selectedIdentity=useRef<Readonly<{key:string;familyId:string}>|null>(null),commercialRequired=useRef(false),[commercialAccess,setCommercialAccess]=useState<Readonly<{key:string|null;acceptedIds:readonly string[]}>>({key:null,acceptedIds:[]});
@@ -44,6 +45,9 @@ export function QuoteScreen({initialCustomerId=null}:{initialCustomerId?:string|
  const {dirty}=view;
  useEffect(()=>{const controller=createQuoteEditorController({store:createPendingQuoteStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:value=>{commercialRequired.current=value.commercialAvailable;const selected=value.selected;selectedIdentity.current=selected?{key:[selected.family.id,selected.family.version,selected.revision.id,selected.revision.version].join(':'),familyId:selected.family.id}:null;setView(value);},readOnly:()=>{const selected=selectedIdentity.current;return selected!==null&&commercialRequired.current&&(acceptedFamilies.current.has(selected.familyId)||verifiedCommercial.current!==selected.key);},blocked:()=>{try{return reviewBusy.current||commercialBusy.current||replacementBusy.current||createPendingQuoteReviewStore(sessionStorage).read()!==null||createPendingQuoteCommercialStore(sessionStorage).read()!==null||createPendingQuoteReplacementStore(sessionStorage).read()!==null||createPendingQuoteAmendmentStore(sessionStorage,'quote.amendment.create').read()!==null||createPendingQuoteAmendmentStore(sessionStorage,'quote.amendment.send').read()!==null;}catch{return true;}}});current.current=controller;queueMicrotask(()=>{if(current.current===controller)refreshPendingNotice();});if(initialCustomerId)focus.current=null;void controller.load(initialCustomerId??undefined);const clearFamilyFacts=()=>{acceptedFamilies.current.clear();verifiedCommercial.current=null;setCommercialAccess({key:null,acceptedIds:[]});},hidden=()=>{if(document.visibilityState==='hidden'){clearFamilyFacts();controller.suspend();}},leave=()=>{clearFamilyFacts();controller.suspend();},restore=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restore);return ()=>{current.current=null;controller.dispose();document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restore);};},[initialCustomerId,refreshPendingNotice]);
  useLayoutEffect(()=>{
+  if(revealDirectory.current&&!directoryCollapsed&&view.phase==='ready'){
+   revealDirectory.current=false;directoryHeading.current?.focus();directoryHeading.current?.scrollIntoView({block:'nearest'});
+  }
   if(returnToDirectory.current&&!showRecord&&view.phase==='ready'){
    returnToDirectory.current=false;
    const trigger=directoryTrigger.current;
@@ -52,12 +56,13 @@ export function QuoteScreen({initialCustomerId=null}:{initialCustomerId?:string|
   if(focus.current===undefined||view.busy)return;
   if(showRecord&&view.phase==='ready'&&view.draft&&(view.selected?.family.id??null)===focus.current)heading.current?.focus();
   focus.current=undefined;
- },[showRecord,view]);
+ },[showRecord,view,directoryCollapsed]);
  useEffect(()=>{if(!dirty&&view.phase!=='pending'&&!view.busy)return;const leave=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener('beforeunload',leave);return ()=>window.removeEventListener('beforeunload',leave);},[dirty,view.phase,view.busy]);
  function discard(){if(reviewBusy.current||commercialBusy.current||replacementBusy.current)return false;return !current.current?.view().dirty||window.confirm('Discard your unsaved quote changes? Choose Cancel to keep editing.');}
  function create(trigger:HTMLElement){if(discard()){directoryTrigger.current=trigger;setShowRecord(true);setMode('edit');focus.current=null;setFormSequence(value=>value+1);current.current?.create();}}
  function resume(){focus.current=view.selected?.family.id??null;setShowRecord(true);}
- function backToDirectory(){returnToDirectory.current=true;setShowRecord(false);}
+ function backToDirectory(){revealDirectory.current=false;setDirectoryCollapsed(false);returnToDirectory.current=true;setShowRecord(false);}
+ function toggleDirectory(){if(directoryCollapsed)revealDirectory.current=true;setDirectoryCollapsed(value=>!value);}
  async function open(familyId:string,trigger:HTMLElement){
   directoryTrigger.current=trigger;
   if(!showRecord&&view.selected?.family.id===familyId&&view.draft&&view.dirty){resume();return;}
@@ -90,7 +95,7 @@ export function QuoteScreen({initialCustomerId=null}:{initialCustomerId?:string|
   {pendingNotice&&<p role="status" className="notice">{pendingNotice} <a href="/save-review">Review interrupted quote actions</a></p>}
   {view.phase==='unavailable'&&<p><a href="/sign-in?returnTo=quotes">Sign in to view quotes</a></p>}
   {view.phase!=='ready'&&view.phase!=='loading'&&<div className="actions">{view.phase==='pending'?<><button type="button" disabled={view.busy||quoteWorking} onClick={()=>void current.current?.check()}>Check original quote save</button>{view.canRetry&&<button type="button" disabled={view.busy||quoteWorking} onClick={()=>void current.current?.retry()}>Retry unchanged original quote</button>}<a href="/save-review">Review interrupted saves</a>{view.reference&&<p className="field-help">Original operation: <span className="record-reference">{view.reference}</span></p>}</>:<button type="button" disabled={view.busy||quoteNavigationBlocked} onClick={()=>{const customerId=view.phase==='unavailable'?initialCustomerId:null;if(customerId)focus.current=null;void current.current?.load(customerId??undefined);}}>Load saved quotes</button>}</div>}
-  {view.phase==='ready'&&<div className="service-layout quote-layout" data-mobile-record={showRecord&&draft!==null}><section id="quote-saved-directory" className="service-directory-panel" aria-labelledby="quote-directory-heading"><h2 id="quote-directory-heading" ref={directoryHeading} tabIndex={-1}>Saved quotes</h2>
+  {view.phase==='ready'&&<div className="service-layout quote-layout" data-mobile-record={showRecord&&draft!==null} data-directory-collapsed={directoryCollapsed&&showRecord&&draft!==null}><section id="quote-saved-directory" className="service-directory-panel" aria-labelledby="quote-directory-heading"><h2 id="quote-directory-heading" ref={directoryHeading} tabIndex={-1}>Saved quotes</h2>
    {draft&&!showRecord&&<button type="button" className="secondary quote-resume" onClick={resume}>{dirty||!view.selected?'Continue unsaved quote':'Return to open quote'}</button>}
    <div className="service-toolbar"><button type="button" className="quote-add" disabled={view.busy||view.writesPaused||quoteWorking} onClick={event=>create(event.currentTarget)}>New quote</button><button type="button" className="secondary" disabled={view.busy||quoteNavigationBlocked} onClick={()=>{if(discard())void current.current?.load();}}>Reload saved quotes</button></div>
    <form className="service-search" onSubmit={event=>{event.preventDefault();if(discard())void current.current?.query(String(new FormData(event.currentTarget).get('search')??''));}}><label>Find a quote<input name="search" type="search" maxLength={200} defaultValue={view.search} key={view.search} disabled={view.busy||quoteNavigationBlocked}/></label><button type="submit" className="secondary" disabled={view.busy||quoteNavigationBlocked}>Search quotes</button></form>
@@ -108,6 +113,7 @@ export function QuoteScreen({initialCustomerId=null}:{initialCustomerId?:string|
     {saved&&<p className="quote-record-date">Saved <time dateTime={saved.updated_at}>{new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:saved.timezone}).format(new Date(saved.updated_at))}</time></p>}
    </header>
    <div className="quote-record-toolbar" ref={toolbar}>
+     <button type="button" className="secondary quote-directory-toggle" aria-expanded={!directoryCollapsed} aria-controls="quote-saved-directory" onClick={toggleDirectory}>{directoryCollapsed?'Show saved quotes':'Hide saved quotes'}</button>
     <div className="quote-record-total"><span>{unsaved?'Draft total':'Saved quote total'}</span><strong>{preview?quoteMoney(preview.totalCents):'Pending'}</strong></div>
     <div className="quote-mode-controls" role="group" aria-label="Quote view">
      <button type="button" className="secondary" aria-pressed={mode==='edit'} aria-controls="quote-edit" onClick={()=>switchMode('edit')}>{retained?'Details':'Edit'}</button>

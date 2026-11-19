@@ -1,4 +1,4 @@
-# Design-audit coverage — November 18, 2026
+# Design-audit coverage — November 19, 2026
 
 This inventory reconciles all 70 original groups: 14 shared findings, 36 destinations and 20 deeper workflows. It preserves every original group and its full requirement text in [DESIGN_AUDIT_COVERAGE.json](DESIGN_AUDIT_COVERAGE.json). The original audit SHA-256 and current assessment source are recorded there.
 
@@ -6,13 +6,13 @@ This inventory reconciles all 70 original groups: 14 shared findings, 36 destina
 
 | Local implementation review | Groups |
 |---|---:|
-| Main change locally addressed | 32 |
-| Partial implementation or required review | 35 |
+| Main change locally addressed | 34 |
+| Partial implementation or required review | 33 |
 | Open audit work | 2 |
 | Review required before choosing changes | 1 |
 | Total | 70 |
 
-32/70, or 45.7%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 45.7% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 35 groups have partial work; three groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
+34/70, or 48.6%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 48.6% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 33 groups have partial work; three groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
 
 The audit is **not finished**. Each row has remaining implementation or verification. Full current-source/state, delivered-build and physical iPhone acceptance is not established. The earlier roughly 80% figure is a low-confidence V1 coding estimate and is not the audit percentage. This inventory does not reduce the broader goal: complete this audit and then all unfinished approved V1 functionality, including P16/P17, native files, recoverable backups, preserved upgrades and owner/device readiness.
 
@@ -50,7 +50,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | R08 | Business data exports (/export-files) | Partial | Finish export-center distinctions, selected request composition and equivalent capability/data states; never imply partial equals complete. |
 | R09 | Lead sources (/lead-sources) | Main change addressed | Remaining source state/pagination and final release/device verification stay open. |
 | R10 | Leads and follow-ups (/leads) | Main change addressed | Complete remaining state variants and final release; do not alter follow-up eligibility. |
-| R11 | Quotes (/quotes) | Partial | Finish/reconcile desktop directory collapse, long editor/preview layout and all stress-state acceptance. |
+| R11 | Quotes (/quotes) | Main change addressed | Complete additional many-line/long-value/state variants, retained access-failure investigation and final exact-source release/installed/physical-device acceptance. |
 | R12 | Quote amendments (/quotes/amendments) | Partial | Reconcile complete retained/changed-item comparison hierarchy and configured modes; current hosted timeout remains unexplained. |
 | R13 | Interrupted save review (/save-review) | Partial | Finish all no-reference/recorded/unresolved/access-lost identity, safe-return and phone compositions. |
 | R14 | Schedule / saved job (/schedule) | Partial | Dedicated planner review, compact loaded job header, first-action reach and date/view/visit restoration remain. |
@@ -78,7 +78,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | R36 | Page not found (/audit-page-does-not-exist) | Main change addressed | Retained baseline plus source inspection is not a fresh final-release/device run. |
 | D01 | Customer profile | Partial | Reconcile compact last/next-visit facts and action hierarchy consistently across all profile sections. |
 | D02 | Schedule planner | Review first | Perform fresh signed-in dense/overlapping planner review before deciding what implementation changes are required. |
-| D03 | Quote editor and preview | Partial | Finish/reconcile desktop directory collapse, full-width long preview and persistent saved/unsaved totals. |
+| D03 | Quote editor and preview | Main change addressed | Other long/many-line/retained/denied/stale/pending states and access-failure investigation remain; exact-head release, installed and physical-device acceptance are separate gates. |
 | D04 | Sharing and acceptance | Partial | Finish compact accepted-agreement/event hierarchy with all retained content and honest delivery evidence. |
 | D05 | Receipt viewer | Main change addressed | Original-file formats, full release and physical iPhone remain separate required acceptance. |
 | D06 | Partial completion | Main change addressed | Finish additional stress, policy/context, access/stale/pending and device/release variants without treating local coverage as final sign-off. |
@@ -99,8 +99,8 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 ## Next sequence
 
-1. Investigate the retained amendment CI deadline using bounded phase/cleanup evidence; do not raise timeouts or suppress errors. Preserve live current-head verification.
-2. Finish explicit implementation gaps: quote desktop/document context, Calendar activity.
+1. Publish and verify the explicit schema-120 supplier recovery correction; keep every failed, interrupted and skipped result visible and all release gates unchanged.
+2. Finish Calendar appointment activity and remaining destination/workflow implementations; preserve the verified quote navigation and reading modes.
 3. Perform the fresh signed-in dense planner review; use actual findings rather than assuming a replacement is needed.
 4. Complete state/zoom/long-value/privacy verification and the unchanged full-release, upgrade, restore and physical-device gates. Reconcile every row before claiming audit completion.
 

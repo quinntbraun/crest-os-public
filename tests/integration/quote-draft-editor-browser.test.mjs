@@ -94,22 +94,45 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await page.getByRole('button',{name:'Return to open quote',exact:true}).click();await expect(page.getByRole('heading',{name:'Edit saved draft',exact:true})).toBeFocused();
    }finally{page.off('request',observe);}
   });
-  await step('four-width rendered layout, accessibility, long content and keyboard focus',async()=>{
+  await step('desktop directory and reading modes preserve the private draft without requests or writes',async()=>{
+   await page.setViewportSize({width:1440,height:1000});
+   const directory=page.locator('#quote-saved-directory'),record=page.locator('#quote-current-record'),titleField=page.getByLabel('Quote title',{exact:true}),modes=page.getByRole('group',{name:'Quote view',exact:true}),preview=page.getByRole('region',{name:'Customer preview',exact:true});
+   await expect(titleField).toHaveValue(title);await expect(directory).toBeVisible();
+   const facts=async()=>{const result={};for(const table of ['quote_families','quote_revisions'])result[table]=(await f.client.query('SELECT to_jsonb(r)::text AS value FROM crest.'+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[f.business])).rows;result.audit=(await f.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[f.business])).rows;return result;};
+   const before=await facts(),requests=[];const observe=request=>{const path=new URL(request.url()).pathname;if(path.startsWith('/api/business/'))requests.push(request.method()+' '+path);};page.on('request',observe);
+   try{
+    const originalWidth=(await record.boundingBox()).width;
+    await titleField.fill(title+' unsaved desktop change');
+    await page.getByRole('button',{name:'Hide saved quotes',exact:true}).press('Enter');await expect(directory).toBeHidden();
+    assert((await record.boundingBox()).width>originalWidth,'collapsing the directory gives the quote more desktop space');
+    await expect(record.locator('.quote-record-state')).toContainText('Unsaved changes');await expect(titleField).toHaveValue(title+' unsaved desktop change');
+    await modes.getByRole('button',{name:'Preview',exact:true}).press('Enter');await expect(page.locator('#quote-edit')).toBeHidden();
+    await expect(preview.getByRole('heading',{name:title+' unsaved desktop change',exact:true})).toBeVisible();await expect(preview).not.toContainText(privateNote);await expect(preview).toContainText(longScope.trim());
+    await page.screenshot({path:'.local/review/quote-desktop-reading-'+name+'-1440.png',fullPage:true});
+    await page.getByRole('button',{name:'Show saved quotes',exact:true}).press('Enter');await expect(directory).toBeVisible();await expect(page.getByRole('heading',{name:'Saved quotes',exact:true})).toBeFocused();
+    await expect(page.getByLabel('Find a quote',{exact:true})).toHaveValue(title);
+    await modes.getByRole('button',{name:'Edit',exact:true}).press('Enter');await expect(titleField).toHaveValue(title+' unsaved desktop change');
+    await titleField.fill(title);await expect(page.getByRole('button',{name:'Save quote draft',exact:true})).toBeDisabled();
+    assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.quote.pending-reference.v1')),null);assert.deepEqual(await facts(),before);assert.deepEqual(requests,[]);
+   }finally{page.off('request',observe);}
+  });
+  await step('five-width rendered layout, accessibility, long content and keyboard focus',async()=>{
    const modes=page.getByRole('group',{name:'Quote view',exact:true}),preview=page.getByRole('region',{name:'Customer preview',exact:true});
-   for(const width of [360,390,768,1440]){await page.setViewportSize({width,height:width<768?844:1000});await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);if(width<760){await expect(page.locator('#quote-saved-directory')).toBeHidden();await expect(page.locator('#quote-current-record')).toBeVisible();}else await expect(page.locator('#quote-saved-directory')).toBeVisible();if(width>=760){const row=await page.getByRole('button',{name:new RegExp('^'+title)}).evaluate(element=>{const title=element.querySelector('strong')?.getBoundingClientRect(),summary=element.querySelector('span')?.getBoundingClientRect();return {titleBottom:title?.bottom,summaryTop:summary?.top};});assert(typeof row.titleBottom==='number'&&typeof row.summaryTop==='number'&&row.summaryTop>=row.titleBottom,'saved quote name and recipient/amount must occupy separate readable rows');}const control=await page.getByLabel('Quote title',{exact:true}).evaluate(e=>({font:getComputedStyle(e).fontSize,height:e.getBoundingClientRect().height}));assert(Number.parseFloat(control.font)>=16);assert(control.height>=44);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);await page.screenshot({path:'.local/review/quote-editor-'+name+'-'+width+'.png',fullPage:true});
-    if(width===1440||width===768&&!await modes.isVisible()){
-     assert.equal(await modes.isVisible(),false);
+   for(const width of [360,390,768,1100,1440]){await page.setViewportSize({width,height:width<768?844:1000});await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);if(width<760){await expect(page.locator('#quote-saved-directory')).toBeHidden();await expect(page.locator('#quote-current-record')).toBeVisible();}else await expect(page.locator('#quote-saved-directory')).toBeVisible();if(width>=760){const row=await page.getByRole('button',{name:new RegExp('^'+title)}).evaluate(element=>{const title=element.querySelector('strong')?.getBoundingClientRect(),summary=element.querySelector('span')?.getBoundingClientRect();return {titleBottom:title?.bottom,summaryTop:summary?.top};});assert(typeof row.titleBottom==='number'&&typeof row.summaryTop==='number'&&row.summaryTop>=row.titleBottom,'saved quote name and recipient/amount must occupy separate readable rows');}const control=await page.getByLabel('Quote title',{exact:true}).evaluate(e=>({font:getComputedStyle(e).fontSize,height:e.getBoundingClientRect().height}));assert(Number.parseFloat(control.font)>=16);assert(control.height>=44);assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);await page.screenshot({path:'.local/review/quote-editor-'+name+'-'+width+'.png',fullPage:true});
+    await expect(modes).toBeVisible();const splitVisible=await preview.isVisible();if(width===1440)assert(splitVisible,'wide editing retains its customer comparison');if(width<760)assert(!splitVisible,'phone editing has its own mode');
+    if(splitVisible){
      const editBox=await page.locator('#quote-edit').boundingBox(),previewBox=await preview.boundingBox();
      assert(editBox&&previewBox&&editBox.x+editBox.width<previewBox.x);
-    }else{
-     await expect(preview).toBeHidden();
+    }
      await modes.getByRole('button',{name:'Preview',exact:true}).press('Enter');
      await expect(preview.getByRole('region',{name:'Quote total',exact:true})).toContainText('$120.55');
      await expect(page.getByRole('textbox',{name:'Quote title',exact:true})).toBeHidden();
+     const composeBox=await page.locator('#quote-compose').boundingBox(),readingBox=await preview.boundingBox();assert(composeBox&&readingBox&&Math.abs(composeBox.width-readingBox.width)<2,'preview uses the whole quote reading area');
+     await expect(preview).not.toContainText(privateNote);await expect(preview).toContainText(longScope.trim());
+     assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
      await page.screenshot({path:'.local/review/quote-preview-'+name+'-'+width+'.png',fullPage:true});
      await modes.getByRole('button',{name:'Edit',exact:true}).press('Enter');
      await expect(page.getByRole('textbox',{name:'Quote title',exact:true})).toHaveValue(title);
-    }
    }
    await page.setViewportSize({width:390,height:844});await page.getByRole('textbox',{name:'Work location',exact:true}).focus();await page.keyboard.press('Tab');await expect(page.getByRole('group',{name:'Line 1',exact:true}).getByLabel('Work description',{exact:true})).toBeFocused();assert.notEqual(await page.getByRole('group',{name:'Line 1',exact:true}).getByLabel('Work description',{exact:true}).evaluate(e=>getComputedStyle(e).outlineStyle),'none');
   });

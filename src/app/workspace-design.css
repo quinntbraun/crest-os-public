@@ -981,6 +981,12 @@ main.expenses-page { max-width:68rem; }
 .quote-record-total strong { font-size:1.125rem; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
 .quote-record-toolbar button { width:auto; margin:0; min-height:44px; padding:.375rem .625rem; }
 .quote-record-toolbar .quote-save { grid-column:1/-1; }
+.quote-record-toolbar .quote-directory-toggle { grid-column:1/-1; justify-self:start; }
+@media (min-width:760px) {
+ .quote-layout[data-directory-collapsed="true"] { grid-template-columns:minmax(0,1fr); }
+ .quote-layout[data-directory-collapsed="true"] > .service-directory-panel { display:none; }
+}
+@media (max-width:759px) { .quote-record-toolbar .quote-directory-toggle { display:none; } }
 .quote-mode-controls { display:flex; gap:.25rem; }
 .quote-mode-controls .secondary[aria-pressed="true"] { box-shadow:inset 0 -2px var(--gold-ink); }
 .customers .quote-record-links { display:flex; flex-wrap:wrap; gap:0 .875rem; margin:0 0 .75rem; }
@@ -996,10 +1002,14 @@ main.expenses-page { max-width:68rem; }
 .quote-preview > p:last-child { margin-block-end:0; }
 .quote-compose[data-mode="edit"] > .quote-preview,
 .quote-compose[data-mode="preview"] > .quote-edit { display:none; }
+.quote-compose[data-mode="preview"] { grid-template-columns:minmax(0,1fr); }
+.quote-compose[data-mode="preview"] > .quote-preview { background:var(--canvas); padding:clamp(.75rem,2vw,1.5rem); }
+.quote-compose[data-mode="preview"] > .quote-preview > .quote-worksheet { max-width:48rem; margin-inline:auto; padding:clamp(1rem,3vw,2rem); }
 @container quote-workspace (min-width: 43rem) {
-  .quote-compose { grid-template-columns:minmax(0,1.075fr) minmax(0,1fr); }
-  .quote-compose[data-mode] > :is(.quote-edit,.quote-preview) { display:block; }
-  .quote-record-toolbar .quote-mode-controls,.quote-record-heading > a { display:none; }
+  .quote-compose[data-mode="edit"] { grid-template-columns:minmax(0,1.075fr) minmax(0,1fr); }
+  .quote-compose[data-mode="edit"] > :is(.quote-edit,.quote-preview) { display:block; }
+  .quote-record-toolbar { grid-template-columns:auto minmax(0,1fr) auto auto; }
+  .quote-record-toolbar .quote-directory-toggle { grid-column:auto; }
   .quote-record-toolbar .quote-save { grid-column:auto; }
 }
 
