@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { readSyntheticCalendarJobStatus } from '../../../client/google-calendar-consent';
 import type { GoogleCalendarJobStatus } from '../../../operations/google-calendar-job-status';
 
@@ -21,12 +21,20 @@ export const calendarJobStatusLabels: Record<GoogleCalendarJobStatus['state'], s
   synced: 'Synced · fictional', removed: 'Removed · fictional', delayed: 'Unconfirmed', reconnect: 'Reconnect', review: 'Needs review',
 };
 
-export function SyntheticCalendarJobStatus({ jobId, recoveryEpoch, appointmentSequence }: { jobId: string; recoveryEpoch: string; appointmentSequence?:string }) {
+export function SyntheticCalendarJobStatus({ jobId, recoveryEpoch, appointmentSequence, onReloadActivity }: { jobId: string; recoveryEpoch: string; appointmentSequence?:string; onReloadActivity?:()=>void }) {
   const [status, setStatus] = useState<GoogleCalendarJobStatus | null>(null);
   const [message, setMessage] = useState('Checking Calendar status…');
   const [busy, setBusy] = useState(false);
   const [checkFailed, setCheckFailed] = useState(false);
+  const [appointmentChanged, setAppointmentChanged] = useState(false);
   const active = useRef<AbortController | null>(null);
+  const reloadAction = useRef<HTMLButtonElement | null>(null);
+  useLayoutEffect(()=>{
+    if(!appointmentChanged||busy||!onReloadActivity||document.visibilityState==='hidden')return;
+    if(document.activeElement!==document.body&&document.activeElement!==reloadAction.current)return;
+    reloadAction.current?.focus({preventScroll:true});
+    reloadAction.current?.scrollIntoView({block:'nearest'});
+  },[appointmentChanged,busy,onReloadActivity]);
 
   const check = useCallback(async () => {
     if (active.current || document.visibilityState === 'hidden') return;
@@ -34,6 +42,7 @@ export function SyntheticCalendarJobStatus({ jobId, recoveryEpoch, appointmentSe
     active.current = controller;
     setStatus(null);
     setCheckFailed(false);
+    setAppointmentChanged(false);
     setBusy(true);
     setMessage('Checking Calendar status…');
     try {
@@ -41,6 +50,7 @@ export function SyntheticCalendarJobStatus({ jobId, recoveryEpoch, appointmentSe
       if (!signal.aborted) {
         if(appointmentSequence&&result.appointmentVersion!==appointmentSequence){
           setCheckFailed(true);
+          setAppointmentChanged(true);
           setMessage('The appointment changed. Reload appointment activity before reviewing its sync.');
           return;
         }
@@ -66,6 +76,7 @@ export function SyntheticCalendarJobStatus({ jobId, recoveryEpoch, appointmentSe
       active.current = null;
       setStatus(null);
       setCheckFailed(false);
+      setAppointmentChanged(false);
       setMessage('Check Calendar status to reload.');
       setBusy(false);
     }
@@ -100,7 +111,9 @@ export function SyntheticCalendarJobStatus({ jobId, recoveryEpoch, appointmentSe
       </dl></details>}
     </div>
     <div className="calendar-settings-actions calendar-activity-actions">
-      <button className="secondary" type="button" disabled={busy} onClick={() => void check()}>Check Calendar status</button>
+      {appointmentChanged&&onReloadActivity
+        ?<button ref={reloadAction} type="button" disabled={busy} onClick={onReloadActivity}>Reload appointment activity</button>
+        :<button className="secondary" type="button" disabled={busy} onClick={() => void check()}>Check Calendar status</button>}
       <a href={'/schedule?job=' + jobId}>Open saved job</a>
     </div>
     </li></ul>

@@ -318,7 +318,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
   await expect(report.getByRole('status')).toHaveText('Posted balances loaded.');
   assert(await dateControl.evaluate(element=>element.isConnected),'loading a snapshot must retain the mounted date control');
-  await reviewAccountingReportWorkspace(page,report,{label:'ledger-'+name,values:[['Debit balances','$100.00'],['Credit balances','$100.00']]});
+  await reviewAccountingReportWorkspace(page,report,{label:'ledger-'+name,values:[['Debit balances','$100.00'],['Credit balances','$100.00']],pickerExpected:income});
   await expect(report.getByRole('row').filter({hasText:'Fictional wash supplies'})).toContainText('$100.00');
   await expect(report.getByRole('row').filter({hasText:'Fictional dedicated bank'})).toContainText('$100.00');
   await accountsView.press('Enter');

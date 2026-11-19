@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { authentication } from '../../../client/authentication';
+import { AuthenticationError, authentication } from '../../../client/authentication';
 import { businessSettings } from '../../../client/business-settings';
 import { readSyntheticCalendarSetup } from '../../../client/google-calendar-consent';
 import type { CalendarSetupState } from '../../../client/google-calendar-consent';
@@ -19,6 +19,7 @@ export function SyntheticGoogleCalendarSettings({ jobId }: { jobId: string | nul
   const active = useRef<AbortController | null>(null);
   const focus = useRef<HTMLParagraphElement>(null);
   const stageNeedsRead = useRef(false);
+  const [signInRequired, setSignInRequired] = useState(false);
 
   useEffect(() => {
     function load() { void loadState(); }
@@ -26,6 +27,7 @@ export function SyntheticGoogleCalendarSettings({ jobId }: { jobId: string | nul
       active.current?.abort();
       active.current = null;
       setLoaded(null);
+      setSignInRequired(false);
       setBusy(false);
     }
     function visibility() { if (document.visibilityState === 'hidden') hide(); else load(); }
@@ -50,6 +52,7 @@ export function SyntheticGoogleCalendarSettings({ jobId }: { jobId: string | nul
     const staging = stageEpoch !== undefined;
     if (staging) stageNeedsRead.current = true;
     setBusy(true);
+    setSignInRequired(false);
     setMessage(staging ? 'Preparing the fictional calendar…' : 'Checking Calendar setup…');
     try {
       let recoveryEpoch = stageEpoch;
@@ -77,10 +80,12 @@ export function SyntheticGoogleCalendarSettings({ jobId }: { jobId: string | nul
       setLoaded({ status, recoveryEpoch });
       setMessage(status.state === 'review' ? 'Calendar setup needs review before it can continue.' :
         staging ? 'Crest Jobs is prepared. Review what an event would share.' : moveFocus ? 'Calendar setup verified.' : '');
-    } catch {
+    } catch (error) {
       if (!signal.aborted) {
         setLoaded(null);
-        setMessage(stageNeedsRead.current ? 'Crest could not confirm setup. Check its saved status before continuing.' :
+        const denied=error instanceof AuthenticationError&&error.kind==='denied';
+        setSignInRequired(denied);
+        setMessage(denied ? 'Sign in again to review Calendar setup.' : stageNeedsRead.current ? 'Crest could not confirm setup. Check its saved status before continuing.' :
           'Crest could not verify Calendar setup. Check your connection and sign-in.');
       }
     } finally {
@@ -127,7 +132,8 @@ export function SyntheticGoogleCalendarSettings({ jobId }: { jobId: string | nul
     {context && <GoogleCalendarConsentPanel context={context} saved={consentSaved} simulated onConsentSaved={confirmSavedConsent}/>}
     {loaded?.status.state === 'active' && !loaded.status.context && <p>Calendar consent is saved.</p>}
     {jobId && loaded && !consentSaved && <SyntheticCalendarJobStatus key={jobId + loaded.recoveryEpoch} jobId={jobId} recoveryEpoch={loaded.recoveryEpoch}/>}
-    {(!loaded || loaded.status.state === 'review') && !busy && <button className="secondary" type="button"
+    {signInRequired&&!busy&&<a className="primary-action" href="/sign-in">Sign in again</a>}
+    {(!loaded || loaded.status.state === 'review') && !busy && !signInRequired && <button className="secondary" type="button"
       onClick={() => void loadState(undefined, true)}>Check setup status</button>}
     </div>
     {loaded&&consentSaved&&<CalendarAppointmentActivity key={loaded.recoveryEpoch} initialJobId={jobId} recoveryEpoch={loaded.recoveryEpoch}/>}

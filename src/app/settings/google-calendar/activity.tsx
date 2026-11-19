@@ -108,7 +108,7 @@ export function CalendarAppointmentActivity({initialJobId,recoveryEpoch}:{initia
    {selected&&<div ref={inspector} className="calendar-activity-inspector" aria-busy={busy}><button type="button" className="secondary" onClick={close}>Back to appointment activity</button>
     {busy?<p role="status">Loading appointment activity before checking this visit…</p>:<>
      {selectedRow?<header className="calendar-selected-identity"><p className="eyebrow">Listed appointment</p><h3>{selectedRow.job.customerName}</h3><p><time dateTime={selectedRow.job.startAt}>{new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:selectedRow.job.timezone}).formatRange(new Date(selectedRow.job.startAt),new Date(selectedRow.job.endAt))}</time> · {selectedRow.job.timezone}</p></header>:<p className="field-help">This appointment is outside the loaded page. Open its saved job for full details.</p>}
-     <SyntheticCalendarJobStatus key={selected+recoveryEpoch+(selectedRow?.job.appointmentSequence??'')} jobId={selected} recoveryEpoch={recoveryEpoch} {...selectedRow?{appointmentSequence:selectedRow.job.appointmentSequence}:{}}/>
+     <SyntheticCalendarJobStatus key={selected+recoveryEpoch+(selectedRow?.job.appointmentSequence??'')} jobId={selected} recoveryEpoch={recoveryEpoch} {...selectedRow?{appointmentSequence:selectedRow.job.appointmentSequence}:{}} onReloadActivity={()=>void load(pageRef.current?.dates,null,[])}/>
     </>}
    </div>}
   </div>

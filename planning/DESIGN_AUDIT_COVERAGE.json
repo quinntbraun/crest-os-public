@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-19T13:35:58.834Z",
+  "assessedAt": "2026-11-19T14:08:44.783Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "2342981176b9af437242fbca57443c7e532ef01d",
-    "publishedCommit": "bacc465e3de32a50892e13bb724e5a567189700e",
-    "publishedTree": "8a5885ac07629614e99e5beee0ac59f54d8da8d9",
-    "localTree": "0a124e0c219846592be12e55864d3791ffd6ca78"
+    "localCommit": "371f39c5b1603e285901243a5e86656f469df7a2",
+    "publishedCommit": "7b8d20d2c79767938a5c391acaa776f524a83a61",
+    "publishedTree": "c59806707487860d0d1804de8f58f7b6bd306a79",
+    "localTree": "17d08dd6a56e07e43da979372b2e7ceb6b2d2dda"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "7618557ec1db676e64f330721d77b2ddfb152c0e8a0eb228a2b5abb719543bbd"
+          "sha256": "2a978ecb6e62c43375803cb088cc884a8496953489b5d9ad16a6bce1e204e79d"
         }
       ],
       "verification": {
@@ -173,7 +173,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "c04e7c058792b39e110bb023d2bb9a1d3eb2eb726959ca8932a2ed70eafd2bd9"
+          "sha256": "085a1899bbe778d1558429ad3d13aab791245c9a23da896570481bb1bc90737c"
         }
       ],
       "verification": {
@@ -245,7 +245,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "c04e7c058792b39e110bb023d2bb9a1d3eb2eb726959ca8932a2ed70eafd2bd9"
+          "sha256": "085a1899bbe778d1558429ad3d13aab791245c9a23da896570481bb1bc90737c"
         }
       ],
       "verification": {
@@ -365,7 +365,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "7618557ec1db676e64f330721d77b2ddfb152c0e8a0eb228a2b5abb719543bbd"
+          "sha256": "2a978ecb6e62c43375803cb088cc884a8496953489b5d9ad16a6bce1e204e79d"
         }
       ],
       "verification": {
@@ -1001,7 +1001,7 @@
         },
         {
           "path": "planning/ACCOUNTING_REPORT_WORKSPACE_DESIGN.md",
-          "sha256": "25ec1b1810fad0bef2ac41a15fd99c8b74bb9d2deec57dbce802e94d9f4e1cbd"
+          "sha256": "51568f4611275f5389ada35398f55e2cda30c1497f5c25d3bba7b86263bc132a"
         }
       ],
       "verification": {
@@ -1161,15 +1161,15 @@
       "requirements": "Observed: The route baseline is unavailable; configured supplemental evidence shows multiple stacked status cards and a waiting update.\n\nDirection: Use one connection summary and an appointment-sync activity list. Distinguish account consent, target calendar, pending update, failure and confirmed sync.\n\nDesktop: Use status plus recent activity, with details in an inspector.\n\nPhone: Keep account/calendar and the next safe action above the event history.\n\nAcceptance: Simulated consent or saved consent must never look like a verified live Google connection or successful event delivery.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-google-calendar-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
       "implementedOrPresent": "A bounded five-row appointment directory now provides real date/time-zone context, explicit filters, current sync states and a phone/desktop inspector with retained list/history focus. Six protected native bookings support actual 5+1 signed-in pagination and no-write recovery evidence.",
-      "remainingWork": "Investigate retained session/held-request failures; complete selected-inspector changes, recovery/access-loss and remaining state/privacy variants plus full exact-source release/installed/physical-device acceptance.",
+      "remainingWork": "Investigate original session/held-request failures; finish paused/recovery and remaining state/privacy variants plus full exact-source release/installed/physical-device acceptance. Actual selected changes and cookie-loss clearing/direct sign-in recovery now pass both engines.",
       "evidence": [
         {
           "path": "src/app/settings/google-calendar/activity.tsx",
-          "sha256": "7ec6f859b24f1d667c059b2c91bb6ba28dda61f04493ecbf718122b94ffb165e"
+          "sha256": "6037d3dd9e9656cf2d4e04e9700c85be435dcbac6bcc5877308edb33ae77e407"
         },
         {
           "path": "planning/CALENDAR_ACTIVITY_DIRECTORY_IMPLEMENTATION.md",
-          "sha256": "ec6064311f92496b24e17806456f3ffb00fd5f0b1a038cba7f6f1bbfc05270a4"
+          "sha256": "3593bfbd68b6619bf4e8f0d03366cefdda0970e4fd6af162eb47060adfe28899"
         }
       ],
       "verification": {
@@ -1657,15 +1657,15 @@
       "requirements": "Account, consent and queued event are presented in three substantial cards. Consolidate connection identity and give each appointment an explicit waiting/failed/confirmed row. Preserve the prominent simulated/no-events disclaimer in fictional mode.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/settings-calendar-pending-chromium-390.png",
       "implementationStatus": "locally_addressed",
       "implementedOrPresent": "Real appointment rows and selected status distinguish unqueued/waiting/fictional-confirmed/checking/failed states; the mounted directory preserves dates/page/focus through selection and native history. Cursors remain in memory; failed/cancelled loads clear private rows.",
-      "remainingWork": "Complete selected-inspector change, recovery/access-loss and other missing state/privacy variants; investigate retained session/held-request failures and preserve truthful simulation labels through final release/device acceptance.",
+      "remainingWork": "Complete paused/recovery and other missing state/privacy variants; investigate original session/held-request failures and preserve truthful simulation labels through final release/device acceptance. Selected-change refusal/focused reload and actual cookie-loss clearing/sign-in navigation pass.",
       "evidence": [
         {
           "path": "src/app/settings/google-calendar/activity.tsx",
-          "sha256": "7ec6f859b24f1d667c059b2c91bb6ba28dda61f04493ecbf718122b94ffb165e"
+          "sha256": "6037d3dd9e9656cf2d4e04e9700c85be435dcbac6bcc5877308edb33ae77e407"
         },
         {
           "path": "planning/CALENDAR_ACTIVITY_DIRECTORY_IMPLEMENTATION.md",
-          "sha256": "ec6064311f92496b24e17806456f3ffb00fd5f0b1a038cba7f6f1bbfc05270a4"
+          "sha256": "3593bfbd68b6619bf4e8f0d03366cefdda0970e4fd6af162eb47060adfe28899"
         }
       ],
       "verification": {

@@ -73,7 +73,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | R31 | Category approvals (/settings/accounts/mappings/categories/manage) | Partial | Integrate retained approval history with proposed editing and finish staged phone selection/review acceptance. |
 | R32 | Mapping approvals (/settings/accounts/mappings/manage) | Main change addressed | Remaining full state and final release/device verification stay open. |
 | R33 | Tax profiles (/settings/accounts/tax) | Main change addressed | Remaining long/history/state and final release/device verification stay open; no unsupported jurisdiction directory is invented. |
-| R34 | Calendar setup (/settings/google-calendar) | Main change addressed | Investigate retained session/held-request failures; complete selected-inspector changes, recovery/access-loss and remaining state/privacy variants plus full exact-source release/installed/physical-device acceptance. |
+| R34 | Calendar setup (/settings/google-calendar) | Main change addressed | Investigate original session/held-request failures; finish paused/recovery and remaining state/privacy variants plus full exact-source release/installed/physical-device acceptance. Actual selected changes and cookie-loss clearing/direct sign-in recovery now pass both engines. |
 | R35 | Vehicle directory (/vehicles) | Main change addressed | Final profile/history/photo, sign-out and device/state verification remain; no stock evidence image. |
 | R36 | Page not found (/audit-page-does-not-exist) | Main change addressed | Retained baseline plus source inspection is not a fresh final-release/device run. |
 | D01 | Customer profile | Partial | Reconcile compact last/next-visit facts and action hierarchy consistently across all profile sections. |
@@ -94,13 +94,13 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | D16 | Supplier bills | Main change addressed | Complete remaining state/long-value/native-original-format variants and fresh release/installed/physical-device acceptance. |
 | D17 | Dated approval history | Main change addressed | Remaining large/gap/state and final release/device review remain. |
 | D18 | Travel history | Main change addressed | Remaining long pagination/failure states and final source/device verification remain. |
-| D19 | Calendar waiting state | Main change addressed | Complete selected-inspector change, recovery/access-loss and other missing state/privacy variants; investigate retained session/held-request failures and preserve truthful simulation labels through final release/device acceptance. |
+| D19 | Calendar waiting state | Main change addressed | Complete paused/recovery and other missing state/privacy variants; investigate original session/held-request failures and preserve truthful simulation labels through final release/device acceptance. Selected-change refusal/focused reload and actual cookie-loss clearing/sign-in navigation pass. |
 | D20 | Drop-off custody history | Main change addressed | Other custody editor/state, native original-format and physical-device/full release acceptance remain. |
 
 ## Next sequence
 
 1. Investigate the retained CSV user-verification HTTP500 with safe actual error categories; complete remaining state review; actual Chromium glyph-font evidence is retained for inspected CSV content. Final-width seven-parent browser acceptance passes, but is not a cause/cure for earlier failures. Preserve the original failed historical54 CI schema comparison; focused25/25 and observed369/369 local passes do not prove a cause/cure or release acceptance. No login retry, deadline/freshness weakening or blind CI retry.
-2. Finish remaining Calendar selected-change/recovery/access-loss/privacy states and investigate retained session/held-request failures; preserve actual reschedule refusal, bounded directory, pagination/return and quote reading modes.
+2. Finish remaining Calendar paused/recovery/privacy states and investigate original session/held-request failures; actual selected-change and cookie-loss recovery journeys pass in both engines; preserve actual reschedule refusal, bounded directory, pagination/return and quote reading modes.
 3. Complete remaining report/state/stress variants; the wide receivables date/load width is verified in both complete configured invoice journeys; preserve completed four-report and planner/context-return evidence. Continue every remaining original page/workflow refinement.
 4. Complete state/zoom/long-value/privacy verification and the unchanged full-release, upgrade, restore and physical-device gates. Reconcile every row before claiming audit completion.
 
