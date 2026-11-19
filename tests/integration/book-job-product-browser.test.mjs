@@ -104,6 +104,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await expect(page.getByRole('region',{name:'Saved work calendar',exact:true})).toHaveCount(0);
   await expect(page.getByRole('link',{name:'Back to Today',exact:true})).toHaveAttribute('href','/');
   assert(page.url().includes('job='+pending.reference.jobId));
+  await page.unroute(/\/api\/business\/scheduling\/(list|pending)$/);await page.goto(f.origin+'/appointment-holds');await expect(page.locator('.proposal-reservation')).toContainText('Time is not reserved');await expect(page.getByRole('button',{name:/Review .* · Confirmed/})).toHaveCount(0);await page.getByRole('link',{name:'View confirmed jobs',exact:true}).click();await expect(page.getByRole('region',{name:'Saved work calendar',exact:true})).toBeVisible();
   const facts=(await f.client.query('SELECT state,version::text FROM crest.jobs WHERE business_id=$1',[f.business])).rows;assert.deepEqual(facts,[{state:'scheduled',version:'1'}]);const amounts=(await f.client.query('SELECT amount_cents::text FROM crest.allocation_plan_parts WHERE business_id=$1 AND job_id=$2 ORDER BY amount_cents',[f.business,pending.reference.jobId])).rows;assert.deepEqual(amounts,[{amount_cents:'0'},{amount_cents:'25000'}]);assert.equal(requests,1);
  }finally{await browser?.close();await f.close();}
 },{timeout:240000});

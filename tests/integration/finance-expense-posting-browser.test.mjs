@@ -1,5 +1,6 @@
 import {observeExpenseAccess,prepareExpenseBrowserCode} from '../support/expense-access-diagnostic.mjs';
 import assert from 'node:assert/strict';
+import {openReceiptDownloads,captureExpenseState} from '../support/receipt-layout.mjs';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {test} from 'node:test';
@@ -486,10 +487,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    assert.deepEqual((await new AxeBuilder({page}).include('.expense-receipts').withTags(['wcag2a','wcag2aa']).analyze()).violations,[]);
    await page.screenshot({path:'.local/review/expenses-verified-receipt-'+name+'-'+width+'.png',animations:'disabled'});
   }
+  await expect(expense.locator('.receipt-preview-context')).toContainText('Recorded expense: $12.99 USD');await captureExpenseState(page,name,'receipt-verified');
   await reviewReceiptDocumentViewer(page,{fixture:f,expense,engine:name});
   const download=page.waitForEvent('download');
-  await expense.getByRole('button',{name:'Download receipt 1',exact:true}).click();
+  await openReceiptDownloads(expense,1);await expense.getByRole('button',{name:'Download receipt 1',exact:true}).click();
   assert.deepEqual(await readFile(await (await download).path()),receipt);
+  await page.route('**/api/business/expense-receipts/list',route=>route.abort('failed'));await expense.getByRole('button',{name:'Load saved receipts',exact:true}).click();await expect(expense.getByRole('status')).toHaveText('Saved receipts could not be verified. Load them again to check.');await expect(preview).toHaveCount(0);await expect(expense.locator('.receipt-saved-row')).toHaveCount(0);await expect(expense.getByText('No saved receipts for this expense.',{exact:true})).toHaveCount(0);await captureExpenseState(page,name,'receipt-read-lost');
+  await page.unroute('**/api/business/expense-receipts/list');await expense.getByRole('button',{name:'Load saved receipts',exact:true}).click();await expect(expense.getByRole('status')).toHaveText('Saved receipt list refreshed.');await expect(preview).toHaveCount(0);await expense.getByRole('button',{name:'View preview for receipt 1',exact:true}).click();await expect(preview).toBeVisible();
   await page.getByRole('button',{name:'Exports',exact:true}).click();
   await expect(preview).toHaveCount(0);
   await page.getByRole('button',{name:'Purchases',exact:true}).click();

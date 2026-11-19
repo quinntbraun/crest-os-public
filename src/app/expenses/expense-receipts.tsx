@@ -1,6 +1,7 @@
 'use client';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {ExpenseRevision} from '../../bookkeeping/expenses/expense-contract';
+import {expenseDollars} from '../../bookkeeping/expenses/expense-contract';
 import type {ReceiptView} from '../../bookkeeping/expenses/receipt-contract';
 import type {ExpenseContext} from '../../client/expenses';
 import type {PendingReceipt} from '../../client/pending-receipt';
@@ -10,7 +11,7 @@ export type ReceiptDirectoryState=Readonly<{active:boolean;status:'unchecked'|'a
 type Resume=Readonly<{context:ExpenseContext;receipt:ReceiptView;operationId:string;file?:File}>;
 export function ExpenseReceipts({expense,context,client,visible=true,onDirectoryStateChange}:{expense:ExpenseRevision;context:ExpenseContext;client:ReturnType<typeof createReceiptClient>;visible?:boolean;onDirectoryStateChange?:(expenseId:string,state:ReceiptDirectoryState)=>void}){
  const [rows,setRows]=useState<readonly ReceiptView[]>([]),[file,setFile]=useState<File|null>(null),[pending,setPending]=useState<ReceiptAttempt|null>(null),[resuming,setResuming]=useState<Resume|null>(null),[original,setOriginal]=useState<PendingReceipt|null>(null),[storageBlocked,setStorageBlocked]=useState(true),[canRetry,setCanRetry]=useState(false),[busy,setBusy]=useState(false),[status,setStatus]=useState(''),[inputKey,setInputKey]=useState(0);
- const [listLoaded,setListLoaded]=useState(false);
+ const [listLoaded,setListLoaded]=useState(false),[listing,setListing]=useState(false),[listIssue,setListIssue]=useState(false);
  const [preview,setPreview]=useState<{receiptId:string;url:string}|null>(null);
  const previewFigure=useRef<HTMLElement|null>(null),closeButton=useRef<HTMLButtonElement|null>(null);
  const previewUrl=useRef<string|null>(null),previewGeneration=useRef(0),previewTrigger=useRef<HTMLButtonElement|null>(null);
@@ -30,7 +31,7 @@ export function ExpenseReceipts({expense,context,client,visible=true,onDirectory
  useEffect(()=>{const warn=(event:BeforeUnloadEvent)=>{if(file||pending||resuming){event.preventDefault();event.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[file,pending,resuming]);
  useEffect(()=>{
   mounted.current=true;const token=++generation.current;lock.current=false;
-  const reset=()=>{closePreview();setRows([]);setListLoaded(false);setFile(null);setPending(null);setResuming(null);setCanRetry(false);setBusy(false);setInputKey(k=>k+1);try{const saved=client.pending();setOriginal(saved);setStorageBlocked(false);setStatus(saved?'An interrupted receipt request needs confirmation before another upload.':'');}catch{setOriginal(null);setStorageBlocked(true);setStatus('Receipt recovery storage needs review. New uploads are blocked.');}};
+  const reset=()=>{closePreview();setRows([]);setListLoaded(false);setListing(false);setListIssue(false);setFile(null);setPending(null);setResuming(null);setCanRetry(false);setBusy(false);setInputKey(k=>k+1);try{const saved=client.pending();setOriginal(saved);setStorageBlocked(false);setStatus(saved?'An interrupted receipt request needs confirmation before another upload.':'');}catch{setOriginal(null);setStorageBlocked(true);setStatus('Receipt recovery storage needs review. New uploads are blocked.');}};
   queueMicrotask(()=>{if(mounted.current&&generation.current===token)reset();});
   const invalidate=()=>{generation.current++;active.current?.abort();active.current=null;},hide=()=>{invalidate();lock.current=false;reset();},visibility=()=>{if(document.visibilityState==='hidden')hide();};
   window.addEventListener('pagehide',hide);document.addEventListener('visibilitychange',visibility);
@@ -72,19 +73,20 @@ export function ExpenseReceipts({expense,context,client,visible=true,onDirectory
  useEffect(()=>{onDirectoryStateChange?.(expense.expenseId,{active:receiptActive,status:directoryStatus});},[onDirectoryStateChange,expense.expenseId,receiptActive,directoryStatus]);
  useEffect(()=>()=>{onDirectoryStateChange?.(expense.expenseId,{active:false,status:'unchecked'});},[onDirectoryStateChange,expense.expenseId]);
  const fileDisabled=busy||storageBlocked||!!pending||!!resuming?.file||!!original&&!canRetry||expense.payload.voided||context.writeState!=='ready';
+ async function loadReceipts(){await run(async(current,signal)=>{
+  setListing(true);setListIssue(false);setStatus('Checking saved receipts…');
+  try{const saved=await client.list(context,expense.expenseId,current,signal);if(!current())return;setRows(saved);setListLoaded(true);if(preview&&!saved.some(row=>row.receiptId===preview.receiptId))closePreview();setStatus('Saved receipt list refreshed.');}
+  catch{if(current()){setRows([]);setListLoaded(false);setListIssue(true);closePreview();setStatus('Saved receipts could not be verified. Load them again to check.');}}
+  finally{if(current())setListing(false);}
+ });}
  return <details className="expense-receipts" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)closePreview();}}>
   <summary>Receipts</summary>
   <div className="receipt-layout" data-preview={preview!==null}>
-   <div className="receipt-controls"><p>Attach a JPEG, PNG, HEIC or PDF up to 25 MB. Files stay private; attachment does not change the expense amount.</p>
-  {original&&<section aria-label="Interrupted receipt request"><p>{originalHere?'Check the original request before another attachment.':'Another receipt request in this tab needs review before new uploads.'}</p>{originalHere&&<><p>Receipt reference: <code>{original.reference.receiptId}</code></p><button type="button" className="secondary" disabled={busy} onClick={()=>void checkOriginal()}>Check interrupted receipt</button></>}<a href={original.reference.expectedRevision==='0'?'/save-review?kind=bookkeeping.receipt.reserve':'/save-review?kind=bookkeeping.receipt.publish'}>Review interrupted receipt request</a></section>}
-  <label className="receipt-file">Receipt file<input key={inputKey} type="file" accept="image/jpeg,image/png,image/heic,application/pdf" disabled={fileDisabled} onChange={e=>{const selected=e.target.files?.[0]??null;if(selected&&(!['image/jpeg','image/png','image/heic','application/pdf'].includes(selected.type)||selected.size<1||selected.size>25*1024*1024)){e.target.value='';setFile(null);setStatus('Choose a supported file between 1 byte and 25 MB.');return;}setFile(selected);setStatus('');}}/></label>
-  {file&&<p className="receipt-file-name">{file.name} · {Math.ceil(file.size/1024)} KB</p>}
-  <div className="receipt-actions">
-   <button type="button" disabled={!file||writesBlocked} onClick={()=>void begin()}>Attach receipt</button>
-   {file&&!fileDisabled&&<button type="button" className="secondary" onClick={()=>{setFile(null);setInputKey(key=>key+1);}}>Clear selected file</button>}
-  </div>
-  <button type="button" className="secondary" disabled={busy} onClick={()=>void run(async(current,signal)=>{const saved=await client.list(context,expense.expenseId,current,signal);if(!current())return;setRows(saved);setListLoaded(true);if(preview&&!saved.some(row=>row.receiptId===preview.receiptId))closePreview();setStatus('Saved receipt list refreshed.');})}>Load saved receipts</button>
-  {rows.map((receipt,index)=><section key={receipt.receiptId} className="receipt-saved-row" aria-label={'Receipt '+(index+1)}>
+   <div className="receipt-controls">
+    <div className="receipt-list-heading"><h4>Saved receipts</h4><button type="button" className="secondary" disabled={busy} onClick={()=>void loadReceipts()}>Load saved receipts</button></div>
+    <p className="receipt-list-state">{listing?'Checking saved receipts…':listIssue?'Saved receipts could not be verified.':listLoaded&&rows.length===0?'No saved receipts for this expense.':!listLoaded?'Load the saved receipt list to check all attachments.':null}</p>
+    <div className="receipt-saved-list" aria-busy={listing}>
+  {rows.map((receipt,index)=><section key={receipt.receiptId} className="receipt-saved-row" data-receipt-status={receipt.status} aria-label={'Receipt '+(index+1)}>
    <p><strong>Receipt {index+1}</strong> · {receipt.status==='available'?'Available':'Upload awaiting validation'} · {receipt.declaredType==='application/pdf'?'PDF':'Image'} · {Math.ceil(receipt.byteSize/1024)} KB</p>
    <div className="receipt-actions">
     {receipt.status==='available'?<>
@@ -92,18 +94,32 @@ export function ExpenseReceipts({expense,context,client,visible=true,onDirectory
       aria-pressed={preview?.receiptId===receipt.receiptId} onClick={event=>{previewTrigger.current=event.currentTarget;void openPreview(receipt);}}>
       View preview
      </button>
+     <details className="receipt-downloads"><summary>Download files</summary><div className="receipt-actions">
      <button type="button" className="secondary" disabled={busy} aria-label={'Download receipt '+(index+1)} onClick={()=>void download(receipt,'original')}>Download receipt</button>
      <button type="button" className="secondary" disabled={busy} aria-label={'Download preview for receipt '+(index+1)} onClick={()=>void download(receipt,'preview')}>Download preview</button>
+     </div></details>
     </>:<>
      <button type="button" className="secondary" disabled={writesBlocked} onClick={()=>startResume(receipt)}>Finish saved upload {index+1}</button>
      {file&&<button type="button" className="secondary" disabled={writesBlocked} onClick={()=>startResume(receipt,true)}>Use selected file for receipt {index+1}</button>}
     </>}
    </div>
   </section>)}
+    </div>
+  {original&&<section className="receipt-recovery" aria-label="Interrupted receipt request"><p>{originalHere?'Check the original request before another attachment.':'Another receipt request in this tab needs review before new uploads.'}</p>{originalHere&&<><p>Receipt reference: <code>{original.reference.receiptId}</code></p><button type="button" className="secondary" disabled={busy} onClick={()=>void checkOriginal()}>Check interrupted receipt</button></>}<a href={original.reference.expectedRevision==='0'?'/save-review?kind=bookkeeping.receipt.reserve':'/save-review?kind=bookkeeping.receipt.publish'}>Review interrupted receipt request</a></section>}
+    <section className="receipt-upload-area" aria-label="Attach a receipt">
+     <h4>Attach a receipt</h4><p className="field-help">JPEG, PNG, HEIC or PDF up to 25 MB. Files stay private; attachment does not change the expense amount.</p>
+  <label className="receipt-file">Receipt file<input key={inputKey} type="file" accept="image/jpeg,image/png,image/heic,application/pdf" disabled={fileDisabled} onChange={e=>{const selected=e.target.files?.[0]??null;if(selected&&(!['image/jpeg','image/png','image/heic','application/pdf'].includes(selected.type)||selected.size<1||selected.size>25*1024*1024)){e.target.value='';setFile(null);setStatus('Choose a supported file between 1 byte and 25 MB.');return;}setFile(selected);setStatus('');}}/></label>
+  {file&&<p className="receipt-file-name">{file.name} · {Math.ceil(file.size/1024)} KB</p>}
+  <div className="receipt-actions">
+   <button type="button" disabled={!file||writesBlocked} onClick={()=>void begin()}>Attach receipt</button>
+   {file&&!fileDisabled&&<button type="button" className="secondary" onClick={()=>{setFile(null);setInputKey(key=>key+1);}}>Clear selected file</button>}
+  </div>
+    </section>
   {pending&&<button type="button" className="secondary" disabled={busy||!canRetry} onClick={()=>void attach(pending)}>Retry the same attachment</button>}{resuming&&<><button type="button" className="secondary" disabled={busy||!canRetry} onClick={()=>void resume(resuming)}>Retry saved upload</button>{!resuming.file&&file&&<button type="button" className="secondary" disabled={busy||!canRetry} onClick={resumeWithFile}>Retry with selected original file</button>}</>}{status&&<p role="status">{status}</p>}
    </div>
    {visible&&preview&&<figure ref={previewFigure} className="receipt-preview" aria-label="Receipt preview">
     {/* Preview bytes come from the private receipt download, verified before creating the URL. */}
+    <div className="receipt-preview-context"><strong>Recorded expense: ${expenseDollars(expense.payload.amountCents)} USD</strong><span>Paid on <time dateTime={expense.payload.paidOn}>{expense.payload.paidOn}</time></span><span>Preview image · amount and date are the saved expense record.</span></div>
     <img src={preview.url} alt="Verified receipt preview"/>
     <figcaption><button ref={closeButton} type="button" className="secondary" onClick={()=>{closePreview();previewTrigger.current?.focus();}}>Close preview</button><ReceiptDocumentViewer key={preview.url} url={preview.url} expense={expense}/></figcaption>
    </figure>}

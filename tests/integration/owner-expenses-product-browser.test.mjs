@@ -2,6 +2,7 @@ import {observeExpenseAccess,prepareExpenseBrowserCode} from '../support/expense
 // Genuine MFA, actual Next app and registered49 PostgreSQL. Viewports emulate
 // phones; no real-device or receipt-provider configuration claim.
 import assert from 'node:assert/strict';
+import {captureExpenseState} from '../support/receipt-layout.mjs';
 import {test} from 'node:test';
 import {mkdir,readFile} from 'node:fs/promises';
 import {chromium,webkit,expect} from '@playwright/test';
@@ -18,7 +19,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   accessDiagnostic=observeExpenseAccess(page,f);page.setDefaultTimeout(15000);page.setDefaultNavigationTimeout(30000);let saves=0;
   page.on('request',request=>{if(request.method()==='POST'&&new URL(request.url()).pathname==='/api/business/expenses/save')saves++;});
   page.on('response',response=>{const path=new URL(response.url()).pathname;if(path.startsWith('/api/')&&response.status()>=400)t.diagnostic('HTTP '+response.status()+' '+path);});
-  await page.goto(f.origin+'/expenses');await expect(page.getByRole('status')).toHaveText('Sign in to view expenses.');await expect(page.getByRole('button',{name:'Save expense',exact:true})).toHaveCount(0);await page.getByRole('link',{name:'Sign in to view expenses',exact:true}).click();const denied=await page.evaluate(async()=>{const response=await fetch('/api/business/expenses/history',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({afterExpenseId:null,afterRevision:'0'})});return response.status;});assert.equal(denied,400);
+  await page.goto(f.origin+'/expenses');await expect(page.getByRole('status')).toHaveText('Sign in to view expenses.');await expect(page.getByRole('button',{name:'Save expense',exact:true})).toHaveCount(0);await captureExpenseState(page,name,'signed-out');await page.getByRole('link',{name:'Sign in to view expenses',exact:true}).click();const denied=await page.evaluate(async()=>{const response=await fetch('/api/business/expenses/history',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({afterExpenseId:null,afterRevision:'0'})});return response.status;});assert.equal(denied,400);
   await prepareExpenseBrowserCode(f);const credentials=f.credentials();await page.getByLabel('Email',{exact:true}).fill(credentials.email);await page.getByLabel('Password',{exact:true}).fill(credentials.password);await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();assert((await context.cookies()).some(c=>c.name==='__Host-crest_session'&&c.httpOnly&&c.secure));
   const returnToExpenses=page.getByRole('link',{name:'Return to Expenses',exact:true});await expect(returnToExpenses).toHaveAttribute('href','/expenses');await returnToExpenses.click();await expect(page.getByRole('heading',{name:'Expenses',exact:true})).toBeVisible();
   const status=()=>page.getByRole('status');await expect(status()).toContainText('Expenses loaded');await expect(page.getByText('No paid expenses recorded.',{exact:true})).toBeVisible();

@@ -8,6 +8,7 @@ import {ReferencePicker} from '../leads/reference-picker';
 import {followUpCandidates,followUpWall} from '../leads/follow-up-time';
 import {NullableText} from '../customers/nullable-text';
 import {SavedHoldHistoryDownload} from './saved-history-download';
+import {useProposalParties} from './proposal-parties';
 function wallFacts(instant:string,zone:string){
  if(!instant)return{local:'',offset:0};
  try{const parts=new Intl.DateTimeFormat('en-CA-u-ca-iso8601-nu-latn',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(instant)),get=(type:string)=>parts.find(p=>p.type===type)?.value??'';const local=get('year').padStart(4,'0')+'-'+get('month')+'-'+get('day')+'T'+get('hour')+':'+get('minute')+':'+get('second')+'.'+instant.slice(20,26);return{local,offset:(Date.parse(local+'Z')-Date.parse(instant))/60000};}catch{return{local:'',offset:0};}
@@ -28,6 +29,7 @@ export function AppointmentHoldScreen(){
  const [view,setView]=useState(initialHoldView),[formInstance,setFormInstance]=useState(0),current=useRef<ReturnType<typeof createHoldController>|null>(null),status=useRef<HTMLParagraphElement>(null),[deviceZone]=useState(()=>Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC');
  const [withdrawn,setWithdrawn]=useState(false),[pageNumber,setPageNumber]=useState(1);
  const proposalHeading=useRef<HTMLHeadingElement>(null);
+ const parties=useProposalParties({businessId:view.businessId,binding:view.binding,rows:view.rows});
  const shownRows=view.rows.filter(row=>(row.state==='withdrawn')===withdrawn);
  const dirty=!!view.draft&&(view.selected?holdPayloadKeys.some(k=>k!=='reason'&&view.draft![k]!==view.selected![k])||view.draft.reason!==null&&view.draft.reason!==view.selected.reason:JSON.stringify(view.draft)!==JSON.stringify(emptyHoldPayload));
  useEffect(()=>{const c=createHoldController({store:createPendingHoldStore({getItem:k=>sessionStorage.getItem(k),setItem:(k,v)=>sessionStorage.setItem(k,v),removeItem:k=>sessionStorage.removeItem(k)}),change:setView});current.current=c;void c.load();const hide=()=>{if(document.visibilityState==='hidden')c.suspend();},leave=()=>c.suspend(),restore=(e:PageTransitionEvent)=>{if(e.persisted)c.suspend();};document.addEventListener('visibilitychange',hide);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restore);return()=>{c.dispose();current.current=null;document.removeEventListener('visibilitychange',hide);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restore);};},[]);
@@ -41,34 +43,35 @@ export function AppointmentHoldScreen(){
   if(kind==='more'&&c.view().phase==='ready')setPageNumber(page=>page+1);
   status.current?.focus();
  }
+ function newProposal(){if(view.busy||view.writesPaused)return;if(discard()){current.current?.create();setFormInstance(n=>n+1);requestAnimationFrame(()=>proposalHeading.current?.focus());}}
  function edit<K extends keyof HoldPayload>(key:K,value:HoldPayload[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
  function time(endpoint:'start'|'end',instant:string){if(!view.draft)return;const f=wallFacts(instant,view.draft.timezone);current.current?.edit({...view.draft,[endpoint==='start'?'start_at':'end_at']:instant,[endpoint==='start'?'local_start':'local_end']:f.local,[endpoint==='start'?'start_offset_minutes':'end_offset_minutes']:f.offset});}
  function zone(timezone:string){if(!view.draft)return;const start=wallFacts(view.draft.start_at,timezone),end=wallFacts(view.draft.end_at,timezone);current.current?.edit({...view.draft,timezone,local_start:start.local,local_end:end.local,start_offset_minutes:start.offset,end_offset_minutes:end.offset});}
  const locked=view.busy||view.writesPaused||view.selected?.state==='withdrawn',withdrawing=view.draft?.state==='withdrawn';
- return <section aria-label="Appointment proposals" aria-busy={view.busy}><p className="notice">Proposed times leave the slot unreserved. Confirm a job from accepted quote scope before starting work.</p><p ref={status} tabIndex={-1} role="status">{view.message}</p>
+ return <section aria-label="Appointment proposals" aria-busy={view.busy}><p className="proposal-reservation"><span>Time is not reserved</span><a href="/schedule">View confirmed jobs</a></p><p ref={status} tabIndex={-1} role="status">{view.message}</p>
   {view.phase==='ready'&&<>
    {view.writesPaused&&<p className="notice">Changes are paused. You can review retained proposals.</p>}
    <section className="proposal-directory settings-card" aria-labelledby="proposal-list-heading">
     <div className="proposal-toolbar">
      <h2 id="proposal-list-heading">Saved proposals</h2>
-     <button type="button" disabled={view.busy||view.writesPaused} onClick={()=>{
-      if(discard()){current.current?.create();setFormInstance(n=>n+1);requestAnimationFrame(()=>proposalHeading.current?.focus());}
-     }}>New unconfirmed proposal</button>
+     {(shownRows.length>0||withdrawn||view.hasMore||pageNumber>1)&&<button type="button" disabled={view.busy||view.writesPaused} onClick={newProposal}>New unconfirmed proposal</button>}
     </div>
     <div className="proposal-filters" role="group" aria-label="Filter saved proposals">
      <button type="button" className="secondary" aria-pressed={!withdrawn} disabled={view.busy} onClick={()=>setWithdrawn(false)}>Unconfirmed</button>
      <button type="button" className="secondary" aria-pressed={withdrawn} disabled={view.busy} onClick={()=>setWithdrawn(true)}>Withdrawn</button>
     </div>
     {shownRows.length>0?<ul className="proposal-rows">{shownRows.map(row=>{
-     const state=row.state==='withdrawn'?'Withdrawn':'Unconfirmed';
+     const state=row.state==='withdrawn'?'Withdrawn':'Unconfirmed',party=parties.get(row.id);
      return <li key={row.id} data-selected={view.selected?.id===row.id}>
-      <div>
-       <strong>{row.label}</strong>
+      <div className="proposal-time"><span className="proposal-caption">Proposed time</span>
        <p><time dateTime={row.start_at}>{proposalTime(row.start_at,row.timezone,true)}</time>
-        {' – '}<time dateTime={row.end_at}>{proposalTime(row.end_at,row.timezone,row.local_start.slice(0,10)!==row.local_end.slice(0,10))}</time>
-        {' · '}<span>{state}</span></p>
+        {' – '}<time dateTime={row.end_at}>{proposalTime(row.end_at,row.timezone,row.local_start.slice(0,10)!==row.local_end.slice(0,10))}</time></p>
        <p className="proposal-zone">{row.timezone}</p>
       </div>
+      <div className="proposal-party" aria-busy={!party}><span className="proposal-caption">{row.customer_id===null?'Current lead':'Current customer'}</span>
+       <strong>{party?.state==='verified'?party.label:party?(row.customer_id===null?'Lead name unavailable':'Customer name unavailable'):(row.customer_id===null?'Checking lead name…':'Checking customer name…')}</strong><p className="proposal-label">{row.label}</p>
+      </div>
+      <div className="proposal-outcome"><span className="proposal-state" data-state={row.state}>{state}</span><p>{row.state==='withdrawn'?'No longer proposed':'Time is not reserved'}</p></div>
       <button type="button" className="secondary" aria-label={'Review '+row.label+' · '+state} disabled={view.busy} onClick={()=>{
        const controller=current.current;
        if(controller&&discard())void controller.open(row).then(()=>{
@@ -78,14 +81,14 @@ export function AppointmentHoldScreen(){
        });
       }}>Review</button>
      </li>;
-    })}</ul>:<p role="status">No {withdrawn?'withdrawn':'unconfirmed'} proposals on this page.</p>}
+    })}</ul>:<div className="proposal-empty"><h3>{withdrawn?'No withdrawals on this page':'Plan the next visit'}</h3><p role="status">No {withdrawn?'withdrawn':'unconfirmed'} proposals on this page.</p><p>{withdrawn?'Withdrawn times stay in retained history. Switch to Unconfirmed to review current proposals.':'Save a proposed time for an existing customer or lead. The slot stays open until a job is confirmed from accepted quote scope.'}</p>{!withdrawn&&!view.hasMore&&pageNumber===1&&<button type="button" disabled={view.busy||view.writesPaused} onClick={newProposal}>New unconfirmed proposal</button>}</div>}
     {(pageNumber>1||view.hasMore)&&<div className="proposal-pagination">
      <p className="field-help">Page {pageNumber} · Filters apply to this page</p>
      {pageNumber>1&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>{if(discard())void action('load');}}>First proposal page</button>}
      {view.hasMore&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>{if(discard())void action('more');}}>Next proposal page</button>}
     </div>}
    </section>
-   {view.draft&&<section className="proposal-editor settings-card" aria-label="Proposal editor"><h2 ref={proposalHeading} tabIndex={-1}>{view.selected?'Review proposal':'New proposal'}</h2>{!view.selected&&view.businessId&&<ReferencePicker businessId={view.businessId} kind="customer" value={view.draft.customer_id} disabled={locked} change={customer_id=>edit('customer_id',customer_id)}/>}<form onSubmit={e=>{e.preventDefault();void action('save');}}><fieldset disabled={locked||withdrawing}>
+   {view.draft&&<section className="proposal-editor settings-card" aria-label="Proposal editor"><h2 ref={proposalHeading} tabIndex={-1}>{view.selected?'Review proposal':'New proposal'}</h2><p className="field-help">Proposed times leave the slot unreserved. Confirm a job from accepted quote scope before starting work.</p>{!view.selected&&view.businessId&&<ReferencePicker businessId={view.businessId} kind="customer" value={view.draft.customer_id} disabled={locked} change={customer_id=>edit('customer_id',customer_id)}/>}<form onSubmit={e=>{e.preventDefault();void action('save');}}><fieldset disabled={locked||withdrawing}>
      <legend>Proposed time</legend>
      <div className="proposal-fields">
       <div className="proposal-field"><label htmlFor="proposal-label">Proposal label</label><input id="proposal-label" value={view.draft.label} maxLength={400} autoComplete="off" onChange={e=>edit('label',e.target.value)} required/></div>

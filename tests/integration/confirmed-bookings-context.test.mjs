@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
 import {mkdir,readFile} from 'node:fs/promises';
 import {join} from 'node:path';
-import {backupDatabase,connect,keyPair,recoveryCluster,restoreDatabase} from '../support/recovery-drill.mjs';
-import {syntheticCustomerProfileAvailable,syntheticLeadFollowUpsAvailable,syntheticLeadMatchReviewAvailable,syntheticRecordJobHistoryAvailable} from '../../scripts/synthetic-migrations.mjs';
+import {backupDatabase,backupLegacy121Database,connect,keyPair,recoveryCluster,restoreDatabase,restoreLegacy121Database} from '../support/recovery-drill.mjs';
+import {syntheticCustomerProfileAvailable,syntheticInvoiceOutstandingAvailable,syntheticLeadFollowUpsAvailable,syntheticLeadMatchReviewAvailable,syntheticRecordJobHistoryAvailable} from '../../scripts/synthetic-migrations.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
@@ -128,7 +128,7 @@ test('saved-job history reads bounded customer and vehicle pages from retained s
  assert.deepEqual(await evidence(),beforeRead);
 });
 
-test('upgrade from schema 117 to 121 preserves an existing booking and restores its customer profile',{timeout:240000},async()=>{
+for(const schemaVersion of [121,122])test('upgrade from schema 117 to '+schemaVersion+' preserves an existing booking and restores its customer profile',{timeout:240000},async()=>{
  const originalCluster=await recoveryCluster();
  let source,snapshotReader,restoredCluster;
  try{
@@ -192,15 +192,17 @@ test('upgrade from schema 117 to 121 preserves an existing booking and restores 
   ) AS value`,[owner.business]);
   const retained=await evidence();
   assert.equal(retained.jobs.length,2);
-  const adopted=await source.apply(database);
-  assert.equal(adopted.history.length,121);
+  const upgradeSource=await source.prefix(schemaVersion);
+  const adopted=await source.apply(database,upgradeSource);
+  assert.equal(adopted.history.length,schemaVersion);
   assert.deepEqual(adopted.history.slice(0,117),before.history);
-  assert.deepEqual(adopted.history.slice(117).map(row=>row.version),['20270111180000','20270112180000','20270113180000','20270114180000']);
-  assert.deepEqual((await source.apply(database)).history,adopted.history);
+  assert.deepEqual(adopted.history.slice(117).map(row=>row.version),['20270111180000','20270112180000','20270113180000','20270114180000',...schemaVersion===122?['20270115180000']:[]]);
+  assert.deepEqual((await source.apply(database,upgradeSource)).history,adopted.history);
   assert(await syntheticLeadFollowUpsAvailable(database));
   assert(await syntheticLeadMatchReviewAvailable(database));
   assert(await syntheticRecordJobHistoryAvailable(database));
   assert(await syntheticCustomerProfileAvailable(database));
+  assert.equal(await syntheticInvoiceOutstandingAvailable(database),schemaVersion===122);
   assert.deepEqual(await evidence(),retained);
 
   const read=async(kind,recordId,connection=reader)=>{
@@ -229,17 +231,20 @@ test('upgrade from schema 117 to 121 preserves an existing booking and restores 
    [[owner.vehicle,'keeper',false],[owner.vehicle,'owner',true]]);
   await assert.rejects(profile(anotherOwner.customer),{code:'42501'});
 
-  const folder=join(source.workspace,'customer-profile-121-recovery');
+  const folder=join(source.workspace,'customer-profile-'+schemaVersion+'-recovery');
   await mkdir(folder,{mode:0o700});
-  const keys=await keyPair(folder),checkpoint=await backupDatabase(admin,database,folder,keys.recipient);
-  assert.equal(checkpoint.manifest.schemaVersion,121);
+  const backup=schemaVersion===121?backupLegacy121Database:backupDatabase,restore=schemaVersion===121?restoreLegacy121Database:restoreDatabase;
+  const keys=await keyPair(folder),checkpoint=await backup(admin,database,folder,keys.recipient);
+  assert.equal(checkpoint.manifest.schemaVersion,schemaVersion);
+  assert.equal(checkpoint.manifest.completeBackup,false);
   restoredCluster=await recoveryCluster();
   const destination=await restoredCluster.database();
-  assert.deepEqual(await restoreDatabase(folder,keys.path,destination),checkpoint.manifest);
+  assert.deepEqual(await restore(folder,keys.path,destination),checkpoint.manifest);
   assert(await syntheticLeadFollowUpsAvailable(destination));
   assert(await syntheticLeadMatchReviewAvailable(destination));
   assert(await syntheticRecordJobHistoryAvailable(destination));
   assert(await syntheticCustomerProfileAvailable(destination));
+  assert.equal(await syntheticInvoiceOutstandingAvailable(destination),schemaVersion===122);
   snapshotReader=await connect(destination);
   await snapshotReader.query('SET ROLE crest_web');
   assert.deepEqual(await read('customer',owner.customer,snapshotReader),customerPage);

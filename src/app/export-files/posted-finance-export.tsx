@@ -135,7 +135,7 @@ export function PostedFinanceExport(){
     ?'Invoices, payments, refunds, expenses and supplier payables with journal entries and audit history. Supplier file checksums are included.'
     :'Posted invoices, payments, refunds and expenses with journal entries and source history.'}</p>
   </header>
-  <dl className="export-attributes"><div><dt>Format</dt><dd>CSV files in one ZIP</dd></div><div><dt>Scope</dt><dd>Available posted records</dd></div></dl>
+  <dl className="export-attributes"><div><dt>Format</dt><dd>CSV files in one ZIP</dd></div><div><dt>Scope</dt><dd>Available posted records</dd></div><div><dt>Date scope</dt><dd>Records included by this package; no date filter</dd></div></dl><p className="export-assurance">A financial record package is separate from a complete business export and a recoverable database backup.</p>
   <div className="export-save-row" data-prepared={phase==='prepared'}>
    <div>
     {phase==='prepared'&&<strong>{postedFinanceExportName}</strong>}

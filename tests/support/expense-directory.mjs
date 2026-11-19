@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
+import {captureExpenseState} from './receipt-layout.mjs';
 import {expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from './source-export-browser-fixture.mjs';
@@ -34,15 +35,18 @@ export async function reviewExpenseDirectory(t,name,engine){
   await expect(button(first)).toContainText('Fictional towel merchant');await expect(button(first)).toContainText('supplies');
   await expect(directory.getByText('Receipts not checked',{exact:true})).toHaveCount(2);
   await button(first).press('Enter');await expect(page.getByRole('heading',{name:first,exact:true})).toBeFocused();
-  const purchase=record(first);await purchase.getByText('Receipts',{exact:true}).click();await purchase.getByRole('button',{name:'Load saved receipts',exact:true}).click();
-  await expect(purchase.getByRole('status')).toHaveText('Saved receipt list refreshed.');await expect(button(first)).toContainText('No saved receipts');
+  const purchase=record(first);await purchase.getByText('Receipts',{exact:true}).click();await expect(purchase.locator('.receipt-list-state')).toHaveText('Load the saved receipt list to check all attachments.');
+  let releaseList;const listReady=new Promise(resolve=>{releaseList=resolve;});await page.route('**/api/business/expense-receipts/list',async route=>{await listReady;await route.continue();},{times:1});
+  try{await purchase.getByRole('button',{name:'Load saved receipts',exact:true}).click();await expect(purchase.locator('.receipt-list-state')).toHaveText('Checking saved receipts…');await expect(purchase.getByRole('status')).toHaveText('Checking saved receipts…');await expect(purchase.getByText('No saved receipts for this expense.',{exact:true})).toHaveCount(0);await captureExpenseState(page,name,'receipt-loading');}finally{releaseList();}
+  await expect(purchase.getByRole('status')).toHaveText('Saved receipt list refreshed.');await expect(button(first)).toContainText('No saved receipts');await expect(purchase.locator('.receipt-list-state')).toHaveText('No saved receipts for this expense.');await captureExpenseState(page,name,'receipt-empty');
+  await page.route('**/api/business/expense-receipts/list',route=>route.abort('failed'));await purchase.getByRole('button',{name:'Load saved receipts',exact:true}).click();await expect(purchase.getByRole('status')).toHaveText('Saved receipts could not be verified. Load them again to check.');await expect(button(first)).toContainText('Receipts not checked');await expect(purchase.getByText('No saved receipts for this expense.',{exact:true})).toHaveCount(0);await captureExpenseState(page,name,'receipt-unavailable');await page.unroute('**/api/business/expense-receipts/list');await purchase.getByRole('button',{name:'Load saved receipts',exact:true}).click();await expect(purchase.getByRole('status')).toHaveText('Saved receipt list refreshed.');
   const snapshot=async()=>(await f.client.query(`SELECT jsonb_build_object(
    'expenses',(SELECT jsonb_agg(to_jsonb(e) ORDER BY e.expense_id,e.revision) FROM crest.expense_revisions e WHERE e.business_id=$1),
    'receipts',(SELECT jsonb_agg(to_jsonb(r) ORDER BY r.receipt_id,r.revision) FROM crest.expense_receipt_revisions r WHERE r.business_id=$1),
    'events',(SELECT jsonb_agg(to_jsonb(a) ORDER BY a.id) FROM crest_private.audit_events a WHERE a.business_id=$1)) AS snapshot`,[f.business])).rows[0].snapshot;
   const before=await snapshot();let requests=0;const observed=request=>{if(new URL(request.url()).pathname.startsWith('/api/'))requests++;};page.on('request',observed);
   const selectedFile={name:'fictional-unsaved-receipt.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jG2kAAAAASUVORK5CYII=','base64')};
-  const file=purchase.getByLabel('Receipt file',{exact:true});await file.setInputFiles(selectedFile);
+  const file=purchase.getByLabel('Receipt file',{exact:true});await file.setInputFiles({name:'invalid-receipt.txt',mimeType:'text/plain',buffer:Buffer.from('Fictional invalid format')});await expect(purchase.getByRole('status')).toHaveText('Choose a supported file between 1 byte and 25 MB.');await expect(purchase.getByRole('button',{name:'Attach receipt',exact:true})).toBeDisabled();assert.equal(requests,0,'invalid preflight issues no business request');await captureExpenseState(page,name,'receipt-invalid');await file.setInputFiles(selectedFile);
   await expect(button(first)).toContainText('Receipt task in progress');await expect(purchase.getByRole('button',{name:'Correct or void',exact:true})).toBeDisabled();
   const search=page.getByLabel('Find an expense',{exact:true});await search.fill('wash');await expect(button(first)).toHaveCount(0);await expect(purchase).toBeVisible();
   await button(second).click();await expect(purchase).toHaveCount(0);await expect(record(second)).toBeVisible();await search.fill('');await button(first).click();
