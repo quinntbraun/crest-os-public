@@ -275,7 +275,9 @@ jobs:
           test "$(npm --version)" = "11.19.1"
           npm ci --ignore-scripts --no-fund
       - name: Verify complete browser partition
-        run: node scripts/run-browser-group.mjs --list
+        run: |
+          node scripts/run-browser-group.mjs --list
+          bash tests/integration/ci-ubuntu-package-sources.sh
       - name: Install verified database and recovery tooling
         run: |
           node scripts/install-tools.mjs

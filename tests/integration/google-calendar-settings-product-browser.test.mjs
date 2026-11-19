@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
+import { mkdir,writeFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
@@ -139,23 +139,68 @@ for (const automatic of [false,true]) test('signed-in Calendar preserves consent
         await expect(page).toHaveURL(fixture.origin + settings + '?job=' + job);
         const sync = page.getByRole('region', { name: 'Saved appointment sync' });
         await expect(sync.getByRole('status')).toHaveText(expectedStatus,{timeout:15000});
+        const fonts=await page.evaluate(async()=>{await document.fonts.ready;return {root:getComputedStyle(document.documentElement).fontFamily,body:getComputedStyle(document.body).fontFamily,regular:document.fonts.check('400 16px "IBM Plex Sans"'),semibold:document.fonts.check('600 16px "IBM Plex Sans"'),faces:[...document.fonts].map(face=>({family:face.family,weight:face.weight,status:face.status}))};});
+        await writeFile(fileURLToPath(new URL('settings-calendar-fonts-'+(automatic?'automatic-':'pending-')+engine.name()+'.json',directory)),JSON.stringify(fonts,null,2));
+        assert(fonts.root.includes('IBM Plex Sans'));assert(fonts.body.includes('IBM Plex Sans'));assert(fonts.regular&&fonts.semibold,'the actual requested self-hosted body font weights must be loaded before visual acceptance');
+        const activity=sync.getByRole('list',{name:'Appointment sync activity'});
+        await expect(activity.getByRole('listitem')).toHaveCount(1);
+        await expect(activity.getByRole('heading',{name:'Selected appointment'})).toBeVisible();
+        await expect(activity.locator('.calendar-activity-state')).toHaveText(automatic?'Synced · fictional':'Waiting');
+        await expect(sync).toContainText('Fictional calendar · No events are sent to Google.');
         await expect(sync.getByRole('link', { name: 'Open saved job' })).toHaveAttribute('href', '/schedule?job=' + job);
         await expect(sync.getByText('Last successful sync', { exact: true })).toHaveCount(automatic ? 1 : 0);
         if (automatic) {
+          const facts=async()=>{const result={};for(const table of ['jobs','google_calendar_consents','google_calendar_dispatch_results','google_calendar_dispatch_sends'])result[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM crest.'+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;result.audit=(await fixture.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[fixture.business])).rows;return result;};
+          const before=await facts(),requests=[];const observe=request=>{const path=new URL(request.url()).pathname;if(path.startsWith('/api/business/'))requests.push(request.method()+' '+path);};page.on('request',observe);
+          const evidence=sync.locator('.calendar-sync-evidence'),toggle=evidence.locator('summary');
+          try{
+          await expect(evidence).not.toHaveAttribute('open','');
+          await expect(sync.locator('time')).toBeHidden();
+          await toggle.press('Enter');await expect(evidence).toHaveAttribute('open','');
+          await expect(toggle).toBeFocused();
           await expect(sync.locator('time')).toHaveAttribute('datetime', /^\d{4}-\d{2}-\d{2}T/);
+          await expect(sync.locator('time')).toBeVisible();
           await expect(sync.getByText('1 of 1', { exact: true })).toBeVisible();
+          await page.screenshot({path:fileURLToPath(new URL('settings-calendar-evidence-'+engine.name()+'-390.png',directory)),fullPage:true});
+          await toggle.press('Enter');await expect(sync.locator('time')).toBeHidden();await expect(toggle).toBeFocused();
+          assert.deepEqual(await facts(),before);assert.deepEqual(requests,[]);
+          }finally{page.off('request',observe);}
         }
-        for (const width of [360, 390, 768, 1440]) {
+        for (const width of [360, 390, 768, 1100, 1440]) {
           await page.setViewportSize({ width, height: 900 });
+          await page.evaluate(async()=>{await document.fonts.ready;});
           const axe = await new AxeBuilder({ page }).analyze();
           assert.deepEqual(axe.violations.map(item => item.id), []);
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
           const screenshotPrefix = automatic ? 'settings-calendar-synced-' : 'settings-calendar-pending-';
           await page.screenshot({ path: fileURLToPath(new URL(screenshotPrefix + engine.name() + '-' + width + '.png', directory)), fullPage: true });
         }
+        await page.setViewportSize({width:390,height:900});
+        let releaseRead,forwarded,heldRead=false;const readGate=new Promise(resolve=>{releaseRead=resolve;});
+        const holdRead=route=>{forwarded=(async()=>{heldRead=true;await readGate;await route.continue();})();return forwarded;};
+        await page.route('**'+prefix+'job-status',holdRead);
+        try{
+          await sync.getByRole('button',{name:'Check Calendar status'}).press('Enter');
+          await expect.poll(()=>heldRead).toBe(true);
+          await expect(sync).toHaveAttribute('aria-busy','true');
+          await expect(activity.locator('.calendar-activity-state')).toHaveText('Checking');
+          await expect(sync.getByRole('button',{name:'Check Calendar status'})).toBeDisabled();
+          await expect(sync.locator('time')).toHaveCount(0);
+          await page.screenshot({path:fileURLToPath(new URL('settings-calendar-checking-'+(automatic?'automatic-':'pending-')+engine.name()+'-390.png',directory)),fullPage:true});
+        }finally{releaseRead();await forwarded;await page.unroute('**'+prefix+'job-status',holdRead);}
+        await expect(sync.getByRole('status')).toHaveText(expectedStatus,{timeout:15000});
         await page.route('**' + prefix + 'job-status', route => route.abort(), { times: 1 });
         await sync.getByRole('button', { name: 'Check Calendar status' }).press('Enter');
         await expect(sync.getByRole('status')).toContainText('could not verify');
+        await expect(activity.locator('.calendar-activity-state')).toHaveText('Check failed');
+        await expect(sync.locator('time')).toHaveCount(0);
+        await expect(sync.locator('.calendar-sync-evidence')).toHaveCount(0);
+        for(const width of [390,1440]){
+          await page.setViewportSize({width,height:900});
+          assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
+          assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+          await page.screenshot({path:fileURLToPath(new URL('settings-calendar-failed-'+(automatic?'automatic-':'pending-')+engine.name()+'-'+width+'.png',directory)),fullPage:true});
+        }
         await sync.getByRole('button', { name: 'Check Calendar status' }).press('Enter');
         await expect(sync.getByRole('status')).toHaveText(expectedStatus,{timeout:15000});
         await page.reload();

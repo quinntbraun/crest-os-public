@@ -73,7 +73,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | R31 | Category approvals (/settings/accounts/mappings/categories/manage) | Partial | Integrate retained approval history with proposed editing and finish staged phone selection/review acceptance. |
 | R32 | Mapping approvals (/settings/accounts/mappings/manage) | Main change addressed | Remaining full state and final release/device verification stay open. |
 | R33 | Tax profiles (/settings/accounts/tax) | Main change addressed | Remaining long/history/state and final release/device verification stay open; no unsupported jurisdiction directory is invented. |
-| R34 | Calendar setup (/settings/google-calendar) | Partial | Finish compact selected-appointment/activity states for waiting/failure/confirmed and integration-state visual review. |
+| R34 | Calendar setup (/settings/google-calendar) | Partial | Implement the original bounded recent-appointment/activity directory; finish other actual integration/state variants and exact release/installed/physical-device acceptance. |
 | R35 | Vehicle directory (/vehicles) | Main change addressed | Final profile/history/photo, sign-out and device/state verification remain; no stock evidence image. |
 | R36 | Page not found (/audit-page-does-not-exist) | Main change addressed | Retained baseline plus source inspection is not a fresh final-release/device run. |
 | D01 | Customer profile | Partial | Reconcile compact last/next-visit facts and action hierarchy consistently across all profile sections. |
@@ -94,13 +94,13 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | D16 | Supplier bills | Main change addressed | Complete remaining state/long-value/native-original-format variants and fresh release/installed/physical-device acceptance. |
 | D17 | Dated approval history | Main change addressed | Remaining large/gap/state and final release/device review remain. |
 | D18 | Travel history | Main change addressed | Remaining long pagination/failure states and final source/device verification remain. |
-| D19 | Calendar waiting state | Partial | Finish compact appointment waiting/failed/confirmed activity and evidence hierarchy; do not claim live delivery. |
+| D19 | Calendar waiting state | Partial | Complete the original broader appointment/activity list and additional actual states; retain truthful simulation labels and final release/device/privacy acceptance. |
 | D20 | Drop-off custody history | Main change addressed | Other custody editor/state, native original-format and physical-device/full release acceptance remain. |
 
 ## Next sequence
 
-1. Publish and verify the explicit schema-120 supplier recovery correction; keep every failed, interrupted and skipped result visible and all release gates unchanged.
-2. Finish Calendar appointment activity and remaining destination/workflow implementations; preserve the verified quote navigation and reading modes.
+1. Publish and verify the signed-package-index optimization after preserving both terminal40481a attempts; retain every failed/skipped result and all original deadlines/signatures/required checks.
+2. Wire the existing-API bounded Calendar page reader into the original activity directory and verify navigation/multiple appointments; preserve the selected-status row and quote reading modes.
 3. Perform the fresh signed-in dense planner review; use actual findings rather than assuming a replacement is needed.
 4. Complete state/zoom/long-value/privacy verification and the unchanged full-release, upgrade, restore and physical-device gates. Reconcile every row before claiming audit completion.
 

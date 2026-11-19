@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-19T07:08:55.771Z",
+  "assessedAt": "2026-11-19T08:07:20.162Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "16dad74356533f78b00c7e9eb49953d7601885e3",
-    "publishedCommit": "d553bd028ec7220b6fa2c223aab7a6f5eb024e39",
-    "publishedTree": "aa60f4a1006a5eb92e02f07ef55306cec992bf96",
-    "localTree": "0b37eaffddf4be6b69fdc27163202a15ac60b3cf"
+    "localCommit": "f9651c12cfad965d516095185ddc8cc477749a6d",
+    "publishedCommit": "40481a44463b250b30eb07a1768c7f0be83b5539",
+    "publishedTree": "08e0060129bac80aaa170a183a95ba426a3459d2",
+    "localTree": "4643a361cd75249125079f7b967747e0d516d501"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "fbadfa0134555262ed269e190a283c5dd61beafc6598c0d325c5e946490acc3c"
+          "sha256": "50bfb2170e45f6779e52b2adc2c66482fbe7ade6f3e517c3773ce6b6f77075a0"
         }
       ],
       "verification": {
@@ -97,7 +97,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ddb374b8ebf7ce933514a9760de1218fed4b2306ab65f5bd483ac7d0a34d8064"
+          "sha256": "52089ddd924b8d11696f7330f5dfe64aa0aefe145ff93f0665c0ed187e48ead9"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -121,7 +121,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ddb374b8ebf7ce933514a9760de1218fed4b2306ab65f5bd483ac7d0a34d8064"
+          "sha256": "52089ddd924b8d11696f7330f5dfe64aa0aefe145ff93f0665c0ed187e48ead9"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
@@ -145,7 +145,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ddb374b8ebf7ce933514a9760de1218fed4b2306ab65f5bd483ac7d0a34d8064"
+          "sha256": "52089ddd924b8d11696f7330f5dfe64aa0aefe145ff93f0665c0ed187e48ead9"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -173,7 +173,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "0d13e9d27bc8dd1a5f1de43e590c6dd053f3ed817153c9e37ba35aea1be0fa6b"
+          "sha256": "6e2c26457c16b8866ffb4daf042ef2a946c1b3287cb9ce9acaa142f6c3a486e8"
         }
       ],
       "verification": {
@@ -245,7 +245,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "0d13e9d27bc8dd1a5f1de43e590c6dd053f3ed817153c9e37ba35aea1be0fa6b"
+          "sha256": "6e2c26457c16b8866ffb4daf042ef2a946c1b3287cb9ce9acaa142f6c3a486e8"
         }
       ],
       "verification": {
@@ -289,7 +289,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ddb374b8ebf7ce933514a9760de1218fed4b2306ab65f5bd483ac7d0a34d8064"
+          "sha256": "52089ddd924b8d11696f7330f5dfe64aa0aefe145ff93f0665c0ed187e48ead9"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
@@ -313,7 +313,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ddb374b8ebf7ce933514a9760de1218fed4b2306ab65f5bd483ac7d0a34d8064"
+          "sha256": "52089ddd924b8d11696f7330f5dfe64aa0aefe145ff93f0665c0ed187e48ead9"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
@@ -365,7 +365,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "fbadfa0134555262ed269e190a283c5dd61beafc6598c0d325c5e946490acc3c"
+          "sha256": "50bfb2170e45f6779e52b2adc2c66482fbe7ade6f3e517c3773ce6b6f77075a0"
         }
       ],
       "verification": {
@@ -1156,16 +1156,16 @@
       "title": "P1 · Calendar setup (/settings/google-calendar)",
       "requirements": "Observed: The route baseline is unavailable; configured supplemental evidence shows multiple stacked status cards and a waiting update.\n\nDirection: Use one connection summary and an appointment-sync activity list. Distinguish account consent, target calendar, pending update, failure and confirmed sync.\n\nDesktop: Use status plus recent activity, with details in an inspector.\n\nPhone: Keep account/calendar and the next safe action above the event history.\n\nAcceptance: Simulated consent or saved consent must never look like a verified live Google connection or successful event delivery.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-google-calendar-{desktop,phone}.png",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Setup summary consolidates account/calendar/consent and clearly labels simulated/no-event mode.",
-      "remainingWork": "Finish compact selected-appointment/activity states for waiting/failure/confirmed and integration-state visual review.",
+      "implementedOrPresent": "Connection identity summary and a compact selected-appointment row distinguish current status, fictional confirmation, checking and failed reads, with keyboard-expandable sync evidence and safe actions.",
+      "remainingWork": "Implement the original bounded recent-appointment/activity directory; finish other actual integration/state variants and exact release/installed/physical-device acceptance.",
       "evidence": [
         {
           "path": "src/app/settings/google-calendar/setup.tsx",
           "sha256": "c7cc715f7f3f97e3655590cdd187532400f54534e29f5694bf6a9e0f2a44343f"
         },
         {
-          "path": "planning/GOOGLE_CALENDAR_V1.md",
-          "sha256": "29b763b56f7f41112498cd2e85fd2098f51f0134cb1060f28940280c8be08f17"
+          "path": "planning/CALENDAR_APPOINTMENT_ACTIVITY_DESIGN.md",
+          "sha256": "b3b9589c349b86273ab21833dd08c0fc0be3565e3a515ff05262564a126b437b"
         }
       ],
       "verification": {
@@ -1253,7 +1253,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "0d13e9d27bc8dd1a5f1de43e590c6dd053f3ed817153c9e37ba35aea1be0fa6b"
+          "sha256": "6e2c26457c16b8866ffb4daf042ef2a946c1b3287cb9ce9acaa142f6c3a486e8"
         }
       ],
       "verification": {
@@ -1652,16 +1652,16 @@
       "title": "Calendar waiting state",
       "requirements": "Account, consent and queued event are presented in three substantial cards. Consolidate connection identity and give each appointment an explicit waiting/failed/confirmed row. Preserve the prominent simulated/no-events disclaimer in fictional mode.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/settings-calendar-pending-chromium-390.png",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Calendar identity summary and truthful simulated/waiting status handling exist.",
-      "remainingWork": "Finish compact appointment waiting/failed/confirmed activity and evidence hierarchy; do not claim live delivery.",
+      "implementedOrPresent": "Selected appointment waiting/fictional-confirmed/checking/failed rows replace the substantial status card; native evidence disclosure preserves focus and makes no business requests or record changes.",
+      "remainingWork": "Complete the original broader appointment/activity list and additional actual states; retain truthful simulation labels and final release/device/privacy acceptance.",
       "evidence": [
         {
           "path": "src/app/settings/google-calendar/job-status.tsx",
-          "sha256": "b9b9a3de999c958f14a98386a690d125447262a69a30639ca3ea6d8929e165a1"
+          "sha256": "5d836f19fcf9f8e489b1ee5adfa9e2f85a63382a3c6e1dd20b5634f78721db83"
         },
         {
-          "path": "planning/GOOGLE_CALENDAR_V1.md",
-          "sha256": "29b763b56f7f41112498cd2e85fd2098f51f0134cb1060f28940280c8be08f17"
+          "path": "planning/CALENDAR_APPOINTMENT_ACTIVITY_DESIGN.md",
+          "sha256": "b3b9589c349b86273ab21833dd08c0fc0be3565e3a515ff05262564a126b437b"
         }
       ],
       "verification": {

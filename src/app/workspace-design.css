@@ -1228,7 +1228,25 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 .calendar-setup-facts div { padding:.5rem 0; border-top:1px solid var(--line); }
 .calendar-setup-facts dt { color:var(--muted); font-size:.825rem; }
 .calendar-setup-facts dd { margin:.15rem 0 0; font-weight:650; overflow-wrap:anywhere; }
-.calendar-job-summary { margin-top:1rem; }
+.calendar-job-summary { margin-top:1.25rem; padding-top:1rem; border-top:1px solid var(--line); container:calendar-activity / inline-size; }
+.calendar-job-summary > h2 { margin:0; font-size:1.125rem; }
+.calendar-activity-list { list-style:none; padding:0; margin:.75rem 0 0; }
+.calendar-activity-row { display:grid; gap:.5rem 1rem; padding:.875rem 0; border-block:1px solid var(--line); }
+.calendar-activity-body { min-width:0; overflow-wrap:anywhere; }
+.calendar-activity-heading { display:flex; align-items:center; flex-wrap:wrap; gap:.375rem .75rem; }
+.calendar-activity-heading h3 { margin:0; font-size:1rem; }
+.calendar-activity-state { font-size:.8125rem; font-weight:650; padding:.2rem .5rem; border:1px solid var(--line); border-radius:var(--radius); color:var(--muted); background:var(--paper); }
+.calendar-activity-row[data-state="pending"] .calendar-activity-state,
+.calendar-activity-row[data-state="delayed"] .calendar-activity-state { color:var(--gold-ink); }
+.calendar-activity-row[data-state="failed"] .calendar-activity-state { color:var(--ink); border-color:var(--ink); }
+.calendar-activity-body > p { margin:.5rem 0; }
+.calendar-activity-body .calendar-activity-version { color:var(--muted); font-size:.875rem; }
+.calendar-sync-evidence { margin:.5rem 0 0; }
+.calendar-sync-evidence summary { min-height:44px; align-content:center; cursor:pointer; }
+@container calendar-activity (min-width:38rem) {
+ .calendar-activity-row { grid-template-columns:minmax(0,1fr) auto; align-items:start; }
+ .calendar-activity-row .calendar-activity-actions { flex-direction:column; align-items:flex-start; }
+}
 .calendar-settings-actions { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .75rem; }
 .calendar-settings-actions button { width:auto; margin:0; }
 @media (min-width:61rem) {
