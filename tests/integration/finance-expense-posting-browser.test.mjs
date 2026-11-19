@@ -9,6 +9,7 @@ import {strFromU8,unzipSync} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
 import {reviewReceiptDocumentViewer} from '../support/receipt-document-viewer.mjs';
+import {reviewAccountingReportWorkspace} from '../support/accounting-report-workspace.mjs';
 
 async function exerciseSupplierBills(page,date,fixture,engine){
  const region=page.getByRole('region',{name:'Unpaid supplier bill drafts',exact:true});
@@ -278,6 +279,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     incomeMetadata=body;assert.equal(response.status(),200);assert.equal(incomeCalls,1);
    }finally{await page.unroute(incomePattern,retainIncome);}
    await expect(statement.getByRole('status')).toHaveText('Recorded income loaded.');
+   await reviewAccountingReportWorkspace(page,statement,{label:'income-'+name,values:[['Recorded-book net income','-$100.00']]});
    await expect(statement.locator('time[title]')).toHaveAttribute('datetime',incomeMetadata.observedAt);
    await expect(statement.locator('time[title]')).toHaveAttribute('title',incomeMetadata.observedAt);
    await expect(statement).toContainText(incomeMetadata.timeZone);
@@ -312,8 +314,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(setupView).toBeVisible();
   await expect(accountsView).toBeVisible();
   await report.getByLabel('Through date (optional)',{exact:true}).fill(date);
+  const dateControl=await report.getByLabel('Through date (optional)',{exact:true}).elementHandle();
   await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
   await expect(report.getByRole('status')).toHaveText('Posted balances loaded.');
+  assert(await dateControl.evaluate(element=>element.isConnected),'loading a snapshot must retain the mounted date control');
+  await reviewAccountingReportWorkspace(page,report,{label:'ledger-'+name,values:[['Debit balances','$100.00'],['Credit balances','$100.00']]});
   await expect(report.getByRole('row').filter({hasText:'Fictional wash supplies'})).toContainText('$100.00');
   await expect(report.getByRole('row').filter({hasText:'Fictional dedicated bank'})).toContainText('$100.00');
   await accountsView.press('Enter');
@@ -350,7 +355,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await page.setViewportSize({width,height:900});
    await sheet.getByRole('table').scrollIntoViewIfNeeded();
    const headingsOverlap=await report.evaluate(section=>{
-    const outer=section.querySelector(':scope > header')?.getBoundingClientRect(),nested=section.querySelector('section[aria-label="Recorded balance sheet"] > header')?.getBoundingClientRect();
+    const outer=section.querySelector(':scope > [data-report-reading] > header')?.getBoundingClientRect(),nested=section.querySelector('section[aria-label="Recorded balance sheet"] > header')?.getBoundingClientRect();
     if(!outer||!nested)throw Error('Both report scope headings are required');
     return outer.bottom>Math.max(0,nested.top)&&nested.bottom>Math.max(0,outer.top)&&outer.top<innerHeight&&nested.top<innerHeight;
    });

@@ -6,6 +6,7 @@ import {incomeSections} from '../../../bookkeeping/recorded-income-statement';
 import {downloadFinanceHistory,financeAccounts} from '../../../client/finance-accounts';
 import styles from './screen.module.css';
 import {FinancialReportHeader} from './financial-report-header';
+import {ReportReadingSummary} from './report-reading-summary';
 
 type Report=Awaited<ReturnType<typeof financeAccounts.readRecordedIncomeStatement>>;
 const coverage='Fictional posted records only. Opening balances, reconciliations and some costs are incomplete.';
@@ -75,7 +76,13 @@ export function RecordedIncomeStatement({businessId}:{businessId:string}){
   <summary>Income statement</summary>
   <section aria-label="Recorded income statement" className="trial-balance">
    <p>{report?.schemaVersion===2?supplierBasis:basis}. {coverage}</p>
-   <form className={styles.incomeForm} onSubmit={event=>{event.preventDefault();void load();}}>
+   <ReportReadingSummary snapshot={report}>{report&&<FinancialReportHeader period={<>Income statement · <time dateTime={report.fromOn}>{displayDate(report.fromOn)}</time>
+      {report.fromOn!==report.throughOn&&<> to <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></>}</>}
+      timeZone={report.timeZone} observedAt={report.observedAt} scopeLabel="Coverage incomplete"
+      coverage={coverage} basis={report.schemaVersion===2?supplierBasis:basis}
+      details={<>{report.coverageStart&&<p className="field-help">First recorded posting {report.coverageStart}.</p>}<p className={styles.reportAmount}><span>Recorded-book net income</span> <strong>{usd(BigInt(report.netIncomeCents))}</strong></p></>}
+      action={<button type="button" className="secondary" onClick={download}>Download income statement CSV</button>}/>}</ReportReadingSummary>
+      <form className={styles.incomeForm} onSubmit={event=>{event.preventDefault();void load();}}>
     <label>From date<input type="date" required value={from} disabled={busy}
      onChange={event=>{setFrom(event.target.value);setReport(null);setMessage('');}}/></label>
     <label>Through date<input type="date" required value={through} min={from||undefined} disabled={busy}
@@ -84,12 +91,7 @@ export function RecordedIncomeStatement({businessId}:{businessId:string}){
    </form>
    <p role="status">{message}</p>
    {report&&<>
-    <FinancialReportHeader period={<>Income statement · <time dateTime={report.fromOn}>{displayDate(report.fromOn)}</time>
-      {report.fromOn!==report.throughOn&&<> to <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></>}</>}
-      timeZone={report.timeZone} observedAt={report.observedAt} scopeLabel="Coverage incomplete"
-      coverage={coverage} basis={report.schemaVersion===2?supplierBasis:basis}
-      details={report.coverageStart&&<p className="field-help">First recorded posting {report.coverageStart}.</p>}
-      action={<button type="button" className="secondary" onClick={download}>Download income statement CSV</button>}/>
+
     <div className={styles.balanceScroll} tabIndex={0} role="region" aria-label="Income and expense totals">
      <table className={styles.balanceTable}>
       <thead><tr><th scope="col">Category</th><th scope="col">Amount</th></tr></thead>

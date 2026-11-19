@@ -14,19 +14,26 @@ export function AccountingReports({context}:{context:FinanceAccountContext}){
  const [selected,setSelected]=useState<Report>('ledger');
  const {businessId,recordedIncomeStatement,customerFundsReport,receivableAging}=context;
  const options=[
-  {id:'ledger',label:'Ledger',available:true},
-  {id:'income',label:'Income',available:recordedIncomeStatement},
-  {id:'funds',label:'Customer funds',available:customerFundsReport},
-  {id:'receivables',label:'Receivables',available:receivableAging},
+  {id:'ledger',label:'Ledger',description:'Posted balances and journal entries',available:true},
+  {id:'income',label:'Income',description:'Recorded income and expenses',available:recordedIncomeStatement},
+  {id:'funds',label:'Customer funds',description:'Recorded funds held for customers',available:customerFundsReport},
+  {id:'receivables',label:'Receivables',description:'Outstanding posted invoices by age',available:receivableAging},
  ] as const;
  const available=options.filter(option=>option.available);
  const current=available.find(option=>option.id===selected)??available[0]!;
 
- return <>
-  {available.length>1&&<div className={styles.reportChoices} role="group" aria-label="Choose a report">
-   {available.map(({id,label})=><button key={id} type="button" className="secondary"
-    aria-pressed={current.id===id} aria-controls="accounting-report-view" onClick={()=>setSelected(id)}>{label}</button>)}
-  </div>}
+ return <div className={styles.reportWorkspace} data-picker={available.length>1}>
+  {available.length>1&&<nav className={styles.reportPicker} aria-label="Report navigation">
+   <p className={styles.reportPickerTitle}>Report library</p>
+   <div className={styles.reportChoices} role="group" aria-label="Choose a report">
+   {available.map(({id,label,description})=><div key={id} className={styles.reportChoice}>
+    <button type="button" className="secondary" aria-describedby={'accounting-report-description-'+id}
+     aria-pressed={current.id===id} aria-controls="accounting-report-view" onClick={()=>setSelected(id)}>{label}</button>
+    <small id={'accounting-report-description-'+id}>{description}</small>
+   </div>)}
+   </div>
+   <p className={styles.reportPickerHelp}>Load a report's dates to see checked figures and its recorded coverage.</p>
+  </nav>}
   <div className={styles.reports} id="accounting-report-view">
    {current.id==='ledger'&&<TrialBalance businessId={businessId}/>}
    {current.id==='income'&&<RecordedIncomeStatement businessId={businessId}/>}
@@ -34,5 +41,5 @@ export function AccountingReports({context}:{context:FinanceAccountContext}){
     includesRefundTransfers={context.refundTransfers===true}/>}
    {current.id==='receivables'&&<ReceivableAging businessId={businessId}/>}
   </div>
- </>;
+ </div>;
 }

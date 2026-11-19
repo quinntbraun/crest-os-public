@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {setTimeout as delay} from 'node:timers/promises';
-import {mkdir,readFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {strFromU8,unzipSync} from 'fflate';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
 
 const columns='Id,Name,Phone,AutoId,Auto,Balance,Email,VIN';
 const csv=[
@@ -50,6 +51,51 @@ async function recordCounts(fixture){
   'SELECT (SELECT count(*) FROM crest.customers WHERE business_id=$1) AS customers, '+
   '(SELECT count(*) FROM crest.vehicles WHERE business_id=$1) AS vehicles',[fixture.business]);
  return counts;
+}
+
+async function retainCsvAuthObservation(fixture,name,phase){
+ if(process.env.CREST_TEST_AUTH_OBSERVE!=='1'||!fixture)return;
+ assert(['Chromium','WebKit'].includes(name));
+ assert(['review','approval','application-direct','application-background','application-automatic'].includes(phase));
+ try{
+  await mkdir('.local/review',{recursive:true});
+  await writeFile('.local/review/workspace-contact-auth-'+phase+'-'+name.toLowerCase()+'.json',JSON.stringify(await sessionAdmissionDiagnostic(fixture))+'\n');
+ }catch{process.stderr.write('SYNTHETIC_AUTH_TRACE_UNAVAILABLE\n');}
+}
+
+async function inspectCsvSurface(page,region,name,stage,check=async()=>{}){
+ const requests=[],observe=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))requests.push(request.method()+' '+new URL(request.url()).pathname);};
+ page.on('request',observe);
+ try{
+  await mkdir('.local/review',{recursive:true});
+  for(const width of [360,390,768,1100,1440]){
+   await page.setViewportSize({width,height:900});await page.evaluate(async()=>{await document.fonts.ready;});
+   await region.evaluate(element=>element.scrollIntoView({block:'start',behavior:'instant'}));
+   await check(width);
+   if(stage==='preview'&&width===1440){
+    const fonts=await page.evaluate(()=>({root:getComputedStyle(document.documentElement).fontFamily,faces:[...document.fonts].filter(face=>face.family.includes('IBM Plex')).map(face=>({family:face.family,weight:face.weight,status:face.status}))}));
+    if(name.toLowerCase()==='chromium'){
+     const session=await page.context().newCDPSession(page);
+     try{
+      await session.send('DOM.enable');await session.send('CSS.enable');const {root}=await session.send('DOM.getDocument');fonts.platform=[];
+      for(const selector of ['.legacy-preview-table th[scope="row"]','.legacy-record-detail dd','.legacy-mapping-summary dt']){
+       const {nodeId}=await session.send('DOM.querySelector',{nodeId:root.nodeId,selector});assert(nodeId);
+       const result=await session.send('CSS.getPlatformFontsForNode',{nodeId});
+       fonts.platform.push({selector,fonts:result.fonts.map(font=>({family:font.familyName,name:font.postScriptName,custom:font.isCustomFont,glyphs:font.glyphCount}))});
+      }
+     }finally{await session.detach();}
+    }
+    await writeFile('.local/review/workspace-contact-fonts-'+name.toLowerCase()+'.json',JSON.stringify(fonts,null,2)+'\n');
+    assert(fonts.faces.length>=2&&fonts.faces.every(face=>face.status==='loaded'),'Bundled CSV workspace font faces load.');
+    if(fonts.platform)assert(fonts.platform.every(row=>row.fonts.length&&row.fonts.every(font=>font.custom&&/^IBMPlexSans/.test(font.name))),'CSV record and mapping text renders in the bundled workspace font.');
+   }
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
+   await page.screenshot({path:'.local/review/workspace-contact-'+stage+'-'+name.toLowerCase()+'-'+width+'.png',fullPage:true});
+   await page.screenshot({path:'.local/review/workspace-contact-'+stage+'-'+name.toLowerCase()+'-viewport-'+width+'.png'});
+  }
+  assert.deepEqual(requests,[],'Reading CSV source, mappings and preview must not issue business requests.');
+ }finally{page.off('request',observe);}
 }
 
 for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
@@ -113,6 +159,11 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    await page.getByRole('link',{name:'Review a contact CSV',exact:true}).click();
    await expect(file).toBeEnabled();
    await expect(page.getByText(/up to 25 MiB and 100,000 records/)).toBeVisible();
+   const sourcePanel=page.getByRole('region',{name:'Choose a CSV',exact:true}),guide=page.getByRole('complementary',{name:'CSV format guide',exact:true});
+   await expect(guide.getByRole('table',{name:'Example columns · fictional records',exact:true})).toBeVisible();
+   await expect(guide).toContainText('Balances, payments and invoices are outside this contact import.');
+   await inspectCsvSurface(page,sourcePanel,name,'source',async()=>{await expect(file).toBeVisible();assert((await file.boundingBox()).height>=44);});
+   const mountedFile=await file.elementHandle();
    const counts=await recordCounts(fixture),reviewRequests=[];
    page.on('request',request=>{
     if(request.method()==='POST'&&!request.url().endsWith('/legacy-batches/stage'))reviewRequests.push({path:new URL(request.url()).pathname,body:request.postData()});
@@ -125,6 +176,8 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    await expect(reviewStatus).toContainText('Check the quoting');
    await choose(csv);
    await expect(page.getByText('28 CSV records',{exact:true})).toBeVisible();
+   assert.equal(await mountedFile.evaluate(element=>element.isConnected),true,'Selecting a file preserves the original file input used by later draft staging.');
+   await expect(page.locator('form[aria-label="Map CSV columns"] legend')).toBeFocused();
    const map=(field,header)=>page.getByLabel(field,{exact:true}).selectOption(header);
    await map('Customer ID','Id');
    await map('Customer name','Name');
@@ -137,6 +190,13 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    await expect(reviewStatus).toHaveText('Map Vehicle ID and Vehicle label when reviewing vehicle details.');
    await map('Vehicle label','Auto');
    await map('VIN','VIN');
+   const mappingForm=page.getByRole('form',{name:'Map CSV columns',exact:true});
+   await inspectCsvSurface(page,mappingForm,name,'mapping',async width=>{
+    const summary=page.getByRole('complementary',{name:'Mapped column summary',exact:true});
+    if(width>=1100){await expect(summary).toBeVisible();await expect(summary).toContainText('Customer ID');await expect(summary).toContainText('Id');assert.equal(await summary.evaluate(element=>getComputedStyle(element).position),'sticky');}
+    else await expect(summary).toBeHidden();
+    for(const select of await mappingForm.locator('select:visible').all()){assert(await select.evaluate(element=>parseFloat(getComputedStyle(element).fontSize)>=16&&element.getBoundingClientRect().height>=44));}
+   });
    await page.getByRole('button',{name:'Review file',exact:true}).click();
    await expect(reviewStatus).toHaveText('CSV review is ready.');
    const results=page.getByRole('region',{name:'CSV review results'});
@@ -153,7 +213,34 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    await results.getByRole('button',{name:'Next',exact:true}).click();
    await expect(results).toContainText('26–28 of 28');
    await results.getByLabel('Show records').selectOption('flagged');
-   await expect(results.locator('.legacy-records > li')).toHaveCount(3);
+   await expect(results.locator('.legacy-preview-table tbody > tr')).toHaveCount(3);
+   const beforeJumpRequests=reviewRequests.length;
+   await results.getByLabel('Source record number',{exact:true}).fill('29');
+   await results.getByRole('button',{name:'Go to record',exact:true}).press('Enter');
+   await expect(results.getByRole('rowheader',{name:'Record 29',exact:true})).toBeFocused();
+   await expect(results.getByLabel('Show records')).toHaveValue('all');
+   await results.getByLabel('Source record number',{exact:true}).fill('2');
+   await results.getByRole('button',{name:'Go to record',exact:true}).press('Enter');
+   await expect(results.getByRole('rowheader',{name:'Record 2',exact:true})).toBeFocused();
+   await results.getByRole('button',{name:'Go to record',exact:true}).press('Enter');
+   await expect(results.getByRole('rowheader',{name:'Record 2',exact:true})).toBeFocused();
+   const firstPreview=results.locator('tr[data-record="2"]');
+   await firstPreview.getByText('Inspect record 2',{exact:true}).press('Enter');
+   await expect(firstPreview.getByRole('definition').filter({hasText:'3175550100'})).toBeVisible();
+   await inspectCsvSurface(page,results,name,'preview',async width=>{
+    await firstPreview.evaluate(element=>element.scrollIntoView({block:'center',behavior:'instant'}));
+    await expect(results.getByRole('table',{name:/Mapped CSV records/})).toBeVisible();
+    const phoneLines=await firstPreview.getByRole('definition').filter({hasText:'3175550100'}).evaluate(element=>{const range=document.createRange();range.selectNodeContents(element);return new Set([...range.getClientRects()].map(rect=>Math.round(rect.top))).size;});
+    assert.equal(phoneLines,1,'An ordinary mapped phone number remains readable on one line.');
+    if(width>=1100)await expect(page.getByRole('complementary',{name:'Mapped column summary',exact:true})).toBeInViewport();
+    if(width<=390){
+     const caption=await results.locator('.legacy-preview-table caption').boundingBox(),table=await results.locator('.legacy-preview-table').boundingBox();assert(caption&&table&&caption.width>=table.width-2&&caption.height<=60,'The phone caption spans the preview rather than a narrow anonymous column.');
+     const ordinary=await results.locator('tr[data-record="6"]').boundingBox();assert(ordinary&&ordinary.height<=170,'A short unopened phone record stays compact.');
+     const inspect=await firstPreview.getByText('Inspect record 2',{exact:true}).boundingBox();assert(inspect&&inspect.height>=44,'Record inspection retains its phone touch target.');
+    }
+   });
+   assert.equal(reviewRequests.length,beforeJumpRequests);
+   await results.getByLabel('Show records').selectOption('flagged');
    assert.deepEqual(await recordCounts(fixture),counts);
    assert(reviewRequests.length>=2);
    for(const request of reviewRequests){
@@ -382,7 +469,16 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    await map('Customer name','Name');
    await page.getByRole('button',{name:'Review file',exact:true}).click();
    await expect(results).toContainText('100,000 CSV records · 30 to review',{timeout:30000});
-   await expect(results.locator('.legacy-records > li')).toHaveCount(25);
+   await expect(results.locator('.legacy-preview-table tbody > tr')).toHaveCount(25);
+   const beforeLargeJump=reviewRequests.length;
+   await results.getByLabel('Source record number',{exact:true}).fill('100001');
+   await results.getByRole('button',{name:'Go to record',exact:true}).press('Enter');
+   await expect(results.getByRole('rowheader',{name:'Record 100001',exact:true})).toBeFocused();
+   await expect(results.locator('.legacy-preview-table tbody > tr')).toHaveCount(25);
+   await results.getByLabel('Source record number',{exact:true}).fill('2');
+   await results.getByRole('button',{name:'Go to record',exact:true}).press('Enter');
+   await expect(results.getByRole('rowheader',{name:'Record 2',exact:true})).toBeFocused();
+   assert.equal(reviewRequests.length,beforeLargeJump);
    await saveDraft.getByLabel('Source name').fill('Fictional maximum-size CSV');
    await saveDraft.getByRole('button',{name:'Save import draft',exact:true}).click();
    await expect(saveDraft).toContainText('Import draft saved.',{timeout:55000});
@@ -415,6 +511,7 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    await expect(file).toHaveCount(0);
    await expect(results).toHaveCount(0);
   }catch(error){
+   if(fixture)process.stderr.write('SYNTHETIC_AUTH_DIAGNOSTIC '+JSON.stringify(await sessionAdmissionDiagnostic(fixture))+'\n');
    if(failures.length)process.stderr.write(JSON.stringify(failures.slice(-12))+'\n');
    if(fixture){
     const admission=await fixture.client.query("SELECT count(*)::int AS requests FROM crest_private.session_request_admissions WHERE bucket='ordinary' AND admitted_at>clock_timestamp()-interval '1 minute' GROUP BY session_id ORDER BY count(*) DESC LIMIT 5");
@@ -422,6 +519,7 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    }
    throw error;
   }finally{
+   await retainCsvAuthObservation(fixture,name,'review');
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{
      if(previous===undefined)delete process.env.CREST_TEST_DATABASE_URL;
@@ -561,7 +659,11 @@ for(const [name,engine] of [['Chromium',chromium],['WebKit',webkit]]){
    const saved=(await fixture.client.query('SELECT approval.id FROM crest.legacy_contact_approvals approval WHERE business_id=$1',[fixture.business])).rows;
    assert.deepEqual(saved,[{id:retried.receipt.approvalId}]);
    await context.close();
+  }catch(error){
+   if(fixture)process.stderr.write('SYNTHETIC_AUTH_DIAGNOSTIC '+JSON.stringify(await sessionAdmissionDiagnostic(fixture))+'\n');
+   throw error;
   }finally{
+   await retainCsvAuthObservation(fixture,name,'approval');
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{
      if(cluster){delete process.env.CREST_TEST_DATABASE_URL;await cluster.close();}
@@ -776,7 +878,11 @@ for(const [name,engine,background,automatic] of [['Chromium',chromium,false,fals
    await saveDecision(repeat);
    assert.deepEqual(await recordCounts(fixture),after);
    await context.close();
+  }catch(error){
+   if(fixture)process.stderr.write('SYNTHETIC_AUTH_DIAGNOSTIC '+JSON.stringify(await sessionAdmissionDiagnostic(fixture))+'\n');
+   throw error;
   }finally{
+   await retainCsvAuthObservation(fixture,name,automatic?'application-automatic':background?'application-background':'application-direct');
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{
      if(cluster){delete process.env.CREST_TEST_DATABASE_URL;await cluster.close();}

@@ -6,13 +6,13 @@ This inventory reconciles all 70 original groups: 14 shared findings, 36 destina
 
 | Local implementation review | Groups |
 |---|---:|
-| Main change locally addressed | 37 |
-| Partial implementation or required review | 31 |
+| Main change locally addressed | 39 |
+| Partial implementation or required review | 29 |
 | Open audit work | 2 |
 | Review required before choosing changes | 0 |
 | Total | 70 |
 
-37/70, or 52.9%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 52.9% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 31 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
+39/70, or 55.7%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 55.7% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 29 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
 
 The audit is **not finished**. Each row has remaining implementation or verification. Full current-source/state, delivered-build and physical iPhone acceptance is not established. The earlier roughly 80% figure is a low-confidence V1 coding estimate and is not the audit percentage. This inventory does not reduce the broader goal: complete this audit and then all unfinished approved V1 functionality, including P16/P17, native files, recoverable backups, preserved upgrades and owner/device readiness.
 
@@ -45,7 +45,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | R03 | Customer addresses (/addresses) | Main change addressed | Fresh release/device and broader state review remain; saved quote address snapshots must stay immutable. |
 | R04 | Appointment proposals (/appointment-holds) | Partial | Reconcile empty-state hierarchy and configured unconfirmed/withdrawn/confirmed phone/desktop presentations. |
 | R05 | Customer directory (/customers) | Main change addressed | Revalidate all profile sections, sign-out and navigation states at the final release. |
-| R06 | Contact CSV review (/customers/import-review) | Partial | Complete choose-file/sample-column/next-step presentation and large-file issue navigation as specified. |
+| R06 | Contact CSV review (/customers/import-review) | Partial | Investigate retained provider verification failures using safe actual error categories without retries or relaxed security/deadlines; complete remaining state/zoom/private/device/release review. Loaded faces and actual Chromium glyph fonts are verified on inspected CSV content. |
 | R07 | Expenses (/expenses) | Partial | Finish every loaded/empty/loading/denied/uncertain/invalid-file variant and real format/device acceptance. |
 | R08 | Business data exports (/export-files) | Partial | Finish export-center distinctions, selected request composition and equivalent capability/data states; never imply partial equals complete. |
 | R09 | Lead sources (/lead-sources) | Main change addressed | Remaining source state/pagination and final release/device verification stay open. |
@@ -66,7 +66,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | R24 | Recorded work time (/schedule/work/time) | Main change addressed | Remaining history/pagination/state and final device/release acceptance stay open. |
 | R25 | Services (/services) | Main change addressed | Final stress/denied/history/device verification remains; accepted quote/job prices must not change. |
 | R26 | Business settings (/settings) | Main change addressed | Remaining child setup states and delivered/device acceptance stay open. |
-| R27 | Accounting home (/settings/accounts) | Partial | Complete persistent overview/picker and configured phone hierarchy beyond the individual report-header refinement. |
+| R27 | Accounting home (/settings/accounts) | Main change addressed | Complete remaining state/zoom/private-clearing variants; investigate retained tax/session failures and preserve exact-source release/installed/physical-device requirements. |
 | R28 | Money channels (/settings/accounts/channels) | Main change addressed | Remaining channel/history/pagination/setup states and delivered/device checks remain. |
 | R29 | Dated account mappings (/settings/accounts/mappings) | Main change addressed | Remaining state and final release/device verification remain; never silently fall back across gaps. |
 | R30 | Expense category mappings (/settings/accounts/mappings/categories) | Main change addressed | Complete remaining loading/error/denied/stale/long-value variants and fresh exact-head release/installed/physical-device acceptance. |
@@ -86,9 +86,9 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | D08 | Work-time ledger | Main change addressed | Other large/stale/denied histories and final source/device acceptance remain. |
 | D09 | Trial balance | Main change addressed | Complete specific text-zoom/final-source and delivered verification; implementation presence is not that sign-off. |
 | D10 | Income statement | Main change addressed | Fresh full-head/all relevant state and delivered/device verification remain. |
-| D11 | Receivables aging | Partial | Finish/reconcile compact aging buckets and customer/due/amount/status detail density, long lists and filters. |
+| D11 | Receivables aging | Main change addressed | Finish long/truncated/empty/error/private-clearing/zoom variants and fresh full-release/installed/physical-device acceptance. |
 | D12 | Customer funds | Main change addressed | Fresh full-head and long/truncated/delivery/device variants remain. |
-| D13 | Issued invoice | Partial | A verified live outstanding header remains to implement/review; the original total must not be used as a guessed balance. |
+| D13 | Issued invoice | Partial | A verified invoice-scoped outstanding header remains to implement/review; payment choices are date-scoped and are not a typed zero-balance result. The original total must not be used as a guessed balance. |
 | D14 | Payment correction | Main change addressed | Other correction/history/stale states and fresh full-head acceptance remain; no invented cash or total balance. |
 | D15 | Statement staging | Main change addressed | Other account-identity/long-value/state and installed/device acceptance remain; staging never means reconciliation. |
 | D16 | Supplier bills | Main change addressed | Complete remaining state/long-value/native-original-format variants and fresh release/installed/physical-device acceptance. |
@@ -99,9 +99,9 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 ## Next sequence
 
-1. Publish the locally verified Calendar/planner/UI-policy corrections after preserved terminalfcf1cae21/22; require fresh full verification without weakening deadlines/signatures/required checks.
+1. Investigate the retained CSV user-verification HTTP500 with safe actual error categories; complete remaining state review; actual Chromium glyph-font evidence is retained for inspected CSV content. Final-width seven-parent browser acceptance passes, but is not a cause/cure for earlier failures. Preserve the original failed historical54 CI schema comparison; focused25/25 and observed369/369 local passes do not prove a cause/cure or release acceptance. No login retry, deadline/freshness weakening or blind CI retry.
 2. Finish remaining Calendar selected-change/recovery/access-loss/privacy states and investigate retained session/held-request failures; preserve actual reschedule refusal, bounded directory, pagination/return and quote reading modes.
-3. Complete remaining planner/selected-job state and stress variants; preserve the now-reviewed populated day/week/month and exact phone-return behavior.
+3. Complete remaining report/state/stress variants; the wide receivables date/load width is verified in both complete configured invoice journeys; preserve completed four-report and planner/context-return evidence. Continue every remaining original page/workflow refinement.
 4. Complete state/zoom/long-value/privacy verification and the unchanged full-release, upgrade, restore and physical-device gates. Reconcile every row before claiming audit completion.
 
 The JSON embeds the original sequence/acceptance and review-gap text. The source register and per-domain notes remain evidence; neither this table nor green narrow checks replace required verification.

@@ -1,6 +1,6 @@
 'use client';
 
-import {useCallback,useEffect,useId,useMemo,useRef,useState} from 'react';
+import {useCallback,useEffect,useId,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {AuthenticationError,authentication} from '../../../client/authentication';
 import {customers} from '../../../client/customers';
@@ -54,7 +54,7 @@ function sameAccess(first:Access,second:Access){
   first.context.businessVersion===second.context.businessVersion&&first.context.recoveryEpoch===second.context.recoveryEpoch;
 }
 function reviewRows(review:LegacyCsvReview,saved:SavedMatches|null){
- const rows=new Map<number,{number:number;customer:string|null;vehicle:string|null;issues:string[];matches:string[]}>();
+ const rows=new Map<number,{number:number;customer:string|null;vehicle:string|null;phone:string|null;email:string|null;vin:string|null;issues:string[];matches:string[]}>();
  for(const record of review.rows){
   const matches=[...record.warnings];
   for(const {kind,count} of saved?.get(record.row)??[]){
@@ -62,10 +62,10 @@ function reviewRows(review:LegacyCsvReview,saved:SavedMatches|null){
    const recordType=kind==='vin'?'vehicle':'customer';
    matches.push(count+' saved '+recordType+(count===1?'':'s')+' with this '+field);
   }
-  rows.set(record.row,{number:record.row,customer:record.customer,vehicle:record.vehicle,issues:[],matches});
+  rows.set(record.row,{number:record.row,customer:record.customer,vehicle:record.vehicle,phone:record.phone,email:record.email,vin:record.vin,issues:[],matches});
  }
  for(const issue of review.issues){
-  const row=rows.get(issue.row)??{number:issue.row,customer:null,vehicle:null,issues:[],matches:[]};
+  const row=rows.get(issue.row)??{number:issue.row,customer:null,vehicle:null,phone:null,email:null,vin:null,issues:[],matches:[]};
   row.issues.push(issueMessage[issue.reason]??'Review this record.');
   rows.set(issue.row,row);
  }
@@ -73,6 +73,9 @@ function reviewRows(review:LegacyCsvReview,saved:SavedMatches|null){
 }
 function ReviewResults({review,saved,busy,checkSaved}:{review:LegacyCsvReview;saved:SavedMatches|null;busy:boolean;checkSaved:()=>void}){
  const [filter,setFilter]=useState('all'),[page,setPage]=useState(0),filterId=useId();
+ const [requestedRecord,setRequestedRecord]=useState(''),[jumpTarget,setJumpTarget]=useState<{record:number}|null>(null);
+ const [jumpMessage,setJumpMessage]=useState('');
+ const preview=useRef<HTMLTableElement>(null),jumpId=useId();
  const heading=useRef<HTMLHeadingElement>(null);
  useEffect(()=>{heading.current?.focus();},[]);
  const {rows,flagged}=useMemo(()=>{
@@ -83,6 +86,18 @@ function ReviewResults({review,saved,busy,checkSaved}:{review:LegacyCsvReview;sa
  const shown=filter==='flagged'?flagged:rows;
  const currentPage=Math.min(page,Math.max(0,Math.ceil(shown.length/pageSize)-1));
  const start=currentPage*pageSize,visible=shown.slice(start,start+pageSize);
+ useLayoutEffect(()=>{
+  if(jumpTarget===null||document.visibilityState==='hidden')return;
+  const row=preview.current?.querySelector<HTMLElement>('[data-record="'+jumpTarget.record+'"] th');
+  if(row){row.focus({preventScroll:true});row.scrollIntoView({block:'center',behavior:'instant'});}
+ },[jumpTarget,currentPage]);
+ function jump(event:FormEvent<HTMLFormElement>){
+  event.preventDefault();
+  const record=Number(requestedRecord),index=rows.findIndex(row=>row.number===record);
+  if(!Number.isInteger(record)||index<0){setJumpMessage('This source record has no preview values. Check the record number in your CSV.');return;}
+  setFilter('all');setPage(Math.floor(index/pageSize));setJumpTarget({record});
+  setJumpMessage('Showing source record '+record+'.');
+ }
  return <section className="legacy-panel" aria-label="CSV review results">
   <div className="legacy-review-summary">
    <h2 ref={heading} tabIndex={-1}>Review results</h2>
@@ -102,20 +117,36 @@ function ReviewResults({review,saved,busy,checkSaved}:{review:LegacyCsvReview;sa
   </details>}
   <div className="legacy-filter">
    <label htmlFor={filterId}>Show records</label>
-   <select id={filterId} value={filter} onChange={event=>{setFilter(event.target.value);setPage(0);}}>
+   <select id={filterId} value={filter} onChange={event=>{setFilter(event.target.value);setPage(0);setJumpTarget(null);setJumpMessage('');}}>
     <option value="all">All records</option><option value="flagged">Needs review</option>
    </select>
   </div>
-  {visible.length>0?<ul className="legacy-records">{visible.map(row=><li key={row.number} data-severity={row.issues.length?'rejected':row.matches.length?'match':'clear'}>
-   <span className="legacy-record-number">Record {row.number}</span>
-   <div><strong>{row.customer??'Check the mapped values'}</strong>{row.vehicle&&<p>{row.vehicle}</p>}
-   <span className="legacy-row-state">{row.issues.length?'Check values':row.matches.length?'Possible match':'No flags in this preview'}</span>
-   {[...row.issues,...row.matches].map(reason=><p className="legacy-flag" key={reason}>{reason}</p>)}</div>
-  </li>)}</ul>:<p>{filter==='flagged'?'No records have review flags.':'The CSV contains no contact records.'}</p>}
+  {rows.length>0&&<form className="legacy-record-jump" aria-label="Find a source record" onSubmit={jump}>
+   <label htmlFor={jumpId}>Source record number<input id={jumpId} type="number" inputMode="numeric" min="2" max={review.sourceRowCount+1} step="1" required value={requestedRecord} onChange={event=>setRequestedRecord(event.target.value)}/></label>
+   <button className="secondary" type="submit">Go to record</button>
+   <p className="field-help">The header is record 1. Contact records start at record 2.</p>
+   <p role="status" aria-label="Source record navigation">{jumpMessage}</p>
+  </form>}
+  {visible.length>0?<table ref={preview} className="legacy-preview-table">
+   <caption>Mapped CSV records · {start+1}–{start+visible.length} of {shown.length}</caption>
+   <thead><tr><th scope="col">Source record</th><th scope="col">Contact and vehicle</th><th scope="col">Review</th></tr></thead>
+   <tbody>{visible.map(row=><tr key={row.number} data-record={row.number} data-severity={row.issues.length?'rejected':row.matches.length?'match':'clear'}>
+    <th scope="row" tabIndex={-1}>Record {row.number}</th>
+    <td><strong>{row.customer??'Check the mapped values'}</strong>{row.vehicle&&<p>{row.vehicle}</p>}
+     <details className="legacy-record-detail"><summary>Inspect record {row.number}</summary>
+      {row.customer?<dl><dt>Customer</dt><dd>{row.customer}</dd><dt>Vehicle</dt><dd>{row.vehicle??'Not available'}</dd>
+       <dt>Phone</dt><dd>{row.phone??'Not available'}</dd><dt>Email</dt><dd>{row.email??'Not available'}</dd><dt>VIN</dt><dd>{row.vin??'Not available'}</dd></dl>:
+       <p>No validated contact values are available. Check this source record in your CSV using the review flags.</p>}
+     </details>
+    </td>
+    <td><span className="legacy-row-state">{row.issues.length?'Check values':row.matches.length?'Possible match':'No flags in this preview'}</span>
+     {[...row.issues,...row.matches].map((reason,index)=><p className="legacy-flag" key={index+'-'+reason}>{reason}</p>)}</td>
+   </tr>)}</tbody>
+  </table>:<p>{filter==='flagged'?'No records have review flags.':'The CSV contains no contact records.'}</p>}
   {shown.length>pageSize&&<nav className="legacy-pagination" aria-label="CSV review pages">
-   <button type="button" className="secondary" disabled={!currentPage} onClick={()=>setPage(currentPage-1)}>Previous</button>
+   <button type="button" className="secondary" disabled={!currentPage} onClick={()=>{setPage(currentPage-1);setJumpTarget(null);setJumpMessage('');}}>Previous</button>
    <span aria-live="polite">{start+1}–{start+visible.length} of {shown.length}</span>
-   <button type="button" className="secondary" disabled={start+visible.length>=shown.length} onClick={()=>setPage(currentPage+1)}>Next</button>
+   <button type="button" className="secondary" disabled={start+visible.length>=shown.length} onClick={()=>{setPage(currentPage+1);setJumpTarget(null);setJumpMessage('');}}>Next</button>
   </nav>}
  </section>;
 }
@@ -133,6 +164,12 @@ export function LegacyContactReview(){
  const [message,setMessage]=useState('Checking workspace access…');
  const csvWorker=useRef<Worker|null>(null);
  const fileInput=useRef<HTMLInputElement>(null),active=useRef<AbortController|null>(null),fileId=useId(),mappingId=useId();
+ const mappingLegend=useRef<HTMLLegendElement>(null);
+ useLayoutEffect(()=>{
+  if(source&&document.visibilityState!=='hidden'){
+   mappingLegend.current?.focus({preventScroll:true});mappingLegend.current?.scrollIntoView({block:'start',behavior:'instant'});
+  }
+ },[source]);
  const clear=useCallback(()=>{
   active.current?.abort();active.current=null;
   csvWorker.current?.terminate();csvWorker.current=null;
@@ -280,17 +317,30 @@ export function LegacyContactReview(){
     issueText={issue=>issueMessage[issue]??'Check the mapped data.'}/>}
    <div className="legacy-source-workspace">
    <ImportStages stage={review?'review':'source'}/>
+   <div className="legacy-source-step" data-loaded={source!==null}>
    <section className="legacy-panel" aria-label="Choose a CSV">
-    <label htmlFor={fileId}>Contact CSV</label>
+    <h2>Choose your contact list</h2>
+    <p>Match the columns, then review the records. Saving a draft and approving an import are separate steps.</p>
+    <div className="legacy-file-chooser"><label htmlFor={fileId}>Contact CSV</label>
     <input id={fileId} ref={fileInput} type="file" accept=".csv,text/csv" disabled={busy} aria-describedby={fileId+'-help'}
      onChange={event=>void selectFile(event.currentTarget.files?.[0])}/>
-    <p id={fileId+'-help'} className="field-help">UTF-8 CSV, up to 25 MiB and 100,000 records. Use fictional records in this workspace.</p>
+    <p id={fileId+'-help'} className="field-help">UTF-8 CSV, up to 25 MiB and 100,000 records. Use fictional records in this workspace.</p></div>
     {source&&<div className="legacy-file"><p>{countFormat.format(source.sourceRowCount)} CSV records</p>
      <button className="secondary" type="button" disabled={busy} onClick={()=>{clear();setMessage('Choose a CSV to inspect.');}}>Clear file</button></div>}
    </section>
-   {source&&<form className="legacy-panel" onSubmit={submit} aria-label="Map CSV columns">
+   {!source&&<aside className="legacy-source-guide" aria-label="CSV format guide">
+    <h3>A simple starting format</h3><p>Your headers can have different names. In the next step, choose which columns contain the customer ID and name.</p>
+    <table><caption>Example columns · fictional records</caption><thead><tr><th scope="col">Customer ID</th><th scope="col">Customer name</th></tr></thead>
+     <tbody><tr><td>contact-001</td><td>Example customer</td></tr></tbody></table>
+    <p className="field-help">Vehicle details need both a vehicle ID and label. Balances, payments and invoices are outside this contact import.</p>
+    <h3>Next: match your columns</h3><p>You will see the required fields first, with optional contact and vehicle details available when needed.</p>
+   </aside>}
+   </div>
+   {source&&<div className="legacy-mapping-workspace">
+   <div className="legacy-mapping-main">
+   <form className="legacy-panel" onSubmit={submit} aria-label="Map CSV columns">
     <fieldset disabled={busy}>
-     <legend>Map CSV columns</legend>
+     <legend ref={mappingLegend} tabIndex={-1}>Map CSV columns</legend>
      <p className="field-help">Customer ID and name are required. If you map a vehicle, include its ID and label.</p>
      <div className="legacy-columns">{column('customerSourceId',true)}{column('displayName',true)}</div>
      <details className="legacy-fields"><summary>Additional customer details</summary>
@@ -301,11 +351,19 @@ export function LegacyContactReview(){
      </details>
      <button type="submit" className="legacy-review-action" disabled={!mapping.customerSourceId||!mapping.displayName}>Review file</button>
     </fieldset>
-   </form>}
+   </form>
    {review&&<ReviewResults key={review.previewSha256} review={review} saved={saved} busy={busy} checkSaved={()=>void checkSaved()}/>}
-   {draftsAvailable&&source&&review&&<SaveLegacyDraft key={review.previewSha256} businessId={access.context.businessId}
+   {draftsAvailable&&review&&<SaveLegacyDraft key={review.previewSha256} businessId={access.context.businessId}
     recoveryEpoch={access.context.recoveryEpoch} sourceSha256={review.sourceSha256} headers={source.headers} mapping={mapping}
     file={()=>fileInput.current?.files?.[0]} authorize={authorizeDraft}/>}
+   </div>
+    <aside className="legacy-mapping-summary" aria-label="Mapped column summary">
+     <h3>Mapped columns</h3><p>{countFormat.format(source.sourceRowCount)} source records · {Object.keys(mapping).length} columns selected</p>
+     <p className="field-help">Customer ID and name are required. Each source column can be used once.</p>
+     {Object.keys(mapping).length>0?<dl>{Object.entries(mapping).map(([field,header])=><div key={field}><dt>{labels[field as Field]}</dt><dd>{header}</dd></div>)}</dl>:
+      <p>Choose the matching ID and name columns to begin.</p>}
+    </aside>
+   </div>}
    </div>
   </>}
  </div>;

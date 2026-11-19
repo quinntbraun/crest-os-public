@@ -1832,3 +1832,61 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
  .supplier-bill-draft-row > p { grid-column:1; }
  .supplier-bill-draft-row > button { grid-column:2; grid-row:1 / span 2; align-self:center; margin:0; }
 }
+
+/* CSV source guidance and a bounded, readable local preview. */
+.legacy-source-step { display:grid; gap:1.5rem; margin-block:1rem; min-width:0; }
+.legacy-source-step > .legacy-panel { margin:0; }
+.legacy-source-step > .legacy-panel,.legacy-mapping-main > .legacy-panel,.legacy-mapping-main h2[tabindex] { scroll-margin-top:7rem; }
+.legacy-file-chooser { padding:1rem; margin-block:1rem; border:1px dashed var(--gold-ink); border-radius:var(--radius); background:var(--canvas); }
+.legacy-file-chooser input { max-width:100%; }
+.legacy-source-guide { min-width:0; padding-block:1rem; border-top:1px solid var(--line); }
+.legacy-source-guide h3,.legacy-mapping-summary h3 { margin:0 0 .5rem; font-size:1rem; }
+.legacy-source-guide h3:not(:first-child) { margin-top:1.5rem; }
+.legacy-source-guide p { margin:.5rem 0 1rem; }
+.legacy-source-guide table { width:100%; table-layout:fixed; }
+.legacy-source-guide :is(th,td) { overflow-wrap:anywhere; }
+.legacy-mapping-workspace legend { scroll-margin-top:7rem; }
+.legacy-mapping-workspace,.legacy-mapping-main { min-width:0; }
+.legacy-mapping-workspace { margin-block:1rem; }
+.legacy-mapping-main > .legacy-panel:first-child { margin-top:0; }
+.legacy-mapping-summary { display:none; }
+.legacy-record-jump { display:flex; flex-wrap:wrap; align-items:end; gap:.65rem; margin-block:1rem; }
+.legacy-record-jump label { max-width:13rem; }
+.legacy-record-jump button { margin:0; }
+.legacy-record-jump p { flex:0 0 100%; margin:0; }
+.legacy-record-jump p:empty { display:none; }
+.legacy-preview-table { width:100%; table-layout:fixed; border-collapse:collapse; margin-block:1rem; }
+.legacy-preview-table caption { text-align:start; color:var(--muted); font-size:.875rem; padding-block:.5rem; }
+.legacy-preview-table :is(th,td) { padding:.75rem .6rem; border:0; border-bottom:1px solid var(--line); text-align:start; vertical-align:top; overflow-wrap:anywhere; }
+.legacy-preview-table thead th { color:var(--muted); font-size:.8125rem; font-weight:600; background:var(--canvas); }
+.legacy-preview-table th:first-child { width:7rem; }
+.legacy-preview-table th[scope='row'] { scroll-margin-top:7rem; font-size:.875rem; font-weight:600; }
+.legacy-preview-table td p { margin:.35rem 0 0; }
+.legacy-preview-table .legacy-flag { color:var(--gold-ink); font-size:.875rem; }
+.legacy-preview-table .legacy-row-state { font-size:.875rem; }
+.legacy-preview-table .legacy-record-detail { margin:.35rem 0 0; padding:0; border:0; border-radius:0; background:transparent; }
+.legacy-preview-table .legacy-record-detail > summary { min-height:44px; align-content:center; font-size:.875rem; color:var(--gold-ink); }
+.legacy-record-detail dl { display:grid; grid-template-columns:minmax(4rem,auto) minmax(0,1fr); gap:.4rem .7rem; font-size:.875rem; }
+.legacy-record-detail dt { color:var(--muted); }
+.legacy-record-detail dd { margin:0; overflow-wrap:anywhere; }
+@media(min-width:1100px) {
+ .legacy-source-step:not([data-loaded='true']) { grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); align-items:start; }
+ .legacy-source-guide { padding:1rem 0 1rem 1.5rem; border-top:0; border-left:1px solid var(--line); }
+ .legacy-mapping-workspace { display:grid; grid-template-columns:minmax(0,1fr) minmax(14rem,16rem); align-items:start; gap:2rem; }
+ .legacy-mapping-summary { display:block; position:sticky; top:6.5rem; max-height:calc(100dvh - 8rem); overflow:auto; scrollbar-gutter:stable; min-width:0; border-left:1px solid var(--line); padding-left:1.5rem; }
+ .legacy-mapping-summary dl { margin:1rem 0 0; }
+ .legacy-mapping-summary dl > div + div { margin-top:.75rem; }
+ .legacy-mapping-summary dt { color:var(--muted); font-size:.8125rem; }
+ .legacy-mapping-summary dd { margin:.15rem 0 0; font-weight:600; overflow-wrap:anywhere; }
+}
+@media(max-width:767px) {
+ .legacy-preview-table,.legacy-preview-table tbody { display:block; }
+ .legacy-preview-table caption { display:block; width:100%; }
+ .legacy-preview-table thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+ .legacy-preview-table tbody tr { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-areas:"record review" "contact contact"; column-gap:.75rem; padding:.75rem 0; border-top:1px solid var(--line); }
+ .legacy-preview-table tbody th { grid-area:record; }
+ .legacy-preview-table tbody td:nth-child(2) { grid-area:contact; }
+ .legacy-preview-table tbody td:nth-child(3) { grid-area:review; }
+ .legacy-preview-table :is(th,td) { display:block; width:auto; border:0; padding:.25rem 0; }
+ .legacy-preview-table th:first-child { width:auto; }
+}

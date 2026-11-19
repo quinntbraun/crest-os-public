@@ -10,6 +10,8 @@ import {unzipSync,strFromU8} from 'fflate';
 import {parseInvoiceCreditReference} from '../../src/bookkeeping/invoice-credit-contract.ts';
 import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {reviewAccountingReportWorkspace} from '../support/accounting-report-workspace.mjs';
+import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
 
 const directReceipts=true;
 const paymentCorrections=process.env.CREST_TEST_PAYMENT_CORRECTIONS==='1';
@@ -32,7 +34,7 @@ const refundTransferFeeExport=process.env.CREST_TEST_REFUND_TRANSFER_FEE_EXPORT=
 const collectionFailureRecreditExport=process.env.CREST_TEST_COLLECTION_FAILURE_RECREDIT_EXPORT==='1';
 const collectionFailureGroupedRecreditExport=process.env.CREST_TEST_COLLECTION_FAILURE_GROUPED_RECREDIT_EXPORT==='1';
 const postedFinanceSchemaVersion=collectionFailureGroupedRecreditExport?100:collectionFailureRecreditExport?99:refundTransferFeeExport?98:directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
-for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
+for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async t=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
   financeAccounts:true,financeMappings:true,financeTaxProfiles:true,invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,
@@ -41,6 +43,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   }:{}});
  let browser;
  const financeResponses=[];
+ const failedReads=[];
  const businessDate=async()=>(await fixture.client.query(
   'SELECT (statement_timestamp() AT TIME ZONE timezone)::date::text AS today FROM crest.businesses WHERE id=$1',
   [fixture.business])).rows[0].today;
@@ -52,6 +55,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    const path=new URL(response.url()).pathname;
    if(path.startsWith('/api/business/finance-accounts/')||path==='/api/auth/session'||path==='/api/business/scheduling/workspace'){
     financeResponses.push([path,response.status()]);
+    if(response.status()>=400){
+     // Read immediately while the response handle exists; retain fixed error
+     // categories only, never request bodies, identifiers or provider details.
+     const failure={path,status:response.status(),category:'body_pending'};failedReads.push(failure);
+     void response.json().then(value=>{failure.category=typeof value?.error==='string'&&/^[A-Z_]{1,80}$/.test(value.error)?value.error:'unclassified';})
+      .catch(()=>{failure.category='body_unavailable';});
+    }
    }
   });
   page.setDefaultTimeout(20000);
@@ -498,6 +508,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await load.press('Enter');
         const fundsReply=await fundsSnapshot;assert.equal(fundsReply.status(),200);const fundsMetadata=await fundsReply.json();
         await expect(report.getByRole('status')).toHaveText('Customer funds matched the ledger.');
+        await reviewAccountingReportWorkspace(page,report,{label:'funds-'+name,values:[['Total held','$10.00']]});
         await expect(report.locator('time[title]')).toHaveAttribute('datetime',fundsMetadata.observedAt);
         await expect(report).toContainText(fundsMetadata.timeZone);
         await expect(report.getByText('Posted customer funds',{exact:true})).toBeVisible();
@@ -724,16 +735,33 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          await aging.getByRole('button',{name:'Load outstanding invoices',exact:true}).press('Enter');
          const agingReply=await agingSnapshot;assert.equal(agingReply.status(),200);const agingMetadata=await agingReply.json();
          await expect(aging.getByRole('status')).toHaveText('Outstanding invoices loaded.');
+         await reviewAccountingReportWorkspace(page,aging,{label:'receivables-'+name,values:[['Total outstanding','$149.00']]});
+         const agingDownload=page.waitForEvent('download');await aging.getByRole('button',{name:'Download listed invoices (CSV)',exact:true}).press('Enter');const agingCsv=await readFile(await(await agingDownload).path(),'utf8');assert(agingCsv.includes(agingMetadata.observedAt)&&agingCsv.includes('opening receivables and legacy balances excluded')&&agingCsv.includes('14900'));
          await expect(aging.locator('time[title]')).toHaveAttribute('datetime',agingMetadata.observedAt);
          await expect(aging).toContainText(agingMetadata.timeZone);
          await expect(aging.getByText('Posted invoices',{exact:true})).toBeVisible();
          await aging.getByText('Invoice details (1 of 1)',{exact:true}).press('Enter');
          await expect(aging).toContainText('Invoice TEST-1');
          await expect(aging).toContainText('$149.00');
-         for(const width of [360,390,768,1440]){
+         const invoiceRow=aging.locator('ul > li').first();
+         await expect(invoiceRow).toContainText(agingMetadata.rows[0].customerName);
+         await expect(invoiceRow.locator('time')).toHaveAttribute('datetime',agingMetadata.rows[0].dueOn);
+         await expect(invoiceRow).toContainText(agingMetadata.rows[0].daysOverdue===0?'Current':agingMetadata.rows[0].daysOverdue+' days overdue');
+         for(const width of [360,390,768,1100,1440]){
           await page.setViewportSize({width,height:900});
           await aging.getByText('Invoice TEST-1',{exact:true}).scrollIntoViewIfNeeded();
+          await page.evaluate(async()=>{await document.fonts.ready;});
+          const bucketTops=await aging.locator('dl[aria-label="Outstanding by age"] > div').evaluateAll(items=>items.map(item=>Math.round(item.getBoundingClientRect().top)));
+          assert.equal(bucketTops.length,5);const bucketRows=new Set(bucketTops).size;
+          assert(bucketRows<=(width>=1100?1:3),'Age buckets stay in one wide row or at most three compact phone rows.');
+          if(width>=1100){
+           const input=await aging.getByLabel('Through date (optional)',{exact:true}).boundingBox(),loadButton=aging.getByRole('button',{name:'Load outstanding invoices',exact:true}),load=await loadButton.boundingBox();
+           assert(input&&load&&Math.abs(input.y+input.height-load.y-load.height)<=2,'Date and load action align in the wide report.');
+           const lines=await loadButton.evaluate(element=>{const range=document.createRange();range.selectNodeContents(element);return new Set([...range.getClientRects()].map(rect=>Math.round(rect.top))).size;});
+           assert.equal(lines,1,'The wide report load label stays on one readable line.');
+          }
           assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+          assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
           await page.screenshot({path:'.local/review/finance-receivable-aging-populated-'+name+'-'+width+'.png'});
          }
          await allowInvoiceReadWindow();
@@ -1574,6 +1602,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      }
     }
  }catch(error){
+  t.diagnostic(JSON.stringify({failedReads:failedReads.slice(-15),session:await sessionAdmissionDiagnostic(fixture)}));
   if(error instanceof Error)throw new Error(error.message+'\nRecent finance responses '+JSON.stringify(financeResponses.slice(-15)),{cause:error});
   throw error;
  }finally{

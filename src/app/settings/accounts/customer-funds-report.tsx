@@ -6,6 +6,7 @@ import {expenseDollars} from '../../../bookkeeping/expenses/expense-contract';
 import {downloadFinanceHistory,financeAccounts} from '../../../client/finance-accounts';
 import styles from './screen.module.css';
 import {FinancialReportHeader} from './financial-report-header';
+import {ReportReadingSummary} from './report-reading-summary';
 
 const dateFormat=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'UTC'});
 const displayDate=(date:string)=>dateFormat.format(new Date(date+'T12:00:00Z'));
@@ -75,6 +76,11 @@ export function CustomerFundsReport({businessId,includesExcess=false,includesRef
     <section aria-label="Customer funds held" aria-busy={busy}>
       <p className="field-help">Fictional funds held from {includesExcess?'payments and payment corrections':'payment corrections'}, checked against account 2000.
        {includesRefundTransfers&&' Funds set aside for returned refunds appear in the trial balance under Refunds still due.'}</p>
+      <ReportReadingSummary snapshot={report}>{report&&<FinancialReportHeader period={<>Customer funds · As of <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></>}
+          timeZone={report.timeZone} observedAt={report.observedAt} scopeLabel="Posted customer funds"
+          coverage={report.truncated?'Details and CSV list the first 100 entries by date. Total held includes all posted customer funds.':'Details and CSV cover the listed customer funds.'}
+          details={<p className={styles.reportAmount}><span>Total held</span> <strong>{usd(report.totalCents)}</strong></p>}
+          action={report.rows.length>0&&<button className="secondary" type="button" onClick={download}>Download listed funds (CSV)</button>}/>}</ReportReadingSummary>
       <form onSubmit={event=>{event.preventDefault();void load();}}>
         <label>Through date (optional)<input type="date" min="1900-01-01" value={through} disabled={busy}
           onChange={event=>{setThrough(event.target.value);setReport(null);setStatus('');}}/></label>
@@ -83,11 +89,7 @@ export function CustomerFundsReport({businessId,includesExcess=false,includesRef
       </form>
       <p role="status">{status}</p>
       {report&&<>
-        <FinancialReportHeader period={<>Customer funds · As of <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></>}
-          timeZone={report.timeZone} observedAt={report.observedAt} scopeLabel="Posted customer funds"
-          coverage={report.truncated?'Details and CSV list the first 100 entries by date. Total held includes all posted customer funds.':'Details and CSV cover the listed customer funds.'}
-          details={<p className={styles.reportAmount}><span>Total held</span> <strong>{usd(report.totalCents)}</strong></p>}
-          action={report.rows.length>0&&<button className="secondary" type="button" onClick={download}>Download listed funds (CSV)</button>}/>
+
         {report.rows.length>0&&<details>
           <summary>Held funds by customer ({report.rows.length} of {report.lotCount} entries)</summary>
           {report.truncated&&<p className="field-help">Showing the first 100 entries by date. The total includes all posted customer funds.</p>}

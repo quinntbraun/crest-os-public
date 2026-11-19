@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-19T10:05:34.558Z",
+  "assessedAt": "2026-11-19T13:35:58.834Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "e481cc84965a80ccde6e8e74bfffbcbd6fae5e06",
-    "publishedCommit": "fcf1caecd252c9cabf9941528e164d8d7b02b885",
-    "publishedTree": "80e21d4108ee62c40878fe10b001a315d1d4aaf2",
-    "localTree": "ce9047fd58cda10d2fc16e7f7706f4c6f8832325"
+    "localCommit": "2342981176b9af437242fbca57443c7e532ef01d",
+    "publishedCommit": "bacc465e3de32a50892e13bb724e5a567189700e",
+    "publishedTree": "8a5885ac07629614e99e5beee0ac59f54d8da8d9",
+    "localTree": "0a124e0c219846592be12e55864d3791ffd6ca78"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -27,12 +27,12 @@
     "destinations": 36,
     "deeperWorkflows": 20,
     "counts": {
-      "locally_addressed": 37,
-      "partial": 31,
+      "locally_addressed": 39,
+      "partial": 29,
       "open": 2,
       "review_needed": 0
     },
-    "mainLocalChangesAddressedPercent": 52.9,
+    "mainLocalChangesAddressedPercent": 55.7,
     "auditComplete": false,
     "finalSignOffClaimed": false
   },
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "28d60182d8bfac39c0543ec0b0f8a5e53c782e20765e1806e9bea0c88c38a7c3"
+          "sha256": "7618557ec1db676e64f330721d77b2ddfb152c0e8a0eb228a2b5abb719543bbd"
         }
       ],
       "verification": {
@@ -97,7 +97,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "be537182a534d8ad9e66a07ac8081607f3695a04ee7d5db70939c958a99f0a56"
+          "sha256": "7464f4d343c10b5cf25e79a51b0524440dea24cac87b59722f0c77fd043ddfa1"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -121,7 +121,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "be537182a534d8ad9e66a07ac8081607f3695a04ee7d5db70939c958a99f0a56"
+          "sha256": "7464f4d343c10b5cf25e79a51b0524440dea24cac87b59722f0c77fd043ddfa1"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
@@ -145,7 +145,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "be537182a534d8ad9e66a07ac8081607f3695a04ee7d5db70939c958a99f0a56"
+          "sha256": "7464f4d343c10b5cf25e79a51b0524440dea24cac87b59722f0c77fd043ddfa1"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -173,7 +173,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "b82d423e58addbbe17e517f96c5d03d2d7327bf7965652f42132964f249d2719"
+          "sha256": "c04e7c058792b39e110bb023d2bb9a1d3eb2eb726959ca8932a2ed70eafd2bd9"
         }
       ],
       "verification": {
@@ -193,7 +193,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/financial-report-header.tsx",
-          "sha256": "9ba8b0ba32729f022fc7c371e73b8fbe5b1abc2bd6ded3a638e7a16c9692d70b"
+          "sha256": "7853b5759e53c1692137781b1b0f112ce44cda19445808e5dc01fa275a840a33"
         },
         {
           "path": "planning/REPORT_SCOPE_DESIGN.md",
@@ -245,7 +245,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "b82d423e58addbbe17e517f96c5d03d2d7327bf7965652f42132964f249d2719"
+          "sha256": "c04e7c058792b39e110bb023d2bb9a1d3eb2eb726959ca8932a2ed70eafd2bd9"
         }
       ],
       "verification": {
@@ -289,7 +289,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "be537182a534d8ad9e66a07ac8081607f3695a04ee7d5db70939c958a99f0a56"
+          "sha256": "7464f4d343c10b5cf25e79a51b0524440dea24cac87b59722f0c77fd043ddfa1"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
@@ -313,7 +313,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "be537182a534d8ad9e66a07ac8081607f3695a04ee7d5db70939c958a99f0a56"
+          "sha256": "7464f4d343c10b5cf25e79a51b0524440dea24cac87b59722f0c77fd043ddfa1"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
@@ -365,7 +365,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "28d60182d8bfac39c0543ec0b0f8a5e53c782e20765e1806e9bea0c88c38a7c3"
+          "sha256": "7618557ec1db676e64f330721d77b2ddfb152c0e8a0eb228a2b5abb719543bbd"
         }
       ],
       "verification": {
@@ -496,12 +496,16 @@
       "title": "P2 · Contact CSV review (/customers/import-review)",
       "requirements": "Observed: The four-stage indicator is a good start. The native file input carries nearly all of the first-step experience.\n\nDirection: Add an accessible choose-file surface, format guidance, a sample-column explanation and a compact preview of the next step. Preserve the existing staged review and explicit approval.\n\nDesktop: Use a preview table with a persistent mapping summary and a restrained issues column.\n\nPhone: Turn each issue into a labeled row with source row number and a direct way to inspect it.\n\nAcceptance: A large or invalid file, duplicate matches, approval interruption and result review remain navigable without accidental import.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/customers-import-review-{desktop,phone}.png",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Staged CSV worker, mapping, approval/results and format limits exist.",
-      "remainingWork": "Complete choose-file/sample-column/next-step presentation and large-file issue navigation as specified.",
+      "implementedOrPresent": "Guided native file selection, example-header explanation, sticky mapping/preview context, responsive inspected record table and bounded source-record2..100001 navigation are implemented. Final-width complete7/7 verifies caption and ordinary phone readability in both engines; earlier full6/7 records a user-verification provider HTTP500 with unresolved internal cause.",
+      "remainingWork": "Investigate retained provider verification failures using safe actual error categories without retries or relaxed security/deadlines; complete remaining state/zoom/private/device/release review. Loaded faces and actual Chromium glyph fonts are verified on inspected CSV content.",
       "evidence": [
         {
           "path": "src/app/customers/import-review/review.tsx",
-          "sha256": "56b8abcd16971cdcea36e5db3a1b18acec8f86fd4f9123525f081a88c485b63c"
+          "sha256": "2f3579231adecbd12cb277e318291b3f11bd2d6912c4c888998b96159d261bae"
+        },
+        {
+          "path": "planning/CONTACT_IMPORT_REVIEW_DESIGN.md",
+          "sha256": "7f80db923251d62d0de0aa1f909c66e7630f9a1c25f44584bffc998078b3ef9a"
         }
       ],
       "verification": {
@@ -987,22 +991,22 @@
       "section": "Every page",
       "title": "P1 · Accounting home (/settings/accounts)",
       "requirements": "Observed: Reports, Accounts and Setup are a good separation, but the baseline opens a trial-balance form rather than a strong financial overview.\n\nDirection: Create a report workspace with a persistent report picker, date scope, coverage notice, loaded-as-of timestamp and export action. Make posted figures, incomplete coverage and setup status distinct.\n\nDesktop: Use available width for aligned figures and drill-in details.\n\nPhone: Put scope and key verified total before long filters or nested tables.\n\nAcceptance: Do not label incomplete recorded profit as business profit; no attractive summary may hide missing opening balances or costs.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Report picker and shared financial scope headers retain totals, coverage, snapshots and CSV actions.",
-      "remainingWork": "Complete persistent overview/picker and configured phone hierarchy beyond the individual report-header refinement.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Persistent desktop report library, compact phone choices and verified summaries before still-mounted date controls are implemented. Complete income/ledger and funds/receivables journeys pass both engines, including actual scoped CSV and retained original financial/recovery/export checks.",
+      "remainingWork": "Complete remaining state/zoom/private-clearing variants; investigate retained tax/session failures and preserve exact-source release/installed/physical-device requirements.",
       "evidence": [
         {
           "path": "src/app/settings/accounts/accounting-reports.tsx",
-          "sha256": "694c18fb57e61a89f3620fd44c1bce1d3a326018bc605b0d83909bfb6383fe53"
+          "sha256": "e2efc973d5a32d34b0f26de98574d7a400888189ac46b5be2606aed67b865532"
         },
         {
-          "path": "planning/REPORT_SCOPE_DESIGN.md",
-          "sha256": "3ccf5a44bb251ea8624bec4b6e9398df12ab1d6d20180731503b3c65e1db1cf6"
+          "path": "planning/ACCOUNTING_REPORT_WORKSPACE_DESIGN.md",
+          "sha256": "25ec1b1810fad0bef2ac41a15fd99c8b74bb9d2deec57dbce802e94d9f4e1cbd"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1417,7 +1421,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/trial-balance.tsx",
-          "sha256": "a5fd3f041db1e1352349f5374ed3ab213899b89c9fab7478807344616be92ee0"
+          "sha256": "cabcab0c24b66e76974387a5bf4ce2a267a4d3f7713a4e16795770c54c77eca6"
         },
         {
           "path": "planning/REPORT_SCOPE_DESIGN.md",
@@ -1441,7 +1445,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/recorded-income-statement.tsx",
-          "sha256": "1d9aa4ec36582fded56030f23a4dd6a0036253a6b4211c9183023d83c0b6dd64"
+          "sha256": "40dcae66e2502741c0234369d1b9814bd758edce52d01947e0bb380143e36d75"
         },
         {
           "path": "planning/REPORT_SCOPE_DESIGN.md",
@@ -1459,22 +1463,22 @@
       "section": "Deeper workflows",
       "title": "Receivables aging",
       "requirements": "The aging summary has useful exact totals but a lot of vertical distance before invoice detail. Use compact aging buckets and invoice rows with customer, due date, amount and status. Label the excluded opening/legacy scope prominently.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-receivable-aging-populated-chromium-1440.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Receivables have scoped posted totals and preserved opening/legacy exclusions.",
-      "remainingWork": "Finish/reconcile compact aging buckets and customer/due/amount/status detail density, long lists and filters.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Five compact exact aging buckets and aligned customer/invoice, due date, amount and overdue-state rows retain scoped totals and opening/legacy exclusions; the complete two-engine invoice file passes with five-width full Axe/geometry and actual CSV evidence.",
+      "remainingWork": "Finish long/truncated/empty/error/private-clearing/zoom variants and fresh full-release/installed/physical-device acceptance.",
       "evidence": [
         {
           "path": "src/app/settings/accounts/receivable-aging.tsx",
-          "sha256": "84f6c17f49516bcba6138c82d5b9aab9b86933aa97cb90705e1f9aa5f486fe40"
+          "sha256": "eb21610853ba941270ea862f7d5598c4499676442f6b844c06048efd65672e4a"
         },
         {
-          "path": "planning/REPORT_SCOPE_DESIGN.md",
-          "sha256": "3ccf5a44bb251ea8624bec4b6e9398df12ab1d6d20180731503b3c65e1db1cf6"
+          "path": "planning/RECEIVABLE_AGING_DENSITY_DESIGN.md",
+          "sha256": "f39b0cd12b4488e41db29bb5ce33c55bad35d6379b923112d2952bfe9880db23"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1489,7 +1493,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/customer-funds-report.tsx",
-          "sha256": "605ad264b22c7ea9b60a07154c6d600baeda09cec26ef01b2b9b7d38b4cbde3f"
+          "sha256": "bdff5c0ff41f5b36c79a74da57df5a3324ce274bc4624f54edfa7b47deae817c"
         },
         {
           "path": "planning/REPORT_SCOPE_DESIGN.md",
@@ -1509,7 +1513,7 @@
       "requirements": "The issued document, new-draft action, payment disclosure and draft history need clearer separation. Lead with invoice number, status, due date and outstanding amount, using only verified values. Give the immutable document its own reading surface.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-invoice-issue-product-chromium-390.png",
       "implementationStatus": "partial",
       "implementedOrPresent": "Immutable issued document, number/dates/original total, distinct payment tasks and disclosed draft history are implemented.",
-      "remainingWork": "A verified live outstanding header remains to implement/review; the original total must not be used as a guessed balance.",
+      "remainingWork": "A verified invoice-scoped outstanding header remains to implement/review; payment choices are date-scoped and are not a typed zero-balance result. The original total must not be used as a guessed balance.",
       "evidence": [
         {
           "path": "src/app/schedule/work/invoice-issue-tax-review.tsx",
@@ -1517,7 +1521,7 @@
         },
         {
           "path": "planning/ISSUED_INVOICE_DESIGN.md",
-          "sha256": "a3524689ed408fce6c4e3586630d2f2960db5217d08d892b3c2ed82467957aa2"
+          "sha256": "c6905f8c0d764fda0568313be5fd8727608429ec06655dacd074a6b0a49c07ed"
         }
       ],
       "verification": {

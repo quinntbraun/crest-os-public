@@ -144,8 +144,9 @@
 
 .agingInvoices li {
   display: grid;
+  grid-template-areas: "identity balance" "due balance";
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: .75rem;
+  gap: .25rem .75rem;
   padding-top: .75rem;
   border-top: 1px solid var(--line);
   overflow-wrap: anywhere;
@@ -156,8 +157,26 @@
   color: var(--muted);
 }
 
-.agingInvoices li > :last-child {
+.agingBalance {
+  grid-area: balance;
   text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.agingIdentity { grid-area:identity; min-width:0; }
+.agingDue { grid-area:due; display:flex; align-items:baseline; flex-wrap:wrap; gap:.35rem; font-size:.875rem; }
+.agingDue time { white-space:nowrap; }
+.agingBuckets { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); margin:.75rem 0 1rem; border-block:1px solid var(--line); }
+.agingBuckets > div { min-width:0; padding:.65rem .5rem; }
+.agingBuckets dt { color:var(--muted); font-size:.8125rem; }
+.agingBuckets dd { margin:.25rem 0 0; font-weight:600; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+@media(min-width:51rem) {
+ .agingBuckets { grid-template-columns:repeat(5,minmax(0,1fr)); }
+ .agingInvoices li { grid-template-areas:"identity due balance"; grid-template-columns:minmax(0,1fr) minmax(7rem,auto) auto; align-items:start; gap:1rem; }
+ .agingDue { display:grid; gap:.15rem; }
+ .reports form.agingDateForm { grid-template-columns:minmax(12rem,22rem) auto; align-items:end; }
+ .agingDateForm > label { grid-area:1 / 1; }
+ .agingDateForm > button { grid-area:1 / 2; margin:0; }
+ .agingDateForm > p { grid-area:2 / 1 / auto / -1; margin:0; }
 }
 
 @media (min-width: 48rem) {
@@ -208,7 +227,7 @@
   background:var(--canvas);
 }
 .reportChoices button {
-  width:auto;
+  width:100%;
   min-height:44px;
   margin:0;
   padding:.35rem .5rem;
@@ -225,6 +244,24 @@
  .reportChoices { grid-auto-flow:column; grid-template-columns:none; grid-auto-columns:minmax(0,1fr); }
 }
 .reports { min-width:0; }
+.reportWorkspace,.reportPicker { min-width:0; }
+.reportChoice { min-width:0; }
+.reportPickerTitle,.reportPickerHelp,.reportChoices small { display:none; }
+.reportReading { display:contents; }
+.reportReading[hidden] { display:none; }
+.reportKeyFigures { display:flex; flex-wrap:wrap; gap:.6rem 1.5rem; margin:.65rem 0 0; }
+.reportKeyFigures > div { min-width:0; }
+.reportKeyFigures dt { color:var(--muted); font-size:.875rem; }
+.reportKeyFigures dd { margin:.15rem 0 0; font-size:1.125rem; font-weight:650; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+@media (min-width:1100px) {
+ .reportWorkspace[data-picker="true"] { display:grid; grid-template-columns:minmax(11rem,14rem) minmax(0,1fr); align-items:start; gap:1.5rem; }
+ .reportPicker { position:sticky; top:6.5rem; }
+ .reportPickerTitle { display:block; margin:0 0 .65rem; font-size:.875rem; font-weight:650; }
+ .reportPickerHelp { display:block; margin:.75rem 0 0; color:var(--muted); font-size:.8125rem; line-height:1.5; }
+ .reportWorkspace .reportChoices { display:grid; grid-auto-flow:row; grid-template-columns:minmax(0,1fr); margin:0; }
+ .reportChoices button { display:block; width:100%; padding:.65rem; text-align:start; }
+ .reportChoices small { display:block; margin:.25rem .65rem .6rem; color:var(--muted); font-size:.8125rem; font-weight:400; line-height:1.4; }
+}
 .reportSection { min-width:0; margin:.9rem 0; }
 .reportSection h2 { margin:0 0 .6rem; scroll-margin-top:1rem; }
 
@@ -384,10 +421,12 @@
 @media (min-height:40rem) {
  .reportHeaderTitle { position:sticky; top:0; z-index:2; }
  .reports :global(.trial-balance):has(> details[open] > section[aria-label="Recorded balance sheet"]) > .reportHeaderTitle { position:static; }
+ .reports :global(.trial-balance):has(> details[open] > section[aria-label="Recorded balance sheet"]) > .reportReading > .reportHeaderTitle { position:static; }
  .reports :is(button,a,input,summary,[tabindex]) { scroll-margin-top:8rem; }
 }
 @media (min-width:51rem) {
  .reports form:has([type="date"]) { max-width:31rem; }
+ .reports form.agingDateForm { max-width:46rem; }
  .reports form.incomeForm { grid-template-columns:repeat(2,minmax(0,1fr)) auto; max-width:42rem; }
  .reports .incomeForm > :is(label,button) { grid-column:auto; grid-row:auto; min-width:0; }
 }

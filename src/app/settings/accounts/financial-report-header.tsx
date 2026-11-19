@@ -12,7 +12,7 @@ export function FinancialReportHeader({period,timeZone,observedAt,scopeLabel,cov
  coverage:string;basis?:ReactNode;details?:ReactNode;action?:ReactNode;
 }){
  return <>
-  <header className={styles.reportHeaderTitle}>
+  <header className={styles.reportHeaderTitle} tabIndex={-1}>
    <p className={styles.reportPeriod}>{period}</p>
    <span className={styles.reportScopeLabel} data-incomplete={scopeLabel==='Coverage incomplete'}>{scopeLabel}</span>
   </header>
