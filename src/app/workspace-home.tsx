@@ -137,6 +137,8 @@ export function WorkspaceHome(){
     </div>}
     {view.phase==='ready'&&<div className="today-content">
       {view.paused&&<p className="notice">Changes are paused for recovery review. You can still review available records and history.</p>}
+      <div className="today-grid">
+      <div className="today-primary">
       <section className="today-visit-feature" aria-label={nextVisit?visitHighlight:featuredReminder?'Next due item':'Upcoming visit status'}>
         {nextVisit?<div className="today-feature-content">
           <div>
@@ -164,8 +166,6 @@ export function WorkspaceHome(){
           <a className="primary-action" href="/schedule">Open schedule <span aria-hidden="true">→</span></a>
         </div>}
       </section>
-      <div className="today-grid">
-      <div className="today-primary">
       <section className="home-panel" aria-label="Schedule review"><div className="section-heading"><h2>{nextVisit?'Seven-day agenda':'Schedule review'}</h2>{nextVisit&&<a className="today-queue-link" href="/schedule">Open schedule</a>}</div>
         {featuredReminder&&<p className="field-help">No active saved visits in the next seven days.</p>}
         {nextVisit&&otherVisits.length===0&&<p className="field-help">No other active visits in the loaded schedule.</p>}
@@ -177,12 +177,12 @@ export function WorkspaceHome(){
       </section>
       </div>
       <div className="today-secondary">
-      {view.schedule&&'maintenance' in view.schedule&&<section className="home-panel" aria-label="Due maintenance reminders">
+      {view.schedule&&'maintenance' in view.schedule&&<section className="home-panel" data-queue-state={view.schedule.maintenance===null?'unknown':otherMaintenance.length===0&&!view.schedule.maintenance?.next?'empty':'items'} aria-label="Due maintenance reminders">
         <h2>Maintenance due</h2>
         <p className="field-help">Due today or overdue in {view.schedule.timezone}.</p>
         {view.schedule.maintenance===null?<p>Saved reminders could not be verified. Refresh to try again.</p>:
           view.schedule.maintenance&&<>
-            {otherMaintenance.length===0?<p>{featureMaintenance?'The due reminder is shown above.':'No maintenance reminders due.'}</p>:
+            {otherMaintenance.length===0?<p>{featureMaintenance?'The due reminder is shown in the next task.':'No maintenance reminders due.'}</p>:
               <ul className="follow-up-list">{otherMaintenance.map(({record,customerName,vehicleLabel,effectiveDueAt})=>
                 <li key={record.taskId}>
                   <strong>{customerName}</strong>{vehicleLabel&&<span>{vehicleLabel}</span>}
@@ -193,11 +193,11 @@ export function WorkspaceHome(){
             {view.schedule.maintenance.next&&<p className="field-help">Showing the first 20 due reminders.</p>}
           </>}
       </section>}
-      <section className="home-panel" id="lead-follow-ups" aria-labelledby="lead-follow-ups-title" aria-busy={followUpLoading}><div className="section-heading"><h2 id="lead-follow-ups-title" tabIndex={-1} ref={followUpHeading}>Lead follow-ups</h2><a href="/leads">All leads</a></div>
+      <section className="home-panel" data-queue-state={view.followUps===null?'unknown':otherReminders.length===0&&!view.followUps.hasMore&&!laterFollowUps?'empty':'items'} id="lead-follow-ups" aria-labelledby="lead-follow-ups-title" aria-busy={followUpLoading}><div className="section-heading"><h2 id="lead-follow-ups-title" tabIndex={-1} ref={followUpHeading}>Lead follow-ups</h2><a href="/leads">All leads</a></div>
         {view.followUps?.hasMore&&otherReminders.length>0&&<p className="field-help">Showing {otherReminders.length} reminders.</p>}
         {view.followUps===null?<p>Follow-ups could not be loaded. Open Leads to check.</p>:<>
           {view.followUps.kind==='legacy'&&view.followUps.hasMore&&<p className="field-help">Showing reminders from the first 50 leads.</p>}
-          {otherReminders.length===0?<p>{laterFollowUps?'No later follow-ups.':featureLead?'The first reminder is shown above.':view.followUps.kind==='legacy'&&view.followUps.hasMore?'No follow-ups among the first 50 leads.':'No follow-up dates recorded.'}</p>:
+          {otherReminders.length===0?<p>{laterFollowUps?'No later follow-ups.':featureLead?'The first reminder is shown in the next task.':view.followUps.kind==='legacy'&&view.followUps.hasMore?'No follow-ups among the first 50 leads.':'No follow-up dates recorded.'}</p>:
             <ul className="follow-up-list lead-follow-up-list">{otherReminders.map(lead=>{
               const overdue=view.followUps?.observedAt&&lead.followUpAt<=view.followUps.observedAt;
               return <li key={lead.id}>
@@ -215,7 +215,14 @@ export function WorkspaceHome(){
           </div>}
         </>}
       </section>
-      {view.proposals!==null&&<section className="home-panel" aria-label="Unconfirmed appointment proposals"><div className="section-heading"><h2>Proposed times</h2><a href="/appointment-holds">Review proposals</a></div>{view.proposals.holds.length===0?<p>No saved proposals on this page.</p>:<ul className="follow-up-list">{view.proposals.holds.map(hold=><li key={hold.id}><strong>{hold.label}</strong><span>{hold.local_start.slice(0,16).replace('T',' ')} · {hold.timezone}</span><span>{hold.state==='withdrawn'?'Withdrawn':'Unconfirmed · does not reserve time'}</span></li>)}</ul>}<p className="field-help">First page of retained proposals, including withdrawals. {view.proposals.hasMore?'More proposals are available. ':''}These are not confirmed bookings.</p><a className="primary-action" href="/appointment-holds">Propose a time</a></section>}
+      <section className="home-panel" data-queue-state={view.proposals===null?'unknown':view.proposals.holds.length===0&&!view.proposals.hasMore?'empty':'items'} aria-label="Unconfirmed appointment proposals">
+        <div className="section-heading"><h2>Proposed times</h2><a className="today-queue-link" href="/appointment-holds">Review proposals</a></div>
+        {view.proposals===null?<p>Saved proposals could not be verified. Open Proposals to check.</p>:<>
+          {view.proposals.holds.length===0?<p>No saved proposals on this page.</p>:<ul className="follow-up-list">{view.proposals.holds.map(hold=><li key={hold.id}><strong>{hold.label}</strong><span>{hold.local_start.slice(0,16).replace('T',' ')} · {hold.timezone}</span><span>{hold.state==='withdrawn'?'Withdrawn':'Unconfirmed · does not reserve time'}</span></li>)}</ul>}
+          {(view.proposals.holds.length>0||view.proposals.hasMore)&&<p className="field-help">First page of retained proposals, including withdrawals. {view.proposals.hasMore?'More proposals are available. ':''}These are not confirmed bookings.</p>}
+          <a className="today-queue-link" href="/appointment-holds">Propose a time</a>
+        </>}
+      </section>
       </div></div>
       <div className="today-footer"><a href="/save-review">Review interrupted saves</a><p className="field-help">Last checked {view.checkedAt===null?'':new Date(view.checkedAt).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}</p></div>
     </div>}

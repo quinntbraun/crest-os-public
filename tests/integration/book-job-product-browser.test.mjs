@@ -1,17 +1,20 @@
 // Genuine accepted quote → actual booking form → uncertain-save recovery →
 // saved Schedule review. Test-only services and fictional records throughout.
 import assert from 'node:assert/strict';
+import {assertTodayLayout,captureTodayState} from '../support/today-layout.mjs';
+
 import {test} from 'node:test';
 import {mkdir} from 'node:fs/promises';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' genuine quote-to-booking lost-reply/reload and saved-job journey',async()=>{
- const f=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,quoteCommercial:true,scheduling:true});let browser;
+ const f=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,quoteCommercial:true,scheduling:true,appointmentHolds:true});let browser;
  try{
   browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}}),page=await context.newPage();page.setDefaultTimeout(15000);page.setDefaultNavigationTimeout(30000);
   await page.goto(f.origin+'/schedule/new?agreement='+f.bookingFamilyId);await expect(page.locator('.booking-status')).toHaveText('Sign in to book a visit.');await expect(page.getByRole('form',{name:'Confirmed visit booking',exact:true})).toHaveCount(0);await page.getByRole('link',{name:'Sign in to book a visit',exact:true}).click();
   const credentials=f.credentials();await page.getByLabel('Email',{exact:true}).fill(credentials.email);await page.getByLabel('Password',{exact:true}).fill(credentials.password);await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();assert((await context.cookies()).some(cookie=>cookie.name==='__Host-crest_session'&&cookie.httpOnly&&cookie.secure));
+  await page.goto(f.origin+'/');await expect(page.getByRole('status')).toHaveText('Workspace access verified.');await expect(page.getByRole('region',{name:'Upcoming visit status'})).toContainText('No active saved visits in the next seven days.');await expect(page.getByRole('region',{name:'Unconfirmed appointment proposals'})).toHaveAttribute('data-queue-state','empty');await captureTodayState(page,name,'empty');
   await page.goto(f.origin+'/schedule/new');await expect(page.getByRole('link',{name:'Open saved quotes',exact:true})).toHaveAttribute('href','/quotes');
   await page.goto(f.origin+'/quotes');const directory=page.getByRole('list',{name:'Saved quotes',exact:true});await expect(directory.getByRole('button')).toHaveCount(1);await directory.getByRole('button').click();const book=page.getByRole('link',{name:'Book a visit from this agreement',exact:true});await expect(book).toBeVisible();await book.click();await expect(page.getByRole('form',{name:'Confirmed visit booking',exact:true})).toBeVisible();
   const visitDay=new Date(Date.now()+86400000).toISOString().slice(0,10);await page.getByLabel('Work location details',{exact:true}).fill('Synthetic Crest booking workshop — 123 Example Lane, Indianapolis');await page.getByRole('button',{name:'Continue to time',exact:true}).click();await expect(page.getByRole('heading',{name:'Time and contact',exact:true})).toBeFocused();await page.getByLabel('Time zone',{exact:true}).fill('UTC');await page.getByLabel('Visit starts',{exact:true}).fill(visitDay+'T10:00');await page.getByLabel('Visit ends',{exact:true}).fill(visitDay+'T11:00');
@@ -68,7 +71,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await page.getByRole('button',{name:'Refresh workspace',exact:true}).click();
   await expect(page.getByRole('status')).toHaveText('Workspace access verified.');
   await expect(page.getByRole('region',{name:'Upcoming visit status'})).toContainText('Upcoming visits could not be verified');
-  await expect(openVisit).toHaveCount(0);
+  await expect(openVisit).toHaveCount(0);await captureTodayState(page,name,'partial-visits');
   await page.unroute('**/api/business/scheduling/list');
   await page.getByRole('button',{name:'Refresh workspace',exact:true}).click();
   await expect(openVisit).toBeVisible();
@@ -90,6 +93,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
     const visitDetails=await featured.locator('.today-feature-content > div').boundingBox();
     assert(visitDetails&&action.x>=visitDetails.x+visitDetails.width&&action.x-visitDetails.x-visitDetails.width<=40);
    }
+   await assertTodayLayout(page);
    await page.screenshot({path:'.local/review/agenda-upcoming-'+name+'-'+width+'.png'});
   }
   await page.route(/\/api\/business\/scheduling\/(list|pending)$/,route=>route.abort('failed'));

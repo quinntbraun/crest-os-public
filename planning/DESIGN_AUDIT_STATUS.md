@@ -6,13 +6,13 @@ This inventory reconciles all 70 original groups: 14 shared findings, 36 destina
 
 | Local implementation review | Groups |
 |---|---:|
-| Main change locally addressed | 40 |
-| Partial implementation or required review | 28 |
+| Main change locally addressed | 44 |
+| Partial implementation or required review | 24 |
 | Open audit work | 2 |
 | Review required before choosing changes | 0 |
 | Total | 70 |
 
-40/70, or 57.1%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 57.1% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 28 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
+44/70, or 62.9%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 62.9% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 24 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
 
 The audit is **not finished**. Each row has remaining implementation or verification. Full current-source/state, delivered-build and physical iPhone acceptance is not established. The earlier roughly 80% figure is a low-confidence V1 coding estimate and is not the audit percentage. The active objective is to complete all 70 original audit groups. Approved V1 business-use, recovery, upgrade, release and owner/device gates remain separate requirements and are not waived by this inventory.
 
@@ -40,8 +40,8 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | S12 | Turn history into a readable evidence trail | Partial | Finish remaining agreement, proposal, approval and integration histories and their missing/stale variants. |
 | S13 | Protect context through every transition | Partial | Verify planner date/view and all remaining contextual returns plus sign-out/private clearing on the exact release. |
 | S14 | Phone finishing is physical-device work | Open | Complete the required physical iPhone, keyboard, safe-area, camera/download, zoom and reduced-motion acceptance. |
-| R01 | Sign in (/sign-in) | Partial | Finish single-brand composition and wrong-code/expired/success/keyboard/zoom review with security clearing preserved. |
-| R02 | Today (/) | Partial | Reconcile compact empty queues and wide agenda/attention composition for scheduled, active, overdue-only and partial reads. |
+| R01 | Sign in (/sign-in) | Main change addressed | Complete genuine timed-expiry, password-manager/zoom/physical keyboard and iPhone acceptance, broader state variants and matching delivered release; all final sign-offs remain false. |
+| R02 | Today (/) | Main change addressed | Complete broader long-list/identity/zoom and global-state review plus matching delivered/installed and physical iPhone acceptance. The two runs are scoped evidence, not one combined10/10 or full audit sign-off. |
 | R03 | Customer addresses (/addresses) | Main change addressed | Fresh release/device and broader state review remain; saved quote address snapshots must stay immutable. |
 | R04 | Appointment proposals (/appointment-holds) | Partial | Reconcile empty-state hierarchy and configured unconfirmed/withdrawn/confirmed phone/desktop presentations. |
 | R05 | Customer directory (/customers) | Main change addressed | Revalidate remaining profile sections, state/zoom/sign-out/navigation variants and matching hosted, installed and physical-device acceptance on the final release. |
@@ -59,7 +59,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | R17 | Service arrangements (/schedule/modes) | Main change addressed | Complete populated-existing-job/policy-dependent and remaining state variants plus fresh current-head release/installed/physical-device acceptance. |
 | R18 | Book a visit (/schedule/new) | Partial | Reconcile the configured booking stages, persistent customer/work context and unavailable/loading slot presentations. |
 | R19 | Standalone travel (/schedule/travel) | Main change addressed | Remaining long-page/state and delivered/device acceptance stay open; no inferred business classification. |
-| R20 | Work status (/schedule/work) | Partial | Finish compact loaded job strip, single next-action hierarchy and keyboard/phone reach for every actual state. |
+| R20 | Work status (/schedule/work) | Main change addressed | Complete remaining denied/stale/loading/long-identity/zoom and physical keyboard/safe-area/device variants plus matching hosted and installed acceptance. Separate published field failures remain release-blocking; no full final sign-off is claimed. |
 | R21 | Cancel started job (/schedule/work/cancel) | Partial | Complete eligible affected-scope/reason/final-confirmation visual review and prove retained work at all relevant states. |
 | R22 | End job (/schedule/work/complete) | Main change addressed | Complete many-vehicle/long-value/context-specific and remaining state variants plus exact-head release/upgrade/installed/physical-device acceptance. |
 | R23 | Interrupt trip (/schedule/work/interrupt) | Partial | Finish configured trip/job consequence hierarchy and en-route/arrived/uncertain visual acceptance. |
@@ -70,7 +70,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | R28 | Money channels (/settings/accounts/channels) | Main change addressed | Remaining channel/history/pagination/setup states and delivered/device checks remain. |
 | R29 | Dated account mappings (/settings/accounts/mappings) | Main change addressed | Remaining state and final release/device verification remain; never silently fall back across gaps. |
 | R30 | Expense category mappings (/settings/accounts/mappings/categories) | Main change addressed | Complete remaining loading/error/denied/stale/long-value variants and fresh exact-head release/installed/physical-device acceptance. |
-| R31 | Category approvals (/settings/accounts/mappings/categories/manage) | Partial | Integrate retained approval history with proposed editing and finish staged phone selection/review acceptance. |
+| R31 | Category approvals (/settings/accounts/mappings/categories/manage) | Main change addressed | Complete remaining empty/denied/stale/loading/long-value/zoom variants and matching hosted, installed and physical-device acceptance. Main local refinement is addressed; full final sign-off remains false. |
 | R32 | Mapping approvals (/settings/accounts/mappings/manage) | Main change addressed | Remaining full state and final release/device verification stay open. |
 | R33 | Tax profiles (/settings/accounts/tax) | Main change addressed | Remaining long/history/state and final release/device verification stay open; no unsupported jurisdiction directory is invented. |
 | R34 | Calendar setup (/settings/google-calendar) | Main change addressed | Investigate original session/held-request failures; finish paused/recovery and remaining state/privacy variants plus full exact-source release/installed/physical-device acceptance. Actual selected changes and cookie-loss clearing/direct sign-in recovery now pass both engines. |
@@ -88,7 +88,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | D10 | Income statement | Main change addressed | Fresh full-head/all relevant state and delivered/device verification remain. |
 | D11 | Receivables aging | Main change addressed | Finish long/truncated/empty/error/private-clearing/zoom variants and fresh full-release/installed/physical-device acceptance. |
 | D12 | Customer funds | Main change addressed | Fresh full-head and long/truncated/delivery/device variants remain. |
-| D13 | Issued invoice | Main change addressed | Complete remaining supplier-posting overlap and state/zoom/privacy coverage, matching hosted and installed release, complete business recovery and physical-device acceptance. Main local implementation is addressed; full audit-row sign-off remains false. |
+| D13 | Issued invoice | Main change addressed | Complete supplier-posting overlap and state/zoom/privacy coverage, matching hosted and installed release, complete business recovery and physical-device acceptance. Published grouped-options400 is repaired in scoped local acceptance; matching hosted verification remains pending. Full audit-row sign-off remains false. |
 | D14 | Payment correction | Main change addressed | Other correction/history/stale states and fresh full-head acceptance remain; no invented cash or total balance. |
 | D15 | Statement staging | Main change addressed | Other account-identity/long-value/state and installed/device acceptance remain; staging never means reconciliation. |
 | D16 | Supplier bills | Main change addressed | Complete remaining state/long-value/native-original-format variants and fresh release/installed/physical-device acceptance. |

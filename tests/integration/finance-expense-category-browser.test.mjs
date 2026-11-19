@@ -5,7 +5,7 @@ import AxeBuilder from '@axe-core/playwright';
 import {chromium,expect,webkit} from '@playwright/test';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
-import {reviewApprovalEntry,assertMappingLayout,mappingBusinessSource} from '../support/mapping-workbench.mjs';
+import {reviewApprovalEntry,reviewApprovalHistory,verifyMappingSignIn,assertMappingLayout,mappingBusinessSource} from '../support/mapping-workbench.mjs';
 
 for(const engine of [chromium,webkit]){
  test(engine.name()+' approves a fictional expense category account, recovers an interrupted save and exports history',
@@ -29,7 +29,7 @@ for(const engine of [chromium,webkit]){
     await page.getByLabel('Password',{exact:true}).fill(credentials.password);
     await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);
     await page.getByRole('button',{name:'Sign in',exact:true}).click();
-    await expect(page.getByRole('status')).toContainText('Signed in');
+    await verifyMappingSignIn(page,fixture);
     await page.goto(fixture.origin+'/settings');
     await page.getByRole('link',{name:'Fictional account setup',exact:true}).click();
     await page.getByRole('button',{name:'Setup',exact:true}).click();
@@ -96,8 +96,16 @@ for(const engine of [chromium,webkit]){
     await editor.getByRole('button',{name:'Close mapping',exact:true}).click();
     await date.fill('2026-03-01');
     await editor.getByLabel('Closure reason',{exact:true}).fill('Fictional owner stopped using this category mapping');
+    const embedded=editor.getByRole('region',{name:'Saved mapping history',exact:true});
+    await embedded.getByText('Version 1 · Account 5100',{exact:true}).click();
+    await expect(embedded.getByText('=Fictional review selected the fuel account',{exact:true})).toBeVisible();
+    const beforeHistory=await mappingBusinessSource(fixture);
+    await reviewApprovalHistory(page,engine.name(),'category-proposed-closure',1);
+    assert.deepEqual(await mappingBusinessSource(fixture),beforeHistory,'reviewing retained approvals must not post a change');
     await editor.getByRole('button',{name:'Save closure',exact:true}).click();
     await expect(status).toHaveText('Mapping closure saved.');
+    await expect(embedded.getByText('Version 2 · Closed',{exact:true})).toBeVisible();
+    await expect(embedded.getByText('From Feb 1, 2026 · Before Mar 1, 2026',{exact:true})).toBeVisible();
     await page.getByRole('link',{name:'Expense category mappings',exact:true}).click();
 
     const lookup=page.getByRole('region',{name:'Account mapping lookup',exact:true});
@@ -165,6 +173,15 @@ for(const engine of [chromium,webkit]){
     await lookup.getByRole('link',{name:'Manage approvals for Fuel',exact:true}).click();
     await expect(page.getByRole('heading',{name:'Manage expense category approvals',exact:true})).toBeVisible();
     await expect(page.getByLabel('Expense category',{exact:true})).toHaveValue('category_fuel');
+    await load.click();
+    await expect(status).toHaveText('Approval settings loaded.');
+    await reviewApprovalHistory(page,engine.name(),'category-saved-closure',2);
+    const embeddedDownload=page.waitForEvent('download');
+    await embedded.getByRole('button',{name:'Download loaded approvals (CSV)',exact:true}).click();
+    assert.equal(await readFile(await (await embeddedDownload).path(),'utf8'),csv);
+    await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
+    await expect(embedded).toHaveCount(0);
+    await expect(category).toHaveValue('');
    }finally{
     try{await browser?.close();}finally{
      try{await fixture?.close();}finally{

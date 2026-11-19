@@ -252,7 +252,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(editor).toHaveCount(0);
   await expect(view.getByRole('region',{name:'Saved intervals',exact:true})).toBeVisible();
   const start=await view.locator('ol time').first().getAttribute('datetime');
-  const corrected=Math.ceil(Date.parse(start)/1000)*1000;
+  const startFraction=start.match(/\.(\d{6})Z$/)?.[1];assert(startFraction,'saved start retains exact microseconds');
+  const exactStart=BigInt(Date.parse(start))*1000n+BigInt(startFraction.slice(3));
+  const corrected=(Math.floor(Date.parse(start)/1000)+1)*1000;
+  assert(BigInt(corrected)*1000n>exactStart,'completion fixture must be strictly after the exact saved start');
   await expect.poll(()=>Date.now()-corrected).toBeGreaterThan(1500);
   await page.goto(completion);
   await page.getByRole('button',{name:'Mark all items fulfilled',exact:true}).click();
@@ -268,7 +271,18 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await form.getByLabel('Corrected completion time').fill(localTime(corrected));
   await form.getByLabel('Completion correction reason').fill(reason);
   await form.getByRole('button',{name:'Review correction',exact:true}).press('Enter');
-  await expect(form.getByRole('region',{name:'Work-time correction review',exact:true})).toContainText(original);
+  try{await expect(form.getByRole('region',{name:'Work-time correction review',exact:true})).toContainText(original);}
+  catch(error){
+   try{
+   const input=await form.getByLabel('Corrected completion time').evaluate(element=>({value:element.value,valid:element.validity.valid,
+    badInput:element.validity.badInput,stepMismatch:element.validity.stepMismatch,customError:element.validity.customError,
+    valueMissing:element.validity.valueMissing}));
+   const businessZone=(await fixture.client.query('SELECT timezone FROM crest.businesses WHERE id=$1',[fixture.business])).rows[0]?.timezone;
+   console.info('WORK_END_REVIEW_DIAGNOSTIC '+JSON.stringify({input,businessZone,fixtureZone:zone,original,proposed:new Date(corrected).toISOString(),
+    alerts:await form.getByRole('alert').allTextContents(),reviews:await form.getByRole('region',{name:'Work-time correction review',exact:true}).count()}));
+   }catch{console.info('WORK_END_REVIEW_DIAGNOSTIC '+JSON.stringify({unavailable:true}));}
+   throw error;
+  }
   await mkdir('.local/review',{recursive:true});
   for(const width of [360,390,768,1100,1440]){
    await page.setViewportSize({width,height:900});

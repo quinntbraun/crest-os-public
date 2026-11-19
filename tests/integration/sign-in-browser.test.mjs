@@ -1,9 +1,9 @@
 // Genuine HTTPS + compiled Next/Node + real disposable Auth/PG. No traces,
 // HAR, video, storageState exports or credential-bearing failure artifacts.
 import assert from 'node:assert/strict';
-import {before,after,test} from 'node:test';
+import {test} from 'node:test';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
-import {mkdir} from 'node:fs/promises';
+import {mkdir,writeFile} from 'node:fs/promises';
 import {createServer} from 'node:net';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
@@ -15,7 +15,8 @@ import {startRealAuthService,authResult} from '../support/real-auth-service.mjs'
 
 let sandbox,client,service,app,origin,fixture,actor,business,login,loginOwned=false;
 const sessionName='__Host-crest_session';
-before(async()=>{
+async function setupSignInFixture(){
+  app=undefined;service=undefined;client=undefined;sandbox=undefined;loginOwned=false;
   assert(['linux','win32'].includes(process.platform),'supported disposable TLS/Auth browser fixture required');
   process.env.NODE_ENV='production';
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);
@@ -47,8 +48,8 @@ before(async()=>{
   assert.throws(()=>JSON.stringify(runtime),/AUTHENTICATION_RUNTIME_PRIVATE/);
   app=await createCrestApplication({origin,environment:'test',tls,authentication:runtime.forServer(),business:{businessId:business},customers:true});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
-});
-after(async()=>{try{await app?.close();}finally{try{await service?.close();}finally{if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();}}});
+}
+async function closeSignInFixture(){try{await app?.close();}finally{try{await service?.close();}finally{if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();}}}
 
 async function checkSession(page){await page.getByRole('button',{name:'Check session',exact:true}).click();await expect(page.getByRole('status')).not.toContainText('Checking this device');}
 async function exerciseBusinessHttp(page,name){
@@ -64,9 +65,42 @@ async function exerciseBusinessHttp(page,name){
   assert.equal((await send('/api/business/rename',{...input,businessId:randomUUID()},csrf)).status,400);
   assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.audit_events WHERE business_id=$1 AND operation_id=$2',[business,input.operationId])).rows[0].n,1);
 }
-async function fill(page,{trusted=false,password=fixture.password}={}){
+async function captureSignInState(page,name,state){
+  const viewport=page.viewportSize();await mkdir('.local/review',{recursive:true});
+  try{for(const width of [320,360,390,768,1440,1920]){
+    await page.setViewportSize({width,height:900});await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
+    await expect(page.getByRole('heading',{name:'Welcome back',exact:true})).toBeVisible();
+    await expect(page.locator('.sign-in-workspace img:visible')).toHaveCount(1);
+    assert(await page.locator('.sign-in-panel img').evaluate(image=>image.complete&&image.naturalWidth>0));
+    const card=await page.locator('.sign-in-panel').boundingBox();assert(card);
+    if(width>=768){assert(card.width>=400&&card.width<=440,'sign-in stays within its focused desktop width');assert(Math.abs(card.x+card.width/2-width/2)<1,'sign-in stays centered');}
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
+    if(state==='form'&&width===1440){
+      const typography=await page.evaluate(()=>({root:getComputedStyle(document.documentElement).fontFamily,
+        heading:getComputedStyle(document.querySelector('.sign-in-brand h1')).fontFamily,
+        label:getComputedStyle(document.querySelector('label[for="email"]')).fontFamily,
+        faces:Array.from(document.fonts).map(face=>({family:face.family,weight:face.weight,status:face.status}))}));
+      if(name==='chromium'){
+        const cdp=await page.context().newCDPSession(page);try{
+          await cdp.send('DOM.enable');await cdp.send('CSS.enable');const {root}=await cdp.send('DOM.getDocument');typography.glyphs=[];
+          for(const selector of ['.sign-in-brand h1','label[for="email"]','.sign-in-feedback']){
+            const {nodeId}=await cdp.send('DOM.querySelector',{nodeId:root.nodeId,selector});const fonts=await cdp.send('CSS.getPlatformFontsForNode',{nodeId});typography.glyphs.push({selector,fonts:fonts.fonts});
+          }
+        }finally{await cdp.detach();}
+      }
+      await writeFile('.local/review/device-sign-in-served-fonts-'+name+'.json',JSON.stringify(typography,null,2)+'\n');
+    }
+    await page.screenshot({path:'.local/review/device-sign-in-'+state+'-'+name+'-'+width+'.png',fullPage:true,
+      mask:[page.locator('#email,#password,#code')],maskColor:'#e8ecf5'});
+  }}finally{if(viewport)await page.setViewportSize(viewport);}
+}
+async function fill(page,{trusted=false,password=fixture.password,code}={}){
   await page.getByLabel('Email',{exact:true}).fill(fixture.email);await page.getByLabel('Password',{exact:true}).fill(password);
-  await page.getByLabel('Authenticator code',{exact:true}).fill(fixture.totp.generate());if(trusted)await page.getByText('Personal device options',{exact:true}).click();await page.getByLabel('Trust this personal device').setChecked(trusted);
+  const input=page.getByLabel('Authenticator code',{exact:true});await input.fill(code??fixture.totp.generate());
+  assert.deepEqual(await input.evaluate(element=>({sixDigits:/^[0-9]{6}$/.test(element.value),valid:element.validity.valid})),{sixDigits:true,valid:true});
+  await expect(input).toBeFocused();
+  if(trusted)await page.getByText('Personal device options',{exact:true}).click();await page.getByLabel('Trust this personal device').setChecked(trusted);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
 }
 async function exerciseCustomerHttp(page,name){
@@ -193,8 +227,9 @@ async function assertPrivate(page,context,loginReply){
 }
 for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900}],['webkit',webkit,{width:360,height:780}]]){
   test(`${name}: genuine HTTPS sign-in, persistence, isolation and revocation`,{timeout:120000},async t=>{
-    const browser=await engine.launch();let first,second,page,other,untrusted,trusted,initial;
+    let browser,first,second,page,other,untrusted,trusted,initial;
     try{
+      await setupSignInFixture();browser=await engine.launch();
       // Fixture-only self-signed certificate acceptance; never changes system or
       // Node TLS trust. Public CA/deployed TLS acceptance is a separate gate.
       first=await browser.newContext({ignoreHTTPSErrors:true,viewport});page=await first.newPage();
@@ -225,6 +260,7 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
         await page.goto(origin+'/sign-in?returnTo=schedule&job='+job);
         await expect(page.getByRole('status')).toHaveText('Sign in to continue.');
         await expect(page.getByLabel('Trust this personal device')).not.toBeChecked();
+        await captureSignInState(page,name,'form');
         const password=page.getByLabel('Password',{exact:true});let visibilityPosts=0;const visibilityRequest=request=>{if(request.method()==='POST'&&request.url().includes('/api/auth/'))visibilityPosts++;};page.on('request',visibilityRequest);
         await password.fill('synthetic-visibility-check');await page.getByRole('button',{name:'Show password',exact:true}).click();await expect(password).toHaveAttribute('type','text');await expect(password).toHaveValue('synthetic-visibility-check');await page.getByRole('button',{name:'Hide password',exact:true}).click();await expect(password).toHaveAttribute('type','password');assert.equal(visibilityPosts,0,'visibility control cannot submit credentials');page.off('request',visibilityRequest);await password.fill('');
         assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow');
@@ -249,6 +285,7 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
         await expect(page.locator('#code-invalid')).toHaveText('Enter all six digits from your authenticator app.');
         await expect(code).toBeFocused();
         await expect(code).toHaveAttribute('aria-invalid','true');
+        await expect(password).toHaveValue('synthetic-format-validation');
         await code.fill('123456');
         await expect(page.locator('#code-invalid')).toHaveCount(0);
         await expect(page.getByRole('button',{name:'Sign in',exact:true})).toBeInViewport();
@@ -261,6 +298,13 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
           await expect(page.getByLabel('Email',{exact:true})).toHaveValue(fixture.email);
           assert.equal(await page.getByLabel('Password',{exact:true}).inputValue(),'');assert.equal(await page.getByLabel('Authenticator code',{exact:true}).inputValue(),'');assert.equal(await localCookie(first),undefined,'failed login issues no session');
         }
+        let wrongCode='000000';
+        while(fixture.totp.validate({token:wrongCode,window:2})!==null)wrongCode=String(Number(wrongCode)+1).padStart(6,'0');
+        await fill(page,{code:wrongCode});await expect(page.getByRole('status')).toContainText('Sign-in failed.');
+        await expect(page.getByLabel('Email',{exact:true})).toHaveValue(fixture.email);
+        assert.equal(await password.inputValue(),'');assert.equal(await code.inputValue(),'');
+        assert.equal(await localCookie(first),undefined,'wrong MFA code issues no session');
+        await captureSignInState(page,name,'wrong-code');
         const loginReply=page.waitForResponse(response=>response.url()===origin+'/api/auth/login'&&response.status()===200);
         await fill(page);await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
         await expect(page.getByRole('status')).toBeFocused();
@@ -268,6 +312,7 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
         untrusted=await assertPrivate(page,first,await loginReply);assert.equal(untrusted.expires,-1,'untrusted cookie is nonpersistent');
         assert.equal((await row(untrusted)).trusted,false,'server persisted untrusted choice');
         assert.equal((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.length,0,'accessible signed-in state');
+        await captureSignInState(page,name,'verified');
         await page.goto(origin+'/sign-in?returnTo=https%3A%2F%2Fexample.test');
         await expect(page.getByRole('link',{name:'Open workspace',exact:true})).toHaveAttribute('href','/');
       });
@@ -298,7 +343,8 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
       });
       await t.test('durable local revocation is observed after reload and cannot leave cached signed-in UI',async()=>{
         await client.query('BEGIN');try{await client.query('SET LOCAL ROLE crest_web');await client.query('SELECT crest_commands.revoke_app_session($1,$2)',[createHash('sha256').update(trusted.value,'ascii').digest(),randomUUID()]);await client.query('COMMIT');}catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_BROWSER_REVOCATION_FAILED');}
-        await checkSession(other);await expect(other.getByRole('status')).toHaveText('Sign in to continue.');await expect(other.getByRole('button',{name:'Sign out on this device',exact:true})).toHaveCount(0);
+        await checkSession(other);await expect(other.getByRole('status')).toHaveText('Your session has ended. Sign in again.');await expect(other.getByRole('button',{name:'Sign out on this device',exact:true})).toHaveCount(0);
+        await captureSignInState(other,name,'ended-session');
         await other.reload();await expect(other.getByRole('status')).toHaveText('Sign in to continue.');
       });
       await t.test('client-only fault injection: uncertain logout is never reported or replayed as success',async()=>{
@@ -328,6 +374,6 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
           await expect(page.getByRole('heading',{name:'Today',exact:true})).toBeVisible();assert.equal(loginCalls,1,'no replay after navigation/focus');
         }finally{release();}
       });
-    }finally{await first?.close();await second?.close();await browser.close();}
+    }finally{try{await first?.close();await second?.close();await browser?.close();}finally{await closeSignInFixture();}}
   });
 }

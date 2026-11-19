@@ -284,7 +284,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    assert.equal(await syntheticRecordJobHistoryAvailable(target),false);
   }
   login='crest_export_browser_'+randomBytes(8).toString('hex');const secret=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+secret+"'");owned=true;await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=secret;const config={connectionString:url.toString(),environment:'test'};
-  service=await startRealAuthService(target,{diagnostic:amendmentAcceptance||quotes||fieldSessions||expenses||legacyContactBatches||legacyContactApplications});const email='synthetic-browser-export-'+randomUUID()+'@example.com',password=randomBytes(32).toString('base64url'),user=authResult(await service.admin.admin.createUser({email,password,email_confirm:true}),'export_browser_user').user;assert(user?.id);
+  service=await startRealAuthService(target,{diagnostic:amendmentAcceptance||quotes||fieldSessions||expenses||financeMappings||legacyContactBatches||legacyContactApplications});const email='synthetic-browser-export-'+randomUUID()+'@example.com',password=randomBytes(32).toString('base64url'),user=authResult(await service.admin.admin.createUser({email,password,email_confirm:true}),'export_browser_user').user;assert(user?.id);
   const sdk=service.sdk();await sdk.initialize();authResult(await sdk.signInWithPassword({email,password}),'export_browser_enrollment');const factor=authResult(await sdk.mfa.enroll({factorType:'totp',friendlyName:'Synthetic export browser MFA'}),'export_browser_factor'),totp=URI.parse(factor.totp.uri);assert(totp instanceof TOTP);authResult(await sdk.mfa.challengeAndVerify({factorId:factor.id,code:totp.generate()}),'export_browser_mfa');
   const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;let actor,business,epoch;
   await client.query('BEGIN');try{
@@ -772,6 +772,22 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    const dispatch=runtime.createLegacyContactImportDispatcher({environment:'test',connectionString:contactWorkerConnection});
    return dispatch(AbortSignal.timeout(10000));
   }
-  return{origin,product,followUpLeads,dispatchContactImport,authorizePostedFinance,preparePayable,originalFile,originalMimeType,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,calendarActivityJobIds,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),authRequestDiagnostics:()=>service.requestDiagnostics(),nextBrowserCodeAt:(Math.floor(seededCodeAt/(totp.period*1000))+1)*totp.period*1000,credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
+  async function seedRetainedMappingHistory(){
+   assert(financeMappings&&!financeCategoryMappings&&!invoiceIssue);
+   const checked=await lifecycle.verify(credential,signal(),'background',true),hash=runtime.sessionCredentialHash(credential);
+   const finance=await sandbox.connect(financeConfiguration.connectionString);
+   try{
+    await finance.query('SET ROLE crest_finance_preview');
+    const account=(await client.query("SELECT id FROM crest.accounts WHERE business_id=$1 AND code='4000'",[business])).rows[0];assert(account);
+    const args=[hash,checked.sessionId,actor,service.issuer,user.id,checked.provider.sessionId,new Date(checked.provider.expiresAt),business,epoch];
+    for(let index=0;index<24;index++){
+     const version=7+index,day='2027-01-'+String(index+2).padStart(2,'0');
+     const result=(await finance.query('SELECT crest_commands.approve_fixed_finance_mapping($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) AS result',
+      [...args,randomUUID(),'service_revenue',String(version-1),account.id,day,'Fictional retained approval '+version])).rows[0].result;
+     assert.equal(result.state,'committed');assert.equal(result.receipt.version,String(version));
+    }
+   }finally{hash.fill(0);await finance.end();}
+  }
+  return{origin,product,followUpLeads,dispatchContactImport,authorizePostedFinance,preparePayable,seedRetainedMappingHistory,originalFile,originalMimeType,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,calendarActivityJobIds,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),authRequestDiagnostics:()=>service.requestDiagnostics(),nextBrowserCodeAt:(Math.floor(seededCodeAt/(totp.period*1000))+1)*totp.period*1000,credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
  }catch(error){await close();throw error;}
 }

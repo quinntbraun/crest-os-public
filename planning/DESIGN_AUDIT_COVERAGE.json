@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-19T16:52:40.589Z",
+  "assessedAt": "2026-11-19T19:14:50.740Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "482964dec65cef90f295c912cf938ddc50d4930c",
-    "publishedCommit": "153aee67fb4105b979a6fa4e976c1ce74639dbe1",
-    "publishedTree": "bac0e641a70311152d185efbd7f12f4aa314e6b8",
-    "localTree": "117e3a6ac810bbfede9f534f4518bacb3b32f38f"
+    "localCommit": "00132d3d1a844655e98076cf6d24c625f5d8ee38",
+    "publishedCommit": "cec45e26f913c965139e2f8be43cae58cfee864f",
+    "publishedTree": "b035a1ca760b3d5f4ec011756f2ea882ea8227a1",
+    "localTree": "d255d108aa272366cb94988ff95c4020296b7450"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -27,12 +27,12 @@
     "destinations": 36,
     "deeperWorkflows": 20,
     "counts": {
-      "locally_addressed": 40,
-      "partial": 28,
+      "locally_addressed": 44,
+      "partial": 24,
       "open": 2,
       "review_needed": 0
     },
-    "mainLocalChangesAddressedPercent": 57.1,
+    "mainLocalChangesAddressedPercent": 62.9,
     "auditComplete": false,
     "finalSignOffClaimed": false
   },
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "e80e3e54c205d09b8f1d45c21f7ed57c63df6ab917ea8f584e2d993795646eb3"
+          "sha256": "36b39c0b9f569712e1e06a58f079c006a35473690cd6684aff6f48f726f6a6f4"
         }
       ],
       "verification": {
@@ -97,7 +97,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7464f4d343c10b5cf25e79a51b0524440dea24cac87b59722f0c77fd043ddfa1"
+          "sha256": "2250c80499b9830f2a8f5b6c9c8a5a2eedad53c414d28981de1524a2d0a6339f"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -121,7 +121,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7464f4d343c10b5cf25e79a51b0524440dea24cac87b59722f0c77fd043ddfa1"
+          "sha256": "2250c80499b9830f2a8f5b6c9c8a5a2eedad53c414d28981de1524a2d0a6339f"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
@@ -145,7 +145,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7464f4d343c10b5cf25e79a51b0524440dea24cac87b59722f0c77fd043ddfa1"
+          "sha256": "2250c80499b9830f2a8f5b6c9c8a5a2eedad53c414d28981de1524a2d0a6339f"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -173,7 +173,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "c7b271849aadeef05d6ed70744edd33ae754f6b543dbf0de4469aa6550cf984f"
+          "sha256": "478656b448538885394daef52ebbe0a9c96bb998e5bdef7afaeb30b90612a44d"
         }
       ],
       "verification": {
@@ -245,7 +245,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "c7b271849aadeef05d6ed70744edd33ae754f6b543dbf0de4469aa6550cf984f"
+          "sha256": "478656b448538885394daef52ebbe0a9c96bb998e5bdef7afaeb30b90612a44d"
         }
       ],
       "verification": {
@@ -289,7 +289,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7464f4d343c10b5cf25e79a51b0524440dea24cac87b59722f0c77fd043ddfa1"
+          "sha256": "2250c80499b9830f2a8f5b6c9c8a5a2eedad53c414d28981de1524a2d0a6339f"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
@@ -313,7 +313,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7464f4d343c10b5cf25e79a51b0524440dea24cac87b59722f0c77fd043ddfa1"
+          "sha256": "2250c80499b9830f2a8f5b6c9c8a5a2eedad53c414d28981de1524a2d0a6339f"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
@@ -365,7 +365,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "e80e3e54c205d09b8f1d45c21f7ed57c63df6ab917ea8f584e2d993795646eb3"
+          "sha256": "36b39c0b9f569712e1e06a58f079c006a35473690cd6684aff6f48f726f6a6f4"
         }
       ],
       "verification": {
@@ -379,22 +379,42 @@
       "section": "Every page",
       "title": "P2 · Sign in (/sign-in)",
       "requirements": "Observed: The compact form is clearer than the installed preview’s large automotive hero. The crest appears in both the shell and form, while the supporting text has little visual hierarchy.\n\nDirection: Use a generous but restrained sign-in composition: one prominent crest, a short welcome, clearly grouped password and authenticator fields, and quiet device options. Keep security explanations beside the relevant control.\n\nDesktop: Use a centered 400–440 px form; do not stretch inputs across the desktop.\n\nPhone: Support password managers, numeric code entry, zoom and the keyboard without hiding Sign in.\n\nAcceptance: A wrong code, expired session and successful sign-in each have a distinct readable response; never clear unrelated entered fields unnecessarily.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/sign-in-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Compact sign-in, password-manager fields, numeric code, distinct feedback and device disclosure exist.",
-      "remainingWork": "Finish single-brand composition and wrong-code/expired/success/keyboard/zoom review with security clearing preserved.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "A single supplied crest, welcome, centered400–440px desktop form, separated code entry and quiet personal-device options are implemented. Original genuine sign-in passes26/26 across Chromium/WebKit, including wrong six-digit MFA, email retention/secret clearing, session-ended/success feedback, focus, device isolation, revocation and interrupted saves. Six-width Axe/overflow and52 fresh masked captures are retained; fonts are measured.",
+      "remainingWork": "Complete genuine timed-expiry, password-manager/zoom/physical keyboard and iPhone acceptance, broader state variants and matching delivered release; all final sign-offs remain false.",
       "evidence": [
         {
           "path": "src/app/sign-in/sign-in.tsx",
-          "sha256": "84292f34ffea67e78f0e4d1272465f89571ab98dd6fb228b71be7bb243d3d8ad"
+          "sha256": "3f3741f6c75fc798484750ccab45a6cb24cd7f385a5c7e04e4980c3453d5b4e3"
         },
         {
-          "path": "planning/CREST_DESIGN_SYSTEM.md",
-          "sha256": "234bda2413b4a708c941b3e962e9bba7189359798478d641ab49f9769b5d5129"
+          "path": "planning/SIGN_IN_DESIGN_REFINEMENT.md",
+          "sha256": "4ffe9cb799d322726654f7792cc02a24c5b6179349e1b5e4302c451f743f1b0a"
+        },
+        {
+          "path": "src/app/sign-in/page.tsx",
+          "sha256": "12918c592c13cadd3034f6ef7e0908736ee223495d56dbbabe8dd147ed86c8e6"
+        },
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "2250c80499b9830f2a8f5b6c9c8a5a2eedad53c414d28981de1524a2d0a6339f"
+        },
+        {
+          "path": "tests/integration/sign-in-browser.test.mjs",
+          "sha256": "081668c0990c509250df10f008c1e4d2f1ec59718c57c46d63594d2311cbe28b"
+        },
+        {
+          "path": "tests/integration/job-work-boundary-product-browser.test.mjs",
+          "sha256": "707399ff936199fc1d89c397bffb1b09abdb8b00ae9967c56e928bf6b587b5d0"
+        },
+        {
+          "path": "tests/integration/work-completion-product-browser.test.mjs",
+          "sha256": "548cdc9c568b0ad1a7af99ebadeed1573772fa2fe6c0d4fb250dfefb51d1b5ea"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -403,22 +423,50 @@
       "section": "Every page",
       "title": "P1 · Today (/)",
       "requirements": "Observed: The next-action card is useful, but empty schedule and maintenance panels still occupy substantial space. The wide hero card has more area than its content needs.\n\nDirection: Make the active visit or due follow-up the first task, followed by a compact agenda. Collapse genuinely empty secondary queues into concise rows. Keep unknown or failed queues visible as unknown.\n\nDesktop: Use a wide agenda plus a narrower attention column. Make the next action align with the record it affects.\n\nPhone: Keep the next valid action visible in the first viewport for a representative one-vehicle job.\n\nAcceptance: Test scheduled, in-progress, overdue-follow-up-only, empty and partial-load states; never turn a failed read into “nothing due.”\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/today-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Agenda/follow-up actions and accessible entry contrast have been refined.",
-      "remainingWork": "Reconcile compact empty queues and wide agenda/attention composition for scheduled, active, overdue-only and partial reads.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Next task and agenda share a wider desktop column; the narrower attention column groups maintenance/follow-ups/proposals with compact verified-empty rows and explicit failed-read feedback. Phone follows task, agenda, attention. Eight original booking/workspace/overdue/maintenance parents pass in a combined run; two complete original active-field parents pass separately after a dated test-fixture correction. Product source is identical across both runs;324 fresh captures retained.",
+      "remainingWork": "Complete broader long-list/identity/zoom and global-state review plus matching delivered/installed and physical-iPhone acceptance. The two runs are scoped evidence, not one combined10/10 or full audit sign-off.",
       "evidence": [
         {
-          "path": "src/app/page.tsx",
-          "sha256": "8cd2c93a05f849f3f99563461d9d9acc13520d1096eebaf2fdd64dd2f5061d77"
+          "path": "src/app/workspace-home.tsx",
+          "sha256": "2cb82bba793976ce7592c5fc5751ccb60ada9a0fef95f4533b042178c5b60c91"
         },
         {
-          "path": "planning/TODAY_ENTRY_CONTRAST.md",
-          "sha256": "ad92f40a6611688a661bfd46e6b0ec596b5f380e4854390cdf8b1cfb2fccf779"
+          "path": "planning/TODAY_AGENDA_DESIGN.md",
+          "sha256": "93cbdce3157b0706f1ef004b8f167678049426f83c4d06124d0b478a0d16142f"
+        },
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "2250c80499b9830f2a8f5b6c9c8a5a2eedad53c414d28981de1524a2d0a6339f"
+        },
+        {
+          "path": "src/client/home-schedule.ts",
+          "sha256": "3968e7dd1d8ccce17b13b1a36089f12cc9146bc427effd0d7b8cad61a2ccecf1"
+        },
+        {
+          "path": "tests/support/today-layout.mjs",
+          "sha256": "b660ede025a59828e5d04374268e09c9a0e36413f977c6e46c975ad98cbc8905"
+        },
+        {
+          "path": "tests/integration/book-job-product-browser.test.mjs",
+          "sha256": "b628a5ce01cbd255a30c0322c00fe66346427da3fafe7353e0ea65e3d64ada64"
+        },
+        {
+          "path": "tests/integration/workspace-journey-browser.test.mjs",
+          "sha256": "8bf174898bc5611d50d9b98589c3a5d07fefa99220b490d1913ae85a5521e808"
+        },
+        {
+          "path": "tests/integration/field-work-product-browser.test.mjs",
+          "sha256": "9ea6a0af2bff4f80125430ac104a7cfa86c10550905b09e17283d3396eb78a32"
+        },
+        {
+          "path": "tests/integration/maintenance-reminders-product-browser.test.mjs",
+          "sha256": "9fe2aa380c9bfe994a6f63590a12f8733ed75415907c3c113ec569bbef41e739"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -493,7 +541,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "ea50ddce28eecc4b47642759a823355b5c5353500e36fc87272b1e887a9a7185"
+          "sha256": "8bf174898bc5611d50d9b98589c3a5d07fefa99220b490d1913ae85a5521e808"
         }
       ],
       "verification": {
@@ -835,22 +883,50 @@
       "section": "Every page",
       "title": "P1 · Work status (/schedule/work)",
       "requirements": "Observed: Desktop places context beside the form, but the phone puts a sizable context card ahead of departure fields. Repeated “saved” messages add reading cost.\n\nDirection: Use a compact persistent job strip, an unmistakable current state and a single next-action form. Secondary ways to start, notes and exceptions stay disclosed.\n\nDesktop: Keep summary and action aligned without stretching every input.\n\nPhone: Place the next field and action within reach; reserve space for keyboard and navigation.\n\nAcceptance: Departure, arrival, pause and resume labels reflect the real recorded state; avoid success feedback before the server confirms.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-work-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Task-specific entry guidance and real departure/arrival/pause/resume workflows exist.",
-      "remainingWork": "Finish compact loaded job strip, single next-action hierarchy and keyboard/phone reach for every actual state.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Active work has an explicit compact phone saved-state/customer/vehicle strip with full detail disclosure and a complete desktop summary beside its next action. Repeated ordinary loaded feedback stays accessible without extra visual text. All original Mobile2/2 and shared custody/pickup9/9 roots pass with state/phone geometry, retained drafts, acknowledged-save, uncertain-save and privacy safeguards.",
+      "remainingWork": "Complete remaining denied/stale/loading/long-identity/zoom and physical keyboard/safe-area/device variants plus matching hosted and installed acceptance. Separate published field failures remain release-blocking; no full final sign-off is claimed.",
       "evidence": [
         {
-          "path": "src/app/schedule/work/page.tsx",
-          "sha256": "0ad764472492dbab8bd856545643b8908e513772f432e02bcabe4df961d6b5b8"
+          "path": "src/app/schedule/work/work.tsx",
+          "sha256": "a35c8e301097101b895452daff114f0de91713156301c0a5183121b9e21005fe"
         },
         {
-          "path": "planning/TASK_PREREQUISITE_DESIGN.md",
-          "sha256": "c070fd223a799e24f1084e7166c9623974e2596a98ef126020ded65f1a8694de"
+          "path": "planning/ACTIVE_WORK_STRIP_DESIGN.md",
+          "sha256": "16565590356d8edd41bf6c7de2c87c6198c8f50156d9bd83dab13ccea43dcd75"
+        },
+        {
+          "path": "src/app/schedule/work/visit-header.tsx",
+          "sha256": "9a2d618fb2dbbff1818f22581e79e828de868ce2c3d1757dc0a4eae85480bd25"
+        },
+        {
+          "path": "src/app/schedule/work/actions.ts",
+          "sha256": "a02358e00d627d78ffcba022c57977feea15fb2c079ef2a74dc594df6efb456b"
+        },
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "2250c80499b9830f2a8f5b6c9c8a5a2eedad53c414d28981de1524a2d0a6339f"
+        },
+        {
+          "path": "tests/support/field-work-layout.mjs",
+          "sha256": "903257baed4d4e36e335b78af3cc78fa72aa7dcd0611dd4cb7742f6b9cc23724"
+        },
+        {
+          "path": "tests/integration/field-work-product-browser.test.mjs",
+          "sha256": "9ea6a0af2bff4f80125430ac104a7cfa86c10550905b09e17283d3396eb78a32"
+        },
+        {
+          "path": "tests/integration/dropoff-custody-product-browser.test.mjs",
+          "sha256": "b36da369d6134e3bc75405b459387e6bf8286f7060ae127015f85b0ee88846b9"
+        },
+        {
+          "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
+          "sha256": "551aca1999c118605d83c1ecdf38634a02576993ec36c938707b35627f3d7755"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1061,7 +1137,7 @@
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
-          "sha256": "dd69f23b08f79e614704df3ce073f49a907ca56b2fd5286a0634b40e8a759f46"
+          "sha256": "9666f714251cefa61e507a45553eedf7c033fd8c56ca6aabfe7f0e7619857752"
         }
       ],
       "verification": {
@@ -1099,22 +1175,46 @@
       "section": "Every page",
       "title": "P2 · Category approvals (/settings/accounts/mappings/categories/manage)",
       "requirements": "Observed: The initial screen has only a select and disabled load button, leaving the approval workflow undiscoverable.\n\nDirection: Explain what selecting a category reveals; use a chosen-category header and a clear saved/proposed approval comparison.\n\nDesktop: Place existing approval history beside proposed effective dates.\n\nPhone: Guide selection → proposed setting → review; keep the selected category visible.\n\nAcceptance: Retained historical approvals remain accessible and new effective periods cannot look like silent edits.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-mappings-categories-manage-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Chosen category entry and shared saved/proposed approval comparison exist.",
-      "remainingWork": "Integrate retained approval history with proposed editing and finish staged phone selection/review acceptance.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Retained approved periods now sit beside proposed effective dates on desktop and follow the selected category/proposal on phones. The shared typed timeline preserves reasons, closure boundaries, loaded coverage, CSV and private clearing. All four original category/fixed-mapping browser roots pass with actual30-version paging, failed-read proposal preservation and unchanged save/recovery safeguards.",
+      "remainingWork": "Complete remaining empty/denied/stale/loading/long-value/zoom variants and matching hosted, installed and physical-device acceptance. Main local refinement is addressed; full final sign-off remains false.",
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "e5e73345c4cdbeb00e32fdd761b2c51445b647e4cd50bd4679a0d37101a9db7d"
+          "sha256": "9a949bd18616896cc49728bb23b894b0413765511e09c47314c57528640d8b9c"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
-          "sha256": "dd69f23b08f79e614704df3ce073f49a907ca56b2fd5286a0634b40e8a759f46"
+          "sha256": "9666f714251cefa61e507a45553eedf7c033fd8c56ca6aabfe7f0e7619857752"
+        },
+        {
+          "path": "src/app/settings/accounts/mappings/history.tsx",
+          "sha256": "17d5a4d9d87ae7a578a6eb2a9da920aa86415d7aebcf88d27e132616dc40234a"
+        },
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "2250c80499b9830f2a8f5b6c9c8a5a2eedad53c414d28981de1524a2d0a6339f"
+        },
+        {
+          "path": "tests/integration/finance-expense-category-browser.test.mjs",
+          "sha256": "eabdd12e5149aff0a71f1748e3d45e686c43158f8ec17e0a638263610ee5feca"
+        },
+        {
+          "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
+          "sha256": "48ffa33d9de75e78a2cac1ceaf5042d0a906607a43ae8953bfd61586d318db3f"
+        },
+        {
+          "path": "tests/support/mapping-workbench.mjs",
+          "sha256": "1265486a5ddf06862590f6a779a2e3a8bf6eb9a229f5728dd075e3f25ed5e89b"
+        },
+        {
+          "path": "tests/support/source-export-browser-fixture.mjs",
+          "sha256": "f9cb926491969445598f73e4a949082d9c216c9d6137234889d8297fe9f7c04e"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1129,11 +1229,11 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "e5e73345c4cdbeb00e32fdd761b2c51445b647e4cd50bd4679a0d37101a9db7d"
+          "sha256": "9a949bd18616896cc49728bb23b894b0413765511e09c47314c57528640d8b9c"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
-          "sha256": "dd69f23b08f79e614704df3ce073f49a907ca56b2fd5286a0634b40e8a759f46"
+          "sha256": "9666f714251cefa61e507a45553eedf7c033fd8c56ca6aabfe7f0e7619857752"
         }
       ],
       "verification": {
@@ -1524,8 +1624,8 @@
       "title": "Issued invoice",
       "requirements": "The issued document, new-draft action, payment disclosure and draft history need clearer separation. Lead with invoice number, status, due date and outstanding amount, using only verified values. Give the immutable document its own reading surface.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-invoice-issue-product-chromium-390.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "The private checked outstanding header, original issued document and financial task hierarchy are implemented. Registered122/populated121/restored capability and grant proof passes10/10. Basic invoice2/2 and complete adjustment/export2/2 are separate genuine Chromium/WebKit runs. Desktop/phone launchers derive availability from the adopted private reader; reviewed schema122 retains109 posting vocabulary and unknown123 is rejected. No installed or full-row acceptance is claimed.",
-      "remainingWork": "Complete remaining supplier-posting overlap and state/zoom/privacy coverage, matching hosted and installed release, complete business recovery and physical-device acceptance. Main local implementation is addressed; full audit-row sign-off remains false.",
+      "implementedOrPresent": "The private checked outstanding header, original issued document and financial task hierarchy are implemented. Registered122/populated121/restored capability and grant proof passes10/10. Basic invoice2/2 and complete adjustment/export2/2 are separate genuine Chromium/WebKit runs. Desktop/phone launchers derive availability from the adopted private reader; reviewed schema122 retains109 posting vocabulary and unknown123 is rejected. No installed or full-row acceptance is claimed. The disabled-tip-write grouped-options compatibility repair passes the complete original payment-recovery2/2 run with270 fresh captures; known shapes are validated before projection and malformed data remains rejected.",
+      "remainingWork": "Complete supplier-posting overlap and state/zoom/privacy coverage, matching hosted and installed release, complete business recovery and physical-device acceptance. Published grouped-options400 is repaired in scoped local acceptance; matching hosted verification remains pending. Full audit-row sign-off remains false.",
       "evidence": [
         {
           "path": "src/app/schedule/work/invoice-issue-tax-review.tsx",
@@ -1549,7 +1649,7 @@
         },
         {
           "path": "src/bookkeeping/finance-account-http.ts",
-          "sha256": "a42c55e5d08d12dff8989b6f7e6540446a403e46a030eaed683ff6806aec626f"
+          "sha256": "4cc13687d44af8e2c93034cb3df6ca91aa5cd146146c9e5e9a8d61a0ad61d8d8"
         },
         {
           "path": "src/client/finance-accounts.ts",
@@ -1642,6 +1742,22 @@
         {
           "path": "tests/unit/node-server.test.ts",
           "sha256": "7dfa9eb6a2e60e3da0ff23bb75ffb7045b19e5bcd125f8d252fcc148cdfe4aa1"
+        },
+        {
+          "path": "planning/GROUPED_RECREDIT_OPTIONS_COMPATIBILITY.md",
+          "sha256": "c71c4c085797aeb3af9501fe30adb29d227ce882311220614f3e8896d5b5945b"
+        },
+        {
+          "path": "src/bookkeeping/collection-failure-grouped-recredit-contract.ts",
+          "sha256": "b5173352d25060314b5350ef3a36fb16dad503c4ed428a6cd3213ee5231fb10e"
+        },
+        {
+          "path": "tests/unit/grouped-recredit-options-compatibility.test.ts",
+          "sha256": "1f554945c1307d7c4db5815bd807929f5c61972f440dffc34b3306bb429d0228"
+        },
+        {
+          "path": "tests/unit/grouped-recredit-options-http.test.ts",
+          "sha256": "80cc15f1692c2e9b1b8353e5478c066fadb1bf92d71e52fc714c03d389b4fe11"
         }
       ],
       "verification": {
@@ -1733,11 +1849,11 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/history.tsx",
-          "sha256": "18bac8e7996f459df41807640dd9cf206fb22736e3f60b92f4db23765f912419"
+          "sha256": "17d5a4d9d87ae7a578a6eb2a9da920aa86415d7aebcf88d27e132616dc40234a"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
-          "sha256": "dd69f23b08f79e614704df3ce073f49a907ca56b2fd5286a0634b40e8a759f46"
+          "sha256": "9666f714251cefa61e507a45553eedf7c033fd8c56ca6aabfe7f0e7619857752"
         }
       ],
       "verification": {

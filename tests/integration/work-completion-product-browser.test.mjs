@@ -361,9 +361,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await historyButton.press('Enter');
   await expect(historyDisclosure.getByRole('alert')).toHaveText('Couldn’t load saved message history.');
   assert.equal(historyReads,1);
-  const historyResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/business/scheduling/review-history'&&response.status()===200);
+  // Begin consuming the retained source as soon as its response is available;
+  // Chromium can release the body handle before the click finishes settling.
+  const historyResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/business/scheduling/review-history'&&response.status()===200).then(response=>response.json());
   await historyDisclosure.getByRole('button',{name:'Retry history',exact:true}).click();
-  const historySource=await (await historyResponse).json();
+  const historySource=await historyResponse;
   const historyRows=historyDisclosure.getByRole('listitem');
   await expect(historyRows).toHaveCount(3);
   await expect(historyRows.nth(0)).toContainText('Owner-confirmed sent');
@@ -417,7 +419,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    const fresh=fixture.credentials();
    await email.fill(fresh.email);
    await page.getByLabel('Password',{exact:true}).fill(fresh.password);
-   await page.getByLabel('Authenticator code',{exact:true}).fill(fresh.code);
+   const freshCode=page.getByLabel('Authenticator code',{exact:true});
+   await freshCode.fill(fresh.code);
+   assert.deepEqual(await freshCode.evaluate(element=>({sixDigits:/^[0-9]{6}$/.test(element.value),valid:element.validity.valid})),{sixDigits:true,valid:true});
+   await expect(freshCode).toBeFocused();
    await page.getByRole('button',{name:'Sign in',exact:true}).click();
    await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
    await page.goto(fixture.origin+end);

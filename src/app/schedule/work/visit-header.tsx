@@ -1,4 +1,5 @@
-import type {ReactNode} from 'react';
+'use client';
+import {useId,useState,type ReactNode} from 'react';
 import type {FieldSessionView} from '../../../client/field-session-controller';
 import {parseCustomer} from '../../../customer/customer-contract';
 import {parseVehicle} from '../../../customer/vehicle-contract';
@@ -9,18 +10,21 @@ const states:Readonly<Record<string,string>>={scheduled:'Scheduled',en_route:'En
 const arrangements:Readonly<Record<string,string>>={mobile:'Mobile detail',dropoff:'Drop-off',pickup_return:'Pickup and return'};
 type Resources=NonNullable<FieldSessionView['resources']>;
 
-export function FieldVisitHeader({resources,departure,children}:{resources:Resources;departure?:string;children?:ReactNode}){
+export function FieldVisitHeader({resources,departure,children,compact=false}:{resources:Resources;departure?:string;children?:ReactNode;compact?:boolean}){
+ const detailsId=useId(),[expanded,setExpanded]=useState(false);
  const {job,appointment}=resources.head,business=resources.businessId;
  const customer=parseCustomer(resources.vehicles[0]!.customer_snapshot,business);
  const vehicles=resources.vehicles.map(row=>parseVehicle(row.vehicle_snapshot,business).label);
  const location=parseBookingLocation(job.work_location_snapshot,business,job.customer_id);
  const address=location.kind==='manual'?location.locationText:location.snapshot.exact_location_text||
   [location.snapshot.line1,location.snapshot.line2,location.snapshot.city,location.snapshot.region,location.snapshot.postal_code,location.snapshot.country].filter(Boolean).join(', ');
- return <header className="field-visit-heading">
+ return <header className={'field-visit-heading'+(compact?' field-visit-strip':'')} data-expanded={expanded}>
   <p className="field-visit-state"><strong>{states[job.state]}</strong><span>{arrangements[job.fulfillment_mode]} · Version {job.version}</span></p>
   <h2>{customer.display_name}</h2>
   <p className="field-visit-vehicles">{vehicles.join(' · ')}</p>
-  <dl>
+  {compact&&<button className="secondary field-visit-disclosure" type="button" aria-expanded={expanded} aria-controls={detailsId}
+   onClick={()=>setExpanded(value=>!value)}>{expanded?'Hide visit details':'View visit details'}</button>}
+  <dl id={detailsId} className="field-visit-facts">
    <div><dt>Confirmed visit</dt><dd><AppointmentTime start={appointment.start_at} end={appointment.end_at} timezone={appointment.timezone}/></dd></div>
    <div><dt>Work location</dt><dd>{address}</dd></div>
    {departure?<div><dt>Trip started</dt><dd><time dateTime={departure}>{appointmentDateTime(departure,appointment.timezone)}</time></dd></div>:

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {captureTodayState} from '../support/today-layout.mjs';
 import {mkdir} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {strFromU8,unzipSync} from 'fflate';
@@ -95,6 +96,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(due.getByRole('link',{name:'Open saved job'})).toHaveAttribute('href','/schedule?job='+jobId+'&from=today');
   await expect(due.getByRole('link',{name:'Open schedule'})).toHaveAttribute('href','/schedule');
   await expect(page.getByRole('region',{name:'Due maintenance reminders'}).getByRole('link',{name:'Open saved job'})).toHaveCount(0);
+  await captureTodayState(page,name,'maintenance-due');
   const {rows:[customer]}=await fixture.client.query('SELECT display_name FROM crest.customers WHERE business_id=$1 AND id=$2',[fixture.business,customerId]);
   await page.goto(origin+'/customers');
   await page.getByRole('button',{name:customer.display_name,exact:true}).click();

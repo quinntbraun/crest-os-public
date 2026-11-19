@@ -8,6 +8,7 @@ import AxeBuilder from '@axe-core/playwright';
 import sharp from 'sharp';
 import {strFromU8,unzipSync} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {assertActiveWorkLayout} from '../support/field-work-layout.mjs';
 import {reviewCustodyEventTimeline} from '../support/custody-event-timeline.mjs';
 
 async function downloadCustodyHistory(page,panel){
@@ -236,6 +237,8 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
    await expect(work.getByLabel('Vehicle you are driving',{exact:true})).toHaveCount(0);
    for(const width of [360,390,768,1440]){
     await page.setViewportSize({width,height:900});
+    await page.evaluate(()=>window.scrollTo(0,0));
+    await assertActiveWorkLayout(page,width,'Scheduled');
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     const audit=await new AxeBuilder({page}).include('[aria-label="Drop-Off work status"]').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
     assert.deepEqual(audit.violations.map(issue=>issue.id),[]);

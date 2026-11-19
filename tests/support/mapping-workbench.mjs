@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 import {expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+export async function verifyMappingSignIn(page,fixture){
+ try{await expect(page.getByRole('status')).toContainText('Signed in');}
+ catch(error){console.info('MAPPING_SIGN_IN_DIAGNOSTIC '+JSON.stringify({provider:fixture.authDiagnostics(),requests:fixture.authRequestDiagnostics()}));throw error;}
+}
 export async function mappingBusinessSource(f){return (await f.client.query(`SELECT jsonb_build_object(
  'versions',(SELECT jsonb_agg(to_jsonb(v) ORDER BY v.id) FROM crest.account_mapping_versions v WHERE v.business_id=$1),
  'events',(SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id) FROM crest_private.audit_events e WHERE e.business_id=$1)) AS snapshot`,[f.business])).rows[0].snapshot;}
@@ -25,4 +29,26 @@ export async function assertMappingLayout(page,width){
  }
  const lookup=await page.locator('.mapping-lookup-pane').boundingBox(),history=await page.getByRole('region',{name:'Saved mapping history',exact:true}).boundingBox();assert(lookup&&history);
  if(width>=1100){const form=await page.locator('.mapping-lookup-form').boundingBox();assert(form&&Math.abs(form.y-history.y)<1,'desktop lookup and history align at the top');assert(lookup.x+lookup.width<=history.x,'desktop lookup and history remain side by side');}else assert(lookup.y+lookup.height<=history.y,'phone/tablet lookup and result precede history');
+}
+
+export async function reviewApprovalHistory(page,engine,kind,versions){
+ const editor=page.getByRole('region',{name:'Mapping approvals',exact:true});
+ const history=editor.getByRole('region',{name:'Saved mapping history',exact:true});
+ const original=page.viewportSize();
+ await expect(history.getByRole('listitem')).toHaveCount(versions);
+ await expect(history.getByRole('link')).toHaveCount(0);
+ const before=await editor.locator('input,textarea,select').evaluateAll(fields=>fields.map(field=>[field.id,field.value]));
+ for(const width of [360,390,768,1100,1440]){
+  await page.setViewportSize({width,height:900});
+  await page.evaluate(async()=>{await document.fonts.ready;scrollTo(0,0);});
+  const proposal=await editor.locator('.mapping-approval-proposal').boundingBox(),retained=await history.boundingBox();
+  assert(proposal&&retained);
+  if(width>=1100){assert(proposal.x+proposal.width<=retained.x,'desktop history sits beside proposed effective dates');assert(Math.abs(proposal.y-retained.y)<1,'desktop history and proposal align');}
+  else assert(proposal.y+proposal.height<=retained.y,'phone/tablet proposal precedes retained approvals');
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
+  await page.screenshot({path:'.local/review/finance-'+kind+'-embedded-history-'+engine+'-'+width+'.png',fullPage:true,animations:'disabled'});
+ }
+ assert.deepEqual(await editor.locator('input,textarea,select').evaluateAll(fields=>fields.map(field=>[field.id,field.value])),before,'responsive history review preserves proposal');
+ if(original)await page.setViewportSize(original);
 }

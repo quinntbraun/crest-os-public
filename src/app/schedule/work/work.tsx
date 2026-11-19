@@ -44,7 +44,7 @@ function WorkForm({view,initialAction,save,more}:{view:FieldSessionView;initialA
  function setReason(value:string){setReasons(current=>({...current,[action]:value}));}
  const optional=(v:string)=>v.trim()?v:null;
  return <form className="field-work-form active-work-form" onSubmit={event=>{event.preventDefault();if(disabled)return;const body:FieldSessionSave['body']=action==='depart'?{action,reason:optional(reason),trip:{drivenVehicleId:vehicle,origin:{schemaVersion:1,kind:'manual',locationText:origin,instructions:optional(instructions)},etaAt:eta||null,notes:optional(notes)}}:{action,reason:optional(reason)};void save(body);}}>
-  <FieldVisitHeader resources={resources}/>
+  <FieldVisitHeader resources={resources} compact/>
   <fieldset className="field-next-action" disabled={disabled}><legend className="visually-hidden">Next work action</legend>
    <h2 ref={actionHeading} tabIndex={-1}>{workActionLabels[action]}</h2>
    <p>{actionDetails[action]}</p>
@@ -93,7 +93,8 @@ export function FieldSessionScreen({jobId,mode='work'}:{jobId:string;mode?:Field
   vehicles:view.resources.vehicles.map(row=>({id:row.vehicle_id,label:parseVehicle(row.vehicle_snapshot,view.resources!.businessId).label})),
   assignments:view.completionVehicles,
  }:undefined;
- return <section aria-label={completing?'Job completion':interrupting?'Mobile trip interruption':cancelling?pickup?'Pickup job cancellation':dropoff?'Drop-Off job cancellation':'Mobile job cancellation':pickup?'Pickup work status':dropoff?'Drop-Off work status':'Mobile work status'} aria-busy={view.busy}><p className={view.selectionNeeded?'visually-hidden':'job-change-status'} ref={status} role="status" tabIndex={-1}>{view.message}</p>
+ const quietLoaded=mode==='work'&&view.phase==='ready'&&view.message==='Saved job loaded. Record what is happening now.';
+ return <section aria-label={completing?'Job completion':interrupting?'Mobile trip interruption':cancelling?pickup?'Pickup job cancellation':dropoff?'Drop-Off job cancellation':'Mobile job cancellation':pickup?'Pickup work status':dropoff?'Drop-Off work status':'Mobile work status'} aria-busy={view.busy}><p className={view.selectionNeeded?'visually-hidden':'job-change-status'+(quietLoaded?' visually-hidden':'')} ref={status} role="status" tabIndex={-1}>{view.message}</p>
   {view.phase==='loading'&&<div className="workspace-skeleton appointment-change-loading" aria-hidden="true"/>}
   {view.phase==='signed-out'&&<a className="primary-action" href="/sign-in">{completing?'Sign in to review completion':'Sign in to review work status'}</a>}
   {mode==='work'&&view.phase==='ready'&&view.resources&&view.context&&workAction&&<WorkForm initialAction={workAction} key={view.resources.head.job.id+':'+view.resources.head.job.version} view={view} more={()=>action('moreVehicles')} save={async body=>{const controller=current.current;if(!controller)return;await controller.save(body);if(current.current===controller)status.current?.focus();}}/>}

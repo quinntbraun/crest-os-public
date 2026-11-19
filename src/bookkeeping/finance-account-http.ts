@@ -88,7 +88,7 @@ import {allocationUnapplicationMatchesInput,parseAllocationUnapplicationInput,pa
  parseAllocationUnapplicationReference,parseAllocationUnapplicationResult,parseInvoicePaymentAllocations} from './allocation-unapplication-contract.ts';
 import {collectionFailureRecreditMatchesInput, collectionFailureRecreditRefusal, parseCollectionFailureRecreditList, parseCollectionFailureRecreditInput, parseCollectionFailureRecreditOptions,
  parseCollectionFailureRecreditReference, parseCollectionFailureRecreditResult} from './collection-failure-recredit-contract.ts';
-import {groupedRecreditMatchesInput, parseGroupedRecreditInput, parseGroupedRecreditOptions,
+import {groupedRecreditMatchesInput, parseGroupedRecreditInput, groupedRecreditOptionsForCapability,
  parseGroupedRecreditReference, parseGroupedRecreditResult} from './collection-failure-grouped-recredit-contract.ts';
 import {parseStatementDraft,parseStatementReference,parseStatementResult} from './statement-staging-contract.ts';
 import {parseStatementMatchSnapshot} from './statement-match-review.ts';
@@ -727,8 +727,8 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     check(customerUuid(customerId)&&customerUuid(failureId)&&customerDate(actualOn));
     const value=await database('SELECT crest_commands.read_fictional_collection_failure_recredit_options('+authority+
      ',$9::uuid,$10::uuid,$11::date) AS result',[...args,customerId,failureId,actualOn],signal);
-    parseGroupedRecreditOptions(value,businessId,customerId,failureId,actualOn,collectionFailureTipReinstatements);
-    return privateJsonResponse(value as object);
+    const response=groupedRecreditOptionsForCapability(value,businessId,customerId,failureId,actualOn,collectionFailureTipReinstatements);
+    return privateJsonResponse(response as object);
    }
    if(route==='grouped-payment-recredit-lookup'||route==='grouped-payment-recredit-retire'){
     const reference=parseGroupedRecreditReference(route==='grouped-payment-recredit-lookup'?input:input.reference);

@@ -1,6 +1,8 @@
 // Actual product pages + genuine provider MFA, restricted SQL and retained
 // history. Synthetic TLS exceptions are confined to this disposable test.
 import assert from 'node:assert/strict';
+import {assertTodayLayout,captureTodayState} from '../support/today-layout.mjs';
+
 import {test} from 'node:test';
 import {setTimeout as delay} from 'node:timers/promises';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
@@ -235,7 +237,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
    const touchTarget=await firstLead.boundingBox();assert(touchTarget&&touchTarget.height>=44);
    const due=await featured.boundingBox(),queued=await section.boundingBox();
-   assert(due&&queued&&due.y+due.height<queued.y);
+   assert(due&&queued);if(width<1100)assert(due.y+due.height<queued.y);else assert(queued.x>=due.x+due.width,'wide attention sits beside the next due task');await assertTodayLayout(page);
    assert.deepEqual((await new AxeBuilder({page}).include('.workspace-home').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
    await page.screenshot({path:join('.local/review',`today-due-${name}-${width}.png`)});
    await section.screenshot({path:join('.local/review',`lead-follow-ups-${name}-${width}.png`)});
@@ -250,7 +252,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.reload();
   await expect(page.getByRole('region',{name:'Upcoming visit status'})).toContainText('Upcoming visits could not be verified.');
   await expect(featured).toHaveCount(0);
-  await expect(section.getByRole('link',{name:first.label,exact:true})).toBeVisible();
+  await expect(section.getByRole('link',{name:first.label,exact:true})).toBeVisible();await captureTodayState(page,name,'partial-overdue');
   await page.unroute('**/api/business/scheduling/list');
   await page.reload();
   await firstLead.click();

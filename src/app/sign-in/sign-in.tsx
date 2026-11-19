@@ -1,5 +1,5 @@
 'use client';
-import {useCallback,useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {authentication,AuthenticationError} from '../../client/authentication';
 import type {Proof,LoginInput} from '../../client/authentication';
@@ -15,6 +15,7 @@ export function SignIn({resume=null}:{resume?:{href:string;label:string}|null}={
   const recheckOnFocus=useRef(false),focusAfterAction=useRef(false);
   const [codeIssue,setCodeIssue]=useState(false);
   const status=useRef<HTMLParagraphElement>(null);
+  const credentialForm=useRef<HTMLFormElement>(null);
   const run=useCallback(async(kind:'session'|'login'|'logout',input?:LoginInput)=>{
     if(!mounted.current||operation.current)return;
     const id=++sequence.current,controller=new AbortController(),previous=current.current;operation.current={id,controller};current.current=null;
@@ -33,7 +34,7 @@ export function SignIn({resume=null}:{resume?:{href:string;label:string}|null}={
     }catch(error){
       const reason=error instanceof AuthenticationError?error.kind:'uncertain';
       next=reason==='unavailable'?{phase:'unavailable',message:'Sign-in is not available while setup is in progress. Check again later.',busy:false}
-        :reason==='denied'&&kind!=='logout'?{phase:'form',message:kind==='login'?'Sign-in failed. Check your email and password, then enter a fresh code. If codes keep failing, check that your phone’s date and time are set automatically.':'Sign in to continue.',busy:false,retryEmail:input?.email??'',...kind==='login'?{feedback:'error' as const}:{}}
+        :reason==='denied'&&kind!=='logout'?{phase:'form',message:kind==='login'?'Sign-in failed. Check your email and password, then enter a fresh code. If codes keep failing, check that your phone’s date and time are set automatically.':previous?'Your session has ended. Sign in again.':'Sign in to continue.',busy:false,retryEmail:input?.email??'',...kind==='login'||previous?{feedback:'error' as const}:{}}
         :{phase:'uncertain',message:kind==='logout'?'Sign-out could not be confirmed. Check this device’s session before trying again.':'The session could not be confirmed. Check this device’s session before trying again.',busy:false};
     }
     if(mounted.current&&sequence.current===id){
@@ -51,9 +52,11 @@ export function SignIn({resume=null}:{resume?:{href:string;label:string}|null}={
     return ()=>{mounted.current=false;operation.current?.controller.abort();operation.current=null;current.current=null;recheckOnFocus.current=false;
       window.removeEventListener('focus',check);window.removeEventListener('pageshow',check);document.removeEventListener('visibilitychange',check);};
   },[run]);
-  useEffect(()=>{
+  useLayoutEffect(()=>{
     if(!focusAfterAction.current)return;
-    focusAfterAction.current=false;status.current?.focus();
+    focusAfterAction.current=false;
+    if(view.phase==='form'&&credentialForm.current?.contains(document.activeElement))return;
+    status.current?.focus();
   },[view]);
   function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();if(operation.current)return;
@@ -69,7 +72,7 @@ export function SignIn({resume=null}:{resume?:{href:string;label:string}|null}={
     {view.busy&&<div className="sign-in-loading" aria-hidden="true">
       <span className="workspace-skeleton"/><span className="workspace-skeleton"/><span className="workspace-skeleton"/>
     </div>}
-    {view.phase==='form'&&<form onSubmit={submit}>
+    {view.phase==='form'&&<form ref={credentialForm} onSubmit={submit}>
       <label htmlFor="email">Email</label><input id="email" name="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={320} defaultValue={view.retryEmail} required/>
       <label htmlFor="password">Password</label><PasswordInput/>
       <label htmlFor="code">Authenticator code</label><input id="code" name="code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength={6} maxLength={6} required aria-describedby={codeIssue?'code-help code-invalid':'code-help'} aria-invalid={codeIssue||undefined}
