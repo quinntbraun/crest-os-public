@@ -8,6 +8,7 @@ import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
+import {reviewSupplierRegister} from '../support/supplier-register-layout.mjs';
 
 const financeRoute='/api/business/finance-accounts/';
 const beginFinanceCalls=page=>page.evaluate(async prefix=>{
@@ -124,10 +125,16 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await expect(review.getByLabel('Purchase tax treatment')).toHaveValue('none');
    await expect(review.getByLabel('Reason for the review')).toHaveValue('Fictional purchase tax review');
    const register=page.getByRole('region',{name:'Recorded supplier payables',exact:true});
+   const loadRegister=async()=>{
+    const reply=page.waitForResponse(response=>response.url().endsWith(financeRoute+'supplier-payable-register'));
+    await register.getByRole('button',{name:'Load supplier payables',exact:true}).click();
+    const response=await reply;assert.equal(response.status(),200);return response.json();
+   };
    await register.getByText('Recorded supplier payables',{exact:true}).click();
-   await register.getByRole('button',{name:'Load supplier payables',exact:true}).click();
+   const emptyRegister=await loadRegister();
    await expect(register.getByRole('status')).toHaveText('No supplier payables were recorded through that date.');
    await expect(register).toContainText('$0.00 outstanding');
+   await reviewSupplierRegister(page,name,'empty',emptyRegister,facts);
    assert.equal((await fixture.client.query('SELECT count(*)::int AS count FROM crest.financial_events WHERE business_id=$1',
     [fixture.business])).rows[0].count,0);
    if(fixture.preparePayable){
@@ -196,8 +203,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     assert.equal(interruptedStatus,200);
     await page.getByRole('button',{name:'Check original posting request',exact:true}).click();
     await expect(page.getByText('Supplier bill posted. Reload Recorded supplier payables.',{exact:true})).toBeVisible();
-    await register.getByRole('button',{name:'Load supplier payables',exact:true}).click();
+    const postedRegister=await loadRegister();
     await expect(register).toContainText('$150.25 outstanding');
+    await reviewSupplierRegister(page,name,'posted',postedRegister,facts);
     await register.getByText('Record supplier payment',{exact:true}).click();
     const payment=register.getByRole('form',{name:'Confirm supplier payment'});
     await payment.getByLabel('Actual payment date',{exact:true}).fill(day);
@@ -217,15 +225,24 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await paymentButton.click();
     await expect(register.getByText('The outcome is unconfirmed.',{exact:false})).toBeVisible();
     assert.equal(interruptedPaymentStatus,200);
+    await expect(register.getByLabel('Through date (optional)',{exact:true})).toBeDisabled();
+    await expect(register.getByRole('button',{name:'Load supplier payables',exact:true})).toBeDisabled();
+    await expect(register.getByText('Check the original payment result below before changing this register’s date.',{exact:true})).toBeVisible();
+    await expect(payment).toBeVisible();
+    const refreshedRegister=page.waitForResponse(response=>response.url().endsWith(financeRoute+'supplier-payable-register'));
     await register.getByRole('button',{name:'Check original posting request',exact:true}).click();
     await expect(register.getByText('Verified supplier payment recorded.',{exact:true})).toBeVisible();
+    const refreshedResponse=await refreshedRegister;assert.equal(refreshedResponse.status(),200);
+    const partiallyPaidRegister=await refreshedResponse.json();
     const {rows:[paymentEvidence]}=await fixture.client.query(`SELECT s.id AS settlement_id,s.payable_id,m.id AS movement_id,v.version::text AS channel_version
      FROM crest.supplier_payable_settlements s JOIN crest.financial_events e ON (e.business_id,e.supplier_payable_settlement_id)=(s.business_id,s.id)
      JOIN crest.money_movements m ON (m.business_id,m.event_id)=(e.business_id,e.id)
      JOIN crest.money_channel_versions v ON (v.business_id,v.id)=(s.business_id,s.channel_version_id) WHERE s.business_id=$1`,[fixture.business]);
     assert.equal(paymentEvidence.channel_version,'1');
-    await expect(register).toContainText('$150.25 bill · $100.25 paid · $50.00 outstanding');
+    await expect(register.locator('.supplier-payable-amounts dd')).toHaveText(['$150.25','$100.25','$50.00']);
     await expect(register).toContainText('The register agrees with the ledger.');
+    await expect(register.getByLabel('Through date (optional)',{exact:true})).toBeEnabled();
+    await reviewSupplierRegister(page,name,'partially-paid',partiallyPaidRegister,facts);
     const {rows:totals}=await fixture.client.query(`SELECT e.template,count(*)::int AS count FROM crest.financial_events e
      WHERE e.business_id=$1 GROUP BY e.template ORDER BY e.template`,[fixture.business]);
     assert.deepEqual(totals,[{template:'P14',count:1},{template:'P15',count:1}]);

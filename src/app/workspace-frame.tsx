@@ -143,6 +143,19 @@ export function WorkspaceFrame({children}:{children:ReactNode}){
   const search=useRef<OpenToolSearch>(null);
   const openSearch=useCallback<OpenToolSearch>(opener=>search.current?.(opener),[]);
 
+  useEffect(()=>{
+    const nav=navigation.current,root=document.documentElement;
+    if(signIn||!nav)return;
+    const update=()=>{
+      if(getComputedStyle(nav).position==='fixed')root.style.setProperty('--workspace-bottom-clearance',Math.ceil(nav.getBoundingClientRect().height+8)+'px');
+      else root.style.removeProperty('--workspace-bottom-clearance');
+    };
+    update();
+    const observer=new ResizeObserver(update);observer.observe(nav);
+    window.addEventListener('resize',update);
+    return ()=>{observer.disconnect();window.removeEventListener('resize',update);root.style.removeProperty('--workspace-bottom-clearance');};
+  },[signIn]);
+
   function keepFocusAboveNavigation(event:FocusEvent<HTMLDivElement>){
     const element=event.target,nav=navigation.current;
     if(element===event.currentTarget||!nav||!element.matches(':focus-visible')||getComputedStyle(nav).position!=='fixed')return;
@@ -182,7 +195,7 @@ export function WorkspaceFrame({children}:{children:ReactNode}){
     <p className="workspace-test-notice"><i aria-hidden="true"/>Test workspace · Use fictional records only</p>
     </header>
     {!signIn&&<nav ref={navigation} className="workspace-destinations" aria-label="Main navigation">{destinations.map(([href,label,icon])=>
-      <a key={href} href={href} aria-current={navigationState(path,href)}><span className="destination-glyph" aria-hidden="true"><WorkspaceIcon name={icon}/></span>{label}</a>)}
+      <a key={href} href={href} aria-current={navigationState(path,href)}><span className="destination-glyph" aria-hidden="true"><WorkspaceIcon name={icon}/></span><span className="destination-label">{label}</span></a>)}
       <div className="workspace-sidebar-tools">
         <div className="workspace-sidebar-group">
           <h2>Operations</h2>

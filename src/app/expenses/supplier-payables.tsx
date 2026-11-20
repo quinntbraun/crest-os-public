@@ -124,30 +124,45 @@ export function SupplierPayableRegister({context}:{context:FinanceAccountContext
   }catch{if(!request.signal.aborted)setStatus('The supplier payable register could not be loaded.');}
   finally{if(active.current===request){active.current=null;setBusy(false);}}
  }
- return <section className="expense-editor" aria-label="Recorded supplier payables">
+ return <section className="expense-editor supplier-payable-register" aria-label="Recorded supplier payables" aria-busy={busy}>
   <details>
    <summary>Recorded supplier payables</summary>
-   <form onSubmit={event=>{event.preventDefault();if(!lockedPayable)void load();}}>
-    <fieldset className="expense-form" disabled={busy}>
+   <form className="supplier-payable-filter" onSubmit={event=>{event.preventDefault();if(!lockedPayable)void load();}}>
+    <fieldset className="expense-form" disabled={busy||!!lockedPayable}>
      <legend>Payables balance</legend>
      <label>Through date (optional) <input type="date" min="1900-01-01" value={throughOn} onChange={event=>{
+      if(lockedPayable)return;
       setThroughOn(event.target.value);setReport(null);setStatus('');
      }}/></label>
      <button type="submit">Load supplier payables</button>
     </fieldset>
    </form>
+   {lockedPayable&&<p className="field-help">Check the original payment result below before changing this register’s date.</p>}
    <p role="status">{status}</p>
    {report&&<>
-    <p>Through {report.throughOn} · {report.openCount} open · {dollars(report.outstandingCents)} outstanding</p>
-    <p>{report.ledgerAgrees?'The register agrees with the ledger.':'Review the difference against the ledger balance of '+dollars(report.ledgerPayableCents)+'.'}</p>
-    {report.rows.map(row=><article key={row.payableId} className="review-card">
-     <h4>{row.vendor}</h4><p>Incurred {row.incurredOn} · due {row.dueOn}{row.overdueDays>0?' · '+row.overdueDays+' days overdue':''}</p>
-     <p>{dollars(row.grossCents)} bill · {dollars(row.paidCents)} paid · {dollars(row.remainingCents)} outstanding</p>
+    <header className="supplier-payable-summary">
+     <div><p>Recorded balances · USD</p><h3>{dollars(report.outstandingCents)} outstanding</h3>
+      <p>Through <time dateTime={report.throughOn}>{report.throughOn}</time></p></div>
+     <dl><div><dt>Open bills</dt><dd>{report.openCount}</dd></div><div><dt>Recorded bills</dt><dd>{report.rowCount}</dd></div></dl>
+    </header>
+    <p className="supplier-payable-ledger" data-agrees={report.ledgerAgrees}>{report.ledgerAgrees?'The register agrees with the ledger.':'Review the difference against the ledger balance of '+dollars(report.ledgerPayableCents)+'.'}</p>
+    <p className="field-help">Showing {report.rows.length} of {report.rowCount} recorded bills through {report.throughOn}. The balance above covers the full register for that date.</p>
+    <div className="supplier-payable-list">
+    {report.rows.map(row=><article key={row.payableId} className="supplier-payable-row">
+     <div className="supplier-payable-record">
+      <h4>{row.vendor}</h4>
+      <p className="supplier-payable-dates">Incurred <time dateTime={row.incurredOn}>{row.incurredOn}</time> · due <time dateTime={row.dueOn}>{row.dueOn}</time></p>
+      {row.overdueDays>0&&<p className="supplier-payable-overdue">{row.overdueDays} days overdue through {report.throughOn}</p>}
+      <p className="supplier-payable-scope">Balances through {report.throughOn} · USD</p>
+      <dl className="supplier-payable-amounts"><div><dt>Bill total</dt><dd>{dollars(row.grossCents)}</dd></div>
+       <div><dt>Paid</dt><dd>{dollars(row.paidCents)}</dd></div><div><dt>Outstanding</dt><dd>{dollars(row.remainingCents)}</dd></div></dl>
+     </div>
      {context.supplierPayablePosting&&row.remainingCents!=='0'&&(!lockedPayable||lockedPayable===row.payableId)&&
       <SupplierSettlementConfirmation key={report.sourceSha256+':'+row.payableId} context={context} row={row} throughOn={report.throughOn}
        lockRegister={locked=>setLockedPayable(locked?row.payableId:null)} onRefresh={()=>void load()}
        onPosted={()=>{setLockedPayable(null);void load(false,'Verified supplier payment recorded.');}}/>}
     </article>)}
+    </div>
     {report.hasMore&&<button type="button" className="secondary" disabled={busy||!!lockedPayable} onClick={()=>void load(true)}>Load more payables</button>}
    </>}
   </details>

@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-20T03:26:01.463Z",
+  "assessedAt": "2026-11-20T04:44:30.849Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "878dda1498aa91753351b918e7fad27f87ce586a",
-    "publishedCommit": "f601104ebc69f71070054aa65604b11e67425191",
-    "publishedTree": "ac8987e9ac9678e0db42f42e9c17d878b9b0203d",
-    "localTree": "e08a0ebdded2cc96448db2f749a70939241cf484"
+    "localCommit": "9220270a0992cb5bd051fa68060683c0740177ed",
+    "publishedCommit": "35d85091cc2f98e74d354d7709c4501ecf4d23e5",
+    "publishedTree": "a21e82c1372d0496767e213e9b94d79d3e5f151e",
+    "localTree": "f7c331c9cc7e0015dbfbb27dc14e1db2575d6f6a"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -49,11 +49,11 @@
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
-          "sha256": "7ec19f3e014d5496edeeee01e965c4707a5201ebf5c6223411e2db2937fde05e"
+          "sha256": "d399ec5434a1e648c8c51bb4156403faac7fca590d6ac036934545d4d22a3bb9"
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "b6528711a1c5298341f9e1db369c4b39765dec0ead4f555b41fef4520c09b442"
+          "sha256": "ab28ec8d2eb43ba309a01d180d79958a9a8b617610f2087a41d4dac1e002a77c"
         }
       ],
       "verification": {
@@ -68,16 +68,32 @@
       "title": "P1 · Desktop layouts need purpose, not more cards",
       "requirements": "Customer, vehicle, service and prerequisite pages often leave the majority of the canvas unused. White space is valuable when it frames a task; here it often reflects missing layout composition.\n\nFinish standard: Use stable list/detail layouts, purposeful unselected inspectors and max-width forms. Never auto-open sensitive records merely to fill space.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Purposeful directory introductions and several workbenches are implemented.",
-      "remainingWork": "Finish remaining prerequisite, supplier and configured-page compositions; review all wide layouts.",
+      "implementedOrPresent": "Focused desktop compositions exist across the addressed destinations. The supplier register now has a scoped balance/coverage summary, flat financial rows and actual-container side-by-side saved facts/payment tasks, verified through both complete original financial workflows.",
+      "remainingWork": "Finish remaining prerequisite, supplier-draft and configured-page compositions; review all wide layouts and final states. Supplier register2/2 is scoped local PNG/financial evidence, not isolated Linux-worker or release acceptance.",
       "evidence": [
         {
-          "path": "src/app/directory-introduction.tsx",
-          "sha256": "5204eba12092dcadf6d32adb5acbf752d3097d34826e16e86de304d4f40302da"
+          "path": "src/app/workspace-design.css",
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
-          "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
-          "sha256": "77ea9cd1fb215797e89166bea87d6a02b085c3dd9575c7371ad4b44f3ec46863"
+          "path": "planning/SUPPLIER_REGISTER_WORKBENCH_DESIGN.md",
+          "sha256": "fe23f6608931090f09487d7a80e3c5444809624869c805e0cbc84ea5393ad47d"
+        },
+        {
+          "path": "src/app/expenses/supplier-payables.tsx",
+          "sha256": "1df40eb9b052e8495b1b8d13e9a69403993674a89a7aed81c4bec316976bd394"
+        },
+        {
+          "path": "tests/support/supplier-register-layout.mjs",
+          "sha256": "3c13c8e39b1475216e665701c185675a36020af4587c7b758aef0bed1f70e686"
+        },
+        {
+          "path": "tests/integration/finance-supplier-payable-browser.test.mjs",
+          "sha256": "ceaca831b54bfb65b93a47699b6d930ceed896b3d169bf201a07ca0ed4ad1a68"
+        },
+        {
+          "path": "planning/CREST_DESIGN_SYSTEM.md",
+          "sha256": "234bda2413b4a708c941b3e962e9bba7189359798478d641ab49f9769b5d5129"
         }
       ],
       "verification": {
@@ -97,7 +113,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -121,7 +137,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
@@ -145,7 +161,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -169,11 +185,11 @@
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
-          "sha256": "7ec19f3e014d5496edeeee01e965c4707a5201ebf5c6223411e2db2937fde05e"
+          "sha256": "d399ec5434a1e648c8c51bb4156403faac7fca590d6ac036934545d4d22a3bb9"
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "42b70d1601356cf6269e76cbc61c5933f6c319647e0136051ea54c53fa0842ed"
+          "sha256": "649ae63cb34b6b8928c973d6d5bfc4d19b36cd777b2406d8936fd874c3d6c82e"
         }
       ],
       "verification": {
@@ -217,7 +233,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
-          "sha256": "7ec19f3e014d5496edeeee01e965c4707a5201ebf5c6223411e2db2937fde05e"
+          "sha256": "d399ec5434a1e648c8c51bb4156403faac7fca590d6ac036934545d4d22a3bb9"
         },
         {
           "path": "planning/CREST_DESIGN_SYSTEM.md",
@@ -245,7 +261,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "42b70d1601356cf6269e76cbc61c5933f6c319647e0136051ea54c53fa0842ed"
+          "sha256": "649ae63cb34b6b8928c973d6d5bfc4d19b36cd777b2406d8936fd874c3d6c82e"
         }
       ],
       "verification": {
@@ -260,16 +276,52 @@
       "title": "P2 · Refine type, spacing and numeric rhythm",
       "requirements": "Heading scale is broadly consistent, but dense labels, helper text and record facts need stronger role separation. Some test captures and installed screens have different visual typography; verify the served font before diagnosing a font bug.\n\nFinish standard: Use one reliable font stack, 16 px editable inputs on phones, tabular money, aligned totals and a small spacing scale. Check real font loading, zoom and long names.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Self-hosted fonts, tabular figures and scoped spacing/readability refinements are present.",
-      "remainingWork": "Complete all-view16px input, zoom, long-name and served-font checks; do not diagnose by a screenshot alone.",
+      "implementedOrPresent": "Reliable bundled fonts, tabular figures and scoped readability refinements are present. All36 closed/setup production destinations reflow at five widths with normal/doubled text in both engines; actual heading glyphs, exact font bytes, whole destination names and measured phone clearance are verified. Genuine sign-in and category approval forms also have separate complete28/28 workflow evidence on their recorded sources; password entry and field values remain usable. Configured supplier balances/vendor/amount/filter glyphs and exact served font files also pass genuine browser checks; no font replacement was warranted.",
+      "remainingWork": "Complete remaining configured business/input/long-name and actual browser-zoom checks plus matching hosted/installed/physical-device acceptance. Final local100/100 includes74 typography tests/720 observations; the two separate28/28 native sources are not one56-case final acceptance.",
       "evidence": [
         {
           "path": "src/app/globals.css",
           "sha256": "1c002a2ebb11f74a8d6780796520ba82cc7cf5575954071750859acf6f7eaaad"
         },
         {
+          "path": "planning/WORKSPACE_TEXT_RESIZE_REFINEMENT.md",
+          "sha256": "70c65be329950513a4efba53287bbe9a509bcd9a2452563941b0576a0836991b"
+        },
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
+        },
+        {
+          "path": "src/app/workspace-frame.tsx",
+          "sha256": "d399ec5434a1e648c8c51bb4156403faac7fca590d6ac036934545d4d22a3bb9"
+        },
+        {
+          "path": "tests/e2e/typography.spec.ts",
+          "sha256": "1e06910253f98095a89756adf0e676fa9e34040a549a9a34711f51d38fc8b56f"
+        },
+        {
+          "path": "tests/support/text-resize-layout.mjs",
+          "sha256": "402cca1facb9ff98cb9428ff6ccc108c1e7c4875ef0e1215a98f303e485b500c"
+        },
+        {
+          "path": "tests/integration/sign-in-browser.test.mjs",
+          "sha256": "f1ebb6fa5bee367471735d4da1dbe3af7ab566648970ceff5bad488ba0a3668c"
+        },
+        {
+          "path": "tests/integration/finance-expense-category-browser.test.mjs",
+          "sha256": "5876b5974139633b3c388e99392133d77f0bec5db03538ff0c7f773d30cb7455"
+        },
+        {
           "path": "planning/CREST_DESIGN_SYSTEM.md",
           "sha256": "234bda2413b4a708c941b3e962e9bba7189359798478d641ab49f9769b5d5129"
+        },
+        {
+          "path": "planning/SUPPLIER_REGISTER_WORKBENCH_DESIGN.md",
+          "sha256": "fe23f6608931090f09487d7a80e3c5444809624869c805e0cbc84ea5393ad47d"
+        },
+        {
+          "path": "tests/support/supplier-register-layout.mjs",
+          "sha256": "3c13c8e39b1475216e665701c185675a36020af4587c7b758aef0bed1f70e686"
         }
       ],
       "verification": {
@@ -289,7 +341,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
@@ -313,7 +365,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
@@ -341,7 +393,7 @@
         },
         {
           "path": "planning/NAVIGATION_READ_LIFECYCLE_INVESTIGATION.md",
-          "sha256": "efcc0187cafa290059f3926bde40238d3b16b10e2f97ed60438f823e2280d7c1"
+          "sha256": "f7342c34cdfca43b0d7ce7e5f54986150dc5ba97001e0f03d92d434d44b256ef"
         }
       ],
       "verification": {
@@ -361,7 +413,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
-          "sha256": "7ec19f3e014d5496edeeee01e965c4707a5201ebf5c6223411e2db2937fde05e"
+          "sha256": "d399ec5434a1e648c8c51bb4156403faac7fca590d6ac036934545d4d22a3bb9"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -385,11 +437,11 @@
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
-          "sha256": "7ec19f3e014d5496edeeee01e965c4707a5201ebf5c6223411e2db2937fde05e"
+          "sha256": "d399ec5434a1e648c8c51bb4156403faac7fca590d6ac036934545d4d22a3bb9"
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "b6528711a1c5298341f9e1db369c4b39765dec0ead4f555b41fef4520c09b442"
+          "sha256": "ab28ec8d2eb43ba309a01d180d79958a9a8b617610f2087a41d4dac1e002a77c"
         }
       ],
       "verification": {
@@ -421,11 +473,11 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "tests/integration/sign-in-browser.test.mjs",
-          "sha256": "081668c0990c509250df10f008c1e4d2f1ec59718c57c46d63594d2311cbe28b"
+          "sha256": "f1ebb6fa5bee367471735d4da1dbe3af7ab566648970ceff5bad488ba0a3668c"
         },
         {
           "path": "tests/integration/job-work-boundary-product-browser.test.mjs",
@@ -461,7 +513,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "src/client/home-schedule.ts",
@@ -549,7 +601,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "tests/unit/proposal-party-read.test.ts",
@@ -637,7 +689,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "tests/integration/legacy-contact-csv-review-browser.test.mjs",
@@ -685,7 +737,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "tests/support/receipt-layout.mjs",
@@ -977,7 +1029,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "tests/support/appointment-comparison-layout.mjs",
@@ -1017,7 +1069,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "tests/unit/mileage-prerequisite.test.ts",
@@ -1081,7 +1133,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "tests/support/booking-review-layout.mjs",
@@ -1169,7 +1221,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "tests/support/field-work-layout.mjs",
@@ -1221,7 +1273,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "tests/support/work-read-diagnostic.mjs",
@@ -1293,7 +1345,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "tests/integration/trip-interruption-product-browser.test.mjs",
@@ -1501,11 +1553,11 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
-          "sha256": "eabdd12e5149aff0a71f1748e3d45e686c43158f8ec17e0a638263610ee5feca"
+          "sha256": "5876b5974139633b3c388e99392133d77f0bec5db03538ff0c7f773d30cb7455"
         },
         {
           "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
@@ -1661,7 +1713,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "tests/integration/confirmed-bookings-product-browser.test.mjs",
@@ -1745,7 +1797,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
+          "sha256": "654cc8b84e92f3075f7a1b619c4b4bfedfe0acb01c1d057ea99a65a0f40b564e"
         },
         {
           "path": "tests/integration/quote-commercial-browser.test.mjs",

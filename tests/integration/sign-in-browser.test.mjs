@@ -7,6 +7,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {createServer} from 'node:net';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {reviewTextResize} from '../support/text-resize-layout.mjs';
 import {URI,TOTP} from 'otpauth';
 import {browserTestTls} from '../support/browser-test-tls.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
@@ -67,6 +68,7 @@ async function exerciseBusinessHttp(page,name){
 }
 async function captureSignInState(page,name,state){
   const viewport=page.viewportSize();await mkdir('.local/review',{recursive:true});
+  if(state==='form')await reviewTextResize(page,name,'sign-in-form');
   try{for(const width of [320,360,390,768,1440,1920]){
     await page.setViewportSize({width,height:900});await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
     await expect(page.getByRole('heading',{name:'Welcome back',exact:true})).toBeVisible();

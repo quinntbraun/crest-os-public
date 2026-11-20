@@ -58,7 +58,7 @@ body { min-width:0; }
  .directory-introduction button { width:auto; margin:1rem 0 0; }
 }
 main { padding-top:clamp(1.25rem,2.5vw,2rem); }
-h1 { font-size:clamp(1.7rem,2.3vw,2.25rem); letter-spacing:-.035em; }
+h1 { font-size:clamp(1.7rem,2.3vw,2.25rem); letter-spacing:-.035em; overflow-wrap:anywhere; }
 :focus-visible { outline-color:#4b60cb; }
 input:not([type='checkbox']),select,textarea { border-color:#8390a7; }
 /* Priority changes switch foreground and background together. */
@@ -75,6 +75,7 @@ button.secondary:not(:disabled):not([aria-pressed='true']):hover { background:va
 .workspace { min-height:100dvh; }
 .workspace-header {
   min-height:58px; padding:0 clamp(.75rem,2.4vw,1.5rem); gap:.75rem;
+  flex-wrap:wrap;
   background:var(--paper); color:var(--ink); border-bottom:1px solid var(--line);
 }
 .crest-wordmark { display:inline-flex; align-items:center; gap:.55rem; color:var(--ink); font-size:.95rem; letter-spacing:-.02em; }
@@ -132,9 +133,16 @@ button.secondary:not(:disabled):not([aria-pressed='true']):hover { background:va
 .workspace-destinations a {
   gap:.7rem; border:0; border-radius:10px; color:#536079;
 }
+@media (min-width:601px) and (max-width:1099px) {
+  .workspace-destinations { flex-wrap:wrap; }
+  .workspace-destinations a { min-width:0; overflow-wrap:anywhere; }
+}
 :is(.workspace-menu,.workspace-destinations) a:is(:hover,[aria-current]) { color:#243594; background:var(--accent-soft); }
 .destination-glyph { display:grid; place-items:center; width:1.35rem; color:inherit; line-height:1; }
 .destination-glyph svg { display:block; width:20px; height:20px; flex:none; }
+.destination-label { min-width:0; max-width:100%; overflow-wrap:anywhere; }
+.password-control { flex-wrap:wrap; }
+.password-control input { flex-basis:10rem; }
 .workspace-home { max-width:85rem; }
 .today-heading { align-items:center; padding:0 0 1rem; overflow-wrap:anywhere; }
 .today-heading h1 { font-size:clamp(1.9rem,3vw,2.55rem); line-height:1.1; letter-spacing:-.04em; }
@@ -321,12 +329,14 @@ details[open] > .amendment-change-summary::before { content:"−"; }
   .amendment-record-row .amendment-record-amount { grid-column:3; align-self:center; }
 }
 .sign-in-workspace .workspace-header { display:none; }
-.sign-in { max-width:30.5rem; padding-top:clamp(1.5rem,7vh,5rem); }
+.sign-in { max-width:30.5rem; padding-top:clamp(1.5rem,7vh,5rem); padding-inline:clamp(12px,4vw,1.5rem); }
 .sign-in-panel,.workspace-missing-card {
   padding:clamp(1rem,3.5vw,1.65rem); background:var(--paper); border:1px solid var(--line);
   border-block-start:3px solid var(--gold-ink); border-radius:var(--radius); box-shadow:var(--panel-shadow);
 }
-.sign-in-brand { display:flex; gap:.75rem; align-items:center; margin-bottom:1rem; }
+.sign-in-panel { padding-inline:clamp(12px,3.5vw,1.65rem); }
+.sign-in-brand { display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; margin-bottom:1rem; }
+.sign-in-brand > div { flex:1 1 10rem; min-width:0; }
 .sign-in-brand img,.workspace-missing-card img { flex:none; width:3rem; height:3rem; border-radius:.625rem; }
 .sign-in-brand h1 { margin:0; }
 .sign-in-brand img { width:3.5rem; height:3.5rem; }
@@ -449,8 +459,9 @@ details[open] > .amendment-change-summary::before { content:"−"; }
   .workspace-search-toggle { justify-content:center; flex:0 0 44px; min-width:44px; padding:.55rem; }
   .workspace-search-toggle kbd { display:none; }
   .workspace-search-text { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-  .workspace-destinations { box-shadow:0 -4px 18px #17234414; gap:.15rem; }
-  .workspace-destinations a { flex:1; min-width:0; flex-direction:column; justify-content:center; gap:.16rem; padding:.35rem .15rem; font-size:.72rem; }
+  .workspace-destinations { box-shadow:0 -4px 18px #17234414; gap:.15rem; flex-wrap:wrap; }
+  .workspace-destinations a { flex:1 0 max-content; min-width:0; max-width:100%; flex-direction:column; justify-content:center; gap:.16rem; padding:.35rem .15rem; font-size:.72rem; }
+  .workspace-destinations .destination-label { text-align:center; }
   .schedule-calendar { padding-inline:0; overflow-x:auto; }
   .calendar-heading,.calendar-toolbar { padding-inline:.75rem; }
   .calendar-days { border-spacing:0; min-width:308px; }
@@ -2023,7 +2034,49 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 .supplier-bill-controls > button,.supplier-bill-load,.supplier-bill-draft-row > button { width:auto; max-width:100%; margin-top:0; }
 .supplier-bill-draft-row > p { margin:.25rem 0; }
 .supplier-bill-draft-row > button { margin-top:.5rem; }
-.category-mapping-date { display:grid; gap:.75rem; align-items:end; margin:1rem 0; }
+.supplier-payable-register { container:supplier-register / inline-size; }
+.customers .supplier-payable-register > details { padding:0; border:0; background:transparent; box-shadow:none; }
+.supplier-payable-register > details > summary { min-height:44px; padding:.75rem 0; font-weight:600; cursor:pointer; }
+.supplier-payable-filter { max-width:34rem; margin:1rem 0; }
+.supplier-payable-filter .expense-form { padding:0; border:0; background:transparent; box-shadow:none; }
+.supplier-payable-filter legend { margin:0 0 .5rem; }
+.supplier-payable-filter button { width:auto; max-width:100%; }
+.supplier-payable-summary { display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:1.25rem 2rem; padding:1rem 0; border-block:1px solid var(--line); }
+.supplier-payable-summary > div { min-width:0; }
+.supplier-payable-summary p { margin:0; color:var(--muted); font-size:.875rem; }
+.supplier-payable-summary h3 { margin:.25rem 0 .45rem; font-size:clamp(1.35rem,2.5vw,1.75rem); line-height:1.25; overflow-wrap:anywhere; }
+.supplier-payable-summary dl { display:flex; flex-wrap:wrap; gap:1.25rem 2rem; margin:0; }
+.supplier-payable-summary dt { color:var(--muted); font-size:.875rem; }
+.supplier-payable-summary dd { margin:.25rem 0 0; font-size:1.25rem; font-weight:600; }
+.supplier-payable-ledger { padding:.65rem .75rem; border-inline-start:3px solid var(--gold-ink); background:var(--canvas); font-size:.875rem; overflow-wrap:anywhere; }
+.supplier-payable-ledger[data-agrees='true'] { padding-inline:0; border:0; background:transparent; color:var(--muted); }
+.supplier-payable-list { container:supplier-payables / inline-size; border-block-start:1px solid var(--line); }
+.supplier-payable-row { min-width:0; padding:1.25rem 0; overflow-wrap:anywhere; }
+.supplier-payable-row + .supplier-payable-row { border-block-start:1px solid var(--line); }
+.supplier-payable-record h4 { margin:0 0 .4rem; font-size:1.125rem; }
+.supplier-payable-dates,.supplier-payable-scope { margin:.25rem 0; color:var(--muted); font-size:.875rem; }
+.supplier-payable-overdue { margin:.5rem 0; color:var(--gold-ink); font-size:.875rem; font-weight:600; }
+.supplier-payable-amounts { display:grid; gap:.6rem; margin:1rem 0 0; }
+.supplier-payable-amounts > div { display:flex; flex-wrap:wrap; justify-content:space-between; gap:.25rem .75rem; }
+.supplier-payable-amounts dt { color:var(--muted); font-size:.875rem; }
+.supplier-payable-amounts dd { margin:0; font-weight:600; font-variant-numeric:tabular-nums; }
+.customers .supplier-payable-row > details { min-width:0; margin:1rem 0 0; padding:0; border:0; border-block-start:1px solid var(--line); border-radius:0; background:transparent; box-shadow:none; }
+.supplier-payable-row > details > summary { min-height:44px; padding:.7rem 0; cursor:pointer; font-weight:600; }
+@container supplier-register (min-width:38rem) {
+ .supplier-payable-filter .expense-form { grid-template-columns:minmax(0,1fr) auto; align-items:end; }
+ .supplier-payable-filter button { margin:0; }
+}
+@container supplier-payables (min-width:40rem) {
+ .supplier-payable-amounts { grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+ .supplier-payable-amounts > div { display:block; }
+ .supplier-payable-amounts dd { margin-top:.3rem; }
+}
+@container supplier-payables (min-width:52rem) {
+ .supplier-payable-row:has(> details) { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:2rem; align-items:start; }
+ .customers .supplier-payable-row > details { margin:0; padding-inline-start:1.5rem; border-block-start:0; border-inline-start:1px solid var(--line); }
+}
+.category-mapping-date { display:grid; grid-template-columns:minmax(0,1fr); gap:.75rem; align-items:end; margin:1rem 0; }
+.category-mapping-date > div { min-width:0; }
 .category-mapping-date > button { width:auto; margin:0; justify-self:start; }
 .category-mapping-date > p { margin:0; }
 .category-mapping-workbench { display:grid; gap:1.5rem; align-items:start; }

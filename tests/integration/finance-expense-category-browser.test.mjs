@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {mkdir,readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
+import {reviewTextResize} from '../support/text-resize-layout.mjs';
 import {chromium,expect,webkit} from '@playwright/test';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
@@ -62,6 +63,7 @@ for(const engine of [chromium,webkit]){
 
     await mkdir('.local/review',{recursive:true});
     async function capture(view){
+     if(view==='approval')await reviewTextResize(page,engine.name(),'category-approval');
      for(const width of [360,390,768,1100,1440]){
       await page.setViewportSize({width,height:900});
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);

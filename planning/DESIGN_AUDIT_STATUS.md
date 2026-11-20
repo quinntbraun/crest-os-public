@@ -27,7 +27,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | ID | Audit group | Local state | Remaining work |
 |---|---|---|
 | S01 | One visual system, delivered consistently | Open | Deliver an accepted matching release, preserve the populated upgrade and compare installed states. |
-| S02 | Desktop layouts need purpose, not more cards | Partial | Finish remaining prerequisite, supplier and configured-page compositions; review all wide layouts. |
+| S02 | Desktop layouts need purpose, not more cards | Partial | Finish remaining prerequisite, supplier-draft and configured-page compositions; review all wide layouts and final states. Supplier register2/2 is scoped local PNG/financial evidence, not isolated Linux-worker or release acceptance. |
 | S03 | Phone record detail should replace the directory | Partial | Reconcile every selected-record workflow, especially remaining commercial/supplier states, and exact return position. |
 | S04 | Make action priority predictable | Partial | Review commit/refresh/recovery priority in every configured task; one narrow success is not global coverage. |
 | S05 | Reduce visual nesting | Partial | Finish accepted-document, supplier and remaining approval/completion nesting. |
@@ -35,7 +35,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | S07 | Keep financial scope attached to the number | Main change addressed | Fresh full-head and delivered acceptance remain separate gates. |
 | S08 | Make Crest recognizable through restraint | Partial | Resolve a legible approved small-size asset and confirm brand consistency on delivered documents/sign-in/navigation. |
 | S09 | Replace Unicode navigation symbols | Main change addressed | Physical-device and installed verification remain separate. |
-| S10 | Refine type, spacing and numeric rhythm | Partial | Complete all-view16px input, zoom, long-name and served-font checks; do not diagnose by a screenshot alone. |
+| S10 | Refine type, spacing and numeric rhythm | Partial | Complete remaining configured business/input/long-name and actual browser-zoom checks plus matching hosted/installed/physical-device acceptance. Final local100/100 includes74 typography tests/720 observations; the two separate28/28 native sources are not one56-case final acceptance. |
 | S11 | Motion should explain changes | Partial | Finish state-specific motion duration, stable geometry, focus and quiet save-response review. |
 | S12 | Turn history into a readable evidence trail | Partial | Finish remaining agreement/approval/integration history and missing/stale/long/zoom/private variants; complete exact-source hosted/installed/physical-device review. New proposal plus normal amendment file6/6 is scoped local evidence; publishedf601 navigation failure remains unresolved, not cured. |
 | S13 | Protect context through every transition | Partial | Verify planner date/view and all remaining contextual returns plus sign-out/private clearing on the exact release. |
