@@ -11,6 +11,7 @@ import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 import {showQuoteDirectory} from '../support/quote-directory.mjs';
+import {enterScrolledQuote,expectQuoteReturn} from '../support/quote-directory-return.mjs';
 import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
 
 // Textarea controls are located by their actual accessible textbox name.
@@ -42,10 +43,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await command(page,'services',{serviceId,expectedRevision:'0',code:'synthetic-'+randomUUID(),active:true,name:service,inclusions:longScope,exclusions:'No paint correction.',internalGuidance:'PRIVATE_SYNTHETIC_CATALOG_GUIDANCE',rangeLowCents:'999999',rangeHighCents:null,estimatedSeconds:null});
    await command(page,'leads',{leadId,expectedVersion:'0',label:prospect,customerId:null,sourceId:null,referralText:null,phone:null,email:null,requestedScope:null,availability:null,estimatedCents:'999999',followUpAt:null,notes:'PRIVATE_SYNTHETIC_LEAD_NOTES'});
    await page.goto(f.origin+'/quotes');await expect(status()).toContainText('Open a saved draft');await expect(page.getByText('No saved quotes match this search.',{exact:false})).toBeVisible();await mkdir('.local/review',{recursive:true});await page.screenshot({path:'.local/review/quote-empty-'+name+'-390.png',fullPage:true});
-   await showQuoteDirectory(page);await page.getByRole('button',{name:'New quote',exact:true}).click();await expect(page.getByRole('heading',{name:'New quote',exact:true})).toBeFocused();await expect(page.getByRole('button',{name:'Save quote draft',exact:true})).toBeDisabled();
+   await showQuoteDirectory(page);const emptyViewport=page.viewportSize();await page.setViewportSize({width:390,height:500});const newQuoteButton=page.getByRole('button',{name:'New quote',exact:true}),newQuoteTop=await enterScrolledQuote(page,newQuoteButton);await expect(page.getByRole('heading',{name:'New quote',exact:true})).toBeFocused();await expect(page.getByRole('button',{name:'Save quote draft',exact:true})).toBeDisabled();
    await page.getByLabel('Quote title',{exact:true}).fill('Unsaved new quote in this tab');
-   await page.getByRole('button',{name:'Back to saved quotes',exact:true}).click();await expect(page.locator('#quote-current-record')).toBeHidden();
-   await page.getByRole('button',{name:'Continue unsaved quote',exact:true}).click();await expect(page.getByRole('heading',{name:'New quote',exact:true})).toBeFocused();await expect(page.getByLabel('Quote title',{exact:true})).toHaveValue('Unsaved new quote in this tab');await page.getByLabel('Quote title',{exact:true}).fill('');
+   await page.getByRole('button',{name:'Back to saved quotes',exact:true}).click();await expect(page.locator('#quote-current-record')).toBeHidden();await expectQuoteReturn(page,newQuoteButton,newQuoteTop);
+   await page.getByRole('button',{name:'Continue unsaved quote',exact:true}).click();await expect(page.getByRole('heading',{name:'New quote',exact:true})).toBeFocused();await expect(page.getByLabel('Quote title',{exact:true})).toHaveValue('Unsaved new quote in this tab');await page.getByLabel('Quote title',{exact:true}).fill('');await page.setViewportSize(emptyViewport);
   });
   await step('customer shortcut, copied catalog and vehicle scope, exact amounts and optional blank fields save',async()=>{
    await page.goto(f.origin+'/customers?customer='+customerId);
@@ -87,10 +88,26 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     const row=page.getByRole('button',{name:new RegExp('^'+title)});await expect(row).toBeFocused();await expect(page.getByLabel('Find a quote',{exact:true})).toHaveValue(title);
     await row.click();await expect(page.getByRole('heading',{name:'Edit saved draft',exact:true})).toBeFocused();await expect(titleField).toHaveValue(title+' unsaved in this tab');
     await back.click();await page.getByRole('button',{name:'Continue unsaved quote',exact:true}).click();await expect(titleField).toHaveValue(title+' unsaved in this tab');
+    const originalViewport=page.viewportSize();
+    try{
+     for(const width of [360,390,430]){
+      await back.click();await page.setViewportSize({width,height:500});
+      const entryTop=await enterScrolledQuote(page,row);
+      await expect(page.getByRole('heading',{name:'Edit saved draft',exact:true})).toBeFocused();
+      await expect(titleField).toHaveValue(title+' unsaved in this tab');
+      await back.click();await expectQuoteReturn(page,row,entryTop);
+      await expect(page.getByLabel('Find a quote',{exact:true})).toHaveValue(title);
+      const resumeTop=await enterScrolledQuote(page,page.getByRole('button',{name:'Continue unsaved quote',exact:true}));
+      await expect(titleField).toHaveValue(title+' unsaved in this tab');
+      await back.click();await expectQuoteReturn(page,page.getByRole('button',{name:'Continue unsaved quote',exact:true}),resumeTop);
+      await page.screenshot({path:'.local/review/quote-directory-return-'+name+'-'+width+'.png'});
+      await page.getByRole('button',{name:'Continue unsaved quote',exact:true}).click();
+     }
+    }finally{await page.setViewportSize(originalViewport);}
     assert.deepEqual(reads,[]);assert.deepEqual(writes,[]);assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.quote.pending-reference.v1')),null);
     await titleField.fill(title);await expect(page.getByRole('button',{name:'Save quote draft',exact:true})).toBeDisabled();
     await page.getByRole('heading',{name:'Edit saved draft',exact:true}).focus();await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'.local/review/quote-focused-record-'+name+'-390.png'});
-    await back.click();await expect(row).toBeFocused();await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'.local/review/quote-focused-directory-'+name+'-390.png'});
+    await back.click();await expect(page.getByRole('button',{name:'Return to open quote',exact:true})).toBeFocused();await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'.local/review/quote-focused-directory-'+name+'-390.png'});
     await page.getByRole('button',{name:'Return to open quote',exact:true}).click();await expect(page.getByRole('heading',{name:'Edit saved draft',exact:true})).toBeFocused();
    }finally{page.off('request',observe);}
   });
@@ -148,6 +165,30 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   });
   await step('explicit saved lead quoting excludes estimates and preserves prospect identity',async()=>{
    await showQuoteDirectory(page);await page.getByRole('button',{name:'New quote',exact:true}).click();await page.getByLabel('Quote title',{exact:true}).fill('Synthetic prospect draft '+name);await page.getByText('Choose a saved lead instead',{exact:true}).click();const picker=page.locator('details').filter({has:page.getByLabel('Find saved leads',{exact:true})});await picker.getByLabel('Find saved leads',{exact:true}).fill(prospect);await picker.getByRole('button',{name:'Find saved records',exact:true}).click();await expect(page.getByLabel('Recipient name',{exact:true})).toHaveValue('');await picker.getByRole('button',{name:new RegExp('^'+prospect)}).click();await expect(page.getByLabel('Recipient name',{exact:true})).toHaveValue(prospect);await page.getByRole('textbox',{name:'Work location',exact:true}).fill('Synthetic prospect work site');await page.getByRole('button',{name:'Add quote line',exact:true}).click();const line=page.getByRole('group',{name:'Line 1',exact:true});await line.getByLabel('Work description',{exact:true}).fill('Owner reviewed prospect work');await line.getByRole('combobox',{name:'Scope',exact:true}).selectOption('job-wide');await expect(line.getByLabel('All-in amount (USD)',{exact:true})).toHaveValue('');await line.getByLabel('All-in amount (USD)',{exact:true}).fill('25.00');await page.getByRole('button',{name:'Save quote draft',exact:true}).click();await expect(status()).toContainText('Quote draft saved');await openSaved('Synthetic prospect draft '+name);const result=await downloadSaved();assert.equal(result.family.lead_id,leadId);assert.equal(result.family.customer_id,null);assert.equal(result.revision.total_cents,'2500');assert.equal(result.revision.internal_snapshot.notes,null);assert.equal((await f.client.query('SELECT state,customer_id FROM crest.leads WHERE business_id=$1 AND id=$2',[f.business,leadId])).rows[0].state,'new');
+  });
+  await step('a canceled different-quote selection preserves the draft and reachable resume origin',async()=>{
+   const originalViewport=page.viewportSize(),prospectTitle='Synthetic prospect draft '+name;
+   await showQuoteDirectory(page);await page.getByLabel('Find a quote',{exact:true}).fill('');
+   await page.getByRole('button',{name:'Search quotes',exact:true}).click();
+   await page.setViewportSize({width:390,height:500});
+   const originalRow=page.getByRole('button',{name:new RegExp('^'+prospectTitle)}),otherRow=page.getByRole('button',{name:new RegExp('^'+title)});
+   await expect(originalRow).toBeEnabled();await expect(otherRow).toBeEnabled();
+   const entryTop=await enterScrolledQuote(page,originalRow);
+   await expect(page.getByRole('heading',{name:'Edit saved draft',exact:true})).toBeFocused();
+   const requests=[],observe=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))requests.push(request.method());};
+   page.on('request',observe);
+   try{
+    const titleField=page.getByLabel('Quote title',{exact:true}),back=page.getByRole('button',{name:'Back to saved quotes',exact:true});
+    await titleField.fill(prospectTitle+' unsaved return');await back.click();await expectQuoteReturn(page,originalRow,entryTop);
+    page.once('dialog',dialog=>dialog.dismiss());await otherRow.press('Enter');
+    await expect(page.locator('#quote-current-record')).toBeHidden();
+    const resumeTop=await enterScrolledQuote(page,page.getByRole('button',{name:'Continue unsaved quote',exact:true}));
+    await expect(titleField).toHaveValue(prospectTitle+' unsaved return');
+    await back.click();await expectQuoteReturn(page,page.getByRole('button',{name:'Continue unsaved quote',exact:true}),resumeTop);
+    await page.getByRole('button',{name:'Continue unsaved quote',exact:true}).click();
+    await titleField.fill(prospectTitle);await expect(page.getByRole('button',{name:'Save quote draft',exact:true})).toBeDisabled();
+    assert.deepEqual(requests,[],'Canceled selection and dirty resume perform no business request');
+   }finally{page.off('request',observe);await page.setViewportSize(originalViewport);}
   });
   await step('network failure, canceling abandonment, reload and back navigation clear private memory honestly',async()=>{
    await page.getByLabel('Quote title',{exact:true}).fill('UNSAVED_PRIVATE_TITLE');page.once('dialog',dialog=>dialog.dismiss());await showQuoteDirectory(page);await page.getByRole('button',{name:'Reload saved quotes',exact:true}).click();await expect(page.getByLabel('Quote title',{exact:true})).toHaveValue('UNSAVED_PRIVATE_TITLE');page.once('dialog',dialog=>dialog.accept());await showQuoteDirectory(page);await page.getByRole('button',{name:'Reload saved quotes',exact:true}).click();await expect(page.getByLabel('Quote title',{exact:true})).toHaveCount(0);

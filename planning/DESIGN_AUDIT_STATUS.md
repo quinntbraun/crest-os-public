@@ -1,4 +1,4 @@
-# Design-audit coverage — November 19, 2026
+# Design-audit coverage — November 20, 2026
 
 This inventory reconciles all 70 original groups: 14 shared findings, 36 destinations and 20 deeper workflows. It preserves every original group and its full requirement text in [DESIGN_AUDIT_COVERAGE.json](DESIGN_AUDIT_COVERAGE.json). The original audit SHA-256 and current assessment source are recorded there.
 
@@ -6,13 +6,13 @@ This inventory reconciles all 70 original groups: 14 shared findings, 36 destina
 
 | Local implementation review | Groups |
 |---|---:|
-| Main change locally addressed | 58 |
-| Partial implementation or required review | 10 |
+| Main change locally addressed | 60 |
+| Partial implementation or required review | 8 |
 | Open audit work | 2 |
 | Review required before choosing changes | 0 |
 | Total | 70 |
 
-58/70, or 82.9%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 82.9% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 10 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
+60/70, or 85.7%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 85.7% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 8 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
 
 The audit is **not finished**. Each row has remaining implementation or verification. Full current-source/state, delivered-build and physical iPhone acceptance is not established. The earlier roughly 80% figure is a low-confidence V1 coding estimate and is not the audit percentage. The active objective is to complete all 70 original audit groups. Approved V1 business-use, recovery, upgrade, release and owner/device gates remain separate requirements and are not waived by this inventory.
 
@@ -26,17 +26,17 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 | ID | Audit group | Local state | Remaining work |
 |---|---|---|
-| S01 | One visual system, delivered consistently | Open | Deliver an accepted matching release, preserve the populated upgrade and compare installed states. |
-| S02 | Desktop layouts need purpose, not more cards | Partial | Complete paid-expense supplier-profile compatibility verification, then reconcile the four original customer/vehicle/service/prerequisite targets using DESKTOP_COMPOSITION_RECONCILIATION. Supplier directory exact phone return and original workflow now pass both engines on95b application source; final variant/delivered/device gates remain separate. |
-| S03 | Phone record detail should replace the directory | Partial | Reconcile every selected-record workflow, especially remaining commercial/supplier states, and exact return position. |
+| S01 | One visual system, delivered consistently | Open | Deliver an accepted release matching the final local design source, preserve the populated upgrade and compare installed states. |
+| S02 | Desktop layouts need purpose, not more cards | Main change addressed | Complete broader configured states/long-content/actual zoom and matching hosted/installed/physical-device acceptance. The separate paid-profile rerun remains0/2 at session creation and interrupted-save checks; causes unresolved and no combined6/6 or release acceptance claimed. Every final sign-off staysfalse. |
+| S03 | Phone record detail should replace the directory | Partial | Reconcile remaining completion/scheduling and other selected-record return contexts against every original S03 requirement, including main-action reachability and exact list position, then complete matching delivered/physical-device acceptance. Scoped quote2/2 does not close the whole group. |
 | S04 | Make action priority predictable | Partial | Review commit/refresh/recovery priority in every configured task; one narrow success is not global coverage. |
-| S05 | Reduce visual nesting | Partial | Finish accepted-document and remaining approval/completion nesting plus full configured-state review; supplier draft surfaces now have scoped four-state96-observation evidence. Exact-source delivered/device acceptance remains open. |
+| S05 | Reduce visual nesting | Main change addressed | Complete broader configured/long-value/zoom/private-state variants and matching delivered/installed/physical-device acceptance. Preserve current WebKit paid-expense provider/session failure, older CLI/trial-balance failures and unresolved initial quote replacement sign-in; no failed run is relabeled passing. |
 | S06 | Treat every state as a designed screen | Partial | Complete the eight-state cross-workflow inventory and exact-source visual verification;72 baseline captures do not cover it. |
 | S07 | Keep financial scope attached to the number | Main change addressed | Fresh full-head and delivered acceptance remain separate gates. |
 | S08 | Make Crest recognizable through restraint | Partial | Resolve a legible approved small-size asset and confirm brand consistency on delivered documents/sign-in/navigation. |
 | S09 | Replace Unicode navigation symbols | Main change addressed | Physical-device and installed verification remain separate. |
 | S10 | Refine type, spacing and numeric rhythm | Partial | Complete remaining configured business/input/long-name and actual browser-zoom checks plus matching hosted/installed/physical-device acceptance. Final local100/100 includes74 typography tests/720 observations; the two separate28/28 native sources are not one56-case final acceptance. |
-| S11 | Motion should explain changes | Partial | Finish state-specific motion duration, stable geometry, focus and quiet save-response review. |
+| S11 | Motion should explain changes | Partial | Finish other workflow-specific motion, stable loading geometry, focus/save-feedback review and exact-source delivered/physical-device acceptance. Scoped booking2/2 is not global S11 completion. |
 | S12 | Turn history into a readable evidence trail | Partial | Finish remaining agreement/approval/integration history and missing/stale/long/zoom/private variants; complete exact-source hosted/installed/physical-device review. New proposal plus normal amendment file6/6 is scoped local evidence; publishedf601 navigation failure remains unresolved, not cured. |
 | S13 | Protect context through every transition | Partial | Verify planner date/view and all remaining contextual returns plus sign-out/private clearing on the exact release. Earlier WebKit failures are not explained or cured by this contrast or later passes; full matching hosted/installed/physical-device acceptance remains separate. |
 | S14 | Phone finishing is physical-device work | Open | Complete the required physical iPhone, keyboard, safe-area, camera/download, zoom and reduced-motion acceptance. |
@@ -99,9 +99,9 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 ## Next sequence
 
-1. Publish the exact locally verified source after fresh PR/run/privacy guards. Public596 Foundation failed an outdated122-versus121 booking-upgrade expectation; explicit pinned121/122 populated upgrades and independent restores now pass in the complete124/124 local group. Preserve the original failed run and mandatory later service screenshot gate. No full hosted release or installed acceptance is established.
-2. Main R12 saved-scope and complete original-document refinement is verified locally7/7. Main R13 original-save outcome/return/evidence refinement is verified locally23/23 and closed-default2/2. Main R14 compact saved-job/desktop contacts/planner return is locally verified8/8. Main R15 appointment comparison and communication is locally verified2/2. Main R16 mileage context/evidence table is locally verified4/4. Main R18 booking context/schedule states is locally verified in separate unchanged-app scopes. Main R21 started-job cancellation review is locally verified in both Mobile/full custody cases, with unresolved separate photo/release failure retained. Main R23 trip context/cancel/replacement/arrived/uncertain refinement is locally verified2/2. Continue retained failure investigation, remaining global/profile/agreement workflows/modes/states alongside retained native/provider failure investigation. Reconcile original requirements one by one; do not substitute passing narrow checks for full group completion.
-3. Complete remaining global action priority, state/zoom/long-value/privacy, font/brand/motion and every remaining page/workflow variant. Preserve historical provider500/54 schema failures; later passes do not establish their causes or cures.
-4. Complete all original70 groups plus unfinished approved V1 portable CSV/Excel exports, complete recoverable backups/off-laptop restore, Linux document-worker/full release/populated upgrade/installed comparison, physical iPhone and owner gates. Every final audit sign-off remains false.
+1. Publish a coherent next draft after fresh public head/base/privacy guards. Older public6da and exact-tree tested merge4a778e4 pass all three workflows, retained recovery and isolated worker checks; their checksum-verified candidate remains activation-blocked and does not accept later local design changes. Current local five-file matrix is11/12 with a provider/session failure retained.
+2. The main S05 nesting refinement is locally addressed across all four original targets; broader variants and final sign-off remain open. Next fix exact quote directory scroll return under S03 while preserving draft/focus/privacy and every original admission/recovery gate. Reconcile original requirements one by one rather than using a narrow passing check as global completion.
+3. Complete remaining global action priority, eight-state cross-workflow inventory, real zoom/long-value/privacy, brand/motion/history/context and every remaining page/workflow variant. Investigate retained provider/session/CLI/schema failures; later passes do not establish their causes or cures.
+4. Complete all original70 groups plus unfinished approved V1 portable CSV/Excel exports, recoverable backups/off-laptop restore, matching Linux-worker/full release/populated upgrade/installed comparison, physical iPhone and owner gates. Every final audit sign-off remains false.
 
 The JSON embeds original sequence/acceptance and review-gap text. Per-domain notes scope actual evidence; no inventory or narrow green result establishes full completion.

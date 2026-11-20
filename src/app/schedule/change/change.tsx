@@ -136,7 +136,7 @@ export function JobChangeScreen({jobId,kind}:{jobId:string;kind:JobChangeKind}){
  const jobHref=jobId?'/schedule?job='+encodeURIComponent(jobId):'/schedule';
  const blocked=view.phase==='blocked';
  return <section aria-label="Saved job change" aria-busy={view.busy}>
-  <p className="job-change-status" ref={status} tabIndex={-1} role="status">{view.message}</p>
+  <p className="job-change-status" data-phase={view.phase} ref={status} tabIndex={-1} role="status">{view.message}</p>
   {view.phase==='loading'&&<div className="workspace-skeleton appointment-change-loading" aria-hidden="true"/>}
   {view.phase==='signed-out'&&<a className="primary-action" href="/sign-in">Sign in to change this job</a>}
   {view.phase==='ready'&&view.resources&&view.context&&<ChangeForm key={view.resources.head.job.id+':'+view.resources.head.job.version+':'+kind} view={view} kind={kind} save={async payload=>{

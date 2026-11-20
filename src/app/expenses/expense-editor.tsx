@@ -149,7 +149,7 @@ export function ExpenseEditor({client,receiptClient,receiptService,embedded=fals
    <button className="secondary" type="button" disabled={busy||!!pending||referenceBlocked} onClick={()=>void reload()}>Load saved expenses</button>
   </div>
   <p ref={feedback} className="expense-workbench-status" tabIndex={embedded?-1:undefined} role="status" aria-live="polite">{status}</p>
-  {pending&&<aside aria-label="Unconfirmed expense save"><p>A save needs confirmation. This form stays locked to prevent a duplicate. Only its original identifiers are stored in this browser tab.</p>{pending.context&&pending.request&&<button type="button" disabled={busy||!retryChecked} onClick={()=>void send(pending)}>Retry the same save</button>}<button type="button" className="secondary" disabled={busy||referenceBlocked} onClick={()=>void resolve()}>Check original save</button><a href="/save-review?kind=bookkeeping.expense.save">Review interrupted expense</a></aside>}
+  {pending&&<aside aria-label="Unconfirmed expense save"><p>A save needs confirmation. This form stays locked to prevent a duplicate. Only its original identifiers are stored in this browser tab.</p>{pending.context&&pending.request&&<button className="secondary" type="button" disabled={busy||!retryChecked} onClick={()=>void send(pending)}>Retry the same save</button>}<button type="button" className="secondary" disabled={busy||referenceBlocked} onClick={()=>void resolve()}>Check original save</button><a href="/save-review?kind=bookkeeping.expense.save">Review interrupted expense</a></aside>}
   <div className={embedded?'expense-workbench-grid expense-directory-layout':'expense-layout'} hidden={embedded&&pane!=='purchases'} data-editing={formOpen||undefined}>
    {!embedded&&expenseForm}
   <div className={embedded?'expense-records expense-directory-container':'expense-records'} data-selected={selectedId!==null||formOpen}>
@@ -179,7 +179,7 @@ export function ExpenseEditor({client,receiptClient,receiptService,embedded=fals
    <h2>Export expense history</h2><p>Choose payment dates. The download includes corrections, voids and totals for this expense list. {activeReceiptClient?'Receipt files are downloaded separately from the expense CSV.':'Receipt attachments are not available yet.'}</p>
    {embedded&&!context&&!pending&&<button type="button" className="secondary" disabled={busy||referenceBlocked} onClick={()=>void reload()}>Load saved expenses</button>}
    <div className="expense-export-dates"><label>From<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label><label>Through<input type="date" value={through} onChange={e=>setThrough(e.target.value)}/></label></div>
-   <button type="button" disabled={!context||busy||!!pending} onClick={accountantExport}>Download private expense CSV and notes</button>
+   <button className="secondary" type="button" disabled={!context||busy||!!pending} onClick={accountantExport}>Download private expense CSV and notes</button>
   </section>
  </section>;
 }

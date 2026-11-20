@@ -263,7 +263,7 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
   {result&&<section className="mapping-summary-card" aria-label="Saved mapping change">
    <h2>{result.closed?'Mapping closure recorded':'Mapping approval recorded'}</h2>
    <p>{financeMappingLabels[result.purpose]} · Version {result.version} · Effective {dateLabel(result.effectiveFrom)}</p>
-   <details><summary>Save reference</summary><p className="save-reference"><code>{result.operationId}</code></p></details>
+   <details className="mapping-save-reference"><summary>Save reference</summary><p className="save-reference"><code>{result.operationId}</code></p></details>
   </section>}
   {!pending&&!draft&&<section className={!workspace?'mapping-approval-start':'mapping-approval-selector'} aria-label="Choose an approval setting">
    {!workspace&&<div className="mapping-approval-introduction"><h2>Review an approval setting</h2><p>Choose a {categories?'category':'purpose'} to see its saved setting and the accounts eligible for a new approval.</p><p>Review the saved and proposed rules before confirming a change. Earlier approvals stay in history.</p></div>}
@@ -353,10 +353,10 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
   {pending&&<section aria-label="Interrupted mapping approval">
    <h2>Interrupted approval</h2>
    <p>{financeMappingLabels[pending.reference.purpose]}</p>
-   <details><summary>Save reference</summary><p className="save-reference"><code>{pending.reference.operationId}</code></p></details>
+   <details className="mapping-save-reference"><summary>Save reference</summary><p className="save-reference"><code>{pending.reference.operationId}</code></p></details>
    <div className={styles.actions}>
     <button type="button" className="secondary" disabled={controlsDisabled} onClick={()=>load(true)}>Check approval status</button>
-    {review==='retry'&&<button type="button" disabled={controlsDisabled} onClick={retry}>Retry original approval</button>}
+    {review==='retry'&&<button className="secondary" type="button" disabled={controlsDisabled} onClick={retry}>Retry original approval</button>}
    </div>
    {review==='retire'&&<form onSubmit={retire}>
     <p className="field-help">Closing this attempt prevents it from saving later. If an approval already saved, it stays in history.</p>

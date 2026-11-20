@@ -123,7 +123,7 @@ export function ServiceScreen(){
   {view.phase!=='ready'&&view.phase!=='loading'&&<div className="actions">
    {view.phase==='pending'?<>
     <button type="button" disabled={view.busy} onClick={()=>void current.current?.check()}>Check original save</button>
-    {view.canRetry&&<button type="button" disabled={view.busy} onClick={()=>void current.current?.retry()}>Retry unchanged original</button>}
+    {view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void current.current?.retry()}>Retry unchanged original</button>}
     <a href="/save-review">Review interrupted saves</a>
     {view.reference&&<p className="field-help">Original operation <span className="record-reference">{view.reference}</span></p>}
    </>:<button type="button" disabled={view.busy} onClick={reload}>Load current services</button>}

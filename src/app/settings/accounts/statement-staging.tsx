@@ -203,18 +203,18 @@ export function StatementStaging({context}:{context:FinanceAccountContext}){
    <StatementComparison values={{...preview.draft,rowCount:preview.draft.rows.length,
      signedRowsCents:String(values.rowTotal),statementDifferenceCents:String(values.difference)}} format={dollars}/>
    <StatementEvidence values={preview.draft}/>
-   {preview.draft.rows.length>0&&<details><summary>Review entered rows</summary>
+    {preview.draft.rows.length>0&&<details className="statement-details"><summary>Review entered rows</summary>
     <ul>{preview.draft.rows.map(row=><li key={row.id}>{row.statementOn} {dollars(row.signedCents)}</li>)}</ul>
    </details>}
-   <button type="button" disabled={busy||context.writeState!=='ready'||context.recoveryEpoch!==preview.reference.recoveryEpoch}
+   <button type="button" className={pending?'secondary':undefined} disabled={busy||context.writeState!=='ready'||context.recoveryEpoch!==preview.reference.recoveryEpoch}
     onClick={()=>void save()}>{pending?'Retry original save':'Stage reviewed statement'}</button>
    {!pending&&<button type="button" className="secondary" disabled={busy} onClick={()=>setPreview(null)}>Discard review</button>}
   </div>}
   {pending&&<div className={styles.openingGroup}>
    <p>Save reference <code>{displayReference(pending)}</code></p>
-   <button type="button" className="secondary" disabled={busy} onClick={()=>void lookup(pending,true)}>Check original save</button>
+   <button type="button" disabled={busy} onClick={()=>void lookup(pending,true)}>Check original save</button>
   </div>}
-  {!pending&&!preview&&<details>
+  {!pending&&!preview&&<details className="statement-details">
    <summary>Check a saved statement</summary>
    <form className={styles.openingGroup} onSubmit={lookupSaved}>
     <label htmlFor="statement-save-reference">Statement save reference</label>

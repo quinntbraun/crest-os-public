@@ -56,7 +56,7 @@ function QuoteCommercialPanelContent({row,dirty,blocked=false,onLock,onCommitted
   catch{if(alive.current&&!request.signal.aborted)setMessage(attempted?'The download could not be confirmed. Check your downloads before trying again.':'Current access and the exact accepted version could not be confirmed. Reload saved quotes. No file was requested.');}finally{link.remove();finish(request);}
  }
  const timeValid=customerInstant(form.instant)&&form.instant.length===27,customerId=row.family.customer_id??conversion?.customerId??null;
- return <section aria-labelledby="quote-commercial-heading"><h3 id="quote-commercial-heading">Sharing and acceptance</h3>
+ return <section className="quote-commercial-workspace" aria-labelledby="quote-commercial-heading"><h3 id="quote-commercial-heading">Sharing and acceptance</h3>
   <p role="status" aria-label="Sharing and acceptance status" className="notice">{view.status}</p>
   {dirty&&<p className="field-help">Save and reopen your draft before recording sharing or customer acceptance.</p>}
   {blocked&&<p className="field-help">Finish the other quote action before continuing here.</p>}

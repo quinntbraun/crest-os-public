@@ -288,7 +288,7 @@ export function FinanceAccountsScreen(){
   {pending&&workspace&&<section className={styles.section} aria-label="Interrupted account save">
    <p className="save-reference">Save reference <code>{pending.reference.operationId}</code></p>
    <button type="button" className="secondary" disabled={busy} onClick={()=>void checkPending()}>Check save status</button>
-   {canRetry&&<button type="button" disabled={busy} onClick={()=>void retry()}>Retry original save</button>}
+   {canRetry&&<button className="secondary" type="button" disabled={busy} onClick={()=>void retry()}>Retry original save</button>}
    {canRetire&&<form onSubmit={event=>void retire(event)}>
     <p className="field-help">Closing this attempt blocks it from saving later. Any change that already saved stays in account history.</p>
     <label htmlFor="finance-retirement-reason">Reason for closing the attempt</label>

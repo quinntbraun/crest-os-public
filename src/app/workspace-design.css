@@ -12,6 +12,8 @@
   --accent-soft:#ebefff;
   --panel-shadow:0 1px 2px #19284b09;
   --workspace-ease:cubic-bezier(.2,.75,.25,1);
+  --workspace-control-duration:160ms;
+  --workspace-panel-duration:200ms;
 }
 body { min-width:0; }
 .task-prerequisite { container:task-entry / inline-size; max-width:64rem; margin:1.5rem 0 2rem; padding:clamp(1.25rem,3vw,2.5rem); padding-inline:clamp(12px,3vw,2.5rem); border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); }
@@ -65,10 +67,10 @@ h1 { font-size:clamp(1.7rem,2.3vw,2.25rem); letter-spacing:-.035em; overflow-wra
 input:not([type='checkbox']),select,textarea { border-color:#8390a7; }
 /* Priority changes switch foreground and background together. */
 button,.primary-action {
-  transition:border-color 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+  transition:border-color var(--workspace-control-duration) ease, box-shadow var(--workspace-control-duration) ease, filter var(--workspace-control-duration) ease;
 }
 input:not([type='checkbox']),select,textarea {
-  transition:background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+  transition:background-color var(--workspace-control-duration) ease, border-color var(--workspace-control-duration) ease, box-shadow var(--workspace-control-duration) ease, filter var(--workspace-control-duration) ease;
 }
 :is(button:not(.secondary):not(:disabled):not([aria-disabled='true']),a.primary-action):hover { filter:brightness(1.08); }
 button.secondary:not(:disabled):not([aria-pressed='true']):hover { background:var(--accent-soft); border-color:#a7b3e8; }
@@ -97,7 +99,7 @@ button.secondary:not(:disabled):not([aria-pressed='true']):hover { background:va
 .workspace-menu summary::after { content:''; width:.36rem; height:.36rem; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:translateY(-2px) rotate(45deg); }
 .workspace-menu[open] summary { background:var(--canvas); color:var(--ink); border-color:#b1bad0; }
 .workspace-menu nav { top:calc(100% + .625rem); padding:.55rem; border-radius:15px; box-shadow:0 18px 54px #121c3540; }
-.workspace-menu[open] nav { animation:workspace-appear 180ms var(--workspace-ease) both; }
+.workspace-menu[open] nav { animation:workspace-appear var(--workspace-panel-duration) var(--workspace-ease) both; }
 .workspace-menu a[aria-current] { box-shadow:inset 3px 0 var(--accent); }
 .workspace-search-toggle {
   display:flex; align-items:center; gap:.65rem; margin:0 0 0 auto; width:auto;
@@ -115,7 +117,7 @@ button.secondary:not(:disabled):not([aria-pressed='true']):hover { background:va
   color:var(--ink); width:min(36rem,calc(100% - 2rem)); max-height:min(38rem,calc(100dvh - 2rem));
   border:1px solid var(--line); border-radius:20px; padding:0; box-shadow:0 24px 90px #121c3566;
 }
-.workspace-search[open] { animation:workspace-appear 200ms var(--workspace-ease) both; }
+.workspace-search[open] { animation:workspace-appear var(--workspace-panel-duration) var(--workspace-ease) both; }
 .workspace-search::backdrop { background:#101a35a3; }
 .workspace-search-inner { padding:1rem; }
 .workspace-search-heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:.75rem; }
@@ -854,7 +856,7 @@ main.completion-page { max-width:68rem; }
 main.appointment-change-page { max-width:68rem; }
 .appointment-change-layout {
   display:grid; gap:.95rem 1.125rem; align-items:start; min-width:0;
-  animation:workspace-appear 160ms var(--workspace-ease) both;
+  animation:workspace-appear var(--workspace-panel-duration) var(--workspace-ease) both;
 }
 .appointment-comparison { display:grid; gap:.6rem; min-width:0; }
 .appointment-comparison header :is(h2,p) { margin:0; }
@@ -936,7 +938,15 @@ main.booking-page { max-width:69rem; }
 .booking-summary dt,.booking-final-facts dt { color:var(--muted); font-size:.875rem; }
 .booking-summary dd,.booking-final-facts dd { margin:0; overflow-wrap:anywhere; font-weight:600; }
 .booking-summary .job-appointment-zone,.booking-final-facts .job-appointment-zone { display:block; margin:0; }
-.booking-stage > section:not([hidden]) { animation:workspace-appear 155ms var(--workspace-ease) both; }
+.booking-stage > section:not([hidden]) { animation:workspace-appear var(--workspace-panel-duration) var(--workspace-ease) both; }
+/* Optional choices are section rows; accepted work keeps its object boundary. */
+.customers .booking-stage details.booking-option {
+  margin:.75rem 0; padding:0; border:0; border-block-start:1px solid var(--line);
+  border-radius:0; background:transparent; box-shadow:none;
+}
+.booking-option > summary { min-height:44px; padding:.7rem 0; cursor:pointer; font-weight:600; }
+.booking-stage fieldset.booking-location-fields { min-width:0; margin:1.25rem 0 0; padding:0; border:0; background:transparent; }
+.booking-stage .booking-location-fields > legend { margin-block-end:.6rem; padding:0; font-weight:600; }
 .booking-stage .booking-final-facts { margin-top:.75rem; padding:.75rem; border:1px solid var(--line); border-radius:var(--radius); background:var(--canvas); }
 .booking-final-facts > p { margin:.6rem 0 0; }
 .booking-stage-actions { display:flex; gap:.6rem; flex-wrap:wrap; justify-content:flex-end; margin-top:1rem; }
@@ -1148,8 +1158,24 @@ main.expenses-page { max-width:68rem; }
 .quote-compose,.quote-record-flow { display:grid; align-items:start; gap:.875rem; }
 .quote-record-flow { margin-block-start:.875rem; }
 .quote-record-flow > #quote-replacement:empty { display:none; }
-.quote-prepared-document { margin-block:1rem; padding:.875rem; border:1px solid var(--line); border-radius:var(--radius); }
+.quote-prepared-document { margin-block:1rem; padding-block:1rem; border-block-start:1px solid var(--line); }
 .quote-prepared-document h4,.quote-prepared-document .field-help { margin:0; }
+.quote-record-flow[data-retained="true"] { padding:clamp(12px,2vw,1.25rem); background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); }
+.quote-record-flow[data-retained="true"] > section,
+.quote-record-flow[data-retained="true"] > #quote-replacement > section { padding:0; border:0; border-radius:0; box-shadow:none; background:transparent; }
+.quote-record-flow[data-retained="true"] > section + section,
+.quote-record-flow[data-retained="true"] > #quote-replacement:not(:empty),
+.quote-record-flow[data-retained="true"] > #quote-replacement + section { padding-block-start:1.25rem; border-block-start:1px solid var(--line); }
+.customers :is(.quote-commercial-workspace,.quote-review-workspace) details,
+.customers .quote-record-flow[data-retained="true"] .customer-history > li > details,
+.customers .quote-compose[data-retained="true"] > .quote-edit > details { margin:.5rem 0; padding:0; border:0; border-block-start:1px solid var(--line); border-radius:0; box-shadow:none; background:transparent; }
+:is(.quote-commercial-workspace,.quote-review-workspace) summary,
+.quote-record-flow[data-retained="true"] .customer-history > li > details > summary,
+.quote-compose[data-retained="true"] > .quote-edit > details > summary { min-height:44px; padding-block:.7rem; font-weight:600; }
+.customers .quote-commercial-workspace .quote-prepared-document > details { border:0; }
+.quote-commercial-workspace fieldset,
+.quote-compose[data-retained="true"] #quote-draft-form > fieldset { min-width:0; padding:0; border:0; background:transparent; }
+.quote-compose[data-retained="true"] > .quote-edit { padding-block:.25rem; border:0; background:transparent; box-shadow:none; }
 .quote-record :is(a,button,input,select,summary,textarea,[id]) { scroll-margin-block-start:7.5rem; }
 .quote-edit > .field-help,.quote-preview h3,.quote-record-flow section > h3 { margin-block-start:0; }
 .quote-preview > .quote-worksheet { margin:.75rem 0 0; box-shadow:none; }
@@ -2012,8 +2038,8 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 .statement-evidence dt { color:var(--muted); font-size:.875rem; }
 .statement-evidence dd { margin:.25rem 0 1rem; overflow-wrap:anywhere; }
 @media (min-width:1100px) { .statement-balance-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
-.customers details.statement-entry { margin:.75rem 0; padding:0; border:0; border-block:1px solid var(--line); border-radius:0; background:transparent; box-shadow:none; }
-.statement-entry > summary { min-height:44px; padding:.7rem 0; cursor:pointer; font-weight:600; }
+.customers details:is(.statement-entry,.statement-details) { margin:.75rem 0; padding:0; border:0; border-block:1px solid var(--line); border-radius:0; background:transparent; box-shadow:none; }
+:is(.statement-entry,.statement-details) > summary { min-height:44px; padding:.7rem 0; cursor:pointer; font-weight:600; }
 
 /* Saved bill identity stays ahead of editing and payable review. */
 .supplier-draft-workspace { container:supplier-draft / inline-size; min-width:0; }
@@ -2225,3 +2251,16 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 .proposal-history-recorded { display:block; margin:.375rem 0; font-size:.8125rem; color:var(--muted); overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
 .proposal-history-reason { display:block; margin:.375rem 0 0; white-space:pre-wrap; overflow-wrap:anywhere; }
 .proposal-history-timeline .customer-values { margin-top:.75rem; padding-top:.75rem; border-top:1px solid var(--line); }
+
+/* Reserve status geometry before a verified outcome; never animate values. */
+.booking-status,.appointment-change-page .job-change-status {
+  padding:.75rem 1rem; border-inline-start:3px solid transparent; border-radius:4px;
+  transition:background-color var(--workspace-control-duration) ease, border-color var(--workspace-control-duration) ease;
+}
+.booking-status[data-phase='committed'],.appointment-change-page .job-change-status[data-phase='committed'] {
+  background:#edf5ef; border-inline-start-color:#426b4e; color:#254d36;
+}
+
+/* The save reference is evidence within the existing approval/recovery surface. */
+.customers .mapping-approval-workspace details.mapping-save-reference { margin:.75rem 0 0; padding:0; border:0; border-block-start:1px solid var(--line); border-radius:0; background:transparent; box-shadow:none; }
+.mapping-save-reference > summary { min-height:44px; padding:.7rem 0; cursor:pointer; font-weight:600; }

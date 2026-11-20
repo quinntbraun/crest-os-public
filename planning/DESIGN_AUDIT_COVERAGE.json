@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-20T06:48:22.598Z",
+  "assessedAt": "2026-11-20T09:01:59.124Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "e34f363f82f207c6440242588fb06ae486a44b47",
-    "publishedCommit": "b533c21aeccd297865fab9f9a66f66b1cfff1697",
-    "publishedTree": "8c8b72b8f406fa00db741deef7b08811e7b18913",
-    "localTree": "6d1999f4668e432a763458fe2b2fc1c9b801f607"
+    "localCommit": "abdca4aa52f2ec9a17f7b20af15ad81b2654175a",
+    "publishedCommit": "6da22e5b3986ca0668fee80912ad55ec36ed55fd",
+    "publishedTree": "1184a1e32b33df531dbea3ba9762fd2e0898ed23",
+    "localTree": "4a80a1d92a09fe2ce97afef922be4ea967d83dca"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -27,12 +27,12 @@
     "destinations": 36,
     "deeperWorkflows": 20,
     "counts": {
-      "locally_addressed": 58,
-      "partial": 10,
+      "locally_addressed": 60,
+      "partial": 8,
       "open": 2,
       "review_needed": 0
     },
-    "mainLocalChangesAddressedPercent": 82.9,
+    "mainLocalChangesAddressedPercent": 85.7,
     "auditComplete": false,
     "finalSignOffClaimed": false
   },
@@ -44,8 +44,8 @@
       "title": "P1 · One visual system, delivered consistently",
       "requirements": "The installed logged-out preview still uses a large dark car hero and a different shell from the newer captured build. First align the version being evaluated and delivered. Then use shared page headers, toolbars, record summaries, inspectors, notices and confirmations throughout.\n\nFinish standard: The same destination and state should have the same hierarchy on laptop and phone; release identity must be verifiable.",
       "implementationStatus": "open",
-      "implementedOrPresent": "New source has a shared shell; installed schema109 remains a different build.",
-      "remainingWork": "Deliver an accepted matching release, preserve the populated upgrade and compare installed states.",
+      "implementedOrPresent": "Older published6da and tested merge4a778e4 have the same tree and complete successful CI, retained recovery/isolated document-worker evidence and a checksum-verified candidate archive. Later local design changes are not in that accepted tree; matching installed states have not been compared.",
+      "remainingWork": "Deliver an accepted release matching the final local design source, preserve the populated upgrade and compare installed states.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "d58caac1ab33a9cfd3518c5479236ad36b5a6bb48613ea71ee24a37d8ed5f345"
+          "sha256": "fd3fee22ba66112a05320f162288417a773050582c389d9d4b81bd98dc4a4de7"
         }
       ],
       "verification": {
@@ -67,17 +67,17 @@
       "section": "Shared findings",
       "title": "P1 · Desktop layouts need purpose, not more cards",
       "requirements": "Customer, vehicle, service and prerequisite pages often leave the majority of the canvas unused. White space is valuable when it frames a task; here it often reflects missing layout composition.\n\nFinish standard: Use stable list/detail layouts, purposeful unselected inspectors and max-width forms. Never auto-open sensitive records merely to fill space.",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Focused desktop compositions exist across the addressed destinations. The supplier register now has a scoped balance/coverage summary, flat financial rows and actual-container side-by-side saved facts/payment tasks, verified through both complete original financial workflows. Final configured task-entry matrix on3a3e069 passes2/2 with168 zero-finding observations across seven guides, six widths and two text sizes in both engines. Actual-container columns, readable wrapping actions and balanced headings preserve authorization, destinations and business audit history; the55-file/18-group CI partition now includes this matrix while retaining original requirements. Supplier draft sourceeb57 passes complete original local workflow2/2 with96 zero-finding observations across dirty editor, selected bill, original-required and ready-entry states, six widths and two text sizes in both engines. Flattened surfaces, fluid phone padding and actual-container editor/review columns retain original financial and private-export gates; inspection preserves financial/draft/journal/audit rows with zero API requests.",
-      "remainingWork": "Complete paid-expense supplier-profile compatibility verification, then reconcile the four original customer/vehicle/service/prerequisite targets using DESKTOP_COMPOSITION_RECONCILIATION. Supplier directory exact phone return and original workflow now pass both engines on95b application source; final variant/delivered/device gates remain separate.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "The original customer, vehicle, service and prerequisite composition changes are implemented with retained genuine directory/service/task evidence and current source reconciliation. Customers/vehicles/services have purposeful unselected inspectors and explicit selection. Seven configured task guides pass168 observations on their recorded source. Supplier register/draft compositions and focused directory now pass both complete original supplier parents, including96draft observations and16normal/doubled-text variants with exact trigger/scroll return, no inspection API traffic and unchanged captured financial/draft/journal/audit rows. Final wide/enlarged-phone captures were reviewed;918production inputs remain unchanged through later test-only corrections.",
+      "remainingWork": "Complete broader configured states/long-content/actual zoom and matching hosted/installed/physical-device acceptance. The separate paid-profile rerun remains0/2 at session creation and interrupted-save checks; causes unresolved and no combined6/6 or release acceptance claimed. Every final sign-off staysfalse.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
-          "path": "planning/SUPPLIER_REGISTER_WORKBENCH_DESIGN.md",
-          "sha256": "fe23f6608931090f09487d7a80e3c5444809624869c805e0cbc84ea5393ad47d"
+          "path": "planning/DESKTOP_COMPOSITION_RECONCILIATION.md",
+          "sha256": "0fbf8fa3436f39c526e6564b5b4f8d241f80463e28d53e95e903b45f36bbc8c0"
         },
         {
           "path": "src/app/expenses/supplier-payables.tsx",
@@ -129,7 +129,7 @@
         },
         {
           "path": "planning/SUPPLIER_DIRECTORY_NAVIGATION_DESIGN.md",
-          "sha256": "b02cfb29a51582c7b5f59fa829f062d0a2b01ef87ce378f790dec8455abbe985"
+          "sha256": "ffd91645cacf47448db0aaa99aa4515e1d55d139729706fc21ac3ad065dfda97"
         },
         {
           "path": "tests/support/supplier-directory-layout.mjs",
@@ -141,12 +141,36 @@
         },
         {
           "path": "planning/DESKTOP_COMPOSITION_RECONCILIATION.md",
-          "sha256": "8a30593b34fb0aba6d98d9d811658450ab66de9aa57e6046adfa97eaa47151a2"
+          "sha256": "0fbf8fa3436f39c526e6564b5b4f8d241f80463e28d53e95e903b45f36bbc8c0"
+        },
+        {
+          "path": "src/app/customers/customers.tsx",
+          "sha256": "0f313d5d550572116a6a9368487a2f067872693fb79e7dd628ba47a42763d0f0"
+        },
+        {
+          "path": "src/app/vehicles/vehicles.tsx",
+          "sha256": "79d8e482f5699ad81707ce3f65a77ef4338d200a5ac92af442ade26545ffea75"
+        },
+        {
+          "path": "src/app/services/services.tsx",
+          "sha256": "844990c0a6d0b8d4f85ed897bf253584ddaecb484bcc23e252ed0a1a0f3de433"
+        },
+        {
+          "path": "src/app/directory-introduction.tsx",
+          "sha256": "5204eba12092dcadf6d32adb5acbf752d3097d34826e16e86de304d4f40302da"
+        },
+        {
+          "path": "src/app/globals.css",
+          "sha256": "1c002a2ebb11f74a8d6780796520ba82cc7cf5575954071750859acf6f7eaaad"
+        },
+        {
+          "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
+          "sha256": "77ea9cd1fb215797e89166bea87d6a02b085c3dd9575c7371ad4b44f3ec46863"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -156,12 +180,12 @@
       "title": "P1 · Phone record detail should replace the directory",
       "requirements": "Long quote and completion captures show how a desktop composition becomes a long stacked phone document. Opening a record should put the record first and preserve the list for a clean return.\n\nFinish standard: At 360–430 px, open a selected record, reach its main action, return to the exact list position and continue without re-searching.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Focused phone records cover directories, quotes, leads, expenses and several accounting/travel tasks. Final configured task-entry matrix on3a3e069 passes2/2 with168 zero-finding observations across seven guides, six widths and two text sizes in both engines. Actual-container columns, readable wrapping actions and balanced headings preserve authorization, destinations and business audit history; the55-file/18-group CI partition now includes this matrix while retaining original requirements.",
-      "remainingWork": "Reconcile every selected-record workflow, especially remaining commercial/supplier states, and exact return position.",
+      "implementedOrPresent": "Focused phone records cover directories, quotes, leads, expenses and several accounting/travel tasks. Final configured task-entry matrix on3a3e069 passes2/2 with168 zero-finding observations across seven guides, six widths and two text sizes in both engines. Actual-container columns, readable wrapping actions and balanced headings preserve authorization, destinations and business audit history; the55-file/18-group CI partition now includes this matrix while retaining original requirements. Exact quote window position and actual origin focus are now captured/restored without persistence or business requests. Complete original editor file2/2 parents/24 TAP tests passes on47d9bad at360/390/430 with unobscured focus, preserved dirty/query state and canceled selection checks;34 fresh artifacts retained. Initial6/8 full matrix remains separately failed/scoped, not a final8/8.",
+      "remainingWork": "Reconcile remaining completion/scheduling and other selected-record return contexts against every original S03 requirement, including main-action reachability and exact list position, then complete matching delivered/physical-device acceptance. Scoped quote2/2 does not close the whole group.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -189,7 +213,7 @@
         },
         {
           "path": "planning/SUPPLIER_DIRECTORY_NAVIGATION_DESIGN.md",
-          "sha256": "b02cfb29a51582c7b5f59fa829f062d0a2b01ef87ce378f790dec8455abbe985"
+          "sha256": "ffd91645cacf47448db0aaa99aa4515e1d55d139729706fc21ac3ad065dfda97"
         },
         {
           "path": "src/app/expenses/supplier-bill-drafts.tsx",
@@ -202,6 +226,22 @@
         {
           "path": "planning/RECEIPT_WORKER_DOWNLOAD_JOURNEY.md",
           "sha256": "bbeb64e41b03a4c60b688703892f9298e8039ca85ec1f374b6e1a3e4aaaeaf57"
+        },
+        {
+          "path": "planning/QUOTE_DIRECTORY_RETURN_POSITION.md",
+          "sha256": "fa1126119c3cf0228a9a50ef57bcafe0afd83106b9e1021abf3307b27291da9b"
+        },
+        {
+          "path": "src/app/quotes/quotes.tsx",
+          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+        },
+        {
+          "path": "tests/integration/quote-draft-editor-browser.test.mjs",
+          "sha256": "cca9228049773aedddfb238e3752459b0cb2fda20063148bd8369e18087dd8fc"
+        },
+        {
+          "path": "tests/support/quote-directory-return.mjs",
+          "sha256": "0e7909b9a1fe944cc292fe1da397197b21ed196441c6063c04d9129145e2412b"
         }
       ],
       "verification": {
@@ -216,16 +256,64 @@
       "title": "P1 · Make action priority predictable",
       "requirements": "Create, load, refresh, search, download and commit controls sometimes have similar dimensions or color. The eye should immediately distinguish the task from maintenance controls.\n\nFinish standard: One primary action per task region; normal secondary controls for refresh/download; destructive styling only for a genuinely destructive consequence.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Primary/secondary controls and export transition contrast were improved.",
+      "implementedOrPresent": "Primary/secondary controls and export transition contrast were improved. Six original-request retry/export controls now use existing secondary styling, preserving primary outcome checks. Exact reconstruction confirms all labels/types/handlers/disabled conditions and all other code unchanged; production build/post-build types/full lint pass. Statement staging now prioritizes the original-outcome check over pending retry, keeping normal staging primary. Attribute-only source preservation plus both complete original statement journeys pass within797a785 full4/4 booking/statement run; final uncertain phone screen reviewed.",
       "remainingWork": "Review commit/refresh/recovery priority in every configured task; one narrow success is not global coverage.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
           "sha256": "ce67c18b2086875bae8b68d134453c80baeae98243bf3b62e5c8bb91bd9364be"
+        },
+        {
+          "path": "planning/ACTION_PRIORITY_REFINEMENT.md",
+          "sha256": "806577ccd8feb55f89a2ce0c3e02afed241d2fad36e2a88f645d7f26f3c4a1a8"
+        },
+        {
+          "path": "src/app/settings/accounts/screen.tsx",
+          "sha256": "3a11a7063021d6cdf7482183ecdc7de7cb82933187f6ccd2fd0d43bb8425a1f0"
+        },
+        {
+          "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
+          "sha256": "c8d3e6ca53f6d5c708421de92d2139ece2996380123cab70c9874db364c3737c"
+        },
+        {
+          "path": "src/app/expenses/expense-editor.tsx",
+          "sha256": "5607c61ed0ae1fbf34ed4702b467026090d43ecdd78d6f551aba9a72771b8ae3"
+        },
+        {
+          "path": "src/app/services/services.tsx",
+          "sha256": "844990c0a6d0b8d4f85ed897bf253584ddaecb484bcc23e252ed0a1a0f3de433"
+        },
+        {
+          "path": "src/app/quotes/quotes.tsx",
+          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+        },
+        {
+          "path": "planning/BOOKING_SURFACE_REFINEMENT.md",
+          "sha256": "24d3519cacb4b278f32f3319e0b881103eefcd7094171439e68c139e84df82eb"
+        },
+        {
+          "path": "src/app/schedule/new/booking.tsx",
+          "sha256": "eae50fc3e231df60bd98862951f1e8952e15583ea2cdf17ec71b9d682340ac2f"
+        },
+        {
+          "path": "src/app/schedule/booking-fields.tsx",
+          "sha256": "2976eff53ed0e0c529338575cbac504a6f2187647d03b5f8e1c780712a0d9cfa"
+        },
+        {
+          "path": "src/app/settings/accounts/statement-staging.tsx",
+          "sha256": "00746ad7f9bf3964c8f4e852ef0bec79b983f072165dd838bc0040d5277a4fd0"
+        },
+        {
+          "path": "tests/integration/book-job-product-browser.test.mjs",
+          "sha256": "b7797da4fd09f3148ef22e5db068b1cfd80b42a2556454c38bb8b0553b9465d9"
+        },
+        {
+          "path": "tests/integration/finance-statement-staging-browser.test.mjs",
+          "sha256": "36f4d9e18a67bb9493aada320aad73908040963241a4794c8df7381fc658db5a"
         }
       ],
       "verification": {
@@ -239,13 +327,13 @@
       "section": "Shared findings",
       "title": "P1 · Reduce visual nesting",
       "requirements": "Fieldsets inside cards inside disclosures create a boxed, generated feel, especially in completion, receipts, quotes and approvals.\n\nFinish standard: Keep one main surface, use spacing and headings for groups, and reserve inner borders for meaningful objects such as a separate work item or document.",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Receipt, completion, history and statement surfaces remove substantial nesting. Supplier draft sourceeb57 passes complete original local workflow2/2 with96 zero-finding observations across dirty editor, selected bill, original-required and ready-entry states, six widths and two text sizes in both engines. Flattened surfaces, fluid phone padding and actual-container editor/review columns retain original financial and private-export gates; inspection preserves financial/draft/journal/audit rows with zero API requests.",
-      "remainingWork": "Finish accepted-document and remaining approval/completion nesting plus full configured-state review; supplier draft surfaces now have scoped four-state96-observation evidence. Exact-source delivered/device acceptance remains open.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "All four original main targets are reconciled in SURFACE_NESTING_RECONCILIATION.md: completion work items/portions, actual receipt documents, retained quote terms and saved/proposed approval records retain meaningful object borders while optional groups/reference/history wrappers use rows/headings/dividers. Current cb91dcc full five-file/full-supplier-profile matrix finishes11/12: both completion, both private PNG receipts, all four fixed/category approvals and both statement parents pass; Chromium paid expense also passes.294 fresh hashed artifacts and current phone/desktop visual review support the main refinement. WebKit paid expense remains failed with session400/provider user500 observations. Quote components and75 relevant CSS rules separately match15bb8b3, whose complete file remains3/4; no aggregate/current full-release acceptance claim.",
+      "remainingWork": "Complete broader configured/long-value/zoom/private-state variants and matching delivered/installed/physical-device acceptance. Preserve current WebKit paid-expense provider/session failure, older CLI/trial-balance failures and unresolved initial quote replacement sign-in; no failed run is relabeled passing.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -266,11 +354,99 @@
         {
           "path": "tests/integration/finance-supplier-payable-browser.test.mjs",
           "sha256": "af88853652a5a5fe27cb4d74c05be7643e1dec8a0e07f2a3eef9bff0fed59d57"
+        },
+        {
+          "path": "planning/QUOTE_RETAINED_SURFACES_DESIGN.md",
+          "sha256": "a0e042c4576d0c3a3cd5b45a26c897caaef5d4d7a3c48d60e0f4d4d498a26794"
+        },
+        {
+          "path": "src/app/quotes/quotes.tsx",
+          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+        },
+        {
+          "path": "src/app/quotes/quote-review-panel.tsx",
+          "sha256": "841d3edba44ec10c5bc1a997d10289f97431810dfe6a9bbfc8899e9215759d8d"
+        },
+        {
+          "path": "src/app/quotes/quote-commercial-panel.tsx",
+          "sha256": "6a28f7cae96ace62a67dcb840f1565fe471bf49bc4ab64dfdf958cea6401f4b1"
+        },
+        {
+          "path": "planning/BOOKING_SURFACE_REFINEMENT.md",
+          "sha256": "24d3519cacb4b278f32f3319e0b881103eefcd7094171439e68c139e84df82eb"
+        },
+        {
+          "path": "src/app/schedule/new/booking.tsx",
+          "sha256": "eae50fc3e231df60bd98862951f1e8952e15583ea2cdf17ec71b9d682340ac2f"
+        },
+        {
+          "path": "src/app/schedule/booking-fields.tsx",
+          "sha256": "2976eff53ed0e0c529338575cbac504a6f2187647d03b5f8e1c780712a0d9cfa"
+        },
+        {
+          "path": "src/app/settings/accounts/statement-staging.tsx",
+          "sha256": "00746ad7f9bf3964c8f4e852ef0bec79b983f072165dd838bc0040d5277a4fd0"
+        },
+        {
+          "path": "tests/integration/book-job-product-browser.test.mjs",
+          "sha256": "b7797da4fd09f3148ef22e5db068b1cfd80b42a2556454c38bb8b0553b9465d9"
+        },
+        {
+          "path": "tests/integration/finance-statement-staging-browser.test.mjs",
+          "sha256": "36f4d9e18a67bb9493aada320aad73908040963241a4794c8df7381fc658db5a"
+        },
+        {
+          "path": "planning/SURFACE_NESTING_RECONCILIATION.md",
+          "sha256": "3de866db11417fe7058c8d9ae2bf04f65908dec0d3bd84d980fab22181ffd535"
+        },
+        {
+          "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
+          "sha256": "b729fc3fe6ba0c1d74fb9acf50ddcc4c7d180d6fbaf09a1f0661a71f8f16a6d3"
+        },
+        {
+          "path": "planning/COMPLETION_PROGRESS_DESIGN.md",
+          "sha256": "197ed314f49da2cd0bd9833b97713f59c6c6d57500391518309f09f46fc91c24"
+        },
+        {
+          "path": "planning/RECEIPT_WORKSPACE_REFINEMENT.md",
+          "sha256": "1404c431088da7c70983a40e224e03199f691526c910796b58c5ca8068990fdb"
+        },
+        {
+          "path": "planning/MAPPING_HISTORY_DESIGN.md",
+          "sha256": "9666f714251cefa61e507a45553eedf7c033fd8c56ca6aabfe7f0e7619857752"
+        },
+        {
+          "path": "src/app/schedule/work/completion.tsx",
+          "sha256": "a01f9bd9eb2968ab01f6c39ddb26d1258a7d85e9781553504384ac6558912f35"
+        },
+        {
+          "path": "src/app/expenses/expense-receipts.tsx",
+          "sha256": "18675c514d491c81e9e996e62f5009b79d099bad1fe700ab92f3dda66235ef0f"
+        },
+        {
+          "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
+          "sha256": "c8d3e6ca53f6d5c708421de92d2139ece2996380123cab70c9874db364c3737c"
+        },
+        {
+          "path": "tests/integration/work-completion-product-browser.test.mjs",
+          "sha256": "548cdc9c568b0ad1a7af99ebadeed1573772fa2fe6c0d4fb250dfefb51d1b5ea"
+        },
+        {
+          "path": "tests/integration/finance-expense-posting-browser.test.mjs",
+          "sha256": "157af2769323698994861b6d2aa3c646a85b8e7d2bdc257ad2487186ddb1cbf7"
+        },
+        {
+          "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
+          "sha256": "48ffa33d9de75e78a2cac1ceaf5042d0a906607a43ae8953bfd61586d318db3f"
+        },
+        {
+          "path": "tests/integration/finance-expense-category-browser.test.mjs",
+          "sha256": "5876b5974139633b3c388e99392133d77f0bec5db03538ff0c7f773d30cb7455"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -289,7 +465,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "d643e772549d73285268b8951ef2e072abd14c58ab3664a24034ef09bc0f8fb6"
+          "sha256": "6ad833b9374a00ebcaf2067191873f592f9c9df00dc80326b03f955802f934fd"
         },
         {
           "path": "planning/SUPPLIER_DRAFT_COMPOSITION_REVIEW.md",
@@ -377,7 +553,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "d643e772549d73285268b8951ef2e072abd14c58ab3664a24034ef09bc0f8fb6"
+          "sha256": "6ad833b9374a00ebcaf2067191873f592f9c9df00dc80326b03f955802f934fd"
         }
       ],
       "verification": {
@@ -405,7 +581,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "src/app/workspace-frame.tsx",
@@ -488,16 +664,40 @@
       "title": "P2 · Motion should explain changes",
       "requirements": "Source already includes short menu/panel transitions, skeleton shimmer and reduced-motion support. Recommending animations as if absent would be misleading.\n\nFinish standard: Extend the existing system: 120–180 ms control feedback, 180–240 ms panel entry, stable skeleton geometry and a quiet confirmed-save response. No fake progress, delayed access to controls or animated financial totals.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Transitions/skeletons/reduced-motion rules exist; Today first-frame contrast was fixed.",
-      "remainingWork": "Finish state-specific motion duration, stable geometry, focus and quiet save-response review.",
+      "implementedOrPresent": "Shared160ms controls and200ms panel entry now extend existing motion without delaying access. Actual booking/appointment-change commitment alone receives quiet status color; uncertainty is never presented as saved. Full original booking journeys2/2 pass on5d3471b with36 actual ready/uncertain/committed normal/reduced-motion observations, stable preference-pair geometry, no overflow/inspection API writes, committed Axe and original recovery/focus/privacy gates.110 fresh hashed artifacts and reviewed phone/desktop captures retained; initial1/2 inspection-preference defect remains separately documented. Subsequent797a785 complete booking/statement4/4 retains the36 booking motion observations and all original outcome/recovery gates after scoped surface changes; this is not an aggregate of separate historical runs.",
+      "remainingWork": "Finish other workflow-specific motion, stable loading geometry, focus/save-feedback review and exact-source delivered/physical-device acceptance. Scoped booking2/2 is not global S11 completion.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
           "sha256": "ad92f40a6611688a661bfd46e6b0ec596b5f380e4854390cdf8b1cfb2fccf779"
+        },
+        {
+          "path": "planning/BOOKING_MOTION_REFINEMENT.md",
+          "sha256": "42cf6c5a147b6b10b80dccff8af76e1da18c1a5914e959d3a7ccb7afd8d99f20"
+        },
+        {
+          "path": "src/app/schedule/new/booking.tsx",
+          "sha256": "eae50fc3e231df60bd98862951f1e8952e15583ea2cdf17ec71b9d682340ac2f"
+        },
+        {
+          "path": "src/app/schedule/change/change.tsx",
+          "sha256": "5c50779ffa733fc327c2e6c3372cfbda0d66f9bf5cfa028126b1281ec3fe6c9e"
+        },
+        {
+          "path": "tests/support/booking-motion.mjs",
+          "sha256": "bed274c7957b6b21585114fb0c7ce798ed2ef3d1e22234939720e9ca3187388c"
+        },
+        {
+          "path": "tests/integration/book-job-product-browser.test.mjs",
+          "sha256": "b7797da4fd09f3148ef22e5db068b1cfd80b42a2556454c38bb8b0553b9465d9"
+        },
+        {
+          "path": "planning/BOOKING_SURFACE_REFINEMENT.md",
+          "sha256": "24d3519cacb4b278f32f3319e0b881103eefcd7094171439e68c139e84df82eb"
         }
       ],
       "verification": {
@@ -517,7 +717,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
@@ -560,7 +760,7 @@
       "title": "P2 · Protect context through every transition",
       "requirements": "Back links now exist on many deeper routes. Their wording and destinations still vary, and an opened task can lose the visible customer/job context.\n\nFinish standard: Use a common breadcrumb or contextual return row, preserve selected record/date/filter where safe, restore focus and avoid retaining private detail after sign-out.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Several directory/task transitions preserve selection, drafts and committed-DOM focus. Native normal amendment2/2 and separately publishedb533 original hosted amendments7/7 preserve strict context/privacy/error checks on their recorded sources. An app-free pinned-browser contrast isolates a matching provisional-fetch diagnostic; safe test-only invocation evidence supports further attribution without changing application transport.",
+      "implementedOrPresent": "Several directory/task transitions preserve selection, drafts and committed-DOM focus. Native normal amendment2/2 and separately publishedb533 original hosted amendments7/7 preserve strict context/privacy/error checks on their recorded sources. An app-free pinned-browser contrast isolates a matching provisional-fetch diagnostic; safe test-only invocation evidence supports further attribution without changing application transport. Quote in-page return now preserves exact window position and reachable focus on the actual entry control; canceled switching keeps the private draft. Full original editor2/2 passes24 tests on47d9bad with no navigation reads/writes and original private lifecycle checks; no URL/storage cache added.",
       "remainingWork": "Verify planner date/view and all remaining contextual returns plus sign-out/private clearing on the exact release. Earlier WebKit failures are not explained or cured by this contrast or later passes; full matching hosted/installed/physical-device acceptance remains separate.",
       "evidence": [
         {
@@ -589,7 +789,7 @@
         },
         {
           "path": "planning/SUPPLIER_DIRECTORY_NAVIGATION_DESIGN.md",
-          "sha256": "b02cfb29a51582c7b5f59fa829f062d0a2b01ef87ce378f790dec8455abbe985"
+          "sha256": "ffd91645cacf47448db0aaa99aa4515e1d55d139729706fc21ac3ad065dfda97"
         },
         {
           "path": "src/app/expenses/supplier-bill-drafts.tsx",
@@ -602,6 +802,22 @@
         {
           "path": "planning/RECEIPT_WORKER_DOWNLOAD_JOURNEY.md",
           "sha256": "bbeb64e41b03a4c60b688703892f9298e8039ca85ec1f374b6e1a3e4aaaeaf57"
+        },
+        {
+          "path": "planning/QUOTE_DIRECTORY_RETURN_POSITION.md",
+          "sha256": "fa1126119c3cf0228a9a50ef57bcafe0afd83106b9e1021abf3307b27291da9b"
+        },
+        {
+          "path": "src/app/quotes/quotes.tsx",
+          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+        },
+        {
+          "path": "tests/integration/quote-draft-editor-browser.test.mjs",
+          "sha256": "cca9228049773aedddfb238e3752459b0cb2fda20063148bd8369e18087dd8fc"
+        },
+        {
+          "path": "tests/support/quote-directory-return.mjs",
+          "sha256": "0e7909b9a1fe944cc292fe1da397197b21ed196441c6063c04d9129145e2412b"
         }
       ],
       "verification": {
@@ -625,7 +841,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "d58caac1ab33a9cfd3518c5479236ad36b5a6bb48613ea71ee24a37d8ed5f345"
+          "sha256": "fd3fee22ba66112a05320f162288417a773050582c389d9d4b81bd98dc4a4de7"
         }
       ],
       "verification": {
@@ -657,7 +873,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "tests/integration/sign-in-browser.test.mjs",
@@ -697,7 +913,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "src/client/home-schedule.ts",
@@ -709,7 +925,7 @@
         },
         {
           "path": "tests/integration/book-job-product-browser.test.mjs",
-          "sha256": "098ae486fa544749fb34ed9ce5c9d426c9bd017838385415d2b46fe35c4d7f57"
+          "sha256": "b7797da4fd09f3148ef22e5db068b1cfd80b42a2556454c38bb8b0553b9465d9"
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
@@ -785,7 +1001,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "tests/unit/proposal-party-read.test.ts",
@@ -805,7 +1021,7 @@
         },
         {
           "path": "tests/integration/book-job-product-browser.test.mjs",
-          "sha256": "098ae486fa544749fb34ed9ce5c9d426c9bd017838385415d2b46fe35c4d7f57"
+          "sha256": "b7797da4fd09f3148ef22e5db068b1cfd80b42a2556454c38bb8b0553b9465d9"
         }
       ],
       "verification": {
@@ -873,7 +1089,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "tests/integration/legacy-contact-csv-review-browser.test.mjs",
@@ -913,7 +1129,7 @@
         },
         {
           "path": "src/app/expenses/expense-editor.tsx",
-          "sha256": "1a7753b7b3f2ce8b0487e1b574b97f222190273a144e0bd9fe95ebf392a6d19a"
+          "sha256": "5607c61ed0ae1fbf34ed4702b467026090d43ecdd78d6f551aba9a72771b8ae3"
         },
         {
           "path": "src/app/expenses/receipt-document-viewer.tsx",
@@ -921,7 +1137,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "tests/support/receipt-layout.mjs",
@@ -1061,11 +1277,27 @@
       "evidence": [
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "258a1a1fcb73631f45a31361e0e802839cdc477b1d5cdfac20ba94035a6eceab"
+          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
         },
         {
           "path": "planning/QUOTE_READING_MODES_DESIGN.md",
           "sha256": "15d60218983368eaae51038ec3694013847eac7b36472eaa8db4758506dd2027"
+        },
+        {
+          "path": "planning/QUOTE_DIRECTORY_RETURN_POSITION.md",
+          "sha256": "fa1126119c3cf0228a9a50ef57bcafe0afd83106b9e1021abf3307b27291da9b"
+        },
+        {
+          "path": "src/app/quotes/quotes.tsx",
+          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+        },
+        {
+          "path": "tests/integration/quote-draft-editor-browser.test.mjs",
+          "sha256": "cca9228049773aedddfb238e3752459b0cb2fda20063148bd8369e18087dd8fc"
+        },
+        {
+          "path": "tests/support/quote-directory-return.mjs",
+          "sha256": "0e7909b9a1fe944cc292fe1da397197b21ed196441c6063c04d9129145e2412b"
         }
       ],
       "verification": {
@@ -1205,7 +1437,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/change/change.tsx",
-          "sha256": "42ef780852babd2c23bbf3a0ab3415c6ab27293b9fc242fc4b1cc74f3873b6a6"
+          "sha256": "5c50779ffa733fc327c2e6c3372cfbda0d66f9bf5cfa028126b1281ec3fe6c9e"
         },
         {
           "path": "planning/APPOINTMENT_COMPARISON_DESIGN.md",
@@ -1213,7 +1445,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "tests/support/appointment-comparison-layout.mjs",
@@ -1253,7 +1485,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "tests/unit/mileage-prerequisite.test.ts",
@@ -1305,7 +1537,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/new/booking.tsx",
-          "sha256": "8981332e9390c3dc56e6c598eed4e8d477acd5e51816e882aef8a2e877b154cc"
+          "sha256": "eae50fc3e231df60bd98862951f1e8952e15583ea2cdf17ec71b9d682340ac2f"
         },
         {
           "path": "planning/BOOKING_STEP_CONTEXT_DESIGN.md",
@@ -1317,7 +1549,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "tests/support/booking-review-layout.mjs",
@@ -1329,7 +1561,7 @@
         },
         {
           "path": "tests/integration/book-job-product-browser.test.mjs",
-          "sha256": "098ae486fa544749fb34ed9ce5c9d426c9bd017838385415d2b46fe35c4d7f57"
+          "sha256": "b7797da4fd09f3148ef22e5db068b1cfd80b42a2556454c38bb8b0553b9465d9"
         },
         {
           "path": "tests/integration/booking-divisions-product-browser.test.mjs",
@@ -1405,7 +1637,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "tests/support/field-work-layout.mjs",
@@ -1457,7 +1689,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "tests/support/work-read-diagnostic.mjs",
@@ -1529,7 +1761,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "tests/integration/trip-interruption-product-browser.test.mjs",
@@ -1581,7 +1813,7 @@
       "evidence": [
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "21fbea9c97980739d936a02c72fa87eaf818a799676b88e3502c7c6124302945"
+          "sha256": "844990c0a6d0b8d4f85ed897bf253584ddaecb484bcc23e252ed0a1a0f3de433"
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
@@ -1725,7 +1957,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "9a949bd18616896cc49728bb23b894b0413765511e09c47314c57528640d8b9c"
+          "sha256": "c8d3e6ca53f6d5c708421de92d2139ece2996380123cab70c9874db364c3737c"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
@@ -1737,7 +1969,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
@@ -1773,7 +2005,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "9a949bd18616896cc49728bb23b894b0413765511e09c47314c57528640d8b9c"
+          "sha256": "c8d3e6ca53f6d5c708421de92d2139ece2996380123cab70c9874db364c3737c"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
@@ -1897,7 +2129,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "tests/integration/confirmed-bookings-product-browser.test.mjs",
@@ -1945,11 +2177,27 @@
       "evidence": [
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "258a1a1fcb73631f45a31361e0e802839cdc477b1d5cdfac20ba94035a6eceab"
+          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
         },
         {
           "path": "planning/QUOTE_READING_MODES_DESIGN.md",
           "sha256": "15d60218983368eaae51038ec3694013847eac7b36472eaa8db4758506dd2027"
+        },
+        {
+          "path": "planning/QUOTE_DIRECTORY_RETURN_POSITION.md",
+          "sha256": "fa1126119c3cf0228a9a50ef57bcafe0afd83106b9e1021abf3307b27291da9b"
+        },
+        {
+          "path": "src/app/quotes/quotes.tsx",
+          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+        },
+        {
+          "path": "tests/integration/quote-draft-editor-browser.test.mjs",
+          "sha256": "cca9228049773aedddfb238e3752459b0cb2fda20063148bd8369e18087dd8fc"
+        },
+        {
+          "path": "tests/support/quote-directory-return.mjs",
+          "sha256": "0e7909b9a1fe944cc292fe1da397197b21ed196441c6063c04d9129145e2412b"
         }
       ],
       "verification": {
@@ -1969,7 +2217,7 @@
       "evidence": [
         {
           "path": "src/app/quotes/quote-commercial-panel.tsx",
-          "sha256": "2a3a8d5690fbb357cfcd706df8304f82d9d2a7a7968523b3462d189ee949350c"
+          "sha256": "6a28f7cae96ace62a67dcb840f1565fe471bf49bc4ab64dfdf958cea6401f4b1"
         },
         {
           "path": "planning/ACCEPTED_AGREEMENT_EVENTS_DESIGN.md",
@@ -1977,11 +2225,11 @@
         },
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "258a1a1fcb73631f45a31361e0e802839cdc477b1d5cdfac20ba94035a6eceab"
+          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "b969acd17c38e1b6fcc55429986d554312e77d0635d0b4770fef362c5a772546"
+          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
         },
         {
           "path": "tests/integration/quote-commercial-browser.test.mjs",
@@ -1989,7 +2237,7 @@
         },
         {
           "path": "tests/integration/quote-draft-editor-browser.test.mjs",
-          "sha256": "4446fe311a5c452e432997af34c06f3746bfc04da0a222efad44dc3a4bddacb9"
+          "sha256": "cca9228049773aedddfb238e3752459b0cb2fda20063148bd8369e18087dd8fc"
         },
         {
           "path": "tests/support/quote-session-failure-evidence.mjs",
