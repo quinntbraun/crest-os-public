@@ -1,4 +1,10 @@
-# Readable commercial milestones and exact approval evidence
+# November 20 release assertion follow-through
+
+Published `e31089d` passes all 21 main prerequisites and both ancillary workflows, but Foundation job `136263156173` stops in the unit-test step: 9,114/9,115 cases pass, with one presentation assertion expecting `Before Apr 1, 2026` as contiguous raw HTML. The actual received markup contains `Before <time dateTime="2026-04-01">Apr 1, 2026</time>` and retains the exact exclusive boundary. Required recovery, production/container and isolated-worker steps are skipped after this failure. The later service-screenshot upload also fails because its generating step did not run and `.local/review/service-*.png` is absent. Neither failure is waived or a successful release.
+
+Test-only correction `dcce5c9` reads visible text across markup boundaries and additionally checks the displayed `Effective until (exclusive)2026-04-01`. Existing complete period/date matrix, immutable source, closed-account, newest-loaded, unloaded-history and empty-history assertions remain. The focused file passes3/3 and the complete local suite passes9,115/9,115 in395files, zero failures. No history component, financial rule, stored date, cutoff, authorization or workflow gate changes. This explains this specific deterministic assertion failure; it does not diagnose the retained provider/native-navigation/recovery failures or transfer local unit success to a new hosted release. A new exact-source full release remains required.
+
+## Readable commercial milestones and exact approval evidence
 
 This S12 continuation refines the existing quote and mapping histories. It does not replace their business controllers, retained sources, exports or approval rules.
 

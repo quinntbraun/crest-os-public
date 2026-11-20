@@ -12,7 +12,10 @@ function render(value:ReturnType<typeof history>){return renderToStaticMarkup(cr
 it('uses the next recorded effective date as the exclusive boundary without changing approved history',()=>{
  const value=history([row(3,'2026-10-01',true),row(2,'2026-04-01'),row(1,'2026-01-01')]),before=JSON.stringify(value);
  const periods=financeMappingPeriods(value.rows);expect(periods.map(({effectiveFrom,effectiveUntil})=>({effectiveFrom,effectiveUntil}))).toEqual([{effectiveFrom:'2026-10-01',effectiveUntil:null},{effectiveFrom:'2026-04-01',effectiveUntil:'2026-10-01'},{effectiveFrom:'2026-01-01',effectiveUntil:'2026-04-01'}]);expect(periods[0]?.row.accountId).toBeNull();expect(JSON.stringify(value)).toBe(before);
- const html=render(value);expect(html).toContain('Before Apr 1, 2026');expect(html).toContain('No posting account assigned by this version');expect(html).toContain('Newest loaded version');expect(html).toContain('No earlier mapping approval is recorded before Jan 1, 2026');
+ const html=render(value),text=html.replace(/<[^>]+>/g,'');
+ expect(text).toContain('Before Apr 1, 2026');
+ expect(text).toContain('Effective until (exclusive)2026-04-01');
+ expect(html).toContain('No posting account assigned by this version');expect(html).toContain('Newest loaded version');expect(html).toContain('No earlier mapping approval is recorded before Jan 1, 2026');
 });
 it('does not describe unloaded earlier periods as uncovered or the latest loaded version as current',()=>{
  const rows=Array.from({length:25},(_,i)=>row(26-i,'2026-01-'+String(26-i).padStart(2,'0'))),html=render(history(rows,true));

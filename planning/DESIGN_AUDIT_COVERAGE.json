@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-20T11:02:34.853Z",
+  "assessedAt": "2026-11-20T11:52:11.634Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "672c26712fa403bf05188880b1a3efeb421c7715",
-    "publishedCommit": "f3ea4bc219cd0639cb3897b81904930bc11ac0ee",
-    "publishedTree": "da409e0d6db249b224566cd121675e48b552395b",
-    "localTree": "29dd3da1f19b27b627d3ea7c06d7d36e6dea169f"
+    "localCommit": "562c42ceaa3c56d17496431dc3c5a543cf11ea22",
+    "publishedCommit": "e31089d21cc098ede30f8fee345e530aefc05bbb",
+    "publishedTree": "e843c517928ea50fd26ba341d8db2ba671d5e404",
+    "localTree": "5ba43ca71032b628e4a7f47444a1e2da21a760d5"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -44,7 +44,7 @@
       "title": "P1 · One visual system, delivered consistently",
       "requirements": "The installed logged-out preview still uses a large dark car hero and a different shell from the newer captured build. First align the version being evaluated and delivered. Then use shared page headers, toolbars, record summaries, inspectors, notices and confirmations throughout.\n\nFinish standard: The same destination and state should have the same hierarchy on laptop and phone; release identity must be verifiable.",
       "implementationStatus": "open",
-      "implementedOrPresent": "A coherent newer draftf3ea4bc/tree da409e matches verified local69b9d66 and is undergoing exact-source CI. Older6da/merge4a passed complete checks, retained recovery and isolated document workers; its candidate archive/input metadata checksums are verified. Neither current installed comparison nor final new-source acceptance is established. Publishedf3ea/tree da409e has now passed all three workflows and all22 main jobs, including Foundation136204373972. Exact tested merge8b54630 retains the same tree; registered frozen52/53 recovery7/7, isolated supplier2/2 and four-format receipt2/2 succeed. Later local history/navigation/action changes remain separate; no matching installation or final owner/device acceptance is claimed.",
+      "implementedOrPresent": "A coherent newer draftf3ea4bc/tree da409e matches verified local69b9d66 and is undergoing exact-source CI. Older6da/merge4a passed complete checks, retained recovery and isolated document workers; its candidate archive/input metadata checksums are verified. Neither current installed comparison nor final new-source acceptance is established. Publishedf3ea/tree da409e has now passed all three workflows and all22 main jobs, including Foundation136204373972. Exact tested merge8b54630 retains the same tree; registered frozen52/53 recovery7/7, isolated supplier2/2 and four-format receipt2/2 succeed. Later local history/navigation/action changes remain separate; no matching installation or final owner/device acceptance is claimed. Coherent draft e31089d/tree e843c51 now exactly matches local ec2bf45, with one public parent f3ea4bc and unchanged base ea06dc6. Complete tracked-source strict default scan has zero findings; no ignore/inline allows. Exact head/base/draft/open/body/tree/sole-parent/nonforce expected-head guards verified. New main44725293108, expense44725293196 and commercial44725293043 were observed queued/running; no old success is transferred. Installed/physical/owner acceptance remains open. Published e310 main44725293108 is terminal failed: all21 prerequisites and both ancillary workflows succeed; Foundation136263156173 stops at one raw-HTML date assertion,9114/9115 units passed. Received time markup preserves the correct Apr1 exclusive boundary. Downstream release/recovery/workers are skipped; required service screenshot artifact is absent. Local test-only dcce5c9 preserves the date matrix and checks visible text plus exact exclusive ISO date; focused3/3/full9115/9115 in395files and final types/full lint pass. No history/app rule or gate changes; new exact-source release remains required.",
       "remainingWork": "Deliver an accepted release matching the final local design source, preserve the populated upgrade and compare installed states.",
       "evidence": [
         {
@@ -53,11 +53,19 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "cc5174d3c18826dedfb634c0f857bca0d4b3ede4d00783b876991133fe2b92d6"
+          "sha256": "1c733e54da18ce1e41034ffdaf2608ea4f43afebfd3db5f5e25f8c5d40fd5389"
         },
         {
           "path": "planning/QUOTE_VERSION_HISTORY_DESIGN.md",
           "sha256": "52c6671a91c12fc88e4aa301069e20a1ea915f617c70b6406c44811f8fc643ba"
+        },
+        {
+          "path": "planning/HISTORY_EVENT_EVIDENCE_DESIGN.md",
+          "sha256": "16fc81ffda566d786c58dfd192e1b6390b4310ec29b7c39caf2148a0e1fae59f"
+        },
+        {
+          "path": "tests/unit/finance-mapping-presentation.test.ts",
+          "sha256": "af46d38ff8d7b4e0cfb674d4c6fd169118e26c2bb9b639ef30a2494bc4f7e4cd"
         }
       ],
       "verification": {
@@ -276,7 +284,7 @@
       "title": "P1 · Make action priority predictable",
       "requirements": "Create, load, refresh, search, download and commit controls sometimes have similar dimensions or color. The eye should immediately distinguish the task from maintenance controls.\n\nFinish standard: One primary action per task region; normal secondary controls for refresh/download; destructive styling only for a genuinely destructive consequence.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Primary/secondary controls and export transition contrast were improved. Six original-request retry/export controls now use existing secondary styling, preserving primary outcome checks. Exact reconstruction confirms all labels/types/handlers/disabled conditions and all other code unchanged; production build/post-build types/full lint pass. Statement staging now prioritizes the original-outcome check over pending retry, keeping normal staging primary. Attribute-only source preservation plus both complete original statement journeys pass within797a785 full4/4 booking/statement run; final uncertain phone screen reviewed. Three more visual attributes make optional vehicle-link transfer and loaded custody-queue refresh/pagination secondary, preserving first-load/review/final-confirm priorities. Exact inverse reconstruction proves every other source byte unchanged after line-ending normalization; production build/post-build types/full lint pass. Source/build scope only, not new rendered acceptance.",
+      "implementedOrPresent": "Primary/secondary controls and export transition contrast were improved. Six original-request retry/export controls now use existing secondary styling, preserving primary outcome checks. Exact reconstruction confirms all labels/types/handlers/disabled conditions and all other code unchanged; production build/post-build types/full lint pass. Statement staging now prioritizes the original-outcome check over pending retry, keeping normal staging primary. Attribute-only source preservation plus both complete original statement journeys pass within797a785 full4/4 booking/statement run; final uncertain phone screen reviewed. Three more visual attributes make optional vehicle-link transfer and loaded custody-queue refresh/pagination secondary, preserving first-load/review/final-confirm priorities. Exact inverse reconstruction proves every other source byte unchanged after line-ending normalization; production build/post-build types/full lint pass. Source/build scope only, not new rendered acceptance. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately.",
       "remainingWork": "Review commit/refresh/recovery priority in every configured task; one narrow success is not global coverage.",
       "evidence": [
         {
@@ -325,7 +333,7 @@
         },
         {
           "path": "src/app/settings/accounts/statement-staging.tsx",
-          "sha256": "00746ad7f9bf3964c8f4e852ef0bec79b983f072165dd838bc0040d5277a4fd0"
+          "sha256": "667a7827e5aad5b55b84b438ada249af509f5fb689b891a8d8aadfd7edb08c1b"
         },
         {
           "path": "tests/integration/book-job-product-browser.test.mjs",
@@ -333,7 +341,7 @@
         },
         {
           "path": "tests/integration/finance-statement-staging-browser.test.mjs",
-          "sha256": "36f4d9e18a67bb9493aada320aad73908040963241a4794c8df7381fc658db5a"
+          "sha256": "7d745a3e719358e8f7d3ef8d3e8946e56c0bd16609e4e8680b23ff4e313880d0"
         },
         {
           "path": "src/app/vehicles/associations.tsx",
@@ -342,6 +350,10 @@
         {
           "path": "src/app/schedule/vehicle-custody-queue.tsx",
           "sha256": "1dabb0f0c01e209b770cf871457d206c83d34307a6c8a19f3064f4a817d5f720"
+        },
+        {
+          "path": "planning/STATEMENT_RECOVERY_PRIORITY_REVIEW.md",
+          "sha256": "a93d81c58cb0572864b09b3026e5f4ac3e3678d44d248ed308578494ecc44758"
         }
       ],
       "verification": {
@@ -413,7 +425,7 @@
         },
         {
           "path": "src/app/settings/accounts/statement-staging.tsx",
-          "sha256": "00746ad7f9bf3964c8f4e852ef0bec79b983f072165dd838bc0040d5277a4fd0"
+          "sha256": "667a7827e5aad5b55b84b438ada249af509f5fb689b891a8d8aadfd7edb08c1b"
         },
         {
           "path": "tests/integration/book-job-product-browser.test.mjs",
@@ -421,7 +433,7 @@
         },
         {
           "path": "tests/integration/finance-statement-staging-browser.test.mjs",
-          "sha256": "36f4d9e18a67bb9493aada320aad73908040963241a4794c8df7381fc658db5a"
+          "sha256": "7d745a3e719358e8f7d3ef8d3e8946e56c0bd16609e4e8680b23ff4e313880d0"
         },
         {
           "path": "planning/SURFACE_NESTING_RECONCILIATION.md",
@@ -484,7 +496,7 @@
       "title": "P1 · Treat every state as a designed screen",
       "requirements": "Some baseline captures are loading or unavailable. A clean screenshot with no overflow does not establish a completed workflow.\n\nFinish standard: Every important workflow needs loaded, empty, loading, validation, denied, stale, uncertain-save and successful variants with clear next steps.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Many actual loaded, empty, pending and error states exist and have scoped tests. Supplier draft sourceeb57 passes complete original local workflow2/2 with96 zero-finding observations across dirty editor, selected bill, original-required and ready-entry states, six widths and two text sizes in both engines. Flattened surfaces, fluid phone padding and actual-container editor/review columns retain original financial and private-export gates; inspection preserves financial/draft/journal/audit rows with zero API requests.",
+      "implementedOrPresent": "Many actual loaded, empty, pending and error states exist and have scoped tests. Supplier draft sourceeb57 passes complete original local workflow2/2 with96 zero-finding observations across dirty editor, selected bill, original-required and ready-entry states, six widths and two text sizes in both engines. Flattened surfaces, fluid phone padding and actual-container editor/review columns retain original financial and private-export gates; inspection preserves financial/draft/journal/audit rows with zero API requests. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. Render-only cb35c2d adds real account-loading live text, explicit fresh-access link after read failure, and capability-gated money-channel guidance for an empty eligible list. Final test1e88e88 both complete original statement engines plus separate48 actual zoom observations pass3/3, zero failures/skips/cancellations, source stable/owned cleanup and98 hashed PNGs.18 new ordinary observations cover loading/failed/empty at360/390/1440 in both engines; a genuine dated channel closure creates emptiness after original export checks. Inspection adds no business requests or captured statement/journal/audit changes. Initialcb35 complete2/3 with one Chromium loading request count remains retained; the final boundary waits for the held original request, retaining zero-additional-request and all deadlines. Six zoom views and three ordinary states are not the whole S06 matrix.",
       "remainingWork": "Complete the eight-state cross-workflow inventory and exact-source visual verification;72 baseline captures do not cover it.",
       "evidence": [
         {
@@ -493,7 +505,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "3e9eacfc82db17b52dfee7c32d68616c4e0474d38323ad78bf8fd9cd2b02a35b"
+          "sha256": "a068b08fae34677eed8bb10216bb04fd03f08aa8b31d2f887cc9b44ae55da948"
         },
         {
           "path": "planning/SUPPLIER_DRAFT_COMPOSITION_REVIEW.md",
@@ -510,6 +522,22 @@
         {
           "path": "tests/integration/finance-supplier-payable-browser.test.mjs",
           "sha256": "af88853652a5a5fe27cb4d74c05be7643e1dec8a0e07f2a3eef9bff0fed59d57"
+        },
+        {
+          "path": "planning/STATEMENT_RECOVERY_PRIORITY_REVIEW.md",
+          "sha256": "a93d81c58cb0572864b09b3026e5f4ac3e3678d44d248ed308578494ecc44758"
+        },
+        {
+          "path": "src/app/settings/accounts/statement-staging.tsx",
+          "sha256": "667a7827e5aad5b55b84b438ada249af509f5fb689b891a8d8aadfd7edb08c1b"
+        },
+        {
+          "path": "tests/integration/finance-statement-staging-browser.test.mjs",
+          "sha256": "7d745a3e719358e8f7d3ef8d3e8946e56c0bd16609e4e8680b23ff4e313880d0"
+        },
+        {
+          "path": "planning/STATEMENT_CHANNEL_STATE_REVIEW.md",
+          "sha256": "61e927dafa75e098185c689d8b09abd2f342755dc4ec64444a5e68b8c13ce41f"
         }
       ],
       "verification": {
@@ -581,7 +609,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "3e9eacfc82db17b52dfee7c32d68616c4e0474d38323ad78bf8fd9cd2b02a35b"
+          "sha256": "a068b08fae34677eed8bb10216bb04fd03f08aa8b31d2f887cc9b44ae55da948"
         }
       ],
       "verification": {
@@ -596,7 +624,7 @@
       "title": "P2 · Refine type, spacing and numeric rhythm",
       "requirements": "Heading scale is broadly consistent, but dense labels, helper text and record facts need stronger role separation. Some test captures and installed screens have different visual typography; verify the served font before diagnosing a font bug.\n\nFinish standard: Use one reliable font stack, 16 px editable inputs on phones, tabular money, aligned totals and a small spacing scale. Check real font loading, zoom and long names.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Reliable bundled fonts, tabular figures and scoped readability refinements are present. All36 closed/setup production destinations reflow at five widths with normal/doubled text in both engines; actual heading glyphs, exact font bytes, whole destination names and measured phone clearance are verified. Genuine sign-in and category approval forms also have separate complete28/28 workflow evidence on their recorded sources; password entry and field values remain usable. Configured supplier balances/vendor/amount/filter glyphs and exact served font files also pass genuine browser checks; no font replacement was warranted. Final configured task-entry matrix on3a3e069 passes2/2 with168 zero-finding observations across seven guides, six widths and two text sizes in both engines. Actual-container columns, readable wrapping actions and balanced headings preserve authorization, destinations and business audit history; the55-file/18-group CI partition now includes this matrix while retaining original requirements. Supplier draft sourceeb57 passes complete original local workflow2/2 with96 zero-finding observations across dirty editor, selected bill, original-required and ready-entry states, six widths and two text sizes in both engines. Flattened surfaces, fluid phone padding and actual-container editor/review columns retain original financial and private-export gates; inspection preserves financial/draft/journal/audit rows with zero API requests. Shared main/tool navigation now distinguishes neutral hover from the marked current destination. Complete closed/setup suite106/106 on e704c3b passes, including48 route/width/engine navigation combinations and original720 typography observations. Both actual padding/scroll-clearance consumers cover the fixed navigation bar; explicit nested Lead sources/Leads semantics remain. Twelve fresh hashed captures and original98/106 failures retained. Source9b5113f build/types/lint plus final test types/lint pass. Shared-chrome scope only; configured/private/device requirements remain. Actual isolated Chromium tab zoom is now verified on all36 closed/setup audit destinations:144 observations at1024/1440 outer widths and100%/200%, expected CSS viewport/DPR, no overflow, visible inputs16px minimum, computed font stack, both fixed-navigation clearance consumers and accessibility pass. Eight hashed PNGs retained; zero cookies/source stable/owned cleanup. Same-build HTTP companion confirms35 normal200 routes and exact originalR36 intentional404. This is not configured long-form/money/history zoom, WebKit zoom, installed or physical-device acceptance. Source656e1f4 additionally passes genuine six-booking planner/saved-job real Chromium zoom: first8 observations and separate expanded16 at100%/200%, explicitly360/390/430CSS px plus desktop. Exact nonzero390px/200% return restores unobscured focused origin and exact scroll, with preserved date values, zero Back/zoom business requests and unchanged jobs/appointments/reservations/overrides/audit rows. Both case/cluster/profile cleanups and source/case hashes pass. Configured financial/long-history and other original contexts remain; no all-workflow/device acceptance is inferred.",
+      "implementedOrPresent": "Reliable bundled fonts, tabular figures and scoped readability refinements are present. All36 closed/setup production destinations reflow at five widths with normal/doubled text in both engines; actual heading glyphs, exact font bytes, whole destination names and measured phone clearance are verified. Genuine sign-in and category approval forms also have separate complete28/28 workflow evidence on their recorded sources; password entry and field values remain usable. Configured supplier balances/vendor/amount/filter glyphs and exact served font files also pass genuine browser checks; no font replacement was warranted. Final configured task-entry matrix on3a3e069 passes2/2 with168 zero-finding observations across seven guides, six widths and two text sizes in both engines. Actual-container columns, readable wrapping actions and balanced headings preserve authorization, destinations and business audit history; the55-file/18-group CI partition now includes this matrix while retaining original requirements. Supplier draft sourceeb57 passes complete original local workflow2/2 with96 zero-finding observations across dirty editor, selected bill, original-required and ready-entry states, six widths and two text sizes in both engines. Flattened surfaces, fluid phone padding and actual-container editor/review columns retain original financial and private-export gates; inspection preserves financial/draft/journal/audit rows with zero API requests. Shared main/tool navigation now distinguishes neutral hover from the marked current destination. Complete closed/setup suite106/106 on e704c3b passes, including48 route/width/engine navigation combinations and original720 typography observations. Both actual padding/scroll-clearance consumers cover the fixed navigation bar; explicit nested Lead sources/Leads semantics remain. Twelve fresh hashed captures and original98/106 failures retained. Source9b5113f build/types/lint plus final test types/lint pass. Shared-chrome scope only; configured/private/device requirements remain. Actual isolated Chromium tab zoom is now verified on all36 closed/setup audit destinations:144 observations at1024/1440 outer widths and100%/200%, expected CSS viewport/DPR, no overflow, visible inputs16px minimum, computed font stack, both fixed-navigation clearance consumers and accessibility pass. Eight hashed PNGs retained; zero cookies/source stable/owned cleanup. Same-build HTTP companion confirms35 normal200 routes and exact originalR36 intentional404. This is not configured long-form/money/history zoom, WebKit zoom, installed or physical-device acceptance. Source656e1f4 additionally passes genuine six-booking planner/saved-job real Chromium zoom: first8 observations and separate expanded16 at100%/200%, explicitly360/390/430CSS px plus desktop. Exact nonzero390px/200% return restores unobscured focused origin and exact scroll, with preserved date values, zero Back/zoom business requests and unchanged jobs/appointments/reservations/overrides/audit rows. Both case/cluster/profile cleanups and source/case hashes pass. Configured financial/long-history and other original contexts remain; no all-workflow/device acceptance is inferred. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. Render-only cb35c2d adds real account-loading live text, explicit fresh-access link after read failure, and capability-gated money-channel guidance for an empty eligible list. Final test1e88e88 both complete original statement engines plus separate48 actual zoom observations pass3/3, zero failures/skips/cancellations, source stable/owned cleanup and98 hashed PNGs.18 new ordinary observations cover loading/failed/empty at360/390/1440 in both engines; a genuine dated channel closure creates emptiness after original export checks. Inspection adds no business requests or captured statement/journal/audit changes. Initialcb35 complete2/3 with one Chromium loading request count remains retained; the final boundary waits for the held original request, retaining zero-additional-request and all deadlines. Six zoom views and three ordinary states are not the whole S06 matrix.",
       "remainingWork": "Complete configured business/input/long-name/history actual-browser-zoom checks plus matching hosted/installed/physical-device acceptance. Earlier720 root-text observations and144 real-zoom closed-state observations are separate scopes, not one complete current-source configured matrix.",
       "evidence": [
         {
@@ -694,6 +722,22 @@
         {
           "path": "planning/CONFIGURED_PLANNER_ZOOM_REVIEW.md",
           "sha256": "fed6652bcff3e8dbab98aa613aa3f72fe8ca582ff405215aca2e8df728e7eabb"
+        },
+        {
+          "path": "planning/STATEMENT_RECOVERY_PRIORITY_REVIEW.md",
+          "sha256": "a93d81c58cb0572864b09b3026e5f4ac3e3678d44d248ed308578494ecc44758"
+        },
+        {
+          "path": "src/app/settings/accounts/statement-staging.tsx",
+          "sha256": "667a7827e5aad5b55b84b438ada249af509f5fb689b891a8d8aadfd7edb08c1b"
+        },
+        {
+          "path": "tests/integration/finance-statement-staging-browser.test.mjs",
+          "sha256": "7d745a3e719358e8f7d3ef8d3e8946e56c0bd16609e4e8680b23ff4e313880d0"
+        },
+        {
+          "path": "planning/STATEMENT_CHANNEL_STATE_REVIEW.md",
+          "sha256": "61e927dafa75e098185c689d8b09abd2f342755dc4ec64444a5e68b8c13ce41f"
         }
       ],
       "verification": {
@@ -756,7 +800,7 @@
       "title": "P2 · Turn history into a readable evidence trail",
       "requirements": "Several histories are version lists, prose and repeated timestamps. The underlying retained evidence deserves a much clearer presentation.\n\nFinish standard: Use dated event rows with action, actual event time, recorded time where different, actor if known, status and an expand-to-compare detail. Keep exact timestamps and exports available.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Lead, amendment, expense, custody, travel, mileage and time histories retain readable evidence. Accepted quote milestones distinguish preparation/sharing/confirmation. Proposal versions now show actual state, recorded zone/time and reason, with native complete facts/exact UTC; both genuine engines preserve immutable records and issue no inspection API traffic. Source96ce901 adds readable quote milestone times in the saved zone plus exact UTC/known approving-actor/reference disclosures; dated mapping periods expose exact boundaries/references and explicitly distinguish effective dates from unavailable recording/actor metadata. Build/types/full lint pass. Complete original three-file/full-supplier matrix6/8 parents,15/18 TAP, stable/cleaned,111 fresh hashed artifacts. Both category and both replacement parents, Chromium fixed mapping and complete WebKit agreement pass; WebKit mapping and Chromium agreement fail early genuine authentication before new histories. No gate waiver or root-cause/cure claim.  Initial quote version history is now dated action/status events with actual saved-zone times, exact UTC/actor/reference evidence and lazy, explicitly labeled saved before/after content. Main renderer/handlers and existing CSS remain unchanged outside the extracted presentation. Final00d11d0 build/types/lint pass; complete original quote files7/8 parents54/56 TAP, stable/cleaned,94 fresh hashed artifacts. Both editor/review/agreement parents and WebKit replacement pass all new evidence/comparison plus original history/export/recovery/private gates. Chromium replacement hits the original send-response deadline with a session400 observation; cause unresolved, no guard waiver. Initial09a label-expectation failures and prior96ce mixed results retained. Test-only provider-live observation on656e1f4 conserves transport/argument/promise/error identity; all5 privacy/ownership units and focused lint pass. Complete original commercial file4/4 parents18/18 TAP passes, stable/cleaned,44 fresh hashed artifacts. This is non-reproduction, not a fix or combination with prior7/8. Final bounded windows contain33 live lookups and one rejection without SQLSTATE; not request-correlated or causal.",
+      "implementedOrPresent": "Lead, amendment, expense, custody, travel, mileage and time histories retain readable evidence. Accepted quote milestones distinguish preparation/sharing/confirmation. Proposal versions now show actual state, recorded zone/time and reason, with native complete facts/exact UTC; both genuine engines preserve immutable records and issue no inspection API traffic. Source96ce901 adds readable quote milestone times in the saved zone plus exact UTC/known approving-actor/reference disclosures; dated mapping periods expose exact boundaries/references and explicitly distinguish effective dates from unavailable recording/actor metadata. Build/types/full lint pass. Complete original three-file/full-supplier matrix6/8 parents,15/18 TAP, stable/cleaned,111 fresh hashed artifacts. Both category and both replacement parents, Chromium fixed mapping and complete WebKit agreement pass; WebKit mapping and Chromium agreement fail early genuine authentication before new histories. No gate waiver or root-cause/cure claim.  Initial quote version history is now dated action/status events with actual saved-zone times, exact UTC/actor/reference evidence and lazy, explicitly labeled saved before/after content. Main renderer/handlers and existing CSS remain unchanged outside the extracted presentation. Final00d11d0 build/types/lint pass; complete original quote files7/8 parents54/56 TAP, stable/cleaned,94 fresh hashed artifacts. Both editor/review/agreement parents and WebKit replacement pass all new evidence/comparison plus original history/export/recovery/private gates. Chromium replacement hits the original send-response deadline with a session400 observation; cause unresolved, no guard waiver. Initial09a label-expectation failures and prior96ce mixed results retained. Test-only provider-live observation on656e1f4 conserves transport/argument/promise/error identity; all5 privacy/ownership units and focused lint pass. Complete original commercial file4/4 parents18/18 TAP passes, stable/cleaned,44 fresh hashed artifacts. This is non-reproduction, not a fix or combination with prior7/8. Final bounded windows contain33 live lookups and one rejection without SQLSTATE; not request-correlated or causal. Published e310 main44725293108 is terminal failed: all21 prerequisites and both ancillary workflows succeed; Foundation136263156173 stops at one raw-HTML date assertion,9114/9115 units passed. Received time markup preserves the correct Apr1 exclusive boundary. Downstream release/recovery/workers are skipped; required service screenshot artifact is absent. Local test-only dcce5c9 preserves the date matrix and checks visible text plus exact exclusive ISO date; focused3/3/full9115/9115 in395files and final types/full lint pass. No history/app rule or gate changes; new exact-source release remains required.",
       "remainingWork": "Resolve separately authorized mapping recording/actor metadata. Finish remaining agreement/approval/integration history and missing/stale/long/zoom/private variants; complete exact-source hosted/installed/physical-device review. New proposal plus normal amendment file6/6 is scoped local evidence; publishedf601 navigation failure remains unresolved, not cured.",
       "evidence": [
         {
@@ -793,7 +837,7 @@
         },
         {
           "path": "planning/HISTORY_EVENT_EVIDENCE_DESIGN.md",
-          "sha256": "025dd268edbfe4ceba24f4380b4f4e7838df714777ea3391f9088a8269d0873c"
+          "sha256": "16fc81ffda566d786c58dfd192e1b6390b4310ec29b7c39caf2148a0e1fae59f"
         },
         {
           "path": "src/app/quotes/quote-commercial-events.tsx",
@@ -854,6 +898,10 @@
         {
           "path": "tests/support/session-query-evidence.test.mjs",
           "sha256": "3671e4fa008d0588f5a749d2a6be6e80ecb3666c8f37daf998914f8a2c538f82"
+        },
+        {
+          "path": "tests/unit/finance-mapping-presentation.test.ts",
+          "sha256": "af46d38ff8d7b4e0cfb674d4c6fd169118e26c2bb9b639ef30a2494bc4f7e4cd"
         }
       ],
       "verification": {
@@ -965,7 +1013,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "cc5174d3c18826dedfb634c0f857bca0d4b3ede4d00783b876991133fe2b92d6"
+          "sha256": "1c733e54da18ce1e41034ffdaf2608ea4f43afebfd3db5f5e25f8c5d40fd5389"
         }
       ],
       "verification": {
@@ -1980,7 +2028,7 @@
       "title": "P1 · Accounting home (/settings/accounts)",
       "requirements": "Observed: Reports, Accounts and Setup are a good separation, but the baseline opens a trial-balance form rather than a strong financial overview.\n\nDirection: Create a report workspace with a persistent report picker, date scope, coverage notice, loaded-as-of timestamp and export action. Make posted figures, incomplete coverage and setup status distinct.\n\nDesktop: Use available width for aligned figures and drill-in details.\n\nPhone: Put scope and key verified total before long filters or nested tables.\n\nAcceptance: Do not label incomplete recorded profit as business profit; no attractive summary may hide missing opening balances or costs.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Persistent desktop report library, compact phone choices and verified summaries before still-mounted date controls are implemented. Complete income/ledger and funds/receivables journeys pass both engines, including actual scoped CSV and retained original financial/recovery/export checks.",
+      "implementedOrPresent": "Persistent desktop report library, compact phone choices and verified summaries before still-mounted date controls are implemented. Complete income/ledger and funds/receivables journeys pass both engines, including actual scoped CSV and retained original financial/recovery/export checks. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. Render-only cb35c2d adds real account-loading live text, explicit fresh-access link after read failure, and capability-gated money-channel guidance for an empty eligible list. Final test1e88e88 both complete original statement engines plus separate48 actual zoom observations pass3/3, zero failures/skips/cancellations, source stable/owned cleanup and98 hashed PNGs.18 new ordinary observations cover loading/failed/empty at360/390/1440 in both engines; a genuine dated channel closure creates emptiness after original export checks. Inspection adds no business requests or captured statement/journal/audit changes. Initialcb35 complete2/3 with one Chromium loading request count remains retained; the final boundary waits for the held original request, retaining zero-additional-request and all deadlines. Six zoom views and three ordinary states are not the whole S06 matrix.",
       "remainingWork": "Complete remaining state/zoom/private-clearing variants; investigate retained tax/session failures and preserve exact-source release/installed/physical-device requirements.",
       "evidence": [
         {
@@ -1990,6 +2038,22 @@
         {
           "path": "planning/ACCOUNTING_REPORT_WORKSPACE_DESIGN.md",
           "sha256": "51568f4611275f5389ada35398f55e2cda30c1497f5c25d3bba7b86263bc132a"
+        },
+        {
+          "path": "planning/STATEMENT_RECOVERY_PRIORITY_REVIEW.md",
+          "sha256": "a93d81c58cb0572864b09b3026e5f4ac3e3678d44d248ed308578494ecc44758"
+        },
+        {
+          "path": "src/app/settings/accounts/statement-staging.tsx",
+          "sha256": "667a7827e5aad5b55b84b438ada249af509f5fb689b891a8d8aadfd7edb08c1b"
+        },
+        {
+          "path": "tests/integration/finance-statement-staging-browser.test.mjs",
+          "sha256": "7d745a3e719358e8f7d3ef8d3e8946e56c0bd16609e4e8680b23ff4e313880d0"
+        },
+        {
+          "path": "planning/STATEMENT_CHANNEL_STATE_REVIEW.md",
+          "sha256": "61e927dafa75e098185c689d8b09abd2f342755dc4ec64444a5e68b8c13ce41f"
         }
       ],
       "verification": {
@@ -2748,7 +2812,7 @@
       "title": "Statement staging",
       "requirements": "Opening/closing balances, row totals and difference are buried in prose, while the checksum occupies prime space. Use a numeric comparison block, a distinct unresolved-difference state and a disclosed evidence section. Staging must never look like reconciliation.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-statement-staging-chromium-390.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Preview/saved balance comparisons, explicit unresolved/zero arithmetic and disclosed file/review evidence are implemented.",
+      "implementedOrPresent": "Preview/saved balance comparisons, explicit unresolved/zero arithmetic and disclosed file/review evidence are implemented. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. Render-only cb35c2d adds real account-loading live text, explicit fresh-access link after read failure, and capability-gated money-channel guidance for an empty eligible list. Final test1e88e88 both complete original statement engines plus separate48 actual zoom observations pass3/3, zero failures/skips/cancellations, source stable/owned cleanup and98 hashed PNGs.18 new ordinary observations cover loading/failed/empty at360/390/1440 in both engines; a genuine dated channel closure creates emptiness after original export checks. Inspection adds no business requests or captured statement/journal/audit changes. Initialcb35 complete2/3 with one Chromium loading request count remains retained; the final boundary waits for the held original request, retaining zero-additional-request and all deadlines. Six zoom views and three ordinary states are not the whole S06 matrix.",
       "remainingWork": "Other account-identity/long-value/state and installed/device acceptance remain; staging never means reconciliation.",
       "evidence": [
         {
@@ -2758,6 +2822,22 @@
         {
           "path": "planning/STATEMENT_COMPARISON_DESIGN.md",
           "sha256": "2b33fa8f24690698a5d3727560115daeb0bb2f6fdde6aaca9f34ff767c2c4120"
+        },
+        {
+          "path": "planning/STATEMENT_RECOVERY_PRIORITY_REVIEW.md",
+          "sha256": "a93d81c58cb0572864b09b3026e5f4ac3e3678d44d248ed308578494ecc44758"
+        },
+        {
+          "path": "src/app/settings/accounts/statement-staging.tsx",
+          "sha256": "667a7827e5aad5b55b84b438ada249af509f5fb689b891a8d8aadfd7edb08c1b"
+        },
+        {
+          "path": "tests/integration/finance-statement-staging-browser.test.mjs",
+          "sha256": "7d745a3e719358e8f7d3ef8d3e8946e56c0bd16609e4e8680b23ff4e313880d0"
+        },
+        {
+          "path": "planning/STATEMENT_CHANNEL_STATE_REVIEW.md",
+          "sha256": "61e927dafa75e098185c689d8b09abd2f342755dc4ec64444a5e68b8c13ce41f"
         }
       ],
       "verification": {

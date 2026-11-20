@@ -42,7 +42,41 @@ for(const engine of [chromium,webkit]){
     await page.getByRole('button',{name:'Setup',exact:true}).click();
     return page.getByRole('region',{name:'Fictional bank statement staging'});
    }
-   const form=await load();
+   async function captureChannelState(phase,target){
+    const viewport=page.viewportSize(),before=await facts();let requests=0;
+    const observe=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))requests++;};
+    page.on('request',observe);
+    try{
+     await mkdir('.local/review',{recursive:true});
+     for(const width of [360,390,1440]){
+      await page.setViewportSize({width,height:900});await target.scrollIntoViewIfNeeded();
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
+      await page.screenshot({path:`.local/review/finance-statement-channel-${phase}-${engine.name()}-${width}.png`});
+     }
+     assert.equal(requests,0);assert.deepEqual(await facts(),before);
+    }finally{page.off('request',observe);await page.setViewportSize(viewport);}
+   }
+   let releaseRead,readStarted=false;const heldRead=new Promise(resolve=>{releaseRead=resolve;});
+   await page.route('**/api/business/finance-accounts/channel-list',async request=>{
+    readStarted=true;await heldRead;await request.abort('failed');
+   },{times:1});
+   const form=page.getByRole('region',{name:'Fictional bank statement staging'});
+   try{
+    await load();
+    const loading=form.getByText('Loading dedicated money accounts…',{exact:true});
+    await expect(loading).toBeVisible();await expect(form.getByLabel('Dedicated money account')).toHaveCount(0);
+    // The component can render loading before its authenticated request starts.
+    // Establish the held original read before counting inspection traffic.
+    await expect.poll(()=>readStarted).toBe(true);
+    await captureChannelState('loading',loading);
+   }finally{releaseRead();}
+   await expect(form.getByRole('alert')).toHaveText('Dedicated accounts could not be loaded.');
+   const checkAccess=form.getByRole('link',{name:'Check accounting access',exact:true});
+   await expect(checkAccess).toHaveAttribute('href','/settings/accounts');
+   await captureChannelState('failed',form.getByRole('alert'));
+   await checkAccess.press('Enter');
+   await page.getByRole('button',{name:'Setup',exact:true}).click();
    const channel=form.getByLabel('Dedicated money account');
    await expect(channel.getByRole('option',{name:'Fictional checking (1234)'})).toHaveCount(1);
    const file=Buffer.from('fictional-provider-statement-bytes');
@@ -82,9 +116,9 @@ for(const engine of [chromium,webkit]){
    await expect(comparison.getByText('Difference needs review',{exact:true})).toBeVisible();
    const hash=createHash('sha256').update(file).digest('hex');
    const evidence=form.locator('details.statement-evidence');assert.equal(await evidence.evaluate(element=>element.open),false);
-   const facts=async()=>{const result={};for(const table of ['statement_imports','statement_import_rows','journal_entries','journal_lines'])
+   async function facts(){const result={};for(const table of ['statement_imports','statement_import_rows','journal_entries','journal_lines'])
     result[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM crest.'+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;
-    result.audit=(await fixture.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[fixture.business])).rows;return result;};
+    result.audit=(await fixture.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[fixture.business])).rows;return result;}
    async function inspectEvidence(workspace){
     const before=await facts();let requests=0;const observe=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))requests++;};page.on('request',observe);
     try{
@@ -122,6 +156,24 @@ for(const engine of [chromium,webkit]){
    await form.getByRole('button',{name:'Stage reviewed statement'}).click();
    await expect(form.getByRole('status')).toContainText('The save could not be confirmed');
    assert.equal(recorded,200);
+   const originalReference=form.locator('details.statement-original-reference');
+   assert.equal(await originalReference.evaluate(node=>node.open),false);
+   assert(await form.evaluate(node=>{
+    const check=[...node.querySelectorAll('button')].find(button=>button.textContent==='Check original save');
+    const review=node.querySelector('.statement-comparison');
+    return Boolean(check&&review&&(check.compareDocumentPosition(review)&Node.DOCUMENT_POSITION_FOLLOWING));
+   }),'The original-save check must precede the long retained review');
+   const beforeReference=await facts();let referenceRequests=0;
+   const observeReference=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))referenceRequests++;};
+   page.on('request',observeReference);
+   try{
+    const pending=await page.evaluate(key=>JSON.parse(sessionStorage.getItem(key)),'crest.statement-stage.original.v1.'+fixture.business);
+    await originalReference.locator('summary').press('Enter');
+    await expect(originalReference.getByText([pending.operationId,pending.recoveryEpoch,pending.statementId].join('.'),{exact:true})).toBeVisible();
+    await originalReference.locator('summary').press('Enter');
+    await expect(originalReference.locator('summary')).toBeFocused();
+    assert.equal(referenceRequests,0);assert.deepEqual(await facts(),beforeReference);
+   }finally{page.off('request',observeReference);}
    const uncertainViewport=page.viewportSize();
    try{
     for(const width of [390,1440]){
@@ -204,6 +256,27 @@ for(const engine of [chromium,webkit]){
    assert.deepEqual([statement.id,statement.operationId,statement.fileSha256,statement.statementDifferenceCents],
     [saved.statementId,saved.operationId,hash,'-50']);
    assert(!JSON.stringify(statement).includes(file.toString()));
+   // Produce an empty eligible-account view through the genuine reviewed command,
+   // after retaining all original statement/export checks above.
+   await page.goto(fixture.origin+'/settings/accounts/channels');
+   const channels=page.getByRole('region',{name:'Money channel reviews',exact:true});
+   await channels.getByRole('button',{name:'Load channels',exact:true}).click();
+   await channels.getByRole('button',{name:/^Fictional checking Account 1000/}).click();
+   await channels.getByRole('button',{name:'Edit review',exact:true}).click();
+   await channels.getByLabel('Effective from',{exact:true}).fill('2026-02-01');
+   await channels.getByLabel('Review record status',{exact:true}).selectOption('closed');
+   await channels.getByLabel('Reason for review',{exact:true}).fill('Fictional review closed this money channel');
+   await channels.getByRole('button',{name:'Save channel review',exact:true}).click();
+   await expect(channels.getByRole('status')).toHaveText('Channel review saved.');
+   await load();
+   const empty=form.getByText('No active dedicated bank or wallet account is available.',{exact:true});
+   await expect(empty).toBeVisible();await expect(form.getByLabel('Dedicated money account')).toHaveCount(0);
+   await expect(form.getByText('Loading dedicated money accounts…',{exact:true})).toHaveCount(0);
+   const reviewChannels=form.getByRole('link',{name:'Review money channels',exact:true});
+   await expect(reviewChannels).toHaveAttribute('href','/settings/accounts/channels');
+   await captureChannelState('empty',empty);
+   await reviewChannels.press('Enter');
+   await expect(page.getByRole('region',{name:'Money channel reviews',exact:true})).toBeVisible();
   }finally{
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{

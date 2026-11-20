@@ -162,8 +162,15 @@ export function StatementStaging({context}:{context:FinanceAccountContext}){
   <h3 id="statement-staging-heading">Fictional bank statement staging</h3>
   <p>The app retains the rows you enter, the review notes and the file checksum. Keep the original file separately.
    Staging creates no ledger entries or reconciliation approval.</p>
-  {channelError&&<p role="alert">Dedicated accounts could not be loaded.</p>}
-  {channels?.length===0&&<p>No active dedicated bank or wallet account is available.</p>}
+  {channels===null&&!channelError&&<p aria-live="polite">Loading dedicated money accounts…</p>}
+  {channelError&&<div>
+   <p role="alert">Dedicated accounts could not be loaded.</p>
+   <p><a href="/settings/accounts">Check accounting access</a></p>
+  </div>}
+  {channels?.length===0&&<div>
+   <p>No active dedicated bank or wallet account is available.</p>
+   {context.moneyChannels&&<p><a href="/settings/accounts/channels">Review money channels</a></p>}
+  </div>}
   {context.writeState!=='ready'&&<p>Statement staging is paused.</p>}
   {saved&&<div className={styles.openingGroup}>
    <p ref={savedStatus} role="status" tabIndex={-1}>Statement staged. {saved.receipt.rowCount} rows retained with a statement difference of {dollars(saved.receipt.statementDifferenceCents)}.</p>
@@ -199,6 +206,13 @@ export function StatementStaging({context}:{context:FinanceAccountContext}){
    <textarea id="statement-rows" name="rows" aria-describedby="statement-rows-help" rows={5} maxLength={10000}/>
    <button type="submit" disabled={busy}>Review statement</button>
   </form></details>}
+  {pending&&<div className={styles.openingGroup}>
+   {notice&&<p role="status">{notice}</p>}
+   <button type="button" disabled={busy} onClick={()=>void lookup(pending,true)}>Check original save</button>
+   <details className="statement-evidence statement-original-reference"><summary>Save reference</summary>
+    <p><code>{displayReference(pending)}</code></p>
+   </details>
+  </div>}
   {preview&&values&&<div className={styles.openingGroup}>
    <StatementComparison values={{...preview.draft,rowCount:preview.draft.rows.length,
      signedRowsCents:String(values.rowTotal),statementDifferenceCents:String(values.difference)}} format={dollars}/>
@@ -210,10 +224,6 @@ export function StatementStaging({context}:{context:FinanceAccountContext}){
     onClick={()=>void save()}>{pending?'Retry original save':'Stage reviewed statement'}</button>
    {!pending&&<button type="button" className="secondary" disabled={busy} onClick={()=>setPreview(null)}>Discard review</button>}
   </div>}
-  {pending&&<div className={styles.openingGroup}>
-   <p>Save reference <code>{displayReference(pending)}</code></p>
-   <button type="button" disabled={busy} onClick={()=>void lookup(pending,true)}>Check original save</button>
-  </div>}
   {!pending&&!preview&&<details className="statement-details">
    <summary>Check a saved statement</summary>
    <form className={styles.openingGroup} onSubmit={lookupSaved}>
@@ -222,6 +232,6 @@ export function StatementStaging({context}:{context:FinanceAccountContext}){
     <button type="submit" className="secondary" disabled={busy}>Check saved statement</button>
    </form>
   </details>}
-  {notice&&<p role="status">{notice}</p>}
+  {!pending&&notice&&<p role="status">{notice}</p>}
  </section>;
 }

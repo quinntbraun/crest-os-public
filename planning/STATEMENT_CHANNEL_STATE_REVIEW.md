@@ -1,0 +1,20 @@
+# Statement account loading, failure and empty states
+
+Statement setup now announces its real account read with polite live text. A failed read offers **Check accounting access**, which uses the existing accounting destination and fresh access check. An empty eligible-account list offers **Review money channels** only when that capability exists. The form is still unavailable until an eligible account is loaded. Pending original-save recovery remains available independently of the account read.
+
+Only rendering in `statement-staging.tsx` changes. No automatic retry, artificial progress, delay, new request, endpoint, permission, financial rule, schema or storage is introduced. The earlier original-outcome priority and collapsed reference remain intact.
+
+Application change: `cb35c2d3fd3eeb6bb7dccacb4f640b78b8a84e9f`. Final native test source: `1e88e88111199ee774df051eeb7c95885f6fd103`.
+
+- Production build, post-build type checking and full lint pass on the application change. The later test-only observation correction passes focused lint. Final aggregate checks are recorded separately with the history-test correction.
+- Both complete original Chromium/WebKit statement journeys pass. Loading is inspected while the genuine authenticated account request is held, then an actual request abort produces failure. The recovery link reloads accounting and the normal workflow continues. No replacement API response is supplied.
+- The empty state is produced after all original statement/export checks, by using the genuine money-channel editor to record a dated closure with a reason. No direct database rewrite or fabricated empty response is used. Its link opens the actual channel workspace.
+- Three new views at 360/390/1440 in both engines give **18 ordinary viewport observations**. Each checks overflow and whole-page accessibility, with zero additional business requests during inspection and exact before/after statement, journal and business-audit rows. The explicit channel review is a separate intentional business command; its history is not claimed unchanged across that command.
+- The same frozen invocation also passes the separate **48 actual Chromium tab-zoom observations** for entry, balanced/difference review, uncertain save, saved balances and evidence. These are a different scope from the 18 new views, not 66 zoom observations or all S06 categories.
+- Whole invocation: **3/3 TAP parents**, zero failures/skips/cancellations, unchanged source and owned browser/profile/fixture/database cleanup. **98 fresh hashed PNGs** are retained: 74 original-workflow captures including the new states, plus 24 zoom viewports. Current Chromium phone loading/failure and WebKit desktop empty views were visually reviewed.
+
+Proof: `.local/design-statement-channel-states-final/{result.json,proof.json,run.log,captures/manifest.json}`. The zoom case and report are retained in `.local/design-statement-channel-states-zoom-final/`; archived case SHA-256 is `5a5e7aa91d9d169b5c06f9de24c172fe0c65ad24f547fb99573e20c4a2380abe`.
+
+The initial complete invocation on `cb35c2d` is retained separately: **2/3 parents** passed, stable source/owned cleanup, 64 fresh captures. WebKit's full journey and the zoom case passed; Chromium counted one request during loading inspection. The original test could start counting before its held read had actually begun. The correction requires the actual route handler to be entered before inspection; it keeps the zero-additional-request assertion, original deadlines and all workflows. The identity of the first counted request was not retained, so do not turn this into a diagnosis of provider/session failures or relabel that run passing.
+
+This extends S06/R27/D15 evidence. Remaining stale/denied variants, other workflows' eight-state inventory, stable loading/motion review, other financial/history zoom, exact new-source release, installation and physical iPhone acceptance remain. All original 70 audit requirements and false final sign-offs remain; implementation counts stay 60 main, 8 partial, 2 open.
