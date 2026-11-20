@@ -1,5 +1,29 @@
 # Design-audit completion register
 
+## Current remaining work
+
+This checklist preserves the original70-group scope in DESIGN_AUDIT_COVERAGE.json. Main changes addressed:60; partial:8; open:2. No final sign-off is claimed.
+
+| Group | Remaining completion work |
+|---|---|
+| S01 | Pass all exact-candidate release, populated-upgrade, recovery and worker checks; compare the installed build. |
+| S03 | Finish completion/scheduling contextual returns at360–430px: reachable main action and exact list-position return. |
+| S04 | Verify the batched task/recovery hierarchy across configured states; the191-file/773-button source inventory alone is insufficient. |
+| S06 | Finish the loaded/empty/loading/validation/denied/stale/uncertain-save/success matrix for every important workflow. |
+| S08 | Resolve the approved small navigation mark and delivered-document consistency; original sign-in crest is verified separately. |
+| S10 | Finish real browser zoom for configured financial/history/long-value states and matching device checks. |
+| S11 | Finish workflow-specific stable loading,120–180ms controls,180–240ms panels and quiet confirmed-save/focus feedback. |
+| S12 | Resolve mapping recording/actor projection and remaining agreement/approval/integration history, including privacy and long/stale/zoom variants. |
+| S13 | Verify planner date/view, contextual returns and sign-out/private clearing on the exact accepted release. |
+| S14 | Physical iPhone keyboard, safe area, camera/download, zoom and reduced-motion acceptance. |
+
+Latest batch:09ce1df adds four record-reference disclosures;24 responsive checks pass, while the full original run remains80/82 (7/8 parents) at WebKit reported-vehicle access.93bdf67 applies15 recovery-priority edits across13 files; f78ea0a corrects two finance report test captures. Final build/types/lint/9125 units pass. One old raw-HTML disabled-button matcher was made styling-independent while preserving the disabled-submit requirement. Controlled actual-byte observer checks pass4 cells, including unchanged503 status; this is not genuine full financial acceptance.
+
+Publishedb651922:20/22 main jobs pass; both ancillary workflows pass. Payment recovery fails on a retired response body; Foundation's prerequisite gate and missing service artifact remain failed. New candidate verification is required. Earlier failures remain retained separately. Real business use is not ready; V1 estimate roughly80%, low confidence. Context sufficient; $0 newly spent. No merge/install/real data/activation.
+
+
+Earlier retained checkpoint (its own source/time):
+
 November20 current checkpoint: original Crest sign-in sourcea0aaddb centers the unchanged supplied PNG at144–192px ordinary size, with responsive enlarged-text cap and preserved authentication controls/card width. SHAfd5b0433/1024117bytes unchanged. Complete original Chromium/WebKit HTTPS sign-in journeys26/26 pass, zero failures/skips/cancellations, stable tracked source and owned cleanup; original MFA/device/deadline/recovery/revocation/privacy assertions remain. Four state/six width/two-engine capture matrix and original text resize pass;62 fresh hashed PNGs/two served-font reports retained; phone form visually reviewed and intended local custom font glyphs confirmed. Build/types/full lint/full9125 units pass. No live local process. Navigation small-size mark and delivered documents remain separate S08 work; no replacement logo or actual-zoom/iPhone claim. Latest supplier/tax4/4/30 layouts and opening2/2/12 layouts remain separate verified scopes; navigation10/11 and original7/8 failures remain unresolved. Published3aab/tree933d is older and terminal failed. Next prepare a strictly scanned coherent draft with exact tree/sole-parent/nonforce guards for fresh full release checks; no old success transfers. Audit60 main/8partial/2open and all70 original bodies/hash/false sign-offs retained. Full remaining original context/action/state/brand/zoom/motion/metadata and release/upgrade/recovery/worker/installed/owner/iPhone gates remain. V1 coding roughly80% low confidence; real use not ready; context sufficient; $0 newly spent. No merge/install/real data/activation/spending.
 
 Earlier retained checkpoint (its own source/time):

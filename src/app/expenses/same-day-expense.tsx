@@ -161,12 +161,12 @@ export function SameDayExpense({businessId,expenseId,onPosted}:{businessId:strin
       {receipt&&<span className="expense-posting-state">Posted</span>}
     </div>
     <p className="expense-posting-status" ref={status} tabIndex={-1} role="status">{message}</p>
-    {!receipt&&<button type="button" className="secondary" disabled={busy} onClick={()=>load()}>
+    {!receipt&&<button type="button" className={pending?undefined:'secondary'} disabled={busy} onClick={()=>load()}>
       {pending?'Check original posting':options?'Reload review':'Load accounting review'}</button>}
     {pending&&retirable&&<form onSubmit={event=>{event.preventDefault();load(retireReason.trim());}}>
       <label>Why close this unrecorded attempt?<input required value={retireReason} maxLength={1000}
         onChange={event=>setRetireReason(event.target.value)}/></label>
-      <button disabled={busy||!retireReason.trim()}>Close original attempt</button>
+      <button className="secondary" disabled={busy||!retireReason.trim()}>Close original attempt</button>
     </form>}
     {receipt&&<><p>${expenseDollars(receipt.grossCents)} posted for {receipt.paidOn}</p>
       <button type="button" className="secondary" onClick={download}>Download posted expense CSV</button></>}

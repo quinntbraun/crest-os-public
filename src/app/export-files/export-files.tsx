@@ -41,7 +41,7 @@ export function SourceExportControls({view,action,editReason,selectJob,statusRef
     <label htmlFor="export-close-reason">Reason for closing this interrupted request</label>
     <textarea id="export-close-reason" name="export-close-reason" rows={3} maxLength={4000} value={view.reason} disabled={view.busy} onChange={event=>editReason(event.target.value)} aria-describedby="export-close-help" required/>
     <p id="export-close-help">{[...view.reason].length}/2000 characters. Review the original status first. Closing records your decision and prevents a late request from starting. It does not cancel an export already recorded. Your reason is kept in the audit history.</p>
-    <button type="submit" disabled={!view.canRetire}>Close this interrupted request</button>
+    <button type="submit" className="secondary" disabled={!view.canRetire}>Close this interrupted request</button>
    </form>
   </section>}
   {view.jobId&&view.phase!=='pending'&&<div className="export-selection">

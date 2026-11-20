@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 // Chromium can retire a page Response body during the real controller refresh.
+// The same boundary covers the two explicitly allowed finance report reads.
 // Forward exactly one genuine request and buffer its actual server bytes before
 // returning them unchanged to the browser. No Auth/result/persistence mock,
 // second write, redirect or automatic retry is introduced.
 export async function captureQuoteResponse(page,path,{timeoutMs=30000,beforeForward,matchesRequest}={}){
- if(!/^\/api\/business\/(?:quotes\/[a-z/]+|settings|scheduling\/(?:book|cancel|history))$/.test(path))throw Error('QUOTE_CAPTURE_PATH_REQUIRED');
+ if(!/^\/api\/business\/(?:quotes\/[a-z/]+|settings|scheduling\/(?:book|cancel|history)|finance-accounts\/(?:customer-funds-report|receivable-aging))$/.test(path))throw Error('QUOTE_CAPTURE_PATH_REQUIRED');
  if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>30000)throw Error('QUOTE_CAPTURE_TIMEOUT_REQUIRED');
  if(beforeForward!==undefined&&typeof beforeForward!=='function')throw Error('QUOTE_CAPTURE_PACING_REQUIRED');
  if(matchesRequest!==undefined&&typeof matchesRequest!=='function')throw Error('QUOTE_CAPTURE_MATCH_REQUIRED');

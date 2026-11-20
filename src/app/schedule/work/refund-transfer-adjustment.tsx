@@ -201,7 +201,7 @@ export function RefundTransferAdjustment({businessId,customerId}:{businessId:str
     <section aria-label={title} aria-busy={busy}>
       <p className="field-help">Use this when your bank or wallet returns a refund to you, or when a second refund attempt settles.</p>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
-      {pending?<button type="button" className="secondary" disabled={busy} onClick={()=>recover()}>Check original refund transfer</button>
+      {pending?<button type="button" disabled={busy} onClick={()=>recover()}>Check original refund transfer</button>
         :<form onSubmit={event=>{event.preventDefault();load();}}>
           <label>What happened?<select required disabled={busy} value={kind} onChange={event=>{
             setKind(event.target.value as RefundTransferKind|'');resetDraft();

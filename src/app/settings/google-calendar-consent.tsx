@@ -251,7 +251,7 @@ function StagedCalendarConsent({ context, saved, simulated, onConsentSaved }: { 
         }}>Change shared details</button>
       </div>
     </form>}
-    {state.step === 'pending' && <button type="button" className="secondary" disabled={busy} onClick={check}>Check save status</button>}
+    {state.step === 'pending' && <button type="button" disabled={busy} onClick={check}>Check save status</button>}
   </section>;
 }
 

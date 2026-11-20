@@ -12,6 +12,7 @@ import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 import {reviewAccountingReportWorkspace} from '../support/accounting-report-workspace.mjs';
 import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
+import {captureDuringAction} from '../support/quote-browser-response.mjs';
 
 const directReceipts=true;
 const invoiceOutstanding=true;
@@ -590,9 +591,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await page.route('**/api/business/finance-accounts/customer-funds-report',route=>route.abort(),{times:1});
         await load.press('Enter');
         await expect(report.getByRole('status')).toContainText('Crest could not verify customer funds.');
-        const fundsSnapshot=page.waitForResponse(response=>response.url().endsWith('/api/business/finance-accounts/customer-funds-report'));
-        await load.press('Enter');
-        const fundsReply=await fundsSnapshot;assert.equal(fundsReply.status(),200);const fundsMetadata=await fundsReply.json();
+        const {status:fundsStatus,body:fundsMetadata}=await captureDuringAction(page,'/api/business/finance-accounts/customer-funds-report',()=>load.press('Enter'),{timeoutMs:20000});
+        assert.equal(fundsStatus,200);
         await expect(report.getByRole('status')).toHaveText('Customer funds matched the ledger.');
         await reviewAccountingReportWorkspace(page,report,{label:'funds-'+name,values:[['Total held','$10.00']]});
         await expect(report.locator('time[title]')).toHaveAttribute('datetime',fundsMetadata.observedAt);
@@ -818,9 +818,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          await page.goto(fixture.origin+'/settings/accounts');
          await page.getByRole('group',{name:'Choose a report',exact:true}).getByRole('button',{name:'Receivables',exact:true}).press('Enter');
          const aging=page.getByRole('region',{name:'Outstanding invoices by due date',exact:true});
-         const agingSnapshot=page.waitForResponse(response=>response.url().endsWith('/api/business/finance-accounts/receivable-aging'));
-         await aging.getByRole('button',{name:'Load outstanding invoices',exact:true}).press('Enter');
-         const agingReply=await agingSnapshot;assert.equal(agingReply.status(),200);const agingMetadata=await agingReply.json();
+         const {status:agingStatus,body:agingMetadata}=await captureDuringAction(page,'/api/business/finance-accounts/receivable-aging',()=>aging.getByRole('button',{name:'Load outstanding invoices',exact:true}).press('Enter'),{timeoutMs:20000});
+         assert.equal(agingStatus,200);
          await expect(aging.getByRole('status')).toHaveText('Outstanding invoices loaded.');
          await reviewAccountingReportWorkspace(page,aging,{label:'receivables-'+name,values:[['Total outstanding','$149.00']]});
          const agingDownload=page.waitForEvent('download');await aging.getByRole('button',{name:'Download listed invoices (CSV)',exact:true}).press('Enter');const agingCsv=await readFile(await(await agingDownload).path(),'utf8');assert(agingCsv.includes(agingMetadata.observedAt)&&agingCsv.includes('opening receivables and legacy balances excluded')&&agingCsv.includes('14900'));

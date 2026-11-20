@@ -227,7 +227,7 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
       </div>
       </div>
     </>}
-    {view.phase==='pending'&&<><p className="field-help">Keep the original save reference until the outcome is confirmed. No retry runs automatically.</p>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check customer save status</button>{view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('retry')}>Retry original customer change</button>}</>}
+    {view.phase==='pending'&&<><p className="field-help">Keep the original save reference until the outcome is confirmed. No retry runs automatically.</p><button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check customer save status</button>{view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('retry')}>Retry original customer change</button>}{view.reference&&<details className="save-review-reference"><summary>Original save reference</summary><p className="save-reference"><code>{view.reference}</code></p></details>}</>}
     {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current customers</button>}
 <nav aria-label="Customer tools" className="customer-directory-tools">
  {view.phase==='ready'&&<a href="/customers/import-review">Review a contact CSV</a>}

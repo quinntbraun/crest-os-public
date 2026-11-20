@@ -175,7 +175,7 @@ export function ExcessReturn({businessId, customerId}: {businessId: string; cust
         }}/></label>
         <button type="submit" className="secondary" disabled={busy}>Load eligible payments</button>
       </form>}
-      {pending && <button type="button" className="secondary" disabled={busy} onClick={() => recover()}>Check original return</button>}
+      {pending && <button type="button" disabled={busy} onClick={() => recover()}>Check original return</button>}
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
       {pending && closable && <form onSubmit={event => { event.preventDefault(); if (financeAccountReviewReason(closeReason.trim())) recover(closeReason.trim()); }}>
         <label>Reason for closing this attempt<textarea required maxLength={1000} rows={2} value={closeReason} disabled={busy}

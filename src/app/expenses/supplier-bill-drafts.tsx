@@ -179,7 +179,7 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
    <button type="button" className="secondary supplier-bill-load" disabled={busy||posting||!!pending} onClick={()=>void load()}>Load saved supplier bills</button>
    <p role="status">{status}</p>
    {pending&&<div aria-label="Unconfirmed supplier bill save">
-    <button type="button" className="secondary" disabled={busy} onClick={()=>void checkSave()}>Check original supplier bill save</button>
+    <button type="button" disabled={busy} onClick={()=>void checkSave()}>Check original supplier bill save</button>
     <button type="button" className="secondary" disabled={busy||context.writeState!=='ready'} onClick={()=>void send(pending)}>Retry same supplier bill save</button>
    </div>}
    <div className="supplier-draft-workbench" data-directory={rows!==null} data-view={directoryOpen?'directory':'record'}>
