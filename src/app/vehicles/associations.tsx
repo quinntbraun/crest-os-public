@@ -70,7 +70,7 @@ export function AssociationPanel({businessId,vehicleId,linkCustomerId=null,onEdi
      <p>{source.relationship==='owner'?'Owner':'Keeper'}{source.is_billing?' · Billing contact':''} · {state}</p>
      <details className="vehicle-link-options"><summary>Link actions for {customer.label}</summary><div className="vehicle-actions">
     <button className="secondary" type="button" disabled={view.busy} onClick={()=>switchView(()=>void current.current?.inspect(source.id))}>View link history for {customer.label}</button>
-    {source.valid_to===null&&<><button className="secondary" type="button" disabled={view.busy||view.writesPaused} onClick={()=>switchView(()=>{focusStart.current=true;void current.current?.begin('close',source.id);})}>End link for {customer.label}</button><button type="button" disabled={view.busy||view.writesPaused} onClick={()=>switchView(()=>{focusStart.current=true;void current.current?.begin('transfer',source.id);})}>Transfer link for {customer.label}</button></>}
+    {source.valid_to===null&&<><button className="secondary" type="button" disabled={view.busy||view.writesPaused} onClick={()=>switchView(()=>{focusStart.current=true;void current.current?.begin('close',source.id);})}>End link for {customer.label}</button><button className="secondary" type="button" disabled={view.busy||view.writesPaused} onClick={()=>switchView(()=>{focusStart.current=true;void current.current?.begin('transfer',source.id);})}>Transfer link for {customer.label}</button></>}
      </div></details>
     </li>;
    })}</ul>

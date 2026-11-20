@@ -15,8 +15,15 @@ export function MappingApprovalHistory({history,purpose,categories,heading,disab
   {!first?<p>No approved versions for this {categories?'category':'purpose'}.</p>:<>
    <p className="mapping-history-coverage">{first.version===last!.version?'Version '+first.version+' loaded.':'Versions '+first.version+' through '+last!.version+' loaded.'} {history.hasMore?'Older approvals have not been loaded.':'This includes the first recorded approval.'} {embedded?'Reload approval settings':'Reload history'} to check for newer versions.</p>
    <ol className="mapping-history-list mapping-period-timeline">{financeMappingPeriods(history.rows).map(({row,effectiveFrom,effectiveUntil})=><li key={row.id} data-closed={row.accountId===null}>
-    <details><summary><strong>Version {row.version} · {row.accountCode===null?'Closed':`Account ${row.accountCode}`}</strong><span>From {dateLabel(effectiveFrom)}{effectiveUntil?' · Before '+dateLabel(effectiveUntil):' · Newest loaded version'}</span>{row.accountId===null&&<span className="mapping-period-closed">No posting account assigned by this version</span>}</summary>
-     <div className="mapping-period-reason"><h3>Approval reason</h3><p>{row.reason}</p>{effectiveUntil&&<p className="field-help">The next version starts {dateLabel(effectiveUntil)}. This period excludes that date.</p>}</div>
+    <details><summary><strong>Version {row.version} · {row.accountCode===null?'Closed':`Account ${row.accountCode}`}</strong><span>From <time dateTime={effectiveFrom}>{dateLabel(effectiveFrom)}</time>{effectiveUntil?<> · Before <time dateTime={effectiveUntil}>{dateLabel(effectiveUntil)}</time></>:' · Newest loaded version'}</span>{row.accountId===null&&<span className="mapping-period-closed">No posting account assigned by this version</span>}</summary>
+     <div className="mapping-period-reason"><h3>Approval reason</h3><p>{row.reason}</p>{effectiveUntil&&<p className="field-help">The next version starts {dateLabel(effectiveUntil)}. This period excludes that date.</p>}
+      <p className="field-help">These dates show when the rule applies. Recording time and the approving person are not included in this history view.</p>
+      <details className="mapping-period-evidence"><summary>Exact approval details</summary><dl>
+       <dt>Effective from</dt><dd><time dateTime={effectiveFrom}>{effectiveFrom}</time></dd>
+       <dt>Effective until (exclusive)</dt><dd>{effectiveUntil?<time dateTime={effectiveUntil}>{effectiveUntil}</time>:'No later version in loaded history'}</dd>
+       <dt>Approval reference</dt><dd>{row.id}</dd><dt>Audit event reference</dt><dd>{row.auditEventId}</dd>
+      </dl></details>
+     </div>
     </details>
    </li>)}</ol>
    <p className="mapping-history-boundary">{history.hasMore?'Earlier periods are not shown. Load older approvals before drawing conclusions about them.':'No earlier mapping approval is recorded before '+dateLabel(last!.effectiveFrom)+' in this loaded history.'}</p>

@@ -17,6 +17,7 @@ import {quoteMoney} from '../../commercial/quote-pricing';
 import {followUpCandidates,followUpWall} from '../leads/follow-up-time';
 import {leadUtc} from '../leads/intake-input';
 import {QuoteDocument} from './quote-document';
+import {QuoteCommercialEvents} from './quote-commercial-events';
 import {PhoneInput} from '../customers/phone-input';
 
 type Props=Readonly<{row:QuoteCommercialRow;dirty:boolean;blocked?:boolean;onLock:(locked:boolean)=>void;onCommitted:(result:QuoteCommercialCommitted)=>Promise<void>;onOpenRevision?:(familyId:string,revisionId:string)=>Promise<void>;onFamilyAccepted?:(accepted:boolean|null)=>void}>;
@@ -70,11 +71,7 @@ function QuoteCommercialPanelContent({row,dirty,blocked=false,onLock,onCommitted
    <p className="field-help">Approved <time dateTime={saved.approval.reviewedAt}>{new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:row.revision.timezone}).format(new Date(saved.approval.reviewedAt))}</time></p>
    <details><summary>Exact retained customer content</summary><QuoteDocument quote={saved.approval.customerRepresentation} stage={saved.state==='Accepted'?'accepted':saved.state==='Sent'?'sent':saved.state==='Superseded'?'superseded':'approved'}/></details>
   </div>}
-  {saved?.approval&&<section className="quote-commercial-events" aria-labelledby="quote-commercial-events-heading"><h4 id="quote-commercial-events-heading">Key saved events</h4><p className="field-help">Approval prepares the document. Actual sharing and customer confirmation are recorded separately. Latest sharing is shown here; the saved quote history retains earlier versions.</p><ol>
-   <li><strong>Document approved</strong><time dateTime={saved.approval.reviewedAt}>{saved.approval.reviewedAt}</time></li>
-   {saved.latestSend&&<li><strong>Last actual sharing</strong><time dateTime={saved.latestSend.confirmedAt}>{saved.latestSend.confirmedAt}</time><p>{saved.latestSend.channel.replace('_',' ')} · {saved.latestSend.recipientSnapshot.displayName}</p>{saved.latestSend.evidenceNote&&<details><summary>Sharing evidence</summary><p className="service-scope">{saved.latestSend.evidenceNote}</p></details>}</li>}
-   {saved.acceptance&&<><li><strong>Customer confirmation</strong><time dateTime={saved.acceptance.confirmationEffectiveAt}>{saved.acceptance.confirmationEffectiveAt}</time></li><li><strong>Recorded in Crest</strong><time dateTime={saved.acceptance.recordedAt}>{saved.acceptance.recordedAt}</time></li></>}
-  </ol></section>}
+  {saved?.approval&&<QuoteCommercialEvents saved={saved} timezone={row.revision.timezone}/>}
   {saved?.approval&&!acceptedOther&&(saved.state==='Ready for Review'||saved.state==='Sent')&&<details><summary>Record how this quote was shared</summary><form onSubmit={event=>{event.preventDefault();if(!view.canSend||unavailable||!saved.approval)return;void current.current?.send(row,{channel:form.sendChannel as QuoteConfirmationChannel,recipientSnapshot:{displayName:form.name,phone:optional(form.phone),email:optional(form.email)},evidenceNote:optional(form.sendNote),confirmedActualSharing:true,presentationHash:saved.approval.presentationHash,replacesRevisionId:activeOther});}}>
    <p>Record a quote you actually shared outside Crest OS. This button does not send a message. Sharing confirms the exact retained approved content above.</p>
    {activeOther&&<p className="notice">This is a replacement offer. Recording its actual sharing supersedes the earlier active shared quote. Until this sharing is recorded, the earlier offer remains available for customer acceptance.</p>}

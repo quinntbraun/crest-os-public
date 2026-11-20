@@ -43,7 +43,13 @@ for(const destination of destinations)test(destination.id+' setup typography ref
    const navigation=await page.evaluate(()=>{
     const nav=document.querySelector('.workspace-destinations');
     if(!nav)return null;
-    return {fixed:getComputedStyle(nav).position==='fixed',height:nav.getBoundingClientRect().height,clearance:parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--workspace-bottom-clearance')),
+    // A custom property may validly retain calc()/env() until consumed, before
+    // the measuring effect writes pixels. Inspect both actual CSS consumers.
+    const workspace=document.querySelector('.workspace');
+    if(!workspace)throw new Error('The navigation must belong to the workspace');
+    return {fixed:getComputedStyle(nav).position==='fixed',height:nav.getBoundingClientRect().height,
+     clearance:parseFloat(getComputedStyle(workspace).paddingBottom),
+     scrollClearance:parseFloat(getComputedStyle(document.documentElement).scrollPaddingBlockEnd),
      labels:[...nav.querySelectorAll(':scope > a .destination-label')].map(label=>{
       const link=label.closest('a')!.getBoundingClientRect(),range=document.createRange();range.selectNodeContents(label);
       const lines=[...range.getClientRects()];
@@ -53,7 +59,10 @@ for(const destination of destinations)test(destination.id+' setup typography ref
    if(navigation){
     expect(navigation.labels).toHaveLength(5);
     expect(navigation.labels.every(Boolean),scope+' destination names stay whole inside their own targets').toBe(true);
-    if(navigation.fixed)expect(navigation.clearance,scope+' reserves the actual navigation height').toBeGreaterThanOrEqual(navigation.height);
+    if(navigation.fixed){
+     expect(navigation.clearance,scope+' reserves the actual navigation height').toBeGreaterThanOrEqual(navigation.height);
+     expect(navigation.scrollClearance,scope+' scroll clearance covers the actual navigation height').toBeGreaterThanOrEqual(navigation.height);
+    }
    }
    if(destination.id==='R01'){
     const welcomeLines=await page.locator('h1').evaluate(heading=>{

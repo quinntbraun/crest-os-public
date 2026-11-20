@@ -14,6 +14,7 @@ export function observeSessionQueries(Client=pg.Client){
   else{
    const row=result?.rows?.[0];
    if(kind==='connection_guard')event.allowed=typeof row?.allowed==='boolean'?row.allowed:null;
+   else if(kind==='provider_live')event.live=typeof row?.live==='boolean'?row.live:null;
    else if(kind==='admission')event.admitted=typeof row?.result==='boolean'?row.result:null;
    else if(kind==='bind')event.bound=typeof row?.result?.id==='string';
    else{
@@ -26,7 +27,8 @@ export function observeSessionQueries(Client=pg.Client){
  function query(...args){
   const raw=typeof args[0]==='string'?args[0]:args[0]?.text,text=typeof raw==='string'?raw.trim():'';
   const match=/^SELECT crest_commands\.(admit_session_request|app_session_snapshot|bind_browser_session)\(/.exec(text);
-  const kind=match?({admit_session_request:'admission',app_session_snapshot:'snapshot',bind_browser_session:'bind'})[match[1]]:text.startsWith('SELECT current_user=$1::name')?'connection_guard':null;
+  const providerLive=text.startsWith("SELECT CASE WHEN current_user='crest_web'")&&text.endsWith('THEN crest_commands.provider_session_is_live($1::uuid,$2::uuid) ELSE false END AS live');
+  const kind=match?({admit_session_request:'admission',app_session_snapshot:'snapshot',bind_browser_session:'bind'})[match[1]]:text.startsWith('SELECT current_user=$1::name')?'connection_guard':providerLive?'provider_live':null;
   if(!kind)return Reflect.apply(original,this,args);
   callsObserved++;const at=Date.now(),started=performance.now();
   try{const result=Reflect.apply(original,this,args);if(result&&typeof result.then==='function')void result.then(value=>{record(kind,at,started,value);},error=>{record(kind,at,started,undefined,error);});return result;}

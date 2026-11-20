@@ -8,6 +8,7 @@ import {createPendingQuoteAmendmentStore} from '../../client/pending-quote-amend
 import {createPendingQuoteReplacementStore} from '../../client/pending-quote-replacement';
 import type {QuoteCommercialCommitted} from '../../commercial/quote-commercial-contract';
 import {QuoteCommercialPanel} from './quote-commercial-panel';
+import {QuoteHistoryEvents} from './quote-history-events';
 import {QuoteReplacementPanel} from './quote-replacement-panel';
 import type {QuoteCommitted} from '../../commercial/quote-storage-contract';
 import type {QuoteReviewCommitted} from '../../commercial/quote-review-contract';
@@ -178,7 +179,7 @@ export function QuoteScreen({initialCustomerId=null}:{initialCustomerId?:string|
     {commercialAvailable&&<div id="quote-replacement"><QuoteReplacementPanel key={'replacement:'+commercialAvailable.revision.id+':'+commercialAvailable.revision.version} row={commercialAvailable} dirty={dirty} blocked={reviewWorking||commercialWorking} onLock={onReplacementLock} onCommitted={onReplacementCommitted}/></div>}
     {view.history&&<section aria-labelledby="quote-history-heading"><h3 id="quote-history-heading">Saved quote history</h3>
      {view.selected&&<QuoteRecordDownload row={view.selected} disabled={view.busy||dirty||quoteWorking}/>}
-     <ol className="customer-history">{view.history.history.map(event=><li key={event.eventId}><strong>Version {event.revision} · {event.action}</strong><p><time dateTime={event.at}>{event.at}</time></p><details><summary>Customer preview at this version</summary><QuoteDocument quote={event.after.customer_safe_snapshot} stage={event.action==='approve'?'approved':event.after.state==='Sent'?'sent':event.after.state==='Accepted'?'accepted':event.after.state==='Superseded'?'superseded':event.after.state==='Ready for Review'?'review':'draft'}/></details></li>)}</ol>{view.history.hasMore&&<button type="button" className="secondary" disabled={view.busy||quoteWorking} onClick={()=>void current.current?.moreHistory()}>Next quote history page</button>}</section>}
+     <QuoteHistoryEvents events={view.history.history}/>{view.history.hasMore&&<button type="button" className="secondary" disabled={view.busy||quoteWorking} onClick={()=>void current.current?.moreHistory()}>Next quote history page</button>}</section>}
     {!view.history&&view.selected&&<QuoteRecordDownload row={view.selected} disabled={view.busy||dirty||quoteWorking}/>}
    </div>
   </section>:<section className="service-choice quote-unselected"><h2>Open a quote</h2><p>Choose a saved quote to review its price, status and history.</p></section>}</div>}

@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-20T09:01:59.124Z",
+  "assessedAt": "2026-11-20T11:02:34.853Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "abdca4aa52f2ec9a17f7b20af15ad81b2654175a",
-    "publishedCommit": "6da22e5b3986ca0668fee80912ad55ec36ed55fd",
-    "publishedTree": "1184a1e32b33df531dbea3ba9762fd2e0898ed23",
-    "localTree": "4a80a1d92a09fe2ce97afef922be4ea967d83dca"
+    "localCommit": "672c26712fa403bf05188880b1a3efeb421c7715",
+    "publishedCommit": "f3ea4bc219cd0639cb3897b81904930bc11ac0ee",
+    "publishedTree": "da409e0d6db249b224566cd121675e48b552395b",
+    "localTree": "29dd3da1f19b27b627d3ea7c06d7d36e6dea169f"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -44,7 +44,7 @@
       "title": "P1 · One visual system, delivered consistently",
       "requirements": "The installed logged-out preview still uses a large dark car hero and a different shell from the newer captured build. First align the version being evaluated and delivered. Then use shared page headers, toolbars, record summaries, inspectors, notices and confirmations throughout.\n\nFinish standard: The same destination and state should have the same hierarchy on laptop and phone; release identity must be verifiable.",
       "implementationStatus": "open",
-      "implementedOrPresent": "Older published6da and tested merge4a778e4 have the same tree and complete successful CI, retained recovery/isolated document-worker evidence and a checksum-verified candidate archive. Later local design changes are not in that accepted tree; matching installed states have not been compared.",
+      "implementedOrPresent": "A coherent newer draftf3ea4bc/tree da409e matches verified local69b9d66 and is undergoing exact-source CI. Older6da/merge4a passed complete checks, retained recovery and isolated document workers; its candidate archive/input metadata checksums are verified. Neither current installed comparison nor final new-source acceptance is established. Publishedf3ea/tree da409e has now passed all three workflows and all22 main jobs, including Foundation136204373972. Exact tested merge8b54630 retains the same tree; registered frozen52/53 recovery7/7, isolated supplier2/2 and four-format receipt2/2 succeed. Later local history/navigation/action changes remain separate; no matching installation or final owner/device acceptance is claimed.",
       "remainingWork": "Deliver an accepted release matching the final local design source, preserve the populated upgrade and compare installed states.",
       "evidence": [
         {
@@ -53,7 +53,11 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "fd3fee22ba66112a05320f162288417a773050582c389d9d4b81bd98dc4a4de7"
+          "sha256": "cc5174d3c18826dedfb634c0f857bca0d4b3ede4d00783b876991133fe2b92d6"
+        },
+        {
+          "path": "planning/QUOTE_VERSION_HISTORY_DESIGN.md",
+          "sha256": "52c6671a91c12fc88e4aa301069e20a1ea915f617c70b6406c44811f8fc643ba"
         }
       ],
       "verification": {
@@ -73,7 +77,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "planning/DESKTOP_COMPOSITION_RECONCILIATION.md",
@@ -180,12 +184,12 @@
       "title": "P1 · Phone record detail should replace the directory",
       "requirements": "Long quote and completion captures show how a desktop composition becomes a long stacked phone document. Opening a record should put the record first and preserve the list for a clean return.\n\nFinish standard: At 360–430 px, open a selected record, reach its main action, return to the exact list position and continue without re-searching.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Focused phone records cover directories, quotes, leads, expenses and several accounting/travel tasks. Final configured task-entry matrix on3a3e069 passes2/2 with168 zero-finding observations across seven guides, six widths and two text sizes in both engines. Actual-container columns, readable wrapping actions and balanced headings preserve authorization, destinations and business audit history; the55-file/18-group CI partition now includes this matrix while retaining original requirements. Exact quote window position and actual origin focus are now captured/restored without persistence or business requests. Complete original editor file2/2 parents/24 TAP tests passes on47d9bad at360/390/430 with unobscured focus, preserved dirty/query state and canceled selection checks;34 fresh artifacts retained. Initial6/8 full matrix remains separately failed/scoped, not a final8/8.",
+      "implementedOrPresent": "Focused phone records cover directories, quotes, leads, expenses and several accounting/travel tasks. Final configured task-entry matrix on3a3e069 passes2/2 with168 zero-finding observations across seven guides, six widths and two text sizes in both engines. Actual-container columns, readable wrapping actions and balanced headings preserve authorization, destinations and business audit history; the55-file/18-group CI partition now includes this matrix while retaining original requirements. Exact quote window position and actual origin focus are now captured/restored without persistence or business requests. Complete original editor file2/2 parents/24 TAP tests passes on47d9bad at360/390/430 with unobscured focus, preserved dirty/query state and canceled selection checks;34 fresh artifacts retained. Initial6/8 full matrix remains separately failed/scoped, not a final8/8. Shared main/tool navigation now distinguishes neutral hover from the marked current destination. Complete closed/setup suite106/106 on e704c3b passes, including48 route/width/engine navigation combinations and original720 typography observations. Both actual padding/scroll-clearance consumers cover the fixed navigation bar; explicit nested Lead sources/Leads semantics remain. Twelve fresh hashed captures and original98/106 failures retained. Source9b5113f build/types/lint plus final test types/lint pass. Shared-chrome scope only; configured/private/device requirements remain. Source656e1f4 additionally passes genuine six-booking planner/saved-job real Chromium zoom: first8 observations and separate expanded16 at100%/200%, explicitly360/390/430CSS px plus desktop. Exact nonzero390px/200% return restores unobscured focused origin and exact scroll, with preserved date values, zero Back/zoom business requests and unchanged jobs/appointments/reservations/overrides/audit rows. Both case/cluster/profile cleanups and source/case hashes pass. Configured financial/long-history and other original contexts remain; no all-workflow/device acceptance is inferred.",
       "remainingWork": "Reconcile remaining completion/scheduling and other selected-record return contexts against every original S03 requirement, including main-action reachability and exact list position, then complete matching delivered/physical-device acceptance. Scoped quote2/2 does not close the whole group.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -233,15 +237,31 @@
         },
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+          "sha256": "ffcbdc515119a9a929b4389f60b186314838c72d8b08598d7ee225abe45e8e31"
         },
         {
           "path": "tests/integration/quote-draft-editor-browser.test.mjs",
-          "sha256": "cca9228049773aedddfb238e3752459b0cb2fda20063148bd8369e18087dd8fc"
+          "sha256": "2cac13bf24e2074ac6e49a5ee7f576afcf71b2443a909d7e548381d673284ea0"
         },
         {
           "path": "tests/support/quote-directory-return.mjs",
           "sha256": "0e7909b9a1fe944cc292fe1da397197b21ed196441c6063c04d9129145e2412b"
+        },
+        {
+          "path": "planning/NAVIGATION_LOCATION_DESIGN.md",
+          "sha256": "c15823dd8cd62473519b1f91813f17362e6d3618d357c9e08a86ec6013a73112"
+        },
+        {
+          "path": "tests/e2e/navigation-location.spec.ts",
+          "sha256": "a7b1469e9f4aedf7b8b525608c8ddee5f711bcee942396ad4017c7e363fd5c2d"
+        },
+        {
+          "path": "tests/e2e/typography.spec.ts",
+          "sha256": "389f036776e35820afcdd2a4ea487621c1d4f9e1e5b2fc359aa8bd98c72cf5de"
+        },
+        {
+          "path": "planning/CONFIGURED_PLANNER_ZOOM_REVIEW.md",
+          "sha256": "fed6652bcff3e8dbab98aa613aa3f72fe8ca582ff405215aca2e8df728e7eabb"
         }
       ],
       "verification": {
@@ -256,12 +276,12 @@
       "title": "P1 · Make action priority predictable",
       "requirements": "Create, load, refresh, search, download and commit controls sometimes have similar dimensions or color. The eye should immediately distinguish the task from maintenance controls.\n\nFinish standard: One primary action per task region; normal secondary controls for refresh/download; destructive styling only for a genuinely destructive consequence.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Primary/secondary controls and export transition contrast were improved. Six original-request retry/export controls now use existing secondary styling, preserving primary outcome checks. Exact reconstruction confirms all labels/types/handlers/disabled conditions and all other code unchanged; production build/post-build types/full lint pass. Statement staging now prioritizes the original-outcome check over pending retry, keeping normal staging primary. Attribute-only source preservation plus both complete original statement journeys pass within797a785 full4/4 booking/statement run; final uncertain phone screen reviewed.",
+      "implementedOrPresent": "Primary/secondary controls and export transition contrast were improved. Six original-request retry/export controls now use existing secondary styling, preserving primary outcome checks. Exact reconstruction confirms all labels/types/handlers/disabled conditions and all other code unchanged; production build/post-build types/full lint pass. Statement staging now prioritizes the original-outcome check over pending retry, keeping normal staging primary. Attribute-only source preservation plus both complete original statement journeys pass within797a785 full4/4 booking/statement run; final uncertain phone screen reviewed. Three more visual attributes make optional vehicle-link transfer and loaded custody-queue refresh/pagination secondary, preserving first-load/review/final-confirm priorities. Exact inverse reconstruction proves every other source byte unchanged after line-ending normalization; production build/post-build types/full lint pass. Source/build scope only, not new rendered acceptance.",
       "remainingWork": "Review commit/refresh/recovery priority in every configured task; one narrow success is not global coverage.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
@@ -269,7 +289,7 @@
         },
         {
           "path": "planning/ACTION_PRIORITY_REFINEMENT.md",
-          "sha256": "806577ccd8feb55f89a2ce0c3e02afed241d2fad36e2a88f645d7f26f3c4a1a8"
+          "sha256": "232ccf26edce46bef810fdb7e77b2fc6a8c69ceb412c8d5ae8619c47a97e521a"
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
@@ -289,7 +309,7 @@
         },
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+          "sha256": "ffcbdc515119a9a929b4389f60b186314838c72d8b08598d7ee225abe45e8e31"
         },
         {
           "path": "planning/BOOKING_SURFACE_REFINEMENT.md",
@@ -314,6 +334,14 @@
         {
           "path": "tests/integration/finance-statement-staging-browser.test.mjs",
           "sha256": "36f4d9e18a67bb9493aada320aad73908040963241a4794c8df7381fc658db5a"
+        },
+        {
+          "path": "src/app/vehicles/associations.tsx",
+          "sha256": "c1ba8f10ef07d88d181b23a3f4e5aa7646b749cbcf882c54201eafd7023d8ff9"
+        },
+        {
+          "path": "src/app/schedule/vehicle-custody-queue.tsx",
+          "sha256": "1dabb0f0c01e209b770cf871457d206c83d34307a6c8a19f3064f4a817d5f720"
         }
       ],
       "verification": {
@@ -333,7 +361,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -361,7 +389,7 @@
         },
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+          "sha256": "ffcbdc515119a9a929b4389f60b186314838c72d8b08598d7ee225abe45e8e31"
         },
         {
           "path": "src/app/quotes/quote-review-panel.tsx",
@@ -369,7 +397,7 @@
         },
         {
           "path": "src/app/quotes/quote-commercial-panel.tsx",
-          "sha256": "6a28f7cae96ace62a67dcb840f1565fe471bf49bc4ab64dfdf958cea6401f4b1"
+          "sha256": "eed3ecca4595d7d9804681b46cd301cab016850469f5fafc159abf14b6f643db"
         },
         {
           "path": "planning/BOOKING_SURFACE_REFINEMENT.md",
@@ -465,7 +493,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "6ad833b9374a00ebcaf2067191873f592f9c9df00dc80326b03f955802f934fd"
+          "sha256": "3e9eacfc82db17b52dfee7c32d68616c4e0474d38323ad78bf8fd9cd2b02a35b"
         },
         {
           "path": "planning/SUPPLIER_DRAFT_COMPOSITION_REVIEW.md",
@@ -553,7 +581,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "6ad833b9374a00ebcaf2067191873f592f9c9df00dc80326b03f955802f934fd"
+          "sha256": "3e9eacfc82db17b52dfee7c32d68616c4e0474d38323ad78bf8fd9cd2b02a35b"
         }
       ],
       "verification": {
@@ -568,8 +596,8 @@
       "title": "P2 · Refine type, spacing and numeric rhythm",
       "requirements": "Heading scale is broadly consistent, but dense labels, helper text and record facts need stronger role separation. Some test captures and installed screens have different visual typography; verify the served font before diagnosing a font bug.\n\nFinish standard: Use one reliable font stack, 16 px editable inputs on phones, tabular money, aligned totals and a small spacing scale. Check real font loading, zoom and long names.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Reliable bundled fonts, tabular figures and scoped readability refinements are present. All36 closed/setup production destinations reflow at five widths with normal/doubled text in both engines; actual heading glyphs, exact font bytes, whole destination names and measured phone clearance are verified. Genuine sign-in and category approval forms also have separate complete28/28 workflow evidence on their recorded sources; password entry and field values remain usable. Configured supplier balances/vendor/amount/filter glyphs and exact served font files also pass genuine browser checks; no font replacement was warranted. Final configured task-entry matrix on3a3e069 passes2/2 with168 zero-finding observations across seven guides, six widths and two text sizes in both engines. Actual-container columns, readable wrapping actions and balanced headings preserve authorization, destinations and business audit history; the55-file/18-group CI partition now includes this matrix while retaining original requirements. Supplier draft sourceeb57 passes complete original local workflow2/2 with96 zero-finding observations across dirty editor, selected bill, original-required and ready-entry states, six widths and two text sizes in both engines. Flattened surfaces, fluid phone padding and actual-container editor/review columns retain original financial and private-export gates; inspection preserves financial/draft/journal/audit rows with zero API requests.",
-      "remainingWork": "Complete remaining configured business/input/long-name and actual browser-zoom checks plus matching hosted/installed/physical-device acceptance. Final local100/100 includes74 typography tests/720 observations; the two separate28/28 native sources are not one56-case final acceptance.",
+      "implementedOrPresent": "Reliable bundled fonts, tabular figures and scoped readability refinements are present. All36 closed/setup production destinations reflow at five widths with normal/doubled text in both engines; actual heading glyphs, exact font bytes, whole destination names and measured phone clearance are verified. Genuine sign-in and category approval forms also have separate complete28/28 workflow evidence on their recorded sources; password entry and field values remain usable. Configured supplier balances/vendor/amount/filter glyphs and exact served font files also pass genuine browser checks; no font replacement was warranted. Final configured task-entry matrix on3a3e069 passes2/2 with168 zero-finding observations across seven guides, six widths and two text sizes in both engines. Actual-container columns, readable wrapping actions and balanced headings preserve authorization, destinations and business audit history; the55-file/18-group CI partition now includes this matrix while retaining original requirements. Supplier draft sourceeb57 passes complete original local workflow2/2 with96 zero-finding observations across dirty editor, selected bill, original-required and ready-entry states, six widths and two text sizes in both engines. Flattened surfaces, fluid phone padding and actual-container editor/review columns retain original financial and private-export gates; inspection preserves financial/draft/journal/audit rows with zero API requests. Shared main/tool navigation now distinguishes neutral hover from the marked current destination. Complete closed/setup suite106/106 on e704c3b passes, including48 route/width/engine navigation combinations and original720 typography observations. Both actual padding/scroll-clearance consumers cover the fixed navigation bar; explicit nested Lead sources/Leads semantics remain. Twelve fresh hashed captures and original98/106 failures retained. Source9b5113f build/types/lint plus final test types/lint pass. Shared-chrome scope only; configured/private/device requirements remain. Actual isolated Chromium tab zoom is now verified on all36 closed/setup audit destinations:144 observations at1024/1440 outer widths and100%/200%, expected CSS viewport/DPR, no overflow, visible inputs16px minimum, computed font stack, both fixed-navigation clearance consumers and accessibility pass. Eight hashed PNGs retained; zero cookies/source stable/owned cleanup. Same-build HTTP companion confirms35 normal200 routes and exact originalR36 intentional404. This is not configured long-form/money/history zoom, WebKit zoom, installed or physical-device acceptance. Source656e1f4 additionally passes genuine six-booking planner/saved-job real Chromium zoom: first8 observations and separate expanded16 at100%/200%, explicitly360/390/430CSS px plus desktop. Exact nonzero390px/200% return restores unobscured focused origin and exact scroll, with preserved date values, zero Back/zoom business requests and unchanged jobs/appointments/reservations/overrides/audit rows. Both case/cluster/profile cleanups and source/case hashes pass. Configured financial/long-history and other original contexts remain; no all-workflow/device acceptance is inferred.",
+      "remainingWork": "Complete configured business/input/long-name/history actual-browser-zoom checks plus matching hosted/installed/physical-device acceptance. Earlier720 root-text observations and144 real-zoom closed-state observations are separate scopes, not one complete current-source configured matrix.",
       "evidence": [
         {
           "path": "src/app/globals.css",
@@ -581,7 +609,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "src/app/workspace-frame.tsx",
@@ -589,7 +617,7 @@
         },
         {
           "path": "tests/e2e/typography.spec.ts",
-          "sha256": "1e06910253f98095a89756adf0e676fa9e34040a549a9a34711f51d38fc8b56f"
+          "sha256": "389f036776e35820afcdd2a4ea487621c1d4f9e1e5b2fc359aa8bd98c72cf5de"
         },
         {
           "path": "tests/support/text-resize-layout.mjs",
@@ -650,6 +678,22 @@
         {
           "path": "tests/integration/finance-supplier-payable-browser.test.mjs",
           "sha256": "af88853652a5a5fe27cb4d74c05be7643e1dec8a0e07f2a3eef9bff0fed59d57"
+        },
+        {
+          "path": "planning/NAVIGATION_LOCATION_DESIGN.md",
+          "sha256": "c15823dd8cd62473519b1f91813f17362e6d3618d357c9e08a86ec6013a73112"
+        },
+        {
+          "path": "tests/e2e/navigation-location.spec.ts",
+          "sha256": "a7b1469e9f4aedf7b8b525608c8ddee5f711bcee942396ad4017c7e363fd5c2d"
+        },
+        {
+          "path": "planning/REAL_BROWSER_ZOOM_REVIEW.md",
+          "sha256": "e453baac68778c8980c1afe9ef0c1830eeb2d34257ce65f514a3d27788c04588"
+        },
+        {
+          "path": "planning/CONFIGURED_PLANNER_ZOOM_REVIEW.md",
+          "sha256": "fed6652bcff3e8dbab98aa613aa3f72fe8ca582ff405215aca2e8df728e7eabb"
         }
       ],
       "verification": {
@@ -669,7 +713,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
@@ -712,12 +756,12 @@
       "title": "P2 · Turn history into a readable evidence trail",
       "requirements": "Several histories are version lists, prose and repeated timestamps. The underlying retained evidence deserves a much clearer presentation.\n\nFinish standard: Use dated event rows with action, actual event time, recorded time where different, actor if known, status and an expand-to-compare detail. Keep exact timestamps and exports available.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Lead, amendment, expense, custody, travel, mileage and time histories retain readable evidence. Accepted quote milestones distinguish preparation/sharing/confirmation. Proposal versions now show actual state, recorded zone/time and reason, with native complete facts/exact UTC; both genuine engines preserve immutable records and issue no inspection API traffic.",
-      "remainingWork": "Finish remaining agreement/approval/integration history and missing/stale/long/zoom/private variants; complete exact-source hosted/installed/physical-device review. New proposal plus normal amendment file6/6 is scoped local evidence; publishedf601 navigation failure remains unresolved, not cured.",
+      "implementedOrPresent": "Lead, amendment, expense, custody, travel, mileage and time histories retain readable evidence. Accepted quote milestones distinguish preparation/sharing/confirmation. Proposal versions now show actual state, recorded zone/time and reason, with native complete facts/exact UTC; both genuine engines preserve immutable records and issue no inspection API traffic. Source96ce901 adds readable quote milestone times in the saved zone plus exact UTC/known approving-actor/reference disclosures; dated mapping periods expose exact boundaries/references and explicitly distinguish effective dates from unavailable recording/actor metadata. Build/types/full lint pass. Complete original three-file/full-supplier matrix6/8 parents,15/18 TAP, stable/cleaned,111 fresh hashed artifacts. Both category and both replacement parents, Chromium fixed mapping and complete WebKit agreement pass; WebKit mapping and Chromium agreement fail early genuine authentication before new histories. No gate waiver or root-cause/cure claim.  Initial quote version history is now dated action/status events with actual saved-zone times, exact UTC/actor/reference evidence and lazy, explicitly labeled saved before/after content. Main renderer/handlers and existing CSS remain unchanged outside the extracted presentation. Final00d11d0 build/types/lint pass; complete original quote files7/8 parents54/56 TAP, stable/cleaned,94 fresh hashed artifacts. Both editor/review/agreement parents and WebKit replacement pass all new evidence/comparison plus original history/export/recovery/private gates. Chromium replacement hits the original send-response deadline with a session400 observation; cause unresolved, no guard waiver. Initial09a label-expectation failures and prior96ce mixed results retained. Test-only provider-live observation on656e1f4 conserves transport/argument/promise/error identity; all5 privacy/ownership units and focused lint pass. Complete original commercial file4/4 parents18/18 TAP passes, stable/cleaned,44 fresh hashed artifacts. This is non-reproduction, not a fix or combination with prior7/8. Final bounded windows contain33 live lookups and one rejection without SQLSTATE; not request-correlated or causal.",
+      "remainingWork": "Resolve separately authorized mapping recording/actor metadata. Finish remaining agreement/approval/integration history and missing/stale/long/zoom/private variants; complete exact-source hosted/installed/physical-device review. New proposal plus normal amendment file6/6 is scoped local evidence; publishedf601 navigation failure remains unresolved, not cured.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
@@ -746,6 +790,70 @@
         {
           "path": "planning/NAVIGATION_READ_LIFECYCLE_INVESTIGATION.md",
           "sha256": "a49cc26f5e50661256774c42feebf71d11f27b697b36d01a99f29f85b52232da"
+        },
+        {
+          "path": "planning/HISTORY_EVENT_EVIDENCE_DESIGN.md",
+          "sha256": "025dd268edbfe4ceba24f4380b4f4e7838df714777ea3391f9088a8269d0873c"
+        },
+        {
+          "path": "src/app/quotes/quote-commercial-events.tsx",
+          "sha256": "e9210f623d0cc1891debe950cb68746e4f9cd0388e3ea382aa973f342026c92d"
+        },
+        {
+          "path": "src/app/quotes/quote-commercial-panel.tsx",
+          "sha256": "eed3ecca4595d7d9804681b46cd301cab016850469f5fafc159abf14b6f643db"
+        },
+        {
+          "path": "src/app/settings/accounts/mappings/history.tsx",
+          "sha256": "9b11a6f0fc6418ef483704c3e9dea63a226c9c5ec1d9f0152721aa0ea00e0990"
+        },
+        {
+          "path": "tests/support/quote-commercial-events.mjs",
+          "sha256": "3cf0b323a6a14350625a75bca42df7342d810f6b6c9c62ecc283611b0a01cb07"
+        },
+        {
+          "path": "tests/support/mapping-workbench.mjs",
+          "sha256": "50208e7986e98e9e268466d463d18d680fa663bd7911aee70a56e434af9d9a10"
+        },
+        {
+          "path": "tests/integration/quote-commercial-browser.test.mjs",
+          "sha256": "9d1e14c9f7c25385d443227ddecc975dae30928bdfc9afeb61d661ed58e90814"
+        },
+        {
+          "path": "planning/QUOTE_VERSION_HISTORY_DESIGN.md",
+          "sha256": "52c6671a91c12fc88e4aa301069e20a1ea915f617c70b6406c44811f8fc643ba"
+        },
+        {
+          "path": "src/app/quotes/quote-history-events.tsx",
+          "sha256": "bb0e8ba8d709fd729b60b3d08f9b554e563d7bac373da4c2f5c16ade10a5095f"
+        },
+        {
+          "path": "src/app/quotes/quotes.tsx",
+          "sha256": "ffcbdc515119a9a929b4389f60b186314838c72d8b08598d7ee225abe45e8e31"
+        },
+        {
+          "path": "tests/support/quote-version-history.mjs",
+          "sha256": "f6850572fd605a9812068beaa056221c2337cc09b1c11abe2329fa9c1091abb4"
+        },
+        {
+          "path": "tests/integration/quote-draft-editor-browser.test.mjs",
+          "sha256": "2cac13bf24e2074ac6e49a5ee7f576afcf71b2443a909d7e548381d673284ea0"
+        },
+        {
+          "path": "tests/integration/quote-review-browser.test.mjs",
+          "sha256": "e165d0eb55690e1d6651a7b2f96ef5ad99b51f31247f21de869cbb1a28bb9003"
+        },
+        {
+          "path": "planning/QUOTE_SESSION_LOOKUP_INVESTIGATION.md",
+          "sha256": "395420c642b23cf3a2aa6a6b05487e35cac0bc763ebfbe8f4a6a722eb8508890"
+        },
+        {
+          "path": "tests/support/session-query-evidence.mjs",
+          "sha256": "e6db9e714e23bd9f4efdf157bd8a65317176b336ae3fec6cfaab898ac9f6470d"
+        },
+        {
+          "path": "tests/support/session-query-evidence.test.mjs",
+          "sha256": "3671e4fa008d0588f5a749d2a6be6e80ecb3666c8f37daf998914f8a2c538f82"
         }
       ],
       "verification": {
@@ -760,7 +868,7 @@
       "title": "P2 · Protect context through every transition",
       "requirements": "Back links now exist on many deeper routes. Their wording and destinations still vary, and an opened task can lose the visible customer/job context.\n\nFinish standard: Use a common breadcrumb or contextual return row, preserve selected record/date/filter where safe, restore focus and avoid retaining private detail after sign-out.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Several directory/task transitions preserve selection, drafts and committed-DOM focus. Native normal amendment2/2 and separately publishedb533 original hosted amendments7/7 preserve strict context/privacy/error checks on their recorded sources. An app-free pinned-browser contrast isolates a matching provisional-fetch diagnostic; safe test-only invocation evidence supports further attribution without changing application transport. Quote in-page return now preserves exact window position and reachable focus on the actual entry control; canceled switching keeps the private draft. Full original editor2/2 passes24 tests on47d9bad with no navigation reads/writes and original private lifecycle checks; no URL/storage cache added.",
+      "implementedOrPresent": "Several directory/task transitions preserve selection, drafts and committed-DOM focus. Native normal amendment2/2 and separately publishedb533 original hosted amendments7/7 preserve strict context/privacy/error checks on their recorded sources. An app-free pinned-browser contrast isolates a matching provisional-fetch diagnostic; safe test-only invocation evidence supports further attribution without changing application transport. Quote in-page return now preserves exact window position and reachable focus on the actual entry control; canceled switching keeps the private draft. Full original editor2/2 passes24 tests on47d9bad with no navigation reads/writes and original private lifecycle checks; no URL/storage cache added. Shared main/tool navigation now distinguishes neutral hover from the marked current destination. Complete closed/setup suite106/106 on e704c3b passes, including48 route/width/engine navigation combinations and original720 typography observations. Both actual padding/scroll-clearance consumers cover the fixed navigation bar; explicit nested Lead sources/Leads semantics remain. Twelve fresh hashed captures and original98/106 failures retained. Source9b5113f build/types/lint plus final test types/lint pass. Shared-chrome scope only; configured/private/device requirements remain. Source656e1f4 additionally passes genuine six-booking planner/saved-job real Chromium zoom: first8 observations and separate expanded16 at100%/200%, explicitly360/390/430CSS px plus desktop. Exact nonzero390px/200% return restores unobscured focused origin and exact scroll, with preserved date values, zero Back/zoom business requests and unchanged jobs/appointments/reservations/overrides/audit rows. Both case/cluster/profile cleanups and source/case hashes pass. Configured financial/long-history and other original contexts remain; no all-workflow/device acceptance is inferred.",
       "remainingWork": "Verify planner date/view and all remaining contextual returns plus sign-out/private clearing on the exact release. Earlier WebKit failures are not explained or cured by this contrast or later passes; full matching hosted/installed/physical-device acceptance remains separate.",
       "evidence": [
         {
@@ -809,15 +917,31 @@
         },
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+          "sha256": "ffcbdc515119a9a929b4389f60b186314838c72d8b08598d7ee225abe45e8e31"
         },
         {
           "path": "tests/integration/quote-draft-editor-browser.test.mjs",
-          "sha256": "cca9228049773aedddfb238e3752459b0cb2fda20063148bd8369e18087dd8fc"
+          "sha256": "2cac13bf24e2074ac6e49a5ee7f576afcf71b2443a909d7e548381d673284ea0"
         },
         {
           "path": "tests/support/quote-directory-return.mjs",
           "sha256": "0e7909b9a1fe944cc292fe1da397197b21ed196441c6063c04d9129145e2412b"
+        },
+        {
+          "path": "planning/NAVIGATION_LOCATION_DESIGN.md",
+          "sha256": "c15823dd8cd62473519b1f91813f17362e6d3618d357c9e08a86ec6013a73112"
+        },
+        {
+          "path": "tests/e2e/navigation-location.spec.ts",
+          "sha256": "a7b1469e9f4aedf7b8b525608c8ddee5f711bcee942396ad4017c7e363fd5c2d"
+        },
+        {
+          "path": "tests/e2e/typography.spec.ts",
+          "sha256": "389f036776e35820afcdd2a4ea487621c1d4f9e1e5b2fc359aa8bd98c72cf5de"
+        },
+        {
+          "path": "planning/CONFIGURED_PLANNER_ZOOM_REVIEW.md",
+          "sha256": "fed6652bcff3e8dbab98aa613aa3f72fe8ca582ff405215aca2e8df728e7eabb"
         }
       ],
       "verification": {
@@ -841,7 +965,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "fd3fee22ba66112a05320f162288417a773050582c389d9d4b81bd98dc4a4de7"
+          "sha256": "cc5174d3c18826dedfb634c0f857bca0d4b3ede4d00783b876991133fe2b92d6"
         }
       ],
       "verification": {
@@ -873,7 +997,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "tests/integration/sign-in-browser.test.mjs",
@@ -913,7 +1037,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "src/client/home-schedule.ts",
@@ -1001,7 +1125,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "tests/unit/proposal-party-read.test.ts",
@@ -1089,7 +1213,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "tests/integration/legacy-contact-csv-review-browser.test.mjs",
@@ -1137,7 +1261,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "tests/support/receipt-layout.mjs",
@@ -1277,7 +1401,7 @@
       "evidence": [
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+          "sha256": "ffcbdc515119a9a929b4389f60b186314838c72d8b08598d7ee225abe45e8e31"
         },
         {
           "path": "planning/QUOTE_READING_MODES_DESIGN.md",
@@ -1289,11 +1413,11 @@
         },
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+          "sha256": "ffcbdc515119a9a929b4389f60b186314838c72d8b08598d7ee225abe45e8e31"
         },
         {
           "path": "tests/integration/quote-draft-editor-browser.test.mjs",
-          "sha256": "cca9228049773aedddfb238e3752459b0cb2fda20063148bd8369e18087dd8fc"
+          "sha256": "2cac13bf24e2074ac6e49a5ee7f576afcf71b2443a909d7e548381d673284ea0"
         },
         {
           "path": "tests/support/quote-directory-return.mjs",
@@ -1445,7 +1569,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "tests/support/appointment-comparison-layout.mjs",
@@ -1485,7 +1609,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "tests/unit/mileage-prerequisite.test.ts",
@@ -1549,7 +1673,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "tests/support/booking-review-layout.mjs",
@@ -1637,7 +1761,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "tests/support/field-work-layout.mjs",
@@ -1689,7 +1813,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "tests/support/work-read-diagnostic.mjs",
@@ -1761,7 +1885,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "tests/integration/trip-interruption-product-browser.test.mjs",
@@ -1965,11 +2089,11 @@
         },
         {
           "path": "src/app/settings/accounts/mappings/history.tsx",
-          "sha256": "17d5a4d9d87ae7a578a6eb2a9da920aa86415d7aebcf88d27e132616dc40234a"
+          "sha256": "9b11a6f0fc6418ef483704c3e9dea63a226c9c5ec1d9f0152721aa0ea00e0990"
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
@@ -1981,7 +2105,7 @@
         },
         {
           "path": "tests/support/mapping-workbench.mjs",
-          "sha256": "1265486a5ddf06862590f6a779a2e3a8bf6eb9a229f5728dd075e3f25ed5e89b"
+          "sha256": "50208e7986e98e9e268466d463d18d680fa663bd7911aee70a56e434af9d9a10"
         },
         {
           "path": "tests/support/source-export-browser-fixture.mjs",
@@ -2129,7 +2253,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "tests/integration/confirmed-bookings-product-browser.test.mjs",
@@ -2177,7 +2301,7 @@
       "evidence": [
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+          "sha256": "ffcbdc515119a9a929b4389f60b186314838c72d8b08598d7ee225abe45e8e31"
         },
         {
           "path": "planning/QUOTE_READING_MODES_DESIGN.md",
@@ -2189,11 +2313,11 @@
         },
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+          "sha256": "ffcbdc515119a9a929b4389f60b186314838c72d8b08598d7ee225abe45e8e31"
         },
         {
           "path": "tests/integration/quote-draft-editor-browser.test.mjs",
-          "sha256": "cca9228049773aedddfb238e3752459b0cb2fda20063148bd8369e18087dd8fc"
+          "sha256": "2cac13bf24e2074ac6e49a5ee7f576afcf71b2443a909d7e548381d673284ea0"
         },
         {
           "path": "tests/support/quote-directory-return.mjs",
@@ -2217,7 +2341,7 @@
       "evidence": [
         {
           "path": "src/app/quotes/quote-commercial-panel.tsx",
-          "sha256": "6a28f7cae96ace62a67dcb840f1565fe471bf49bc4ab64dfdf958cea6401f4b1"
+          "sha256": "eed3ecca4595d7d9804681b46cd301cab016850469f5fafc159abf14b6f643db"
         },
         {
           "path": "planning/ACCEPTED_AGREEMENT_EVENTS_DESIGN.md",
@@ -2225,19 +2349,19 @@
         },
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "77c46e8740be8fbf20b67db418b4684367076da3905bb577b86e612d6cb7f0fe"
+          "sha256": "ffcbdc515119a9a929b4389f60b186314838c72d8b08598d7ee225abe45e8e31"
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "674adbb27c3bae7256cf4009d913b13b57b4d3913b67ebe918082c39cf1a1609"
+          "sha256": "937245c0a60273acf258c8b1e940f277f883a9445cdbda99b2ffd1bc88e4cf70"
         },
         {
           "path": "tests/integration/quote-commercial-browser.test.mjs",
-          "sha256": "bb3d118aa16090427f080f8a3742cc90c8430cad7f55189ab3a9c73e1e349379"
+          "sha256": "9d1e14c9f7c25385d443227ddecc975dae30928bdfc9afeb61d661ed58e90814"
         },
         {
           "path": "tests/integration/quote-draft-editor-browser.test.mjs",
-          "sha256": "cca9228049773aedddfb238e3752459b0cb2fda20063148bd8369e18087dd8fc"
+          "sha256": "2cac13bf24e2074ac6e49a5ee7f576afcf71b2443a909d7e548381d673284ea0"
         },
         {
           "path": "tests/support/quote-session-failure-evidence.mjs",
@@ -2677,7 +2801,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/history.tsx",
-          "sha256": "17d5a4d9d87ae7a578a6eb2a9da920aa86415d7aebcf88d27e132616dc40234a"
+          "sha256": "9b11a6f0fc6418ef483704c3e9dea63a226c9c5ec1d9f0152721aa0ea00e0990"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",

@@ -141,7 +141,8 @@ button.secondary:not(:disabled):not([aria-pressed='true']):hover { background:va
   .workspace-destinations { flex-wrap:wrap; }
   .workspace-destinations a { min-width:0; overflow-wrap:anywhere; }
 }
-:is(.workspace-menu,.workspace-destinations) a:is(:hover,[aria-current]) { color:#243594; background:var(--accent-soft); }
+:is(.workspace-menu,.workspace-destinations) a:not([aria-current]):hover { color:var(--ink); background:#e8ebf0; }
+:is(.workspace-menu,.workspace-destinations) a[aria-current] { color:#243594; background:var(--accent-soft); box-shadow:inset 3px 0 var(--accent); }
 .destination-glyph { display:grid; place-items:center; width:1.35rem; color:inherit; line-height:1; }
 .destination-glyph svg { display:block; width:20px; height:20px; flex:none; }
 .destination-label { min-width:0; max-width:100%; overflow-wrap:anywhere; }
@@ -312,6 +313,11 @@ details[open] > .amendment-change-summary::before { content:"−"; }
 .amendment-timeline > li > details > summary { display:list-item; min-height:44px; padding:.5rem 0; align-content:center; cursor:pointer; }
 .amendment-timeline .amendment-event-evidence summary { font-size:.8125rem; color:var(--muted); }
 .amendment-event-evidence dd { margin:.15rem 0 .6rem; overflow-wrap:anywhere; }
+.quote-history-comparison { container:quote-history-comparison / inline-size; }
+.quote-history-comparison-content { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; align-items:start; }
+.quote-history-comparison-version { min-width:0; }
+.quote-history-comparison-version > h4 { margin:.5rem 0 .75rem; color:var(--muted); font-size:.875rem; }
+@container quote-history-comparison (min-width:46rem) { .quote-history-comparison-content { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 .amendment-activity .amendment-actions > button { width:100%; }
 @media (min-width:75rem) {
  .amendment-workspace-grid { grid-template-columns:minmax(0,1fr) minmax(17rem,26%); align-items:start; }
@@ -2239,6 +2245,11 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 .quote-commercial-events li::before { content:''; position:absolute; inset-inline-start:-1.0625rem; top:.4rem; width:.5rem; height:.5rem; border-radius:50%; background:var(--gold-ink); }
 .quote-commercial-events time { display:block; color:var(--muted); font-size:.8125rem; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
 .quote-commercial-events li p { margin:.25rem 0; overflow-wrap:anywhere; }
+.quote-commercial-events .quote-event-evidence,.mapping-period-timeline .mapping-period-evidence { margin:.5rem 0 0; padding:0; border:0; background:transparent; border-radius:0; }
+.quote-commercial-events .quote-event-evidence summary,.mapping-period-timeline .mapping-period-evidence summary { min-height:44px; padding:.5rem 0; font-size:.875rem; }
+.quote-event-evidence dl,.mapping-period-evidence dl { display:grid; gap:.25rem; margin:.25rem 0 .75rem; overflow-wrap:anywhere; }
+.quote-event-evidence dt,.mapping-period-evidence dt { color:var(--muted); font-size:.8125rem; }
+.quote-event-evidence dd,.mapping-period-evidence dd { margin:0 0 .5rem; font-size:.875rem; font-variant-numeric:tabular-nums; }
 @container quote-workspace (min-width:50rem) { .quote-commercial-events ol { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 
 /* Proposal versions are retained events, with complete evidence on demand. */

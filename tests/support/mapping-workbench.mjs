@@ -38,6 +38,23 @@ export async function reviewApprovalHistory(page,engine,kind,versions){
  await expect(history.getByRole('listitem')).toHaveCount(versions);
  await expect(history.getByRole('link')).toHaveCount(0);
  const before=await editor.locator('input,textarea,select').evaluateAll(fields=>fields.map(field=>[field.id,field.value]));
+ const expanded=[];
+ const entries=history.locator('.mapping-period-timeline > li');
+ for(const index of [...new Set([0,versions-1])]){
+  const row=entries.nth(index),outer=row.locator(':scope > details'),evidence=row.locator('.mapping-period-evidence');
+  const outerOpen=await outer.getAttribute('open')!==null,evidenceOpen=await evidence.getAttribute('open')!==null;
+  expanded.push({outer,evidence,outerOpen,evidenceOpen});
+  if(!outerOpen)await outer.locator(':scope > summary').click();
+  await expect(row).toContainText('These dates show when the rule applies.');
+  if(!evidenceOpen)await evidence.locator(':scope > summary').click();
+  const dates=await outer.locator(':scope > summary time').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('datetime')));
+  assert(dates.length>=1&&dates.every(value=>/^\d{4}-\d{2}-\d{2}$/.test(value)));
+  assert.deepEqual(await evidence.locator('time').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('datetime'))),dates);
+  for(const time of await evidence.locator('time').all())await expect(time).toHaveText(await time.getAttribute('datetime'));
+  const facts=evidence.locator('dd');
+  await expect(facts).toHaveCount(4);
+  for(const index of [2,3])await expect(facts.nth(index)).toHaveText(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+ }
  for(const width of [360,390,768,1100,1440]){
   await page.setViewportSize({width,height:900});
   await page.evaluate(async()=>{await document.fonts.ready;scrollTo(0,0);});
@@ -48,6 +65,10 @@ export async function reviewApprovalHistory(page,engine,kind,versions){
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
   await page.screenshot({path:'.local/review/finance-'+kind+'-embedded-history-'+engine+'-'+width+'.png',fullPage:true,animations:'disabled'});
+ }
+ for(const {outer,evidence,outerOpen,evidenceOpen} of expanded){
+  if(!evidenceOpen)await evidence.locator(':scope > summary').click();
+  if(!outerOpen)await outer.locator(':scope > summary').click();
  }
  assert.deepEqual(await editor.locator('input,textarea,select').evaluateAll(fields=>fields.map(field=>[field.id,field.value])),before,'responsive history review preserves proposal');
  if(original)await page.setViewportSize(original);
