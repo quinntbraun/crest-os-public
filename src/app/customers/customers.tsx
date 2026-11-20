@@ -124,7 +124,7 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
       {view.writesPaused&&<p className="notice">Customer changes are paused. You can review current records and history.</p>}
       <div className="customer-directory-layout" data-mobile-record={showRecord&&editorVisible}>
       <section className="customer-lookup" aria-label="Customer lookup">
-      <button className="customer-add" type="button" disabled={view.busy||view.writesPaused} onClick={event=>create(event.currentTarget)}>Add customer</button>
+      <button className={'customer-add'+(view.selected?' secondary':'')} type="button" disabled={view.busy||view.writesPaused} onClick={event=>create(event.currentTarget)}>Add customer</button>
       <form className="customer-search" onSubmit={search} aria-label="Search customers">
         <label htmlFor="customer-search">Customer search</label>
         <div className="customer-search-row">
@@ -144,12 +144,12 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
       <div className="customer-record">
       {!view.draft&&!view.selected&&!view.busy&&<DirectoryIntroduction kind="customer" onSearch={()=>document.getElementById('customer-search')?.focus()}/>}
       {editorVisible&&<button type="button" className="secondary customer-directory-back" onClick={backToDirectory}>← Back to customers</button>}
-      {view.selected&&<header className="customer-record-header">
+      {view.selected&&<header className="customer-record-header customer-profile-identity" data-split-identity={profileAvailable&&!!(view.selected.phone_raw||view.selected.email_raw||view.selected.contact_preference)}>
         <div className="customer-record-title">
           <h2>{view.selected.display_name}</h2>
           {view.selected.archived_at===null&&!view.writesPaused&&<a className="record-return-link" href={'/quotes?customer='+encodeURIComponent(view.selected.id)}>Start a quote</a>}
         </div>
-        {(view.selected.phone_raw||view.selected.email_raw||view.selected.contact_preference)&&<dl>
+        {(view.selected.phone_raw||view.selected.email_raw||view.selected.contact_preference)&&<dl className="customer-profile-contact">
           {view.selected.phone_raw&&<div><dt>Phone</dt><dd>{phonePresentation(view.selected.phone_raw)}</dd></div>}
           {view.selected.email_raw&&<div><dt>Email</dt><dd>{view.selected.email_raw}</dd></div>}
           {view.selected.contact_preference&&<div><dt>Prefers</dt><dd>{view.selected.contact_preference}</dd></div>}

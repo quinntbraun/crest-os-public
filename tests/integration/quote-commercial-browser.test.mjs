@@ -2,26 +2,31 @@
 // viewports emulate sizes; they are not a claim of real-device testing.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {mkdir,readFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 import {showQuoteDirectory} from '../support/quote-directory.mjs';
 import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
+import {observeQuoteSessionFailures} from '../support/quote-session-failure-evidence.mjs';
+import {observeSessionQueries} from '../support/session-query-evidence.mjs';
 
 // Eagerly own response bytes before a reactive refresh can retire the Response.
 import {captureQuoteResponse as responseFor} from '../support/quote-browser-response.mjs';
 async function post(page,path,body){return page.evaluate(async input=>{const session=await fetch('/api/auth/session',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'content-type':'application/json'},body:'{}'}),proof=await session.json();if(session.status!==200)throw Error('GENUINE_SESSION_REQUIRED');const response=await fetch(input.path,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'content-type':'application/json','x-crest-csrf':proof.csrfToken},body:JSON.stringify(input.body)});return {status:response.status,value:await response.json()};},{path,body});}
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])for(const scenario of ['agreement','replacement'])test(name+' genuine quote '+scenario+' workflow',async t=>{
- const f=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,quoteCommercial:true});let browser;
+ const f=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,quoteCommercial:true});let browser,sessionEvidence,queryEvidence,queryRecorded=false;
+ async function captureQueryEvidence(){if(queryRecorded||!queryEvidence)return;queryRecorded=true;try{await mkdir('.local/review',{recursive:true});await writeFile('.local/review/quote-session-queries-'+name+'-'+scenario+'.json',JSON.stringify(queryEvidence.snapshot(),null,2)+'\n');}catch{t.diagnostic('Fixed session query evidence unavailable');}}
  try{
+  queryEvidence=observeSessionQueries();
   browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:844},timezoneId:'America/Indianapolis'}),page=await context.newPage(),customer='Synthetic agreement customer 雪 '+name,customerId=randomUUID(),internal='PRIVATE_SYNTHETIC_AGREEMENT_'+name,inclusions=('Agreed detailing preparation and careful surface protection. é 雪 😀\n').repeat(20),evidence='Synthetic customer confirmed the exact two-line quote by phone — 雪 '+name;
+  sessionEvidence=observeQuoteSessionFailures(page,f,name+'-'+scenario);
   page.setDefaultTimeout(15000);page.setDefaultNavigationTimeout(30000);
   page.on('response',response=>{const path=new URL(response.url()).pathname;if(path.startsWith('/api/')&&response.status()>=400)t.diagnostic('HTTP '+response.status()+' '+path);});
   const status=()=>page.getByRole('status',{name:'Quote status',exact:true}),panel=()=>page.getByRole('region',{name:'Sharing and acceptance',exact:true}),commercialStatus=()=>panel().getByRole('status',{name:'Sharing and acceptance status',exact:true}),review=()=>page.getByRole('region',{name:'Review and approval',exact:true}),directory=()=>page.getByRole('list',{name:'Saved quotes',exact:true});
   let first,second,accepted,lostAccepted,pendingRaw;const writes={send:0,accept:0,review:0,save:0};page.on('request',request=>{const path=new URL(request.url()).pathname;if(request.method()==='POST'&&path==='/api/business/quotes/commercial/send')writes.send++;if(request.method()==='POST'&&path==='/api/business/quotes/commercial/accept')writes.accept++;if(request.method()==='POST'&&['/api/business/quotes/review/submit','/api/business/quotes/review/approve'].includes(path))writes.review++;if(request.method()==='POST'&&path==='/api/business/quotes/save')writes.save++;});
-  async function step(label,work){t.diagnostic('Starting: '+label);let completed=false;await t.test(label,async()=>{try{await work();completed=true;}catch(error){t.diagnostic('Session and provider at failure: '+JSON.stringify(await sessionAdmissionDiagnostic(f)));throw error;}});assert(completed,'The required preceding workflow failed; dependent actions were not attempted.');}
+  async function step(label,work){sessionEvidence.mark(label);t.diagnostic('Starting: '+label);let completed=false;await t.test(label,async()=>{try{await work();completed=true;}catch(error){await captureQueryEvidence();t.diagnostic('Session and provider at failure: '+JSON.stringify(await sessionAdmissionDiagnostic(f)));throw error;}});assert(completed,'The required preceding workflow failed; dependent actions were not attempted.');}
   async function open(title){await showQuoteDirectory(page);await directory().getByRole('button',{name:new RegExp('^'+title)}).click();await expect(panel()).toBeVisible();await expect(commercialStatus()).not.toContainText('Checking current');}
   async function reloadOpen(title,pending=false){await page.reload();await expect(directory()).toBeVisible();if(pending){await expect(page.getByRole('button',{name:'New quote',exact:true})).toBeDisabled();await expect(directory().getByRole('button',{name:new RegExp('^'+title)})).toBeEnabled();}await open(title);}
   async function loadOpen(title){await showQuoteDirectory(page);await page.getByRole('button',{name:/^(Load|Reload) saved quotes$/}).click();await expect(directory()).toBeVisible();await open(title);}
@@ -109,6 +114,25 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])for(const s
    await expect(page.locator('.quote-record-total strong')).toHaveText('$250.00');
    await expect(panel().getByRole('heading',{name:'Prepared customer document',exact:true})).toBeVisible();
    await expect(panel().locator('.quote-prepared-document time')).toHaveAttribute('datetime',/^\d{4}-\d{2}-\d{2}T/);
+   const inspectionWrites={...writes};
+   await expect(panel().locator('.quote-agreement-state')).toHaveText('Accepted');
+   await expect(panel().getByRole('region',{name:'Key saved events',exact:true})).toBeVisible();
+   assert.equal(await panel().locator('.quote-accepted-agreement').evaluate(el=>Boolean(el.compareDocumentPosition(el.parentElement.querySelector('.quote-prepared-document'))&Node.DOCUMENT_POSITION_FOLLOWING)),true);
+   await expect(panel().locator('.quote-commercial-events ol > li')).toHaveCount(4);
+   for(const width of [320,390,768,1440,1920]){
+    await page.setViewportSize({width,height:width<768?844:1000});await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
+    const documentPreview=page.getByRole('region',{name:'Customer preview',exact:true}),modes=page.getByRole('group',{name:'Quote view',exact:true});
+    await expect(documentPreview).toBeHidden();
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+    await mkdir('.local/review',{recursive:true});await page.screenshot({path:'.local/review/agreement-overview-'+name+'-'+width+'.png',fullPage:true});
+    await modes.getByRole('button',{name:'Preview',exact:true}).click();await expect(documentPreview).toBeVisible();await expect(page.locator('#quote-edit')).toBeHidden();
+    await expect(documentPreview).toContainText('$250.00');await expect(documentPreview).toContainText(inclusions.trim());await expect(documentPreview).not.toContainText(internal);
+    assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+    await page.screenshot({path:'.local/review/agreement-explicit-preview-'+name+'-'+width+'.png',fullPage:true});
+    await modes.getByRole('button',{name:'Details',exact:true}).click();await expect(documentPreview).toBeHidden();
+   }
+   assert.deepEqual(writes,inspectionWrites,'Inspection must not alter sharing, acceptance, approval or quote drafts');
    await page.getByText('Saved draft fields',{exact:true}).click();
    await expect(page.getByRole('textbox',{name:'Quote title',exact:true})).toBeDisabled();
    await page.getByText('Saved draft fields',{exact:true}).click();
@@ -132,5 +156,5 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])for(const s
   });
   }
   await context.close();
- }finally{await browser?.close();await f.close();}
+ }finally{try{await sessionEvidence?.finish();await captureQueryEvidence();}finally{try{queryEvidence?.stop();}finally{try{await browser?.close();}finally{await f.close();}}}}
 });

@@ -7,6 +7,7 @@ import {mkdir,readFile} from 'node:fs/promises';
 import {setTimeout as delay} from 'node:timers/promises';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {observeWorkReads} from '../support/work-read-diagnostic.mjs';
 import {unzipSync,strFromU8} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' populated overlapping planner visual baseline and exact phone return',{timeout:240000},async()=>{
@@ -46,9 +47,9 @@ async function signIn(page,f,freshAfter=0){
  return nextCodeAt;
 }
 for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' genuine saved-job review, history retrieval, refresh and privacy',async()=>{
- const f=await sourceExportBrowserFixture({product:true,workspace:true,quotes:true,quoteReview:true,quoteCommercial:true,scheduling:true,recordJobHistory:true});let browser;
+ const f=await sourceExportBrowserFixture({product:true,workspace:true,quotes:true,quoteReview:true,quoteCommercial:true,scheduling:true,recordJobHistory:true});let browser,readDiagnostic;
  try{
-  browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}}),page=await context.newPage();page.setDefaultTimeout(15000);page.setDefaultNavigationTimeout(30000);
+  browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}}),page=await context.newPage();readDiagnostic=observeWorkReads(page,f,name+' saved-job recovery');page.setDefaultTimeout(15000);page.setDefaultNavigationTimeout(30000);
   const nextCodeAt=await signIn(page,f);
   const booked=await page.evaluate(async input=>{
    const session=await fetch('/api/auth/session',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});if(!session.ok)return{status:session.status};const proof=await session.json(),{businessId,...body}=input;void businessId;
@@ -237,7 +238,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
 
   await probePage.goto(f.origin+'/schedule');
   await probePage.goto(f.origin+'/');await probePage.goBack();const check=probePage.getByRole('button',{name:'Check schedule access',exact:true});if(await check.isVisible())await check.click();await expect(probePage.locator('.schedule-status')).toContainText('Saved schedule loaded.');assert.equal((await f.client.query('SELECT count(*)::int AS count FROM supabase_migrations.schema_migrations')).rows[0].count,120);
- }finally{await browser?.close();await f.close();}
+ }catch(error){await readDiagnostic?.();throw error;}finally{await browser?.close();await f.close();}
 },{timeout:240000});
 
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' customer profile shows verified upcoming visits and active vehicle links',{timeout:150000},async()=>{
@@ -277,6 +278,30 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(upcoming).toHaveAttribute('href','/schedule?job='+request.jobId+'&from=customer');
   await expect(upcoming.locator('time')).toHaveAttribute('datetime',visitStart);
   const sections=page.getByRole('navigation',{name:'Customer record sections',exact:true});
+  async function captureIdentity(state){
+   await mkdir('.local/review',{recursive:true});
+   for(const width of [320,390,768,1440,1920]){
+    await page.setViewportSize({width,height:900});await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
+    await expect(summary).toContainText('No completed visit');await expect(summary.getByRole('link').locator('time')).toHaveAttribute('datetime',visitStart);
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(v=>v.id),[]);
+    await page.screenshot({path:'.local/review/customer-identity-'+state+'-'+name+'-'+width+'.png',fullPage:true});
+   }
+   await page.setViewportSize({width:390,height:844});
+  }
+  await captureIdentity('without-contact');
+  await sections.getByRole('button',{name:'Overview',exact:true}).click();
+  await page.getByLabel('Email value',{exact:true}).fill('profile.review@example.com');
+  await page.getByRole('button',{name:'Save customer',exact:true}).click();
+  await expect(page.locator('.customer-directory-status')).toContainText('Customer saved.');
+  await page.goto(fixture.origin+'/customers?customer='+request.payload.customerId);
+  await expect(page.locator('.customer-profile-contact')).toContainText('profile.review@example.com');
+  await expect(summary.getByRole('link').locator('time')).toHaveAttribute('datetime',visitStart);
+  const snapshot=async()=>(await fixture.client.query('SELECT to_jsonb(c)::text AS value FROM crest.customers c WHERE id=$1',[request.payload.customerId])).rows;
+  const beforeInspection=await snapshot(),beforeSaves=fixture.requests.filter(r=>r.method==='POST'&&r.path.endsWith('/save')).length;
+  for(const pane of await sections.getByRole('button').all()){const label=(await pane.textContent()).trim();await pane.click();await captureIdentity(label.toLowerCase());}
+  assert.deepEqual(await snapshot(),beforeInspection);assert.equal(fixture.requests.filter(r=>r.method==='POST'&&r.path.endsWith('/save')).length,beforeSaves);
+
   await sections.getByRole('button',{name:'Vehicles',exact:true}).click();
   const linkedVehicles=page.getByRole('region',{name:'Linked vehicles',exact:true});
   const linkedVehicle=linkedVehicles.getByRole('link',{name:'Synthetic lifecycle sedan',exact:true});

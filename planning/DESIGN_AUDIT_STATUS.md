@@ -6,13 +6,13 @@ This inventory reconciles all 70 original groups: 14 shared findings, 36 destina
 
 | Local implementation review | Groups |
 |---|---:|
-| Main change locally addressed | 56 |
-| Partial implementation or required review | 12 |
+| Main change locally addressed | 58 |
+| Partial implementation or required review | 10 |
 | Open audit work | 2 |
 | Review required before choosing changes | 0 |
 | Total | 70 |
 
-56/70, or 80%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 80% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 12 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
+58/70, or 82.9%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 82.9% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 10 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
 
 The audit is **not finished**. Each row has remaining implementation or verification. Full current-source/state, delivered-build and physical iPhone acceptance is not established. The earlier roughly 80% figure is a low-confidence V1 coding estimate and is not the audit percentage. The active objective is to complete all 70 original audit groups. Approved V1 business-use, recovery, upgrade, release and owner/device gates remain separate requirements and are not waived by this inventory.
 
@@ -76,10 +76,10 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | R34 | Calendar setup (/settings/google-calendar) | Main change addressed | Investigate original session/held-request failures; finish paused/recovery and remaining state/privacy variants plus full exact-source release/installed/physical-device acceptance. Actual selected changes and cookie-loss clearing/direct sign-in recovery now pass both engines. |
 | R35 | Vehicle directory (/vehicles) | Main change addressed | Final profile/history/photo, sign-out and device/state verification remain; no stock evidence image. |
 | R36 | Page not found (/audit-page-does-not-exist) | Main change addressed | Retained baseline plus source inspection is not a fresh final-release/device run. |
-| D01 | Customer profile | Partial | Reconcile compact last/next-visit facts and action hierarchy consistently across all profile sections. |
+| D01 | Customer profile | Main change addressed | Complete broader long/many/loading/denied/stale/zoom/private variants and exact-source hosted/installed/physical-device acceptance. Full original observed6/6 and60 fresh captures support the main refinement; initial recovery5/6 failure remains unexplained. Global desktop served-font inconsistency remains S10. |
 | D02 | Schedule planner | Main change addressed | Complete additional empty/error/recovery/long-value/zoom/selected-change variants and fresh full release/installed/physical-device acceptance. Planning stays distinct from active execution; loaded-time cues do not infer availability or override approval. |
 | D03 | Quote editor and preview | Main change addressed | Other long/many-line/retained/denied/stale/pending states and access-failure investigation remain; exact-head release, installed and physical-device acceptance are separate gates. |
-| D04 | Sharing and acceptance | Partial | Finish compact accepted-agreement/event hierarchy with all retained content and honest delivery evidence. |
+| D04 | Sharing and acceptance | Main change addressed | Complete broader state/long/many/zoom/font/private and exact-source hosted/installed/physical acceptance. Final original5/6 parents (nested37/39), both full agreement and draft-editor journeys pass. Chromium replacement setup session400 remains unexplained; initial3/4, observed3/4 and hosted227 frozen53 schema failure are retained. No full6/6, cause/cure or release acceptance claim. |
 | D05 | Receipt viewer | Main change addressed | Original-file formats, full release and physical iPhone remain separate required acceptance. |
 | D06 | Partial completion | Main change addressed | Finish additional stress, policy/context, access/stale/pending and device/release variants without treating local coverage as final sign-off. |
 | D07 | Saved completion and follow-up | Main change addressed | Other outcome/message/delivery states and final release/device acceptance remain. |

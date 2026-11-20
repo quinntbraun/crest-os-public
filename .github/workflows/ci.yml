@@ -552,5 +552,8 @@ jobs:
             test-results/
             .local/receipt-isolated-decoder.log
             .local/supplier-isolated-decoder.log
+            .local/amendment53-original-schema.sql
+            .local/amendment53-restored-schema.sql
+          include-hidden-files: true
           retention-days: 3
           if-no-files-found: ignore

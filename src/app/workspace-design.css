@@ -1147,8 +1147,8 @@ main.expenses-page { max-width:68rem; }
 .quote-compose[data-mode="preview"] > .quote-preview { background:var(--canvas); padding:clamp(.75rem,2vw,1.5rem); }
 .quote-compose[data-mode="preview"] > .quote-preview > .quote-worksheet { max-width:48rem; margin-inline:auto; padding:clamp(1rem,3vw,2rem); }
 @container quote-workspace (min-width: 43rem) {
-  .quote-compose[data-mode="edit"] { grid-template-columns:minmax(0,1.075fr) minmax(0,1fr); }
-  .quote-compose[data-mode="edit"] > :is(.quote-edit,.quote-preview) { display:block; }
+  .quote-compose[data-mode="edit"][data-retained="false"] { grid-template-columns:minmax(0,1.075fr) minmax(0,1fr); }
+  .quote-compose[data-mode="edit"][data-retained="false"] > :is(.quote-edit,.quote-preview) { display:block; }
   .quote-record-toolbar { grid-template-columns:auto minmax(0,1fr) auto auto; }
   .quote-record-toolbar .quote-directory-toggle { grid-column:auto; }
   .quote-record-toolbar .quote-save { grid-column:auto; }
@@ -1804,6 +1804,16 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 .work-time-correction-review .work-time-comparison { grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr)); }
 .work-time-draft-state { padding:.65rem; border-inline-start:3px solid var(--gold-ink); background:var(--canvas); font-size:.875rem; }
 
+.customer-directory .customer-record { container-type:inline-size; container-name:customer-profile; }
+.customer-profile-identity .customer-visit-summary { margin-top:.65rem; padding-top:.65rem; }
+.customer-profile-identity dd { overflow-wrap:anywhere; }
+@container customer-profile (min-width:40rem) {
+ .customer-profile-identity[data-split-identity='true'] { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:0 1.25rem; align-items:start; }
+ .customer-profile-identity[data-split-identity='true'] .customer-record-title { grid-column:1/-1; }
+ .customer-profile-identity[data-split-identity='true'] .customer-profile-contact { grid-column:1; margin-top:.65rem; }
+ .customer-profile-identity[data-split-identity='true'] .customer-visit-summary { grid-column:2; grid-row:2; margin-top:.65rem; padding:0 0 0 1rem; border-top:0; border-inline-start:1px solid var(--line); }
+ .customer-profile-identity[data-split-identity='true'] .customer-record-flags { grid-column:1/-1; }
+}
 .mileage-selected[hidden] { display:none; }
 .mileage-selected .mileage-back { width:auto; margin:0; }
 .mileage-draft-notice { padding:1rem; border:1px solid var(--line); border-inline-start:3px solid var(--gold-ink); border-radius:var(--radius); }
@@ -2107,3 +2117,18 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
  .mapping-approval-columns { grid-template-columns:minmax(0,1.2fr) minmax(17rem,.8fr); gap:1.5rem; align-items:start; }
  .mapping-history-inline { border-top:0; border-inline-start:1px solid var(--line); padding:0 0 0 1.25rem; }
 }
+
+/* Accepted agreement, retained document and recorded events are separate surfaces. */
+.quote-agreement-heading { display:flex; align-items:center; justify-content:space-between; gap:.5rem 1rem; flex-wrap:wrap; }
+.quote-agreement-heading h4 { margin:0; }
+.quote-agreement-state { color:var(--gold-ink); background:var(--paper); border:1px solid var(--line); border-radius:999px; padding:.25rem .65rem; font-size:.8125rem; font-weight:600; }
+.quote-accepted-agreement { padding-block:1rem; }
+.quote-accepted-agreement .customer-values { margin-top:.75rem; }
+.quote-commercial-events { border-block-start:1px solid var(--line); padding-block:1rem; }
+.quote-commercial-events h4 { margin:0; }
+.quote-commercial-events ol { display:grid; gap:1rem; list-style:none; padding:0 0 0 .75rem; margin:1rem 0 0 .25rem; border-inline-start:2px solid var(--line); }
+.quote-commercial-events li { min-width:0; position:relative; padding-inline-start:.75rem; }
+.quote-commercial-events li::before { content:''; position:absolute; inset-inline-start:-1.0625rem; top:.4rem; width:.5rem; height:.5rem; border-radius:50%; background:var(--gold-ink); }
+.quote-commercial-events time { display:block; color:var(--muted); font-size:.8125rem; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+.quote-commercial-events li p { margin:.25rem 0; overflow-wrap:anywhere; }
+@container quote-workspace (min-width:50rem) { .quote-commercial-events ol { grid-template-columns:repeat(2,minmax(0,1fr)); } }

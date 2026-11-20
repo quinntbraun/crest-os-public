@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-20T01:03:16.783Z",
+  "assessedAt": "2026-11-20T02:33:24.247Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "ca45edd9cfcf9ab015bc47a7f6072e59063d6457",
-    "publishedCommit": "875f1af0db3ebc68dab1f80607578da2e37346cf",
-    "publishedTree": "68fc0491fe42df91f29e99d2515d4e88cd97b452",
-    "localTree": "6c8d6ea0894d511ae097ae6462019293bd0554bb"
+    "localCommit": "e842460522755ee442addce3c49d6bb70e133fd6",
+    "publishedCommit": "227b00f7c90d34e0600da0ecd51ceaf6e37322b4",
+    "publishedTree": "e41c6c17092d376b6803c3960ecbe922dd8b7ad2",
+    "localTree": "e6f87ae888e5ddc33fcd9bb3f1eb050c549152c8"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -27,12 +27,12 @@
     "destinations": 36,
     "deeperWorkflows": 20,
     "counts": {
-      "locally_addressed": 56,
-      "partial": 12,
+      "locally_addressed": 58,
+      "partial": 10,
       "open": 2,
       "review_needed": 0
     },
-    "mainLocalChangesAddressedPercent": 80,
+    "mainLocalChangesAddressedPercent": 82.9,
     "auditComplete": false,
     "finalSignOffClaimed": false
   },
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "0e4297f35593710a7344f81d500a569d529fe66a097c2275521f9fa2d900501e"
+          "sha256": "86bdabfb6a9ff64e584d8bbefcc8275781341dbbff9d3fcecdf633b095fa2985"
         }
       ],
       "verification": {
@@ -97,7 +97,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -121,7 +121,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
@@ -145,7 +145,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -173,7 +173,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "c606eeaff1cb00b80d663c716d7f3ec92e529fdeca52a4a941798efd7ab9a0cd"
+          "sha256": "927673cd749e454c04a574aeef7107d03ffdfbe3749d11dae72800ad0d6c2492"
         }
       ],
       "verification": {
@@ -245,7 +245,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "c606eeaff1cb00b80d663c716d7f3ec92e529fdeca52a4a941798efd7ab9a0cd"
+          "sha256": "927673cd749e454c04a574aeef7107d03ffdfbe3749d11dae72800ad0d6c2492"
         }
       ],
       "verification": {
@@ -289,7 +289,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
@@ -313,7 +313,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
@@ -365,7 +365,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "0e4297f35593710a7344f81d500a569d529fe66a097c2275521f9fa2d900501e"
+          "sha256": "86bdabfb6a9ff64e584d8bbefcc8275781341dbbff9d3fcecdf633b095fa2985"
         }
       ],
       "verification": {
@@ -397,7 +397,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "tests/integration/sign-in-browser.test.mjs",
@@ -437,7 +437,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "src/client/home-schedule.ts",
@@ -525,7 +525,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "tests/unit/proposal-party-read.test.ts",
@@ -565,7 +565,7 @@
       "evidence": [
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "d47e44d7b116ca7441de06d3ad0163560711d6b0f054df85fa4b4fa48e300e22"
+          "sha256": "0f313d5d550572116a6a9368487a2f067872693fb79e7dd628ba47a42763d0f0"
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
@@ -613,7 +613,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "tests/integration/legacy-contact-csv-review-browser.test.mjs",
@@ -661,7 +661,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "tests/support/receipt-layout.mjs",
@@ -801,7 +801,7 @@
       "evidence": [
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "621a6fc2ac59818837f98161c4c3372166558d0b30d757aa880305c09f578a2c"
+          "sha256": "258a1a1fcb73631f45a31361e0e802839cdc477b1d5cdfac20ba94035a6eceab"
         },
         {
           "path": "planning/QUOTE_READING_MODES_DESIGN.md",
@@ -921,7 +921,7 @@
         },
         {
           "path": "tests/integration/confirmed-bookings-product-browser.test.mjs",
-          "sha256": "f7cac30ee47122f62f306d32dd5b66850b8de0730f0737346dbc506ea88d3a4b"
+          "sha256": "656b3fac7a877814ae4cb61be6185b7d4afb3d18522cb597eca9023ac319d143"
         },
         {
           "path": "tests/integration/field-work-product-browser.test.mjs",
@@ -953,7 +953,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "tests/support/appointment-comparison-layout.mjs",
@@ -993,7 +993,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "tests/unit/mileage-prerequisite.test.ts",
@@ -1057,7 +1057,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "tests/support/booking-review-layout.mjs",
@@ -1145,7 +1145,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "tests/support/field-work-layout.mjs",
@@ -1197,7 +1197,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "tests/support/work-read-diagnostic.mjs",
@@ -1269,7 +1269,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "tests/integration/trip-interruption-product-browser.test.mjs",
@@ -1477,7 +1477,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
@@ -1623,18 +1623,30 @@
       "section": "Deeper workflows",
       "title": "Customer profile",
       "requirements": "Use a compact identity header, clear last/next visit facts and the existing section navigation. Keep record creation secondary while inspecting an existing customer. The historical supplemental capture predates some footer/button refinements; those are not reopened as new defects.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/customer-profile-vehicles-viewport-chromium-1440.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Customer identity, linked sections and phone profile exist.",
-      "remainingWork": "Reconcile compact last/next-visit facts and action hierarchy consistently across all profile sections.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Compact customer identity retains server-verified last/next visit facts across every section; actual wide record panes align contact and visits, phones stack them, and Add customer is secondary while inspecting a record. Actual contact save, no-contact/contact and all five sections preserve exact facts and avoid inspection mutations.",
+      "remainingWork": "Complete broader long/many/loading/denied/stale/zoom/private variants and exact-source hosted/installed/physical-device acceptance. Full original observed6/6 and60 fresh captures support the main refinement; initial recovery5/6 failure remains unexplained. Global desktop served-font inconsistency remains S10.",
       "evidence": [
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "d47e44d7b116ca7441de06d3ad0163560711d6b0f054df85fa4b4fa48e300e22"
+          "sha256": "0f313d5d550572116a6a9368487a2f067872693fb79e7dd628ba47a42763d0f0"
+        },
+        {
+          "path": "planning/CUSTOMER_PROFILE_IDENTITY_REFINEMENT.md",
+          "sha256": "00ce98011f5c1113894c1e149345baedd2a99bf03a87dc07cdb6b278f0f27d56"
+        },
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-product-browser.test.mjs",
+          "sha256": "656b3fac7a877814ae4cb61be6185b7d4afb3d18522cb597eca9023ac319d143"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1673,7 +1685,7 @@
       "evidence": [
         {
           "path": "src/app/quotes/quotes.tsx",
-          "sha256": "621a6fc2ac59818837f98161c4c3372166558d0b30d757aa880305c09f578a2c"
+          "sha256": "258a1a1fcb73631f45a31361e0e802839cdc477b1d5cdfac20ba94035a6eceab"
         },
         {
           "path": "planning/QUOTE_READING_MODES_DESIGN.md",
@@ -1691,22 +1703,46 @@
       "section": "Deeper workflows",
       "title": "Sharing and acceptance",
       "requirements": "The long accepted-quote evidence stacks directory, agreement, document and history. Open the selected agreement directly on phones; keep Accepted, the exact retained content and a compact event timeline distinct. A prepared document is not evidence of delivery.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/quote-commercial-chromium-390.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Phone quote record separation and actual acceptance/content retention exist.",
-      "remainingWork": "Finish compact accepted-agreement/event hierarchy with all retained content and honest delivery evidence.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Selected phone quotes retain direct record context. Accepted agreement, exact retained document and saved milestones are distinct; approval explicitly does not imply delivery. Retained quotes use compact Details at every width and explicit full-document Preview; editable wide drafts retain side-by-side comparison.",
+      "remainingWork": "Complete broader state/long/many/zoom/font/private and exact-source hosted/installed/physical acceptance. Final original5/6 parents (nested37/39), both full agreement and draft-editor journeys pass. Chromium replacement setup session400 remains unexplained; initial3/4, observed3/4 and hosted227 frozen53 schema failure are retained. No full6/6, cause/cure or release acceptance claim.",
       "evidence": [
         {
           "path": "src/app/quotes/quote-commercial-panel.tsx",
-          "sha256": "42f014ed78f096f7cb4cfe666bf8b707e24e553854c8c1e55395386169205670"
+          "sha256": "2a3a8d5690fbb357cfcd706df8304f82d9d2a7a7968523b3462d189ee949350c"
         },
         {
-          "path": "planning/QUOTE_PHONE_NAVIGATION.md",
-          "sha256": "4150ca8a1cbc2ef9e5cd074a3f0ae76bd9a5f978e5254fd27dae2097ce56b68b"
+          "path": "planning/ACCEPTED_AGREEMENT_EVENTS_DESIGN.md",
+          "sha256": "ed8a30e3a927f54b0c93d8cb52ef544d180cd2e2dae3067f5b6cf57419bddb61"
+        },
+        {
+          "path": "src/app/quotes/quotes.tsx",
+          "sha256": "258a1a1fcb73631f45a31361e0e802839cdc477b1d5cdfac20ba94035a6eceab"
+        },
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+        },
+        {
+          "path": "tests/integration/quote-commercial-browser.test.mjs",
+          "sha256": "bb3d118aa16090427f080f8a3742cc90c8430cad7f55189ab3a9c73e1e349379"
+        },
+        {
+          "path": "tests/integration/quote-draft-editor-browser.test.mjs",
+          "sha256": "4446fe311a5c452e432997af34c06f3746bfc04da0a222efad44dc3a4bddacb9"
+        },
+        {
+          "path": "tests/support/quote-session-failure-evidence.mjs",
+          "sha256": "25ee2b74269d7fc765dc11c84aa390a0487b549a3660db735de51baa67f8d1a9"
+        },
+        {
+          "path": "planning/FROZEN53_RELEASE_FAILURE_INVESTIGATION.md",
+          "sha256": "49750e3045b5f583c86cca88a0369bb4ae0b16b1f7a1b21b312692d39f4fccde"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },

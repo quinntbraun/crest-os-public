@@ -129,7 +129,7 @@ export function QuoteScreen({initialCustomerId=null}:{initialCustomerId?:string|
    </nav>}
    {commercialUnverified&&<p role="status" className="notice">Saved sharing and acceptance facts must be verified before editing. Reload sharing status below if the check fails.</p>}
    {acceptedDraft&&<p className="notice">An earlier offer in this quote family was accepted. This remaining draft is retained for history and cannot change that agreement. Open the accepted quote below.</p>}
-   <div id="quote-compose" className="quote-compose" data-mode={mode} ref={compose}>
+   <div id="quote-compose" className="quote-compose" data-mode={mode} data-retained={retained} ref={compose}>
    <div id="quote-edit" className="quote-edit">
    {!retained&&<p className="field-help">Unsaved changes clear when you leave or hide this page.</p>}
    <DraftFields key={retained?selectedKey:undefined}>
