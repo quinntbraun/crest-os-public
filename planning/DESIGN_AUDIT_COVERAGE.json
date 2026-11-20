@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-20T02:33:24.247Z",
+  "assessedAt": "2026-11-20T03:26:01.463Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "e842460522755ee442addce3c49d6bb70e133fd6",
-    "publishedCommit": "227b00f7c90d34e0600da0ecd51ceaf6e37322b4",
-    "publishedTree": "e41c6c17092d376b6803c3960ecbe922dd8b7ad2",
-    "localTree": "e6f87ae888e5ddc33fcd9bb3f1eb050c549152c8"
+    "localCommit": "878dda1498aa91753351b918e7fad27f87ce586a",
+    "publishedCommit": "f601104ebc69f71070054aa65604b11e67425191",
+    "publishedTree": "ac8987e9ac9678e0db42f42e9c17d878b9b0203d",
+    "localTree": "e08a0ebdded2cc96448db2f749a70939241cf484"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "86bdabfb6a9ff64e584d8bbefcc8275781341dbbff9d3fcecdf633b095fa2985"
+          "sha256": "b6528711a1c5298341f9e1db369c4b39765dec0ead4f555b41fef4520c09b442"
         }
       ],
       "verification": {
@@ -97,7 +97,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -121,7 +121,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
@@ -145,7 +145,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -173,7 +173,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "927673cd749e454c04a574aeef7107d03ffdfbe3749d11dae72800ad0d6c2492"
+          "sha256": "42b70d1601356cf6269e76cbc61c5933f6c319647e0136051ea54c53fa0842ed"
         }
       ],
       "verification": {
@@ -245,7 +245,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "927673cd749e454c04a574aeef7107d03ffdfbe3749d11dae72800ad0d6c2492"
+          "sha256": "42b70d1601356cf6269e76cbc61c5933f6c319647e0136051ea54c53fa0842ed"
         }
       ],
       "verification": {
@@ -289,7 +289,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
@@ -308,16 +308,40 @@
       "title": "P2 · Turn history into a readable evidence trail",
       "requirements": "Several histories are version lists, prose and repeated timestamps. The underlying retained evidence deserves a much clearer presentation.\n\nFinish standard: Use dated event rows with action, actual event time, recorded time where different, actor if known, status and an expand-to-compare detail. Keep exact timestamps and exports available.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Lead, amendment, expense, custody, travel, mileage and time histories now have readable retained evidence.",
-      "remainingWork": "Finish remaining agreement, proposal, approval and integration histories and their missing/stale variants.",
+      "implementedOrPresent": "Lead, amendment, expense, custody, travel, mileage and time histories retain readable evidence. Accepted quote milestones distinguish preparation/sharing/confirmation. Proposal versions now show actual state, recorded zone/time and reason, with native complete facts/exact UTC; both genuine engines preserve immutable records and issue no inspection API traffic.",
+      "remainingWork": "Finish remaining agreement/approval/integration history and missing/stale/long/zoom/private variants; complete exact-source hosted/installed/physical-device review. New proposal plus normal amendment file6/6 is scoped local evidence; publishedf601 navigation failure remains unresolved, not cured.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
           "sha256": "43d223170aca73ff3e8b10d4982d466279662dce006ff35beeb9b52836bfe7f2"
+        },
+        {
+          "path": "src/app/appointment-holds/screen.tsx",
+          "sha256": "d49d9509dace99c8758dc12170d6980904b92a082912fd13c7f8bafc0928d1a3"
+        },
+        {
+          "path": "planning/PROPOSAL_HISTORY_TIMELINE_DESIGN.md",
+          "sha256": "8fdb6d7627f2278d1b07a3e5603dcd8aafc0c3644904da7fb01e498d7c7c314e"
+        },
+        {
+          "path": "tests/support/proposal-history-layout.mjs",
+          "sha256": "226b7e41191292413bc0d4e3fc997b78b36e3a0e65a2c2ab38501527328e7e67"
+        },
+        {
+          "path": "tests/integration/appointment-holds-browser.test.mjs",
+          "sha256": "5c7161311686ffb070d9ae6623b8c867839af94468fcd6d1bba7acaaba903ee8"
+        },
+        {
+          "path": "tests/integration/appointment-holds-product-browser.test.mjs",
+          "sha256": "8cd5063dfe8f2d4e43f0facde1aaef7163bf6bfe85bac605a256cc020ae4e058"
+        },
+        {
+          "path": "planning/NAVIGATION_READ_LIFECYCLE_INVESTIGATION.md",
+          "sha256": "efcc0187cafa290059f3926bde40238d3b16b10e2f97ed60438f823e2280d7c1"
         }
       ],
       "verification": {
@@ -365,7 +389,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "86bdabfb6a9ff64e584d8bbefcc8275781341dbbff9d3fcecdf633b095fa2985"
+          "sha256": "b6528711a1c5298341f9e1db369c4b39765dec0ead4f555b41fef4520c09b442"
         }
       ],
       "verification": {
@@ -397,7 +421,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "tests/integration/sign-in-browser.test.mjs",
@@ -437,7 +461,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "src/client/home-schedule.ts",
@@ -505,7 +529,7 @@
       "evidence": [
         {
           "path": "src/app/appointment-holds/screen.tsx",
-          "sha256": "c4879ff21ab0bb8066dee608ff5c6c3e911a983ae1a8cdab5c6dccd041002195"
+          "sha256": "d49d9509dace99c8758dc12170d6980904b92a082912fd13c7f8bafc0928d1a3"
         },
         {
           "path": "planning/PROPOSAL_DIRECTORY_DESIGN.md",
@@ -525,7 +549,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "tests/unit/proposal-party-read.test.ts",
@@ -537,7 +561,7 @@
         },
         {
           "path": "tests/integration/appointment-holds-browser.test.mjs",
-          "sha256": "844e71bf5711ab88ed4c612fd3d43b297b973a285a89b727e59dc3b6b954e1df"
+          "sha256": "5c7161311686ffb070d9ae6623b8c867839af94468fcd6d1bba7acaaba903ee8"
         },
         {
           "path": "tests/integration/appointment-holds-product-browser.test.mjs",
@@ -613,7 +637,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "tests/integration/legacy-contact-csv-review-browser.test.mjs",
@@ -661,7 +685,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "tests/support/receipt-layout.mjs",
@@ -841,7 +865,7 @@
         },
         {
           "path": "tests/integration/quote-amendment-workspace-browser.test.mjs",
-          "sha256": "16111440fcdc5172cfd00d9e653b1db06f0afafb1483664442dc4cb6208b83da"
+          "sha256": "f178d551ab88c60dd056ec2da1fb44854ddeebc32ab2b7965a55aac5195f6358"
         },
         {
           "path": "tests/integration/quote-amendment-acceptance-product-browser.test.mjs",
@@ -953,7 +977,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "tests/support/appointment-comparison-layout.mjs",
@@ -993,7 +1017,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "tests/unit/mileage-prerequisite.test.ts",
@@ -1057,7 +1081,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "tests/support/booking-review-layout.mjs",
@@ -1145,7 +1169,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "tests/support/field-work-layout.mjs",
@@ -1197,7 +1221,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "tests/support/work-read-diagnostic.mjs",
@@ -1269,7 +1293,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "tests/integration/trip-interruption-product-browser.test.mjs",
@@ -1477,7 +1501,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
@@ -1637,7 +1661,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "tests/integration/confirmed-bookings-product-browser.test.mjs",
@@ -1721,7 +1745,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "15ba1b8c9e429693c0a0997b8e8ecac7e61d57a77d22843a746671120fcbf6fd"
+          "sha256": "99ed25e994565506eadd665d5809064a32952eb6e35d1a122d6f8711e893ff19"
         },
         {
           "path": "tests/integration/quote-commercial-browser.test.mjs",

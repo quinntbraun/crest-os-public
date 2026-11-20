@@ -37,7 +37,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | S09 | Replace Unicode navigation symbols | Main change addressed | Physical-device and installed verification remain separate. |
 | S10 | Refine type, spacing and numeric rhythm | Partial | Complete all-view16px input, zoom, long-name and served-font checks; do not diagnose by a screenshot alone. |
 | S11 | Motion should explain changes | Partial | Finish state-specific motion duration, stable geometry, focus and quiet save-response review. |
-| S12 | Turn history into a readable evidence trail | Partial | Finish remaining agreement, proposal, approval and integration histories and their missing/stale variants. |
+| S12 | Turn history into a readable evidence trail | Partial | Finish remaining agreement/approval/integration history and missing/stale/long/zoom/private variants; complete exact-source hosted/installed/physical-device review. New proposal plus normal amendment file6/6 is scoped local evidence; publishedf601 navigation failure remains unresolved, not cured. |
 | S13 | Protect context through every transition | Partial | Verify planner date/view and all remaining contextual returns plus sign-out/private clearing on the exact release. |
 | S14 | Phone finishing is physical-device work | Open | Complete the required physical iPhone, keyboard, safe-area, camera/download, zoom and reduced-motion acceptance. |
 | R01 | Sign in (/sign-in) | Main change addressed | Complete genuine timed-expiry, password-manager/zoom/physical keyboard and iPhone acceptance, broader state variants and matching delivered release; all final sign-offs remain false. |

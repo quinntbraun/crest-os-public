@@ -2132,3 +2132,14 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 .quote-commercial-events time { display:block; color:var(--muted); font-size:.8125rem; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
 .quote-commercial-events li p { margin:.25rem 0; overflow-wrap:anywhere; }
 @container quote-workspace (min-width:50rem) { .quote-commercial-events ol { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+/* Proposal versions are retained events, with complete evidence on demand. */
+.proposal-history-timeline { list-style:none; margin:1.25rem 0 .5rem .25rem; padding:0; }
+.proposal-history-timeline > li { position:relative; padding:0 0 1.25rem 1rem; border-inline-start:2px solid var(--line); min-width:0; }
+.proposal-history-timeline > li:last-child { padding-bottom:0; }
+.proposal-history-timeline > li::before { content:''; position:absolute; inset-inline-start:-.3125rem; top:.6rem; width:.5rem; height:.5rem; border-radius:50%; background:var(--gold-ink); }
+.customers .proposal-history-timeline details { margin:0; padding:0; border:0; border-radius:0; background:transparent; }
+.proposal-history-heading { display:inline-flex; align-items:center; flex-wrap:wrap; gap:.375rem .75rem; }
+.proposal-history-recorded { display:block; margin:.375rem 0; font-size:.8125rem; color:var(--muted); overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+.proposal-history-reason { display:block; margin:.375rem 0 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.proposal-history-timeline .customer-values { margin-top:.75rem; padding-top:.75rem; border-top:1px solid var(--line); }
