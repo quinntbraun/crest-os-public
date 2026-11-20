@@ -5,6 +5,7 @@ import {test} from 'node:test';
 import {setTimeout as delay} from 'node:timers/promises';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {observeWorkReads} from '../support/work-read-diagnostic.mjs';
 import sharp from 'sharp';
 import {strFromU8,unzipSync} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
@@ -34,7 +35,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
  name+(cancelWork?' Drop-Off no-work cancellation retains the vehicle for explicit return':startWork?' Drop-Off work starts explicitly, completes, and awaits separate collection':' Drop-Off forms recover interrupted intake and record collection'),async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:startWork,unfulfilledCancellation:cancelWork,dropoffCustody:true});
- let browser,page;
+ let browser,page,readDiagnostic;
  const responses=[];
  function logScheduleDiagnostic(path,scheduleStatus){
   const scheduling=responses.filter(item=>item.route.startsWith('/api/business/scheduling/'));
@@ -47,7 +48,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
  try{
   browser=await engine.launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:844}});
-  page=await context.newPage();
+  page=await context.newPage();readDiagnostic=observeWorkReads(page,fixture,name+(cancelWork?' Drop-Off cancellation':startWork?' Drop-Off completion':' Drop-Off intake'));
   page.setDefaultTimeout(20000);
   page.on('response',response=>{
    const url=new URL(response.url());
@@ -289,6 +290,8 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
      submitted++;const response=await route.fetch();assert.equal(response.status(),200);
      if(name==='webkit')await route.abort();else await route.fulfill({response});
     },{times:1});
+    await cancellation.getByRole('button',{name:'Review cancellation',exact:true}).click();
+    await expect(cancellation.getByRole('region',{name:'Review job cancellation',exact:true})).toBeVisible();assert.equal(submitted,0);
     const cancel=cancellation.getByRole('button',{name:'Cancel job and close work time',exact:true});
     await cancel.focus();await page.keyboard.press('Enter');
     if(name==='webkit'){
@@ -451,6 +454,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
   const path=page?new URL(page.url()).pathname:null;
   const safeStatus=page&&path==='/schedule'?await page.locator('.schedule-status').textContent({timeout:500}).catch(()=>null):null;
   logScheduleDiagnostic(path,safeStatus);
+  await readDiagnostic?.();
   throw error;
  }finally{
   if(process.env.CREST_CUSTODY_ROUTE_DIAGNOSTICS==='1')logScheduleDiagnostic(page?new URL(page.url()).pathname:null,null);
@@ -464,11 +468,11 @@ test(photoEngine[0]+' signed-in condition photo survives interrupted upload conf
   .withExif({IFD0:{Copyright:'Generated Crest test image'}}).png().toBuffer();
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,dropoffCustody:true,photoFixture:photo});
- let browser;
+ let browser,page,photoDiagnostic;
  try{
   browser=await photoEngine[1].launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
-  const page=await context.newPage();page.setDefaultTimeout(25000);
+  page=await context.newPage();photoDiagnostic=observeWorkReads(page,fixture,photoEngine[0]+' custody photo');page.setDefaultTimeout(25000);
   await page.addInitScript(()=>{
    const revoke=URL.revokeObjectURL.bind(URL);
    window.crestTestRevocations=[];
@@ -519,7 +523,7 @@ test(photoEngine[0]+' signed-in condition photo survives interrupted upload conf
    await vehicle.click();
    await panel.getByRole('button',{name:'Load custody history',exact:true}).click();
   }
-  await openHistory();
+  photoDiagnostic.mark('intake');await openHistory();
   await panel.getByRole('button',{name:'Record intake…',exact:true}).click();
   await panel.getByLabel('Actual handoff time',{exact:true}).fill('2026-11-03T09:45');
   await panel.getByLabel('Who handed over the vehicle?',{exact:true}).fill('Synthetic intake contact');
@@ -558,7 +562,7 @@ test(photoEngine[0]+' signed-in condition photo survives interrupted upload conf
   assert.equal((await post('custody-photo/status',{jobVehicleId:randomUUID(),photoId:scope.photoId})).status,400);
   await expect(save).toBeEnabled();await save.click();
   await expect(panel.getByText('Handoff saved.',{exact:true})).toBeVisible();
-  await page.reload();await openHistory();
+  photoDiagnostic.mark('photo_reopen');await page.reload();await openHistory();
   const exported=await downloadCustodyHistory(page,panel);
   assert.equal(exported.state,'in_custody');
   assert.equal(exported.events[0].conditionPhotoId,scope.photoId);
@@ -598,19 +602,20 @@ test(photoEngine[0]+' signed-in condition photo survives interrupted upload conf
   }
   const oldUrl=await image.getAttribute('src'),oldDownload=await downloadLink.getAttribute('href');
   await vehicle.click();
-  await expect(image).toHaveCount(0);
+  photoDiagnostic.mark('preview_clear');await expect(image).toHaveCount(0);
   await expect.poll(()=>page.evaluate(url=>window.crestTestRevocations.includes(url),oldUrl)).toBe(true);
   await expect.poll(()=>page.evaluate(url=>window.crestTestRevocations.includes(url),oldDownload)).toBe(true);
 
   await page.setViewportSize({width:390,height:844});
-  await page.getByRole('button',{name:'Cancel this job…',exact:true}).click();
+  photoDiagnostic.mark('scheduled_cancel');await page.getByRole('button',{name:'Cancel this job…',exact:true}).click();
   await page.getByLabel('Cancellation reason',{exact:true}).fill('Synthetic cancellation after verified intake');
   await page.getByLabel('Customer-communication status',{exact:true}).selectOption('not_sent');
   await page.getByRole('button',{name:'Cancel this scheduled job',exact:true}).click();
   await expect(page.locator('.job-change-status')).toContainText('Job cancellation saved.');
   await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
-  await openHistory();
+  photoDiagnostic.mark('release_history');await openHistory();
   await panel.getByRole('button',{name:'Record release…',exact:true}).click();
+  photoDiagnostic.mark('release_save');
   await panel.getByLabel('Actual handoff time',{exact:true}).fill('2026-11-03T11:15');
   await panel.getByLabel('Who collected the vehicle?',{exact:true}).fill('Synthetic collecting customer');
   await panel.getByLabel('Handoff location',{exact:true}).fill('Synthetic shop bay');
@@ -629,5 +634,5 @@ test(photoEngine[0]+' signed-in condition photo survives interrupted upload conf
   assert.notEqual(rows[1].condition_photo_id,scope.photoId);
   assert(rows[1].condition_photo_id);
   assert.equal(fixture.photoStorage.requests.filter(request=>request.method==='PUT'&&request.key.startsWith('staging/')).length,2);
- }finally{try{await browser?.close();}finally{await fixture.close();}}
+ }catch(error){await photoDiagnostic?.();if(page&&!page.isClosed()&&new URL(page.url()).pathname==='/schedule'){await mkdir('.local/review',{recursive:true});await page.screenshot({path:'.local/review/custody-photo-read-failure-'+photoEngine[0]+'-'+Date.now()+'.png',fullPage:true}).catch(()=>null);}throw error;}finally{try{await browser?.close();}finally{await fixture.close();}}
 },{timeout:360000});

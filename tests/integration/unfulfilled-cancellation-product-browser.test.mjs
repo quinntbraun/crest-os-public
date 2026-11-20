@@ -3,6 +3,7 @@ import {test} from 'node:test';
 import {mkdir,readFile} from 'node:fs/promises';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {observeWorkReads} from '../support/work-read-diagnostic.mjs';
 import {strFromU8,unzipSync} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
@@ -10,11 +11,11 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
  const f=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,
   jobCompletion:true,supportTrips:true,unfulfilledCancellation:true});
- let browser;
+ let browser,diagnostic;
  try{
   browser=await engine.launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
-  const page=await context.newPage();
+  const page=await context.newPage();diagnostic=observeWorkReads(page,f,name+' Mobile cancellation');
   page.setDefaultTimeout(20000);
   const job=f.bookingRequest.jobId,work=f.origin+'/schedule/work?job='+job;
   const cancel=f.origin+'/schedule/work/cancel?job='+job;
@@ -37,6 +38,8 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   assert.equal(booking,200);
   await page.goto(cancel);
   await expect(status).toContainText('no longer eligible');
+  await expect(page.getByRole('link',{name:'Open saved job',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Reload saved work',exact:true})).toBeHidden();
   await page.goto(work);
   await page.getByText('Other ways to start',{exact:true}).click();await page.getByRole('button',{name:'Already here — start without recorded travel',exact:true}).click();
   await page.getByLabel('Why was travel not recorded?').fill('Synthetic arrival without trip');
@@ -70,7 +73,8 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await page.getByLabel('Cancellation reason').fill(reason);
   await page.getByLabel('Customer-communication status').selectOption('not_sent');
   await page.getByLabel('Communication note (optional)',{exact:true}).fill(note);
-  const save=page.getByRole('button',{name:'Cancel job and close work time'});
+  const save=page.getByRole('button',{name:'Cancel job and close work time'}),reviewButton=page.getByRole('button',{name:'Review cancellation',exact:true});
+  await expect(save).toHaveCount(0);
   let submits=0;
   await page.route(route,async intercepted=>{
    submits++;
@@ -78,17 +82,33 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
    if(name==='webkit'&&response.status()===200)await intercepted.abort('failed');
    else await intercepted.fulfill({response});
   });
-  await save.click();
+  await reviewButton.click();
   assert.equal(submits,0);
   await expect(page.getByLabel('Work completed',{exact:true})).toBeFocused();
   await page.getByLabel('Work completed',{exact:true}).selectOption('none');
   await mkdir('.local/review',{recursive:true});
-  for(const width of [360,390,768,1440]){
+  for(const width of [320,360,390,768,1440,1920]){
    await page.setViewportSize({width,height:900});
    await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
    assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(v=>v.id),[]);
    await page.screenshot({path:'.local/review/field-cancellation-'+name+'-'+width+'.png',fullPage:true});
+  }
+  const beforeReview=f.requests.length;await reviewButton.click();
+  const review=page.getByRole('region',{name:'Review job cancellation',exact:true});
+  await expect(review.getByRole('heading',{name:'Review cancellation',exact:true})).toBeFocused();
+  await expect(review).toContainText(reason);await expect(review).toContainText(note);await expect(review).toContainText('Not sent');
+  assert.equal(submits,0);assert.equal(f.requests.length,beforeReview);
+  await page.getByRole('button',{name:'Back to cancellation details',exact:true}).click();
+  await expect(page.getByLabel('Work completed',{exact:true})).toBeFocused();
+  await expect(page.getByLabel('Cancellation reason',{exact:true})).toHaveValue(reason);
+  await expect(page.getByLabel('Communication note (optional)',{exact:true})).toHaveValue(note);
+  await reviewButton.click();assert.equal(submits,0);assert.equal(f.requests.length,beforeReview);
+  for(const width of [320,360,390,768,1440,1920]){
+   await page.setViewportSize({width,height:900});await page.evaluate(()=>window.scrollTo(0,0));
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(v=>v.id),[]);
+   await page.screenshot({path:'.local/review/field-cancellation-review-'+name+'-'+width+'.png',fullPage:true});
   }
   await save.focus();
   await page.keyboard.press('Enter');
@@ -123,5 +143,5 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
    (SELECT bool_and(o.outcome='cancelled' AND o.completed_cents=0) FROM crest.work_scope_outcomes o WHERE o.job_id=j.id) cancelled_scope
    FROM crest.jobs j WHERE j.id=$1`,[job])).rows;
   assert.deepEqual(rows,[{state:'cancelled',open_work:0,reservations:0,open_travel:name==='webkit'?1:0,cancelled_scope:true}]);
- }finally{await browser?.close();await f.close();}
+ }catch(error){await diagnostic?.();throw error;}finally{await browser?.close();await f.close();}
 });

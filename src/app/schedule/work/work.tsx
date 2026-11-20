@@ -122,7 +122,7 @@ export function FieldSessionScreen({jobId,mode='work'}:{jobId:string;mode?:Field
   {view.selectionNeeded&&<TaskPrerequisite kind={mode}/>}
   {blocked&&!view.selectionNeeded&&<div className="field-unavailable-actions">
    <a className="primary-action" href={returnHref}>{jobId?'Open saved job':'Open Schedule'}</a>
-   {jobId&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload saved work</button>}
+   {jobId&&(cancelling?<details className="field-eligibility-recheck"><summary>Check cancellation eligibility again</summary><button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload saved work</button></details>:<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload saved work</button>)}
   </div>}
   {['review','unavailable'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload saved work</button>}
   <nav aria-label="Work navigation">{!blocked&&jobId&&<a href={returnHref}>Saved job and history</a>}{(!blocked||jobId)&&<a href="/schedule">Schedule</a>}<a href="/save-review">Interrupted saves</a></nav>

@@ -13,6 +13,8 @@ import {tripCursorBefore} from '../operations/support-trip';
 import type {SupportTripCursor} from '../operations/support-trip';
 import {scheduleDateWindow} from './schedule-reader';
 import type {JobSummary} from '../operations/confirmed-job-read-contract';
+import {parseCustomer} from '../customer/customer-contract';
+import {parseVehicle} from '../customer/vehicle-contract';
 
 type Store=ReturnType<typeof createPendingSchedulingStore>;
 type Workspace=Awaited<ReturnType<typeof scheduling.workspace>>;
@@ -23,12 +25,13 @@ export type MileageJobChoice=Pick<JobSummary,'jobId'|'customerName'|'startAt'|'v
 export type MileageJobCursor=Readonly<{startAt:string;jobId:string}>;
 export type MileageJobChoices=Readonly<{jobs:readonly MileageJobChoice[];next:MileageJobCursor|null}>;
 export type MileageView=Readonly<{
+ jobContext:Readonly<{customerName:string;vehicleLabels:readonly string[]}>|null;
  phase:'loading'|'ready'|'pending'|'review'|'signed-out'|'unavailable';busy:boolean;message:string;selectionNeeded?:boolean;
  trips:readonly MileageTrip[];hasMore:boolean;selected:MileageTrip|null;history:MileageHistoryPage|null;
  canSave:boolean;timezone:string;reference:string;departure:LoadedMobileDeparture|null;pendingKind:SaveKind|null;
 }>;
 export const initialMileageView: MileageView=Object.freeze({
- phase:'loading',busy:true,message:'Checking access to saved trips…',trips:[],hasMore:false,selected:null,
+ phase:'loading',busy:true,message:'Checking access to saved trips…',trips:[],hasMore:false,selected:null,jobContext:null,
  history:null,canSave:false,timezone:'',reference:'',departure:null,pendingKind:null
 });
 
@@ -85,10 +88,19 @@ export function createMileageController(deps:{jobId:string;legId?:string;initial
    await readHistory(result.trip,businessId,proof,signal);
    return;
   }
+  // A saved job's vehicles are context, never evidence of which vehicle travelled.
+  let jobContext: MileageView['jobContext']=null;
+  try{
+   const resources=await scheduling.resources(businessId,deps.jobId,proof,signal);live(signal);
+   if(!('state'in resources))jobContext=Object.freeze({
+    customerName:parseCustomer(resources.vehicles[0]!.customer_snapshot,businessId).display_name,
+    vehicleLabels:Object.freeze(resources.vehicles.map(row=>parseVehicle(row.vehicle_snapshot,businessId).label))
+   });
+  }catch(error){live(signal);if(error instanceof AuthenticationError&&error.kind==='denied')throw error;}
   const result=await scheduling.mileageTrips({businessId,jobId:deps.jobId,after:null,pageSize:20},proof,signal);
   live(signal);
   if(result.state!=='loaded')throw Error();
-  update({phase:'ready',trips:result.trips,hasMore:result.hasMore,selected:null,history:null,departure:null,
+  update({phase:'ready',trips:result.trips,hasMore:result.hasMore,selected:null,history:null,departure:null,jobContext,
    timezone:workspace!.context.timezone,canSave:workspace!.context.writeState==='ready',
    message:result.trips.length?'Choose a saved trip.':'No trips are recorded for this job.'});
   let selected=result.trips.find(trip=>trip.legId===selection);

@@ -291,21 +291,23 @@ export function MileageScreen({jobId,legId,initialTrip}:{jobId:string;legId:stri
     <h2>Saved mileage history</h2>
     {saved.evidence.length===0?<p>No mileage has been saved for this trip.</p>:<>
      <p className="field-help">Loaded versions {String(saved.evidence[0]!.sequence)}–{String(saved.evidence.at(-1)!.sequence)}. {saved.afterVersion==='0'?'No earlier versions for this trip.':'Earlier versions are available.'}</p>
-     <ol className="mileage-versions">{saved.evidence.map((row,index)=>{
+     <table className="mileage-evidence-table" role="table"><caption className="visually-hidden">Recorded mileage versions, distances, vehicle types and evidence</caption><thead role="rowgroup"><tr role="row"><th scope="col">Entry</th><th scope="col">Distance</th><th scope="col">Vehicle used</th><th scope="col">Evidence and attribution</th></tr></thead><tbody role="rowgroup">{saved.evidence.map((row,index)=>{
       const previous=saved.evidence[index-1],changes=mileageEvidenceChanges(saved,previous,row);
       const fieldValue=(key:string,raw:string|null)=>raw===null?'Not recorded':key==='source'?sources[raw as MileageBody['source']]:key==='movement_kind'?movementLabels[raw as MileageBody['movementKind']]:key==='allocations'?<SavedAttribution history={saved} evidenceId={raw} currentJob={jobId} trip={trip} state={String(saved.evidence.find(entry=>entry.id===raw)?.allocation_state)}/>:raw;
-      return <li key={String(row.id)}>
-       <header><strong>Version {String(row.sequence)}</strong><span>{row.sequence==='1'?'First entry':'Correction'} · {sources[row.source as MileageBody['source']]}</span><p>Recorded <time dateTime={String(row.created_at)} title={String(row.created_at)}>{format(String(row.created_at))}</time></p></header>
-       <p className="mileage-history-distance">{row.actual_miles!==null&&<strong>{String(row.actual_miles)} actual miles</strong>}{row.estimate_miles!==null&&<span>{String(row.estimate_miles)} estimated miles</span>}</p>
-       <p>{movementLabels[row.movement_kind as MileageBody['movementKind']]}</p>
+      return <tr key={String(row.id)} role="row">
+       <th scope="row" role="rowheader"><header><strong>Version {String(row.sequence)}</strong><span>{row.sequence==='1'?'First entry':'Correction'} · {sources[row.source as MileageBody['source']]}</span><p>Recorded <time dateTime={String(row.created_at)} title={String(row.created_at)}>{format(String(row.created_at))}</time></p></header></th>
+       <td role="cell"><p className="mileage-history-distance">{row.actual_miles!==null&&<strong>{String(row.actual_miles)} actual miles</strong>}{row.estimate_miles!==null&&<span>{String(row.estimate_miles)} estimated miles</span>}</p></td>
+       <td role="cell"><p>{movementLabels[row.movement_kind as MileageBody['movementKind']]}</p></td>
+       <td role="cell">
        {row.reason!==null&&<p className="mileage-history-reason"><strong>Reason recorded</strong><span>{String(row.reason)}</span></p>}
        {changes?.length?<details className="mileage-history-changes"><summary>Changes from version {String(previous!.sequence)}</summary><dl>{changes.map(change=><div key={change.key}><dt>{change.label}</dt><dd><span>Before</span><div>{fieldValue(change.key,change.before)}</div></dd><dd><span>This version</span><div>{fieldValue(change.key,change.after)}</div></dd></div>)}</dl></details>:row.sequence!=='1'&&<p className="field-help">{changes===null?'The preceding version is not on this loaded page.':'Distance, source and allocations unchanged; the retained reason is shown above.'}</p>}
        <SavedAttribution history={saved} evidenceId={String(row.id)} currentJob={jobId} trip={trip} state={String(row.allocation_state)}/>
        <details className="mileage-history-evidence"><summary>Saved evidence for mileage version {String(row.sequence)}</summary><dl>
         <div><dt>Actual miles</dt><dd>{row.actual_miles===null?'Not recorded':String(row.actual_miles)}</dd></div><div><dt>Estimated miles</dt><dd>{row.estimate_miles===null?'Not recorded':String(row.estimate_miles)}</dd></div><div><dt>Estimate source</dt><dd>{row.estimate_source===null?'Not recorded':String(row.estimate_source)}</dd></div><div><dt>Odometer (mi)</dt><dd>{row.odometer_start===null?'Not recorded':String(row.odometer_start)+' → '+String(row.odometer_end)}</dd></div><div><dt>Notes</dt><dd>{row.notes===null?'Not recorded':String(row.notes)}</dd></div><div><dt>Recorded (UTC)</dt><dd>{String(row.created_at)}</dd></div><div><dt>Evidence reference</dt><dd>{String(row.id)}</dd></div><div><dt>Trip version reference</dt><dd>{String(row.leg_version_id)}</dd></div><div><dt>Operation reference</dt><dd>{String(row.operation_id)}</dd></div>
        </dl></details>
-      </li>;
-     }).reverse()}</ol>
+       </td>
+      </tr>;
+     }).reverse()}</tbody></table>
     </>}
     <div className="mileage-history-actions">
      {saved.afterVersion!=='0'&&<button className="secondary" type="button" disabled={view.busy} onClick={handleEarlierVersions}>Load earlier versions</button>}
@@ -329,7 +331,14 @@ export function MileageScreen({jobId,legId,initialTrip}:{jobId:string;legId:stri
    <button type="button" disabled={view.busy} onClick={()=>void action(current=>current.check())}>{pendingDeparture?'Check original departure correction':'Check original mileage'}</button>
   </>}
   {view.phase==='ready'&&<>
+   {jobId&&<section className="mileage-job-context" aria-label="Saved job context">
+    {view.jobContext?<><div><p className="field-help">Mileage for this job</p><h2>{view.jobContext.customerName}</h2></div>
+     <details><summary>Job vehicles · {view.jobContext.vehicleLabels.length}</summary><ul>{view.jobContext.vehicleLabels.map((label,index)=><li key={index}>{label}</li>)}</ul><p className="field-help">These are the job’s vehicles. The saved mileage identifies the type of vehicle used for travel separately.</p></details></>
+     :<p>Job identity could not be verified. <a href={'/schedule?job='+encodeURIComponent(jobId)}>Open saved job</a> to review its customer and vehicles.</p>}
+   </section>}
+   {legId&&<p className="field-help mileage-standalone-context">Standalone travel · Job attribution is recorded separately for each mileage entry.</p>}
    {!view.canSave&&<p className="notice">Changes are paused. Saved mileage is available for review.</p>}
+   {jobId&&view.trips.length===0&&<section className="home-panel" aria-label="No recorded trips"><h2>No trips recorded yet</h2><p>Mileage appears here after travel is recorded for this job. No distance has been assumed.</p><a className="primary-action" href={'/schedule?job='+encodeURIComponent(jobId)}>Return to saved job</a></section>}
    {dirtyDrafts.size>0&&!showingRecord&&selected&&<aside className="mileage-draft-notice" aria-label="Unfinished mileage draft"><p>Your unfinished mileage or departure draft is still open.</p><button type="button" className="secondary" onClick={()=>{setDismissedRecord(null);setFocusRequest({target:'record'});}}>Return to mileage draft</button></aside>}
    {!!jobId&&(view.trips.length>0||selected)&&<div className="mileage-layout" data-picker={view.trips.length>0} data-selected={showingRecord}>
     {view.trips.length>0&&<section className="home-panel mileage-picker" aria-label="Find a trip">

@@ -25,7 +25,7 @@ export function TripInterruptionForm({view,save}:{view:FieldSessionView;save:(dr
  const reviewInput=bookingSlotInput(context,slot,job.id);
  const customerConfirmed=action==='reschedule';
  const hasEvidence=customerConfirmed||communication==='sent';
- return <form className="field-work-form trip-interruption-form" onSubmit={event=>{
+ return <form className="field-work-form trip-interruption-form field-decision-layout" onSubmit={event=>{
   event.preventDefault();
   if(disabled)return;
   const data=new FormData(event.currentTarget),text=(name:string)=>String(data.get(name)??'');
@@ -51,12 +51,20 @@ export function TripInterruptionForm({view,save}:{view:FieldSessionView;save:(dr
     unknown_travel_reviewed:unknownTravelReviewed}});
   }catch{setError('Enter the confirmed replacement and actual customer confirmation, then review the schedule for this time.');}
  }}>
-  <FieldVisitHeader resources={view.resources!} departure={trip.departedAt}/>
+  <aside className="field-decision-context" aria-label="Trip and visit consequences">
+   <FieldVisitHeader resources={view.resources!} departure={trip.departedAt} compact/>
+   <section className="trip-consequence-summary" aria-label="Interruption consequences">
+    <p className="field-help">Active trip · Recorded departure retained</p>
+    <h3>{customerConfirmed?'End travel and replace the visit':'End travel and cancel the visit'}</h3>
+    <p id={id+'-effect'}>{customerConfirmed?'A successful save ends this trip at the actual stop and replaces the reservation with the customer-confirmed visit time.':'A successful save ends this trip at the actual stop and cancels this visit.'}</p>
+    <p className="field-help">Earlier appointments and travel remain in history. Choose a stop and reason before saving.</p>
+   </section>
+  </aside>
   <fieldset disabled={disabled}>
    <legend>End travel and change the visit</legend>
    <p>The save records when the trip ends and keeps the departure in history.</p>
    <label htmlFor={id+'-action'}>What happened?</label>
-   <select id={id+'-action'} value={action} onChange={event=>{
+   <select id={id+'-action'} aria-describedby={id+'-effect'} value={action} onChange={event=>{
     setAction(event.target.value==='reschedule'?'reschedule':'cancel');setEffectiveAt('');setReview(null);setError('');
    }}><option value="cancel">Cancel the visit</option><option value="reschedule">Reschedule confirmed visit</option></select>
    <label htmlFor={id+'-stop'}>Actual stop location</label>
@@ -99,9 +107,9 @@ export function TripInterruptionForm({view,save}:{view:FieldSessionView;save:(dr
      <textarea id={id+'-note'} name="note" rows={2} maxLength={2000} required={hasEvidence||communication==='no_contact'}/>
     </>}
    </div>
-   <p className="field-help">Enter communication that has already happened.</p>
+   <p className="field-help">Enter communication that has already happened. Crest sends no message from this screen.</p>
    {error&&<p role="alert">{error}</p>}
-   <button type="submit">{customerConfirmed?'End trip and save replacement':'End trip and cancel visit'}</button>
+   <button className={customerConfirmed?undefined:'field-cancel-submit'} type="submit">{customerConfirmed?'End trip and save replacement':'End trip and cancel visit'}</button>
   </fieldset>
  </form>;
 }

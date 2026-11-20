@@ -12,6 +12,7 @@ import {AmendmentAllocationReview} from './allocation-review';
 import {AmendmentCancellationCreator} from './cancellation-creator';
 import {AmendmentCancellationEditor} from './cancellation-editor';
 import {AmendmentHistoryEvents} from './history';
+import {AmendmentScopeOverview} from './scope-overview';
 
 /** Construction view. Amendment APIs remain closed by default; the complete
  * amendment feature, source/recovery adoption and release gates are pending. */
@@ -76,7 +77,7 @@ export function QuoteAmendmentWorkspace(){
       </div>
       {!amendment.parentIsCurrent&&!(amendment.schemaVersion===2&&amendment.acceptance.request.agreementId===selected.parent.agreementId)&&<p className="notice">This amendment refers to an earlier accepted agreement. Review the current accepted terms before preparing further changes.</p>}
       {view.dirty&&!view.acceptance&&<p className="notice">{view.preparingReopening?'This comparison shows the accepted cancellation. Save the new Draft to compare your proposed work.':'This comparison shows the saved amendment. Save your edits to update it.'}</p>}
-      <details className="amendment-saved-comparison" open><summary>{amendment.schemaVersion===2?'Review accepted changes':'Review proposed changes'}</summary><QuoteAmendmentDocument comparison={amendment.comparison.customer} accepted={amendment.schemaVersion===2}/></details>
+      <details className="amendment-saved-comparison" open><summary>{amendment.schemaVersion===2?'Review accepted changes':'Review proposed changes'}</summary><QuoteAmendmentDocument comparison={amendment.comparison.customer} accepted={amendment.schemaVersion===2}/><AmendmentScopeOverview comparison={amendment.comparison.customer} original={amendment.parent.revision.customer_safe_snapshot} after={amendment.revision.customer_safe_snapshot.lines} accepted={amendment.schemaVersion===2}/></details>
      </>}
      <details><summary>Accepted scope and terms</summary><QuoteDocument quote={selected.parent.revision.customer_safe_snapshot} stage="accepted"/></details>
      <AmendmentAllocationReview key={JSON.stringify(['allocations',selected.family.business_id,selected.family.id,selected.family.version,selected.parent.agreementId,selected.parent.versionNo,selected.parent.customerId,selected.parent.revision.total_cents])} target={selected}/>

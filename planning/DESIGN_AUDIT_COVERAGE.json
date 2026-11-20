@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-19T21:03:40.464Z",
+  "assessedAt": "2026-11-20T01:03:16.783Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "b209102f888f3c2d0da82a3b9e330d090bbe28ff",
-    "publishedCommit": "596a889afd8fb0915fe47581314e349bdf74af0e",
-    "publishedTree": "4ed79e38949ab006b302db406ef02f8f1b3331e4",
-    "localTree": "023c0bc39418788684e433c84d954a3274832b8c"
+    "localCommit": "ca45edd9cfcf9ab015bc47a7f6072e59063d6457",
+    "publishedCommit": "875f1af0db3ebc68dab1f80607578da2e37346cf",
+    "publishedTree": "68fc0491fe42df91f29e99d2515d4e88cd97b452",
+    "localTree": "6c8d6ea0894d511ae097ae6462019293bd0554bb"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -27,12 +27,12 @@
     "destinations": 36,
     "deeperWorkflows": 20,
     "counts": {
-      "locally_addressed": 48,
-      "partial": 20,
+      "locally_addressed": 56,
+      "partial": 12,
       "open": 2,
       "review_needed": 0
     },
-    "mainLocalChangesAddressedPercent": 68.6,
+    "mainLocalChangesAddressedPercent": 80,
     "auditComplete": false,
     "finalSignOffClaimed": false
   },
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "b3311b336c455d701885b6b26d33eccfa35f23f4a9d689887c40dbd2dba7578e"
+          "sha256": "0e4297f35593710a7344f81d500a569d529fe66a097c2275521f9fa2d900501e"
         }
       ],
       "verification": {
@@ -97,7 +97,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "d87ecdc9a1944a5707fb736f9003a16bb1a081ee26e3cdd9da98d9089c8ffaba"
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -121,7 +121,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "d87ecdc9a1944a5707fb736f9003a16bb1a081ee26e3cdd9da98d9089c8ffaba"
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
@@ -145,7 +145,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "d87ecdc9a1944a5707fb736f9003a16bb1a081ee26e3cdd9da98d9089c8ffaba"
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -173,7 +173,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "afd1111e3c66f866ffdab76eb0a9c9f8cfb29b2d4012152f1d763a43203038c1"
+          "sha256": "c606eeaff1cb00b80d663c716d7f3ec92e529fdeca52a4a941798efd7ab9a0cd"
         }
       ],
       "verification": {
@@ -245,7 +245,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "afd1111e3c66f866ffdab76eb0a9c9f8cfb29b2d4012152f1d763a43203038c1"
+          "sha256": "c606eeaff1cb00b80d663c716d7f3ec92e529fdeca52a4a941798efd7ab9a0cd"
         }
       ],
       "verification": {
@@ -289,7 +289,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "d87ecdc9a1944a5707fb736f9003a16bb1a081ee26e3cdd9da98d9089c8ffaba"
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
@@ -313,7 +313,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "d87ecdc9a1944a5707fb736f9003a16bb1a081ee26e3cdd9da98d9089c8ffaba"
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
@@ -365,7 +365,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "b3311b336c455d701885b6b26d33eccfa35f23f4a9d689887c40dbd2dba7578e"
+          "sha256": "0e4297f35593710a7344f81d500a569d529fe66a097c2275521f9fa2d900501e"
         }
       ],
       "verification": {
@@ -397,7 +397,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "d87ecdc9a1944a5707fb736f9003a16bb1a081ee26e3cdd9da98d9089c8ffaba"
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
         },
         {
           "path": "tests/integration/sign-in-browser.test.mjs",
@@ -437,7 +437,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "d87ecdc9a1944a5707fb736f9003a16bb1a081ee26e3cdd9da98d9089c8ffaba"
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
         },
         {
           "path": "src/client/home-schedule.ts",
@@ -449,7 +449,7 @@
         },
         {
           "path": "tests/integration/book-job-product-browser.test.mjs",
-          "sha256": "1c45a92d8825b847a001748484fce52750116c25c8f49a3241ee228d99ffd703"
+          "sha256": "098ae486fa544749fb34ed9ce5c9d426c9bd017838385415d2b46fe35c4d7f57"
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
@@ -457,7 +457,7 @@
         },
         {
           "path": "tests/integration/field-work-product-browser.test.mjs",
-          "sha256": "9ea6a0af2bff4f80125430ac104a7cfa86c10550905b09e17283d3396eb78a32"
+          "sha256": "e4eb8013e4f8b6947eddb7b945a49dc49237d590a8dba622245f5af09d2b7d10"
         },
         {
           "path": "tests/integration/maintenance-reminders-product-browser.test.mjs",
@@ -525,7 +525,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "d87ecdc9a1944a5707fb736f9003a16bb1a081ee26e3cdd9da98d9089c8ffaba"
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
         },
         {
           "path": "tests/unit/proposal-party-read.test.ts",
@@ -545,7 +545,7 @@
         },
         {
           "path": "tests/integration/book-job-product-browser.test.mjs",
-          "sha256": "1c45a92d8825b847a001748484fce52750116c25c8f49a3241ee228d99ffd703"
+          "sha256": "098ae486fa544749fb34ed9ce5c9d426c9bd017838385415d2b46fe35c4d7f57"
         }
       ],
       "verification": {
@@ -613,7 +613,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "d87ecdc9a1944a5707fb736f9003a16bb1a081ee26e3cdd9da98d9089c8ffaba"
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
         },
         {
           "path": "tests/integration/legacy-contact-csv-review-browser.test.mjs",
@@ -661,7 +661,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "d87ecdc9a1944a5707fb736f9003a16bb1a081ee26e3cdd9da98d9089c8ffaba"
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
         },
         {
           "path": "tests/support/receipt-layout.mjs",
@@ -819,22 +819,38 @@
       "section": "Every page",
       "title": "P1 · Quote amendments (/quotes/amendments)",
       "requirements": "Observed: The accepted-work selector exposes useful status and amount facts, but amendment work needs a stronger comparison hierarchy.\n\nDirection: Show accepted scope beside proposed changes, with a clear amount delta and labeled added, changed and retained items. Keep the original agreement accessible.\n\nDesktop: Use a two-column comparison with a single review summary.\n\nPhone: Use stacked Original/Proposed blocks and a compact change summary.\n\nAcceptance: No animation or editing interaction may imply that an accepted agreement was overwritten.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/quotes-amendments-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Accepted/proposed comparison, amount deltas and versioned amendment history exist.",
-      "remainingWork": "Reconcile complete retained/changed-item comparison hierarchy and configured modes; current hosted timeout remains unexplained.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Saved Original/Proposed or Accepted comparison now shows every retained/changed/added/removed/reordered line, compact counts, one existing monetary delta summary and a complete version-labelled original agreement from the amendment own immutable parent. Actual-container desktop columns and stacked phone blocks are verified through normal, accepted, cancelled and reopened workflows.",
+      "remainingWork": "Complete broader long/many/reordered/Superseded/state/zoom/private-clearing review and exact hosted/installed/physical-device acceptance. Final7/7 is local scoped evidence; initial scheduling400 and independent hosted875 WebKit native-fetch observation remain unexplained and retained, not fixed by later passes.",
       "evidence": [
         {
           "path": "src/app/quotes/amendments/workspace.tsx",
-          "sha256": "1e4ea3e9957d10fd6c87aaad6efa852ec37586e43936099abc5c23cbc249a857"
+          "sha256": "8ed8215e9bae585eb492a26ab29c2d1fd7ad839012a55927fb4cc1fdbbf9e0e2"
         },
         {
-          "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
-          "sha256": "43d223170aca73ff3e8b10d4982d466279662dce006ff35beeb9b52836bfe7f2"
+          "path": "planning/AMENDMENT_SCOPE_OVERVIEW_DESIGN.md",
+          "sha256": "e3e585390b4b6600d81724209ed54ee6aa323648020ce59c6cb5f73408c02645"
+        },
+        {
+          "path": "src/app/quotes/amendments/scope-overview.tsx",
+          "sha256": "d387633bb2e294de5b9a0db5b8e1df7c172dc1e6dda468b06407bae336c04fad"
+        },
+        {
+          "path": "tests/support/amendment-scope-layout.mjs",
+          "sha256": "4bdd5f3ea4dbd634a524667eae40f37513520e450dad6cafb932018c15c28aee"
+        },
+        {
+          "path": "tests/integration/quote-amendment-workspace-browser.test.mjs",
+          "sha256": "16111440fcdc5172cfd00d9e653b1db06f0afafb1483664442dc4cb6208b83da"
+        },
+        {
+          "path": "tests/integration/quote-amendment-acceptance-product-browser.test.mjs",
+          "sha256": "2f2c9274c8a08b554af57114fef6829e2865da31a60ce59515383e232f90a4df"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -843,18 +859,38 @@
       "section": "Every page",
       "title": "P1 · Interrupted save review (/save-review)",
       "requirements": "Observed: The desktop no-reference state and phone checking state differ. A save-type selector and repeated loading language make an exceptional workflow feel like a general tool.\n\nDirection: Explain which original action is being checked, what is known and the next safe step. Give no-reference, recorded, unresolved and access-lost outcomes separate compositions.\n\nDesktop: Use one outcome panel with a narrow evidence/details column.\n\nPhone: Keep record identity and safe return action above technical references.\n\nAcceptance: Never show an optimistic success or suggest repeating a write while its original outcome is uncertain.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/save-review-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Outcome-specific review, original-save reference disclosure and separate retirement confirmation exist.",
-      "remainingWork": "Finish all no-reference/recorded/unresolved/access-lost identity, safe-return and phone compositions.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Known original action and typed outcome lead a single panel, with narrow desktop evidence and phone identity/safe action before reference. No-reference and retired outcomes return to a directory; only a verified receipt opens a saved record. Alternate save types are a secondary disclosure. Actual Return/Back retains exact pending bytes, creates no customer and submits no save/retirement request.",
+      "remainingWork": "Complete wider interrupted/uncertain/conflict/long-reference/zoom/private-clearing variants and full exact-source hosted/installed/physical-device acceptance. Final23/23 is scoped genuine conversion/save-review plus UI-only financial evidence; separate closed-default2/2 does not establish actual finance activation or complete audit acceptance.",
       "evidence": [
         {
           "path": "src/app/save-review/review.tsx",
-          "sha256": "87c9db63a5e515a642f97289bee9885cf97b720cc5f0793a015979e76b1cd1dc"
+          "sha256": "1b20c17a18e126e034285d1d059e714f1f3572438c8c8cde17b711e3ec0be927"
+        },
+        {
+          "path": "planning/SAVE_REVIEW_OUTCOME_DESIGN.md",
+          "sha256": "3ff44165b2e94cbd94d5deba9ed8eca9a08ae79550abb715810058fed9f69893"
+        },
+        {
+          "path": "tests/support/save-review-layout.mjs",
+          "sha256": "ed0dfbb3a03f93b95b20853fb67829f0e8b6c211a99d0e6469535f79ac282075"
+        },
+        {
+          "path": "tests/integration/lead-conversion-http-browser.test.mjs",
+          "sha256": "ecf742327dc9f2e0c7776d2e1aa3198b78ec5daa6b56dd6afadb5a22a2c9056d"
+        },
+        {
+          "path": "tests/integration/owner-expenses-save-review.test.mjs",
+          "sha256": "49154475cc75ccc63c0d7de23741b6e0bd20876d73b17150d69ee7b5e6429c70"
+        },
+        {
+          "path": "tests/e2e/foundation.spec.ts",
+          "sha256": "3b2e3135b81f5160a273964d6f028215e2dceb0176ef8b4a68a2a82add284b3e"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -863,22 +899,38 @@
       "section": "Every page",
       "title": "P1 · Schedule / saved job (/schedule)",
       "requirements": "Observed: The captured route is a saved job rather than the schedule planner. The job header, location block and section buttons consume much of the phone viewport before the work details.\n\nDirection: Give planning and active-job review distinct page identities. Compress the saved-job header into customer, vehicle, time, status and next valid action; preserve the selected date on return.\n\nDesktop: Use a planning canvas with selected-visit detail, and a separate focused job layout when executing work.\n\nPhone: Prioritize the current job action; make customer contact and location easy to reach.\n\nAcceptance: Browser Back restores date, view and selected visit. Verify planning separately from this saved-job capture.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Populated planner review and compact wide calendar/agenda/inspector composition now keep actual work/action context near the top; exact phone date/view/visit/scroll/focus return is verified with six saved visits and an actual reviewed overlap.",
-      "remainingWork": "Finish compact loaded-job/header/action reach and contextual returns for remaining actual states/linked workflows, wider stress/zoom/privacy and exact release/installed/physical-device acceptance.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Retained linked/first vehicle context is in the saved-job header; phone appointment actions share a row, quiet section anchors reduce pre-work clutter, and unchanged contact/location is closed by default on phones/open on desktop with working native toggles. Populated planning stays separate and exact date/view/selection/scroll/focus returns remain verified.",
+      "remainingWork": "Complete broader many/long/other-mode/cancelled/completed/denied/stale/loading/zoom/private-clearing variants plus exact-source full hosted/installed/physical-device acceptance. Final8/8 is scoped local evidence; independent hosted875 WebKit native-fetch and earlier provider failures remain unresolved, with no gate waiver.",
       "evidence": [
+        {
+          "path": "src/app/schedule/job-details.tsx",
+          "sha256": "1810061a02bc291943cf20cbd90def4534114bebc36de0ce4c2d51427521b28d"
+        },
+        {
+          "path": "planning/SAVED_JOB_COMPACT_REVIEW.md",
+          "sha256": "a28a57e4ca30db1b740861dfcd5dae9bcb3d210849ff7ab991d869fbcd0b2129"
+        },
         {
           "path": "src/app/schedule/screen.tsx",
           "sha256": "7e3adf2f53711240285e8f6f9a64f07b67d096ab43dc186cd6610207edfe00c7"
         },
         {
-          "path": "planning/PLANNER_POPULATED_REVIEW.md",
-          "sha256": "0c7c04a8b49c956f8f9c28511cfd570b3ff72618e8762485ac8865a12fdb2144"
+          "path": "tests/support/saved-job-layout.mjs",
+          "sha256": "be2fe429f4e2ff4f0c4066c3e0abfb5f3e3385e8f2834b94942861ade05c9d7a"
+        },
+        {
+          "path": "tests/integration/confirmed-bookings-product-browser.test.mjs",
+          "sha256": "f7cac30ee47122f62f306d32dd5b66850b8de0730f0737346dbc506ea88d3a4b"
+        },
+        {
+          "path": "tests/integration/field-work-product-browser.test.mjs",
+          "sha256": "e4eb8013e4f8b6947eddb7b945a49dc49237d590a8dba622245f5af09d2b7d10"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -887,18 +939,34 @@
       "section": "Every page",
       "title": "P1 · Change appointment (/schedule/change)",
       "requirements": "Observed: The old time and proposed-time form are separated well on desktop, but the phone stacks substantial context ahead of the action.\n\nDirection: Use an explicit Current → Proposed time comparison with timezone, reason and reservation effect. Put communication status beside confirmation.\n\nDesktop: Keep the comparison beside the form instead of repeating the same facts in prose.\n\nPhone: Use one compact current-time card followed by the proposed time fields.\n\nAcceptance: A proposal must never visually release the original reservation or imply that a customer was automatically messaged.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-change-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Existing current/proposed appointment and reservation workflow is retained.",
-      "remainingWork": "Review compact phone comparison, timezone/reason/reservation effect and adjacent communication status across actual outcomes.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Saved current and proposed times share a compact phone comparison with explicit time zones, offsets and reservation states; desktop retains comparison beside the form. Actual customer confirmation/communication is grouped beside its explicit no-message statement, and draft previews state unsaved/no replacement reservation.",
+      "remainingWork": "Complete broader long-value/timezone/DST/zoom/loading/denied/stale/private-state matrices and exact-source hosted/installed/physical-device acceptance. Local genuine2/2 preserves all original reservation/recovery/history rules; independent hosted875 fetch and earlier provider failures remain unresolved.",
       "evidence": [
         {
-          "path": "src/app/schedule/change/page.tsx",
-          "sha256": "4e731c2434c2b3bf0b3307bf079e2320955ad210f8be6e72da9de4530916a07f"
+          "path": "src/app/schedule/change/change.tsx",
+          "sha256": "42ef780852babd2c23bbf3a0ab3415c6ab27293b9fc242fc4b1cc74f3873b6a6"
+        },
+        {
+          "path": "planning/APPOINTMENT_COMPARISON_DESIGN.md",
+          "sha256": "88a0852a391b9a0f5555530fa0fd7ea8967fa4c0165c96a7ee2ae805e1deee27"
+        },
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+        },
+        {
+          "path": "tests/support/appointment-comparison-layout.mjs",
+          "sha256": "ce0156906f95bb2767bf3c9defbbd2002bf4f62e5a3fe898dce727a9d15e6625"
+        },
+        {
+          "path": "tests/integration/job-change-product-browser.test.mjs",
+          "sha256": "371a9b15536b224d3fd42c2e6ec43ef4dd303f74dfc82bc7ec3eefa78657b552"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -907,22 +975,38 @@
       "section": "Every page",
       "title": "P2 · Trip mileage (/schedule/mileage)",
       "requirements": "Observed: The empty route contains only a sentence and a saved-job link. It lacks the customer, trip or vehicle context needed to understand the page.\n\nDirection: Use a compact job/trip header, followed by recorded miles, attribution status and the existing next step. Explain the empty state with a contextual return action.\n\nDesktop: Align trip, vehicle, distance and source in a table when records exist.\n\nPhone: Use one readable trip card per journey with attribution details behind disclosure.\n\nAcceptance: Keep measured, entered, missing and corrected mileage visibly distinct; never invent distance.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-mileage-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Focused mileage history, source/actual/estimate distinctions, retained corrections and contextual returns are implemented.",
-      "remainingWork": "Finish full job/trip/vehicle context, desktop aligned density and remaining empty/long-list/state review.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Validated minimal customer/job-vehicle context, explicit standalone distinction and contextual empty return now accompany real trip facts. Desktop saved versions align entry/source/distance/vehicle-type/evidence in a semantic table; phone keeps readable cards and expandable actual attribution. Job vehicles never imply which vehicle travelled, unavailable identity stays unavailable, and private context clears on access loss.",
+      "remainingWork": "Complete broader long-list/multi-vehicle/standalone/all-source/missing/stale/denied/zoom/state variants, exact-source full hosted/installed/physical iPhone acceptance and all original final gates. Genuine local4/4 retains original precision/attribution/recovery/export rules; public875 native-fetch/provider failures remain unresolved.",
       "evidence": [
         {
           "path": "src/app/schedule/mileage/screen.tsx",
-          "sha256": "15bdc7d4fbdb495ca4360ae022044ea77e61c9f848cfddaa915d00dbe0d750e9"
+          "sha256": "4d7eb5cd084bf4a694cfdc5034dbf174d74488737ee9311bec2766a16e9784bc"
         },
         {
-          "path": "planning/MILEAGE_HISTORY_DESIGN.md",
-          "sha256": "fb553570ab638e6905d486302f77932671663b72388dad757f39ef988880da13"
+          "path": "planning/MILEAGE_JOB_CONTEXT_DESIGN.md",
+          "sha256": "882ff8bd73417721bcb934092a6006d47c41d638fb81b31625ad297bccfac7f2"
+        },
+        {
+          "path": "src/client/mileage-controller.ts",
+          "sha256": "bd6a1292032bfb1e17b62ae39aa99fed03978866e3f3ae37ab0de335622381a3"
+        },
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+        },
+        {
+          "path": "tests/unit/mileage-prerequisite.test.ts",
+          "sha256": "8a0e97fab2c4e414f7267d7cf03ba8128337ff0d2103845604c65bcb5905da38"
+        },
+        {
+          "path": "tests/integration/mileage-product-browser.test.mjs",
+          "sha256": "ebabd8e1710ed939f0ccd283cde525a26a1a2845c26cd47e7615a8a10a4c103d"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -955,22 +1039,58 @@
       "section": "Every page",
       "title": "P1 · Book a visit (/schedule/new)",
       "requirements": "Observed: Opening the route without an accepted quote produces an almost empty page and sends the owner back to quotes.\n\nDirection: Offer a contextual accepted-quote chooser if the existing data contract permits it. Otherwise show a deliberate prerequisite card explaining the exact path and expected result.\n\nDesktop: Use a guided booking layout with quote summary, time selection and final reservation review.\n\nPhone: Show a short step sequence with the customer and selected work retained throughout.\n\nAcceptance: Booking reserves only after explicit successful confirmation; loading and unavailable slots are not treated as empty availability.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-new-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Deliberate accepted-quote prerequisite guidance and original reservation/recovery rules exist.",
-      "remainingWork": "Reconcile the configured booking stages, persistent customer/work context and unavailable/loading slot presentations.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Three booking steps retain customer, exact selected-work amount and paid/complimentary item/vehicle counts; native selected-scope/details disclosure is compact on phones/open on desktop. Draft/no-reservation identity and explicit not-reviewed/checking/verified/unavailable schedule states preserve current review, stale-review invalidation and original-save recovery.",
+      "remainingWork": "Complete broader long/partial/complimentary/multi-agreement/vehicle/mode/zone/DST/zoom/access-loss/state matrices and exact-source hosted/installed/physical-iPhone acceptance. Final basic2/2, separate divisions4/4 and other original6/6 share identical739 app files; no combined12/12 claim. Initial original receipt failure and independent hosted875 native-fetch/provider causes remain unresolved.",
       "evidence": [
         {
-          "path": "src/app/schedule/new/page.tsx",
-          "sha256": "d6a852e1d6e16616c8347f253e95a1d8cd59ec02541811f436851b8cf8edf834"
+          "path": "src/app/schedule/new/booking.tsx",
+          "sha256": "8981332e9390c3dc56e6c598eed4e8d477acd5e51816e882aef8a2e877b154cc"
         },
         {
-          "path": "planning/TASK_PREREQUISITE_DESIGN.md",
-          "sha256": "c070fd223a799e24f1084e7166c9623974e2596a98ef126020ded65f1a8694de"
+          "path": "planning/BOOKING_STEP_CONTEXT_DESIGN.md",
+          "sha256": "484870a41cedf0a8aa4f466bb57fb1c6c70d1b711657eb597de24d5732df7cc2"
+        },
+        {
+          "path": "src/app/schedule/slot-review.tsx",
+          "sha256": "36ceb8e15bfa6d7ab43efb15ab6d91e95721499341112e05693742b737690d4d"
+        },
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+        },
+        {
+          "path": "tests/support/booking-review-layout.mjs",
+          "sha256": "a166c180235dd7f2519e59b37f7333bfcb99e045797916aec10573721163aebf"
+        },
+        {
+          "path": "tests/support/booking-read-diagnostic.mjs",
+          "sha256": "45e8530a273454b19e1624f9126d4ba06bba1d65f2575b2929dff8ccf1b006c0"
+        },
+        {
+          "path": "tests/integration/book-job-product-browser.test.mjs",
+          "sha256": "098ae486fa544749fb34ed9ce5c9d426c9bd017838385415d2b46fe35c4d7f57"
+        },
+        {
+          "path": "tests/integration/booking-divisions-product-browser.test.mjs",
+          "sha256": "bf52c743ad79cc8f4a6284814d2c7dd56387636370bb615aba75af1fc7440f5c"
+        },
+        {
+          "path": "tests/integration/combined-booking-product-browser.test.mjs",
+          "sha256": "c3bb282f2bec378ed78a26df76bf08c43949aff030b0dadbfca4c9c0706ae438"
+        },
+        {
+          "path": "tests/integration/booking-conflict-review-product-browser.test.mjs",
+          "sha256": "70b464dd44cb7d8f7bfd7741b7c8bac59dfa4b680e6845f12e3bda5753c4e521"
+        },
+        {
+          "path": "tests/integration/job-change-product-browser.test.mjs",
+          "sha256": "371a9b15536b224d3fd42c2e6ec43ef4dd303f74dfc82bc7ec3eefa78657b552"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1009,7 +1129,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/work/work.tsx",
-          "sha256": "a35c8e301097101b895452daff114f0de91713156301c0a5183121b9e21005fe"
+          "sha256": "8f3fb7a89ba438389a3249d76a04ee34bfe3f176fa4ae660b8aff8d77ebb4a99"
         },
         {
           "path": "planning/ACTIVE_WORK_STRIP_DESIGN.md",
@@ -1025,7 +1145,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "d87ecdc9a1944a5707fb736f9003a16bb1a081ee26e3cdd9da98d9089c8ffaba"
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
         },
         {
           "path": "tests/support/field-work-layout.mjs",
@@ -1033,11 +1153,11 @@
         },
         {
           "path": "tests/integration/field-work-product-browser.test.mjs",
-          "sha256": "9ea6a0af2bff4f80125430ac104a7cfa86c10550905b09e17283d3396eb78a32"
+          "sha256": "e4eb8013e4f8b6947eddb7b945a49dc49237d590a8dba622245f5af09d2b7d10"
         },
         {
           "path": "tests/integration/dropoff-custody-product-browser.test.mjs",
-          "sha256": "b36da369d6134e3bc75405b459387e6bf8286f7060ae127015f85b0ee88846b9"
+          "sha256": "4ebabbefba6758c85ad8975c6b8052eb17a2ad8472bf7e1147eba3e5695d7d4a"
         },
         {
           "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
@@ -1055,22 +1175,50 @@
       "section": "Every page",
       "title": "P1 · Cancel started job (/schedule/work/cancel)",
       "requirements": "Observed: The captured state is ineligible, offering Open saved job and Reload saved work at similar prominence. It does not show an eligible cancellation form.\n\nDirection: Design the ineligible state as a calm explanation with a single return action. For eligible cancellation, show affected scope, retained history and a clear final confirmation.\n\nDesktop: Keep the reason and consequence summary together.\n\nPhone: Use full-width confirmation only at the deliberate final step.\n\nAcceptance: Cancellation never resembles deletion, and must preserve work already recorded. Eligible-state visual sign-off remains needed.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-work-cancel-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Missing-selection/ineligible guidance and original cancellation/history rules exist.",
-      "remainingWork": "Complete eligible affected-scope/reason/final-confirmation visual review and prove retained work at all relevant states.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Started-job cancellation now has compact customer/vehicle context, affected assigned work and retained-history/trip/custody consequences beside the desktop form. Valid details lead to a separate focused review; Back retains fields without API traffic, and only the final explicit action cancels. Ineligible state has one primary saved-job return and disclosed eligibility recheck.",
+      "remainingWork": "Complete broader communication/mode/long-value/zoom/stale/private/state variants and exact-source hosted/installed/physical acceptance. Observed original full run8/9: both Mobile and all6 main custody parents pass, generated-photo release action fails after separate scheduled cancellation. Initial authsession400/saved-job read failures and later photo failure remain unresolved; no full9/9 or release acceptance claim. Separate latest custody/photo7/7 on unchanged application source does not diagnose/cure those failures or establish complete two-file/release acceptance.",
       "evidence": [
         {
-          "path": "src/app/schedule/work/cancel/page.tsx",
-          "sha256": "2d401c59d86103587fd360149804b11f180e2f681f62088dd0b8f77125bc9895"
+          "path": "src/app/schedule/work/cancellation.tsx",
+          "sha256": "ae3e5db39d9a3552bda10a4c1ee2bf7e2c6542f702e5dd0cabedbdd8c8f11fc0"
         },
         {
-          "path": "planning/TASK_PREREQUISITE_DESIGN.md",
-          "sha256": "c070fd223a799e24f1084e7166c9623974e2596a98ef126020ded65f1a8694de"
+          "path": "planning/STARTED_JOB_CANCELLATION_REVIEW.md",
+          "sha256": "2b19e28b822c85fa9a50255a51e0af628b6de8156455f77154b68e44e6ea4a8a"
+        },
+        {
+          "path": "src/app/schedule/work/work.tsx",
+          "sha256": "8f3fb7a89ba438389a3249d76a04ee34bfe3f176fa4ae660b8aff8d77ebb4a99"
+        },
+        {
+          "path": "src/app/schedule/work/visit-header.tsx",
+          "sha256": "9a2d618fb2dbbff1818f22581e79e828de868ce2c3d1757dc0a4eae85480bd25"
+        },
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+        },
+        {
+          "path": "tests/support/work-read-diagnostic.mjs",
+          "sha256": "0bb6c651d60c9a199a8dbecb14656fa1ddf8c0cd463df2eb87881338b7d595dd"
+        },
+        {
+          "path": "tests/integration/unfulfilled-cancellation-product-browser.test.mjs",
+          "sha256": "68c9a02a8b2078f1bc546dfdfc9ae88fcbfcdb38a3f5b6135fbf2bf950495dee"
+        },
+        {
+          "path": "tests/integration/dropoff-custody-product-browser.test.mjs",
+          "sha256": "4ebabbefba6758c85ad8975c6b8052eb17a2ad8472bf7e1147eba3e5695d7d4a"
+        },
+        {
+          "path": "planning/WORK_READ_RELEASE_FAILURE_INVESTIGATION.md",
+          "sha256": "87abcb884333cefd0d12ba581b98ca659f8c99b180a6268a7c337c44e18332c5"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1103,22 +1251,38 @@
       "section": "Every page",
       "title": "P1 · Interrupt trip (/schedule/work/interrupt)",
       "requirements": "Observed: The captured prerequisite state is sparse. A genuine interruption needs strong context so it cannot be mistaken for pausing work or cancelling the job.\n\nDirection: Show the active trip, what the interruption records and the exact next available choices. Use action-specific wording and a concise reason field.\n\nDesktop: Keep trip and job consequences in a small summary beside the form.\n\nPhone: Use a focused single-task screen with a direct return to the saved job.\n\nAcceptance: Verify en-route, already-arrived and uncertain-result variants; do not change job or trip state through navigation.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/schedule-work-interrupt-{desktop,phone}.png",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Trip-specific prerequisite and existing interruption/uncertainty handling are retained.",
-      "remainingWork": "Finish configured trip/job consequence hierarchy and en-route/arrived/uncertain visual acceptance.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Actual active-trip/customer/vehicle context and action-specific successful-save consequences sit beside the desktop form and use compact phone visit disclosure. Cancel and confirmed replacement retain original departure/history and explicit communication; choice/disclosure sends0API and changes no job/travel data. Genuine already-arrived navigation remains blocked; uncertain state keeps original recovery.",
+      "remainingWork": "Complete broader contact/communication/timezone/DST/long/zoom/mode/stale/private/state variants, overall phone copy density and exact-source hosted/installed/physical acceptance. Scoped original2/2 passes do not diagnose or cure earlier receipt/auth/read/photo-release/native-fetch/provider failures, which remain release work.",
       "evidence": [
         {
-          "path": "src/app/schedule/work/interrupt/page.tsx",
-          "sha256": "abf5c1cf43b633677ffaf8901349b7a18dd62264ad49b0b135c493efd4f8136e"
+          "path": "src/app/schedule/work/interruption.tsx",
+          "sha256": "8161df3ed819ad37ba8485c7b335bb8715a9b8a7c272c89d7154d7fc4cd99e3d"
         },
         {
-          "path": "planning/TASK_PREREQUISITE_DESIGN.md",
-          "sha256": "c070fd223a799e24f1084e7166c9623974e2596a98ef126020ded65f1a8694de"
+          "path": "planning/TRIP_INTERRUPTION_CONTEXT_DESIGN.md",
+          "sha256": "cb5121cffb6f0ba0c72e37d838f2360ceff2d00ea1c91bc174f0908c7776babf"
+        },
+        {
+          "path": "src/app/schedule/work/visit-header.tsx",
+          "sha256": "9a2d618fb2dbbff1818f22581e79e828de868ce2c3d1757dc0a4eae85480bd25"
+        },
+        {
+          "path": "src/app/workspace-design.css",
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
+        },
+        {
+          "path": "tests/integration/trip-interruption-product-browser.test.mjs",
+          "sha256": "0e6c39ffe62fcd3424a92e4ebc932420a5c78f379d3249bd53a48ad69f9afc94"
+        },
+        {
+          "path": "tests/support/work-read-diagnostic.mjs",
+          "sha256": "0bb6c651d60c9a199a8dbecb14656fa1ddf8c0cd463df2eb87881338b7d595dd"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1313,7 +1477,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "d87ecdc9a1944a5707fb736f9003a16bb1a081ee26e3cdd9da98d9089c8ffaba"
+          "sha256": "3b3621ab81d94d2cd36b473b22c0e5e9b25172799b849eb057193ae53403cb6d"
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",

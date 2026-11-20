@@ -53,7 +53,7 @@ function ChangeForm({view,kind,save}:{view:JobChangeView;kind:JobChangeKind;save
   let conflictReview;try{if(!reviewInput)throw Error();conflictReview=prepareSlotReview(slotReview,context,reviewInput,zone);}catch{setIssue('Review the current schedule, acknowledge any unknown travel and give a reason for any overlapping visits before confirming.');return;}
   await save({action,reason,latestAppointmentId:latest.id,expectedModeSequence:mode!,appointment:null,customerConfirmation:{channel:channel as BookingConfirmation['channel'],effectiveAt,evidenceNote:note},conflictReview});
  }
- const confirmationFields=<><label htmlFor={fieldPrefix+'-channel'}>Confirmation or communication channel</label><select id={fieldPrefix+'-channel'} required value={channel} onChange={event=>{setChannel(event.target.value);touch();}}><option value="">Choose the actual channel</option><option value="text">Text</option><option value="phone">Phone</option><option value="email">Email</option><option value="in_person">In person</option></select><BookingInstantInput key={'actual:'+zone+':'+action} label="When the customer confirmation or communication occurred" value={effectiveAt} zone={zone} change={value=>{setEffectiveAt(value);touch();}}/><label>Confirmation or communication evidence<textarea required rows={3} maxLength={2000} value={note} onChange={event=>{setNote(event.target.value);touch();}}/></label></>;
+ const confirmationFields=<section className="appointment-communication" aria-label="Recorded customer communication"><h3>{kind==='cancel'?'Record the communication':'Customer confirmation'}</h3><p className="field-help">Record what actually happened. Crest sends no message from this screen.</p><label htmlFor={fieldPrefix+'-channel'}>Confirmation or communication channel</label><select id={fieldPrefix+'-channel'} required value={channel} onChange={event=>{setChannel(event.target.value);touch();}}><option value="">Choose the actual channel</option><option value="text">Text</option><option value="phone">Phone</option><option value="email">Email</option><option value="in_person">In person</option></select><BookingInstantInput key={'actual:'+zone+':'+action} label="When the customer confirmation or communication occurred" value={effectiveAt} zone={zone} change={value=>{setEffectiveAt(value);touch();}}/><label>Confirmation or communication evidence<textarea required rows={3} maxLength={2000} value={note} onChange={event=>{setNote(event.target.value);touch();}}/></label></section>;
  const customer=parseCustomer(resources.vehicles[0]!.customer_snapshot,resources.businessId);
  const cancellation=kind==='cancel';
  const showDraft=action==='propose'&&!!slot.local_start&&!!slot.local_end&&Date.parse(slot.end_at)>Date.parse(slot.start_at)
@@ -62,8 +62,10 @@ function ChangeForm({view,kind,save}:{view:JobChangeView;kind:JobChangeKind;save
  return <div className="appointment-change-layout">
   <section className="appointment-comparison" aria-label="Saved appointment times">
    <header><p className="field-help">Saved job · Version {head.job.version}</p><h2>{customer.display_name}</h2></header>
-   <ReservationCard appointment={head.appointment}/>
-   {pending&&<ReservationCard appointment={latest} proposed/>}
+   <div className="appointment-time-comparison">
+    <ReservationCard appointment={head.appointment}/>
+    {pending&&<><p className="appointment-replacement-label">Proposed replacement</p><ReservationCard appointment={latest} proposed/></>}
+   </div>
   </section>
   <form className="appointment-change-form" aria-label={cancellation?'Scheduled job cancellation':'Appointment change'} onChange={()=>setIssue('')} onSubmit={event=>{event.preventDefault();if(!locked)void submit();}}>
    <fieldset disabled={locked}>
@@ -95,7 +97,7 @@ function ChangeForm({view,kind,save}:{view:JobChangeView;kind:JobChangeKind;save
        <BookingInstantInput key={'end:'+slot.timezone} label="Proposed visit ends" value={slot.end_at} zone={slot.timezone} change={value=>time('end',value)}/>
       </div>
       <p className="field-help">Changing the time zone keeps the same actual visit time.</p>
-      {showDraft&&<div className="appointment-draft-time"><strong>New proposal draft</strong><p><AppointmentTime start={slot.start_at} end={slot.end_at} timezone={slot.timezone}/></p></div>}
+      {showDraft&&<div className="appointment-draft-time"><strong>New proposal draft</strong><p><AppointmentTime start={slot.start_at} end={slot.end_at} timezone={slot.timezone}/></p><p className="field-help">Unsaved · No replacement time reserved</p></div>}
       <details>
        <summary>Travel estimates and visit contact</summary>
        <p className="field-help">Leave travel blank when unknown. Enter 0 for no travel time.</p>

@@ -63,7 +63,7 @@ test('financial save review requires explicit confirmation and exact receipt rec
     if(result==='lost-retirement'){
      await page.getByRole('status').filter({hasText:'outcome could not be verified'}).waitFor();assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),raw);await page.getByRole('button',{name:'Check original resolution',exact:true}).click();await page.getByRole('button',{name:'Acknowledge retirement and release local reference',exact:true}).waitFor();assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),raw);await page.getByRole('button',{name:'Acknowledge retirement and release local reference',exact:true}).click();await page.getByRole('status').filter({hasText:'retired save reference is released'}).waitFor();assert.equal(domainCalls,0);
     }else{await page.getByRole('button',{name:'Verify original save receipt',exact:true}).waitFor();assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),raw);await page.getByRole('button',{name:'Verify original save receipt',exact:true}).click();await page.getByRole('status').filter({hasText:'original save receipt is verified'}).waitFor();assert.equal(domainCalls,1);}
-    assert.equal(await page.getByRole('link',{name:'Open Expenses',exact:true}).getAttribute('href'),'/expenses');
+    assert.equal(await page.getByRole('link',{name:'Return to Expenses',exact:true}).getAttribute('href'),'/expenses');
     assert.equal(retireCalls,1);assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),null);
     await page.reload();
     await page.getByRole('heading',{name:'No save to review in this tab',exact:true}).waitFor();

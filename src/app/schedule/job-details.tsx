@@ -1,6 +1,6 @@
 'use client';
 import type {Ref} from 'react';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import type {parseJobResources} from '../../operations/booking-context-contract';
 import type {JobHistoryEvent} from '../../operations/confirmed-job-read-contract';
 import type {BookingLocation} from '../../operations/confirmed-booking-contract';
@@ -20,6 +20,9 @@ import {AppointmentTime,appointmentDateTime} from './appointment-time';
 const states:Readonly<Record<string,string>>={scheduled:'Scheduled',en_route:'En route',in_progress:'In progress',paused:'Paused',completed:'Completed',cancelled:'Cancelled'};
 const modes:Readonly<Record<string,string>>={mobile:'Mobile detail',dropoff:'Drop-off',pickup_return:'Pickup and return'};
 const events={book:'Job booked',propose:'Time change proposed',confirm:'Time change confirmed',withdraw:'Proposal withdrawn',cancel:'Job cancelled',state_change:'Work status changed'};
+const visitDetailsQuery='(min-width:880px)';
+function subscribeVisitWidth(change:()=>void){const query=window.matchMedia(visitDetailsQuery);query.addEventListener('change',change);return()=>query.removeEventListener('change',change);}
+function wideVisitDetails(){return window.matchMedia(visitDetailsQuery).matches;}
 function WorkLocation({value}:{value:BookingLocation}){
  if(value.kind==='manual')return <><p>{value.locationText}</p>{value.instructions&&<p className="field-help">{value.instructions}</p>}</>;
  const address=value.snapshot;
@@ -32,7 +35,9 @@ type Props=Readonly<{
 export function SavedJobDetails(props:Props){return <SavedJobDetailsContent key={props.resources.head.job.id+':'+props.resources.head.job.version} {...props}/>;}
 function SavedJobDetailsContent({resources,headingRef,initialJobVehicleId,visitsSource,history,historyComplete,busy,canChange,onWorkStatus,completionAvailable,invoiceDraftsAvailable,googleCalendarAvailable,mileageAvailable,workTimeAvailable,dropoffCustodyAvailable,pickupTripsAvailable,pickupWorkAvailable,pickupCollectionAvailable,pickupPhotosAvailable,pickupReleaseAvailable,onChangeAppointment,onCancel,onDownload,onMoreHistory}:Props){
  const {head}=resources,{job,appointment,latestAppointment}=head;
+ const visitDetailsOpen=useSyncExternalStore(subscribeVisitWidth,wideVisitDetails,()=>false);
  const customer=parseCustomer(resources.vehicles[0]!.customer_snapshot,resources.businessId);
+ const primaryVehicle=parseVehicle((resources.vehicles.find(row=>row.id===initialJobVehicleId)??resources.vehicles[0]!).vehicle_snapshot,resources.businessId);
  const location=parseBookingLocation(job.work_location_snapshot,resources.businessId,job.customer_id),contact=parseBookingContact(appointment.contact_snapshot);
  const [copyState,setCopyState]=useState(''),alive=useRef(false),target=useRef<HTMLElement|null>(null);
  const savedHistory=useRef<HTMLDetailsElement>(null);
@@ -59,7 +64,7 @@ function SavedJobDetailsContent({resources,headingRef,initialJobVehicleId,visits
  return <article className="schedule-job" aria-label="Saved job">
   <header className="schedule-job-heading">
    <p className="schedule-job-state"><strong>{states[job.state]}</strong><span>{' · '}{modes[job.fulfillment_mode]}</span></p>
-   <h2 ref={headingRef} tabIndex={headingRef?-1:undefined}>{customer.display_name}</h2>
+   <div className="schedule-job-identity"><h2 ref={headingRef} tabIndex={headingRef?-1:undefined}>{customer.display_name}</h2><p className="schedule-job-vehicle">Vehicle · {primaryVehicle.label}{resources.vehicles.length>1?' · +'+(resources.vehicles.length-1)+' more':''}</p></div>
    <a className="schedule-job-record-link" href={'/customers?customer='+encodeURIComponent(job.customer_id)+'&job='+encodeURIComponent(job.id)+(visitsSource==='customer'?'&view=visits':'')}>{visitsSource==='customer'?'Back to customer visits':'Open customer record'}</a>
    <dl className="job-appointment">
     <dt>{job.state==='cancelled'?'Retained appointment':'Confirmed appointment'}</dt>
@@ -71,10 +76,10 @@ function SavedJobDetailsContent({resources,headingRef,initialJobVehicleId,visits
    </section>}
    {!fieldAction&&!completionAction&&appointmentActions}
   </header>
-  <dl className="schedule-job-facts">
+  <details className="schedule-job-visit-details" open={visitDetailsOpen}><summary>Location and visit contact</summary><dl className="schedule-job-facts">
    <div><dt>Work location</dt><dd><WorkLocation value={location}/></dd></div>
    <div><dt>Contact for this visit</dt><dd>{contact.kind==='no_contact'?<>No contact selected: {contact.reason}</>:contact.value}</dd></div>
-  </dl>
+  </dl></details>
   <nav className="schedule-job-jumps" aria-label="Job sections">
    <a href="#job-vehicles">Vehicles</a>
    <a href="#job-work">Work scope</a>

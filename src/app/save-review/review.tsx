@@ -88,8 +88,9 @@ function Review({kind,label}:{kind:OriginalOperationKind;label:string}){
   await controller[operation]();
   if(current.current===controller)status.current?.focus();
  }
- return <section className="save-review-card" aria-label="Original save review" data-tone={tone}>
-  <header><p className="save-review-subject">{label}</p>
+ return <section className="save-review-card" aria-label="Original save review" data-tone={tone} data-verification={view.verification} data-has-reference={!!view.reference}>
+  <div className="save-review-outcome">
+  <header><p className="save-review-subject">Original action · {label}</p>
    <div ref={status} className="save-review-status" tabIndex={-1} role="status" aria-atomic="true">
     <h2>{outcomeTitle(view)}</h2><p>{view.message}</p>
    </div>
@@ -101,9 +102,11 @@ function Review({kind,label}:{kind:OriginalOperationKind;label:string}){
    {view.canLookup&&!view.needsSignIn&&['review','pending'].includes(view.phase)&&<button type="button" onClick={()=>void action('lookup')}>Check original resolution</button>}
    {!view.needsSignIn&&['idle','pending','blocked'].includes(view.phase)&&<button type="button" className={view.canLookup?'secondary':undefined} disabled={view.busy} onClick={()=>void action('load')}>Load original save review</button>}
 
-   {view.phase==='complete'&&<a className="primary-action" href={view.record?.href??href}>{view.record?.label??'Open '+name}</a>}
+   {view.phase==='complete'&&<a className="primary-action" href={view.verification==='receipt-verified'&&view.record?view.record.href:href}>{view.verification==='receipt-verified'&&view.record?view.record.label:'Return to '+name}</a>}
    {view.needsSignIn&&!view.busy&&<a className="primary-action" href={'/sign-in?resumeSave='+encodeURIComponent(kind)}>Sign in and resume</a>}
+   {!view.busy&&!view.needsSignIn&&view.phase!=='complete'&&<a className="save-review-return" href={href}>Return to {name}</a>}
   </div>
+  {view.reference&&!resolved&&<p className="field-help save-review-return-help">Returning keeps the original reference in this tab. Verify its outcome before making another save.</p>}
   {view.canPrepareRetirement&&<button className="secondary save-review-options" type="button" aria-expanded={reasonOpen} aria-controls={reasonOpen?'save-review-retirement':undefined} disabled={view.busy} onClick={()=>setReasonOpen(!reasonOpen)}>Retirement options</button>}
   {view.canPrepareRetirement&&reasonOpen&&<form id="save-review-retirement" className="save-review-retirement" onSubmit={event=>{event.preventDefault();void action('review');}}>
    <p>Retirement prevents the original request from running later. Any completed save remains in the records. A recently authenticated owner must provide a reason. Expenses and receipts also require financial authority.</p>
@@ -119,7 +122,8 @@ function Review({kind,label}:{kind:OriginalOperationKind;label:string}){
     <button type="button" className="secondary" disabled={view.busy} onClick={()=>{setReasonOpen(true);current.current?.back();}}>Edit reason</button>
    </div>
   </section>}
-  {view.reference&&<details className="save-review-reference"><summary>Save reference</summary><p className="save-reference"><code>{view.reference}</code></p></details>}
+  </div>
+  {view.reference&&<aside className="save-review-evidence" aria-label="Review evidence"><h3>Evidence</h3><details className="save-review-reference"><summary>Save reference</summary><p className="save-reference"><code>{view.reference}</code></p></details></aside>}
  </section>;
 }
 export function SaveReviewScreen({initialKind='crm.customer.save'}:{initialKind?:OriginalOperationKind}={}){
@@ -127,11 +131,13 @@ export function SaveReviewScreen({initialKind='crm.customer.save'}:{initialKind?
  return <div className="save-review-layout">
   <Review key={kind} kind={kind} label={choices.find(([value])=>value===kind)?.[1]??'Original save'}/>
   <aside className="save-review-picker" aria-label="Save selection">
+   <details><summary>Review a different save</summary>
    <label htmlFor="save-review-kind">Interrupted save type</label>
    <select id="save-review-kind" value={kind} onChange={event=>{const selected=choices.find(([value])=>value===event.target.value);if(selected)setKind(selected[0]);}}>{groups.map(group=><optgroup key={group.label} label={group.label}>
     {choices.filter(([value])=>group.matches(value)).map(([value,label])=><option key={value} value={value}>{label}</option>)}
    </optgroup>)}</select>
    <p className="field-help">Keep this tab open until the outcome is verified. Leaving or hiding the page clears private review details.</p>
+   </details>
   </aside>
  </div>;
 }

@@ -99,7 +99,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await form.getByLabel('Departure correction reason',{exact:true}).fill(reason);
   await expect(form).toContainText('Saved mileage will need review after the correction.');
   await mkdir('.local/review',{recursive:true});
-  for(const width of [360,390,768,1100,1440]){
+  for(const width of [320,360,390,768,1100,1440,1920]){
    await page.setViewportSize({width,height:900});
    await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
@@ -177,6 +177,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.goto(fixture.origin+job);
   await page.getByRole('link',{name:'Review trip mileage',exact:true}).click();
   await expect(status).toHaveText('No trips are recorded for this job.');
+  await expect(page.getByRole('region',{name:'Saved job context',exact:true})).toContainText('Synthetic lifecycle customer');
+  await expect(page.getByRole('region',{name:'No recorded trips',exact:true})).toContainText('No distance has been assumed.');
+  await capture('empty');
   await page.getByRole('link',{name:'Saved job',exact:true}).click();
   await page.getByRole('button',{name:'Record departure…',exact:true}).click();
   await page.getByLabel('Vehicle you are driving',{exact:true}).selectOption(fixture.fieldVehicleId);
@@ -196,10 +199,21 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(history).toContainText('No mileage has been saved for this trip.');
   async function capture(stage){
    await mkdir('.local/review',{recursive:true});
-   for(const width of [360,390,768,1100,1440]){
+   const context=page.getByRole('region',{name:'Saved job context',exact:true});
+   await expect(context).toContainText('Synthetic lifecycle customer');
+   const summary=context.getByText('Job vehicles · 1',{exact:true}),beforeDisclosure=fixture.requests.length;
+   await summary.focus();await page.keyboard.press('Enter');
+   await expect(context.locator('details')).toHaveAttribute('open','');
+   await expect(context.locator('li')).toHaveCount(1);
+   await expect(context).toContainText('The saved mileage identifies the type of vehicle used for travel separately.');
+   await summary.focus();await page.keyboard.press('Enter');
+   await expect(context.locator('details')).not.toHaveAttribute('open','');
+   assert.equal(fixture.requests.length,beforeDisclosure,'Job vehicle disclosure makes no API request');
+   for(const width of [320,360,390,768,1100,1440,1920]){
     await page.setViewportSize({width,height:900});
     await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    if(width<=390)assert(await context.evaluate(node=>node.getBoundingClientRect().height<190),'Phone job context stays compact');
     if(stage==='split')assert(await page.locator('.mileage-share-controls').evaluateAll(rows=>rows.length===2&&rows.every(row=>{
      const input=row.querySelector('input').getBoundingClientRect(),remove=row.querySelector('button').getBoundingClientRect();
      return input.width>=135&&remove.left-input.right>=7&&remove.right<=row.getBoundingClientRect().right+1;
@@ -321,8 +335,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.reload();
   await trip.click();
   await expect(history).toContainText('Synthetic odometer correction');
-  const split=history.locator('li').filter({hasText:'Version 2'}).first();
-  await split.locator(':scope > .mileage-saved-attribution > summary').click();
+  const split=history.getByRole('row').filter({has:page.getByRole('rowheader',{name:/^Version 2/})});
+  await split.locator(':scope > td > .mileage-saved-attribution > summary').click();
   await expect(split).toContainText('80% · This job');
   await expect(split).toContainText('20% · Open allocated job');
   const allocatedJob=split.getByRole('link',{name:/Open allocated job/});
@@ -338,6 +352,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(split.locator('.mileage-history-evidence')).toContainText(note);
   assert.equal(fixture.requests.length,inspectRequests,'Retained history inspection makes no API request');
   assert.deepEqual(await mileageFacts(fixture),beforeInspect);
+  await expect(history.getByRole('table')).toBeVisible();
+  await expect(history.getByRole('columnheader',{name:'Vehicle used',exact:true})).toHaveCount(1);
   await capture('saved');
   await page.setViewportSize({width:390,height:844});
   await allocatedJob.press('Enter');
@@ -400,6 +416,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await button.click();
   await expect(status).toHaveText('Saved trips or access could not be verified. Reload to try again.');
   await expect(history).toHaveCount(0);
+  await expect(page.getByRole('region',{name:'Saved job context',exact:true})).toHaveCount(0);
   assert.equal(blockedReads,1);
   assert.equal(unexpectedDownloads,0);
  }catch(error){await diagnostic?.();throw error;}finally{

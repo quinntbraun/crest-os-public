@@ -1,6 +1,6 @@
 'use client';
 import {TaskPrerequisite} from '../../task-prerequisite';
-import {useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {createBookJobController,initialBookJobView} from '../../../client/book-job-controller';
 import type {BookJobView} from '../../../client/book-job-controller';
 import {createPendingSchedulingStore,pendingSchedulingKeys} from '../../../client/pending-scheduling';
@@ -24,7 +24,11 @@ type WorkAction='addAgreement'|'addVehicle'|'removeAgreement';
 const steps=['Work','Time and contact','Confirm'] as const;
 type Step=typeof steps[number];
 const arrangementLabels={mobile:'Mobile detail',dropoff:'Drop-off',pickup_return:'Pickup and return'};
+const summaryQuery='(min-width:950px)';
+function subscribeSummaryWidth(change:()=>void){const query=window.matchMedia(summaryQuery);query.addEventListener('change',change);return()=>query.removeEventListener('change',change);}
+function wideSummary(){return window.matchMedia(summaryQuery).matches;}
 function BookingForm({view,save,moreAddresses,findAgreements,findVehicles,changeWork}:{view:BookJobView;save:(payload:BookingPayload)=>Promise<void>;moreAddresses:()=>void;findAgreements:(search:string,more?:boolean)=>void;findVehicles:(search:string,more?:boolean)=>void;changeWork:(kind:WorkAction,id:string)=>Promise<BookingWork|null>}){
+ const summaryOpen=useSyncExternalStore(subscribeSummaryWidth,wideSummary,()=>false);
  const agreement=view.work!,context=view.context!,modeVersion=context.context.modeVersion,enabled={mobile:modeVersion?.mobile_enabled??initialFulfillmentModes.mobileEnabled,dropoff:modeVersion?.dropoff_enabled??initialFulfillmentModes.dropoffEnabled,pickup_return:modeVersion?.pickup_return_enabled??initialFulfillmentModes.pickupReturnEnabled};
  const [payload,setPayload]=useState(()=>{const initial=initialBookingPayload(agreement,context.context.operatorId,view.jobId,context.context.timezone);return {...initial,fulfillmentMode:enabled.mobile?'mobile' as const:enabled.dropoff?'dropoff' as const:enabled.pickup_return?'pickup_return' as const:'mobile' as const};}),[divisions,setDivisions]=useState<Record<string,BookingDivision>>({}),[contact,setContact]=useState(''),[channel,setChannel]=useState(''),[dirty,setDirty]=useState(false),[issue,setIssue]=useState('');
  const [slotReview,setSlotReview]=useState<SlotReviewSelection|null>(null),reviewInput=bookingSlotInput(context,payload.appointment,null);
@@ -111,13 +115,17 @@ function BookingForm({view,save,moreAddresses,findAgreements,findVehicles,change
    </ol>
    <div className="booking-layout">
     <aside className="booking-summary" aria-label="Visit summary">
-     <p className="field-help">Accepted work</p><h2>{agreement.customer.display_name}</h2>
+     <p className="field-help">Visit draft · No time reserved</p><h2>{agreement.customer.display_name}</h2>
+     <p className="booking-summary-selection"><strong>{visitAmount??'Review selected work'}</strong><span>{parts.length} {parts.length===1?'work item':'work items'} · {payload.vehicles.length} {payload.vehicles.length===1?'vehicle':'vehicles'}</span></p>
+     <details className="booking-summary-details" open={summaryOpen}><summary>Selected work and visit details</summary>
+     <ul className="booking-selected-work">{parts.map(part=><li key={part.partitionId}>{part.scopeDescription} · {quoteMoney(part.amountCents)}</li>)}</ul>
+     {parts.length===0&&<p className="field-help">Assign accepted work before continuing.</p>}
      <dl>
       <div><dt>Service</dt><dd>{arrangementLabels[payload.fulfillmentMode]}</dd></div>
       <div><dt>Vehicles</dt><dd>{payload.vehicles.length?payload.vehicles.map(vehicle=>agreement.vehicles.find(row=>row.id===vehicle.vehicleId)?.label).filter(Boolean).join(' · '):'Choose a vehicle'}</dd></div>
-      <div><dt>Work assigned to this visit</dt><dd>{visitAmount??'Review the selected work'}</dd></div>
       {validWindow&&step!=='Confirm'&&<div><dt>Visit time</dt><dd><AppointmentTime start={payload.appointment.start_at} end={payload.appointment.end_at} timezone={payload.appointment.timezone} showOffset/></dd></div>}
      </dl>
+     </details>
     </aside>
     <div className="booking-stage">
      <section data-booking-step="Work" hidden={step!=='Work'}>
@@ -145,9 +153,6 @@ function BookingForm({view,save,moreAddresses,findAgreements,findVehicles,change
         payload.workLocation.snapshot.exact_location_text||[payload.workLocation.snapshot.line1,payload.workLocation.snapshot.city,payload.workLocation.snapshot.region,payload.workLocation.snapshot.postal_code].filter(Boolean).join(', ')}</dd></div></dl>
        <p className="field-help">Saving creates the reservation. Send any customer message separately.</p>
       </section>}
-      <details><summary>Work in this visit · {parts.length} {parts.length===1?'item':'items'}</summary>
-       <ul>{parts.map(part=><li key={part.partitionId}>{part.scopeDescription} · {quoteMoney(part.amountCents)}</li>)}</ul>
-      </details>
   <section aria-label="Customer confirmation"><h3>Customer confirmation</h3><p>Record the customer’s actual confirmation of this visit’s time, location and selected work.</p><label htmlFor="booking-confirm-channel">Visit confirmation channel</label><select id="booking-confirm-channel" value={channel} required onChange={event=>{setChannel(event.target.value);appointment({customer_confirmation:{...payload.appointment.customer_confirmation,channel:event.target.value as BookingAppointment['customer_confirmation']['channel']}});}}><option value="">Choose how they confirmed</option><option value="text">Text</option><option value="phone">Phone</option><option value="email">Email</option><option value="in_person">In person</option></select><BookingInstantInput key={'confirmation:'+payload.appointment.timezone} label="When the customer confirmed this visit" value={payload.appointment.customer_confirmation.effectiveAt} zone={payload.appointment.timezone} change={effectiveAt=>appointment({customer_confirmation:{...payload.appointment.customer_confirmation,effectiveAt}})}/><label>Visit confirmation evidence<textarea rows={3} required maxLength={2000} value={payload.appointment.customer_confirmation.evidenceNote} onChange={event=>appointment({customer_confirmation:{...payload.appointment.customer_confirmation,evidenceNote:event.target.value}})}/></label></section>
       <BookingSlotReview context={context} input={reviewInput} timezone={payload.appointment.timezone} value={slotReview} change={value=>{setSlotReview(value);setIssue('');}}/>
       <p className="field-help">Crest rechecks the accepted work, operating modes and reservations when you save.</p>

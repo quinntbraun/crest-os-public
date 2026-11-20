@@ -231,6 +231,29 @@ button.secondary:not(:disabled):not([aria-pressed='true']):hover { background:va
 .amendment-record-header dd { margin:.1rem 0 0; font-weight:650; font-variant-numeric:tabular-nums; }
 .amendment-workspace-grid { display:grid; gap:1.25rem; margin-top:1rem; }
 .amendment-workspace-main,.amendment-activity { min-width:0; }
+.amendment-workspace-main { container:amendment-main / inline-size; }
+.amendment-scope-overview { margin:1.25rem 0 0; padding-block:1rem .25rem; border-top:1px solid var(--line); }
+.amendment-scope-overview header h3 { margin:0; }
+.amendment-scope-overview header p { margin:.4rem 0 .75rem; color:var(--muted); font-size:.875rem; }
+.amendment-scope-counts { display:flex; flex-wrap:wrap; gap:.5rem 1.25rem; margin:.75rem 0 1.25rem; }
+.amendment-scope-counts > div { display:flex; gap:.4rem; align-items:baseline; }
+.amendment-scope-counts dt { color:var(--muted); font-size:.8125rem; }
+.amendment-scope-counts dd { margin:0; font-weight:600; font-variant-numeric:tabular-nums; }
+.amendment-scope-columns { display:grid; gap:1.25rem; }
+.amendment-scope-columns > section { min-width:0; }
+.amendment-scope-columns h4 { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:.3rem .75rem; margin:0 0 .5rem; }
+.amendment-scope-columns h4 span { color:var(--muted); font-size:.8125rem; font-weight:400; }
+.amendment-scope-columns ul { list-style:none; padding:0; margin:0; }
+.amendment-scope-columns li { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:baseline; gap:.25rem .75rem; padding:.75rem 0; border-top:1px solid var(--line); }
+.amendment-scope-identity { grid-column:1 / -1; min-width:0; overflow-wrap:anywhere; }
+.amendment-scope-identity strong,.amendment-scope-identity span { display:block; }
+.amendment-scope-identity strong { font-size:.875rem; }
+.amendment-scope-identity span,.amendment-scope-label { color:var(--muted); font-size:.8125rem; }
+.amendment-scope-amount { text-align:right; font-variant-numeric:tabular-nums; font-size:.875rem; }
+.customers .amendment-original-document { margin:.5rem 0 0; padding:0; border:0; border-top:1px solid var(--line); border-radius:0; background:transparent; box-shadow:none; }
+.amendment-original-document > summary { min-height:44px; align-content:center; cursor:pointer; font-size:.875rem; }
+.amendment-saved-comparison .amendment-comparison { grid-template-columns:minmax(0,1fr); }
+@container amendment-main (min-width:40rem) { .amendment-scope-columns,.amendment-saved-comparison .amendment-comparison { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 .amendment-review-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.25rem 1rem; }
 .amendment-review-heading h3,.amendment-activity > h3 { margin-top:0; }
 .amendment-review-heading h3 { margin-bottom:0; }
@@ -561,6 +584,11 @@ details[open] > .amendment-change-summary::before { content:"−"; }
 }
 .schedule-job-heading .schedule-job-state { margin-bottom:.55rem; }
 .schedule-job-heading h2 { font-size:clamp(1.35rem,2.4vw,2rem); }
+.schedule-job-identity { min-width:0; flex:1 1 16rem; }
+.schedule-job-vehicle { margin:.2rem 0 0; font-size:.875rem; color:var(--muted); overflow-wrap:anywhere; }
+.customers details.schedule-job-visit-details { margin:.75rem 0; padding:0; border:0; border-block:1px solid var(--line); border-radius:0; box-shadow:none; background:transparent; }
+.schedule-job-visit-details > summary { min-height:44px; align-content:center; padding:.35rem 0; cursor:pointer; font-size:.875rem; font-weight:600; }
+.schedule-job-visit-details .schedule-job-facts { margin:.25rem 0 .75rem; }
 .schedule-job-heading .schedule-job-record-link { display:inline-flex; align-items:center; min-height:44px; }
 .job-appointment { flex:0 0 100%; margin:.5rem 0 0; font-variant-numeric:tabular-nums; }
 .job-appointment dt,.job-appointment-zone { color:var(--muted); font-size:.875rem; }
@@ -589,14 +617,18 @@ details[open] > .amendment-change-summary::before { content:"−"; }
 .schedule-job-facts p { margin:0; }
 .schedule-job-facts .field-help { display:block; margin:.35rem 0 0; }
 .schedule-job .schedule-job-jumps {
-  display:flex; flex-wrap:wrap; gap:.5rem; margin:1rem 0;
+  display:flex; flex-wrap:wrap; gap:.15rem 1rem; margin:.6rem 0;
 }
 .schedule-job-jumps a {
-  display:inline-flex; align-items:center; min-height:44px; padding:.15rem .75rem;
-  border:1px solid var(--line); border-radius:.6rem; color:var(--ink); background:var(--paper);
+  display:inline-flex; align-items:center; min-height:44px; padding:.15rem 0;
+  border:0; border-radius:0; color:var(--ink); background:transparent;
   font-size:.875rem; font-weight:650; text-decoration:none;
 }
-.schedule-job-jumps a:hover { background:var(--accent-soft); }
+.schedule-job-jumps a:hover { color:var(--accent); text-decoration:underline; text-underline-offset:.25em; }
+@media(max-width:500px) {
+ .schedule-job .schedule-job-primary[aria-label="Job actions"]:has(> button:nth-child(2)) { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:.5rem; width:100%; }
+ .schedule-job .schedule-job-primary[aria-label="Job actions"] button { width:100%; min-width:0; font-size:.875rem; padding:.65rem .5rem; }
+}
 .schedule-job :is(#job-vehicles,#job-work,#job-history,#job-money) { scroll-margin-block-start:1rem; }
 .job-history-panel {
   padding:.25rem .85rem .75rem; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper);
@@ -677,6 +709,14 @@ main.save-review-page { max-width:64rem; }
 }
 .save-review-card header { margin:0; }
 .save-review-card { border-inline-start:3px solid var(--line); }
+.save-review-outcome,.save-review-evidence { min-width:0; }
+.save-review-evidence { margin-top:1.25rem; padding-top:1rem; border-top:1px solid var(--line); }
+.save-review-evidence h3 { margin:0; font-size:.875rem; }
+.save-review-return { color:var(--muted); font-size:.875rem; }
+.save-review-return-help { max-width:58ch; }
+.save-review-picker { padding:0; border:0; border-radius:0; box-shadow:none; background:transparent; max-width:26rem; }
+.customers .save-review-picker > details { margin:0; padding:0; border:0; border-radius:0; box-shadow:none; background:transparent; }
+.save-review-picker > details > summary { min-height:44px; align-content:center; cursor:pointer; color:var(--muted); font-size:.875rem; }
 .save-review-card[data-tone="attention"] { border-inline-start-color:var(--gold-ink); }
 .save-review-card[data-tone="resolved"] { border-inline-start-color:#367052; }
 .save-review-time { margin:.65rem 0 0; color:var(--muted); font-size:.825rem; }
@@ -700,7 +740,8 @@ main.save-review-page { max-width:64rem; }
 .save-review-picker label { margin-top:0; }
 .save-review-picker select { width:100%; }
 @media (min-width:880px) {
-  .save-review-layout { grid-template-columns:minmax(0,1fr) minmax(15rem,18rem); }
+  .save-review-card[data-has-reference="true"] { display:grid; grid-template-columns:minmax(0,1fr) minmax(13rem,18rem); gap:2rem; }
+  .save-review-evidence { margin:0; padding:0 0 0 1.25rem; border-top:0; border-inline-start:1px solid var(--line); }
 }
 @media (max-width:500px) {
   .save-review-actions > :is(button,a),.save-review-card .save-review-options { width:100%; }
@@ -805,6 +846,13 @@ main.appointment-change-page { max-width:68rem; }
 .appointment-comparison { display:grid; gap:.6rem; min-width:0; }
 .appointment-comparison header :is(h2,p) { margin:0; }
 .appointment-comparison header h2 { margin-top:.2rem; }
+.appointment-time-comparison { min-width:0; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); }
+.appointment-time-comparison .reservation-card { padding:.7rem .85rem; border:0; background:transparent; border-radius:0; box-shadow:none; }
+.appointment-replacement-label { margin:0; padding:.35rem .85rem; border-block:1px solid var(--line); background:var(--canvas); color:var(--muted); font-size:.8rem; font-weight:600; }
+.appointment-communication { margin-block:1rem; padding-block:1rem; border-block:1px solid var(--line); }
+.appointment-communication h3 { margin:0; font-size:1rem; }
+.appointment-communication > label { display:block; margin-top:.8rem; }
+.appointment-communication > .field-help { margin:.35rem 0 .65rem; }
 .appointment-change-form { min-width:0; }
 .appointment-change-form > fieldset { min-width:0; margin:0; }
 .appointment-change-form > fieldset > label { display:block; margin-top:.8rem; }
@@ -834,6 +882,13 @@ main.appointment-change-page { max-width:68rem; }
   .appointment-change-layout { grid-template-columns:minmax(15rem,1fr) minmax(0,1.65fr); }
   .appointment-comparison { position:sticky; top:1rem; }
 }
+@media (max-width:600px) {
+  .appointment-comparison header h2 { font-size:1rem; overflow-wrap:anywhere; }
+  .appointment-time-comparison .reservation-card-heading { gap:.2rem .5rem; }
+  .appointment-time-comparison .reservation-card-heading h3 { font-size:.875rem; }
+  .appointment-time-comparison .reservation-card p { margin:.25rem 0 0; font-size:.875rem; }
+  .appointment-time-comparison .job-appointment-zone { font-size:.8rem; }
+}
 
 main.booking-page { max-width:69rem; }
 .booking-workbench > fieldset.booking-editor { min-width:0; padding:0; border:0; background:transparent; }
@@ -852,6 +907,17 @@ main.booking-page { max-width:69rem; }
 }
 .booking-summary :is(h2,p),.booking-stage > section > h2 { margin:0; }
 .booking-summary h2 { margin:.2rem 0 .65rem; }
+.booking-summary .booking-summary-selection { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:.3rem .75rem; }
+.booking-summary-selection > strong { font-size:1.125rem; font-variant-numeric:tabular-nums; }
+.booking-summary-selection > span { color:var(--muted); font-size:.875rem; }
+.booking-summary .booking-summary-details { margin:.5rem 0 0; padding:0; border:0; background:transparent; box-shadow:none; }
+.booking-summary-details > summary { min-height:44px; align-content:center; font-size:.875rem; }
+.booking-selected-work { padding-inline-start:1.15rem; margin:.4rem 0 .75rem; font-size:.875rem; overflow-wrap:anywhere; }
+.booking-selected-work li + li { margin-top:.4rem; }
+.slot-review-status { padding:.7rem .8rem; border-inline-start:3px solid var(--line); background:var(--canvas); border-radius:.25rem; }
+.slot-review[data-review-state='checking'] .slot-review-status { border-color:var(--accent); }
+.slot-review[data-review-state='unavailable'] .slot-review-status { border-color:#9a5d16; }
+.slot-review-loading { min-height:2rem; margin-block:.5rem; border-radius:.25rem; }
 .booking-summary dl,.booking-final-facts dl { display:grid; gap:.45rem; margin:.4rem 0 0; }
 .booking-summary dl > div,.booking-final-facts dl > div { display:grid; gap:.12rem; }
 .booking-summary dt,.booking-final-facts dt { color:var(--muted); font-size:.875rem; }
@@ -920,6 +986,23 @@ main.field-work-page { max-width:66rem; }
 }
 .appointment-cancellation-notice + .notice { margin-block:.5rem; }
 .field-work-form .field-cancel-submit:not(:disabled) { background:#8d3234; border-color:#8d3234; }
+.field-work-form.field-decision-layout { display:grid; align-items:start; gap:1rem; }
+.field-decision-context { display:grid; gap:.75rem; min-width:0; }
+.field-decision-context > :is(p,details) { margin:0; }
+.field-decision-layout > fieldset { min-width:0; margin:0; }
+.field-decision-layout > fieldset[hidden] { display:none; }
+.field-decision-review { min-width:0; margin:0; }
+.field-decision-review h2 { margin:0; scroll-margin-block:1rem; }
+.field-decision-review dl { display:grid; gap:.75rem; }
+.field-decision-review dt { color:var(--muted); font-size:.875rem; }
+.field-decision-review dd { margin:.2rem 0 0; overflow-wrap:anywhere; white-space:pre-wrap; }
+.field-decision-review-actions { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1rem; }
+.field-decision-review-actions button { width:auto; margin:0; flex:1 1 12rem; }
+.trip-consequence-summary { padding:.65rem .85rem; border-inline-start:3px solid var(--line); border-radius:.25rem; background:var(--canvas); }
+.trip-consequence-summary h3 { margin:.25rem 0; font-size:1rem; }
+.trip-consequence-summary p { margin:.4rem 0; }
+@media(min-width:950px) { .field-work-form.field-decision-layout { grid-template-columns:minmax(15rem,1fr) minmax(0,1.6fr); } }
+@media(max-width:600px) { .field-decision-review-actions button { width:100%; flex-basis:100%; } }
 @media (min-width:930px) {
   .active-work-form { grid-template-columns:minmax(14rem,1fr) minmax(0,1.65fr); }
 }
@@ -1726,6 +1809,33 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 .mileage-draft-notice { padding:1rem; border:1px solid var(--line); border-inline-start:3px solid var(--gold-ink); border-radius:var(--radius); }
 .mileage-versions header > span,.mileage-versions header p { display:block; color:var(--muted); font-size:.85rem; }
 .mileage-history-distance { display:grid; gap:.3rem; }
+.mileage-job-context { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:.6rem 1.5rem; margin-block:.8rem 1rem; padding-block:.75rem; border-block:1px solid var(--line); min-width:0; }
+.mileage-job-context > div { min-width:0; flex:1 1 16rem; }
+.mileage-job-context h2 { margin:0; font-size:1.125rem; overflow-wrap:anywhere; }
+.mileage-job-context .field-help { margin:0 0 .25rem; }
+.mileage-job-context > details { flex:0 1 auto; min-width:0; margin:0; padding:0; border:0; background:transparent; box-shadow:none; }
+.mileage-job-context > details[open] { flex-basis:100%; }
+.mileage-job-context > details summary { min-height:44px; align-content:center; font-size:.875rem; }
+.mileage-job-context > details ul { padding-inline-start:1.25rem; overflow-wrap:anywhere; }
+.mileage-evidence-table { width:100%; table-layout:fixed; border-collapse:collapse; margin-block:.75rem; font-size:.875rem; }
+.mileage-evidence-table :is(th,td) { padding:.75rem .5rem; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; overflow-wrap:anywhere; min-width:0; }
+.mileage-evidence-table th { font-weight:400; }
+.mileage-evidence-table thead th { color:var(--muted); font-weight:600; }
+.mileage-evidence-table thead th:last-child { width:36%; }
+.mileage-evidence-table header { display:grid; gap:.25rem; }
+.mileage-evidence-table header :is(span,p) { color:var(--muted); font-size:.8rem; }
+.mileage-evidence-table p { margin:.25rem 0; white-space:pre-wrap; }
+.mileage-evidence-table summary { min-height:44px; align-content:center; }
+.mileage-evidence-table .mileage-saved-attribution { margin-block:.5rem; padding:.4rem .5rem; }
+@media (max-width:1199px) {
+ .mileage-evidence-table,.mileage-evidence-table tbody { display:block; }
+ .mileage-evidence-table thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+ .mileage-evidence-table tbody > tr { display:grid; grid-template-columns:1fr; gap:.3rem; padding:.75rem 0; border-top:1px solid var(--line); }
+ .mileage-evidence-table tbody :is(th,td) { display:block; padding:0; border:0; }
+}
+.mileage-trip-summary dl { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr)); gap:.5rem 1rem; }
+.mileage-trip-summary dl > div { min-width:0; }
+.mileage-trip-summary dd { margin:.2rem 0 0; }
 .mileage-history-distance > strong { font-size:1.1rem; }
 .mileage-history-reason { display:grid; gap:.3rem; }
 .mileage-history .mileage-history-changes,.mileage-history .mileage-history-evidence { border:0; padding:0; background:transparent; }
