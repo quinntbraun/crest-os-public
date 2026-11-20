@@ -9,6 +9,8 @@ import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {reviewSupplierRegister} from '../support/supplier-register-layout.mjs';
+import {reviewSupplierDraft} from '../support/supplier-draft-layout.mjs';
+import {reviewSupplierDirectory} from '../support/supplier-directory-layout.mjs';
 
 const financeRoute='/api/business/finance-accounts/';
 const beginFinanceCalls=page=>page.evaluate(async prefix=>{
@@ -83,6 +85,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    const facts=async()=>{const result={};for(const table of ['supplier_bill_draft_revisions','financial_events','journal_entries','journal_lines'])
     result[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM crest.'+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;
     result.audit=(await fixture.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[fixture.business])).rows;return result;};
+   const draftLayoutFindings=[];
+   draftLayoutFindings.push(...await reviewSupplierDraft(page,name,'dirty-editor',facts));
    const beforeDirtyReview=await facts();let dirtyReviewRequests=0;const trackDirtyReview=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))dirtyReviewRequests++;};page.on('request',trackDirtyReview);
    try{
     await expect(page.getByText('Preview the payable entry',{exact:true})).toHaveAttribute('aria-disabled','true');
@@ -107,6 +111,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await selected.screenshot({path:'.local/review/finance-supplier-selected-'+name+'-'+width+'.png'});
     await bills.screenshot({path:'.local/review/finance-supplier-workspace-'+name+'-'+width+'.png'});
    }
+   draftLayoutFindings.push(...await reviewSupplierDraft(page,name,'selected',facts));
    await page.getByText('Preview the payable entry',{exact:true}).click();
    const review=page.getByRole('form',{name:'Supplier payable entry preview'});
    await editor.locator(':scope > summary').press('Enter');
@@ -117,6 +122,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await review.getByLabel('Reason for the review').fill('Fictional purchase tax review');
    await review.getByRole('button',{name:'Review expense and payable amounts'}).click();
    await expect(page.getByText('A verified original is required for this revision.',{exact:true})).toBeVisible();
+   draftLayoutFindings.push(...await reviewSupplierDraft(page,name,'original-required',facts));
    await page.getByText('Preview the payable entry',{exact:true}).click();
    await editor.locator(':scope > summary').press('Enter');
    await expect(draft.getByLabel('Business purpose',{exact:true})).toBeEnabled();
@@ -164,7 +170,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      [fixture.business]);
     const originalId=original.original_id;
     await review.getByRole('button',{name:'Review expense and payable amounts'}).click();
-    await expect(page.getByRole('heading',{name:'Proposed entry for Fictional workshop supplier'})).toBeVisible();
+   await expect(page.getByRole('heading',{name:'Proposed entry for Fictional workshop supplier'})).toBeVisible();
+   draftLayoutFindings.push(...await reviewSupplierDraft(page,name,'entry-ready',facts));
     await expect(page.getByText('Credit accounts payable $150.25',{exact:true})).toBeVisible();
     await page.route('**/api/business/supplier-original/preview',async route=>{
      const response=await route.fetch();
@@ -304,6 +311,21 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa']).analyze();
     assert.deepEqual(audit.violations.map(entry=>entry.id),[]);
    }
+   assert.equal(draftLayoutFindings.length,0,'Supplier draft layout findings are retained in state/engine observation reports');
+   const directoryAuth=await beginFinanceCalls(page);
+   for(let index=1;index<=8;index++){
+    const seeded=await financeCall(page,directoryAuth.headers,'supplier-bill-draft-save',{
+     reference:{billId:randomUUID(),recoveryEpoch:directoryAuth.context.recoveryEpoch,operationId:randomUUID(),expectedRevision:'0'},
+     payload:{incurredOn:day,dueOn:day,unknownDueReason:null,vendor:'Fictional directory supplier '+index,unknownVendorReason:null,
+      documentReference:'Directory bill '+index,grossCents:'2500',purchaseTaxCents:'0',purpose:'Fictional directory supplies',
+      missingReceiptReason:'Synthetic directory evidence',splits:[{category:'supplies',grossCents:'2500'}],changeReason:null},
+    });
+    assert.equal(seeded.status,200);assert.equal(seeded.body.state,'committed');
+   }
+   await page.goto(fixture.origin+'/expenses');
+   await page.getByRole('button',{name:'Suppliers',exact:true}).click();
+   await page.getByText('Unpaid supplier bills',{exact:true}).click();
+   await reviewSupplierDirectory(page,name,facts);
   }finally{
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{

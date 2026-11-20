@@ -49,8 +49,10 @@ async function exerciseSupplierBills(page,date,fixture,engine){
  await summary.click();
  await region.getByRole('button',{name:'Load saved supplier bills',exact:true}).click();
  await region.getByRole('button',{name:'Open supplier bill draft',exact:true}).click();
+ await region.locator('details.supplier-bill-editor > summary').press('Enter');
  await expect(form.getByLabel('Bill total (USD)',{exact:true})).toHaveValue('150.25');
  await form.getByLabel('Business purpose',{exact:true}).fill('Fictional supplies reviewed again');
+ await page.setViewportSize({width:1440,height:900});
  const beforeNavigation=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM crest.supplier_bill_draft_revisions r WHERE business_id=$1 ORDER BY revision',[fixture.business])).rows;
  let navigationRequests=0;const trackNavigation=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))navigationRequests++;};page.on('request',trackNavigation);
  try{
@@ -94,6 +96,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
  const matchStatement=process.env.CREST_TEST_STATEMENT_MATCH_REVIEW==='1';
  const saveMatchDraft=process.env.CREST_TEST_STATEMENT_MATCH_DRAFTS==='1';
  const supplierBills=process.env.CREST_TEST_SUPPLIER_BILL_DRAFTS==='1';
+ const payableReview=matchStatement&&saveMatchDraft&&supplierBills&&process.env.CREST_TEST_SUPPLIER_PAYABLE_REVIEW==='1';
+ const payableReports=payableReview&&process.env.CREST_TEST_SUPPLIER_PAYABLE_POSTING==='1';
  const f=await sourceExportBrowserFixture({product:true,workspace:true,expenses:true,catalog:true,quotes:true,
   quoteReview:true,quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,
   financeAccounts:true,financeMappings:true,financeCategoryMappings:true,financeTaxProfiles:true,financeMoneyChannels:true,
@@ -319,7 +323,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
   await expect(report.getByRole('status')).toHaveText('Posted balances loaded.');
   assert(await dateControl.evaluate(element=>element.isConnected),'loading a snapshot must retain the mounted date control');
-  await reviewAccountingReportWorkspace(page,report,{label:'ledger-'+name,values:[['Debit balances','$100.00'],['Credit balances','$100.00']],pickerExpected:income});
+  await reviewAccountingReportWorkspace(page,report,{label:'ledger-'+name,values:[['Debit balances','$100.00'],['Credit balances','$100.00']],pickerExpected:income||payableReports});
   await expect(report.getByRole('row').filter({hasText:'Fictional wash supplies'})).toContainText('$100.00');
   await expect(report.getByRole('row').filter({hasText:'Fictional dedicated bank'})).toContainText('$100.00');
   await accountsView.press('Enter');
@@ -397,8 +401,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await page.getByRole('button',{name:'Save ZIP',exact:true}).click();
    const {'manifest.json':manifest,'export_delivery.json':delivery,...source}=unzipSync(await readFile(await (await financeDownload).path()));
    assert.equal(verifyFinanceSourceExport(strFromU8(manifest),Object.entries(source).map(([name,bytes])=>
-    ({name,content:strFromU8(bytes)})),f.business).profile,'crest.posted-finance-source.v22');
-   assert.equal(JSON.parse(strFromU8(delivery)).sourceSchemaVersion,108);
+    ({name,content:strFromU8(bytes)})),f.business).profile,payableReview?'crest.posted-finance-source.v23':'crest.posted-finance-source.v22');
+   assert.equal(JSON.parse(strFromU8(delivery)).sourceSchemaVersion,payableReview?109:108);
    const retained=JSON.parse(strFromU8(source['supplier_bill_draft_source.json'])).revisions;
    assert.equal(retained.length,3);
    assert.equal(retained.find(row=>row.revision==='2').payload.changeReason,'Fictional source reviewed');
@@ -489,9 +493,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   }
   await expect(expense.locator('.receipt-preview-context')).toContainText('Recorded expense: $12.99 USD');await captureExpenseState(page,name,'receipt-verified');
   await reviewReceiptDocumentViewer(page,{fixture:f,expense,engine:name});
-  const download=page.waitForEvent('download');
-  await openReceiptDownloads(expense,1);await expense.getByRole('button',{name:'Download receipt 1',exact:true}).click();
-  assert.deepEqual(await readFile(await (await download).path()),receipt);
+  await openReceiptDownloads(expense,1);
+  const [download]=await Promise.all([page.waitForEvent('download'),expense.getByRole('button',{name:'Download receipt 1',exact:true}).click()]);
+  assert.deepEqual(await readFile(await download.path()),receipt);
   await page.route('**/api/business/expense-receipts/list',route=>route.abort('failed'));await expense.getByRole('button',{name:'Load saved receipts',exact:true}).click();await expect(expense.getByRole('status')).toHaveText('Saved receipts could not be verified. Load them again to check.');await expect(preview).toHaveCount(0);await expect(expense.locator('.receipt-saved-row')).toHaveCount(0);await expect(expense.getByText('No saved receipts for this expense.',{exact:true})).toHaveCount(0);await captureExpenseState(page,name,'receipt-read-lost');
   await page.unroute('**/api/business/expense-receipts/list');await expense.getByRole('button',{name:'Load saved receipts',exact:true}).click();await expect(expense.getByRole('status')).toHaveText('Saved receipt list refreshed.');await expect(preview).toHaveCount(0);await expense.getByRole('button',{name:'View preview for receipt 1',exact:true}).click();await expect(preview).toBeVisible();
   await page.getByRole('button',{name:'Exports',exact:true}).click();
@@ -516,9 +520,12 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await expense.getByRole('button',{name:'Attach receipt',exact:true}).click();
     await expect(expense.getByRole('status')).toHaveText('Receipt saved and checked.',{timeout:85000});
     receiptCount++;
-    const saved=page.waitForEvent('download');
-    await expense.getByRole('button',{name:'Download receipt '+receiptCount,exact:true}).click();
-    assert.deepEqual(await readFile(await(await saved).path()),file.bytes);
+    const downloads=expense.getByRole('region',{name:'Receipt '+receiptCount,exact:true}).locator('details.receipt-downloads');
+    assert.equal(await downloads.evaluate(node=>node.open),false,'A newly attached receipt keeps its download controls closed');
+    await openReceiptDownloads(expense,receiptCount);
+    const button=expense.getByRole('button',{name:'Download receipt '+receiptCount,exact:true});await expect(button).toBeVisible();
+    const [saved]=await Promise.all([page.waitForEvent('download'),button.click()]);
+    assert.deepEqual(await readFile(await saved.path()),file.bytes);
    }
    console.log('SYNTHETIC_RECEIPT_WORKER_FORMATS '+name+' image/png,image/jpeg,application/pdf,image/heic');
    const workerPath=join(f.workspace,'expense-receipts','worker.json'),originalProfile=await readFile(workerPath);

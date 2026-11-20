@@ -309,6 +309,8 @@ jobs:
             .local/review/completion-*.png
             .local/review/mileage-*.png
             .local/review/travel-*.png
+            .local/review/task-entry-*.png
+            .local/review/task-entry-observations-*.json
             .local/review/finance-*.png
           include-hidden-files: true
           retention-days: 3
@@ -542,6 +544,23 @@ jobs:
           include-hidden-files: true
           retention-days: 3
           if-no-files-found: error
+      - name: Preserve configured supplier review evidence
+        # Retain configured supplier states on success as well as failure.
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: supplier-review-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            .local/review/supplier-draft-*.png
+            .local/review/supplier-draft-observations-*.json
+            .local/review/supplier-directory-*.png
+            .local/review/supplier-directory-observations-*.json
+            .local/review/supplier-register-*.png
+            .local/review/supplier-register-*.json
+            .local/review/finance-supplier-*.png
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: ignore
       - name: Preserve browser diagnostics
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

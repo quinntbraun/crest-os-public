@@ -10,7 +10,7 @@ export const browserGroups = Object.freeze({
   field: group('field-work-product-browser','work-completion-product-browser','mileage-product-browser','support-trip-product-browser','trip-interruption-product-browser','unfulfilled-cancellation-product-browser','job-work-time-product-browser','job-work-boundary-product-browser','maintenance-reminders-product-browser'),
   custody: group('dropoff-custody-product-browser','dropoff-policy-revision-browser','pickup-trip-product-browser','pickup-custody-photo-browser','pickup-worksite-product-browser'),
   'statement-staging': group('finance-statement-staging-browser'),
-  'workspace-records': group('source-export-browser','source-export-product-browser','workspace-journey-browser','owner-expenses-product-browser'),
+  'workspace-records': group('source-export-browser','source-export-product-browser','workspace-journey-browser','owner-expenses-product-browser','task-entry-layout-browser'),
   'accounting-settings': group('finance-account-settings-browser','finance-mapping-settings-browser','finance-tax-profiles-browser','finance-expense-category-browser','finance-money-channel-browser'),
   records: group('finance-invoice-issue-product-browser','finance-expense-posting-browser','google-calendar-settings-product-browser')
 });

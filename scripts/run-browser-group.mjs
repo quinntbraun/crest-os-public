@@ -22,7 +22,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  const result=await run(args,env);
  let screenshots=[];
  try {
-  screenshots=(await readdir('.local/review')).filter(name=>/^(settings|workspace|home|quote|amendment|appointment|field|completion|mileage|travel|finance)-.*\.png$/.test(name)).sort();
+  screenshots=(await readdir('.local/review')).filter(name=>/^(settings|workspace|home|quote|amendment|appointment|field|completion|mileage|travel|finance|task-entry)-.*\.png$/.test(name)).sort();
  } catch(error) {
   if(error.code!=='ENOENT')throw error;
  }
@@ -50,10 +50,25 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
   [360,390,768,1440].map(width=>`${view}-${engine}-${width}.png`)));
  if(selected==='records')for(const view of ['settings-calendar-default-disclosure','settings-calendar-disclosure'])
   for(const width of [360,390,768,1440])requiredScreenshots.push(view+'-chromium-'+width+'.png');
+ const entryReports=[];
+ if(selected==='workspace-records'){
+  const kinds=['booking','work','completion','interruption','cancellation','mileage','work-time'];
+  for(const engine of ['chromium','webkit']){
+   for(const kind of kinds)for(const width of [320,1440])for(const text of [16,32])requiredScreenshots.push('task-entry-'+kind+'-'+engine+'-'+width+'-'+text+'.png');
+   try{
+    const report=JSON.parse(await readFile('.local/review/task-entry-observations-'+engine+'.json','utf8'));
+    const expected=kinds.flatMap(kind=>[320,390,768,1100,1440,1920].flatMap(width=>[1,2].map(scale=>kind+'/'+width+'/'+scale)));
+    const rows=report.observations,keys=new Set(rows.map(row=>row.kind+'/'+row.width+'/'+row.textScale));
+    const valid=rows.length===84&&keys.size===84&&expected.every(key=>keys.has(key))&&report.findings.length===0&&rows.every(row=>!row.overflow&&row.actionFits&&row.target&&row.axe.length===0&&(row.expectedColumns?row.columns:row.stacked));
+    entryReports.push({engine,observations:rows.length,valid});
+   }catch{entryReports.push({engine,valid:false});}
+  }
+ }
  const missingScreenshots=requiredScreenshots.filter(name=>!screenshots.includes(name));
- const passed=result.code===0&&result.signal===null&&(!needsScreenshots||screenshots.length>0)&&missingScreenshots.length===0;
+ const passed=result.code===0&&result.signal===null&&(!needsScreenshots||screenshots.length>0)&&missingScreenshots.length===0&&entryReports.every(report=>report.valid);
  await mkdir('.local/ci-browser',{recursive:true});await writeFile('.local/ci-browser/'+selected+'.json',JSON.stringify({schemaVersion:1,sourceCommit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),group:selected,files,args,...(scenario?{scenario}:{}),childExitCode:result.code,childSignal:result.signal,screenshots,screenshotsRequired:needsScreenshots,passed},null,2)+'\n',{flag:'wx'});
  if(!passed){
+  if(entryReports.some(report=>!report.valid))console.error('MISSING_OR_FAILED_TASK_ENTRY_OBSERVATIONS '+JSON.stringify(entryReports));
   if(missingScreenshots.length)console.error('MISSING_REQUIRED_SCREENSHOTS '+JSON.stringify(missingScreenshots));
   console.error('REQUIRED_BROWSER_GROUP_FAILED');process.exitCode=typeof result.code==='number'&&result.code!==0?result.code:1;
  }

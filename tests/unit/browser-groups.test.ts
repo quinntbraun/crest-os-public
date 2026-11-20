@@ -7,8 +7,10 @@ describe('complete required browser grouping',()=>{
  it('retains every original records file exactly once across the three required jobs',()=>{
   const retained=['source-export-browser','source-export-product-browser','workspace-journey-browser','owner-expenses-product-browser','finance-account-settings-browser','finance-mapping-settings-browser','finance-tax-profiles-browser','finance-expense-category-browser','finance-money-channel-browser','finance-invoice-issue-product-browser','finance-expense-posting-browser','google-calendar-settings-product-browser'].map(name=>'tests/integration/'+name+'.test.mjs');
   const actual=recordBrowserGroupNames.flatMap(name=>browserGroupFiles(command,name));
-  expect(actual.sort()).toEqual(retained.sort());expect(new Set(actual).size).toBe(retained.length);
-  expect(browserGroupFiles(command,'workspace-records')).toHaveLength(4);expect(browserGroupFiles(command,'accounting-settings')).toHaveLength(5);expect(browserGroupFiles(command,'records')).toHaveLength(3);
+  const entry='tests/integration/task-entry-layout-browser.test.mjs';
+  expect(actual.filter(file=>file!==entry).sort()).toEqual(retained.sort());expect(new Set(actual).size).toBe(retained.length+1);
+  expect(actual.filter(file=>file===entry)).toHaveLength(1);expect(browserGroupFiles(command,'workspace-records')).toContain(entry);
+  expect(browserGroupFiles(command,'workspace-records')).toHaveLength(5);expect(browserGroupFiles(command,'accounting-settings')).toHaveLength(5);expect(browserGroupFiles(command,'records')).toHaveLength(3);
  });
  it('retains all original records screenshot requirements without omitting or duplicating a view',()=>{
   const retained=['workspace-menu','finance-account-settings-recovery','finance-mapping-history','finance-mapping-manage','finance-tax-approval','finance-tax-history','finance-tax-preview','finance-category-approval','finance-category-history','finance-channel-opening','finance-channel-history','finance-invoice-issue-product','finance-direct-receipt','finance-expense-posting','finance-trial-balance','finance-balance-sheet','finance-payment-correction','finance-fund-application','finance-held-tip','finance-invoice-credit','finance-paid-invoice-credit','finance-service-refund','finance-posted-export','settings-calendar-synced','settings-calendar-pending'];
@@ -17,7 +19,7 @@ describe('complete required browser grouping',()=>{
  });
  it('partitions every file in the actual retained full command exactly once',()=>{
   const files=Object.keys(browserGroups).flatMap(name=>browserGroupFiles(command,name));
-  expect([...files].sort()).toEqual(command.split(' ').slice(3).sort());expect(new Set(files).size).toBe(files.length);expect(files).toHaveLength(54);
+  expect([...files].sort()).toEqual(command.split(' ').slice(3).sort());expect(new Set(files).size).toBe(files.length);expect(files).toHaveLength(55);
  });
  it('requires the actual workflow matrix to retain every distinct group',()=>{
   const workflow=readFileSync(new URL('../../.github/workflows/ci.yml',import.meta.url),'utf8'),matrix=workflow.match(/browser_workflows:[\s\S]*?matrix:\s*\n\s*suite: \[([^\]]+)\]/);

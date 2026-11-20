@@ -24,7 +24,9 @@ export async function reviewSupplierRegister(page,engine,state,report,snapshot){
    await expect(item.locator('.supplier-payable-amounts dt')).toHaveText(['Bill total','Paid','Outstanding']);
    await expect(item.locator('.supplier-payable-amounts dd')).toHaveText([row.grossCents,row.paidCents,row.remainingCents].map(cents=>'$'+expenseDollars(cents)));
    const retained=await item.locator('.supplier-payable-record').boundingBox(),payment=await item.locator(':scope > details').boundingBox();
-   if(payment){assert(retained);const list=await register.locator('.supplier-payable-list').boundingBox();assert(list);if(list.width>=832){assert(retained.x+retained.width<=payment.x,'wide saved balances and payment task sit side by side');}else assert(retained.y+retained.height<=payment.y,'phone saved balances precede the payment task');}
+   if(payment){assert(retained);const list=await register.locator('.supplier-payable-list').boundingBox();assert(list);
+    await writeFile('.local/review/supplier-register-geometry-'+engine+'-'+state+'-'+width+'.json',JSON.stringify({width,index,list,retained,payment,rootSize:await page.locator('html').evaluate(root=>getComputedStyle(root).fontSize)},null,2)+'\n');
+    if(list.width>=832){assert(retained.x+retained.width<=payment.x,'wide saved balances and payment task sit side by side');}else assert(retained.y+retained.height<=payment.y,'phone saved balances precede the payment task');}
   }
   if(state==='posted'&&width===1440){
    const fonts=await page.evaluate(()=>({body:getComputedStyle(document.body).fontFamily,regular:document.fonts.check('400 16px "IBM Plex Sans"'),semibold:document.fonts.check('600 16px "IBM Plex Sans"'),faces:[...document.fonts].filter(face=>face.family.includes('IBM Plex')).map(face=>({family:face.family,weight:face.weight,status:face.status}))}));

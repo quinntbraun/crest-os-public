@@ -11,7 +11,9 @@ const tasks={
 export function TaskPrerequisite({kind}:{kind:keyof typeof tasks}){
  const task=tasks[kind];
  return <section className="task-prerequisite" aria-label="Choose where to start">
-  <div className="task-prerequisite-main"><h2>{task.title}</h2><p>{task.description}</p><a className="primary-action" href={task.href}>{task.action}<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" focusable="false"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>{kind==='mileage'&&<a className="task-prerequisite-alternate" href="/schedule/travel">Open standalone travel</a>}</div>
+  <div className="task-prerequisite-layout">
+  <div className="task-prerequisite-main"><h2>{task.title}</h2><p>{task.description}</p><a className="primary-action" href={task.href}><span>{task.action}</span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" focusable="false"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>{kind==='mileage'&&<a className="task-prerequisite-alternate" href="/schedule/travel">Open standalone travel</a>}</div>
   <aside className="task-prerequisite-guide" aria-label="What happens next"><h3>What happens next</h3><ol>{task.steps.map(([title,detail])=><li key={title}><strong>{title}</strong><p>{detail}</p></li>)}</ol></aside>
+  </div>
  </section>;
 }
