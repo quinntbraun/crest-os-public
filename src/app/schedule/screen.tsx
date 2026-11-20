@@ -1,12 +1,15 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {createScheduleReader,initialScheduleReadView} from '../../client/schedule-reader';
+import {observeInitialReadDeparture} from '../../client/initial-read-departure';
 import {SavedJobDetails} from './job-details';
 import {CalendarNavigation} from './calendar-navigation';
 import {ScheduleAgenda} from './agenda';
 import {VehicleCustodyQueue} from './vehicle-custody-queue';
 import {calendarRange,calendarToday,moveCalendarRange} from '../../client/schedule-calendar';
 import type {CalendarMode,CalendarRange} from '../../client/schedule-calendar';
+// Install when this client module evaluates, before the initial React effect.
+const initialReadDeparture=typeof window==='undefined'?null:observeInitialReadDeparture(window);
 function when(value:string,timezone:string){return new Intl.DateTimeFormat('en-US',{timeZone:timezone,month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(value));}
 export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{initialJobId?:string;initialJobVehicleId?:string;visitsSource?:'customer'|'vehicle'}){
  const [view,setView]=useState(initialScheduleReadView),[downloadMessage,setDownloadMessage]=useState(''),reader=useRef<ReturnType<typeof createScheduleReader>|null>(null),status=useRef<HTMLParagraphElement>(null),review=useRef<HTMLElement|null>(null),url=useRef<string|null>(null);
@@ -57,7 +60,7 @@ export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{
   reader.current=current;
   const clear=()=>{focusPlanner.current=false;current.suspend();revoke();setDownloadMessage('');setReviewing(false);agendaSource.current=null;restoreAgendaFocus.current=false;},hidden=()=>{if(document.visibilityState==='hidden')clear();},restored=(event:PageTransitionEvent)=>{if(event.persisted)clear();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',clear);window.addEventListener('pageshow',restored);
-  if(document.visibilityState==='hidden')clear();else void current.load(undefined,initialJobId);
+  if(document.visibilityState==='hidden'||initialReadDeparture?.canStart()===false)clear();else void current.load(undefined,initialJobId);
   return()=>{reader.current=null;current.dispose();revoke();document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',clear);window.removeEventListener('pageshow',restored);};
  },[initialJobId]);
  async function action(kind:'load'|'more'|'morePending'|'moreHistory',dates?:{fromDate:string;throughDate:string}){

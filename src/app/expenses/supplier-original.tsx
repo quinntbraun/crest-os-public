@@ -89,7 +89,7 @@ export function SupplierOriginalUpload({context,bill,lockDraft,onAvailable,disab
   </form>
   <p role="status">{status}</p>
   {pending&&<>
-   <button type="button" className="secondary" disabled={busy} onClick={()=>void attempt(pending,true)}>Check original upload</button>
+   <button type="button" disabled={busy} onClick={()=>void attempt(pending,true)}>Check original upload</button>
    <button type="button" className="secondary" disabled={busy} onClick={()=>void attempt(pending)}>Retry original upload</button>
    <button type="button" className="secondary" disabled={busy} onClick={()=>{
     setPending(null);setFile(null);resetSelection(value=>value+1);lockDraft(false);setStatus('Choose another original bill file.');

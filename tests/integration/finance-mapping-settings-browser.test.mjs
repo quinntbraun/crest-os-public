@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
 import {randomUUID} from 'node:crypto';
 import {mkdir,readFile} from 'node:fs/promises';
 import {test} from 'node:test';
@@ -193,6 +194,7 @@ for(const engine of [chromium,webkit]){
    const retained=await page.evaluate(key=>sessionStorage.getItem(key),pendingKey);
    assert(retained&&!retained.includes('Fictional')&&!retained.includes('2026-12-01')&&!retained.includes(accountId));
    assert.deepEqual(Object.keys(JSON.parse(retained).reference).sort(),['expectedVersion','operationId','purpose','recoveryEpoch']);
+   await reviewFinancialRecovery(page,fixture,engine.name(),'mapping',editor.getByRole('region',{name:'Interrupted mapping approval',exact:true}));
    await page.reload();
    await review.click();
    await expect(editorStatus).toHaveText('The original approval was confirmed.');

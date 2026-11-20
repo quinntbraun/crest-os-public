@@ -286,15 +286,17 @@ export function FinanceAccountsScreen(){
    {context.openingWorksheet&&<OpeningWorksheet businessId={context.businessId} arPreview={context.openingArPreview===true}/>}
   </section>}
   {pending&&workspace&&<section className={styles.section} aria-label="Interrupted account save">
-   <p className="save-reference">Save reference <code>{pending.reference.operationId}</code></p>
-   <button type="button" className="secondary" disabled={busy} onClick={()=>void checkPending()}>Check save status</button>
+   <button type="button" disabled={busy} onClick={()=>void checkPending()}>Check save status</button>
    {canRetry&&<button className="secondary" type="button" disabled={busy} onClick={()=>void retry()}>Retry original save</button>}
+   <details className="statement-evidence account-original-reference"><summary>Save reference</summary>
+    <p className="save-reference"><code>{pending.reference.operationId}</code></p>
+   </details>
    {canRetire&&<form onSubmit={event=>void retire(event)}>
     <p className="field-help">Closing this attempt blocks it from saving later. Any change that already saved stays in account history.</p>
     <label htmlFor="finance-retirement-reason">Reason for closing the attempt</label>
     <textarea id="finance-retirement-reason" rows={2} autoComplete="off" maxLength={1000} required disabled={busy} value={reviewReason}
      onChange={event=>setReviewReason(event.target.value)}/>
-    <button type="submit" disabled={busy||!financeAccountReviewReason(reviewReason.trim())}>Close interrupted save</button>
+    <button type="submit" className="secondary" disabled={busy||!financeAccountReviewReason(reviewReason.trim())}>Close interrupted save</button>
    </form>}
   </section>}
   {workspace&&!editor&&<section className={styles.section} aria-labelledby="finance-accounts-heading" hidden={activeArea!=='accounts'}>

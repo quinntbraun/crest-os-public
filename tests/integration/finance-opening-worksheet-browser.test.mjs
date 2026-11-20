@@ -7,6 +7,7 @@ import {strFromU8,unzipSync} from 'fflate';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
+import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
 
 for(const engine of [chromium,webkit]){
  test(`${engine.name()} genuine owner saves and recovers a fictional opening worksheet`,{timeout:240000},async()=>{
@@ -89,6 +90,7 @@ for(const engine of [chromium,webkit]){
    assert.deepEqual(Object.keys(retained).sort(),['operationId','recoveryEpoch']);
 
    const reopened=await load();
+   await reviewFinancialRecovery(page,fixture,engine.name(),'worksheet',reopened);
    await reopened.getByRole('button',{name:'Check original worksheet save'}).click();
    await expect(reopened.getByRole('status')).toHaveText('The original worksheet save was confirmed.');
    await expect(reopened.getByRole('heading',{name:'Saved revision 1'})).toBeVisible();
@@ -183,6 +185,7 @@ for(const engine of [chromium,webkit]){
     const arReopened=await load();
     await arReopened.getByText('Preview customer balances owed',{exact:true}).click();
     await ar.getByRole('button',{name:'Load saved receivables'}).click();
+    await reviewFinancialRecovery(page,fixture,engine.name(),'receivables',ar);
     await ar.getByRole('button',{name:'Check original receivables save'}).click();
     await expect(ar.getByRole('status')).toHaveText('The original receivables save was confirmed.');
     await expect(ar.getByText('Saved receivables revision 1 · $125.50 USD')).toBeVisible();

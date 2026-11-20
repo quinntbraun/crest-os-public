@@ -356,13 +356,13 @@ export function MoneyChannelsScreen(){
    change={change} findAccounts={findAccounts} save={save} cancel={cancelEditor}/>}
   {pending&&<section className={styles.channelIntro} aria-label="Interrupted channel review">
    <h2>Check the original review</h2><p>The outcome is unconfirmed. Review this attempt before starting another change.</p>
-   <button type="button" className="secondary" disabled={disabled} onClick={()=>load(true)}>Check interrupted review</button>
+   <button type="button" disabled={disabled} onClick={()=>load(true)}>Check interrupted review</button>
   </section>}
   {pending&&canClose&&<form onSubmit={closeAttempt}>
    <label htmlFor="channel-close-reason">Reason to close this attempt</label>
    <textarea id="channel-close-reason" rows={2} maxLength={1000} required disabled={disabled} value={reason}
     onChange={event=>setReason(event.target.value)}/>
-   <button type="submit" disabled={disabled||!financeAccountReviewReason(reason.trim())}>Close interrupted review</button>
+   <button type="submit" className="secondary" disabled={disabled||!financeAccountReviewReason(reason.trim())}>Close interrupted review</button>
   </form>}
  </section>;
 }

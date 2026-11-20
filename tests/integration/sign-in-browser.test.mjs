@@ -74,6 +74,8 @@ async function captureSignInState(page,name,state){
     await expect(page.getByRole('heading',{name:'Welcome back',exact:true})).toBeVisible();
     await expect(page.locator('.sign-in-workspace img:visible')).toHaveCount(1);
     assert(await page.locator('.sign-in-panel img').evaluate(image=>image.complete&&image.naturalWidth>0));
+    const crest=await page.locator('.sign-in-panel img').boundingBox();assert(crest);
+    assert(crest.width>=144&&crest.width<=192&&Math.abs(crest.width-crest.height)<1,'the supplied full crest stays prominent and square at ordinary text size');
     const card=await page.locator('.sign-in-panel').boundingBox();assert(card);
     if(width>=768){assert(card.width>=400&&card.width<=440,'sign-in stays within its focused desktop width');assert(Math.abs(card.x+card.width/2-width/2)<1,'sign-in stays centered');}
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));

@@ -4,6 +4,7 @@ import {test} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
 import {chromium,expect,webkit} from '@playwright/test';
 import {reviewBusinessSettingsIndex} from '../support/business-settings-index.mjs';
+import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
@@ -79,6 +80,7 @@ for(const engine of [chromium,webkit]){
 
    await page.reload();
    await expect(status).toContainText('Review the interrupted account save');
+   await reviewFinancialRecovery(page,fixture,engine.name(),'account',settings.getByRole('region',{name:'Interrupted account save',exact:true}),JSON.parse(retained).reference.operationId);
    await settings.getByRole('button',{name:'Check save status',exact:true}).click();
    await expect(status).toHaveText('The original account save was confirmed.');
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);

@@ -174,7 +174,7 @@ export function OpeningReceivables({worksheet}:{worksheet:OpeningReceipt}){
    <p role="status">{message}</p>
    <button type="button" className="secondary" disabled={busy||!!pending} onClick={loadSaved}>Load saved receivables</button>
    {pending&&<div className={styles.openingGroup}>
-    <button type="button" className="secondary" disabled={busy} onClick={()=>inspect(null)}>Check original receivables save</button>
+    <button type="button" disabled={busy} onClick={()=>inspect(null)}>Check original receivables save</button>
     {mayClose&&<form onSubmit={event=>{event.preventDefault();if(financeAccountReviewReason(closeReason.trim()))inspect(closeReason.trim());}}>
      <label htmlFor="ar-close-reason">Reason for closing this receivables save</label>
      <input id="ar-close-reason" required maxLength={1000} value={closeReason} onChange={event=>setCloseReason(event.target.value)}/>

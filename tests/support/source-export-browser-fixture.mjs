@@ -653,7 +653,16 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   }
   const claim={formatVersion:1,profile:'crest.business-source-journal-bundle.v1',businessId:business,actorId:actor,exportJobId:jobId,recoveryEpoch:epoch,leaseId},observedAt=(await client.query("SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"+00:00\"') AS value")).rows[0].value,bytes=[product?Buffer.alloc(20000,97):Buffer.from('example'),Buffer.from('{"x":123}')];
   const plan={formatVersion:1,claim,generationId:randomUUID(),observedAt,appReleaseId:release,sourceSchemaVersion:43,manifestSha256:sha(bytes[1]),parts:[{partId:randomUUID(),fileName:'example.csv',contentType:'text/csv; charset=utf-8',bytes:bytes[0].length,sha256:sha(bytes[0])},{partId:randomUUID(),fileName:'source_manifest.json',contentType:'application/json',bytes:9,sha256:sha(bytes[1])}],totalBytes:bytes.reduce((n,value)=>n+value.length,0),referenceClosureComplete:false,completePortableExport:false,completeBackup:false},planSha256=sha(JSON.stringify(plan)),journal=runtime.createSourceExportDatabaseJournal(config,auth.provider,auth.tokens,job,operation),parts=[];
-  const stage=async(name,raw)=>{try{assert.deepEqual(await journal[name](credential,raw,signal()),{formatVersion:1,stage:name,requestSha256:sha(raw)});}catch(error){if(workTime)console.error('WORK_TIME_FIXTURE_JOURNAL_DIAGNOSTIC '+JSON.stringify({stage:['snapshot','intent','verified','ready'].includes(name)?name:'other',provider:service.diagnostics(),notSubmitted:error?.message==='SOURCE_EXPORT_JOURNAL_NOT_SUBMITTED'}));throw error;}};h=await runtime.custodyFixture(async()=>{});
+  const stage=async(name,raw)=>{
+   try{assert.deepEqual(await journal[name](credential,raw,signal()),{formatVersion:1,stage:name,requestSha256:sha(raw)});}
+   catch(error){
+    try{console.error((workTime?'WORK_TIME_FIXTURE_JOURNAL_DIAGNOSTIC ':'SOURCE_EXPORT_FIXTURE_JOURNAL_DIAGNOSTIC ')+JSON.stringify({
+     stage:['snapshot','intent','verified','ready'].includes(name)?name:'other',provider:service.diagnostics(),
+     requests:service.requestDiagnostics(),notSubmitted:error?.message==='SOURCE_EXPORT_JOURNAL_NOT_SUBMITTED',
+    }));}catch{/* Failure-only classified diagnostics must preserve the original error. */}
+    throw error;
+   }
+  };h=await runtime.custodyFixture(async()=>{});
   await stage('snapshot',JSON.stringify({plan,planSha256}));for(const [i,p]of plan.parts.entries()){
    const binding={businessId:business,actorId:actor,exportJobId:jobId,generationId:plan.generationId,recoveryEpoch:epoch,partId:p.partId,fileName:p.fileName,contentType:p.contentType},prepared=await h.store.prepare(bytes[i],binding,signal()),payload={claim,generationId:plan.generationId,planSha256,partId:p.partId,intent:prepared.intentForServer()},raw=JSON.stringify(payload);await stage('intent',raw);const intent=await h.store.writeCandidate(prepared,signal());await h.store.verifyCandidate(intent,binding,signal());await stage('verified',raw);parts.push(payload);
   }

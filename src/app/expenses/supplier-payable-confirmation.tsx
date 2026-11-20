@@ -55,7 +55,7 @@ function useSupplierConfirmation<Input extends {reference:SupplierOperationRefer
 function PendingControls({operation}:{operation:{pending:unknown;busy:boolean;check:()=>void;retry:()=>void}}){
  if(!operation.pending)return null;
  return <div>
-  <button type="button" className="secondary" disabled={operation.busy} onClick={operation.check}>Check original posting request</button>
+  <button type="button" disabled={operation.busy} onClick={operation.check}>Check original posting request</button>
   <button type="button" className="secondary" disabled={operation.busy} onClick={operation.retry}>Retry original posting request</button>
  </div>;
 }

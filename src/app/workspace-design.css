@@ -345,11 +345,11 @@ details[open] > .amendment-change-summary::before { content:"−"; }
   border-block-start:3px solid var(--gold-ink); border-radius:var(--radius); box-shadow:var(--panel-shadow);
 }
 .sign-in-panel { padding-inline:clamp(12px,3.5vw,1.65rem); }
-.sign-in-brand { display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; margin-bottom:1rem; }
-.sign-in-brand > div { flex:1 1 10rem; min-width:0; }
+.sign-in-brand { display:grid; gap:1rem; justify-items:center; text-align:center; margin-bottom:1.25rem; }
+.sign-in-brand > div { min-width:0; }
 .sign-in-brand img,.workspace-missing-card img { flex:none; width:3rem; height:3rem; border-radius:.625rem; }
 .sign-in-brand h1 { margin:0; }
-.sign-in-brand img { width:3.5rem; height:3.5rem; }
+.sign-in-brand img { width:clamp(9rem,40vw,12rem); max-width:100%; height:auto; aspect-ratio:1; border-radius:.875rem; }
 .sign-in-brand .eyebrow { margin:0 0 .3rem; }
 .sign-in-feedback {
   margin:0 0 1rem; padding:.6rem .75rem; border-radius:.45rem;

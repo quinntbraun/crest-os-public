@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
 import {mkdir,readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
@@ -147,6 +148,7 @@ for(const engine of [chromium,webkit]){
    assert(!Object.values(reference).includes(accountId));
    assert.match(submittedBinding,/^[A-Za-z0-9_-]{43}$/);
    assert.deepEqual(pending,{businessId:fixture.business,binding:submittedBinding,reference:submittedReference});
+   await reviewFinancialRecovery(page,fixture,engine.name(),'channel',panel.getByRole('region',{name:'Interrupted channel review',exact:true}));
    await page.reload();
    await checkInterrupted();
    await expect(status).toHaveText('The original channel review was confirmed.');

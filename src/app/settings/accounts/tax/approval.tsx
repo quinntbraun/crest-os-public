@@ -158,7 +158,7 @@ export function TaxApprovalEditor({scope,applicabilityLabel,disabled,onSaved,onT
    {signedOut&&<a href="/sign-in">Sign in again</a>}
    {!reviewed&&<div className={styles.actions}>
     {!pending&&<button type="button" className="secondary" disabled={locked||!scope} onClick={()=>load()}>Load approval settings</button>}
-    <button type="button" className="secondary" disabled={locked} onClick={()=>load(true)}>Check interrupted approval</button>
+    <button type="button" className={pending?undefined:'secondary'} disabled={locked} onClick={()=>load(true)}>Check interrupted approval</button>
    </div>}
    {reviewed&&scope&&!pending&&<form className="mapping-lookup-form" onSubmit={submit}>
     <label htmlFor="tax-approval-date">Effective from</label>
@@ -221,7 +221,7 @@ export function TaxApprovalEditor({scope,applicabilityLabel,disabled,onSaved,onT
     <label htmlFor="tax-approval-close-reason">Reason to close this attempt</label>
     <textarea id="tax-approval-close-reason" rows={2} maxLength={1000} required value={closeReason} disabled={locked}
      onChange={event=>setCloseReason(event.target.value)}/>
-    <div className={styles.actions}><button type="submit" disabled={locked||!financeAccountReviewReason(closeReason.trim())}>
+    <div className={styles.actions}><button type="submit" className="secondary" disabled={locked||!financeAccountReviewReason(closeReason.trim())}>
      Close interrupted attempt
     </button></div>
    </form>}

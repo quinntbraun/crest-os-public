@@ -353,17 +353,17 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
   {pending&&<section aria-label="Interrupted mapping approval">
    <h2>Interrupted approval</h2>
    <p>{financeMappingLabels[pending.reference.purpose]}</p>
-   <details className="mapping-save-reference"><summary>Save reference</summary><p className="save-reference"><code>{pending.reference.operationId}</code></p></details>
    <div className={styles.actions}>
-    <button type="button" className="secondary" disabled={controlsDisabled} onClick={()=>load(true)}>Check approval status</button>
+    <button type="button" disabled={controlsDisabled} onClick={()=>load(true)}>Check approval status</button>
     {review==='retry'&&<button className="secondary" type="button" disabled={controlsDisabled} onClick={retry}>Retry original approval</button>}
    </div>
+   <details className="mapping-save-reference"><summary>Save reference</summary><p className="save-reference"><code>{pending.reference.operationId}</code></p></details>
    {review==='retire'&&<form onSubmit={retire}>
     <p className="field-help">Closing this attempt prevents it from saving later. If an approval already saved, it stays in history.</p>
     <label htmlFor="mapping-attempt-reason">Reason for closing the attempt</label>
     <textarea id="mapping-attempt-reason" rows={2} maxLength={1000} required disabled={controlsDisabled}
      value={reviewReason} onChange={event=>setReviewReason(event.target.value)}/>
-    <button type="submit" disabled={controlsDisabled||!financeAccountReviewReason(reviewReason.trim())}>Close interrupted attempt</button>
+    <button type="submit" className="secondary" disabled={controlsDisabled||!financeAccountReviewReason(reviewReason.trim())}>Close interrupted attempt</button>
    </form>}
   </section>}
  </section>;

@@ -23,7 +23,7 @@ export default async function SignInPage({searchParams}:{searchParams:Promise<{r
  return <main className="sign-in">
   <div className="sign-in-panel">
    <header className="sign-in-brand">
-    <Image src="/brand/crest-detailing.png" width={56} height={56} priority alt="Crest Detailing"/>
+    <Image src="/brand/crest-detailing.png" width={192} height={192} priority alt="Crest Detailing"/>
     <div><p className="eyebrow">Crest OS</p><h1>Welcome back</h1></div>
    </header>
    <SignIn resume={resume}/>

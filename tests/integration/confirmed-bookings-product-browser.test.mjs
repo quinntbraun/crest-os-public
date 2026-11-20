@@ -201,9 +201,11 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await vehicleEditor.getByLabel('Vehicle label',{exact:true}).fill(revisedVehicle);
   await vehicleEditor.getByRole('button',{name:'Save vehicle',exact:true}).click();
   await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
+  readDiagnostic.mark('vehicle_profile_reload');
   await page.reload();
   await expect(page.getByRole('heading',{name:revisedVehicle,exact:true})).toBeVisible();
   await expect(returnToJob).toHaveAttribute('href','/schedule?job='+jobId+'&vehicle='+jobVehicle.id);
+  readDiagnostic.mark('vehicle_return');
   await returnToJob.focus();await page.keyboard.press('Enter');
   await expect(bookedVehicleSummary).toHaveText(originalVehicle);
   await expect(bookedVehicleSummary).toBeFocused();
@@ -211,6 +213,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   // The separate recovery and empty-state probes start with a fresh browser session so the deliberately rapid workflows respect the ordinary request allowance.
   await context.close();
   const probeContext=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:844}}),probePage=await probeContext.newPage();
+  readDiagnostic=observeWorkReads(probePage,f,name+' fresh-session recovery');
   probePage.setDefaultTimeout(15000);probePage.setDefaultNavigationTimeout(30000);
   await signIn(probePage,f,nextCodeAt);
   const probeVehicleEditor=probePage.getByRole('form',{name:'Vehicle editor',exact:true}),probeVisits=probePage.locator('.record-job-history');

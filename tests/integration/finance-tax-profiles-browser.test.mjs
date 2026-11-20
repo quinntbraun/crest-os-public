@@ -5,6 +5,7 @@ import AxeBuilder from '@axe-core/playwright';
 import {chromium,expect,webkit} from '@playwright/test';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
 
 for(const engine of [chromium,webkit]){
  test(engine.name()+' reviews, saves and recovers fictional tax approvals with history and dated amounts',{timeout:240000},async()=>{
@@ -226,6 +227,7 @@ for(const engine of [chromium,webkit]){
    assert(pending);
    assert.deepEqual(Object.keys(JSON.parse(pending)).sort(),['binding','businessId','reference']);
    assert.deepEqual(Object.keys(JSON.parse(pending).reference).sort(),['expectedVersion','operationId','recoveryEpoch']);
+   await reviewFinancialRecovery(page,fixture,engine.name(),'tax_pending',manager);
    await page.reload();
    await openEditor();
    await reviewInterrupted.click();
@@ -240,6 +242,7 @@ for(const engine of [chromium,webkit]){
    await expect(approvalStatus).toContainText('The approval could not be confirmed.');
    await reviewInterrupted.click();
    await expect(approvalStatus).toContainText('No completed approval was found.');
+   await reviewFinancialRecovery(page,fixture,engine.name(),'tax_absent',manager);
    await manager.getByLabel('Reason to close this attempt',{exact:true}).fill('Fictional owner reviewed the pending operation');
    await manager.getByRole('button',{name:'Close interrupted attempt',exact:true}).click();
    await expect(approvalStatus).toHaveText('The interrupted tax approval was closed.');

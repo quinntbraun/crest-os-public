@@ -11,6 +11,7 @@ import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {reviewSupplierRegister} from '../support/supplier-register-layout.mjs';
 import {reviewSupplierDraft} from '../support/supplier-draft-layout.mjs';
 import {reviewSupplierDirectory} from '../support/supplier-directory-layout.mjs';
+import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
 
 const financeRoute='/api/business/finance-accounts/';
 const beginFinanceCalls=page=>page.evaluate(async prefix=>{
@@ -164,6 +165,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await originalForm.getByRole('button',{name:'Upload and verify original',exact:true}).click();
     assert.equal(await verification.promise,200,'verification must commit before simulating the lost reply');
     await expect(page.getByText('Verification could not be confirmed.',{exact:false})).toBeVisible();
+    await reviewFinancialRecovery(page,fixture,name,'supplier_upload',bills);
     await page.getByRole('button',{name:'Check original upload',exact:true}).click();
     await expect(page.getByText('Original bill verified.',{exact:true})).toBeVisible();
     const {rows:[original]}=await fixture.client.query('SELECT id AS original_id FROM crest.supplier_bill_originals WHERE business_id=$1',
@@ -208,6 +210,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await postButton.click();
     await expect(page.getByText('The outcome is unconfirmed.',{exact:false})).toBeVisible();
     assert.equal(interruptedStatus,200);
+    await reviewFinancialRecovery(page,fixture,name,'supplier_posting',bills);
     await page.getByRole('button',{name:'Check original posting request',exact:true}).click();
     await expect(page.getByText('Supplier bill posted. Reload Recorded supplier payables.',{exact:true})).toBeVisible();
     const postedRegister=await loadRegister();
@@ -236,6 +239,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await expect(register.getByRole('button',{name:'Load supplier payables',exact:true})).toBeDisabled();
     await expect(register.getByText('Check the original payment result below before changing this register’s date.',{exact:true})).toBeVisible();
     await expect(payment).toBeVisible();
+    await reviewFinancialRecovery(page,fixture,name,'supplier_payment',register);
     const refreshedRegister=page.waitForResponse(response=>response.url().endsWith(financeRoute+'supplier-payable-register'));
     await register.getByRole('button',{name:'Check original posting request',exact:true}).click();
     await expect(register.getByText('Verified supplier payment recorded.',{exact:true})).toBeVisible();

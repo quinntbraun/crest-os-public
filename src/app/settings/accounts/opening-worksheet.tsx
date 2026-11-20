@@ -184,7 +184,7 @@ export function OpeningWorksheet({businessId,arPreview}:{businessId:string;arPre
    <button type="button" className="secondary" disabled={busy||!!pending} onClick={()=>load(null)}>Load opening worksheet</button>
    <p role="status">{message}</p>
    {pending&&<div className={styles.openingGroup}>
-    <button type="button" className="secondary" disabled={busy} onClick={()=>inspect(null)}>Check original worksheet save</button>
+    <button type="button" disabled={busy} onClick={()=>inspect(null)}>Check original worksheet save</button>
     {mayClose&&<form onSubmit={event=>{event.preventDefault();if(financeAccountReviewReason(reason.trim()))inspect(reason.trim());}}>
      <label htmlFor="opening-close-reason">Reason for closing this save</label>
      <input id="opening-close-reason" required maxLength={1000} value={reason} onChange={event=>setReason(event.target.value)}/>
