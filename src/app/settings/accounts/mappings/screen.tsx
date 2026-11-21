@@ -120,10 +120,11 @@ export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
  }
  function download(){
   if(!history?.rows.length||active.current)return;
+  const recordingAvailable=history.rows.every(row=>row.recording!==undefined);
   downloadFinanceHistory('crest-mapping-approvals.csv',[
-   ['Purpose','Version','Effective from','Status','Account code','Approval reason'],
+   ['Purpose','Version','Effective from','Status','Account code','Approval reason',...(recordingAvailable?['Recorded in Crest (UTC)','Recorded by reference']:[])],
    ...history.rows.map(row=>[financeMappingLabels[row.purpose],row.version,row.effectiveFrom,
-    row.accountId===null?'Closed':'Approved',row.accountCode??'',row.reason]),
+    row.accountId===null?'Closed':'Approved',row.accountCode??'',row.reason,...(recordingAvailable?[row.recording!.recordedAt,row.recording!.actorId]:[])]),
   ]);
  }
  const matchingCategories=categoryEntries.filter(([key,label])=>

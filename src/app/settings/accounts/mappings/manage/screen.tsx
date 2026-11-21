@@ -137,10 +137,11 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
  }
  function downloadHistory(){
   if(!workspace?.history.rows.length||active.current)return;
+  const recordingAvailable=workspace.history.rows.every(row=>row.recording!==undefined);
   downloadFinanceHistory('crest-mapping-approvals.csv',[
-   ['Purpose','Version','Effective from','Status','Account code','Approval reason'],
+   ['Purpose','Version','Effective from','Status','Account code','Approval reason',...(recordingAvailable?['Recorded in Crest (UTC)','Recorded by reference']:[])],
    ...workspace.history.rows.map(row=>[financeMappingLabels[row.purpose],row.version,row.effectiveFrom,
-    row.accountId===null?'Closed':'Approved',row.accountCode??'',row.reason]),
+    row.accountId===null?'Closed':'Approved',row.accountCode??'',row.reason,...(recordingAvailable?[row.recording!.recordedAt,row.recording!.actorId]:[])]),
   ]);
  }
  async function finish(context:FinanceAccountContext,entry:Pending,messageAfter:string,signal:AbortSignal,receipt?:{version:string;effectiveFrom:string;accountId:string|null}){

@@ -18,8 +18,11 @@ export async function requireSyntheticFinancePreviewConnection(connectionString,
      SELECT 1 FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles r ON r.oid=m.roleid
      WHERE m.member=(SELECT oid FROM pg_catalog.pg_roles WHERE rolname=session_user)
       AND (r.rolname<>'crest_finance_preview' OR m.admin_option)
-    ) AS allowed`,[login]);
+    ) AS allowed,
+    CASE WHEN to_regprocedure('crest_commands.read_finance_mapping_history_evidence(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,text,bigint,integer)') IS NULL THEN false
+     ELSE has_function_privilege(current_user,'crest_commands.read_finance_mapping_history_evidence(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,text,bigint,integer)','EXECUTE') END AS mapping_history_evidence`,[login]);
   assert.equal(rows[0]?.allowed,true,failure);
+  return rows[0]?.mapping_history_evidence===true;
  }catch{throw Error(failure);}
  finally{await client.end().catch(()=>undefined);}
 }
@@ -65,7 +68,7 @@ export async function readSyntheticFinancePreview(directory,state,taxProfiles=fa
   login='crest_finance_local_'+state.id;
   connectionString=`postgresql://${login}:${value.password}@127.0.0.1:54329/${state.databaseName}`;
  }catch{throw Error(failure);}
- await requireSyntheticFinancePreviewConnection(connectionString,login);
- return {connectionString,fixedMappings:true,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,
+ const mappingHistoryEvidence=await requireSyntheticFinancePreviewConnection(connectionString,login);
+ return {connectionString,fixedMappings:true,...(mappingHistoryEvidence?{mappingHistoryEvidence:true}:{}),taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,
   invoiceIssueTaxReview:invoiceIssue,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,collectionFailureTipReinstatements:restoredTips,openingWorksheet};
 }

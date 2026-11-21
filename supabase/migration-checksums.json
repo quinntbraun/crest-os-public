@@ -610,6 +610,11 @@
       "version": "20270115180000",
       "file": "20270115180000_invoice_outstanding.sql",
       "sha256": "a31c29b9e597c130ef8d14831b0edf6473e920e45aa024ba15caecaefeb91f30"
+    },
+    {
+      "version": "20270116180000",
+      "file": "20270116180000_finance_mapping_recording_history.sql",
+      "sha256": "a655e25d1c0a030e7babd4766b1726353abcdcfecfe6b00bcffe4a3450f3c2d0"
     }
   ]
 }

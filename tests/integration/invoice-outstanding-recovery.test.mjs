@@ -9,8 +9,8 @@ import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {command,committed,issue} from '../support/invoice-outstanding-fixture.mjs';
 import {syntheticInvoiceOutstandingAvailable} from '../../scripts/synthetic-migrations.mjs';
-import {backupDatabase,backupLegacy121Database,connect,inventory,keyPair,privateWorkspace,recoveryCluster,
- restoreDatabase,restoreLegacy121Database} from '../support/recovery-drill.mjs';
+import {backupLegacy122Database,backupLegacy121Database,connect,inventory,keyPair,privateWorkspace,recoveryCluster,
+ restoreLegacy122Database,restoreLegacy121Database} from '../support/recovery-drill.mjs';
 
 test('registered122 preserves populated121 and independently restores both frozen and current encrypted source',{timeout:240000},async()=>{
  const cluster=await recoveryCluster();let sandbox,destination,directory;const restored=[];
@@ -34,13 +34,13 @@ test('registered122 preserves populated121 and independently restores both froze
   const frozen=await backupLegacy121Database(admin,target,point121,keys.recipient);assert.equal(frozen.manifest.schemaVersion,121);
   assert.equal(frozen.manifest.completeBackup,false,'Database-only proof must not claim external object/vault completeness.');
   const before=await inventory(admin),beforeHistory=(await admin.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows;
-  await sandbox.apply(target);const history=(await admin.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows;
+  await sandbox.apply(target,await sandbox.prefix(122));const history=(await admin.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows;
   assert.equal(history.length,122);assert.deepEqual(history.slice(0,121),beforeHistory);
   assert.deepEqual((await inventory(admin)).filter(row=>row.schema!=='supabase_migrations'),before.filter(row=>row.schema!=='supabase_migrations'));
   const balance=await command(finance,'read_fictional_invoice_outstanding',[...owner.auth(),owner.customer,invoice.invoiceId]);assert.equal(balance.outstandingCents,'25000');
-  const current=await backupDatabase(admin,target,point122,keys.recipient);assert.equal(current.manifest.schemaVersion,122);assert.equal(current.manifest.completeBackup,false);
+  const current=await backupLegacy122Database(admin,target,point122,keys.recipient);assert.equal(current.manifest.schemaVersion,122);assert.equal(current.manifest.completeBackup,false);
   destination=await recoveryCluster();
-  for(const [version,point,restore,manifest]of [[121,point121,restoreLegacy121Database,frozen.manifest],[122,point122,restoreDatabase,current.manifest]]){
+  for(const [version,point,restore,manifest]of [[121,point121,restoreLegacy121Database,frozen.manifest],[122,point122,restoreLegacy122Database,current.manifest]]){
    const url=await destination.database();assert.notEqual(new URL(url).port,new URL(target).port);
    assert.deepEqual(await restore(point,keys.path,url),manifest);const client=await connect(url);restored.push(client);
    assert.deepEqual(await inventory(client),manifest.rows);assert.equal((await client.query('SELECT count(*)::int AS value FROM supabase_migrations.schema_migrations')).rows[0].value,version);

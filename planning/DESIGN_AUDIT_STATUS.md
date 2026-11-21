@@ -1,4 +1,4 @@
-# Design-audit coverage — November 20, 2026
+# Design-audit coverage — November 21, 2026
 
 This inventory reconciles all 70 original groups: 14 shared findings, 36 destinations and 20 deeper workflows. It preserves every original group and its full requirement text in [DESIGN_AUDIT_COVERAGE.json](DESIGN_AUDIT_COVERAGE.json). The original audit SHA-256 and current assessment source are recorded there.
 
@@ -6,13 +6,13 @@ This inventory reconciles all 70 original groups: 14 shared findings, 36 destina
 
 | Local implementation review | Groups |
 |---|---:|
-| Main change locally addressed | 60 |
-| Partial implementation or required review | 8 |
+| Main change locally addressed | 61 |
+| Partial implementation or required review | 7 |
 | Open audit work | 2 |
 | Review required before choosing changes | 0 |
 | Total | 70 |
 
-60/70, or 85.7%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 85.7% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 8 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
+61/70, or 87.1%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 87.1% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 7 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
 
 The audit is **not finished**. Each row has remaining implementation or verification. Full current-source/state, delivered-build and physical iPhone acceptance is not established. The earlier roughly 80% figure is a low-confidence V1 coding estimate and is not the audit percentage. The active objective is to complete all 70 original audit groups. Approved V1 business-use, recovery, upgrade, release and owner/device gates remain separate requirements and are not waived by this inventory.
 
@@ -33,11 +33,11 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | S05 | Reduce visual nesting | Main change addressed | Complete broader configured/long-value/zoom/private-state variants and matching delivered/installed/physical-device acceptance. Preserve current WebKit paid-expense provider/session failure, older CLI/trial-balance failures and unresolved initial quote replacement sign-in; no failed run is relabeled passing. |
 | S06 | Treat every state as a designed screen | Partial | Complete the eight-state cross-workflow inventory and exact-source visual verification;72 baseline captures do not cover it. |
 | S07 | Keep financial scope attached to the number | Main change addressed | Fresh full-head and delivered acceptance remain separate gates. |
-| S08 | Make Crest recognizable through restraint | Partial | Resolve a legible approved small-size asset and confirm brand consistency on delivered documents/sign-in/navigation. |
+| S08 | Make Crest recognizable through restraint | Main change addressed | Obtain owner confirmation of the established wordmark treatment and complete exact delivered/installed/physical-device brand acceptance; retain the unexplained renewed-access failure and all full release gates. |
 | S09 | Replace Unicode navigation symbols | Main change addressed | Physical-device and installed verification remain separate. |
 | S10 | Refine type, spacing and numeric rhythm | Partial | Complete configured business/input/long-name/history actual-browser-zoom checks plus matching hosted/installed/physical-device acceptance. Earlier720 root-text observations and144 real-zoom closed-state observations are separate scopes, not one complete current-source configured matrix. |
 | S11 | Motion should explain changes | Partial | Finish other workflow-specific motion, stable loading geometry, focus/save-feedback review and exact-source delivered/physical-device acceptance. Scoped booking2/2 is not global S11 completion. |
-| S12 | Turn history into a readable evidence trail | Partial | Resolve separately authorized mapping recording/actor metadata. Finish remaining agreement/approval/integration history and missing/stale/long/zoom/private variants; complete exact-source hosted/installed/physical-device review. New proposal plus normal amendment file6/6 is scoped local evidence; publishedf601 navigation failure remains unresolved, not cured. |
+| S12 | Turn history into a readable evidence trail | Partial | Finish remaining agreement/approval/integration histories and missing/stale/long/zoom/private variants, plus fresh exact-source123 release/installed/owner/physical-device acceptance. Mapping recording/actor projection is now locally implemented and verified; earlier access/provider failures remain unexplained and retained. |
 | S13 | Protect context through every transition | Partial | Verify planner date/view and all remaining contextual returns plus sign-out/private clearing on the exact release. Earlier WebKit failures are not explained or cured by this contrast or later passes; full matching hosted/installed/physical-device acceptance remains separate. |
 | S14 | Phone finishing is physical-device work | Open | Complete the required physical iPhone, keyboard, safe-area, camera/download, zoom and reduced-motion acceptance. |
 | R01 | Sign in (/sign-in) | Main change addressed | Complete genuine timed-expiry, password-manager/zoom/physical keyboard and iPhone acceptance, broader state variants and matching delivered release; all final sign-offs remain false. |
@@ -99,7 +99,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 ## Next sequence
 
-1. Observe exact955ac14/tree84b5b07: main44808191294 is terminal failed21/22, owner-expense44808191275 and commercial44808191523 pass. Local completion2/2 and isolated supplier2/2 are verified separately; publish the corrected coherent source for new full checks. This candidate contains the13-workflow priority batch and finance response-capture correction. Publishedb651 is terminal20/22 main; both ancillary workflows pass. Preserve its body-retirement failure and gated Foundation/service-artifact result. No unchanged rerun, assertion waiver, timeout increase or accounting change.
+1. Observe new coherent8282277/tree2cdaede: main44920156657 is terminal22/22 successful, and owner-expense44920156646/commercial44920156662 pass. Exact tested mergedcd906a/tree2cdaede is verified. Prepare the strictly scanned coherent branding/schema123 candidate for fresh full checks; no prior success transfers. Prior955ac14/tree84b5b07: main44808191294 is terminal failed21/22, owner-expense44808191275 and commercial44808191523 pass. Local completion2/2 and isolated supplier2/2 are verified separately; publish the corrected coherent source for new full checks. This candidate contains the13-workflow priority batch and finance response-capture correction. Publishedb651 is terminal20/22 main; both ancillary workflows pass. Preserve its body-retirement failure and gated Foundation/service-artifact result. No unchanged rerun, assertion waiver, timeout increase or accounting change.
 2. Use DESIGN_AUDIT_FINISH_REGISTER.md as the single remaining-work checklist. Complete the remaining original phone-return, eight-state, small-brand, actual-zoom, motion and strict-metadata requirements in coherent batches; source scans and scoped passes are not global acceptance.
 3. Retain four-record09ce80/82 (7/8 parents) and all24 successful exact-reference layouts separately. Investigate the reported-vehicle access failure when evidence supports a correction; no isolated broad rerun solely for green.
-4. Require every new-head release/upgrade/recovery/isolated-worker, installed comparison, owner-finance/off-laptop restore and physical iPhone gate. Counts60 main/8partial/2open and all 70 original bodies/hash/false sign-offs remain.
+4. Require every new-head release/upgrade/recovery/isolated-worker, installed comparison, owner-finance/off-laptop restore and physical iPhone gate. Counts61 main/7partial/2open and all 70 original bodies/hash/false sign-offs remain.

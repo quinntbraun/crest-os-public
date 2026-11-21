@@ -56,8 +56,9 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
    await page.emulateMedia({reducedMotion:'reduce'});
    assert.equal(await placeholder.evaluate(node=>getComputedStyle(node).animationName),'none');
    await page.emulateMedia({reducedMotion:null});
-   const logo=page.getByRole('link',{name:'Crest OS home',exact:true}).locator('img');
-   await expect.poll(()=>logo.evaluate(img=>img.complete&&img.naturalWidth>0)).toBe(true);
+   const wordmark=page.getByRole('link',{name:'Crest OS home',exact:true});
+   await expect(wordmark).toBeVisible();await expect(wordmark).toHaveText('Crest OS');
+   const wordmarkBounds=await wordmark.boundingBox();assert(wordmarkBounds&&wordmarkBounds.height>=44&&wordmarkBounds.width>=44,'The established text wordmark stays readable and provides a full touch target.');
    await page.screenshot({path:'.local/review/home-loading-'+name+'-390.png'});
   }finally{releaseWorkspaceRead();}
   await expect(page.getByRole('status')).toHaveText('Workspace access verified.');

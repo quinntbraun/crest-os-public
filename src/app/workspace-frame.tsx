@@ -1,5 +1,4 @@
 'use client';
-import Image from 'next/image';
 import {WorkspaceIcon} from './workspace-icon';
 import {usePathname} from 'next/navigation';
 import {createContext,useCallback,useContext,useEffect,useImperativeHandle,useRef,useState} from 'react';
@@ -171,7 +170,6 @@ export function WorkspaceFrame({children}:{children:ReactNode}){
     <a className="skip-link" href="#workspace-content">Skip to content</a>
     <header className="workspace-masthead"><div className="workspace-header">
       <a className="crest-wordmark" href="/" aria-label="Crest OS home">
-        <Image src="/brand/crest-detailing.png" alt="" width={36} height={36} className="crest-workspace-logo"/>
         <span>Crest OS</span>
       </a>
       {!signIn&&<WorkspaceSearch searchRef={search}/>}

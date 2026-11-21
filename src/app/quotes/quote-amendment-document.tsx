@@ -1,3 +1,4 @@
+import {DocumentBrand} from '../document-brand';
 import {useId} from 'react';
 import {exactCustomerObject as exact,customerInstant} from '../../customer/customer-contract';
 import {quoteVersion} from '../../commercial/quote-storage-contract';
@@ -76,7 +77,7 @@ function Scope({value}:{value:Line|null}){return value===null?<p>Not included</p
 export function QuoteAmendmentDocument({comparison,accepted=false}:{comparison:Comparison;accepted?:boolean}){
  const title=useId();validate(comparison);requireSafe(typeof accepted==='boolean');
  return <article className="quote-worksheet quote-amendment" aria-labelledby={title}>
-  <header><p className="eyebrow">Crest Detailing</p><h2 id={title}>{accepted?(comparison.schemaVersion!==1?'Accepted cancellation of remaining work':'Accepted change to work'):comparison.schemaVersion!==1?'Proposed cancellation of remaining work':'Proposed change to accepted work'}</h2><p>{accepted?'This change is accepted. The earlier agreement and its recorded history remain available.':'Your accepted agreement remains in effect until this change is separately accepted.'}</p></header>
+  <header><DocumentBrand/><h2 id={title}>{accepted?(comparison.schemaVersion!==1?'Accepted cancellation of remaining work':'Accepted change to work'):comparison.schemaVersion!==1?'Proposed cancellation of remaining work':'Proposed change to accepted work'}</h2><p>{accepted?'This change is accepted. The earlier agreement and its recorded history remain available.':'Your accepted agreement remains in effect until this change is separately accepted.'}</p></header>
   {comparison.schemaVersion!==1&&<section aria-label="Cancellation reason"><h3>Reason</h3><p className="service-scope">{comparison.cancellationReason}</p></section>}
   <AmendmentTotals comparison={comparison} accepted={accepted}/>
   <p className="field-help">USD · All-in quoted amounts. This comparison records no invoice, payment or refund.</p>

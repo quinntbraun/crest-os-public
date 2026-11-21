@@ -7,7 +7,7 @@ import {reviewTextResize} from '../support/text-resize-layout.mjs';
 import {chromium,expect,webkit} from '@playwright/test';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
-import {reviewApprovalEntry,reviewApprovalHistory,verifyMappingSignIn,assertMappingLayout,mappingBusinessSource} from '../support/mapping-workbench.mjs';
+import {reviewApprovalEntry,reviewApprovalHistory,reviewMappingRecordingCsv,verifyMappingSignIn,assertMappingLayout,mappingBusinessSource} from '../support/mapping-workbench.mjs';
 
 for(const engine of [chromium,webkit]){
  test(engine.name()+' approves a fictional expense category account, recovers an interrupted save and exports history',
@@ -16,7 +16,7 @@ for(const engine of [chromium,webkit]){
    if(cluster)process.env.CREST_TEST_DATABASE_URL=cluster.testDatabaseUrl;
    let fixture,browser;
    try{
-    fixture=await sourceExportBrowserFixture({product:true,workspace:true,financeAccounts:true,financeMappings:true,financeCategoryMappings:true});
+    fixture=await sourceExportBrowserFixture({product:true,workspace:true,financeAccounts:true,financeMappings:true,financeMappingHistory:true,financeCategoryMappings:true});
     browser=await engine.launch();
     const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:900}});
     const page=await context.newPage();page.setDefaultTimeout(20000);
@@ -104,7 +104,7 @@ for(const engine of [chromium,webkit]){
     await embedded.getByText('Version 1 · Account 5100',{exact:true}).click();
     await expect(embedded.getByText('=Fictional review selected the fuel account',{exact:true})).toBeVisible();
     const beforeHistory=await mappingBusinessSource(fixture);
-    await reviewApprovalHistory(page,engine.name(),'category-proposed-closure',1);
+    await reviewApprovalHistory(page,engine.name(),'category-proposed-closure',1,fixture);
     assert.deepEqual(await mappingBusinessSource(fixture),beforeHistory,'reviewing retained approvals must not post a change');
     await editor.getByRole('button',{name:'Save closure',exact:true}).click();
     await expect(status).toHaveText('Mapping closure saved.');
@@ -172,6 +172,7 @@ for(const engine of [chromium,webkit]){
     const download=await waiting;
     assert.equal(download.suggestedFilename(),'crest-mapping-approvals.csv');
     const csv=await readFile(await download.path(),'utf8');
+    await reviewMappingRecordingCsv(csv,fixture,'category_fuel');
     assert.match(csv,/"Fuel","1","2026-02-01","Approved","5100","'=Fictional review selected the fuel account"/);
     await capture('history');
     await lookup.getByRole('link',{name:'Manage approvals for Fuel',exact:true}).click();
@@ -179,7 +180,7 @@ for(const engine of [chromium,webkit]){
     await expect(page.getByLabel('Expense category',{exact:true})).toHaveValue('category_fuel');
     await load.click();
     await expect(status).toHaveText('Approval settings loaded.');
-    await reviewApprovalHistory(page,engine.name(),'category-saved-closure',2);
+    await reviewApprovalHistory(page,engine.name(),'category-saved-closure',2,fixture);
     const embeddedDownload=page.waitForEvent('download');
     await embedded.getByRole('button',{name:'Download loaded approvals (CSV)',exact:true}).click();
     assert.equal(await readFile(await (await embeddedDownload).path(),'utf8'),csv);

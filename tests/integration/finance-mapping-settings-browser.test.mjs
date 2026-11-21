@@ -7,7 +7,7 @@ import AxeBuilder from '@axe-core/playwright';
 import {chromium,expect,webkit} from '@playwright/test';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
-import {mappingBusinessSource,reviewApprovalEntry,reviewApprovalHistory,verifyMappingSignIn,assertMappingLayout} from '../support/mapping-workbench.mjs';
+import {mappingBusinessSource,reviewApprovalEntry,reviewApprovalHistory,reviewMappingRecordingCsv,verifyMappingSignIn,assertMappingLayout} from '../support/mapping-workbench.mjs';
 
 for(const engine of [chromium,webkit]){
  test(engine.name()+' reopens the account mapping applicable on a date and its approved history',{timeout:240000},async()=>{
@@ -15,7 +15,7 @@ for(const engine of [chromium,webkit]){
   if(cluster)process.env.CREST_TEST_DATABASE_URL=cluster.testDatabaseUrl;
   let fixture,browser;
   try{
-   fixture=await sourceExportBrowserFixture({product:true,workspace:true,financeAccounts:true,financeMappings:true});
+   fixture=await sourceExportBrowserFixture({product:true,workspace:true,financeAccounts:true,financeMappings:true,financeMappingHistory:true});
    browser=await engine.launch();
    const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:900}});
    const page=await context.newPage();page.setDefaultTimeout(20000);
@@ -78,6 +78,7 @@ for(const engine of [chromium,webkit]){
    const file=await download;
    assert.equal(file.suggestedFilename(),'crest-mapping-approvals.csv');
    const csv=await readFile(await file.path(),'utf8');
+    await reviewMappingRecordingCsv(csv,fixture,'service_revenue');
    assert.match(csv,/"3","2026-10-01","Closed","","Fictional mapping closed"/);
    assert.match(csv,/"1","2026-01-01","Approved","4000","'=Fictional initial approval"/);
    for(const width of [360,390,768,1100,1440]){
@@ -174,7 +175,7 @@ for(const engine of [chromium,webkit]){
    await embedded.getByText('Version 1 · Account 4000',{exact:true}).click();
    await expect(embedded.getByText('=Fictional initial approval',{exact:true})).toBeVisible();
    const beforeEditorHistory=await mappingBusinessSource(fixture);
-   await reviewApprovalHistory(page,engine.name(),'mapping-proposed-closure',4);
+   await reviewApprovalHistory(page,engine.name(),'mapping-proposed-closure',4,fixture);
    assert.deepEqual(await mappingBusinessSource(fixture),beforeEditorHistory);
    for(const width of [360,390,768,1440]){
     await page.setViewportSize({width,height:900});
@@ -269,9 +270,10 @@ for(const engine of [chromium,webkit]){
    await expect(older).toHaveCount(0);await expect(effective).toHaveValue('2027-02-01');
    await expect(approvalReason).toHaveValue('Fictional proposal retained while reading older approvals');
    await expect(editor.getByRole('region',{name:'Latest saved rule',exact:true})).toContainText('Fictional retained approval 30');
-   await reviewApprovalHistory(page,engine.name(),'mapping-paginated-proposal',30);
+   await reviewApprovalHistory(page,engine.name(),'mapping-paginated-proposal',30,fixture);
    const pagedDownload=page.waitForEvent('download');await embedded.getByRole('button',{name:'Download loaded approvals (CSV)',exact:true}).click();
    const pagedCsv=await readFile(await (await pagedDownload).path(),'utf8');
+   await reviewMappingRecordingCsv(pagedCsv,fixture,'service_revenue');
    assert.equal(pagedCsv.trim().split('\n').length,31);
    assert.match(pagedCsv,/"30","2027-01-25","Approved","4000","Fictional retained approval 30"/);
    assert.match(pagedCsv,/"1","2026-01-01","Approved","4000","'=Fictional initial approval"/);

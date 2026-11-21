@@ -1,5 +1,6 @@
 'use client';
 
+import {DocumentBrand} from '../../document-brand';
 import { useEffect, useId, useRef, useState } from 'react';
 import { clearPendingInvoiceIssue, downloadFinanceHistory, financeAccounts, readPendingInvoiceIssue,
   retainPendingInvoiceIssue } from '../../../client/finance-accounts';
@@ -71,6 +72,7 @@ export function IssuedInvoiceDetails({ invoice,businessId,receiptBusinessId,paym
   const showRefunds=serviceRefunds||excessReturns||tipReturns||refundTransfers;
   return <div className="issued-invoice-details">
     <article className="issued-invoice-document" aria-labelledby={actionsId+'-document'}>
+    <DocumentBrand/>
     <header className="issued-invoice-heading">
       <div><p className="invoice-document-state">Issued · {invoice.currency}</p><h4 id={actionsId+'-document'}>Invoice {invoice.invoiceNumber}</h4></div>
       <p className="invoice-document-amount"><span>Original total</span> <strong>{quoteMoney(invoice.totalCents)}</strong></p>

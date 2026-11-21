@@ -30,7 +30,7 @@ test('registered invoice outstanding preserves populated121 and binds actual aut
   const foreign=await makeOwner(),today=(await admin.query("SELECT (statement_timestamp() AT TIME ZONE 'UTC')::date::text AS value")).rows[0].value;
   const invoice=await issue({admin,web,finance,owner,service,today});assert.equal(invoice.totalCents,'25000');
   const beforeUpgrade=await inventory(admin),beforeHistory=(await admin.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows;
-  await sandbox.apply(target);const afterHistory=(await admin.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows;assert.equal(afterHistory.length,122);assert.deepEqual(afterHistory.slice(0,121),beforeHistory);
+  await sandbox.apply(target,await sandbox.prefix(122));const afterHistory=(await admin.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version')).rows;assert.equal(afterHistory.length,122);assert.deepEqual(afterHistory.slice(0,121),beforeHistory);
   assert.deepEqual((await inventory(admin)).filter(row=>row.schema!=='supabase_migrations'),beforeUpgrade.filter(row=>row.schema!=='supabase_migrations'));
   const signature='crest_commands.read_fictional_invoice_outstanding(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,uuid)';
   const args=()=>[...owner.auth(),owner.customer,invoice.invoiceId];

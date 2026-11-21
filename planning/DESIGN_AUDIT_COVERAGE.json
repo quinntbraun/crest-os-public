@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-21T15:35:38.535Z",
+  "assessedAt": "2026-11-21T17:00:46.156Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "5e9efbda0654865de1b8d8f84ee0d8363082cc38",
-    "publishedCommit": "955ac14bb9dbd5209961d512a7802facb83229c5",
-    "publishedTree": "84b5b07fa343ace4e3a5859254235bb0fcc4dae4",
-    "localTree": "b12577e8d69ab9c6988b451feae4e1c1f9b00d41"
+    "localCommit": "3a340a195d086c13a0a36b990122fd4fc3f46499",
+    "publishedCommit": "8282277c07ead937b6804e3b33a0cba5749b5b77",
+    "publishedTree": "2cdaede5aa0f698b5df6339718c23d8021391f7c",
+    "localTree": "1b59fe9189ba2d402890438e9f25f5d6c01cbe7e"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -27,12 +27,12 @@
     "destinations": 36,
     "deeperWorkflows": 20,
     "counts": {
-      "locally_addressed": 60,
-      "partial": 8,
+      "locally_addressed": 61,
+      "partial": 7,
       "open": 2,
       "review_needed": 0
     },
-    "mainLocalChangesAddressedPercent": 85.7,
+    "mainLocalChangesAddressedPercent": 87.1,
     "auditComplete": false,
     "finalSignOffClaimed": false
   },
@@ -44,16 +44,16 @@
       "title": "P1 · One visual system, delivered consistently",
       "requirements": "The installed logged-out preview still uses a large dark car hero and a different shell from the newer captured build. First align the version being evaluated and delivered. Then use shared page headers, toolbars, record summaries, inspectors, notices and confirmations throughout.\n\nFinish standard: The same destination and state should have the same hierarchy on laptop and phone; release identity must be verifiable.",
       "implementationStatus": "open",
-      "implementedOrPresent": "A coherent newer draftf3ea4bc/tree da409e matches verified local69b9d66 and is undergoing exact-source CI. Older6da/merge4a passed complete checks, retained recovery and isolated document workers; its candidate archive/input metadata checksums are verified. Neither current installed comparison nor final new-source acceptance is established. Publishedf3ea/tree da409e has now passed all three workflows and all22 main jobs, including Foundation136204373972. Exact tested merge8b54630 retains the same tree; registered frozen52/53 recovery7/7, isolated supplier2/2 and four-format receipt2/2 succeed. Later local history/navigation/action changes remain separate; no matching installation or final owner/device acceptance is claimed. Coherent draft e31089d/tree e843c51 now exactly matches local ec2bf45, with one public parent f3ea4bc and unchanged base ea06dc6. Complete tracked-source strict default scan has zero findings; no ignore/inline allows. Exact head/base/draft/open/body/tree/sole-parent/nonforce expected-head guards verified. New main44725293108, expense44725293196 and commercial44725293043 were observed queued/running; no old success is transferred. Installed/physical/owner acceptance remains open. Published e310 main44725293108 is terminal failed: all21 prerequisites and both ancillary workflows succeed; Foundation136263156173 stops at one raw-HTML date assertion,9114/9115 units passed. Received time markup preserves the correct Apr1 exclusive boundary. Downstream release/recovery/workers are skipped; required service screenshot artifact is absent. Local test-only dcce5c9 preserves the date matrix and checks visible text plus exact exclusive ISO date; focused3/3/full9115/9115 in395files and final types/full lint pass. No history/app rule or gate changes; new exact-source release remains required. New coherent draft3aab311/tree933d979 exactly matches reviewed localb96c917, with sole public parente31089d and unchanged baseea06dc6. All10 text entries reconstruct the complete local tree; default-rule complete tracked-source scan has zero findings with empty ignore/inline allows disabled. Head/base/all-terminal, tree/sole-parent/nonforce lease, exact title/body/draft/open/unmerged are verified. New main44731338309 is queued and expense44731338224 running; only those two workflows have been observed at this snapshot. No preceding result is transferred; matching full new-source release/installed/owner/device acceptance remains open. Public3aab311 is now terminal failed: main20/22 jobs succeed, amendment136271570910 fails6/7 at WebKit Schedule/Back native pageerror and Foundation136284474583 correctly stops at the prerequisite gate; required generated service screenshots are absent. Feedback amendment136271569694 separately fails4/5 at review/approve503; commercial/integrity children and owner expense pass. Tested mergef7e012c/tree933d979 and parents are verified. Safe failures retained. A four-cell app-free early-abort contrast passes: live reads remain200; provisional un-aborted reads emit3 native pageerrors, pre-aborted reads emit0, genuine exception positive controls remain active. This is mechanism evidence, not a Crest lifecycle fix. No production departure boundary, error waiver, request exemption or deadline/pacing change has been made. Current local Schedule candidate b534fc9 and diagnostic b05c058 remain separate from the failed public3aab tree. Full original normal amendments pass2/2; later complete saved-job plus acceptance diagnostics are10/11, with WebKit failing a subsequent fresh-session Schedule search after the original vehicle return passed. A provider500 is observed, not established as cause. No candidate full acceptance or new publication is claimed. New coherent draftb651922/treee8c40ca exactly matches local73d213c, sole public parent3aab311 and unchanged baseea06dc6.36 UTF8 entries reconstruct the complete tree;2598-file/39120931-byte complete tracked-source copy passes strict default secret detection with zero findings, empty ignore and inline allows disabled. Exact source/head/base/draft/open/unmerged/title/body/tree/sole-parent/nonforce expected-head guards pass; private local ancestry is excluded. New main44746575665 and commercial44746575565 are observed queued/running; main21 prerequisite jobs have been discovered, with new-head success not established. Owner expense workflow has not yet appeared and is not waived or borrowed from the prior source. Matching release/upgrade/recovery/workers/installation/owner/iPhone acceptance remains required. Publishedb651922 is terminal: main20/22 succeeds, including Schedule/amendments; both owner-expense and commercial feedback workflows pass. Payment-recovery136323330422 fails on a retired browser Response body; Foundation136338412260 stops at the prerequisite gate and required service screenshots are absent. Downstream release/upgrade/recovery/workers remain unaccepted. Local test-onlyf78ea0a buffers both late finance report reads through the existing single-forward actual-byte observer at the unchanged20s deadline. Original full financial assertions remain; four controlled observer cells pass. New full-head verification remains required. New coherent draft955ac14/tree84b5b07 exactly matches localca50c4b, sole parentb651922 and unchanged baseea06dc6.29 text entries reconstruct the full tree. Strict default complete2599-file scan is clean, empty ignore/inline allows disabled; head/base/all-prior-terminal, tree/sole-parent/nonforce lease and exact PR title/body/draft/open/unmerged guards pass. New main44808191294, owner-expense44808191275 and commercial44808191523 are observed queued/running; their results remain pending. No prior success transfers. Published955ac14/tree84b5b07 is terminal:21/22 main jobs pass, both owner-expense and commercial workflows pass. Foundation reaches and passes production build, browser accessibility, portable-container smoke, isolated photo decoding and preceding registered upgrade/recovery gates; Chromium supplier register JSON loses its response body after navigation (WebKit passes). Private expense isolated-worker and candidate provenance steps are skipped, not accepted. Local2fd8f80 buffers both register reads through the existing one-forward actual-byte helper; original statuses/assertions/deadlines remain. Full9128 units pass. Complete original supplier journeys on6e54ec3 pass2/2 with the current isolated Linux PDF worker,18 recovery observations,118 PNGs, unchanged source and owned cleanup. The first local0/2 omitted the Windows absolute Docker launch prerequisite and remains retained separately. A new exact hosted candidate remains required.",
+      "implementedOrPresent": "A coherent newer draftf3ea4bc/tree da409e matches verified local69b9d66 and is undergoing exact-source CI. Older6da/merge4a passed complete checks, retained recovery and isolated document workers; its candidate archive/input metadata checksums are verified. Neither current installed comparison nor final new-source acceptance is established. Publishedf3ea/tree da409e has now passed all three workflows and all22 main jobs, including Foundation136204373972. Exact tested merge8b54630 retains the same tree; registered frozen52/53 recovery7/7, isolated supplier2/2 and four-format receipt2/2 succeed. Later local history/navigation/action changes remain separate; no matching installation or final owner/device acceptance is claimed. Coherent draft e31089d/tree e843c51 now exactly matches local ec2bf45, with one public parent f3ea4bc and unchanged base ea06dc6. Complete tracked-source strict default scan has zero findings; no ignore/inline allows. Exact head/base/draft/open/body/tree/sole-parent/nonforce expected-head guards verified. New main44725293108, expense44725293196 and commercial44725293043 were observed queued/running; no old success is transferred. Installed/physical/owner acceptance remains open. Published e310 main44725293108 is terminal failed: all21 prerequisites and both ancillary workflows succeed; Foundation136263156173 stops at one raw-HTML date assertion,9114/9115 units passed. Received time markup preserves the correct Apr1 exclusive boundary. Downstream release/recovery/workers are skipped; required service screenshot artifact is absent. Local test-only dcce5c9 preserves the date matrix and checks visible text plus exact exclusive ISO date; focused3/3/full9115/9115 in395files and final types/full lint pass. No history/app rule or gate changes; new exact-source release remains required. New coherent draft3aab311/tree933d979 exactly matches reviewed localb96c917, with sole public parente31089d and unchanged baseea06dc6. All10 text entries reconstruct the complete local tree; default-rule complete tracked-source scan has zero findings with empty ignore/inline allows disabled. Head/base/all-terminal, tree/sole-parent/nonforce lease, exact title/body/draft/open/unmerged are verified. New main44731338309 is queued and expense44731338224 running; only those two workflows have been observed at this snapshot. No preceding result is transferred; matching full new-source release/installed/owner/device acceptance remains open. Public3aab311 is now terminal failed: main20/22 jobs succeed, amendment136271570910 fails6/7 at WebKit Schedule/Back native pageerror and Foundation136284474583 correctly stops at the prerequisite gate; required generated service screenshots are absent. Feedback amendment136271569694 separately fails4/5 at review/approve503; commercial/integrity children and owner expense pass. Tested mergef7e012c/tree933d979 and parents are verified. Safe failures retained. A four-cell app-free early-abort contrast passes: live reads remain200; provisional un-aborted reads emit3 native pageerrors, pre-aborted reads emit0, genuine exception positive controls remain active. This is mechanism evidence, not a Crest lifecycle fix. No production departure boundary, error waiver, request exemption or deadline/pacing change has been made. Current local Schedule candidate b534fc9 and diagnostic b05c058 remain separate from the failed public3aab tree. Full original normal amendments pass2/2; later complete saved-job plus acceptance diagnostics are10/11, with WebKit failing a subsequent fresh-session Schedule search after the original vehicle return passed. A provider500 is observed, not established as cause. No candidate full acceptance or new publication is claimed. New coherent draftb651922/treee8c40ca exactly matches local73d213c, sole public parent3aab311 and unchanged baseea06dc6.36 UTF8 entries reconstruct the complete tree;2598-file/39120931-byte complete tracked-source copy passes strict default secret detection with zero findings, empty ignore and inline allows disabled. Exact source/head/base/draft/open/unmerged/title/body/tree/sole-parent/nonforce expected-head guards pass; private local ancestry is excluded. New main44746575665 and commercial44746575565 are observed queued/running; main21 prerequisite jobs have been discovered, with new-head success not established. Owner expense workflow has not yet appeared and is not waived or borrowed from the prior source. Matching release/upgrade/recovery/workers/installation/owner/iPhone acceptance remains required. Publishedb651922 is terminal: main20/22 succeeds, including Schedule/amendments; both owner-expense and commercial feedback workflows pass. Payment-recovery136323330422 fails on a retired browser Response body; Foundation136338412260 stops at the prerequisite gate and required service screenshots are absent. Downstream release/upgrade/recovery/workers remain unaccepted. Local test-onlyf78ea0a buffers both late finance report reads through the existing single-forward actual-byte observer at the unchanged20s deadline. Original full financial assertions remain; four controlled observer cells pass. New full-head verification remains required. New coherent draft955ac14/tree84b5b07 exactly matches localca50c4b, sole parentb651922 and unchanged baseea06dc6.29 text entries reconstruct the full tree. Strict default complete2599-file scan is clean, empty ignore/inline allows disabled; head/base/all-prior-terminal, tree/sole-parent/nonforce lease and exact PR title/body/draft/open/unmerged guards pass. New main44808191294, owner-expense44808191275 and commercial44808191523 are observed queued/running; their results remain pending. No prior success transfers. Published955ac14/tree84b5b07 is terminal:21/22 main jobs pass, both owner-expense and commercial workflows pass. Foundation reaches and passes production build, browser accessibility, portable-container smoke, isolated photo decoding and preceding registered upgrade/recovery gates; Chromium supplier register JSON loses its response body after navigation (WebKit passes). Private expense isolated-worker and candidate provenance steps are skipped, not accepted. Local2fd8f80 buffers both register reads through the existing one-forward actual-byte helper; original statuses/assertions/deadlines remain. Full9128 units pass. Complete original supplier journeys on6e54ec3 pass2/2 with the current isolated Linux PDF worker,18 recovery observations,118 PNGs, unchanged source and owned cleanup. The first local0/2 omitted the Windows absolute Docker launch prerequisite and remains retained separately. A new exact hosted candidate remains required. New coherent draft8282277/tree2cdaede exactly matches local818ef7f, sole public parent955ac14 and unchanged baseea06dc6. All13 text entries reconstruct the full tree; strict complete2600-file scan has zero findings with empty ignore and inline allows disabled. Exact tree/sole-parent, expected-head/nonforce and PR title/body/base/draft/open/unmerged guards pass. All three new workflows are discovered: main44920156657, owner-expense44920156646 and commercial44920156662 queued. Results remain pending; do not transfer older passes or republish over live checks. No merge or installation. Published8282277/tree2cdaede is terminal successful: all22 main jobs and both owner-expense/commercial workflows pass. Tested mergedcd906a retains the exact tree and expected baseea06dc6/head8282277 parents. Foundation136901155437, including upgrade/recovery and isolated worker stages, succeeds. This verifies that published schema122 candidate only; newer local branding and schema123 remain separate and require fresh checks. No installation or real-use approval is established.",
       "remainingWork": "Deliver an accepted release matching the final local design source, preserve the populated upgrade and compare installed states.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
-          "sha256": "d399ec5434a1e648c8c51bb4156403faac7fca590d6ac036934545d4d22a3bb9"
+          "sha256": "c273cd029ca734fe6d48b51b4fbb9bc8d611832a3ba94c30bcc65655f7463ba1"
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "764a89c493e1be081f912eb01c798c22fc9a7907de517e26ba42b4393dc49e0d"
+          "sha256": "7f440e2ef2502e523720bacfbc47e199f99b3f6d1fd10e8cb96cabbab20b7de6"
         },
         {
           "path": "planning/QUOTE_VERSION_HISTORY_DESIGN.md",
@@ -97,7 +97,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "planning/DESKTOP_COMPOSITION_RECONCILIATION.md",
@@ -117,7 +117,7 @@
         },
         {
           "path": "planning/CREST_DESIGN_SYSTEM.md",
-          "sha256": "234bda2413b4a708c941b3e962e9bba7189359798478d641ab49f9769b5d5129"
+          "sha256": "b27d80f6ef68ca5a8273de86dcd97edcba4041941efc377d15ffc60057b36d12"
         },
         {
           "path": "src/app/task-prerequisite.tsx",
@@ -209,7 +209,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -317,7 +317,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
@@ -333,7 +333,7 @@
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "dc835fc57774e5f35ec67c44e39f119daf01c940e3a671a48ba0cbc5f7afcb0f"
+          "sha256": "bba2a7bf2f684aec0d5a98acd73ed8f40cc72d95febfaed92072a8429306f662"
         },
         {
           "path": "src/app/expenses/expense-editor.tsx",
@@ -365,7 +365,7 @@
         },
         {
           "path": "tests/integration/book-job-product-browser.test.mjs",
-          "sha256": "b7797da4fd09f3148ef22e5db068b1cfd80b42a2556454c38bb8b0553b9465d9"
+          "sha256": "1e423d14b8b9fd1efec041ba72719253164776534a8e02e285a7ef47adbb9f12"
         },
         {
           "path": "tests/integration/finance-statement-staging-browser.test.mjs",
@@ -461,7 +461,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -517,7 +517,7 @@
         },
         {
           "path": "tests/integration/book-job-product-browser.test.mjs",
-          "sha256": "b7797da4fd09f3148ef22e5db068b1cfd80b42a2556454c38bb8b0553b9465d9"
+          "sha256": "1e423d14b8b9fd1efec041ba72719253164776534a8e02e285a7ef47adbb9f12"
         },
         {
           "path": "tests/integration/finance-statement-staging-browser.test.mjs",
@@ -553,7 +553,7 @@
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "dc835fc57774e5f35ec67c44e39f119daf01c940e3a671a48ba0cbc5f7afcb0f"
+          "sha256": "bba2a7bf2f684aec0d5a98acd73ed8f40cc72d95febfaed92072a8429306f662"
         },
         {
           "path": "tests/integration/work-completion-product-browser.test.mjs",
@@ -565,11 +565,11 @@
         },
         {
           "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
-          "sha256": "3533e5577c8a6622b5117759d1540a810c40c99dcaea0646c4328d44314993c5"
+          "sha256": "34100f5caded8b90dd4547ce3d26884bae6da648191b9207f88bc07241adbd33"
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
-          "sha256": "606f7e96d0947b603b9c2783dbda99db082193bf9f2decaefd2fce55f7b639e3"
+          "sha256": "a1788686d5755159b147061986b6a0287b3197da2c59d69972439bd5620e196b"
         }
       ],
       "verification": {
@@ -589,11 +589,11 @@
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
-          "sha256": "d399ec5434a1e648c8c51bb4156403faac7fca590d6ac036934545d4d22a3bb9"
+          "sha256": "c273cd029ca734fe6d48b51b4fbb9bc8d611832a3ba94c30bcc65655f7463ba1"
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "f842134492b2180a493ba5dd5118db2a4090994a76e3fd725560657d7a61f5f9"
+          "sha256": "977b4e05f953f3140b6c6e48f1f71f939ef5bff4d1b55262fd54f77a06fb6f4e"
         },
         {
           "path": "planning/SUPPLIER_DRAFT_COMPOSITION_REVIEW.md",
@@ -645,7 +645,7 @@
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "dc835fc57774e5f35ec67c44e39f119daf01c940e3a671a48ba0cbc5f7afcb0f"
+          "sha256": "bba2a7bf2f684aec0d5a98acd73ed8f40cc72d95febfaed92072a8429306f662"
         },
         {
           "path": "planning/OPENING_BALANCE_RECOVERY_PRIORITY_REVIEW.md",
@@ -707,17 +707,17 @@
       "section": "Shared findings",
       "title": "P2 · Make Crest recognizable through restraint",
       "requirements": "The supplied crest is present in the newer build, but intricate badge lettering becomes tiny at navigation size. Navy, blue, gold, border treatments and historical button variants compete across evidence sets.\n\nFinish standard: Use the original crest prominently on sign-in and documents; use an approved legible small-size mark in navigation. Set one accent role and one neutral control system. No invented replacement logo.",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Original supplied Crest asset is used; shared restrained controls exist. Original-crest sign-in sourcea0aaddb uses the unchanged supplied PNG at144–192px ordinary size, with responsive width cap, centered welcome and preserved card/auth controls. Both complete original HTTPS sign-in journeys pass26/26 total tests, four state/six width/two-engine capture matrix, original text-resize/privacy/recovery/revocation checks, stable source and owned cleanup.62 fresh hashed PNGs/two served-font reports retained; intended local fonts are confirmed. Build/types/full lint/full9125 units pass. Navigation small mark and delivered-document branding remain open; no replacement logo was invented.",
-      "remainingWork": "Resolve a legible approved small-size asset and confirm brand consistency on delivered documents/sign-in/navigation.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "The unchanged original crest is prominent on sign-in and customer quote, amendment, cancellation and issued-invoice documents. Compact navigation reuses the established Crest OS text wordmark with a44px minimum touch target under the owner's delegated design direction; no new graphic or altered logo asset is introduced. Original sign-in/booking on3e98bc0 passes28/28 with178 PNGs; original taxable/exempt invoice on5afb580 passes2/2 with64 PNGs. Source stays frozen and owned resources are cleaned. Separate commercial/amendment source3cec3fd remains21/23 (8/9 root checks,5/6 genuine journeys): both standard agreements and both amendment/cancellation/reopening flows pass; Chromium replacement fails after renewed access, while WebKit replacement passes.200 PNGs and the unexplained failure remain retained. Final build/types/targeted lint and34 focused document/contract cases pass in their recorded scopes. Owner confirmation of the wordmark and final acceptance remain separate.",
+      "remainingWork": "Obtain owner confirmation of the established wordmark treatment and complete exact delivered/installed/physical-device brand acceptance; retain the unexplained renewed-access failure and all full release gates.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
-          "sha256": "d399ec5434a1e648c8c51bb4156403faac7fca590d6ac036934545d4d22a3bb9"
+          "sha256": "c273cd029ca734fe6d48b51b4fbb9bc8d611832a3ba94c30bcc65655f7463ba1"
         },
         {
           "path": "planning/CREST_DESIGN_SYSTEM.md",
-          "sha256": "234bda2413b4a708c941b3e962e9bba7189359798478d641ab49f9769b5d5129"
+          "sha256": "b27d80f6ef68ca5a8273de86dcd97edcba4041941efc377d15ffc60057b36d12"
         },
         {
           "path": "planning/SIGN_IN_CREST_PROMINENCE_REVIEW.md",
@@ -729,16 +729,36 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "tests/integration/sign-in-browser.test.mjs",
           "sha256": "f32a580023148ed5fa8838cafe077fe778a7d002cc5df5d114f1763a7e2498fd"
+        },
+        {
+          "path": "src/app/document-brand.tsx",
+          "sha256": "929c5ae517ad00f72af6fd7add6c312cc0132632f231959efd84009a58d2cc4d"
+        },
+        {
+          "path": "src/app/quotes/quote-document.tsx",
+          "sha256": "78b70a163df5e98e9c3ea79c6d6304ffb08c3b9beeca7faba4932119633c1090"
+        },
+        {
+          "path": "src/app/quotes/quote-amendment-document.tsx",
+          "sha256": "941523537b8c34328ebe799bd9f2c92837ef2e811bd1983c8f79d5fef623d96c"
+        },
+        {
+          "path": "src/app/schedule/work/invoice-issue-tax-review.tsx",
+          "sha256": "434d9bcd062bbef634e97e74f31745a00432675168e32b951da9a60156cab35a"
+        },
+        {
+          "path": "tests/integration/book-job-product-browser.test.mjs",
+          "sha256": "1e423d14b8b9fd1efec041ba72719253164776534a8e02e285a7ef47adbb9f12"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -757,7 +777,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "f842134492b2180a493ba5dd5118db2a4090994a76e3fd725560657d7a61f5f9"
+          "sha256": "977b4e05f953f3140b6c6e48f1f71f939ef5bff4d1b55262fd54f77a06fb6f4e"
         }
       ],
       "verification": {
@@ -772,7 +792,7 @@
       "title": "P2 · Refine type, spacing and numeric rhythm",
       "requirements": "Heading scale is broadly consistent, but dense labels, helper text and record facts need stronger role separation. Some test captures and installed screens have different visual typography; verify the served font before diagnosing a font bug.\n\nFinish standard: Use one reliable font stack, 16 px editable inputs on phones, tabular money, aligned totals and a small spacing scale. Check real font loading, zoom and long names.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Reliable bundled fonts, tabular figures and scoped readability refinements are present. All36 closed/setup production destinations reflow at five widths with normal/doubled text in both engines; actual heading glyphs, exact font bytes, whole destination names and measured phone clearance are verified. Genuine sign-in and category approval forms also have separate complete28/28 workflow evidence on their recorded sources; password entry and field values remain usable. Configured supplier balances/vendor/amount/filter glyphs and exact served font files also pass genuine browser checks; no font replacement was warranted. Final configured task-entry matrix on3a3e069 passes2/2 with168 zero-finding observations across seven guides, six widths and two text sizes in both engines. Actual-container columns, readable wrapping actions and balanced headings preserve authorization, destinations and business audit history; the55-file/18-group CI partition now includes this matrix while retaining original requirements. Supplier draft sourceeb57 passes complete original local workflow2/2 with96 zero-finding observations across dirty editor, selected bill, original-required and ready-entry states, six widths and two text sizes in both engines. Flattened surfaces, fluid phone padding and actual-container editor/review columns retain original financial and private-export gates; inspection preserves financial/draft/journal/audit rows with zero API requests. Shared main/tool navigation now distinguishes neutral hover from the marked current destination. Complete closed/setup suite106/106 on e704c3b passes, including48 route/width/engine navigation combinations and original720 typography observations. Both actual padding/scroll-clearance consumers cover the fixed navigation bar; explicit nested Lead sources/Leads semantics remain. Twelve fresh hashed captures and original98/106 failures retained. Source9b5113f build/types/lint plus final test types/lint pass. Shared-chrome scope only; configured/private/device requirements remain. Actual isolated Chromium tab zoom is now verified on all36 closed/setup audit destinations:144 observations at1024/1440 outer widths and100%/200%, expected CSS viewport/DPR, no overflow, visible inputs16px minimum, computed font stack, both fixed-navigation clearance consumers and accessibility pass. Eight hashed PNGs retained; zero cookies/source stable/owned cleanup. Same-build HTTP companion confirms35 normal200 routes and exact originalR36 intentional404. This is not configured long-form/money/history zoom, WebKit zoom, installed or physical-device acceptance. Source656e1f4 additionally passes genuine six-booking planner/saved-job real Chromium zoom: first8 observations and separate expanded16 at100%/200%, explicitly360/390/430CSS px plus desktop. Exact nonzero390px/200% return restores unobscured focused origin and exact scroll, with preserved date values, zero Back/zoom business requests and unchanged jobs/appointments/reservations/overrides/audit rows. Both case/cluster/profile cleanups and source/case hashes pass. Configured financial/long-history and other original contexts remain; no all-workflow/device acceptance is inferred. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. Render-only cb35c2d adds real account-loading live text, explicit fresh-access link after read failure, and capability-gated money-channel guidance for an empty eligible list. Final test1e88e88 both complete original statement engines plus separate48 actual zoom observations pass3/3, zero failures/skips/cancellations, source stable/owned cleanup and98 hashed PNGs.18 new ordinary observations cover loading/failed/empty at360/390/1440 in both engines; a genuine dated channel closure creates emptiness after original export checks. Inspection adds no business requests or captured statement/journal/audit changes. Initialcb35 complete2/3 with one Chromium loading request count remains retained; the final boundary waits for the held original request, retaining zero-additional-request and all deadlines. Six zoom views and three ordinary states are not the whole S06 matrix. New local0cbf356 makes original account/channel/fixed-category approval outcome checks primary and keeps retry/optional closure secondary; account references disclose after the check, and mapping references move after actions. Three controller prefixes are byte-identical to2379755. Full original four-file matrix on diagnostic-only6ada85f passes8/8,0fail/skip/cancel, stable source/owned cleanup,24 unobscured-focused recovery views,0inspection business requests and unchanged captured account/channel/mapping/audit rows.212 hashed artifacts include204 PNG/eight bounded reports. Build/types plus final full lint/9115 units pass. Initial0cbf7/8 remains retained: WebKit fixed-mapping fixture verified-journal notSubmitted before application browser, cause unknown; final8/8 is non-reproduction, not auth cure. Test-only failure logging uses existing64-event classifiers and preserves errors/healthy transport. No global S04/eight-state/zoom/device acceptance follows.",
+      "implementedOrPresent": "Reliable bundled fonts, tabular figures and scoped readability refinements are present. All36 closed/setup production destinations reflow at five widths with normal/doubled text in both engines; actual heading glyphs, exact font bytes, whole destination names and measured phone clearance are verified. Genuine sign-in and category approval forms also have separate complete28/28 workflow evidence on their recorded sources; password entry and field values remain usable. Configured supplier balances/vendor/amount/filter glyphs and exact served font files also pass genuine browser checks; no font replacement was warranted. Final configured task-entry matrix on3a3e069 passes2/2 with168 zero-finding observations across seven guides, six widths and two text sizes in both engines. Actual-container columns, readable wrapping actions and balanced headings preserve authorization, destinations and business audit history; the55-file/18-group CI partition now includes this matrix while retaining original requirements. Supplier draft sourceeb57 passes complete original local workflow2/2 with96 zero-finding observations across dirty editor, selected bill, original-required and ready-entry states, six widths and two text sizes in both engines. Flattened surfaces, fluid phone padding and actual-container editor/review columns retain original financial and private-export gates; inspection preserves financial/draft/journal/audit rows with zero API requests. Shared main/tool navigation now distinguishes neutral hover from the marked current destination. Complete closed/setup suite106/106 on e704c3b passes, including48 route/width/engine navigation combinations and original720 typography observations. Both actual padding/scroll-clearance consumers cover the fixed navigation bar; explicit nested Lead sources/Leads semantics remain. Twelve fresh hashed captures and original98/106 failures retained. Source9b5113f build/types/lint plus final test types/lint pass. Shared-chrome scope only; configured/private/device requirements remain. Actual isolated Chromium tab zoom is now verified on all36 closed/setup audit destinations:144 observations at1024/1440 outer widths and100%/200%, expected CSS viewport/DPR, no overflow, visible inputs16px minimum, computed font stack, both fixed-navigation clearance consumers and accessibility pass. Eight hashed PNGs retained; zero cookies/source stable/owned cleanup. Same-build HTTP companion confirms35 normal200 routes and exact originalR36 intentional404. This is not configured long-form/money/history zoom, WebKit zoom, installed or physical-device acceptance. Source656e1f4 additionally passes genuine six-booking planner/saved-job real Chromium zoom: first8 observations and separate expanded16 at100%/200%, explicitly360/390/430CSS px plus desktop. Exact nonzero390px/200% return restores unobscured focused origin and exact scroll, with preserved date values, zero Back/zoom business requests and unchanged jobs/appointments/reservations/overrides/audit rows. Both case/cluster/profile cleanups and source/case hashes pass. Configured financial/long-history and other original contexts remain; no all-workflow/device acceptance is inferred. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. Render-only cb35c2d adds real account-loading live text, explicit fresh-access link after read failure, and capability-gated money-channel guidance for an empty eligible list. Final test1e88e88 both complete original statement engines plus separate48 actual zoom observations pass3/3, zero failures/skips/cancellations, source stable/owned cleanup and98 hashed PNGs.18 new ordinary observations cover loading/failed/empty at360/390/1440 in both engines; a genuine dated channel closure creates emptiness after original export checks. Inspection adds no business requests or captured statement/journal/audit changes. Initialcb35 complete2/3 with one Chromium loading request count remains retained; the final boundary waits for the held original request, retaining zero-additional-request and all deadlines. Six zoom views and three ordinary states are not the whole S06 matrix. New local0cbf356 makes original account/channel/fixed-category approval outcome checks primary and keeps retry/optional closure secondary; account references disclose after the check, and mapping references move after actions. Three controller prefixes are byte-identical to2379755. Full original four-file matrix on diagnostic-only6ada85f passes8/8,0fail/skip/cancel, stable source/owned cleanup,24 unobscured-focused recovery views,0inspection business requests and unchanged captured account/channel/mapping/audit rows.212 hashed artifacts include204 PNG/eight bounded reports. Build/types plus final full lint/9115 units pass. Initial0cbf7/8 remains retained: WebKit fixed-mapping fixture verified-journal notSubmitted before application browser, cause unknown; final8/8 is non-reproduction, not auth cure. Test-only failure logging uses existing64-event classifiers and preserves errors/healthy transport. No global S04/eight-state/zoom/device acceptance follows. Configured mapping source1598864 adds48 actual Chromium tab-zoom observations across six genuine entry/current/closed/history/unsaved-proposal states.720/780/860/1440 outer widths at100%/200% verify CSS width/DPR, native PNG dimensions, no CSS/pinch zoom, overflow,16px inputs, Axe, conserved typed/mapping/audit facts and zero inspection business requests. Private pagehide clearing and owned cleanup pass;24 hashed PNGs retained. Other histories, long-value/state combinations, WebKit/device and exact delivered acceptance remain open.",
       "remainingWork": "Complete configured business/input/long-name/history actual-browser-zoom checks plus matching hosted/installed/physical-device acceptance. Earlier720 root-text observations and144 real-zoom closed-state observations are separate scopes, not one complete current-source configured matrix.",
       "evidence": [
         {
@@ -785,11 +805,11 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "src/app/workspace-frame.tsx",
-          "sha256": "d399ec5434a1e648c8c51bb4156403faac7fca590d6ac036934545d4d22a3bb9"
+          "sha256": "c273cd029ca734fe6d48b51b4fbb9bc8d611832a3ba94c30bcc65655f7463ba1"
         },
         {
           "path": "tests/e2e/typography.spec.ts",
@@ -805,11 +825,11 @@
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
-          "sha256": "606f7e96d0947b603b9c2783dbda99db082193bf9f2decaefd2fce55f7b639e3"
+          "sha256": "a1788686d5755159b147061986b6a0287b3197da2c59d69972439bd5620e196b"
         },
         {
           "path": "planning/CREST_DESIGN_SYSTEM.md",
-          "sha256": "234bda2413b4a708c941b3e962e9bba7189359798478d641ab49f9769b5d5129"
+          "sha256": "b27d80f6ef68ca5a8273de86dcd97edcba4041941efc377d15ffc60057b36d12"
         },
         {
           "path": "planning/SUPPLIER_REGISTER_WORKBENCH_DESIGN.md",
@@ -865,7 +885,7 @@
         },
         {
           "path": "planning/REAL_BROWSER_ZOOM_REVIEW.md",
-          "sha256": "e453baac68778c8980c1afe9ef0c1830eeb2d34257ce65f514a3d27788c04588"
+          "sha256": "94e11cc87b70dd5fb52b07b09e3d8efb2415a97ece51519e0c0d0ae4d983b2f3"
         },
         {
           "path": "planning/CONFIGURED_PLANNER_ZOOM_REVIEW.md",
@@ -905,7 +925,7 @@
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "dc835fc57774e5f35ec67c44e39f119daf01c940e3a671a48ba0cbc5f7afcb0f"
+          "sha256": "bba2a7bf2f684aec0d5a98acd73ed8f40cc72d95febfaed92072a8429306f662"
         }
       ],
       "verification": {
@@ -925,7 +945,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
@@ -949,7 +969,7 @@
         },
         {
           "path": "tests/integration/book-job-product-browser.test.mjs",
-          "sha256": "b7797da4fd09f3148ef22e5db068b1cfd80b42a2556454c38bb8b0553b9465d9"
+          "sha256": "1e423d14b8b9fd1efec041ba72719253164776534a8e02e285a7ef47adbb9f12"
         },
         {
           "path": "planning/BOOKING_SURFACE_REFINEMENT.md",
@@ -968,12 +988,12 @@
       "title": "P2 · Turn history into a readable evidence trail",
       "requirements": "Several histories are version lists, prose and repeated timestamps. The underlying retained evidence deserves a much clearer presentation.\n\nFinish standard: Use dated event rows with action, actual event time, recorded time where different, actor if known, status and an expand-to-compare detail. Keep exact timestamps and exports available.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Lead, amendment, expense, custody, travel, mileage and time histories retain readable evidence. Accepted quote milestones distinguish preparation/sharing/confirmation. Proposal versions now show actual state, recorded zone/time and reason, with native complete facts/exact UTC; both genuine engines preserve immutable records and issue no inspection API traffic. Source96ce901 adds readable quote milestone times in the saved zone plus exact UTC/known approving-actor/reference disclosures; dated mapping periods expose exact boundaries/references and explicitly distinguish effective dates from unavailable recording/actor metadata. Build/types/full lint pass. Complete original three-file/full-supplier matrix6/8 parents,15/18 TAP, stable/cleaned,111 fresh hashed artifacts. Both category and both replacement parents, Chromium fixed mapping and complete WebKit agreement pass; WebKit mapping and Chromium agreement fail early genuine authentication before new histories. No gate waiver or root-cause/cure claim.  Initial quote version history is now dated action/status events with actual saved-zone times, exact UTC/actor/reference evidence and lazy, explicitly labeled saved before/after content. Main renderer/handlers and existing CSS remain unchanged outside the extracted presentation. Final00d11d0 build/types/lint pass; complete original quote files7/8 parents54/56 TAP, stable/cleaned,94 fresh hashed artifacts. Both editor/review/agreement parents and WebKit replacement pass all new evidence/comparison plus original history/export/recovery/private gates. Chromium replacement hits the original send-response deadline with a session400 observation; cause unresolved, no guard waiver. Initial09a label-expectation failures and prior96ce mixed results retained. Test-only provider-live observation on656e1f4 conserves transport/argument/promise/error identity; all5 privacy/ownership units and focused lint pass. Complete original commercial file4/4 parents18/18 TAP passes, stable/cleaned,44 fresh hashed artifacts. This is non-reproduction, not a fix or combination with prior7/8. Final bounded windows contain33 live lookups and one rejection without SQLSTATE; not request-correlated or causal. Published e310 main44725293108 is terminal failed: all21 prerequisites and both ancillary workflows succeed; Foundation136263156173 stops at one raw-HTML date assertion,9114/9115 units passed. Received time markup preserves the correct Apr1 exclusive boundary. Downstream release/recovery/workers are skipped; required service screenshot artifact is absent. Local test-only dcce5c9 preserves the date matrix and checks visible text plus exact exclusive ISO date; focused3/3/full9115/9115 in395files and final types/full lint pass. No history/app rule or gate changes; new exact-source release remains required.",
-      "remainingWork": "Resolve separately authorized mapping recording/actor metadata. Finish remaining agreement/approval/integration history and missing/stale/long/zoom/private variants; complete exact-source hosted/installed/physical-device review. New proposal plus normal amendment file6/6 is scoped local evidence; publishedf601 navigation failure remains unresolved, not cured.",
+      "implementedOrPresent": "Lead, amendment, expense, custody, travel, mileage and time histories retain readable evidence. Accepted quote milestones distinguish preparation/sharing/confirmation. Proposal versions now show actual state, recorded zone/time and reason, with native complete facts/exact UTC; both genuine engines preserve immutable records and issue no inspection API traffic. Source96ce901 adds readable quote milestone times in the saved zone plus exact UTC/known approving-actor/reference disclosures; dated mapping periods expose exact boundaries/references and explicitly distinguish effective dates from unavailable recording/actor metadata. Build/types/full lint pass. Complete original three-file/full-supplier matrix6/8 parents,15/18 TAP, stable/cleaned,111 fresh hashed artifacts. Both category and both replacement parents, Chromium fixed mapping and complete WebKit agreement pass; WebKit mapping and Chromium agreement fail early genuine authentication before new histories. No gate waiver or root-cause/cure claim.  Initial quote version history is now dated action/status events with actual saved-zone times, exact UTC/actor/reference evidence and lazy, explicitly labeled saved before/after content. Main renderer/handlers and existing CSS remain unchanged outside the extracted presentation. Final00d11d0 build/types/lint pass; complete original quote files7/8 parents54/56 TAP, stable/cleaned,94 fresh hashed artifacts. Both editor/review/agreement parents and WebKit replacement pass all new evidence/comparison plus original history/export/recovery/private gates. Chromium replacement hits the original send-response deadline with a session400 observation; cause unresolved, no guard waiver. Initial09a label-expectation failures and prior96ce mixed results retained. Test-only provider-live observation on656e1f4 conserves transport/argument/promise/error identity; all5 privacy/ownership units and focused lint pass. Complete original commercial file4/4 parents18/18 TAP passes, stable/cleaned,44 fresh hashed artifacts. This is non-reproduction, not a fix or combination with prior7/8. Final bounded windows contain33 live lookups and one rejection without SQLSTATE; not request-correlated or causal. Published e310 main44725293108 is terminal failed: all21 prerequisites and both ancillary workflows succeed; Foundation136263156173 stops at one raw-HTML date assertion,9114/9115 units passed. Received time markup preserves the correct Apr1 exclusive boundary. Downstream release/recovery/workers are skipped; required service screenshot artifact is absent. Local test-only dcce5c9 preserves the date matrix and checks visible text plus exact exclusive ISO date; focused3/3/full9115/9115 in395files and final types/full lint pass. No history/app rule or gate changes; new exact-source release remains required. Registered123 source6dae674 adds a separate version2 mapping-history reader reusing retained version1 authorization/paging and requiring the exact business/mapping/version/audit/operation/actor relationship. History rows and CSV show actual retained recording time and opaque actor reference, separately from effective dates; no inferred names or identity expansion. Legacy responses/commands and all previous migration bytes stay unchanged. Build/types/full lint and9142 units in400 files pass. New registered upgrade/authorization and independent encrypted frozen122/current123 database restore passes6/6, preserving captured facts, exact reader definition and restricted permissions. Complete original fixed/category browser files pass4/4 in both engines, checking display/CSV against actual audit rows through30 loaded versions, with original recovery/source/privacy assertions preserved.122 PNGs retained;390px category history visually reviewed. Both native runs keep tracked source frozen and clean owned resources. These database-only proofs do not establish full external-file/owner/device recovery or fresh hosted123 acceptance.",
+      "remainingWork": "Finish remaining agreement/approval/integration histories and missing/stale/long/zoom/private variants, plus fresh exact-source123 release/installed/owner/physical-device acceptance. Mapping recording/actor projection is now locally implemented and verified; earlier access/provider failures remain unexplained and retained.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
@@ -1017,7 +1037,7 @@
         },
         {
           "path": "src/app/settings/accounts/mappings/history.tsx",
-          "sha256": "9b11a6f0fc6418ef483704c3e9dea63a226c9c5ec1d9f0152721aa0ea00e0990"
+          "sha256": "2e541cdbcf92aaf055792c93a19243ba4055fe5faca14823353685c3d1a95d14"
         },
         {
           "path": "tests/support/quote-commercial-events.mjs",
@@ -1025,7 +1045,7 @@
         },
         {
           "path": "tests/support/mapping-workbench.mjs",
-          "sha256": "50208e7986e98e9e268466d463d18d680fa663bd7911aee70a56e434af9d9a10"
+          "sha256": "ea71414c3546a33f9ab47586b731d3d1a27a32c92af52e1043dece241fbda8d7"
         },
         {
           "path": "tests/integration/quote-commercial-browser.test.mjs",
@@ -1070,6 +1090,34 @@
         {
           "path": "tests/unit/finance-mapping-presentation.test.ts",
           "sha256": "af46d38ff8d7b4e0cfb674d4c6fd169118e26c2bb9b639ef30a2494bc4f7e4cd"
+        },
+        {
+          "path": "planning/FINANCE_MAPPING_RECORDING_HISTORY.md",
+          "sha256": "62fc9abf4af92513e3e09ebb69afc91b91604fc513fc3642e8780ede02fb8981"
+        },
+        {
+          "path": "src/bookkeeping/finance-mapping-contract.ts",
+          "sha256": "cb801b06859cf36c7eb556fdb411d7f0dd96f51918ccbca40bce0868f1a75015"
+        },
+        {
+          "path": "src/bookkeeping/finance-account-http.ts",
+          "sha256": "3fc049b92143756fec664873449fb3ba20f8fdbafbcce686bb79a451ddcf542b"
+        },
+        {
+          "path": "supabase/migrations/20270116180000_finance_mapping_recording_history.sql",
+          "sha256": "a655e25d1c0a030e7babd4766b1726353abcdcfecfe6b00bcffe4a3450f3c2d0"
+        },
+        {
+          "path": "tests/integration/finance-mapping-recording-history.test.mjs",
+          "sha256": "3efd5b212f6ee9f722e91881b799d14d596f1447ddab6df11baa35029df11100"
+        },
+        {
+          "path": "tests/unit/finance-mapping-recording-history.test.ts",
+          "sha256": "180cde13ff0030b8893ecabf8843e0fec4b73e5e061977c194394a411b21e305"
+        },
+        {
+          "path": "tests/unit/finance-mapping-recording-adoption.test.ts",
+          "sha256": "1d8cc11970bd2d1174c7a98bcb5fcf2202895c83df412fa797ab59723c16fb6a"
         }
       ],
       "verification": {
@@ -1089,7 +1137,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
-          "sha256": "d399ec5434a1e648c8c51bb4156403faac7fca590d6ac036934545d4d22a3bb9"
+          "sha256": "c273cd029ca734fe6d48b51b4fbb9bc8d611832a3ba94c30bcc65655f7463ba1"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -1177,11 +1225,11 @@
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
-          "sha256": "d399ec5434a1e648c8c51bb4156403faac7fca590d6ac036934545d4d22a3bb9"
+          "sha256": "c273cd029ca734fe6d48b51b4fbb9bc8d611832a3ba94c30bcc65655f7463ba1"
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "764a89c493e1be081f912eb01c798c22fc9a7907de517e26ba42b4393dc49e0d"
+          "sha256": "7f440e2ef2502e523720bacfbc47e199f99b3f6d1fd10e8cb96cabbab20b7de6"
         }
       ],
       "verification": {
@@ -1213,7 +1261,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "tests/integration/sign-in-browser.test.mjs",
@@ -1253,7 +1301,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "src/client/home-schedule.ts",
@@ -1265,7 +1313,7 @@
         },
         {
           "path": "tests/integration/book-job-product-browser.test.mjs",
-          "sha256": "b7797da4fd09f3148ef22e5db068b1cfd80b42a2556454c38bb8b0553b9465d9"
+          "sha256": "1e423d14b8b9fd1efec041ba72719253164776534a8e02e285a7ef47adbb9f12"
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
@@ -1341,7 +1389,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "tests/unit/proposal-party-read.test.ts",
@@ -1361,7 +1409,7 @@
         },
         {
           "path": "tests/integration/book-job-product-browser.test.mjs",
-          "sha256": "b7797da4fd09f3148ef22e5db068b1cfd80b42a2556454c38bb8b0553b9465d9"
+          "sha256": "1e423d14b8b9fd1efec041ba72719253164776534a8e02e285a7ef47adbb9f12"
         }
       ],
       "verification": {
@@ -1429,7 +1477,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "tests/integration/legacy-contact-csv-review-browser.test.mjs",
@@ -1477,7 +1525,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "tests/support/receipt-layout.mjs",
@@ -1785,7 +1833,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "tests/support/appointment-comparison-layout.mjs",
@@ -1825,7 +1873,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "tests/unit/mileage-prerequisite.test.ts",
@@ -1889,7 +1937,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "tests/support/booking-review-layout.mjs",
@@ -1901,7 +1949,7 @@
         },
         {
           "path": "tests/integration/book-job-product-browser.test.mjs",
-          "sha256": "b7797da4fd09f3148ef22e5db068b1cfd80b42a2556454c38bb8b0553b9465d9"
+          "sha256": "1e423d14b8b9fd1efec041ba72719253164776534a8e02e285a7ef47adbb9f12"
         },
         {
           "path": "tests/integration/booking-divisions-product-browser.test.mjs",
@@ -1977,7 +2025,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "tests/support/field-work-layout.mjs",
@@ -2029,7 +2077,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "tests/support/work-read-diagnostic.mjs",
@@ -2101,7 +2149,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "tests/integration/trip-interruption-product-browser.test.mjs",
@@ -2241,7 +2289,7 @@
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "dc835fc57774e5f35ec67c44e39f119daf01c940e3a671a48ba0cbc5f7afcb0f"
+          "sha256": "bba2a7bf2f684aec0d5a98acd73ed8f40cc72d95febfaed92072a8429306f662"
         }
       ],
       "verification": {
@@ -2285,7 +2333,7 @@
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "dc835fc57774e5f35ec67c44e39f119daf01c940e3a671a48ba0cbc5f7afcb0f"
+          "sha256": "bba2a7bf2f684aec0d5a98acd73ed8f40cc72d95febfaed92072a8429306f662"
         }
       ],
       "verification": {
@@ -2305,7 +2353,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/screen.tsx",
-          "sha256": "63a369327af4bc895d0284fc3c111c5c5876893581e64baf25827631a31094c6"
+          "sha256": "dcd04f6c93a3c1fe32a4c42d9b93610f146570938c079e9fe1431eb9f4e3d053"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
@@ -2329,7 +2377,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/screen.tsx",
-          "sha256": "63a369327af4bc895d0284fc3c111c5c5876893581e64baf25827631a31094c6"
+          "sha256": "dcd04f6c93a3c1fe32a4c42d9b93610f146570938c079e9fe1431eb9f4e3d053"
         },
         {
           "path": "planning/CATEGORY_MAPPING_SELECTION_DESIGN.md",
@@ -2353,7 +2401,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "dc835fc57774e5f35ec67c44e39f119daf01c940e3a671a48ba0cbc5f7afcb0f"
+          "sha256": "bba2a7bf2f684aec0d5a98acd73ed8f40cc72d95febfaed92072a8429306f662"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
@@ -2361,27 +2409,27 @@
         },
         {
           "path": "src/app/settings/accounts/mappings/history.tsx",
-          "sha256": "9b11a6f0fc6418ef483704c3e9dea63a226c9c5ec1d9f0152721aa0ea00e0990"
+          "sha256": "2e541cdbcf92aaf055792c93a19243ba4055fe5faca14823353685c3d1a95d14"
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
-          "sha256": "606f7e96d0947b603b9c2783dbda99db082193bf9f2decaefd2fce55f7b639e3"
+          "sha256": "a1788686d5755159b147061986b6a0287b3197da2c59d69972439bd5620e196b"
         },
         {
           "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
-          "sha256": "3533e5577c8a6622b5117759d1540a810c40c99dcaea0646c4328d44314993c5"
+          "sha256": "34100f5caded8b90dd4547ce3d26884bae6da648191b9207f88bc07241adbd33"
         },
         {
           "path": "tests/support/mapping-workbench.mjs",
-          "sha256": "50208e7986e98e9e268466d463d18d680fa663bd7911aee70a56e434af9d9a10"
+          "sha256": "ea71414c3546a33f9ab47586b731d3d1a27a32c92af52e1043dece241fbda8d7"
         },
         {
           "path": "tests/support/source-export-browser-fixture.mjs",
-          "sha256": "08bbf5cf4a24ce4d7baa959f6d462b6c42a249a38d4558b7103d6e61a0eff40f"
+          "sha256": "26d20e9a6512901da2b2ca32f2f6b6ec3ab5b1ebcc1fbd2214d394e9488855c2"
         },
         {
           "path": "planning/FINANCIAL_RECOVERY_ACTION_REVIEW.md",
@@ -2401,7 +2449,7 @@
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "dc835fc57774e5f35ec67c44e39f119daf01c940e3a671a48ba0cbc5f7afcb0f"
+          "sha256": "bba2a7bf2f684aec0d5a98acd73ed8f40cc72d95febfaed92072a8429306f662"
         }
       ],
       "verification": {
@@ -2421,7 +2469,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "dc835fc57774e5f35ec67c44e39f119daf01c940e3a671a48ba0cbc5f7afcb0f"
+          "sha256": "bba2a7bf2f684aec0d5a98acd73ed8f40cc72d95febfaed92072a8429306f662"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
@@ -2445,7 +2493,7 @@
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "dc835fc57774e5f35ec67c44e39f119daf01c940e3a671a48ba0cbc5f7afcb0f"
+          "sha256": "bba2a7bf2f684aec0d5a98acd73ed8f40cc72d95febfaed92072a8429306f662"
         }
       ],
       "verification": {
@@ -2565,7 +2613,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "tests/integration/confirmed-bookings-product-browser.test.mjs",
@@ -2665,7 +2713,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "7da54d8e00d35e0d5bfb9e3443fa96fa193248ee4f42c2957da2b81efc944ff1"
+          "sha256": "3bfc8d06dcbbae24a11ae0127826e3e6f56e9411ed5864ea8324048ca3f77513"
         },
         {
           "path": "tests/integration/quote-commercial-browser.test.mjs",
@@ -2893,7 +2941,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/work/invoice-issue-tax-review.tsx",
-          "sha256": "06db47224a82c4b21b3cd9714f779a3653104df698a3e3aab0709195f704e23b"
+          "sha256": "434d9bcd062bbef634e97e74f31745a00432675168e32b951da9a60156cab35a"
         },
         {
           "path": "planning/INVOICE_OUTSTANDING_HEADER.md",
@@ -2913,11 +2961,11 @@
         },
         {
           "path": "src/bookkeeping/finance-account-http.ts",
-          "sha256": "4cc13687d44af8e2c93034cb3df6ca91aa5cd146146c9e5e9a8d61a0ad61d8d8"
+          "sha256": "3fc049b92143756fec664873449fb3ba20f8fdbafbcce686bb79a451ddcf542b"
         },
         {
           "path": "src/client/finance-accounts.ts",
-          "sha256": "5953d1f8d8ec21ccd0b9e62e42a0e4d1bf175a78f41154ab1f56d7d4639701aa"
+          "sha256": "16463f252b857b932a886e151d8a9ee6a2dcbf75bc135f135c0b029f49d14dd8"
         },
         {
           "path": "src/client/finance-activity.ts",
@@ -2941,11 +2989,11 @@
         },
         {
           "path": "tests/integration/invoice-outstanding.test.mjs",
-          "sha256": "b30f97ee264e234c4949e1d5a54c01a42b3bf80a7376d7217a622df0a9702190"
+          "sha256": "f44cf88e4f523b3d5e10e2c5e268d5324d1343d9fa9293b4ae0018125cdd8936"
         },
         {
           "path": "tests/integration/invoice-outstanding-recovery.test.mjs",
-          "sha256": "f39d4aa7b38b5b44fabe6392a9933f4514cb6f10a29c8b8c9b205509d55e88e7"
+          "sha256": "f8db2984d760f2023e75b9fc828168593925deb7ef90b8228905954e6f4fe741"
         },
         {
           "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
@@ -2969,7 +3017,7 @@
         },
         {
           "path": "tests/unit/invoice-outstanding-adoption.test.ts",
-          "sha256": "9038f5de36860bd88991036d98d95897e1285296255403bf5bfc20b5bc8a416e"
+          "sha256": "725a44a9aa067915fad91d139f95336b0dc0a56459e515938f84cd3e558550d1"
         },
         {
           "path": "tests/support/confirmed-booking-fixture.mjs",
@@ -2981,7 +3029,7 @@
         },
         {
           "path": "tests/support/recovery-drill.mjs",
-          "sha256": "6a2cab7a405bf88bcb1bb5f0fb49a451e3cb37ca8e90bd3e38339f921ae58588"
+          "sha256": "43fde59f6b876fbdc43a5b5b93e304c26c4af73894dfcf2df19b076e1491d4bc"
         },
         {
           "path": "scripts/synthetic-migrations.mjs",
@@ -3001,7 +3049,7 @@
         },
         {
           "path": "src/server/node-server.ts",
-          "sha256": "8bdf44d1d500267804c89d4d1da29f95651a02f2aebb098c1864c827a0e3a346"
+          "sha256": "c439ed1b70b8b376730e40302ff52f5b3d32f62397f999759f99e7feb74b6252"
         },
         {
           "path": "tests/unit/node-server.test.ts",
@@ -3129,7 +3177,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/history.tsx",
-          "sha256": "9b11a6f0fc6418ef483704c3e9dea63a226c9c5ec1d9f0152721aa0ea00e0990"
+          "sha256": "2e541cdbcf92aaf055792c93a19243ba4055fe5faca14823353685c3d1a95d14"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",

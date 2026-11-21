@@ -82,9 +82,8 @@ button.secondary:not(:disabled):not([aria-pressed='true']):hover { background:va
   flex-wrap:wrap;
   background:var(--paper); color:var(--ink); border-bottom:1px solid var(--line);
 }
-.crest-wordmark { display:inline-flex; align-items:center; gap:.55rem; color:var(--ink); font-size:.95rem; letter-spacing:-.02em; }
+.crest-wordmark { display:inline-flex; align-items:center; min-height:44px; color:var(--ink); font-size:1.05rem; letter-spacing:-.02em; }
 .crest-wordmark span { padding:0; border:0; color:inherit; font-size:inherit; letter-spacing:inherit; }
-.crest-workspace-logo { width:36px; height:36px; border-radius:7px; }
 .workspace-test-notice {
   display:flex; align-items:center; gap:.5rem; min-height:34px;
   padding:.375rem clamp(1rem,3vw,2.3rem); color:#554116; background:#faf1d9; border-color:#eadab7;
@@ -2276,3 +2275,10 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 /* The save reference is evidence within the existing approval/recovery surface. */
 .customers .mapping-approval-workspace details.mapping-save-reference { margin:.75rem 0 0; padding:0; border:0; border-block-start:1px solid var(--line); border-radius:0; background:transparent; box-shadow:none; }
 .mapping-save-reference > summary { min-height:44px; padding:.7rem 0; cursor:pointer; font-weight:600; }
+
+:is(.quote-worksheet,.issued-invoice-document) .document-brand { display:flex; flex-wrap:wrap; align-items:center; gap:1rem; margin-bottom:1.25rem; }
+:is(.quote-worksheet,.issued-invoice-document) .document-brand-crest { display:block; flex:none; width:9rem; max-width:100%; height:auto; aspect-ratio:1; border-radius:.5rem; }
+:is(.quote-worksheet,.issued-invoice-document) .document-brand .eyebrow { margin:0; }
+@media print { :is(.quote-worksheet,.issued-invoice-document) .document-brand { break-inside:avoid; } :is(.quote-worksheet,.issued-invoice-document) .document-brand-crest { width:1.5in; } }
+
+.mapping-period-timeline .mapping-recorded-time { display:block; margin-block:.3rem; color:var(--ink); font-size:.875rem; line-height:1.5; overflow-wrap:anywhere; }

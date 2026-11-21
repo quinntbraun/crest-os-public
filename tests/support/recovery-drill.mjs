@@ -340,6 +340,15 @@ assert.equal(hash(legacy121CoverageBytes),'1ce3baedfffa812a252249f770b31809e4699
 const legacy121Coverage=JSON.parse(legacy121CoverageBytes);assert.equal(legacy121Coverage.migrationCount,121);
 const legacy121Profile=Object.freeze({schemaVersion:121,registrySha256:hash(legacy121Bytes)});
 const legacy121Snapshot={profile:legacy121Profile,versions:legacy121.migrations.map(row=>row.version),coverage:legacy121Coverage};
+const legacy122Bytes=await readFile(join(root,'tests/support/registered122-migration-checksums.json'));
+const legacy122=JSON.parse(legacy122Bytes);assert.equal(hash(legacy122Bytes),'b058f60826c57db95730b9b601572fea9db1f77340473debc6ee758527c04e3e');
+assert.deepEqual(registry.migrations.slice(0,122),legacy122.migrations);
+const legacy122CoverageBytes=await readFile(join(root,'tests/support/registered122-export-coverage.json'));
+assert.equal(hash(legacy122CoverageBytes),'d5d40657d1a76bfcc1fb9c369b8992469215b1823c1d2fcc6e1d98e8d55a34b4');
+const legacy122Coverage=JSON.parse(legacy122CoverageBytes);assert.equal(legacy122Coverage.migrationCount,122);
+const legacy122Profile=Object.freeze({schemaVersion:122,registrySha256:hash(legacy122Bytes)});
+const legacy122Snapshot={profile:legacy122Profile,versions:legacy122.migrations.map(row=>row.version),coverage:legacy122Coverage};
+
 const contactCandidateFiles=['legacy-contact-external-identities.sql','legacy-contact-application.sql','legacy-contact-application-source.sql'];
 const contactCandidateSources=await Promise.all(contactCandidateFiles.map(async file=>({file,sha256:hash(await readFile(join(root,'planning/proposals',file)))})));
 const contactCandidateTables={
@@ -1283,7 +1292,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile===legacy101Profile
       ||profile===legacy102Profile||profile===legacy103Profile||profile===legacy104Profile||profile===legacy105Profile||profile===legacy106Profile
       ||profile===legacy107Profile||profile===legacy108Profile||profile===legacy113Profile||profile===legacy114Profile
-      ||profile===legacy115Profile||profile===legacy116Profile||profile===legacy117Profile||profile===legacy118Profile||profile===legacy119Profile||profile===legacy120Profile||profile===legacy121Profile||profile===contactApplicationCandidate.profile||profile===contactQueueCandidate.profile
+      ||profile===legacy115Profile||profile===legacy116Profile||profile===legacy117Profile||profile===legacy118Profile||profile===legacy119Profile||profile===legacy120Profile||profile===legacy121Profile||profile===legacy122Profile||profile===contactApplicationCandidate.profile||profile===contactQueueCandidate.profile
       ||profile.schemaVersion===81&&profile.heldUnapplicationMigrationSha256
       ||profile.schemaVersion===82&&profile.heldFundApplicationMigrationSha256
       ||profile.schemaVersion===83&&profile.heldTipMigrationSha256
@@ -1529,3 +1538,8 @@ export async function recoveryCluster(){
     },async close(){for(const c of clients)await c.end();if(owned){await run('docker',['rm','--force','--volumes',name]);owned=false;}}};
   }catch{for(const c of clients)await c.end().catch(()=>{});if(owned)await run('docker',['rm','--force','--volumes',name]);throw new Error('SYNTHETIC_RECOVERY_CLUSTER_FAILED');}
 }
+
+export async function backupLegacy122Database(client,url,directory,recipient,duringSnapshot,objectCapture){
+ return backupWithProfile(legacy122Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy122Snapshot);
+}
+export async function restoreLegacy122Database(...args){return restoreWithProfile(legacy122Profile,...args);}
