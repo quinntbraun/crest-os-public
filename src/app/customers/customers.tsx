@@ -1,4 +1,5 @@
 'use client';
+import {DirectoryLoading} from '../directory-loading';
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent,ComponentType} from 'react';
 import {createCustomerEditorController,initialCustomerEditorView,emptyCustomerDraft} from '../../client/customer-editor-controller';
@@ -84,7 +85,7 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
     document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
     return ()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
   },[initialCustomerId]);
-  useEffect(()=>{if(!dirty&&view.phase!=='pending'&&!view.busy)return;const leaving=(event:BeforeUnloadEvent)=>{event.preventDefault();};window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[dirty,view.phase,view.busy]);
+  useEffect(()=>{if(!dirty&&view.phase!=='pending')return;const leaving=(event:BeforeUnloadEvent)=>{event.preventDefault();};window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[dirty,view.phase]);
   function discardAllowed(){const state=current.current?.view();return !state||!draftChanged(state.draft,state.selected?draftFromCustomer(state.selected):emptyCustomerDraft)||window.confirm('Discard your unsaved customer changes? Choose Cancel to keep editing.');}
   async function open(id:string,trigger:HTMLElement){
     const controller=current.current;
@@ -119,11 +120,13 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
   function edit<K extends keyof CustomerDraft>(key:K,value:CustomerDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
   function submit(event:FormEvent){event.preventDefault();void action('save');}
   function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const data=new FormData(event.currentTarget);query(String(data.get('search')??''),data.get('archived')==='on');}
+  const recordLoading=showRecord&&view.phase==='ready'&&view.busy&&!view.selected&&!view.draft;
   return <section className="customer-directory" aria-label="Customer directory" aria-busy={view.busy}>
-    <p className="customer-directory-status" ref={status} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
+    <p className="customer-directory-status" data-confirmed={view.saveConfirmed===true} ref={status} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{recordLoading?'Loading customer record…':view.message}</p>
+    {(view.phase==='loading'||recordLoading)&&<DirectoryLoading record={recordLoading||showRecord&&Boolean(initialCustomerId)}/>}
     {view.phase==='ready'&&<>
       {view.writesPaused&&<p className="notice">Customer changes are paused. You can review current records and history.</p>}
-      <div className="customer-directory-layout" data-mobile-record={showRecord&&editorVisible}>
+      <div className="customer-directory-layout" hidden={recordLoading} inert={recordLoading} data-mobile-record={showRecord&&editorVisible}>
       <section className="customer-lookup" aria-label="Customer lookup">
       <button className={'customer-add'+(view.selected?' secondary':'')} type="button" disabled={view.busy||view.writesPaused} onClick={event=>create(event.currentTarget)}>Add customer</button>
       <form className="customer-search" onSubmit={search} aria-label="Search customers">

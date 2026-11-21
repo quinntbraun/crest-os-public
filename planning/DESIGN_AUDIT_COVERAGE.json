@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-21T22:31:02.686Z",
+  "assessedAt": "2026-11-21T23:27:31.141Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "12caaaa1a37efec333424267a3828c114d97bebd",
-    "publishedCommit": "747f5764209f030bb45fd31cd99b5e8f83f205cd",
-    "publishedTree": "65b4b4f0c20537a9b126a23d1ccd027c0ee3630a",
-    "localTree": "a63dfeef90a1db06878a918b74013cbb669ecfc5"
+    "localCommit": "6a05c393d7a99efccd48f946c54d4df4313ecd58",
+    "publishedCommit": "210d21b43aff140018adb319aebf7394350545d7",
+    "publishedTree": "5a9072a08688735a79ae8bce7bdfae089ead7215",
+    "localTree": "870ae46567e16c924a43c8323a07d560e9cdb564"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -44,8 +44,8 @@
       "title": "P1 · One visual system, delivered consistently",
       "requirements": "The installed logged-out preview still uses a large dark car hero and a different shell from the newer captured build. First align the version being evaluated and delivered. Then use shared page headers, toolbars, record summaries, inspectors, notices and confirmations throughout.\n\nFinish standard: The same destination and state should have the same hierarchy on laptop and phone; release identity must be verifiable.",
       "implementationStatus": "open",
-      "implementedOrPresent": "Published747 remains terminal failed21/22 at frozen53/54 restore; both ancillary workflows pass. Controlled catalog relocation reproduces an identical-schema policy-role list ordering refusal. The correction authenticates the original archive schema against its unchanged manifest first, verifies exact policy headers/role sets and compares every remaining byte. Full original25 plus source-closed53/54 regressions pass27/27 on c2d35b8, frozen source/owned cleanup true. Full9176 units/407 files, types/lint pass. Hosted747 differing bytes were unavailable; fresh full hosted confirmation remains required. No migration, frozen manifest, privilege or business rule changes.",
-      "remainingWork": "Publish the corrected coherent source only after prior runs are terminal, accept all original release/upgrade/recovery/worker checks, diagnose retained failures and compare installed states.",
+      "implementedOrPresent": "Published210d21b/tree5a9072a is terminal failed20/22 main jobs; both commercial44957603087 and expense44957603114 workflows succeed. Custody137009048118 passes13/15 but both pickup engines reject the correct job/vehicle URL because preserved custom-date fields were absent from the old expectation. Foundation137017843650 fails its prerequisite guard; all schema/upgrade/recovery/worker producers and their required artifacts remain unaccepted. Exact teste300c77/tree and baseea06/head210d parents are verified. Test-only02f02c2 requires all original job/vehicle fields plus the exact selected date/view/disclosures; both full original handoff cases pass locally, retaining8 handoff PNGs/48 pickup artifacts, in a separate4/6 scope with two CRM focus failures. Those are fixed and verified in CRM_LOADING_SAVE_FEEDBACK.md. Original53/54 policy-order local27/27 proof remains separate; it has not received fresh full hosted acceptance. All three210d workflows are terminal. Retained proof .local/design-publication/210d-terminal-safe.json. No merge/install.",
+      "remainingWork": "Prepare a freshly scanned coherent candidate with strict handoff context and verified CRM loading/feedback, require fresh exact-head complete release/upgrade/recovery/worker/artifact checks, and finish installed/owner/device acceptance.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "428ec7298f531b79857d7e36139403113ad70f143b1d251cec749b8b2c80edf9"
+          "sha256": "620edbdda931b670665d3901e278e2b52322302195b387aae62771dfa68fe823"
         },
         {
           "path": "planning/QUOTE_VERSION_HISTORY_DESIGN.md",
@@ -129,7 +129,7 @@
         },
         {
           "path": "planning/SCHEDULE_NAVIGATION_CONTEXT.md",
-          "sha256": "ae37ed3d510bd2669399e2a23efba637c44fbb04d80a9d54c8d0a51afd4eae5a"
+          "sha256": "5e8b3d01ff031879d2af23d1b845472f36c506005d5053c84dda548c45d3b659"
         },
         {
           "path": "tests/integration/field54-candidate.test.mjs",
@@ -162,6 +162,46 @@
         {
           "path": "tests/unit/recovery-schema-diagnostic.test.ts",
           "sha256": "eff6e3f3d1511a133ee5bce6e81733e2c2a3ea8fc4e86de06d15f28bb8a67794"
+        },
+        {
+          "path": "planning/CRM_LOADING_SAVE_FEEDBACK.md",
+          "sha256": "d0468da4bf277acd11066024f655e454cd3163d1e3e1dd95f763a1f36239e145"
+        },
+        {
+          "path": "src/app/directory-loading.tsx",
+          "sha256": "d10b72c4e95907e2fa947594365dfa83e9082e187023f29afb6b708a3f0df085"
+        },
+        {
+          "path": "src/app/customers/customers.tsx",
+          "sha256": "63e7d358e7027517a607ba9abb62effbd2e61bda84aba172ec12918bd2bc02b0"
+        },
+        {
+          "path": "src/app/vehicles/vehicles.tsx",
+          "sha256": "063def25e4ceb90dd7e29afe001bad17b9d352d2ff0c336898b85203148542e6"
+        },
+        {
+          "path": "src/client/customer-editor-controller.ts",
+          "sha256": "c65d0a86f8189990e020ffd0e1ed437437547d5d3501e78045314ba553ab0c19"
+        },
+        {
+          "path": "src/client/vehicle-editor-controller.ts",
+          "sha256": "d69df619be6a7717292e48affc01c7c1119dcbeff330307c757993c5259f5e6f"
+        },
+        {
+          "path": "tests/support/crm-save-feedback.mjs",
+          "sha256": "3f790f83620e8f8967e812fb7318f28df272a2886f2e0265c8d05d1d6a2831b1"
+        },
+        {
+          "path": "tests/integration/workspace-journey-browser.test.mjs",
+          "sha256": "a160458bfec2637fb2e76f337018f3197b2a88756813b3bd2f2754744c7e4d45"
+        },
+        {
+          "path": "tests/integration/vehicle-http-browser.test.mjs",
+          "sha256": "7544736bfe0d3cb18a2ea8cb24398fb97dabdde73763eb34cc2409b7ff9f87a6"
+        },
+        {
+          "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
+          "sha256": "50289baf5a7a67eaf18ce4e25a0ae74f9ca06178b25241f55ae330da7ee45ea7"
         }
       ],
       "verification": {
@@ -181,7 +221,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "planning/DESKTOP_COMPOSITION_RECONCILIATION.md",
@@ -253,11 +293,11 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "f4ac0cc099aa0e524e3ac93922cc1275a828c1c9d2e87a5fe589c04fff6fe601"
+          "sha256": "63e7d358e7027517a607ba9abb62effbd2e61bda84aba172ec12918bd2bc02b0"
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "ccff7b4653b628b9b4ee20b2f136821c4bf4fa451e5c4cffa6ca32e0080faa28"
+          "sha256": "063def25e4ceb90dd7e29afe001bad17b9d352d2ff0c336898b85203148542e6"
         },
         {
           "path": "src/app/services/services.tsx",
@@ -288,12 +328,12 @@
       "title": "P1 · Phone record detail should replace the directory",
       "requirements": "Long quote and completion captures show how a desktop composition becomes a long stacked phone document. Opening a record should put the record first and preserve the list for a clean return.\n\nFinish standard: At 360–430 px, open a selected record, reach its main action, return to the exact list position and continue without re-searching.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Focused phone records cover directories, quotes, leads, expenses and several accounting/travel tasks. Final configured task-entry matrix on3a3e069 passes2/2 with168 zero-finding observations across seven guides, six widths and two text sizes in both engines. Actual-container columns, readable wrapping actions and balanced headings preserve authorization, destinations and business audit history; the55-file/18-group CI partition now includes this matrix while retaining original requirements. Exact quote window position and actual origin focus are now captured/restored without persistence or business requests. Complete original editor file2/2 parents/24 TAP tests passes on47d9bad at360/390/430 with unobscured focus, preserved dirty/query state and canceled selection checks;34 fresh artifacts retained. Initial6/8 full matrix remains separately failed/scoped, not a final8/8. Shared main/tool navigation now distinguishes neutral hover from the marked current destination. Complete closed/setup suite106/106 on e704c3b passes, including48 route/width/engine navigation combinations and original720 typography observations. Both actual padding/scroll-clearance consumers cover the fixed navigation bar; explicit nested Lead sources/Leads semantics remain. Twelve fresh hashed captures and original98/106 failures retained. Source9b5113f build/types/lint plus final test types/lint pass. Shared-chrome scope only; configured/private/device requirements remain. Source656e1f4 additionally passes genuine six-booking planner/saved-job real Chromium zoom: first8 observations and separate expanded16 at100%/200%, explicitly360/390/430CSS px plus desktop. Exact nonzero390px/200% return restores unobscured focused origin and exact scroll, with preserved date values, zero Back/zoom business requests and unchanged jobs/appointments/reservations/overrides/audit rows. Both case/cluster/profile cleanups and source/case hashes pass. Configured financial/long-history and other original contexts remain; no all-workflow/device acceptance is inferred. Early Schedule automatic-read departure candidate is implemented and unit/control-tested. Original normal amendment journeys pass2/2; the complete later saved-job/acceptance run remains10/11 at a different fresh-session search. The original vehicle return failure is retained and is not erased by non-reproduction. Completion source7b7d499 adds Review completion and Back to completion review within the mounted editor. Both complete original browser journeys pass2/2, eight360/390/430/1440 observations restore exact focus/scroll and prior open item, preserve blank outcomes and actual partial entries, submit zero inspection business requests and preserve actual jobs/audit.76 hashed PNGs retained. No cross-route storage/history/URL architecture or completion command/math changes; broader S03/S13 requirements remain. New Schedule navigation source2547137 carries validated date/view/disclosure/job/position context through ordinary task links, with fresh authorized reads on return. A new period clears the old origin, fractional CSS positions are retained, and Service arrangements preserves the new dates. Initial Saved visits focus respects a control the user already chose; clean vehicle reads no longer warn about lost edits, while dirty and unresolved saves remain protected. Build/types/full lint and9168 units/405 files pass. Original planner/saved-job/customer-profile/vehicle HTTP/editor run19/20 retains a Chromium initial-login400 before the new regression; loaded390/1440 change/cancel returns, exact dates/view/focus/scroll, changed-period/service-arrangement context, source conservation, overflow/Axe and privacy pass in both engines. WebKit passes the controlled slow-read Back-focus test; both vehicle editor/recovery groups preserve dirty/pending guards and original claims. Diagnostic-only014ae7a preserves identical application source and both original complete saved-job journeys pass2/2 with74 captures; the relocated case/hash and original assertions are verified. This is not aggregate20/20, a startup400 cure, complete cross-workspace state/zoom coverage or installed/device acceptance. Separate initial9/10 and new-selector4/6 runs remain retained. See SCHEDULE_NAVIGATION_CONTEXT.md. Current f321595 implements validated date/view/origin context through customer/vehicle server returns, saved visits and overview visit links. Both new complete four-width cases pass2/2 with16 hashed captures at360/390/430/1440 in Chromium/WebKit, exact originating focus/scroll, Axe/overflow and domain/audit conservation; frozen source/owned cleanup pass. Current build/types/full lint and9177 units/407 files pass. Earlier full original file4/6 retains four passing saved-job/profile flows and two added rapid-case429 failures; diagnostic0/2 confirms unchanged120/minute session admission. New journeys have fresh genuine sessions per width; all original six cases/deadlines remain. Initial four-width1/2 retains Chromium desktop42→470 failure. A separate0/1 diagnostic proves identical geometry/font state with a900.453125px control edge in900px viewport; rounded CSS-edge visibility fixes unnecessary centering while retaining exact scroll assertions. Fresh new2/2 is separate from original-file and earlier source scopes; full hosted/installed/device acceptance remains required.",
+      "implementedOrPresent": "Focused phone records cover directories, quotes, leads, expenses and several accounting/travel tasks. Final configured task-entry matrix on3a3e069 passes2/2 with168 zero-finding observations across seven guides, six widths and two text sizes in both engines. Actual-container columns, readable wrapping actions and balanced headings preserve authorization, destinations and business audit history; the55-file/18-group CI partition now includes this matrix while retaining original requirements. Exact quote window position and actual origin focus are now captured/restored without persistence or business requests. Complete original editor file2/2 parents/24 TAP tests passes on47d9bad at360/390/430 with unobscured focus, preserved dirty/query state and canceled selection checks;34 fresh artifacts retained. Initial6/8 full matrix remains separately failed/scoped, not a final8/8. Shared main/tool navigation now distinguishes neutral hover from the marked current destination. Complete closed/setup suite106/106 on e704c3b passes, including48 route/width/engine navigation combinations and original720 typography observations. Both actual padding/scroll-clearance consumers cover the fixed navigation bar; explicit nested Lead sources/Leads semantics remain. Twelve fresh hashed captures and original98/106 failures retained. Source9b5113f build/types/lint plus final test types/lint pass. Shared-chrome scope only; configured/private/device requirements remain. Source656e1f4 additionally passes genuine six-booking planner/saved-job real Chromium zoom: first8 observations and separate expanded16 at100%/200%, explicitly360/390/430CSS px plus desktop. Exact nonzero390px/200% return restores unobscured focused origin and exact scroll, with preserved date values, zero Back/zoom business requests and unchanged jobs/appointments/reservations/overrides/audit rows. Both case/cluster/profile cleanups and source/case hashes pass. Configured financial/long-history and other original contexts remain; no all-workflow/device acceptance is inferred. Early Schedule automatic-read departure candidate is implemented and unit/control-tested. Original normal amendment journeys pass2/2; the complete later saved-job/acceptance run remains10/11 at a different fresh-session search. The original vehicle return failure is retained and is not erased by non-reproduction. Completion source7b7d499 adds Review completion and Back to completion review within the mounted editor. Both complete original browser journeys pass2/2, eight360/390/430/1440 observations restore exact focus/scroll and prior open item, preserve blank outcomes and actual partial entries, submit zero inspection business requests and preserve actual jobs/audit.76 hashed PNGs retained. No cross-route storage/history/URL architecture or completion command/math changes; broader S03/S13 requirements remain. New Schedule navigation source2547137 carries validated date/view/disclosure/job/position context through ordinary task links, with fresh authorized reads on return. A new period clears the old origin, fractional CSS positions are retained, and Service arrangements preserves the new dates. Initial Saved visits focus respects a control the user already chose; clean vehicle reads no longer warn about lost edits, while dirty and unresolved saves remain protected. Build/types/full lint and9168 units/405 files pass. Original planner/saved-job/customer-profile/vehicle HTTP/editor run19/20 retains a Chromium initial-login400 before the new regression; loaded390/1440 change/cancel returns, exact dates/view/focus/scroll, changed-period/service-arrangement context, source conservation, overflow/Axe and privacy pass in both engines. WebKit passes the controlled slow-read Back-focus test; both vehicle editor/recovery groups preserve dirty/pending guards and original claims. Diagnostic-only014ae7a preserves identical application source and both original complete saved-job journeys pass2/2 with74 captures; the relocated case/hash and original assertions are verified. This is not aggregate20/20, a startup400 cure, complete cross-workspace state/zoom coverage or installed/device acceptance. Separate initial9/10 and new-selector4/6 runs remain retained. See SCHEDULE_NAVIGATION_CONTEXT.md. Current f321595 implements validated date/view/origin context through customer/vehicle server returns, saved visits and overview visit links. Both new complete four-width cases pass2/2 with16 hashed captures at360/390/430/1440 in Chromium/WebKit, exact originating focus/scroll, Axe/overflow and domain/audit conservation; frozen source/owned cleanup pass. Current build/types/full lint and9177 units/407 files pass. Earlier full original file4/6 retains four passing saved-job/profile flows and two added rapid-case429 failures; diagnostic0/2 confirms unchanged120/minute session admission. New journeys have fresh genuine sessions per width; all original six cases/deadlines remain. Initial four-width1/2 retains Chromium desktop42→470 failure. A separate0/1 diagnostic proves identical geometry/font state with a900.453125px control edge in900px viewport; rounded CSS-edge visibility fixes unnecessary centering while retaining exact scroll assertions. Fresh new2/2 is separate from original-file and earlier source scopes; full hosted/installed/device acceptance remains required. Current4dbecd3 passes all four complete original customer/vehicle workspace and dashboard-follow-up cases, with actual context-held loading, exact original Back focus and retained draft, saved/stale outcome inspection, normal/reduced-motion geometry, overflow/Axe,0 inspection requests and domain/audit conservation.12 loading/18 feedback PNGs are among250 fresh hashed artifacts. Loading uses responsive decorative placeholders; existing directory controls remain mounted, hidden and inert during record reads. The customer leave guard protects dirty/pending work without warning for clean reads. A transient marker confirms only verified committed/lookup outcomes after reference cleanup; all other states stay neutral and new actions/private clearing reset it. Build/types/full lint and9181 units pass on4dbecd3. Earlier14/18 retains both full vehicle HTTP groups and all12 child passes, plus a loading-test cleanup rejection and downstream ownership refusals; test-only route completion fixes that. Separate4/6 then retains full handoff/follow-up passes and both disconnected-origin focus failures; preserving the real directory fixes the original strict assertions in fresh4/4. No scopes are aggregated and global states/motion/zoom/device acceptance remains open.",
       "remainingWork": "Reconcile remaining completion/scheduling and other selected-record return contexts against every original S03 requirement, including main-action reachability and exact list position, then complete matching delivered/physical-device acceptance. Scoped quote2/2 does not close the whole group.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "planning/QUOTE_PHONE_NAVIGATION.md",
@@ -385,7 +425,7 @@
         },
         {
           "path": "planning/SCHEDULE_NAVIGATION_CONTEXT.md",
-          "sha256": "ae37ed3d510bd2669399e2a23efba637c44fbb04d80a9d54c8d0a51afd4eae5a"
+          "sha256": "5e8b3d01ff031879d2af23d1b845472f36c506005d5053c84dda548c45d3b659"
         },
         {
           "path": "src/app/schedule/navigation.tsx",
@@ -413,7 +453,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "ccff7b4653b628b9b4ee20b2f136821c4bf4fa451e5c4cffa6ca32e0080faa28"
+          "sha256": "063def25e4ceb90dd7e29afe001bad17b9d352d2ff0c336898b85203148542e6"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -441,7 +481,7 @@
         },
         {
           "path": "tests/integration/vehicle-http-browser.test.mjs",
-          "sha256": "9b2f3df2f9287e03414917fa2aac63a7717af5798cc25f2cea6ecd89a8b5d29a"
+          "sha256": "7544736bfe0d3cb18a2ea8cb24398fb97dabdde73763eb34cc2409b7ff9f87a6"
         },
         {
           "path": "src/app/customers/page.tsx",
@@ -453,11 +493,39 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "f4ac0cc099aa0e524e3ac93922cc1275a828c1c9d2e87a5fe589c04fff6fe601"
+          "sha256": "63e7d358e7027517a607ba9abb62effbd2e61bda84aba172ec12918bd2bc02b0"
         },
         {
           "path": "src/app/schedule/back-to-saved-job.tsx",
           "sha256": "8a49567af683184fcd8d50e6ad10753c5dd4007bcd83844aabf16da695cf7f04"
+        },
+        {
+          "path": "planning/CRM_LOADING_SAVE_FEEDBACK.md",
+          "sha256": "d0468da4bf277acd11066024f655e454cd3163d1e3e1dd95f763a1f36239e145"
+        },
+        {
+          "path": "src/app/directory-loading.tsx",
+          "sha256": "d10b72c4e95907e2fa947594365dfa83e9082e187023f29afb6b708a3f0df085"
+        },
+        {
+          "path": "src/client/customer-editor-controller.ts",
+          "sha256": "c65d0a86f8189990e020ffd0e1ed437437547d5d3501e78045314ba553ab0c19"
+        },
+        {
+          "path": "src/client/vehicle-editor-controller.ts",
+          "sha256": "d69df619be6a7717292e48affc01c7c1119dcbeff330307c757993c5259f5e6f"
+        },
+        {
+          "path": "tests/support/crm-save-feedback.mjs",
+          "sha256": "3f790f83620e8f8967e812fb7318f28df272a2886f2e0265c8d05d1d6a2831b1"
+        },
+        {
+          "path": "tests/integration/workspace-journey-browser.test.mjs",
+          "sha256": "a160458bfec2637fb2e76f337018f3197b2a88756813b3bd2f2754744c7e4d45"
+        },
+        {
+          "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
+          "sha256": "50289baf5a7a67eaf18ce4e25a0ae74f9ca06178b25241f55ae330da7ee45ea7"
         }
       ],
       "verification": {
@@ -472,12 +540,12 @@
       "title": "P1 · Make action priority predictable",
       "requirements": "Create, load, refresh, search, download and commit controls sometimes have similar dimensions or color. The eye should immediately distinguish the task from maintenance controls.\n\nFinish standard: One primary action per task region; normal secondary controls for refresh/download; destructive styling only for a genuinely destructive consequence.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Primary/secondary controls and export transition contrast were improved. Six original-request retry/export controls now use existing secondary styling, preserving primary outcome checks. Exact reconstruction confirms all labels/types/handlers/disabled conditions and all other code unchanged; production build/post-build types/full lint pass. Statement staging now prioritizes the original-outcome check over pending retry, keeping normal staging primary. Attribute-only source preservation plus both complete original statement journeys pass within797a785 full4/4 booking/statement run; final uncertain phone screen reviewed. Three more visual attributes make optional vehicle-link transfer and loaded custody-queue refresh/pagination secondary, preserving first-load/review/final-confirm priorities. Exact inverse reconstruction proves every other source byte unchanged after line-ending normalization; production build/post-build types/full lint pass. Source/build scope only, not new rendered acceptance. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. New local0cbf356 makes original account/channel/fixed-category approval outcome checks primary and keeps retry/optional closure secondary; account references disclose after the check, and mapping references move after actions. Three controller prefixes are byte-identical to2379755. Full original four-file matrix on diagnostic-only6ada85f passes8/8,0fail/skip/cancel, stable source/owned cleanup,24 unobscured-focused recovery views,0inspection business requests and unchanged captured account/channel/mapping/audit rows.212 hashed artifacts include204 PNG/eight bounded reports. Build/types plus final full lint/9115 units pass. Initial0cbf7/8 remains retained: WebKit fixed-mapping fixture verified-journal notSubmitted before application browser, cause unknown; final8/8 is non-reproduction, not auth cure. Test-only failure logging uses existing64-event classifiers and preserves errors/healthy transport. No global S04/eight-state/zoom/device acceptance follows. Opening-balance c907362 now gives original worksheet/receivables checks primary emphasis, preserving optional closure as secondary. Both complete original browser journeys pass2/2 with12 new genuine recovery-layout observations at360/390/1440, zero inspection business traffic and unchanged captured revisions/audit. Full9125 units, types/lint/build pass. This does not finish global task priority. Supplier/tax source7e0d7b9 clarifies original-result priority in upload, posting, payment and pending approval; optional tax closure remains secondary and manual recovery entry remains secondary outside a pending task. Both complete original supplier/tax files pass4/4, plus30 genuine two-engine recovery layouts at360/390/1440, zero inspection business requests and conserved relevant original/draft/payable/settlement/movement/journal/tax/audit rows. Build/types/full lint/full9125 units pass;160 fresh hashed PNGs and10 reports retained. Ordinary widths are not actual zoom or physical iPhone acceptance. Global S04/S06 remain partial. Batched93bdf67 addresses15 presentation/order edits across13 remaining recovery workflows after a191-interface-file/773-button inventory. Interrupted expense/receipt/supplier/Calendar/refund/work-time checks are primary; optional closures/retries stay secondary; expense check precedes retry. Source handlers, permissions, references and financial rules are unchanged. Build/types/full lint and final9125 units pass.18 remaining lexical candidates were reviewed as initial/recovery tasks, explicit filters/search, contextual recovery entry or genuine cancellation; the source inventory is not all-state visual acceptance. Record09ce1df additionally collapses four technical references after status/retry actions;24 exact-reference layouts pass but the full four-file run remains80/82 with one WebKit vehicle-access subtest and its parent failed. Published955ac14/tree84b5b07 is terminal:21/22 main jobs pass, both owner-expense and commercial workflows pass. Foundation reaches and passes production build, browser accessibility, portable-container smoke, isolated photo decoding and preceding registered upgrade/recovery gates; Chromium supplier register JSON loses its response body after navigation (WebKit passes). Private expense isolated-worker and candidate provenance steps are skipped, not accepted. Local2fd8f80 buffers both register reads through the existing one-forward actual-byte helper; original statuses/assertions/deadlines remain. Full9128 units pass. Complete original supplier journeys on6e54ec3 pass2/2 with the current isolated Linux PDF worker,18 recovery observations,118 PNGs, unchanged source and owned cleanup. The first local0/2 omitted the Windows absolute Docker launch prerequisite and remains retained separately. A new exact hosted candidate remains required. Pending booking/job-change saved-job links now use the shared secondary anchor treatment; Check original request remains primary, with committed links unchanged. This is a render/CSS-only change with production build verification, not a complete configured-state review.",
+      "implementedOrPresent": "Primary/secondary controls and export transition contrast were improved. Six original-request retry/export controls now use existing secondary styling, preserving primary outcome checks. Exact reconstruction confirms all labels/types/handlers/disabled conditions and all other code unchanged; production build/post-build types/full lint pass. Statement staging now prioritizes the original-outcome check over pending retry, keeping normal staging primary. Attribute-only source preservation plus both complete original statement journeys pass within797a785 full4/4 booking/statement run; final uncertain phone screen reviewed. Three more visual attributes make optional vehicle-link transfer and loaded custody-queue refresh/pagination secondary, preserving first-load/review/final-confirm priorities. Exact inverse reconstruction proves every other source byte unchanged after line-ending normalization; production build/post-build types/full lint pass. Source/build scope only, not new rendered acceptance. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. New local0cbf356 makes original account/channel/fixed-category approval outcome checks primary and keeps retry/optional closure secondary; account references disclose after the check, and mapping references move after actions. Three controller prefixes are byte-identical to2379755. Full original four-file matrix on diagnostic-only6ada85f passes8/8,0fail/skip/cancel, stable source/owned cleanup,24 unobscured-focused recovery views,0inspection business requests and unchanged captured account/channel/mapping/audit rows.212 hashed artifacts include204 PNG/eight bounded reports. Build/types plus final full lint/9115 units pass. Initial0cbf7/8 remains retained: WebKit fixed-mapping fixture verified-journal notSubmitted before application browser, cause unknown; final8/8 is non-reproduction, not auth cure. Test-only failure logging uses existing64-event classifiers and preserves errors/healthy transport. No global S04/eight-state/zoom/device acceptance follows. Opening-balance c907362 now gives original worksheet/receivables checks primary emphasis, preserving optional closure as secondary. Both complete original browser journeys pass2/2 with12 new genuine recovery-layout observations at360/390/1440, zero inspection business traffic and unchanged captured revisions/audit. Full9125 units, types/lint/build pass. This does not finish global task priority. Supplier/tax source7e0d7b9 clarifies original-result priority in upload, posting, payment and pending approval; optional tax closure remains secondary and manual recovery entry remains secondary outside a pending task. Both complete original supplier/tax files pass4/4, plus30 genuine two-engine recovery layouts at360/390/1440, zero inspection business requests and conserved relevant original/draft/payable/settlement/movement/journal/tax/audit rows. Build/types/full lint/full9125 units pass;160 fresh hashed PNGs and10 reports retained. Ordinary widths are not actual zoom or physical iPhone acceptance. Global S04/S06 remain partial. Batched93bdf67 addresses15 presentation/order edits across13 remaining recovery workflows after a191-interface-file/773-button inventory. Interrupted expense/receipt/supplier/Calendar/refund/work-time checks are primary; optional closures/retries stay secondary; expense check precedes retry. Source handlers, permissions, references and financial rules are unchanged. Build/types/full lint and final9125 units pass.18 remaining lexical candidates were reviewed as initial/recovery tasks, explicit filters/search, contextual recovery entry or genuine cancellation; the source inventory is not all-state visual acceptance. Record09ce1df additionally collapses four technical references after status/retry actions;24 exact-reference layouts pass but the full four-file run remains80/82 with one WebKit vehicle-access subtest and its parent failed. Published955ac14/tree84b5b07 is terminal:21/22 main jobs pass, both owner-expense and commercial workflows pass. Foundation reaches and passes production build, browser accessibility, portable-container smoke, isolated photo decoding and preceding registered upgrade/recovery gates; Chromium supplier register JSON loses its response body after navigation (WebKit passes). Private expense isolated-worker and candidate provenance steps are skipped, not accepted. Local2fd8f80 buffers both register reads through the existing one-forward actual-byte helper; original statuses/assertions/deadlines remain. Full9128 units pass. Complete original supplier journeys on6e54ec3 pass2/2 with the current isolated Linux PDF worker,18 recovery observations,118 PNGs, unchanged source and owned cleanup. The first local0/2 omitted the Windows absolute Docker launch prerequisite and remains retained separately. A new exact hosted candidate remains required. Pending booking/job-change saved-job links now use the shared secondary anchor treatment; Check original request remains primary, with committed links unchanged. This is a render/CSS-only change with production build verification, not a complete configured-state review. A subsequent CSS-only refinement fits direct CRM recovery buttons to their labels from768px while preserving phone full width. Production build and an isolated390/1440 actual-style rendering show358/358px on phone and192.546875/1152px on desktop without overflow. This is a sizing review, not authenticated workflow acceptance or global action-priority closure.",
       "remainingWork": "Review commit/refresh/recovery priority in every configured task; one narrow success is not global coverage.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "planning/ACTION_PRIORITY_CONTRAST.md",
@@ -604,12 +672,48 @@
           "sha256": "908d10746fc4d44c8a98fcef44abd30e7ef31051159a7c90a35c5f7bf90ee4ae"
         },
         {
-          "path": "src/app/schedule/new/booking.tsx",
-          "sha256": "109446633710493e9cfc0b91154426241ca7d3f34894aa78abeaf11f2afe9bc4"
-        },
-        {
           "path": "src/app/schedule/change/change.tsx",
           "sha256": "f95134610ed6f62c734867b8260b0686505c26b646e3af93658dd163232b9af3"
+        },
+        {
+          "path": "planning/CRM_LOADING_SAVE_FEEDBACK.md",
+          "sha256": "d0468da4bf277acd11066024f655e454cd3163d1e3e1dd95f763a1f36239e145"
+        },
+        {
+          "path": "src/app/directory-loading.tsx",
+          "sha256": "d10b72c4e95907e2fa947594365dfa83e9082e187023f29afb6b708a3f0df085"
+        },
+        {
+          "path": "src/app/customers/customers.tsx",
+          "sha256": "63e7d358e7027517a607ba9abb62effbd2e61bda84aba172ec12918bd2bc02b0"
+        },
+        {
+          "path": "src/app/vehicles/vehicles.tsx",
+          "sha256": "063def25e4ceb90dd7e29afe001bad17b9d352d2ff0c336898b85203148542e6"
+        },
+        {
+          "path": "src/client/customer-editor-controller.ts",
+          "sha256": "c65d0a86f8189990e020ffd0e1ed437437547d5d3501e78045314ba553ab0c19"
+        },
+        {
+          "path": "src/client/vehicle-editor-controller.ts",
+          "sha256": "d69df619be6a7717292e48affc01c7c1119dcbeff330307c757993c5259f5e6f"
+        },
+        {
+          "path": "tests/support/crm-save-feedback.mjs",
+          "sha256": "3f790f83620e8f8967e812fb7318f28df272a2886f2e0265c8d05d1d6a2831b1"
+        },
+        {
+          "path": "tests/integration/workspace-journey-browser.test.mjs",
+          "sha256": "a160458bfec2637fb2e76f337018f3197b2a88756813b3bd2f2754744c7e4d45"
+        },
+        {
+          "path": "tests/integration/vehicle-http-browser.test.mjs",
+          "sha256": "7544736bfe0d3cb18a2ea8cb24398fb97dabdde73763eb34cc2409b7ff9f87a6"
+        },
+        {
+          "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
+          "sha256": "50289baf5a7a67eaf18ce4e25a0ae74f9ca06178b25241f55ae330da7ee45ea7"
         }
       ],
       "verification": {
@@ -629,7 +733,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "planning/COMPLETION_DESIGN_REFINEMENT.md",
@@ -752,7 +856,7 @@
       "title": "P1 · Treat every state as a designed screen",
       "requirements": "Some baseline captures are loading or unavailable. A clean screenshot with no overflow does not establish a completed workflow.\n\nFinish standard: Every important workflow needs loaded, empty, loading, validation, denied, stale, uncertain-save and successful variants with clear next steps.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Many actual loaded, empty, pending and error states exist and have scoped tests. Supplier draft sourceeb57 passes complete original local workflow2/2 with96 zero-finding observations across dirty editor, selected bill, original-required and ready-entry states, six widths and two text sizes in both engines. Flattened surfaces, fluid phone padding and actual-container editor/review columns retain original financial and private-export gates; inspection preserves financial/draft/journal/audit rows with zero API requests. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. Render-only cb35c2d adds real account-loading live text, explicit fresh-access link after read failure, and capability-gated money-channel guidance for an empty eligible list. Final test1e88e88 both complete original statement engines plus separate48 actual zoom observations pass3/3, zero failures/skips/cancellations, source stable/owned cleanup and98 hashed PNGs.18 new ordinary observations cover loading/failed/empty at360/390/1440 in both engines; a genuine dated channel closure creates emptiness after original export checks. Inspection adds no business requests or captured statement/journal/audit changes. Initialcb35 complete2/3 with one Chromium loading request count remains retained; the final boundary waits for the held original request, retaining zero-additional-request and all deadlines. Six zoom views and three ordinary states are not the whole S06 matrix. New local0cbf356 makes original account/channel/fixed-category approval outcome checks primary and keeps retry/optional closure secondary; account references disclose after the check, and mapping references move after actions. Three controller prefixes are byte-identical to2379755. Full original four-file matrix on diagnostic-only6ada85f passes8/8,0fail/skip/cancel, stable source/owned cleanup,24 unobscured-focused recovery views,0inspection business requests and unchanged captured account/channel/mapping/audit rows.212 hashed artifacts include204 PNG/eight bounded reports. Build/types plus final full lint/9115 units pass. Initial0cbf7/8 remains retained: WebKit fixed-mapping fixture verified-journal notSubmitted before application browser, cause unknown; final8/8 is non-reproduction, not auth cure. Test-only failure logging uses existing64-event classifiers and preserves errors/healthy transport. No global S04/eight-state/zoom/device acceptance follows. Two opening-balance genuine uncertain-save states now have12 scoped two-engine layout observations and complete original2/2 recovery/export evidence. This does not close all eight states across workflows. Supplier/tax source7e0d7b9 clarifies original-result priority in upload, posting, payment and pending approval; optional tax closure remains secondary and manual recovery entry remains secondary outside a pending task. Both complete original supplier/tax files pass4/4, plus30 genuine two-engine recovery layouts at360/390/1440, zero inspection business requests and conserved relevant original/draft/payable/settlement/movement/journal/tax/audit rows. Build/types/full lint/full9125 units pass;160 fresh hashed PNGs and10 reports retained. Ordinary widths are not actual zoom or physical iPhone acceptance. Global S04/S06 remain partial. Four record recovery disclosures pass24 genuine width observations and exact-reference/zero-API/conserved-record-operation-audit checks; their complete original four-file invocation remains80/82,7/8 parents, with WebKit reported-vehicle access unavailable, session400 observed and cause unproven.154 PNGs/eight reports retained. The new13-workflow priority batch has local static/unit gates, with broad runtime acceptance pending. Global eight-state coverage remains partial. Published955ac14/tree84b5b07 is terminal:21/22 main jobs pass, both owner-expense and commercial workflows pass. Foundation reaches and passes production build, browser accessibility, portable-container smoke, isolated photo decoding and preceding registered upgrade/recovery gates; Chromium supplier register JSON loses its response body after navigation (WebKit passes). Private expense isolated-worker and candidate provenance steps are skipped, not accepted. Local2fd8f80 buffers both register reads through the existing one-forward actual-byte helper; original statuses/assertions/deadlines remain. Full9128 units pass. Complete original supplier journeys on6e54ec3 pass2/2 with the current isolated Linux PDF worker,18 recovery observations,118 PNGs, unchanged source and owned cleanup. The first local0/2 omitted the Windows absolute Docker launch prerequisite and remains retained separately. A new exact hosted candidate remains required. Latest configured Schedule forms/clean-read/dirty/pending/return states have scoped native evidence on2547137, with actual source conservation and retained startup400; the complete eight-state inventory is still required. See SCHEDULE_NAVIGATION_CONTEXT.md.",
+      "implementedOrPresent": "Many actual loaded, empty, pending and error states exist and have scoped tests. Supplier draft sourceeb57 passes complete original local workflow2/2 with96 zero-finding observations across dirty editor, selected bill, original-required and ready-entry states, six widths and two text sizes in both engines. Flattened surfaces, fluid phone padding and actual-container editor/review columns retain original financial and private-export gates; inspection preserves financial/draft/journal/audit rows with zero API requests. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. Render-only cb35c2d adds real account-loading live text, explicit fresh-access link after read failure, and capability-gated money-channel guidance for an empty eligible list. Final test1e88e88 both complete original statement engines plus separate48 actual zoom observations pass3/3, zero failures/skips/cancellations, source stable/owned cleanup and98 hashed PNGs.18 new ordinary observations cover loading/failed/empty at360/390/1440 in both engines; a genuine dated channel closure creates emptiness after original export checks. Inspection adds no business requests or captured statement/journal/audit changes. Initialcb35 complete2/3 with one Chromium loading request count remains retained; the final boundary waits for the held original request, retaining zero-additional-request and all deadlines. Six zoom views and three ordinary states are not the whole S06 matrix. New local0cbf356 makes original account/channel/fixed-category approval outcome checks primary and keeps retry/optional closure secondary; account references disclose after the check, and mapping references move after actions. Three controller prefixes are byte-identical to2379755. Full original four-file matrix on diagnostic-only6ada85f passes8/8,0fail/skip/cancel, stable source/owned cleanup,24 unobscured-focused recovery views,0inspection business requests and unchanged captured account/channel/mapping/audit rows.212 hashed artifacts include204 PNG/eight bounded reports. Build/types plus final full lint/9115 units pass. Initial0cbf7/8 remains retained: WebKit fixed-mapping fixture verified-journal notSubmitted before application browser, cause unknown; final8/8 is non-reproduction, not auth cure. Test-only failure logging uses existing64-event classifiers and preserves errors/healthy transport. No global S04/eight-state/zoom/device acceptance follows. Two opening-balance genuine uncertain-save states now have12 scoped two-engine layout observations and complete original2/2 recovery/export evidence. This does not close all eight states across workflows. Supplier/tax source7e0d7b9 clarifies original-result priority in upload, posting, payment and pending approval; optional tax closure remains secondary and manual recovery entry remains secondary outside a pending task. Both complete original supplier/tax files pass4/4, plus30 genuine two-engine recovery layouts at360/390/1440, zero inspection business requests and conserved relevant original/draft/payable/settlement/movement/journal/tax/audit rows. Build/types/full lint/full9125 units pass;160 fresh hashed PNGs and10 reports retained. Ordinary widths are not actual zoom or physical iPhone acceptance. Global S04/S06 remain partial. Four record recovery disclosures pass24 genuine width observations and exact-reference/zero-API/conserved-record-operation-audit checks; their complete original four-file invocation remains80/82,7/8 parents, with WebKit reported-vehicle access unavailable, session400 observed and cause unproven.154 PNGs/eight reports retained. The new13-workflow priority batch has local static/unit gates, with broad runtime acceptance pending. Global eight-state coverage remains partial. Published955ac14/tree84b5b07 is terminal:21/22 main jobs pass, both owner-expense and commercial workflows pass. Foundation reaches and passes production build, browser accessibility, portable-container smoke, isolated photo decoding and preceding registered upgrade/recovery gates; Chromium supplier register JSON loses its response body after navigation (WebKit passes). Private expense isolated-worker and candidate provenance steps are skipped, not accepted. Local2fd8f80 buffers both register reads through the existing one-forward actual-byte helper; original statuses/assertions/deadlines remain. Full9128 units pass. Complete original supplier journeys on6e54ec3 pass2/2 with the current isolated Linux PDF worker,18 recovery observations,118 PNGs, unchanged source and owned cleanup. The first local0/2 omitted the Windows absolute Docker launch prerequisite and remains retained separately. A new exact hosted candidate remains required. Latest configured Schedule forms/clean-read/dirty/pending/return states have scoped native evidence on2547137, with actual source conservation and retained startup400; the complete eight-state inventory is still required. See SCHEDULE_NAVIGATION_CONTEXT.md. Current4dbecd3 passes all four complete original customer/vehicle workspace and dashboard-follow-up cases, with actual context-held loading, exact original Back focus and retained draft, saved/stale outcome inspection, normal/reduced-motion geometry, overflow/Axe,0 inspection requests and domain/audit conservation.12 loading/18 feedback PNGs are among250 fresh hashed artifacts. Loading uses responsive decorative placeholders; existing directory controls remain mounted, hidden and inert during record reads. The customer leave guard protects dirty/pending work without warning for clean reads. A transient marker confirms only verified committed/lookup outcomes after reference cleanup; all other states stay neutral and new actions/private clearing reset it. Build/types/full lint and9181 units pass on4dbecd3. Earlier14/18 retains both full vehicle HTTP groups and all12 child passes, plus a loading-test cleanup rejection and downstream ownership refusals; test-only route completion fixes that. Separate4/6 then retains full handoff/follow-up passes and both disconnected-origin focus failures; preserving the real directory fixes the original strict assertions in fresh4/4. No scopes are aggregated and global states/motion/zoom/device acceptance remains open.",
       "remainingWork": "Complete the eight-state cross-workflow inventory and exact-source visual verification;72 baseline captures do not cover it.",
       "evidence": [
         {
@@ -761,7 +865,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "93f0ce3cb3830d2a1297d326dbdb865ac1e41bd8de6f1414a63a309e3c8fde78"
+          "sha256": "60a2b8646f34ea31ded2fb9104fa243087ac14171a013cb266ae0e721337d256"
         },
         {
           "path": "planning/SUPPLIER_DRAFT_COMPOSITION_REVIEW.md",
@@ -841,7 +945,7 @@
         },
         {
           "path": "planning/SCHEDULE_NAVIGATION_CONTEXT.md",
-          "sha256": "ae37ed3d510bd2669399e2a23efba637c44fbb04d80a9d54c8d0a51afd4eae5a"
+          "sha256": "5e8b3d01ff031879d2af23d1b845472f36c506005d5053c84dda548c45d3b659"
         },
         {
           "path": "src/app/schedule/navigation.tsx",
@@ -869,7 +973,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "ccff7b4653b628b9b4ee20b2f136821c4bf4fa451e5c4cffa6ca32e0080faa28"
+          "sha256": "063def25e4ceb90dd7e29afe001bad17b9d352d2ff0c336898b85203148542e6"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -897,7 +1001,39 @@
         },
         {
           "path": "tests/integration/vehicle-http-browser.test.mjs",
-          "sha256": "9b2f3df2f9287e03414917fa2aac63a7717af5798cc25f2cea6ecd89a8b5d29a"
+          "sha256": "7544736bfe0d3cb18a2ea8cb24398fb97dabdde73763eb34cc2409b7ff9f87a6"
+        },
+        {
+          "path": "planning/CRM_LOADING_SAVE_FEEDBACK.md",
+          "sha256": "d0468da4bf277acd11066024f655e454cd3163d1e3e1dd95f763a1f36239e145"
+        },
+        {
+          "path": "src/app/directory-loading.tsx",
+          "sha256": "d10b72c4e95907e2fa947594365dfa83e9082e187023f29afb6b708a3f0df085"
+        },
+        {
+          "path": "src/app/customers/customers.tsx",
+          "sha256": "63e7d358e7027517a607ba9abb62effbd2e61bda84aba172ec12918bd2bc02b0"
+        },
+        {
+          "path": "src/client/customer-editor-controller.ts",
+          "sha256": "c65d0a86f8189990e020ffd0e1ed437437547d5d3501e78045314ba553ab0c19"
+        },
+        {
+          "path": "src/client/vehicle-editor-controller.ts",
+          "sha256": "d69df619be6a7717292e48affc01c7c1119dcbeff330307c757993c5259f5e6f"
+        },
+        {
+          "path": "tests/support/crm-save-feedback.mjs",
+          "sha256": "3f790f83620e8f8967e812fb7318f28df272a2886f2e0265c8d05d1d6a2831b1"
+        },
+        {
+          "path": "tests/integration/workspace-journey-browser.test.mjs",
+          "sha256": "a160458bfec2637fb2e76f337018f3197b2a88756813b3bd2f2754744c7e4d45"
+        },
+        {
+          "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
+          "sha256": "50289baf5a7a67eaf18ce4e25a0ae74f9ca06178b25241f55ae330da7ee45ea7"
         }
       ],
       "verification": {
@@ -957,7 +1093,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "tests/integration/sign-in-browser.test.mjs",
@@ -1005,7 +1141,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "93f0ce3cb3830d2a1297d326dbdb865ac1e41bd8de6f1414a63a309e3c8fde78"
+          "sha256": "60a2b8646f34ea31ded2fb9104fa243087ac14171a013cb266ae0e721337d256"
         }
       ],
       "verification": {
@@ -1033,7 +1169,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "src/app/workspace-frame.tsx",
@@ -1161,7 +1297,7 @@
         },
         {
           "path": "planning/SCHEDULE_NAVIGATION_CONTEXT.md",
-          "sha256": "ae37ed3d510bd2669399e2a23efba637c44fbb04d80a9d54c8d0a51afd4eae5a"
+          "sha256": "5e8b3d01ff031879d2af23d1b845472f36c506005d5053c84dda548c45d3b659"
         },
         {
           "path": "src/app/schedule/navigation.tsx",
@@ -1189,7 +1325,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "ccff7b4653b628b9b4ee20b2f136821c4bf4fa451e5c4cffa6ca32e0080faa28"
+          "sha256": "063def25e4ceb90dd7e29afe001bad17b9d352d2ff0c336898b85203148542e6"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -1217,7 +1353,7 @@
         },
         {
           "path": "tests/integration/vehicle-http-browser.test.mjs",
-          "sha256": "9b2f3df2f9287e03414917fa2aac63a7717af5798cc25f2cea6ecd89a8b5d29a"
+          "sha256": "7544736bfe0d3cb18a2ea8cb24398fb97dabdde73763eb34cc2409b7ff9f87a6"
         }
       ],
       "verification": {
@@ -1232,12 +1368,12 @@
       "title": "P2 · Motion should explain changes",
       "requirements": "Source already includes short menu/panel transitions, skeleton shimmer and reduced-motion support. Recommending animations as if absent would be misleading.\n\nFinish standard: Extend the existing system: 120–180 ms control feedback, 180–240 ms panel entry, stable skeleton geometry and a quiet confirmed-save response. No fake progress, delayed access to controls or animated financial totals.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Shared160ms controls and200ms panel entry now extend existing motion without delaying access. Actual booking/appointment-change commitment alone receives quiet status color; uncertainty is never presented as saved. Full original booking journeys2/2 pass on5d3471b with36 actual ready/uncertain/committed normal/reduced-motion observations, stable preference-pair geometry, no overflow/inspection API writes, committed Axe and original recovery/focus/privacy gates.110 fresh hashed artifacts and reviewed phone/desktop captures retained; initial1/2 inspection-preference defect remains separately documented. Subsequent797a785 complete booking/statement4/4 retains the36 booking motion observations and all original outcome/recovery gates after scoped surface changes; this is not an aggregate of separate historical runs. Financial save feedback onb58d7cd is implemented for accounts, mappings/categories, channels and tax: quiet160ms confirmation uses only validated committed outcomes, clears on another action/ordinary message/private clearing, preserves geometry and existing focus, and disables transitions for reduced motion. Build/types/full lint pass. Original five-file native run8/10 has both account/mapping/category/tax journeys passing; both channel cases fail only the new wrong status-focus assumption. Test-onlya703ae7 preserves the existing Saved channels heading instead; both complete original channel journeys then pass2/2, including uncertain-response neutral styling. Application source is unchanged between the two scopes. Frozen source/owned cleanup pass in both;274+72 PNGs include24+6 confirmation captures. Three widths360/390/1440, actual focus, reduced motion and zero inspection business requests are checked. These separate runs are not an aggregate10/10, full-audit acceptance or a cure for earlier unrelated failures. See FINANCIAL_SAVE_FEEDBACK_DESIGN.md. S11 remains partial. Initial Saved visits focus now occurs in layout and respects the user-chosen interactive control. Clean read-only vehicle loading does not install an edit-loss warning; actual dirty and unresolved saves remain protected in genuine browser cases. No timer, artificial progress or control delay is added. See SCHEDULE_NAVIGATION_CONTEXT.md.",
+      "implementedOrPresent": "Shared160ms controls and200ms panel entry now extend existing motion without delaying access. Actual booking/appointment-change commitment alone receives quiet status color; uncertainty is never presented as saved. Full original booking journeys2/2 pass on5d3471b with36 actual ready/uncertain/committed normal/reduced-motion observations, stable preference-pair geometry, no overflow/inspection API writes, committed Axe and original recovery/focus/privacy gates.110 fresh hashed artifacts and reviewed phone/desktop captures retained; initial1/2 inspection-preference defect remains separately documented. Subsequent797a785 complete booking/statement4/4 retains the36 booking motion observations and all original outcome/recovery gates after scoped surface changes; this is not an aggregate of separate historical runs. Financial save feedback onb58d7cd is implemented for accounts, mappings/categories, channels and tax: quiet160ms confirmation uses only validated committed outcomes, clears on another action/ordinary message/private clearing, preserves geometry and existing focus, and disables transitions for reduced motion. Build/types/full lint pass. Original five-file native run8/10 has both account/mapping/category/tax journeys passing; both channel cases fail only the new wrong status-focus assumption. Test-onlya703ae7 preserves the existing Saved channels heading instead; both complete original channel journeys then pass2/2, including uncertain-response neutral styling. Application source is unchanged between the two scopes. Frozen source/owned cleanup pass in both;274+72 PNGs include24+6 confirmation captures. Three widths360/390/1440, actual focus, reduced motion and zero inspection business requests are checked. These separate runs are not an aggregate10/10, full-audit acceptance or a cure for earlier unrelated failures. See FINANCIAL_SAVE_FEEDBACK_DESIGN.md. S11 remains partial. Initial Saved visits focus now occurs in layout and respects the user-chosen interactive control. Clean read-only vehicle loading does not install an edit-loss warning; actual dirty and unresolved saves remain protected in genuine browser cases. No timer, artificial progress or control delay is added. See SCHEDULE_NAVIGATION_CONTEXT.md. Current4dbecd3 passes all four complete original customer/vehicle workspace and dashboard-follow-up cases, with actual context-held loading, exact original Back focus and retained draft, saved/stale outcome inspection, normal/reduced-motion geometry, overflow/Axe,0 inspection requests and domain/audit conservation.12 loading/18 feedback PNGs are among250 fresh hashed artifacts. Loading uses responsive decorative placeholders; existing directory controls remain mounted, hidden and inert during record reads. The customer leave guard protects dirty/pending work without warning for clean reads. A transient marker confirms only verified committed/lookup outcomes after reference cleanup; all other states stay neutral and new actions/private clearing reset it. Build/types/full lint and9181 units pass on4dbecd3. Earlier14/18 retains both full vehicle HTTP groups and all12 child passes, plus a loading-test cleanup rejection and downstream ownership refusals; test-only route completion fixes that. Separate4/6 then retains full handoff/follow-up passes and both disconnected-origin focus failures; preserving the real directory fixes the original strict assertions in fresh4/4. No scopes are aggregated and global states/motion/zoom/device acceptance remains open.",
       "remainingWork": "Finish other workflow-specific motion, stable loading geometry, focus/save-feedback review and exact-source delivered/physical-device acceptance. Scoped booking2/2 is not global S11 completion.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "planning/TODAY_ENTRY_CONTRAST.md",
@@ -1321,7 +1457,7 @@
         },
         {
           "path": "planning/SCHEDULE_NAVIGATION_CONTEXT.md",
-          "sha256": "ae37ed3d510bd2669399e2a23efba637c44fbb04d80a9d54c8d0a51afd4eae5a"
+          "sha256": "5e8b3d01ff031879d2af23d1b845472f36c506005d5053c84dda548c45d3b659"
         },
         {
           "path": "src/app/schedule/navigation.tsx",
@@ -1349,7 +1485,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "ccff7b4653b628b9b4ee20b2f136821c4bf4fa451e5c4cffa6ca32e0080faa28"
+          "sha256": "063def25e4ceb90dd7e29afe001bad17b9d352d2ff0c336898b85203148542e6"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -1377,7 +1513,39 @@
         },
         {
           "path": "tests/integration/vehicle-http-browser.test.mjs",
-          "sha256": "9b2f3df2f9287e03414917fa2aac63a7717af5798cc25f2cea6ecd89a8b5d29a"
+          "sha256": "7544736bfe0d3cb18a2ea8cb24398fb97dabdde73763eb34cc2409b7ff9f87a6"
+        },
+        {
+          "path": "planning/CRM_LOADING_SAVE_FEEDBACK.md",
+          "sha256": "d0468da4bf277acd11066024f655e454cd3163d1e3e1dd95f763a1f36239e145"
+        },
+        {
+          "path": "src/app/directory-loading.tsx",
+          "sha256": "d10b72c4e95907e2fa947594365dfa83e9082e187023f29afb6b708a3f0df085"
+        },
+        {
+          "path": "src/app/customers/customers.tsx",
+          "sha256": "63e7d358e7027517a607ba9abb62effbd2e61bda84aba172ec12918bd2bc02b0"
+        },
+        {
+          "path": "src/client/customer-editor-controller.ts",
+          "sha256": "c65d0a86f8189990e020ffd0e1ed437437547d5d3501e78045314ba553ab0c19"
+        },
+        {
+          "path": "src/client/vehicle-editor-controller.ts",
+          "sha256": "d69df619be6a7717292e48affc01c7c1119dcbeff330307c757993c5259f5e6f"
+        },
+        {
+          "path": "tests/support/crm-save-feedback.mjs",
+          "sha256": "3f790f83620e8f8967e812fb7318f28df272a2886f2e0265c8d05d1d6a2831b1"
+        },
+        {
+          "path": "tests/integration/workspace-journey-browser.test.mjs",
+          "sha256": "a160458bfec2637fb2e76f337018f3197b2a88756813b3bd2f2754744c7e4d45"
+        },
+        {
+          "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
+          "sha256": "50289baf5a7a67eaf18ce4e25a0ae74f9ca06178b25241f55ae330da7ee45ea7"
         }
       ],
       "verification": {
@@ -1397,7 +1565,7 @@
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "planning/AMENDMENT_HISTORY_DESIGN.md",
@@ -1640,7 +1808,7 @@
       "title": "P2 · Protect context through every transition",
       "requirements": "Back links now exist on many deeper routes. Their wording and destinations still vary, and an opened task can lose the visible customer/job context.\n\nFinish standard: Use a common breadcrumb or contextual return row, preserve selected record/date/filter where safe, restore focus and avoid retaining private detail after sign-out.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Several directory/task transitions preserve selection, drafts and committed-DOM focus. Native normal amendment2/2 and separately publishedb533 original hosted amendments7/7 preserve strict context/privacy/error checks on their recorded sources. An app-free pinned-browser contrast isolates a matching provisional-fetch diagnostic; safe test-only invocation evidence supports further attribution without changing application transport. Quote in-page return now preserves exact window position and reachable focus on the actual entry control; canceled switching keeps the private draft. Full original editor2/2 passes24 tests on47d9bad with no navigation reads/writes and original private lifecycle checks; no URL/storage cache added. Shared main/tool navigation now distinguishes neutral hover from the marked current destination. Complete closed/setup suite106/106 on e704c3b passes, including48 route/width/engine navigation combinations and original720 typography observations. Both actual padding/scroll-clearance consumers cover the fixed navigation bar; explicit nested Lead sources/Leads semantics remain. Twelve fresh hashed captures and original98/106 failures retained. Source9b5113f build/types/lint plus final test types/lint pass. Shared-chrome scope only; configured/private/device requirements remain. Source656e1f4 additionally passes genuine six-booking planner/saved-job real Chromium zoom: first8 observations and separate expanded16 at100%/200%, explicitly360/390/430CSS px plus desktop. Exact nonzero390px/200% return restores unobscured focused origin and exact scroll, with preserved date values, zero Back/zoom business requests and unchanged jobs/appointments/reservations/overrides/audit rows. Both case/cluster/profile cleanups and source/case hashes pass. Configured financial/long-history and other original contexts remain; no all-workflow/device acceptance is inferred. Public3aab311 is now terminal failed: main20/22 jobs succeed, amendment136271570910 fails6/7 at WebKit Schedule/Back native pageerror and Foundation136284474583 correctly stops at the prerequisite gate; required generated service screenshots are absent. Feedback amendment136271569694 separately fails4/5 at review/approve503; commercial/integrity children and owner expense pass. Tested mergef7e012c/tree933d979 and parents are verified. Safe failures retained. A four-cell app-free early-abort contrast passes: live reads remain200; provisional un-aborted reads emit3 native pageerrors, pre-aborted reads emit0, genuine exception positive controls remain active. This is mechanism evidence, not a Crest lifecycle fix. No production departure boundary, error waiver, request exemption or deadline/pacing change has been made. The early automatic Schedule read-departure boundary is implemented with7 focused regressions and controlled actual-factory browser contrast. Complete original normal amendment2/2 passes; later full saved-job/acceptance10/11 retains a subsequent fresh-session search failure and observed provider500. Original return non-reproduction is not a cause/fix claim. All private clearing/error/admission/deadline gates remain. Publishedb651922 Schedule and full amendment prerequisite jobs pass, as do commercial feedback and owner expense. This is exact-source scoped success, not a cure or erasure of earlier lifecycle/provider failures. Local09ce four-record journeys retain the different WebKit reported-vehicle session400 failure; source/context/privacy/deadline guards remain intact. New Schedule navigation source2547137 carries validated date/view/disclosure/job/position context through ordinary task links, with fresh authorized reads on return. A new period clears the old origin, fractional CSS positions are retained, and Service arrangements preserves the new dates. Initial Saved visits focus respects a control the user already chose; clean vehicle reads no longer warn about lost edits, while dirty and unresolved saves remain protected. Build/types/full lint and9168 units/405 files pass. Original planner/saved-job/customer-profile/vehicle HTTP/editor run19/20 retains a Chromium initial-login400 before the new regression; loaded390/1440 change/cancel returns, exact dates/view/focus/scroll, changed-period/service-arrangement context, source conservation, overflow/Axe and privacy pass in both engines. WebKit passes the controlled slow-read Back-focus test; both vehicle editor/recovery groups preserve dirty/pending guards and original claims. Diagnostic-only014ae7a preserves identical application source and both original complete saved-job journeys pass2/2 with74 captures; the relocated case/hash and original assertions are verified. This is not aggregate20/20, a startup400 cure, complete cross-workspace state/zoom coverage or installed/device acceptance. Separate initial9/10 and new-selector4/6 runs remain retained. See SCHEDULE_NAVIGATION_CONTEXT.md. Current f321595 implements validated date/view/origin context through customer/vehicle server returns, saved visits and overview visit links. Both new complete four-width cases pass2/2 with16 hashed captures at360/390/430/1440 in Chromium/WebKit, exact originating focus/scroll, Axe/overflow and domain/audit conservation; frozen source/owned cleanup pass. Current build/types/full lint and9177 units/407 files pass. Earlier full original file4/6 retains four passing saved-job/profile flows and two added rapid-case429 failures; diagnostic0/2 confirms unchanged120/minute session admission. New journeys have fresh genuine sessions per width; all original six cases/deadlines remain. Initial four-width1/2 retains Chromium desktop42→470 failure. A separate0/1 diagnostic proves identical geometry/font state with a900.453125px control edge in900px viewport; rounded CSS-edge visibility fixes unnecessary centering while retaining exact scroll assertions. Fresh new2/2 is separate from original-file and earlier source scopes; full hosted/installed/device acceptance remains required.",
+      "implementedOrPresent": "Several directory/task transitions preserve selection, drafts and committed-DOM focus. Native normal amendment2/2 and separately publishedb533 original hosted amendments7/7 preserve strict context/privacy/error checks on their recorded sources. An app-free pinned-browser contrast isolates a matching provisional-fetch diagnostic; safe test-only invocation evidence supports further attribution without changing application transport. Quote in-page return now preserves exact window position and reachable focus on the actual entry control; canceled switching keeps the private draft. Full original editor2/2 passes24 tests on47d9bad with no navigation reads/writes and original private lifecycle checks; no URL/storage cache added. Shared main/tool navigation now distinguishes neutral hover from the marked current destination. Complete closed/setup suite106/106 on e704c3b passes, including48 route/width/engine navigation combinations and original720 typography observations. Both actual padding/scroll-clearance consumers cover the fixed navigation bar; explicit nested Lead sources/Leads semantics remain. Twelve fresh hashed captures and original98/106 failures retained. Source9b5113f build/types/lint plus final test types/lint pass. Shared-chrome scope only; configured/private/device requirements remain. Source656e1f4 additionally passes genuine six-booking planner/saved-job real Chromium zoom: first8 observations and separate expanded16 at100%/200%, explicitly360/390/430CSS px plus desktop. Exact nonzero390px/200% return restores unobscured focused origin and exact scroll, with preserved date values, zero Back/zoom business requests and unchanged jobs/appointments/reservations/overrides/audit rows. Both case/cluster/profile cleanups and source/case hashes pass. Configured financial/long-history and other original contexts remain; no all-workflow/device acceptance is inferred. Public3aab311 is now terminal failed: main20/22 jobs succeed, amendment136271570910 fails6/7 at WebKit Schedule/Back native pageerror and Foundation136284474583 correctly stops at the prerequisite gate; required generated service screenshots are absent. Feedback amendment136271569694 separately fails4/5 at review/approve503; commercial/integrity children and owner expense pass. Tested mergef7e012c/tree933d979 and parents are verified. Safe failures retained. A four-cell app-free early-abort contrast passes: live reads remain200; provisional un-aborted reads emit3 native pageerrors, pre-aborted reads emit0, genuine exception positive controls remain active. This is mechanism evidence, not a Crest lifecycle fix. No production departure boundary, error waiver, request exemption or deadline/pacing change has been made. The early automatic Schedule read-departure boundary is implemented with7 focused regressions and controlled actual-factory browser contrast. Complete original normal amendment2/2 passes; later full saved-job/acceptance10/11 retains a subsequent fresh-session search failure and observed provider500. Original return non-reproduction is not a cause/fix claim. All private clearing/error/admission/deadline gates remain. Publishedb651922 Schedule and full amendment prerequisite jobs pass, as do commercial feedback and owner expense. This is exact-source scoped success, not a cure or erasure of earlier lifecycle/provider failures. Local09ce four-record journeys retain the different WebKit reported-vehicle session400 failure; source/context/privacy/deadline guards remain intact. New Schedule navigation source2547137 carries validated date/view/disclosure/job/position context through ordinary task links, with fresh authorized reads on return. A new period clears the old origin, fractional CSS positions are retained, and Service arrangements preserves the new dates. Initial Saved visits focus respects a control the user already chose; clean vehicle reads no longer warn about lost edits, while dirty and unresolved saves remain protected. Build/types/full lint and9168 units/405 files pass. Original planner/saved-job/customer-profile/vehicle HTTP/editor run19/20 retains a Chromium initial-login400 before the new regression; loaded390/1440 change/cancel returns, exact dates/view/focus/scroll, changed-period/service-arrangement context, source conservation, overflow/Axe and privacy pass in both engines. WebKit passes the controlled slow-read Back-focus test; both vehicle editor/recovery groups preserve dirty/pending guards and original claims. Diagnostic-only014ae7a preserves identical application source and both original complete saved-job journeys pass2/2 with74 captures; the relocated case/hash and original assertions are verified. This is not aggregate20/20, a startup400 cure, complete cross-workspace state/zoom coverage or installed/device acceptance. Separate initial9/10 and new-selector4/6 runs remain retained. See SCHEDULE_NAVIGATION_CONTEXT.md. Current f321595 implements validated date/view/origin context through customer/vehicle server returns, saved visits and overview visit links. Both new complete four-width cases pass2/2 with16 hashed captures at360/390/430/1440 in Chromium/WebKit, exact originating focus/scroll, Axe/overflow and domain/audit conservation; frozen source/owned cleanup pass. Current build/types/full lint and9177 units/407 files pass. Earlier full original file4/6 retains four passing saved-job/profile flows and two added rapid-case429 failures; diagnostic0/2 confirms unchanged120/minute session admission. New journeys have fresh genuine sessions per width; all original six cases/deadlines remain. Initial four-width1/2 retains Chromium desktop42→470 failure. A separate0/1 diagnostic proves identical geometry/font state with a900.453125px control edge in900px viewport; rounded CSS-edge visibility fixes unnecessary centering while retaining exact scroll assertions. Fresh new2/2 is separate from original-file and earlier source scopes; full hosted/installed/device acceptance remains required. Current4dbecd3 passes all four complete original customer/vehicle workspace and dashboard-follow-up cases, with actual context-held loading, exact original Back focus and retained draft, saved/stale outcome inspection, normal/reduced-motion geometry, overflow/Axe,0 inspection requests and domain/audit conservation.12 loading/18 feedback PNGs are among250 fresh hashed artifacts. Loading uses responsive decorative placeholders; existing directory controls remain mounted, hidden and inert during record reads. The customer leave guard protects dirty/pending work without warning for clean reads. A transient marker confirms only verified committed/lookup outcomes after reference cleanup; all other states stay neutral and new actions/private clearing reset it. Build/types/full lint and9181 units pass on4dbecd3. Earlier14/18 retains both full vehicle HTTP groups and all12 child passes, plus a loading-test cleanup rejection and downstream ownership refusals; test-only route completion fixes that. Separate4/6 then retains full handoff/follow-up passes and both disconnected-origin focus failures; preserving the real directory fixes the original strict assertions in fresh4/4. No scopes are aggregated and global states/motion/zoom/device acceptance remains open.",
       "remainingWork": "Finish paginated and changed-record origin states, actual zoom and accepted-release/installed/owner/physical-device verification. The original scope remains open; later passes do not erase retained failures.",
       "evidence": [
         {
@@ -1717,7 +1885,7 @@
         },
         {
           "path": "planning/SCHEDULE_NAVIGATION_CONTEXT.md",
-          "sha256": "ae37ed3d510bd2669399e2a23efba637c44fbb04d80a9d54c8d0a51afd4eae5a"
+          "sha256": "5e8b3d01ff031879d2af23d1b845472f36c506005d5053c84dda548c45d3b659"
         },
         {
           "path": "src/app/schedule/navigation.tsx",
@@ -1745,7 +1913,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "ccff7b4653b628b9b4ee20b2f136821c4bf4fa451e5c4cffa6ca32e0080faa28"
+          "sha256": "063def25e4ceb90dd7e29afe001bad17b9d352d2ff0c336898b85203148542e6"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -1773,7 +1941,7 @@
         },
         {
           "path": "tests/integration/vehicle-http-browser.test.mjs",
-          "sha256": "9b2f3df2f9287e03414917fa2aac63a7717af5798cc25f2cea6ecd89a8b5d29a"
+          "sha256": "7544736bfe0d3cb18a2ea8cb24398fb97dabdde73763eb34cc2409b7ff9f87a6"
         },
         {
           "path": "src/app/customers/page.tsx",
@@ -1785,11 +1953,39 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "f4ac0cc099aa0e524e3ac93922cc1275a828c1c9d2e87a5fe589c04fff6fe601"
+          "sha256": "63e7d358e7027517a607ba9abb62effbd2e61bda84aba172ec12918bd2bc02b0"
         },
         {
           "path": "src/app/schedule/back-to-saved-job.tsx",
           "sha256": "8a49567af683184fcd8d50e6ad10753c5dd4007bcd83844aabf16da695cf7f04"
+        },
+        {
+          "path": "planning/CRM_LOADING_SAVE_FEEDBACK.md",
+          "sha256": "d0468da4bf277acd11066024f655e454cd3163d1e3e1dd95f763a1f36239e145"
+        },
+        {
+          "path": "src/app/directory-loading.tsx",
+          "sha256": "d10b72c4e95907e2fa947594365dfa83e9082e187023f29afb6b708a3f0df085"
+        },
+        {
+          "path": "src/client/customer-editor-controller.ts",
+          "sha256": "c65d0a86f8189990e020ffd0e1ed437437547d5d3501e78045314ba553ab0c19"
+        },
+        {
+          "path": "src/client/vehicle-editor-controller.ts",
+          "sha256": "d69df619be6a7717292e48affc01c7c1119dcbeff330307c757993c5259f5e6f"
+        },
+        {
+          "path": "tests/support/crm-save-feedback.mjs",
+          "sha256": "3f790f83620e8f8967e812fb7318f28df272a2886f2e0265c8d05d1d6a2831b1"
+        },
+        {
+          "path": "tests/integration/workspace-journey-browser.test.mjs",
+          "sha256": "a160458bfec2637fb2e76f337018f3197b2a88756813b3bd2f2754744c7e4d45"
+        },
+        {
+          "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
+          "sha256": "50289baf5a7a67eaf18ce4e25a0ae74f9ca06178b25241f55ae330da7ee45ea7"
         }
       ],
       "verification": {
@@ -1813,7 +2009,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "428ec7298f531b79857d7e36139403113ad70f143b1d251cec749b8b2c80edf9"
+          "sha256": "620edbdda931b670665d3901e278e2b52322302195b387aae62771dfa68fe823"
         }
       ],
       "verification": {
@@ -1845,7 +2041,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "tests/integration/sign-in-browser.test.mjs",
@@ -1885,7 +2081,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "src/client/home-schedule.ts",
@@ -1901,7 +2097,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "8bf174898bc5611d50d9b98589c3a5d07fefa99220b490d1913ae85a5521e808"
+          "sha256": "a160458bfec2637fb2e76f337018f3197b2a88756813b3bd2f2754744c7e4d45"
         },
         {
           "path": "tests/integration/field-work-product-browser.test.mjs",
@@ -1973,7 +2169,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "tests/unit/proposal-party-read.test.ts",
@@ -2013,7 +2209,7 @@
       "evidence": [
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "f4ac0cc099aa0e524e3ac93922cc1275a828c1c9d2e87a5fe589c04fff6fe601"
+          "sha256": "63e7d358e7027517a607ba9abb62effbd2e61bda84aba172ec12918bd2bc02b0"
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
@@ -2029,7 +2225,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "8bf174898bc5611d50d9b98589c3a5d07fefa99220b490d1913ae85a5521e808"
+          "sha256": "a160458bfec2637fb2e76f337018f3197b2a88756813b3bd2f2754744c7e4d45"
         }
       ],
       "verification": {
@@ -2061,7 +2257,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "tests/integration/legacy-contact-csv-review-browser.test.mjs",
@@ -2109,7 +2305,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "tests/support/receipt-layout.mjs",
@@ -2417,7 +2613,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "tests/support/appointment-comparison-layout.mjs",
@@ -2457,7 +2653,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "tests/unit/mileage-prerequisite.test.ts",
@@ -2521,7 +2717,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "tests/support/booking-review-layout.mjs",
@@ -2609,7 +2805,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "tests/support/field-work-layout.mjs",
@@ -2625,7 +2821,7 @@
         },
         {
           "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
-          "sha256": "551aca1999c118605d83c1ecdf38634a02576993ec36c938707b35627f3d7755"
+          "sha256": "50289baf5a7a67eaf18ce4e25a0ae74f9ca06178b25241f55ae330da7ee45ea7"
         }
       ],
       "verification": {
@@ -2661,7 +2857,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "tests/support/work-read-diagnostic.mjs",
@@ -2733,7 +2929,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "tests/integration/trip-interruption-product-browser.test.mjs",
@@ -2997,7 +3193,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
@@ -3145,7 +3341,7 @@
       "evidence": [
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "ccff7b4653b628b9b4ee20b2f136821c4bf4fa451e5c4cffa6ca32e0080faa28"
+          "sha256": "063def25e4ceb90dd7e29afe001bad17b9d352d2ff0c336898b85203148542e6"
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
@@ -3189,7 +3385,7 @@
       "evidence": [
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "f4ac0cc099aa0e524e3ac93922cc1275a828c1c9d2e87a5fe589c04fff6fe601"
+          "sha256": "63e7d358e7027517a607ba9abb62effbd2e61bda84aba172ec12918bd2bc02b0"
         },
         {
           "path": "planning/CUSTOMER_PROFILE_IDENTITY_REFINEMENT.md",
@@ -3197,7 +3393,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "tests/integration/confirmed-bookings-product-browser.test.mjs",
@@ -3297,7 +3493,7 @@
         },
         {
           "path": "src/app/workspace-design.css",
-          "sha256": "ced00882c32cbe43643c7e762a727976b060831ec0ef811e5988c6b84e2e57bf"
+          "sha256": "1dd562b025f8e627268a2fc7f215a542c4299eb3f6d87c22e787fd5407ab0293"
         },
         {
           "path": "tests/integration/quote-commercial-browser.test.mjs",

@@ -9,7 +9,7 @@ import type {PendingCustomer,createPendingCustomerStore} from './pending-custome
 
 type Snapshot=Awaited<ReturnType<typeof customers.context>>;
 type History=Extract<Awaited<ReturnType<typeof customers.history>>,{state:'found'}>;
-export type CustomerEditorView=Readonly<{phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Customer[];hasMore:boolean;search:string;includeArchived:boolean;selected:Customer|null;draft:CustomerDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean;reviewHistoryAvailable?:true;recordJobHistoryAvailable?:true;customerProfileAvailable?:true;maintenanceFollowUpAvailable?:true}>;
+export type CustomerEditorView=Readonly<{phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Customer[];hasMore:boolean;search:string;includeArchived:boolean;selected:Customer|null;draft:CustomerDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean;saveConfirmed?:true;reviewHistoryAvailable?:true;recordJobHistoryAvailable?:true;customerProfileAvailable?:true;maintenanceFollowUpAvailable?:true}>;
 export const initialCustomerEditorView:CustomerEditorView=Object.freeze({phase:'loading',message:'Checking customer access…',busy:true,rows:Object.freeze([]),hasMore:false,search:'',includeArchived:false,selected:null,draft:null,draftIssue:'',history:null,canSave:false,canRetry:false,reference:'',writesPaused:true});
 export const emptyCustomerDraft:CustomerDraft=Object.freeze({displayName:'',phone:null,email:null,contactPreference:null,outreachOptOut:false,notes:null,customerSince:null,archived:false,archiveReason:null});
 
@@ -17,8 +17,8 @@ type Dependencies={store:ReturnType<typeof createPendingCustomerStore>;change:(v
 export function createCustomerEditorController(deps:Dependencies){
   const api=deps.api??customers,session=deps.session??authentication.session,id=deps.id??(()=>crypto.randomUUID());
   let alive=true,active:AbortController|null=null,proof:Proof|null=null,snapshot:Snapshot|null=null,pending:PendingCustomer|null=null,original:CustomerSave|null=null;
-  let phase:CustomerEditorView['phase']='loading',message=initialCustomerEditorView.message,rows:readonly Customer[]=[],hasMore=false,search='',includeArchived=false,selected:Customer|null=null,draft:CustomerDraft|null=null,history:History|null=null,canRetry=false;
-  const clearPrivate=()=>{proof=null;snapshot=null;rows=[];hasMore=false;search='';includeArchived=false;selected=null;draft=null;history=null;original=null;canRetry=false;};
+  let phase:CustomerEditorView['phase']='loading',message=initialCustomerEditorView.message,rows:readonly Customer[]=[],hasMore=false,search='',includeArchived=false,selected:Customer|null=null,draft:CustomerDraft|null=null,history:History|null=null,canRetry=false,saveConfirmed=false;
+  const clearPrivate=()=>{proof=null;snapshot=null;rows=[];hasMore=false;search='';includeArchived=false;selected=null;draft=null;history=null;original=null;canRetry=false;saveConfirmed=false;};
   function draftIssue(){if(draft===null)return '';try{parseCustomerDraft(draft);}catch{return 'Review the name, field lengths, date and archive reason before saving.';}
     // UUIDs have a fixed wire length. Match the actual flat JSON input and
     // exact current version before creating IDs, a reference or a request.
@@ -26,7 +26,7 @@ export function createCustomerEditorController(deps:Dependencies){
     return new TextEncoder().encode(JSON.stringify(body)).byteLength>8192?'This draft is too large to send. Shorten the contact details or notes before saving.':'';
   }
   const view=():CustomerEditorView=>Object.freeze({phase,message,busy:!!active,rows:phase==='ready'?rows:Object.freeze([]),hasMore:phase==='ready'&&hasMore,search:phase==='ready'?search:'',includeArchived:phase==='ready'&&includeArchived,selected:phase==='ready'?selected:null,draft:phase==='ready'?draft:null,draftIssue:phase==='ready'?draftIssue():'',history:phase==='ready'?history:null,
-    canSave:!active&&phase==='ready'&&snapshot?.context.writeState==='ready'&&draft!==null&&draftIssue()===''&&(!selected||JSON.stringify(draft)!==JSON.stringify(draftFromCustomer(selected))),canRetry:!active&&canRetry,
+    canSave:!active&&phase==='ready'&&snapshot?.context.writeState==='ready'&&draft!==null&&draftIssue()===''&&(!selected||JSON.stringify(draft)!==JSON.stringify(draftFromCustomer(selected))),canRetry:!active&&canRetry,...phase==='review'&&!active&&saveConfirmed?{saveConfirmed:true as const}:{},
     reference:phase==='pending'&&snapshot?.context.businessId===pending?.businessId?pending?.reference.operationId??'':'',writesPaused:snapshot?.context.writeState!=='ready',...phase==='ready'&&snapshot?.reviewHistoryAvailable?{reviewHistoryAvailable:true as const}:{},
     ...phase==='ready'&&snapshot?.customerProfileAvailable?{customerProfileAvailable:true as const}:{},
     ...phase==='ready'&&snapshot?.recordJobHistoryAvailable?{recordJobHistoryAvailable:true as const}:{},
@@ -37,7 +37,7 @@ export function createCustomerEditorController(deps:Dependencies){
   const retain=(text:string)=>{phase='pending';message=text;canRetry=false;rows=[];selected=null;draft=null;history=null;search='';hasMore=false;};
   const eligible=()=>!!pending&&!!original&&!!snapshot&&snapshot.context.businessId===pending.businessId&&snapshot.binding===pending.binding&&snapshot.context.writeState==='ready'&&snapshot.context.recoveryEpoch===pending.reference.recoveryEpoch&&(['operationId','customerId','expectedVersion','recoveryEpoch'] as const).every(key=>original![key]===pending!.reference[key]);
   async function run(work:(signal:AbortSignal)=>Promise<void>,failure:(error:unknown)=>void){
-    if(!alive||active)return;const controller=new AbortController();active=controller;emit();
+    if(!alive||active)return;saveConfirmed=false;const controller=new AbortController();active=controller;emit();
     try{await work(controller.signal);}catch(error){if(alive&&active===controller&&!controller.signal.aborted)failure(error);}finally{if(active===controller){active=null;emit();}}
   }
   const load=()=>run(async signal=>{
@@ -62,7 +62,7 @@ export function createCustomerEditorController(deps:Dependencies){
     if(!pending)throw new Error();
     if(result.state==='conflict'&&result.reason==='operation'){retain('The save reference conflicts with the recorded request. Keep it for review; no replacement will be sent.');original=null;return;}
     try{deps.store.clear(pending);}catch{retain(result.state==='committed'?'Save confirmed, but its reference could not be cleared. Check save status before another edit.':'No change was saved, but its reference could not be cleared. Check save status before another edit.');return;}
-    pending=null;clearPrivate();phase='review';message=result.state==='committed'?(lookup?'The original save is confirmed. Load current customers to review the recorded result.':'Customer saved. Load current customers before another edit.'):'The record changed or the customer ID is already in use. Load current customers and review before starting a new edit.';
+    pending=null;clearPrivate();phase='review';saveConfirmed=result.state==='committed';message=result.state==='committed'?(lookup?'The original save is confirmed. Load current customers to review the recorded result.':'Customer saved. Load current customers before another edit.'):'The record changed or the customer ID is already in use. Load current customers and review before starting a new edit.';
   }
   const check=()=>run(async signal=>{
     pending=deps.store.read();if(!pending)throw new PendingCustomerError();retain('Checking the original customer save…');emit();await fresh(signal);

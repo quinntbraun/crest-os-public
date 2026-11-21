@@ -26,7 +26,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 | ID | Audit group | Local state | Remaining work |
 |---|---|---|
-| S01 | One visual system, delivered consistently | Open | Publish the corrected coherent source only after prior runs are terminal, accept all original release/upgrade/recovery/worker checks, diagnose retained failures and compare installed states. |
+| S01 | One visual system, delivered consistently | Open | Prepare a freshly scanned coherent candidate with strict handoff context and verified CRM loading/feedback, require fresh exact-head complete release/upgrade/recovery/worker/artifact checks, and finish installed/owner/device acceptance. |
 | S02 | Desktop layouts need purpose, not more cards | Main change addressed | Complete broader configured states/long-content/actual zoom and matching hosted/installed/physical-device acceptance. The separate paid-profile rerun remains0/2 at session creation and interrupted-save checks; causes unresolved and no combined6/6 or release acceptance claimed. Every final sign-off staysfalse. |
 | S03 | Phone record detail should replace the directory | Partial | Reconcile remaining completion/scheduling and other selected-record return contexts against every original S03 requirement, including main-action reachability and exact list position, then complete matching delivered/physical-device acceptance. Scoped quote2/2 does not close the whole group. |
 | S04 | Make action priority predictable | Partial | Review commit/refresh/recovery priority in every configured task; one narrow success is not global coverage. |

@@ -1,4 +1,5 @@
 'use client';
+import {DirectoryLoading} from '../directory-loading';
 import {useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {createVehicleEditorController,initialVehicleEditorView,emptyVehicleDraft} from '../../client/vehicle-editor-controller';
@@ -119,12 +120,14 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
   }
   function submit(event:FormEvent){event.preventDefault();void action('save');}
   function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const data=new FormData(event.currentTarget);query(String(data.get('search')??''),data.get('archived')==='on');}
+  const recordLoading=showRecord&&view.phase==='ready'&&view.busy&&!view.selected&&!view.draft;
   return <section className="vehicle-workspace" aria-label="Vehicle directory" aria-busy={view.busy}>
-    <p ref={status} tabIndex={-1} role="status" className="customer-directory-status" aria-label="Vehicle editor status" aria-live="polite" aria-atomic="true">{view.message}</p>
+    <p ref={status} tabIndex={-1} role="status" className="customer-directory-status" data-confirmed={view.saveConfirmed===true} aria-label="Vehicle editor status" aria-live="polite" aria-atomic="true">{recordLoading?'Loading vehicle record…':view.message}</p>
+    {(view.phase==='loading'||recordLoading)&&<DirectoryLoading record={recordLoading||showRecord&&Boolean(initialVehicleId)}/>}
     {view.phase==='ready'&&<>
       {linkCustomerId&&!view.selected&&<p>Choose a vehicle or save a new one, then start its customer link.</p>}
       {view.writesPaused&&<p className="notice">Vehicle changes are paused. You can review current records and history.</p>}
-      <div className="vehicle-layout" data-mobile-record={showRecord&&view.draft!==null}>
+      <div className="vehicle-layout" hidden={recordLoading} inert={recordLoading} data-mobile-record={showRecord&&view.draft!==null}>
         <section className="customer-lookup" aria-label="Find a vehicle">
           <button type="button" className="customer-add" disabled={view.busy||view.writesPaused} onClick={create}>Add vehicle</button>
           <form className="customer-search" onSubmit={search} aria-label="Search vehicles"><label htmlFor="vehicle-search">Vehicle search</label><div className="customer-search-row"><input ref={searchInput} id="vehicle-search" name="search" type="search" autoComplete="off" maxLength={400} defaultValue={view.search} disabled={view.busy}/><button className="secondary" type="submit" disabled={view.busy} aria-label="Search vehicles">Search</button></div><label className="trust"><input name="archived" type="checkbox" defaultChecked={view.includeArchived} disabled={view.busy}/>Include archived vehicles</label></form>

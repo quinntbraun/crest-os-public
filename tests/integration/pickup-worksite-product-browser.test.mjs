@@ -282,7 +282,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
    await queueSummary.click();
    await loadQueue.click();
    await openReturn.focus();await page.keyboard.press('Enter');
-   await expect(page).toHaveURL(fixture.origin+jobPath+'&vehicle='+jobVehicleId);
+   await expect(page).toHaveURL(fixture.origin+jobPath+'&vehicle='+jobVehicleId+'&'+new URLSearchParams({plannerFrom:'2026-12-01',plannerThrough:'2026-12-03',plannerView:'custom',plannerCalendar:'closed',plannerRange:'open'}));
    const selectedVehicle=page.locator('summary').filter({hasText:/^Synthetic lifecycle sedan$/});
    await expect(selectedVehicle).toBeFocused();
    assert(await selectedVehicle.evaluate(summary=>summary.parentElement.open));

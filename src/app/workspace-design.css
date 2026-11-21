@@ -2296,3 +2296,26 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 .financial-history-compare-side { display:block; color:var(--muted); font-size:.8rem; }
 .financial-history-compare-value { margin:.25rem 0 0; overflow-wrap:anywhere; white-space:pre-wrap; }
 .financial-history-change { padding:.05rem .4rem; border:1px solid var(--line); border-radius:4px; font-size:.75rem; font-weight:500; }
+
+/* The confirmation marker reflects a verified save or lookup, never message wording. */
+.customer-directory-status[data-confirmed] { padding:.5rem .75rem; border-inline-start:3px solid transparent; border-radius:4px; transition:background-color var(--workspace-control-duration) ease,border-color var(--workspace-control-duration) ease; }
+.customer-directory-status[data-confirmed='true'] { background:#edf5ef; border-inline-start-color:#426b4e; color:#254d36; }
+@media (prefers-reduced-motion:reduce) { .customer-directory-status[data-confirmed] { transition:none; } }
+
+.directory-loading { display:grid; gap:1.5rem; margin-block:1rem 2rem; min-width:0; }
+.directory-loading-list,.directory-loading-detail { min-width:0; }
+.directory-loading-search { height:3rem; margin-bottom:.75rem; }
+.directory-loading-row { display:grid; gap:.65rem; padding:1rem 0; border-block-end:1px solid var(--line); }
+.directory-loading-row .workspace-skeleton { width:70%; height:1rem; }
+.directory-loading-row .workspace-skeleton:last-child { width:45%; height:.8rem; }
+.directory-loading-detail { display:grid; align-content:start; gap:1rem; min-height:15rem; padding:1.25rem; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); }
+.directory-loading-detail .workspace-skeleton { width:85%; height:1rem; }
+.directory-loading-detail .directory-loading-title { width:65%; height:1.5rem; margin-bottom:.5rem; }
+.directory-loading-detail .workspace-skeleton:last-child { width:50%; }
+@media (min-width:768px) { .directory-loading { grid-template-columns:minmax(13rem,.8fr) minmax(0,1.2fr); } }
+@media (max-width:767px) { .directory-loading:not([data-record='true']) .directory-loading-detail,.directory-loading[data-record='true'] .directory-loading-list { display:none; } }
+
+/* Retain the actual directory controls so Back restores their identity and focus. */
+.customer-directory-layout[hidden],.vehicle-layout[hidden] { display:none!important; }
+
+@media (min-width:768px) { .customer-directory > button,.vehicle-workspace > button { display:block; width:fit-content; max-width:100%; min-width:min(12rem,100%); } }
