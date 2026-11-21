@@ -1,4 +1,6 @@
 'use client';
+import {ScheduleLink} from './navigation';
+
 import {useEffect,useId,useRef,useState} from 'react';
 import {authentication} from '../../client/authentication';
 import {conditionPhotoType,dropoffPhotos} from '../../client/dropoff-photos';
@@ -112,8 +114,8 @@ export function DropoffPhotoViewer({jobVehicleId,photoId}:{jobVehicleId:string;p
    {/* The authenticated derivative is an ephemeral local blob URL. */}
    <img className="custody-photo-preview" src={preview} alt="Saved vehicle condition photo"/></>:
    <button type="button" className="secondary" disabled={busy!==null} onClick={()=>void open('preview')}>{busy==='preview'?'Opening photo…':'View condition photo'}</button>}
-  {original?<a className="custody-photo-save" href={original.url} download={original.name}
-   onClick={()=>setMessage('Download requested. Check your browser downloads.')}>Save original file</a>:
+  {original?<ScheduleLink className="custody-photo-save" href={original.url} download={original.name}
+   onClick={()=>setMessage('Download requested. Check your browser downloads.')}>Save original file</ScheduleLink>:
    <button type="button" className="secondary" disabled={busy!==null} onClick={()=>void open('original')}>
     {busy==='original'?'Preparing original…':'Prepare original download'}</button>}
   {message&&<p role="status">{message}</p>}

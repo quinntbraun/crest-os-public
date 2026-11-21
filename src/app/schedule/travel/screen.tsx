@@ -1,4 +1,6 @@
 'use client';
+import {ScheduleLink} from '../navigation';
+
 import {useEffect,useId,useLayoutEffect,useRef,useState} from 'react';
 import {createSupportTripController,initialSupportTripView} from '../../../client/support-trip-controller';
 import type {SupportTripView} from '../../../client/support-trip-controller';
@@ -82,7 +84,7 @@ function TripForm({mode,trip,view,save,moreVehicles,onDirtyChange}:{
     {view.vehicles.map(row=><option key={row.id} value={row.id}>{row.label}</option>)}
    </select>
    {view.moreVehicles&&<button type="button" className="secondary" onClick={moreVehicles}>Load more vehicles</button>}
-   {view.vehicles.length===0&&!retired&&<p><a href="/vehicles">Save a vehicle</a> before recording a trip.</p>}
+   {view.vehicles.length===0&&!retired&&<p><ScheduleLink href="/vehicles">Save a vehicle</ScheduleLink> before recording a trip.</p>}
    <label htmlFor={id+'-origin'}>Leaving from</label>
    <textarea id={id+'-origin'} name="origin" rows={2} maxLength={2000} defaultValue={trip?.origin.locationText} required/>
    <label htmlFor={id+'-destination'}>Going to</label>
@@ -164,7 +166,7 @@ function TripFacts({trip,timezone}:{trip:TripFactValues;timezone:string}){
    {trip.notes&&<div><dt>Notes</dt><dd>{trip.notes}</dd></div>}
    {trip.reason&&<div><dt>Reason recorded</dt><dd>{trip.reason}</dd></div>}
   </dl>}
-  {trip.jobId&&<a href={'/schedule?job='+encodeURIComponent(trip.jobId)}>Open related job</a>}
+  {trip.jobId&&<ScheduleLink href={'/schedule?job='+encodeURIComponent(trip.jobId)}>Open related job</ScheduleLink>}
  </div>;
 }
 
@@ -316,7 +318,7 @@ export function SupportTripScreen({initialTrip}:{initialTrip:{legId:string;depar
  }
  return <section className="travel-screen" aria-label="Saved standalone travel" aria-busy={view.busy}>
   <p role="status" className="job-change-status">{view.message}</p>
-  {view.phase==='signed-out'&&<a className="primary-action" href="/sign-in">Sign in to view travel</a>}
+  {view.phase==='signed-out'&&<ScheduleLink className="primary-action" href="/sign-in">Sign in to view travel</ScheduleLink>}
   {(view.phase==='unavailable'||view.phase==='review')&&<button type="button" onClick={()=>void controller.current?.load()} disabled={view.busy}>Reload saved travel</button>}
   {view.phase==='pending'&&<>
    {view.pending&&<p className="save-reference">Original trip reference <code>{view.pending.reference}</code></p>}
@@ -367,7 +369,7 @@ export function SupportTripScreen({initialTrip}:{initialTrip:{legId:string;depar
      </div>
      <p className="field-help">Saved version {selected.sequence} · Time zone: {view.timezone}. Actual journey times and recorded version times are separate.</p>
      <TripFacts trip={selected} timezone={view.timezone}/>
-     {view.mileageAvailable&&selected.state!=='open'&&<a className="primary-action travel-mileage" href={'/schedule/mileage?leg='+encodeURIComponent(selected.legId)}>Review trip mileage</a>}
+     {view.mileageAvailable&&selected.state!=='open'&&<ScheduleLink className="primary-action travel-mileage" href={'/schedule/mileage?leg='+encodeURIComponent(selected.legId)}>Review trip mileage</ScheduleLink>}
      <details className="travel-versions">
       <summary>Saved versions ({view.history.length}{view.moreHistory?'+':''})</summary>
       <p className="field-help">Loaded versions are ordered by version, from earliest to latest. {view.moreHistory?'Later saved versions remain to be loaded.':'History through the selected version is loaded.'}</p>
@@ -385,7 +387,7 @@ export function SupportTripScreen({initialTrip}:{initialTrip:{legId:string;depar
    </div>
   </>}
   {view.phase!=='ready'&&view.phase!=='loading'&&<nav className="work-links" aria-label="Travel help">
-   <a href={view.pending?'/save-review?kind='+view.pending.kind:'/save-review'}>Interrupted saves</a>
+   <ScheduleLink href={view.pending?'/save-review?kind='+view.pending.kind:'/save-review'}>Interrupted saves</ScheduleLink>
   </nav>}
  </section>;
 }

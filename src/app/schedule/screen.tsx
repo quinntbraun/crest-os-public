@@ -1,4 +1,7 @@
 'use client';
+import {ScheduleLink,ScheduleNavigationProvider,useScheduleNavigation} from './navigation';
+import {scheduleNavigationHref} from '../../client/schedule-navigation';
+
 import {useEffect,useRef,useState} from 'react';
 import {createScheduleReader,initialScheduleReadView} from '../../client/schedule-reader';
 import {observeInitialReadDeparture} from '../../client/initial-read-departure';
@@ -12,10 +15,15 @@ import type {CalendarMode,CalendarRange} from '../../client/schedule-calendar';
 const initialReadDeparture=typeof window==='undefined'?null:observeInitialReadDeparture(window);
 function when(value:string,timezone:string){return new Intl.DateTimeFormat('en-US',{timeZone:timezone,month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(value));}
 export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{initialJobId?:string;initialJobVehicleId?:string;visitsSource?:'customer'|'vehicle'}){
+ const initialNavigation=useScheduleNavigation();
+ const pendingReturn=useRef(initialNavigation?.focusJobId);
+ const [navigationFocus,setNavigationFocus]=useState(initialNavigation?.focusJobId);
+ const [navigationOrigin,setNavigationOrigin]=useState<{originY:number;originWidth:number}|null>(initialNavigation?.originY!==undefined&&initialNavigation.originWidth!==undefined?{originY:initialNavigation.originY,originWidth:initialNavigation.originWidth}:null);
  const [view,setView]=useState(initialScheduleReadView),[downloadMessage,setDownloadMessage]=useState(''),reader=useRef<ReturnType<typeof createScheduleReader>|null>(null),status=useRef<HTMLParagraphElement>(null),review=useRef<HTMLElement|null>(null),url=useRef<string|null>(null);
- const [fromDate,setFrom]=useState(''),[throughDate,setThrough]=useState('');
- const [calendarMode,setCalendarMode]=useState<CalendarMode>('week');
- const [calendarOpen,setCalendarOpen]=useState(false),[reviewing,setReviewing]=useState(false);
+ const [fromDate,setFrom]=useState(initialNavigation?.fromDate??''),[throughDate,setThrough]=useState(initialNavigation?.throughDate??'');
+ const [calendarMode,setCalendarMode]=useState<CalendarMode>(initialNavigation?.mode??'week');
+ const [rangeOpen,setRangeOpen]=useState(initialNavigation?.rangeOpen??false);
+ const [calendarOpen,setCalendarOpen]=useState(initialNavigation?.calendarOpen??false),[reviewing,setReviewing]=useState(false);
  const agendaSource=useRef<{button:HTMLButtonElement;scrollY:number;width:number}|null>(null),restoreAgendaFocus=useRef(false);
  const mobileBack=useRef<HTMLButtonElement>(null),jobHeading=useRef<HTMLHeadingElement>(null);
  const calendarToggle=useRef<HTMLButtonElement>(null),agendaHeading=useRef<HTMLHeadingElement>(null);
@@ -23,6 +31,24 @@ export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{
  const focusPlanner=useRef(false);
  const linkedJob=initialJobId!==undefined;
  const selected=linkedJob&&view.selected?.jobId!==initialJobId?null:view.selected;
+ const navigationDates=view.dates??initialNavigation;
+ const navigation=navigationDates?{fromDate:navigationDates.fromDate,throughDate:navigationDates.throughDate,mode:calendarMode,calendarOpen,rangeOpen,
+  ...selected?{focusJobId:selected.jobId}:navigationFocus?{focusJobId:navigationFocus}:{},
+  ...navigationOrigin??{}}:null;
+ useEffect(()=>{
+  if(linkedJob||!pendingReturn.current||view.busy||view.phase!=='ready'||!view.loaded)return;
+  const button=agendaHeading.current?.closest('section')?.querySelector<HTMLButtonElement>('[data-schedule-job="'+pendingReturn.current+'"]');
+  if(!button){agendaHeading.current?.focus();if(!view.hasMore)pendingReturn.current=undefined;return;}
+  pendingReturn.current=undefined;
+  const sameWidth=initialNavigation?.originWidth===window.innerWidth&&initialNavigation.originY!==undefined;
+  button.focus({preventScroll:sameWidth});
+  if(sameWidth){
+   window.scrollTo({top:initialNavigation.originY,behavior:'instant'});
+   const box=button.getBoundingClientRect(),clearance=parseFloat(getComputedStyle(document.documentElement).scrollPaddingBlockEnd)||0;
+   // Layout edges can differ from the browser's rounded scroll offset by a fraction of a CSS pixel.
+   if(Math.round(box.top)<0||Math.round(box.bottom)>Math.round(innerHeight-clearance))button.scrollIntoView({block:'center',behavior:'instant'});
+  }
+ },[initialNavigation,linkedJob,view.busy,view.loaded,view.phase,view.rows,view.hasMore]);
  useEffect(()=>{
   if(initialJobId&&view.phase==='ready'&&selected?.jobId===initialJobId&&!selected.vehicles.some(vehicle=>vehicle.id===initialJobVehicleId)){
    jobHeading.current?.focus({preventScroll:true});
@@ -58,27 +84,27 @@ export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{
  useEffect(()=>{
   const current=createScheduleReader({change:next=>{setView(next);if(next.dates){setFrom(next.dates.fromDate);setThrough(next.dates.throughDate);}}});
   reader.current=current;
-  const clear=()=>{focusPlanner.current=false;current.suspend();revoke();setDownloadMessage('');setReviewing(false);agendaSource.current=null;restoreAgendaFocus.current=false;},hidden=()=>{if(document.visibilityState==='hidden')clear();},restored=(event:PageTransitionEvent)=>{if(event.persisted)clear();};
+  const clear=()=>{focusPlanner.current=false;pendingReturn.current=undefined;setNavigationFocus(undefined);setNavigationOrigin(null);current.suspend();revoke();setDownloadMessage('');setReviewing(false);agendaSource.current=null;restoreAgendaFocus.current=false;},hidden=()=>{if(document.visibilityState==='hidden')clear();},restored=(event:PageTransitionEvent)=>{if(event.persisted)clear();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',clear);window.addEventListener('pageshow',restored);
-  if(document.visibilityState==='hidden'||initialReadDeparture?.canStart()===false)clear();else void current.load(undefined,initialJobId);
+  if(document.visibilityState==='hidden'||initialReadDeparture?.canStart()===false)clear();else void current.load(initialNavigation??undefined,initialJobId);
   return()=>{reader.current=null;current.dispose();revoke();document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',clear);window.removeEventListener('pageshow',restored);};
- },[initialJobId]);
+ },[initialJobId,initialNavigation]);
  async function action(kind:'load'|'more'|'morePending'|'moreHistory',dates?:{fromDate:string;throughDate:string}){
   const current=reader.current;
   if(!current||current.view().busy)return;
   if(kind==='load'){
    focusPlanner.current=!linkedJob;
    setReviewing(false);
-   if(!dates)setCalendarMode('week');
+   if(!dates&&!view.dates&&!initialNavigation)setCalendarMode('week');
   }
-  await(kind==='load'?current.load(dates,dates?undefined:initialJobId):current[kind]());
+  await(kind==='load'?current.load(dates??view.dates??initialNavigation??undefined,initialJobId):current[kind]());
   if(current!==reader.current)return;
   if(kind==='load'&&!linkedJob)return;
   if(kind==='load'&&linkedJob&&current.view().selected)return;
   if(kind==='load'||current.view().phase!=='ready')status.current?.focus();
   else if(kind==='moreHistory')review.current?.focus();
  }
- function selectCalendar(range:CalendarRange,mode:CalendarMode){const current=reader.current;if(!current||current.view().busy||current.view().phase!=='ready')return;setCalendarMode(mode);setDownloadMessage('');void action('load',range);}
+ function selectCalendar(range:CalendarRange,mode:CalendarMode){const current=reader.current;if(!current||current.view().busy||current.view().phase!=='ready')return;pendingReturn.current=undefined;setNavigationFocus(undefined);setNavigationOrigin(null);setCalendarMode(mode);setRangeOpen(mode==='custom');setDownloadMessage('');void action('load',range);}
  async function open(jobId:string,source:HTMLButtonElement){
   const current=reader.current;if(!current||current.view().busy)return;
   const origin={button:source,scrollY:window.scrollY,width:window.innerWidth};
@@ -86,7 +112,7 @@ export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{
   await current.open(jobId);
   if(current!==reader.current)return;
   if(current.view().phase==='ready'&&current.view().selected?.jobId===jobId){
-   agendaSource.current=origin;
+   agendaSource.current=origin;setNavigationFocus(jobId);setNavigationOrigin({originY:origin.scrollY,originWidth:origin.width});
    setReviewing(true);
   }else status.current?.focus();
  }
@@ -115,17 +141,17 @@ export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{
    dropoffCustodyAvailable={view.dropoffCustodyAvailable===true} pickupTripsAvailable={view.pickupTripsAvailable===true}
    pickupWorkAvailable={view.pickupWorkAvailable===true} pickupCollectionAvailable={view.pickupCollectionAvailable===true}
    pickupPhotosAvailable={view.pickupPhotosAvailable===true} pickupReleaseAvailable={view.pickupReleaseAvailable===true}
-   onWorkStatus={view.fieldSessionAvailable===true&&selected.head.job.operator_actor_id===view.operatorId?()=>window.location.assign('/schedule/work?job='+encodeURIComponent(selected.jobId)):undefined}
-   onChangeAppointment={()=>window.location.assign('/schedule/change?job='+encodeURIComponent(selected.jobId)+'&kind=reschedule')}
-   onCancel={()=>window.location.assign('/schedule/change?job='+encodeURIComponent(selected.jobId)+'&kind=cancel')}
+   onWorkStatus={view.fieldSessionAvailable===true&&selected.head.job.operator_actor_id===view.operatorId?()=>window.location.assign(scheduleNavigationHref('/schedule/work?job='+encodeURIComponent(selected.jobId),navigation)):undefined}
+   onChangeAppointment={()=>window.location.assign(scheduleNavigationHref('/schedule/change?job='+encodeURIComponent(selected.jobId)+'&kind=reschedule',navigation))}
+   onCancel={()=>window.location.assign(scheduleNavigationHref('/schedule/change?job='+encodeURIComponent(selected.jobId)+'&kind=cancel',navigation))}
    onDownload={()=>void download()} onMoreHistory={()=>void action('moreHistory')}/>:
-   linkedJob?<a className="primary-action" href="/schedule">Open Schedule</a>:<p>Select a saved job to review its vehicles, location, work and history.</p>}
+   linkedJob?<ScheduleLink className="primary-action" href="/schedule">Open Schedule</ScheduleLink>:<p>Select a saved job to review its vehicles, location, work and history.</p>}
   {downloadMessage&&<p role="status" aria-label="Job download status">{downloadMessage}</p>}
  </section>;
  const previous=view.dates?moveCalendarRange(view.dates,calendarMode,-1):null;
  const next=view.dates?moveCalendarRange(view.dates,calendarMode,1):null;
  const todayMode=calendarMode==='custom'?'day':calendarMode;
- return <section className="schedule-reader" aria-label={linkedJob?'Saved visit':'Saved schedule'} aria-busy={view.busy}
+ return <ScheduleNavigationProvider context={navigation}><section className="schedule-reader" aria-label={linkedJob?'Saved visit':'Saved schedule'} aria-busy={view.busy}
   data-reviewing={!linkedJob&&reviewing&&!!selected||undefined}
   data-agenda-loaded={!linkedJob&&view.phase==='ready'&&view.loaded||undefined}>
   <p ref={status} className={'schedule-status'+(linkedJob&&selected?' visually-hidden':'')} role="status" tabIndex={-1}>{view.message}</p>
@@ -134,11 +160,11 @@ export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{
    <div className="workspace-skeleton"/>
    <div className="workspace-skeleton"/>
   </div>}
-  {view.phase==='signed-out'&&<a className="primary-action" href={'/sign-in?returnTo=schedule'+(initialJobId?'&job='+encodeURIComponent(initialJobId):'')}>Sign in to view your schedule</a>}
-  {view.phase==='unavailable'&&<><p>Private schedule records stay hidden until access is checked again.</p><button type="button" disabled={view.busy} onClick={()=>void action('load')}>Check schedule access</button><a href="/sign-in">Check sign-in</a></>}
+  {view.phase==='signed-out'&&<ScheduleLink className="primary-action" href={'/sign-in?returnTo=schedule'+(initialJobId?'&job='+encodeURIComponent(initialJobId):'')}>Sign in to view your schedule</ScheduleLink>}
+  {view.phase==='unavailable'&&<><p>Private schedule records stay hidden until access is checked again.</p><button type="button" disabled={view.busy} onClick={()=>void action('load')}>Check schedule access</button><ScheduleLink href="/sign-in">Check sign-in</ScheduleLink></>}
   {view.phase==='ready'&&linkedJob&&jobReview}
   {view.phase==='ready'&&!linkedJob&&<>
-   <div className="schedule-intro"><p className="field-help">Business time zone: {view.timezone}.</p>{view.supportTripsAvailable&&<a href="/schedule/travel">Standalone travel</a>}</div>
+   <div className="schedule-intro"><p className="field-help">Business time zone: {view.timezone}.</p>{view.supportTripsAvailable&&<ScheduleLink href="/schedule/travel">Standalone travel</ScheduleLink>}</div>
    <div className="schedule-planner"><div className="schedule-planner-nav">
    {view.loaded&&view.dates&&<>
     <div className="schedule-mobile-controls" role="group" aria-label="Agenda navigation">
@@ -152,7 +178,7 @@ export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{
       busy={view.busy} select={selectCalendar} showDay={range=>{setCalendarOpen(false);selectCalendar(range,'day');}}/>
     </div>
    </>}
-   <details className="schedule-custom-range" open={calendarMode==='custom'||!view.loaded}><summary>Custom date range</summary><form aria-label="Schedule date range" onSubmit={event=>{event.preventDefault();selectCalendar({fromDate,throughDate},'custom');}}><div className="schedule-date-fields"><div><label htmlFor="schedule-from">From date</label><input id="schedule-from" type="date" value={fromDate} required disabled={view.busy} onChange={event=>setFrom(event.target.value)}/></div><div><label htmlFor="schedule-through">Through date</label><input id="schedule-through" type="date" value={throughDate} min={fromDate} required disabled={view.busy} onChange={event=>setThrough(event.target.value)}/></div></div><button type="submit" disabled={view.busy}>Load saved schedule</button></form></details>
+   <details className="schedule-custom-range" open={rangeOpen||!view.loaded} onToggle={event=>{if(view.loaded)setRangeOpen(event.currentTarget.open);}}><summary>Custom date range</summary><form aria-label="Schedule date range" onSubmit={event=>{event.preventDefault();selectCalendar({fromDate,throughDate},'custom');}}><div className="schedule-date-fields"><div><label htmlFor="schedule-from">From date</label><input id="schedule-from" type="date" value={fromDate} required disabled={view.busy} onChange={event=>setFrom(event.target.value)}/></div><div><label htmlFor="schedule-through">Through date</label><input id="schedule-through" type="date" value={throughDate} min={fromDate} required disabled={view.busy} onChange={event=>setThrough(event.target.value)}/></div></div><button type="submit" disabled={view.busy}>Load saved schedule</button></form></details>
    </div>{view.loaded&&view.dates&&<div className="schedule-layout"><div className="schedule-list-pane">
     <ScheduleAgenda dates={view.dates} mode={calendarMode} timezone={view.timezone} rows={view.rows} hasMore={view.hasMore}
      busy={view.busy} selectedId={selected?.jobId} open={(id,source)=>void open(id,source)} more={()=>void action('more')} headingRef={agendaHeading}/>
@@ -163,6 +189,6 @@ export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{
     {view.dropoffCustodyAvailable&&<VehicleCustodyQueue key="dropoff" kind="dropoff" timezone={view.timezone}/>}
     {view.pickupReturnsAvailable&&<VehicleCustodyQueue key="pickup" kind="pickup" timezone={view.timezone}/>}
   </div>}
-  {!linkedJob&&<nav aria-label="Schedule tools"><a href="/schedule/modes">Service arrangements</a><a href="/quotes">Accepted quote scope</a><a href="/appointment-holds">Unconfirmed appointment proposals</a><a href="/save-review">Interrupted saves</a></nav>}
- </section>;
+  {!linkedJob&&<nav aria-label="Schedule tools"><ScheduleLink href="/schedule/modes">Service arrangements</ScheduleLink><ScheduleLink href="/quotes">Accepted quote scope</ScheduleLink><ScheduleLink href="/appointment-holds">Unconfirmed appointment proposals</ScheduleLink><ScheduleLink href="/save-review">Interrupted saves</ScheduleLink></nav>}
+ </section></ScheduleNavigationProvider>;
 }

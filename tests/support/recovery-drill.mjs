@@ -1,3 +1,5 @@
+import {normalizedSchema,legacyPolicyOrderMatches} from './recovery-schema-comparison.mjs';
+import {rememberRecoverySchema,recoverySchemaDifference} from './recovery-schema-diagnostic.mjs';
 // Bounded, synthetic-only recovery machinery. No production escape flag or
 // runtime/vault credentials. Dumps are trusted executable SQL, never user uploads.
 import assert from 'node:assert/strict';
@@ -438,27 +440,7 @@ export async function inventory(client){
   }
   return result;
 }
-export function normalizedSchema(bytes,policyRoleSets=[]){
-  // PG17's psql restriction nonce is intentionally random; retain every other
-  // schema byte except the presentation order of verified Crest policy roles.
-  let sql=bytes.toString().replace(/^\\(?:un)?restrict [A-Za-z0-9]+\r?$/gm,'');
-  for(const {schemaName,tableName,policyName,roles} of policyRoleSets){
-    if(!roles.every(role=>/^crest_[a-z_]+$/.test(role)))continue;
-    assert(['crest','crest_private'].includes(schemaName));
-    assert([tableName,policyName].every(name=>/^[a-z_][a-z0-9_]*$/.test(name)));
-    const header=`-- Name: ${tableName} ${policyName}; Type: POLICY; Schema: ${schemaName}; Owner: crest_[a-z_]+`;
-    const statement=`CREATE POLICY ${policyName} ON ${schemaName}\\.${tableName}(?: AS RESTRICTIVE)?(?: FOR (?:SELECT|INSERT|UPDATE|DELETE))? TO `;
-    const line=new RegExp(`^(${header}\\n--\\n\\n${statement})(crest_[a-z_]+(?:, crest_[a-z_]+)+)(?= USING \\(| WITH CHECK \\(|;)`,'gm');
-    let found=0;
-    sql=sql.replace(line,(_match,prefix,listed)=>{
-      assert.deepEqual(listed.split(', ').sort(),roles);
-      found++;
-      return prefix+roles.join(', ');
-    });
-    assert.equal(found,1,'dump must contain the exact policy entry');
-  }
-  return sql;
-}
+export {normalizedSchema} from './recovery-schema-comparison.mjs';
 async function multiRolePolicySets(client){
   const {rows}=await client.query(`SELECT n.nspname AS "schemaName", c.relname AS "tableName", p.polname AS "policyName",
     ARRAY(SELECT CASE WHEN member.oid=0 THEN 'PUBLIC' ELSE r.rolname::text END
@@ -1354,7 +1336,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
     stage='objects';const objectArchive=objectCapture?{inventory:objects,receipt:await objectCapture.capture(objects)}:null;
     const manifest={formatVersion:1,scope:'synthetic_database_drill',completeBackup:false,...profile,
       databaseImage:pins.testDatabaseImage,snapshot,roles,...(roleCreationOrder?{roleCreationOrder}:{}),rows,
-      ...(schemaPolicyRoles?{schemaPolicyRoles}:{}),schemaSha256:hash(normalizedSchema(schema,schemaPolicyRoles)),
+      ...(schemaPolicyRoles?{schemaPolicyRoles}:{}),schemaSha256:rememberRecoverySchema(normalizedSchema(schema,schemaPolicyRoles)),
       dump:{bytes:dump.length,sha256:hash(dump)},objectArchive,excluded:['runtime_login_credentials',...(objectArchive?[]:['external_objects']),'application_image','independent_vault','production_configuration','production_recovery_authority']};
     // The backup side receives a public recipient only. No private identity.
     stage='encryption';const receipt={formatVersion:1,dump:await seal(join(directory,'database.age'),dump,recipient),
@@ -1523,7 +1505,26 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     stage='schema';
     const policyRoleSets=profile.schemaVersion>=55?await multiRolePolicySets(client):undefined;
     if(policyRoleSets)assert.deepEqual(policyRoleSets,manifest.schemaPolicyRoles,'restored policy role sets differ');
-    assert.equal(hash(normalizedSchema(await postgresTool('pg_dump',url,['--schema-only']),policyRoleSets)),manifest.schemaSha256,'restored schema/grants differ');
+    const restoredSchema=normalizedSchema(await postgresTool('pg_dump',url,['--schema-only']),policyRoleSets),restoredDigest=hash(restoredSchema);
+    if(restoredDigest!==manifest.schemaSha256){
+      let roleOrderMatches=null;
+      try{if(manifest.roleCreationOrder){const order=(await client.query("SELECT rolname FROM pg_roles WHERE rolname ~ '^crest_[a-z_]+$' ORDER BY oid")).rows.map(row=>row.rolname);roleOrderMatches=JSON.stringify(order)===JSON.stringify(manifest.roleCreationOrder);}}catch{/* Preserve the original schema refusal even when diagnostic metadata is unavailable. */}
+      let legacyPresentation=null,legacyPresentationVerified=false;
+      if(profile.schemaVersion===53||profile.schemaVersion===54){
+        try{
+          const originalSchema=normalizedSchema(await run('docker',['run','--pull=never','--rm','--interactive','--network','none','--read-only','--cap-drop','ALL',pins.testDatabaseImage,'pg_restore','--schema-only','--file=-'],{input:dump}));
+          const roles=await multiRolePolicySets(client);
+          legacyPresentationVerified=legacyPolicyOrderMatches(originalSchema,restoredSchema,manifest.schemaSha256,roles);
+          legacyPresentation={authenticatedArchiveSchemaMatchesManifest:true,exactAfterVerifiedPolicyRoleOrdering:legacyPresentationVerified};
+        }catch{/* Diagnostic failure never changes the original strict schema refusal. */}
+      }
+      if(legacyPresentationVerified){
+        console.log('SYNTHETIC_RECOVERY_LEGACY_POLICY_ORDER_VERIFIED '+JSON.stringify({schemaVersion:profile.schemaVersion,authenticatedSchemaDigest:manifest.schemaSha256}));
+      }else{
+        console.error('SYNTHETIC_RECOVERY_SCHEMA_DIAGNOSTIC '+JSON.stringify({...recoverySchemaDifference(manifest.schemaSha256,restoredSchema,{schemaVersion:profile.schemaVersion,roleOrderMatches}),legacyPresentation}));
+        assert.equal(restoredDigest,manifest.schemaSha256,'restored schema/grants differ');
+      }
+    }
     return manifest;
   }catch{throw new Error('SYNTHETIC_RECOVERY_RESTORE_FAILED:'+stage);}finally{await client.end();}
 }

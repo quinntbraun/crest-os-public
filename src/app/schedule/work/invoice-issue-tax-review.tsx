@@ -1,4 +1,6 @@
 'use client';
+import {ScheduleLink} from '../navigation';
+
 
 import {DocumentBrand} from '../../document-brand';
 import { useEffect, useId, useRef, useState } from 'react';
@@ -94,9 +96,9 @@ export function IssuedInvoiceDetails({ invoice,businessId,receiptBusinessId,paym
     </article>
     {receiptBusinessId&&<>
       <nav className="invoice-action-links" aria-label="Invoice actions">
-        <a href={'#'+actionsId+'-payments'}>Payments</a>
-        {showAdjustments&&<a href={'#'+actionsId+'-adjustments'}>Corrections and credits</a>}
-        {showRefunds&&<a href={'#'+actionsId+'-refunds'}>Refunds</a>}
+        <ScheduleLink href={'#'+actionsId+'-payments'}>Payments</ScheduleLink>
+        {showAdjustments&&<ScheduleLink href={'#'+actionsId+'-adjustments'}>Corrections and credits</ScheduleLink>}
+        {showRefunds&&<ScheduleLink href={'#'+actionsId+'-refunds'}>Refunds</ScheduleLink>}
       </nav>
       <section className="invoice-action-section" aria-labelledby={actionsId+'-payments'}>
         <h5 id={actionsId+'-payments'} tabIndex={-1}>Payments</h5>
@@ -382,7 +384,7 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
       {!!accounts?.missing.length && <>
         <p>Account mappings needed</p>
         <ul>{accounts.missing.map(purpose => <li key={purpose}>{accountNames[purpose]}</li>)}</ul>
-        <a href="/settings/accounts/mappings/manage">Manage dated account mappings</a>
+        <ScheduleLink href="/settings/accounts/mappings/manage">Manage dated account mappings</ScheduleLink>
       </>}
       {!!accounts?.jurisdictions.length && <>
         <p>Tax payable mappings to review</p>

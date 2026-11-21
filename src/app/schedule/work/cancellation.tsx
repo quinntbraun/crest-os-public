@@ -1,4 +1,6 @@
 'use client';
+import {ScheduleLink} from '../navigation';
+
 import {useId,useLayoutEffect,useRef,useState} from 'react';
 import type {FieldSessionView} from '../../../client/field-session-controller';
 import {parseBookingCommunication} from '../../../operations/confirmed-booking-contract';
@@ -42,7 +44,7 @@ export function UnfulfilledCancellationForm({view,save}:{view:FieldSessionView;s
    <ul>{assignments.map(part=><li key={part.sourceAllocationId+'/'+part.partitionId}>{part.scopeDescription}</li>)}</ul>
   </details>
   <p>If any work was completed, including a free service, record it through {context.jobCompletionAvailable
-   ?<a href={'/schedule/work/complete?job='+encodeURIComponent(job.jobId)}>End job</a>
+   ?<ScheduleLink href={'/schedule/work/complete?job='+encodeURIComponent(job.jobId)}>End job</ScheduleLink>
    :'the completion workflow'}.</p>
   {job.openTravelLegVersionIds.length>0&&<p role="status">A trip is still open. It will need to be ended separately when the travel actually stops.</p>}
   </aside>

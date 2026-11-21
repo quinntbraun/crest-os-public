@@ -1,3 +1,5 @@
+import {ScheduleLink,ScheduleNavigationProvider} from './navigation';
+import {readScheduleNavigation} from '../../client/schedule-navigation';
 import {ScheduleScreen} from './screen';
 import {customerInstant,customerUuid} from '../../customer/customer-contract';
 export const dynamic='force-dynamic';
@@ -12,9 +14,9 @@ export default async function SchedulePage({searchParams}:{searchParams:Promise<
  const mileageReturn=mileageSource&&customerUuid(input.mileageJob)&&customerInstant(input.mileageAt)?
   '/schedule/mileage?'+new URLSearchParams({job:input.mileageJob,trip:mileageSource,at:input.mileageAt}):
   mileageSource&&input.mileageJob===undefined?'/schedule/mileage?'+new URLSearchParams({leg:mileageSource}):null;
- return <main className={'customers schedule-page'+(jobId?' schedule-job-page':'')}><header className="workflow-heading">
-  {jobId&&<nav aria-label="Job navigation"><a href={mileageReturn??(todaySource?'/':'/schedule')}>{mileageReturn?'Back to trip mileage':todaySource?'Back to Today':'Back to Schedule'}</a></nav>}
+ return <ScheduleNavigationProvider context={readScheduleNavigation(await searchParams)}><main className={'customers schedule-page'+(jobId?' schedule-job-page':'')}><header className="workflow-heading">
+  {jobId&&<nav aria-label="Job navigation"><ScheduleLink href={mileageReturn??(todaySource?'/':'/schedule')}>{mileageReturn?'Back to trip mileage':todaySource?'Back to Today':'Back to Schedule'}</ScheduleLink></nav>}
   <h1>{jobId?'Job':'Schedule'}</h1></header>
   <ScheduleScreen {...jobId?{initialJobId:jobId}:{}} {...vehicleId?{initialJobVehicleId:vehicleId}:{}} {...visitsSource?{visitsSource}:{}}/>
- </main>;
+ </main></ScheduleNavigationProvider>;
 }

@@ -1,6 +1,8 @@
 'use client';
+import {ScheduleLink} from './navigation';
 
-import {useEffect,useId,useRef,useState} from 'react';
+
+import {useEffect,useId,useLayoutEffect,useRef,useState} from 'react';
 import {authentication} from '../../client/authentication';
 import {postScheduling,SchedulingClientError} from '../../client/scheduling-transport';
 import {parseRecordJobHistoryPage,parseRecordJobHistoryRequest} from '../../operations/record-job-history-contract';
@@ -26,10 +28,12 @@ function jobHref(row:Job,kind:'customer'|'vehicle'){
 
 export function RecordJobHistory({businessId,recordId,kind,initiallyOpen=false}:{businessId:string;recordId:string;kind:'customer'|'vehicle';initiallyOpen?:boolean}){
   const id=useId(),active=useRef<AbortController|null>(null),details=useRef<HTMLDetailsElement>(null);
-  useEffect(()=>{
+  useLayoutEffect(()=>{
     if(!initiallyOpen||!details.current)return;
     details.current.open=true;
-    details.current.querySelector('summary')?.focus();
+    // An arriving read must not take focus back from a control the user chose.
+    const focused=document.activeElement;
+    if(!focused?.matches('a[href],button,input,select,textarea,summary,[contenteditable="true"]'))details.current.querySelector('summary')?.focus();
   },[initiallyOpen]);
   const [view,setView]=useState(initial);
   useEffect(()=>()=>{active.current?.abort();active.current=null;},[]);
@@ -85,7 +89,7 @@ export function RecordJobHistory({businessId,recordId,kind,initiallyOpen=false}:
         const time=visitTime(row),label=row.customerName??row.vehicleLabels.join(' · ');
         return <li className="activity-entry" key={row.jobId}>
           <div><time dateTime={row.startAt}>{time}</time><strong>{label}</strong><span>{states[row.state]} · {modes[row.fulfillmentMode]}</span></div>
-          <a id={id+'-'+row.jobId} href={jobHref(row,kind)} aria-label={'Open saved job for '+label+' on '+time}>Open saved job</a>
+          <ScheduleLink id={id+'-'+row.jobId} href={jobHref(row,kind)} aria-label={'Open saved job for '+label+' on '+time}>Open saved job</ScheduleLink>
         </li>;
       })}</ol>
     </>}

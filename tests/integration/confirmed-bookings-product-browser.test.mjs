@@ -1,3 +1,4 @@
+import {reviewScheduleTaskReturn,reviewScheduleRecordReturn} from '../support/schedule-task-return.mjs';
 import {captureSavedJob} from '../support/saved-job-layout.mjs';
 // Genuine MFA and compiled Next/Node with registered saved-visit history. Native command setup is
 // explicit test data; this does not claim the unfinished booking form works.
@@ -11,7 +12,7 @@ import {observeWorkReads} from '../support/work-read-diagnostic.mjs';
 import {unzipSync,strFromU8} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' populated overlapping planner visual baseline and exact phone return',{timeout:240000},async()=>{
- const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,quoteCommercial:true,scheduling:true,googleCalendar:true,calendarActivityBookings:6,calendarActivityOverlap:true});let browser;
+ const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,quoteCommercial:true,scheduling:true,googleCalendar:true,calendarActivityBookings:6,calendarActivityOverlap:true,recordJobHistory:true});let browser;
  try{
   assert.equal(fixture.calendarActivityJobIds.length,6);
   assert.equal((await fixture.client.query('SELECT count(*)::int AS count FROM crest.schedule_overrides WHERE business_id=$1',[fixture.business])).rows[0].count,1);
@@ -28,7 +29,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   }
   await page.setViewportSize({width:390,height:900});const target=agenda.getByRole('listitem').nth(4).getByRole('button');await target.scrollIntoViewIfNeeded();const savedScroll=await page.evaluate(()=>window.scrollY),from=await page.getByLabel('From date',{exact:true}).inputValue(),through=await page.getByLabel('Through date',{exact:true}).inputValue();await target.press('Enter');const review=page.getByRole('region',{name:'Job review',exact:true});await expect(review.getByRole('article',{name:'Saved job'})).toBeVisible();await expect(schedule).toHaveAttribute('aria-busy','false');await expect(agenda).toBeHidden();await expect(review.getByRole('link',{name:'Open customer record',exact:true})).toHaveAttribute('href',new RegExp('[?&]job='+fixture.calendarActivityJobIds[4]+'(?:&|$)'));await capture('selected');await captureSavedJob(page,name,'planner-selected');await page.setViewportSize({width:390,height:900});
   const requests=[],observe=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))requests.push(request.method()+' '+new URL(request.url()).pathname);};page.on('request',observe);try{await review.getByRole('button',{name:'Back to agenda',exact:true}).press('Enter');await expect(target).toBeFocused();await expect.poll(()=>page.evaluate(()=>window.scrollY)).toBe(savedScroll);assert.deepEqual(requests,[]);}finally{page.off('request',observe);}
-  await expect(page.getByLabel('From date',{exact:true})).toHaveValue(from);await expect(page.getByLabel('Through date',{exact:true})).toHaveValue(through);await expect(calendar.getByRole('button',{name:'Month',exact:true})).toHaveAttribute('aria-pressed','true');assert.deepEqual(await facts(),before);
+  await expect(page.getByLabel('From date',{exact:true})).toHaveValue(from);await expect(page.getByLabel('Through date',{exact:true})).toHaveValue(through);await expect(calendar.getByRole('button',{name:'Month',exact:true})).toHaveAttribute('aria-pressed','true');assert.deepEqual(await facts(),before);await reviewScheduleTaskReturn(page,fixture,fixture.calendarActivityJobIds[4]);assert.deepEqual(await facts(),before);
  }finally{await browser?.close();await fixture.close();}
 });
 async function signIn(page,f,freshAfter=0){
@@ -39,10 +40,18 @@ async function signIn(page,f,freshAfter=0){
  const codeReadyAt=Math.max(f.nextBrowserCodeAt,freshAfter,remaining<6000?Date.now()+remaining:0);
  if(codeReadyAt>=Date.now())await delay(codeReadyAt-Date.now()+250);
  const nextCodeAt=(Math.floor(Date.now()/30000)+1)*30000;
+ const codeGeneratedAt=Date.now();
  await page.getByLabel('Authenticator code',{exact:true}).fill(f.credentials().code);
  const login=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/auth/login');
  await page.getByRole('button',{name:'Sign in',exact:true}).click();
- assert.equal((await login).status(),200,'Synthetic sign-in response');
+ const response=await login;
+ if(response.status()!==200){
+  let shape=null,provider=null,providerRequests=null;
+  try{const body=response.request().postDataJSON();shape={emailPresent:typeof body.email==='string'&&body.email.length>0,passwordPresent:typeof body.password==='string'&&body.password.length>0,sixDigitCode:typeof body.code==='string'&&/^[0-9]{6}$/.test(body.code),trustedBoolean:typeof body.trusted==='boolean'};}catch{/* Evidence stays explicitly unavailable. */}
+  try{provider=f.authDiagnostics().slice(-8);providerRequests=f.authRequestDiagnostics().slice(-12);}catch{/* Evidence stays explicitly unavailable. */}
+  console.error('SYNTHETIC_BOOKING_STARTUP_DIAGNOSTIC '+JSON.stringify({status:response.status(),shape,codeGeneratedAt,responseAt:Date.now(),nextBrowserCodeAt:f.nextBrowserCodeAt,provider,providerRequests}));
+ }
+ assert.equal(response.status(),200,'Synthetic sign-in response');
  await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible({timeout:15000});
  return nextCodeAt;
 }
@@ -116,9 +125,11 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await capture('schedule');await captureSavedJob(page,name,'scheduled');
   if(name==='webkit')await page.setViewportSize({width:390,height:844});
   const jobId=booked.value.receipt.jobId;
+  const plannerContext=new URLSearchParams({plannerFrom:'2026-11-03',plannerThrough:'2026-11-03',plannerView:'day',plannerCalendar:'closed',plannerRange:'closed',plannerFocus:jobId,plannerY:String(agendaScroll),plannerWidth:'390'});
+  const withPlanner=href=>href+'&'+plannerContext.toString();
   const linkedCustomer=(await f.client.query('SELECT customer_id FROM crest.jobs WHERE business_id=$1 AND id=$2',[f.business,jobId])).rows[0].customer_id;
   const link=page.getByRole('article',{name:'Saved job',exact:true}).getByRole('link',{name:'Open customer record',exact:true});
-  await expect(link).toHaveAttribute('href','/customers?customer='+linkedCustomer+'&job='+jobId);
+  await expect(link).toHaveAttribute('href',withPlanner('/customers?customer='+linkedCustomer+'&job='+jobId));
   await link.focus();await page.keyboard.press('Enter');
   const editor=page.getByRole('form',{name:'Customer editor',exact:true});
   await expect(editor.getByRole('heading',{name:'Edit customer',exact:true})).toBeFocused();
@@ -132,12 +143,12 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await page.unroute(visitsRoute,interruptVisits);
   await savedVisits.getByRole('button',{name:'Retry saved visits',exact:true}).click();
   const savedVisit=savedVisits.getByRole('link',{name:/Open saved job for/});
-  await expect(savedVisit).toHaveAttribute('href','/schedule?job='+jobId+'&from=customer');
+  await expect(savedVisit).toHaveAttribute('href',withPlanner('/schedule?job='+jobId+'&from=customer'));
   await expect(savedVisit).toBeFocused();
   await expect(savedVisits).toContainText('Synthetic lifecycle sedan');
   await page.keyboard.press('Enter');
   const customerVisitsLink=page.getByRole('link',{name:'Back to customer visits',exact:true});
-  await expect(customerVisitsLink).toHaveAttribute('href','/customers?customer='+linkedCustomer+'&job='+jobId+'&view=visits');
+  await expect(customerVisitsLink).toHaveAttribute('href',withPlanner('/customers?customer='+linkedCustomer+'&job='+jobId+'&view=visits'));
   await customerVisitsLink.focus();await page.keyboard.press('Enter');
   await expect(savedVisits.locator('summary')).toBeFocused();
   await expect(savedVisit).toBeVisible();
@@ -150,7 +161,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Overview',exact:true}).click();
   await expect(editor.getByLabel('Customer name',{exact:true})).toHaveValue(revisedName);
   const returnToJob=page.getByRole('link',{name:'Back to saved job',exact:true});
-  await expect(returnToJob).toHaveAttribute('href','/schedule?job='+jobId);
+  await expect(returnToJob).toHaveAttribute('href',withPlanner('/schedule?job='+jobId));
   await returnToJob.click();
   await expect(page.getByRole('heading',{name:'Synthetic lifecycle customer',exact:true})).toBeVisible();
   const jobVehicles=page.getByRole('region',{name:'Vehicles for this job',exact:true});
@@ -173,14 +184,14 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   }
   await bookedVehicleSummary.click();
   const vehicleLink=jobVehicles.getByRole('link',{name:'Open vehicle record for '+originalVehicle,exact:true});
-  await expect(vehicleLink).toHaveAttribute('href','/vehicles?vehicle='+jobVehicle.vehicle_id+'&job='+jobId+'&jobVehicle='+jobVehicle.id);
+  await expect(vehicleLink).toHaveAttribute('href',withPlanner('/vehicles?vehicle='+jobVehicle.vehicle_id+'&job='+jobId+'&jobVehicle='+jobVehicle.id));
   assert(await vehicleLink.evaluate(el=>el.getBoundingClientRect().height>=44&&document.documentElement.scrollWidth<=innerWidth));
   await vehicleLink.focus();await page.keyboard.press('Enter');
   const vehicleEditor=page.getByRole('form',{name:'Vehicle editor',exact:true});
   await expect(page.getByRole('heading',{name:originalVehicle,exact:true})).toBeFocused();
   await expect(vehicleEditor).toHaveCount(0);
   await savedVisits.locator('summary').click();
-  await expect(savedVisit).toHaveAttribute('href','/schedule?job='+jobId+'&vehicle='+jobVehicle.id+'&from=vehicle');
+  await expect(savedVisit).toHaveAttribute('href',withPlanner('/schedule?job='+jobId+'&vehicle='+jobVehicle.id+'&from=vehicle'));
   await expect(savedVisits).toContainText('Synthetic lifecycle customer');
   assert(await savedVisits.evaluate(el=>el.getBoundingClientRect().right<=innerWidth&&document.documentElement.scrollWidth<=innerWidth));
   assert.deepEqual((await new AxeBuilder({page}).include('.record-job-history').withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa']).analyze()).violations,[]);
@@ -188,7 +199,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await savedVisit.focus();await page.keyboard.press('Enter');
   await expect(bookedVehicleSummary).toBeFocused();
   const vehicleVisitsLink=jobVehicles.getByRole('link',{name:'Back to vehicle visits for '+originalVehicle,exact:true});
-  await expect(vehicleVisitsLink).toHaveAttribute('href','/vehicles?vehicle='+jobVehicle.vehicle_id+'&job='+jobId+'&jobVehicle='+jobVehicle.id+'&view=visits');
+  await expect(vehicleVisitsLink).toHaveAttribute('href',withPlanner('/vehicles?vehicle='+jobVehicle.vehicle_id+'&job='+jobId+'&jobVehicle='+jobVehicle.id+'&view=visits'));
   assert(await vehicleVisitsLink.evaluate(el=>el.getBoundingClientRect().height>=44&&document.documentElement.scrollWidth<=innerWidth));
   await vehicleVisitsLink.focus();await page.keyboard.press('Enter');
   await expect(savedVisits.locator('summary')).toBeFocused();
@@ -199,12 +210,23 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await expect(vehicleEditor.getByRole('heading',{name:'Edit vehicle',exact:true})).toBeFocused();
   const revisedVehicle='Synthetic current vehicle label';
   await vehicleEditor.getByLabel('Vehicle label',{exact:true}).fill(revisedVehicle);
+  await expect.poll(()=>page.evaluate(()=>{const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;})).toBe(true);
   await vehicleEditor.getByRole('button',{name:'Save vehicle',exact:true}).click();
   await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
   readDiagnostic.mark('vehicle_profile_reload');
-  await page.reload();
+  let releaseHistory;
+  const historyGate=new Promise(resolve=>{releaseHistory=resolve;});
+  const heldHistory=page.waitForRequest(request=>new URL(request.url()).pathname==='/api/business/vehicles/history');
+  await page.route('**/api/business/vehicles/history',async route=>{await historyGate;await route.continue();},{times:1});
+  void heldHistory.catch(()=>undefined);
+  try{
+   await page.reload();await heldHistory;await returnToJob.focus();
+   assert.equal(await page.evaluate(()=>{const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;}),false,'A clean read must not warn that edits could be lost.');
+  }finally{releaseHistory();}
   await expect(page.getByRole('heading',{name:revisedVehicle,exact:true})).toBeVisible();
-  await expect(returnToJob).toHaveAttribute('href','/schedule?job='+jobId+'&vehicle='+jobVehicle.id);
+  await expect(savedVisits).toHaveJSProperty('open',true);
+  await expect(returnToJob).toBeFocused();
+  await expect(returnToJob).toHaveAttribute('href',withPlanner('/schedule?job='+jobId+'&vehicle='+jobVehicle.id));
   readDiagnostic.mark('vehicle_return');
   await returnToJob.focus();await page.keyboard.press('Enter');
   await expect(bookedVehicleSummary).toHaveText(originalVehicle);
@@ -323,4 +345,23 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.getByRole('link',{name:'Back to customer vehicles',exact:true}).press('Enter');
   await expect(linkedVehicle).toBeFocused();
  }finally{await browser?.close();await fixture.close();}
+});
+
+// Each viewport gets a genuinely authenticated session: the added journeys must
+// respect the unchanged120 requests/minute per-session admission limit.
+for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' calendar context through customer and vehicle history at four widths',{timeout:300000},async()=>{
+ const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,quoteCommercial:true,scheduling:true,googleCalendar:true,calendarActivityBookings:6,calendarActivityOverlap:true,recordJobHistory:true});let browser,context,nextCodeAt=0;
+ try{
+  browser=await engine.launch();
+  for(const width of [360,390,430,1440]){
+   context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width,height:900}});
+   try{
+    const page=await context.newPage();page.setDefaultTimeout(15000);page.setDefaultNavigationTimeout(30000);
+    nextCodeAt=await signIn(page,fixture,nextCodeAt);
+    const params=new URLSearchParams({plannerFrom:'2026-11-01',plannerThrough:'2026-11-30',plannerView:'month',plannerCalendar:'open',plannerRange:'closed'});
+    await page.goto(fixture.origin+'/schedule?'+params);await expect(page.locator('.schedule-status')).toContainText('Saved schedule loaded.');
+    await reviewScheduleRecordReturn(page,fixture,fixture.calendarActivityJobIds[4]);
+   }finally{await context.close();context=null;}
+  }
+ }finally{await context?.close();await browser?.close();await fixture.close();}
 });

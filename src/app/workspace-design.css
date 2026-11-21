@@ -72,8 +72,8 @@ button,.primary-action {
 input:not([type='checkbox']),select,textarea {
   transition:background-color var(--workspace-control-duration) ease, border-color var(--workspace-control-duration) ease, box-shadow var(--workspace-control-duration) ease, filter var(--workspace-control-duration) ease;
 }
-:is(button:not(.secondary):not(:disabled):not([aria-disabled='true']),a.primary-action):hover { filter:brightness(1.08); }
-button.secondary:not(:disabled):not([aria-pressed='true']):hover { background:var(--accent-soft); border-color:#a7b3e8; }
+:is(button:not(.secondary):not(:disabled):not([aria-disabled='true']),a.primary-action:not(.secondary)):hover { filter:brightness(1.08); }
+:is(button.secondary:not(:disabled):not([aria-pressed='true']),a.primary-action.secondary):hover { background:var(--accent-soft); border-color:#a7b3e8; }
 .customer-lookup,.customer-record-editor,.home-panel,.notice { box-shadow:var(--panel-shadow); }
 .notice,.status { border-left-color:#c69139; }
 .workspace { min-height:100dvh; }

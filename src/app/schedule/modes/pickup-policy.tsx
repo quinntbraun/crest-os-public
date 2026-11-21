@@ -1,4 +1,6 @@
 'use client';
+import {ScheduleLink} from '../navigation';
+
 
 import {useEffect,useId,useRef,useState} from 'react';
 import {authentication,AuthenticationError} from '../../../client/authentication';
@@ -143,8 +145,8 @@ export function PickupPolicySettings({businessId,timezone,canWrite}:{businessId:
    <p className="field-help">Changes apply to future Pickup + Return bookings. Enable the service separately in Service arrangements.</p>
    <p ref={status} role="status" tabIndex={-1}>{view.message}</p>
    <button type="button" className="secondary" disabled={view.busy} onClick={()=>void load()}>{view.page?'Reload pickup policy':'Load pickup policy'}</button>
-   {view.signedOut&&<p><a href="/sign-in">Sign in</a></p>}
-   {view.pending&&<p><a href={'/save-review?kind='+pickupPolicyKind}>Open Save review</a></p>}
+   {view.signedOut&&<p><ScheduleLink href="/sign-in">Sign in</ScheduleLink></p>}
+   {view.pending&&<p><ScheduleLink href={'/save-review?kind='+pickupPolicyKind}>Open Save review</ScheduleLink></p>}
    {view.page&&!view.pending&&canWrite&&(editing?
     <><PolicyForm key={current?.id??'initial'} policy={current} busy={view.busy} save={save}/>
     <button type="button" className="secondary" disabled={view.busy} onClick={()=>setEditing(false)}>Cancel policy edit</button></>:

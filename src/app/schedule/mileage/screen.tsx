@@ -1,4 +1,6 @@
 'use client';
+import {ScheduleLink} from '../navigation';
+
 import {mileageEvidenceChanges} from './mileage-evidence-presentation';
 import {TaskPrerequisite} from '../../task-prerequisite';
 import {useCallback,useEffect,useId,useLayoutEffect,useRef,useState} from 'react';
@@ -323,7 +325,7 @@ export function MileageScreen({jobId,legId,initialTrip}:{jobId:string;legId:stri
  }
  return <section className="mileage-screen" aria-label="Saved trip mileage" aria-busy={view.busy}>
   <p className={view.selectionNeeded?'visually-hidden':'job-change-status'} ref={status} role="status" tabIndex={-1}>{view.message}</p>
-  {view.phase==='signed-out'&&<a className="primary-action" href="/sign-in">Sign in to view mileage</a>}
+  {view.phase==='signed-out'&&<ScheduleLink className="primary-action" href="/sign-in">Sign in to view mileage</ScheduleLink>}
   {view.selectionNeeded&&<TaskPrerequisite kind="mileage"/>}
   {!view.selectionNeeded&&(view.phase==='review'||view.phase==='unavailable')&&<button type="button" disabled={view.busy} onClick={()=>void action(current=>current.load())}>Reload saved trips</button>}
   {view.phase==='pending'&&<>
@@ -334,11 +336,11 @@ export function MileageScreen({jobId,legId,initialTrip}:{jobId:string;legId:stri
    {jobId&&<section className="mileage-job-context" aria-label="Saved job context">
     {view.jobContext?<><div><p className="field-help">Mileage for this job</p><h2>{view.jobContext.customerName}</h2></div>
      <details><summary>Job vehicles · {view.jobContext.vehicleLabels.length}</summary><ul>{view.jobContext.vehicleLabels.map((label,index)=><li key={index}>{label}</li>)}</ul><p className="field-help">These are the job’s vehicles. The saved mileage identifies the type of vehicle used for travel separately.</p></details></>
-     :<p>Job identity could not be verified. <a href={'/schedule?job='+encodeURIComponent(jobId)}>Open saved job</a> to review its customer and vehicles.</p>}
+     :<p>Job identity could not be verified. <ScheduleLink href={'/schedule?job='+encodeURIComponent(jobId)}>Open saved job</ScheduleLink> to review its customer and vehicles.</p>}
    </section>}
    {legId&&<p className="field-help mileage-standalone-context">Standalone travel · Job attribution is recorded separately for each mileage entry.</p>}
    {!view.canSave&&<p className="notice">Changes are paused. Saved mileage is available for review.</p>}
-   {jobId&&view.trips.length===0&&<section className="home-panel" aria-label="No recorded trips"><h2>No trips recorded yet</h2><p>Mileage appears here after travel is recorded for this job. No distance has been assumed.</p><a className="primary-action" href={'/schedule?job='+encodeURIComponent(jobId)}>Return to saved job</a></section>}
+   {jobId&&view.trips.length===0&&<section className="home-panel" aria-label="No recorded trips"><h2>No trips recorded yet</h2><p>Mileage appears here after travel is recorded for this job. No distance has been assumed.</p><ScheduleLink className="primary-action" href={'/schedule?job='+encodeURIComponent(jobId)}>Return to saved job</ScheduleLink></section>}
    {dirtyDrafts.size>0&&!showingRecord&&selected&&<aside className="mileage-draft-notice" aria-label="Unfinished mileage draft"><p>Your unfinished mileage or departure draft is still open.</p><button type="button" className="secondary" onClick={()=>{setDismissedRecord(null);setFocusRequest({target:'record'});}}>Return to mileage draft</button></aside>}
    {!!jobId&&(view.trips.length>0||selected)&&<div className="mileage-layout" data-picker={view.trips.length>0} data-selected={showingRecord}>
     {view.trips.length>0&&<section className="home-panel mileage-picker" aria-label="Find a trip">
@@ -359,10 +361,10 @@ export function MileageScreen({jobId,legId,initialTrip}:{jobId:string;legId:stri
    {!!legId&&selected&&history&&renderTrip(selected,history)}
   </>}
   <nav className="work-links" aria-label="Related mileage pages">
-   {jobId&&<a href={'/schedule?job='+encodeURIComponent(jobId)}>Saved job</a>}
-   {legId&&<a href={selected?'/schedule/travel?'+new URLSearchParams({trip:legId,at:selected.departedAt}):'/schedule/travel'}>Standalone travel</a>}
-   {!jobId&&!legId&&<a href="/schedule">Schedule</a>}
-   {view.phase!=='ready'&&<a href={'/save-review?kind='+(pendingDeparture?mobileDepartureKind:kind)}>Interrupted saves</a>}
+   {jobId&&<ScheduleLink href={'/schedule?job='+encodeURIComponent(jobId)}>Saved job</ScheduleLink>}
+   {legId&&<ScheduleLink href={selected?'/schedule/travel?'+new URLSearchParams({trip:legId,at:selected.departedAt}):'/schedule/travel'}>Standalone travel</ScheduleLink>}
+   {!jobId&&!legId&&<ScheduleLink href="/schedule">Schedule</ScheduleLink>}
+   {view.phase!=='ready'&&<ScheduleLink href={'/save-review?kind='+(pendingDeparture?mobileDepartureKind:kind)}>Interrupted saves</ScheduleLink>}
   </nav>
  </section>;
 }
@@ -407,8 +409,8 @@ function SavedAttribution({history,evidenceId,currentJob,trip,state}:{history:Mi
   <summary>{state==='draft'?'Draft job attribution':'Job attribution'} · {shares.length} {shares.length===1?'job':'jobs'}</summary>
   <ul>{shares.map((row,index)=><li key={String(row.id)}>
    {mileageSharePercent(String(row.fraction))}% · {row.job_id===currentJob?'This job':
-    <a href={'/schedule?'+new URLSearchParams({job:String(row.job_id),from:'mileage',mileageLeg:trip.legId,
-     ...currentJob?{mileageJob:currentJob,mileageAt:trip.departedAt}:{}})}>Open allocated job {index+1}</a>}
+    <ScheduleLink href={'/schedule?'+new URLSearchParams({job:String(row.job_id),from:'mileage',mileageLeg:trip.legId,
+     ...currentJob?{mileageJob:currentJob,mileageAt:trip.departedAt}:{}})}>Open allocated job {index+1}</ScheduleLink>}
   </li>)}</ul>
  </details>;
 }

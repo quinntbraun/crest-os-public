@@ -72,7 +72,7 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
     document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
     return ()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
   },[initialVehicleId,initialVisits]);
-  useEffect(()=>{if(!dirty&&view.phase!=='pending'&&!view.busy)return;const leaving=(event:BeforeUnloadEvent)=>{event.preventDefault();};window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[dirty,view.phase,view.busy]);
+  useEffect(()=>{if(!dirty&&view.phase!=='pending')return;const leaving=(event:BeforeUnloadEvent)=>{event.preventDefault();};window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[dirty,view.phase]);
   function discardAllowed(){
     if(linkEdit.current==='pending'){window.alert('Check the pending customer-link save before changing vehicles. Its original save reference must be kept.');return false;}
     const state=current.current?.view();return (!state||!draftChanged(state.draft,state.selected?draftFromVehicle(state.selected):emptyVehicleDraft))&&linkEdit.current==='clean'||window.confirm('Discard your unsaved vehicle or customer-link changes? Choose Cancel to keep editing.');

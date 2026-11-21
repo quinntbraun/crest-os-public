@@ -1,4 +1,6 @@
 'use client';
+import {ScheduleLink} from './navigation';
+
 
 import {useEffect,useId,useRef,useState} from 'react';
 import {authentication,AuthenticationError} from '../../client/authentication';
@@ -111,7 +113,7 @@ function DepartureForm({resources,choices,busy,timezone,more,save,worksiteVehicl
     {choices.vehicles.map(row=><option key={row.id} value={row.id}>{row.label}</option>)}
    </select>
    {choices.hasMore&&<button type="button" className="secondary" onClick={more}>Load more driving vehicles</button>}
-   {!choices.vehicles.length&&<p><a href="/vehicles">Save an active driving vehicle</a>, then reload pickup travel.</p>}
+   {!choices.vehicles.length&&<p><ScheduleLink href="/vehicles">Save an active driving vehicle</ScheduleLink>, then reload pickup travel.</p>}
    <label htmlFor={id+'-origin'}>Where are you leaving from?</label>
    <input id={id+'-origin'} required maxLength={2000} autoComplete="off" value={origin} onChange={event=>setOrigin(event.target.value)}/>
    <details><summary>Arrival estimate and notes</summary>
@@ -286,13 +288,13 @@ export function PickupTrips({resources,canChange,workAvailable}:{resources:Saved
  return <details ref={panel} onToggle={event=>{if(!event.currentTarget.open)clear();}}>
   <summary>Pickup travel</summary>
   <p role="status" ref={status} tabIndex={-1}>{view.message}</p>
-  {view.signedOut&&<p><a href="/sign-in">Sign in</a></p>}
+  {view.signedOut&&<p><ScheduleLink href="/sign-in">Sign in</ScheduleLink></p>}
   <button type="button" className="secondary" disabled={view.busy} onClick={()=>void load()}>{view.page?'Reload pickup travel':'Load pickup travel'}</button>
-  {view.pending&&<p><a href={'/save-review?kind='+pickupTripKind}>Open Save review</a></p>}
+  {view.pending&&<p><ScheduleLink href={'/save-review?kind='+pickupTripKind}>Open Save review</ScheduleLink></p>}
   {view.page&&!view.pending&&canChange&&activeLeg&&<ArrivalForm key={activeLeg.legId} busy={view.busy}
    canArrive={view.page.jobState==='scheduled'||activeLeg.purpose==='return_to_customer'} purpose={activeLeg.purpose} save={body=>void save(body)}/>}
   {view.page?.worksiteReady===true&&workAvailable&&canChange&&!view.pending&&!activeLeg&&
-   <p><a className="primary-action" href={'/schedule/work?job='+encodeURIComponent(jobId)}>Start Work</a></p>}
+   <p><ScheduleLink className="primary-action" href={'/schedule/work?job='+encodeURIComponent(jobId)}>Start Work</ScheduleLink></p>}
   {view.page&&!view.pending&&canChange&&!activeLeg&&view.page.jobState==='scheduled'&&view.page.worksiteReady!==true&&
    <DepartureForm key={view.page.trips[0]?.legVersionId??'planned'} resources={resources} choices={choices}
     worksiteVehicleIds={worksiteVehicleIds} busy={view.busy} timezone={timezone}

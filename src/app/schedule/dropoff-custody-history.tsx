@@ -1,4 +1,6 @@
 'use client';
+import {ScheduleLink} from './navigation';
+
 import {useEffect,useId,useRef,useState} from 'react';
 import {authentication,AuthenticationError} from '../../client/authentication';
 import {postScheduling,SchedulingClientError} from '../../client/scheduling-transport';
@@ -215,9 +217,9 @@ export function DropoffCustodyHistory({businessId,jobId,jobVehicleId,vehicleId,t
  return <section ref={anchor} className="custody-history-workspace" aria-label="Vehicle custody" aria-busy={view.busy}>
   <h4>Vehicle custody</h4>
   <p role="status" tabIndex={-1} ref={status}>{view.message}</p>
-  {view.signedOut&&<a href="/sign-in">Sign in</a>}
+  {view.signedOut&&<ScheduleLink href="/sign-in">Sign in</ScheduleLink>}
   {record&&<p><strong>{labels[record.state]}</strong></p>}
-  {view.pending&&<p><a href={'/save-review?kind='+dropoffCustodyKind}>Open Save review</a></p>}
+  {view.pending&&<p><ScheduleLink href={'/save-review?kind='+dropoffCustodyKind}>Open Save review</ScheduleLink></p>}
   <button type="button" className="secondary" disabled={view.busy} onClick={()=>void load()}>
    {record?'Reload custody history':'Load custody history'}
   </button>

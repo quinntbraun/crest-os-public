@@ -1,4 +1,6 @@
 'use client';
+import {ScheduleLink} from '../navigation';
+
 
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {financeAccounts} from '../../../client/finance-accounts';
@@ -62,6 +64,6 @@ export function InvoiceOutstanding({businessId,invoice}:{businessId:string;invoi
    {' · Checked '+snapshot.checkedTime}
    {' · '+snapshot.timeZone}</p>}
   <p ref={status} role="status" tabIndex={-1}>{active>0?'Finish the current financial task, then check the balance again.':message}</p>
-  {signIn?<a className="button secondary" href="/sign-in">Sign in again</a>:<button type="button" className="secondary" disabled={busy||active>0} onClick={()=>void check()}>{busy?'Checking balance…':snapshot?'Check balance again':'Check balance'}</button>}
+  {signIn?<ScheduleLink className="button secondary" href="/sign-in">Sign in again</ScheduleLink>:<button type="button" className="secondary" disabled={busy||active>0} onClick={()=>void check()}>{busy?'Checking balance…':snapshot?'Check balance again':'Check balance'}</button>}
  </section>;
 }

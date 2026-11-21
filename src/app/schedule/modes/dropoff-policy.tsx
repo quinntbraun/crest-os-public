@@ -1,4 +1,6 @@
 'use client';
+import {ScheduleLink} from '../navigation';
+
 import {useEffect,useId,useRef,useState} from 'react';
 import {authentication} from '../../../client/authentication';
 import {scheduling} from '../../../client/scheduling';
@@ -117,7 +119,7 @@ function PolicyEditor({businessId,mode,canWrite,canRevise,reloadModes}:{business
  }
  return <section aria-label="Selected Drop-Off policy" aria-busy={view.busy}>
   <p ref={status} role="status" tabIndex={-1}>{view.message}</p>
-  {view.pending&&<a href={'/save-review?kind='+view.pendingKind}>Open policy Save review</a>}
+  {view.pending&&<ScheduleLink href={'/save-review?kind='+view.pendingKind}>Open policy Save review</ScheduleLink>}
   {view.reloadRequired?<button type="button" className="secondary" disabled={view.busy} onClick={()=>void reloadModes()}>Reload service arrangements</button>:
    <button type="button" className="secondary" disabled={view.busy} onClick={()=>void load()}>
     {view.loaded?'Reload Drop-Off policy':'Load Drop-Off policy'}

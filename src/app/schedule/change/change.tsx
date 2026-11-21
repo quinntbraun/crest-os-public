@@ -1,4 +1,6 @@
 'use client';
+import {ScheduleLink} from '../navigation';
+
 import {useEffect,useId,useRef,useState} from 'react';
 import {createJobChangeController,initialJobChangeView} from '../../../client/job-change-controller';
 import type {JobChangeKind,JobChangeView} from '../../../client/job-change-controller';
@@ -138,13 +140,13 @@ export function JobChangeScreen({jobId,kind}:{jobId:string;kind:JobChangeKind}){
  return <section aria-label="Saved job change" aria-busy={view.busy}>
   <p className="job-change-status" data-phase={view.phase} ref={status} tabIndex={-1} role="status">{view.message}</p>
   {view.phase==='loading'&&<div className="workspace-skeleton appointment-change-loading" aria-hidden="true"/>}
-  {view.phase==='signed-out'&&<a className="primary-action" href="/sign-in">Sign in to change this job</a>}
+  {view.phase==='signed-out'&&<ScheduleLink className="primary-action" href="/sign-in">Sign in to change this job</ScheduleLink>}
   {view.phase==='ready'&&view.resources&&view.context&&<ChangeForm key={view.resources.head.job.id+':'+view.resources.head.job.version+':'+kind} view={view} kind={kind} save={async payload=>{
    const controller=current.current;if(!controller)return;
    await controller.save(payload);if(controller===current.current)status.current?.focus();
   }}/>}
   {['committed','pending'].includes(view.phase)&&view.savedJobId&&<>
-   <p>Confirmed saved version {view.savedVersion}.</p><a className="primary-action" href={'/schedule?job='+encodeURIComponent(view.savedJobId)}>Open updated job in Schedule</a>
+   <p>Confirmed saved version {view.savedVersion}.</p><ScheduleLink className={view.phase==='committed'?'primary-action':'secondary primary-action'} href={'/schedule?job='+encodeURIComponent(view.savedJobId)}>Open updated job in Schedule</ScheduleLink>
   </>}
   {view.phase==='pending'&&<>
    <p>Keep the original reference until the outcome is verified. Crest checks the recorded result before any retry.</p>
@@ -152,18 +154,18 @@ export function JobChangeScreen({jobId,kind}:{jobId:string;kind:JobChangeKind}){
    <div className="field-unavailable-actions">
     <button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check original job change</button>
     {view.canRetry&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>void action('retry')}>Retry unchanged job change</button>}
-    <a href={'/save-review?kind='+commandType}>Review interrupted job change</a>
+    <ScheduleLink href={'/save-review?kind='+commandType}>Review interrupted job change</ScheduleLink>
    </div>
   </>}
   {blocked&&<div className="field-unavailable-actions">
-   <a className="primary-action" href={jobHref}>{jobId?'Open saved job':'Open Schedule'}</a>
+   <ScheduleLink className="primary-action" href={jobHref}>{jobId?'Open saved job':'Open Schedule'}</ScheduleLink>
    {jobId&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload saved job</button>}
   </div>}
   {['review','unavailable'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload saved job</button>}
   <nav aria-label="Job change navigation">
-   {!blocked&&!view.savedJobId&&jobId&&<a href={jobHref}>Saved job</a>}
-   {(!blocked||jobId)&&<a href="/schedule">Schedule</a>}
-   <a href="/save-review">Interrupted saves</a>
+   {!blocked&&!view.savedJobId&&jobId&&<ScheduleLink href={jobHref}>Saved job</ScheduleLink>}
+   {(!blocked||jobId)&&<ScheduleLink href="/schedule">Schedule</ScheduleLink>}
+   <ScheduleLink href="/save-review">Interrupted saves</ScheduleLink>
   </nav>
  </section>;
 }

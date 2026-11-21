@@ -13,6 +13,7 @@ import {MaintenanceReminders} from '../maintenance-reminders';
 import {draftFromCustomer} from '../../customer/customer-contract';
 import {draftChanged} from '../../client/draft-changed';
 import {CustomerPayments} from './customer-payments';
+import {ScheduleLink} from '../schedule/navigation';
 import {RecordJobHistory} from '../schedule/record-job-history';
 import {useCustomerProfile} from './use-customer-profile';
 
@@ -25,7 +26,7 @@ type CustomerSection=keyof typeof sectionLabels;
 
 function VisitLink({visit}:{visit:{jobId:string;at:string;timezone:string}}){
   const formatted=new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short',timeZone:visit.timezone}).format(new Date(visit.at));
-  return <a href={'/schedule?'+new URLSearchParams({job:visit.jobId,from:'customer'})}><time dateTime={visit.at}>{formatted}</time></a>;
+  return <ScheduleLink href={'/schedule?'+new URLSearchParams({job:visit.jobId,from:'customer'})}><time dateTime={visit.at}>{formatted}</time></ScheduleLink>;
 }
 
 export function CustomerScreen({related:Related,initialCustomerId=null,initialSection='overview',initialVehicleFocus=null}:{

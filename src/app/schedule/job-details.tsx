@@ -1,4 +1,6 @@
 'use client';
+import {ScheduleLink} from './navigation';
+
 import type {Ref} from 'react';
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import type {parseJobResources} from '../../operations/booking-context-contract';
@@ -65,14 +67,14 @@ function SavedJobDetailsContent({resources,headingRef,initialJobVehicleId,visits
   <header className="schedule-job-heading">
    <p className="schedule-job-state"><strong>{states[job.state]}</strong><span>{' · '}{modes[job.fulfillment_mode]}</span></p>
    <div className="schedule-job-identity"><h2 ref={headingRef} tabIndex={headingRef?-1:undefined}>{customer.display_name}</h2><p className="schedule-job-vehicle">Vehicle · {primaryVehicle.label}{resources.vehicles.length>1?' · +'+(resources.vehicles.length-1)+' more':''}</p></div>
-   <a className="schedule-job-record-link" href={'/customers?customer='+encodeURIComponent(job.customer_id)+'&job='+encodeURIComponent(job.id)+(visitsSource==='customer'?'&view=visits':'')}>{visitsSource==='customer'?'Back to customer visits':'Open customer record'}</a>
+   <ScheduleLink className="schedule-job-record-link" href={'/customers?customer='+encodeURIComponent(job.customer_id)+'&job='+encodeURIComponent(job.id)+(visitsSource==='customer'?'&view=visits':'')}>{visitsSource==='customer'?'Back to customer visits':'Open customer record'}</ScheduleLink>
    <dl className="job-appointment">
     <dt>{job.state==='cancelled'?'Retained appointment':'Confirmed appointment'}</dt>
     <dd><AppointmentTime start={appointment.start_at} end={appointment.end_at} timezone={appointment.timezone}/></dd>
    </dl>
    {(fieldAction||completionAction)&&<section className="schedule-job-primary" aria-label="Field work actions">
    {fieldAction&&<button type="button" disabled={busy||!canChange} onClick={onWorkStatus}>{fieldAction==='start_dropoff'?'Review work start':workActionLabels[fieldAction]}…</button>}
-   {completionAction&&<a className={fieldAction?'schedule-job-completion':'primary-action'} href={'/schedule/work/complete?job='+encodeURIComponent(job.id)}>{job.state==='completed'?'Review saved completion':'Review and end job'}</a>}
+   {completionAction&&<ScheduleLink className={fieldAction?'schedule-job-completion':'primary-action'} href={'/schedule/work/complete?job='+encodeURIComponent(job.id)}>{job.state==='completed'?'Review saved completion':'Review and end job'}</ScheduleLink>}
    </section>}
    {!fieldAction&&!completionAction&&appointmentActions}
   </header>
@@ -81,10 +83,10 @@ function SavedJobDetailsContent({resources,headingRef,initialJobVehicleId,visits
    <div><dt>Contact for this visit</dt><dd>{contact.kind==='no_contact'?<>No contact selected: {contact.reason}</>:contact.value}</dd></div>
   </dl></details>
   <nav className="schedule-job-jumps" aria-label="Job sections">
-   <a href="#job-vehicles">Vehicles</a>
-   <a href="#job-work">Work scope</a>
-   <a href="#job-history" onClick={()=>{if(savedHistory.current)savedHistory.current.open=true;}}>History</a>
-   {invoiceDraftsAvailable&&<a href="#job-money">Invoice tools</a>}
+   <ScheduleLink href="#job-vehicles">Vehicles</ScheduleLink>
+   <ScheduleLink href="#job-work">Work scope</ScheduleLink>
+   <ScheduleLink href="#job-history" onClick={()=>{if(savedHistory.current)savedHistory.current.open=true;}}>History</ScheduleLink>
+   {invoiceDraftsAvailable&&<ScheduleLink href="#job-money">Invoice tools</ScheduleLink>}
   </nav>
   {proposed&&<section aria-label="Proposed appointment change"><h3>Time change awaiting confirmation</h3><p>{appointmentDateTime(latestAppointment.start_at,latestAppointment.timezone)} – {appointmentDateTime(latestAppointment.end_at,latestAppointment.timezone)}</p><p className="field-help">The confirmed appointment above still reserves the time. This proposal reserves no time.</p></section>}
   {pickupTripsAvailable&&job.fulfillment_mode==='pickup_return'&&<PickupTrips resources={resources} canChange={canChange&&!busy} workAvailable={pickupWorkAvailable===true}/>}
@@ -94,7 +96,7 @@ function SavedJobDetailsContent({resources,headingRef,initialJobVehicleId,visits
    const selected=row.id===initialJobVehicleId,returnToVisits=selected&&visitsSource==='vehicle';
    const vehicleLinkLabel=returnToVisits?'Back to vehicle visits':'Open vehicle record';
    return <details key={row.id} open={selected||undefined}><summary ref={selected?target:undefined}>{vehicle.label}</summary><dl className="customer-values"><dt>Vehicle</dt><dd>{[vehicle.year,vehicle.make,vehicle.model,vehicle.color].filter(v=>v!==null&&v!=='').join(' · ')||vehicle.label}</dd>{vehicle.plate&&<><dt>Plate</dt><dd>{vehicle.plate}</dd></>}{vehicle.vin_raw&&<><dt>VIN</dt><dd>{vehicle.vin_raw}</dd></>}{pickup&&<><dt>Pickup</dt><dd><WorkLocation value={pickup}/></dd></>}{returned&&<><dt>Return</dt><dd><WorkLocation value={returned}/></dd></>}</dl>
-    <a className="schedule-job-record-link" href={'/vehicles?vehicle='+encodeURIComponent(row.vehicle_id)+'&job='+encodeURIComponent(job.id)+'&jobVehicle='+encodeURIComponent(row.id)+(returnToVisits?'&view=visits':'')} aria-label={vehicleLinkLabel+' for '+vehicle.label}>{vehicleLinkLabel}</a>
+    <ScheduleLink className="schedule-job-record-link" href={'/vehicles?vehicle='+encodeURIComponent(row.vehicle_id)+'&job='+encodeURIComponent(job.id)+'&jobVehicle='+encodeURIComponent(row.id)+(returnToVisits?'&view=visits':'')} aria-label={vehicleLinkLabel+' for '+vehicle.label}>{vehicleLinkLabel}</ScheduleLink>
     {pickupCollectionAvailable&&job.fulfillment_mode==='pickup_return'&&<PickupCollection businessId={resources.businessId} jobId={job.id} jobVehicleId={row.id} jobVersion={job.version} timezone={appointment.timezone} canChange={canChange&&!busy} photosAvailable={pickupPhotosAvailable===true} releaseAvailable={pickupReleaseAvailable===true}/>}
     {dropoffCustodyAvailable&&job.fulfillment_mode==='dropoff'&&<DropoffCustodyHistory businessId={resources.businessId} jobId={job.id} jobVehicleId={row.id} vehicleId={vehicle.id} timezone={appointment.timezone} canChange={canChange}/>}
    </details>;
@@ -104,9 +106,9 @@ function SavedJobDetailsContent({resources,headingRef,initialJobVehicleId,visits
   {invoiceDraftsAvailable&&<div id="job-money"><InvoiceDrafts businessId={resources.businessId} jobId={job.id} canPrepare={job.state!=='cancelled'}/></div>}
   {(googleCalendarAvailable||mileageAvailable||workTimeAvailable&&job.fulfillment_mode==='mobile'&&job.first_work_at)&&
    <nav className="schedule-job-tools" aria-label="Saved job tools">
-    {googleCalendarAvailable&&<a href={'/settings/google-calendar?job='+encodeURIComponent(job.id)}>Calendar sync status</a>}
-    {mileageAvailable&&<a href={'/schedule/mileage?job='+encodeURIComponent(job.id)}>Review trip mileage</a>}
-    {workTimeAvailable&&job.fulfillment_mode==='mobile'&&job.first_work_at&&<a href={'/schedule/work/time?job='+encodeURIComponent(job.id)}>Review recorded work time</a>}
+    {googleCalendarAvailable&&<ScheduleLink href={'/settings/google-calendar?job='+encodeURIComponent(job.id)}>Calendar sync status</ScheduleLink>}
+    {mileageAvailable&&<ScheduleLink href={'/schedule/mileage?job='+encodeURIComponent(job.id)}>Review trip mileage</ScheduleLink>}
+    {workTimeAvailable&&job.fulfillment_mode==='mobile'&&job.first_work_at&&<ScheduleLink href={'/schedule/work/time?job='+encodeURIComponent(job.id)}>Review recorded work time</ScheduleLink>}
    </nav>}
   {(fieldAction||completionAction)&&appointmentActions}
   <details id="job-history" className="job-history-panel" ref={savedHistory}>
