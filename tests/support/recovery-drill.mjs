@@ -348,6 +348,15 @@ assert.equal(hash(legacy122CoverageBytes),'d5d40657d1a76bfcc1fb9c369b8992469215b
 const legacy122Coverage=JSON.parse(legacy122CoverageBytes);assert.equal(legacy122Coverage.migrationCount,122);
 const legacy122Profile=Object.freeze({schemaVersion:122,registrySha256:hash(legacy122Bytes)});
 const legacy122Snapshot={profile:legacy122Profile,versions:legacy122.migrations.map(row=>row.version),coverage:legacy122Coverage};
+const legacy123Bytes=await readFile(join(root,'tests/support/registered123-migration-checksums.json'));
+const legacy123=JSON.parse(legacy123Bytes);assert.equal(hash(legacy123Bytes),'aa6bb0581e624d755c845be9fee880ea5d918c4fb2e4145ca4fff977625ec33d');
+assert.deepEqual(registry.migrations.slice(0,123),legacy123.migrations);
+const legacy123CoverageBytes=await readFile(join(root,'tests/support/registered123-export-coverage.json'));
+assert.equal(hash(legacy123CoverageBytes),'e3a1c45b70a1d0e3ef6c1bdd71f921a7ea680184855ef0356cd43e3c97651999');
+const legacy123Coverage=JSON.parse(legacy123CoverageBytes);assert.equal(legacy123Coverage.migrationCount,123);
+const legacy123Profile=Object.freeze({schemaVersion:123,registrySha256:hash(legacy123Bytes)});
+const legacy123Snapshot={profile:legacy123Profile,versions:legacy123.migrations.map(row=>row.version),coverage:legacy123Coverage};
+
 
 const contactCandidateFiles=['legacy-contact-external-identities.sql','legacy-contact-application.sql','legacy-contact-application-source.sql'];
 const contactCandidateSources=await Promise.all(contactCandidateFiles.map(async file=>({file,sha256:hash(await readFile(join(root,'planning/proposals',file)))})));
@@ -1292,7 +1301,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile===legacy101Profile
       ||profile===legacy102Profile||profile===legacy103Profile||profile===legacy104Profile||profile===legacy105Profile||profile===legacy106Profile
       ||profile===legacy107Profile||profile===legacy108Profile||profile===legacy113Profile||profile===legacy114Profile
-      ||profile===legacy115Profile||profile===legacy116Profile||profile===legacy117Profile||profile===legacy118Profile||profile===legacy119Profile||profile===legacy120Profile||profile===legacy121Profile||profile===legacy122Profile||profile===contactApplicationCandidate.profile||profile===contactQueueCandidate.profile
+      ||profile===legacy115Profile||profile===legacy116Profile||profile===legacy117Profile||profile===legacy118Profile||profile===legacy119Profile||profile===legacy120Profile||profile===legacy121Profile||profile===legacy122Profile||profile===legacy123Profile||profile===contactApplicationCandidate.profile||profile===contactQueueCandidate.profile
       ||profile.schemaVersion===81&&profile.heldUnapplicationMigrationSha256
       ||profile.schemaVersion===82&&profile.heldFundApplicationMigrationSha256
       ||profile.schemaVersion===83&&profile.heldTipMigrationSha256
@@ -1543,3 +1552,8 @@ export async function backupLegacy122Database(client,url,directory,recipient,dur
  return backupWithProfile(legacy122Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy122Snapshot);
 }
 export async function restoreLegacy122Database(...args){return restoreWithProfile(legacy122Profile,...args);}
+
+export async function backupLegacy123Database(client,url,directory,recipient,duringSnapshot,objectCapture){
+ return backupWithProfile(legacy123Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy123Snapshot);
+}
+export async function restoreLegacy123Database(...args){return restoreWithProfile(legacy123Profile,...args);}

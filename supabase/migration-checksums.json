@@ -615,6 +615,11 @@
       "version": "20270116180000",
       "file": "20270116180000_finance_mapping_recording_history.sql",
       "sha256": "a655e25d1c0a030e7babd4766b1726353abcdcfecfe6b00bcffe4a3450f3c2d0"
+    },
+    {
+      "version": "20270117180000",
+      "file": "20270117180000_finance_history_recording.sql",
+      "sha256": "80e002a2bd865e06ad95717e04dff462900ed368aaca7a484f9622125bae8c17"
     }
   ]
 }

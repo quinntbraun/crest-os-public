@@ -1,4 +1,5 @@
 'use client';
+import {FinanceHistoryRecordedTime,FinanceHistoryRecordingFacts} from '../history-recording';
 
 import {useCallback,useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
 import type {FormEvent} from 'react';
@@ -246,12 +247,13 @@ export function MoneyChannelsScreen(){
  }
  function download(){
   if(!history?.page.rows.length||controller.current)return;
+  const recordingAvailable=history.page.rows.every(row=>row.recording!==undefined);
   downloadFinanceHistory('crest-money-channel-history.csv',[
    ['Channel','Version','Effective from','Type','Ownership','Account code','Provider','Masked suffix','Status','Ownership evidence',
-    'Opening state','Opening date','Opening cents','Opening evidence','Reason','Audit event'],
+    'Opening state','Opening date','Opening cents','Opening evidence','Reason','Audit event',...(recordingAvailable?['Recorded in Crest (UTC)','Recorded by reference']:[])],
    ...history.page.rows.map(row=>[row.label,row.version,row.effectiveFrom,moneyChannelKinds[row.kind],moneyChannelScopes[row.ownershipScope],
     history.record.accountCode,row.providerNamespace??'',row.maskedSuffix??'',row.active?'Open':'Closed',row.ownershipEvidence??'',
-    moneyChannelOpeningStates[row.openingState],row.openingOn??'',row.openingCents??'',row.openingEvidence??'',row.reason,row.auditEventId])
+    moneyChannelOpeningStates[row.openingState],row.openingOn??'',row.openingCents??'',row.openingEvidence??'',row.reason,row.auditEventId,...(recordingAvailable?[row.recording!.recordedAt,row.recording!.actorId]:[])])
   ]);
  }
 
@@ -269,15 +271,17 @@ export function MoneyChannelsScreen(){
    <div className={styles.actions}><button type="button" className="secondary" disabled={disabled} onClick={download}>Download loaded history (CSV)</button></div>
    <ol className="mapping-history-list">{history.page.rows.map((row,index)=><li key={row.version} className="channel-timeline-row">
     <strong>Version {row.version} · {row.active?'Open':'Closed'}</strong>
+    <FinanceHistoryRecordedTime recording={row.recording}/>
     <p>Effective <time dateTime={row.effectiveFrom}>{dateLabel(row.effectiveFrom)}</time>{index>0?' · Before '+dateLabel(history.page.rows[index-1]!.effectiveFrom)+' (exclusive)':' · Newest loaded review'}</p>
     <p>Account {history.record.accountCode} · {moneyChannelOpeningStates[row.openingState]}
      {row.openingCents===null?'':' · '+dollars(row.openingCents,true)+' USD'}</p>
     <p>{row.reason}</p>
-    {(row.ownershipEvidence||row.openingEvidence)&&<details>
-     <summary>Evidence</summary>
+    <details>
+     <summary>{row.ownershipEvidence||row.openingEvidence?'Evidence':'Recording evidence'}</summary>
      {row.ownershipEvidence&&<p>Ownership · {row.ownershipEvidence}</p>}
      {row.openingEvidence&&<p>Opening · {row.openingOn} · {row.openingEvidence}</p>}
-    </details>}
+     <FinanceHistoryRecordingFacts recording={row.recording} auditEventId={row.auditEventId}/>
+    </details>
    </li>)}</ol>
    {history.page.hasMore&&<button type="button" className="secondary" disabled={disabled}
     onClick={()=>loadHistory(history.record,true)}>Earlier reviews</button>}

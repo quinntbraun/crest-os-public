@@ -1,4 +1,5 @@
 'use client';
+import {FinanceHistoryRecordedTime,FinanceHistoryRecordingFacts} from './history-recording';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {InvoiceSetup} from './invoice-setup';
@@ -15,11 +16,12 @@ import {
  financeAccountTypes,financeAccountReviewReason,parseFinanceAccountDraft,requireFinanceAccount as check,
 } from '../../../bookkeeping/finance-account-contract';
 import type {
- FinanceAccount,FinanceAccountDraft,FinanceAccountHistory,FinanceAccountType,
+ FinanceAccount,FinanceAccountDraft,FinanceAccountType,
 } from '../../../bookkeeping/finance-account-contract';
 
 type Workspace={context:FinanceAccountContext;rows:FinanceAccount[];hasMore:boolean;includeArchived:boolean};
-type AccountHistory={account:FinanceAccount;rows:FinanceAccountHistory[];hasMore:boolean};
+type AccountHistoryRow=Awaited<ReturnType<typeof financeAccounts.history>>['rows'][number];
+type AccountHistory={account:FinanceAccount;rows:AccountHistoryRow[];hasMore:boolean};
 type Pending=NonNullable<ReturnType<typeof readPendingFinanceAccount>>;
 type Editor={account:FinanceAccount|null;name:string;code:string;accountType:FinanceAccountType|'';
  reportRole:string;controlKind:string;active:boolean;reason:string};
@@ -37,10 +39,11 @@ function readEditor(editor:Editor){
   name:editor.name.trim(),active:editor.active,reason:editor.reason.trim()||null,
  },expectedVersion);
 }
-function downloadHistory(rows:readonly FinanceAccountHistory[]){
+function downloadHistory(rows:readonly AccountHistoryRow[]){
+ const recordingAvailable=rows.length>0&&rows.every(row=>row.recording!==undefined);
  downloadFinanceHistory('crest-account-history.csv',[
-  ['Account code','Name','Version','Status','Change reason'],
-  ...rows.map(row=>[row.code,row.name,row.version,row.active?'Active':'Archived',row.reason??'']),
+  ['Account code','Name','Version','Status','Change reason',...(recordingAvailable?['Recorded in Crest (UTC)','Recorded by reference']:[])],
+  ...rows.map(row=>[row.code,row.name,row.version,row.active?'Active':'Archived',row.reason??'',...(recordingAvailable?[row.recording!.recordedAt,row.recording!.actorId]:[])]),
  ]);
 }
 const initialMessage='Checking accounting access…';
@@ -368,7 +371,9 @@ export function FinanceAccountsScreen(){
      <span className="activity-version">Version {row.version}</span>
     </div>
     <p className="activity-meta">{row.active?'Active':'Archived'}</p>
+    <FinanceHistoryRecordedTime recording={row.recording}/>
     {row.reason&&<p>{row.reason}</p>}
+    <details><summary>Version evidence</summary><FinanceHistoryRecordingFacts recording={row.recording} auditEventId={row.auditEventId}/></details>
    </li>)}</ol>
    <div className={styles.actions}>{history.hasMore&&<button type="button" className="secondary" disabled={busy}
     onClick={()=>void openHistory(workspace,history.account,true)}>Load more history</button>}

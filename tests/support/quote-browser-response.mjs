@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 // returning them unchanged to the browser. No Auth/result/persistence mock,
 // second write, redirect or automatic retry is introduced.
 export async function captureQuoteResponse(page,path,{timeoutMs=30000,beforeForward,matchesRequest}={}){
- if(!/^\/api\/business\/(?:quotes\/[a-z/]+|settings|scheduling\/(?:book|cancel|history)|finance-accounts\/(?:customer-funds-report|receivable-aging|supplier-payable-register))$/.test(path))throw Error('QUOTE_CAPTURE_PATH_REQUIRED');
+ if(!/^\/api\/business\/(?:quotes\/[a-z/]+|settings|scheduling\/(?:book|cancel|history|review-history)|finance-accounts\/(?:customer-funds-report|receivable-aging|supplier-payable-register))$/.test(path))throw Error('QUOTE_CAPTURE_PATH_REQUIRED');
  if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>30000)throw Error('QUOTE_CAPTURE_TIMEOUT_REQUIRED');
  if(beforeForward!==undefined&&typeof beforeForward!=='function')throw Error('QUOTE_CAPTURE_PACING_REQUIRED');
  if(matchesRequest!==undefined&&typeof matchesRequest!=='function')throw Error('QUOTE_CAPTURE_MATCH_REQUIRED');

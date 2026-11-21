@@ -1,22 +1,30 @@
+import {reviewFinancialHistoryRecording,reviewFinancialHistoryRecordingCsv} from '../support/financial-history-recording-layout.mjs';
 import assert from 'node:assert/strict';
-import {mkdir,readFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
 import {chromium,expect,webkit} from '@playwright/test';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
+import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
+import {observeSessionQueries} from '../support/session-query-evidence.mjs';
 
 for(const engine of [chromium,webkit]){
- test(engine.name()+' reviews, saves and recovers fictional tax approvals with history and dated amounts',{timeout:240000},async()=>{
+ test(engine.name()+' reviews, saves and recovers fictional tax approvals with history and dated amounts',{timeout:240000},async t=>{
   const previous=process.env.CREST_TEST_DATABASE_URL,cluster=previous?null:await recoveryCluster();
   if(cluster)process.env.CREST_TEST_DATABASE_URL=cluster.testDatabaseUrl;
-  let fixture,browser;
+  let fixture,browser,page,queryEvidence;const responses=[],previewRequests=[],dateEvents=[];
   try{
-   fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,financeAccounts:true,financeTaxProfiles:true});
+   fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,financeAccounts:true,financeHistoryEvidence:true,financeTaxProfiles:true});
+   queryEvidence=observeSessionQueries();
    browser=await engine.launch();
    const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:900}});
-   const page=await context.newPage();page.setDefaultTimeout(20000);
+   page=await context.newPage();page.setDefaultTimeout(20000);
+   await page.exposeFunction('crestObserveFictionalTaxDate',event=>{if(event&&['input','change','focusin','focusout'].includes(event.type)&&typeof event.value==='string'&&/^(?:\d{4}-\d{2}-\d{2})?$/.test(event.value)){dateEvents.push({type:event.type,value:event.value});if(dateEvents.length>32)dateEvents.shift();}});
+   await page.addInitScript(()=>{for(const type of ['input','change','focusin','focusout'])document.addEventListener(type,event=>{if(event.target instanceof HTMLInputElement&&event.target.id==='tax-date')void window.crestObserveFictionalTaxDate({type,value:event.target.value});},true);});
+   page.on('request',request=>{if(new URL(request.url()).pathname==='/api/business/finance-accounts/tax-preview'&&request.method()==='POST'){const value=request.postDataJSON();previewRequests.push({date:value?.date});if(previewRequests.length>16)previewRequests.shift();}});
+   page.on('response',response=>{const path=new URL(response.url()).pathname;if(path==='/api/auth/session'||path.startsWith('/api/business/finance-accounts/')){responses.push([path,response.status()]);if(responses.length>64)responses.shift();}});
    const anonymous=await page.request.post(fixture.origin+'/api/business/finance-accounts/tax-history',
     {data:{jurisdiction:'Fictional district',applicability:'tip',serviceId:null,beforeVersion:null}});
    assert.equal(anonymous.status(),400);
@@ -69,6 +77,8 @@ for(const engine of [chromium,webkit]){
    const file=await pendingDownload;
    assert.equal(file.suggestedFilename(),'crest-tax-profile-history.csv');
    const csv=await readFile(await file.path(),'utf8');
+   await reviewFinancialHistoryRecording(page,fixture,history,'tax');
+   await reviewFinancialHistoryRecordingCsv(csv,fixture,history,'tax');
    assert.match(csv,/"2026-01-01","Verified inclusive rate","0\.1","'=Fictional rate evidence"/);
    assert.match(csv,/"2026-06-01","Verified exemption policy","","Fictional exemption policy"/);
    await mkdir('.local/review',{recursive:true});
@@ -143,6 +153,7 @@ for(const engine of [chromium,webkit]){
    await expect(status).toHaveText('An exemption policy applies. This transaction needs its own evidence.');
    await expect(calculation.getByText('Tax included',{exact:true})).toHaveCount(0);
    await date.fill('2025-12-31');
+   await expect(date).toHaveValue('2025-12-31');
    await check.click();
    await expect(status).toHaveText('No verified tax treatment applies on that date.');
    await expect(calculation).toHaveCount(0);
@@ -253,7 +264,14 @@ for(const engine of [chromium,webkit]){
 
    await page.goBack();
    await expect(page.getByRole('heading',{name:'Accounting',level:1,exact:true})).toBeVisible();
+  }catch(error){
+   t.diagnostic('Recent tax response statuses: '+JSON.stringify(responses));
+   t.diagnostic('Fictional tax preview dates: '+JSON.stringify({requests:previewRequests,events:dateEvents,current:await page?.locator('#tax-date').inputValue().catch(()=>null)}));
+   if(fixture)t.diagnostic('Tax session/provider evidence: '+JSON.stringify(await sessionAdmissionDiagnostic(fixture)));
+   try{if(queryEvidence){await mkdir('.local/review',{recursive:true});await writeFile('.local/review/finance-tax-session-queries-'+engine.name()+'.json',JSON.stringify(queryEvidence.snapshot(),null,2)+'\n');}}catch{t.diagnostic('Tax query evidence unavailable');}
+   throw error;
   }finally{
+   queryEvidence?.stop();
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{
      if(previous===undefined)delete process.env.CREST_TEST_DATABASE_URL;

@@ -7,7 +7,7 @@ import {test} from 'node:test';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixture.mjs';
-import {backupDatabase,backupLegacy122Database,connect,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase,restoreLegacy122Database} from '../support/recovery-drill.mjs';
+import {backupLegacy123Database,backupLegacy122Database,connect,inventory,keyPair,privateWorkspace,recoveryCluster,restoreLegacy123Database,restoreLegacy122Database} from '../support/recovery-drill.mjs';
 
 const signature='crest_commands.read_finance_mapping_history_evidence(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,text,bigint,integer)';
 async function call(db,name,args){return (await db.query('SELECT crest_commands.'+name+'('+args.map((_,index)=>'$'+(index+1)).join(',')+') AS result',args)).rows[0].result;}
@@ -86,10 +86,10 @@ test('mapping recording projection preserves122 history and enforces exact autho
    await assert.rejects(call(finance,'read_finance_mapping_history_evidence',[...args,'service_revenue',null,25]),error=>error.code==='42501');
   });
   await t.test('independent encrypted122 and123 restores preserve recording facts and exact reader permissions',async()=>{
-   const current=await backupDatabase(admin,target,point123,keys.recipient);assert.equal(current.manifest.schemaVersion,123);assert.equal(current.manifest.completeBackup,false);
+   const current=await backupLegacy123Database(admin,target,point123,keys.recipient);assert.equal(current.manifest.schemaVersion,123);assert.equal(current.manifest.completeBackup,false);
    const definition=(await admin.query('SELECT pg_get_functiondef(to_regprocedure($1)) AS value',[signature])).rows[0].value;
    destination=await recoveryCluster();
-   for(const [version,point,restore,manifest]of [[122,point122,restoreLegacy122Database,frozen.manifest],[123,point123,restoreDatabase,current.manifest]]){
+   for(const [version,point,restore,manifest]of [[122,point122,restoreLegacy122Database,frozen.manifest],[123,point123,restoreLegacy123Database,current.manifest]]){
     const url=await destination.database();assert.notEqual(new URL(url).port,new URL(target).port);
     assert.deepEqual(await restore(point,keys.path,url),manifest);const client=await connect(url);restored.push(client);
     assert.deepEqual(await inventory(client),manifest.rows);

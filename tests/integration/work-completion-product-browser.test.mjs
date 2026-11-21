@@ -7,6 +7,7 @@ import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
+import {captureDuringAction} from '../support/quote-browser-response.mjs';
 
 const invoiceDrafts=true;
 const dollars=cents=>(cents/100n).toString()+'.'+(cents%100n).toString().padStart(2,'0');
@@ -379,20 +380,22 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const historyButton=historyDisclosure.locator(':scope > summary');
   await expect(historyDisclosure.getByRole('listitem')).toHaveCount(0);
   let historyReads=0;
+  const countHistoryRequest=request=>{if(request.method()==='POST'&&new URL(request.url()).pathname==='/api/business/scheduling/review-history')historyReads++;};
+  page.on('request',countHistoryRequest);
+  let rejectedHistoryRead=false;
   await page.route('**/api/business/scheduling/review-history',async route=>{
-   historyReads++;
-   if(historyReads===1)await route.abort('failed');
+   if(!rejectedHistoryRead){rejectedHistoryRead=true;await route.abort('failed');}
    else await route.continue();
   });
   await historyButton.focus();
   await historyButton.press('Enter');
   await expect(historyDisclosure.getByRole('alert')).toHaveText('Couldn’t load saved message history.');
   assert.equal(historyReads,1);
-  // Begin consuming the retained source as soon as its response is available;
-  // Chromium can release the body handle before the click finishes settling.
-  const historyResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/business/scheduling/review-history'&&response.status()===200).then(response=>response.json());
-  await historyDisclosure.getByRole('button',{name:'Retry history',exact:true}).click();
-  const historySource=await historyResponse;
+  // Buffer the one genuine server response before Chromium can retire its
+  // handle. Preserve the intentional failed first read and all source checks.
+  const historyResponse=await captureDuringAction(page,'/api/business/scheduling/review-history',()=>historyDisclosure.getByRole('button',{name:'Retry history',exact:true}).click(),{timeoutMs:20000});
+  assert.equal(historyResponse.status,200);
+  const historySource=historyResponse.body;
   const historyRows=historyDisclosure.getByRole('listitem');
   await expect(historyRows).toHaveCount(3);
   await expect(historyRows.nth(0)).toContainText('Owner-confirmed sent');
@@ -416,6 +419,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   }
   await expect(historyDisclosure).not.toContainText('https://example.invalid/crest-review');
   assert.equal(historyReads,2);
+  page.off('request',countHistoryRequest);
   await capture('history');
   await historyButton.click();
   await expect(historyDisclosure.locator('li')).toHaveCount(0);

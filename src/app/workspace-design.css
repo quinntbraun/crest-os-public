@@ -2282,3 +2282,8 @@ li[data-severity="rejected"] .legacy-row-state { color:#802830; background:#f7e7
 @media print { :is(.quote-worksheet,.issued-invoice-document) .document-brand { break-inside:avoid; } :is(.quote-worksheet,.issued-invoice-document) .document-brand-crest { width:1.5in; } }
 
 .mapping-period-timeline .mapping-recorded-time { display:block; margin-block:.3rem; color:var(--ink); font-size:.875rem; line-height:1.5; overflow-wrap:anywhere; }
+
+.financial-history-recorded { display:block; margin-block:.3rem; color:var(--ink); font-size:.875rem; line-height:1.5; overflow-wrap:anywhere; }
+.financial-history-evidence { display:grid; gap:.25rem; margin-block:1rem; }
+.financial-history-evidence dt { color:var(--muted); font-size:.8rem; }
+.financial-history-evidence dd { min-width:0; margin:0 0 .5rem; overflow-wrap:anywhere; white-space:pre-wrap; }

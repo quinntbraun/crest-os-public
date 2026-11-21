@@ -1,3 +1,4 @@
+import {reviewFinancialHistoryRecording,reviewFinancialHistoryRecordingCsv} from '../support/financial-history-recording-layout.mjs';
 import assert from 'node:assert/strict';
 import {mkdir,readFile} from 'node:fs/promises';
 import {test} from 'node:test';
@@ -14,7 +15,7 @@ for(const engine of [chromium,webkit]){
   if(cluster)process.env.CREST_TEST_DATABASE_URL=cluster.testDatabaseUrl;
   let fixture,browser;
   try{
-   fixture=await sourceExportBrowserFixture({product:true,workspace:true,financeAccounts:true});
+   fixture=await sourceExportBrowserFixture({product:true,workspace:true,financeAccounts:true,financeHistoryEvidence:true});
    browser=await engine.launch();
    const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:900}});
    const page=await context.newPage();page.setDefaultTimeout(20000);
@@ -96,7 +97,10 @@ for(const engine of [chromium,webkit]){
    await history.getByRole('button',{name:'Download loaded history (CSV)',exact:true}).click();
    const file=await download;
    assert.equal(file.suggestedFilename(),'crest-account-history.csv');
-   assert.match(await readFile(await file.path(),'utf8'),/"1000","Fictional closed checking","2","Archived"/);
+   const csv=await readFile(await file.path(),'utf8');
+   assert.match(csv,/"1000","Fictional closed checking","2","Archived"/);
+   await reviewFinancialHistoryRecording(page,fixture,history,'account');
+   await reviewFinancialHistoryRecordingCsv(csv,fixture,history,'account');
 
    await mkdir('.local/review',{recursive:true});
    for(const width of [360,390,768,1440]){

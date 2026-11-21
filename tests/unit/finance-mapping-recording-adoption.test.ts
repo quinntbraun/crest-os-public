@@ -1,11 +1,11 @@
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {expect,it} from 'vitest';
-import registry from '../../supabase/migration-checksums.json';
+import registry from '../support/registered123-migration-checksums.json';
 import previous from '../support/registered122-migration-checksums.json';
-import coverage from '../../planning/SECURITY_EXPORT_COVERAGE.json';
+import coverage from '../support/registered123-export-coverage.json';
 import previousCoverage from '../support/registered122-export-coverage.json';
-import compatibility from '../../release/compatibility.json';
+import compatibility from '../support/registered123-compatibility.json';
 import previousCompatibility from '../support/registered122-compatibility.json';
 
 const bytes=(path:string)=>readFileSync(new URL('../../'+path,import.meta.url));

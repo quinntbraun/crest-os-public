@@ -1,3 +1,4 @@
+import {reviewFinancialHistoryRecording,reviewFinancialHistoryRecordingCsv} from '../support/financial-history-recording-layout.mjs';
 import assert from 'node:assert/strict';
 import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
 import {mkdir,readFile} from 'node:fs/promises';
@@ -14,7 +15,7 @@ for(const engine of [chromium,webkit]){
   if(cluster)process.env.CREST_TEST_DATABASE_URL=cluster.testDatabaseUrl;
   let fixture,browser;
   try{
-   fixture=await sourceExportBrowserFixture({product:true,workspace:true,financeAccounts:true,financeMoneyChannels:true});
+   fixture=await sourceExportBrowserFixture({product:true,workspace:true,financeAccounts:true,financeHistoryEvidence:true,financeMoneyChannels:true});
    browser=await engine.launch();
    const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:900}});
    const page=await context.newPage();page.setDefaultTimeout(20000);
@@ -195,6 +196,8 @@ for(const engine of [chromium,webkit]){
    const download=await waiting;
    assert.equal(download.suggestedFilename(),'crest-money-channel-history.csv');
    const csv=await readFile(await download.path(),'utf8');
+   await reviewFinancialHistoryRecording(page,fixture,history,'channel');
+   await reviewFinancialHistoryRecordingCsv(csv,fixture,history,'channel');
    assert.match(csv,/"Verified opening amount","2026-01-01","1025","'=Fictional verified opening evidence"/);
    await expect(history).toContainText('Before Feb 1, 2026 (exclusive)');
    await capture('history',history.getByRole('heading'));

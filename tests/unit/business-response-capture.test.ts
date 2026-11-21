@@ -44,3 +44,13 @@ it('refuses finance writes before registering an observer or forwarding a reques
  await expect(captureDuringAction(f.page,path,()=>f.action())).rejects.toThrow('QUOTE_CAPTURE_PATH_REQUIRED');
  expect(f.counts.forwards).toBe(0);expect(f.registered()).toBe(false);
 });
+
+it('buffers the genuine review-history read once and preserves unsuccessful responses',async()=>{
+ for(const status of [200,503]){
+  const path='/api/business/scheduling/review-history',f=scene(path,status);
+  const result=await captureDuringAction(f.page,path,()=>f.action(),{timeoutMs:20000});
+  expect(result.status).toBe(status);expect(result.body).toEqual(JSON.parse(f.bytes.toString('utf8')));
+  expect(f.counts).toEqual({forwards:1,reads:1,fulfills:1,aborts:0});
+  expect(f.order).toEqual(['forward','read','fulfill','action-complete']);expect(f.registered()).toBe(false);
+ }
+});

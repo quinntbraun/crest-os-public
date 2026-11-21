@@ -2,31 +2,28 @@
 
 ## Current remaining work
 
-Main local changes addressed:61; partial:7; open:2. All70 original requirement bodies/hash and false final sign-offs remain; the audit is not finished.
+Audit61 main local changes addressed/7partial/2open; all70 original requirement bodies/hash and false final sign-offs remain. The audit is not finished.
 
-Published8282277/tree2cdaede is terminal successful: all22 main jobs and both owner-expense/commercial workflows pass. Tested mergedcd906a retains the exact tree and expected baseea06dc6/head8282277 parents. Foundation136901155437, including upgrade/recovery and isolated worker stages, succeeds. This verifies that published schema122 candidate only; newer local branding and schema123 remain separate and require fresh checks. No installation or real-use approval is established.
+Published169c95a/tree86c9ca2 is terminal: expense/commercial pass; main20/22 jobs pass, with field and dependent Foundation failing. The exact field failure is a retired Chromium review-history response body. Test-onlyed157e0 buffers the single genuine server response before fulfillment; both complete original completion journeys now pass locally, retaining failed-read/retry/source/request-count checks. This does not cure tax or older session failures. Older828 source passed all22 main jobs and expense/commercial, but cannot accept newer124. Draft PR178 remains open/unmerged/uninstalled on baseea06dc6. New124 source is not published or accepted yet; no live local process.
 
-Latest local batch: The unchanged original crest is prominent on sign-in and customer quote, amendment, cancellation and issued-invoice documents. Compact navigation reuses the established Crest OS text wordmark with a44px minimum touch target under the owner's delegated design direction; no new graphic or altered logo asset is introduced. Original sign-in/booking on3e98bc0 passes28/28 with178 PNGs; original taxable/exempt invoice on5afb580 passes2/2 with64 PNGs. Source stays frozen and owned resources are cleaned. Separate commercial/amendment source3cec3fd remains21/23 (8/9 root checks,5/6 genuine journeys): both standard agreements and both amendment/cancellation/reopening flows pass; Chromium replacement fails after renewed access, while WebKit replacement passes.200 PNGs and the unexplained failure remain retained. Final build/types/targeted lint and34 focused document/contract cases pass in their recorded scopes. Owner confirmation of the wordmark and final acceptance remain separate.
-
-Additional S10 evidence: Configured mapping source1598864 adds48 actual Chromium tab-zoom observations across six genuine entry/current/closed/history/unsaved-proposal states.720/780/860/1440 outer widths at100%/200% verify CSS width/DPR, native PNG dimensions, no CSS/pinch zoom, overflow,16px inputs, Axe, conserved typed/mapping/audit facts and zero inspection business requests. Private pagehide clearing and owned cleanup pass;24 hashed PNGs retained. Other histories, long-value/state combinations, WebKit/device and exact delivered acceptance remain open.
-
-Latest S12 batch: Registered123 source6dae674 adds a separate version2 mapping-history reader reusing retained version1 authorization/paging and requiring the exact business/mapping/version/audit/operation/actor relationship. History rows and CSV show actual retained recording time and opaque actor reference, separately from effective dates; no inferred names or identity expansion. Legacy responses/commands and all previous migration bytes stay unchanged. Build/types/full lint and9142 units in400 files pass. New registered upgrade/authorization and independent encrypted frozen122/current123 database restore passes6/6, preserving captured facts, exact reader definition and restricted permissions. Complete original fixed/category browser files pass4/4 in both engines, checking display/CSV against actual audit rows through30 loaded versions, with original recovery/source/privacy assertions preserved.122 PNGs retained;390px category history visually reviewed. Both native runs keep tracked source frozen and clean owned resources. These database-only proofs do not establish full external-file/owner/device recovery or fresh hosted123 acceptance.
+Registered124 completes actual audit recording metadata for account, tax and money-channel histories and loaded CSVs, separately from applicability dates and channel ownership. No financial command, snapshot, legacy reader or prior migration changes. Build/types/full lint and9157 units/402 files pass. Native append-only upgrade/authorization and independent encrypted frozen123/current124 database restore pass6/6 on a18c572. Complete original account/channel/tax/completion files on ed157e0 finish7/8 with189 PNGs: all account/channel/completion journeys and WebKit tax pass; Chromium tax later earlier-date preview fails verification. Separate diagnostic tax c872414 finishes1/2: WebKit keeps prior exemption despite200 responses and eligible observed session. Separate dates-only observation plus stronger expected-input assertion on ef5b0e3 finishes2/2,42 PNGs, with unchanged application code. Source remains frozen and owned cleanup passes in every run. This is non-reproduction, not a cause/fix or aggregate8/8 acceptance. Both earlier tax failures remain retained; see FINANCIAL_HISTORY_RECORDING.md.
 
 | Group | Remaining implementation or acceptance |
 |---|---|
-| S01 | Finish exact-candidate Foundation/release, populated upgrade, recovery and worker checks; compare installed build; retain the renewed-access failure. |
-| S03 | Completion return is verified locally; finish other selected-record/scheduling return contexts and delivered/device acceptance. |
-| S04 | Verify the task/recovery hierarchy across remaining configured states; source button inventory is insufficient. |
-| S06 | Finish the loaded/empty/loading/validation/denied/stale/uncertain-save/success matrix for every important workflow. |
-| S08 | Main branding implementation addressed; owner wordmark confirmation and exact delivered/installed/device acceptance remain. |
-| S10 | Mapping zoom is now verified separately; finish other financial/history/long-value states and matching device checks. |
-| S11 | Finish workflow-specific stable loading, control/panel motion and quiet confirmed-save/focus review. |
-| S12 | Recording/actor projection is locally verified. Finish other agreement/approval/integration history/privacy/state/zoom review and fresh123 acceptance. |
-| S13 | Verify date/view/contextual returns and sign-out/private clearing on the accepted release. |
-| S14 | Physical iPhone keyboard, safe area, camera/download, zoom and reduced-motion acceptance. |
+| S01 | Fresh exact-candidate CI/upgrade/recovery/worker, retained failure diagnosis and installed comparison. |
+| S03 | Remaining selected-record and scheduling returns; delivered/device acceptance. |
+| S04 | Configured task/recovery action hierarchy across remaining states. |
+| S06 | Complete important-workflow loaded/empty/loading/validation/denied/stale/uncertain-save/success matrix. |
+| S08 | Owner wordmark confirmation and exact delivered/installed/device acceptance. |
+| S10 | Remaining actual browser zoom on financial/history/long-value states and device checks. |
+| S11 | Workflow-specific stable loading, control/panel motion and quiet confirmed-save/focus review. |
+| S12 | Finish remaining agreement/integration history presentation and missing/stale/long/zoom/private variants; trace retained tax input/result verification failures without weaker assertions, retries or security waivers. Require fresh exact-source124 release, installed comparison, owner and physical-device acceptance. Local date/actor projection and database recovery are verified in their separate recorded scopes. |
+| S13 | Date/view/contextual return and private clearing on the accepted release. |
+| S14 | Physical iPhone keyboard/safe-area/camera/download/zoom/reduced-motion acceptance. |
 
-V1 coding roughly80%, low confidence. Real Crest use is not ready. Context sufficient; $0 newly spent. No live local process, merge/install/real data/activation. Remaining original state/context/action/zoom/motion/history, exact release/upgrade/recovery/worker/installed, owner-finance/off-laptop restore and physical-iPhone gates remain mandatory.
+Use DESIGN_AUDIT_FINISH_REGISTER.md as the single remaining-work checklist. Keep earlier80/82 record and21/23 quote/access failures and all other historical scopes separate. No installed build or final owner/device acceptance is established.
 
+V1 coding roughly80%, low confidence. Actual Crest use is not ready. Context sufficient; $0 newly spent. No merge/install, real data, financial/provider activation or spending. Full V1 portability and owner-finance/off-laptop restore gates remain.
 
 Earlier retained checkpoint (its own source/time):
 

@@ -1,4 +1,5 @@
 'use client';
+import {FinanceHistoryRecordedTime,FinanceHistoryRecordingFacts} from '../history-recording';
 
 import {useCallback,useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import type {FormEvent,RefObject} from 'react';
@@ -143,11 +144,12 @@ export function FinanceTaxProfilesScreen(){
  }
  function download(){
   if(!history?.rows.length||active.current)return;
+  const recordingAvailable=history.rows.every(row=>row.recording!==undefined);
   downloadFinanceHistory('crest-tax-profile-history.csv',[
    ['Jurisdiction','Applies to','Service ID','Version','Effective from','Treatment','Rate (decimal)',
-    'Verification evidence','Approval reason','Reviewer ID','Audit event ID'],
+    'Verification evidence','Approval reason','Reviewer ID','Audit event ID',...(recordingAvailable?['Recorded in Crest (UTC)','Recorded by reference']:[])],
    ...history.rows.map(row=>[row.jurisdiction,row.applicability,row.serviceId??'',row.version,row.effectiveFrom,
-    financeTaxTreatmentLabels[row.treatment],row.rate??'',row.verificationEvidence??'',row.reason,row.reviewedBy,row.auditEventId])
+    financeTaxTreatmentLabels[row.treatment],row.rate??'',row.verificationEvidence??'',row.reason,row.reviewedBy,row.auditEventId,...(recordingAvailable?[row.recording!.recordedAt,row.recording!.actorId]:[])])
   ]);
  }
 
@@ -272,11 +274,13 @@ export function FinanceTaxProfilesScreen(){
     {history.rows.map((row,index)=><li key={row.id}>
      <details><summary>
       <strong>Version {row.version} · {financeTaxTreatmentLabels[row.treatment]}</strong>
+      <FinanceHistoryRecordedTime recording={row.recording} inline/>
       <span>Effective {dateLabel(row.effectiveFrom)}{row.rate===null?'':' · Decimal rate '+row.rate}</span>
       <span>{index>0?'Before '+dateLabel(history.rows[index-1]!.effectiveFrom)+' (exclusive)':'Newest loaded approval'}</span>
      </summary>
      <p>{row.reason}</p>
      {row.verificationEvidence&&<><p><strong>Verification evidence</strong></p><p>{row.verificationEvidence}</p></>}
+     <FinanceHistoryRecordingFacts recording={row.recording} auditEventId={row.auditEventId}/>
      </details>
     </li>)}
    </ol>
