@@ -12,6 +12,7 @@ import {reviewSupplierRegister} from '../support/supplier-register-layout.mjs';
 import {reviewSupplierDraft} from '../support/supplier-draft-layout.mjs';
 import {reviewSupplierDirectory} from '../support/supplier-directory-layout.mjs';
 import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
+import {captureDuringAction} from '../support/quote-browser-response.mjs';
 
 const financeRoute='/api/business/finance-accounts/';
 const beginFinanceCalls=page=>page.evaluate(async prefix=>{
@@ -133,9 +134,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await expect(review.getByLabel('Reason for the review')).toHaveValue('Fictional purchase tax review');
    const register=page.getByRole('region',{name:'Recorded supplier payables',exact:true});
    const loadRegister=async()=>{
-    const reply=page.waitForResponse(response=>response.url().endsWith(financeRoute+'supplier-payable-register'));
-    await register.getByRole('button',{name:'Load supplier payables',exact:true}).click();
-    const response=await reply;assert.equal(response.status(),200);return response.json();
+    const response=await captureDuringAction(page,financeRoute+'supplier-payable-register',()=>register.getByRole('button',{name:'Load supplier payables',exact:true}).click());
+    assert.equal(response.status,200);return response.body;
    };
    await register.getByText('Recorded supplier payables',{exact:true}).click();
    const emptyRegister=await loadRegister();
@@ -240,11 +240,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await expect(register.getByText('Check the original payment result below before changing this register’s date.',{exact:true})).toBeVisible();
     await expect(payment).toBeVisible();
     await reviewFinancialRecovery(page,fixture,name,'supplier_payment',register);
-    const refreshedRegister=page.waitForResponse(response=>response.url().endsWith(financeRoute+'supplier-payable-register'));
-    await register.getByRole('button',{name:'Check original posting request',exact:true}).click();
+    const refreshedRegister=await captureDuringAction(page,financeRoute+'supplier-payable-register',()=>register.getByRole('button',{name:'Check original posting request',exact:true}).click());
     await expect(register.getByText('Verified supplier payment recorded.',{exact:true})).toBeVisible();
-    const refreshedResponse=await refreshedRegister;assert.equal(refreshedResponse.status(),200);
-    const partiallyPaidRegister=await refreshedResponse.json();
+    assert.equal(refreshedRegister.status,200);
+    const partiallyPaidRegister=refreshedRegister.body;
     const {rows:[paymentEvidence]}=await fixture.client.query(`SELECT s.id AS settlement_id,s.payable_id,m.id AS movement_id,v.version::text AS channel_version
      FROM crest.supplier_payable_settlements s JOIN crest.financial_events e ON (e.business_id,e.supplier_payable_settlement_id)=(s.business_id,s.id)
      JOIN crest.money_movements m ON (m.business_id,m.event_id)=(e.business_id,e.id)

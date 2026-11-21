@@ -1,4 +1,4 @@
-// Disposable Linux-only real Auth/SQL/SigV4/JWE/TLS fixture. It serves compiled
+// Disposable real Auth/SQL/SigV4/JWE/TLS fixture. It serves compiled
 // actual React controls, or an explicit actual Next test application. No hosted
 // provider or production activation. The default retains the compiled-control fixture.
 import assert from 'node:assert/strict';
@@ -14,7 +14,7 @@ import {randomBytes,randomUUID,createHash} from 'node:crypto';
 import {browserTestTls} from './browser-test-tls.mjs';
 import {readFile,chmod,mkdir,writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
-import {join} from 'node:path';
+import {join,win32} from 'node:path';
 import {Readable} from 'node:stream';
 import {URI,TOTP} from 'otpauth';
 import {migrationSandbox} from './migration-sandbox.mjs';
@@ -81,6 +81,13 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  const supplierBillDrafts=statementMatchDrafts&&process.env.CREST_TEST_SUPPLIER_BILL_DRAFTS==='1';
  const supplierPayableReview=supplierBillDrafts&&process.env.CREST_TEST_SUPPLIER_PAYABLE_REVIEW==='1';
  const supplierPayablePosting=supplierPayableReview&&process.env.CREST_TEST_SUPPLIER_PAYABLE_POSTING==='1';
+ if(supplierPayablePosting&&process.env.CREST_SUPPLIER_DOCUMENT_IMAGE_ID){
+  assert(/^sha256:[a-f0-9]{64}$/.test(process.env.CREST_SUPPLIER_DOCUMENT_IMAGE_ID),'SYNTHETIC_SUPPLIER_IMAGE_REQUIRED');
+  if(process.platform==='win32'){
+   const executable=process.env.CREST_TEST_DOCKER_EXECUTABLE;
+   assert(typeof executable==='string'&&/^[A-Za-z]:[\\/]/.test(executable)&&win32.basename(executable).toLowerCase()==='docker.exe'&&!/\p{Cc}/u.test(executable),'SYNTHETIC_SUPPLIER_DOCKER_PATH_REQUIRED');
+  }
+ }
  const openingArPreview=openingWorksheet&&process.env.CREST_TEST_OPENING_AR_PREVIEW==='1';
  assert(!openingArPreview||postedFinanceExport);
  const recordedIncomeStatement=process.env.CREST_TEST_RECORDED_INCOME_STATEMENT==='1';

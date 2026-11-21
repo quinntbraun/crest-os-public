@@ -1,5 +1,5 @@
 'use client';
-import {useId,useLayoutEffect,useState} from 'react';
+import {useId,useLayoutEffect,useRef,useState} from 'react';
 import {quoteDollarsInput,quoteMoney} from '../../../commercial/quote-pricing';
 import type {CompletionAssignment,CompletionBody,CompletionContext,CompletionSummary} from '../../../operations/work-completion-contract';
 import type {CompletionAllocation,CompletionPiece,WorkOutcome} from '../../../operations/work-completion';
@@ -79,7 +79,7 @@ function Portion({id,piece,index,change,remove}:{id:string;piece:PieceDraft;inde
   {remove&&<button type="button" className="secondary" onClick={remove}>Remove portion {index+1}</button>}
  </fieldset>;
 }
-function AssignedScope({id,row,index,draft,ready,open,toggle,change}:{id:string;row:CompletionAssignment;index:number;draft:ScopeDraft;ready:boolean;open:boolean;toggle:(open:boolean)=>void;change:(next:ScopeDraft)=>void}){
+function AssignedScope({id,row,index,draft,ready,open,toggle,change,onReview}:{id:string;row:CompletionAssignment;index:number;draft:ScopeDraft;ready:boolean;open:boolean;toggle:(open:boolean)=>void;change:(next:ScopeDraft)=>void;onReview:()=>void}){
  const complimentary=row.grossInclusiveCents==='0';
  const state=ready?(draft.selection==='split'?'Portions ready':labels[draft.selection as WorkOutcome]):draft.selection?'Needs details':'Needs outcome';
  return <fieldset className="completion-assignment">
@@ -107,6 +107,7 @@ function AssignedScope({id,row,index,draft,ready,open,toggle,change}:{id:string;
    <label htmlFor={id+'-reason'}>Reason for unfinished item</label>
    <textarea id={id+'-reason'} rows={2} maxLength={1000} required value={draft.reason} onChange={event=>change({...draft,reason:event.target.value})}/>
   </>}
+  <button type="button" className="secondary completion-review-return" onClick={onReview}>Back to completion review</button>
   </details>
  </fieldset>;
 }
@@ -134,6 +135,7 @@ function reviewAllocation(row:CompletionAssignment,draft:ScopeDraft){
   field:problem instanceof CompletionInputError?problem.field:'-outcome'};}
 }
 
+type CompletionReviewOrigin={button:HTMLButtonElement;index:number;activeItem:number|null;scrollY:number;width:number};
 export function CompletionEditor({context,visit,disabled,save}:{context:CompletionContext;visit:VisitIdentity|undefined;disabled:boolean;save:(body:CompletionBody)=>Promise<void>}){
  const id=useId();
  const [scope,setScope]=useState<Record<string,ScopeDraft>>({});
@@ -143,12 +145,24 @@ export function CompletionEditor({context,visit,disabled,save}:{context:Completi
  const [additional,setAdditional]=useState(''),[contactReview,setContactReview]=useState('');
  const [error,setError]=useState('');
  const [activeItem,setActiveItem]=useState<number|null>(0);
- const [focusRequest,setFocusRequest]=useState<{field:string}|null>(null);
+ const reviewOrigin=useRef<CompletionReviewOrigin|null>(null);
+ const [focusRequest,setFocusRequest]=useState<{field:string}|{origin:CompletionReviewOrigin}|null>(null);
  useLayoutEffect(()=>{
   if(!focusRequest)return;
+  if('origin' in focusRequest){
+   const origin=focusRequest.origin;
+   if(origin.button.isConnected){
+    const sameWidth=origin.width===window.innerWidth;
+    origin.button.focus({preventScroll:sameWidth});
+    if(sameWidth)window.scrollTo({top:origin.scrollY,behavior:'instant'});
+   }else{
+    const finish=document.getElementById(id+'-end-job');finish?.focus();finish?.scrollIntoView({block:'center',behavior:'instant'});
+   }
+   return;
+  }
   const target=document.getElementById(focusRequest.field);
   if(target){target.focus();target.scrollIntoView({block:'center',behavior:'instant'});}
- },[focusRequest]);
+ },[focusRequest,id]);
  const unanswered=context.assignments.filter(row=>!scope[row.assignedPartId]?.selection);
  const hasSelectedOutcome=unanswered.length<context.assignments.length;
  const reviewed=context.assignments.map(row=>reviewAllocation(row,scope[row.assignedPartId]??blank));
@@ -159,10 +173,16 @@ export function CompletionEditor({context,visit,disabled,save}:{context:Completi
  const hasFulfilled=reviewed.some(row=>row.allocation?.pieces.some(piece=>piece.outcome==='completed'));
  const walkthroughReady=walkthrough==='done'||walkthrough==='unavailable'&&walkthroughReason.trim().length>0;
  const itemField=(index:number)=>id+'-assignment-'+index;
- const focusField=(field:string)=>{
+ const focusField=(field:string,button?:HTMLButtonElement)=>{
   const index=context.assignments.findIndex((_,position)=>field.startsWith(itemField(position)+'-'));
+  reviewOrigin.current=button&&index>=0?{button,index,activeItem,scrollY:window.scrollY,width:window.innerWidth}:null;
   if(index>=0)setActiveItem(index);
   setFocusRequest({field});
+ };
+ const backToReview=(index:number)=>{
+  const origin=reviewOrigin.current;reviewOrigin.current=null;
+  if(origin?.index===index){setActiveItem(origin.activeItem);setFocusRequest({origin});}
+  else setFocusRequest({field:id+'-end-job'});
  };
  const nextField=firstUnresolved>=0?itemField(firstUnresolved)+(reviewed[firstUnresolved]!.field??'-outcome'):!hasFulfilled?itemField(displayOrder[0]!)+'-outcome':
   !walkthroughReady?id+(walkthrough==='unavailable'?'-walkthrough-reason':'-walkthrough'):null;
@@ -205,6 +225,7 @@ export function CompletionEditor({context,visit,disabled,save}:{context:Completi
    <p className="completion-visit-state">{context.jobState==='paused'?'Paused':'In progress'} <span>· Saved version {context.jobVersion}</span></p>
    {visit&&<><h2>{visit.customer}</h2><p>{visit.vehicles.map(row=>row.label).join(' · ')}</p></>}
    <p className="field-help">Record what was done. Unfinished work will be flagged for review.</p>
+   <button type="button" className="secondary completion-review-jump" disabled={disabled} onClick={()=>focusField(id+'-end-job')}>Review completion</button>
   </header>
   <div className="completion-checklist">
   <fieldset disabled={disabled}>
@@ -224,7 +245,8 @@ export function CompletionEditor({context,visit,disabled,save}:{context:Completi
     {group.items.map(index=>{
      const row=context.assignments[index]!;
      return <AssignedScope key={row.assignedPartId} id={itemField(index)} row={row} index={index} draft={scope[row.assignedPartId]??blank} ready={reviewed[index]!.allocation!==null}
-      open={activeItem===index} toggle={open=>setActiveItem(current=>open?index:current===index?null:current)}
+      open={activeItem===index} toggle={open=>{reviewOrigin.current=null;setActiveItem(current=>open?index:current===index?null:current);}}
+      onReview={()=>backToReview(index)}
       change={next=>setScope(current=>({...current,[row.assignedPartId]:next}))}/>;
     })}
    </div>)}
@@ -269,15 +291,15 @@ export function CompletionEditor({context,visit,disabled,save}:{context:Completi
     !hasFulfilled?'A fulfilled portion is required':!walkthroughReady?'Walkthrough outcome required':'Ready to end the job'}</p>
    {unresolved>0&&<div className="completion-unresolved" role="region" aria-label="Items needing review" tabIndex={0}>
     <ol>{displayOrder.filter(index=>!reviewed[index]!.allocation).map(index=><li key={context.assignments[index]!.assignedPartId}>
-     <button type="button" className="secondary" disabled={disabled} onClick={()=>focusField(itemField(index)+(reviewed[index]!.field??'-outcome'))}>
+     <button type="button" className="secondary" disabled={disabled} onClick={event=>focusField(itemField(index)+(reviewed[index]!.field??'-outcome'),event.currentTarget)}>
       Item {index+1}: {scope[context.assignments[index]!.assignedPartId]?.selection?'Needs details':'Needs outcome'}
      </button>
      <p>{context.assignments[index]!.scopeDescription}</p>
     </li>)}</ol>
    </div>}
-   {nextField&&<button type="button" className="secondary" disabled={disabled} onClick={()=>focusField(nextField)}>Review next required field</button>}
+   {nextField&&<button type="button" className="secondary" disabled={disabled} onClick={event=>focusField(nextField,event.currentTarget)}>Review next required field</button>}
    {error&&<p role="alert">{error}</p>}
-   <button type="submit" disabled={disabled}>End job</button>
+   <button id={id+'-end-job'} type="submit" disabled={disabled}>End job</button>
   </aside>
  </form>;
 }

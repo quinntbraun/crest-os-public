@@ -1,7 +1,7 @@
 // Genuine Next/Node/MFA browser acceptance for the isolated completion candidate.
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {mkdir,readFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
@@ -129,7 +129,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(review).toContainText(rows.length+' items need review');
   const firstEditor=page.getByRole('group',{name:'Assigned item 1',exact:true}).locator('details.completion-item-editor');
   const previewFacts=async()=>({jobs:(await fixture.client.query('SELECT to_jsonb(j)::text AS value FROM crest.jobs j WHERE business_id=$1 ORDER BY to_jsonb(j)::text COLLATE "C"',[fixture.business])).rows,audit:(await fixture.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[fixture.business])).rows});
-  const beforeJump=await previewFacts(),jumpRequests=[];const observeJump=request=>{const path=new URL(request.url()).pathname;if(path.startsWith('/api/business/'))jumpRequests.push(request.method()+' '+path);};page.on('request',observeJump);
+  const beforeJump=await previewFacts(),jumpRequests=[],returnChecks=[];const observeJump=request=>{const path=new URL(request.url()).pathname;if(path.startsWith('/api/business/'))jumpRequests.push(request.method()+' '+path);};page.on('request',observeJump);
   try{
    await expect(firstEditor).toHaveJSProperty('open',true);
    await firstEditor.locator(':scope > summary').press('Enter');await expect(page.getByLabel('Outcome for item 1',{exact:true})).toBeHidden();
@@ -149,9 +149,27 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(issue=>issue.id),[]);
     await review.screenshot({path:'.local/review/completion-unresolved-'+name+'-'+width+'.png'});
    }
+   for(const width of [360,390,430,1440]){
+    await page.setViewportSize({width,height:900});
+    await page.getByRole('button',{name:'Review completion',exact:true}).press('Enter');
+    await expect(review.getByRole('button',{name:'End job',exact:true})).toBeFocused();
+    await expect(review.getByRole('button',{name:'End job',exact:true})).toBeInViewport({ratio:1});
+    const origin=review.getByRole('region',{name:'Items needing review',exact:true}).getByRole('button',{name:'Item 2: Needs outcome',exact:true});
+    await origin.scrollIntoViewIfNeeded();await origin.focus();await page.evaluate(()=>new Promise(requestAnimationFrame));
+    const position=await page.evaluate(()=>scrollY);if(width<768)assert(position>0,'Phone return must exercise a genuinely scrolled review');
+    await origin.press('Enter');await expect(page.getByLabel('Outcome for item 2',{exact:true})).toBeFocused();
+    await page.getByRole('group',{name:'Assigned item 2',exact:true}).getByRole('button',{name:'Back to completion review',exact:true}).press('Enter');
+    await expect(origin).toBeFocused();await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(position);
+    await expect(firstEditor).toHaveJSProperty('open',true);
+    for(let index=0;index<rows.length;index++)await expect(page.getByLabel('Outcome for item '+(index+1),{exact:true})).toHaveValue('');
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await page.screenshot({path:'.local/review/completion-review-return-'+name+'-'+width+'.png'});
+    returnChecks.push({width,mainActionReachable:true,exactFocusAndScrollReturn:true,nonzeroPhoneScroll:width<768?position>0:null});
+   }
    await page.setViewportSize({width:1100,height:600});await review.getByRole('button',{name:'End job',exact:true}).scrollIntoViewIfNeeded();
    await expect(review.getByRole('button',{name:'End job',exact:true})).toBeInViewport({ratio:1});
    assert.deepEqual(await previewFacts(),beforeJump);assert.deepEqual(jumpRequests,[]);
+   await writeFile('.local/review/completion-review-return-'+name+'.json',JSON.stringify({engine:name,observations:returnChecks,businessRequests:jumpRequests.length,sourcePreserved:true},null,2)+'\n');
   }finally{page.off('request',observeJump);await page.setViewportSize({width:390,height:844});}
   await review.getByRole('button',{name:'Review next required field',exact:true}).press('Enter');
   await expect(page.getByLabel('Outcome for item 1',{exact:true})).toBeFocused();
@@ -187,6 +205,15 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await editor.locator(':scope > summary').press('Enter');await expect(editor).toHaveJSProperty('open',true);await expect(otherEditor).toHaveJSProperty('open',false);
     await expect(reason).toBeVisible();await expect(reason).toHaveValue('Synthetic weather interruption.');await expect(split.getByLabel('Work in this portion',{exact:true})).toHaveValue('Synthetic interior surfaces fulfilled');
     await expect(page.locator('details.completion-item-editor[open]')).toHaveCount(1);
+    await page.getByRole('button',{name:'Review completion',exact:true}).press('Enter');
+    await expect(review.getByRole('button',{name:'End job',exact:true})).toBeFocused();
+    const returnTarget=review.getByRole('region',{name:'Items needing review',exact:true}).getByRole('button',{name:'Item '+(otherIndex+1)+': Needs outcome',exact:true});
+    await returnTarget.scrollIntoViewIfNeeded();await returnTarget.focus();await page.evaluate(()=>new Promise(requestAnimationFrame));
+    const returnY=await page.evaluate(()=>scrollY);await returnTarget.press('Enter');
+    await otherEditor.getByRole('button',{name:'Back to completion review',exact:true}).press('Enter');
+    await expect(returnTarget).toBeFocused();await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(returnY);
+    await expect(editor).toHaveJSProperty('open',true);await expect(otherEditor).toHaveJSProperty('open',false);
+    await expect(reason).toHaveValue('Synthetic weather interruption.');await expect(split.getByLabel('Gross amount in dollars',{exact:true})).toHaveValue(dollars(firstGross));
     assert.deepEqual(await previewFacts(),beforeSwitch);assert.deepEqual(switchRequests,[]);
    }finally{page.off('request',observeSwitch);}
    const outcomes=page.getByRole('group',{name:'Scope outcomes',exact:true});

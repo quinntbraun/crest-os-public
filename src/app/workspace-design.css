@@ -779,6 +779,7 @@ main.completion-page { max-width:68rem; }
 }
 .completion-visit-heading p,.completion-review p { margin:.35rem 0 0; }
 .completion-visit-heading h2 { margin:.5rem 0 0; }
+.completion-visit-heading .completion-review-jump { width:auto; margin-top:.8rem; }
 .completion-visit-heading .completion-visit-state { margin:0; font-weight:650; }
 .completion-visit-state span { font-size:.875rem; color:var(--muted); font-weight:400; }
 .completion-checklist { min-width:0; }

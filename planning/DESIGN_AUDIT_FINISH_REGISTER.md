@@ -4,10 +4,14 @@
 
 This checklist preserves the original70-group scope in DESIGN_AUDIT_COVERAGE.json. Main changes addressed:60; partial:8; open:2. No final sign-off is claimed.
 
+Published955ac14/tree84b5b07 is terminal:21/22 main jobs pass, both owner-expense and commercial workflows pass. Foundation reaches and passes production build, browser accessibility, portable-container smoke, isolated photo decoding and preceding registered upgrade/recovery gates; Chromium supplier register JSON loses its response body after navigation (WebKit passes). Private expense isolated-worker and candidate provenance steps are skipped, not accepted. Local2fd8f80 buffers both register reads through the existing one-forward actual-byte helper; original statuses/assertions/deadlines remain. Full9128 units pass. Complete original supplier journeys on6e54ec3 pass2/2 with the current isolated Linux PDF worker,18 recovery observations,118 PNGs, unchanged source and owned cleanup. The first local0/2 omitted the Windows absolute Docker launch prerequisite and remains retained separately. A new exact hosted candidate remains required.
+
+Completion source7b7d499 adds Review completion and Back to completion review within the mounted editor. Both complete original browser journeys pass2/2, eight360/390/430/1440 observations restore exact focus/scroll and prior open item, preserve blank outcomes and actual partial entries, submit zero inspection business requests and preserve actual jobs/audit.76 hashed PNGs retained. No cross-route storage/history/URL architecture or completion command/math changes; broader S03/S13 requirements remain.
+
 | Group | Remaining completion work |
 |---|---|
 | S01 | Pass all exact-candidate release, populated-upgrade, recovery and worker checks; compare the installed build. |
-| S03 | Finish completion/scheduling contextual returns at360–430px: reachable main action and exact list-position return. |
+| S03 | Completion return is verified locally; finish scheduling/other selected-record returns and exact delivered/device acceptance. |
 | S04 | Verify the batched task/recovery hierarchy across configured states; the191-file/773-button source inventory alone is insufficient. |
 | S06 | Finish the loaded/empty/loading/validation/denied/stale/uncertain-save/success matrix for every important workflow. |
 | S08 | Resolve the approved small navigation mark and delivered-document consistency; original sign-in crest is verified separately. |
