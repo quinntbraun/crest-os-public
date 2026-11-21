@@ -14,7 +14,24 @@ const labels={assigned:'Assigned',completed:'Completed',cancelled:'Cancelled',un
 export function AmendmentAcceptance({view,controller}:{view:QuoteAmendmentWorkspaceView;controller:RefObject<ReturnType<typeof createQuoteAmendmentWorkspace>|null>}){
  const amendment=view.amendment,[channel,setChannel]=useState<''|QuoteConfirmationChannel>(''),[name,setName]=useState(''),[phone,setPhone]=useState(''),[email,setEmail]=useState(''),[wall,setWall]=useState(''),[instant,setInstant]=useState(''),[exact,setExact]=useState(''),[evidence,setEvidence]=useState(''),[confirmed,setConfirmed]=useState(false);
  if(!amendment)return null;
- if(amendment.schemaVersion===2&&amendment.acceptance)return <section aria-label="Saved amendment acceptance"><h3>Customer acceptance recorded</h3><dl className="customer-values"><dt>Confirmed by</dt><dd>{amendment.acceptance.request.body.counterpartySnapshot.displayName}</dd><dt>Customer confirmation</dt><dd><time dateTime={amendment.acceptance.request.body.confirmationEffectiveAt}>{amendment.acceptance.request.body.confirmationEffectiveAt}</time></dd><dt>Recorded in Crest</dt><dd><time dateTime={amendment.acceptance.recordedAt}>{amendment.acceptance.recordedAt}</time></dd></dl><details><summary>Confirmation evidence</summary><p className="service-scope">{amendment.acceptance.request.body.evidenceNote}</p></details><p className="field-help">The saved private record includes the exact confirmation, allocation command and original receipt. Visit changes, invoices, credits and refunds are separate.</p></section>;
+ if(amendment.schemaVersion===2&&amendment.acceptance){
+  const acceptance=amendment.acceptance,zone=amendment.revision.timezone,format=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'long',timeZone:zone});
+  return <section aria-label="Saved amendment acceptance"><h3>Customer acceptance recorded</h3>
+   <dl className="customer-values">
+    <dt>Confirmed by</dt><dd>{acceptance.request.body.counterpartySnapshot.displayName}</dd>
+    <dt>Customer confirmation</dt><dd><time dateTime={acceptance.request.body.confirmationEffectiveAt}>{format.format(new Date(acceptance.request.body.confirmationEffectiveAt))}</time></dd>
+    <dt>Recorded in Crest</dt><dd><time dateTime={acceptance.recordedAt}>{format.format(new Date(acceptance.recordedAt))}</time></dd>
+   </dl>
+   <details><summary>Confirmation evidence</summary><p className="service-scope">{acceptance.request.body.evidenceNote}</p>
+    <dl className="financial-history-evidence">
+     <dt>Customer confirmation (exact UTC)</dt><dd><time dateTime={acceptance.request.body.confirmationEffectiveAt}>{acceptance.request.body.confirmationEffectiveAt}</time></dd>
+     <dt>Recorded in Crest (exact UTC)</dt><dd><time dateTime={acceptance.recordedAt}>{acceptance.recordedAt}</time></dd>
+     <dt>Saved time zone</dt><dd>{zone}</dd>
+    </dl>
+   </details>
+   <p className="field-help">The saved private record includes the exact confirmation, allocation command and original receipt. Visit changes, invoices, credits and refunds are separate.</p>
+  </section>;
+ }
  if(!view.canPrepareAcceptance&&!view.acceptance)return null;
  const zone=amendment.revision.timezone,matches=followUpCandidates(wall,zone),validTime=customerInstant(instant)&&instant.length===27,canChange=!view.busy&&view.phase==='ready',preparation=view.acceptance;
  const time=(value:string)=>{setInstant(value);setExact(value);setWall(followUpWall(value,zone));};

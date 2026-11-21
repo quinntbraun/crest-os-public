@@ -328,9 +328,19 @@ for (const automatic of [false,true]) test('signed-in Calendar preserves consent
           await expect(toggle).toBeFocused();
           await expect(sync.locator('time')).toHaveAttribute('datetime', /^\d{4}-\d{2}-\d{2}T/);
           await expect(sync.locator('time')).toBeVisible();
+          const confirmation=(await fixture.client.query(`SELECT to_char(r.recorded_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS stamp
+            FROM crest.google_calendar_outbox o JOIN crest.google_calendar_dispatch_leases l ON (l.business_id,l.outbox_id)=(o.business_id,o.id)
+            JOIN crest.google_calendar_dispatch_results r ON (r.business_id,r.lease_id)=(l.business_id,l.id)
+            WHERE o.business_id=$1 AND o.job_id=$2 AND r.outcome IN('published','removed','no_effect')
+            ORDER BY o.appointment_sequence DESC,l.attempt_no DESC LIMIT 1`,[fixture.business,job])).rows[0]?.stamp;
+          assert.match(confirmation,/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/);
+          await expect(sync.locator('time')).toHaveAttribute('datetime',confirmation);
+          await expect(sync.locator('time')).toHaveText(new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'long',timeZone:'UTC'}).format(new Date(confirmation)));
+          await expect(evidence.getByText(confirmation,{exact:true})).toBeVisible();
           await expect(sync.getByText('1 of 1', { exact: true })).toBeVisible();
           await page.screenshot({path:fileURLToPath(new URL('settings-calendar-evidence-'+engine.name()+'-390.png',directory)),fullPage:true});
           await toggle.press('Enter');await expect(sync.locator('time')).toBeHidden();await expect(toggle).toBeFocused();
+          await expect(evidence.getByText(confirmation,{exact:true})).toBeHidden();
           assert.deepEqual(await facts(),before);assert.deepEqual(requests,[]);
           }finally{page.off('request',observe);}
         }

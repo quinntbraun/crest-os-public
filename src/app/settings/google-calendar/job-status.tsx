@@ -15,7 +15,7 @@ const descriptions: Record<GoogleCalendarJobStatus['state'], string> = {
   reconnect: 'Reconnect Calendar to continue.',
   review: 'Review the Calendar connection before sending any further changes.',
 };
-const timestamp = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
+const timestamp = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'long', timeZone: 'UTC' });
 export const calendarJobStatusLabels: Record<GoogleCalendarJobStatus['state'], string> = {
   disconnected: 'Disconnected', not_queued: 'Not queued', pending: 'Waiting', in_progress: 'In progress',
   synced: 'Synced · fictional', removed: 'Removed · fictional', delayed: 'Unconfirmed', reconnect: 'Reconnect', review: 'Needs review',
@@ -106,7 +106,8 @@ export function SyntheticCalendarJobStatus({ jobId, recoveryEpoch, appointmentSe
       <p role="status">{message}</p>
       {status&&<p className="calendar-activity-version">Appointment version <strong>{status.appointmentVersion}</strong></p>}
       {status?.lastConfirmedAt && <details className="calendar-sync-evidence"><summary>Sync evidence</summary><dl className="calendar-setup-facts">
-        <div><dt>Last successful sync</dt><dd><time dateTime={status.lastConfirmedAt}>{timestamp.format(new Date(status.lastConfirmedAt))} UTC</time></dd></div>
+        <div><dt>Last successful sync</dt><dd><time dateTime={status.lastConfirmedAt}>{timestamp.format(new Date(status.lastConfirmedAt))}</time></dd></div>
+        <div><dt>Confirmed at (exact UTC)</dt><dd>{status.lastConfirmedAt}</dd></div>
         <div><dt>Confirmed appointment version</dt><dd>{status.lastConfirmedVersion} of {status.appointmentVersion}</dd></div>
       </dl></details>}
     </div>

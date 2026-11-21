@@ -1,4 +1,4 @@
-import {parseFinanceAccountHistoryEvidence,parseFinanceTaxHistoryEvidence,parseMoneyChannelHistoryEvidence} from './finance-history-recording';
+import {parseFinanceAccountHistoryEvidence,parseFinanceTaxHistoryEvidence,parseMoneyChannelHistoryEvidence} from './finance-history-recording.ts';
 import 'server-only';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';

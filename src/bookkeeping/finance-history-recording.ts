@@ -1,8 +1,8 @@
-import {customerInstant,customerUuid,exactCustomerObject as exact} from '../customer/customer-contract';
-import {parseFinanceAccountHistory,requireFinanceAccount as check} from './finance-account-contract';
-import {parseFinanceTaxHistory} from './finance-tax-contract';
+import {customerInstant,customerUuid,exactCustomerObject as exact} from '../customer/customer-contract.ts';
+import {parseFinanceAccountHistory,requireFinanceAccount as check} from './finance-account-contract.ts';
+import {parseFinanceTaxHistory} from './finance-tax-contract.ts';
 import type {FinanceTaxScope} from './finance-tax-contract';
-import {parseMoneyChannelHistory} from './finance-money-channel-contract';
+import {parseMoneyChannelHistory} from './finance-money-channel-contract.ts';
 
 export type FinanceHistoryRecording=Readonly<{recordedAt:string;actorId:string}>;
 export type FinanceHistoryPage<T extends object>={rows:(T&{recording?:FinanceHistoryRecording})[];hasMore:boolean};

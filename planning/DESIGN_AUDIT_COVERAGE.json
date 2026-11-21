@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-21T17:53:52.405Z",
+  "assessedAt": "2026-11-21T18:32:58.881Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "c852c65edd6723bf35055b0042d96419042fc6b4",
-    "publishedCommit": "169c95a67e16de4d51bbac66f2d56950a56153e5",
-    "publishedTree": "86c9ca2976485bf1ea39a97ff20320d987f17fd4",
-    "localTree": "0678edf9e68cd50264eaa60ed7189234071cdb3e"
+    "localCommit": "3510e9fe3f2e0fa07aa20d3d06befc163aac1000",
+    "publishedCommit": "cb3f3d587344e7a15d2248f9f5d551b614642820",
+    "publishedTree": "f0fc7ee4c968d4e63390b7ce79b56398989979fe",
+    "localTree": "ce68f0c7f9e52dc759eafd46c48ffbfe2d33f4ed"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -44,8 +44,8 @@
       "title": "P1 · One visual system, delivered consistently",
       "requirements": "The installed logged-out preview still uses a large dark car hero and a different shell from the newer captured build. First align the version being evaluated and delivered. Then use shared page headers, toolbars, record summaries, inspectors, notices and confirmations throughout.\n\nFinish standard: The same destination and state should have the same hierarchy on laptop and phone; release identity must be verifiable.",
       "implementationStatus": "open",
-      "implementedOrPresent": "Published169c95a/tree86c9ca2 is terminal: expense/commercial pass; main20/22 jobs pass, with field and dependent Foundation failing. The exact field failure is a retired Chromium review-history response body. Test-onlyed157e0 buffers the single genuine server response before fulfillment; both complete original completion journeys now pass locally, retaining failed-read/retry/source/request-count checks. This does not cure tax or older session failures. Older828 source passed all22 main jobs and expense/commercial, but cannot accept newer124. Draft PR178 remains open/unmerged/uninstalled on baseea06dc6. New124 source is not published or accepted yet; no live local process.",
-      "remainingWork": "Publish and accept the exact candidate through original complete release/upgrade/recovery/worker checks, diagnose retained failures, then compare installed states.",
+      "implementedOrPresent": "Publishedcb3f3d5/treef0fc7ee is terminal: all three workflows fail; main20/22 jobs pass, including every browser group, while genuine-auth native loading and dependent Foundation fail. Four expense files expose the same missing shared-history runtime suffix. Local26b18e3 fixes that module graph, with two native regression cases reproducing before and passing after correction; all four complete original expense files then pass their actual cases. Commercial/integrity subjobs pass; its amendment subjob retains a600000ms Chromium timeout after private-record retrieval and subsequent WebKit role-ownership refusal. Main amendment succeeds separately. Cause of the timeout is unresolved. No guard, deadline, quota or original assertion is waived. New corrected local source requires a fresh coherent draft and its own full hosted checks; older successful scopes cannot accept it.",
+      "remainingWork": "Publish the corrected coherent source only after prior runs are terminal, accept all original release/upgrade/recovery/worker checks, diagnose retained failures and compare installed states.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "c158d8d1a10858f2294343614d6df8db2b45a97cd2b1ba6a8ab7afe65e5369eb"
+          "sha256": "ccedd3650285e72c06e9e49115a83e4617ae708bac0795c7507dab79435e721e"
         },
         {
           "path": "planning/QUOTE_VERSION_HISTORY_DESIGN.md",
@@ -81,7 +81,7 @@
         },
         {
           "path": "planning/FINANCIAL_HISTORY_RECORDING.md",
-          "sha256": "1cd4ab873692e8c104750b87a81e3dfbdb8b326d451fb9ce1c3e8c08c5e85822"
+          "sha256": "e2d15e7b8d3d258dd154d7e8849530c278d8980b21cf1624e4c9f0d50f002397"
         },
         {
           "path": "tests/integration/finance-tax-profiles-browser.test.mjs",
@@ -94,6 +94,30 @@
         {
           "path": "tests/support/quote-browser-response.mjs",
           "sha256": "ed71f94967d3e4b21d6cadc000037dc61dda9218bf6c8e4dba15af8960844176"
+        },
+        {
+          "path": "planning/ACCEPTANCE_SYNC_TIME_DESIGN.md",
+          "sha256": "c02344d8dc069b5b7ae2263781601f2a8826af006a431ec46a0726815f6e2d7f"
+        },
+        {
+          "path": "tests/unit/finance-history-native-import.test.ts",
+          "sha256": "befd9737edc9dfdda1d5f2edee74c4427424d6819c16949074ed8c3b333a722b"
+        },
+        {
+          "path": "src/app/quotes/amendments/acceptance.tsx",
+          "sha256": "d386c55e43d9d96294878b1c43fc42d696ff8a9fcbf8930749988b07e49b2628"
+        },
+        {
+          "path": "src/app/settings/google-calendar/job-status.tsx",
+          "sha256": "c5083ec92df34656458958ca228cf62994f7ca900214493ebcf006a2ab4bcc1d"
+        },
+        {
+          "path": "tests/support/amendment-accepted-history.mjs",
+          "sha256": "0779b29e99f683523181afeaca297dade8df541e24fb7cf10a88f8673e58e298"
+        },
+        {
+          "path": "tests/integration/google-calendar-settings-product-browser.test.mjs",
+          "sha256": "ad12b7d15c3b97c42a857fd0f12388e856c2bccf36838d02fb199aaf3047706d"
         }
       ],
       "verification": {
@@ -609,7 +633,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "c48325f6bd09d0eb35b57c713960125aeb9c1d8b60daac9ae405a539badb3cf4"
+          "sha256": "6d145054f5f22485493271929cd7142cc086f72a42863a60e0065322dfa79556"
         },
         {
           "path": "planning/SUPPLIER_DRAFT_COMPOSITION_REVIEW.md",
@@ -793,7 +817,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "c48325f6bd09d0eb35b57c713960125aeb9c1d8b60daac9ae405a539badb3cf4"
+          "sha256": "6d145054f5f22485493271929cd7142cc086f72a42863a60e0065322dfa79556"
         }
       ],
       "verification": {
@@ -1004,8 +1028,8 @@
       "title": "P2 · Turn history into a readable evidence trail",
       "requirements": "Several histories are version lists, prose and repeated timestamps. The underlying retained evidence deserves a much clearer presentation.\n\nFinish standard: Use dated event rows with action, actual event time, recorded time where different, actor if known, status and an expand-to-compare detail. Keep exact timestamps and exports available.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Registered124 completes actual audit recording metadata for account, tax and money-channel histories and loaded CSVs, separately from applicability dates and channel ownership. No financial command, snapshot, legacy reader or prior migration changes. Build/types/full lint and9157 units/402 files pass. Native append-only upgrade/authorization and independent encrypted frozen123/current124 database restore pass6/6 on a18c572. Complete original account/channel/tax/completion files on ed157e0 finish7/8 with189 PNGs: all account/channel/completion journeys and WebKit tax pass; Chromium tax later earlier-date preview fails verification. Separate diagnostic tax c872414 finishes1/2: WebKit keeps prior exemption despite200 responses and eligible observed session. Separate dates-only observation plus stronger expected-input assertion on ef5b0e3 finishes2/2,42 PNGs, with unchanged application code. Source remains frozen and owned cleanup passes in every run. This is non-reproduction, not a cause/fix or aggregate8/8 acceptance. Both earlier tax failures remain retained; see FINANCIAL_HISTORY_RECORDING.md.",
-      "remainingWork": "Finish remaining agreement/integration history presentation and missing/stale/long/zoom/private variants; trace retained tax input/result verification failures without weaker assertions, retries or security waivers. Require fresh exact-source124 release, installed comparison, owner and physical-device acceptance. Local date/actor projection and database recovery are verified in their separate recorded scopes.",
+      "implementedOrPresent": "Latest local application: saved customer confirmation and Crest recording times use the retained quote zone, with exact UTC/zone in Confirmation evidence; Calendar keeps last-successful-sync precision and appointment version in its existing private disclosure. Build/types/full lint and9159 units/403 files pass. Frozenfeb3cc0 six-file invocation is16/18 with284 PNGs: all four original Calendar cases and all four original expense files pass; both amendment journeys fail a new test incorrectly expecting acceptance on reopened Draft. Corrected test-only0626346 checks accepted source2 dates and reopened Draft source1 absence, preserving all pre-existing checks; its complete original amendment file passes5/5, including both entire genuine journeys,184 PNGs. Both invocations freeze tracked source and clean owned resources. Later33edd21 adds phase logs only; removing only those lines reconstructs the exact tested helper. See ACCEPTANCE_SYNC_TIME_DESIGN.md. Earlier registered124 history projection/recovery and tax failure/non-reproduction scopes remain separate in FINANCIAL_HISTORY_RECORDING.md. No aggregate18/18 or hosted-timeout cure is claimed.",
+      "remainingWork": "Implement explicit expand-to-compare detail for account/tax/channel/mapping history using only the actual adjacent loaded versions; never invent an earlier snapshot or silently fetch it. Finish remaining missing/stale/long/zoom/private history variants, diagnose retained tax and hosted amendment failures, and require fresh exact-source124 release/installed/owner/physical-device acceptance.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
@@ -1117,7 +1141,7 @@
         },
         {
           "path": "src/bookkeeping/finance-account-http.ts",
-          "sha256": "f9f895c7d87a874133c79eb01333d197d69cd4cf75bb02854b9bc35cf6bd8ebd"
+          "sha256": "0d0b3c6ab0e2ff1f7c87526f83be7b7c8292b170b55a01c08797dd11cb6a0e54"
         },
         {
           "path": "supabase/migrations/20270116180000_finance_mapping_recording_history.sql",
@@ -1137,7 +1161,7 @@
         },
         {
           "path": "planning/FINANCIAL_HISTORY_RECORDING.md",
-          "sha256": "1cd4ab873692e8c104750b87a81e3dfbdb8b326d451fb9ce1c3e8c08c5e85822"
+          "sha256": "e2d15e7b8d3d258dd154d7e8849530c278d8980b21cf1624e4c9f0d50f002397"
         },
         {
           "path": "tests/integration/finance-tax-profiles-browser.test.mjs",
@@ -1153,7 +1177,7 @@
         },
         {
           "path": "src/bookkeeping/finance-history-recording.ts",
-          "sha256": "f9409e5c47f36deee41c8839e1cd868167765a6486151b40d197c0923167f713"
+          "sha256": "4da442d27bb254919f5f00dcd146f9ab06b2be489d26a6d7efbee67c5432b4c7"
         },
         {
           "path": "src/app/settings/accounts/history-recording.tsx",
@@ -1178,6 +1202,30 @@
         {
           "path": "tests/unit/financial-history-recording-adoption.test.ts",
           "sha256": "9d10ec0c76bcedebbaaef1328844251cb4a12cd352c5381dd5d46b01b1da70d9"
+        },
+        {
+          "path": "planning/ACCEPTANCE_SYNC_TIME_DESIGN.md",
+          "sha256": "c02344d8dc069b5b7ae2263781601f2a8826af006a431ec46a0726815f6e2d7f"
+        },
+        {
+          "path": "tests/unit/finance-history-native-import.test.ts",
+          "sha256": "befd9737edc9dfdda1d5f2edee74c4427424d6819c16949074ed8c3b333a722b"
+        },
+        {
+          "path": "src/app/quotes/amendments/acceptance.tsx",
+          "sha256": "d386c55e43d9d96294878b1c43fc42d696ff8a9fcbf8930749988b07e49b2628"
+        },
+        {
+          "path": "src/app/settings/google-calendar/job-status.tsx",
+          "sha256": "c5083ec92df34656458958ca228cf62994f7ca900214493ebcf006a2ab4bcc1d"
+        },
+        {
+          "path": "tests/support/amendment-accepted-history.mjs",
+          "sha256": "0779b29e99f683523181afeaca297dade8df541e24fb7cf10a88f8673e58e298"
+        },
+        {
+          "path": "tests/integration/google-calendar-settings-product-browser.test.mjs",
+          "sha256": "ad12b7d15c3b97c42a857fd0f12388e856c2bccf36838d02fb199aaf3047706d"
         }
       ],
       "verification": {
@@ -1289,7 +1337,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "c158d8d1a10858f2294343614d6df8db2b45a97cd2b1ba6a8ab7afe65e5369eb"
+          "sha256": "ccedd3650285e72c06e9e49115a83e4617ae708bac0795c7507dab79435e721e"
         }
       ],
       "verification": {
@@ -3021,7 +3069,7 @@
         },
         {
           "path": "src/bookkeeping/finance-account-http.ts",
-          "sha256": "f9f895c7d87a874133c79eb01333d197d69cd4cf75bb02854b9bc35cf6bd8ebd"
+          "sha256": "0d0b3c6ab0e2ff1f7c87526f83be7b7c8292b170b55a01c08797dd11cb6a0e54"
         },
         {
           "path": "src/client/finance-accounts.ts",
